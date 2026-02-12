@@ -1,16 +1,17 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.9 - Fix ROIC (NOPAT/Avg IC), ROE (Avg Equity), cache versioning
+//   - ROIC = NOPAT / Average Invested Capital (méthode GuruFocus)
+//   - NOPAT = Operating Income × (1 - Tax Rate effective)
+//   - IC = Total Assets - Excess Cash (- AP si disponible)
+//   - ROE = Net Income / Average Equity (N + N-1) / 2
+//   - D/E inchangé (instantané, standard)
+//   - Cache: _formulaVersion=2 force re-fetch des anciennes entrées
+//   - Zéro appel API supplémentaire (2 périodes déjà retournées)
 // Version 2.8 - Ajout sélection de région via REGIONS env var
 // Version 2.7.1 - Hotfix: ne pas ajouter mic_code pour US stocks
-// Fix v2.7.1: buildFundamentalsParams exclut les MICs US (XNAS/XNYS/BATS)
-//   car /balance_sheet et /income_statement ne supportent pas mic_code
-//   → les US stocks n'ont pas besoin de désambiguïsation
 // Changements v2.7:
 // - Ajout COUNTRY_EN et MIC_HINTS pour désambiguïser les appels balance_sheet/income_statement
-// - fetchBalanceSheet() et fetchIncomeStatement() acceptent un contexte {exchange, country}
-// - Les paramètres API incluent exchange/mic_code/country pour éviter les faux positifs
-// - fetchFundamentalsForSymbol() propage le contexte
-// - enrichWithFundamentals() passe le contexte depuis les colonnes CSV
 // Changements v2.6:
 // - Migration automatique ROIC
 const fs = require('fs').promises;
@@ -25,6 +26,9 @@ const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
+// ✅ v2.9: Version de formule pour invalidation cache
+const FORMULA_VERSION = 2;
+
 // ✅ v2.8: Toutes les régions disponibles
 const ALL_INPUTS = [
   { file: 'Actions_US.csv',     region: 'US' },
@@ -33,7 +37,6 @@ const ALL_INPUTS = [
 ];
 
 // ✅ v2.8: Sélection de région via REGIONS env var (us, europe, asia, all)
-// Exemples: REGIONS=europe  |  REGIONS=us,europe  |  REGIONS=all
 const REGIONS_ENV = (process.env.REGIONS || 'all').toLowerCase().split(',').map(s => s.trim());
 const REGION_MAP = { us: 'US', europe: 'EUROPE', asia: 'ASIA' };
 
@@ -52,7 +55,6 @@ if (INPUTS.length === 0) {
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
 const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '2500', 10);
-// Par défaut: traite TOUTES les actions (99999 = illimité en pratique)
 const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '99999', 10);
 const RATE_LIMIT_PAUSE_MS = 70000;
 
@@ -140,7 +142,7 @@ const MIC_HINTS = {
     'XBRU': { exchange: 'Euronext', country: 'Belgium' },
     'XLIS': { exchange: 'Euronext', country: 'Portugal' },
     'XETR': { exchange: 'XETR',    country: 'Germany' },
-    'XMIL': { exchange: 'XETR',    country: 'Germany' },  // Fallback DE pour Italie (MTA inaccessible)
+    'XMIL': { exchange: 'XETR',    country: 'Germany' },
     'XWBO': { exchange: 'Vienna',   country: 'Austria' },
     'XOSL': { exchange: 'OSE',      country: 'Norway' },
     'XSTO': { exchange: 'NASDAQ Stockholm', country: 'Sweden' },
@@ -163,18 +165,12 @@ function toMIC(exchange, country=''){
   return COUNTRY2MIC[normalize(country)] || null;
 }
 
-// ✅ v2.7: Helper — construit les paramètres API avec contexte exchange/country
-// ✅ v2.7.1: Skip contexte pour US (ticker seul fonctionne, mic_code casse l'appel)
 function buildFundamentalsParams(symbol, context = {}) {
   const mic = toMIC(context.exchange || '', context.country || '');
   const params = { symbol, period: 'annual', apikey: API_KEY };
 
-  // ✅ v2.7.1: Les US n'ont pas besoin de désambiguïsation
-  // et /balance_sheet ne supporte pas mic_code → ne rien ajouter
   if (mic && US_MICS.has(mic)) {
-    if (DEBUG) {
-      console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
-    }
+    if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
     return params;
   }
 
@@ -190,19 +186,11 @@ function buildFundamentalsParams(symbol, context = {}) {
       if (hint.country) params.country = hint.country;
     }
   } else if (mic) {
-    // Non-US, non-MIC_HINTS: essayer exchange seul
-    // Ne PAS ajouter mic_code car /balance_sheet peut ne pas le supporter
-    // Utiliser plutôt le country EN si disponible
     const countryEN = COUNTRY_EN[normalize(context.country || '')];
-    if (countryEN) {
-      params.country = countryEN;
-    }
+    if (countryEN) params.country = countryEN;
   }
 
-  if (DEBUG) {
-    console.log(`  [DEBUG] Fundamentals params for ${symbol}:`, JSON.stringify(params));
-  }
-
+  if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}:`, JSON.stringify(params));
   return params;
 }
 
@@ -258,7 +246,7 @@ async function tryQuote(sym, mic){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FONDAMENTAUX BUFFETT - PARSING STRUCTURE IMBRIQUÉE
+// FONDAMENTAUX BUFFETT v2.9 — NOPAT / Average IC
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadFundamentalsCache() {
@@ -289,7 +277,98 @@ function isRateLimitError(data) {
   return /run out of API credits/i.test(msg) || /rate limit/i.test(msg);
 }
 
-// ✅ v2.7: Accepte context pour désambiguïser via exchange/country
+// ✅ v2.9: Helper — parse une seule période de balance sheet
+function parseOneBalanceSheet(sheet) {
+  if (!sheet || typeof sheet !== 'object') return null;
+
+  const assets = sheet.assets || {};
+  const liabilities = sheet.liabilities || {};
+  const equityBlock = sheet.shareholders_equity || {};
+  const currentLiab = liabilities.current_liabilities || {};
+  const nonCurrentLiab = liabilities.non_current_liabilities || {};
+  const currentAssets = assets.current_assets || {};
+
+  // ── Cash (somme de tous les candidats non-null) ──
+  const cashCandidates = [
+    currentAssets.cash_and_cash_equivalents,
+    currentAssets.cash,
+    currentAssets.cash_equivalents,
+    currentAssets.other_short_term_investments,
+    assets.cash_and_cash_equivalents,
+    sheet.cash_and_cash_equivalents,
+    sheet.cash,
+  ];
+  const cashSum = cashCandidates.map(parseFloatSafe).filter(v => v != null).reduce((s, v) => s + v, 0);
+  const hasCash = cashCandidates.some(v => parseFloatSafe(v) != null);
+  const cash_total = hasCash ? cashSum : null;
+
+  // ── Totaux ──
+  const totalAssets =
+    parseFloatSafe(assets.total_assets) ??
+    parseFloatSafe(sheet.total_assets) ??
+    null;
+
+  const totalLiabilities =
+    parseFloatSafe(liabilities.total_liabilities) ??
+    parseFloatSafe(sheet.total_liabilities) ??
+    null;
+
+  // ✅ v2.9: Total current assets & liabilities pour IC
+  const totalCurrentAssets =
+    parseFloatSafe(currentAssets.total_current_assets) ??
+    parseFloatSafe(assets.total_current_assets) ??
+    null;
+
+  const totalCurrentLiabilities =
+    parseFloatSafe(currentLiab.total_current_liabilities) ??
+    parseFloatSafe(liabilities.total_current_liabilities) ??
+    null;
+
+  // ✅ v2.9: Accounts payable pour IC
+  const accountsPayable =
+    parseFloatSafe(currentLiab.accounts_payable) ?? 0;
+  const accruedExpenses =
+    parseFloatSafe(currentLiab.accrued_expenses) ?? 0;
+
+  // ── Debt ──
+  const shortTermDebt = parseFloatSafe(currentLiab.short_term_debt) ??
+                        parseFloatSafe(currentLiab.current_debt) ?? 0;
+  const longTermDebt = parseFloatSafe(nonCurrentLiab.long_term_debt) ??
+                       parseFloatSafe(nonCurrentLiab.long_term_debt_and_capital_lease_obligation) ?? 0;
+  const totalDebt = shortTermDebt + longTermDebt;
+
+  // ── Equity ──
+  let totalEquity =
+    parseFloatSafe(equityBlock.total_shareholders_equity) ??
+    parseFloatSafe(equityBlock.total_stockholders_equity) ??
+    parseFloatSafe(equityBlock.stockholders_equity) ??
+    parseFloatSafe(equityBlock.total_equity) ??
+    parseFloatSafe(equityBlock.common_stock_equity) ??
+    parseFloatSafe(sheet.total_shareholders_equity) ??
+    parseFloatSafe(sheet.total_stockholders_equity) ??
+    parseFloatSafe(sheet.stockholders_equity) ??
+    parseFloatSafe(sheet.total_equity) ??
+    null;
+
+  if (totalEquity === null && totalAssets !== null && totalLiabilities !== null) {
+    totalEquity = totalAssets - totalLiabilities;
+  }
+
+  return {
+    total_debt: totalDebt,
+    total_equity: totalEquity,
+    total_assets: totalAssets,
+    total_liabilities: totalLiabilities,
+    total_current_assets: totalCurrentAssets,
+    total_current_liabilities: totalCurrentLiabilities,
+    accounts_payable: accountsPayable,
+    accrued_expenses: accruedExpenses,
+    cash_and_st_investments: cash_total,
+    fiscal_date: sheet.fiscal_date || sheet.date || null
+  };
+}
+
+// ✅ v2.9: Retourne { current, previous } — 2 périodes, 0 appel supplémentaire
 async function fetchBalanceSheet(symbol, context = {}) {
   try {
     const params = buildFundamentalsParams(symbol, context);
@@ -298,125 +377,43 @@ async function fetchBalanceSheet(symbol, context = {}) {
       params,
       timeout: 30000
     });
-    
+
     if (DEBUG) {
       console.log(`  [DEBUG] balance_sheet ${symbol} response keys:`, data ? Object.keys(data) : 'null');
       console.log(`  [DEBUG] credits: used=${headers['api-credits-used']}, left=${headers['api-credits-left']}`);
     }
-    
-    if (isRateLimitError(data)) {
-      return { _rateLimited: true };
-    }
-    
+
+    if (isRateLimitError(data)) return { _rateLimited: true };
+
     if (!data || data.status === 'error' || data.code) {
       console.warn(`  ⚠️ Balance sheet erreur ${symbol}: ${data?.message || data?.code || 'unknown'}`);
       return null;
     }
-    
-    let sheet = data.balance_sheet || data;
-    if (Array.isArray(sheet)) {
-      sheet = sheet[0];
-    }
-    
-    if (!sheet || typeof sheet !== 'object') {
+
+    let sheets = data.balance_sheet || data;
+    if (!Array.isArray(sheets)) sheets = [sheets];
+
+    const current  = parseOneBalanceSheet(sheets[0]);
+    const previous = sheets.length > 1 ? parseOneBalanceSheet(sheets[1]) : null;
+
+    if (!current) {
       console.warn(`  ⚠️ Format inattendu balance_sheet ${symbol}`);
       return null;
     }
-    
+
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} sheet keys:`, Object.keys(sheet));
+      console.log(`  [DEBUG] ${symbol} BS current: equity=${current.total_equity}, assets=${current.total_assets}, cash=${current.cash_and_st_investments}, curAssets=${current.total_current_assets}, curLiab=${current.total_current_liabilities}`);
+      if (previous) console.log(`  [DEBUG] ${symbol} BS previous: equity=${previous.total_equity}, assets=${previous.total_assets}`);
     }
-    
-    const assets = sheet.assets || {};
-    const liabilities = sheet.liabilities || {};
-    const equityBlock = sheet.shareholders_equity || {};
-    const currentLiab = liabilities.current_liabilities || {};
-    const nonCurrentLiab = liabilities.non_current_liabilities || {};
-    
-    // ✅ v2.5: Extraction du cash pour ROIC
-    const currentAssets = assets.current_assets || {};
-    
-    const cashCandidates = [
-      currentAssets.cash_and_cash_equivalents,
-      currentAssets.cash,
-      currentAssets.cash_equivalents,
-      currentAssets.other_short_term_investments,
-      assets.cash_and_cash_equivalents,
-      sheet.cash_and_cash_equivalents,
-      sheet.cash,
-    ];
-    
-    const cash_and_st_investments = cashCandidates
-      .map(parseFloatSafe)
-      .filter(v => v != null)
-      .reduce((sum, v) => sum + v, 0);
-    
-    const hasCash = cashCandidates.some(v => parseFloatSafe(v) != null);
-    const cash_total = hasCash ? cash_and_st_investments : null;
-    
-    if (DEBUG && cash_total !== null) {
-      console.log(`  [DEBUG] ${symbol} cash_and_st_investments: ${cash_total?.toLocaleString()}`);
-    }
-    
-    if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} equityBlock keys:`, Object.keys(equityBlock));
-      console.log(`  [DEBUG] ${symbol} liabilities keys:`, Object.keys(liabilities));
-    }
-    
-    const totalAssets = 
-      parseFloatSafe(assets.total_assets) ??
-      parseFloatSafe(sheet.total_assets) ?? 
-      null;
-    
-    const totalLiabilities = 
-      parseFloatSafe(liabilities.total_liabilities) ??
-      parseFloatSafe(sheet.total_liabilities) ?? 
-      null;
-    
-    const shortTermDebt = parseFloatSafe(currentLiab.short_term_debt) ?? 
-                          parseFloatSafe(currentLiab.current_debt) ?? 0;
-    const longTermDebt = parseFloatSafe(nonCurrentLiab.long_term_debt) ?? 
-                         parseFloatSafe(nonCurrentLiab.long_term_debt_and_capital_lease_obligation) ?? 0;
-    const totalDebt = shortTermDebt + longTermDebt;
-    
-    let totalEquity = 
-      parseFloatSafe(equityBlock.total_shareholders_equity) ??
-      parseFloatSafe(equityBlock.total_stockholders_equity) ??
-      parseFloatSafe(equityBlock.stockholders_equity) ??
-      parseFloatSafe(equityBlock.total_equity) ??
-      parseFloatSafe(equityBlock.common_stock_equity) ??
-      parseFloatSafe(sheet.total_shareholders_equity) ??
-      parseFloatSafe(sheet.total_stockholders_equity) ??
-      parseFloatSafe(sheet.stockholders_equity) ??
-      parseFloatSafe(sheet.total_equity) ??
-      null;
-    
-    if (totalEquity === null && totalAssets !== null && totalLiabilities !== null) {
-      totalEquity = totalAssets - totalLiabilities;
-      if (DEBUG) {
-        console.log(`  [DEBUG] ${symbol} equity dérivée = ${totalAssets} - ${totalLiabilities} = ${totalEquity}`);
-      }
-    }
-    
-    if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} FINAL: debt=${totalDebt}, equity=${totalEquity}, assets=${totalAssets}, cash=${cash_total}`);
-    }
-    
-    return {
-      total_debt: totalDebt,
-      total_equity: totalEquity,
-      total_assets: totalAssets,
-      total_liabilities: totalLiabilities,
-      cash_and_st_investments: cash_total,
-      fiscal_date: sheet.fiscal_date || sheet.date || null
-    };
+
+    return { current, previous };
   } catch (error) {
     console.error(`  ❌ Erreur balance_sheet ${symbol}:`, error.message);
     return null;
   }
 }
 
-// ✅ v2.7: Accepte context pour désambiguïser via exchange/country
+// ✅ v2.9: Extrait aussi operating_income, pretax_income, income_tax
 async function fetchIncomeStatement(symbol, context = {}) {
   try {
     const params = buildFundamentalsParams(symbol, context);
@@ -425,56 +422,63 @@ async function fetchIncomeStatement(symbol, context = {}) {
       params,
       timeout: 30000
     });
-    
+
     if (DEBUG) {
       console.log(`  [DEBUG] income_statement ${symbol} response keys:`, data ? Object.keys(data) : 'null');
     }
-    
-    if (isRateLimitError(data)) {
-      return { _rateLimited: true };
-    }
-    
+
+    if (isRateLimitError(data)) return { _rateLimited: true };
+
     if (!data || data.status === 'error' || data.code) {
       console.warn(`  ⚠️ Income statement erreur ${symbol}: ${data?.message || data?.code || 'unknown'}`);
       return null;
     }
-    
+
     let statement = data.income_statement || data;
-    if (Array.isArray(statement)) {
-      statement = statement[0];
-    }
-    
+    if (Array.isArray(statement)) statement = statement[0];
+
     if (!statement || typeof statement !== 'object') {
       console.warn(`  ⚠️ Format inattendu income_statement ${symbol}`);
       return null;
     }
-    
-    if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} income keys:`, Object.keys(statement));
-    }
-    
+
+    if (DEBUG) console.log(`  [DEBUG] ${symbol} income keys:`, Object.keys(statement));
+
     const netIncomeBlock = statement.net_income || {};
-    
-    const netIncome = 
+
+    const netIncome =
       parseFloatSafe(typeof netIncomeBlock === 'object' ? netIncomeBlock.net_income : netIncomeBlock) ??
       parseFloatSafe(statement.net_income) ??
       parseFloatSafe(statement.net_income_common_stockholders) ??
       parseFloatSafe(statement.net_income_from_continuing_operations) ??
       null;
-    
-    const revenue = 
+
+    const revenue =
       parseFloatSafe(statement.revenue) ??
       parseFloatSafe(statement.total_revenue) ??
+      parseFloatSafe(statement.sales) ??
       parseFloatSafe(statement.operating_revenue) ??
       null;
-    
+
+    // ✅ v2.9: Champs nécessaires pour NOPAT et tax rate
+    const operatingIncome =
+      parseFloatSafe(statement.operating_income) ??
+      parseFloatSafe(statement.ebit) ??
+      null;
+
+    const pretaxIncome = parseFloatSafe(statement.pretax_income) ?? null;
+    const incomeTax    = parseFloatSafe(statement.income_tax) ?? null;
+
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} FINAL: net_income=${netIncome}, revenue=${revenue}`);
+      console.log(`  [DEBUG] ${symbol} FINAL: net_income=${netIncome}, op_income=${operatingIncome}, pretax=${pretaxIncome}, tax=${incomeTax}, revenue=${revenue}`);
     }
-    
+
     return {
       net_income: netIncome,
       revenue: revenue,
+      operating_income: operatingIncome,
+      pretax_income: pretaxIncome,
+      income_tax: incomeTax,
       ebitda: parseFloatSafe(statement.ebitda) ?? parseFloatSafe(statement.normalized_ebitda) ?? null,
       fiscal_date: statement.fiscal_date || statement.date || null
     };
@@ -484,45 +488,83 @@ async function fetchIncomeStatement(symbol, context = {}) {
   }
 }
 
-// ✅ v2.5: Mise à jour pour calculer ROIC
-function computeFundamentalRatios(balanceSheet, incomeStatement) {
-  if (!balanceSheet) {
+// ✅ v2.9: Invested Capital = Total Assets - AP/Accrued - Excess Cash (méthode GuruFocus)
+function computeInvestedCapital(bs) {
+  if (!bs || bs.total_assets == null) return null;
+
+  const totalAssets = bs.total_assets;
+  const cash = bs.cash_and_st_investments ?? 0;
+  const curLiab = bs.total_current_liabilities ?? 0;
+  const curAssets = bs.total_current_assets ?? 0;
+  const ap = bs.accounts_payable ?? 0;
+  const accrued = bs.accrued_expenses ?? 0;
+
+  // Excess Cash = Cash - max(0, Current Liab - Current Assets + Cash)
+  const excessCash = cash - Math.max(0, curLiab - curAssets + cash);
+
+  const ic = totalAssets - ap - accrued - excessCash;
+
+  if (DEBUG) {
+    console.log(`    [IC] assets=${totalAssets}, ap+accrued=${ap + accrued}, excessCash=${excessCash} → IC=${ic}`);
+  }
+
+  return ic;
+}
+
+// ✅ v2.9: Nouvelle signature avec balanceSheetPrev pour moyennes
+function computeFundamentalRatios(bsCurrent, bsPrevious, incomeStatement) {
+  if (!bsCurrent) {
     return { roe: null, de_ratio: null, roic: null, error: 'no_balance_sheet' };
   }
-  
-  const equity     = balanceSheet.total_equity;
-  const debt       = balanceSheet.total_debt ?? null;
-  const cash       = balanceSheet.cash_and_st_investments ?? 0;
+
+  const equity     = bsCurrent.total_equity;
+  const equityPrev = bsPrevious?.total_equity ?? equity;
+  const debt       = bsCurrent.total_debt ?? null;
+  const cash       = bsCurrent.cash_and_st_investments ?? 0;
   const net_income = incomeStatement?.net_income ?? null;
 
   let roe = null;
   let de_ratio = null;
   let roic = null;
 
-  // ROE = Net Income / Equity (en %)
-  if (equity != null && equity !== 0 && net_income != null) {
-    roe = Math.round((net_income / equity) * 10000) / 100;
+  // ✅ v2.9: ROE = Net Income / Average Equity (en %)
+  const avgEquity = (equity != null && equityPrev != null) ? (equity + equityPrev) / 2 : equity;
+  if (avgEquity != null && avgEquity !== 0 && net_income != null) {
+    roe = Math.round((net_income / avgEquity) * 10000) / 100;
   }
 
-  // D/E = Debt / Equity (ratio)
+  // D/E = Debt / Equity instantanée (ratio) — standard, pas de moyenne
   if (equity != null && equity !== 0 && debt != null) {
     de_ratio = Math.round((debt / equity) * 100) / 100;
   }
 
-  // ✅ v2.5: ROIC simplifié = Net Income / Invested Capital (en %)
-  // Invested Capital = Equity + Debt - Cash
-  const invested_capital = 
-    (equity != null ? equity : 0) + 
-    (debt   != null ? debt   : 0) - 
-    (cash   != null ? cash   : 0);
+  // ✅ v2.9: ROIC = NOPAT / Average Invested Capital (en %)
+  // NOPAT = Operating Income × (1 - Tax Rate effective)
+  const opIncome   = incomeStatement?.operating_income ?? null;
+  const pretax     = incomeStatement?.pretax_income ?? null;
+  const taxAmount  = incomeStatement?.income_tax ?? null;
 
-  // Protection contre les entreprises "cash-rich" (IC trop faible ou négatif)
-  if (net_income != null && invested_capital > 1000) {
-    roic = Math.round((net_income / invested_capital) * 10000) / 100;
+  // Tax rate effectif, borné [0%, 50%], fallback 25%
+  let taxRate = 0.25;
+  if (pretax != null && pretax > 0 && taxAmount != null && taxAmount >= 0) {
+    taxRate = Math.min(Math.max(taxAmount / pretax, 0), 0.50);
   }
 
-  if (DEBUG && roic !== null) {
-    console.log(`  [DEBUG] ROIC: NI=${net_income?.toLocaleString()}, IC=${invested_capital?.toLocaleString()} (E=${equity?.toLocaleString()}+D=${debt?.toLocaleString()}-C=${cash?.toLocaleString()}) => ROIC=${roic}%`);
+  const nopat = opIncome != null ? opIncome * (1 - taxRate) : null;
+
+  // IC current + previous → average
+  const icCurrent  = computeInvestedCapital(bsCurrent);
+  const icPrevious = bsPrevious ? computeInvestedCapital(bsPrevious) : icCurrent;
+  const avgIC = (icCurrent != null && icPrevious != null) ? (icCurrent + icPrevious) / 2 : icCurrent;
+
+  if (nopat != null && avgIC != null && avgIC > 1000) {
+    roic = Math.round((nopat / avgIC) * 10000) / 100;
+  }
+
+  if (DEBUG) {
+    console.log(`  [DEBUG] ${incomeStatement?.fiscal_date || '?'}: ROE=${roe}% (NI=${net_income} / avgEq=${avgEquity})`);
+    console.log(`  [DEBUG] ROIC=${roic}% (NOPAT=${nopat} [opInc=${opIncome}×(1-${(taxRate*100).toFixed(1)}%)] / avgIC=${avgIC})`);
+    console.log(`  [DEBUG] D/E=${de_ratio} (debt=${debt} / eq=${equity})`);
   }
 
   return {
@@ -530,41 +572,51 @@ function computeFundamentalRatios(balanceSheet, incomeStatement) {
     de_ratio,
     roic,
     net_income,
+    operating_income: opIncome,
+    nopat,
+    tax_rate: Math.round(taxRate * 10000) / 100,
     total_debt: debt,
     total_equity: equity,
-    invested_capital,
+    avg_equity: avgEquity,
+    invested_capital: icCurrent,
+    avg_invested_capital: avgIC,
     cash_and_st_investments: cash,
-    balance_sheet_date: balanceSheet.fiscal_date,
-    income_statement_date: incomeStatement?.fiscal_date
+    balance_sheet_date: bsCurrent.fiscal_date,
+    income_statement_date: incomeStatement?.fiscal_date,
+    _formulaVersion: FORMULA_VERSION
   };
 }
 
-// ✅ v2.7: Accepte context et le propage aux fetchers
+// ✅ v2.9: Passe les 2 périodes de BS à computeFundamentalRatios
 async function fetchFundamentalsForSymbol(symbol, context = {}) {
-  const balanceSheet = await fetchBalanceSheet(symbol, context);
-  
-  if (balanceSheet?._rateLimited) {
+  const bsResult = await fetchBalanceSheet(symbol, context);
+
+  if (bsResult?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
     return fetchFundamentalsForSymbol(symbol, context);
   }
-  
+
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
-  
+
   const incomeStatement = await fetchIncomeStatement(symbol, context);
-  
+
   if (incomeStatement?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
     const incomeRetry = await fetchIncomeStatement(symbol, context);
-    const ratios = computeFundamentalRatios(balanceSheet, incomeRetry?._rateLimited ? null : incomeRetry);
+    const bsCurrent  = bsResult?.current ?? null;
+    const bsPrevious = bsResult?.previous ?? null;
+    const ratios = computeFundamentalRatios(bsCurrent, bsPrevious, incomeRetry?._rateLimited ? null : incomeRetry);
     return { symbol, ...ratios, fetched_at: new Date().toISOString() };
   }
-  
+
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
-  
-  const ratios = computeFundamentalRatios(balanceSheet, incomeStatement);
-  
+
+  const bsCurrent  = bsResult?.current ?? null;
+  const bsPrevious = bsResult?.previous ?? null;
+  const ratios = computeFundamentalRatios(bsCurrent, bsPrevious, incomeStatement);
+
   return {
     symbol,
     ...ratios,
@@ -574,90 +626,82 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.8 (+regions, +context, US fix)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.9 (NOPAT/AvgIC)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
+  console.log(`🔢 Formula version: ${FORMULA_VERSION}`);
   if (DEBUG) console.log('🐛 DEBUG mode activé');
-  
+
   const cache = await loadFundamentalsCache();
   const now = Date.now();
-  
+
   const needsUpdate = [];
   const fromCache = [];
-  let needsRoicMigration = 0;
-  
-  // ✅ v2.7: Migration — re-fetch si cache sans contexte (v2.6→v2.7) pour les stocks qui avaient null
+  let needsFormulaMigration = 0;
+
   for (const stock of stocks) {
     const ticker = stock['Ticker'];
     const cached = cache.data[ticker];
-    
+
     if (cached && cached.fetched_at) {
       const cachedTime = new Date(cached.fetched_at).getTime();
       const cacheNotExpired = now - cachedTime < CACHE_TTL_MS;
-      
-      // Vérifier si ROIC est présent dans le cache (migration v2.4 → v2.6)
-      const hasRoic = cached.roic !== undefined;
-      
-      // ✅ v2.7: Re-fetch si cache valide mais ROE+D/E sont TOUS les deux null
-      // (probablement un appel sans contexte qui a échoué)
+
+      // ✅ v2.9: Force re-fetch si formule obsolète
+      const formulaOk = (cached._formulaVersion || 0) >= FORMULA_VERSION;
+
+      // v2.7: Re-fetch si cache sans contexte
       const needsContextMigration = cached.roe === null && cached.de_ratio === null && !cached._hasContext;
-      
-      if (cacheNotExpired && hasRoic && !needsContextMigration) {
-        // Cache complet et valide → utiliser
+
+      if (cacheNotExpired && formulaOk && !needsContextMigration) {
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
         stock.roic = cached.roic;
         fromCache.push(ticker);
         continue;
-      } else if (cacheNotExpired && !hasRoic) {
-        // Cache valide mais sans ROIC → migration nécessaire
-        needsRoicMigration++;
       }
-      // Si cache expiré ou sans ROIC ou sans contexte → needsUpdate
+      if (!formulaOk) needsFormulaMigration++;
     }
     needsUpdate.push(stock);
   }
-  
-  console.log(`📁 ${fromCache.length} stocks avec cache valide (incluant ROIC)`);
+
+  console.log(`📁 ${fromCache.length} stocks avec cache valide (v${FORMULA_VERSION})`);
   console.log(`🔄 ${needsUpdate.length} stocks nécessitent mise à jour`);
-  if (needsRoicMigration > 0) {
-    console.log(`🔄 Dont ${needsRoicMigration} stocks en migration ROIC (cache v2.4 → v2.6)`);
+  if (needsFormulaMigration > 0) {
+    console.log(`🔄 Dont ${needsFormulaMigration} stocks en migration formule (v1 → v${FORMULA_VERSION})`);
   }
-  
-  // Estimation du temps
+
   if (needsUpdate.length > 0) {
-    const estimatedMinutes = Math.ceil(needsUpdate.length / 12); // ~12 stocks/min avec Ultra plan
+    const estimatedMinutes = Math.ceil(needsUpdate.length / 12);
     console.log(`⏱️ Temps estimé: ~${estimatedMinutes} minutes pour ${needsUpdate.length} stocks`);
   }
-  
+
   const toProcess = needsUpdate.slice(0, maxNewFetches);
   let processed = 0;
   let succeeded = 0;
   let failed = 0;
-  
+
   const startTime = Date.now();
-  
+
   for (const stock of toProcess) {
     const ticker = stock['Ticker'];
-    
+
     try {
       console.log(`  📊 [${processed + 1}/${toProcess.length}] ${ticker}...`);
-      
-      // ✅ v2.7: Passer le contexte exchange/country pour désambiguïser
+
       const fundamentals = await fetchFundamentalsForSymbol(ticker, {
         exchange: stock['Bourse de valeurs'] || '',
         country: stock['Pays'] || ''
       });
-      
-      // ✅ v2.7: Marquer le cache comme ayant été fetché avec contexte
+
       fundamentals._hasContext = true;
-      
+
       cache.data[ticker] = fundamentals;
       stock.roe = fundamentals.roe;
       stock.de_ratio = fundamentals.de_ratio;
       stock.roic = fundamentals.roic;
-      
+
       if (fundamentals.roe !== null || fundamentals.de_ratio !== null || fundamentals.roic !== null) {
         console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'}, ROIC=${fundamentals.roic?.toFixed(1) ?? 'N/A'}%`);
         succeeded++;
@@ -665,7 +709,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         console.log(`  ⚠️ ${ticker}: Données incomplètes (equity=${fundamentals.total_equity}, income=${fundamentals.net_income})`);
         failed++;
       }
-      
+
     } catch (error) {
       console.error(`  ❌ ${ticker}: Erreur -`, error.message);
       cache.data[ticker] = {
@@ -674,6 +718,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         de_ratio: null,
         roic: null,
         _hasContext: true,
+        _formulaVersion: FORMULA_VERSION,
         error: error.message,
         fetched_at: new Date().toISOString()
       };
@@ -682,10 +727,9 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.roic = null;
       failed++;
     }
-    
+
     processed++;
-    
-    // Sauvegarde intermédiaire tous les 10 stocks
+
     if (processed % 10 === 0) {
       await saveFundamentalsCache(cache);
       const elapsed = (Date.now() - startTime) / 1000;
@@ -695,7 +739,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       console.log(`  💾 Cache sauvegardé (${processed}/${toProcess.length}) - ${rate.toFixed(0)} stocks/min - ETA: ${etaMinutes}min`);
     }
   }
-  
+
   const notProcessed = needsUpdate.slice(maxNewFetches);
   for (const stock of notProcessed) {
     const ticker = stock['Ticker'];
@@ -704,11 +748,11 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     stock.de_ratio = cached?.de_ratio ?? null;
     stock.roic = cached?.roic ?? null;
   }
-  
+
   await saveFundamentalsCache(cache);
-  
+
   const totalTime = (Date.now() - startTime) / 1000;
-  
+
   console.log('\n' + '─'.repeat(50));
   console.log('📊 RÉSUMÉ ENRICHISSEMENT:');
   console.log(`  ✅ Depuis cache: ${fromCache.length}`);
@@ -720,7 +764,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     console.log(`  ⏱️ Temps: ${(totalTime/60).toFixed(1)}min (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
   }
   console.log('─'.repeat(50));
-  
+
   return stocks;
 }
 
@@ -728,7 +772,6 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 // CSV HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ✅ v2.5: Ajout de 'roic' dans le header
 const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','roe','de_ratio','roic'];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
@@ -810,13 +853,14 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.8\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.9\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
+  console.log(`   FORMULA_VERSION=${FORMULA_VERSION}`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
   console.log(`   DEBUG=${DEBUG}`);
-  
+
   const allOutputs = [];
   const allRejected = [];
   const stats = { total: 0, passed: 0, failed: 0 };
@@ -829,10 +873,10 @@ async function throttle() {
     const filtered = [];
     const rejected = [];
     let processed = 0;
-    
+
     for (const r of rows) {
       await throttle();
-      
+
       const ticker = (r['Ticker']||'').trim();
       const exch   = r['Bourse de valeurs'] || '';
       const mic    = toMIC(exch, r['Pays'] || '');
@@ -842,7 +886,7 @@ async function throttle() {
       const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
       const source = VOL_MIN_BY_MIC[mic || ''] ? `MIC:${mic}` : `REGION:${region}`;
       stats.total++;
-      
+
       if (vol >= thr) {
         filtered.push({
           'Ticker': ticker,
@@ -868,7 +912,7 @@ async function throttle() {
           'Raison': `Volume ${vol} < Seuil ${thr}`
         });
       }
-      
+
       processed++;
       if (processed % 10 === 0) console.log(`  Progression: ${processed}/${rows.length}`);
     }
@@ -892,22 +936,22 @@ for (const output of allOutputs) {
 
 await writeCSV(path.join(OUT_DIR, 'Actions_filtrees_par_volume.csv'), combined);
 await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
-  
+
   // Résumé final
   console.log('\n' + '='.repeat(50));
   console.log('📊 RÉSUMÉ FINAL');
   console.log('='.repeat(50));
   console.log(`Total: ${stats.total} | ✅ ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%) | ❌ ${stats.failed}`);
-  
+
   const withROE = combined.filter(s => s.roe !== null).length;
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   const withROIC = combined.filter(s => s.roic !== null).length;
-  
-  console.log(`\n📈 Fondamentaux Buffett:`);
+
+  console.log(`\n📈 Fondamentaux Buffett (v2.9 — NOPAT/AvgIC):`);
   console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
   console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
   console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);
-  
+
   // Top ROE
   if (withROE > 0) {
     console.log('\n🏆 TOP 10 ROE:');
@@ -918,20 +962,20 @@ await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allR
         console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'} ROIC=${s.roic?.toFixed(1) ?? 'N/A'}%`);
       });
   }
-  
+
   // Top ROIC
   if (withROIC > 0) {
     console.log('\n🏆 TOP 10 ROIC:');
-    combined.filter(s => s.roic !== null && s.roic > 0 && s.roic < 200)  // Exclure outliers
+    combined.filter(s => s.roic !== null && s.roic > 0 && s.roic < 200)
       .sort((a, b) => b.roic - a.roic)
       .slice(0, 10)
       .forEach((s, i) => {
         console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROIC=${s.roic.toFixed(1)}% ROE=${s.roe?.toFixed(1) ?? 'N/A'}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'}`);
       });
   }
-  
+
   console.log('\n' + '='.repeat(50));
-  
+
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_filtered=${combined.length}\n`);
