@@ -436,9 +436,9 @@ const ITALY_FALLBACK = {
     'STLAM': { sym: '8TI',  exchange: 'XETR' },                    // Stellantis ✅
     'MONC':  { sym: 'MOV',  exchange: 'XETR' },                    // Moncler ✅
     // ✅ v3.25c: Corrections confirmées par tests API
-    'LDO':   { sym: 'LDO',  exchange: 'XWBO', country: 'Austria' }, // Leonardo → Vienne ✅
+    'LDO':   { sym: 'FMNB', exchange: 'XETR' },                    // Leonardo ✅
     'BMPS':  { sym: 'MPI0', exchange: 'XETR' },                    // Monte Paschi → XETR ✅
-    // CPR (Campari): aucun cross-listing trouvé ❌
+    'CPR':   { sym: '58H',  exchange: 'XETR' },                    // Campari ✅
 };
 
 // ✅ v3.25: MIC → exchange+country pour endpoints data TD
