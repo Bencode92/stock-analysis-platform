@@ -1,5 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.10b - ITALY_FALLBACK: force whitelist volume (vol DE aussi faible)
 // Version 2.10 - ITALY_FALLBACK: whitelist volume + fondamentaux via cross-listings DE
 // Version 2.9 - Fix ROIC (NOPAT/Avg IC), ROE (Avg Equity), cache versioning
 //   - ROIC = NOPAT / Average Invested Capital (méthode GuruFocus)
@@ -882,7 +883,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.10\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.10b\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
   console.log(`   FORMULA_VERSION=${FORMULA_VERSION}`);
@@ -912,18 +913,10 @@ async function throttle() {
       let { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
       let vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
 
-      // ✅ v2.10: Stocks italiens ITALY_FALLBACK → whitelist (volume TD non fiable pour XMIL)
+      // ✅ v2.10b: Stocks italiens ITALY_FALLBACK → force pass (volume TD non fiable pour XMIL ET cross-listings DE)
       if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) {
-        const fb = ITALY_FALLBACK[ticker];
-        const fbQuote = await tryQuote(fb.sym, fb.exchange);
-        if (fbQuote) {
-          sym = fb.sym;
-          quote = fbQuote;
-          vol = Number(fbQuote.volume) || Number(fbQuote.average_volume) || 999_999;
-        } else {
-          vol = 999_999; // force pass — blue chip confirmée
-        }
-        if (DEBUG) console.log(`  [ITALY WHITELIST] ${ticker} → ${fb.sym}:${fb.exchange} (vol forced)`);
+        vol = 999_999; // force pass inconditionnellement — blue chip confirmée
+        console.log(`  [ITALY WHITELIST] ${ticker} → forced pass (blue chip)`);
       }
 
       const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
@@ -990,7 +983,7 @@ async function throttle() {
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   const withROIC = combined.filter(s => s.roic !== null).length;
 
-  console.log(`\n📈 Fondamentaux Buffett (v2.10 — NOPAT/AvgIC + ITALY_FALLBACK):`);
+  console.log(`\n📈 Fondamentaux Buffett (v2.10b — NOPAT/AvgIC + ITALY_FALLBACK):`);
   console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
   console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
   console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);
