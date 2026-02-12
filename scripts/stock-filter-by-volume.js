@@ -905,8 +905,23 @@ async function throttle() {
       const ticker = (r['Ticker']||'').trim();
       const exch   = r['Bourse de valeurs'] || '';
       const mic    = toMIC(exch, r['Pays'] || '');
-      const { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
-      const vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
+      let { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
+      let vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
+
+      // ✅ v2.10: Fallback italien — si vol=0 et stock XMIL, essayer cross-listing DE
+      if (vol === 0 && mic === 'XMIL') {
+        const fb = ITALY_FALLBACK[ticker];
+        if (fb) {
+          const fbQuote = await tryQuote(fb.sym, fb.exchange);
+          const fbVol = fbQuote ? (Number(fbQuote.volume)||Number(fbQuote.average_volume)||0) : 0;
+          if (fbVol > 0) {
+            sym = fb.sym;
+            quote = fbQuote;
+            vol = fbVol;
+            if (DEBUG) console.log(`  [ITALY] ${ticker} → ${fb.sym}:${fb.exchange} vol=${fbVol}`);
+          }
+        }
+      }
 
       const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
       const source = VOL_MIN_BY_MIC[mic || ''] ? `MIC:${mic}` : `REGION:${region}`;
