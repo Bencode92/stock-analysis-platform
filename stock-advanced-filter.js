@@ -256,7 +256,7 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
 
         // P3: MIC_HINTS — exchange+country (confirmé pour LSE, ISE, BME, SIX)
         const hint = mic ? MIC_HINTS[mic] : null;
-        if (hint) {
+        if (hint && mic !== 'XMIL') {
             trials.push({ symbol: base, exchange: hint.exchange, country: hint.country });
         }
 
@@ -297,7 +297,7 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
 // ✅ v3.17.4: FIX cache avec clé précise et désactivation du réordonnancement pour endpoints sensibles
 async function fetchTD(endpoint, trials, extraParams = {}) {
     // Clé de cache précise incluant tous les paramètres importants
-    const makeKey = (t) => `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}`;
+    const makeKey = (t) => `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}:${t.country || ''}`;
 
     // ⚠️ Pour les endpoints sensibles, on ne réordonne PAS par cache
     const CACHE_REORDER_UNSAFE = ['dividends', 'time_series', 'splits'];
@@ -477,7 +477,17 @@ function rankCandidate(c, wanted){
     if (US_EXCH.test(c.exchange||"") && !isUSCountry(wanted.country)) s -= 3;     // évite ADR US
     return s;
 }
+// ✅ v3.25b: Helpers Italie + type robuste
+const isItalyStock = (stock) => {
+  const ex = normalize(stock.exchange);
+  const c  = normalize(stock.country);
+  return /borsa italiana/.test(ex) || c === 'italie' || c === 'italy';
+};
 
+const isCommonStock = (c) => {
+  const t = normalize(c?.type || c?.instrument_type || '');
+  return t === 'common stock';
+};
 // Quote robuste (essaye SYM:MIC, puis mic_code, puis SYM brut)
 async function tryQuote(sym, mic){
     const attempt = async (params) => {
@@ -492,6 +502,12 @@ async function tryQuote(sym, mic){
         if (q1) return q1;
         const q2 = await attempt({ symbol: sym, mic_code: mic, apikey: CONFIG.API_KEY });
         if (q2) return q2;
+        // ✅ v3.25b: Essai via MIC_HINTS (exchange+country)
+        const hint = MIC_HINTS[mic];
+        if (hint) {
+            const q3 = await attempt({ symbol: sym, exchange: hint.exchange, country: hint.country, apikey: CONFIG.API_KEY });
+            if (q3) return q3;
+        }
     }
     return await attempt({ symbol: sym, apikey: CONFIG.API_KEY });
 }
@@ -508,9 +524,10 @@ function resolveSymbol(symbol, stock) {
 // Résolution "smart": test direct, sinon /stocks → meilleur candidat - v3.16: utilise isUSCountry
 async function resolveSymbolSmart(symbol, stock) {
     const mic = toMIC(stock.exchange, stock.country);
-
     // 🚀 FAST PATH v3.14: Priorité absolue pour Europe/Asie avec MIC connu
-    if (mic && !isUSMic(mic)) {
+    // ✅ v3.25b: Exclure Italie — /quote OK sur XMIL mais /time_series KO
+    const italy = isItalyStock(stock);
+    if (mic && !isUSMic(mic) && !italy) {
         const qEU = await tryQuote(symbol, mic);
         if (qEU && nameLooksRight(qEU.name, stock.name)) {
             if (CONFIG.DEBUG) console.log(`[FAST PATH] ${symbol} → ${symbol}:${mic} (${stock.country})`);
@@ -524,13 +541,15 @@ async function resolveSymbolSmart(symbol, stock) {
     const okMarket = !(looksUS && !isUSCountry(stock.country));
     const okName   = q?.name ? nameLooksRight(q.name, stock.name) : true;
 
-    if (q && okMarket && okName) {
+    if (q && okMarket && okName && !italy) {
         return mic ? `${symbol}:${mic}` : symbol;         // symbole final (suffixé si on sait le MIC)
     }
 
 // 2) lookup /stocks pour symbole TD non ambigu (priorité MIC voulu, LSE 0XXX)
     const countryEN = COUNTRY_EN[normalize(stock.country)] || stock.country;
-    const cand = await tdStocksLookup({ symbol, country: countryEN, exchange: stock.exchange });
+    const micWanted = toMIC(stock.exchange, stock.country);
+    const exWanted = MIC_HINTS[micWanted]?.exchange || stock.exchange;
+    const cand = await tdStocksLookup({ symbol, country: countryEN, exchange: exWanted });
     if (cand.length) {
         cand.sort((a,b)=>rankCandidate(b,stock) - rankCandidate(a,stock));
         const best = cand[0]; // ex: 0QOK (Roche)
@@ -560,7 +579,9 @@ async function resolveSymbolSmart(symbol, stock) {
         const countryEN_it = COUNTRY_EN[normalize(stock.country)] || stock.country;
         const deCands = await tdStocksLookup({ symbol, country: 'Germany' });
         const DE_MICS = ['XETR', 'XFRA', 'XSTU', 'XHAN', 'XMUN'];
-        const deMatch = deCands.find(c => DE_MICS.includes(c.mic_code) && c.instrument_type === 'Common Stock');
+        const deMatch = deCands
+          .filter(c => DE_MICS.includes(c.mic_code) && isCommonStock(c))
+          .sort((a,b) => (a.mic_code === 'XETR' ? -1 : 0) - (b.mic_code === 'XETR' ? -1 : 0))[0];
         if (deMatch) {
             const qDyn = await tryQuote(deMatch.symbol, deMatch.mic_code);
             if (qDyn) {
@@ -570,7 +591,7 @@ async function resolveSymbolSmart(symbol, stock) {
         }
         // Dernier essai : Vienne (XWBO)
         const atCands = await tdStocksLookup({ symbol, country: 'Austria' });
-        const atMatch = atCands.find(c => c.mic_code === 'XWBO' && c.instrument_type === 'Common Stock');
+        const atMatch = atCands.find(c => c.mic_code === 'XWBO' && isCommonStock(c));
         if (atMatch) {
             const qAt = await tryQuote(atMatch.symbol, 'XWBO');
             if (qAt) {
@@ -962,11 +983,9 @@ async function getMarketCapDirect(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.MARKET_CAP);
         
-        // Si déjà résolu avec :MIC, ne pas re-résoudre
-        const isResolved = /:/.test(symbol);
-        const trials = isResolved 
-            ? [{ symbol }]
-            : tdParamTrials(symbol, stock);
+        // ✅ v3.25b: Ne pas court-circuiter — utiliser les trials complets
+        const base = /:/.test(symbol) ? symbol.split(':')[0] : symbol;
+        const trials = tdParamTrials(base, stock, symbol);
         
         const data = await fetchTD('market_cap', trials);
         if (!data) return null;
