@@ -1,5 +1,6 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.10c - Fix fondamentaux IT: country=Italy d'abord, retry DE cross-listing si échec
 // Version 2.10b - ITALY_FALLBACK: force whitelist volume (vol DE aussi faible)
 // Version 2.10 - ITALY_FALLBACK: whitelist volume + fondamentaux via cross-listings DE
 // Version 2.9 - Fix ROIC (NOPAT/Avg IC), ROE (Avg Equity), cache versioning
@@ -134,6 +135,7 @@ const COUNTRY_EN = {
 };
 
 // ✅ v2.7: MIC → exchange+country pour endpoints data TD (fondamentaux)
+// ✅ v2.10c: XMIL → country=Italy (pas XETR — cross-listings DE n'ont pas de fondamentaux)
 const MIC_HINTS = {
     'XLON': { exchange: 'LSE',      country: 'United Kingdom' },
     'XDUB': { exchange: 'ISE',      country: 'Ireland' },
@@ -144,7 +146,7 @@ const MIC_HINTS = {
     'XBRU': { exchange: 'Euronext', country: 'Belgium' },
     'XLIS': { exchange: 'Euronext', country: 'Portugal' },
     'XETR': { exchange: 'XETR',    country: 'Germany' },
-    'XMIL': { exchange: 'XETR',    country: 'Germany' },
+    'XMIL': { country: 'Italy' },
     'XWBO': { exchange: 'Vienna',   country: 'Austria' },
     'XOSL': { exchange: 'OSE',      country: 'Norway' },
     'XSTO': { exchange: 'NASDAQ Stockholm', country: 'Sweden' },
@@ -152,7 +154,7 @@ const MIC_HINTS = {
     'XHEL': { exchange: 'NASDAQ Helsinki', country: 'Finland' },
 };
 
-// ✅ v2.10: Mapping Italie → cross-listings DE (tickers différents sur XETR)
+// ✅ v2.10: Mapping Italie → cross-listings DE (pour volume/prix uniquement)
 // Volume TD non fiable pour XMIL → ces blue caps sont whitelistées
 const ITALY_FALLBACK = {
     'ISP':   { sym: 'IES',  exchange: 'XETR', country: 'Germany' },
@@ -183,6 +185,7 @@ function toMIC(exchange, country=''){
   return COUNTRY2MIC[normalize(country)] || null;
 }
 
+// ✅ v2.10c: Fondamentaux — ticker original + country=Italy (pas de remap DE)
 function buildFundamentalsParams(symbol, context = {}) {
   const mic = toMIC(context.exchange || '', context.country || '');
   const params = { symbol, period: 'annual', apikey: API_KEY };
@@ -192,27 +195,19 @@ function buildFundamentalsParams(symbol, context = {}) {
     return params;
   }
 
-  // ✅ v2.10: Remap ticker italien vers cross-listing DE
-  if (mic === 'XMIL') {
-    const fb = ITALY_FALLBACK[symbol];
-    if (fb) {
-      params.symbol = fb.sym;
-      params.exchange = fb.exchange;
-      params.country = fb.country;
-      if (DEBUG) console.log(`  [DEBUG] ITALY_FALLBACK ${symbol} → ${fb.sym}:${fb.exchange}`);
-      return params;
-    }
-  }
+  // ✅ v2.10c: PAS de remap ITALY_FALLBACK pour fondamentaux
+  // Les cross-listings DE (AEU, FMNB, MPI0...) n'ont pas de fondamentaux sur TD
+  // On utilise le ticker original + country=Italy via MIC_HINTS
 
   const hint = mic ? MIC_HINTS[mic] : null;
 
   if (hint) {
-    if (/euronext/i.test(hint.exchange)) {
+    if (/euronext/i.test(hint.exchange || '')) {
       params.exchange = 'Euronext';
       params.mic_code = mic;
       params.country = hint.country;
     } else {
-      params.exchange = hint.exchange;
+      if (hint.exchange) params.exchange = hint.exchange;
       if (hint.country) params.country = hint.country;
     }
   } else if (mic) {
@@ -617,7 +612,7 @@ function computeFundamentalRatios(bsCurrent, bsPrevious, incomeStatement) {
   };
 }
 
-// ✅ v2.9: Passe les 2 périodes de BS à computeFundamentalRatios
+// ✅ v2.10c: Retry avec DE cross-listing si ticker IT échoue
 async function fetchFundamentalsForSymbol(symbol, context = {}) {
   const bsResult = await fetchBalanceSheet(symbol, context);
 
@@ -645,6 +640,31 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
   const bsCurrent  = bsResult?.current ?? null;
   const bsPrevious = bsResult?.previous ?? null;
+
+  // ✅ v2.10c: Si échec ET stock italien dans ITALY_FALLBACK → retry avec cross-listing DE
+  const mic = toMIC(context.exchange || '', context.country || '');
+  if (!bsCurrent && !incomeStatement && mic === 'XMIL' && ITALY_FALLBACK[symbol]) {
+    const fb = ITALY_FALLBACK[symbol];
+    console.log(`  🔄 [ITALY RETRY] ${symbol} → ${fb.sym}:${fb.exchange} (country=Italy échoué)`);
+
+    const deContext = { exchange: fb.exchange, country: 'Germany' };
+    // Override buildFundamentalsParams en passant directement le sym DE
+    const bsDE = await fetchBalanceSheet(fb.sym, deContext);
+    await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
+    const isDE = await fetchIncomeStatement(fb.sym, deContext);
+    await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
+
+    const bsDECurrent  = bsDE?.current ?? null;
+    const bsDEPrevious = bsDE?.previous ?? null;
+    const ratiosDE = computeFundamentalRatios(bsDECurrent, bsDEPrevious, isDE);
+
+    if (ratiosDE.roe !== null || ratiosDE.de_ratio !== null) {
+      console.log(`  ✅ [ITALY RETRY] ${symbol} via ${fb.sym}:${fb.exchange} → ROE=${ratiosDE.roe}`);
+    }
+
+    return { symbol, ...ratiosDE, fetched_at: new Date().toISOString() };
+  }
+
   const ratios = computeFundamentalRatios(bsCurrent, bsPrevious, incomeStatement);
 
   return {
@@ -656,7 +676,7 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.10 (NOPAT/AvgIC + ITALY_FALLBACK)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.10c (ITALY: country=Italy + retry DE)');
   console.log('═'.repeat(50));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
@@ -883,7 +903,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.10b\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.10c\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
   console.log(`   FORMULA_VERSION=${FORMULA_VERSION}`);
@@ -983,7 +1003,7 @@ async function throttle() {
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   const withROIC = combined.filter(s => s.roic !== null).length;
 
-  console.log(`\n📈 Fondamentaux Buffett (v2.10b — NOPAT/AvgIC + ITALY_FALLBACK):`);
+  console.log(`\n📈 Fondamentaux Buffett (v2.10c — country=Italy + retry DE):`);
   console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
   console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
   console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);
