@@ -1265,6 +1265,11 @@ function calculateBuffettScore(stock) {
     const isFin = SECTOR_PROFILE_MAP[(stock.sector || '').toLowerCase().trim()] === 'FIN'
                || SECTOR_PROFILE_REGEX.some(r => r.profile === 'FIN' && r.re.test((stock.sector || '').toLowerCase()));
 
+    // ✅ v3.30: Buffett Score non applicable aux financières (banques, assureurs)
+    // ROIC et D/E n'ont pas de sens pour FIN, il ne resterait que ROE → score bancal
+    // Le Quality Score FIN est conçu pour ça → on laisse Buffett = null
+    if (isFin) return { score: null, grade: null, used: 0, detail: 'FIN_NOT_APPLICABLE', bonus: 0 };
+
     // Préférer les moyennes 3Y (moins bruitées), fallback année N
     const ROE  = Number.isFinite(stock.roe_avg_3y)  ? stock.roe_avg_3y  : stock.roe;
     const ROIC = Number.isFinite(stock.roic_avg_3y) ? stock.roic_avg_3y : stock.roic;
@@ -1280,8 +1285,8 @@ function calculateBuffettScore(stock) {
     const sROIC = linScore(ROIC, 3, 20, 25);
     if (sROIC != null) parts.push({ name: 'roic', pts: sROIC, max: 25 });
 
-    // D/E: 0 → 20 pts, 2.5 → 0 pts (linéaire inverse) — exclu pour FIN
-    if (!isFin && Number.isFinite(DE) && DE >= 0) {
+    // D/E: 0 → 20 pts, 2.5 → 0 pts (linéaire inverse)
+    if (Number.isFinite(DE) && DE >= 0) {
         const sDE = linScore(2.5 - Math.min(2.5, DE), 0, 2.5, 20);
         if (sDE != null) parts.push({ name: 'de', pts: sDE, max: 20 });
     }
@@ -1295,7 +1300,7 @@ function calculateBuffettScore(stock) {
 
     // Coverage cap : évite les scores gonflés quand il manque des données
     if (used < 2) score = Math.min(score, 60);
-    if (used < 3 && !isFin) score = Math.min(score, 80);
+    if (used < 3) score = Math.min(score, 80);
 
     // Bonus stabilité ROE (coefficient de variation sur 3 ans)
     let bonus = 0;
@@ -1944,6 +1949,14 @@ function buildDist(stocks, field, filter = validNum) {
 }
 
 // Score a single metric against its distribution
+// ✅ v3.30: Shrinkage — ramène le percentile vers 50 quand le peer group est petit
+// Évite les rankings instables (chaque rang vaut ~14 pts avec n=7)
+// n0=20 = taille à partir de laquelle on fait pleinement confiance au ranking
+function shrinkTo50(p, n, n0 = 20) {
+    const k = Math.min(1, Math.max(0, (n - 1) / n0));
+    return 50 + (p - 50) * k;
+}
+
 function scoreMetric(value, sorted, direction, opts = {}) {
     if (!sorted || sorted.length < 5) {
         return { sc: null, used: false, imputed: false };
@@ -1958,11 +1971,13 @@ function scoreMetric(value, sorted, direction, opts = {}) {
     // Clamp value to winsorized range
     const clamped = clampVal(value, sorted[0], sorted[sorted.length - 1]);
     let p = percentileRank(sorted, clamped);
+    // ✅ v3.30: Shrinkage vers 50 pour petits échantillons
+    p = shrinkTo50(p, sorted.length);
     if (direction === 'low') p = 100 - p;
     return { sc: p, used: true, imputed: false };
 }
 
-// Score payout as distance to sector target (non-monotone)
+// Score payout as distance to sector target (non-monotone) — YIELD only
 function scorePayoutTarget(value, sorted, target) {
     if (!sorted || sorted.length < 5) {
         return { sc: null, used: false, imputed: false };
@@ -1975,6 +1990,19 @@ function scorePayoutTarget(value, sorted, target) {
     const dists = sorted.map(x => Math.abs(x - target)).sort((a, b) => a - b);
     const p = 100 - percentileRank(dists, distToTarget);
     return { sc: p, used: true, imputed: false };
+}
+
+// ✅ v3.30: Payout monotone (soutenabilité) — DEFAULT & FIN
+// Payout bas = safe (pas de pénalité pour buyback-heavy companies)
+// Payout élevé = risque de cut
+function scorePayoutSafety(value) {
+    if (!validNum(value)) return { sc: 35, used: true, imputed: true };
+    let sc;
+    if (value <= 60)       sc = 100;                               // ≤60% = safe
+    else if (value <= 90)  sc = 100 - (value - 60) * (40 / 30);   // 60→100, 90→60
+    else if (value <= 120) sc = 60  - (value - 90) * (40 / 30);   // 90→60, 120→20
+    else                   sc = Math.max(0, 20 - (value - 120));   // >120 → danger
+    return { sc: Math.max(0, Math.min(100, sc)), used: true, imputed: false };
 }
 
 /**
@@ -2077,7 +2105,11 @@ function computeQualityScores(allStocks) {
             dist.pe, 'low'
         );
         const mFCF  = scoreMetric(s.fcf_yield, dist.fcf, 'high');
-        const mG    = scoreMetric(s.eps_growth_5y, dist.growth, 'high');
+        // ✅ v3.30: Cap EPS growth à ±80% pour neutraliser spin-offs/one-offs (ROG -46%, SU -197%)
+        const epsGrowthCapped = validNum(s.eps_growth_5y)
+            ? clampVal(s.eps_growth_5y, -80, 80)
+            : s.eps_growth_5y;
+        const mG    = scoreMetric(epsGrowthCapped, dist.growth, 'high');
 
         // ✅ v3.27: Multi-year metrics
         const mROEAvg  = scoreMetric(s.roe_avg_3y, dist.roe_avg, 'high');
@@ -2098,9 +2130,10 @@ function computeQualityScores(allStocks) {
             else if (cv > 0.80) stabilityBonus = -5;  // très volatile
         }
 
-        // Payout: non-monotone, distance à une cible sectorielle
-        const payoutTarget = (profile === 'YIELD') ? 70 : 50;
-        const mPayout = scorePayoutTarget(s.payout_ratio_ttm, dist.payout, payoutTarget);
+        // ✅ v3.30: Payout scoring — monotone (soutenabilité) pour DEFAULT/FIN, distance à cible pour YIELD
+        const mPayout = (profile === 'YIELD')
+            ? scorePayoutTarget(s.payout_ratio_ttm, dist.payout, 70)
+            : scorePayoutSafety(s.payout_ratio_ttm);
 
         // ── Track coverage & imputations ──
         const imputed = [];
@@ -2170,7 +2203,8 @@ function computeQualityScores(allStocks) {
         let penalty = 0;
         const penalties = [];
 
-        if (validNum(s.roic) && s.roic <= 0) {
+        // ✅ v3.30: ROIC penalty exclue pour FIN (ROIC non pertinent pour banques/assureurs)
+        if (profile !== 'FIN' && validNum(s.roic) && s.roic <= 0) {
             penalty += 15; penalties.push('roic_negative');
         }
         if (validNum(s.payout_ratio_ttm) && s.payout_ratio_ttm > 120 && profile !== 'YIELD') {
