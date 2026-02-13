@@ -1789,7 +1789,7 @@ function winsorize(sorted, pLow = 0.05, pHigh = 0.95) {
 // 3 profils sectoriels max — pas de micro-tuning
 function sectorProfile(sector = '') {
     const s = (sector || '').toLowerCase();
-    if (/bank|insurance|financial/.test(s)) return 'FIN';
+    if (/bank|insurance|financ/.test(s)) return 'FIN';
     if (/utilit|reit|telecom|real estate|electric/.test(s)) return 'YIELD';
     return 'DEFAULT';
 }
