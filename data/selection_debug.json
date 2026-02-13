@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-13-08-28-49",
-    "git_sha": "29e5a43c7",
-    "git_sha_full": "29e5a43c7f9440060bc6a1c83f9057a22545270b",
+    "run_id": "2026-02-13-16-46-52",
+    "git_sha": "2653784ef",
+    "git_sha_full": "2653784ef1d01d0292acfbaebc25c77ebb143c31",
     "config_hash": "1dd525e8",
     "universe_asof": "2026-02-13",
-    "timestamp_utc": "2026-02-13T08:28:49.824468+00:00",
+    "timestamp_utc": "2026-02-13T16:46:52.549556+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 145.61
+    "total_duration_sec": 223.26
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,22 +22,22 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3103,
-      "after": 3103,
+      "before": 3112,
+      "after": 3112,
       "rejected": 0,
-      "equity": 996,
+      "equity": 1005,
       "etf": 1342,
       "crypto": 341,
       "bond": 424
     },
     "hard_filters_equity": {
       "name": "hard_filters",
-      "before": 996,
-      "after": 961,
-      "rejected": 35,
+      "before": 1005,
+      "after": 967,
+      "rejected": 38,
       "category": "equity",
       "reason_counts": {
-        "MISSING_DATA": 35
+        "MISSING_DATA": 38
       },
       "duration_sec": 0.0
     },
@@ -51,43 +51,43 @@
       "top_k": [
         {
           "ticker": "K",
-          "score": 0.8688
+          "score": 0.8692
         },
         {
           "ticker": "000660",
-          "score": 0.8485
+          "score": 0.8478
         },
         {
           "ticker": "WDC",
-          "score": 0.8291
+          "score": 0.8271
         },
         {
           "ticker": "ENR",
-          "score": 0.79
+          "score": 0.7887
         },
         {
           "ticker": "EME",
-          "score": 0.7854
+          "score": 0.7848
         },
         {
           "ticker": "VEDL",
-          "score": 0.7831
+          "score": 0.7817
         },
         {
           "ticker": "HCA",
-          "score": 0.7755
+          "score": 0.7758
         },
         {
           "ticker": "NRG",
-          "score": 0.7679
+          "score": 0.7687
         },
         {
           "ticker": "MPWR",
-          "score": 0.7663
+          "score": 0.7659
         },
         {
           "ticker": "JBL",
-          "score": 0.7653
+          "score": 0.7651
         }
       ]
     },
@@ -150,44 +150,44 @@
       "profile": "Agressif",
       "top_k": [
         {
-          "ticker": "C98/USD",
+          "ticker": "STG/USD",
           "score": 100.0
         },
         {
-          "ticker": "STG/USD",
-          "score": 99.04
+          "ticker": "ZRO/USD",
+          "score": 99.51
         },
         {
-          "ticker": "ZRO/USD",
-          "score": 98.96
+          "ticker": "C98/USD",
+          "score": 94.73
         },
         {
           "ticker": "DUSK/USD",
-          "score": 90.87
-        },
-        {
-          "ticker": "CVX/USD",
-          "score": 88.18
+          "score": 91.57
         },
         {
           "ticker": "REP/EUR",
-          "score": 87.93
+          "score": 91.08
+        },
+        {
+          "ticker": "CVX/USD",
+          "score": 90.59
         },
         {
           "ticker": "GNO/EUR",
-          "score": 87.78
+          "score": 86.42
         },
         {
           "ticker": "GNO/USD",
-          "score": 84.0
+          "score": 85.83
+        },
+        {
+          "ticker": "DCR/USD",
+          "score": 84.61
         },
         {
           "ticker": "MANTA/USD",
-          "score": 83.82
-        },
-        {
-          "ticker": "KEEP/USD",
-          "score": 78.4
+          "score": 84.46
         }
       ]
     },
@@ -250,44 +250,44 @@
       "profile": "Modéré",
       "top_k": [
         {
-          "ticker": "CLX",
-          "score": 0.7819
+          "ticker": "FGR",
+          "score": 0.7794
         },
         {
-          "ticker": "FGR",
-          "score": 0.7763
+          "ticker": "CLX",
+          "score": 0.778
         },
         {
           "ticker": "VEDL",
-          "score": 0.774
+          "score": 0.7675
         },
         {
           "ticker": "ABBV",
-          "score": 0.7646
-        },
-        {
-          "ticker": "HCA",
           "score": 0.7597
         },
         {
+          "ticker": "HCA",
+          "score": 0.7541
+        },
+        {
           "ticker": "COR",
-          "score": 0.7503
+          "score": 0.7451
         },
         {
           "ticker": "HIG",
-          "score": 0.7426
+          "score": 0.7401
         },
         {
           "ticker": "TRV",
-          "score": 0.7349
-        },
-        {
-          "ticker": "KR",
-          "score": 0.729
+          "score": 0.7333
         },
         {
           "ticker": "INGA",
-          "score": 0.7262
+          "score": 0.7246
+        },
+        {
+          "ticker": "ADM",
+          "score": 0.723
         }
       ]
     },
@@ -343,8 +343,8 @@
     },
     "5_selection_crypto_Modéré": {
       "name": "selection_crypto",
-      "before": 24,
-      "after": 24,
+      "before": 23,
+      "after": 23,
       "rejected": 0,
       "category": "crypto",
       "profile": "Modéré",
@@ -355,39 +355,39 @@
         },
         {
           "ticker": "XAUT/USD",
-          "score": 95.8
+          "score": 97.95
         },
         {
           "ticker": "TRX/USD",
-          "score": 88.19
-        },
-        {
-          "ticker": "NFT/USD",
-          "score": 74.28
+          "score": 84.16
         },
         {
           "ticker": "BCH/USD",
-          "score": 64.17
-        },
-        {
-          "ticker": "GNO/USD",
-          "score": 62.47
-        },
-        {
-          "ticker": "PORTO/USD",
-          "score": 59.19
+          "score": 72.14
         },
         {
           "ticker": "TON/USD",
-          "score": 55.38
+          "score": 65.98
         },
         {
-          "ticker": "BCH/EUR",
-          "score": 53.28
+          "ticker": "GNO/USD",
+          "score": 63.34
         },
         {
-          "ticker": "LAZIO/USD",
-          "score": 51.18
+          "ticker": "PORTO/USD",
+          "score": 63.34
+        },
+        {
+          "ticker": "ATOM/USD",
+          "score": 55.13
+        },
+        {
+          "ticker": "NFT/USD",
+          "score": 54.84
+        },
+        {
+          "ticker": "BTTN/USD",
+          "score": 54.69
         }
       ]
     },
@@ -443,51 +443,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 196,
-      "after": 196,
+      "before": 200,
+      "after": 200,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
+          "ticker": "IMB",
+          "score": 0.839
+        },
+        {
           "ticker": "AGS",
-          "score": 0.8217
+          "score": 0.8178
         },
         {
           "ticker": "LI",
-          "score": 0.7929
+          "score": 0.7907
         },
         {
           "ticker": "CS",
-          "score": 0.7846
-        },
-        {
-          "ticker": "ENEL",
-          "score": 0.7806
+          "score": 0.788
         },
         {
           "ticker": "HNR1",
-          "score": 0.7727
+          "score": 0.7871
         },
         {
-          "ticker": "DG",
-          "score": 0.7651
+          "ticker": "ENEL",
+          "score": 0.7766
+        },
+        {
+          "ticker": "ULVR",
+          "score": 0.7732
         },
         {
           "ticker": "BVI",
-          "score": 0.7646
+          "score": 0.7601
+        },
+        {
+          "ticker": "DG",
+          "score": 0.759
         },
         {
           "ticker": "AD",
-          "score": 0.7461
-        },
-        {
-          "ticker": "ITW",
-          "score": 0.7345
-        },
-        {
-          "ticker": "ELE",
-          "score": 0.7231
+          "score": 0.7425
         }
       ]
     },
@@ -603,7 +603,7 @@
   "top10_by_preset": {
     "equity": {
       "agressif": {
-        "count": 191,
+        "count": 194,
         "criteria": {
           "vol_min": 35
         },
@@ -627,7 +627,7 @@
             "buffett": 100.0,
             "vol": 39.3,
             "roe": 19.9,
-            "div_yield": 0.36,
+            "div_yield": 0.51,
             "payout": 43.0,
             "perf_ytd": 1.2,
             "perf_1y": 108.7,
@@ -674,17 +674,16 @@
             "sector": "Matériaux"
           },
           {
-            "ticker": "UNI",
-            "name": "UNIPOL ASSICURAZIONI SPA",
+            "ticker": "TEN",
+            "name": "TENARIS SA",
             "buffett": 98.0,
-            "vol": 38.8,
-            "roe": 11.5,
-            "div_yield": 4.43,
-            "payout": 53.0,
-            "perf_ytd": 5.8,
-            "perf_1y": 19.1,
-            "mcap": "14.2B",
-            "sector": "Finance"
+            "vol": 40.1,
+            "roe": 11.2,
+            "div_yield": 1.96,
+            "payout": 58.0,
+            "perf_ytd": 8.4,
+            "mcap": "1.7B",
+            "sector": "Energie"
           },
           {
             "ticker": "3661",
@@ -741,12 +740,25 @@
         ]
       },
       "croissance": {
-        "count": 40,
+        "count": 41,
         "criteria": {
           "vol_min": 20,
           "perf_1y_min": 10
         },
         "top_10": [
+          {
+            "ticker": "AHT",
+            "name": "ASHTEAD GROUP PLC",
+            "buffett": 95.0,
+            "vol": 30.8,
+            "roe": 17.4,
+            "div_yield": 1.1,
+            "payout": 32.0,
+            "perf_ytd": 1.9,
+            "perf_1y": 2.9,
+            "mcap": "21.5B",
+            "sector": "Industries"
+          },
           {
             "ticker": "TXT",
             "name": "TEXTRON INC",
@@ -818,7 +830,7 @@
             "buffett": 81.0,
             "vol": 31.8,
             "roe": 4.8,
-            "div_yield": 2.9,
+            "div_yield": 3.51,
             "payout": 59.0,
             "perf_ytd": 0.6,
             "perf_1y": -12.8,
@@ -863,24 +875,11 @@
             "perf_1y": 20.3,
             "mcap": "42.6B",
             "sector": "Matériaux"
-          },
-          {
-            "ticker": "IPN",
-            "name": "IPSEN SA",
-            "buffett": 77.0,
-            "vol": 23.9,
-            "roe": 8.7,
-            "div_yield": 0.81,
-            "payout": 26.0,
-            "perf_ytd": 24.0,
-            "perf_1y": 32.0,
-            "mcap": "12.2B",
-            "sector": "Santé"
           }
         ]
       },
       "defensif": {
-        "count": 42,
+        "count": 40,
         "criteria": {
           "vol_max": 28,
           "roe_min": 10,
@@ -1079,6 +1078,7 @@
             "name": "BANCO SANTANDER SA",
             "buffett": 100.0,
             "vol": 28.7,
+            "roe": 14.1,
             "div_yield": 2.18,
             "payout": 28.0,
             "perf_ytd": 2.3,
@@ -1091,12 +1091,37 @@
             "name": "UNICREDIT",
             "buffett": 100.0,
             "vol": 31.1,
-            "roe": 15.4,
             "div_yield": 3.88,
             "payout": 42.0,
             "perf_ytd": 3.6,
             "perf_1y": 59.5,
             "mcap": "110.2B",
+            "sector": "Finance"
+          },
+          {
+            "ticker": "BARC",
+            "name": "BARCLAYS PLC",
+            "buffett": 100.0,
+            "vol": 30.1,
+            "roe": 9.6,
+            "div_yield": 1.83,
+            "payout": 20.0,
+            "perf_ytd": -2.4,
+            "perf_1y": 58.4,
+            "mcap": "64.1B",
+            "sector": "Finance"
+          },
+          {
+            "ticker": "NWG",
+            "name": "NATWEST GROUP PLC",
+            "buffett": 100.0,
+            "vol": 28.6,
+            "roe": 12.6,
+            "div_yield": 4.18,
+            "payout": 39.0,
+            "perf_ytd": -8.3,
+            "perf_1y": 36.7,
+            "mcap": "47.6B",
             "sector": "Finance"
           },
           {
@@ -1149,37 +1174,11 @@
             "perf_1y": -13.0,
             "mcap": "22.7B",
             "sector": "Finance"
-          },
-          {
-            "ticker": "GLE",
-            "name": "SOCIETE GENERALE SA",
-            "buffett": 98.0,
-            "vol": 31.6,
-            "roe": 8.8,
-            "div_yield": 1.28,
-            "payout": 25.0,
-            "perf_ytd": 2.6,
-            "perf_1y": 90.6,
-            "mcap": "52.9B",
-            "sector": "Finance"
-          },
-          {
-            "ticker": "ZM",
-            "name": "ZOOM COMMUNICATIONS INC CLASS ",
-            "buffett": 96.0,
-            "vol": 33.1,
-            "roe": 11.3,
-            "div_yield": 0.0,
-            "payout": 0.0,
-            "perf_ytd": 6.9,
-            "perf_1y": 10.0,
-            "mcap": "27.6B",
-            "sector": "Technologie de l'inf"
           }
         ]
       },
       "quality_premium": {
-        "count": 195,
+        "count": 205,
         "criteria": {
           "vol_max": 35,
           "roe_min": 15,
@@ -1270,7 +1269,7 @@
             "buffett": 100.0,
             "vol": 22.1,
             "roe": 18.9,
-            "div_yield": 3.03,
+            "div_yield": 3.48,
             "payout": 46.0,
             "perf_ytd": 10.5,
             "perf_1y": 49.0,
@@ -1291,6 +1290,19 @@
             "sector": "La communication"
           },
           {
+            "ticker": "BNZL",
+            "name": "BUNZL",
+            "buffett": 100.0,
+            "vol": 25.5,
+            "roe": 17.4,
+            "div_yield": 3.43,
+            "payout": 51.0,
+            "perf_ytd": 3.9,
+            "perf_1y": -37.4,
+            "mcap": "6.9B",
+            "sector": "Industries"
+          },
+          {
             "ticker": "ALL",
             "name": "ALLSTATE CORP",
             "buffett": 100.0,
@@ -1302,18 +1314,6 @@
             "perf_1y": 9.1,
             "mcap": "54.1B",
             "sector": "Finance"
-          },
-          {
-            "ticker": "NFLX",
-            "name": "NETFLIX INC",
-            "buffett": 99.0,
-            "vol": 33.2,
-            "roe": 35.2,
-            "payout": 0.0,
-            "perf_ytd": -19.1,
-            "perf_1y": -24.7,
-            "mcap": "321.8B",
-            "sector": "La communication"
           }
         ]
       },
@@ -1457,7 +1457,7 @@
         ]
       },
       "rendement": {
-        "count": 109,
+        "count": 111,
         "criteria": {
           "vol_max": 28,
           "div_yield_min": 1.5
@@ -1495,12 +1495,25 @@
             "buffett": 100.0,
             "vol": 19.1,
             "roe": 18.6,
-            "div_yield": 2.39,
+            "div_yield": 2.79,
             "payout": 36.0,
             "perf_ytd": 16.5,
             "perf_1y": -4.1,
             "mcap": "160.4B",
             "sector": "La communication"
+          },
+          {
+            "ticker": "TSCO",
+            "name": "TESCO PLC",
+            "buffett": 100.0,
+            "vol": 19.7,
+            "roe": 14.0,
+            "div_yield": 2.5,
+            "payout": 60.0,
+            "perf_ytd": 7.4,
+            "perf_1y": 20.0,
+            "mcap": "30.1B",
+            "sector": "Biens de consommatio"
           },
           {
             "ticker": "AGS",
@@ -1534,7 +1547,7 @@
             "buffett": 100.0,
             "vol": 20.4,
             "roe": 21.2,
-            "div_yield": 2.88,
+            "div_yield": 3.6,
             "payout": 34.0,
             "perf_ytd": -6.0,
             "perf_1y": -2.7,
@@ -1573,30 +1586,17 @@
             "buffett": 99.0,
             "vol": 20.0,
             "roe": 15.4,
-            "div_yield": 5.22,
+            "div_yield": 5.67,
             "payout": 65.0,
             "perf_ytd": -7.4,
             "perf_1y": 0.9,
             "mcap": "79.3B",
             "sector": "Finance"
-          },
-          {
-            "ticker": "ML",
-            "name": "MICHELIN",
-            "buffett": 99.0,
-            "vol": 21.2,
-            "roe": 10.3,
-            "div_yield": 3.98,
-            "payout": 52.0,
-            "perf_ytd": 19.9,
-            "perf_1y": 1.0,
-            "mcap": "24.0B",
-            "sector": "Biens de consommatio"
           }
         ]
       },
       "value_dividend": {
-        "count": 186,
+        "count": 178,
         "criteria": {
           "vol_max": 30,
           "roe_min": 8
@@ -1668,6 +1668,19 @@
             "sector": "Finance"
           },
           {
+            "ticker": "PSON",
+            "name": "PEARSON PLC",
+            "buffett": 100.0,
+            "vol": 22.8,
+            "roe": 10.8,
+            "div_yield": 2.52,
+            "payout": 37.0,
+            "perf_ytd": -14.2,
+            "perf_1y": -32.9,
+            "mcap": "5.7B",
+            "sector": "Biens de consommatio"
+          },
+          {
             "ticker": "316140",
             "name": "WOORI FINANCIAL GROUP INC",
             "buffett": 100.0,
@@ -1700,7 +1713,7 @@
             "vol": 23.2,
             "roe": 14.1,
             "div_yield": 3.57,
-            "payout": 46.0,
+            "payout": 48.0,
             "perf_ytd": 4.6,
             "perf_1y": 42.0,
             "mcap": "46.2B",
@@ -1717,19 +1730,6 @@
             "perf_ytd": -20.9,
             "perf_1y": -36.4,
             "mcap": "52.6B",
-            "sector": "Finance"
-          },
-          {
-            "ticker": "ASRNL",
-            "name": "ASR NEDERLAND NV",
-            "buffett": 97.0,
-            "vol": 22.6,
-            "roe": 9.8,
-            "div_yield": 5.3,
-            "payout": 68.0,
-            "perf_ytd": 0.5,
-            "perf_1y": 26.2,
-            "mcap": "12.7B",
             "sector": "Finance"
           }
         ]
@@ -1945,12 +1945,12 @@
         {
           "ticker": "QSP/USD",
           "name": "Quantstamp",
-          "vol": 193.6,
-          "perf_1d": 11.3,
-          "perf_7d": 66.9,
-          "perf_30d": 28.2,
-          "perf_ytd": 55.8,
-          "sharpe": 2.53
+          "vol": 195.4,
+          "perf_1d": 13.8,
+          "perf_7d": 70.6,
+          "perf_30d": 31.1,
+          "perf_ytd": 59.3,
+          "sharpe": 2.67
         },
         {
           "ticker": "FXS/USD",
@@ -1961,26 +1961,6 @@
           "perf_30d": 27.9,
           "perf_ytd": 27.3,
           "sharpe": 2.45
-        },
-        {
-          "ticker": "DBC/USD",
-          "name": "DeepBrain Chain",
-          "vol": 162.1,
-          "perf_1d": -2.2,
-          "perf_7d": 29.8,
-          "perf_30d": 30.0,
-          "perf_ytd": 66.8,
-          "sharpe": 2.12
-        },
-        {
-          "ticker": "HT/USD",
-          "name": "Huobi Token",
-          "vol": 143.6,
-          "perf_1d": 21.7,
-          "perf_7d": 55.7,
-          "perf_30d": 17.8,
-          "perf_ytd": 26.6,
-          "sharpe": 1.99
         },
         {
           "ticker": "OMNI/USD",
@@ -1995,42 +1975,82 @@
         {
           "ticker": "STG/USD",
           "name": "Stargate Finance",
-          "vol": 141.7,
-          "perf_1d": -3.1,
-          "perf_7d": 17.4,
-          "perf_30d": 19.6,
-          "perf_ytd": 47.3,
-          "sharpe": 1.81
+          "vol": 141.6,
+          "perf_1d": -2.8,
+          "perf_7d": 17.7,
+          "perf_30d": 19.9,
+          "perf_ytd": 47.7,
+          "sharpe": 1.83
         },
         {
           "ticker": "PAXG/USD",
           "name": "PAX Gold",
           "vol": 59.8,
-          "perf_1d": 1.1,
-          "perf_7d": 0.8,
-          "perf_30d": 8.2,
-          "perf_ytd": 14.2,
-          "sharpe": 1.77
+          "perf_1d": 0.9,
+          "perf_7d": 0.6,
+          "perf_30d": 8.0,
+          "perf_ytd": 14.0,
+          "sharpe": 1.73
         },
         {
           "ticker": "XAUT/USD",
           "name": "Tether Gold",
           "vol": 59.5,
-          "perf_1d": 1.1,
-          "perf_7d": 0.9,
+          "perf_1d": 1.0,
+          "perf_7d": 0.8,
           "perf_30d": 7.7,
           "perf_ytd": 13.6,
-          "sharpe": 1.71
+          "sharpe": 1.7
         },
         {
           "ticker": "ZRO/USD",
           "name": "LayerZero",
-          "vol": 143.5,
-          "perf_1d": -3.7,
-          "perf_7d": 15.9,
-          "perf_30d": 17.8,
-          "perf_ytd": 45.6,
-          "sharpe": 1.67
+          "vol": 143.4,
+          "perf_1d": -3.5,
+          "perf_7d": 16.2,
+          "perf_30d": 18.1,
+          "perf_ytd": 46.0,
+          "sharpe": 1.7
+        },
+        {
+          "ticker": "DCR/USD",
+          "name": "Decred",
+          "vol": 127.3,
+          "perf_1d": 10.2,
+          "perf_7d": 8.6,
+          "perf_30d": 28.4,
+          "perf_ytd": 43.3,
+          "sharpe": 1.51
+        },
+        {
+          "ticker": "DBC/USD",
+          "name": "DeepBrain Chain",
+          "vol": 166.5,
+          "perf_1d": -10.3,
+          "perf_7d": 19.0,
+          "perf_30d": 19.2,
+          "perf_ytd": 53.0,
+          "sharpe": 1.47
+        },
+        {
+          "ticker": "REP/EUR",
+          "name": "Augur",
+          "vol": 180.2,
+          "perf_1d": 8.9,
+          "perf_7d": 36.1,
+          "perf_30d": 7.1,
+          "perf_ytd": 22.5,
+          "sharpe": 0.79
+        },
+        {
+          "ticker": "FITFI/USD",
+          "name": "Step App",
+          "vol": 187.8,
+          "perf_1d": 2.0,
+          "perf_7d": -1.9,
+          "perf_30d": -5.8,
+          "perf_ytd": 24.0,
+          "sharpe": 0.65
         },
         {
           "ticker": "COVAL/USD",
@@ -2043,94 +2063,74 @@
           "sharpe": 0.62
         },
         {
-          "ticker": "FITFI/USD",
-          "name": "Step App",
-          "vol": 187.7,
-          "perf_1d": 0.7,
-          "perf_7d": -3.2,
-          "perf_30d": -7.0,
-          "perf_ytd": 22.4,
-          "sharpe": 0.56
+          "ticker": "HT/USD",
+          "name": "Huobi Token",
+          "vol": 123.0,
+          "perf_1d": 4.3,
+          "perf_7d": 33.4,
+          "perf_30d": 0.9,
+          "perf_ytd": 8.5,
+          "sharpe": 0.59
         },
         {
-          "ticker": "DCR/USD",
-          "name": "Decred",
-          "vol": 122.4,
-          "perf_1d": -0.0,
-          "perf_7d": -1.5,
-          "perf_30d": 16.4,
-          "perf_ytd": 29.9,
+          "ticker": "RFR/USD",
+          "name": "Refereum",
+          "vol": 150.9,
+          "perf_1d": -1.0,
+          "perf_7d": -0.5,
+          "perf_30d": -2.2,
+          "perf_ytd": 126.8,
           "sharpe": 0.54
         },
         {
           "ticker": "MANTA/USD",
           "name": "Manta Network",
-          "vol": 160.8,
-          "perf_1d": -1.3,
-          "perf_7d": 11.1,
-          "perf_30d": -3.2,
-          "perf_ytd": 2.8,
-          "sharpe": 0.38
+          "vol": 160.9,
+          "perf_1d": -1.7,
+          "perf_7d": 10.7,
+          "perf_30d": -3.6,
+          "perf_ytd": 2.4,
+          "sharpe": 0.35
         },
         {
           "ticker": "ASTER/USDT",
           "name": "Aster",
           "vol": 132.5,
-          "perf_1d": -0.4,
-          "perf_7d": 28.1,
-          "perf_30d": -2.3,
-          "perf_ytd": 0.1,
-          "sharpe": 0.25
-        },
-        {
-          "ticker": "REP/EUR",
-          "name": "Augur",
-          "vol": 177.5,
-          "perf_1d": 0.0,
-          "perf_7d": 25.0,
-          "perf_30d": -1.6,
-          "perf_ytd": 12.5,
-          "sharpe": 0.19
+          "perf_1d": -0.1,
+          "perf_7d": 28.4,
+          "perf_30d": -2.1,
+          "perf_ytd": 0.4,
+          "sharpe": 0.28
         },
         {
           "ticker": "RIF/USD",
           "name": "Rootstock Infrastructure ",
-          "vol": 124.9,
-          "perf_1d": -1.7,
-          "perf_7d": -16.3,
-          "perf_30d": -4.1,
-          "perf_ytd": -0.3,
-          "sharpe": 0.13
-        },
-        {
-          "ticker": "Pluton/USD",
-          "name": "Pluton",
-          "vol": 122.5,
-          "perf_1d": -1.6,
-          "perf_7d": -12.1,
-          "perf_30d": -13.2,
-          "perf_ytd": -3.5,
-          "sharpe": -0.06
+          "vol": 125.1,
+          "perf_1d": -2.5,
+          "perf_7d": -17.0,
+          "perf_30d": -4.9,
+          "perf_ytd": -1.1,
+          "sharpe": 0.05
         },
         {
           "ticker": "LEOu/USD",
           "name": "UNUS SED LEO",
-          "vol": 111.2,
-          "perf_1d": -1.8,
-          "perf_7d": 3.7,
-          "perf_30d": -9.0,
-          "perf_ytd": -14.1,
-          "sharpe": -0.07
+          "vol": 111.0,
+          "perf_1d": -1.0,
+          "perf_7d": 4.5,
+          "perf_30d": -8.3,
+          "perf_ytd": -13.4,
+          "sharpe": 0.01
         },
         {
-          "ticker": "RFR/USD",
-          "name": "Refereum",
-          "vol": 154.8,
-          "perf_1d": -9.8,
-          "perf_7d": -9.3,
-          "perf_30d": -10.8,
-          "perf_ytd": 106.7,
-          "sharpe": -0.16
+          "ticker": "Pluton/USD",
+          "name": "Pluton",
+          "vol": 122.7,
+          "perf_1d": -2.4,
+          "perf_7d": -12.8,
+          "perf_30d": -14.0,
+          "perf_ytd": -4.3,
+          "sharpe": -0.14
         }
       ]
     },
@@ -2344,44 +2344,38 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": true,
-    "drift_pct": 33.33,
+    "has_drift": false,
+    "drift_pct": 4.17,
     "details": {
       "1_initial.after": {
-        "current": 3103,
-        "previous": 3115,
-        "delta": -12,
-        "pct_change": 0.39
+        "current": 3112,
+        "previous": 3103,
+        "delta": 9,
+        "pct_change": 0.29
       },
       "1_initial.equity": {
-        "current": 996,
-        "previous": 1006,
-        "delta": -10,
-        "pct_change": 0.99
-      },
-      "1_initial.crypto": {
-        "current": 341,
-        "previous": 343,
-        "delta": -2,
-        "pct_change": 0.58
+        "current": 1005,
+        "previous": 996,
+        "delta": 9,
+        "pct_change": 0.9
       },
       "hard_filters_equity.after": {
-        "current": 961,
-        "previous": 968,
-        "delta": -7,
-        "pct_change": 0.72
+        "current": 967,
+        "previous": 961,
+        "delta": 6,
+        "pct_change": 0.62
       },
       "5_selection_crypto_Modéré.after": {
-        "current": 24,
-        "previous": 18,
-        "delta": 6,
-        "pct_change": 33.33
+        "current": 23,
+        "previous": 24,
+        "delta": -1,
+        "pct_change": 4.17
       },
       "5_selection_equity_Stable.after": {
-        "current": 196,
-        "previous": 179,
-        "delta": 17,
-        "pct_change": 9.5
+        "current": 200,
+        "previous": 196,
+        "delta": 4,
+        "pct_change": 2.04
       }
     }
   }
