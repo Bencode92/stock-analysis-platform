@@ -1358,7 +1358,14 @@ async function enrichStock(stock) {
     const usedCurrency = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
     if ((usedCurrency === 'GBX' || usedCurrency === 'GBp') && Number.isFinite(price)) {
         price = price / 100; // 7450 GBX/GBp -> 74.50 GBP
-        if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price converted from ${usedCurrency} to GBP`);
+        // ✅ v3.28b: Normaliser aussi le range 52w
+        if (range_52w && typeof range_52w === 'string') {
+            const parts = range_52w.split('-').map(s => parseFloat(s.trim()));
+            if (parts.length === 2 && parts.every(Number.isFinite)) {
+                range_52w = `${(parts[0]/100).toFixed(6)} - ${(parts[1]/100).toFixed(6)}`;
+            }
+        }
+        if (CONFIG.DEBUG) console.log(`[GBX→GBP] ${stock.symbol}: price+range converted from ${usedCurrency} to GBP`);
     }
     
     // ✅ v3.26: Garde-fou — si quote et series sont sur des listings/devises différents, préférer series
@@ -1439,8 +1446,17 @@ async function enrichStock(stock) {
 
     // Série complète avec ajustement intelligent v3.18
     const fullDivsRaw = dividends?.dividends_full || [];
-    const fullDivs = maybeAdjustForSplit(fullDivsRaw, splitD, splitF)
+    let fullDivs = maybeAdjustForSplit(fullDivsRaw, splitD, splitF)
       .sort((a,b)=>b.ex_date.localeCompare(a.ex_date));
+
+    // ✅ v3.28b: Normalisation GBp/GBX → GBP pour les dividendes
+    // L'API retourne les dividendes dans la devise de marché (GBp pour LSE)
+    // mais le prix est déjà normalisé en GBP (L.1359) → on aligne
+    const isGBpCurrency = (usedCurrency === 'GBX' || usedCurrency === 'GBp');
+    if (isGBpCurrency && fullDivs.length > 0) {
+        fullDivs = fullDivs.map(d => ({ ...d, amount: d.amount / 100 }));
+        if (CONFIG.DEBUG) console.log(`[GBX→GBP DIV] ${stock.symbol}: ${fullDivs.length} dividendes /100`);
+    }
 
     // Fenêtre TTM
     const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
@@ -1670,6 +1686,8 @@ async function enrichStock(stock) {
     const usedEx =  quote?._meta?.exchange ?? perf?._series_meta?.exchange ?? null;
     const usedMic = quote?._meta?.mic_code ?? null;
     const usedCur = quote?._meta?.currency ?? perf?._series_meta?.currency ?? null;
+    // ✅ v3.28b: Afficher GBP (pas GBp) car toutes les valeurs sont normalisées
+    const displayCurrency = (usedCur === 'GBX' || usedCur === 'GBp') ? 'GBP' : usedCur;
     const usedTz  = perf?._series_meta?.timezone ?? null;
     const symUsed = quote?._meta?.symbol_used || perf?._series_meta?.symbol_used || (resolved || stock.symbol);
     
@@ -1700,7 +1718,7 @@ async function enrichStock(stock) {
         resolved_symbol: symUsed,
         data_exchange: usedEx,
         data_mic: usedMic,
-        data_currency: usedCur,
+        data_currency: displayCurrency,
         data_timezone: usedTz,
         
         price,
@@ -1756,10 +1774,18 @@ async function enrichStock(stock) {
         dividend_yield_regular: yield_regular,
         dividend_yield_forward: yield_fwd,
         dividend_special_share_ttm: Number(specialShare.toFixed(1)),  // % du TTM venant de spéciaux
-        dividends_history: dividends?.dividends_history || [],
-        avg_dividend_year: Number(dividends?.avg_dividend_per_year?.toFixed?.(2) ?? dividends?.avg_dividend_per_year ?? null),
+        // ✅ v3.28b: Utiliser fullDivs (normalisé GBp→GBP) et non les données brutes API
+        dividends_history: fullDivs.slice(0, 10).map(d => ({ ex_date: d.ex_date, amount: +(d.amount.toFixed(6)) })),
+        avg_dividend_year: (() => {
+            const byY = {};
+            for (const d of fullDivs) { const y = new Date(d.ex_date).getFullYear(); byY[y] = (byY[y] || 0) + d.amount; }
+            const nowY = new Date().getFullYear();
+            const full = Object.keys(byY).map(Number).filter(y => y < nowY).sort().slice(-3);
+            const avg = full.length ? full.reduce((s, y) => s + byY[y], 0) / full.length : 0;
+            return Number.isFinite(avg) ? +avg.toFixed(2) : null;
+        })(),
         total_dividends_ttm: ttmSumCalc,              
-        dividend_growth_3y: dividends?.dividend_growth_3y || null,  
+        dividend_growth_3y: dividends?.dividend_growth_3y || null,  // CAGR → ratio, pas affecté par ÷100
         
         // MÉTRIQUES PAYOUT
         payout_ratio_ttm,
