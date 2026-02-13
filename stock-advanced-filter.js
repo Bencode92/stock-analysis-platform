@@ -1050,6 +1050,46 @@ async function getGrowthEstimates(symbol, stock) {
 }
 
 // Market cap avec handling spécial pour symboles déjà résolus - v3.16: contexte complet
+// ✅ v3.28: Forex rate cache — pour normalisation cross-currency
+// Utilisé quand devise de marché ≠ devise de reporting des fondamentaux
+const FOREX_CACHE = new Map(); // "EUR/CHF" → { rate: 0.94, ts: Date.now() }
+const FOREX_TTL_MS = 6 * 60 * 60 * 1000; // 6h
+
+async function fetchForexRate(from, to) {
+    if (from === to) return 1;
+    // GBp/GBX → GBP: conversion d'unité, pas forex
+    if ((from === 'GBX' || from === 'GBp') && to === 'GBP') return 0.01;
+    if (from === 'GBP' && (to === 'GBX' || to === 'GBp')) return 100;
+    // ILA → ILS (Israeli Agorot → Shekel)
+    if (from === 'ILA' && to === 'ILS') return 0.01;
+
+    const pair = `${from}/${to}`;
+    const cached = FOREX_CACHE.get(pair);
+    if (cached && (Date.now() - cached.ts) < FOREX_TTL_MS) return cached.rate;
+
+    try {
+        await pay(CONFIG.CREDITS.QUOTE); // forex_pair coûte 1 crédit
+        const { data } = await axios.get('https://api.twelvedata.com/exchange_rate', {
+            params: { symbol: pair, apikey: CONFIG.API_KEY },
+            timeout: 10000
+        });
+        const rate = parseFloat(data?.rate);
+        if (Number.isFinite(rate) && rate > 0) {
+            FOREX_CACHE.set(pair, { rate, ts: Date.now() });
+            if (CONFIG.DEBUG) console.log(`[FOREX] ${pair} = ${rate}`);
+            return rate;
+        }
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error(`[FOREX ERR] ${pair}:`, e.message);
+    }
+    // Fallback: essayer la paire inverse
+    const revPair = `${to}/${from}`;
+    const revCached = FOREX_CACHE.get(revPair);
+    if (revCached && (Date.now() - revCached.ts) < FOREX_TTL_MS) return 1 / revCached.rate;
+
+    return null; // Pas de taux dispo
+}
+
 async function getMarketCapDirect(symbol, stock) {
     try {
         await pay(CONFIG.CREDITS.MARKET_CAP);
@@ -1341,6 +1381,14 @@ async function enrichStock(stock) {
         // Essai de reconstitution du prix via statistics (market_cap / shares)
         if (Number.isFinite(stats?.market_cap) && Number.isFinite(stats?.shares_outstanding) && stats.shares_outstanding > 0) {
             price = stats.market_cap / stats.shares_outstanding;
+            // ✅ v3.28: Si on n'a pas de quote mais qu'on sait que c'est LSE, normaliser
+            if (!usedCurrency) {
+                const mic = toMIC(stock.exchange || '', stock.country || '');
+                if (mic === 'XLON') {
+                    price = price / 100;
+                    if (CONFIG.DEBUG) console.log(`[FALLBACK GBp→GBP] ${stock.symbol}: price /100 (LSE inferred)`);
+                }
+            }
             if (CONFIG.DEBUG) console.log(`[FALLBACK PRICE] ${stock.symbol}: price = ${price} from market_cap/shares`);
             // on n'a pas de variation jour fiable sans quote/série
             change_percent = null;
@@ -1353,15 +1401,29 @@ async function enrichStock(stock) {
     }
     
     // Market cap avec priorités
-    const market_cap = 
+    let market_cap = 
         (typeof mcDirect === 'number' ? mcDirect : null) ??
         (typeof stats.market_cap === 'number' ? stats.market_cap : null) ??
-        // Dernier recours : SO * prix
+        // Dernier recours : SO * prix (prix déjà en GBP si GBp)
         ((typeof stats.shares_outstanding === 'number' && typeof price === 'number')
             ? stats.shares_outstanding * price
             : null);
     
-    // ✅ v3.23: NOUVEAU - Calcul FCF Yield
+    // ✅ v3.28: Normalisation market_cap GBp/GBX → GBP
+    // Les API stats/mcDirect retournent en devise de marché (GBp pour LSE)
+    // mais les financials (FCF, etc.) sont en devise de reporting (GBP)
+    // Note: le 3ème fallback (SO × price) est déjà en GBP car price est normalisé L.1320
+    if ((usedCurrency === 'GBX' || usedCurrency === 'GBp') && Number.isFinite(market_cap)) {
+        // Seulement si market_cap vient de l'API (pas du fallback SO × price_GBP)
+        const mcFromApi = (typeof mcDirect === 'number' ? mcDirect : null) ??
+                          (typeof stats.market_cap === 'number' ? stats.market_cap : null);
+        if (mcFromApi != null && market_cap === mcFromApi) {
+            market_cap = market_cap / 100;
+            if (CONFIG.DEBUG) console.log(`[GBX→GBP MC] ${stock.symbol}: market_cap /100 → ${(market_cap/1e9).toFixed(2)}B GBP`);
+        }
+    }
+    
+    // ✅ v3.23: Calcul FCF Yield (maintenant market_cap et FCF sont dans la même devise)
     let fcf_yield = null;
     if (Number.isFinite(stats?.fcf_ttm) && Number.isFinite(market_cap) && market_cap > 0) {
         fcf_yield = +((stats.fcf_ttm / market_cap) * 100).toFixed(2);
@@ -1787,10 +1849,37 @@ function winsorize(sorted, pLow = 0.05, pHigh = 0.95) {
 }
 
 // 3 profils sectoriels max — pas de micro-tuning
+// ✅ v3.28b: Mapping explicite secteurs → profils (FR + EN)
+// Table déclarative : plus maintenable que du regex pur
+const SECTOR_PROFILE_MAP = {
+    // FIN
+    'finance':                          'FIN',
+    'financial services':               'FIN',
+    'financials':                       'FIN',
+    // YIELD
+    'immobilier':                       'YIELD',
+    'real estate':                      'YIELD',
+    'services publics':                 'YIELD',
+    'utilities':                        'YIELD',
+    'la communication':                 'YIELD',
+    'communication services':           'YIELD',
+    'telecommunications':               'YIELD',
+};
+
+// Fallback regex pour les noms non listés
+const SECTOR_PROFILE_REGEX = [
+    { re: /bank|insurance|financ/,                        profile: 'FIN' },
+    { re: /utilit|reit|telecom|immobil|services publics|communication|electric/, profile: 'YIELD' },
+];
+
 function sectorProfile(sector = '') {
-    const s = (sector || '').toLowerCase();
-    if (/bank|insurance|financ/.test(s)) return 'FIN';
-    if (/utilit|reit|telecom|real estate|electric/.test(s)) return 'YIELD';
+    const s = (sector || '').toLowerCase().trim();
+    // 1) Exact match dans la table
+    if (SECTOR_PROFILE_MAP[s]) return SECTOR_PROFILE_MAP[s];
+    // 2) Fallback regex
+    for (const { re, profile } of SECTOR_PROFILE_REGEX) {
+        if (re.test(s)) return profile;
+    }
     return 'DEFAULT';
 }
 
