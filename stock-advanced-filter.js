@@ -1618,14 +1618,25 @@ async function enrichStock(stock) {
     let dividendYield, dividend_yield_src;
     let debug_dividends = null;
     
-    // Choix final du yield
-    dividendYield = dividend_yield_ttm ?? yield_regular ?? yield_fwd ?? null;
-    dividend_yield_src =
-      usedTtmSource === 'calc-runrate' ? 'TTM (run-rate post-split)' :
-      usedTtmSource === 'api'          ? 'TTM (API)' :
-      dividend_yield_ttm != null        ? 'TTM' :
-      yield_regular != null             ? 'REG' :
-      yield_fwd != null                 ? 'FWD' : null;
+    // ✅ v3.30: Si spéciaux pèsent lourd, forcer REG pour éviter de surestimer le yield récurrent
+    // Ex: HSBC special_share=55% → TTM=3.91% vs REG=2.39%, IBE special=61% → TTM=3.33% vs REG=2.31%
+    const preferRegBecauseSpecials =
+      Number.isFinite(specialShare) && specialShare >= 20 &&
+      Number.isFinite(yield_regular) && yield_regular > 0;
+
+    if (preferRegBecauseSpecials) {
+        dividendYield = yield_regular;
+        dividend_yield_src = 'REG';
+    } else {
+        // Choix final du yield
+        dividendYield = dividend_yield_ttm ?? yield_regular ?? yield_fwd ?? null;
+        dividend_yield_src =
+          usedTtmSource === 'calc-runrate' ? 'TTM (run-rate post-split)' :
+          usedTtmSource === 'api'          ? 'TTM (API)' :
+          dividend_yield_ttm != null        ? 'TTM' :
+          yield_regular != null             ? 'REG' :
+          yield_fwd != null                 ? 'FWD' : null;
+    }
 
     // --- v3.17.1: GARDE-FOU ETR - Détection conflits de rendements ---
     {
@@ -1781,12 +1792,12 @@ async function enrichStock(stock) {
         market_cap,
         range_52w,
         
-        perf_1d: perf.performances?.day_1 || null,
-        perf_1m: perf.performances?.month_1 || null,
-        perf_3m: perf.performances?.month_3 || null,
-        perf_ytd: perf.performances?.ytd || null,
-        perf_1y: perf.performances?.year_1 || null,
-        perf_3y: perf.performances?.year_3 || null,
+        perf_1d: perf.performances?.day_1 != null ? +perf.performances.day_1 : null,
+        perf_1m: perf.performances?.month_1 != null ? +perf.performances.month_1 : null,
+        perf_3m: perf.performances?.month_3 != null ? +perf.performances.month_3 : null,
+        perf_ytd: perf.performances?.ytd != null ? +perf.performances.ytd : null,
+        perf_1y: perf.performances?.year_1 != null ? +perf.performances.year_1 : null,
+        perf_3y: perf.performances?.year_3 != null ? +perf.performances.year_3 : null,
         
         // ✅ v3.22: Fondamentaux Buffett depuis CSV
    roe: stock.roe,
@@ -1844,6 +1855,9 @@ async function enrichStock(stock) {
         // MÉTRIQUES PAYOUT
         payout_ratio_ttm,
         payout_ratio_regular,
+        // ✅ v3.30: payout pour scoring — utilise REG si spéciaux ≥ 20% (HSBC, IBE)
+        payout_ratio_scoring: (specialShare >= 20 && Number.isFinite(payout_ratio_regular))
+            ? payout_ratio_regular : payout_ratio_ttm,
         payout_status,
         dividend_coverage,
         
@@ -1851,11 +1865,12 @@ async function enrichStock(stock) {
         eps_ttm,                                   
         pe_ratio: stats?.pe_ratio || null,        
         
-        volatility_3y: perf.volatility_3y,
-        distance_52w_high: perf.distance_52w_high,
-        distance_52w_low: perf.distance_52w_low,
-        max_drawdown_ytd: perf.max_drawdown_ytd,
-        max_drawdown_3y: perf.max_drawdown_3y,
+        // ✅ v3.30: Force number type pour les champs perf (évite strings "36.74" qui cassent les tris)
+        volatility_3y: perf.volatility_3y != null ? +perf.volatility_3y : null,
+        distance_52w_high: perf.distance_52w_high != null ? +perf.distance_52w_high : null,
+        distance_52w_low: perf.distance_52w_low != null ? +perf.distance_52w_low : null,
+        max_drawdown_ytd: perf.max_drawdown_ytd != null ? +perf.max_drawdown_ytd : null,
+        max_drawdown_3y: perf.max_drawdown_3y != null ? +perf.max_drawdown_3y : null,
         
         // v3.20: Ajout de l'objet de debug amélioré
         debug_dividends,
@@ -2112,7 +2127,7 @@ function computeQualityScores(allStocks) {
             pe:      buildDist(peers, 'pe_ratio', x => validNum(x) && x > 0),
             fcf:     buildDist(peers, 'fcf_yield'),
             growth:  buildDist(peers, 'eps_growth_5y'),
-            payout:  buildDist(peers, 'payout_ratio_ttm', x => validNum(x) && x >= 0),
+            payout:  buildDist(peers, 'payout_ratio_scoring', x => validNum(x) && x >= 0),
             // ✅ v3.27: Multi-year distributions
             roe_avg: buildDist(peers, 'roe_avg_3y'),
             roic_avg: buildDist(peers, 'roic_avg_3y'),
@@ -2165,10 +2180,10 @@ function computeQualityScores(allStocks) {
             else if (cv > 0.80) stabilityBonus = -5;  // très volatile
         }
 
-        // ✅ v3.30: Payout scoring — monotone (soutenabilité) pour DEFAULT/FIN, distance à cible pour YIELD
+        // ✅ v3.30: Payout scoring — utilise payout_ratio_scoring (REG si spéciaux élevés)
         const mPayout = (profile === 'YIELD')
-            ? scorePayoutTarget(s.payout_ratio_ttm, dist.payout, 70)
-            : scorePayoutSafety(s.payout_ratio_ttm);
+            ? scorePayoutTarget(s.payout_ratio_scoring, dist.payout, 70)
+            : scorePayoutSafety(s.payout_ratio_scoring);
 
         // ── Track coverage & imputations ──
         const imputed = [];
@@ -2242,7 +2257,7 @@ function computeQualityScores(allStocks) {
         if (profile !== 'FIN' && validNum(s.roic) && s.roic <= 0) {
             penalty += 15; penalties.push('roic_negative');
         }
-        if (validNum(s.payout_ratio_ttm) && s.payout_ratio_ttm > 120 && profile !== 'YIELD') {
+        if (validNum(s.payout_ratio_scoring) && s.payout_ratio_scoring > 120 && profile !== 'YIELD') {
             penalty += 10; penalties.push('payout_unsustainable');
         }
         if (validNum(s.fcf_yield) && s.fcf_yield < 0) {
@@ -2330,6 +2345,67 @@ function computeQualityScores(allStocks) {
 
     console.log('═'.repeat(60));
     return allStocks;
+}
+
+// ✅ v3.30: Export peer group details for transparency
+function exportPeerGroups(allStocks) {
+    const groups = new Map();
+    
+    for (const s of allStocks) {
+        if (s.error || !s.quality_peer) continue;
+        const key = s.quality_peer;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({
+            ticker: s.ticker,
+            name: s.name,
+            sector: s.sector,
+            country: s.country,
+            exchange: s.exchange,
+            profile: s.quality_profile,
+            // Fondamentaux
+            roe: s.roe,
+            roe_avg_3y: s.roe_avg_3y,
+            roe_std_3y: s.roe_std_3y,
+            roic: s.roic,
+            roic_avg_3y: s.roic_avg_3y,
+            roic_std_3y: s.roic_std_3y,
+            de_ratio: s.de_ratio,
+            net_margin: s.net_margin,
+            revenue_growth_3y: s.revenue_growth_3y,
+            // Valorisation
+            pe_ratio: s.pe_ratio,
+            fcf_yield: s.fcf_yield,
+            // Growth
+            eps_growth_5y: s.eps_growth_5y,
+            eps_growth_forecast_5y: s.eps_growth_forecast_5y,
+            // Dividendes
+            dividend_yield: s.dividend_yield,
+            payout_ratio_ttm: s.payout_ratio_ttm,
+            payout_ratio_scoring: s.payout_ratio_scoring,
+            // Scores
+            buffett_score: s.buffett_score,
+            buffett_grade: s.buffett_grade,
+            quality_score: s.quality_score,
+            quality_grade: s.quality_grade,
+            quality_subscores: s.quality_subscores,
+            quality_penalties: s.quality_penalties,
+            // Risque
+            volatility_3y: s.volatility_3y,
+            max_drawdown_3y: s.max_drawdown_3y,
+            market_cap: s.market_cap,
+        });
+    }
+
+    const output = {};
+    for (const [key, stocks] of [...groups.entries()].sort()) {
+        const sorted = stocks.sort((a, b) => (b.quality_score || 0) - (a.quality_score || 0));
+        output[key] = {
+            peer_size: stocks.length,
+            profile: stocks[0]?.profile || 'DEFAULT',
+            stocks: sorted,
+        };
+    }
+    return output;
 }
 
 // ---------- TOPS HELPERS ----------
@@ -2561,6 +2637,12 @@ async function main() {
     // ✅ v3.27: Quality Score — scoring relatif APRÈS enrichissement complet
     const allForScoring = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA];
     computeQualityScores(allForScoring);
+    
+    // ✅ v3.30: Export peer groups pour transparence du scoring
+    const peerGroupsData = exportPeerGroups(allForScoring);
+    const peerGroupsPath = path.join(OUT_DIR, 'peer_groups.json');
+    await fs.writeFile(peerGroupsPath, JSON.stringify(peerGroupsData, null, 2));
+    console.log(`📊 Peer groups exportés: ${peerGroupsPath} (${Object.keys(peerGroupsData).length} groupes)`);
     
     // ✅ v3.27: Écrire les JSON APRÈS le scoring (quality_score maintenant rempli)
     for (const region of regions) {
