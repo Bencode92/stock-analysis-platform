@@ -2065,7 +2065,10 @@ function computeQualityScores(allStocks) {
 
         // ── Score each metric ──
         const mROE  = scoreMetric(roe, dist.roe, 'high');
-        const mROIC = scoreMetric(roic, dist.roic, 'high');
+        // ✅ v3.29b: ROIC exclu pour FIN (comme D/E) — invested capital non pertinent pour banques
+        const mROIC = (profile === 'FIN')
+            ? { sc: null, used: false, imputed: false }
+            : scoreMetric(roic, dist.roic, 'high');
         const mDE   = (profile === 'FIN')
             ? { sc: null, used: false, imputed: false }  // D/E non pertinent pour banques
             : scoreMetric(s.de_ratio, dist.de, 'low');
@@ -2078,7 +2081,10 @@ function computeQualityScores(allStocks) {
 
         // ✅ v3.27: Multi-year metrics
         const mROEAvg  = scoreMetric(s.roe_avg_3y, dist.roe_avg, 'high');
-        const mROICAvg = scoreMetric(s.roic_avg_3y, dist.roic_avg, 'high');
+        // ✅ v3.29b: ROIC avg exclu pour FIN (cohérent avec ROIC year N)
+        const mROICAvg = (profile === 'FIN')
+            ? { sc: null, used: false, imputed: false }
+            : scoreMetric(s.roic_avg_3y, dist.roic_avg, 'high');
         const mMargin  = scoreMetric(s.net_margin, dist.margin, 'high');
         const mRevGrowth = scoreMetric(s.revenue_growth_3y, dist.revgrowth, 'high');
 
@@ -2118,9 +2124,12 @@ function computeQualityScores(allStocks) {
 
         // ── Dimension scores ──
         // Quality: préférer les moyennes 3Y si disponibles, sinon année N
+        // ✅ v3.29b: ROIC exclu pour FIN — Quality FIN = avg(ROE, Margin)
         const qualityROE  = mROEAvg.sc != null ? mROEAvg.sc : mROE.sc;
         const qualityROIC = mROICAvg.sc != null ? mROICAvg.sc : mROIC.sc;
-        const quality = safeAvg([qualityROE, qualityROIC, mMargin.sc]);
+        const quality = (profile === 'FIN')
+            ? safeAvg([qualityROE, mMargin.sc])
+            : safeAvg([qualityROE, qualityROIC, mMargin.sc]);
 
         const safety  = (profile === 'FIN')
             ? safeAvg([mPayout.sc])           // Banques: pas de D/E
@@ -2179,10 +2188,17 @@ function computeQualityScores(allStocks) {
         if (score != null) score = Math.max(0, score - penalty);
 
         // ── Coverage cap ──
-        const expectedFields = (profile === 'FIN') ? 7 : 11;
-        const coverage = Math.round((used.length / expectedFields) * 100);
-        if (coverage < 60 && score != null) {
-            score = Math.min(score, 60); // Pas de grade A avec trop de trous
+        // ✅ v3.29b: expectedFields = nb de métriques effectivement trackées (non exclues)
+        // FIN: 8 métriques (exclut ROIC, ROIC_avg, D/E = 3 exclues sur 11)
+        // DEFAULT/YIELD: 11 métriques
+        const expectedFields = (profile === 'FIN') ? 8 : 11;
+        // ✅ v3.29b: Distinguer coverage effective (imputations incluses) vs réelle
+        const realCount = used.filter(name => !imputed.includes(name)).length;
+        const coverageEffective = Math.round((used.length / expectedFields) * 100);
+        const coverageReal = Math.round((realCount / expectedFields) * 100);
+        // Capper sur la couverture RÉELLE (pas les imputations)
+        if (coverageReal < 60 && score != null) {
+            score = Math.min(score, 60); // Pas de grade A avec trop de trous réels
         }
 
         // ✅ v3.27: Stability bonus (moat indicator)
@@ -2193,7 +2209,7 @@ function computeQualityScores(allStocks) {
         // ── Inject into stock ──
         s.quality_score = (score == null) ? null : Math.round(clampVal(score, 0, 100));
         s.quality_grade = qualityGrade(s.quality_score);
-        s.quality_coverage = clampVal(coverage, 0, 100);
+        s.quality_coverage = clampVal(coverageReal, 0, 100);  // ✅ v3.29b: basé sur real, pas effective
         s.quality_imputed_fields = imputed.length ? [...new Set(imputed)] : [];
         s.quality_penalties = penalties.length ? penalties : [];
         s.quality_peer = peerKey;
