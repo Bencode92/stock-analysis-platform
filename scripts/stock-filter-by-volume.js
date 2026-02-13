@@ -1,22 +1,18 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.11 - Multi-year fundamentals: séries 3-5 ans, stabilité, marge nette, croissance CA
+//   - fetchBalanceSheet: retourne TOUTES les périodes (3-5 ans, pas juste N/N-1)
+//   - fetchIncomeStatement: retourne TOUTES les périodes (pas juste la première)
+//   - Nouvelles métriques: roe_avg_3y, roe_std_3y, roic_avg_3y, roic_std_3y
+//   - Nouvelles métriques: net_margin (NI/Revenue), revenue_growth_3y (CAGR)
+//   - 0 appel API supplémentaire (TD retourne déjà 3-5 périodes)
+//   - FORMULA_VERSION=3 → force re-fetch des anciennes entrées v1/v2
+//   - CSV enrichi: 6 nouvelles colonnes pour stock-advanced-filter.js
 // Version 2.10c - Fix fondamentaux IT: country=Italy d'abord, retry DE cross-listing si échec
 // Version 2.10b - ITALY_FALLBACK: force whitelist volume (vol DE aussi faible)
 // Version 2.10 - ITALY_FALLBACK: whitelist volume + fondamentaux via cross-listings DE
 // Version 2.9 - Fix ROIC (NOPAT/Avg IC), ROE (Avg Equity), cache versioning
-//   - ROIC = NOPAT / Average Invested Capital (méthode GuruFocus)
-//   - NOPAT = Operating Income × (1 - Tax Rate effective)
-//   - IC = Total Assets - Excess Cash (- AP si disponible)
-//   - ROE = Net Income / Average Equity (N + N-1) / 2
-//   - D/E inchangé (instantané, standard)
-//   - Cache: _formulaVersion=2 force re-fetch des anciennes entrées
-//   - Zéro appel API supplémentaire (2 périodes déjà retournées)
 // Version 2.8 - Ajout sélection de région via REGIONS env var
-// Version 2.7.1 - Hotfix: ne pas ajouter mic_code pour US stocks
-// Changements v2.7:
-// - Ajout COUNTRY_EN et MIC_HINTS pour désambiguïser les appels balance_sheet/income_statement
-// Changements v2.6:
-// - Migration automatique ROIC
 const fs = require('fs').promises;
 const path = require('path');
 const { parse } = require('csv-parse/sync');
@@ -29,8 +25,8 @@ const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
-// ✅ v2.9: Version de formule pour invalidation cache
-const FORMULA_VERSION = 2;
+// ✅ v2.11: Version 3 — force re-fetch pour avoir toutes les périodes
+const FORMULA_VERSION = 3;
 
 // ✅ v2.8: Toutes les régions disponibles
 const ALL_INPUTS = [
@@ -39,7 +35,6 @@ const ALL_INPUTS = [
   { file: 'Actions_Asie.csv',   region: 'ASIA' },
 ];
 
-// ✅ v2.8: Sélection de région via REGIONS env var (us, europe, asia, all)
 const REGIONS_ENV = (process.env.REGIONS || 'all').toLowerCase().split(',').map(s => s.trim());
 const REGION_MAP = { us: 'US', europe: 'EUROPE', asia: 'ASIA' };
 
@@ -53,7 +48,7 @@ if (INPUTS.length === 0) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONFIGURATION FONDAMENTAUX BUFFETT
+// CONFIGURATION FONDAMENTAUX
 // ═══════════════════════════════════════════════════════════════════════════
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
@@ -115,7 +110,6 @@ const COUNTRY2MIC = {
   'china':'XSHG'
 };
 
-// ✅ v2.7: Mapping pays FR→EN pour l'API TD (fondamentaux)
 const COUNTRY_EN = {
     'france':'France', 'belgique':'Belgium', 'pays-bas':'Netherlands',
     'portugal':'Portugal', 'italie':'Italy', 'italy':'Italy',
@@ -134,8 +128,7 @@ const COUNTRY_EN = {
     'china':'China', 'chine':'China',
 };
 
-// ✅ v2.7: MIC → exchange+country pour endpoints data TD (fondamentaux)
-// ✅ v2.10c: XMIL → country=Italy (pas XETR — cross-listings DE n'ont pas de fondamentaux)
+// ✅ v2.10c: XMIL → country=Italy (pas XETR)
 const MIC_HINTS = {
     'XLON': { exchange: 'LSE',      country: 'United Kingdom' },
     'XDUB': { exchange: 'ISE',      country: 'Ireland' },
@@ -154,8 +147,6 @@ const MIC_HINTS = {
     'XHEL': { exchange: 'NASDAQ Helsinki', country: 'Finland' },
 };
 
-// ✅ v2.10: Mapping Italie → cross-listings DE (pour volume/prix uniquement)
-// Volume TD non fiable pour XMIL → ces blue caps sont whitelistées
 const ITALY_FALLBACK = {
     'ISP':   { sym: 'IES',  exchange: 'XETR', country: 'Germany' },
     'UCG':   { sym: 'CRIN', exchange: 'XETR', country: 'Germany' },
@@ -170,9 +161,7 @@ const ITALY_FALLBACK = {
     'CPR':   { sym: '58H',  exchange: 'XETR', country: 'Germany' },
 };
 
-// ✅ v2.7.1: MICs US — pas besoin de contexte, ticker seul suffit
 const US_MICS = new Set(['XNAS', 'XNYS', 'BATS', 'ARCX', 'XASE']);
-
 const normalize = s => (s||'').toLowerCase().trim();
 
 function toMIC(exchange, country=''){
@@ -185,7 +174,6 @@ function toMIC(exchange, country=''){
   return COUNTRY2MIC[normalize(country)] || null;
 }
 
-// ✅ v2.10c: Fondamentaux — ticker original + country=Italy (pas de remap DE)
 function buildFundamentalsParams(symbol, context = {}) {
   const mic = toMIC(context.exchange || '', context.country || '');
   const params = { symbol, period: 'annual', apikey: API_KEY };
@@ -194,10 +182,6 @@ function buildFundamentalsParams(symbol, context = {}) {
     if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
     return params;
   }
-
-  // ✅ v2.10c: PAS de remap ITALY_FALLBACK pour fondamentaux
-  // Les cross-listings DE (AEU, FMNB, MPI0...) n'ont pas de fondamentaux sur TD
-  // On utilise le ticker original + country=Italy via MIC_HINTS
 
   const hint = mic ? MIC_HINTS[mic] : null;
 
@@ -271,7 +255,7 @@ async function tryQuote(sym, mic){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FONDAMENTAUX BUFFETT v2.9 — NOPAT / Average IC
+// FONDAMENTAUX v2.11 — Multi-années (3-5 ans)
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadFundamentalsCache() {
@@ -302,7 +286,21 @@ function isRateLimitError(data) {
   return /run out of API credits/i.test(msg) || /rate limit/i.test(msg);
 }
 
-// ✅ v2.9: Helper — parse une seule période de balance sheet
+// ── Helpers stats ──
+function arrAvg(arr) {
+  const v = arr.filter(Number.isFinite);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
+
+function arrStd(arr) {
+  const v = arr.filter(Number.isFinite);
+  if (v.length < 2) return null;
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  const variance = v.reduce((s, x) => s + (x - mean) ** 2, 0) / (v.length - 1);
+  return Math.sqrt(variance);
+}
+
+// ── Parse une seule période de balance sheet ──
 function parseOneBalanceSheet(sheet) {
   if (!sheet || typeof sheet !== 'object') return null;
 
@@ -313,7 +311,7 @@ function parseOneBalanceSheet(sheet) {
   const nonCurrentLiab = liabilities.non_current_liabilities || {};
   const currentAssets = assets.current_assets || {};
 
-  // ── Cash (somme de tous les candidats non-null) ──
+  // Cash
   const cashCandidates = [
     currentAssets.cash_and_cash_equivalents,
     currentAssets.cash,
@@ -327,7 +325,6 @@ function parseOneBalanceSheet(sheet) {
   const hasCash = cashCandidates.some(v => parseFloatSafe(v) != null);
   const cash_total = hasCash ? cashSum : null;
 
-  // ── Totaux ──
   const totalAssets =
     parseFloatSafe(assets.total_assets) ??
     parseFloatSafe(sheet.total_assets) ??
@@ -338,7 +335,6 @@ function parseOneBalanceSheet(sheet) {
     parseFloatSafe(sheet.total_liabilities) ??
     null;
 
-  // ✅ v2.9: Total current assets & liabilities pour IC
   const totalCurrentAssets =
     parseFloatSafe(currentAssets.total_current_assets) ??
     parseFloatSafe(assets.total_current_assets) ??
@@ -349,20 +345,15 @@ function parseOneBalanceSheet(sheet) {
     parseFloatSafe(liabilities.total_current_liabilities) ??
     null;
 
-  // ✅ v2.9: Accounts payable pour IC
-  const accountsPayable =
-    parseFloatSafe(currentLiab.accounts_payable) ?? 0;
-  const accruedExpenses =
-    parseFloatSafe(currentLiab.accrued_expenses) ?? 0;
+  const accountsPayable = parseFloatSafe(currentLiab.accounts_payable) ?? 0;
+  const accruedExpenses = parseFloatSafe(currentLiab.accrued_expenses) ?? 0;
 
-  // ── Debt ──
   const shortTermDebt = parseFloatSafe(currentLiab.short_term_debt) ??
                         parseFloatSafe(currentLiab.current_debt) ?? 0;
   const longTermDebt = parseFloatSafe(nonCurrentLiab.long_term_debt) ??
                        parseFloatSafe(nonCurrentLiab.long_term_debt_and_capital_lease_obligation) ?? 0;
   const totalDebt = shortTermDebt + longTermDebt;
 
-  // ── Equity ──
   let totalEquity =
     parseFloatSafe(equityBlock.total_shareholders_equity) ??
     parseFloatSafe(equityBlock.total_stockholders_equity) ??
@@ -393,7 +384,7 @@ function parseOneBalanceSheet(sheet) {
   };
 }
 
-// ✅ v2.9: Retourne { current, previous } — 2 périodes, 0 appel supplémentaire
+// ✅ v2.11: Retourne TOUTES les périodes (tableau), pas juste { current, previous }
 async function fetchBalanceSheet(symbol, context = {}) {
   try {
     const params = buildFundamentalsParams(symbol, context);
@@ -418,27 +409,65 @@ async function fetchBalanceSheet(symbol, context = {}) {
     let sheets = data.balance_sheet || data;
     if (!Array.isArray(sheets)) sheets = [sheets];
 
-    const current  = parseOneBalanceSheet(sheets[0]);
-    const previous = sheets.length > 1 ? parseOneBalanceSheet(sheets[1]) : null;
+    // ✅ v2.11: Parse TOUTES les périodes disponibles
+    const allPeriods = sheets.map(parseOneBalanceSheet).filter(p => p !== null);
 
-    if (!current) {
+    if (!allPeriods.length) {
       console.warn(`  ⚠️ Format inattendu balance_sheet ${symbol}`);
       return null;
     }
 
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} BS current: equity=${current.total_equity}, assets=${current.total_assets}, cash=${current.cash_and_st_investments}, curAssets=${current.total_current_assets}, curLiab=${current.total_current_liabilities}`);
-      if (previous) console.log(`  [DEBUG] ${symbol} BS previous: equity=${previous.total_equity}, assets=${previous.total_assets}`);
+      console.log(`  [DEBUG] ${symbol} BS: ${allPeriods.length} périodes (${allPeriods.map(p => p.fiscal_date).join(', ')})`);
     }
 
-    return { current, previous };
+    return { periods: allPeriods };
   } catch (error) {
     console.error(`  ❌ Erreur balance_sheet ${symbol}:`, error.message);
     return null;
   }
 }
 
-// ✅ v2.9: Extrait aussi operating_income, pretax_income, income_tax
+// ── Parse une seule période d'income statement ──
+function parseOneIncomeStatement(statement) {
+  if (!statement || typeof statement !== 'object') return null;
+
+  const netIncomeBlock = statement.net_income || {};
+
+  const netIncome =
+    parseFloatSafe(typeof netIncomeBlock === 'object' ? netIncomeBlock.net_income : netIncomeBlock) ??
+    parseFloatSafe(statement.net_income) ??
+    parseFloatSafe(statement.net_income_common_stockholders) ??
+    parseFloatSafe(statement.net_income_from_continuing_operations) ??
+    null;
+
+  const revenue =
+    parseFloatSafe(statement.revenue) ??
+    parseFloatSafe(statement.total_revenue) ??
+    parseFloatSafe(statement.sales) ??
+    parseFloatSafe(statement.operating_revenue) ??
+    null;
+
+  const operatingIncome =
+    parseFloatSafe(statement.operating_income) ??
+    parseFloatSafe(statement.ebit) ??
+    null;
+
+  const pretaxIncome = parseFloatSafe(statement.pretax_income) ?? null;
+  const incomeTax    = parseFloatSafe(statement.income_tax) ?? null;
+
+  return {
+    net_income: netIncome,
+    revenue: revenue,
+    operating_income: operatingIncome,
+    pretax_income: pretaxIncome,
+    income_tax: incomeTax,
+    ebitda: parseFloatSafe(statement.ebitda) ?? parseFloatSafe(statement.normalized_ebitda) ?? null,
+    fiscal_date: statement.fiscal_date || statement.date || null
+  };
+}
+
+// ✅ v2.11: Retourne TOUTES les périodes (tableau)
 async function fetchIncomeStatement(symbol, context = {}) {
   try {
     const params = buildFundamentalsParams(symbol, context);
@@ -459,61 +488,29 @@ async function fetchIncomeStatement(symbol, context = {}) {
       return null;
     }
 
-    let statement = data.income_statement || data;
-    if (Array.isArray(statement)) statement = statement[0];
+    let statements = data.income_statement || data;
+    if (!Array.isArray(statements)) statements = [statements];
 
-    if (!statement || typeof statement !== 'object') {
+    // ✅ v2.11: Parse TOUTES les périodes disponibles
+    const allPeriods = statements.map(parseOneIncomeStatement).filter(p => p !== null);
+
+    if (!allPeriods.length) {
       console.warn(`  ⚠️ Format inattendu income_statement ${symbol}`);
       return null;
     }
 
-    if (DEBUG) console.log(`  [DEBUG] ${symbol} income keys:`, Object.keys(statement));
-
-    const netIncomeBlock = statement.net_income || {};
-
-    const netIncome =
-      parseFloatSafe(typeof netIncomeBlock === 'object' ? netIncomeBlock.net_income : netIncomeBlock) ??
-      parseFloatSafe(statement.net_income) ??
-      parseFloatSafe(statement.net_income_common_stockholders) ??
-      parseFloatSafe(statement.net_income_from_continuing_operations) ??
-      null;
-
-    const revenue =
-      parseFloatSafe(statement.revenue) ??
-      parseFloatSafe(statement.total_revenue) ??
-      parseFloatSafe(statement.sales) ??
-      parseFloatSafe(statement.operating_revenue) ??
-      null;
-
-    // ✅ v2.9: Champs nécessaires pour NOPAT et tax rate
-    const operatingIncome =
-      parseFloatSafe(statement.operating_income) ??
-      parseFloatSafe(statement.ebit) ??
-      null;
-
-    const pretaxIncome = parseFloatSafe(statement.pretax_income) ?? null;
-    const incomeTax    = parseFloatSafe(statement.income_tax) ?? null;
-
     if (DEBUG) {
-      console.log(`  [DEBUG] ${symbol} FINAL: net_income=${netIncome}, op_income=${operatingIncome}, pretax=${pretaxIncome}, tax=${incomeTax}, revenue=${revenue}`);
+      console.log(`  [DEBUG] ${symbol} IS: ${allPeriods.length} périodes (${allPeriods.map(p => p.fiscal_date).join(', ')})`);
     }
 
-    return {
-      net_income: netIncome,
-      revenue: revenue,
-      operating_income: operatingIncome,
-      pretax_income: pretaxIncome,
-      income_tax: incomeTax,
-      ebitda: parseFloatSafe(statement.ebitda) ?? parseFloatSafe(statement.normalized_ebitda) ?? null,
-      fiscal_date: statement.fiscal_date || statement.date || null
-    };
+    return { periods: allPeriods };
   } catch (error) {
     console.error(`  ❌ Erreur income_statement ${symbol}:`, error.message);
     return null;
   }
 }
 
-// ✅ v2.9: Invested Capital = Total Assets - AP/Accrued - Excess Cash (méthode GuruFocus)
+// Invested Capital (méthode GuruFocus)
 function computeInvestedCapital(bs) {
   if (!bs || bs.total_assets == null) return null;
 
@@ -524,9 +521,7 @@ function computeInvestedCapital(bs) {
   const ap = bs.accounts_payable ?? 0;
   const accrued = bs.accrued_expenses ?? 0;
 
-  // Excess Cash = Cash - max(0, Current Liab - Current Assets + Cash)
   const excessCash = cash - Math.max(0, curLiab - curAssets + cash);
-
   const ic = totalAssets - ap - accrued - excessCash;
 
   if (DEBUG) {
@@ -536,83 +531,165 @@ function computeInvestedCapital(bs) {
   return ic;
 }
 
-// ✅ v2.9: Nouvelle signature avec balanceSheetPrev pour moyennes
-function computeFundamentalRatios(bsCurrent, bsPrevious, incomeStatement) {
-  if (!bsCurrent) {
-    return { roe: null, de_ratio: null, roic: null, error: 'no_balance_sheet' };
-  }
+// ✅ v2.11: Calcule les ratios pour UNE année (BS[N] + BS[N-1] + IS[N])
+function computeOneYearRatios(bsCurrent, bsPrevious, incomeStatement) {
+  if (!bsCurrent) return null;
 
   const equity     = bsCurrent.total_equity;
   const equityPrev = bsPrevious?.total_equity ?? equity;
   const debt       = bsCurrent.total_debt ?? null;
-  const cash       = bsCurrent.cash_and_st_investments ?? 0;
   const net_income = incomeStatement?.net_income ?? null;
-
-  let roe = null;
-  let de_ratio = null;
-  let roic = null;
-
-  // ✅ v2.9: ROE = Net Income / Average Equity (en %)
-  const avgEquity = (equity != null && equityPrev != null) ? (equity + equityPrev) / 2 : equity;
-  if (avgEquity != null && avgEquity !== 0 && net_income != null) {
-    roe = Math.round((net_income / avgEquity) * 10000) / 100;
-  }
-
-  // D/E = Debt / Equity instantanée (ratio) — standard, pas de moyenne
-  if (equity != null && equity !== 0 && debt != null) {
-    de_ratio = Math.round((debt / equity) * 100) / 100;
-  }
-
-  // ✅ v2.9: ROIC = NOPAT / Average Invested Capital (en %)
-  // NOPAT = Operating Income × (1 - Tax Rate effective)
+  const revenue    = incomeStatement?.revenue ?? null;
   const opIncome   = incomeStatement?.operating_income ?? null;
   const pretax     = incomeStatement?.pretax_income ?? null;
   const taxAmount  = incomeStatement?.income_tax ?? null;
 
-  // Tax rate effectif, borné [0%, 50%], fallback 25%
+  // ROE = Net Income / Average Equity (en %)
+  const avgEquity = (equity != null && equityPrev != null) ? (equity + equityPrev) / 2 : equity;
+  let roe = null;
+  if (avgEquity != null && avgEquity !== 0 && net_income != null) {
+    roe = Math.round((net_income / avgEquity) * 10000) / 100;
+  }
+
+  // D/E = Debt / Equity instantanée (ratio)
+  let de_ratio = null;
+  if (equity != null && equity !== 0 && debt != null) {
+    de_ratio = Math.round((debt / equity) * 100) / 100;
+  }
+
+  // ROIC = NOPAT / Average IC (en %)
   let taxRate = 0.25;
   if (pretax != null && pretax > 0 && taxAmount != null && taxAmount >= 0) {
     taxRate = Math.min(Math.max(taxAmount / pretax, 0), 0.50);
   }
-
   const nopat = opIncome != null ? opIncome * (1 - taxRate) : null;
-
-  // IC current + previous → average
   const icCurrent  = computeInvestedCapital(bsCurrent);
   const icPrevious = bsPrevious ? computeInvestedCapital(bsPrevious) : icCurrent;
   const avgIC = (icCurrent != null && icPrevious != null) ? (icCurrent + icPrevious) / 2 : icCurrent;
 
+  let roic = null;
   if (nopat != null && avgIC != null && avgIC > 1000) {
     roic = Math.round((nopat / avgIC) * 10000) / 100;
   }
 
-  if (DEBUG) {
-    console.log(`  [DEBUG] ${incomeStatement?.fiscal_date || '?'}: ROE=${roe}% (NI=${net_income} / avgEq=${avgEquity})`);
-    console.log(`  [DEBUG] ROIC=${roic}% (NOPAT=${nopat} [opInc=${opIncome}×(1-${(taxRate*100).toFixed(1)}%)] / avgIC=${avgIC})`);
-    console.log(`  [DEBUG] D/E=${de_ratio} (debt=${debt} / eq=${equity})`);
+  // ✅ v2.11: Marge nette
+  let net_margin = null;
+  if (net_income != null && revenue != null && revenue > 0) {
+    net_margin = Math.round((net_income / revenue) * 10000) / 100;
   }
 
   return {
-    roe,
-    de_ratio,
-    roic,
-    net_income,
-    operating_income: opIncome,
-    nopat,
-    tax_rate: Math.round(taxRate * 10000) / 100,
-    total_debt: debt,
-    total_equity: equity,
-    avg_equity: avgEquity,
-    invested_capital: icCurrent,
-    avg_invested_capital: avgIC,
-    cash_and_st_investments: cash,
-    balance_sheet_date: bsCurrent.fiscal_date,
-    income_statement_date: incomeStatement?.fiscal_date,
+    fiscal_date: bsCurrent.fiscal_date || incomeStatement?.fiscal_date || null,
+    roe, de_ratio, roic, net_margin,
+    net_income, revenue, operating_income: opIncome,
+    nopat, tax_rate: Math.round(taxRate * 10000) / 100,
+    total_debt: debt, total_equity: equity, avg_equity: avgEquity,
+    invested_capital: icCurrent, avg_invested_capital: avgIC,
+    cash_and_st_investments: bsCurrent.cash_and_st_investments ?? 0,
+  };
+}
+
+// ✅ v2.11: Calcule les ratios pour TOUTES les années disponibles
+// bsPeriods: [N, N-1, N-2, ...] (plus récent en premier)
+// isPeriods: [N, N-1, N-2, ...] (plus récent en premier)
+function computeMultiYearRatios(bsPeriods, isPeriods) {
+  if (!bsPeriods || !bsPeriods.length) {
+    return { roe: null, de_ratio: null, roic: null, error: 'no_balance_sheet' };
+  }
+
+  // Calcul par année : BS[i] + BS[i+1] (previous) + IS[i]
+  const yearlyRatios = [];
+  for (let i = 0; i < bsPeriods.length; i++) {
+    const bsCurrent  = bsPeriods[i];
+    const bsPrevious = (i + 1 < bsPeriods.length) ? bsPeriods[i + 1] : null;
+    const isMatch = isPeriods?.[i] ?? null;
+    const ratios = computeOneYearRatios(bsCurrent, bsPrevious, isMatch);
+    if (ratios) yearlyRatios.push(ratios);
+  }
+
+  if (!yearlyRatios.length) {
+    return { roe: null, de_ratio: null, roic: null, error: 'no_valid_periods' };
+  }
+
+  // Valeurs les plus récentes (année N)
+  const latest = yearlyRatios[0];
+
+  // ✅ v2.11: Séries pour calcul de stabilité (max 3 dernières années)
+  const recent3 = yearlyRatios.slice(0, 3);
+  const roeArr  = recent3.map(r => r.roe).filter(Number.isFinite);
+  const roicArr = recent3.map(r => r.roic).filter(Number.isFinite);
+
+  const roe_avg_3y  = arrAvg(roeArr);
+  const roe_std_3y  = arrStd(roeArr);
+  const roic_avg_3y = arrAvg(roicArr);
+  const roic_std_3y = arrStd(roicArr);
+
+  // ✅ v2.11: Marge nette (année N)
+  const net_margin = latest.net_margin;
+
+  // ✅ v2.11: Revenue Growth CAGR
+  // On prend les revenues dans recent3 (ancien → récent pour le CAGR)
+  let revenue_growth_3y = null;
+  const revenueArr = recent3.map(r => r.revenue).reverse(); // ancien → récent
+  const validRevenue = revenueArr.filter(Number.isFinite);
+  if (validRevenue.length >= 2) {
+    const first = validRevenue[0];
+    const last  = validRevenue[validRevenue.length - 1];
+    const n = validRevenue.length - 1;
+    if (first > 0 && last > 0) {
+      revenue_growth_3y = Math.round((Math.pow(last / first, 1 / n) - 1) * 10000) / 100;
+    }
+  }
+
+  if (DEBUG) {
+    const dates = yearlyRatios.map(r => r.fiscal_date).join(', ');
+    console.log(`  [MULTI-YEAR] ${yearlyRatios.length} années (${dates})`);
+    console.log(`    ROE: latest=${latest.roe}%, avg3y=${roe_avg_3y?.toFixed(1)}%, std=${roe_std_3y?.toFixed(1)}`);
+    console.log(`    ROIC: latest=${latest.roic}%, avg3y=${roic_avg_3y?.toFixed(1)}%, std=${roic_std_3y?.toFixed(1)}`);
+    console.log(`    Net margin: ${net_margin?.toFixed(1)}% | Rev growth 3y: ${revenue_growth_3y?.toFixed(1)}%`);
+  }
+
+  return {
+    // Valeurs année N (rétrocompatibles v2.10c)
+    roe: latest.roe,
+    de_ratio: latest.de_ratio,
+    roic: latest.roic,
+
+    // ✅ v2.11: Nouvelles métriques multi-années
+    roe_avg_3y:  roe_avg_3y != null ? Math.round(roe_avg_3y * 100) / 100 : null,
+    roe_std_3y:  roe_std_3y != null ? Math.round(roe_std_3y * 100) / 100 : null,
+    roic_avg_3y: roic_avg_3y != null ? Math.round(roic_avg_3y * 100) / 100 : null,
+    roic_std_3y: roic_std_3y != null ? Math.round(roic_std_3y * 100) / 100 : null,
+    net_margin:  net_margin != null ? Math.round(net_margin * 100) / 100 : null,
+    revenue_growth_3y: revenue_growth_3y != null ? Math.round(revenue_growth_3y * 100) / 100 : null,
+
+    // Détails année N (pour debug/cache)
+    net_income: latest.net_income,
+    operating_income: latest.operating_income,
+    nopat: latest.nopat,
+    tax_rate: latest.tax_rate,
+    total_debt: latest.total_debt,
+    total_equity: latest.total_equity,
+    avg_equity: latest.avg_equity,
+    invested_capital: latest.invested_capital,
+    avg_invested_capital: latest.avg_invested_capital,
+    cash_and_st_investments: latest.cash_and_st_investments,
+    balance_sheet_date: latest.fiscal_date,
+    income_statement_date: latest.fiscal_date,
+
+    // ✅ v2.11: Metadata multi-années (stocké dans le cache pour debug)
+    years_available: yearlyRatios.length,
+    yearly_dates: yearlyRatios.map(r => r.fiscal_date),
+    yearly_roe: yearlyRatios.map(r => r.roe),
+    yearly_roic: yearlyRatios.map(r => r.roic),
+    yearly_revenue: yearlyRatios.map(r => r.revenue),
+    yearly_net_margin: yearlyRatios.map(r => r.net_margin),
+
     _formulaVersion: FORMULA_VERSION
   };
 }
 
-// ✅ v2.10c: Retry avec DE cross-listing si ticker IT échoue
+// ✅ v2.11: Refactored — utilise les tableaux multi-périodes
 async function fetchFundamentalsForSymbol(symbol, context = {}) {
   const bsResult = await fetchBalanceSheet(symbol, context);
 
@@ -624,48 +701,47 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
 
-  const incomeStatement = await fetchIncomeStatement(symbol, context);
+  const isResult = await fetchIncomeStatement(symbol, context);
 
-  if (incomeStatement?._rateLimited) {
+  if (isResult?._rateLimited) {
     console.log(`  ⏱️ Rate limit atteint, pause ${RATE_LIMIT_PAUSE_MS/1000}s...`);
     await new Promise(r => setTimeout(r, RATE_LIMIT_PAUSE_MS));
-    const incomeRetry = await fetchIncomeStatement(symbol, context);
-    const bsCurrent  = bsResult?.current ?? null;
-    const bsPrevious = bsResult?.previous ?? null;
-    const ratios = computeFundamentalRatios(bsCurrent, bsPrevious, incomeRetry?._rateLimited ? null : incomeRetry);
+    const isRetry = await fetchIncomeStatement(symbol, context);
+    const bsPeriods = bsResult?.periods ?? [];
+    const isPeriods = isRetry?._rateLimited ? [] : (isRetry?.periods ?? []);
+    const ratios = computeMultiYearRatios(bsPeriods, isPeriods);
     return { symbol, ...ratios, fetched_at: new Date().toISOString() };
   }
 
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
 
-  const bsCurrent  = bsResult?.current ?? null;
-  const bsPrevious = bsResult?.previous ?? null;
+  const bsPeriods = bsResult?.periods ?? [];
+  const isPeriods = isResult?.periods ?? [];
 
-  // ✅ v2.10c: Si échec ET stock italien dans ITALY_FALLBACK → retry avec cross-listing DE
+  // ✅ v2.10c: Retry cross-listing DE pour stocks italiens
   const mic = toMIC(context.exchange || '', context.country || '');
-  if (!bsCurrent && !incomeStatement && mic === 'XMIL' && ITALY_FALLBACK[symbol]) {
+  if (!bsPeriods.length && !isPeriods.length && mic === 'XMIL' && ITALY_FALLBACK[symbol]) {
     const fb = ITALY_FALLBACK[symbol];
     console.log(`  🔄 [ITALY RETRY] ${symbol} → ${fb.sym}:${fb.exchange} (country=Italy échoué)`);
 
     const deContext = { exchange: fb.exchange, country: 'Germany' };
-    // Override buildFundamentalsParams en passant directement le sym DE
     const bsDE = await fetchBalanceSheet(fb.sym, deContext);
     await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
     const isDE = await fetchIncomeStatement(fb.sym, deContext);
     await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
 
-    const bsDECurrent  = bsDE?.current ?? null;
-    const bsDEPrevious = bsDE?.previous ?? null;
-    const ratiosDE = computeFundamentalRatios(bsDECurrent, bsDEPrevious, isDE);
+    const bsPeriodsDE = bsDE?.periods ?? [];
+    const isPeriodsDE = isDE?.periods ?? [];
+    const ratiosDE = computeMultiYearRatios(bsPeriodsDE, isPeriodsDE);
 
     if (ratiosDE.roe !== null || ratiosDE.de_ratio !== null) {
-      console.log(`  ✅ [ITALY RETRY] ${symbol} via ${fb.sym}:${fb.exchange} → ROE=${ratiosDE.roe}`);
+      console.log(`  ✅ [ITALY RETRY] ${symbol} via ${fb.sym}:${fb.exchange} → ROE=${ratiosDE.roe}, ${ratiosDE.years_available} années`);
     }
 
     return { symbol, ...ratiosDE, fetched_at: new Date().toISOString() };
   }
 
-  const ratios = computeFundamentalRatios(bsCurrent, bsPrevious, incomeStatement);
+  const ratios = computeMultiYearRatios(bsPeriods, isPeriods);
 
   return {
     symbol,
@@ -675,12 +751,12 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 }
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
-  console.log('\n' + '═'.repeat(50));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX BUFFETT v2.10c (ITALY: country=Italy + retry DE)');
-  console.log('═'.repeat(50));
+  console.log('\n' + '═'.repeat(60));
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX v2.11 (Multi-années 3-5 ans)');
+  console.log('═'.repeat(60));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
-  console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ (toutes les actions)' : maxNewFetches}`);
-  console.log(`🔢 Formula version: ${FORMULA_VERSION}`);
+  console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ' : maxNewFetches}`);
+  console.log(`🔢 Formula version: ${FORMULA_VERSION} (force re-fetch v1/v2 → v3)`);
   if (DEBUG) console.log('🐛 DEBUG mode activé');
 
   const cache = await loadFundamentalsCache();
@@ -698,16 +774,20 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       const cachedTime = new Date(cached.fetched_at).getTime();
       const cacheNotExpired = now - cachedTime < CACHE_TTL_MS;
 
-      // ✅ v2.9: Force re-fetch si formule obsolète
       const formulaOk = (cached._formulaVersion || 0) >= FORMULA_VERSION;
-
-      // v2.7: Re-fetch si cache sans contexte
       const needsContextMigration = cached.roe === null && cached.de_ratio === null && !cached._hasContext;
 
       if (cacheNotExpired && formulaOk && !needsContextMigration) {
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
         stock.roic = cached.roic;
+        // ✅ v2.11: Charger aussi les nouvelles métriques depuis le cache
+        stock.roe_avg_3y = cached.roe_avg_3y ?? null;
+        stock.roe_std_3y = cached.roe_std_3y ?? null;
+        stock.roic_avg_3y = cached.roic_avg_3y ?? null;
+        stock.roic_std_3y = cached.roic_std_3y ?? null;
+        stock.net_margin = cached.net_margin ?? null;
+        stock.revenue_growth_3y = cached.revenue_growth_3y ?? null;
         fromCache.push(ticker);
         continue;
       }
@@ -719,7 +799,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   console.log(`📁 ${fromCache.length} stocks avec cache valide (v${FORMULA_VERSION})`);
   console.log(`🔄 ${needsUpdate.length} stocks nécessitent mise à jour`);
   if (needsFormulaMigration > 0) {
-    console.log(`🔄 Dont ${needsFormulaMigration} stocks en migration formule (v1 → v${FORMULA_VERSION})`);
+    console.log(`🔄 Dont ${needsFormulaMigration} stocks en migration formule (v1/v2 → v${FORMULA_VERSION})`);
   }
 
   if (needsUpdate.length > 0) {
@@ -751,12 +831,20 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.roe = fundamentals.roe;
       stock.de_ratio = fundamentals.de_ratio;
       stock.roic = fundamentals.roic;
+      // ✅ v2.11: Nouvelles métriques
+      stock.roe_avg_3y = fundamentals.roe_avg_3y ?? null;
+      stock.roe_std_3y = fundamentals.roe_std_3y ?? null;
+      stock.roic_avg_3y = fundamentals.roic_avg_3y ?? null;
+      stock.roic_std_3y = fundamentals.roic_std_3y ?? null;
+      stock.net_margin = fundamentals.net_margin ?? null;
+      stock.revenue_growth_3y = fundamentals.revenue_growth_3y ?? null;
 
       if (fundamentals.roe !== null || fundamentals.de_ratio !== null || fundamentals.roic !== null) {
-        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}%, D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'}, ROIC=${fundamentals.roic?.toFixed(1) ?? 'N/A'}%`);
+        const yrs = fundamentals.years_available || 1;
+        console.log(`  ✅ ${ticker}: ROE=${fundamentals.roe?.toFixed(1) ?? 'N/A'}% D/E=${fundamentals.de_ratio?.toFixed(2) ?? 'N/A'} ROIC=${fundamentals.roic?.toFixed(1) ?? 'N/A'}% | ${yrs}Y avg_ROE=${fundamentals.roe_avg_3y?.toFixed(1) ?? '-'}% margin=${fundamentals.net_margin?.toFixed(1) ?? '-'}%`);
         succeeded++;
       } else {
-        console.log(`  ⚠️ ${ticker}: Données incomplètes (equity=${fundamentals.total_equity}, income=${fundamentals.net_income})`);
+        console.log(`  ⚠️ ${ticker}: Données incomplètes`);
         failed++;
       }
 
@@ -764,17 +852,19 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       console.error(`  ❌ ${ticker}: Erreur -`, error.message);
       cache.data[ticker] = {
         symbol: ticker,
-        roe: null,
-        de_ratio: null,
-        roic: null,
+        roe: null, de_ratio: null, roic: null,
+        roe_avg_3y: null, roe_std_3y: null,
+        roic_avg_3y: null, roic_std_3y: null,
+        net_margin: null, revenue_growth_3y: null,
         _hasContext: true,
         _formulaVersion: FORMULA_VERSION,
         error: error.message,
         fetched_at: new Date().toISOString()
       };
-      stock.roe = null;
-      stock.de_ratio = null;
-      stock.roic = null;
+      stock.roe = null; stock.de_ratio = null; stock.roic = null;
+      stock.roe_avg_3y = null; stock.roe_std_3y = null;
+      stock.roic_avg_3y = null; stock.roic_std_3y = null;
+      stock.net_margin = null; stock.revenue_growth_3y = null;
       failed++;
     }
 
@@ -797,23 +887,38 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     stock.roe = cached?.roe ?? null;
     stock.de_ratio = cached?.de_ratio ?? null;
     stock.roic = cached?.roic ?? null;
+    stock.roe_avg_3y = cached?.roe_avg_3y ?? null;
+    stock.roe_std_3y = cached?.roe_std_3y ?? null;
+    stock.roic_avg_3y = cached?.roic_avg_3y ?? null;
+    stock.roic_std_3y = cached?.roic_std_3y ?? null;
+    stock.net_margin = cached?.net_margin ?? null;
+    stock.revenue_growth_3y = cached?.revenue_growth_3y ?? null;
   }
 
   await saveFundamentalsCache(cache);
 
   const totalTime = (Date.now() - startTime) / 1000;
 
-  console.log('\n' + '─'.repeat(50));
-  console.log('📊 RÉSUMÉ ENRICHISSEMENT:');
+  console.log('\n' + '─'.repeat(60));
+  console.log('📊 RÉSUMÉ ENRICHISSEMENT v2.11:');
   console.log(`  ✅ Depuis cache: ${fromCache.length}`);
   console.log(`  🔄 Nouveaux appels: ${processed}`);
-  console.log(`    - Avec ROE/D/E/ROIC: ${succeeded}`);
+  console.log(`    - Avec données: ${succeeded}`);
   console.log(`    - Sans données: ${failed}`);
   console.log(`  ⏳ En attente: ${notProcessed.length}`);
   if (totalTime > 0) {
     console.log(`  ⏱️ Temps: ${(totalTime/60).toFixed(1)}min (${(processed/totalTime*60).toFixed(0)} stocks/min)`);
   }
-  console.log('─'.repeat(50));
+
+  // ✅ v2.11: Stats multi-années
+  const withMultiYear = stocks.filter(s => s.roe_avg_3y !== null).length;
+  const withMargin = stocks.filter(s => s.net_margin !== null).length;
+  const withRevGrowth = stocks.filter(s => s.revenue_growth_3y !== null).length;
+  console.log(`\n  📈 Multi-années (v2.11):`);
+  console.log(`    - ROE avg 3Y: ${withMultiYear}/${stocks.length}`);
+  console.log(`    - Net margin: ${withMargin}/${stocks.length}`);
+  console.log(`    - Revenue growth 3Y: ${withRevGrowth}/${stocks.length}`);
+  console.log('─'.repeat(60));
 
   return stocks;
 }
@@ -822,12 +927,20 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 // CSV HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-const HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','roe','de_ratio','roic'];
+// ✅ v2.11: Header étendu avec nouvelles colonnes
+const HEADER = [
+  'Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché',
+  'roe','de_ratio','roic',
+  'roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y',
+  'net_margin','revenue_growth_3y'
+];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
+
+const FLOAT_COLS = new Set(['roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','net_margin','revenue_growth_3y']);
 
 const csvLine = obj => HEADER.map(h => {
   const val = obj[h];
-  if ((h === 'roe' || h === 'de_ratio' || h === 'roic') && val !== null && val !== undefined) {
+  if (FLOAT_COLS.has(h) && val !== null && val !== undefined) {
     return `"${parseFloat(val).toFixed(2)}"`;
   }
   return `"${String(val ?? '').replace(/"/g,'""')}"`;
@@ -903,10 +1016,10 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.10c\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.11\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
-  console.log(`   FORMULA_VERSION=${FORMULA_VERSION}`);
+  console.log(`   FORMULA_VERSION=${FORMULA_VERSION} (multi-années)`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
   console.log(`   DEBUG=${DEBUG}`);
@@ -933,9 +1046,9 @@ async function throttle() {
       let { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
       let vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
 
-      // ✅ v2.10b: Stocks italiens ITALY_FALLBACK → force pass (volume TD non fiable pour XMIL ET cross-listings DE)
+      // ITALY_FALLBACK whitelist
       if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) {
-        vol = 999_999; // force pass inconditionnellement — blue chip confirmée
+        vol = 999_999;
         console.log(`  [ITALY WHITELIST] ${ticker} → forced pass (blue chip)`);
       }
 
@@ -951,9 +1064,11 @@ async function throttle() {
           'Pays': r['Pays']||'',
           'Bourse de valeurs': r['Bourse de valeurs']||'',
           'Devise de marché': r['Devise de marché']||'',
-          'roe': null,
-          'de_ratio': null,
-          'roic': null
+          'roe': null, 'de_ratio': null, 'roic': null,
+          // ✅ v2.11: Nouvelles colonnes initialisées
+          'roe_avg_3y': null, 'roe_std_3y': null,
+          'roic_avg_3y': null, 'roic_std_3y': null,
+          'net_margin': null, 'revenue_growth_3y': null
         });
         stats.passed++;
         console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
@@ -980,11 +1095,11 @@ async function throttle() {
     console.log(`✅ ${region}: ${filtered.length}/${rows.length} retenus`);
   }
 
-  // Enrichissement fondamentaux - TOUTES les actions
+  // Enrichissement fondamentaux multi-années
   let combined = allOutputs.flatMap(o => o.rows);
   combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
 
-  // Sauvegarde par région (objets déjà enrichis par référence)
+  // Sauvegarde par région
   for (const output of allOutputs) {
     await writeCSV(output.file, output.rows);
     console.log(`📁 ${output.title}: ${output.rows.length} stocks → ${output.file}`);
@@ -994,19 +1109,27 @@ async function throttle() {
   await writeCSVGeneric(path.join(OUT_DIR, 'Actions_rejetes_par_volume.csv'), allRejected, REJ_HEADER);
 
   // Résumé final
-  console.log('\n' + '='.repeat(50));
-  console.log('📊 RÉSUMÉ FINAL');
-  console.log('='.repeat(50));
+  console.log('\n' + '='.repeat(60));
+  console.log('📊 RÉSUMÉ FINAL v2.11');
+  console.log('='.repeat(60));
   console.log(`Total: ${stats.total} | ✅ ${stats.passed} (${(stats.passed/stats.total*100).toFixed(1)}%) | ❌ ${stats.failed}`);
 
   const withROE = combined.filter(s => s.roe !== null).length;
   const withDE = combined.filter(s => s.de_ratio !== null).length;
   const withROIC = combined.filter(s => s.roic !== null).length;
+  const withROEAvg = combined.filter(s => s.roe_avg_3y !== null).length;
+  const withMargin = combined.filter(s => s.net_margin !== null).length;
+  const withRevGrowth = combined.filter(s => s.revenue_growth_3y !== null).length;
 
-  console.log(`\n📈 Fondamentaux Buffett (v2.10c — country=Italy + retry DE):`);
+  console.log(`\n📈 Fondamentaux (année N):`);
   console.log(`  ROE:  ${withROE}/${combined.length} (${(withROE/combined.length*100).toFixed(1)}%)`);
   console.log(`  D/E:  ${withDE}/${combined.length} (${(withDE/combined.length*100).toFixed(1)}%)`);
   console.log(`  ROIC: ${withROIC}/${combined.length} (${(withROIC/combined.length*100).toFixed(1)}%)`);
+
+  console.log(`\n📈 Multi-années (v2.11):`);
+  console.log(`  ROE avg 3Y:        ${withROEAvg}/${combined.length} (${(withROEAvg/combined.length*100).toFixed(1)}%)`);
+  console.log(`  Net margin:        ${withMargin}/${combined.length} (${(withMargin/combined.length*100).toFixed(1)}%)`);
+  console.log(`  Revenue growth 3Y: ${withRevGrowth}/${combined.length} (${(withRevGrowth/combined.length*100).toFixed(1)}%)`);
 
   // Top ROE
   if (withROE > 0) {
@@ -1015,7 +1138,7 @@ async function throttle() {
       .sort((a, b) => b.roe - a.roe)
       .slice(0, 10)
       .forEach((s, i) => {
-        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'} ROIC=${s.roic?.toFixed(1) ?? 'N/A'}%`);
+        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE=${s.roe.toFixed(1)}% avg3y=${s.roe_avg_3y?.toFixed(1) ?? '-'}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'} ROIC=${s.roic?.toFixed(1) ?? 'N/A'}%`);
       });
   }
 
@@ -1026,11 +1149,27 @@ async function throttle() {
       .sort((a, b) => b.roic - a.roic)
       .slice(0, 10)
       .forEach((s, i) => {
-        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROIC=${s.roic.toFixed(1)}% ROE=${s.roe?.toFixed(1) ?? 'N/A'}% D/E=${s.de_ratio?.toFixed(2) ?? 'N/A'}`);
+        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROIC=${s.roic.toFixed(1)}% avg3y=${s.roic_avg_3y?.toFixed(1) ?? '-'}% margin=${s.net_margin?.toFixed(1) ?? '-'}%`);
       });
   }
 
-  console.log('\n' + '='.repeat(50));
+  // ✅ v2.11: Top stabilité ROE (faible std = moat durable)
+  if (withROEAvg > 0) {
+    console.log('\n🏆 TOP 10 ROE STABLE (avg élevé + faible volatilité):');
+    combined.filter(s => s.roe_avg_3y !== null && s.roe_avg_3y > 10 && s.roe_std_3y !== null)
+      .sort((a, b) => {
+        // Score = avg / (1 + std) — favorise haut avg ET faible volatilité
+        const sa = a.roe_avg_3y / (1 + (a.roe_std_3y || 0));
+        const sb = b.roe_avg_3y / (1 + (b.roe_std_3y || 0));
+        return sb - sa;
+      })
+      .slice(0, 10)
+      .forEach((s, i) => {
+        console.log(`  ${(i+1).toString().padStart(2)}. ${s['Ticker'].padEnd(8)} ROE_avg=${s.roe_avg_3y.toFixed(1)}% std=${s.roe_std_3y.toFixed(1)} revGrowth=${s.revenue_growth_3y?.toFixed(1) ?? '-'}%`);
+      });
+  }
+
+  console.log('\n' + '='.repeat(60));
 
   if (process.env.GITHUB_OUTPUT) {
     const fsSync = require('fs');
@@ -1038,5 +1177,6 @@ async function throttle() {
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roe=${withROE}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_de=${withDE}\n`);
     fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_roic=${withROIC}\n`);
+    fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `fundamentals_with_multiyear=${withROEAvg}\n`);
   }
 })();
