@@ -1,4 +1,17 @@
 // stock-advanced-filter.js
+// Version 3.27 - Quality Score: scoring relatif par peer group (secteur×région)
+// Changements v3.27:
+// - NOUVEAU: computeQualityScores() — scoring relatif par peer group (secteur×région)
+// - 4 dimensions: Quality (ROE, ROIC), Safety (D/E, Payout), Value (PE, FCF), Growth (EPS 5Y)
+// - Percentiles intra-peer group avec winsorisation p05-p95
+// - 3 profils sectoriels: FIN (banques), YIELD (utilities/REIT), DEFAULT
+// - Gates absolus: pénalités ROIC≤0, payout>120%, FCF<0
+// - Coverage tracking: plafond score si métriques manquantes
+// - Payout non-monotone: score = distance à une cible sectorielle
+// - Fallback peer group: secteur global si groupe < 5 stocks
+// - Champs: quality_score, quality_grade, quality_coverage, quality_subscores, quality_peer
+// - buildOverview() enrichi avec tops quality
+// - buffett_score/grade conservés pour rétrocompatibilité
 // Version 3.26 - Fix performances: adjust param, drawdown forward, YTD/3Y basis, 52w intraday, currency guard
 // Changements v3.26:
 // - Fix adjust param: 'adjusted' (ignoré par TD) → 'adjust' (param correct)
@@ -1641,6 +1654,18 @@ async function enrichStock(stock) {
     buffett_score,
     buffett_grade,
         
+        // ✅ v3.27: Quality Score (rempli par computeQualityScores() après enrichissement)
+        quality_score: null,    // sera injecté post-enrichissement
+        quality_grade: null,
+        quality_coverage: null,
+        quality_subscores: null,
+        quality_imputed_fields: [],
+        quality_penalties: [],
+        quality_peer: null,
+        quality_peer_size: null,
+        quality_profile: null,
+        region: null,           // injecté par main() avant scoring
+        
         // ✅ v3.23: NOUVELLES MÉTRIQUES
         fcf_yield,                                        // FCF Yield en %
         fcf_ttm: stats?.fcf_ttm ?? null,                 // FCF TTM brut
@@ -1717,6 +1742,332 @@ function calculateDrawdowns(prices) {
     return { ytd: maxYtd.toFixed(2), year3: max3y.toFixed(2) };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ✅ v3.27: QUALITY SCORE — Scoring relatif par peer group (secteur × région)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function clampVal(x, a, b) { return Math.max(a, Math.min(b, x)); }
+
+// Percentile rank [0..100] — tie-aware via insertion bounds
+function percentileRank(sorted, x) {
+    if (!sorted || sorted.length <= 1) return 50;
+    // lower_bound
+    let lo = 0, hi = sorted.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] < x) lo = mid + 1; else hi = mid; }
+    const left = lo;
+    // upper_bound
+    lo = 0; hi = sorted.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] <= x) lo = mid + 1; else hi = mid; }
+    const right = lo;
+    const rank = (left + right) / 2;
+    return (rank / (sorted.length - 1)) * 100;
+}
+
+// Winsorize: cap outliers at p05/p95
+function winsorize(sorted, pLow = 0.05, pHigh = 0.95) {
+    if (!sorted || sorted.length < 5) return sorted || [];
+    const loIdx = Math.floor((sorted.length - 1) * pLow);
+    const hiIdx = Math.ceil((sorted.length - 1) * pHigh);
+    const lo = sorted[loIdx], hi = sorted[hiIdx];
+    return sorted.map(v => clampVal(v, lo, hi));
+}
+
+// 3 profils sectoriels max — pas de micro-tuning
+function sectorProfile(sector = '') {
+    const s = (sector || '').toLowerCase();
+    if (/bank|insurance|financial/.test(s)) return 'FIN';
+    if (/utilit|reit|telecom|real estate|electric/.test(s)) return 'YIELD';
+    return 'DEFAULT';
+}
+
+function qualityGrade(score) {
+    if (score == null) return null;
+    if (score >= 75) return 'A';
+    if (score >= 55) return 'B';
+    if (score >= 35) return 'C';
+    return 'D';
+}
+
+const validNum = x => Number.isFinite(x);
+const safeAvg = (xs) => {
+    const v = (xs || []).filter(validNum);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+};
+
+// Build sorted+winsorized distribution from array of stocks for a given field
+function buildDist(stocks, field, filter = validNum) {
+    const vals = stocks.map(s => s[field]).filter(filter).sort((a, b) => a - b);
+    return vals.length >= 5 ? winsorize(vals) : vals;
+}
+
+// Score a single metric against its distribution
+function scoreMetric(value, sorted, direction, opts = {}) {
+    if (!sorted || sorted.length < 5) {
+        return { sc: null, used: false, imputed: false };
+    }
+    if (!validNum(value)) {
+        // N/A → impute médiane but cap score
+        const med = sorted[Math.floor(sorted.length / 2)];
+        const p = percentileRank(sorted, med);
+        const capped = Math.min(p, opts.naCapPct ?? 40);
+        return { sc: capped, used: true, imputed: true };
+    }
+    // Clamp value to winsorized range
+    const clamped = clampVal(value, sorted[0], sorted[sorted.length - 1]);
+    let p = percentileRank(sorted, clamped);
+    if (direction === 'low') p = 100 - p;
+    return { sc: p, used: true, imputed: false };
+}
+
+// Score payout as distance to sector target (non-monotone)
+function scorePayoutTarget(value, sorted, target) {
+    if (!sorted || sorted.length < 5) {
+        return { sc: null, used: false, imputed: false };
+    }
+    if (!validNum(value)) {
+        return { sc: 35, used: true, imputed: true }; // NA pénalisé
+    }
+    // Distance à la cible — plus proche = mieux
+    const distToTarget = Math.abs(value - target);
+    const dists = sorted.map(x => Math.abs(x - target)).sort((a, b) => a - b);
+    const p = 100 - percentileRank(dists, distToTarget);
+    return { sc: p, used: true, imputed: false };
+}
+
+/**
+ * computeQualityScores — Scoring relatif par peer group
+ * 
+ * Appelé APRÈS enrichStock() sur tous les stocks (besoin de toutes les données)
+ * Injecte: quality_score, quality_grade, quality_coverage, quality_subscores,
+ *          quality_peer, quality_peer_size, quality_imputed_fields, quality_penalties
+ */
+function computeQualityScores(allStocks) {
+    console.log('\n' + '═'.repeat(60));
+    console.log('🎯 QUALITY SCORING v3.27 — Peer group relatif (secteur × région)');
+    console.log('═'.repeat(60));
+
+    // ── 1. Build peer groups: sector × region ──
+    const byGroup = new Map();
+    const bySector = new Map(); // fallback: sector-only (cross-région)
+
+    for (const s of allStocks) {
+        if (s.error) continue;
+        const region = s.region || 'GLOBAL';
+        const sector = s.sector || 'Unknown';
+        const key = `${region}|${sector}`;
+        const sectorKey = `ALL|${sector}`;
+
+        if (!byGroup.has(key)) byGroup.set(key, []);
+        byGroup.get(key).push(s);
+
+        if (!bySector.has(sectorKey)) bySector.set(sectorKey, []);
+        bySector.get(sectorKey).push(s);
+    }
+
+    // Log peer group stats
+    const groupSizes = [...byGroup.entries()].map(([k, v]) => ({ key: k, n: v.length }));
+    const smallGroups = groupSizes.filter(g => g.n < 5);
+    console.log(`📊 ${byGroup.size} peer groups créés (${smallGroups.length} avec < 5 stocks → fallback secteur global)`);
+
+    // ── 2. Score each stock ──
+    let scored = 0, skipped = 0;
+
+    for (const s of allStocks) {
+        if (s.error) {
+            skipped++;
+            continue;
+        }
+
+        const region = s.region || 'GLOBAL';
+        const sector = s.sector || 'Unknown';
+        const key = `${region}|${sector}`;
+        const sectorKey = `ALL|${sector}`;
+
+        // Choose peer group: primary (sector×region) or fallback (sector global)
+        let peers = byGroup.get(key) || [];
+        let peerKey = key;
+        if (peers.length < 5) {
+            peers = bySector.get(sectorKey) || [];
+            peerKey = sectorKey;
+        }
+        // Ultimate fallback: all stocks
+        if (peers.length < 5) {
+            peers = allStocks.filter(x => !x.error);
+            peerKey = 'GLOBAL|ALL';
+        }
+
+        const profile = sectorProfile(s.sector);
+
+        // ── Build distributions ──
+        const dist = {
+            roe:     buildDist(peers, 'roe'),
+            roic:    buildDist(peers, 'roic'),
+            de:      buildDist(peers, 'de_ratio', x => validNum(x) && x >= 0),
+            pe:      buildDist(peers, 'pe_ratio', x => validNum(x) && x > 0),
+            fcf:     buildDist(peers, 'fcf_yield'),
+            growth:  buildDist(peers, 'eps_growth_5y'),
+            payout:  buildDist(peers, 'payout_ratio_ttm', x => validNum(x) && x >= 0),
+        };
+
+        // ── Handle suspicious zeros ──
+        // ROE=0 suspect seulement si on a des indices d'erreur (net_income manquant dans le contexte)
+        // ROIC=0 idem. On ne touche PAS aux vrais zéros.
+        const roe = s.roe;
+        const roic = s.roic;
+
+        // ── Score each metric ──
+        const mROE  = scoreMetric(roe, dist.roe, 'high');
+        const mROIC = scoreMetric(roic, dist.roic, 'high');
+        const mDE   = (profile === 'FIN')
+            ? { sc: null, used: false, imputed: false }  // D/E non pertinent pour banques
+            : scoreMetric(s.de_ratio, dist.de, 'low');
+        const mPE   = scoreMetric(
+            (validNum(s.pe_ratio) && s.pe_ratio > 0) ? s.pe_ratio : null,
+            dist.pe, 'low'
+        );
+        const mFCF  = scoreMetric(s.fcf_yield, dist.fcf, 'high');
+        const mG    = scoreMetric(s.eps_growth_5y, dist.growth, 'high');
+
+        // Payout: non-monotone, distance à une cible sectorielle
+        const payoutTarget = (profile === 'YIELD') ? 70 : 50;
+        const mPayout = scorePayoutTarget(s.payout_ratio_ttm, dist.payout, payoutTarget);
+
+        // ── Track coverage & imputations ──
+        const imputed = [];
+        const used = [];
+
+        const track = (name, m) => {
+            if (m.used) { used.push(name); if (m.imputed) imputed.push(name); }
+        };
+        track('roe', mROE);
+        track('roic', mROIC);
+        track('de_ratio', mDE);
+        track('pe_ratio', mPE);
+        track('fcf_yield', mFCF);
+        track('eps_growth_5y', mG);
+        track('payout_ratio_ttm', mPayout);
+
+        // ── Dimension scores ──
+        const quality = safeAvg([mROE.sc, mROIC.sc]);
+        const safety  = (profile === 'FIN')
+            ? safeAvg([mPayout.sc])           // Banques: pas de D/E
+            : safeAvg([mDE.sc, mPayout.sc]);
+        const value   = safeAvg([mPE.sc, mFCF.sc]);
+        const growth  = safeAvg([mG.sc]);
+
+        // ── Dimension weights (3 profils) ──
+        let w;
+        switch (profile) {
+            case 'FIN':
+                w = { quality: 0.45, safety: 0.30, value: 0.25, growth: 0.00 };
+                break;
+            case 'YIELD':
+                w = { quality: 0.25, safety: 0.35, value: 0.35, growth: 0.05 };
+                break;
+            default:
+                w = { quality: 0.30, safety: 0.25, value: 0.25, growth: 0.20 };
+        }
+
+        // ── Weighted composite ──
+        const parts = [];
+        if (quality != null) parts.push(['quality', quality]);
+        if (safety  != null) parts.push(['safety',  safety]);
+        if (value   != null) parts.push(['value',   value]);
+        if (growth  != null && w.growth > 0) parts.push(['growth', growth]);
+
+        let totalW = 0;
+        for (const [k] of parts) totalW += w[k] || 0;
+
+        let score = null;
+        if (parts.length > 0 && totalW > 0) {
+            score = parts.reduce((acc, [k, v]) => acc + v * (w[k] || 0), 0) / totalW;
+        }
+
+        // ── Gates absolus (pénalités additives plafonnées) ──
+        let penalty = 0;
+        const penalties = [];
+
+        if (validNum(s.roic) && s.roic <= 0) {
+            penalty += 15; penalties.push('roic_negative');
+        }
+        if (validNum(s.payout_ratio_ttm) && s.payout_ratio_ttm > 120 && profile !== 'YIELD') {
+            penalty += 10; penalties.push('payout_unsustainable');
+        }
+        if (validNum(s.fcf_yield) && s.fcf_yield < 0) {
+            penalty += 10; penalties.push('fcf_negative');
+        }
+        if (validNum(s.pe_ratio) && s.pe_ratio <= 0) {
+            penalty += 5; penalties.push('pe_negative_or_loss');
+        }
+
+        // Cap total penalty at 30 points
+        penalty = Math.min(penalty, 30);
+        if (score != null) score = Math.max(0, score - penalty);
+
+        // ── Coverage cap ──
+        const expectedFields = (profile === 'FIN') ? 5 : 7;
+        const coverage = Math.round((used.length / expectedFields) * 100);
+        if (coverage < 60 && score != null) {
+            score = Math.min(score, 60); // Pas de grade A avec trop de trous
+        }
+
+        // ── Inject into stock ──
+        s.quality_score = (score == null) ? null : Math.round(clampVal(score, 0, 100));
+        s.quality_grade = qualityGrade(s.quality_score);
+        s.quality_coverage = clampVal(coverage, 0, 100);
+        s.quality_imputed_fields = imputed.length ? [...new Set(imputed)] : [];
+        s.quality_penalties = penalties.length ? penalties : [];
+        s.quality_peer = peerKey;
+        s.quality_peer_size = peers.length;
+        s.quality_profile = profile;
+        s.quality_subscores = {
+            quality: quality != null ? Math.round(quality) : null,
+            safety:  safety  != null ? Math.round(safety)  : null,
+            value:   value   != null ? Math.round(value)   : null,
+            growth:  growth  != null ? Math.round(growth)  : null,
+        };
+
+        scored++;
+    }
+
+    // ── Stats ──
+    const withScore = allStocks.filter(s => s.quality_score != null);
+    const qA = withScore.filter(s => s.quality_grade === 'A').length;
+    const qB = withScore.filter(s => s.quality_grade === 'B').length;
+    const qC = withScore.filter(s => s.quality_grade === 'C').length;
+    const qD = withScore.filter(s => s.quality_grade === 'D').length;
+    const withPenalties = withScore.filter(s => s.quality_penalties.length > 0).length;
+    const withImputed = withScore.filter(s => s.quality_imputed_fields.length > 0).length;
+    const lowCoverage = withScore.filter(s => s.quality_coverage < 60).length;
+
+    console.log(`\n📊 Résultats Quality Score:`);
+    console.log(`  Scorés: ${scored} | Skippés: ${skipped}`);
+    console.log(`  Avec score: ${withScore.length}/${allStocks.length}`);
+    console.log(`  Avec pénalités: ${withPenalties} | Avec imputations: ${withImputed} | Coverage <60%: ${lowCoverage}`);
+    console.log(`\n🏆 Distribution Quality Grades:`);
+    console.log(`  A (≥75): ${qA} | B (≥55): ${qB} | C (≥35): ${qC} | D (<35): ${qD}`);
+
+    // Top 5 par profil
+    for (const pf of ['DEFAULT', 'FIN', 'YIELD']) {
+        const top = withScore
+            .filter(s => s.quality_profile === pf && s.quality_coverage >= 60)
+            .sort((a, b) => (b.quality_score || 0) - (a.quality_score || 0))
+            .slice(0, 5);
+        if (top.length) {
+            console.log(`\n  🔝 Top ${pf}:`);
+            top.forEach((s, i) => {
+                const sub = s.quality_subscores;
+                console.log(`    ${i + 1}. ${s.ticker.padEnd(8)} ${s.quality_score}/100 (${s.quality_grade}) ` +
+                    `Q=${sub.quality ?? '-'} S=${sub.safety ?? '-'} V=${sub.value ?? '-'} G=${sub.growth ?? '-'} ` +
+                    `[${s.quality_peer}, n=${s.quality_peer_size}]`);
+            });
+        }
+    }
+
+    console.log('═'.repeat(60));
+    return allStocks;
+}
+
 // ---------- TOPS HELPERS ----------
 function cmpCore(a, b, field, dir){
   const s = dir === 'asc' ? 1 : -1;
@@ -1762,7 +2113,13 @@ function buildOverview(byRegion){
     de_ratio: s.de_ratio == null ? null : Number(s.de_ratio),
     roic: s.roic == null ? null : Number(s.roic),
     buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
-    buffett_grade: s.buffett_grade || null
+    buffett_grade: s.buffett_grade || null,
+    // ✅ v3.27: Quality Score
+    quality_score: s.quality_score == null ? null : Number(s.quality_score),
+    quality_grade: s.quality_grade || null,
+    quality_coverage: s.quality_coverage == null ? null : Number(s.quality_coverage),
+    quality_subscores: s.quality_subscores || null,
+    quality_profile: s.quality_profile || null
   });
 
   const sets = {
@@ -1798,12 +2155,33 @@ function buildOverview(byRegion){
                        .slice(0, 10)
                        .map(pick)
       },
-      // ✅ v3.22: Top Buffett Quality
+      // ✅ v3.22: Top Buffett Quality (legacy)
       buffett: {
         best_quality: getTopN(arr, { field: 'buffett_score', direction: 'desc', n: 10, excludeADR }).map(pick),
         highest_roe: getTopN(arr, { field: 'roe', direction: 'desc', n: 10, excludeADR }).map(pick),
         lowest_debt: arr.filter(s => s.de_ratio != null && s.de_ratio >= 0 && (!excludeADR || !s.is_adr))
                        .sort((a,b) => (a.de_ratio || 999) - (b.de_ratio || 999))
+                       .slice(0, 10)
+                       .map(pick)
+      },
+      // ✅ v3.27: Top Quality Score (nouveau scoring relatif)
+      quality: {
+        best_overall: arr.filter(s => s.quality_score != null && s.quality_coverage >= 60 && (!excludeADR || !s.is_adr))
+                        .sort((a,b) => (b.quality_score || 0) - (a.quality_score || 0))
+                        .slice(0, 10)
+                        .map(pick),
+        best_no_penalty: arr.filter(s => s.quality_score != null && s.quality_coverage >= 60 
+                                      && (!s.quality_penalties || s.quality_penalties.length === 0)
+                                      && (!excludeADR || !s.is_adr))
+                           .sort((a,b) => (b.quality_score || 0) - (a.quality_score || 0))
+                           .slice(0, 10)
+                           .map(pick),
+        best_value: arr.filter(s => s.quality_subscores?.value != null && s.quality_coverage >= 60 && (!excludeADR || !s.is_adr))
+                      .sort((a,b) => (b.quality_subscores?.value || 0) - (a.quality_subscores?.value || 0))
+                      .slice(0, 10)
+                      .map(pick),
+        best_growth: arr.filter(s => s.quality_subscores?.growth != null && s.quality_coverage >= 60 && (!excludeADR || !s.is_adr))
+                       .sort((a,b) => (b.quality_subscores?.growth || 0) - (a.quality_subscores?.growth || 0))
                        .slice(0, 10)
                        .map(pick)
       },
@@ -1831,7 +2209,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.26 - Fix performances)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.27 - Quality Score peer group)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
@@ -1901,11 +2279,28 @@ async function main() {
             enrichedStocks.push(...enrichedBatch);
         }
         
-        byRegion[region.name.toUpperCase()] = enrichedStocks;
+        // ✅ v3.27: Injecter le champ region pour le peer group scoring
+        const regionTag = region.name.toUpperCase();
+        for (const s of enrichedStocks) {
+            if (!s.error) s.region = regionTag;
+        }
+        
+        byRegion[regionTag] = enrichedStocks;
+        console.log(`✅ ${regionTag}: ${enrichedStocks.length} stocks enrichis`);
+    }
+    
+    // ✅ v3.27: Quality Score — scoring relatif APRÈS enrichissement complet
+    const allForScoring = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA];
+    computeQualityScores(allForScoring);
+    
+    // ✅ v3.27: Écrire les JSON APRÈS le scoring (quality_score maintenant rempli)
+    for (const region of regions) {
+        const regionTag = region.name.toUpperCase();
+        const enrichedStocks = byRegion[regionTag];
         
         const filepath = path.join(OUT_DIR, `stocks_${region.name}.json`);
         await fs.writeFile(filepath, JSON.stringify({
-            region: region.name.toUpperCase(),
+            region: regionTag,
             timestamp: new Date().toISOString(),
             stocks: enrichedStocks,
             // Métadonnées ADR
@@ -1915,7 +2310,7 @@ async function main() {
             } : null
         }, null, 2));
         
-        console.log(`✅ ${filepath}`);
+        console.log(`📁 ${filepath}`);
     }
     
     // --------- TOPS OVERVIEW ----------
@@ -1935,12 +2330,21 @@ async function main() {
     const withSplits = allStocks.filter(s => s.debug_dividends?.recent_split).length;
     const withRunRate = allStocks.filter(s => s.debug_dividends?.used_run_rate).length;
     
-    // ✅ v3.22: Stats Buffett
+    // ✅ v3.22: Stats Buffett (legacy)
     const withBuffettScore = allStocks.filter(s => s.buffett_score !== null);
     const gradeA = allStocks.filter(s => s.buffett_grade === 'A').length;
     const gradeB = allStocks.filter(s => s.buffett_grade === 'B').length;
     const gradeC = allStocks.filter(s => s.buffett_grade === 'C').length;
     const gradeD = allStocks.filter(s => s.buffett_grade === 'D').length;
+    
+    // ✅ v3.27: Stats Quality Score (nouveau)
+    const withQuality = allStocks.filter(s => s.quality_score !== null);
+    const qA = allStocks.filter(s => s.quality_grade === 'A').length;
+    const qB = allStocks.filter(s => s.quality_grade === 'B').length;
+    const qC = allStocks.filter(s => s.quality_grade === 'C').length;
+    const qD = allStocks.filter(s => s.quality_grade === 'D').length;
+    const qPenalized = allStocks.filter(s => s.quality_penalties && s.quality_penalties.length > 0).length;
+    const qLowCov = allStocks.filter(s => s.quality_coverage != null && s.quality_coverage < 60).length;
     
     // ✅ v3.23: Stats nouvelles métriques
     const withFCFYield = allStocks.filter(s => s.fcf_yield !== null).length;
@@ -1956,18 +2360,30 @@ async function main() {
     console.log(`  - Actions avec conflits de rendements: ${withConflict}/${allStocks.length}`);
     if (KEEP_ADR) console.log(`  - ADR dans US: ${adrCount}`);
     
-    // ✅ v3.22: Affichage stats Buffett
-    console.log('\n📈 Statistiques Buffett:');
+    // ✅ v3.22: Affichage stats Buffett (legacy)
+    console.log('\n📈 Statistiques Buffett (legacy):');
     console.log(`  - Actions avec ROE: ${allStocks.filter(s => s.roe !== null).length}/${allStocks.length}`);
     console.log(`  - Actions avec D/E: ${allStocks.filter(s => s.de_ratio !== null).length}/${allStocks.length}`);
     console.log(`  - Actions avec ROIC: ${allStocks.filter(s => s.roic !== null).length}/${allStocks.length}`);
     console.log(`  - Actions avec score Buffett: ${withBuffettScore.length}/${allStocks.length}`);
     
-    console.log('\n🏆 Distribution Grades Buffett:');
+    console.log('\n🏆 Distribution Grades Buffett (legacy):');
     console.log(`  - Grade A (≥80): ${gradeA} actions`);
     console.log(`  - Grade B (≥60): ${gradeB} actions`);
     console.log(`  - Grade C (≥40): ${gradeC} actions`);
     console.log(`  - Grade D (<40): ${gradeD} actions`);
+    
+    // ✅ v3.27: Affichage Quality Score
+    console.log('\n🎯 Quality Score v3.27 (peer group relatif):');
+    console.log(`  - Actions avec score: ${withQuality.length}/${allStocks.length}`);
+    console.log(`  - Avec pénalités: ${qPenalized}`);
+    console.log(`  - Coverage < 60%: ${qLowCov}`);
+    
+    console.log('\n🏆 Distribution Quality Grades:');
+    console.log(`  - Grade A (≥75): ${qA} actions`);
+    console.log(`  - Grade B (≥55): ${qB} actions`);
+    console.log(`  - Grade C (≥35): ${qC} actions`);
+    console.log(`  - Grade D (<35): ${qD} actions`);
     
     // ✅ v3.23: Affichage nouvelles métriques
     console.log('\n💰 Statistiques Value/Growth (v3.23):');
