@@ -1252,53 +1252,64 @@ function clampRegToTTM(reg, ttm, hasSpecial){
 }
 
 // ✅ v3.24: Score Buffett enrichi (ROE + D/E + ROIC)
-function calculateBuffettScore(roe, de_ratio, roic) {
-    let score = 0;
-    let maxScore = 0;
-    
-    // ROE: max 25 points
-    if (roe !== null && roe !== undefined && Number.isFinite(roe)) {
-        maxScore += 25;
-        if (roe >= 20) score += 25;           // Excellent
-        else if (roe >= 15) score += 20;      // Bon
-        else if (roe >= 10) score += 12;      // Acceptable
-        else if (roe > 0) score += 5;         // Faible
-        // roe <= 0 : 0 points
-    }
-    
-    // D/E: max 20 points
-    if (de_ratio !== null && de_ratio !== undefined && Number.isFinite(de_ratio)) {
-        maxScore += 20;
-        if (de_ratio < 0.5) score += 20;      // Faible endettement
-        else if (de_ratio < 1.0) score += 15; // Modéré
-        else if (de_ratio < 2.0) score += 8;  // Élevé
-        else if (de_ratio < 3.0) score += 3;  // Très élevé
-        // de_ratio >= 3.0 : 0 points (dangereux)
-    }
-    
-    // ✅ v3.24: ROIC - max 25 points (Return on Invested Capital)
-    if (roic !== null && roic !== undefined && Number.isFinite(roic)) {
-        maxScore += 25;
-        if (roic >= 20) score += 25;          // Excellent (très efficace)
-        else if (roic >= 15) score += 20;     // Bon
-        else if (roic >= 10) score += 12;     // Acceptable
-        else if (roic >= 5) score += 5;       // Faible
-        else if (roic > 0) score += 2;        // Très faible
-        // roic <= 0 : 0 points (destruction de valeur)
-    }
-    
-    // Normaliser sur 100
-    if (maxScore === 0) return null;
-    return Math.round((score / maxScore) * 100);
+// ✅ v3.29: Buffett Score V2 — lissage linéaire, 3Y, coverage cap, profil FIN, bonus stabilité
+// Interpolation linéaire : score progresse proportionnellement entre x0 (0 pts) et x1 (max pts)
+function linScore(x, x0, x1, pts) {
+    if (!Number.isFinite(x)) return null;
+    if (x <= x0) return 0;
+    if (x >= x1) return pts;
+    return ((x - x0) / (x1 - x0)) * pts;
 }
 
-// ✅ v3.22: Grade Buffett (A/B/C/D)
-function getBuffettGrade(score) {
-    if (score === null || score === undefined) return null;
-    if (score >= 80) return 'A';
-    if (score >= 60) return 'B';
-    if (score >= 40) return 'C';
-    return 'D';
+function calculateBuffettScore(stock) {
+    const isFin = SECTOR_PROFILE_MAP[(stock.sector || '').toLowerCase().trim()] === 'FIN'
+               || SECTOR_PROFILE_REGEX.some(r => r.profile === 'FIN' && r.re.test((stock.sector || '').toLowerCase()));
+
+    // Préférer les moyennes 3Y (moins bruitées), fallback année N
+    const ROE  = Number.isFinite(stock.roe_avg_3y)  ? stock.roe_avg_3y  : stock.roe;
+    const ROIC = Number.isFinite(stock.roic_avg_3y) ? stock.roic_avg_3y : stock.roic;
+    const DE   = stock.de_ratio;
+
+    const parts = [];
+
+    // ROE: 5% → 0 pts, 20% → 25 pts (linéaire)
+    const sROE = linScore(ROE, 5, 20, 25);
+    if (sROE != null) parts.push({ name: 'roe', pts: sROE, max: 25 });
+
+    // ROIC: 3% → 0 pts, 20% → 25 pts (linéaire)
+    const sROIC = linScore(ROIC, 3, 20, 25);
+    if (sROIC != null) parts.push({ name: 'roic', pts: sROIC, max: 25 });
+
+    // D/E: 0 → 20 pts, 2.5 → 0 pts (linéaire inverse) — exclu pour FIN
+    if (!isFin && Number.isFinite(DE) && DE >= 0) {
+        const sDE = linScore(2.5 - Math.min(2.5, DE), 0, 2.5, 20);
+        if (sDE != null) parts.push({ name: 'de', pts: sDE, max: 20 });
+    }
+
+    const used = parts.length;
+    const max = parts.reduce((a, p) => a + p.max, 0);
+    const got = parts.reduce((a, p) => a + p.pts, 0);
+    if (!max) return { score: null, grade: null, used: 0, detail: null, bonus: 0 };
+
+    let score = Math.round((got / max) * 100);
+
+    // Coverage cap : évite les scores gonflés quand il manque des données
+    if (used < 2) score = Math.min(score, 60);
+    if (used < 3 && !isFin) score = Math.min(score, 80);
+
+    // Bonus stabilité ROE (coefficient de variation sur 3 ans)
+    let bonus = 0;
+    if (Number.isFinite(stock.roe_std_3y) && Number.isFinite(stock.roe_avg_3y) && stock.roe_avg_3y > 0) {
+        const cv = stock.roe_std_3y / Math.abs(stock.roe_avg_3y);
+        if (cv < 0.15) bonus = 5;        // très stable — moat
+        else if (cv < 0.25) bonus = 3;   // stable
+        else if (cv > 0.60) bonus = -5;  // très volatile
+    }
+    score = Math.max(0, Math.min(100, score + bonus));
+
+    const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';
+    const detail = parts.map(p => `${p.name}=${p.pts.toFixed(1)}/${p.max}`).join(' ');
+    return { score, grade, used, detail, bonus };
 }
 
 // ✅ v3.23: Mise à jour enrichStock pour inclure FCF Yield et EPS Growth 5Y
@@ -1695,12 +1706,15 @@ async function enrichStock(stock) {
         console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
     }
     
-    // ✅ v3.24: Calcul du score Buffett depuis les données CSV (avec ROIC)
-    const buffett_score = calculateBuffettScore(stock.roe, stock.de_ratio, stock.roic);
-    const buffett_grade = getBuffettGrade(buffett_score);
+    // ✅ v3.29: Buffett Score V2 — lissage linéaire, 3Y, coverage cap, profil FIN, bonus stabilité
+    const buffett = calculateBuffettScore(stock);
+    const buffett_score = buffett.score;
+    const buffett_grade = buffett.grade;
     
     if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null || stock.roic !== null)) {
-        console.log(`[BUFFETT] ${stock.symbol}: ROE=${stock.roe}%, D/E=${stock.de_ratio}, ROIC=${stock.roic}% → Score=${buffett_score}, Grade=${buffett_grade}`);
+        const ROE_used = Number.isFinite(stock.roe_avg_3y) ? `${stock.roe_avg_3y}(3Y)` : `${stock.roe}(N)`;
+        const ROIC_used = Number.isFinite(stock.roic_avg_3y) ? `${stock.roic_avg_3y}(3Y)` : `${stock.roic}(N)`;
+        console.log(`[BUFFETT V2] ${stock.symbol}: ROE=${ROE_used}%, ROIC=${ROIC_used}%, D/E=${stock.de_ratio} | ${buffett.detail} | bonus=${buffett.bonus} → ${buffett_score} ${buffett_grade}`);
     }
 
     
