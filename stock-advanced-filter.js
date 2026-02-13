@@ -682,7 +682,14 @@ async function loadStockCSV(filepath) {
             roe: parseNumberLoose(row['roe']) ?? null,
             de_ratio: parseNumberLoose(row['de_ratio']) ?? null,
             // ✅ v3.24: Lecture ROIC depuis le CSV
-            roic: parseNumberLoose(row['roic']) ?? null
+            roic: parseNumberLoose(row['roic']) ?? null,
+            // ✅ v3.27: Nouvelles métriques multi-années depuis CSV (v2.11)
+            roe_avg_3y: parseNumberLoose(row['roe_avg_3y']) ?? null,
+            roe_std_3y: parseNumberLoose(row['roe_std_3y']) ?? null,
+            roic_avg_3y: parseNumberLoose(row['roic_avg_3y']) ?? null,
+            roic_std_3y: parseNumberLoose(row['roic_std_3y']) ?? null,
+            net_margin: parseNumberLoose(row['net_margin']) ?? null,
+            revenue_growth_3y: parseNumberLoose(row['revenue_growth_3y']) ?? null
         })).filter(s => s.symbol);
     } catch (error) {
         console.error(`Erreur ${filepath}: ${error.message}`);
@@ -1651,6 +1658,13 @@ async function enrichStock(stock) {
    roe: stock.roe,
     de_ratio: stock.de_ratio,
     roic: stock.roic,
+    // ✅ v3.27: Métriques multi-années depuis CSV (v2.11)
+    roe_avg_3y: stock.roe_avg_3y,
+    roe_std_3y: stock.roe_std_3y,
+    roic_avg_3y: stock.roic_avg_3y,
+    roic_std_3y: stock.roic_std_3y,
+    net_margin: stock.net_margin,
+    revenue_growth_3y: stock.revenue_growth_3y,
     buffett_score,
     buffett_grade,
         
@@ -1907,6 +1921,11 @@ function computeQualityScores(allStocks) {
             fcf:     buildDist(peers, 'fcf_yield'),
             growth:  buildDist(peers, 'eps_growth_5y'),
             payout:  buildDist(peers, 'payout_ratio_ttm', x => validNum(x) && x >= 0),
+            // ✅ v3.27: Multi-year distributions
+            roe_avg: buildDist(peers, 'roe_avg_3y'),
+            roic_avg: buildDist(peers, 'roic_avg_3y'),
+            margin:  buildDist(peers, 'net_margin'),
+            revgrowth: buildDist(peers, 'revenue_growth_3y'),
         };
 
         // ── Handle suspicious zeros ──
@@ -1928,6 +1947,22 @@ function computeQualityScores(allStocks) {
         const mFCF  = scoreMetric(s.fcf_yield, dist.fcf, 'high');
         const mG    = scoreMetric(s.eps_growth_5y, dist.growth, 'high');
 
+        // ✅ v3.27: Multi-year metrics
+        const mROEAvg  = scoreMetric(s.roe_avg_3y, dist.roe_avg, 'high');
+        const mROICAvg = scoreMetric(s.roic_avg_3y, dist.roic_avg, 'high');
+        const mMargin  = scoreMetric(s.net_margin, dist.margin, 'high');
+        const mRevGrowth = scoreMetric(s.revenue_growth_3y, dist.revgrowth, 'high');
+
+        // ✅ v3.27: Stability bonus — low std = consistent quality (moat indicator)
+        // Si roe_std_3y est dispo et faible, boost quality score
+        let stabilityBonus = 0;
+        if (validNum(s.roe_std_3y) && validNum(s.roe_avg_3y) && s.roe_avg_3y > 0) {
+            const cv = s.roe_std_3y / Math.abs(s.roe_avg_3y); // coefficient of variation
+            if (cv < 0.15) stabilityBonus = 8;       // très stable
+            else if (cv < 0.30) stabilityBonus = 4;  // stable
+            else if (cv > 0.80) stabilityBonus = -5;  // très volatile
+        }
+
         // Payout: non-monotone, distance à une cible sectorielle
         const payoutTarget = (profile === 'YIELD') ? 70 : 50;
         const mPayout = scorePayoutTarget(s.payout_ratio_ttm, dist.payout, payoutTarget);
@@ -1946,14 +1981,24 @@ function computeQualityScores(allStocks) {
         track('fcf_yield', mFCF);
         track('eps_growth_5y', mG);
         track('payout_ratio_ttm', mPayout);
+        // ✅ v3.27: Track multi-year metrics
+        track('roe_avg_3y', mROEAvg);
+        track('roic_avg_3y', mROICAvg);
+        track('net_margin', mMargin);
+        track('revenue_growth_3y', mRevGrowth);
 
         // ── Dimension scores ──
-        const quality = safeAvg([mROE.sc, mROIC.sc]);
+        // Quality: préférer les moyennes 3Y si disponibles, sinon année N
+        const qualityROE  = mROEAvg.sc != null ? mROEAvg.sc : mROE.sc;
+        const qualityROIC = mROICAvg.sc != null ? mROICAvg.sc : mROIC.sc;
+        const quality = safeAvg([qualityROE, qualityROIC, mMargin.sc]);
+
         const safety  = (profile === 'FIN')
             ? safeAvg([mPayout.sc])           // Banques: pas de D/E
             : safeAvg([mDE.sc, mPayout.sc]);
         const value   = safeAvg([mPE.sc, mFCF.sc]);
-        const growth  = safeAvg([mG.sc]);
+        // Growth: combiner EPS growth 5Y et revenue growth 3Y
+        const growth  = safeAvg([mG.sc, mRevGrowth.sc]);
 
         // ── Dimension weights (3 profils) ──
         let w;
@@ -2005,10 +2050,15 @@ function computeQualityScores(allStocks) {
         if (score != null) score = Math.max(0, score - penalty);
 
         // ── Coverage cap ──
-        const expectedFields = (profile === 'FIN') ? 5 : 7;
+        const expectedFields = (profile === 'FIN') ? 7 : 11;
         const coverage = Math.round((used.length / expectedFields) * 100);
         if (coverage < 60 && score != null) {
             score = Math.min(score, 60); // Pas de grade A avec trop de trous
+        }
+
+        // ✅ v3.27: Stability bonus (moat indicator)
+        if (score != null && stabilityBonus !== 0) {
+            score = Math.max(0, Math.min(100, score + stabilityBonus));
         }
 
         // ── Inject into stock ──
@@ -2112,6 +2162,11 @@ function buildOverview(byRegion){
     roe: s.roe == null ? null : Number(s.roe),
     de_ratio: s.de_ratio == null ? null : Number(s.de_ratio),
     roic: s.roic == null ? null : Number(s.roic),
+    // ✅ v3.27: Multi-year metrics
+    roe_avg_3y: s.roe_avg_3y == null ? null : Number(s.roe_avg_3y),
+    roe_std_3y: s.roe_std_3y == null ? null : Number(s.roe_std_3y),
+    net_margin: s.net_margin == null ? null : Number(s.net_margin),
+    revenue_growth_3y: s.revenue_growth_3y == null ? null : Number(s.revenue_growth_3y),
     buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
     buffett_grade: s.buffett_grade || null,
     // ✅ v3.27: Quality Score
