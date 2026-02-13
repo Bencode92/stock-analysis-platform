@@ -1317,6 +1317,29 @@ function calculateBuffettScore(stock) {
     return { score, grade, used, detail, bonus };
 }
 
+// ✅ v3.30: Sanitize forward dividend yield
+// Neutralise le bug provider qui annualise ×4 les dividendes annuels
+// (le provider traite tout comme trimestriel → forward = montant_annuel × 4 / prix)
+function sanitizeForwardYield({ yieldFwd, yieldReg, yieldTtmCalc, freq, recentSplit, specialSharePct }) {
+    if (!Number.isFinite(yieldFwd) || yieldFwd <= 0) return null;
+
+    // Référence réaliste : REG sinon TTM calc
+    const ref = Number.isFinite(yieldReg) && yieldReg > 0
+        ? yieldReg
+        : (Number.isFinite(yieldTtmCalc) && yieldTtmCalc > 0 ? yieldTtmCalc : null);
+
+    // Bug ×4 typique : payeur annuel/semestriel, pas de split récent, peu de spéciaux
+    if (ref && (freq === 1 || freq === 2) && !recentSplit && (specialSharePct ?? 0) < 20) {
+        const ratio = yieldFwd / ref;
+        if (ratio > 2.2 && ratio < 6.5) return null;  // x3..x6 = bug provider
+    }
+
+    // Plafond absolu : >12% forward yield quasi impossible hors REITs/Utilities
+    if (yieldFwd > 12) return null;
+
+    return yieldFwd;
+}
+
 // ✅ v3.23: Mise à jour enrichStock pour inclure FCF Yield et EPS Growth 5Y
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
@@ -1539,8 +1562,19 @@ async function enrichStock(stock) {
       ? +((ttmSumCalc / price) * 100).toFixed(2) : null;
     let   yield_regular  = (price > 0 && annualRegular)
       ? +((annualRegular / price) * 100).toFixed(2) : null;
-    const yield_fwd      = Number.isFinite(stats?.dividend_yield_forward_pct)
+    const yield_fwd_raw  = Number.isFinite(stats?.dividend_yield_forward_pct)
       ? +stats.dividend_yield_forward_pct.toFixed(2) : null;
+
+    // ✅ v3.30: Sanitize forward yield — neutralise le bug x4 sur payeurs annuels
+    // Le provider annualise le montant annuel comme si c'était trimestriel → yield x4
+    const yield_fwd = sanitizeForwardYield({
+        yieldFwd: yield_fwd_raw,
+        yieldReg: yield_regular,
+        yieldTtmCalc: yield_ttm_calc,
+        freq,
+        recentSplit,
+        specialSharePct: specialShare
+    });
 
     let dividend_yield_ttm = yield_ttm_calc;
 
@@ -1631,6 +1665,7 @@ async function enrichStock(stock) {
         quarterly_median: regularQ ?? null,
         special_share_ttm_pct: +specialShare.toFixed(1),
         api_trailing_pct: Number.isFinite(yield_ttm_api) ? +yield_ttm_api.toFixed(2) : null,
+        api_forward_pct_raw: Number.isFinite(yield_fwd_raw) ? +yield_fwd_raw.toFixed(2) : null,
         api_forward_pct: Number.isFinite(yield_fwd) ? +yield_fwd.toFixed(2) : null,
         consistency: dividend_consistency,
         frequency_detected: freq,
