@@ -764,17 +764,29 @@ async function getPerformanceData(symbol, stock) {
         if (!data || data.status === 'error' || !data.values) return {};
 
         const meta = data.meta || {};
-        // ✅ v3.26: Parse high/low pour 52w intraday
-        const prices = (data.values || []).map(v => ({
-            date: v.datetime.slice(0,10),
-            close: Number(v.close),
-            high: Number(v.high) || Number(v.close),
-            low: Number(v.low) || Number(v.close)
-        }));
-        if (!prices.length) return {};
+        // ✅ v3.30 Fix 13a: Filtrer les prix invalides (close<=0, NaN, date manquante)
+        // Un seul close=0 suffit à exploser vol/drawdown via log(0) = -Infinity
+        const prices = (data.values || []).map(v => {
+            const close = Number(v.close);
+            const high  = Number(v.high);
+            const low   = Number(v.low);
+            return {
+                date: (v.datetime || '').slice(0,10),
+                close,
+                high: Number.isFinite(high) && high > 0 ? high : close,
+                low:  Number.isFinite(low)  && low  > 0 ? low  : close
+            };
+        }).filter(p =>
+            p.date &&
+            Number.isFinite(p.close) && p.close > 0 &&
+            Number.isFinite(p.high)  && p.high  > 0 &&
+            Number.isFinite(p.low)   && p.low   > 0
+        );
+        if (prices.length < 50) return {};
 
-        const current = prices.at(-1)?.close || 0;
-        const prev = prices.at(-2)?.close || null;
+        const current = prices.at(-1)?.close;
+        if (!Number.isFinite(current) || current <= 0) return {};
+        const prev = prices.at(-2)?.close ?? null;
         const perf = {};
         
         if (prev) perf.day_1 = ((current - prev)/prev*100).toFixed(2);
@@ -810,7 +822,12 @@ async function getPerformanceData(symbol, stock) {
 
         const tail = prices.slice(-Math.min(252*3, prices.length)).map(p => p.close);
         const rets = []; 
-        for (let i=1; i<tail.length; i++) rets.push(Math.log(tail[i]/tail[i-1]));
+        for (let i=1; i<tail.length; i++) {
+            const r = Math.log(tail[i]/tail[i-1]);
+            // ✅ v3.30 Fix 13b: Cap returns ±50%/jour — absorbe GBp/GBP shifts et glitches provider
+            // Un shift ×100 (GBp→GBP) = log(100) = 4.6 → capé à 0.5
+            rets.push(Math.max(-0.5, Math.min(0.5, r)));
+        }
         const vol = Math.sqrt(252) * standardDeviation(rets) * 100;
 
         // ✅ v3.26: 52w basé sur high/low intraday + 365 jours calendrier
@@ -1476,6 +1493,9 @@ async function enrichStock(stock) {
     }
     
     // ✅ v3.23: Calcul FCF Yield (maintenant market_cap et FCF sont dans la même devise)
+    // ✅ v3.30 Fix 14: market_cap <= 0 → null (MONC, CPR Borsa Italiana: data provider KO)
+    if (!Number.isFinite(market_cap) || market_cap <= 0) market_cap = null;
+    
     let fcf_yield = null;
     if (Number.isFinite(stats?.fcf_ttm) && Number.isFinite(market_cap) && market_cap > 0) {
         fcf_yield = +((stats.fcf_ttm / market_cap) * 100).toFixed(2);
@@ -2166,7 +2186,12 @@ function computeQualityScores(allStocks) {
             : scoreMetric(roic, dist.roic, 'high');
         const mDE   = (profile === 'FIN')
             ? { sc: null, used: false, imputed: false }  // D/E non pertinent pour banques
-            : scoreMetric(s.de_ratio, dist.de, 'low');
+            // ✅ v3.30 Fix 15: D/E négatif = equity négative (buybacks extrêmes) → pénalité
+            // IHG: de_ratio=-1.6 → clampé au min peer (0.01) → direction=low → score ~100 = FAUX
+            // Equity négative = levier structurel extrême, pas "ultra-safe"
+            : (validNum(s.de_ratio) && s.de_ratio < 0)
+                ? { sc: 15, used: true, imputed: false }  // Cap bas: pire que médiane
+                : scoreMetric(s.de_ratio, dist.de, 'low');
         const mPE   = scoreMetric(
             (validNum(s.pe_ratio) && s.pe_ratio > 0) ? s.pe_ratio : null,
             dist.pe, 'low'
@@ -2282,6 +2307,12 @@ function computeQualityScores(allStocks) {
         }
         if (validNum(s.pe_ratio) && s.pe_ratio <= 0) {
             penalty += 5; penalties.push('pe_negative_or_loss');
+        }
+        // ✅ v3.30 Fix 15: Equity négative (D/E < 0) = levier structurel extrême
+        // IHG: buybacks → equity négative → de_ratio=-1.6 → Safety était 98 (FAUX)
+        // Score D/E déjà capé à 15 ci-dessus, on ajoute aussi une pénalité composite
+        if (profile !== 'FIN' && validNum(s.de_ratio) && s.de_ratio < 0) {
+            penalty += 8; penalties.push('equity_negative');
         }
 
         // Cap total penalty at 30 points
