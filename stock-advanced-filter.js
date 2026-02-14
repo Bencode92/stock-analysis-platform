@@ -1137,11 +1137,14 @@ function calculateDividendGrowth(history) {
         byYear[year] = (byYear[year] || 0) + d.amount;
     });
     
-    const years = Object.keys(byYear).sort();
-    if (years.length < 2) return null;
+    // ✅ v3.30 Fix 11: Exclure l'année courante (incomplète → CAGR artificiellement négatif)
+    // Ex: au 14/02/2026, ASML n'a qu'1 dividende en 2026 → byYear[2026]=1.6 vs 2025=6.56
+    const nowYear = new Date().getFullYear();
+    const fullYears = Object.keys(byYear).map(Number).filter(y => y < nowYear).sort();
+    if (fullYears.length < 2) return null;
     
-    // CAGR sur la période disponible (max 3 ans)
-    const recentYears = years.slice(-4); // Prendre les 4 dernières années max
+    // CAGR sur les 3 dernières années complètes (4 points → 3 périodes)
+    const recentYears = fullYears.slice(-4);
     if (recentYears.length < 2) return null;
     
     const first = byYear[recentYears[0]];
@@ -1521,7 +1524,13 @@ async function enrichStock(stock) {
     
     // Utiliser les montants post-split si disponibles, sinon tous les montants récents
     const baseAmts = recentAmtsPost.length >= 2 ? recentAmtsPost : recentAmtsAll;
-    const m = median(baseAmts);
+
+    // ✅ v3.30 Fix 12: Filtrer les micro-dividendes (scrip) avant médiane pour isSpecial
+    // IBE: scrip dividends de 0.005€ polluaient la médiane → "final" de 0.409€ classé spécial
+    // Seuil: montant < 5% du max → considéré scrip/technique, pas un vrai dividende
+    const maxAmt = Math.max(...baseAmts, 0);
+    const baseAmtsClean = maxAmt > 0 ? baseAmts.filter(a => a >= maxAmt * 0.05) : baseAmts;
+    const m = median(baseAmtsClean.length >= 2 ? baseAmtsClean : baseAmts);
     const isSpecial = (a) => (m != null) && a > m * 1.6;
 
     // ✅ v3.20: TTM initial (potentiellement incomplet après split)
