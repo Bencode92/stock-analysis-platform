@@ -854,7 +854,13 @@ async function getPerformanceData(symbol, stock) {
                 symbol_used: data.symbol || trials[0]?.symbol || resolved,
                 exchange: meta.exchange ?? null,
                 currency: meta.currency ?? null,
-                timezone: meta.exchange_timezone ?? meta.timezone ?? null
+                timezone: meta.exchange_timezone ?? meta.timezone ?? null,
+                // ✅ v3.31: debug_meta — série points/min/max pour diagnostic data quality
+                series_points: prices.length,
+                series_min_close: Math.min(...prices.map(p => p.close)),
+                series_max_close: Math.max(...prices.map(p => p.close)),
+                series_start: prices[0]?.date ?? null,
+                series_end: prices.at(-1)?.date ?? null
             },
             __last_close: current,
             __prev_close: prev,
@@ -1805,6 +1811,37 @@ async function enrichStock(stock) {
         console.log(`[BUFFETT V2] ${stock.symbol}: ROE=${ROE_used}%, ROIC=${ROIC_used}%, D/E=${stock.de_ratio} | ${buffett.detail} | bonus=${buffett.bonus} → ${buffett_score} ${buffett_grade}`);
     }
 
+    // ✅ v3.31: Sanity warnings — détection anomalies data quality AVANT return
+    const sanity_warnings = [];
+    {
+        const vol = perf?.volatility_3y != null ? +perf.volatility_3y : null;
+        const dd = perf?.max_drawdown_3y != null ? +perf.max_drawdown_3y : null;
+        if (vol != null && vol > 120)
+            sanity_warnings.push(`vol_extreme:${vol.toFixed(0)}%`);
+        if (dd != null && dd > 90)
+            sanity_warnings.push(`dd_extreme:${dd.toFixed(0)}%`);
+        if (market_cap == null)
+            sanity_warnings.push('market_cap_missing');
+        if (Number.isFinite(price) && price <= 0)
+            sanity_warnings.push('price_invalid');
+        if (Number.isFinite(stock.de_ratio) && stock.de_ratio < 0)
+            sanity_warnings.push(`equity_negative:D/E=${stock.de_ratio}`);
+        if (Number.isFinite(stats?.pe_ratio) && stats.pe_ratio <= 0)
+            sanity_warnings.push(`pe_negative:${stats.pe_ratio}`);
+        if (Number.isFinite(stats?.pe_ratio) && stats.pe_ratio < 1)
+            sanity_warnings.push(`pe_suspect:${stats.pe_ratio}`);
+        const smn = perf?._series_meta?.series_min_close;
+        const smx = perf?._series_meta?.series_max_close;
+        if (smn && smx && smn > 0 && smx / smn > 5)
+            sanity_warnings.push(`series_range_extreme:${(smx/smn).toFixed(1)}x`);
+        if (Number.isFinite(fcf_yield) && (fcf_yield > 50 || fcf_yield < -50))
+            sanity_warnings.push(`fcf_yield_extreme:${fcf_yield}%`);
+    }
+    // Log warnings toujours (pas seulement en DEBUG) — c'est un filet de sécurité data quality
+    if (sanity_warnings.length > 0) {
+        console.warn(`[SANITY] ${stock.symbol}: ${sanity_warnings.join(' | ')}`);
+    }
+
     
     return {
         ticker: stock.symbol,
@@ -1911,6 +1948,29 @@ async function enrichStock(stock) {
         
         // v3.20: Ajout de l'objet de debug amélioré
         debug_dividends,
+
+        // ✅ v3.31: debug_meta — traçabilité complète données source + sanity warnings
+        debug_meta: {
+            resolved_symbol: symUsed,
+            quote_exchange: usedEx,
+            quote_mic: usedMic,
+            quote_currency: usedCur,
+            series_exchange: perf?._series_meta?.exchange ?? null,
+            series_currency: perf?._series_meta?.currency ?? null,
+            series_points: perf?._series_meta?.series_points ?? null,
+            series_min_close: perf?._series_meta?.series_min_close ?? null,
+            series_max_close: perf?._series_meta?.series_max_close ?? null,
+            series_start: perf?._series_meta?.series_start ?? null,
+            series_end: perf?._series_meta?.series_end ?? null,
+            series_ratio_max_min: (() => {
+                const mn = perf?._series_meta?.series_min_close;
+                const mx = perf?._series_meta?.series_max_close;
+                return (mn && mx && mn > 0) ? +(mx / mn).toFixed(1) : null;
+            })()
+        },
+
+        // ✅ v3.31: sanity_warnings — flags diagnostiques data quality
+        sanity_warnings,
         
         last_updated: new Date().toISOString()
     };
