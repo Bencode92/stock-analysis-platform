@@ -875,10 +875,12 @@ async function getDividendData(symbol, stock) {
         })).filter(d => d.ex_date);
 
         const lastYear = dividends.filter(d => {
-            const date = new Date(d.ex_date); 
+            const date = new Date(d.ex_date + 'T00:00:00Z'); 
             const yearAgo = new Date(); 
-            yearAgo.setFullYear(yearAgo.getFullYear()-1);
-            return date > yearAgo;
+            yearAgo.setUTCFullYear(yearAgo.getUTCFullYear()-1);
+            yearAgo.setUTCHours(0, 0, 0, 0);
+            // ✅ v3.30: Borne inclusive (>= au lieu de >) — corrige SHEL qui perdait 1 dividende
+            return date >= yearAgo;
         });
 
         const totalTTM = lastYear.reduce((s,d)=>s+d.amount,0);
@@ -1320,7 +1322,7 @@ function calculateBuffettScore(stock) {
 // ✅ v3.30: Sanitize forward dividend yield
 // Neutralise le bug provider qui annualise ×4 les dividendes annuels
 // (le provider traite tout comme trimestriel → forward = montant_annuel × 4 / prix)
-function sanitizeForwardYield({ yieldFwd, yieldReg, yieldTtmCalc, freq, recentSplit, specialSharePct }) {
+function sanitizeForwardYield({ yieldFwd, yieldReg, yieldTtmCalc, freq, recentSplit, specialSharePct, profile }) {
     if (!Number.isFinite(yieldFwd) || yieldFwd <= 0) return null;
 
     // Référence réaliste : REG sinon TTM calc
@@ -1334,8 +1336,9 @@ function sanitizeForwardYield({ yieldFwd, yieldReg, yieldTtmCalc, freq, recentSp
         if (ratio > 2.2 && ratio < 6.5) return null;  // x3..x6 = bug provider
     }
 
-    // Plafond absolu : >12% forward yield quasi impossible hors REITs/Utilities
-    if (yieldFwd > 12) return null;
+    // ✅ v3.30: Plafond par profil — YIELD (utilities/REIT) peut avoir des forwards >12% légitimes
+    const cap = (profile === 'YIELD') ? 20 : 12;
+    if (yieldFwd > cap) return null;
 
     return yieldFwd;
 }
@@ -1498,8 +1501,12 @@ async function enrichStock(stock) {
     }
 
     // Fenêtre TTM
-    const oneYearAgo = new Date(); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    const last12m = fullDivs.filter(d => new Date(d.ex_date) > oneYearAgo);
+    // ✅ v3.30: Borne inclusive (>=) + UTC midnight — corrige le bug SHEL
+    // (ex-date exactement à J-365, l'heure du run ne doit pas affecter l'inclusion)
+    const oneYearAgo = new Date();
+    oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
+    oneYearAgo.setUTCHours(0, 0, 0, 0);  // Comparer date vs date, pas datetime vs date
+    const last12m = fullDivs.filter(d => new Date(d.ex_date + 'T00:00:00Z') >= oneYearAgo);
 
     // ✅ v3.17.4: Log de debug pour la fenêtre TTM
     if (CONFIG.DEBUG && last12m.length > 0) {
@@ -1573,7 +1580,8 @@ async function enrichStock(stock) {
         yieldTtmCalc: yield_ttm_calc,
         freq,
         recentSplit,
-        specialSharePct: specialShare
+        specialSharePct: specialShare,
+        profile: sectorProfile(stock.sector)
     });
 
     let dividend_yield_ttm = yield_ttm_calc;
