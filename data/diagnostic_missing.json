@@ -1,17 +1,7 @@
 {
-  "generated_at": "2026-02-16T10:50:33.933Z",
+  "generated_at": "2026-02-16T12:50:16.894Z",
   "total_stocks": 267,
-  "no_data": [
-    {
-      "ticker": "ENGI",
-      "name": "ENGIE SA",
-      "country": "France",
-      "exchange_csv": "Nyse Euronext - Euronext Paris",
-      "resolved_symbol": null,
-      "data_exchange": null,
-      "data_mic": null
-    }
-  ],
+  "no_data": [],
   "missing_roe": [
     {
       "ticker": "SAN",
@@ -274,9 +264,9 @@
       "name": "SOCIETE GENERALE SA",
       "country": "France",
       "exchange_csv": "Nyse Euronext - Euronext Paris",
-      "resolved_symbol": "GLE:XPAR",
-      "data_exchange": null,
-      "data_mic": null
+      "resolved_symbol": "GLE",
+      "data_exchange": "Euronext",
+      "data_mic": "XPAR"
     },
     {
       "ticker": "CABK",
@@ -459,38 +449,9 @@
       "data_mic": "XPAR"
     }
   ],
-  "missing_perf": [
-    {
-      "ticker": "GLE",
-      "name": "SOCIETE GENERALE SA",
-      "country": "France",
-      "exchange_csv": "Nyse Euronext - Euronext Paris",
-      "resolved_symbol": "GLE:XPAR",
-      "data_exchange": null,
-      "data_mic": null,
-      "has_price": true,
-      "has_perf_1d": false
-    }
-  ],
-  "missing_dividend": [
-    {
-      "ticker": "SU",
-      "name": "SCHNEIDER ELECTRIC",
-      "country": "France",
-      "resolved_symbol": "SU",
-      "data_exchange": "Euronext",
-      "data_mic": null
-    }
-  ],
+  "missing_perf": [],
+  "missing_dividend": [],
   "by_exchange": [
-    {
-      "exchange": "Nyse Euronext - Euronext Paris",
-      "total": 54,
-      "no_data": 1,
-      "no_roe": 3,
-      "no_de": 1,
-      "no_perf": 1
-    },
     {
       "exchange": "Euronext Amsterdam",
       "total": 25,
@@ -520,6 +481,14 @@
       "total": 45,
       "no_data": 0,
       "no_roe": 1,
+      "no_de": 1,
+      "no_perf": 0
+    },
+    {
+      "exchange": "Nyse Euronext - Euronext Paris",
+      "total": 54,
+      "no_data": 0,
+      "no_roe": 3,
       "no_de": 1,
       "no_perf": 0
     },
@@ -591,7 +560,7 @@
   "by_data_mic": [
     {
       "mic": "XETR",
-      "total": 56,
+      "total": 57,
       "no_roe": 4,
       "no_de": 1,
       "no_perf": 0,
@@ -604,7 +573,7 @@
     },
     {
       "mic": "XPAR",
-      "total": 50,
+      "total": 54,
       "no_roe": 3,
       "no_de": 1,
       "no_perf": 0,
@@ -627,23 +596,13 @@
     },
     {
       "mic": "XLON",
-      "total": 51,
+      "total": 52,
       "no_roe": 2,
       "no_de": 0,
       "no_perf": 0,
       "tickers": [
         "GSK",
         "SMIN"
-      ]
-    },
-    {
-      "mic": "NO_MIC",
-      "total": 5,
-      "no_roe": 0,
-      "no_de": 0,
-      "no_perf": 1,
-      "tickers": [
-        "GLE"
       ]
     }
   ]
