@@ -1102,14 +1102,16 @@ async function getProfileData(symbol, stock) {
 
         const industry = data.industry || null;
         const sectorApi = data.sector || null;
+        const nameApi = data.name || null;  // ✅ v3.31e: capture name pour détection mismatch
 
         if (CONFIG.DEBUG && industry) {
-            console.log(`[PROFILE] ${symbol}: sector=${sectorApi}, industry=${industry}`);
+            console.log(`[PROFILE] ${symbol}: name=${nameApi}, sector=${sectorApi}, industry=${industry}`);
         }
 
         return {
             industry: industry ? String(industry).trim() : null,
-            sector_api: sectorApi ? String(sectorApi).trim() : null
+            sector_api: sectorApi ? String(sectorApi).trim() : null,
+            name_api: nameApi ? String(nameApi).trim() : null  // ✅ v3.31e
         };
     } catch (e) {
         if (CONFIG.DEBUG) console.error('[PROFILE EXC]', symbol, e.message);
@@ -1893,6 +1895,7 @@ async function enrichStock(stock) {
         sector: stock.sector,
         industry: profileData?.industry ?? null,  // ✅ v3.31: depuis /profile (peer groups)
         sector_api: profileData?.sector_api ?? null,  // ✅ v3.31c: pour audit CSV vs API
+        name_api: profileData?.name_api ?? null,  // ✅ v3.31e: pour détection ticker mismatch
         country: stock.country,
         exchange: stock.exchange, // Exchange du CSV (intention)
         
@@ -2869,10 +2872,39 @@ async function main() {
     console.log(`📊 Peer groups exportés: ${peerGroupsPath} (${Object.keys(peerGroupsData).length} groupes)`);
 
     // ✅ v3.31d: Audit classification industry (détecte incohérences CSV vs API)
+    // ✅ v3.31e: + détection name_mismatch (ticker résolu vers mauvaise entreprise)
+    const NOISE_WORDS = new Set([
+        'inc', 'corp', 'ltd', 'plc', 'company', 'group', 'holdings', 'holding',
+        'the', 'and', 'class', 'reit', 'pjsc', 'jsc', 'limited', 'shs',
+        'registered', 'ordinary', 'common', 'stock', 'shares', 'new', 'hldgs'
+    ]);
+    function nameTokens(s) {
+        return normalize(s).normalize('NFKD').replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/).filter(w => w.length >= 3 && !NOISE_WORDS.has(w));
+    }
+    // Retourne [score 0-1, detail] — 0 = aucun overlap, 1 = match parfait
+    function nameMatchScore(csvName, apiName) {
+        if (!csvName || !apiName) return [1, 'no_api_name']; // pas de donnée → pas de flag
+        const csv = nameTokens(csvName);
+        const api = new Set(nameTokens(apiName));
+        if (csv.length === 0) return [1, 'csv_name_too_short']; // ex: "3M"
+        const matches = csv.filter(t => api.has(t)).length;
+        return [matches / csv.length, `${matches}/${csv.length} tokens`];
+    }
+
     const industryAudit = [];
     for (const s of allForScoring) {
         if (s.error) continue;
         const flags = [];
+
+        // ✅ v3.31e: CRITICAL — Name mismatch (ticker résolu vers mauvaise entreprise)
+        const [nmScore, nmDetail] = nameMatchScore(s.name, s.name_api);
+        if (nmScore === 0) {
+            flags.push('name_mismatch_CRITICAL');
+        } else if (nmScore > 0 && nmScore < 0.5) {
+            flags.push('name_mismatch_WARNING');
+        }
+
         // Sector CSV vs sector_api mismatch
         if (s.sector_api && s.sector) {
             const csvK = normKey(s.sector);
@@ -2898,6 +2930,8 @@ async function main() {
             industryAudit.push({
                 ticker: s.ticker,
                 name: s.name,
+                name_api: s.name_api || null,  // ✅ v3.31e: nom retourné par Twelve Data
+                name_match: nmScore < 1 ? nmDetail : undefined,  // ✅ v3.31e: détail mismatch
                 sector_csv: s.sector,
                 sector_api: s.sector_api,
                 industry: s.industry,
@@ -2910,6 +2944,23 @@ async function main() {
     const auditPath = path.join(OUT_DIR, 'industry_audit.json');
     await fs.writeFile(auditPath, JSON.stringify(industryAudit, null, 2));
     console.log(`🧹 Industry audit: ${industryAudit.length} stocks avec flags → ${auditPath}`);
+
+    // ✅ v3.31e: Alerte visible pour les mismatches critiques (mauvaise entreprise)
+    const criticalMismatches = industryAudit.filter(a => a.flags.includes('name_mismatch_CRITICAL'));
+    if (criticalMismatches.length > 0) {
+        console.log(`\n🚨 ALERTE: ${criticalMismatches.length} TICKER(S) RÉSOLUS VERS LA MAUVAISE ENTREPRISE:`);
+        for (const m of criticalMismatches) {
+            console.log(`   ❌ ${m.ticker}: CSV="${m.name}" ≠ API="${m.name_api}" → DONNÉES INVALIDES`);
+        }
+        console.log(`   → Corriger les tickers dans le CSV source ou ajouter des overrides.\n`);
+    }
+    const warnMismatches = industryAudit.filter(a => a.flags.includes('name_mismatch_WARNING'));
+    if (warnMismatches.length > 0) {
+        console.log(`⚠️  ${warnMismatches.length} ticker(s) avec correspondance de nom partielle:`);
+        for (const m of warnMismatches) {
+            console.log(`   ⚠️  ${m.ticker}: CSV="${m.name}" ~ API="${m.name_api}" (${m.name_match})`);
+        }
+    }
     
     // ✅ v3.27: Écrire les JSON APRÈS le scoring (quality_score maintenant rempli)
     for (const region of regions) {
