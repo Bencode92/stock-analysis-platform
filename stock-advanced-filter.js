@@ -2462,54 +2462,39 @@ function exportPeerGroups(allStocks) {
     for (const s of allStocks) {
         if (s.error || !s.quality_peer) continue;
         const key = s.quality_peer;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push({
+        if (!groups.has(key)) groups.set(key, { profile: s.quality_profile || 'DEFAULT', stocks: [] });
+        groups.get(key).stocks.push({
+            // Identité
             ticker: s.ticker,
             name: s.name,
             sector: s.sector,
             country: s.country,
-            exchange: s.exchange,
-            profile: s.quality_profile,
-            // Fondamentaux
+            // Fondamentaux clés
             roe: s.roe,
-            roe_avg_3y: s.roe_avg_3y,
-            roe_std_3y: s.roe_std_3y,
             roic: s.roic,
-            roic_avg_3y: s.roic_avg_3y,
-            roic_std_3y: s.roic_std_3y,
             de_ratio: s.de_ratio,
             net_margin: s.net_margin,
-            revenue_growth_3y: s.revenue_growth_3y,
+            // Dividende
+            dividend_yield: s.dividend_yield,
+            payout_ratio_scoring: s.payout_ratio_scoring,
             // Valorisation
             pe_ratio: s.pe_ratio,
             fcf_yield: s.fcf_yield,
-            // Growth
-            eps_growth_5y: s.eps_growth_5y,
-            eps_growth_forecast_5y: s.eps_growth_forecast_5y,
-            // Dividendes
-            dividend_yield: s.dividend_yield,
-            payout_ratio_ttm: s.payout_ratio_ttm,
-            payout_ratio_scoring: s.payout_ratio_scoring,
             // Scores
-            buffett_score: s.buffett_score,
-            buffett_grade: s.buffett_grade,
             quality_score: s.quality_score,
             quality_grade: s.quality_grade,
-            quality_subscores: s.quality_subscores,
-            quality_penalties: s.quality_penalties,
+            buffett_score: s.buffett_score,
             // Risque
-            volatility_3y: s.volatility_3y,
-            max_drawdown_3y: s.max_drawdown_3y,
             market_cap: s.market_cap,
         });
     }
 
     const output = {};
-    for (const [key, stocks] of [...groups.entries()].sort()) {
-        const sorted = stocks.sort((a, b) => (b.quality_score || 0) - (a.quality_score || 0));
+    for (const [key, group] of [...groups.entries()].sort()) {
+        const sorted = group.stocks.sort((a, b) => (b.quality_score || 0) - (a.quality_score || 0));
         output[key] = {
-            peer_size: stocks.length,
-            profile: stocks[0]?.profile || 'DEFAULT',
+            peer_size: group.stocks.length,
+            profile: group.profile,
             stocks: sorted,
         };
     }
