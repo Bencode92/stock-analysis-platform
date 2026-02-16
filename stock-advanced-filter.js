@@ -131,7 +131,8 @@ const CONFIG = {
         STATISTICS: 25,
         DIVIDENDS: 10,
         MARKET_CAP: 1,
-        GROWTH_ESTIMATES: 10  // ✅ v3.23: Nouveau endpoint
+        GROWTH_ESTIMATES: 10,  // ✅ v3.23: Nouveau endpoint
+        PROFILE: 10            // ✅ v3.31: /profile pour industry (peer groups)
     }
 };
 
@@ -1074,6 +1075,36 @@ async function getGrowthEstimates(symbol, stock) {
     }
 }
 
+// ✅ v3.31: Fetch /profile pour industry (peer groups granulaires)
+async function getProfileData(symbol, stock) {
+    try {
+        await pay(CONFIG.CREDITS.PROFILE);
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
+        
+        const data = await fetchTD('profile', trials);
+        if (!data || data.status === 'error') {
+            if (CONFIG.DEBUG) console.log(`[PROFILE] ${symbol}: no data`);
+            return {};
+        }
+
+        const industry = data.industry || null;
+        const sectorApi = data.sector || null;
+
+        if (CONFIG.DEBUG && industry) {
+            console.log(`[PROFILE] ${symbol}: sector=${sectorApi}, industry=${industry}`);
+        }
+
+        return {
+            industry: industry ? String(industry).trim() : null,
+            sector_api: sectorApi ? String(sectorApi).trim() : null
+        };
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[PROFILE EXC]', symbol, e.message);
+        return {};
+    }
+}
+
 // Market cap avec handling spécial pour symboles déjà résolus - v3.16: contexte complet
 // ✅ v3.28: Forex rate cache — pour normalisation cross-currency
 // Utilisé quand devise de marché ≠ devise de reporting des fondamentaux
@@ -1397,13 +1428,14 @@ async function enrichStock(stock) {
     // ✅ v3.23: Ajout de getGrowthEstimates dans le Promise.all
     const sym = resolved || stock.symbol;  // symbole final (évent. suffixé :MIC)
     const ctx = stock;                     // garde exchange + country d'origine
-    const [perf, quote, dividends, stats, mcDirect, growth] = await Promise.all([
+    const [perf, quote, dividends, stats, mcDirect, growth, profileData] = await Promise.all([
         getPerformanceData(sym, ctx),
         getQuoteData(sym, ctx),
         getDividendData(sym, ctx),
         getStatisticsData(sym, ctx),
         getMarketCapDirect(sym, ctx),
-        getGrowthEstimates(sym, ctx)  // ✅ v3.23: NOUVEAU
+        getGrowthEstimates(sym, ctx),  // ✅ v3.23
+        getProfileData(sym, ctx)       // ✅ v3.31: industry pour peer groups
     ]);
     
     // Fallback prix & range depuis la série si quote indisponible
@@ -1847,6 +1879,7 @@ async function enrichStock(stock) {
         ticker: stock.symbol,
         name: stock.name,
         sector: stock.sector,
+        industry: profileData?.industry ?? null,  // ✅ v3.31: depuis /profile (peer groups)
         country: stock.country,
         exchange: stock.exchange, // Exchange du CSV (intention)
         
@@ -2161,31 +2194,50 @@ function scorePayoutSafety(value) {
  */
 function computeQualityScores(allStocks) {
     console.log('\n' + '═'.repeat(60));
-    console.log('🎯 QUALITY SCORING v3.27 — Peer group relatif (secteur × région)');
+    console.log('🎯 QUALITY SCORING v3.31 — Peer group: industry → sector (cascade)');
     console.log('═'.repeat(60));
 
-    // ── 1. Build peer groups: sector × region ──
-    const byGroup = new Map();
-    const bySector = new Map(); // fallback: sector-only (cross-région)
+    // ── 1. Build peer groups: 3 niveaux de granularité ──
+    const byIndustry = new Map();  // ✅ v3.31: REGION|industry (le plus granulaire)
+    const byGroup = new Map();     // REGION|sector
+    const bySector = new Map();    // ALL|sector (cross-région)
 
+    let withIndustry = 0, withoutIndustry = 0;
     for (const s of allStocks) {
         if (s.error) continue;
         const region = s.region || 'GLOBAL';
         const sector = s.sector || 'Unknown';
-        const key = `${region}|${sector}`;
-        const sectorKey = `ALL|${sector}`;
+        const industry = s.industry || null;
 
+        // Niveau 1: industry × region (si industry disponible)
+        if (industry) {
+            const indKey = `${region}|${industry}`;
+            if (!byIndustry.has(indKey)) byIndustry.set(indKey, []);
+            byIndustry.get(indKey).push(s);
+            withIndustry++;
+        } else {
+            withoutIndustry++;
+        }
+
+        // Niveau 2: sector × region (toujours)
+        const key = `${region}|${sector}`;
         if (!byGroup.has(key)) byGroup.set(key, []);
         byGroup.get(key).push(s);
 
+        // Niveau 3: sector global (toujours)
+        const sectorKey = `ALL|${sector}`;
         if (!bySector.has(sectorKey)) bySector.set(sectorKey, []);
         bySector.get(sectorKey).push(s);
     }
 
     // Log peer group stats
-    const groupSizes = [...byGroup.entries()].map(([k, v]) => ({ key: k, n: v.length }));
-    const smallGroups = groupSizes.filter(g => g.n < 5);
-    console.log(`📊 ${byGroup.size} peer groups créés (${smallGroups.length} avec < 5 stocks → fallback secteur global)`);
+    const indSizes = [...byIndustry.entries()].map(([k, v]) => ({ key: k, n: v.length }));
+    const indSmall = indSizes.filter(g => g.n < 5);
+    const grpSizes = [...byGroup.entries()].map(([k, v]) => ({ key: k, n: v.length }));
+    const grpSmall = grpSizes.filter(g => g.n < 5);
+    console.log(`📊 Industry: ${byIndustry.size} groupes (${indSmall.length} < 5 → fallback sector)`);
+    console.log(`📊 Sector:   ${byGroup.size} groupes (${grpSmall.length} < 5 → fallback global)`);
+    console.log(`📊 Coverage: ${withIndustry}/${withIndustry+withoutIndustry} stocks avec industry (${withoutIndustry} sans → fallback sector)`);
 
     // ── 2. Score each stock ──
     let scored = 0, skipped = 0;
@@ -2198,18 +2250,43 @@ function computeQualityScores(allStocks) {
 
         const region = s.region || 'GLOBAL';
         const sector = s.sector || 'Unknown';
-        const key = `${region}|${sector}`;
-        const sectorKey = `ALL|${sector}`;
+        const industry = s.industry || null;
 
-        // Choose peer group: primary (sector×region) or fallback (sector global)
-        let peers = byGroup.get(key) || [];
-        let peerKey = key;
-        if (peers.length < 5) {
-            peers = bySector.get(sectorKey) || [];
-            peerKey = sectorKey;
+        // ✅ v3.31: Cascade industry → sector × region → sector global → all
+        let peers, peerKey;
+
+        // Niveau 1: REGION|industry
+        if (industry) {
+            const indKey = `${region}|${industry}`;
+            const indPeers = byIndustry.get(indKey) || [];
+            if (indPeers.length >= 5) {
+                peers = indPeers;
+                peerKey = indKey;
+            }
         }
-        // Ultimate fallback: all stocks
-        if (peers.length < 5) {
+
+        // Niveau 2: REGION|sector (fallback)
+        if (!peers) {
+            const key = `${region}|${sector}`;
+            const grpPeers = byGroup.get(key) || [];
+            if (grpPeers.length >= 5) {
+                peers = grpPeers;
+                peerKey = key;
+            }
+        }
+
+        // Niveau 3: ALL|sector (cross-région)
+        if (!peers) {
+            const sectorKey = `ALL|${sector}`;
+            const secPeers = bySector.get(sectorKey) || [];
+            if (secPeers.length >= 5) {
+                peers = secPeers;
+                peerKey = sectorKey;
+            }
+        }
+
+        // Niveau 4: tout
+        if (!peers) {
             peers = allStocks.filter(x => !x.error);
             peerKey = 'GLOBAL|ALL';
         }
@@ -2468,6 +2545,7 @@ function exportPeerGroups(allStocks) {
             ticker: s.ticker,
             name: s.name,
             sector: s.sector,
+            industry: s.industry,  // ✅ v3.31
             country: s.country,
             // Fondamentaux clés
             roe: s.roe,
