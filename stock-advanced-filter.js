@@ -239,6 +239,18 @@ function usExchangeName(ex='') {
 
 const normalize = s => (s||'').toLowerCase().trim();
 
+// ✅ v3.31c: Clé normalisée pour industry (évite fragmentation typographique)
+// "Luxury Goods" et "luxury-goods" → "luxury_goods"
+function normKey(s) {
+    return (s || '')
+        .toLowerCase()
+        .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 80);
+}
+
 // MIC safe pour éviter ADR - v3.16: utilise isUSCountry
 function micForRegion(stock) {
     const mic = toMIC(stock.exchange, stock.country);
@@ -825,7 +837,7 @@ async function getPerformanceData(symbol, stock) {
         const rets = []; 
         for (let i=1; i<tail.length; i++) {
             const r = Math.log(tail[i]/tail[i-1]);
-            // ✅ v3.30 Fix 13b: Cap returns ±50%/jour — absorbe GBp/GBP shifts et glitches provider
+            // ✅ v3.30 Fix 13b: Cap log-returns à ±0.5 (~+65%/-39% simple) — absorbe GBp/GBP shifts et glitches provider
             // Un shift ×100 (GBp→GBP) = log(100) = 4.6 → capé à 0.5
             rets.push(Math.max(-0.5, Math.min(0.5, r)));
         }
@@ -1880,6 +1892,7 @@ async function enrichStock(stock) {
         name: stock.name,
         sector: stock.sector,
         industry: profileData?.industry ?? null,  // ✅ v3.31: depuis /profile (peer groups)
+        sector_api: profileData?.sector_api ?? null,  // ✅ v3.31c: pour audit CSV vs API
         country: stock.country,
         exchange: stock.exchange, // Exchange du CSV (intention)
         
@@ -1929,6 +1942,7 @@ async function enrichStock(stock) {
         quality_penalties: [],
         quality_peer: null,
         quality_peer_size: null,
+        quality_peer_level: null,  // ✅ v3.31d: cascade level audit trail
         quality_profile: null,
         region: null,           // injecté par main() avant scoring
         
@@ -2194,102 +2208,111 @@ function scorePayoutSafety(value) {
  */
 function computeQualityScores(allStocks) {
     console.log('\n' + '═'.repeat(60));
-    console.log('🎯 QUALITY SCORING v3.31 — Peer group: industry → sector (cascade)');
+    console.log('🎯 QUALITY SCORING v3.31d — Peer group: industry → sector (cascade 5 niveaux)');
     console.log('═'.repeat(60));
 
-    // ── 1. Build peer groups: 3 niveaux de granularité ──
-    const byIndustry = new Map();  // ✅ v3.31: REGION|industry (le plus granulaire)
-    const byGroup = new Map();     // REGION|sector
-    const bySector = new Map();    // ALL|sector (cross-région)
+    // ✅ v3.31d: Normalisation industry (anti-synonymes + fragmentation Twelve Data)
+    function normIndustry(s) {
+        if (!s) return null;
+        const cleaned = String(s).trim()
+            .replace(/&/g, 'and')
+            .replace(/['']/g, '')
+            .replace(/\s+/g, ' ');
+        // Retourne null si vide ou blacklisté
+        const key = normKey(cleaned);
+        if (!key || key === 'other' || key === 'unknown' || key === 'miscellaneous' || key === 'n_a') return null;
+        return cleaned; // garder la version lisible, normKey sert pour les clés
+    }
+
+    // ── 1. Build peer groups: 4 niveaux de granularité ──
+    const byIndustryRegion = new Map();  // REGION|industry_norm
+    const byIndustryGlobal = new Map();  // ALL|industry_norm (cross-région)
+    const bySectorRegion = new Map();    // REGION|sector
+    const bySectorGlobal = new Map();    // ALL|sector
 
     let withIndustry = 0, withoutIndustry = 0;
     for (const s of allStocks) {
         if (s.error) continue;
         const region = s.region || 'GLOBAL';
         const sector = s.sector || 'Unknown';
-        const industry = s.industry || null;
+        const indNorm = normIndustry(s.industry);
 
-        // Niveau 1: industry × region (si industry disponible)
-        if (industry) {
-            const indKey = `${region}|${industry}`;
-            if (!byIndustry.has(indKey)) byIndustry.set(indKey, []);
-            byIndustry.get(indKey).push(s);
+        if (indNorm) {
+            const indK = normKey(indNorm); // clé stable pour regroupement
+            const k1 = `${region}|${indK}`;
+            if (!byIndustryRegion.has(k1)) byIndustryRegion.set(k1, []);
+            byIndustryRegion.get(k1).push(s);
+
+            const k1g = `ALL|${indK}`;
+            if (!byIndustryGlobal.has(k1g)) byIndustryGlobal.set(k1g, []);
+            byIndustryGlobal.get(k1g).push(s);
             withIndustry++;
         } else {
             withoutIndustry++;
         }
 
-        // Niveau 2: sector × region (toujours)
-        const key = `${region}|${sector}`;
-        if (!byGroup.has(key)) byGroup.set(key, []);
-        byGroup.get(key).push(s);
+        const k2 = `${region}|${sector}`;
+        if (!bySectorRegion.has(k2)) bySectorRegion.set(k2, []);
+        bySectorRegion.get(k2).push(s);
 
-        // Niveau 3: sector global (toujours)
-        const sectorKey = `ALL|${sector}`;
-        if (!bySector.has(sectorKey)) bySector.set(sectorKey, []);
-        bySector.get(sectorKey).push(s);
+        const k2g = `ALL|${sector}`;
+        if (!bySectorGlobal.has(k2g)) bySectorGlobal.set(k2g, []);
+        bySectorGlobal.get(k2g).push(s);
     }
 
     // Log peer group stats
-    const indSizes = [...byIndustry.entries()].map(([k, v]) => ({ key: k, n: v.length }));
-    const indSmall = indSizes.filter(g => g.n < 5);
-    const grpSizes = [...byGroup.entries()].map(([k, v]) => ({ key: k, n: v.length }));
-    const grpSmall = grpSizes.filter(g => g.n < 5);
-    console.log(`📊 Industry: ${byIndustry.size} groupes (${indSmall.length} < 5 → fallback sector)`);
-    console.log(`📊 Sector:   ${byGroup.size} groupes (${grpSmall.length} < 5 → fallback global)`);
-    console.log(`📊 Coverage: ${withIndustry}/${withIndustry+withoutIndustry} stocks avec industry (${withoutIndustry} sans → fallback sector)`);
+    const ir = [...byIndustryRegion.values()], ig = [...byIndustryGlobal.values()];
+    console.log(`📊 Industry×Region: ${byIndustryRegion.size} groupes (${ir.filter(v=>v.length<5).length} < 5)`);
+    console.log(`📊 Industry×Global: ${byIndustryGlobal.size} groupes (${ig.filter(v=>v.length<5).length} < 5)`);
+    console.log(`📊 Sector×Region:   ${bySectorRegion.size} groupes`);
+    console.log(`📊 Coverage: ${withIndustry}/${withIndustry+withoutIndustry} stocks avec industry`);
 
     // ── 2. Score each stock ──
     let scored = 0, skipped = 0;
+    const levelCounts = {};
 
     for (const s of allStocks) {
-        if (s.error) {
-            skipped++;
-            continue;
-        }
+        if (s.error) { skipped++; continue; }
 
         const region = s.region || 'GLOBAL';
         const sector = s.sector || 'Unknown';
-        const industry = s.industry || null;
+        const indNorm = normIndustry(s.industry);
 
-        // ✅ v3.31: Cascade industry → sector × region → sector global → all
-        let peers, peerKey;
+        // ✅ v3.31d: Cascade 5 niveaux — industry conservé le plus longtemps possible
+        let peers, peerKey, peerLevel;
+        const indK = indNorm ? normKey(indNorm) : null;
 
-        // Niveau 1: REGION|industry
-        if (industry) {
-            const indKey = `${region}|${industry}`;
-            const indPeers = byIndustry.get(indKey) || [];
-            if (indPeers.length >= 5) {
-                peers = indPeers;
-                peerKey = indKey;
-            }
+        // 1) REGION|industry
+        if (!peers && indK) {
+            const k = `${region}|${indK}`;
+            const p = byIndustryRegion.get(k) || [];
+            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'industry_region'; }
         }
-
-        // Niveau 2: REGION|sector (fallback)
+        // 2) ALL|industry (cross-région, conserve la comparabilité économique)
+        if (!peers && indK) {
+            const k = `ALL|${indK}`;
+            const p = byIndustryGlobal.get(k) || [];
+            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'industry_global'; }
+        }
+        // 3) REGION|sector
         if (!peers) {
-            const key = `${region}|${sector}`;
-            const grpPeers = byGroup.get(key) || [];
-            if (grpPeers.length >= 5) {
-                peers = grpPeers;
-                peerKey = key;
-            }
+            const k = `${region}|${sector}`;
+            const p = bySectorRegion.get(k) || [];
+            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'sector_region'; }
         }
-
-        // Niveau 3: ALL|sector (cross-région)
+        // 4) ALL|sector
         if (!peers) {
-            const sectorKey = `ALL|${sector}`;
-            const secPeers = bySector.get(sectorKey) || [];
-            if (secPeers.length >= 5) {
-                peers = secPeers;
-                peerKey = sectorKey;
-            }
+            const k = `ALL|${sector}`;
+            const p = bySectorGlobal.get(k) || [];
+            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'sector_global'; }
         }
-
-        // Niveau 4: tout
+        // 5) GLOBAL|ALL
         if (!peers) {
             peers = allStocks.filter(x => !x.error);
             peerKey = 'GLOBAL|ALL';
+            peerLevel = 'global_all';
         }
+        levelCounts[peerLevel] = (levelCounts[peerLevel] || 0) + 1;
 
         const profile = sectorProfile(s.sector);
 
@@ -2483,6 +2506,7 @@ function computeQualityScores(allStocks) {
         s.quality_penalties = penalties.length ? penalties : [];
         s.quality_peer = peerKey;
         s.quality_peer_size = peers.length;
+        s.quality_peer_level = peerLevel;  // ✅ v3.31d: audit trail cascade
         s.quality_profile = profile;
         s.quality_subscores = {
             quality: quality != null ? Math.round(quality) : null,
@@ -2526,6 +2550,12 @@ function computeQualityScores(allStocks) {
                     `[${s.quality_peer}, n=${s.quality_peer_size}]`);
             });
         }
+    }
+
+    // ✅ v3.31d: Log peer group cascade distribution
+    console.log(`\n📊 Peer Level Distribution:`);
+    for (const [level, count] of Object.entries(levelCounts).sort((a,b) => b[1] - a[1])) {
+        console.log(`  ${level.padEnd(20)} ${count}`);
     }
 
     console.log('═'.repeat(60));
@@ -2807,6 +2837,28 @@ async function main() {
     
     // ✅ v3.27: Quality Score — scoring relatif APRÈS enrichissement complet
     const allForScoring = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA];
+
+    // ✅ v3.31d: Overrides industry/sector (fichier maintenable manuellement)
+    // Format: { "TICKER": { "sector": "...", "industry": "..." } }
+    let overrideCount = 0;
+    try {
+        const ovText = await fs.readFile('data/industry_overrides.json', 'utf8');
+        const overrides = JSON.parse(ovText);
+        for (const s of allForScoring) {
+            if (s.error) continue;
+            const ov = overrides[s.ticker];
+            if (ov) {
+                if (ov.sector) { s.sector = ov.sector; }
+                if (ov.industry) { s.industry = ov.industry; }
+                overrideCount++;
+                console.log(`[OVERRIDE] ${s.ticker}: sector=${ov.sector || '-'}, industry=${ov.industry || '-'}`);
+            }
+        }
+        console.log(`📝 Overrides appliqués: ${overrideCount}/${Object.keys(overrides).length}`);
+    } catch {
+        // Fichier absent → pas d'overrides, c'est normal
+    }
+
     computeQualityScores(allForScoring);
     
     // ✅ v3.30: Export peer groups pour transparence du scoring
@@ -2814,6 +2866,49 @@ async function main() {
     const peerGroupsPath = path.join(OUT_DIR, 'peer_groups.json');
     await fs.writeFile(peerGroupsPath, JSON.stringify(peerGroupsData, null, 2));
     console.log(`📊 Peer groups exportés: ${peerGroupsPath} (${Object.keys(peerGroupsData).length} groupes)`);
+
+    // ✅ v3.31d: Audit classification industry (détecte incohérences CSV vs API)
+    const industryAudit = [];
+    for (const s of allForScoring) {
+        if (s.error) continue;
+        const flags = [];
+        // Sector CSV vs sector_api mismatch
+        if (s.sector_api && s.sector) {
+            const csvK = normKey(s.sector);
+            const apiK = normKey(s.sector_api);
+            if (csvK !== apiK) flags.push('sector_mismatch');
+        }
+        // Industry manquante malgré /profile appelé
+        if (!s.industry && s.sector_api) flags.push('industry_missing');
+        // Marges extrêmes (possible holdco / fair value)
+        if (Number.isFinite(s.net_margin) && s.net_margin > 60) flags.push('margin_extreme');
+        // ROE extrême
+        if (Number.isFinite(s.roe) && Math.abs(s.roe) > 60) flags.push('roe_extreme');
+        // Equity négative
+        if (Number.isFinite(s.de_ratio) && s.de_ratio < 0) flags.push('equity_negative');
+        // Peer group fallback (a une industry mais scoré au niveau sector)
+        if (s.industry && s.quality_peer) {
+            const indK = normKey(s.industry);
+            const peerK = normKey(s.quality_peer);
+            if (indK && !peerK.includes(indK)) flags.push('peer_fallback_to_sector');
+        }
+
+        if (flags.length > 0) {
+            industryAudit.push({
+                ticker: s.ticker,
+                name: s.name,
+                sector_csv: s.sector,
+                sector_api: s.sector_api,
+                industry: s.industry,
+                quality_peer: s.quality_peer,
+                quality_score: s.quality_score,
+                flags
+            });
+        }
+    }
+    const auditPath = path.join(OUT_DIR, 'industry_audit.json');
+    await fs.writeFile(auditPath, JSON.stringify(industryAudit, null, 2));
+    console.log(`🧹 Industry audit: ${industryAudit.length} stocks avec flags → ${auditPath}`);
     
     // ✅ v3.27: Écrire les JSON APRÈS le scoring (quality_score maintenant rempli)
     for (const region of regions) {
@@ -2843,7 +2938,8 @@ async function main() {
     console.log(`🏁 ${topsPath}`);
     
     // Statistiques sur les payout ratios
-    const allStocks = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA].filter(s => !KEEP_ADR || !s.is_adr);
+    // ✅ v3.31d: Fix KEEP_ADR logic (était inversé: !KEEP_ADR || !s.is_adr)
+    const allStocks = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA].filter(s => KEEP_ADR || !s.is_adr);
     const withPayout = allStocks.filter(s => s.payout_ratio_ttm !== null);
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
