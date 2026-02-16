@@ -591,6 +591,7 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "payout_ratio": ["payout_ratio_ttm", "payout_ratio"],
     "dividend_coverage": ["dividend_coverage", "interest_coverage"],
     "buffett_score": ["_buffett_score", "buffett_score"],
+    "quality_score": ["quality_score"],
 }
 
 METRIC_RANGES: Dict[str, Tuple[float, float]] = {
@@ -628,8 +629,9 @@ RELAX_STEPS: List[Tuple[str, float, float]] = [
     ("dividend_coverage_min", -0.3, 0.8),    # Étape 4: baisser coverage_min
     ("payout_ratio_max", +15, 100.0),        # Étape 5: augmenter payout_max
     ("dividend_yield_min", -0.2, 0.0),       # Étape 6: baisser div_yield_min
+    ("quality_score_min", -10, 30.0),         # Étape 7: baisser quality_min (plancher 30)
+    ("fcf_yield_min", -1.0, -2.0),            # Étape 8: tolérer FCF légèrement négatif
 ]
-
 
 # ============ PROFILE POLICY v5.0.0 ============
 
@@ -663,10 +665,11 @@ PROFILE_POLICY: Dict[str, Dict] = {
     "Modéré": {
         "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility"},
         "min_buffett_score": 60,
-        "hard_filters": {
+         "hard_filters": {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
             "roe_min": 8.0,
+            "quality_score_min": 40,    # v4.15: filtre qualité complémentaire au moat
         },
         "equity_min_weight": 0.40,
         "equity_max_weight": 0.60,
@@ -696,6 +699,8 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "dividend_yield_min": 0.5,
             "payout_ratio_max": 85.0,
             "dividend_coverage_min": 1.2,
+            "quality_score_min": 50,    # v4.15: filtre qualité complémentaire au moat
+            "fcf_yield_min": 0.0,       # v4.15: exige FCF positif pour profil stable
         },
         "equity_min_weight": 0.25,
         "equity_max_weight": 0.45,
@@ -1069,6 +1074,21 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
                 reasons.append("coverage_missing")
             elif coverage < filters["dividend_coverage_min"]:
                 reasons.append(f"coverage<{filters['dividend_coverage_min']}")
+        # Quality score filter (v4.15: complément au moat gate)
+        if "quality_score_min" in filters:
+            qs = get_metric_value(eq, "quality_score")
+            if qs is None:
+                reasons.append("quality_score_missing")
+            elif qs < filters["quality_score_min"]:
+                reasons.append(f"quality<{filters['quality_score_min']}")
+        
+        # FCF yield floor filter (v4.15: exige cash generation positive)
+        if "fcf_yield_min" in filters:
+            fcf = get_metric_value(eq, "fcf_yield")
+            if fcf is None:
+                reasons.append("fcf_yield_missing")
+            elif fcf < filters["fcf_yield_min"]:
+                reasons.append(f"fcf<{filters['fcf_yield_min']}")           
         
         if reasons:
             for r in reasons:
@@ -1166,6 +1186,22 @@ def apply_hard_filters_with_custom(
                 reasons.append("buffett_missing")
             elif buffett < custom_filters["buffett_score_min"]:
                 reasons.append(f"buffett<{custom_filters['buffett_score_min']}")
+        
+        # Quality score filter (v4.15: complément au moat gate)
+        if "quality_score_min" in custom_filters:
+            qs = get_metric_value(eq, "quality_score")
+            if qs is None:
+                reasons.append("quality_score_missing")
+            elif qs < custom_filters["quality_score_min"]:
+                reasons.append(f"quality<{custom_filters['quality_score_min']}")
+        
+        # FCF yield floor filter (v4.15: exige cash generation positive)
+        if "fcf_yield_min" in custom_filters:
+            fcf = get_metric_value(eq, "fcf_yield")
+            if fcf is None:
+                reasons.append("fcf_yield_missing")
+            elif fcf < custom_filters["fcf_yield_min"]:
+                reasons.append(f"fcf<{custom_filters['fcf_yield_min']}")
         
         if reasons:
             for r in reasons:
