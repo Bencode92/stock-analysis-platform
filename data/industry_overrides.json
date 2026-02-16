@@ -1,7 +1,7 @@
 {
   "_COMMENT": "Overrides manuels sector/industry — placé dans data/industry_overrides.json",
   "_USAGE": "Appliqués avant computeQualityScores() pour corriger les misclassifications Twelve Data",
-  "_UPDATED": "2026-02-16 — v3.31d post-audit peer_groups.json",
+  "_UPDATED": "2026-02-16 — v3.31d post-audit peer_groups.json (EUROPE + ASIA)",
 
   "TEN": {
     "sector": "Energie",
@@ -27,5 +27,9 @@
   "GBLB": {
     "industry": "Holding / Investment Companies",
     "_reason": "GBL = holding Frère-Desmarais. Payout 200%, quality=19. Pollue Asset Management."
+  },
+  "402340": {
+    "industry": "Holding / Investment Companies",
+    "_reason": "SK Square = holding d'investissement (18% SK Hynix). ROE = fair value du stake, pas marge semi-conducteur. Pollue semiconductors (n=10)."
   }
 }
