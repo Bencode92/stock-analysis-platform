@@ -413,12 +413,12 @@ CONFIG = {
     "platform_fee_annual_bp": 0.0,  # 0 = no platform fee, set to e.g. 50 for 0.50%/year
     # === Buffett Filter Config ===
     "buffett_mode": "soft",
-    "buffett_min_score": 40,
+    "buffett_min_score": 50,
     # v4.14.0: Seuils Buffett PAR PROFIL (permet divergence Agressif vs Stable)
     "buffett_min_score_by_profile": {
-        "Agressif": 30,   # Plus permissif → autorise les "pépites" volatiles
-        "Modéré": 40,     # Seuil standard
-        "Stable": 50,     # Plus strict → qualité Buffett élevée requise
+        "Agressif": 50,   # Plus permissif → autorise les "pépites" volatiles
+        "Modéré": 60,     # Seuil standard
+        "Stable": 70,     # Plus strict → qualité Buffett élevée requise
     },
     # === v4.9.0: Tactical Context RADAR (data-driven) ===
     "use_tactical_context": True,
