@@ -636,7 +636,7 @@ RELAX_STEPS: List[Tuple[str, float, float]] = [
 PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
         "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium"},
-        "min_buffett_score": 40,
+        "min_buffett_score": 50,
         "hard_filters": {
             "volatility_3y_min": 22.0,
             "volatility_3y_max": 120.0,
@@ -662,7 +662,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
     },
     "Modéré": {
         "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility"},
-        "min_buffett_score": 50,
+        "min_buffett_score": 60,
         "hard_filters": {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
@@ -689,7 +689,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
     },
     "Stable": {
         "allowed_equity_presets": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
-        "min_buffett_score": 60,
+        "min_buffett_score": 70,
         "hard_filters": {
             "volatility_3y_max": 28.0,
             "roe_min": 10.0,
