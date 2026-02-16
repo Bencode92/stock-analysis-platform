@@ -2854,7 +2854,8 @@ async function main() {
                 console.log(`[OVERRIDE] ${s.ticker}: sector=${ov.sector || '-'}, industry=${ov.industry || '-'}`);
             }
         }
-        console.log(`📝 Overrides appliqués: ${overrideCount}/${Object.keys(overrides).length}`);
+        const ovTickers = Object.keys(overrides).filter(k => !k.startsWith('_'));
+        console.log(`📝 Overrides appliqués: ${overrideCount}/${ovTickers.length}`);
     } catch {
         // Fichier absent → pas d'overrides, c'est normal
     }
