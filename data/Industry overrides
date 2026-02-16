@@ -1,0 +1,31 @@
+{
+  "_COMMENT": "Overrides manuels sector/industry — placé dans data/industry_overrides.json",
+  "_USAGE": "Appliqués avant computeQualityScores() pour corriger les misclassifications Twelve Data",
+  "_UPDATED": "2026-02-16 — v3.31d post-audit peer_groups.json",
+
+  "TEN": {
+    "sector": "Energie",
+    "industry": "Oil & Gas Equipment & Services",
+    "_reason": "Tenaris = tubes acier pétroliers. Twelve Data retourne 'Medical Instruments & Supplies' (FAUX). Sector CSV déjà correct (Energie)."
+  },
+  "EXO": {
+    "industry": "Holding / Investment Companies",
+    "_reason": "Exor = holding Agnelli (Ferrari, Stellantis, CNH). Twelve Data retourne industry de CNH ('Farm & Heavy Construction Machinery'). Net margin 96.55% = fair value accounting."
+  },
+  "PAH3": {
+    "industry": "Holding / Investment Companies",
+    "_reason": "Porsche Automobil Holding = holding pure (53% VW). ROE -44%, net_margin null. Pollue Auto Manufacturers."
+  },
+  "CLNX": {
+    "industry": "Telecom Services",
+    "_reason": "Cellnex = opérateur tours télécoms. Twelve Data retourne 'Real Estate Services' (pas de catégorie towers/telecom infra dans leur taxonomie)."
+  },
+  "PRX": {
+    "industry": "Holding / Investment Companies",
+    "_reason": "Prosus = holding d'investissement (Tencent 26%, delivery, fintech). Net margin 200% = gains non réalisés fair value."
+  },
+  "GBLB": {
+    "industry": "Holding / Investment Companies",
+    "_reason": "GBL = holding Frère-Desmarais. Payout 200%, quality=19. Pollue Asset Management."
+  }
+}
