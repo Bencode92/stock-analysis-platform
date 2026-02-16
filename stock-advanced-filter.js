@@ -2772,6 +2772,39 @@ async function main() {
     
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
     
+    // ✅ v3.31f: Appliquer _banned (exclusion) et _alias (remapping ticker) depuis overrides
+    let bannedCount = 0, aliasCount = 0;
+    try {
+        const ovText = await fs.readFile('data/industry_overrides.json', 'utf8');
+        const overrides = JSON.parse(ovText);
+        const banned = new Set();
+        const aliases = {};   // old_ticker → new_ticker
+        for (const [tk, val] of Object.entries(overrides)) {
+            if (tk.startsWith('_')) continue;
+            if (val && val._banned) banned.add(tk);
+            if (val && val._alias) aliases[tk] = val._alias;
+        }
+
+        // Process all 3 arrays in-place
+        for (const arr of [usStocks, europeStocks, asiaStocks]) {
+            for (let i = arr.length - 1; i >= 0; i--) {
+                const sym = arr[i].symbol;
+                if (banned.has(sym)) {
+                    console.log(`🚫 [BANNED] ${sym}: ${arr[i].name} → exclu (${overrides[sym]._reason})`);
+                    arr.splice(i, 1);
+                    bannedCount++;
+                } else if (aliases[sym]) {
+                    console.log(`🔄 [ALIAS]  ${sym} → ${aliases[sym]}: ${arr[i].name}`);
+                    arr[i].symbol = aliases[sym];
+                    aliasCount++;
+                }
+            }
+        }
+        if (bannedCount || aliasCount) {
+            console.log(`📝 Ticker overrides: ${bannedCount} banned, ${aliasCount} aliased\n`);
+        }
+    } catch { /* no overrides file → skip */ }
+    
     // ✅ v3.24: Stats ROE/D/E/ROIC chargées depuis CSV
     const allLoaded = [...usStocks, ...europeStocks, ...asiaStocks];
     const withROE = allLoaded.filter(s => s.roe !== null).length;
@@ -2872,37 +2905,91 @@ async function main() {
     console.log(`📊 Peer groups exportés: ${peerGroupsPath} (${Object.keys(peerGroupsData).length} groupes)`);
 
     // ✅ v3.31d: Audit classification industry (détecte incohérences CSV vs API)
-    // ✅ v3.31e: + détection name_mismatch (ticker résolu vers mauvaise entreprise)
-    const NOISE_WORDS = new Set([
+    // ✅ v3.31f: Matching amélioré (apostrophes, stems, substring, ticker-in-API)
+    //   + support _name_verified dans overrides pour rebrands connus
+    const AUDIT_NOISE = new Set([
         'inc', 'corp', 'ltd', 'plc', 'company', 'group', 'holdings', 'holding',
         'the', 'and', 'class', 'reit', 'pjsc', 'jsc', 'limited', 'shs',
-        'registered', 'ordinary', 'common', 'stock', 'shares', 'new', 'hldgs'
+        'registered', 'ordinary', 'common', 'stock', 'shares', 'new', 'hldgs',
+        'incorporated', 'non', 'voting', 'bearer', 'preferred', 'series',
+        'depositary', 'receipt', 'rights', 'warrant', 'unit', 'international'
     ]);
-    function nameTokens(s) {
-        return normalize(s).normalize('NFKD').replace(/[^a-z0-9\s]/g, ' ')
-            .split(/\s+/).filter(w => w.length >= 3 && !NOISE_WORDS.has(w));
+    function auditTokens(s) {
+        return normalize(s).normalize('NFKD')
+            .replace(/['\u2019\u2018\u00B4]/g, '')   // strip apostrophes BEFORE tokenizing
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/).filter(w => w.length >= 3 && !AUDIT_NOISE.has(w));
     }
     // Retourne [score 0-1, detail] — 0 = aucun overlap, 1 = match parfait
-    function nameMatchScore(csvName, apiName) {
-        if (!csvName || !apiName) return [1, 'no_api_name']; // pas de donnée → pas de flag
-        const csv = nameTokens(csvName);
-        const api = new Set(nameTokens(apiName));
-        if (csv.length === 0) return [1, 'csv_name_too_short']; // ex: "3M"
-        const matches = csv.filter(t => api.has(t)).length;
-        return [matches / csv.length, `${matches}/${csv.length} tokens`];
+    function nameMatchScore(csvName, apiName, ticker) {
+        if (!csvName || !apiName) return [1, 'no_api_name'];
+        const csv = auditTokens(csvName);
+        const api = auditTokens(apiName);
+        if (csv.length === 0) return [1, 'csv_name_too_short'];
+        if (api.length === 0) return [1, 'api_name_too_short'];
+
+        const apiSet = new Set(api);
+        const apiFlat = normalize(apiName).replace(/[^a-z0-9]/g, '');
+        let matches = 0;
+
+        for (const t of csv) {
+            // 1) Exact match
+            if (apiSet.has(t)) { matches++; continue; }
+            // 2) Stem match (plurals/possessives: mcdonalds↔mcdonald)
+            const tStem = t.replace(/s$/, '');
+            if (tStem.length >= 3 && api.some(a => a.replace(/s$/, '') === tStem)) { matches++; continue; }
+            // 3) Prefix match (5+ chars shared prefix)
+            if (t.length >= 5 && api.some(a => a.length >= 5 && (a.startsWith(t.slice(0,5)) || t.startsWith(a.slice(0,5))))) {
+                matches += 0.7; continue;
+            }
+            // 4) Substring containment (strategy ⊂ microstrategy)
+            if (t.length >= 5 && (apiFlat.includes(t) || api.some(a => a.includes(t) || t.includes(a)))) {
+                matches += 0.7; continue;
+            }
+        }
+
+        // 5) Ticker-in-API-name bonus (GE→General Electric, WAB→Wabtec)
+        const tickerLow = (ticker || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (tickerLow.length >= 2 && matches === 0) {
+            if (apiFlat.includes(tickerLow)) {
+                matches = csv.length * 0.6;     // ticker found in API name
+            } else if (tickerLow.length >= 2) {
+                const initials = api.map(a => a[0]).join('');
+                if (initials === tickerLow || initials.startsWith(tickerLow)) {
+                    matches = csv.length * 0.6; // ticker = acronym of API name
+                }
+            }
+        }
+
+        const score = Math.min(1, matches / csv.length);
+        return [score, `${matches.toFixed(1)}/${csv.length} tokens`];
     }
+
+    // Build set of tickers with _name_verified in overrides (rebrands acknowledged)
+    const nameVerified = new Set();
+    try {
+        const ovText2 = await fs.readFile('data/industry_overrides.json', 'utf8');
+        const ov2 = JSON.parse(ovText2);
+        for (const [tk, val] of Object.entries(ov2)) {
+            if (tk.startsWith('_')) continue;
+            if (val && val._name_verified) nameVerified.add(tk);
+        }
+    } catch { /* no overrides file */ }
 
     const industryAudit = [];
     for (const s of allForScoring) {
         if (s.error) continue;
         const flags = [];
 
-        // ✅ v3.31e: CRITICAL — Name mismatch (ticker résolu vers mauvaise entreprise)
-        const [nmScore, nmDetail] = nameMatchScore(s.name, s.name_api);
-        if (nmScore === 0) {
-            flags.push('name_mismatch_CRITICAL');
-        } else if (nmScore > 0 && nmScore < 0.5) {
-            flags.push('name_mismatch_WARNING');
+        // ✅ v3.31f: Name mismatch — skip si _name_verified dans overrides
+        let nmScore = 1, nmDetail = '';
+        if (!nameVerified.has(s.ticker)) {
+            [nmScore, nmDetail] = nameMatchScore(s.name, s.name_api, s.ticker);
+            if (nmScore === 0) {
+                flags.push('name_mismatch_CRITICAL');
+            } else if (nmScore > 0 && nmScore < 0.5) {
+                flags.push('name_mismatch_WARNING');
+            }
         }
 
         // Sector CSV vs sector_api mismatch
