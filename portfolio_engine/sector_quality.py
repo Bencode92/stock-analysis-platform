@@ -860,9 +860,10 @@ def apply_buffett_filter(
         profile = get_profile(a.get("sector"))
         a["_buffett_penalty"] = compute_buffett_penalty(a, profile)
         a["_value_score"] = compute_value_score(a, profile)
-        a["_buffett_score"] = compute_buffett_score(a, profile)
+        # v4.15: Ne pas écraser le score JS s'il existe déjà
+        if a.get("buffett_score") is None:
+            a["_buffett_score"] = compute_buffett_score(a, profile)
         a["_buffett_reject_reason"] = None
-    
     # Étape 3: Hard filter si demandé
     if mode in ("hard", "both"):
         filtered = []
