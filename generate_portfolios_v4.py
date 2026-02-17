@@ -1625,6 +1625,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 "current_ratio": _safe_float(it.get("current_ratio")),
                 "quick_ratio": _safe_float(it.get("quick_ratio")),
                 "beta": _safe_float(it.get("beta")),
+                # === v4.15: Quality score (complément au Buffett moat gate) ===
+                "quality_score": _safe_float(it.get("quality_score")),
                 # === Legacy ===
                 "sector_top": it.get("sector"),
                 "country_top": it.get("country"),
@@ -2460,6 +2462,9 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 "fcf_yield": _safe_float(it.get("fcf_yield")),
                 "eps_growth_5y": _safe_float(it.get("eps_growth_5y")),
                 "beta": _safe_float(it.get("beta")),
+                # === v4.15: Quality score (complément au Buffett moat gate) ===
+                "quality_score": _safe_float(it.get("quality_score")),
+                # === Legacy ===
                 "sector_top": it.get("sector"),
                 "country_top": it.get("country"),
             })
