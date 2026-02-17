@@ -8,6 +8,7 @@ Génère un fichier JSON documentant:
 3. Les raisons précises de sélection/rejet
 4. v1.4.0: Classement final complet par catégorie (ETF, Obligations, Crypto)
 
+v1.5.0 - FIX: Vraies raisons de rejet (preset incompatible, classement, profile_score)
 v1.4.1 - FIX: Robust rejection reasons + sort_score_source diagnostic in category rankings
 v1.4.0 - ADD: Classement final ETF / Obligations / Crypto + explain_top_caps_selection étendu
 v1.3.0 - Aligned with preset_meta v4.15.2 (profile-based selection, yield-trap, missing data)
@@ -68,6 +69,18 @@ SELECTION_PIPELINE = {
                 "croissance": "vol >= 25% ET ytd > 0%",
             },
             "output": "Actions avec _matched_preset assigné",
+        },
+        {
+            "step": "3b",
+            "name": "Filtre preset par profil",
+            "function": "filter_equities_by_profile()",
+            "description": "Seuls les presets autorisés pour le profil sont conservés",
+            "allowed_presets": {
+                "Agressif": "croissance, momentum_trend, agressif, recovery, quality_premium",
+                "Modéré": "quality_premium, value_dividend, croissance, momentum_trend, defensif, low_volatility",
+                "Stable": "defensif, low_volatility, rendement, value_dividend, quality_premium",
+            },
+            "output": "Actions dont le preset est compatible avec le profil",
         },
         {
             "step": 4,
@@ -162,6 +175,15 @@ HARD_FILTER_EXPLANATIONS = {
     "div_yield_missing": "❌ Dividend yield manquant (requis pour Stable)",
     "payout_missing": "❌ Payout ratio manquant (requis pour anti yield-trap)",
     "coverage_missing": "❌ Dividend coverage manquant (requis pour anti yield-trap)",
+}
+
+
+# === v1.5.0: Presets autorisés par profil (miroir de PROFILE_POLICY) ===
+
+PROFILE_ALLOWED_PRESETS = {
+    "Agressif": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium"},
+    "Modéré": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility"},
+    "Stable": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
 }
 
 
@@ -419,6 +441,7 @@ def analyze_rejection_reason(
     """
     Analyse détaillée de la raison de rejet d'un actif.
     
+    v1.5.0: Preset compatibility + profile_score ranking.
     v1.3.0: Added profile-aware hard filter analysis.
     """
     details = {}
@@ -489,10 +512,38 @@ def analyze_rejection_reason(
             details["selected_in_sector"] = [s.get("name", "?")[:20] for s in selected_in_sector]
             return f"❌ Quota sectoriel atteint ({sector}: {sector_count}/{max_per_sector}), score {composite:.3f} < seuil {min_selected_score:.3f}", details
     
-    # 7. Score composite insuffisant
+    # 6b. v1.5.0: Preset incompatible avec le profil
+    matched_preset = asset.get("_matched_preset")
+    allowed_presets = PROFILE_ALLOWED_PRESETS.get(profile, set())
+    
+    if matched_preset and allowed_presets and matched_preset not in allowed_presets:
+        details["matched_preset"] = matched_preset
+        details["profile"] = profile
+        details["allowed_presets"] = sorted(allowed_presets)
+        return (
+            f"❌ Preset '{matched_preset}' non éligible pour profil {profile} "
+            f"(autorisés: {', '.join(sorted(allowed_presets))})"
+        ), details
+    
+    # 6c. v1.5.0: Profile score disponible → classement insuffisant
+    profile_score = asset.get("_profile_score")
     composite = asset.get("_composite_score") or 0
+    
+    if profile_score is not None:
+        details["profile_score"] = round(profile_score, 3)
+        details["composite_score"] = round(composite, 3)
+        details["sector"] = sector
+        details["matched_preset"] = matched_preset
+        return (
+            f"❌ Classement insuffisant pour profil {profile} "
+            f"(profile_score: {profile_score:.3f}, quota atteint)"
+        ), details
+    
+    # 7. Fallback: score composite (pas de profile_score disponible)
     details["composite_score"] = round(composite, 3)
     details["sector"] = sector
+    if matched_preset:
+        details["matched_preset"] = matched_preset
     
     return f"❌ Score composite insuffisant ({composite:.3f})", details
 
@@ -793,6 +844,7 @@ def generate_selection_explanation(
     """
     Génère un fichier JSON expliquant la sélection des actions.
     
+    v1.5.0: Improved rejection reasons (preset compat, profile_score).
     v1.4.0: Added ETF/Bond/Crypto ranking sections.
     v1.3.0: Added profile parameter for profile-aware analysis.
     """
@@ -986,7 +1038,7 @@ def generate_selection_explanation(
     # Build report
     report = {
         "generated_at": datetime.now().isoformat(),
-        "version": "v1.4.0",
+        "version": "v1.5.0",
         "preset_meta_version": "v4.15.2",
         
         "selection_pipeline": SELECTION_PIPELINE,
@@ -1088,6 +1140,7 @@ def explain_top_caps_selection(
     """
     Fonction simple pour intégration dans generate_portfolios_v4.py
     
+    v1.5.0: Improved rejection reasons.
     v1.4.0: Added ETF/Bond/Crypto parameters.
     v1.3.0: Added profile parameter.
     """
