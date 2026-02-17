@@ -1714,7 +1714,7 @@ class PortfolioOptimizer:
         deduplicate_etfs: bool = True,
         deduplicate_corporate: bool = True,
         use_bucket_constraints: bool = True,
-        buffett_hard_filter: bool = True,
+        buffett_hard_filter: bool = False,  # v4.15.1: Désactivé, preset_meta gate suffit (seuils 50/60/70)
         buffett_min_score: float = BUFFETT_HARD_FILTER_MIN,
         use_preset_etf: bool = True,  # v6.30: Utiliser preset_etf pour sélection ETF
     ):
@@ -4636,7 +4636,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 source_data=item,
                 exposure=item.get("exposure"),
                 preset=item.get("preset"),
-                buffett_score=item.get("_buffett_score"),
+                buffett_score=item.get("buffett_score") or item.get("_buffett_score"),
                 ticker=item.get("ticker") or item.get("symbol"),   # v6.18.3: FIX ticker_coverage
                 symbol=item.get("symbol") or item.get("ticker"),   # v6.18.3: alias
             )
