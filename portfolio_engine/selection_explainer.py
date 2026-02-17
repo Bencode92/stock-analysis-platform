@@ -505,7 +505,7 @@ def _get_best_score_with_source(asset: Dict):
         "_profile_score",
         "composite_score", "_composite_score",
         "bond_quality_raw",
-        "_buffett_score", "buffett_score",
+        "buffett_score", "_buffett_score",
     ]:    
         val = asset.get(key)
         if val is not None:
@@ -519,7 +519,6 @@ def _get_best_score_with_source(asset: Dict):
 def _get_best_score(asset: Dict) -> float:
     """v1.4.0: Extract the best available score from any asset type."""
     return _get_best_score_with_source(asset)[0]
-
 
 def _deduce_rejection_reason_standalone(asset: Dict, category: str, sort_source: str) -> str:
     """
@@ -750,7 +749,7 @@ def build_category_ranking(
             mcap = asset.get("market_cap")
             if mcap:
                 entry["market_cap"] = str(mcap)
-            bs = asset.get("_buffett_score") or asset.get("buffett_score")
+            bs = asset.get("buffett_score") or asset.get("_buffett_score")
             if bs is not None:
                 try:
                     entry["buffett_score"] = round(float(bs), 1)
