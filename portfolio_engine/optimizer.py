@@ -186,7 +186,7 @@ except ImportError:
         LOTTERY = "lottery"
     
     PROFILE_BUCKET_TARGETS = {
-        "Stable": {Role.CORE: (0.30, 0.40), Role.DEFENSIVE: (0.45, 0.60), Role.SATELLITE: (0.05, 0.15), Role.LOTTERY: (0.00, 0.00)},
+        "Stable": {Role.CORE: (0.25, 0.35), Role.DEFENSIVE: (0.50, 0.65), Role.SATELLITE: (0.05, 0.15), Role.LOTTERY: (0.00, 0.00)},       
         "Modéré": {Role.CORE: (0.45, 0.55), Role.DEFENSIVE: (0.20, 0.30), Role.SATELLITE: (0.15, 0.25), Role.LOTTERY: (0.00, 0.02)},
         "Agressif": {Role.CORE: (0.35, 0.45), Role.DEFENSIVE: (0.05, 0.15), Role.SATELLITE: (0.35, 0.50), Role.LOTTERY: (0.00, 0.05)},
     }
@@ -812,7 +812,7 @@ PROFILES = {
         vol_target=6.0,
         vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=35.0,
+        bonds_min=25.0,
         bonds_max=60.0,           # PATCH v8.4: cap obligations
         max_turnover=15.0,
         turnover_penalty=0.20,
@@ -859,7 +859,7 @@ PROFILES_EUUS = {
         vol_target=6.0,
         vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=35.0,
+        bonds_min=25.0,
         bonds_max=60.0,           # PATCH v8.4: cap obligations
         max_turnover=15.0,
         turnover_penalty=0.20,
