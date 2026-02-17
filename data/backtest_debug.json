@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-17T16:48:28.698666",
+    "generated_at": "2026-02-17T16:55:47.788774",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -20,8 +20,8 @@
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 31,
-    "tickers_with_data": 31,
+    "total_tickers_requested": 32,
+    "tickers_with_data": 32,
     "tickers_missing": []
   },
   "assets_by_type": {
@@ -34,6 +34,7 @@
       "EME",
       "EWJV",
       "FIX",
+      "FLKR",
       "GBIL",
       "GDE",
       "HIG",
@@ -304,7 +305,7 @@
       "total_return_pct": 22.11,
       "volatility_annual_pct": 14.22,
       "weights_by_profile": {
-        "Agressif": 13.0
+        "Agressif": 12.26
       },
       "price_samples": [
         {
@@ -475,7 +476,7 @@
       "total_return_pct": 20.83,
       "volatility_annual_pct": 18.71,
       "weights_by_profile": {
-        "Agressif": 9.0
+        "Agressif": 8.81
       },
       "price_samples": [
         {
@@ -532,7 +533,7 @@
       "total_return_pct": 61.32,
       "volatility_annual_pct": 59.24,
       "weights_by_profile": {
-        "Agressif": 3.83
+        "Agressif": 4.92
       },
       "price_samples": [
         {
@@ -574,6 +575,63 @@
           "prev_close": 1337.9499,
           "daily_return_pct": 0.0,
           "formula": "(1337.9499 / 1337.9499) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
+    "FLKR": {
+      "ticker": "FLKR",
+      "type": "Action",
+      "n_days_data": 85,
+      "first_date": "2025-10-21",
+      "last_date": "2026-02-16",
+      "first_price": 29.64,
+      "last_price": 43.6,
+      "total_return_pct": 47.1,
+      "volatility_annual_pct": 30.25,
+      "weights_by_profile": {
+        "Agressif": 0.94
+      },
+      "price_samples": [
+        {
+          "date": "2025-10-21",
+          "close": 29.64,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-11-19",
+          "close": 30.21,
+          "prev_date": "2025-11-18",
+          "prev_close": 30.5,
+          "daily_return_pct": -0.9508,
+          "formula": "(30.2100 / 30.5000) - 1"
+        },
+        {
+          "date": "2025-12-18",
+          "close": 30.88,
+          "prev_date": "2025-12-17",
+          "prev_close": 30.25,
+          "daily_return_pct": 2.0826,
+          "formula": "(30.8800 / 30.2500) - 1"
+        },
+        {
+          "date": "2026-01-16",
+          "close": 36.76,
+          "prev_date": "2026-01-15",
+          "prev_close": 36.4,
+          "daily_return_pct": 0.989,
+          "formula": "(36.7600 / 36.4000) - 1"
+        },
+        {
+          "date": "2026-02-16",
+          "close": 43.6,
+          "prev_date": "2026-02-13",
+          "prev_close": 43.6,
+          "daily_return_pct": 0.0,
+          "formula": "(43.6000 / 43.6000) - 1"
         }
       ],
       "is_benchmark": false
@@ -874,7 +932,7 @@
       "total_return_pct": 13.88,
       "volatility_annual_pct": 43.79,
       "weights_by_profile": {
-        "Agressif": 5.17
+        "Agressif": 5.75
       },
       "price_samples": [
         {
@@ -1612,7 +1670,7 @@
       "total_return_pct": 17.97,
       "volatility_annual_pct": 14.6,
       "weights_by_profile": {
-        "Agressif": 13.0
+        "Agressif": 12.99
       },
       "price_samples": [
         {
@@ -1783,7 +1841,7 @@
       "total_return_pct": 131.92,
       "volatility_annual_pct": 78.88,
       "weights_by_profile": {
-        "Agressif": 13.0
+        "Agressif": 11.33
       },
       "price_samples": [
         {
@@ -1846,33 +1904,6 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "WDC",
-          "type": "Action",
-          "weight_pct": 13.0,
-          "price_prev": 281.58,
-          "price_today": 281.58,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "ticker": "VPL",
-          "type": "Action",
-          "weight_pct": 13.0,
-          "price_prev": 106.42,
-          "price_today": 106.42,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
-          "ticker": "AVDV",
-          "type": "Action",
-          "weight_pct": 13.0,
-          "price_prev": 107.66,
-          "price_today": 107.66,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
-        },
-        {
           "ticker": "000660",
           "type": "Action",
           "weight_pct": 13.0,
@@ -1882,9 +1913,36 @@
           "contribution_pct": 0.0
         },
         {
+          "ticker": "VPL",
+          "type": "Action",
+          "weight_pct": 12.99,
+          "price_prev": 106.42,
+          "price_today": 106.42,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "ticker": "AVDV",
+          "type": "Action",
+          "weight_pct": 12.26,
+          "price_prev": 107.66,
+          "price_today": 107.66,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
+          "ticker": "WDC",
+          "type": "Action",
+          "weight_pct": 11.33,
+          "price_prev": 281.58,
+          "price_today": 281.58,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
           "ticker": "EWJV",
           "type": "Action",
-          "weight_pct": 9.0,
+          "weight_pct": 8.81,
           "price_prev": 47.57,
           "price_today": 47.57,
           "return_pct": 0.0,
@@ -1893,7 +1951,7 @@
         {
           "ticker": "MPWR",
           "type": "Action",
-          "weight_pct": 5.17,
+          "weight_pct": 5.75,
           "price_prev": 1171.47,
           "price_today": 1171.47,
           "return_pct": 0.0,
@@ -1987,7 +2045,7 @@
   ],
   "profiles_summary": {
     "Agressif": {
-      "n_assets": 12,
+      "n_assets": 13,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
         "Action": 100.0,
@@ -2001,20 +2059,20 @@
           13.0
         ],
         [
-          "WDC",
+          "000660",
           13.0
         ],
         [
           "VPL",
-          13.0
+          12.99
         ],
         [
           "AVDV",
-          13.0
+          12.26
         ],
         [
-          "000660",
-          13.0
+          "WDC",
+          11.33
         ]
       ]
     },
@@ -2085,13 +2143,13 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 35.05,
-      "net_return_pct": 35.05,
-      "volatility_pct": 22.0,
-      "max_drawdown_pct": -4.6,
+      "gross_return_pct": 34.59,
+      "net_return_pct": 34.59,
+      "volatility_pct": 21.53,
+      "max_drawdown_pct": -4.62,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 0.34,
-      "excess_return_pct": 34.71
+      "excess_return_pct": 34.24
     },
     "Modéré": {
       "gross_return_pct": 10.89,
