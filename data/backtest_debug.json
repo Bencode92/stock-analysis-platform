@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-17T08:33:05.484294",
+    "generated_at": "2026-02-17T09:10:55.073937",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -39,6 +39,7 @@
       "K",
       "PAAA",
       "PAXG/USD",
+      "SCHO",
       "SCHY",
       "VEDL",
       "VPL",
@@ -51,7 +52,6 @@
       "VEA"
     ],
     "Bond_ETF": [
-      "STIP",
       "VGSH",
       "VTIP"
     ],
@@ -811,9 +811,9 @@
       "first_date": "2025-10-21",
       "last_date": "2026-02-17",
       "first_price": 4096.4702,
-      "last_price": 4931.0,
-      "total_return_pct": 20.37,
-      "volatility_annual_pct": 33.97,
+      "last_price": 4927.0498,
+      "total_return_pct": 20.28,
+      "volatility_annual_pct": 33.99,
       "weights_by_profile": {
         "Modéré": 2.1
       },
@@ -852,11 +852,11 @@
         },
         {
           "date": "2026-02-17",
-          "close": 4931.0,
+          "close": 4927.0498,
           "prev_date": "2026-02-16",
           "prev_close": 4998.5898,
-          "daily_return_pct": -1.3522,
-          "formula": "(4931.0000 / 4998.5898) - 1"
+          "daily_return_pct": -1.4312,
+          "formula": "(4927.0498 / 4998.5898) - 1"
         }
       ],
       "is_benchmark": false
@@ -973,6 +973,63 @@
       ],
       "is_benchmark": false
     },
+    "SCHO": {
+      "ticker": "SCHO",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2025-10-21",
+      "last_date": "2026-02-17",
+      "first_price": 24.45,
+      "last_price": 24.42,
+      "total_return_pct": -0.12,
+      "volatility_annual_pct": 1.61,
+      "weights_by_profile": {
+        "Stable": 15.0
+      },
+      "price_samples": [
+        {
+          "date": "2025-10-21",
+          "close": 24.45,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2025-11-19",
+          "close": 24.37,
+          "prev_date": "2025-11-18",
+          "prev_close": 24.37,
+          "daily_return_pct": 0.0,
+          "formula": "(24.3700 / 24.3700) - 1"
+        },
+        {
+          "date": "2025-12-19",
+          "close": 24.34,
+          "prev_date": "2025-12-18",
+          "prev_close": 24.42,
+          "daily_return_pct": -0.3276,
+          "formula": "(24.3400 / 24.4200) - 1"
+        },
+        {
+          "date": "2026-01-19",
+          "close": 24.36,
+          "prev_date": "2026-01-16",
+          "prev_close": 24.36,
+          "daily_return_pct": 0.0,
+          "formula": "(24.3600 / 24.3600) - 1"
+        },
+        {
+          "date": "2026-02-17",
+          "close": 24.42,
+          "prev_date": "2026-02-16",
+          "prev_close": 24.42,
+          "daily_return_pct": 0.0,
+          "formula": "(24.4200 / 24.4200) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "SCHY": {
       "ticker": "SCHY",
       "type": "Action",
@@ -1085,63 +1142,6 @@
         }
       ],
       "is_benchmark": true
-    },
-    "STIP": {
-      "ticker": "STIP",
-      "type": "Bond_ETF",
-      "n_days_data": 86,
-      "first_date": "2025-10-21",
-      "last_date": "2026-02-17",
-      "first_price": 103.53,
-      "last_price": 103.01,
-      "total_return_pct": -0.5,
-      "volatility_annual_pct": 1.61,
-      "weights_by_profile": {
-        "Stable": 15.0
-      },
-      "price_samples": [
-        {
-          "date": "2025-10-21",
-          "close": 103.53,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2025-11-19",
-          "close": 102.83,
-          "prev_date": "2025-11-18",
-          "prev_close": 102.88,
-          "daily_return_pct": -0.0486,
-          "formula": "(102.8300 / 102.8800) - 1"
-        },
-        {
-          "date": "2025-12-19",
-          "close": 102.32,
-          "prev_date": "2025-12-18",
-          "prev_close": 102.68,
-          "daily_return_pct": -0.3506,
-          "formula": "(102.3200 / 102.6800) - 1"
-        },
-        {
-          "date": "2026-01-19",
-          "close": 102.41,
-          "prev_date": "2026-01-16",
-          "prev_close": 102.41,
-          "daily_return_pct": 0.0,
-          "formula": "(102.4100 / 102.4100) - 1"
-        },
-        {
-          "date": "2026-02-17",
-          "close": 103.01,
-          "prev_date": "2026-02-16",
-          "prev_close": 103.01,
-          "daily_return_pct": 0.0,
-          "formula": "(103.0100 / 103.0100) - 1"
-        }
-      ],
-      "is_benchmark": false
     },
     "URTH": {
       "ticker": "URTH",
@@ -1605,8 +1605,8 @@
       "first_date": "2025-10-21",
       "last_date": "2026-02-17",
       "first_price": 4094.6,
-      "last_price": 4903.1,
-      "total_return_pct": 19.75,
+      "last_price": 4904.1,
+      "total_return_pct": 19.77,
       "volatility_annual_pct": 33.5,
       "weights_by_profile": {
         "Modéré": 2.9
@@ -1646,11 +1646,11 @@
         },
         {
           "date": "2026-02-17",
-          "close": 4903.1,
+          "close": 4904.1,
           "prev_date": "2026-02-16",
           "prev_close": 4967.2,
-          "daily_return_pct": -1.2905,
-          "formula": "(4903.1000 / 4967.2000) - 1"
+          "daily_return_pct": -1.2703,
+          "formula": "(4904.1000 / 4967.2000) - 1"
         }
       ],
       "is_benchmark": false
@@ -1777,16 +1777,16 @@
     },
     {
       "asset_type": "Bond_ETF",
-      "ticker": "STIP",
+      "ticker": "VGSH",
       "date": "2025-11-19",
       "prev_date": "2025-11-18",
-      "close_J": 102.83,
-      "close_J_minus_1": 102.88,
-      "formula": "(102.8300 / 102.8800) - 1",
-      "daily_return_pct": -0.0486,
-      "weight_pct": 15.0,
-      "contribution_pct": -0.0073,
-      "explanation": "Le 2025-11-19, STIP (Bond_ETF) a clôturé à 102.83 vs 102.88 le 2025-11-18, soit un rendement de -0.05%"
+      "close_J": 58.77,
+      "close_J_minus_1": 58.78,
+      "formula": "(58.7700 / 58.7800) - 1",
+      "daily_return_pct": -0.017,
+      "weight_pct": 8.0,
+      "contribution_pct": -0.0014,
+      "explanation": "Le 2025-11-19, VGSH (Bond_ETF) a clôturé à 58.77 vs 58.78 le 2025-11-18, soit un rendement de -0.02%"
     },
     {
       "asset_type": "Benchmark",
@@ -1871,9 +1871,9 @@
       "n_assets": 7,
       "total_weight_pct": 100.0,
       "allocation_by_type": {
-        "Action": 70.0,
+        "Action": 85.0,
         "ETF": 0,
-        "Bond_ETF": 30.0,
+        "Bond_ETF": 15.0,
         "Crypto": 0
       },
       "top_5_holdings": [
@@ -1882,7 +1882,7 @@
           15.0
         ],
         [
-          "STIP",
+          "SCHO",
           15.0
         ],
         [
@@ -1920,13 +1920,13 @@
       "excess_return_pct": 11.34
     },
     "Stable": {
-      "gross_return_pct": 8.04,
-      "net_return_pct": 8.04,
-      "volatility_pct": 5.66,
+      "gross_return_pct": 8.05,
+      "net_return_pct": 8.05,
+      "volatility_pct": 5.62,
       "max_drawdown_pct": -1.26,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": 0.91,
-      "excess_return_pct": 7.13
+      "excess_return_pct": 7.14
     }
   },
   "uniformity_proof": {
