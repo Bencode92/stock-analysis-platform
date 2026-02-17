@@ -69,8 +69,7 @@ MIN_DATA_POINTS = 60  # ~2 mois de données
 PROFILE_PRESETS = {
     "Stable": [],  # EXCLUSION TOTALE - crypto trop volatile
     "Modéré": ["blue_chip", "quality_risk", "trend3_12m", "swing7_30"],  # v1.2.0: blue_chip prioritaire
-    "Agressif": ["momentum24h", "recovery_crypto", "swing7_30", "highvol_lottery"],
-}
+    "Agressif": ["blue_chip", "momentum24h", "recovery_crypto", "swing7_30", "highvol_lottery"]
 
 # Hard constraints par profil (quantiles)
 PROFILE_CONSTRAINTS = {
