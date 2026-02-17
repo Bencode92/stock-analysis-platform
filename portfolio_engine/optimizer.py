@@ -807,6 +807,7 @@ PROFILES = {
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=65.0,
+        max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -820,6 +821,7 @@ PROFILES = {
         score_scale=3.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
+        max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
     ),
 }
 
@@ -2886,7 +2888,7 @@ class PortfolioOptimizer:
                 # FIX v8.5: Pénalité concentration (HHI)
                 hhi = float(np.sum(w ** 2))
                 hhi_equal = 1.0 / n
-                _hhi_lambda = {"Agressif": 3.0, "Modéré": 4.0, "Stable": 2.0}.get(profile.name, 3.0)
+                _hhi_lambda = {"Agressif": 5.0, "Modéré": 4.0, "Stable": 2.0}.get(profile.name, 3.0)
                 hhi_penalty = _hhi_lambda * (hhi - hhi_equal)
                 
                 return -(port_score - vol_penalty - turnover_penalty - bucket_penalty - hhi_penalty)
