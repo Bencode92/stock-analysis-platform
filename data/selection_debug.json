@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-17-09-08-10",
-    "git_sha": "2d005ca8f",
-    "git_sha_full": "2d005ca8ffd3b7c369867ad51c2482cad9f3799b",
+    "run_id": "2026-02-17-09-55-00",
+    "git_sha": "a23ca3670",
+    "git_sha_full": "a23ca367045671507147a144abeb5ff9fe1ddf5f",
     "config_hash": "6c942836",
     "universe_asof": "2026-02-17",
-    "timestamp_utc": "2026-02-17T09:08:10.831614+00:00",
+    "timestamp_utc": "2026-02-17T09:55:00.475158+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 170.45
+    "total_duration_sec": 124.83
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,18 +22,18 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3112,
-      "after": 3112,
+      "before": 3111,
+      "after": 3111,
       "rejected": 0,
-      "equity": 1005,
+      "equity": 1004,
       "etf": 1342,
       "crypto": 341,
       "bond": 424
     },
     "hard_filters_equity": {
       "name": "hard_filters",
-      "before": 1005,
-      "after": 983,
+      "before": 1004,
+      "after": 982,
       "rejected": 22,
       "category": "equity",
       "reason_counts": {
@@ -50,44 +50,44 @@
       "profile": "Agressif",
       "top_k": [
         {
-          "ticker": "K",
-          "score": 0.8805
-        },
-        {
           "ticker": "000660",
-          "score": 0.8438
+          "score": 0.8448
         },
         {
           "ticker": "WDC",
-          "score": 0.8198
+          "score": 0.8212
         },
         {
           "ticker": "EME",
-          "score": 0.7877
+          "score": 0.7875
         },
         {
           "ticker": "NRG",
-          "score": 0.7837
+          "score": 0.7845
         },
         {
           "ticker": "ENR",
-          "score": 0.7767
+          "score": 0.7759
         },
         {
           "ticker": "HCA",
-          "score": 0.7742
+          "score": 0.7759
         },
         {
           "ticker": "VEDL",
-          "score": 0.774
+          "score": 0.775
         },
         {
           "ticker": "MPWR",
-          "score": 0.7634
+          "score": 0.7642
         },
         {
           "ticker": "JBL",
-          "score": 0.7606
+          "score": 0.762
+        },
+        {
+          "ticker": "KLAC",
+          "score": 0.7533
         }
       ]
     },
@@ -251,43 +251,43 @@
       "top_k": [
         {
           "ticker": "FGR",
-          "score": 0.773
+          "score": 0.7725
         },
         {
           "ticker": "VEDL",
-          "score": 0.7651
+          "score": 0.7649
         },
         {
           "ticker": "CLX",
-          "score": 0.7641
+          "score": 0.7644
         },
         {
           "ticker": "COR",
-          "score": 0.7478
+          "score": 0.7485
         },
         {
           "ticker": "HIG",
-          "score": 0.7304
+          "score": 0.7308
         },
         {
           "ticker": "HCA",
-          "score": 0.7297
+          "score": 0.7286
         },
         {
           "ticker": "ADM",
-          "score": 0.7275
+          "score": 0.7273
         },
         {
           "ticker": "SBIN",
-          "score": 0.7275
+          "score": 0.7268
         },
         {
           "ticker": "KR",
-          "score": 0.7249
+          "score": 0.7247
         },
         {
           "ticker": "ELE",
-          "score": 0.7199
+          "score": 0.7201
         }
       ]
     },
@@ -443,51 +443,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 170,
-      "after": 170,
+      "before": 169,
+      "after": 169,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "IMB",
-          "score": 0.8615
+          "score": 0.8635
         },
         {
           "ticker": "AGS",
-          "score": 0.823
+          "score": 0.8248
         },
         {
           "ticker": "CS",
-          "score": 0.8003
-        },
-        {
-          "ticker": "HNR1",
-          "score": 0.7971
+          "score": 0.8014
         },
         {
           "ticker": "LI",
-          "score": 0.7971
+          "score": 0.799
+        },
+        {
+          "ticker": "HNR1",
+          "score": 0.7981
         },
         {
           "ticker": "ULVR",
-          "score": 0.7813
+          "score": 0.7812
         },
         {
           "ticker": "BVI",
-          "score": 0.7709
+          "score": 0.7718
         },
         {
           "ticker": "DTE",
-          "score": 0.7353
+          "score": 0.7368
         },
         {
           "ticker": "AD",
-          "score": 0.7332
+          "score": 0.7347
         },
         {
-          "ticker": "ITW",
-          "score": 0.7246
+          "ticker": "BN",
+          "score": 0.7226
         }
       ]
     },
@@ -603,7 +603,7 @@
   "top10_by_preset": {
     "equity": {
       "agressif": {
-        "count": 209,
+        "count": 208,
         "criteria": {
           "vol_min": 35
         },
@@ -739,7 +739,7 @@
         ]
       },
       "croissance": {
-        "count": 44,
+        "count": 45,
         "criteria": {
           "vol_min": 20,
           "perf_1y_min": 10
@@ -756,19 +756,6 @@
             "perf_ytd": 0.8,
             "perf_1y": 0.3,
             "mcap": "21.2B",
-            "sector": "Industries"
-          },
-          {
-            "ticker": "WAB",
-            "name": "WESTINGHOUSE AIR BRAKE TECHNOL",
-            "buffett": 94.0,
-            "vol": 23.7,
-            "roe": 10.5,
-            "div_yield": 0.39,
-            "payout": 15.0,
-            "perf_ytd": 20.0,
-            "perf_1y": 35.3,
-            "mcap": "43.8B",
             "sector": "Industries"
           },
           {
@@ -835,6 +822,19 @@
             "perf_1y": 20.9,
             "mcap": "50.7B",
             "sector": "Matériaux"
+          },
+          {
+            "ticker": "WAB",
+            "name": "WESTINGHOUSE AIR BRAKE TECHNOL",
+            "buffett": 84.0,
+            "vol": 23.7,
+            "roe": 10.5,
+            "div_yield": 0.39,
+            "payout": 15.0,
+            "perf_ytd": 20.0,
+            "perf_1y": 35.3,
+            "mcap": "43.8B",
+            "sector": "Industries"
           },
           {
             "ticker": "ZBH",
@@ -1005,7 +1005,7 @@
           {
             "ticker": "CHD",
             "name": "CHURCH AND DWIGHT INC",
-            "buffett": 90.0,
+            "buffett": 89.0,
             "vol": 19.3,
             "roe": 13.4,
             "div_yield": 1.18,
@@ -1430,7 +1430,7 @@
           {
             "ticker": "LULU",
             "name": "LULULEMON ATHLETICA INC",
-            "buffett": 89.0,
+            "buffett": 90.0,
             "vol": 41.9,
             "roe": 42.0,
             "div_yield": 0.0,
@@ -1441,22 +1441,22 @@
             "sector": "Biens de consommatio"
           },
           {
-            "ticker": "ARES",
-            "name": "ARES MANAGEMENT CORP CLASS A",
-            "buffett": 87.0,
-            "vol": 35.0,
-            "roe": 16.3,
-            "div_yield": 3.35,
-            "payout": 200.0,
-            "perf_ytd": -17.2,
-            "perf_1y": -26.8,
-            "mcap": "43.9B",
-            "sector": "Finance"
+            "ticker": "QCOM",
+            "name": "QUALCOMM INC",
+            "buffett": 89.0,
+            "vol": 36.0,
+            "roe": 26.1,
+            "div_yield": 2.5,
+            "payout": 71.0,
+            "perf_ytd": -17.7,
+            "perf_1y": -17.4,
+            "mcap": "150.3B",
+            "sector": "Technologie de l'inf"
           }
         ]
       },
       "rendement": {
-        "count": 108,
+        "count": 107,
         "criteria": {
           "vol_max": 28,
           "div_yield_min": 1.5
@@ -2344,13 +2344,31 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 15.0,
+    "drift_pct": 0.59,
     "details": {
+      "1_initial.after": {
+        "current": 3111,
+        "previous": 3112,
+        "delta": -1,
+        "pct_change": 0.03
+      },
+      "1_initial.equity": {
+        "current": 1004,
+        "previous": 1005,
+        "delta": -1,
+        "pct_change": 0.1
+      },
+      "hard_filters_equity.after": {
+        "current": 982,
+        "previous": 983,
+        "delta": -1,
+        "pct_change": 0.1
+      },
       "5_selection_equity_Stable.after": {
-        "current": 170,
-        "previous": 200,
-        "delta": -30,
-        "pct_change": 15.0
+        "current": 169,
+        "previous": 170,
+        "delta": -1,
+        "pct_change": 0.59
       }
     }
   }
