@@ -502,11 +502,11 @@ def analyze_rejection_reason(
 def _get_best_score_with_source(asset: Dict):
     """v1.4.1: Extract the best available score AND its source field name."""
     for key in [
-        "composite_score", "_composite_score",
         "_profile_score",
+        "composite_score", "_composite_score",
         "bond_quality_raw",
         "_buffett_score", "buffett_score",
-    ]:
+    ]:    
         val = asset.get(key)
         if val is not None:
             try:
