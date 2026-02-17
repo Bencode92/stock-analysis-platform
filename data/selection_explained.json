@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-02-17T14:10:41.119502",
-  "version": "v1.4.0",
+  "generated_at": "2026-02-17T14:30:47.130810",
+  "version": "v1.5.0",
   "preset_meta_version": "v4.15.2",
   "selection_pipeline": {
     "version": "v4.15.2",
@@ -43,6 +43,18 @@
           "croissance": "vol >= 25% ET ytd > 0%"
         },
         "output": "Actions avec _matched_preset assigné"
+      },
+      {
+        "step": "3b",
+        "name": "Filtre preset par profil",
+        "function": "filter_equities_by_profile()",
+        "description": "Seuls les presets autorisés pour le profil sont conservés",
+        "allowed_presets": {
+          "Agressif": "croissance, momentum_trend, agressif, recovery, quality_premium",
+          "Modéré": "quality_premium, value_dividend, croissance, momentum_trend, defensif, low_volatility",
+          "Stable": "defensif, low_volatility, rendement, value_dividend, quality_premium"
+        },
+        "output": "Actions dont le preset est compatible avec le profil"
       },
       {
         "step": 4,
@@ -255,10 +267,12 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.646)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.531, quota atteint)",
           "details": {
+            "profile_score": 0.531,
             "composite_score": 0.646,
-            "sector": "Technologie de l'information"
+            "sector": "Technologie de l'information",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 85.0,
           "composite_score": 0.646,
@@ -279,10 +293,12 @@
           "sector": "La communication",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.661)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.591, quota atteint)",
           "details": {
+            "profile_score": 0.591,
             "composite_score": 0.661,
-            "sector": "La communication"
+            "sector": "La communication",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 99.0,
           "composite_score": 0.661,
@@ -303,10 +319,12 @@
           "sector": "La communication",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.661)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.590, quota atteint)",
           "details": {
+            "profile_score": 0.59,
             "composite_score": 0.661,
-            "sector": "La communication"
+            "sector": "La communication",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 99.0,
           "composite_score": 0.661,
@@ -327,10 +345,12 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.633)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.473, quota atteint)",
           "details": {
+            "profile_score": 0.473,
             "composite_score": 0.633,
-            "sector": "Technologie de l'information"
+            "sector": "Technologie de l'information",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 98.0,
           "composite_score": 0.633,
@@ -351,10 +371,12 @@
           "sector": "Biens de consommation cycliques",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.550)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.378, quota atteint)",
           "details": {
+            "profile_score": 0.378,
             "composite_score": 0.55,
-            "sector": "Biens de consommation cycliques"
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 92.0,
           "composite_score": 0.55,
@@ -374,10 +396,18 @@
           "sector": "La communication",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.640)",
+          "status": "❌ Preset 'agressif' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.64,
-            "sector": "La communication"
+            "matched_preset": "agressif",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 97.0,
           "composite_score": 0.64,
@@ -448,10 +478,12 @@
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.672)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.453, quota atteint)",
           "details": {
+            "profile_score": 0.453,
             "composite_score": 0.672,
-            "sector": "Biens de consommation de base"
+            "sector": "Biens de consommation de base",
+            "matched_preset": "defensif"
           },
           "buffett_score": 79.0,
           "composite_score": 0.672,
@@ -472,10 +504,12 @@
           "sector": "Santé",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.609)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.467, quota atteint)",
           "details": {
+            "profile_score": 0.467,
             "composite_score": 0.609,
-            "sector": "Santé"
+            "sector": "Santé",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 73.0,
           "composite_score": 0.609,
@@ -496,10 +530,12 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.580)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.521, quota atteint)",
           "details": {
+            "profile_score": 0.521,
             "composite_score": 0.58,
-            "sector": "Finance"
+            "sector": "Finance",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 89.1,
           "composite_score": 0.58,
@@ -520,10 +556,12 @@
           "sector": "Energie",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.601)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.461, quota atteint)",
           "details": {
+            "profile_score": 0.461,
             "composite_score": 0.601,
-            "sector": "Energie"
+            "sector": "Energie",
+            "matched_preset": "value_dividend"
           },
           "buffett_score": 65.0,
           "composite_score": 0.601,
@@ -544,10 +582,12 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.667)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.655, quota atteint)",
           "details": {
+            "profile_score": 0.655,
             "composite_score": 0.667,
-            "sector": "Finance"
+            "sector": "Finance",
+            "matched_preset": "defensif"
           },
           "buffett_score": 90.1,
           "composite_score": 0.667,
@@ -568,10 +608,18 @@
           "sector": "Santé",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.687)",
+          "status": "❌ Preset 'rendement' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.687,
-            "sector": "Santé"
+            "matched_preset": "rendement",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 93.0,
           "composite_score": 0.687,
@@ -618,10 +666,12 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.667)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.644, quota atteint)",
           "details": {
+            "profile_score": 0.644,
             "composite_score": 0.667,
-            "sector": "Finance"
+            "sector": "Finance",
+            "matched_preset": "defensif"
           },
           "buffett_score": 89.7,
           "composite_score": 0.667,
@@ -642,10 +692,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.498)",
+          "status": "❌ Preset 'recovery' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.498,
-            "sector": "Technologie de l'information"
+            "matched_preset": "recovery",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 52.0,
           "composite_score": 0.498,
@@ -666,10 +724,12 @@
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.719)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.573, quota atteint)",
           "details": {
+            "profile_score": 0.573,
             "composite_score": 0.719,
-            "sector": "Biens de consommation de base"
+            "sector": "Biens de consommation de base",
+            "matched_preset": "defensif"
           },
           "buffett_score": 97.0,
           "composite_score": 0.719,
@@ -722,10 +782,12 @@
           "sector": "Energie",
           "country": "Norvège",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.696)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.656, quota atteint)",
           "details": {
+            "profile_score": 0.656,
             "composite_score": 0.696,
-            "sector": "Energie"
+            "sector": "Energie",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 92.0,
           "composite_score": 0.696,
@@ -746,10 +808,18 @@
           "sector": "Technologie de l'information",
           "country": "Pays-Bas",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.707)",
+          "status": "❌ Preset 'agressif' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.707,
-            "sector": "Technologie de l'information"
+            "matched_preset": "agressif",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 100.0,
           "composite_score": 0.707,
@@ -793,10 +863,18 @@
           "sector": "Santé",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.712)",
+          "status": "❌ Preset 'rendement' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.712,
-            "sector": "Santé"
+            "matched_preset": "rendement",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 84.0,
           "composite_score": 0.712,
@@ -817,10 +895,12 @@
           "sector": "Biens de consommation cycliques",
           "country": "France",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.530)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.406, quota atteint)",
           "details": {
+            "profile_score": 0.406,
             "composite_score": 0.53,
-            "sector": "Biens de consommation cycliques"
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 81.0,
           "composite_score": 0.53,
@@ -841,10 +921,18 @@
           "sector": "Santé",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.718)",
+          "status": "❌ Preset 'rendement' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.718,
-            "sector": "Santé"
+            "matched_preset": "rendement",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 80.0,
           "composite_score": 0.718,
@@ -865,10 +953,12 @@
           "sector": "Santé",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.627)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.560, quota atteint)",
           "details": {
+            "profile_score": 0.56,
             "composite_score": 0.627,
-            "sector": "Santé"
+            "sector": "Santé",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 67.0,
           "composite_score": 0.627,
@@ -889,10 +979,12 @@
           "sector": "Biens de consommation cycliques",
           "country": "France",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.641)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.489, quota atteint)",
           "details": {
+            "profile_score": 0.489,
             "composite_score": 0.641,
-            "sector": "Biens de consommation cycliques"
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 100.0,
           "composite_score": 0.641,
@@ -913,10 +1005,12 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.582)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.558, quota atteint)",
           "details": {
+            "profile_score": 0.558,
             "composite_score": 0.582,
-            "sector": "Finance"
+            "sector": "Finance",
+            "matched_preset": "value_dividend"
           },
           "buffett_score": 88.9,
           "composite_score": 0.582,
@@ -937,10 +1031,18 @@
           "sector": "Biens de consommation de base",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.665)",
+          "status": "❌ Preset 'rendement' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.665,
-            "sector": "Biens de consommation de base"
+            "matched_preset": "rendement",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 62.0,
           "composite_score": 0.665,
@@ -960,10 +1062,12 @@
           "sector": "Biens de consommation de base",
           "country": "France",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.632)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.490, quota atteint)",
           "details": {
+            "profile_score": 0.49,
             "composite_score": 0.632,
-            "sector": "Biens de consommation de base"
+            "sector": "Biens de consommation de base",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 90.0,
           "composite_score": 0.632,
@@ -984,10 +1088,12 @@
           "sector": "La communication",
           "country": "Norvège",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.530)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.470, quota atteint)",
           "details": {
+            "profile_score": 0.47,
             "composite_score": 0.53,
-            "sector": "La communication"
+            "sector": "La communication",
+            "matched_preset": "value_dividend"
           },
           "buffett_score": 65.0,
           "composite_score": 0.53,
@@ -1033,10 +1139,12 @@
           "sector": "Industries",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.525)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.306, quota atteint)",
           "details": {
+            "profile_score": 0.306,
             "composite_score": 0.525,
-            "sector": "Industries"
+            "sector": "Industries",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 57.0,
           "composite_score": 0.525,
@@ -1129,10 +1237,12 @@
           "sector": "Industries",
           "country": "France",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.576)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.405, quota atteint)",
           "details": {
+            "profile_score": 0.405,
             "composite_score": 0.576,
-            "sector": "Industries"
+            "sector": "Industries",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 60.0,
           "composite_score": 0.576,
@@ -1153,10 +1263,12 @@
           "sector": "Finance",
           "country": "Espagne",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.577)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.663, quota atteint)",
           "details": {
+            "profile_score": 0.663,
             "composite_score": 0.577,
-            "sector": "Finance"
+            "sector": "Finance",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 96.8,
           "composite_score": 0.577,
@@ -1177,10 +1289,12 @@
           "sector": "Industries",
           "country": "France",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.561)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.339, quota atteint)",
           "details": {
+            "profile_score": 0.339,
             "composite_score": 0.561,
-            "sector": "Industries"
+            "sector": "Industries",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 64.0,
           "composite_score": 0.561,
@@ -1209,10 +1323,12 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.621)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.617, quota atteint)",
           "details": {
+            "profile_score": 0.617,
             "composite_score": 0.621,
-            "sector": "Technologie de l'information"
+            "sector": "Technologie de l'information",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 59.0,
           "composite_score": 0.621,
@@ -1232,10 +1348,12 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.603)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.489, quota atteint)",
           "details": {
+            "profile_score": 0.489,
             "composite_score": 0.603,
-            "sector": "Technologie de l'information"
+            "sector": "Technologie de l'information",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 59.0,
           "composite_score": 0.603,
@@ -1375,10 +1493,12 @@
           "sector": "Biens de consommation cycliques",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.644)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.648, quota atteint)",
           "details": {
+            "profile_score": 0.648,
             "composite_score": 0.644,
-            "sector": "Biens de consommation cycliques"
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 93.0,
           "composite_score": 0.644,
@@ -1424,10 +1544,18 @@
           "sector": "Finance",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.563)",
+          "status": "❌ Preset 'agressif' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, value_dividend)",
           "details": {
-            "composite_score": 0.563,
-            "sector": "Finance"
+            "matched_preset": "agressif",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "value_dividend"
+            ]
           },
           "buffett_score": 74.1,
           "composite_score": 0.563,
@@ -1628,10 +1756,12 @@
           "sector": "Biens de consommation cycliques",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.525)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.628, quota atteint)",
           "details": {
+            "profile_score": 0.628,
             "composite_score": 0.525,
-            "sector": "Biens de consommation cycliques"
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 55.0,
           "composite_score": 0.525,
