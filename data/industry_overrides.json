@@ -15,7 +15,12 @@
   "TEN": {
     "sector": "Energie",
     "industry": "Oil & Gas Equipment & Services",
-    "_reason": "Tenaris = tubes acier pétroliers. Twelve Data retourne 'Medical Instruments & Supplies' (FAUX). Sector CSV déjà correct (Energie)."
+    "_name_verified": true,
+    "_reason": "Tenaris SA (MIL). Sans country=Italy, Twelve Data résout vers Tecan Group AG (Suisse). Override sector+industry+name."
+  },
+  "ADP": {
+    "_name_verified": true,
+    "_reason": "Aéroports de Paris (Euronext). Bug Twelve Data: retourne name='Automatic Data Processing' mais données correctes (CEO Pascal, parisaeroport.fr, Airports & Air Services)."
   },
   "EXO": {
     "industry": "Holding / Investment Companies",
@@ -52,5 +57,13 @@
   "RS": {
     "_name_verified": true,
     "_reason": "Reliance Steel & Aluminum → rebrand Reliance Inc (2024). Twelve Data retourne nouveau nom court."
+  },
+  "BCVN": {
+    "_name_verified": true,
+    "_reason": "BC VAUD N = abréviation CSV de Banque Cantonale Vaudoise. Twelve Data retourne nom complet."
+  },
+  "AI": {
+    "_name_verified": true,
+    "_reason": "L'Air Liquide Société Anonyme → Air Liquide S.A. Apostrophe colle le L au token (LAIR≠AIR)."
   }
 }
