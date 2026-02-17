@@ -2773,29 +2773,37 @@ async function main() {
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
     
     // ✅ v3.31f: Appliquer _banned (exclusion) et _alias (remapping ticker) depuis overrides
+    //   Supporte _region: "US"|"EUROPE"|"ASIA" pour limiter l'override à une région
     let bannedCount = 0, aliasCount = 0;
     try {
         const ovText = await fs.readFile('data/industry_overrides.json', 'utf8');
         const overrides = JSON.parse(ovText);
-        const banned = new Set();
-        const aliases = {};   // old_ticker → new_ticker
+        const bans = {};    // ticker → { reason, region? }
+        const aliases = {};  // ticker → { target, region? }
         for (const [tk, val] of Object.entries(overrides)) {
             if (tk.startsWith('_')) continue;
-            if (val && val._banned) banned.add(tk);
-            if (val && val._alias) aliases[tk] = val._alias;
+            if (val && val._banned) bans[tk] = { reason: val._reason || '', region: (val._region || '').toUpperCase() };
+            if (val && val._alias)  aliases[tk] = { target: val._alias, region: (val._region || '').toUpperCase() };
         }
 
-        // Process all 3 arrays in-place
-        for (const arr of [usStocks, europeStocks, asiaStocks]) {
+        // Process all 3 arrays with region tag
+        const regionArrays = [
+            [usStocks, 'US'],
+            [europeStocks, 'EUROPE'],
+            [asiaStocks, 'ASIA']
+        ];
+        for (const [arr, region] of regionArrays) {
             for (let i = arr.length - 1; i >= 0; i--) {
                 const sym = arr[i].symbol;
-                if (banned.has(sym)) {
-                    console.log(`🚫 [BANNED] ${sym}: ${arr[i].name} → exclu (${overrides[sym]._reason})`);
+                const ban = bans[sym];
+                const alias = aliases[sym];
+                if (ban && (!ban.region || ban.region === region)) {
+                    console.log(`🚫 [BANNED] ${sym}: ${arr[i].name} → exclu (${ban.reason})`);
                     arr.splice(i, 1);
                     bannedCount++;
-                } else if (aliases[sym]) {
-                    console.log(`🔄 [ALIAS]  ${sym} → ${aliases[sym]}: ${arr[i].name}`);
-                    arr[i].symbol = aliases[sym];
+                } else if (alias && (!alias.region || alias.region === region)) {
+                    console.log(`🔄 [ALIAS]  ${sym} → ${alias.target}: ${arr[i].name} (${region})`);
+                    arr[i].symbol = alias.target;
                     aliasCount++;
                 }
             }
