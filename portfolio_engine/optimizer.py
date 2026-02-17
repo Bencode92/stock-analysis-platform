@@ -790,9 +790,10 @@ PROFILES = {
         max_sector=35.0,
         max_turnover=30.0,
         turnover_penalty=0.05,
-        score_scale=4.0,
+        score_scale=5.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
+        max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -836,9 +837,10 @@ PROFILES_EUUS = {
         max_turnover=30.0,
         turnover_penalty=0.05,
         euus_mode=True,
-        score_scale=4.0,
+        score_scale=5.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
+        max_single_position=13.0, 
     ),
     "Modéré": ProfileConstraints(
         name="Modéré", 
@@ -1924,6 +1926,34 @@ class PortfolioOptimizer:
             universe,
             key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
         )
+        # =====================================================
+        # FIX v8.5: PÉNALITÉ CRYPTO SANS HISTORIQUE
+        # =====================================================
+        NO_HISTORY_SCORE_PENALTY = 0.50
+        NO_HISTORY_MAX_WEIGHT = 3.0
+        
+        for asset in sorted_assets:
+            if asset.category == "Crypto" and asset.returns_series is None:
+                original_score = asset.score
+                asset.score *= (1 - NO_HISTORY_SCORE_PENALTY)
+                if hasattr(asset, '_select_score'):
+                    asset._select_score *= (1 - NO_HISTORY_SCORE_PENALTY)
+                asset._no_history = True
+                asset._max_weight_override = NO_HISTORY_MAX_WEIGHT
+                logger.warning(
+                    f"[FIX v8.5] {asset.id}: no price history, "
+                    f"score {original_score:.1f} → {asset.score:.1f}, "
+                    f"max_weight capped at {NO_HISTORY_MAX_WEIGHT}%"
+                )
+        
+        # Re-trier après pénalité
+        sorted_assets = sorted(
+            sorted_assets,
+            key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
+        )
+        # =====================================================
+        # FIN FIX v8.5
+        # =====================================================
         
         # === ÉTAPE 5b: Définir taille du pool ===
         target_pool = profile.max_assets * 3
@@ -2825,12 +2855,14 @@ class PortfolioOptimizer:
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
                 
-                # Pénalité vol asymétrique (inchangée)
+                # Pénalité vol asymétrique
                 vol_diff = port_vol - vol_target
                 if vol_diff < 0:  # Sous la cible
                     vol_penalty = 8.0 * vol_diff ** 2
                 else:  # Au-dessus
-                    vol_penalty = 3.0 * vol_diff ** 2
+                    # FIX v8.5: Agressif tolère plus de vol pour plus de score
+                    _vol_above_lambda = {"Agressif": 1.5, "Modéré": 3.0, "Stable": 8.0}.get(profile.name, 3.0)
+                    vol_penalty = _vol_above_lambda * vol_diff ** 2
                 
                 # P0 PARTNER: Pénalité turnover (v6.23 P0 FIX: 0.5× cohérent avec contrainte)
                 if has_prev_weights:
@@ -2851,10 +2883,23 @@ class PortfolioOptimizer:
                         above = max(0.0, role_w - _mx)
                         bucket_penalty += _bucket_lambda * (below ** 2 + above ** 2)
                 
-                return -(port_score - vol_penalty - turnover_penalty - bucket_penalty)
+                # FIX v8.5: Pénalité concentration (HHI)
+                hhi = float(np.sum(w ** 2))
+                hhi_equal = 1.0 / n
+                _hhi_lambda = {"Agressif": 3.0, "Modéré": 4.0, "Stable": 2.0}.get(profile.name, 3.0)
+                hhi_penalty = _hhi_lambda * (hhi - hhi_equal)
+                
+                return -(port_score - vol_penalty - turnover_penalty - bucket_penalty - hhi_penalty)
             
             constraints = self._build_constraints(candidates, profile, cov)
-            bounds = [(0, profile.max_single_position / 100) for _ in range(n)]
+            bounds = []
+            for i, c in enumerate(candidates):
+                max_w = profile.max_single_position / 100
+                # FIX v8.5: Cap weight pour actifs sans historique
+                if getattr(c, '_no_history', False):
+                    override = getattr(c, '_max_weight_override', max_w * 100)
+                    max_w = min(max_w, override / 100)
+                bounds.append((0, max_w))
             
             w0 = self._get_smart_initial_weights(candidates, profile)
             
