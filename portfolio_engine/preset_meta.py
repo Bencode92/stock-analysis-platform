@@ -590,7 +590,7 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "dividend_growth_3y": ["dividend_growth_3y"],
     "payout_ratio": ["payout_ratio_ttm", "payout_ratio"],
     "dividend_coverage": ["dividend_coverage", "interest_coverage"],
-    "buffett_score": ["_buffett_score", "buffett_score"],
+    "buffett_score": ["buffett_score", "_buffett_score"],
     "quality_score": ["quality_score"],
 }
 
@@ -639,6 +639,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
         "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium"},
         "min_buffett_score": 50,
+         "min_quality_gate": 55,     # v4.15: OR gate — quality rescue pour secteurs à moat structurellement bas
         "hard_filters": {
             "volatility_3y_min": 22.0,
             "volatility_3y_max": 120.0,
@@ -665,6 +666,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
     "Modéré": {
         "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility"},
         "min_buffett_score": 60,
+        "min_quality_gate": 65,     # v4.15: OR gate
          "hard_filters": {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
@@ -693,6 +695,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
     "Stable": {
         "allowed_equity_presets": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
         "min_buffett_score": 70,
+        "min_quality_gate": 65,     # v4.15: OR gate
         "hard_filters": {
             "volatility_3y_max": 28.0,
             "roe_min": 10.0,
@@ -931,7 +934,7 @@ def compute_universe_stats(equities: List[Dict]) -> Dict[str, List[float]]:
 # ============ ASSIGN PRESET ============
 
 def assign_preset_to_equity(eq: Dict) -> str:
-    """v4.14.0: recovery AVANT agressif."""
+    """v4.15: recovery AVANT agressif. Seuils Buffett -10 (JS strict)."""
     vol = get_metric_value(eq, "volatility_3y") or 25.0
     ytd = get_metric_value(eq, "perf_ytd") or 0.0
     perf_1y = get_metric_value(eq, "perf_1y") or 0.0
@@ -946,11 +949,11 @@ def assign_preset_to_equity(eq: Dict) -> str:
         return "recovery"
     if vol >= 35:
         return "agressif"
-    if vol < 22 and (div_yield > 1.5 or buffett >= 75):
+    if vol < 22 and (div_yield > 1.5 or buffett >= 65):
         return "rendement" if div_yield > 2.0 else "defensif"
-    if vol < 20 and buffett >= 70:
+    if vol < 20 and buffett >= 60:
         return "low_volatility"
-    if vol < 30 and roe > 15 and buffett >= 65:
+    if vol < 30 and roe > 15 and buffett >= 55:
         return "quality_premium"
     if vol < 28 and div_yield > 1.0:
         return "value_dividend"
@@ -1316,15 +1319,37 @@ def select_equities_for_profile(
         preset_dist[p] = preset_dist.get(p, 0) + 1
     meta["stages"]["presets"] = preset_dist
     
-    # Buffett filter
+    # v4.15: Buffett OR Quality gate — le quality_score (peer-relative) rescue
+    # les secteurs à moat structurellement bas (REITs, Utilities)
     min_buffett = policy.get("min_buffett_score", 0)
-    eq_buffett = [eq for eq in equities if (get_metric_value(eq, "buffett_score") or 0) >= min_buffett]
-    meta["stages"]["buffett"] = {"min": min_buffett, "before": len(equities), "after": len(eq_buffett)}
+    min_quality = policy.get("min_quality_gate", 0)
+    
+    def passes_gate(eq):
+        b = get_metric_value(eq, "buffett_score") or 0
+        q = get_metric_value(eq, "quality_score") or 0
+        return b >= min_buffett or q >= min_quality
+    
+    eq_buffett = [eq for eq in equities if passes_gate(eq)]
+    
+    # Diagnostic: combien rescued par quality?
+    buffett_only = sum(1 for eq in eq_buffett if (get_metric_value(eq, "buffett_score") or 0) >= min_buffett)
+    quality_rescued = len(eq_buffett) - buffett_only
+    meta["stages"]["buffett"] = {
+        "min_buffett": min_buffett,
+        "min_quality": min_quality,
+        "before": len(equities),
+        "after": len(eq_buffett),
+        "passed_by_buffett": buffett_only,
+        "rescued_by_quality": quality_rescued,
+    }
     
     if len(eq_buffett) < target_n:
-        relaxed = max(0, min_buffett - 20)
-        eq_buffett = [eq for eq in equities if (get_metric_value(eq, "buffett_score") or 0) >= relaxed]
-        meta["stages"]["buffett"]["relaxed_to"] = relaxed
+        relaxed_b = max(0, min_buffett - 20)
+        relaxed_q = max(0, min_quality - 15)
+        eq_buffett = [eq for eq in equities if
+            (get_metric_value(eq, "buffett_score") or 0) >= relaxed_b or
+            (get_metric_value(eq, "quality_score") or 0) >= relaxed_q]
+        meta["stages"]["buffett"]["relaxed_to"] = {"buffett": relaxed_b, "quality": relaxed_q}
     
     # Preset filter
     allowed_presets = policy.get("allowed_equity_presets", set())
