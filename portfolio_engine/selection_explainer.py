@@ -320,7 +320,7 @@ def calculate_composite_score(eq: Dict) -> float:
     momentum_score = min(1.0, max(0.0, momentum_raw))
     
     roe = _safe_float(eq.get("roe"))
-    buffett = _safe_float(eq.get("_buffett_score"), 50)
+    buffett = _safe_float(eq.get("buffett_score") or eq.get("_buffett_score"), 50)
     
     roe_norm = min(1.0, max(0.0, roe / 30.0))
     buffett_norm = buffett / 100.0
@@ -439,7 +439,7 @@ def analyze_rejection_reason(
         return f"❌ Hard filters [{profile}]: {'; '.join(explanations)}", details
     
     # 3. Check Buffett score
-    buffett_score = asset.get("_buffett_score")
+    buffett_score = asset.get("buffett_score") or asset.get("_buffett_score")
     buffett_reject = asset.get("_buffett_reject_reason")
     
     if buffett_reject:
@@ -640,7 +640,7 @@ def build_category_ranking(
                 pass
 
         # Buffett score (always show for equity)
-        bs = asset.get("_buffett_score") or asset.get("buffett_score")
+        bs = asset.get("buffett_score") or asset.get("_buffett_score")
         if bs is not None:
             try:
                 entry["buffett_score"] = round(float(bs), 1)
@@ -886,8 +886,9 @@ def generate_selection_explanation(
                 "details": details,
             }
             
-            if eq.get("_buffett_score") is not None:
-                entry["buffett_score"] = round(eq["_buffett_score"], 1)
+            _bs = eq.get("buffett_score") or eq.get("_buffett_score")
+            if _bs is not None:
+                entry["buffett_score"] = round(float(_bs), 1)    
             
             composite = eq.get("_composite_score", 0)
             if composite > 0:
