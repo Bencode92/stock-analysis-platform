@@ -2863,7 +2863,7 @@ class PortfolioOptimizer:
                     vol_penalty = 8.0 * vol_diff ** 2
                 else:  # Au-dessus
                     # FIX v8.5: Agressif tolère plus de vol pour plus de score
-                    _vol_above_lambda = {"Agressif": 1.5, "Modéré": 3.0, "Stable": 8.0}.get(profile.name, 3.0)
+                    _vol_above_lambda = {"Agressif": 2.5, "Modéré": 3.0, "Stable": 8.0}.get(profile.name, 3.0)
                     vol_penalty = _vol_above_lambda * vol_diff ** 2
                 
                 # P0 PARTNER: Pénalité turnover (v6.23 P0 FIX: 0.5× cohérent avec contrainte)
@@ -2888,7 +2888,7 @@ class PortfolioOptimizer:
                 # FIX v8.5: Pénalité concentration (HHI)
                 hhi = float(np.sum(w ** 2))
                 hhi_equal = 1.0 / n
-                _hhi_lambda = {"Agressif": 5.0, "Modéré": 4.0, "Stable": 2.0}.get(profile.name, 3.0)
+                _hhi_lambda = {"Agressif": 8.0, "Modéré": 4.0, "Stable": 2.0}.get(profile.name, 3.0)
                 hhi_penalty = _hhi_lambda * (hhi - hhi_equal)
                 
                 return -(port_score - vol_penalty - turnover_penalty - bucket_penalty - hhi_penalty)
