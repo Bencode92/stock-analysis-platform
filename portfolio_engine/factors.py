@@ -2208,9 +2208,10 @@ class FactorScorer:
         for i, asset in enumerate(assets):
             cat = categories[i]
             
-        # v4.0.0: Toujours calculer buffett_score pour equity (utilisé par preset_meta)
+       # v4.15.1: Calculer buffett_score UNIQUEMENT si absent (ne pas écraser le score JS expert)
             if cat == "equity":
-                asset["buffett_score"] = compute_buffett_quality_score(asset)
+                if asset.get("buffett_score") is None:
+                    asset["buffett_score"] = compute_buffett_quality_score(asset)
             
             # v4.0.0: Si mode="preset" et equity → PAS de composite_score
             if cat == "equity" and self.equity_scoring_mode == "preset":
