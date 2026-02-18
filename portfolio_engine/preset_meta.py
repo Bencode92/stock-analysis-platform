@@ -592,6 +592,8 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "dividend_coverage": ["dividend_coverage", "interest_coverage"],
     "buffett_score": ["buffett_score", "_buffett_score"],
     "quality_score": ["quality_score"],
+    "quality_value_sub": ["quality_subscores.value", "quality_value_sub", "value_subscore"],
+}
 }
 
 METRIC_RANGES: Dict[str, Tuple[float, float]] = {
@@ -611,6 +613,7 @@ METRIC_RANGES: Dict[str, Tuple[float, float]] = {
     "payout_ratio": (0, 120),
     "dividend_coverage": (0, 10),
     "buffett_score": (20, 100),
+    "quality_value_sub": (0, 100),
 }
 
 
@@ -658,13 +661,14 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "volatility_3y": 0.05,
             "dividend_yield": -0.05,
             "buffett_score": 0.10,
+            "quality_value_sub": 0.00,
         },
         "description": "Profil orienté croissance/momentum, tolère la volatilité",
         "expected_vol_range": (15, 22),
         "expected_equity_overlap_with_stable": 0.25,
     },
     "Modéré": {
-        "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility"},
+        "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility", "rendement"},
         "min_buffett_score": 60,
         "min_quality_gate": 65,     # v4.15: OR gate
          "hard_filters": {
@@ -682,11 +686,12 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "perf_3m": 0.05,
             "roe": 0.20,
             "eps_growth_5y": 0.10,
-            "fcf_yield": 0.10,
+            "fcf_yield": 0.05,
             "volatility_3y": -0.10,
             "max_drawdown_3y": -0.05,
             "dividend_yield": 0.10,
             "buffett_score": 0.15,
+            "quality_value_sub": 0.10,
         },
         "description": "Profil équilibré qualité/momentum, risque maîtrisé",
         "expected_vol_range": (10, 15),
@@ -712,12 +717,13 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "perf_ytd": 0.00,
             "perf_1y": 0.00,
             "roe": 0.15,
-            "fcf_yield": 0.10,
+            "fcf_yield": 0.05,
             "volatility_3y": -0.25,
             "max_drawdown_3y": -0.15,
             "dividend_yield": 0.20,
             "dividend_growth_3y": 0.05,
-            "buffett_score": 0.20,
+            "buffett_score": 0.15,
+            "quality_value_sub": 0.10,
         },
         "description": "Profil défensif, faible volatilité, haut dividende",
         "expected_vol_range": (6, 10),
@@ -771,7 +777,13 @@ def get_profile_policy(profile: str) -> Dict:
 def get_metric_value(eq: Dict, metric_key: str) -> Optional[float]:
     aliases = FIELD_MAPPING.get(metric_key, [metric_key])
     for alias in aliases:
-        if alias in eq and eq[alias] is not None:
+        # v5.1.2: Support nested keys like "quality_subscores.value"
+        if "." in alias:
+            parts = alias.split(".", 1)
+            parent = eq.get(parts[0])
+            if isinstance(parent, dict) and parts[1] in parent and parent[parts[1]] is not None:
+                return safe_float(parent[parts[1]])
+        elif alias in eq and eq[alias] is not None:
             return safe_float(eq[alias])
     return None
 
@@ -947,6 +959,10 @@ def assign_preset_to_equity(eq: Dict) -> str:
     
     if vol >= 35 and ytd < -10:
         return "recovery"
+    # v5.1.2: Quality escape — vol haute mais qualité exceptionnelle
+    if vol >= 35 and buffett >= 80 and roe >= 20:
+        logger.debug(f"Quality escape: {eq.get('ticker','?')} vol={vol:.1f} buff={buffett} roe={roe:.1f} → quality_premium")
+        return "quality_premium"
     if vol >= 35:
         return "agressif"
     if vol < 22 and (div_yield > 1.5 or buffett >= 65):
