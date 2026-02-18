@@ -594,7 +594,6 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "quality_score": ["quality_score"],
     "quality_value_sub": ["quality_subscores.value", "quality_value_sub", "value_subscore"],
 }
-}
 
 METRIC_RANGES: Dict[str, Tuple[float, float]] = {
     "perf_ytd": (-30, 60),
