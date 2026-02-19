@@ -1,5 +1,10 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.13 - Fix ticker collision: cache key ticker:country (SAN, ADM, NEM, ADP)
+//   - buildCacheKey(ticker, country) → "SAN:espagne" vs "SAN:france"
+//   - FORMULA_VERSION=4 → force re-fetch des entrées collisionnées v3
+//   - Migration auto des anciennes clés ticker → ticker:country
+//   - Résout: Sanofi/Santander, Admiral/ADM, Newmont/Nemetschek, ADP/Aéroports
 // Version 2.12 - Sync overrides: _banned/_alias depuis industry_overrides.json (cohérent avec advanced filter v3.31f)
 //   - Charge data/industry_overrides.json au démarrage
 //   - Exclut les tickers _banned AVANT resolveSymbol (évite volume/fondamentaux du mauvais stock)
@@ -31,8 +36,8 @@ const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
-// ✅ v2.11: Version 3 — force re-fetch pour avoir toutes les périodes
-const FORMULA_VERSION = 3;
+// ✅ v2.13: Version 4 — force re-fetch pour corriger collisions ticker (SAN, ADM, NEM, ADP)
+const FORMULA_VERSION = 4;
 
 // ✅ v2.8: Toutes les régions disponibles
 const ALL_INPUTS = [
@@ -169,6 +174,13 @@ const ITALY_FALLBACK = {
 
 const US_MICS = new Set(['XNAS', 'XNYS', 'BATS', 'ARCX', 'XASE']);
 const normalize = s => (s||'').toLowerCase().trim();
+
+// ✅ v2.13: Clé de cache ticker:country pour éviter les collisions
+// SAN:espagne ≠ SAN:france, ADM:etats-unis ≠ ADM:royaume-uni
+function buildCacheKey(ticker, country) {
+  const c = normalize(country);
+  return c ? `${ticker}:${c}` : ticker;
+}
 
 function toMIC(exchange, country=''){
   const ex = normalize(exchange);
@@ -758,15 +770,39 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
 
 async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PER_RUN) {
   console.log('\n' + '═'.repeat(60));
-  console.log('📈 ENRICHISSEMENT FONDAMENTAUX v2.11 (Multi-années 3-5 ans)');
+  console.log('📈 ENRICHISSEMENT FONDAMENTAUX v2.13 (Cache key ticker:country)');
   console.log('═'.repeat(60));
   console.log(`⚡ Rate limit: ${FUNDAMENTALS_RATE_LIMIT_MS}ms entre requêtes`);
   console.log(`📦 Max fetches: ${maxNewFetches >= 99999 ? 'ILLIMITÉ' : maxNewFetches}`);
-  console.log(`🔢 Formula version: ${FORMULA_VERSION} (force re-fetch v1/v2 → v3)`);
+  console.log(`🔢 Formula version: ${FORMULA_VERSION} (force re-fetch collisions v3)`);
   if (DEBUG) console.log('🐛 DEBUG mode activé');
 
   const cache = await loadFundamentalsCache();
   const now = Date.now();
+
+  // ✅ v2.13: Migration anciennes clés "TICKER" → "TICKER:pays"
+  // Copie les entrées non-ambiguës vers les nouvelles clés.
+  // Les tickers collisionnés (SAN, ADM, NEM, ADP) sont exclus → re-fetch forcé.
+  const COLLISION_TICKERS = new Set(['SAN', 'ADM', 'NEM', 'ADP']);
+  let migrated = 0, skippedCollisions = 0;
+  for (const stock of stocks) {
+    const ticker = stock['Ticker'];
+    const newKey = buildCacheKey(ticker, stock['Pays'] || '');
+    if (newKey === ticker) continue; // pas de pays → même clé
+    if (cache.data[newKey]) continue; // déjà migré
+    if (!cache.data[ticker]) continue; // rien à migrer
+    if (COLLISION_TICKERS.has(ticker)) {
+      // Clé ambiguë — on ne sait pas à quel pays correspondent les données
+      skippedCollisions++;
+      continue;
+    }
+    // Copier l'ancienne entrée vers la nouvelle clé
+    cache.data[newKey] = cache.data[ticker];
+    migrated++;
+  }
+  if (migrated || skippedCollisions) {
+    console.log(`🔄 Migration cache: ${migrated} clés migrées, ${skippedCollisions} collisions forcées au re-fetch`);
+  }
 
   const needsUpdate = [];
   const fromCache = [];
@@ -774,7 +810,8 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 
   for (const stock of stocks) {
     const ticker = stock['Ticker'];
-    const cached = cache.data[ticker];
+    const cacheKey = buildCacheKey(ticker, stock['Pays'] || '');
+    const cached = cache.data[cacheKey];
 
     if (cached && cached.fetched_at) {
       const cachedTime = new Date(cached.fetched_at).getTime();
@@ -822,9 +859,10 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 
   for (const stock of toProcess) {
     const ticker = stock['Ticker'];
+    const cacheKey = buildCacheKey(ticker, stock['Pays'] || '');
 
     try {
-      console.log(`  📊 [${processed + 1}/${toProcess.length}] ${ticker}...`);
+      console.log(`  📊 [${processed + 1}/${toProcess.length}] ${ticker} [${cacheKey}]...`);
 
       const fundamentals = await fetchFundamentalsForSymbol(ticker, {
         exchange: stock['Bourse de valeurs'] || '',
@@ -833,7 +871,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 
       fundamentals._hasContext = true;
 
-      cache.data[ticker] = fundamentals;
+      cache.data[cacheKey] = fundamentals;
       stock.roe = fundamentals.roe;
       stock.de_ratio = fundamentals.de_ratio;
       stock.roic = fundamentals.roic;
@@ -856,7 +894,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 
     } catch (error) {
       console.error(`  ❌ ${ticker}: Erreur -`, error.message);
-      cache.data[ticker] = {
+      cache.data[cacheKey] = {
         symbol: ticker,
         roe: null, de_ratio: null, roic: null,
         roe_avg_3y: null, roe_std_3y: null,
@@ -889,7 +927,8 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   const notProcessed = needsUpdate.slice(maxNewFetches);
   for (const stock of notProcessed) {
     const ticker = stock['Ticker'];
-    const cached = cache.data[ticker];
+    const cacheKey = buildCacheKey(ticker, stock['Pays'] || '');
+    const cached = cache.data[cacheKey];
     stock.roe = cached?.roe ?? null;
     stock.de_ratio = cached?.de_ratio ?? null;
     stock.roic = cached?.roic ?? null;
@@ -1022,7 +1061,7 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.12\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.13\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
   console.log(`   FORMULA_VERSION=${FORMULA_VERSION} (multi-années)`);
