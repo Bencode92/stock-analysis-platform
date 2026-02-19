@@ -11,6 +11,13 @@ Generates a detailed JSON report explaining:
 - v1.5.1: FIX: Robust rejection reasons + sort_score_source diagnostic
 - v1.5.0: FULL per-category rankings (ETF, equity, bond, crypto) for debugging
 
+v1.7.0 - SYNC with preset_meta v5.1.3:
+  1. Fix preset_meta_version: v4.15.2 → v5.1.3
+  2. Propagate profile field in audit entries (was always None)
+  3. Accept selected_tickers param in create_selection_audit for accurate marking
+  4. Fix equity category_rankings 100/100 selected bug (was using scored pool, not portfolio allocation)
+  5. Add anomaly warnings: vol>48% non-agressif, country concentration, selected inflation
+  6. Add _run_anomaly_checks() post-generation guard-rails
 v1.6.0 - REFACTOR:
   1. Guard-rail: warn when >80% assets are non_classé (detects HAS_MODULAR_SELECTORS=False)
   2. Use get_stable_uid() everywhere instead of fragile _get_asset_id()
@@ -440,8 +447,8 @@ class ETFScoringDebug:
 @dataclass 
 class SelectionAuditReport:
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    version: str = "v1.6.0"
-    preset_meta_version: str = "v4.15.2"
+    version: str = "v1.7.0"
+    preset_meta_version: str = "v5.1.3"
     summary: Dict[str, int] = field(default_factory=dict)
     profile_stats: Dict[str, Dict] = field(default_factory=dict)
     filters_applied: List[Dict] = field(default_factory=list)
@@ -479,7 +486,7 @@ class SelectionAuditor:
             "buffett_min_score": self.config.get("buffett_min_score", 40),
             "tactical_mode": self.config.get("tactical_mode", "radar"),
             "use_tactical_context": self.config.get("use_tactical_context", False),
-            "preset_meta_version": "v4.15.2",
+            "preset_meta_version": "v5.1.3",
         }
         self._all_equities: List[Dict] = []
         self._all_etf: List[Dict] = []
@@ -743,9 +750,17 @@ class SelectionAuditor:
 
     # ============= CATEGORY + PRESET RANKINGS =============
 
-    def record_category_ranking(self, category, all_candidates, selected, max_entries=100):
-        """v1.6.2: Two-tier sort for equity to fix _buffett_score scale mismatch."""
-        selected_ids = self._uid_set(selected, category)
+    def record_category_ranking(self, category, all_candidates, selected, max_entries=100, selected_tickers=None):
+        """v1.7.0: Accept selected_tickers for accurate marking. v1.6.2: Two-tier sort."""
+        # v1.7.0: Use selected_tickers if provided (accurate portfolio-level marking)
+        if selected_tickers:
+            selected_ids = set(selected_tickers)
+            # Also add UIDs for cross-matching
+            for a in selected:
+                if any(str(a.get(k, "")) in selected_tickers for k in ["ticker", "symbol", "id", "name", "etfsymbol"]):
+                    selected_ids.add(self._uid(a, category))
+        else:
+            selected_ids = self._uid_set(selected, category)
         # v1.6.2 FIX: Two-tier sort pour equity — _profile_score (0-1) first, puis _buffett_score normalisé
         if category == "equity":
             sorted_cands = sorted(all_candidates, key=lambda a: (
@@ -757,13 +772,28 @@ class SelectionAuditor:
         entries = [self._build_ranking_entry(i, a, category, selected_ids) for i, a in enumerate(sorted_cands[:max_entries], 1)]
         self.report.category_rankings[category] = entries
         n_sel = sum(1 for e in entries if e.get("selected"))
-        logger.info(f"📊 Audit v1.6.2: {category} ranking – {len(entries)} entries, {n_sel} selected")
+        n_total = len(entries)
+        logger.info(f"📊 Audit v1.7.0: {category} ranking – {n_total} entries, {n_sel} selected")
+        # v1.7.0: Anomaly warning if selected ratio is unrealistic
+        if category == "equity" and n_total > 0 and n_sel / n_total > 0.6:
+            w = (f"🚨 [equity] {n_sel}/{n_total} ({n_sel/n_total:.0%}) du ranking sont 'selected' "
+                 f"– probable que equities_final contient le pool scoré complet, pas juste les sélectionnés. "
+                 f"Passer selected_tickers= dans create_selection_audit() pour corriger.")
+            logger.warning(w)
+            self.report.anomaly_warnings.append(w)
         if category in ("equity", "etf"):
-            self.record_preset_rankings(category, all_candidates, selected)
+            self.record_preset_rankings(category, all_candidates, selected, selected_tickers=selected_tickers)
 
-    def record_preset_rankings(self, category, all_candidates, selected, top_n=10):
-        """v1.6.2: Two-tier sort for equity presets + anomaly guard-rail."""
-        selected_ids = self._uid_set(selected, category)
+    def record_preset_rankings(self, category, all_candidates, selected, top_n=10, selected_tickers=None):
+        """v1.7.0: Accept selected_tickers. v1.6.2: Two-tier sort + anomaly guard-rail."""
+        # v1.7.0: Use selected_tickers if provided
+        if selected_tickers:
+            selected_ids = set(selected_tickers)
+            for a in selected:
+                if any(str(a.get(k, "")) in selected_tickers for k in ["ticker", "symbol", "id", "name", "etfsymbol"]):
+                    selected_ids.add(self._uid(a, category))
+        else:
+            selected_ids = self._uid_set(selected, category)
         by_preset: Dict[str, List[Dict]] = {}
         for asset in all_candidates:
             preset = asset.get("_matched_preset") or "non_classé"
@@ -790,7 +820,7 @@ class SelectionAuditor:
             self.report.preset_rankings = {}
         self.report.preset_rankings[category] = preset_rankings
         parts = [f"{p}: {len(e)} ({sum(1 for x in e if x.get('selected'))} sel)" for p, e in sorted(preset_rankings.items())]
-        logger.info(f"📊 Audit v1.6.2: {category} preset_rankings – {len(preset_rankings)} presets: " + ", ".join(parts))
+        logger.info(f"📊 Audit v1.7.0: {category} preset_rankings – {len(preset_rankings)} presets: " + ", ".join(parts))
 
     # ============= REJECTION LOOKUP =============
 
@@ -838,7 +868,8 @@ class SelectionAuditor:
 
     # ============= FINAL SELECTION + REPORT =============
 
-    def record_final_selection(self, selected, all_candidates, category="equity", top_selected=50, top_rejected=50):
+    def record_final_selection(self, selected, all_candidates, category="equity", top_selected=50, top_rejected=50, selected_tickers=None):
+        """v1.7.0: Accept optional selected_tickers set for accurate portfolio-level marking."""
         # === DEBUG LOG 3: Vérifier ce que reçoit record_final_selection ===
         if category == "equity":
             _ac_ps = sum(1 for a in all_candidates if a.get("_profile_score") is not None)
@@ -848,7 +879,18 @@ class SelectionAuditor:
             if all_candidates:
                 _sc, _src = _score_with_source(all_candidates[0])
                 logger.info(f"🔍 DEBUG-3C: all_candidates[0] score={_sc:.4f}, source={_src}, name={all_candidates[0].get('name','?')[:30]}")
-        selected_ids = {self._uid(a, category) for a in selected}
+            if selected_tickers:
+                logger.info(f"🔍 DEBUG-3D: selected_tickers provided: {len(selected_tickers)} tickers")
+        # v1.7.0: Use selected_tickers for accurate marking if provided
+        if selected_tickers:
+            selected_ids = set(selected_tickers)
+            # Also add UIDs for cross-matching
+            for a in selected:
+                uid = self._uid(a, category)
+                if any(str(a.get(k, "")) in selected_tickers for k in ["ticker", "symbol", "id", "name", "etfsymbol"]):
+                    selected_ids.add(uid)
+        else:
+            selected_ids = {self._uid(a, category) for a in selected}
         sel_entries = []
         for i, asset in enumerate(selected[:top_selected], 1):
             entry = self._create_audit_entry(asset, category)
@@ -875,10 +917,13 @@ class SelectionAuditor:
         sa, ra = _MAP.get(category, ("equities_selected","equities_rejected"))
         setattr(self.report, sa, sel_entries)
         setattr(self.report, ra, rej_entries)
-        self.record_category_ranking(category, all_candidates, selected)
+        # v1.7.0: Pass selected_tickers to ranking for accurate marking
+        self.record_category_ranking(category, all_candidates, selected, selected_tickers=selected_tickers)
         logger.info(f"📊 Audit: {category} final - {len(sel_entries)} selected, {len(rej_entries)} notable rejected")
 
     def generate_report(self):
+        # v1.7.0: Run anomaly checks before generating summary
+        self._run_anomaly_checks()
         self.report.summary = {
             "equities_initial": self._stage_counts.get("equity_initial", 0),
             "equities_selected": len(self.report.equities_selected),
@@ -899,6 +944,46 @@ class SelectionAuditor:
         }
         return self.report
 
+    def _run_anomaly_checks(self):
+        """v1.7.0: Post-generation anomaly detection guard-rails."""
+        eq_sel = self.report.equities_selected
+        if not eq_sel:
+            return
+        # Check 1: High-vol stocks in non-agressif presets
+        NON_AGGRESSIVE_PRESETS = {"quality_premium", "defensif", "low_volatility", "value_dividend", "rendement"}
+        for e in eq_sel:
+            vol = e.get("volatility")
+            preset = e.get("matched_preset", "")
+            if vol and preset in NON_AGGRESSIVE_PRESETS and float(vol) > 48:
+                w = f"🔴 VOL_CAP: {e.get('name','?')[:25]} vol={vol}% in preset={preset} (> 48% cap Modéré)"
+                self.report.anomaly_warnings.append(w)
+                logger.warning(w)
+        # Check 2: Country concentration
+        countries: Dict[str, int] = {}
+        for e in eq_sel:
+            c = e.get("country", "?")
+            countries[c] = countries.get(c, 0) + 1
+        for c, n in countries.items():
+            if n > 5:
+                w = f"🟠 CONCENTRATION: {c} a {n} stocks sélectionnés (> 5)"
+                self.report.anomaly_warnings.append(w)
+                logger.warning(w)
+        # Check 3: Missing profile field
+        n_no_profile = sum(1 for e in eq_sel if not e.get("profile"))
+        if n_no_profile > 0:
+            w = f"🟡 PROFILE_MISSING: {n_no_profile}/{len(eq_sel)} equities n'ont pas de champ 'profile' – pipeline ne tag pas _profile sur les assets"
+            self.report.anomaly_warnings.append(w)
+            logger.warning(w)
+        # Check 4: Empty pipeline sections (hooks not connected)
+        if not self.report.profile_stats:
+            w = "🟡 HOOKS_DISCONNECTED: profile_stats est vide – track_profile_hard_filters()/record_profile_selection() non appelés par le pipeline"
+            self.report.anomaly_warnings.append(w)
+            logger.warning(w)
+        if not self.report.hard_filter_stats:
+            w = "🟡 HOOKS_DISCONNECTED: hard_filter_stats est vide – track_profile_hard_filters() non appelé par le pipeline"
+            self.report.anomaly_warnings.append(w)
+            logger.warning(w)
+
     def save_report(self, output_path="data/selection_audit.json"):
         report = self.generate_report()
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -916,6 +1001,9 @@ class SelectionAuditor:
 
     def _create_audit_entry(self, asset, category):
         entry = {"name": asset.get("name") or asset.get("ticker") or "Unknown", "ticker": asset.get("ticker") or asset.get("symbol"), "category": category}
+        # v1.7.0: Propagate profile field
+        profile = asset.get("_profile") or asset.get("profile")
+        if profile: entry["profile"] = profile
         if asset.get("_matched_preset"): entry["matched_preset"] = asset["_matched_preset"]
         if asset.get("_buffett_score") is not None: entry["buffett_score"] = round(asset["_buffett_score"], 1)
         elif asset.get("buffett_score") is not None: entry["buffett_score"] = round(asset["buffett_score"], 1)
@@ -1026,8 +1114,8 @@ class SelectionAuditor:
 
 # === Convenience function ===
 
-def create_selection_audit(config, equities_initial, equities_after_buffett, equities_final, etf_data=None, etf_selected=None, crypto_data=None, crypto_selected=None, bonds_data=None, bonds_selected=None, market_context=None, profile_selections=None, etf_scoring_debug=None, output_path="data/selection_audit.json"):
-    """Convenience function to create audit report. v1.6.0: anomaly_warnings."""
+def create_selection_audit(config, equities_initial, equities_after_buffett, equities_final, etf_data=None, etf_selected=None, crypto_data=None, crypto_selected=None, bonds_data=None, bonds_selected=None, market_context=None, profile_selections=None, etf_scoring_debug=None, output_path="data/selection_audit.json", selected_tickers=None):
+    """Convenience function to create audit report. v1.7.0: selected_tickers for accurate marking."""
     auditor = SelectionAuditor(config)
     if market_context: auditor.set_radar_context(market_context)
     auditor.track_initial_universe(equities_initial, "equity")
@@ -1038,17 +1126,18 @@ def create_selection_audit(config, equities_initial, equities_after_buffett, equ
                 auditor.track_profile_hard_filters(profile, data["before"], data["after"], data.get("stats", {}))
             if "selected" in data and "meta" in data:
                 auditor.record_profile_selection(profile, data["selected"], data.get("candidates", []), data["meta"])
-    auditor.record_final_selection(equities_final, equities_after_buffett, "equity", 50, 50)
+    # v1.7.0: Pass selected_tickers for accurate equity marking
+    auditor.record_final_selection(equities_final, equities_after_buffett, "equity", 50, 50, selected_tickers=selected_tickers)
     if etf_data:
         auditor.track_initial_universe(etf_data, "etf")
         if etf_scoring_debug:
             for p, d in etf_scoring_debug.items():
                 auditor.track_etf_scoring_diagnostic(p, d.get("stage_counts",{}), d.get("scoring_components",{}), d.get("score_stats",{}), d.get("is_flat",False), d.get("scoring_method","unknown"))
-        auditor.record_final_selection(etf_selected or [], etf_data, "etf", 30, 20)
+        auditor.record_final_selection(etf_selected or [], etf_data, "etf", 30, 20, selected_tickers=selected_tickers)
     if crypto_data:
         auditor.track_initial_universe(crypto_data, "crypto")
-        auditor.record_final_selection(crypto_selected or [], crypto_data, "crypto", 10, 10)
+        auditor.record_final_selection(crypto_selected or [], crypto_data, "crypto", 10, 10, selected_tickers=selected_tickers)
     if bonds_data:
         auditor.track_initial_universe(bonds_data, "bond")
-        auditor.record_final_selection(bonds_selected or [], bonds_data, "bond", 20, 10)
+        auditor.record_final_selection(bonds_selected or [], bonds_data, "bond", 20, 10, selected_tickers=selected_tickers)
     return auditor.save_report(output_path)
