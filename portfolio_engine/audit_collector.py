@@ -429,8 +429,8 @@ class AuditCollector:
             preset_groups.setdefault(preset, []).append(eq)
         
         for preset_name, assets in sorted(preset_groups.items()):
-            sorted_assets = sorted(assets, key=lambda x: x.get("_profile_score") or x.get("_buffett_score") or x.get("composite_score") or 0, reverse=True)[:10]
-            top_10 = []
+            sorted_assets = sorted(assets, key=lambda x: x.get("_profile_score") or x.get("_buffett_score") or x.get("composite_score") or 0, reverse=True)[:20]  # v5.1.4: 10→20 pour éviter confusion CLX/LMT
+            top_10 = []  # Note: variable gardée "top_10" pour compat JSON, contient maintenant top 20
             for a in sorted_assets:
                 entry = {"ticker": a.get("ticker") or a.get("symbol") or "?", "name": (a.get("name") or "")[:30]}
                 buffett = a.get("_buffett_score") or a.get("buffett_score")
