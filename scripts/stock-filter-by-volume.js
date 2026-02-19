@@ -1,5 +1,11 @@
 // stock-filter-by-volume.js
 // npm i csv-parse axios
+// Version 2.12 - Sync overrides: _banned/_alias depuis industry_overrides.json (cohérent avec advanced filter v3.31f)
+//   - Charge data/industry_overrides.json au démarrage
+//   - Exclut les tickers _banned AVANT resolveSymbol (évite volume/fondamentaux du mauvais stock)
+//   - Remplace les tickers _alias AVANT resolveSymbol (ex: HEIA→HEI.A en US)
+//   - Supporte _region pour limiter l'override à une région (US/EUROPE/ASIA)
+//   - Purge le fundamentals_cache pour les tickers banned (évite pollution cache)
 // Version 2.11 - Multi-year fundamentals: séries 3-5 ans, stabilité, marge nette, croissance CA
 //   - fetchBalanceSheet: retourne TOUTES les périodes (3-5 ans, pas juste N/N-1)
 //   - fetchIncomeStatement: retourne TOUTES les périodes (pas juste la première)
@@ -1016,13 +1022,34 @@ async function throttle() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 (async ()=>{
-  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.11\n');
+  console.log('🚀 Démarrage du filtrage par volume + enrichissement fondamentaux v2.12\n');
   console.log(`📊 Config:`);
   console.log(`   REGIONS=${INPUTS.map(i => i.region).join(', ')}`);
   console.log(`   FORMULA_VERSION=${FORMULA_VERSION} (multi-années)`);
   console.log(`   MAX_FUNDAMENTALS_FETCH=${MAX_NEW_FETCHES_PER_RUN >= 99999 ? 'ILLIMITÉ' : MAX_NEW_FETCHES_PER_RUN}`);
   console.log(`   FUNDAMENTALS_RATE_LIMIT=${FUNDAMENTALS_RATE_LIMIT_MS}ms`);
   console.log(`   DEBUG=${DEBUG}`);
+
+  // ✅ v2.12: Charger les overrides (_banned, _alias) depuis industry_overrides.json
+  // Identique à stock-advanced-filter.js v3.31f — cohérence pipeline
+  let tickerBans = {};    // ticker → { reason, region? }
+  let tickerAliases = {}; // ticker → { target, region? }
+  try {
+    const ovText = await fs.readFile(path.join(DATA_DIR, 'industry_overrides.json'), 'utf8');
+    const overrides = JSON.parse(ovText);
+    for (const [tk, val] of Object.entries(overrides)) {
+      if (tk.startsWith('_')) continue;
+      if (val && val._banned) tickerBans[tk] = { reason: val._reason || '', region: (val._region || '').toUpperCase() };
+      if (val && val._alias)  tickerAliases[tk] = { target: val._alias, region: (val._region || '').toUpperCase() };
+    }
+    const banCount = Object.keys(tickerBans).length;
+    const aliasCount = Object.keys(tickerAliases).length;
+    if (banCount || aliasCount) {
+      console.log(`📝 Overrides chargés: ${banCount} banned, ${aliasCount} aliases`);
+    }
+  } catch {
+    // Fichier absent → pas d'overrides, c'est normal
+  }
 
   const allOutputs = [];
   const allRejected = [];
@@ -1032,6 +1059,27 @@ async function throttle() {
     const src = path.join(DATA_DIR, file);
     const rows = await readCSV(src);
     console.log(`\n📊 ${region}: ${rows.length} stocks à analyser`);
+
+    // ✅ v2.12: Appliquer _banned et _alias AVANT resolveSymbol
+    // Sinon on fetch volume/fondamentaux du mauvais stock
+    let bannedInRegion = 0, aliasedInRegion = 0;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const tk = (rows[i]['Ticker'] || '').trim();
+      const ban = tickerBans[tk];
+      const alias = tickerAliases[tk];
+      if (ban && (!ban.region || ban.region === region)) {
+        console.log(`  🚫 [BANNED] ${tk}: ${rows[i]['Stock'] || ''} → exclu (${ban.reason})`);
+        rows.splice(i, 1);
+        bannedInRegion++;
+      } else if (alias && (!alias.region || alias.region === region)) {
+        console.log(`  🔄 [ALIAS]  ${tk} → ${alias.target}: ${rows[i]['Stock'] || ''}`);
+        rows[i]['Ticker'] = alias.target;
+        aliasedInRegion++;
+      }
+    }
+    if (bannedInRegion || aliasedInRegion) {
+      console.log(`  📝 Region ${region}: ${bannedInRegion} banned, ${aliasedInRegion} aliased → ${rows.length} restants`);
+    }
 
     const filtered = [];
     const rejected = [];
