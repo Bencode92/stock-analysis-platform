@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur complet v5.1.3 (ETF Scoring Fix)
+generate_portfolios_v4.py - Orchestrateur complet v5.1.4 (Audit Cosmetic Fix)
+V5.1.4: FIX AUDIT COSMETIC
+   - FIX: Pass profile_selections to create_selection_audit (fixes empty hard_filter_stats/profile_stats)
+   - FIX: Pass etf_scoring_debug to create_selection_audit (fixes empty etf_scoring_debug)
+   - FIX: Collect per-profile hard filter data + ETF scoring diagnostics during pipeline loop
+
 V5.1.3: FIX SCORING FLAT ETF
    - FIX: Supprime roundtrip df→dict→df qui causait NaN dans colonnes numériques
    - NEW: load_csv_robust() avec gestion encoding (utf-8-sig, BOM Windows)
@@ -1805,7 +1810,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     all_scored_etfs = {}
     all_scored_cryptos = {}
     all_scored_bonds = {}   
-    
+       
+    # === v5.1.4 FIX: Collect profile_selections + etf_scoring_debug for selection_audit ===
+    _profile_selections_for_audit = {}   # {profile: {before, after, stats, selected, candidates, meta}}
+    _etf_scoring_debug_for_audit = {}    # {profile: {stage_counts, scoring_components, ...}}
     # v4.14.0 FIX R5b: Synchroniser PROFILE_POLICY avec seuils Buffett CONFIG
     # Évite le double filtre (CONFIG vs PROFILE_POLICY)
     if HAS_PROFILE_POLICY:
@@ -1854,6 +1862,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         # =======================================
         
         equities_by_profile[profile] = profile_equities
+        
+        # === v5.1.4: Collecter profile_selections pour selection_audit ===
+        _profile_selections_for_audit[profile] = {
+            "before": eq_filtered,
+            "after": profile_equities,
+            "stats": {
+                "before": len(eq_filtered),
+                "after": len(profile_equities),
+                "rejected": len(eq_filtered) - len(profile_equities),
+                "reasons": profile_selection_meta.get("stages", {}).get("hard_filters", {}).get("rejection_reasons", {}),
+            },
+            "selected": profile_equities,
+            "candidates": eq_filtered,
+            "meta": profile_selection_meta,
+        }
         
         # v5.1.4: Tagger _profile sur chaque equity pour traçabilité audit
         for eq in profile_equities:
@@ -1940,6 +1963,24 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     else:
                         logger.info(f"   [{profile}] ✅ ETF scores: [{scores.min():.1f}, {scores.max():.1f}]")
                 
+                # === v5.1.4: Collecter ETF scoring debug pour selection_audit ===
+                if profile not in _etf_scoring_debug_for_audit and not etf_selected_df.empty:
+                    _sc = etf_selected_df.get("_profile_score")
+                    _etf_scoring_debug_for_audit[profile] = {
+                        "stage_counts": {
+                            "initial": len(etf_df),
+                            "presets": len(etf_selected_df),
+                        },
+                        "scoring_components": {},
+                        "score_stats": {
+                            "min": float(_sc.min()) if _sc is not None and not _sc.empty else 0,
+                            "max": float(_sc.max()) if _sc is not None and not _sc.empty else 0,
+                            "std": float(_sc.std()) if _sc is not None and not _sc.empty else 0,
+                        } if "_profile_score" in etf_selected_df.columns else {},
+                        "is_flat": (_sc.nunique() <= 1) if "_profile_score" in etf_selected_df.columns and _sc is not None else True,
+                        "scoring_method": "rank_percentile",
+                    }
+
                 # v5.1.2 FIX: Forcer category="etf" pour éviter reclassification dans build_raw_universe
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
@@ -2349,13 +2390,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 etf_selected=etf_selected_audit,
                 crypto_data=scored_crypto_list,
                 crypto_selected=crypto_selected_audit,
-                bonds_data=scored_bonds_list,              # v5.1.4: Bonds passthrough
-                bonds_selected=bonds_selected_audit,       # v5.1.4: Bonds sélectionnés
+                bonds_data=scored_bonds_list,
+                bonds_selected=bonds_selected_audit,
                 market_context=market_context,
+                profile_selections=_profile_selections_for_audit,     # v5.1.4: fix empty profile_stats/hard_filter_stats
+                etf_scoring_debug=_etf_scoring_debug_for_audit,       # v5.1.4: fix empty etf_scoring_debug
                 output_path=CONFIG.get("selection_audit_output", "data/selection_audit.json"),
-                selected_tickers=selected_tickers,  # v1.7.0: accurate portfolio-level marking
+                selected_tickers=selected_tickers,
             )
-            logger.info("✅ Audit de sélection généré (v5.1.4 - bonds passthrough + selected_tickers)")
+            logger.info("✅ Audit de sélection généré (v5.1.4 - profile_selections + etf_scoring_debug)")
         except Exception as e:
             logger.warning(f"⚠️ Erreur génération audit: {e}")
             import traceback
