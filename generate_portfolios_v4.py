@@ -1858,6 +1858,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         equities_by_profile[profile] = profile_equities
         
+        # v5.1.4: Tagger _profile sur chaque equity pour traçabilité audit
+        for eq in profile_equities:
+            if "_profile" not in eq:
+                eq["_profile"] = profile
+        
         # === v5.1.0: AUDIT HOOK 5 - Selection par profil ===
         if _collector:
             _collector.record_final_selection(
@@ -1865,6 +1870,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 selected=profile_equities,
                 profile=profile,
             )
+        
+        # v5.1.4: AUDIT HOOK 6 - Hard filter stats par profil
+        if _collector and profile_selection_meta:
+            hard_stages = profile_selection_meta.get("stages", {}).get("hard_filters", {})
+            if hard_stages:
+                try:
+                    _collector.track_profile_hard_filters(
+                        profile=profile,
+                        before_count=hard_stages.get("before", 0),
+                        after_count=hard_stages.get("after", 0),
+                        filters_applied=hard_stages.get("filters", {}),
+                        relaxed_steps=hard_stages.get("relaxed", []),
+                    )
+                except (AttributeError, TypeError) as e:
+                    logger.debug(f"   [{profile}] track_profile_hard_filters not available: {e}")
 # === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
         if HAS_MODULAR_SELECTORS:
             # --- ETF actions ---
@@ -2308,6 +2328,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     logger.info("🔍 DEBUG-2C: ⚠️ AUCUN _profile_score dans eq_filtered → ranking sera 100% _buffett_score!")
             # === FIN DEBUG LOG 2 ===
             
+            # v5.1.4: Construire bonds_selected pour l'audit
+            bonds_selected_audit = []
+            for bond in scored_bonds_list:
+                identifiers = set()
+                for key in ["id", "ticker", "symbol", "name", "isin"]:
+                    val = bond.get(key)
+                    if val:
+                        identifiers.add(str(val))
+                if identifiers & selected_tickers:
+                    bond_copy = bond.copy()
+                    bond_copy["category"] = "bond"
+                    bonds_selected_audit.append(bond_copy)
+            
+            logger.info(f"   📊 Audit v5.1.4: {len(scored_bonds_list)} bonds scored, {len(bonds_selected_audit)} bonds selected")
+            
             create_selection_audit(
                 config=CONFIG,
                 equities_initial=eq_rows_before_buffett,
@@ -2317,11 +2352,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 etf_selected=etf_selected_audit,
                 crypto_data=scored_crypto_list,
                 crypto_selected=crypto_selected_audit,
+                bonds_data=scored_bonds_list,              # v5.1.4: Bonds passthrough
+                bonds_selected=bonds_selected_audit,       # v5.1.4: Bonds sélectionnés
                 market_context=market_context,
                 output_path=CONFIG.get("selection_audit_output", "data/selection_audit.json"),
                 selected_tickers=selected_tickers,  # v1.7.0: accurate portfolio-level marking
             )
-            logger.info("✅ Audit de sélection généré (v1.7.0 - selected_tickers)")
+            logger.info("✅ Audit de sélection généré (v5.1.4 - bonds passthrough + selected_tickers)")
         except Exception as e:
             logger.warning(f"⚠️ Erreur génération audit: {e}")
             import traceback
