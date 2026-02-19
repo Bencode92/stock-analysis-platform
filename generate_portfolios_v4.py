@@ -2319,8 +2319,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 crypto_selected=crypto_selected_audit,
                 market_context=market_context,
                 output_path=CONFIG.get("selection_audit_output", "data/selection_audit.json"),
+                selected_tickers=selected_tickers,  # v1.7.0: accurate portfolio-level marking
             )
-            logger.info("✅ Audit de sélection généré (v1.5.3 - scored data)")
+            logger.info("✅ Audit de sélection généré (v1.7.0 - selected_tickers)")
         except Exception as e:
             logger.warning(f"⚠️ Erreur génération audit: {e}")
             import traceback
