@@ -656,7 +656,7 @@ RELAX_PROFILE_LIMITS: Dict[str, Dict[str, float]] = {
     "Agressif": {
         # Pas de restrictions supplémentaires — les limits globaux suffisent
     },
-
+}
 # ============ PROFILE POLICY v5.0.0 ============
 
 PROFILE_POLICY: Dict[str, Dict] = {
