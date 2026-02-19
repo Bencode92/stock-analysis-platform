@@ -2310,7 +2310,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for asset_id in profile_data.get("allocation", {}).keys():
                     selected_tickers.add(asset_id)
             
-           all_profile_equities = []
+            all_profile_equities = []
             for profile_eqs in equities_by_profile.values():
                 all_profile_equities.extend(profile_eqs)
             
