@@ -2310,16 +2310,20 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for asset_id in profile_data.get("allocation", {}).keys():
                     selected_tickers.add(asset_id)
             
-            all_profile_equities = []
+           all_profile_equities = []
             for profile_eqs in equities_by_profile.values():
                 all_profile_equities.extend(profile_eqs)
             
-            seen_ids = set()
+            # v5.1.4 FIX R2: Dedup par (eid, profile) pour préserver les entrées multi-profil
+            # Avant: dedup par eid seul → Agressif gagnait toujours (itéré en premier)
+            seen_keys = set()
             equities_final = []
             for e in all_profile_equities:
                 eid = e.get("id") or e.get("ticker")
-                if eid not in seen_ids:
-                    seen_ids.add(eid)
+                profile = e.get("_profile", "")
+                dedup_key = (eid, profile)
+                if dedup_key not in seen_keys:
+                    seen_keys.add(dedup_key)
                     equities_final.append(e)
             
             # v1.5.3 FIX: Use SCORED data (has _matched_preset, _profile_score)
