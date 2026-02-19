@@ -11,6 +11,10 @@ Generates a detailed JSON report explaining:
 - v1.5.1: FIX: Robust rejection reasons + sort_score_source diagnostic
 - v1.5.0: FULL per-category rankings (ETF, equity, bond, crypto) for debugging
 
+v1.7.1 - SYNC with preset_meta v5.1.4:
+  1. Fix preset_meta_version: v5.1.3 → v5.1.4
+  2. Fix top_n=10 → 20 in record_preset_rankings (coherence with scoring top_k=20)
+  3. Pass profile_selections + etf_scoring_debug from pipeline (fix empty sections)
 v1.7.0 - SYNC with preset_meta v5.1.3:
   1. Fix preset_meta_version: v4.15.2 → v5.1.3
   2. Propagate profile field in audit entries (was always None)
@@ -448,7 +452,7 @@ class ETFScoringDebug:
 class SelectionAuditReport:
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     version: str = "v1.7.0"
-    preset_meta_version: str = "v5.1.3"
+    preset_meta_version: str = "v5.1.4"
     summary: Dict[str, int] = field(default_factory=dict)
     profile_stats: Dict[str, Dict] = field(default_factory=dict)
     filters_applied: List[Dict] = field(default_factory=list)
@@ -486,7 +490,7 @@ class SelectionAuditor:
             "buffett_min_score": self.config.get("buffett_min_score", 40),
             "tactical_mode": self.config.get("tactical_mode", "radar"),
             "use_tactical_context": self.config.get("use_tactical_context", False),
-            "preset_meta_version": "v5.1.3",
+            "preset_meta_version": "v5.1.4",
         }
         self._all_equities: List[Dict] = []
         self._all_etf: List[Dict] = []
@@ -784,7 +788,7 @@ class SelectionAuditor:
         if category in ("equity", "etf"):
             self.record_preset_rankings(category, all_candidates, selected, selected_tickers=selected_tickers)
 
-    def record_preset_rankings(self, category, all_candidates, selected, top_n=10, selected_tickers=None):
+    def record_preset_rankings(self, category, all_candidates, selected, top_n=20, selected_tickers=None):
         """v1.7.0: Accept selected_tickers. v1.6.2: Two-tier sort + anomaly guard-rail."""
         # v1.7.0: Use selected_tickers if provided
         if selected_tickers:
