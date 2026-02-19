@@ -1131,7 +1131,7 @@ def create_selection_audit(config, equities_initial, equities_after_buffett, equ
             if "selected" in data and "meta" in data:
                 auditor.record_profile_selection(profile, data["selected"], data.get("candidates", []), data["meta"])
     # v1.7.0: Pass selected_tickers for accurate equity marking
-    auditor.record_final_selection(equities_final, equities_after_buffett, "equity", 50, 50, selected_tickers=selected_tickers)
+    auditor.record_final_selection(equities_final, equities_after_buffett, "equity", 150, 50, selected_tickers=selected_tickers)
     if etf_data:
         auditor.track_initial_universe(etf_data, "etf")
         if etf_scoring_debug:
