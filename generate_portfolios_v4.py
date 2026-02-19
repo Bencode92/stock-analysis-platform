@@ -1863,15 +1863,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         equities_by_profile[profile] = profile_equities
         
-        # === v5.1.4: Collecter profile_selections pour selection_audit ===
+        # === v5.1.4 FIX R1: Collecter profile_selections pour selection_audit ===
+        # Les vraies stats hard_filters sont dans stages.hard_filters (pas top-level)
+        _hf_stats = profile_selection_meta.get("stages", {}).get("hard_filters", {})
         _profile_selections_for_audit[profile] = {
             "before": eq_filtered,
             "after": profile_equities,
-            "stats": {
+            "stats": _hf_stats if _hf_stats else {
                 "before": len(eq_filtered),
                 "after": len(profile_equities),
                 "rejected": len(eq_filtered) - len(profile_equities),
-                "reasons": profile_selection_meta.get("stages", {}).get("hard_filters", {}).get("rejection_reasons", {}),
+                "reasons": {},
             },
             "selected": profile_equities,
             "candidates": eq_filtered,
