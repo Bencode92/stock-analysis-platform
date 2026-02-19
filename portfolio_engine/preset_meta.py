@@ -2,6 +2,12 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v5.1.4 (RELAX_PROFILE_LIMITS — vol cap enforcement):
+- NEW: RELAX_PROFILE_LIMITS dict — caps par profil pour relaxation progressive
+- FIX: Modéré vol_max capé à 48% (élimine 9 violations: 042700, 278470, 1519, DSSA, etc.)
+- FIX: Stable vol_max capé à 35%, roe plancher 5%, quality plancher 40
+- FIX: Relaxation loop dans select_equities_for_profile() applique les caps
+
 v5.1.1 (Alignement presets inter-modules):
 - NEW: high_yield preset pour bonds HY (alignement avec preset_bond.py)
 - NEW: bonds_hy correlation group
@@ -634,6 +640,22 @@ RELAX_STEPS: List[Tuple[str, float, float]] = [
     ("quality_score_min", -10, 30.0),         # Étape 7: baisser quality_min (plancher 30)
     ("fcf_yield_min", -1.0, -2.0),            # Étape 8: tolérer FCF légèrement négatif
 ]
+# v5.1.4: Caps par profil pour la relaxation progressive
+# Empêche RELAX_STEPS de dénaturer le profil de risque
+# Ex: Modéré vol_max ne peut PAS dépasser 48% même après relaxation complète
+RELAX_PROFILE_LIMITS: Dict[str, Dict[str, float]] = {
+    "Stable": {
+        "volatility_3y_max": 35.0,    # Cap vol strict pour profil défensif
+        "roe_min": 5.0,               # Plancher ROE
+        "quality_score_min": 40.0,    # Plancher qualité
+    },
+    "Modéré": {
+        "volatility_3y_max": 48.0,    # Cap vol — rejette NVDA(48.8%), 1519(61.3%), etc.
+        "roe_min": 3.0,               # Plancher ROE relaxé
+    },
+    "Agressif": {
+        # Pas de restrictions supplémentaires — les limits globaux suffisent
+    },
 
 # ============ PROFILE POLICY v5.0.0 ============
 
@@ -1386,6 +1408,8 @@ def select_equities_for_profile(
     if len(eq_hard) < target_n // 2:
         filters = deepcopy(policy.get("hard_filters", {}))
         relaxed_steps = []
+        # v5.1.4: Charger les caps par profil
+        profile_limits = RELAX_PROFILE_LIMITS.get(profile, {})
         
         for filter_key, delta, limit in RELAX_STEPS:
             if filter_key not in filters:
@@ -1398,6 +1422,17 @@ def select_equities_for_profile(
                 new_val = min(old_val + delta, limit)
             else:
                 new_val = max(old_val + delta, limit)
+            
+            # v5.1.4: Appliquer le cap profil (RELAX_PROFILE_LIMITS)
+            if filter_key in profile_limits:
+                profile_cap = profile_limits[filter_key]
+                if delta > 0:
+                    # Pour les max (vol_max, payout_max): ne pas dépasser le cap profil
+                    new_val = min(new_val, profile_cap)
+                else:
+                    # Pour les min (roe_min, div_min): ne pas descendre sous le plancher profil
+                    new_val = max(new_val, profile_cap)
+                logger.info(f"   [{profile}] Relax {filter_key}: {old_val} → {new_val} (cap profil: {profile_cap})")
             
             filters[filter_key] = new_val
             relaxed_steps.append(f"{filter_key}: {old_val} → {new_val}")
