@@ -1734,14 +1734,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 scores=profile_scores,
                 top_k=[{"ticker": e.get("ticker"), "score": round(e.get("_profile_score", 0), 3)} for e in top_k],
             )
-    # === v5.1.2: TOP 10 BY PRESET DEBUG ===
-    if _collector:
-        _collector.record_top10_by_preset(
-            equities=eq_filtered,
-            etfs=etf_data,
-            cryptos=crypto_data,
-            bonds=bonds_data,
-        )
+    # === v5.1.4: TOP 10 BY PRESET DEBUG (v5.1.2 doublon supprimé) ===
+
     # === v5.1.3: TOP 10 BY PRESET DEBUG ===
     if _collector:
         # Assigner les presets aux equities AVANT le hook
@@ -1796,7 +1790,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     logger.info(f"   Pool équités disponible: {len(eq_filtered)} (sélection par profil)")
     
     # 8. Optimiser pour chaque profil
-    optimizer = PortfolioOptimizer()
+    # v5.1.4 FIX Step7: use_preset_etf=False car select_etfs_for_profile()
+    # est déjà appelé L1873 avec le DataFrame complet (sector_top5, holdings_top10).
+    # Le double pass dans optimizer perdait _hhi_sector (0/60 non-NaN au pass 2).
+    optimizer = PortfolioOptimizer(use_preset_etf=False)
     portfolios = {}
     all_assets = []
     all_assets_ids = set()  # v4.13.2 FIX: Track IDs pour union des 3 profils
@@ -2558,7 +2555,8 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     logger.info(f"   Universe ETF/Bonds EU/US: {len(universe_others)} actifs")
     
     # 6. v4.15.0 P0 FIX: Optimiser PAR PROFIL avec sélection equities différenciée
-    optimizer = PortfolioOptimizer()
+    # v5.1.4 FIX Step7: use_preset_etf=False (même raison que pipeline global)
+    optimizer = PortfolioOptimizer(use_preset_etf=False)
     portfolios = {}
     all_assets = []
     all_assets_ids = set()
