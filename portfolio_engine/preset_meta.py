@@ -2,6 +2,12 @@
 """
 PRESET_META - Source unique de vérité pour les presets.
 
+v5.2.0 (Dedup dual-listings + corporate groups + roe>0 safeguard):
+- NEW: DUAL_LISTING_TICKERS dict — GOOG/GOOGL, BRK.A/BRK.B, etc.
+- NEW: deduplicate_dual_listings() — keeps highest-scored ticker per group
+- FIX: select_equities_for_profile() calls both dedup functions
+- FIX: roe_min=0 in Agressif hard_filters (blocks Seagate ROE=-324%)
+
 v5.1.4 (RELAX_PROFILE_LIMITS — vol cap enforcement):
 - NEW: RELAX_PROFILE_LIMITS dict — caps par profil pour relaxation progressive
 - FIX: Modéré vol_max capé à 48% (élimine 9 violations: 042700, 278470, 1519, DSSA, etc.)
@@ -126,7 +132,70 @@ CORPORATE_GROUPS: Dict[str, List[str]] = {
 MAX_CORPORATE_GROUP_WEIGHT = 0.20
 MAX_STOCKS_PER_GROUP = 1
 
+# ============ DUAL LISTING DEDUP (v5.2.0) ============
+# Tickers representing the SAME company (dual-class shares, ADRs, local vs intl)
+# When both are present, we keep the one with highest _profile_score
 
+DUAL_LISTING_TICKERS: Dict[str, List[str]] = {
+    # US dual-class shares
+    "GOOGL": ["GOOG"],          # Alphabet Class A vs Class C
+    "BRK.B": ["BRK.A"],         # Berkshire Hathaway
+    "FWONA": ["FWONK"],         # Liberty Formula One
+    "LSXMA": ["LSXMK"],         # Liberty SiriusXM
+    "FOXA": ["FOX"],            # Fox Corp
+    "NWSA": ["NWS"],            # News Corp
+    "DISCA": ["DISCK"],         # Warner Bros Discovery
+    # Asia local vs ADR
+    "TSM": ["2330"],            # TSMC (NYSE ADR vs TWSE local)
+    "005930": ["SSNLF"],        # Samsung Electronics
+}
+
+# Reverse lookup: duplicate_ticker -> canonical_ticker
+_DUAL_REVERSE: Dict[str, str] = {}
+for _canon, _dupes in DUAL_LISTING_TICKERS.items():
+    for _d in _dupes:
+        _DUAL_REVERSE[_d] = _canon
+
+
+def deduplicate_dual_listings(
+    stocks: List[Dict],
+    score_field: str = "_profile_score",
+) -> Tuple[List[Dict], Dict[str, str]]:
+    """v5.2.0: Remove duplicate tickers for same company (GOOG/GOOGL, BRK.A/BRK.B).
+    
+    For each dual-listing group, keeps the ticker with the highest score.
+    
+    Returns:
+        (deduped_stocks, removed_map) where removed_map = {removed_ticker: kept_ticker}
+    """
+    groups: Dict[str, List[Dict]] = {}
+    no_group: List[Dict] = []
+    
+    for stock in stocks:
+        ticker = stock.get("ticker", "")
+        canonical = _DUAL_REVERSE.get(ticker, ticker)
+        
+        if canonical in DUAL_LISTING_TICKERS or ticker in _DUAL_REVERSE:
+            groups.setdefault(canonical, []).append(stock)
+        else:
+            no_group.append(stock)
+    
+    selected: List[Dict] = []
+    removed_map: Dict[str, str] = {}
+    
+    for canonical, group_stocks in groups.items():
+        group_stocks.sort(key=lambda s: s.get(score_field, 0), reverse=True)
+        best = group_stocks[0]
+        selected.append(best)
+        
+        kept_ticker = best.get("ticker", canonical)
+        for dropped in group_stocks[1:]:
+            dropped_ticker = dropped.get("ticker", "?")
+            removed_map[dropped_ticker] = kept_ticker
+            logger.info(f"   [DUAL_DEDUP] {dropped_ticker} removed (kept {kept_ticker})")
+    
+    selected.extend(no_group)
+    return selected, removed_map
 # ============ REGION MAPPINGS ============
 
 COUNTRY_TO_REGION: Dict[str, str] = {
@@ -667,6 +736,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "hard_filters": {
             "volatility_3y_min": 22.0,
             "volatility_3y_max": 120.0,
+            "roe_min": 0.0,              # v5.2.0: blocks negative ROE (Seagate -324%)
         },
         "equity_min_weight": 0.50,
         "equity_max_weight": 0.75,
@@ -1466,8 +1536,24 @@ def select_equities_for_profile(
     # Score
     for eq in eq_hard:
         eq["_profile_score"] = score_equity_for_profile(eq, profile, universe_dists)
-    
     sorted_eq = sorted(eq_hard, key=lambda x: x.get("_profile_score", 0), reverse=True)
+    
+    # v5.2.0: Dedup dual-listings (GOOG/GOOGL, BRK.A/BRK.B)
+    sorted_eq, dual_removed = deduplicate_dual_listings(sorted_eq)
+    if dual_removed:
+        meta["stages"]["dual_listing_dedup"] = dual_removed
+        logger.info(f"   [{profile}] Dual-listing dedup: {len(dual_removed)} removed")
+    
+    # v5.2.0: Dedup corporate groups (Samsung, Hyundai, Alphabet, etc.)
+    scores_map = {eq.get("name", ""): eq.get("_profile_score", 0) for eq in sorted_eq}
+    sorted_eq, corp_removed = deduplicate_by_corporate_group(sorted_eq, scores=scores_map)
+    if corp_removed:
+        meta["stages"]["corporate_group_dedup"] = corp_removed
+        logger.info(f"   [{profile}] Corporate group dedup: {sum(len(v) for v in corp_removed.values())} removed")
+    
+    # Re-sort after dedup
+    sorted_eq = sorted(sorted_eq, key=lambda x: x.get("_profile_score", 0), reverse=True)
+    
     selected = sorted_eq[:target_n]
     meta["selected_count"] = len(selected)
     
@@ -1703,7 +1789,7 @@ def export_watchlist(
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("PRESET_META v5.1.1 - Option B + PRESET_RULES + high_yield")
+    print("PRESET_META v5.2.0 - Dedup dual-listings + corporate groups + roe>0")
     print("=" * 60)
     
     print(f"\nTotal presets: {len(PRESET_META)}")
