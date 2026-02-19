@@ -8,6 +8,7 @@ Génère un fichier JSON documentant:
 3. Les raisons précises de sélection/rejet
 4. v1.4.0: Classement final complet par catégorie (ETF, Obligations, Crypto)
 
+v1.6.0 - SYNC: Aligned with preset_meta v5.1.3 (quality_escape, rendement, RELAX_PROFILE_LIMITS, max_per_country)
 v1.5.0 - FIX: Vraies raisons de rejet (preset incompatible, classement, profile_score)
 v1.4.1 - FIX: Robust rejection reasons + sort_score_source diagnostic in category rankings
 v1.4.0 - ADD: Classement final ETF / Obligations / Crypto + explain_top_caps_selection étendu
@@ -26,11 +27,11 @@ from typing import Dict, List, Any, Optional, Tuple
 logger = logging.getLogger("selection-explainer")
 
 
-# === LOGIQUE DE SÉLECTION DOCUMENTÉE v4.15.2 ===
+# === LOGIQUE DE SÉLECTION DOCUMENTÉE v5.1.3 ===
 
 SELECTION_PIPELINE = {
-    "version": "v4.15.2",
-    "description": "Pipeline de sélection des actions par profil (preset_meta v4.15.2)",
+    "version": "v5.1.3",
+    "description": "Pipeline de sélection des actions par profil (preset_meta v5.1.3)",
     "steps": [
         {
             "step": 1,
@@ -60,14 +61,17 @@ SELECTION_PIPELINE = {
             "description": "Assigne chaque action à un preset selon ses caractéristiques",
             "presets": {
                 "recovery": "vol >= 35% ET ytd < -10%",
-                "agressif": "vol >= 35%",
-                "defensif": "vol < 22% ET (div_yield > 1.5% OU buffett >= 75)",
-                "low_volatility": "vol < 20% ET buffett >= 70",
-                "quality_premium": "vol < 30% ET roe > 15% ET buffett >= 65",
+                "quality_escape": "vol >= 35% ET buffett >= 80 ET roe >= 20 → quality_premium (v5.1.2)",
+                "agressif": "vol >= 35% (sinon)",
+                "rendement": "vol < 22% ET div_yield > 2.0% ET (div_yield > 1.5% OU buffett >= 65)",
+                "defensif": "vol < 22% ET (div_yield > 1.5% OU buffett >= 65) ET div_yield <= 2.0%",
+                "low_volatility": "vol < 20% ET buffett >= 60",
+                "quality_premium": "vol < 30% ET roe > 15% ET buffett >= 55",
                 "value_dividend": "vol < 28% ET div_yield > 1%",
                 "momentum_trend": "vol >= 28% ET (ytd > 5% OU perf_1y > 20%)",
                 "croissance": "vol >= 25% ET ytd > 0%",
             },
+            "evaluation_order": "Les règles sont évaluées dans l'ordre ci-dessus (première match gagne)",
             "output": "Actions avec _matched_preset assigné",
         },
         {
@@ -77,7 +81,7 @@ SELECTION_PIPELINE = {
             "description": "Seuls les presets autorisés pour le profil sont conservés",
             "allowed_presets": {
                 "Agressif": "croissance, momentum_trend, agressif, recovery, quality_premium",
-                "Modéré": "quality_premium, value_dividend, croissance, momentum_trend, defensif, low_volatility",
+                "Modéré": "quality_premium, value_dividend, croissance, momentum_trend, defensif, low_volatility, rendement",
                 "Stable": "defensif, low_volatility, rendement, value_dividend, quality_premium",
             },
             "output": "Actions dont le preset est compatible avec le profil",
@@ -97,6 +101,7 @@ SELECTION_PIPELINE = {
                     "volatility_3y_min": 12.0,
                     "volatility_3y_max": 45.0,
                     "roe_min": 8.0,
+                    "quality_score_min": 40,
                     "rejection_if_missing": ["volatility_3y", "roe"],
                 },
                 "Stable": {
@@ -105,6 +110,8 @@ SELECTION_PIPELINE = {
                     "dividend_yield_min": 0.5,
                     "payout_ratio_max": 85.0,
                     "dividend_coverage_min": 1.2,
+                    "quality_score_min": 50,
+                    "fcf_yield_min": 0.0,
                     "rejection_if_missing": ["volatility_3y", "roe", "dividend_yield", "payout_ratio", "dividend_coverage"],
                     "yield_trap_protection": "payout > 85% OU coverage < 1.2x = REJET",
                 },
@@ -117,13 +124,36 @@ SELECTION_PIPELINE = {
             "output": "Actions filtrées par profil",
         },
         {
+            "step": "4b",
+            "name": "Relaxation progressive (si candidats insuffisants)",
+            "function": "RELAX_STEPS + RELAX_PROFILE_LIMITS",
+            "description": "Si < target_n/2 candidats après hard_filters, relaxe progressivement les seuils",
+            "relax_order": [
+                "volatility_3y_max +10 (limité par profil)",
+                "volatility_3y_min -5",
+                "roe_min -3",
+                "dividend_coverage_min -0.3",
+                "payout_ratio_max +15",
+                "dividend_yield_min -0.2",
+                "quality_score_min -10 (plancher 30)",
+                "fcf_yield_min -1.0",
+            ],
+            "profile_caps_v5.1.3": {
+                "Stable": "vol cap 35%, roe_min plancher 5%, quality_score plancher 40",
+                "Modéré": "vol cap 48% (rejette NVIDIA 48.8%, Fortune Electric 61.3%), roe_min plancher 3%",
+                "Agressif": "pas de restriction supplémentaire (limits globaux)",
+            },
+            "output": "Pool élargi si nécessaire, tout en respectant les caps profil",
+        },
+        {
             "step": 5,
             "name": "Scoring par profil",
             "function": "score_equity_for_profile()",
             "description": "Score pondéré selon le profil, avec pénalité missing data",
             "weights_example": {
-                "Agressif": "perf_1y=0.20, perf_3m=0.10, eps_growth=0.15, max_dd=-0.05",
-                "Stable": "volatility=-0.25, max_dd=-0.15, div_yield=0.20, buffett=0.20",
+                "Agressif": "perf_1y=0.20, perf_3m=0.10, eps_growth=0.15, vol=0.05, buffett=0.10, max_dd=-0.05, div=-0.05",
+                "Modéré": "roe=0.25, buffett=0.20, perf_1y=0.10, div_yield=0.10, quality_value_sub=0.10, eps_growth=0.10, vol=-0.10, max_dd=-0.05",
+                "Stable": "volatility=-0.25, max_dd=-0.15, div_yield=0.20, buffett=0.15, roe=0.15, quality_value_sub=0.10, div_growth=0.05, fcf=0.05",
             },
             "v4.15.2_changes": [
                 "Missing data penalty: poids négatif = percentile 1.0 (pire)",
@@ -140,7 +170,13 @@ SELECTION_PIPELINE = {
             "target": "25 actions par profil",
             "description": "Sélectionne les meilleures actions pour chaque profil",
             "overlap_target": "< 30% entre Agressif et Stable",
-            "output": "25 actions finales par profil",
+            "max_per_country_v5.1.3": {
+                "Agressif": 5,
+                "Modéré": 3,
+                "Stable": 3,
+            },
+            "country_trim": "Si un pays dépasse le cap, les excédentaires sont remplacés par les next-best d'autres pays",
+            "output": "25 actions finales par profil (diversification géographique garantie)",
         },
         {
             "step": 7,
@@ -162,6 +198,10 @@ SELECTION_PIPELINE = {
         "Anti yield-trap: payout > 85% ou coverage < 1.2x = REJET",
         "Overlap Agressif/Stable < 30% (différenciation réelle)",
         "Scoring avec pénalité missing data (pas d'avantage injuste)",
+        "v5.1.2: Quality escape — vol haute + qualité exceptionnelle (buff≥80, roe≥20) → quality_premium",
+        "v5.1.3: RELAX_PROFILE_LIMITS — vol cap Modéré 48%, Stable 35% (empêche relaxation de dénaturer le profil)",
+        "v5.1.3: max_per_country — limite concentration géographique (Modéré/Stable=3, Agressif=5)",
+        "v5.1.2: quality_value_sub — score value issu de quality_subscores.value (poids 10% Modéré/Stable)",
     ],
 }
 
@@ -182,7 +222,7 @@ HARD_FILTER_EXPLANATIONS = {
 
 PROFILE_ALLOWED_PRESETS = {
     "Agressif": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium"},
-    "Modéré": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility"},
+    "Modéré": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility", "rendement"},
     "Stable": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
 }
 
@@ -1038,8 +1078,8 @@ def generate_selection_explanation(
     # Build report
     report = {
         "generated_at": datetime.now().isoformat(),
-        "version": "v1.5.0",
-        "preset_meta_version": "v4.15.2",
+        "version": "v1.6.0",
+        "preset_meta_version": "v5.1.3",
         
         "selection_pipeline": SELECTION_PIPELINE,
         
