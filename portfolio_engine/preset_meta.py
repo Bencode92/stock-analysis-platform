@@ -1052,7 +1052,7 @@ def assign_preset_to_equity(eq: Dict) -> str:
         return "recovery"
     # v5.1.2: Quality escape — vol haute mais qualité exceptionnelle
     if vol >= 35 and buffett >= 80 and roe >= 20:
-        if vol >= 50:
+        if vol >= 48:
             logger.debug(f"Quality high-vol: {eq.get('ticker','?')} vol={vol:.1f} → quality_high_vol (SATELLITE)")
             return "quality_high_vol"
         logger.debug(f"Quality escape: {eq.get('ticker','?')} vol={vol:.1f} buff={buffett} roe={roe:.1f} → quality_premium")
