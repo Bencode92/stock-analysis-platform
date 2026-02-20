@@ -1591,8 +1591,22 @@ def select_equities_for_profile(
                 break
             _selected.append(_eq)
         return _selected
-
     selected = _enforce_caps(sorted_eq, profile, target_n)
+
+    # v5.2.1 FIX P2c: Preset diversity floor
+    MIN_PRESETS_REPRESENTED = 4
+    presets_in_sel = set(eq.get("_matched_preset") for eq in selected)
+    if len(presets_in_sel) < MIN_PRESETS_REPRESENTED and len(sorted_eq) > target_n:
+        remaining = [eq for eq in sorted_eq if eq not in selected]
+        for missing_p in (p for p in preset_dist if p not in presets_in_sel and preset_dist[p] > 0):
+            best = next((eq for eq in remaining if eq.get("_matched_preset") == missing_p), None)
+            if best and len(selected) > 1:
+                selected[-1] = best
+                presets_in_sel.add(missing_p)
+            if len(presets_in_sel) >= MIN_PRESETS_REPRESENTED:
+                break
+        selected = sorted(selected, key=lambda x: x.get("_profile_score", 0), reverse=True)
+
     meta["selected_count"] = len(selected)
     
     # Stats
