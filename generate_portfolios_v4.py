@@ -2310,10 +2310,18 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for asset_id in profile_data.get("allocation", {}).keys():
                     selected_tickers.add(asset_id)
             
+            # v5.2.1 FIX P0: Interleaving round-robin pour que equities_selected
+            # contienne les 3 profils (pas juste Agressif qui consomme tous les slots)
+            profile_lists = {p: list(eqs) for p, eqs in equities_by_profile.items()}
+            max_len = max((len(v) for v in profile_lists.values()), default=0)
             all_profile_equities = []
-            for profile_eqs in equities_by_profile.values():
-                all_profile_equities.extend(profile_eqs)
-            
+            for i in range(max_len):
+                for profile_name, eqs in profile_lists.items():
+                    if i < len(eqs):
+                        eq = eqs[i]
+                        if "_profile" not in eq:
+                            eq["_profile"] = profile_name
+                        all_profile_equities.append(eq)
             # v5.1.4 FIX R2: Dedup par (eid, profile) pour préserver les entrées multi-profil
             # Avant: dedup par eid seul → Agressif gagnait toujours (itéré en premier)
             seen_keys = set()
@@ -2386,7 +2394,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     bonds_selected_audit.append(bond_copy)
             
             logger.info(f"   📊 Audit v5.1.4: {len(scored_bonds_list)} bonds scored, {len(bonds_selected_audit)} bonds selected")
-            
+            # v5.2.1 FIX P1a: Dedup bonds par nom
+            _seen_bond_names = set()
+            _bonds_deduped = []
+            for _b in bonds_selected_audit:
+                _bname = (_b.get("name") or "").strip().lower()
+                if _bname and _bname not in _seen_bond_names:
+                    _seen_bond_names.add(_bname)
+                    _bonds_deduped.append(_b)
+            bonds_selected_audit = _bonds_deduped
             create_selection_audit(
                 config=CONFIG,
                 equities_initial=eq_rows_before_buffett,
