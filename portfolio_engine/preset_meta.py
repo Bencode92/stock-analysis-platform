@@ -1571,7 +1571,7 @@ def select_equities_for_profile(
             _sector = _eq.get("sector", "OTHER")
             n = max(len(_selected), 1)
 
-            if (len(_selected) >= _target_n // 3 and (
+            if (len(_selected) >= _target_n // 4 and (
                 region_counts.get(_region, 0) / n >= _region_caps.get(_region, DEFAULT_REGION_CAP) or
                 country_counts.get(_country, 0) / n >= COUNTRY_CAP or
                 sector_counts.get(_sector, 0) / n >= SECTOR_CAP)):
