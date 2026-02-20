@@ -730,7 +730,7 @@ RELAX_PROFILE_LIMITS: Dict[str, Dict[str, float]] = {
 
 PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
-        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium"},
+        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium", "quality_high_vol"},
         "min_buffett_score": 50,
          "min_quality_gate": 55,     # v4.15: OR gate — quality rescue pour secteurs à moat structurellement bas
         "hard_filters": {
@@ -1052,6 +1052,9 @@ def assign_preset_to_equity(eq: Dict) -> str:
         return "recovery"
     # v5.1.2: Quality escape — vol haute mais qualité exceptionnelle
     if vol >= 35 and buffett >= 80 and roe >= 20:
+        if vol >= 50:
+            logger.debug(f"Quality high-vol: {eq.get('ticker','?')} vol={vol:.1f} → quality_high_vol (SATELLITE)")
+            return "quality_high_vol"
         logger.debug(f"Quality escape: {eq.get('ticker','?')} vol={vol:.1f} buff={buffett} roe={roe:.1f} → quality_premium")
         return "quality_premium"
     if vol >= 35:
@@ -1554,7 +1557,42 @@ def select_equities_for_profile(
     # Re-sort after dedup
     sorted_eq = sorted(sorted_eq, key=lambda x: x.get("_profile_score", 0), reverse=True)
     
-    selected = sorted_eq[:target_n]
+# v5.2.1 FIX P1c: Enforcement caps région/secteur
+    def _enforce_caps(sorted_list, _profile, _target_n):
+        region_counts, country_counts, sector_counts = {}, {}, {}
+        _selected, overflow = [], []
+        COUNTRY_CAP = 0.20 if _profile == "Agressif" else 0.15
+        SECTOR_CAP = 0.25
+        _region_caps = STOCK_REGION_CAPS.get(_profile, STOCK_REGION_CAPS["Modéré"])
+
+        for _eq in sorted_list:
+            _country = _eq.get("country", "OTHER")
+            _region = get_region(_country)
+            _sector = _eq.get("sector", "OTHER")
+            n = max(len(_selected), 1)
+
+            if (len(_selected) >= _target_n // 3 and (
+                region_counts.get(_region, 0) / n >= _region_caps.get(_region, DEFAULT_REGION_CAP) or
+                country_counts.get(_country, 0) / n >= COUNTRY_CAP or
+                sector_counts.get(_sector, 0) / n >= SECTOR_CAP)):
+                overflow.append(_eq)
+                continue
+
+            _selected.append(_eq)
+            region_counts[_region] = region_counts.get(_region, 0) + 1
+            country_counts[_country] = country_counts.get(_country, 0) + 1
+            sector_counts[_sector] = sector_counts.get(_sector, 0) + 1
+            if len(_selected) >= _target_n:
+                break
+
+        # Backfill si pas assez
+        for _eq in overflow:
+            if len(_selected) >= _target_n:
+                break
+            _selected.append(_eq)
+        return _selected
+
+    selected = _enforce_caps(sorted_eq, profile, target_n)
     meta["selected_count"] = len(selected)
     
     # Stats
