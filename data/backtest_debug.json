@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-20T08:29:50.079934",
+    "generated_at": "2026-02-20T10:33:56.241328",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -247,7 +247,7 @@
       "total_return_pct": 12.99,
       "volatility_annual_pct": 47.42,
       "weights_by_profile": {
-        "Agressif": 12.9
+        "Agressif": 6.8
       },
       "price_samples": [
         {
@@ -418,7 +418,7 @@
       "total_return_pct": 7.39,
       "volatility_annual_pct": 44.64,
       "weights_by_profile": {
-        "Agressif": 12.6
+        "Agressif": 12.58
       },
       "price_samples": [
         {
@@ -703,7 +703,7 @@
       "total_return_pct": 56.51,
       "volatility_annual_pct": 53.28,
       "weights_by_profile": {
-        "Agressif": 5.75
+        "Agressif": 4.55
       },
       "price_samples": [
         {
@@ -1320,11 +1320,11 @@
       "first_date": "2025-10-24",
       "last_date": "2026-02-20",
       "first_price": 495.7,
-      "last_price": 676.25,
-      "total_return_pct": 36.42,
+      "last_price": 682.35,
+      "total_return_pct": 37.65,
       "volatility_annual_pct": 35.33,
       "weights_by_profile": {
-        "Agressif": 4.6,
+        "Agressif": 4.58,
         "Modéré": 10.0
       },
       "price_samples": [
@@ -1362,11 +1362,11 @@
         },
         {
           "date": "2026-02-20",
-          "close": 676.25,
+          "close": 682.35,
           "prev_date": "2026-02-19",
           "prev_close": 676.25,
-          "daily_return_pct": 0.0,
-          "formula": "(676.2500 / 676.2500) - 1"
+          "daily_return_pct": 0.902,
+          "formula": "(682.3500 / 676.2500) - 1"
         }
       ],
       "is_benchmark": false
@@ -1440,7 +1440,7 @@
       "total_return_pct": 30.64,
       "volatility_annual_pct": 68.01,
       "weights_by_profile": {
-        "Agressif": 4.15
+        "Agressif": 11.49
       },
       "price_samples": [
         {
@@ -1750,20 +1750,20 @@
           "contribution_pct": 0.7998
         },
         {
-          "ticker": "APH",
+          "ticker": "EME",
           "type": "Action",
-          "weight_pct": 12.9,
-          "price_prev": 151.2,
-          "price_today": 151.2,
+          "weight_pct": 12.58,
+          "price_prev": 803.55,
+          "price_today": 803.55,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
         {
-          "ticker": "EME",
+          "ticker": "VRT",
           "type": "Action",
-          "weight_pct": 12.6,
-          "price_prev": 803.55,
-          "price_today": 803.55,
+          "weight_pct": 11.49,
+          "price_prev": 243.06,
+          "price_today": 243.06,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1777,11 +1777,11 @@
           "contribution_pct": 0.0
         },
         {
-          "ticker": "LRCX",
+          "ticker": "APH",
           "type": "Action",
-          "weight_pct": 5.75,
-          "price_prev": 237.39,
-          "price_today": 237.39,
+          "weight_pct": 6.8,
+          "price_prev": 151.2,
+          "price_today": 151.2,
           "return_pct": 0.0,
           "contribution_pct": 0.0
         },
@@ -1806,14 +1806,14 @@
         {
           "ticker": "VEDL",
           "type": "Action",
-          "weight_pct": 4.6,
+          "weight_pct": 4.58,
           "price_prev": 676.25,
-          "price_today": 676.25,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
+          "price_today": 682.35,
+          "return_pct": 0.902,
+          "contribution_pct": 0.0413
         }
       ],
-      "total_portfolio_return_pct": 0.7998,
+      "total_portfolio_return_pct": 0.8411,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1882,12 +1882,12 @@
           13.0
         ],
         [
-          "APH",
-          12.9
+          "EME",
+          12.58
         ],
         [
-          "EME",
-          12.6
+          "VRT",
+          11.49
         ]
       ]
     },
@@ -1958,22 +1958,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 34.78,
-      "net_return_pct": 34.78,
-      "volatility_pct": 23.08,
-      "max_drawdown_pct": -7.7,
+      "gross_return_pct": 37.09,
+      "net_return_pct": 37.09,
+      "volatility_pct": 24.14,
+      "max_drawdown_pct": -7.29,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -0.28,
-      "excess_return_pct": 35.06
+      "excess_return_pct": 37.37
     },
     "Modéré": {
-      "gross_return_pct": 12.53,
-      "net_return_pct": 12.53,
+      "gross_return_pct": 12.63,
+      "net_return_pct": 12.63,
       "volatility_pct": 8.96,
       "max_drawdown_pct": -1.72,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 4.82,
-      "excess_return_pct": 7.71
+      "excess_return_pct": 7.82
     },
     "Stable": {
       "gross_return_pct": 7.17,
