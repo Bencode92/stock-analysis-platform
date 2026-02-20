@@ -2557,8 +2557,8 @@ class PortfolioOptimizer:
                 available_sector = profile.max_sector - sector_weights[asset.sector]
                 if available_sector < 0.5:
                     continue
-                # FIX v8.5: Limiter aussi le poids individuel au secteur dispo
-                base_weight = min(base_weight, available_sector)
+                # FIX v8.5: Initialiser base_weight puis limiter au secteur dispo
+                base_weight = min(profile.max_single_position, available_sector)
                 
                 # P0 FIX v6.19: Check leveraged cap
                 is_leveraged = False
