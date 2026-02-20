@@ -821,7 +821,7 @@ PROFILES = {
         score_scale=3.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
-        max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
+        max_single_position=10.0,     # ÉTAIT 15.0 (default dataclass)
     ),
 }
 
@@ -2554,10 +2554,11 @@ class PortfolioOptimizer:
                 if asset.category == "Crypto" and category_weights["Crypto"] >= profile.crypto_max:
                     continue
                 
-                # P1 FIX v6.19: Check avec weight prévu, pas juste >=
                 available_sector = profile.max_sector - sector_weights[asset.sector]
                 if available_sector < 0.5:
                     continue
+                # FIX v8.5: Limiter aussi le poids individuel au secteur dispo
+                base_weight = min(base_weight, available_sector)
                 
                 # P0 FIX v6.19: Check leveraged cap
                 is_leveraged = False
@@ -2610,6 +2611,47 @@ class PortfolioOptimizer:
                     # P0 FIX v6.19: Update leveraged tracking
                     if is_leveraged:
                         leveraged_weight += weight
+        
+        # === FIX v8.5: Enforce min_assets dans fallback heuristique ===
+        if len(allocation) < profile.min_assets:
+            remaining = [a for a in sorted_candidates 
+                         if a.id not in allocation]
+            # Trier par vol croissante pour Stable, score décroissant sinon
+            if profile.name == "Stable":
+                remaining = sorted(remaining, key=lambda a: (a.vol_annual, a.id))
+            else:
+                remaining = sorted(remaining, key=lambda a: (-a.score, a.id))
+            
+            for asset in remaining:
+                if len(allocation) >= profile.min_assets:
+                    break
+                # Vérifier sector cap avant d'ajouter
+                if sector_weights.get(asset.sector, 0) >= profile.max_sector:
+                    continue
+                # Vérifier region cap pour Actions
+                if asset.category == "Actions":
+                    region = get_region(asset.region)
+                    region_cap = get_stock_region_cap(profile.name, region) * 100
+                    if region_weights.get(region, 0) >= region_cap:
+                        continue
+                # Vérifier crypto cap
+                if asset.category == "Crypto" and category_weights.get("Crypto", 0) >= profile.crypto_max:
+                    continue
+                
+                allocation[asset.id] = 2.0
+                total_weight += 2.0
+                category_weights[asset.category] += 2.0
+                sector_weights[asset.sector] += 2.0
+                if asset.role:
+                    bucket_weights[asset.role.value] += 2.0
+                if asset.category == "Actions":
+                    region = get_region(asset.region)
+                    region_weights[region] += 2.0
+            
+            logger.info(
+                f"FIX v8.5: min_assets enforcement — "
+                f"{len(allocation)} assets in pool (target {profile.min_assets})"
+            )
         
         # === Normaliser à 100% ===
         if total_weight > 0:
