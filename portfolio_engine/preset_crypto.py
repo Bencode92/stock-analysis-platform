@@ -212,22 +212,25 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
         is_stable = base_upper.isin(STABLECOINS)
         mask &= ~is_stable
     
-    # tier1_listed
+    # tier1_listed (v5.2.1 FIX P2b: tolérant aux données manquantes)
     if "tier1_listed" in df.columns:
-        mask &= df["tier1_listed"] == True
+        tier1 = df["tier1_listed"]
+        mask &= tier1.apply(lambda x: str(x).strip().lower() in ("true", "1", "yes")) | tier1.isna()
     
-    # stale
+    # stale (v5.2.1 FIX P2b: tolérant aux données manquantes)
     if "stale" in df.columns:
-        mask &= df["stale"] == False
+        stale = df["stale"]
+        mask &= stale.apply(lambda x: str(x).strip().lower() in ("false", "0", "no")) | stale.isna()
     
     # coverage_ratio
     if "coverage_ratio" in df.columns:
         coverage = _to_numeric(df["coverage_ratio"])
         mask &= (coverage >= MIN_COVERAGE_RATIO) | coverage.isna()
     
-    # enough_history_90d
+    # enough_history_90d (v5.2.1 FIX P2b: tolérant aux données manquantes)
     if "enough_history_90d" in df.columns:
-        mask &= df["enough_history_90d"] == True
+        hist90 = df["enough_history_90d"]
+        mask &= hist90.apply(lambda x: str(x).strip().lower() in ("true", "1", "yes")) | hist90.isna()
     
     # data_points
     if "data_points" in df.columns:
@@ -656,8 +659,16 @@ def select_crypto_for_profile(
     # Top N
     if top_n and len(df_sorted) > top_n:
         df_sorted = df_sorted.head(top_n)
-    
+       
     logger.info(f"[Crypto {profile}] Sélection finale: {len(df_sorted)} cryptos")
+    
+    # v5.2.1 FIX P2b: Fallback BTC+ETH si sélection vide
+    if df_sorted.empty and profile == "Agressif" and "currency_base" in df.columns:
+        btc_eth = df[df["currency_base"].str.upper().isin(["BTC", "ETH"])]
+        if not btc_eth.empty:
+            logger.warning(f"[Crypto {profile}] Fallback BTC+ETH: {len(btc_eth)} cryptos")
+            df_sorted = btc_eth.copy()
+            df_sorted["_profile_score"] = 50.0
     
     return df_sorted
 
