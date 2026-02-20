@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-20T10:31:55.461858",
+  "timestamp": "2026-02-20T11:51:19.109347",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -13,7 +13,7 @@
     "crypto_selected": 0,
     "crypto_rejected_notable": 10,
     "bonds_initial": 60,
-    "bonds_selected": 7,
+    "bonds_selected": 9,
     "total_filters_applied": 4,
     "etf_scoring_issues": 6,
     "category_rankings_sizes": {
@@ -45,8 +45,8 @@
           "selected": 2
         },
         "quality_high_vol": {
-          "total": 11,
-          "selected": 2
+          "total": 14,
+          "selected": 3
         },
         "quality_premium": {
           "total": 20,
@@ -108,7 +108,7 @@
         }
       }
     },
-    "anomaly_warnings_count": 11
+    "anomaly_warnings_count": 9
   },
   "profile_stats": {
     "Agressif": {
@@ -120,7 +120,8 @@
           "total": 978
         },
         "presets": {
-          "quality_premium": 240,
+          "quality_high_vol": 14,
+          "quality_premium": 237,
           "agressif": 161,
           "momentum_trend": 134,
           "defensif": 47,
@@ -128,7 +129,6 @@
           "recovery": 65,
           "rendement": 106,
           "croissance": 44,
-          "quality_high_vol": 11,
           "low_volatility": 3
         },
         "buffett": {
@@ -203,7 +203,8 @@
           "total": 978
         },
         "presets": {
-          "quality_premium": 240,
+          "quality_high_vol": 14,
+          "quality_premium": 237,
           "agressif": 161,
           "momentum_trend": 134,
           "defensif": 47,
@@ -211,7 +212,6 @@
           "recovery": 65,
           "rendement": 106,
           "croissance": 44,
-          "quality_high_vol": 11,
           "low_volatility": 3
         },
         "buffett": {
@@ -224,17 +224,17 @@
         },
         "preset_filter": {
           "before": 533,
-          "after": 436
+          "after": 433
         },
         "hard_filters": {
-          "before": 436,
+          "before": 433,
           "after": 362,
-          "rejected": 74,
+          "rejected": 71,
           "reasons": {
-            "vol>45.0": 10,
             "roe_missing": 45,
             "roe<8.0": 14,
-            "quality<40": 7
+            "quality<40": 7,
+            "vol>45.0": 7
           }
         },
         "distributions": {
@@ -266,7 +266,7 @@
       },
       "stats": {
         "avg_vol": 26.1,
-        "avg_div": 2.1,
+        "avg_div": 2.11,
         "avg_score": 0.547
       }
     },
@@ -279,7 +279,8 @@
           "total": 978
         },
         "presets": {
-          "quality_premium": 240,
+          "quality_high_vol": 14,
+          "quality_premium": 237,
           "agressif": 161,
           "momentum_trend": 134,
           "defensif": 47,
@@ -287,7 +288,6 @@
           "recovery": 65,
           "rendement": 106,
           "croissance": 44,
-          "quality_high_vol": 11,
           "low_volatility": 3
         },
         "buffett": {
@@ -300,16 +300,16 @@
         },
         "preset_filter": {
           "before": 461,
-          "after": 307
+          "after": 304
         },
         "hard_filters": {
-          "before": 307,
+          "before": 304,
           "after": 131,
-          "rejected": 176,
+          "rejected": 173,
           "reasons": {
-            "vol>28.0": 98,
-            "div<0.5": 56,
-            "coverage_missing": 22,
+            "div<0.5": 53,
+            "vol>28.0": 95,
+            "coverage_missing": 21,
             "div_yield_missing": 1,
             "roe_missing": 28,
             "quality<50": 10,
@@ -374,10 +374,10 @@
       "rejected_count": 728,
       "rejection_rate_pct": 74.4,
       "rejection_reasons": {
-        "vol>45.0": 10,
         "roe_missing": 45,
         "roe<8.0": 14,
-        "quality<40": 7
+        "quality<40": 7,
+        "vol>45.0": 7
       }
     },
     {
@@ -388,9 +388,9 @@
       "rejected_count": 848,
       "rejection_rate_pct": 86.7,
       "rejection_reasons": {
-        "vol>28.0": 98,
-        "div<0.5": 56,
-        "coverage_missing": 22,
+        "div<0.5": 53,
+        "vol>28.0": 95,
+        "coverage_missing": 21,
         "div_yield_missing": 1,
         "roe_missing": 28,
         "quality<50": 10,
@@ -424,14 +424,10 @@
       }
     },
     "Modéré": {
-      "before": 436,
+      "before": 433,
       "after": 362,
-      "rejected": 74,
+      "rejected": 71,
       "reasons": {
-        "vol>45.0": {
-          "count": 10,
-          "explanation": "Volatilité trop élevée (> 45.0%) - Risque excessif"
-        },
         "roe_missing": {
           "count": 45,
           "explanation": "ROE manquant (donnée non disponible)"
@@ -443,24 +439,28 @@
         "quality<40": {
           "count": 7,
           "explanation": "quality<40"
+        },
+        "vol>45.0": {
+          "count": 7,
+          "explanation": "Volatilité trop élevée (> 45.0%) - Risque excessif"
         }
       }
     },
     "Stable": {
-      "before": 307,
+      "before": 304,
       "after": 131,
-      "rejected": 176,
+      "rejected": 173,
       "reasons": {
-        "vol>28.0": {
-          "count": 98,
-          "explanation": "Volatilité trop élevée (> 28.0%) - Risque excessif"
-        },
         "div<0.5": {
-          "count": 56,
+          "count": 53,
           "explanation": "Dividend yield trop faible (< 0.5%) - Profil rendement non atteint"
         },
+        "vol>28.0": {
+          "count": 95,
+          "explanation": "Volatilité trop élevée (> 28.0%) - Risque excessif"
+        },
         "coverage_missing": {
-          "count": 22,
+          "count": 21,
           "explanation": "Dividend coverage manquant (donnée non disponible)"
         },
         "div_yield_missing": {
@@ -661,12 +661,10 @@
         "ticker": "FIX",
         "sort_score": 0.7692,
         "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "quality_premium",
+        "selected": true,
+        "matched_preset": "quality_high_vol",
         "profile_score": 0.7692,
         "buffett_score": 90.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Industries",
         "country": "Etats-Unis",
         "volatility": 49.1,
@@ -799,7 +797,7 @@
         "sort_score": 0.7236,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "quality_premium",
+        "matched_preset": "quality_high_vol",
         "profile_score": 0.7236,
         "buffett_score": 94.0,
         "rejection_reason": "Filtré par hard_filters_Stable",
@@ -1229,24 +1227,6 @@
       },
       {
         "rank": 35,
-        "name": "SYSCO CORP",
-        "ticker": "SYY",
-        "sort_score": 0.6615,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "matched_preset": "rendement",
-        "profile_score": 0.6615,
-        "buffett_score": 68.0,
-        "sector": "Biens de consommation de base",
-        "country": "Etats-Unis",
-        "volatility": 20.5,
-        "ytd": "21.92%",
-        "roe": "97.55%",
-        "market_cap": "42.8B",
-        "dividend_yield": "2.37%"
-      },
-      {
-        "rank": 36,
         "name": "KIA CORPORATION CORP",
         "ticker": "000270",
         "sort_score": 0.6611,
@@ -1266,7 +1246,7 @@
         "dividend_yield": "3.78%"
       },
       {
-        "rank": 37,
+        "rank": 36,
         "name": "WOORI FINANCIAL GROUP INC",
         "ticker": "316140",
         "sort_score": 0.6607,
@@ -1284,6 +1264,24 @@
         "roe": "8.84%",
         "market_cap": "28.8T",
         "dividend_yield": "1.86%"
+      },
+      {
+        "rank": 37,
+        "name": "SYSCO CORP",
+        "ticker": "SYY",
+        "sort_score": 0.6605,
+        "sort_score_source": "_profile_score",
+        "selected": true,
+        "matched_preset": "rendement",
+        "profile_score": 0.6605,
+        "buffett_score": 68.0,
+        "sector": "Biens de consommation de base",
+        "country": "Etats-Unis",
+        "volatility": 20.5,
+        "ytd": "21.92%",
+        "roe": "97.55%",
+        "market_cap": "42.8B",
+        "dividend_yield": "2.37%"
       },
       {
         "rank": 38,
@@ -2302,7 +2300,7 @@
         "sort_score": 0.5981,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "quality_premium",
+        "matched_preset": "quality_high_vol",
         "profile_score": 0.5981,
         "buffett_score": 97.0,
         "rejection_reason": "Filtré par hard_filters_Stable",
@@ -2377,26 +2375,6 @@
       },
       {
         "rank": 93,
-        "name": "UNION PACIFIC CORP",
-        "ticker": "UNP",
-        "sort_score": 0.5956,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "rendement",
-        "profile_score": 0.5956,
-        "buffett_score": 66.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
-        "sector": "Industries",
-        "country": "Etats-Unis",
-        "volatility": 21.6,
-        "ytd": "14.68%",
-        "roe": "40.38%",
-        "market_cap": "157.2B",
-        "dividend_yield": "2.05%"
-      },
-      {
-        "rank": 94,
         "name": "COLGATE-PALMOLIVE",
         "ticker": "CL",
         "sort_score": 0.5956,
@@ -2414,6 +2392,26 @@
         "roe": "406.26%",
         "market_cap": "77.2B",
         "dividend_yield": "2.17%"
+      },
+      {
+        "rank": 94,
+        "name": "UNION PACIFIC CORP",
+        "ticker": "UNP",
+        "sort_score": 0.5946,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "matched_preset": "rendement",
+        "profile_score": 0.5946,
+        "buffett_score": 66.0,
+        "rejection_reason": "Filtré par hard_filters_Agressif",
+        "rejection_filter": "hard_filters_Agressif",
+        "sector": "Industries",
+        "country": "Etats-Unis",
+        "volatility": 21.6,
+        "ytd": "14.68%",
+        "roe": "40.38%",
+        "market_cap": "157.2B",
+        "dividend_yield": "2.05%"
       },
       {
         "rank": 95,
@@ -4749,9 +4747,8 @@
         "ticker": "SCHO",
         "sort_score": 98.0,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 98.0,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 2.3,
         "ytd": "0.14%"
       },
@@ -4761,9 +4758,8 @@
         "ticker": "STIP",
         "sort_score": 97.55,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 97.55,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 2.5,
         "ytd": "0.54%"
       },
@@ -4961,9 +4957,8 @@
         "ticker": "SCHO",
         "sort_score": 90.6,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 90.6,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 2.3,
         "ytd": "0.14%"
       },
@@ -5091,9 +5086,8 @@
         "ticker": "STIP",
         "sort_score": 88.49,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 88.49,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 2.5,
         "ytd": "0.54%"
       },
@@ -6581,11 +6575,11 @@
           "rank": 1,
           "name": "ICICI BANK LTD",
           "ticker": "ICICIBANK",
-          "sort_score": 0.4988,
+          "sort_score": 0.4977,
           "sort_score_source": "_profile_score",
           "selected": false,
           "matched_preset": "low_volatility",
-          "profile_score": 0.4988,
+          "profile_score": 0.4977,
           "buffett_score": 61.5,
           "rejection_reason": "Filtré par hard_filters_Modéré",
           "rejection_filter": "hard_filters_Modéré",
@@ -7075,6 +7069,24 @@
         },
         {
           "rank": 3,
+          "name": "COMFORT SYSTEMS USA INC",
+          "ticker": "FIX",
+          "sort_score": 0.7692,
+          "sort_score_source": "_profile_score",
+          "selected": true,
+          "matched_preset": "quality_high_vol",
+          "profile_score": 0.7692,
+          "buffett_score": 90.0,
+          "sector": "Industries",
+          "country": "Etats-Unis",
+          "volatility": 49.1,
+          "ytd": "43.6%",
+          "roe": "35.03%",
+          "market_cap": "46.6B",
+          "dividend_yield": "0.15%"
+        },
+        {
+          "rank": 4,
           "name": "HANWHA AEROSPACE LTD",
           "ticker": "012450",
           "sort_score": 0.7649,
@@ -7094,7 +7106,7 @@
           "dividend_yield": "0.23%"
         },
         {
-          "rank": 4,
+          "rank": 5,
           "name": "ASIA VITAL COMPONENTS LTD",
           "ticker": "3017",
           "sort_score": 0.7344,
@@ -7114,7 +7126,27 @@
           "dividend_yield": "0.62%"
         },
         {
-          "rank": 5,
+          "rank": 6,
+          "name": "NVIDIA CORP",
+          "ticker": "NVDA",
+          "sort_score": 0.7236,
+          "sort_score_source": "_profile_score",
+          "selected": false,
+          "matched_preset": "quality_high_vol",
+          "profile_score": 0.7236,
+          "buffett_score": 94.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
+          "sector": "Technologie de l'information",
+          "country": "Etats-Unis",
+          "volatility": 48.8,
+          "ytd": "0.79%",
+          "roe": "119.18%",
+          "market_cap": "4.6T",
+          "dividend_yield": "0.02%"
+        },
+        {
+          "rank": 7,
           "name": "APR LTD",
           "ticker": "278470",
           "sort_score": 0.7135,
@@ -7134,7 +7166,7 @@
           "dividend_yield": "1.24%"
         },
         {
-          "rank": 6,
+          "rank": 8,
           "name": "HANMI SEMICONDUCTOR LTD",
           "ticker": "042700",
           "sort_score": 0.6522,
@@ -7154,7 +7186,7 @@
           "dividend_yield": "0.36%"
         },
         {
-          "rank": 7,
+          "rank": 9,
           "name": "HYUNDAI-ROTEM",
           "ticker": "064350",
           "sort_score": 0.6284,
@@ -7174,7 +7206,27 @@
           "dividend_yield": "0.09%"
         },
         {
-          "rank": 8,
+          "rank": 10,
+          "name": "DEXCOM INC",
+          "ticker": "DXCM",
+          "sort_score": 0.5981,
+          "sort_score_source": "_profile_score",
+          "selected": false,
+          "matched_preset": "quality_high_vol",
+          "profile_score": 0.5981,
+          "buffett_score": 97.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
+          "sector": "Santé",
+          "country": "Etats-Unis",
+          "volatility": 49.7,
+          "ytd": "9.84%",
+          "roe": "34.5%",
+          "market_cap": "28.4B",
+          "dividend_yield": "0.00%"
+        },
+        {
+          "rank": 11,
           "name": "NEXT PLC",
           "ticker": "NXT",
           "sort_score": 0.5723,
@@ -7194,7 +7246,7 @@
           "dividend_yield": "1.75%"
         },
         {
-          "rank": 9,
+          "rank": 12,
           "name": "WAAREE ENERGIES LTD",
           "ticker": "WAAREEENER",
           "sort_score": 0.5655,
@@ -7214,7 +7266,7 @@
           "dividend_yield": "0.07%"
         },
         {
-          "rank": 10,
+          "rank": 13,
           "name": "ALCHIP TECHNOLOGIES LTD",
           "ticker": "3661",
           "sort_score": 0.5456,
@@ -7234,7 +7286,7 @@
           "dividend_yield": "0.53%"
         },
         {
-          "rank": 11,
+          "rank": 14,
           "name": "3I GROUP PLC",
           "ticker": "III",
           "sort_score": 0.4918,
@@ -7275,26 +7327,6 @@
         },
         {
           "rank": 2,
-          "name": "COMFORT SYSTEMS USA INC",
-          "ticker": "FIX",
-          "sort_score": 0.7692,
-          "sort_score_source": "_profile_score",
-          "selected": false,
-          "matched_preset": "quality_premium",
-          "profile_score": 0.7692,
-          "buffett_score": 90.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
-          "sector": "Industries",
-          "country": "Etats-Unis",
-          "volatility": 49.1,
-          "ytd": "43.6%",
-          "roe": "35.03%",
-          "market_cap": "46.6B",
-          "dividend_yield": "0.15%"
-        },
-        {
-          "rank": 3,
           "name": "GE VERNOVA T&D INDIA LTD",
           "ticker": "GVT&D",
           "sort_score": 0.7247,
@@ -7314,27 +7346,7 @@
           "dividend_yield": "0.14%"
         },
         {
-          "rank": 4,
-          "name": "NVIDIA CORP",
-          "ticker": "NVDA",
-          "sort_score": 0.7236,
-          "sort_score_source": "_profile_score",
-          "selected": false,
-          "matched_preset": "quality_premium",
-          "profile_score": 0.7236,
-          "buffett_score": 94.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
-          "sector": "Technologie de l'information",
-          "country": "Etats-Unis",
-          "volatility": 48.8,
-          "ytd": "0.79%",
-          "roe": "119.18%",
-          "market_cap": "4.6T",
-          "dividend_yield": "0.02%"
-        },
-        {
-          "rank": 5,
+          "rank": 3,
           "name": "TERADYNE INC",
           "ticker": "TER",
           "sort_score": 0.7159,
@@ -7354,7 +7366,7 @@
           "dividend_yield": "0.15%"
         },
         {
-          "rank": 6,
+          "rank": 4,
           "name": "ADMIRAL GROUP PLC",
           "ticker": "ADM",
           "sort_score": 0.7045,
@@ -7372,7 +7384,7 @@
           "dividend_yield": "7.36%"
         },
         {
-          "rank": 7,
+          "rank": 5,
           "name": "INDUSTRIA DE DISENO TEXTIL SA",
           "ticker": "ITX",
           "sort_score": 0.6727,
@@ -7392,7 +7404,7 @@
           "dividend_yield": "2.90%"
         },
         {
-          "rank": 8,
+          "rank": 6,
           "name": "BANCO BILBAO VIZCAYA ARGENTARIA SA",
           "ticker": "BBVA",
           "sort_score": 0.6641,
@@ -7412,7 +7424,7 @@
           "dividend_yield": "3.69%"
         },
         {
-          "rank": 9,
+          "rank": 7,
           "name": "GE AEROSPACE",
           "ticker": "GE",
           "sort_score": 0.6472,
@@ -7432,7 +7444,7 @@
           "dividend_yield": "0.44%"
         },
         {
-          "rank": 10,
+          "rank": 8,
           "name": "HERSHEY FOODS",
           "ticker": "HSY",
           "sort_score": 0.641,
@@ -7452,7 +7464,7 @@
           "dividend_yield": "2.52%"
         },
         {
-          "rank": 11,
+          "rank": 9,
           "name": "NEMETSCHEK",
           "ticker": "NEM",
           "sort_score": 0.6333,
@@ -7472,7 +7484,7 @@
           "dividend_yield": "0.83%"
         },
         {
-          "rank": 12,
+          "rank": 10,
           "name": "CHROMA ATE INC",
           "ticker": "2360",
           "sort_score": 0.6318,
@@ -7492,7 +7504,7 @@
           "dividend_yield": "0.86%"
         },
         {
-          "rank": 13,
+          "rank": 11,
           "name": "FASTENAL",
           "ticker": "FAST",
           "sort_score": 0.6245,
@@ -7512,7 +7524,7 @@
           "dividend_yield": "1.90%"
         },
         {
-          "rank": 14,
+          "rank": 12,
           "name": "KLA CORP",
           "ticker": "KLAC",
           "sort_score": 0.624,
@@ -7532,7 +7544,7 @@
           "dividend_yield": "0.64%"
         },
         {
-          "rank": 15,
+          "rank": 13,
           "name": "EMCOR GROUP INC",
           "ticker": "EME",
           "sort_score": 0.6202,
@@ -7550,7 +7562,7 @@
           "dividend_yield": "0.13%"
         },
         {
-          "rank": 16,
+          "rank": 14,
           "name": "PAYCHEX INC",
           "ticker": "PAYX",
           "sort_score": 0.619,
@@ -7570,7 +7582,7 @@
           "dividend_yield": "4.62%"
         },
         {
-          "rank": 17,
+          "rank": 15,
           "name": "AUTO TRADER GROUP PLC",
           "ticker": "AUTO",
           "sort_score": 0.6181,
@@ -7589,7 +7601,7 @@
           "dividend_yield": "3.98%"
         },
         {
-          "rank": 18,
+          "rank": 16,
           "name": "LAM RESEARCH CORP",
           "ticker": "LRCX",
           "sort_score": 0.6142,
@@ -7607,7 +7619,7 @@
           "dividend_yield": "0.41%"
         },
         {
-          "rank": 19,
+          "rank": 17,
           "name": "SNAP ON INC",
           "ticker": "SNA",
           "sort_score": 0.6074,
@@ -7625,7 +7637,7 @@
           "dividend_yield": "2.32%"
         },
         {
-          "rank": 20,
+          "rank": 18,
           "name": "FDJ UNITED",
           "ticker": "FDJU",
           "sort_score": 0.606,
@@ -7643,6 +7655,46 @@
           "roe": "35.29%",
           "market_cap": "4.6B",
           "dividend_yield": "8.29%"
+        },
+        {
+          "rank": 19,
+          "name": "KUEHNE UND NAGEL INTERNATIONAL AG",
+          "ticker": "KNIN",
+          "sort_score": 0.6006,
+          "sort_score_source": "_profile_score",
+          "selected": false,
+          "matched_preset": "quality_premium",
+          "profile_score": 0.6006,
+          "buffett_score": 90.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
+          "sector": "Industries",
+          "country": "Suisse",
+          "volatility": 26.4,
+          "ytd": "2.95%",
+          "roe": "38.29%",
+          "market_cap": "20.9B",
+          "dividend_yield": "4.68%"
+        },
+        {
+          "rank": 20,
+          "name": "ASML HOLDING NV",
+          "ticker": "ASML",
+          "sort_score": 0.5988,
+          "sort_score_source": "_profile_score",
+          "selected": false,
+          "matched_preset": "quality_premium",
+          "profile_score": 0.5988,
+          "buffett_score": 100.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
+          "sector": "Technologie de l'information",
+          "country": "Pays-Bas",
+          "volatility": 36.8,
+          "ytd": "34.38%",
+          "roe": "50.46%",
+          "market_cap": "480.6B",
+          "dividend_yield": "0.54%"
         }
       ],
       "recovery": [
@@ -8269,11 +8321,11 @@
           "rank": 12,
           "name": "SYSCO CORP",
           "ticker": "SYY",
-          "sort_score": 0.6615,
+          "sort_score": 0.6605,
           "sort_score_source": "_profile_score",
           "selected": true,
           "matched_preset": "rendement",
-          "profile_score": 0.6615,
+          "profile_score": 0.6605,
           "buffett_score": 68.0,
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
@@ -8365,26 +8417,6 @@
         },
         {
           "rank": 17,
-          "name": "UNION PACIFIC CORP",
-          "ticker": "UNP",
-          "sort_score": 0.5956,
-          "sort_score_source": "_profile_score",
-          "selected": false,
-          "matched_preset": "rendement",
-          "profile_score": 0.5956,
-          "buffett_score": 66.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
-          "sector": "Industries",
-          "country": "Etats-Unis",
-          "volatility": 21.6,
-          "ytd": "14.68%",
-          "roe": "40.38%",
-          "market_cap": "157.2B",
-          "dividend_yield": "2.05%"
-        },
-        {
-          "rank": 18,
           "name": "COLGATE-PALMOLIVE",
           "ticker": "CL",
           "sort_score": 0.5956,
@@ -8402,6 +8434,26 @@
           "roe": "406.26%",
           "market_cap": "77.2B",
           "dividend_yield": "2.17%"
+        },
+        {
+          "rank": 18,
+          "name": "UNION PACIFIC CORP",
+          "ticker": "UNP",
+          "sort_score": 0.5946,
+          "sort_score_source": "_profile_score",
+          "selected": false,
+          "matched_preset": "rendement",
+          "profile_score": 0.5946,
+          "buffett_score": 66.0,
+          "rejection_reason": "Filtré par hard_filters_Agressif",
+          "rejection_filter": "hard_filters_Agressif",
+          "sector": "Industries",
+          "country": "Etats-Unis",
+          "volatility": 21.6,
+          "ytd": "14.68%",
+          "roe": "40.38%",
+          "market_cap": "157.2B",
+          "dividend_yield": "2.05%"
         },
         {
           "rank": 19,
@@ -8425,23 +8477,23 @@
         },
         {
           "rank": 20,
-          "name": "GENERAL MILLS INC",
-          "ticker": "GIS",
+          "name": "PEPSICO INC",
+          "ticker": "PEP",
           "sort_score": 0.573,
           "sort_score_source": "_profile_score",
           "selected": false,
           "matched_preset": "rendement",
           "profile_score": 0.573,
-          "buffett_score": 63.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
+          "buffett_score": 60.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
-          "volatility": 20.9,
-          "ytd": "-2.26%",
-          "roe": "24.59%",
-          "market_cap": "24.2B",
-          "dividend_yield": "5.35%"
+          "volatility": 18.8,
+          "ytd": "14.42%",
+          "roe": "42.85%",
+          "market_cap": "224.8B",
+          "dividend_yield": "3.42%"
         }
       ],
       "value_dividend": [
@@ -8726,6 +8778,26 @@
         },
         {
           "rank": 15,
+          "name": "FIDELITY NATIONAL FINANCIAL INC",
+          "ticker": "FNF",
+          "sort_score": 0.4891,
+          "sort_score_source": "_profile_score",
+          "selected": false,
+          "matched_preset": "value_dividend",
+          "profile_score": 0.4891,
+          "buffett_score": 51.4,
+          "rejection_reason": "Filtré par hard_filters_Agressif",
+          "rejection_filter": "hard_filters_Agressif",
+          "sector": "Finance",
+          "country": "Etats-Unis",
+          "volatility": 24.8,
+          "ytd": "2.58%",
+          "roe": "17.4%",
+          "market_cap": "15.2B",
+          "dividend_yield": "3.57%"
+        },
+        {
+          "rank": 16,
           "name": "HSBC HOLDINGS PLC",
           "ticker": "HSBA",
           "sort_score": 0.4884,
@@ -8745,7 +8817,7 @@
           "dividend_yield": "2.37%"
         },
         {
-          "rank": 16,
+          "rank": 17,
           "name": "EXXON MOBIL CORP",
           "ticker": "XOM",
           "sort_score": 0.4863,
@@ -8765,7 +8837,7 @@
           "dividend_yield": "2.68%"
         },
         {
-          "rank": 17,
+          "rank": 18,
           "name": "PRUDENTIAL FINANCIAL INC",
           "ticker": "PRU",
           "sort_score": 0.4859,
@@ -8784,7 +8856,7 @@
           "dividend_yield": "3.89%"
         },
         {
-          "rank": 18,
+          "rank": 19,
           "name": "LOGITECH INTERNATIONAL SA",
           "ticker": "LOGN",
           "sort_score": 0.4773,
@@ -8804,7 +8876,7 @@
           "dividend_yield": "1.81%"
         },
         {
-          "rank": 19,
+          "rank": 20,
           "name": "MONCLER",
           "ticker": "MONC",
           "sort_score": 0.475,
@@ -8821,26 +8893,6 @@
           "ytd": "-10.27%",
           "roe": "18.81%",
           "dividend_yield": "2.58%"
-        },
-        {
-          "rank": 20,
-          "name": "AMUNDI SA",
-          "ticker": "AMUN",
-          "sort_score": 0.4689,
-          "sort_score_source": "_profile_score",
-          "selected": false,
-          "matched_preset": "value_dividend",
-          "profile_score": 0.4689,
-          "buffett_score": 68.4,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
-          "sector": "Finance",
-          "country": "France",
-          "volatility": 24.4,
-          "ytd": "10.13%",
-          "roe": "11.09%",
-          "market_cap": "15.9B",
-          "dividend_yield": "5.47%"
         }
       ]
     },
@@ -11694,15 +11746,13 @@
     }
   },
   "anomaly_warnings": [
-    "🔴 VOL_CAP: COMFORT SYSTEMS USA INC vol=49.1% in preset=quality_premium (> 48% cap Modéré)",
-    "🔴 VOL_CAP: NVIDIA CORP vol=48.8% in preset=quality_premium (> 48% cap Modéré)",
-    "🟠 CONCENTRATION: Corée a 9 stocks sélectionnés (> 5)",
-    "🟠 CONCENTRATION: Inde a 16 stocks sélectionnés (> 5)",
-    "🟠 CONCENTRATION: Etats-Unis a 69 stocks sélectionnés (> 5)",
+    "🟠 CONCENTRATION: Corée a 10 stocks sélectionnés (> 5)",
+    "🟠 CONCENTRATION: Inde a 15 stocks sélectionnés (> 5)",
+    "🟠 CONCENTRATION: Etats-Unis a 67 stocks sélectionnés (> 5)",
     "🟠 CONCENTRATION: Allemagne a 6 stocks sélectionnés (> 5)",
-    "🟠 CONCENTRATION: Taïwan a 6 stocks sélectionnés (> 5)",
+    "🟠 CONCENTRATION: Taïwan a 8 stocks sélectionnés (> 5)",
     "🟠 CONCENTRATION: France a 8 stocks sélectionnés (> 5)",
-    "🟠 CONCENTRATION: Royaume-Uni a 12 stocks sélectionnés (> 5)",
+    "🟠 CONCENTRATION: Royaume-Uni a 11 stocks sélectionnés (> 5)",
     "🟠 CONCENTRATION: Suisse a 11 stocks sélectionnés (> 5)",
     "🟠 CONCENTRATION: Espagne a 6 stocks sélectionnés (> 5)"
   ],
@@ -11846,7 +11896,7 @@
       "profile": "Modéré",
       "matched_preset": "rendement",
       "buffett_score": 68.0,
-      "profile_score": 0.662,
+      "profile_score": 0.66,
       "roe": "97.55%",
       "de_ratio": 7.81,
       "market_cap": "42.8B",
@@ -12086,7 +12136,7 @@
       "ticker": "FIX",
       "category": "equity",
       "profile": "Agressif",
-      "matched_preset": "quality_premium",
+      "matched_preset": "quality_high_vol",
       "buffett_score": 90.0,
       "profile_score": 0.769,
       "roe": "35.03%",
@@ -12101,7 +12151,7 @@
       "radar_tilt": "favored",
       "selected": true,
       "ranking": 18,
-      "selection_reason": "Qualité Buffett excellente (90); Score profil élevé (0.77); Preset: quality_premium; ROE élevé (35%); Secteur favorisé RADAR (industrials)"
+      "selection_reason": "Qualité Buffett excellente (90); Score profil élevé (0.77); Preset: quality_high_vol; ROE élevé (35%); Secteur favorisé RADAR (industrials)"
     },
     {
       "name": "HANWHA AEROSPACE LTD",
@@ -12721,7 +12771,7 @@
       "ticker": "NVDA",
       "category": "equity",
       "profile": "Agressif",
-      "matched_preset": "quality_premium",
+      "matched_preset": "quality_high_vol",
       "buffett_score": 94.0,
       "profile_score": 0.724,
       "roe": "119.18%",
@@ -12736,7 +12786,7 @@
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 47,
-      "selection_reason": "Qualité Buffett excellente (94); Score profil élevé (0.72); Preset: quality_premium; ROE élevé (119%)"
+      "selection_reason": "Qualité Buffett excellente (94); Score profil élevé (0.72); Preset: quality_high_vol; ROE élevé (119%)"
     },
     {
       "name": "WOORI FINANCIAL GROUP INC",
@@ -12855,7 +12905,7 @@
       "profile": "Agressif",
       "matched_preset": "quality_premium",
       "buffett_score": 64.0,
-      "profile_score": 0.521,
+      "profile_score": 0.52,
       "roe": "76.87%",
       "de_ratio": 3.23,
       "market_cap": "150.4B",
@@ -13091,26 +13141,26 @@
       "selection_reason": "Qualité Buffett excellente (100); Preset: value_dividend"
     },
     {
-      "name": "UNION PACIFIC CORP",
-      "ticker": "UNP",
+      "name": "COLGATE-PALMOLIVE",
+      "ticker": "CL",
       "category": "equity",
       "profile": "Modéré",
       "matched_preset": "rendement",
-      "buffett_score": 66.0,
+      "buffett_score": 71.0,
       "profile_score": 0.596,
-      "roe": "40.38%",
-      "de_ratio": 1.78,
-      "market_cap": "157.2B",
-      "volatility": 21.6,
-      "ytd": "14.68%",
-      "dividend_yield": 2.05,
-      "dividend_coverage": 2.2,
-      "sector": "Industries",
+      "roe": "406.26%",
+      "de_ratio": 15.65,
+      "market_cap": "77.2B",
+      "volatility": 17.9,
+      "ytd": "21.1%",
+      "dividend_yield": 2.17,
+      "dividend_coverage": 1.26,
+      "sector": "Biens de consommation de base",
       "country": "Etats-Unis",
       "radar_tilt": "favored",
       "selected": true,
       "ranking": 64,
-      "selection_reason": "Qualité Buffett solide (66); Preset: rendement; ROE élevé (40%); Secteur favorisé RADAR (industrials)"
+      "selection_reason": "Qualité Buffett excellente (71); Preset: rendement; ROE élevé (406%); Secteur favorisé RADAR (consumer-staples)"
     },
     {
       "name": "EOG RESOURCES INC",
@@ -13135,26 +13185,26 @@
       "selection_reason": "Qualité Buffett excellente (100); Preset: quality_premium; ROE élevé (22%); Secteur favorisé RADAR (energy)"
     },
     {
-      "name": "COLGATE-PALMOLIVE",
-      "ticker": "CL",
+      "name": "UNION PACIFIC CORP",
+      "ticker": "UNP",
       "category": "equity",
       "profile": "Modéré",
       "matched_preset": "rendement",
-      "buffett_score": 71.0,
-      "profile_score": 0.596,
-      "roe": "406.26%",
-      "de_ratio": 15.65,
-      "market_cap": "77.2B",
-      "volatility": 17.9,
-      "ytd": "21.1%",
-      "dividend_yield": 2.17,
-      "dividend_coverage": 1.26,
-      "sector": "Biens de consommation de base",
+      "buffett_score": 66.0,
+      "profile_score": 0.595,
+      "roe": "40.38%",
+      "de_ratio": 1.78,
+      "market_cap": "157.2B",
+      "volatility": 21.6,
+      "ytd": "14.68%",
+      "dividend_yield": 2.05,
+      "dividend_coverage": 2.2,
+      "sector": "Industries",
       "country": "Etats-Unis",
       "radar_tilt": "favored",
       "selected": true,
       "ranking": 66,
-      "selection_reason": "Qualité Buffett excellente (71); Preset: rendement; ROE élevé (406%); Secteur favorisé RADAR (consumer-staples)"
+      "selection_reason": "Qualité Buffett solide (66); Preset: rendement; ROE élevé (40%); Secteur favorisé RADAR (industrials)"
     },
     {
       "name": "APL APOLLO TUBES LTD",
@@ -13449,7 +13499,7 @@
       "profile": "Modéré",
       "matched_preset": "rendement",
       "buffett_score": 63.0,
-      "profile_score": 0.573,
+      "profile_score": 0.572,
       "roe": "24.59%",
       "de_ratio": 1.66,
       "market_cap": "24.2B",
@@ -13799,7 +13849,7 @@
       "profile": "Modéré",
       "matched_preset": "rendement",
       "buffett_score": 66.0,
-      "profile_score": 0.545,
+      "profile_score": 0.544,
       "roe": "56.0%",
       "de_ratio": 1.87,
       "market_cap": "41.4B",
@@ -14085,7 +14135,7 @@
       "profile": "Agressif",
       "matched_preset": "quality_premium",
       "buffett_score": 56.0,
-      "profile_score": 0.47,
+      "profile_score": 0.469,
       "roe": "46.1%",
       "de_ratio": 2.7,
       "market_cap": "25.2B",
@@ -14502,7 +14552,7 @@
       "profile": "Modéré",
       "matched_preset": "rendement",
       "buffett_score": 58.0,
-      "profile_score": 0.506,
+      "profile_score": 0.505,
       "roe": "10.33%",
       "de_ratio": 0.4,
       "market_cap": "23.0B",
@@ -14634,7 +14684,7 @@
       "profile": "Stable",
       "matched_preset": "low_volatility",
       "buffett_score": 61.5,
-      "profile_score": 0.499,
+      "profile_score": 0.498,
       "roe": "16.6%",
       "de_ratio": 0.62,
       "market_cap": "9.9T",
@@ -14781,13 +14831,35 @@
       "selection_reason": "Qualité Buffett excellente (93); Preset: quality_premium; ROE élevé (46%)"
     },
     {
+      "name": "REALTEK SEMICONDUCTOR CORP",
+      "ticker": "2379",
+      "category": "equity",
+      "profile": "Modéré",
+      "matched_preset": "value_dividend",
+      "buffett_score": 100.0,
+      "profile_score": 0.582,
+      "roe": "24.7%",
+      "de_ratio": 0.0,
+      "market_cap": "245.4B",
+      "volatility": 32.5,
+      "ytd": "-2.66%",
+      "dividend_yield": 5.36,
+      "dividend_coverage": 1.17,
+      "sector": "Technologie de l'information",
+      "country": "Taïwan",
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 141,
+      "selection_reason": "Qualité Buffett excellente (100); Preset: value_dividend; ROE élevé (25%)"
+    },
+    {
       "name": "QUEST DIAGNOSTICS INC",
       "ticker": "DGX",
       "category": "equity",
       "profile": "Modéré",
       "matched_preset": "defensif",
       "buffett_score": 57.0,
-      "profile_score": 0.492,
+      "profile_score": 0.491,
       "roe": "13.84%",
       "de_ratio": 1.03,
       "market_cap": "22.7B",
@@ -14799,7 +14871,7 @@
       "country": "Etats-Unis",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 141,
+      "ranking": 142,
       "selection_reason": "Qualité Buffett solide (57); Preset: defensif"
     },
     {
@@ -14821,8 +14893,30 @@
       "country": "Etats-Unis",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 142,
+      "ranking": 143,
       "selection_reason": "Qualité Buffett excellente (70); Preset: agressif"
+    },
+    {
+      "name": "NIEN MADE ENTERPRISE LTD",
+      "ticker": "8464",
+      "category": "equity",
+      "profile": "Agressif",
+      "matched_preset": "quality_premium",
+      "buffett_score": 100.0,
+      "profile_score": 0.557,
+      "roe": "25.35%",
+      "de_ratio": 0.04,
+      "market_cap": "117.2B",
+      "volatility": 36.2,
+      "ytd": "10.8%",
+      "dividend_yield": 3.62,
+      "dividend_coverage": 1.54,
+      "sector": "Biens de consommation cycliques",
+      "country": "Taïwan",
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 144,
+      "selection_reason": "Qualité Buffett excellente (100); Preset: quality_premium; ROE élevé (25%)"
     },
     {
       "name": "EURONEXT NV",
@@ -14831,7 +14925,7 @@
       "profile": "Stable",
       "matched_preset": "rendement",
       "buffett_score": 56.6,
-      "profile_score": 0.491,
+      "profile_score": 0.49,
       "roe": "14.63%",
       "de_ratio": 0.71,
       "market_cap": "12.7B",
@@ -14843,7 +14937,7 @@
       "country": "France",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 143,
+      "ranking": 145,
       "selection_reason": "Qualité Buffett solide (57); Preset: rendement"
     },
     {
@@ -14865,8 +14959,30 @@
       "country": "Etats-Unis",
       "radar_tilt": "favored",
       "selected": true,
-      "ranking": 144,
+      "ranking": 146,
       "selection_reason": "Qualité Buffett excellente (70); Preset: quality_premium; Secteur favorisé RADAR (industrials)"
+    },
+    {
+      "name": "COWAY LTD",
+      "ticker": "021240",
+      "category": "equity",
+      "profile": "Agressif",
+      "matched_preset": "croissance",
+      "buffett_score": 74.0,
+      "profile_score": 0.466,
+      "roe": "17.69%",
+      "de_ratio": 0.46,
+      "market_cap": "6.3T",
+      "volatility": 34.5,
+      "ytd": "0.46%",
+      "dividend_yield": 4.56,
+      "dividend_coverage": 1.97,
+      "sector": "Biens de consommation cycliques",
+      "country": "Corée",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 147,
+      "selection_reason": "Qualité Buffett excellente (74); Preset: croissance; Région favorisée RADAR (south-korea)"
     },
     {
       "name": "HYUNDAI-ROTEM",
@@ -14887,118 +15003,49 @@
       "country": "Corée",
       "radar_tilt": "favored",
       "selected": true,
-      "ranking": 145,
+      "ranking": 148,
       "selection_reason": "Qualité Buffett excellente (98); Preset: quality_high_vol; ROE élevé (20%); Secteur favorisé RADAR (industrials); Région favorisée RADAR (south-korea)"
     },
     {
-      "name": "NORTHROP GRUMMAN CORP",
-      "ticker": "NOC",
-      "category": "equity",
-      "profile": "Agressif",
-      "matched_preset": "quality_premium",
-      "buffett_score": 61.0,
-      "profile_score": 0.596,
-      "roe": "26.17%",
-      "de_ratio": 1.02,
-      "market_cap": "103.4B",
-      "volatility": 23.3,
-      "ytd": "28.22%",
-      "dividend_yield": 1.23,
-      "dividend_coverage": 3.23,
-      "sector": "Industries",
-      "country": "Etats-Unis",
-      "radar_tilt": "favored",
-      "selected": true,
-      "ranking": 146,
-      "selection_reason": "Qualité Buffett solide (61); Preset: quality_premium; ROE élevé (26%); Secteur favorisé RADAR (industrials)"
-    },
-    {
-      "name": "NATWEST GROUP PLC",
-      "ticker": "NWG",
+      "name": "AYALA CORP",
+      "ticker": "AC",
       "category": "equity",
       "profile": "Agressif",
       "matched_preset": "momentum_trend",
-      "buffett_score": 100.0,
-      "profile_score": 0.592,
-      "roe": "12.57%",
-      "de_ratio": 1.67,
-      "market_cap": "49.0B",
-      "volatility": 28.6,
-      "ytd": "-5.77%",
-      "dividend_yield": 4.07,
-      "dividend_coverage": 2.68,
-      "sector": "Finance",
-      "country": "Royaume-Uni",
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 147,
-      "selection_reason": "Qualité Buffett excellente (100); Preset: momentum_trend"
-    },
-    {
-      "name": "T ROWE PRICE GROUP INC",
-      "ticker": "TROW",
-      "category": "equity",
-      "profile": "Modéré",
-      "matched_preset": "quality_premium",
-      "buffett_score": 68.3,
-      "profile_score": 0.488,
-      "roe": "18.79%",
-      "de_ratio": 0.04,
-      "market_cap": "20.8B",
-      "volatility": 26.7,
-      "ytd": "-7.9%",
-      "dividend_yield": 5.39,
-      "dividend_coverage": 1.82,
-      "sector": "Finance",
-      "country": "Etats-Unis",
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 148,
-      "selection_reason": "Qualité Buffett solide (68); Preset: quality_premium"
-    },
-    {
-      "name": "NESTLE INDIA LTD",
-      "ticker": "NESTLEIND",
-      "category": "equity",
-      "profile": "Modéré",
-      "matched_preset": "defensif",
-      "buffett_score": 97.0,
-      "profile_score": 0.594,
-      "roe": "79.99%",
-      "de_ratio": 0.29,
-      "market_cap": "2.5T",
-      "volatility": 18.7,
-      "ytd": "-0.82%",
-      "dividend_yield": 0.33,
-      "dividend_coverage": 1.78,
-      "sector": "Biens de consommation de base",
-      "country": "Inde",
+      "buffett_score": 71.0,
+      "profile_score": 0.465,
+      "roe": "72.03%",
+      "de_ratio": 5.31,
+      "volatility": 32.8,
+      "ytd": "8.81%",
+      "sector": "Industries",
+      "country": "Philippines",
       "radar_tilt": "favored",
       "selected": true,
       "ranking": 149,
-      "selection_reason": "Qualité Buffett excellente (97); Preset: defensif; ROE élevé (80%); Secteur favorisé RADAR (consumer-staples)"
+      "selection_reason": "Qualité Buffett excellente (71); Preset: momentum_trend; ROE élevé (72%); Secteur favorisé RADAR (industrials)"
     },
     {
-      "name": "EXXON MOBIL CORP",
-      "ticker": "XOM",
+      "name": "FIDELITY NATIONAL FINANCIAL INC",
+      "ticker": "FNF",
       "category": "equity",
       "profile": "Modéré",
       "matched_preset": "value_dividend",
-      "buffett_score": 80.0,
-      "profile_score": 0.486,
-      "roe": "14.51%",
-      "de_ratio": 0.15,
-      "market_cap": "635.4B",
-      "volatility": 23.0,
-      "ytd": "25.21%",
-      "dividend_yield": 2.68,
-      "dividend_coverage": 1.66,
-      "sector": "Energie",
+      "buffett_score": 51.4,
+      "profile_score": 0.489,
+      "roe": "17.4%",
+      "de_ratio": 0.55,
+      "market_cap": "15.2B",
+      "volatility": 24.8,
+      "ytd": "2.58%",
+      "dividend_yield": 3.57,
+      "dividend_coverage": 2.13,
+      "sector": "Finance",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 150,
-      "selection_reason": "Qualité Buffett excellente (80); Preset: value_dividend; Secteur favorisé RADAR (energy)"
+      "selection_reason": "Qualité Buffett solide (51); Preset: value_dividend"
     }
   ],
   "equities_rejected": [
@@ -16537,6 +16584,28 @@
       "selection_reason": "Score profil élevé (99.46)"
     },
     {
+      "name": "Schwab Short-Term U.S. Treasury ETF",
+      "ticker": "SCHO",
+      "category": "bond",
+      "profile_score": 98.0,
+      "volatility": 2.3,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 5,
+      "selection_reason": "Score profil élevé (98.00)"
+    },
+    {
+      "name": "iShares 0-5 Year TIPS Bond ETF",
+      "ticker": "STIP",
+      "category": "bond",
+      "profile_score": 97.55,
+      "volatility": 2.5,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 6,
+      "selection_reason": "Score profil élevé (97.55)"
+    },
+    {
       "name": "SPDR Portfolio Short Term Treasury ETF",
       "ticker": "SPTS",
       "category": "bond",
@@ -16544,7 +16613,7 @@
       "volatility": 2.3,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 5,
+      "ranking": 7,
       "selection_reason": "Score profil élevé (96.46)"
     },
     {
@@ -16555,7 +16624,7 @@
       "volatility": 2.9,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 6,
+      "ranking": 8,
       "selection_reason": "Score profil élevé (94.04)"
     },
     {
@@ -16566,7 +16635,7 @@
       "volatility": 2.2,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 7,
+      "ranking": 9,
       "selection_reason": "Score profil élevé (84.59)"
     }
   ],
