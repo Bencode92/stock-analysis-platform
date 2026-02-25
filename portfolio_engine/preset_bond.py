@@ -72,9 +72,9 @@ PROFILE_PRESETS = {
 # Hard constraints par profil
 PROFILE_CONSTRAINTS = {
     "Stable": {
-        "duration_max": 7.0,           # était 5.0 → accepte intermediate-term IG
-        "credit_min": 60,              # inchangé (BBB minimum = IG only)
-        "vol_max_quantile": 0.55,      # était 0.40 → accepte corporate IG (vol ~5-7%)
+        "duration_max": 5.0,           # ← trop strict : exclut les IG corporate (duration 6-7Y)
+        "credit_min": 60,
+        "vol_max_quantile": 0.40,      # ← trop strict : exclut les IG corporate (vol légèrement > Treasuries)
     },
     "Modéré": {
         "duration_max": 10.0,          # Duration max 10 ans
@@ -257,14 +257,17 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
     # Doit être un bond
     if "fund_type" in df.columns:
         fund_type_lower = df["fund_type"].fillna("").str.lower()
-        is_bond = fund_type_lower.str.contains("bond|obligation|fixed income", regex=True)
+        is_bond = fund_type_lower.str.contains(
+            "bond|obligation|fixed income|government|treasury|muni|"
+            "inflation|loan|securitized|maturity|convertible|money market",
+            regex=True
+        )
         mask &= is_bond
     
     filtered = df[mask].copy()
     logger.info(f"[Bond] Data QC: {len(df)} → {len(filtered)} ({len(df) - len(filtered)} exclus)")
     
     return filtered
-
 
 # =============================================================================
 # HARD CONSTRAINTS PAR PROFIL
