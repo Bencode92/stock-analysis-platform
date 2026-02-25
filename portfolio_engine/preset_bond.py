@@ -89,7 +89,7 @@ PROFILE_CONSTRAINTS = {
 }
 # v1.2.0: Limite de bonds par fund_type (déduplication)
 MAX_PER_FUND_TYPE = {
-    "Stable": 2,      # Max 2 bonds du même fund_type (ex: 2 Short Government max)
+    "Stable": 3,      # Max 3 bonds du même fund_type (ex: 3 Short Government max)
     "Modéré": 3,       # Plus tolérant
     "Agressif": 5,     # Quasi pas de contrainte
 }
