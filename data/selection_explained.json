@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-25T12:07:46.115744",
+  "generated_at": "2026-02-25T12:32:08.962218",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,12 +201,12 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 23,
-    "selection_rate": "2.3%",
+    "total_selected": 25,
+    "selection_rate": "2.5%",
     "by_region": {
       "US": {
         "universe": 521,
-        "in_top_20_selected": 0
+        "in_top_20_selected": 1
       },
       "Europe": {
         "universe": 267,
@@ -220,7 +220,7 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 19
+        "selected": 21
       }
     }
   },
@@ -263,10 +263,11 @@
       ]
     },
     "Biens de consommation cycliques": {
-      "selected_count": 2,
+      "selected_count": 3,
       "selected_names": [
         "ROSS STORES INC",
-        "INDUSTRIA DE DISENO TEXTI"
+        "INDUSTRIA DE DISENO TEXTI",
+        "TJX INC"
       ]
     },
     "Biens de consommation de base": {
@@ -278,9 +279,10 @@
       ]
     },
     "Santé": {
-      "selected_count": 1,
+      "selected_count": 2,
       "selected_names": [
-        "NOVARTIS AG"
+        "NOVARTIS AG",
+        "JOHNSON & JOHNSON"
       ]
     }
   },
@@ -288,8 +290,8 @@
     "US": {
       "total_in_universe": 521,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 0,
-      "rejection_rate_top_20": "100%",
+      "selected_in_top_20": 1,
+      "rejection_rate_top_20": "95%",
       "stocks": [
         {
           "rank": 1,
@@ -656,13 +658,10 @@
           "market_cap_billions": 593.5,
           "sector": "Santé",
           "country": "Etats-Unis",
-          "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.646, quota atteint)",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "profile_score": 0.646,
-            "composite_score": 0.733,
-            "sector": "Santé",
-            "matched_preset": "defensif"
+            "status": "selected"
           },
           "buffett_score": 81.0,
           "composite_score": 0.733,
@@ -3001,7 +3000,7 @@
         "ticker": "TJX",
         "sort_score": 0.65,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.7018,
         "profile_score": 0.65,
         "buffett_score": 86.0,
@@ -3010,7 +3009,6 @@
         "sector": "Biens de consommation cycliques",
         "country": "Etats-Unis",
         "matched_preset": "defensif",
-        "rejection_reason": "Score composite (0.650) insuffisant pour le quota",
         "roe": 61.98,
         "de_ratio": 1.52,
         "market_cap": "175521581549",
@@ -3146,7 +3144,7 @@
         "ticker": "JNJ",
         "sort_score": 0.6462,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.7333,
         "profile_score": 0.6462,
         "buffett_score": 81.0,
@@ -3155,7 +3153,6 @@
         "sector": "Santé",
         "country": "Etats-Unis",
         "matched_preset": "defensif",
-        "rejection_reason": "Score composite (0.646) insuffisant pour le quota",
         "roe": 35.03,
         "de_ratio": 0.59,
         "market_cap": "593509909958",

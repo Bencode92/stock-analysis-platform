@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-25T12:07:46.029971",
+  "timestamp": "2026-02-25T12:32:08.871545",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -7,7 +7,7 @@
     "equities_selected": 150,
     "equities_rejected_notable": 50,
     "etf_initial": 165,
-    "etf_selected": 10,
+    "etf_selected": 9,
     "etf_rejected_notable": 20,
     "crypto_initial": 43,
     "crypto_selected": 0,
@@ -34,7 +34,7 @@
         },
         "defensif": {
           "total": 20,
-          "selected": 1
+          "selected": 3
         },
         "low_volatility": {
           "total": 3,
@@ -92,7 +92,7 @@
         },
         "rendement_etf": {
           "total": 19,
-          "selected": 1
+          "selected": 0
         },
         "sector_cyclical": {
           "total": 11,
@@ -1435,12 +1435,10 @@
         "ticker": "TJX",
         "sort_score": 0.65,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "defensif",
         "profile_score": 0.65,
         "buffett_score": 86.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Biens de consommation cycliques",
         "country": "Etats-Unis",
         "volatility": 16.9,
@@ -1535,12 +1533,10 @@
         "ticker": "JNJ",
         "sort_score": 0.6462,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "defensif",
         "profile_score": 0.6462,
         "buffett_score": 81.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Santé",
         "country": "Etats-Unis",
         "volatility": 17.2,
@@ -5667,12 +5663,10 @@
           "ticker": "TJX",
           "sort_score": 0.65,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "defensif",
           "profile_score": 0.65,
           "buffett_score": 86.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Biens de consommation cycliques",
           "country": "Etats-Unis",
           "volatility": 16.9,
@@ -5687,12 +5681,10 @@
           "ticker": "JNJ",
           "sort_score": 0.6462,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "defensif",
           "profile_score": 0.6462,
           "buffett_score": 81.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Santé",
           "country": "Etats-Unis",
           "volatility": 17.2,
@@ -10610,9 +10602,10 @@
           "ticker": "DJD",
           "sort_score": 55.0,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "rendement_etf",
           "profile_score": 55.0,
+          "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
           "sector": "Healthcare",
           "volatility": 12.3,
           "ytd": "8.72%",
@@ -15679,19 +15672,6 @@
       "selected": true,
       "ranking": 9,
       "selection_reason": "Score profil élevé (88.75); Preset: coeur_global"
-    },
-    {
-      "name": "Invesco Dow Jones Industrial Average Dividend ETF",
-      "ticker": "DJD",
-      "category": "etf",
-      "matched_preset": "rendement_etf",
-      "profile_score": 55.0,
-      "volatility": 12.3,
-      "sector": "Healthcare",
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 10,
-      "selection_reason": "Score profil élevé (55.00); Preset: rendement_etf"
     }
   ],
   "etf_rejected": [
