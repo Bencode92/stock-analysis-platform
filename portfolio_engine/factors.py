@@ -187,13 +187,20 @@ def normalize_category(category: str, fund_type: str = "", etf_type: str = "", s
     if "bond" in fund_type_lower or "obligation" in fund_type_lower or "fixed income" in fund_type_lower:
         return "bond"
     
+    # v4.1.1 FIX: Respect category="bond" BEFORE checking etf_type
+    # Bonds with fund_types like "Short Government", "Target Maturity", "Muni National Interm"
+    # have etf_type set but should remain classified as bonds, not ETFs
+    cat_lower = category.lower().strip() if category else ""
+    if cat_lower in ("bond", "bonds", "obligation", "obligations"):
+        return "bond"
+    
     # v2.4.7 FIX: Détection ETF via etf_type ou sector_bucket
     if etf_type or sector_bucket:
         return "etf"
     
     if not category:
         return "other"
-    return CATEGORY_NORMALIZE.get(category.lower().strip(), "other")
+    return CATEGORY_NORMALIZE.get(cat_lower, "other")
 
 
 # Facteurs applicables par catégorie (v2.4)
