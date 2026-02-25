@@ -72,9 +72,9 @@ PROFILE_PRESETS = {
 # Hard constraints par profil
 PROFILE_CONSTRAINTS = {
     "Stable": {
-        "duration_max": 5.0,           # Duration max 5 ans
-        "credit_min": 60,              # BBB minimum (IG)
-        "vol_max_quantile": 0.40,      # Vol < Q40
+        "duration_max": 7.0,           # était 5.0 → accepte intermediate-term IG
+        "credit_min": 60,              # inchangé (BBB minimum = IG only)
+        "vol_max_quantile": 0.55,      # était 0.40 → accepte corporate IG (vol ~5-7%)
     },
     "Modéré": {
         "duration_max": 10.0,          # Duration max 10 ans
@@ -89,7 +89,7 @@ PROFILE_CONSTRAINTS = {
 }
 # v1.2.0: Limite de bonds par fund_type (déduplication)
 MAX_PER_FUND_TYPE = {
-    "Stable": 3,      # Max 3 bonds du même fund_type (ex: 3 Short Government max)
+    "Stable": 2,      # Max 2 bonds du même fund_type (ex: 2 Short Government max)
     "Modéré": 3,       # Plus tolérant
     "Agressif": 5,     # Quasi pas de contrainte
 }
