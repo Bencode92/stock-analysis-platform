@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-25-09-05-25",
-    "git_sha": "89dcef2cb",
-    "git_sha_full": "89dcef2cb882cf7930cfd8faf06d42173afce85e",
+    "run_id": "2026-02-25-09-31-13",
+    "git_sha": "46fcf7adf",
+    "git_sha_full": "46fcf7adfb886e1e1367cd5bfaf3835fb3887a1f",
     "config_hash": "6c942836",
     "universe_asof": "2026-02-25",
-    "timestamp_utc": "2026-02-25T09:05:25.853939+00:00",
+    "timestamp_utc": "2026-02-25T09:31:13.314212+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 226.7
+    "total_duration_sec": 176.2
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -503,8 +503,8 @@
     },
     "5_selection_bond_Stable": {
       "name": "selection_bond",
-      "before": 2,
-      "after": 2,
+      "before": 3,
+      "after": 3,
       "rejected": 0,
       "category": "bond",
       "profile": "Stable",
@@ -516,6 +516,10 @@
         {
           "ticker": "GBIL",
           "score": 97.47
+        },
+        {
+          "ticker": "USFR",
+          "score": 96.62
         }
       ]
     }
@@ -3504,37 +3508,13 @@
   },
   "drift_vs_previous": {
     "has_drift": true,
-    "drift_pct": 90.0,
+    "drift_pct": 50.0,
     "details": {
-      "5_selection_crypto_Agressif.after": {
-        "current": 32,
-        "previous": 30,
-        "delta": 2,
-        "pct_change": 6.67
-      },
-      "5_selection_bond_Agressif.after": {
-        "current": 5,
-        "previous": 20,
-        "delta": -15,
-        "pct_change": 75.0
-      },
-      "5_selection_crypto_Modéré.after": {
-        "current": 21,
-        "previous": 19,
-        "delta": 2,
-        "pct_change": 10.53
-      },
-      "5_selection_bond_Modéré.after": {
-        "current": 3,
-        "previous": 20,
-        "delta": -17,
-        "pct_change": 85.0
-      },
       "5_selection_bond_Stable.after": {
-        "current": 2,
-        "previous": 20,
-        "delta": -18,
-        "pct_change": 90.0
+        "current": 3,
+        "previous": 2,
+        "delta": 1,
+        "pct_change": 50.0
       }
     }
   }
