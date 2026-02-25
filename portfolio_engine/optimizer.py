@@ -590,7 +590,7 @@ MIN_ETF_IN_POOL = {
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # v6.28 FIX B: Aligné avec max_single_position (15%) pour cohérence bounds SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
-    "Stable": 15.0,   # v6.28 FIX: 25% → 15% (aligné avec max_single_position global)
+    "Stable": 10.0,   # v6.33 FIX: 15% → 10% (aligné avec max_single_position=10% pour Stable)
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
     "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
 }
@@ -2511,7 +2511,10 @@ class PortfolioOptimizer:
         max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0)
         min_distinct = MIN_DISTINCT_BONDS.get(profile.name, 2)
         
-        n_bonds_required = max(min_distinct, int(np.ceil(bonds_needed / max_single_bond)))
+       # v6.33 FIX: effective_max = min(max_single_bond, max_single_position)
+        # Sans ce fix, ceil(35/15)=3 bonds mais chaque bond cappé à 10% → 30% < 35%
+        effective_max_bond = min(max_single_bond, profile.max_single_position)
+        n_bonds_required = max(min_distinct, int(np.ceil(bonds_needed / effective_max_bond)))
         n_bonds_to_use = min(len(bonds), max(n_bonds_required, 3))
         
         if n_bonds_to_use > 0:
