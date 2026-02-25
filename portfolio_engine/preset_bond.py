@@ -72,9 +72,9 @@ PROFILE_PRESETS = {
 # Hard constraints par profil
 PROFILE_CONSTRAINTS = {
     "Stable": {
-        "duration_max": 5.0,           # ← trop strict : exclut les IG corporate (duration 6-7Y)
-        "credit_min": 60,
-        "vol_max_quantile": 0.40,      # ← trop strict : exclut les IG corporate (vol légèrement > Treasuries)
+        "duration_max": 3.0,           # v6.33: 5→3 ans (ultra-short/short only)
+        "credit_min": 70,              # v6.33: 60→70 (A- minimum, pas BBB)
+        "vol_max_quantile": 0.30,      # v6.33: 0.40→0.30 (top 30% les moins volatils)
     },
     "Modéré": {
         "duration_max": 10.0,          # Duration max 10 ans
@@ -89,9 +89,9 @@ PROFILE_CONSTRAINTS = {
 }
 # v1.2.0: Limite de bonds par fund_type (déduplication)
 MAX_PER_FUND_TYPE = {
-    "Stable": 2,      # Max 2 bonds du même fund_type (ex: 2 Short Government max)
-    "Modéré": 3,       # Plus tolérant
-    "Agressif": 5,     # Quasi pas de contrainte
+    "Stable": 1,      # v6.33: 2→1 (1 seul bond par fund_type = diversification max)
+    "Modéré": 2,       # v6.33: 3→2
+    "Agressif": 5,
 }
 # Poids scoring par profil
 SCORING_WEIGHTS = {
