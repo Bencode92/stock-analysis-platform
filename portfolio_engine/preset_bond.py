@@ -1,9 +1,15 @@
 # portfolio_engine/preset_bond.py
 """
 =========================================
-Bond ETF Preset Selector v1.1.0
+Bond ETF Preset Selector v1.2.0
 =========================================
 
+Sélection d'ETF obligataires par profil (Stable/Modéré/Agressif).
+
+v1.2.0: Déduplication fund_type
+- NEW: _dedup_by_fund_type() limite à N bonds par fund_type
+- FIX: Stable ne peut plus accumuler 4+ Treasury court terme identiques
+- Impact: Stable diversification effective passe de ~4 à ~7 instruments
 Sélection d'ETF obligataires par profil (Stable/Modéré/Agressif).
 
 v1.1.0: Alignement avec preset_meta.py
@@ -81,7 +87,12 @@ PROFILE_CONSTRAINTS = {
         "vol_max_quantile": 1.0,
     },
 }
-
+# v1.2.0: Limite de bonds par fund_type (déduplication)
+MAX_PER_FUND_TYPE = {
+    "Stable": 2,      # Max 2 bonds du même fund_type (ex: 2 Short Government max)
+    "Modéré": 3,       # Plus tolérant
+    "Agressif": 5,     # Quasi pas de contrainte
+}
 # Poids scoring par profil
 SCORING_WEIGHTS = {
     "Stable": {
@@ -167,7 +178,47 @@ def _normalize_score(score: pd.Series, min_val: float = 0, max_val: float = 100)
         return pd.Series(50.0, index=score.index)
     normalized = (score - s_min) / (s_max - s_min)
     return min_val + normalized * (max_val - min_val)
-
+def _dedup_by_fund_type(df: pd.DataFrame, profile: str) -> pd.DataFrame:
+    """
+    v1.2.0: Limite le nombre de bonds par fund_type.
+    
+    Évite la fausse diversification (ex: 4 ETFs "Short Government" dans Stable).
+    Conserve les meilleurs scores par type.
+    
+    Args:
+        df: DataFrame trié par _profile_score descending
+        profile: Profil pour déterminer le max par type
+    
+    Returns:
+        DataFrame dédupliqué
+    """
+    max_per_type = MAX_PER_FUND_TYPE.get(profile, 3)
+    
+    if "fund_type" not in df.columns or df.empty:
+        logger.debug(f"[Bond {profile}] Dedup: skip (pas de colonne fund_type ou df vide)")
+        return df
+    
+    # Normaliser fund_type pour le groupby
+    df["_fund_type_norm"] = df["fund_type"].fillna("Unknown").str.strip().str.lower()
+    
+    before_count = len(df)
+    df_dedup = df.groupby("_fund_type_norm", group_keys=False).head(max_per_type)
+    after_count = len(df_dedup)
+    
+    # Cleanup colonne temporaire
+    df_dedup = df_dedup.drop(columns=["_fund_type_norm"], errors="ignore")
+    if "_fund_type_norm" in df.columns:
+        df.drop(columns=["_fund_type_norm"], inplace=True, errors="ignore")
+    
+    if before_count > after_count:
+        logger.info(
+            f"[Bond {profile}] Dedup fund_type (max {max_per_type}/type): "
+            f"{before_count} → {after_count} ({before_count - after_count} doublons retirés)"
+        )
+    else:
+        logger.debug(f"[Bond {profile}] Dedup fund_type: aucun doublon détecté")
+    
+    return df_dedup
 
 # =============================================================================
 # DATA QUALITY FILTERS
@@ -508,8 +559,12 @@ def select_bonds_for_profile(
     # Scoring
     df_scored = compute_profile_score(df_preset, profile)
     
-    # Tri par score
+   # Tri par score
     df_sorted = df_scored.sort_values("_profile_score", ascending=False)
+    
+    # v1.2.0: Déduplication par fund_type AVANT head(top_n)
+    # Garantit la diversité des types obligataires dans la sélection finale
+    df_sorted = _dedup_by_fund_type(df_sorted, profile)
     
     # Top N
     if top_n and len(df_sorted) > top_n:
@@ -536,7 +591,8 @@ def get_bond_preset_summary() -> Dict[str, Any]:
             }
             for profile, presets in PROFILE_PRESETS.items()
         },
-        "version": "1.1.0",
+        "max_per_fund_type": MAX_PER_FUND_TYPE,
+        "version": "1.2.0",
     }
 
 
