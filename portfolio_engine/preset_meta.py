@@ -607,9 +607,9 @@ CRYPTO_PRESET_PRIORITY = [
 
 PROFILE_BUCKET_TARGETS: Dict[str, Dict[Role, Tuple[float, float]]] = {
     "Stable": {
-        Role.CORE: (0.30, 0.45),
-        Role.DEFENSIVE: (0.05, 0.15),
-        Role.SATELLITE: (0.35, 0.60),
+        Role.CORE: (0.20, 0.35),
+        Role.DEFENSIVE: (0.40, 0.65),   # v6.33 FIX: 5-15% → 40-65% (bonds=DEFENSIVE, min 35%)
+        Role.SATELLITE: (0.05, 0.20),   # v6.33 FIX: 35-60% → 5-20% (profil conservateur)
         Role.LOTTERY: (0.00, 0.00),
     },
     "Modéré": {
