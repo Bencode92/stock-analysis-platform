@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-25-08-33-12",
-    "git_sha": "1de7c5f43",
-    "git_sha_full": "1de7c5f431b98019be9e81bdfe057d22945b54b9",
+    "run_id": "2026-02-25-09-05-25",
+    "git_sha": "89dcef2cb",
+    "git_sha_full": "89dcef2cb882cf7930cfd8faf06d42173afce85e",
     "config_hash": "6c942836",
     "universe_asof": "2026-02-25",
-    "timestamp_utc": "2026-02-25T08:33:12.043999+00:00",
+    "timestamp_utc": "2026-02-25T09:05:25.853939+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 154.74
+    "total_duration_sec": 226.7
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -143,12 +143,20 @@
     },
     "5_selection_crypto_Agressif": {
       "name": "selection_crypto",
-      "before": 30,
-      "after": 30,
+      "before": 32,
+      "after": 32,
       "rejected": 0,
       "category": "crypto",
       "profile": "Agressif",
       "top_k": [
+        {
+          "ticker": "BTC/USD",
+          "score": 75.0
+        },
+        {
+          "ticker": "ETH/USD",
+          "score": 75.0
+        },
         {
           "ticker": "MORPHO/USD",
           "score": 100.0
@@ -180,21 +188,13 @@
         {
           "ticker": "SNX/EUR",
           "score": 80.06
-        },
-        {
-          "ticker": "SNX/USD",
-          "score": 79.17
-        },
-        {
-          "ticker": "PAXG/USD",
-          "score": 77.96
         }
       ]
     },
     "5_selection_bond_Agressif": {
       "name": "selection_bond",
-      "before": 20,
-      "after": 20,
+      "before": 5,
+      "after": 5,
       "rejected": 0,
       "category": "bond",
       "profile": "Agressif",
@@ -218,26 +218,6 @@
         {
           "ticker": "FLRT",
           "score": 90.71
-        },
-        {
-          "ticker": "CLOZ",
-          "score": 89.34
-        },
-        {
-          "ticker": "ICLO",
-          "score": 88.74
-        },
-        {
-          "ticker": "JBBB",
-          "score": 88.66
-        },
-        {
-          "ticker": "JAAA",
-          "score": 87.1
-        },
-        {
-          "ticker": "PAAA",
-          "score": 84.42
         }
       ]
     },
@@ -343,12 +323,20 @@
     },
     "5_selection_crypto_Modéré": {
       "name": "selection_crypto",
-      "before": 19,
-      "after": 19,
+      "before": 21,
+      "after": 21,
       "rejected": 0,
       "category": "crypto",
       "profile": "Modéré",
       "top_k": [
+        {
+          "ticker": "BTC/USD",
+          "score": 75.0
+        },
+        {
+          "ticker": "ETH/USD",
+          "score": 75.0
+        },
         {
           "ticker": "PAXG/USD",
           "score": 100.0
@@ -380,21 +368,13 @@
         {
           "ticker": "GNO/USD",
           "score": 46.26
-        },
-        {
-          "ticker": "BTT/USD",
-          "score": 44.88
-        },
-        {
-          "ticker": "ATOM/EUR",
-          "score": 40.16
         }
       ]
     },
     "5_selection_bond_Modéré": {
       "name": "selection_bond",
-      "before": 20,
-      "after": 20,
+      "before": 3,
+      "after": 3,
       "rejected": 0,
       "category": "bond",
       "profile": "Modéré",
@@ -410,34 +390,6 @@
         {
           "ticker": "XTWO",
           "score": 99.56
-        },
-        {
-          "ticker": "GBIL",
-          "score": 99.46
-        },
-        {
-          "ticker": "USFR",
-          "score": 99.14
-        },
-        {
-          "ticker": "SCHO",
-          "score": 98.0
-        },
-        {
-          "ticker": "STIP",
-          "score": 97.55
-        },
-        {
-          "ticker": "DFIP",
-          "score": 97.27
-        },
-        {
-          "ticker": "CLTL",
-          "score": 97.16
-        },
-        {
-          "ticker": "TDTT",
-          "score": 97.13
         }
       ]
     },
@@ -551,8 +503,8 @@
     },
     "5_selection_bond_Stable": {
       "name": "selection_bond",
-      "before": 20,
-      "after": 20,
+      "before": 2,
+      "after": 2,
       "rejected": 0,
       "category": "bond",
       "profile": "Stable",
@@ -564,38 +516,6 @@
         {
           "ticker": "GBIL",
           "score": 97.47
-        },
-        {
-          "ticker": "USFR",
-          "score": 96.62
-        },
-        {
-          "ticker": "VGSH",
-          "score": 94.23
-        },
-        {
-          "ticker": "TFLO",
-          "score": 90.66
-        },
-        {
-          "ticker": "SCHO",
-          "score": 90.6
-        },
-        {
-          "ticker": "SPTS",
-          "score": 90.36
-        },
-        {
-          "ticker": "XTWO",
-          "score": 88.77
-        },
-        {
-          "ticker": "STIP",
-          "score": 88.49
-        },
-        {
-          "ticker": "CLIP",
-          "score": 87.62
         }
       ]
     }
@@ -3583,14 +3503,38 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.78,
+    "has_drift": true,
+    "drift_pct": 90.0,
     "details": {
-      "5_selection_equity_Stable.after": {
-        "current": 129,
-        "previous": 128,
-        "delta": 1,
-        "pct_change": 0.78
+      "5_selection_crypto_Agressif.after": {
+        "current": 32,
+        "previous": 30,
+        "delta": 2,
+        "pct_change": 6.67
+      },
+      "5_selection_bond_Agressif.after": {
+        "current": 5,
+        "previous": 20,
+        "delta": -15,
+        "pct_change": 75.0
+      },
+      "5_selection_crypto_Modéré.after": {
+        "current": 21,
+        "previous": 19,
+        "delta": 2,
+        "pct_change": 10.53
+      },
+      "5_selection_bond_Modéré.after": {
+        "current": 3,
+        "previous": 20,
+        "delta": -17,
+        "pct_change": 85.0
+      },
+      "5_selection_bond_Stable.after": {
+        "current": 2,
+        "previous": 20,
+        "delta": -18,
+        "pct_change": 90.0
       }
     }
   }
