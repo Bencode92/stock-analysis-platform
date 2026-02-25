@@ -1562,9 +1562,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         try:
             df_b = pd.read_csv(CONFIG["bonds_csv"])
             df_b["category"] = "bond"
-            df_b["fund_type"] = "bond"
+            # v6.33 FIX: Ne PAS écraser fund_type — preset_bond._dedup_by_fund_type()
+            # a besoin des types originaux (Short Government, Corporate Bond, etc.)
+            # pour diversifier. Écraser avec "bond" → tous groupés → max 2 pour Stable.
+            if "fund_type" not in df_b.columns:
+                df_b["fund_type"] = "bond"
             bonds_data = df_b.to_dict("records")
-            logger.info(f"Bonds: {CONFIG['bonds_csv']} ({len(bonds_data)} entrées) - fund_type forcé à 'bond'")
+            logger.info(f"Bonds: {CONFIG['bonds_csv']} ({len(bonds_data)} entrées) - fund_type préservé du CSV")
         except Exception as e:
             logger.warning(f"Impossible de charger Bonds: {e}")
     
