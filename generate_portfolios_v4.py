@@ -2002,11 +2002,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                             all_scored_etfs[_uid] = _etf.copy()
             else:
                 profile_etf_data = []
-            
+               
             # --- Bonds ---
             if bonds_data:
                 bonds_df = pd.DataFrame(bonds_data)
-                bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=20)
+                # v6.33: top_n par profil — Stable = peu mais qualité, Agressif = plus large
+                bonds_top_n = {"Stable": 6, "Modéré": 10, "Agressif": 15}.get(profile, 10)
+                bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=bonds_top_n)
                 profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
                 logger.info(f"   [{profile}] Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
                 # v5.1.2 FIX: Forcer category="bond"
@@ -2024,7 +2026,6 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                             all_scored_bonds[_uid] = _bond.copy()
             else:
                 profile_bonds_data = []
-            
             # --- Crypto ---
             if crypto_data:
                 crypto_df = pd.DataFrame(crypto_data)
