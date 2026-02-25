@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-25T09:44:42.112770",
+    "generated_at": "2026-02-25T10:05:36.099554",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -2132,9 +2132,9 @@
       "first_date": "2025-10-29",
       "last_date": "2026-02-25",
       "first_price": 516.5,
-      "last_price": 695.4,
-      "total_return_pct": 34.64,
-      "volatility_annual_pct": 35.1,
+      "last_price": 727.95,
+      "total_return_pct": 40.94,
+      "volatility_annual_pct": 35.86,
       "weights_by_profile": {
         "Agressif": 3.66,
         "Modéré": 10.0
@@ -2174,11 +2174,11 @@
         },
         {
           "date": "2026-02-25",
-          "close": 695.4,
+          "close": 727.95,
           "prev_date": "2026-02-24",
           "prev_close": 695.4,
-          "daily_return_pct": 0.0,
-          "formula": "(695.4000 / 695.4000) - 1"
+          "daily_return_pct": 4.6808,
+          "formula": "(727.9500 / 695.4000) - 1"
         }
       ],
       "is_benchmark": false
@@ -2610,12 +2610,12 @@
           "type": "Action",
           "weight_pct": 3.66,
           "price_prev": 695.4,
-          "price_today": 695.4,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
+          "price_today": 727.95,
+          "return_pct": 4.6808,
+          "contribution_pct": 0.1713
         }
       ],
-      "total_portfolio_return_pct": 0.1237,
+      "total_portfolio_return_pct": 0.295,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -2760,22 +2760,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 35.37,
-      "net_return_pct": 35.37,
-      "volatility_pct": 22.68,
+      "gross_return_pct": 35.61,
+      "net_return_pct": 35.61,
+      "volatility_pct": 22.67,
       "max_drawdown_pct": -6.05,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -1.04,
-      "excess_return_pct": 36.42
+      "excess_return_pct": 36.65
     },
     "Modéré": {
-      "gross_return_pct": 12.63,
-      "net_return_pct": 12.63,
-      "volatility_pct": 9.06,
+      "gross_return_pct": 13.16,
+      "net_return_pct": 13.16,
+      "volatility_pct": 9.07,
       "max_drawdown_pct": -1.63,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.27,
-      "excess_return_pct": 9.36
+      "excess_return_pct": 9.89
     },
     "Stable": {
       "gross_return_pct": 8.3,
