@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-25T12:32:08.962218",
+  "generated_at": "2026-02-25T14:53:43.739857",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,16 +201,16 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 25,
-    "selection_rate": "2.5%",
+    "total_selected": 11,
+    "selection_rate": "1.1%",
     "by_region": {
       "US": {
         "universe": 521,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       },
       "Europe": {
         "universe": 267,
-        "in_top_20_selected": 4
+        "in_top_20_selected": 0
       },
       "Asia": {
         "universe": 210,
@@ -220,28 +220,25 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 21
+        "selected": 10
       }
     }
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 4,
+      "selected_count": 2,
       "selected_names": [
         "SK HYNIX INC",
-        "LAM RESEARCH CORP",
-        "AMPHENOL CORP CLASS A",
-        "ASML HOLDING NV"
+        "AMPHENOL CORP CLASS A"
       ]
     },
     "Industries": {
-      "selected_count": 6,
+      "selected_count": 5,
       "selected_names": [
         "COMFORT SYSTEMS USA INC",
         "FORTUNE ELECTRIC LTD",
         "EMCOR GROUP INC",
         "VERTIV HOLDINGS CLASS A",
-        "HOWMET AEROSPACE INC",
         "SNAP ON INC"
       ]
     },
@@ -252,37 +249,16 @@
       ]
     },
     "Finance": {
-      "selected_count": 6,
+      "selected_count": 2,
       "selected_names": [
-        "BANCO SANTANDER SA",
         "ADMIRAL GROUP PLC",
-        "AGEAS SA",
-        "HARTFORD INSURANCE GROUP ",
-        "HANNOVER RUECK",
-        "WOORI FINANCIAL GROUP INC"
-      ]
-    },
-    "Biens de consommation cycliques": {
-      "selected_count": 3,
-      "selected_names": [
-        "ROSS STORES INC",
-        "INDUSTRIA DE DISENO TEXTI",
-        "TJX INC"
+        "AGEAS SA"
       ]
     },
     "Biens de consommation de base": {
-      "selected_count": 3,
+      "selected_count": 1,
       "selected_names": [
-        "SYSCO CORP",
-        "UNILEVER PLC",
-        "PROCTER & GAMBLE"
-      ]
-    },
-    "Santé": {
-      "selected_count": 2,
-      "selected_names": [
-        "NOVARTIS AG",
-        "JOHNSON & JOHNSON"
+        "SYSCO CORP"
       ]
     }
   },
@@ -290,8 +266,8 @@
     "US": {
       "total_in_universe": 521,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -328,18 +304,12 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.672 < seuil 0.674",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.569, quota atteint)",
           "details": {
+            "profile_score": 0.569,
+            "composite_score": 0.672,
             "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.672,
-            "min_selected_score": 0.674,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "LAM RESEARCH CORP",
-              "AMPHENOL CORP CLASS ",
-              "ASML HOLDING NV"
-            ]
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 90.0,
           "composite_score": 0.672,
@@ -412,18 +382,12 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.635 < seuil 0.674",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.436, quota atteint)",
           "details": {
+            "profile_score": 0.436,
+            "composite_score": 0.635,
             "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.635,
-            "min_selected_score": 0.674,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "LAM RESEARCH CORP",
-              "AMPHENOL CORP CLASS ",
-              "ASML HOLDING NV"
-            ]
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 100.0,
           "composite_score": 0.635,
@@ -599,20 +563,12 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 6/4), score 0.577 < seuil 0.591",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.472, quota atteint)",
           "details": {
+            "profile_score": 0.472,
+            "composite_score": 0.577,
             "sector": "Finance",
-            "sector_quota": "6/4",
-            "your_score": 0.577,
-            "min_selected_score": 0.591,
-            "selected_in_sector": [
-              "BANCO SANTANDER SA",
-              "ADMIRAL GROUP PLC",
-              "AGEAS SA",
-              "HARTFORD INSURANCE G",
-              "HANNOVER RUECK",
-              "WOORI FINANCIAL GROU"
-            ]
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 89.1,
           "composite_score": 0.577,
@@ -658,10 +614,13 @@
           "market_cap_billions": 593.5,
           "sector": "Santé",
           "country": "Etats-Unis",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.646, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.646,
+            "composite_score": 0.733,
+            "sector": "Santé",
+            "matched_preset": "defensif"
           },
           "buffett_score": 81.0,
           "composite_score": 0.733,
@@ -682,20 +641,12 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 6/4), score 0.665 < seuil 0.591",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.635, quota atteint)",
           "details": {
+            "profile_score": 0.635,
+            "composite_score": 0.665,
             "sector": "Finance",
-            "sector_quota": "6/4",
-            "your_score": 0.665,
-            "min_selected_score": 0.591,
-            "selected_in_sector": [
-              "BANCO SANTANDER SA",
-              "ADMIRAL GROUP PLC",
-              "AGEAS SA",
-              "HARTFORD INSURANCE G",
-              "HANNOVER RUECK",
-              "WOORI FINANCIAL GROU"
-            ]
+            "matched_preset": "defensif"
           },
           "buffett_score": 90.4,
           "composite_score": 0.665,
@@ -742,20 +693,12 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 6/4), score 0.664 < seuil 0.591",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.620, quota atteint)",
           "details": {
+            "profile_score": 0.62,
+            "composite_score": 0.664,
             "sector": "Finance",
-            "sector_quota": "6/4",
-            "your_score": 0.664,
-            "min_selected_score": 0.591,
-            "selected_in_sector": [
-              "BANCO SANTANDER SA",
-              "ADMIRAL GROUP PLC",
-              "AGEAS SA",
-              "HARTFORD INSURANCE G",
-              "HANNOVER RUECK",
-              "WOORI FINANCIAL GROU"
-            ]
+            "matched_preset": "defensif"
           },
           "buffett_score": 90.2,
           "composite_score": 0.664,
@@ -846,8 +789,8 @@
     "Europe": {
       "total_in_universe": 267,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 4,
-      "rejection_rate_top_20": "80%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -883,10 +826,13 @@
           "market_cap_billions": 490.4,
           "sector": "Technologie de l'information",
           "country": "Pays-Bas",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.598, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.598,
+            "composite_score": 0.728,
+            "sector": "Technologie de l'information",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 100.0,
           "composite_score": 0.728,
@@ -984,10 +930,13 @@
           "market_cap_billions": 247.3,
           "sector": "Santé",
           "country": "Suisse",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.676, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.676,
+            "composite_score": 0.727,
+            "sector": "Santé",
+            "matched_preset": "rendement"
           },
           "buffett_score": 80.0,
           "composite_score": 0.727,
@@ -1034,20 +983,12 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 6/4), score 0.594 < seuil 0.591",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.481, quota atteint)",
           "details": {
+            "profile_score": 0.481,
+            "composite_score": 0.594,
             "sector": "Finance",
-            "sector_quota": "6/4",
-            "your_score": 0.594,
-            "min_selected_score": 0.591,
-            "selected_in_sector": [
-              "BANCO SANTANDER SA",
-              "ADMIRAL GROUP PLC",
-              "AGEAS SA",
-              "HARTFORD INSURANCE G",
-              "HANNOVER RUECK",
-              "WOORI FINANCIAL GROU"
-            ]
+            "matched_preset": "value_dividend"
           },
           "buffett_score": 88.9,
           "composite_score": 0.594,
@@ -1197,10 +1138,10 @@
           "sector": "Industries",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.541 < seuil 0.640",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.541 < seuil 0.640",
           "details": {
             "sector": "Industries",
-            "sector_quota": "6/4",
+            "sector_quota": "5/4",
             "your_score": 0.541,
             "min_selected_score": 0.64,
             "selected_in_sector": [
@@ -1208,7 +1149,6 @@
               "FORTUNE ELECTRIC LTD",
               "EMCOR GROUP INC",
               "VERTIV HOLDINGS CLAS",
-              "HOWMET AEROSPACE INC",
               "SNAP ON INC"
             ]
           },
@@ -1230,10 +1170,13 @@
           "market_cap_billions": 179.3,
           "sector": "Biens de consommation cycliques",
           "country": "Espagne",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.671, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.671,
+            "composite_score": 0.713,
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 100.0,
           "composite_score": 0.713,
@@ -1302,10 +1245,13 @@
           "market_cap_billions": 156.4,
           "sector": "Finance",
           "country": "Espagne",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.616, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.616,
+            "composite_score": 0.591,
+            "sector": "Finance",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 96.8,
           "composite_score": 0.591,
@@ -1326,10 +1272,10 @@
           "sector": "Industries",
           "country": "France",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.573 < seuil 0.640",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.573 < seuil 0.640",
           "details": {
             "sector": "Industries",
-            "sector_quota": "6/4",
+            "sector_quota": "5/4",
             "your_score": 0.573,
             "min_selected_score": 0.64,
             "selected_in_sector": [
@@ -1337,7 +1283,6 @@
               "FORTUNE ELECTRIC LTD",
               "EMCOR GROUP INC",
               "VERTIV HOLDINGS CLAS",
-              "HOWMET AEROSPACE INC",
               "SNAP ON INC"
             ]
           },
@@ -1360,20 +1305,12 @@
           "sector": "Finance",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 6/4), score 0.583 < seuil 0.591",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.626, quota atteint)",
           "details": {
+            "profile_score": 0.626,
+            "composite_score": 0.583,
             "sector": "Finance",
-            "sector_quota": "6/4",
-            "your_score": 0.583,
-            "min_selected_score": 0.591,
-            "selected_in_sector": [
-              "BANCO SANTANDER SA",
-              "ADMIRAL GROUP PLC",
-              "AGEAS SA",
-              "HARTFORD INSURANCE G",
-              "HANNOVER RUECK",
-              "WOORI FINANCIAL GROU"
-            ]
+            "matched_preset": "rendement"
           },
           "buffett_score": 64.9,
           "composite_score": 0.583,
@@ -1402,18 +1339,12 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.669 < seuil 0.674",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.623, quota atteint)",
           "details": {
+            "profile_score": 0.623,
+            "composite_score": 0.669,
             "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.669,
-            "min_selected_score": 0.674,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "LAM RESEARCH CORP",
-              "AMPHENOL CORP CLASS ",
-              "ASML HOLDING NV"
-            ]
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 59.0,
           "composite_score": 0.669,
@@ -1433,18 +1364,12 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.650 < seuil 0.674",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.496, quota atteint)",
           "details": {
+            "profile_score": 0.496,
+            "composite_score": 0.65,
             "sector": "Technologie de l'information",
-            "sector_quota": "4/4",
-            "your_score": 0.65,
-            "min_selected_score": 0.674,
-            "selected_in_sector": [
-              "SK HYNIX INC",
-              "LAM RESEARCH CORP",
-              "AMPHENOL CORP CLASS ",
-              "ASML HOLDING NV"
-            ]
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 59.0,
           "composite_score": 0.65,
@@ -1693,19 +1618,18 @@
           "sector": "Finance",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Finance: 6/4), score 0.571 < seuil 0.591",
+          "status": "❌ Preset 'agressif' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, rendement, value_dividend)",
           "details": {
-            "sector": "Finance",
-            "sector_quota": "6/4",
-            "your_score": 0.571,
-            "min_selected_score": 0.591,
-            "selected_in_sector": [
-              "BANCO SANTANDER SA",
-              "ADMIRAL GROUP PLC",
-              "AGEAS SA",
-              "HARTFORD INSURANCE G",
-              "HANNOVER RUECK",
-              "WOORI FINANCIAL GROU"
+            "matched_preset": "agressif",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "rendement",
+              "value_dividend"
             ]
           },
           "buffett_score": 74.1,
@@ -2032,7 +1956,7 @@
         "ticker": "HNR1",
         "sort_score": 0.7797,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.6355,
         "profile_score": 0.7797,
         "buffett_score": 97.3,
@@ -2041,6 +1965,7 @@
         "sector": "Finance",
         "country": "Allemagne",
         "matched_preset": "rendement",
+        "rejection_reason": "Score composite (0.780) insuffisant pour le quota",
         "roe": 21.17,
         "de_ratio": 0.37,
         "market_cap": "30462837506",
@@ -2260,7 +2185,7 @@
         "ticker": "ULVR",
         "sort_score": 0.7231,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.7063,
         "profile_score": 0.7231,
         "buffett_score": 70.0,
@@ -2269,6 +2194,7 @@
         "sector": "Biens de consommation de base",
         "country": "Royaume-Uni",
         "matched_preset": "rendement",
+        "rejection_reason": "Score composite (0.723) insuffisant pour le quota",
         "roe": 29.41,
         "de_ratio": 1.36,
         "market_cap": "119557199185.92",
@@ -2445,7 +2371,7 @@
         "ticker": "PG",
         "sort_score": 0.6853,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.7256,
         "profile_score": 0.6853,
         "buffett_score": 84.0,
@@ -2454,6 +2380,7 @@
         "sector": "Biens de consommation de base",
         "country": "Etats-Unis",
         "matched_preset": "rendement",
+        "rejection_reason": "Score composite (0.685) insuffisant pour le quota",
         "roe": 31.24,
         "de_ratio": 0.68,
         "market_cap": "386858785551",
@@ -2485,7 +2412,7 @@
         "ticker": "HIG",
         "sort_score": 0.6818,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.6388,
         "profile_score": 0.6818,
         "buffett_score": 97.3,
@@ -2494,6 +2421,7 @@
         "sector": "Finance",
         "country": "Etats-Unis",
         "matched_preset": "defensif",
+        "rejection_reason": "Score composite (0.682) insuffisant pour le quota",
         "roe": 19.58,
         "de_ratio": 0.27,
         "market_cap": "39182704952",
@@ -2505,7 +2433,7 @@
         "ticker": "NOVN",
         "sort_score": 0.6759,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.727,
         "profile_score": 0.6759,
         "buffett_score": 80.0,
@@ -2514,6 +2442,7 @@
         "sector": "Santé",
         "country": "Suisse",
         "matched_preset": "rendement",
+        "rejection_reason": "Score composite (0.676) insuffisant pour le quota",
         "roe": 30.63,
         "de_ratio": 0.76,
         "market_cap": "247296476679",
@@ -2546,7 +2475,7 @@
         "ticker": "ITX",
         "sort_score": 0.6711,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.7132,
         "profile_score": 0.6711,
         "buffett_score": 100.0,
@@ -2555,6 +2484,7 @@
         "sector": "Biens de consommation cycliques",
         "country": "Espagne",
         "matched_preset": "quality_premium",
+        "rejection_reason": "Score composite (0.671) insuffisant pour le quota",
         "roe": 30.65,
         "de_ratio": 0.3,
         "market_cap": "179315743888",
@@ -2608,7 +2538,7 @@
         "ticker": "316140",
         "sort_score": 0.664,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.6367,
         "profile_score": 0.664,
         "buffett_score": 83.4,
@@ -2617,6 +2547,7 @@
         "sector": "Finance",
         "country": "Corée",
         "matched_preset": "value_dividend",
+        "rejection_reason": "Score composite (0.664) insuffisant pour le quota",
         "roe": 8.84,
         "de_ratio": 2.29,
         "market_cap": "28581867120400",
@@ -3000,7 +2931,7 @@
         "ticker": "TJX",
         "sort_score": 0.65,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.7018,
         "profile_score": 0.65,
         "buffett_score": 86.0,
@@ -3009,6 +2940,7 @@
         "sector": "Biens de consommation cycliques",
         "country": "Etats-Unis",
         "matched_preset": "defensif",
+        "rejection_reason": "Score composite (0.650) insuffisant pour le quota",
         "roe": 61.98,
         "de_ratio": 1.52,
         "market_cap": "175521581549",
@@ -3144,7 +3076,7 @@
         "ticker": "JNJ",
         "sort_score": 0.6462,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.7333,
         "profile_score": 0.6462,
         "buffett_score": 81.0,
@@ -3153,6 +3085,7 @@
         "sector": "Santé",
         "country": "Etats-Unis",
         "matched_preset": "defensif",
+        "rejection_reason": "Score composite (0.646) insuffisant pour le quota",
         "roe": 35.03,
         "de_ratio": 0.59,
         "market_cap": "593509909958",
@@ -3885,7 +3818,7 @@
         "ticker": "SAN",
         "sort_score": 0.6159,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.591,
         "profile_score": 0.6159,
         "buffett_score": 96.8,
@@ -3894,6 +3827,7 @@
         "sector": "Finance",
         "country": "Espagne",
         "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.616) insuffisant pour le quota",
         "roe": 14.09,
         "de_ratio": 2.88,
         "market_cap": "156350056000",
@@ -3905,7 +3839,7 @@
         "ticker": "SAN",
         "sort_score": 0.6159,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.4281,
         "profile_score": 0.6159,
         "buffett_score": 46.0,
@@ -3914,6 +3848,7 @@
         "sector": "Santé",
         "country": "France",
         "matched_preset": "value_dividend",
+        "rejection_reason": "Score composite (0.616) insuffisant pour le quota",
         "de_ratio": 0.23,
         "market_cap": "97650121056",
         "dividend_yield": 4.86
