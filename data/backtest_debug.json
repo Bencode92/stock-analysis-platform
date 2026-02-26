@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-02-26T09:56:49.026849",
+    "generated_at": "2026-02-26T12:18:07.192607",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -253,7 +253,7 @@
       "total_return_pct": 9.73,
       "volatility_annual_pct": 47.59,
       "weights_by_profile": {
-        "Agressif": 2.47
+        "Agressif": 2.46
       },
       "price_samples": [
         {
@@ -1163,7 +1163,7 @@
       "total_return_pct": 29.0,
       "volatility_annual_pct": 29.46,
       "weights_by_profile": {
-        "Agressif": 1.21
+        "Agressif": 1.2
       },
       "price_samples": [
         {
@@ -1668,11 +1668,11 @@
       "first_date": "2025-10-30",
       "last_date": "2026-02-26",
       "first_price": 506.9,
-      "last_price": 727.65,
-      "total_return_pct": 43.55,
-      "volatility_annual_pct": 35.64,
+      "last_price": 737.35,
+      "total_return_pct": 45.46,
+      "volatility_annual_pct": 35.66,
       "weights_by_profile": {
-        "Agressif": 3.78,
+        "Agressif": 3.8,
         "Modéré": 10.0
       },
       "price_samples": [
@@ -1710,11 +1710,11 @@
         },
         {
           "date": "2026-02-26",
-          "close": 727.65,
+          "close": 737.35,
           "prev_date": "2026-02-25",
           "prev_close": 727.65,
-          "daily_return_pct": 0.0,
-          "formula": "(727.6500 / 727.6500) - 1"
+          "daily_return_pct": 1.3331,
+          "formula": "(737.3500 / 727.6500) - 1"
         }
       ],
       "is_benchmark": false
@@ -2153,14 +2153,14 @@
         {
           "ticker": "VEDL",
           "type": "Action",
-          "weight_pct": 3.78,
+          "weight_pct": 3.8,
           "price_prev": 727.65,
-          "price_today": 727.65,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
+          "price_today": 737.35,
+          "return_pct": 1.3331,
+          "contribution_pct": 0.0507
         }
       ],
-      "total_portfolio_return_pct": 1.0344,
+      "total_portfolio_return_pct": 1.085,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -2305,22 +2305,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 40.25,
-      "net_return_pct": 40.25,
+      "gross_return_pct": 40.33,
+      "net_return_pct": 40.33,
       "volatility_pct": 23.57,
       "max_drawdown_pct": -5.92,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -0.42,
-      "excess_return_pct": 40.67
+      "excess_return_pct": 40.74
     },
     "Modéré": {
-      "gross_return_pct": 12.44,
-      "net_return_pct": 12.44,
-      "volatility_pct": 8.87,
+      "gross_return_pct": 12.59,
+      "net_return_pct": 12.59,
+      "volatility_pct": 8.86,
       "max_drawdown_pct": -2.13,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 3.61,
-      "excess_return_pct": 8.82
+      "excess_return_pct": 8.97
     },
     "Stable": {
       "gross_return_pct": 4.53,
