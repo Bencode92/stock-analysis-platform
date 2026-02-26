@@ -45,6 +45,7 @@ Usage:
     from portfolio_engine.preset_meta import PRESET_META, PROFILE_BUCKET_TARGETS, Role
     from portfolio_engine.preset_meta import PROFILE_POLICY, get_profile_policy
     from portfolio_engine.preset_meta import select_equities_for_profile
+    from portfolio_engine.preset_meta import select_crypto_core_satellite, CRYPTO_CORE_CONFIG
     
     selected, meta = select_equities_for_profile(equities, "Agressif", target_n=25)
 """
@@ -601,6 +602,154 @@ CRYPTO_PRESET_PRIORITY = [
     "quality_risk", "trend3_12m", "swing7_30", "recovery_crypto",
     "momentum24h", "highvol_lottery",
 ]
+# ============ v5.3.0: CRYPTO DYNAMIC CORE/SATELLITE ============
+# Remplace le hardcoding BTC/ETH dans optimizer.py CRYPTO_CORE_SATELLITE
+# Le core = top N cryptos par score composite, PAS par convention.
+
+CRYPTO_RANKING_WEIGHTS: Dict[str, Dict[str, float]] = {
+    "Agressif": {
+        "sharpe_ratio":    0.30,
+        "ret_90d_pct":     0.25,
+        "drawdown_90d":   -0.20,   # négatif = pénalise les forts drawdowns
+        "vol_30d_annual":  -0.15,   # négatif = pénalise la haute vol
+        "ret_1y_pct":      0.10,
+    },
+    "Modéré": {
+        "sharpe_ratio":    0.25,
+        "ret_90d_pct":     0.15,
+        "drawdown_90d":   -0.30,   # plus conservateur
+        "vol_30d_annual":  -0.25,
+        "ret_1y_pct":      0.05,
+    },
+}
+
+CRYPTO_CORE_CONFIG: Dict[str, Dict] = {
+    "Agressif": {
+        "n_core": 2,               # top 2 par score = core
+        "core_pct": 0.60,          # 60% du budget crypto en core
+        "n_satellite": 3,          # top 3 suivants = satellite
+        "vol_max_core": 120.0,     # pas de filtre vol strict pour core Agressif
+        "dd_max_satellite": 40.0,  # satellite exclu si drawdown > 40%
+    },
+    "Modéré": {
+        "n_core": 2,
+        "core_pct": 0.70,          # 70% du budget crypto en core
+        "n_satellite": 2,
+        "vol_max_core": 80.0,      # filtre vol pour core Modéré
+        "dd_max_satellite": 30.0,
+    },
+}
+
+
+def rank_cryptos_for_profile(
+    cryptos: List[Dict],
+    profile: str,
+) -> List[Dict]:
+    """v5.3.0: Classe les cryptos par score composite basé sur métriques.
+
+    Retourne la liste triée par score décroissant, avec _crypto_rank_score ajouté.
+    Ne modifie PAS les dicts en entrée (fait une copie du score).
+    """
+    weights = CRYPTO_RANKING_WEIGHTS.get(profile, CRYPTO_RANKING_WEIGHTS["Modéré"])
+
+    RANGES = {
+        "sharpe_ratio":    (-5.0, 7.0),
+        "ret_90d_pct":     (-60.0, 100.0),
+        "drawdown_90d":    (0.0, 80.0),
+        "vol_30d_annual":  (20.0, 150.0),
+        "ret_1y_pct":      (-80.0, 200.0),
+    }
+
+    for crypto in cryptos:
+        score = 0.0
+        missing = 0
+
+        for metric, weight in weights.items():
+            raw = crypto.get(metric)
+            if raw is None:
+                missing += 1
+                continue
+            try:
+                val = float(raw)
+            except (TypeError, ValueError):
+                missing += 1
+                continue
+
+            # drawdown stocké en négatif → abs pour comparaison
+            if "drawdown" in metric:
+                val = abs(val)
+
+            lo, hi = RANGES.get(metric, (0, 100))
+            if hi > lo:
+                normalized = max(0.0, min(1.0, (val - lo) / (hi - lo)))
+            else:
+                normalized = 0.5
+
+            score += weight * normalized
+
+        # Pénalité si trop de données manquantes
+        if missing > len(weights) // 2:
+            score *= 0.5
+
+        crypto["_crypto_rank_score"] = round(score, 4)
+
+    cryptos.sort(key=lambda x: x.get("_crypto_rank_score", 0), reverse=True)
+    return cryptos
+
+
+def select_crypto_core_satellite(
+    cryptos: List[Dict],
+    profile: str,
+) -> Tuple[List[Dict], List[Dict], Dict]:
+    """v5.3.0: Sélectionne core et satellite dynamiquement par mérite.
+
+    Args:
+        cryptos: Liste de dicts crypto (source_data enrichis) avec au minimum
+                 les clés sharpe_ratio, ret_90d_pct, drawdown_90d, vol_30d_annual.
+                 Chaque dict DOIT avoir une clé "_asset_id" = l'ID de l'Asset optimizer.
+        profile: "Agressif" ou "Modéré"
+
+    Returns:
+        (core_list, satellite_list, meta_dict)
+    """
+    config = CRYPTO_CORE_CONFIG.get(profile)
+    if config is None:
+        return [], [], {"reason": "no_config_for_profile"}
+
+    ranked = rank_cryptos_for_profile(cryptos, profile)
+
+    # Filtre vol pour core (Modéré a un seuil)
+    vol_max = config.get("vol_max_core", 999)
+    eligible_core = [
+        c for c in ranked
+        if (c.get("vol_30d_annual") or 999) <= vol_max
+    ]
+
+    n_core = config["n_core"]
+    n_sat = config["n_satellite"]
+    dd_max = config["dd_max_satellite"]
+
+    core = eligible_core[:n_core]
+    core_ids = {c.get("_asset_id") for c in core}
+
+    # Satellite : top suivants, filtrés par drawdown
+    remaining = [c for c in ranked if c.get("_asset_id") not in core_ids]
+    satellite = [
+        c for c in remaining
+        if abs(float(c.get("drawdown_90d") or 0)) <= dd_max
+    ][:n_sat]
+
+    meta = {
+        "core_symbols": [c.get("symbol", c.get("_asset_id", "?")) for c in core],
+        "satellite_symbols": [c.get("symbol", c.get("_asset_id", "?")) for c in satellite],
+        "core_scores": [c.get("_crypto_rank_score", 0) for c in core],
+        "satellite_scores": [c.get("_crypto_rank_score", 0) for c in satellite],
+        "total_ranked": len(ranked),
+        "vol_max_core": vol_max,
+        "dd_max_satellite": dd_max,
+    }
+
+    return core, satellite, meta
 
 
 # ============ PROFILE BUCKET TARGETS ============
