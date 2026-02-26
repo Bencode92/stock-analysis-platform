@@ -4489,7 +4489,7 @@ class PortfolioOptimizer:
         allocation = {k: v for k, v in allocation.items() if v >= 0.5}
         
         return allocation   
-def _apply_crypto_core_satellite(
+    def _apply_crypto_core_satellite(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
