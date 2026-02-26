@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-26T12:56:35.287896",
+  "generated_at": "2026-02-26T14:02:49.537795",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,8 +201,8 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 16,
-    "selection_rate": "1.6%",
+    "total_selected": 14,
+    "selection_rate": "1.4%",
     "by_region": {
       "US": {
         "universe": 521,
@@ -210,7 +210,7 @@
       },
       "Europe": {
         "universe": 267,
-        "in_top_20_selected": 2
+        "in_top_20_selected": 1
       },
       "Asia": {
         "universe": 210,
@@ -220,16 +220,15 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 15
+        "selected": 12
       }
     }
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 3,
+      "selected_count": 2,
       "selected_names": [
         "SK HYNIX INC",
-        "LAM RESEARCH CORP",
         "AMPHENOL CORP CLASS A"
       ]
     },
@@ -249,18 +248,17 @@
         "VEDANTA LTD"
       ]
     },
-    "Finance": {
-      "selected_count": 3,
-      "selected_names": [
-        "BANCO SANTANDER SA",
-        "ADMIRAL GROUP PLC",
-        "AGEAS SA"
-      ]
-    },
     "Biens de consommation cycliques": {
       "selected_count": 1,
       "selected_names": [
         "ROSS STORES INC"
+      ]
+    },
+    "Finance": {
+      "selected_count": 2,
+      "selected_names": [
+        "ADMIRAL GROUP PLC",
+        "AGEAS SA"
       ]
     },
     "Biens de consommation de base": {
@@ -803,8 +801,8 @@
     "Europe": {
       "total_in_universe": 267,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 2,
-      "rejection_rate_top_20": "90%",
+      "selected_in_top_20": 1,
+      "rejection_rate_top_20": "95%",
       "stocks": [
         {
           "rank": 1,
@@ -1256,10 +1254,13 @@
           "market_cap_billions": 163.9,
           "sector": "Finance",
           "country": "Espagne",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.612, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.612,
+            "composite_score": 0.602,
+            "sector": "Finance",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 96.8,
           "composite_score": 0.602,
@@ -3721,7 +3722,7 @@
         "ticker": "LRCX",
         "sort_score": 0.6181,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.736,
         "profile_score": 0.6181,
         "buffett_score": 98.0,
@@ -3730,6 +3731,7 @@
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "matched_preset": "quality_premium",
+        "rejection_reason": "Score composite (0.618) insuffisant pour le quota",
         "roe": 58.24,
         "de_ratio": 0.45,
         "market_cap": "313392032739",
@@ -3888,7 +3890,7 @@
         "ticker": "SAN",
         "sort_score": 0.6124,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.602,
         "profile_score": 0.6124,
         "buffett_score": 96.8,
@@ -3897,6 +3899,7 @@
         "sector": "Finance",
         "country": "Espagne",
         "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.612) insuffisant pour le quota",
         "roe": 14.09,
         "de_ratio": 2.88,
         "market_cap": "163865192000",
@@ -3908,7 +3911,7 @@
         "ticker": "SAN",
         "sort_score": 0.6124,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.4284,
         "profile_score": 0.6124,
         "buffett_score": 46.0,
@@ -3917,6 +3920,7 @@
         "sector": "Santé",
         "country": "France",
         "matched_preset": "value_dividend",
+        "rejection_reason": "Score composite (0.612) insuffisant pour le quota",
         "de_ratio": 0.23,
         "market_cap": "97557114993",
         "dividend_yield": 4.85
