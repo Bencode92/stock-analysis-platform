@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-26T15:31:25.464214",
+  "generated_at": "2026-02-26T16:39:05.783874",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,16 +201,16 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 15,
-    "selection_rate": "1.5%",
+    "total_selected": 20,
+    "selection_rate": "2.0%",
     "by_region": {
       "US": {
         "universe": 521,
-        "in_top_20_selected": 0
+        "in_top_20_selected": 1
       },
       "Europe": {
         "universe": 267,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 3
       },
       "Asia": {
         "universe": 210,
@@ -220,26 +220,30 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 14
+        "selected": 17
       }
     }
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 2,
+      "selected_count": 5,
       "selected_names": [
         "SK HYNIX INC",
-        "LAM RESEARCH CORP"
+        "LAM RESEARCH CORP",
+        "AMPHENOL CORP CLASS A",
+        "NVIDIA CORP",
+        "ASML HOLDING NV"
       ]
     },
     "Industries": {
-      "selected_count": 5,
+      "selected_count": 6,
       "selected_names": [
         "FORTUNE ELECTRIC LTD",
         "COMFORT SYSTEMS USA INC",
         "EMCOR GROUP INC",
         "VERTIV HOLDINGS CLASS A",
-        "SNAP ON INC"
+        "SNAP ON INC",
+        "ILLINOIS TOOL INC"
       ]
     },
     "Matériaux": {
@@ -248,18 +252,19 @@
         "VEDANTA LTD"
       ]
     },
+    "Finance": {
+      "selected_count": 4,
+      "selected_names": [
+        "BANCO SANTANDER SA",
+        "ADMIRAL GROUP PLC",
+        "AGEAS SA",
+        "WOORI FINANCIAL GROUP INC"
+      ]
+    },
     "Biens de consommation cycliques": {
       "selected_count": 1,
       "selected_names": [
         "ROSS STORES INC"
-      ]
-    },
-    "Finance": {
-      "selected_count": 3,
-      "selected_names": [
-        "ADMIRAL GROUP PLC",
-        "AGEAS SA",
-        "WOORI FINANCIAL GROUP INC"
       ]
     },
     "Biens de consommation de base": {
@@ -280,8 +285,8 @@
     "US": {
       "total_in_universe": 521,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 0,
-      "rejection_rate_top_20": "100%",
+      "selected_in_top_20": 1,
+      "rejection_rate_top_20": "95%",
       "stocks": [
         {
           "rank": 1,
@@ -291,13 +296,10 @@
           "market_cap_billions": 4761.3,
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
-          "selected": false,
-          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "hard_filter_reasons": [
-              "vol>45.0"
-            ],
-            "profile": "Modéré"
+            "status": "selected"
           },
           "buffett_score": 94.0,
           "composite_score": 0.604,
@@ -318,12 +320,19 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.570, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.671 < seuil 0.604",
           "details": {
-            "profile_score": 0.57,
-            "composite_score": 0.671,
             "sector": "Technologie de l'information",
-            "matched_preset": "quality_premium"
+            "sector_quota": "5/4",
+            "your_score": 0.671,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP",
+              "ASML HOLDING NV"
+            ]
           },
           "buffett_score": 90.0,
           "composite_score": 0.671,
@@ -396,12 +405,19 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.433, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.641 < seuil 0.604",
           "details": {
-            "profile_score": 0.433,
-            "composite_score": 0.641,
             "sector": "Technologie de l'information",
-            "matched_preset": "quality_premium"
+            "sector_quota": "5/4",
+            "your_score": 0.641,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP",
+              "ASML HOLDING NV"
+            ]
           },
           "buffett_score": 100.0,
           "composite_score": 0.641,
@@ -577,12 +593,18 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.476, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.582 < seuil 0.602",
           "details": {
-            "profile_score": 0.476,
-            "composite_score": 0.582,
             "sector": "Finance",
-            "matched_preset": "quality_premium"
+            "sector_quota": "4/4",
+            "your_score": 0.582,
+            "min_selected_score": 0.602,
+            "selected_in_sector": [
+              "BANCO SANTANDER SA",
+              "ADMIRAL GROUP PLC",
+              "AGEAS SA",
+              "WOORI FINANCIAL GROU"
+            ]
           },
           "buffett_score": 89.1,
           "composite_score": 0.582,
@@ -629,12 +651,18 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.637, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.668 < seuil 0.602",
           "details": {
-            "profile_score": 0.637,
-            "composite_score": 0.668,
             "sector": "Finance",
-            "matched_preset": "defensif"
+            "sector_quota": "4/4",
+            "your_score": 0.668,
+            "min_selected_score": 0.602,
+            "selected_in_sector": [
+              "BANCO SANTANDER SA",
+              "ADMIRAL GROUP PLC",
+              "AGEAS SA",
+              "WOORI FINANCIAL GROU"
+            ]
           },
           "buffett_score": 90.2,
           "composite_score": 0.668,
@@ -707,12 +735,18 @@
           "sector": "Finance",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.624, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.667 < seuil 0.602",
           "details": {
-            "profile_score": 0.624,
-            "composite_score": 0.667,
             "sector": "Finance",
-            "matched_preset": "defensif"
+            "sector_quota": "4/4",
+            "your_score": 0.667,
+            "min_selected_score": 0.602,
+            "selected_in_sector": [
+              "BANCO SANTANDER SA",
+              "ADMIRAL GROUP PLC",
+              "AGEAS SA",
+              "WOORI FINANCIAL GROU"
+            ]
           },
           "buffett_score": 89.9,
           "composite_score": 0.667,
@@ -803,8 +837,8 @@
     "Europe": {
       "total_in_universe": 267,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 3,
+      "rejection_rate_top_20": "85%",
       "stocks": [
         {
           "rank": 1,
@@ -840,13 +874,10 @@
           "market_cap_billions": 500.1,
           "sector": "Technologie de l'information",
           "country": "Pays-Bas",
-          "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.604, quota atteint)",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "profile_score": 0.604,
-            "composite_score": 0.733,
-            "sector": "Technologie de l'information",
-            "matched_preset": "quality_premium"
+            "status": "selected"
           },
           "buffett_score": 100.0,
           "composite_score": 0.733,
@@ -968,12 +999,18 @@
           "sector": "Finance",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.468, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.615 < seuil 0.602",
           "details": {
-            "profile_score": 0.468,
-            "composite_score": 0.615,
             "sector": "Finance",
-            "matched_preset": "value_dividend"
+            "sector_quota": "4/4",
+            "your_score": 0.615,
+            "min_selected_score": 0.602,
+            "selected_in_sector": [
+              "BANCO SANTANDER SA",
+              "ADMIRAL GROUP PLC",
+              "AGEAS SA",
+              "WOORI FINANCIAL GROU"
+            ]
           },
           "buffett_score": 88.9,
           "composite_score": 0.615,
@@ -1149,10 +1186,10 @@
           "sector": "Industries",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.547 < seuil 0.640",
+          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.547 < seuil 0.640",
           "details": {
             "sector": "Industries",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.547,
             "min_selected_score": 0.64,
             "selected_in_sector": [
@@ -1160,7 +1197,8 @@
               "COMFORT SYSTEMS USA ",
               "EMCOR GROUP INC",
               "VERTIV HOLDINGS CLAS",
-              "SNAP ON INC"
+              "SNAP ON INC",
+              "ILLINOIS TOOL INC"
             ]
           },
           "buffett_score": 57.0,
@@ -1256,13 +1294,10 @@
           "market_cap_billions": 163.9,
           "sector": "Finance",
           "country": "Espagne",
-          "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.613, quota atteint)",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "profile_score": 0.613,
-            "composite_score": 0.602,
-            "sector": "Finance",
-            "matched_preset": "momentum_trend"
+            "status": "selected"
           },
           "buffett_score": 96.8,
           "composite_score": 0.602,
@@ -1283,10 +1318,10 @@
           "sector": "Industries",
           "country": "France",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.575 < seuil 0.640",
+          "status": "❌ Quota sectoriel atteint (Industries: 6/4), score 0.575 < seuil 0.640",
           "details": {
             "sector": "Industries",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.575,
             "min_selected_score": 0.64,
             "selected_in_sector": [
@@ -1294,7 +1329,8 @@
               "COMFORT SYSTEMS USA ",
               "EMCOR GROUP INC",
               "VERTIV HOLDINGS CLAS",
-              "SNAP ON INC"
+              "SNAP ON INC",
+              "ILLINOIS TOOL INC"
             ]
           },
           "buffett_score": 64.0,
@@ -1316,12 +1352,18 @@
           "sector": "Finance",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.627, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.585 < seuil 0.602",
           "details": {
-            "profile_score": 0.627,
-            "composite_score": 0.585,
             "sector": "Finance",
-            "matched_preset": "rendement"
+            "sector_quota": "4/4",
+            "your_score": 0.585,
+            "min_selected_score": 0.602,
+            "selected_in_sector": [
+              "BANCO SANTANDER SA",
+              "ADMIRAL GROUP PLC",
+              "AGEAS SA",
+              "WOORI FINANCIAL GROU"
+            ]
           },
           "buffett_score": 64.8,
           "composite_score": 0.585,
@@ -1350,12 +1392,19 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.625, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.689 < seuil 0.604",
           "details": {
-            "profile_score": 0.625,
-            "composite_score": 0.689,
             "sector": "Technologie de l'information",
-            "matched_preset": "momentum_trend"
+            "sector_quota": "5/4",
+            "your_score": 0.689,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP",
+              "ASML HOLDING NV"
+            ]
           },
           "buffett_score": 59.0,
           "composite_score": 0.689,
@@ -1375,12 +1424,19 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.499, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 5/4), score 0.672 < seuil 0.604",
           "details": {
-            "profile_score": 0.499,
-            "composite_score": 0.672,
             "sector": "Technologie de l'information",
-            "matched_preset": "momentum_trend"
+            "sector_quota": "5/4",
+            "your_score": 0.672,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP",
+              "ASML HOLDING NV"
+            ]
           },
           "buffett_score": 59.0,
           "composite_score": 0.672,
@@ -1629,18 +1685,17 @@
           "sector": "Finance",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Preset 'agressif' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, rendement, value_dividend)",
+          "status": "❌ Quota sectoriel atteint (Finance: 4/4), score 0.566 < seuil 0.602",
           "details": {
-            "matched_preset": "agressif",
-            "profile": "Modéré",
-            "allowed_presets": [
-              "croissance",
-              "defensif",
-              "low_volatility",
-              "momentum_trend",
-              "quality_premium",
-              "rendement",
-              "value_dividend"
+            "sector": "Finance",
+            "sector_quota": "4/4",
+            "your_score": 0.566,
+            "min_selected_score": 0.602,
+            "selected_in_sector": [
+              "BANCO SANTANDER SA",
+              "ADMIRAL GROUP PLC",
+              "AGEAS SA",
+              "WOORI FINANCIAL GROU"
             ]
           },
           "buffett_score": 74.1,
@@ -2032,7 +2087,7 @@
         "ticker": "NVDA",
         "sort_score": 0.7649,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.6039,
         "profile_score": 0.7649,
         "buffett_score": 94.0,
@@ -2041,7 +2096,6 @@
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "matched_preset": "quality_high_vol",
-        "rejection_reason": "Score composite (0.765) insuffisant pour le quota",
         "roe": 119.18,
         "de_ratio": 0.13,
         "market_cap": "4761299320000",
@@ -2858,7 +2912,7 @@
         "ticker": "ITW",
         "sort_score": 0.6566,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.7163,
         "profile_score": 0.6566,
         "buffett_score": 76.0,
@@ -2867,7 +2921,6 @@
         "sector": "Industries",
         "country": "Etats-Unis",
         "matched_preset": "rendement",
-        "rejection_reason": "Score composite (0.657) insuffisant pour le quota",
         "roe": 93.72,
         "de_ratio": 2.86,
         "market_cap": "83503065118",
@@ -3910,7 +3963,7 @@
         "ticker": "SAN",
         "sort_score": 0.613,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.602,
         "profile_score": 0.613,
         "buffett_score": 96.8,
@@ -3919,7 +3972,6 @@
         "sector": "Finance",
         "country": "Espagne",
         "matched_preset": "momentum_trend",
-        "rejection_reason": "Score composite (0.613) insuffisant pour le quota",
         "roe": 14.09,
         "de_ratio": 2.88,
         "market_cap": "163865192000",

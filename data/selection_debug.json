@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-26-15-30-42",
-    "git_sha": "17ecbfa30",
-    "git_sha_full": "17ecbfa3059495475ead0584c190cf3cedda6860",
+    "run_id": "2026-02-26-16-38-23",
+    "git_sha": "08c5279ac",
+    "git_sha_full": "08c5279ac454189e9eb1cc7597617929bb16ae1e",
     "config_hash": "6c942836",
     "universe_asof": "2026-02-26",
-    "timestamp_utc": "2026-02-26T15:30:42.952672+00:00",
+    "timestamp_utc": "2026-02-26T16:38:23.076448+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 184.02
+    "total_duration_sec": 228.88
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -143,53 +143,11 @@
     },
     "5_selection_crypto_Agressif": {
       "name": "selection_crypto",
-      "before": 32,
-      "after": 32,
+      "before": 0,
+      "after": 0,
       "rejected": 0,
       "category": "crypto",
-      "profile": "Agressif",
-      "top_k": [
-        {
-          "ticker": "BTC/USD",
-          "score": 75.0
-        },
-        {
-          "ticker": "ETH/USD",
-          "score": 75.0
-        },
-        {
-          "ticker": "MORPHO/USD",
-          "score": 100.0
-        },
-        {
-          "ticker": "DCR/USD",
-          "score": 89.46
-        },
-        {
-          "ticker": "DENT/USD",
-          "score": 87.21
-        },
-        {
-          "ticker": "GNO/USD",
-          "score": 87.08
-        },
-        {
-          "ticker": "GNO/EUR",
-          "score": 86.85
-        },
-        {
-          "ticker": "WLD/USD",
-          "score": 74.48
-        },
-        {
-          "ticker": "DUSK/USD",
-          "score": 74.03
-        },
-        {
-          "ticker": "ZIL/USD",
-          "score": 72.76
-        }
-      ]
+      "profile": "Agressif"
     },
     "5_selection_bond_Agressif": {
       "name": "selection_bond",
@@ -343,53 +301,11 @@
     },
     "5_selection_crypto_Modéré": {
       "name": "selection_crypto",
-      "before": 22,
-      "after": 22,
+      "before": 0,
+      "after": 0,
       "rejected": 0,
       "category": "crypto",
-      "profile": "Modéré",
-      "top_k": [
-        {
-          "ticker": "BTC/USD",
-          "score": 75.0
-        },
-        {
-          "ticker": "ETH/USD",
-          "score": 75.0
-        },
-        {
-          "ticker": "PAXG/USD",
-          "score": 100.0
-        },
-        {
-          "ticker": "XAUT/USD",
-          "score": 92.31
-        },
-        {
-          "ticker": "TRX/USD",
-          "score": 84.62
-        },
-        {
-          "ticker": "NFT/USD",
-          "score": 67.61
-        },
-        {
-          "ticker": "DCR/USD",
-          "score": 58.3
-        },
-        {
-          "ticker": "GNO/USD",
-          "score": 51.01
-        },
-        {
-          "ticker": "BTTN/USD",
-          "score": 40.49
-        },
-        {
-          "ticker": "PORTO/USD",
-          "score": 38.66
-        }
-      ]
+      "profile": "Modéré"
     },
     "5_selection_bond_Modéré": {
       "name": "selection_bond",
@@ -3578,20 +3494,20 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 1.54,
+    "has_drift": true,
+    "drift_pct": 100.0,
     "details": {
-      "5_selection_equity_Stable.after": {
-        "current": 128,
-        "previous": 130,
-        "delta": -2,
-        "pct_change": 1.54
+      "5_selection_crypto_Agressif.after": {
+        "current": 0,
+        "previous": 32,
+        "delta": -32,
+        "pct_change": 100.0
       },
-      "5_selection_etf_Stable.after": {
-        "current": 75,
-        "previous": 76,
-        "delta": -1,
-        "pct_change": 1.32
+      "5_selection_crypto_Modéré.after": {
+        "current": 0,
+        "previous": 22,
+        "delta": -22,
+        "pct_change": 100.0
       }
     }
   }
