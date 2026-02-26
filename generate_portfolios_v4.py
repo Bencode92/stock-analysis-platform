@@ -2027,27 +2027,25 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             else:
                 profile_bonds_data = []
             # --- Crypto ---
-            if crypto_data:
-                crypto_df = pd.DataFrame(crypto_data)
-                crypto_selected_df = select_crypto_for_profile(crypto_df, profile, top_n=30)
-                profile_crypto_data = crypto_selected_df.to_dict('records') if not crypto_selected_df.empty else []
-                logger.info(f"   [{profile}] Crypto sélectionnés: {len(profile_crypto_data)}/{len(crypto_data)}")
+            # v6.34 FIX: Toujours appeler select_crypto_for_profile, même si crypto_data
+            # est vide, pour que le fallback BTC/ETH de _ensure_blue_chips() fonctionne
+            crypto_df = pd.DataFrame(crypto_data) if crypto_data else pd.DataFrame()
+            crypto_selected_df = select_crypto_for_profile(crypto_df, profile, top_n=30)
+            profile_crypto_data = crypto_selected_df.to_dict('records') if not crypto_selected_df.empty else []
+            logger.info(f"   [{profile}] Crypto sélectionnés: {len(profile_crypto_data)}/{len(crypto_data)}")
             # v5.2.0 FIX: Forcer category="crypto" pour éviter reclassification
-                for cr in profile_crypto_data:
-                    cr["_force_category"] = "crypto"
-                    cr["category"] = "crypto"
-                # v1.5.3 FIX: Collect scored crypto for audit
-                for _cr in profile_crypto_data:
-                    _uid = _cr.get("symbol") or _cr.get("ticker") or _cr.get("name") or ""
-                    if _uid:
-                        _existing = all_scored_cryptos.get(_uid)
-                        _new_s = _cr.get("_profile_score") or _cr.get("composite_score") or 0
-                        _old_s = (_existing or {}).get("_profile_score") or (_existing or {}).get("composite_score") or 0
-                        if _existing is None or _new_s > _old_s:
-                            all_scored_cryptos[_uid] = _cr.copy()
-            else:
-                profile_crypto_data = []
-            
+            for cr in profile_crypto_data:
+                cr["_force_category"] = "crypto"
+                cr["category"] = "crypto"
+            # v1.5.3 FIX: Collect scored crypto for audit
+            for _cr in profile_crypto_data:
+                _uid = _cr.get("symbol") or _cr.get("ticker") or _cr.get("name") or ""
+                if _uid:
+                    _existing = all_scored_cryptos.get(_uid)
+                    _new_s = _cr.get("_profile_score") or _cr.get("composite_score") or 0
+                    _old_s = (_existing or {}).get("_profile_score") or (_existing or {}).get("composite_score") or 0
+                    if _existing is None or _new_s > _old_s:
+                        all_scored_cryptos[_uid] = _cr.copy()
             # === v5.1.0: AUDIT HOOK - Sélection ETF/Crypto/Bond ===
             if _collector:
                 _collector.record_final_selection(category="etf", selected=profile_etf_data, profile=profile)
