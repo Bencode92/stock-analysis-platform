@@ -731,11 +731,15 @@ def select_crypto_for_profile(
     # Couche 1: Hard constraints (inclut exclusion Stable)
     df_constrained = apply_hard_constraints(df_clean, profile)
     
-    # Si vide après contraintes (ex: Stable), retourner vide
+    # Si vide après contraintes
     if df_constrained.empty:
+        # v1.3.1 FIX: Pour Modéré/Agressif, injecter BTC/ETH même si univers vide
+        if profile in ("Modéré", "Agressif"):
+            logger.warning(f"[Crypto {profile}] Univers vide après contraintes — injection blue chips fallback")
+            empty_df = pd.DataFrame(columns=_BTC_ETH_SYNTHETIC.columns)
+            return _ensure_blue_chips(empty_df, profile)
         logger.info(f"[Crypto {profile}] Sélection finale: 0 cryptos (exclusion ou filtres stricts)")
         return df_constrained
-    
     # Couche 2: Presets union
     df_preset = apply_presets_union(df_constrained, profile)
     
