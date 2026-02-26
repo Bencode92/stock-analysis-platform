@@ -1940,23 +1940,43 @@ class PortfolioOptimizer:
 
         CRYPTO_BLUECHIPS = {"BTC", "ETH"}
 
-        for asset in sorted_assets:
-            if asset.category == "Crypto" and asset.returns_series is None:
-                original_score = asset.score
+        # =====================================================
+        # FIX v8.5 + PATCH v8.6: PÉNALITÉ CRYPTO SANS HISTORIQUE
+        # v8.6: Si AUCUN crypto n'a returns_series, c'est structurel
+        #       (pas de données prix pour la classe entière) → skip pénalité
+        #       Si CERTAINS ont l'historique, pénaliser ceux qui ne l'ont pas
+        #       avec distinction blue chip (−15%) vs altcoin (−50%)
+        # =====================================================
+        NO_HISTORY_PENALTY_DEFAULT = 0.50
+        NO_HISTORY_PENALTY_BLUECHIP = 0.15
+        NO_HISTORY_MAX_WEIGHT_DEFAULT = 3.0
+        NO_HISTORY_MAX_WEIGHT_BLUECHIP = 5.0
 
+        CRYPTO_BLUECHIPS = {"BTC", "ETH"}
+
+        crypto_assets = [a for a in sorted_assets if a.category == "Crypto"]
+        crypto_with_history = sum(1 for a in crypto_assets if a.returns_series is not None)
+        skip_crypto_penalty = (len(crypto_assets) > 0 and crypto_with_history == 0)
+
+        if skip_crypto_penalty:
+            logger.info(
+                f"[PATCH v8.6] Aucun crypto n'a returns_series "
+                f"({len(crypto_assets)} cryptos) — pénalité désactivée (structurel)"
+            )
+
+        for asset in sorted_assets:
+            if asset.category == "Crypto" and asset.returns_series is None and not skip_crypto_penalty:
+                original_score = asset.score
                 # Identifier blue chips par base symbol
                 base_symbol = (asset.ticker or asset.id or "").split("/")[0].upper()
                 is_bluechip = base_symbol in CRYPTO_BLUECHIPS
-
                 penalty = NO_HISTORY_PENALTY_BLUECHIP if is_bluechip else NO_HISTORY_PENALTY_DEFAULT
                 max_w = NO_HISTORY_MAX_WEIGHT_BLUECHIP if is_bluechip else NO_HISTORY_MAX_WEIGHT_DEFAULT
-
                 asset.score *= (1 - penalty)
                 if hasattr(asset, '_select_score'):
                     asset._select_score *= (1 - penalty)
                 asset._no_history = True
                 asset._max_weight_override = max_w
-
                 tag = "BLUECHIP" if is_bluechip else "ALT"
                 logger.warning(
                     f"[FIX v8.5+v8.6 {tag}] {asset.id}: no price history, "
