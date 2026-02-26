@@ -1929,23 +1929,39 @@ class PortfolioOptimizer:
             key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
         )
         # =====================================================
-        # FIX v8.5: PÉNALITÉ CRYPTO SANS HISTORIQUE
+        # FIX v8.5 + PATCH v8.6: PÉNALITÉ CRYPTO SANS HISTORIQUE
+        # v8.6: BTC/ETH = artifact technique (données synthétiques),
+        #       pénalité réduite. Altcoins = risque réel, pénalité forte.
         # =====================================================
-        NO_HISTORY_SCORE_PENALTY = 0.50
-        NO_HISTORY_MAX_WEIGHT = 3.0
-        
+        NO_HISTORY_PENALTY_DEFAULT = 0.50       # Altcoins : −50%
+        NO_HISTORY_PENALTY_BLUECHIP = 0.15      # BTC/ETH  : −15%
+        NO_HISTORY_MAX_WEIGHT_DEFAULT = 3.0     # Altcoins : max 3%
+        NO_HISTORY_MAX_WEIGHT_BLUECHIP = 5.0    # BTC/ETH  : max 5%
+
+        CRYPTO_BLUECHIPS = {"BTC", "ETH"}
+
         for asset in sorted_assets:
             if asset.category == "Crypto" and asset.returns_series is None:
                 original_score = asset.score
-                asset.score *= (1 - NO_HISTORY_SCORE_PENALTY)
+
+                # Identifier blue chips par base symbol
+                base_symbol = (asset.ticker or asset.id or "").split("/")[0].upper()
+                is_bluechip = base_symbol in CRYPTO_BLUECHIPS
+
+                penalty = NO_HISTORY_PENALTY_BLUECHIP if is_bluechip else NO_HISTORY_PENALTY_DEFAULT
+                max_w = NO_HISTORY_MAX_WEIGHT_BLUECHIP if is_bluechip else NO_HISTORY_MAX_WEIGHT_DEFAULT
+
+                asset.score *= (1 - penalty)
                 if hasattr(asset, '_select_score'):
-                    asset._select_score *= (1 - NO_HISTORY_SCORE_PENALTY)
+                    asset._select_score *= (1 - penalty)
                 asset._no_history = True
-                asset._max_weight_override = NO_HISTORY_MAX_WEIGHT
+                asset._max_weight_override = max_w
+
+                tag = "BLUECHIP" if is_bluechip else "ALT"
                 logger.warning(
-                    f"[FIX v8.5] {asset.id}: no price history, "
-                    f"score {original_score:.1f} → {asset.score:.1f}, "
-                    f"max_weight capped at {NO_HISTORY_MAX_WEIGHT}%"
+                    f"[FIX v8.5+v8.6 {tag}] {asset.id}: no price history, "
+                    f"score {original_score:.1f} → {asset.score:.1f} "
+                    f"(penalty={penalty:.0%}), max_weight={max_w}%"
                 )
         
         # Re-trier après pénalité
@@ -2140,6 +2156,13 @@ class PortfolioOptimizer:
                     f"Stocks={len(pool_stocks)}, ETF={len(pool_etf)}, "
                     f"Bonds={len(pool_bonds)}, Crypto={len(pool_crypto)}, "
                     f"max_any_category={getattr(profile, 'max_any_category', 100)}%")
+
+        # === PATCH v8.6: ALERTE si crypto attendu mais absent du pool ===
+        if profile.crypto_max > 0 and len(pool_crypto) == 0:
+            logger.warning(
+                f"[PATCH v8.6 ALERT] {profile.name}: crypto_max={profile.crypto_max}% "
+                f"mais 0 crypto dans le pool. Vérifier scores ou données source."
+            )
         
         # Log bucket distribution
         bucket_dist = defaultdict(int)
