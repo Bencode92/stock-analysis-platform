@@ -129,6 +129,8 @@ try:
         PROFILE_BUCKET_TARGETS,
         EQUITY_PRESETS,
         select_equities_for_profile,  # ← NOUVELLE LIGNE
+        select_crypto_core_satellite,  # v5.3.0: Dynamic crypto core/satellite
+        CRYPTO_CORE_CONFIG,            # v5.3.0: Config par profil
         ETF_PRESETS,
         CRYPTO_PRESETS,
         Role,
@@ -169,6 +171,10 @@ except ImportError:
         return "OTHER"
     def get_stock_region_cap(profile: str, region: str) -> float:
         return 0.30
+    # Fallback v5.3.0: Dynamic crypto
+    CRYPTO_CORE_CONFIG = {}
+    def select_crypto_core_satellite(cryptos, profile):
+        return [], [], {"reason": "preset_meta_unavailable"}   
     # === Fallback EU/US v2.2 ===
     STOCK_REGION_CAPS_EUUS = {}
     ALLOWED_REGIONS_EUUS = {"EU", "US", "OTHER"}
@@ -596,27 +602,10 @@ MAX_SINGLE_BOND_WEIGHT = {
 }
 # ============= v6.23 CRYPTO CORE/SATELLITE =============
 
-CRYPTO_CORE_SATELLITE = {
-    "Agressif": {
-        "enabled": True,
-        "core_pct": 0.60,           # 60% du budget crypto en core
-        "core_assets": ["BTC/USD", "ETH/USD"],
-        "core_split": [0.50, 0.50], # 50/50 entre BTC et ETH
-        "satellite_max_per_asset": 0.15,  # Max 15% du budget crypto par alt
-        "satellite_dd_max": 35.0,   # Exclure alts avec DD > 35%
-    },
-    "Modéré": {
-        "enabled": True,
-        "core_pct": 0.70,           # 70% du budget crypto en core
-        "core_assets": ["BTC/USD", "ETH/USD"],
-        "core_split": [0.60, 0.40], # 60/40 BTC/ETH
-        "satellite_max_per_asset": 0.10,
-        "satellite_dd_max": 30.0,
-    },
-    "Stable": {
-        "enabled": False,  # Pas de crypto pour Stable
-    },
-}
+# ============= v6.35 CRYPTO CORE/SATELLITE (DYNAMIC) =============
+# SUPPRIMÉ: L'ancien dict CRYPTO_CORE_SATELLITE qui hardcodait BTC/ETH.
+# Remplacé par CRYPTO_CORE_CONFIG dans preset_meta.py (v5.3.0).
+# La sélection se fait maintenant par mérite via select_crypto_core_satellite().
 # P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
 MIN_DISTINCT_BONDS = {
     "Stable": 2,      # v6.11 FIX: 4 → 2 (cohérent avec max 18%)
@@ -4500,102 +4489,115 @@ class PortfolioOptimizer:
         allocation = {k: v for k, v in allocation.items() if v >= 0.5}
         
         return allocation   
-    def _apply_crypto_core_satellite(
+def _apply_crypto_core_satellite(
         self,
         allocation: Dict[str, float],
         candidates: List[Asset],
         profile: ProfileConstraints
     ) -> Dict[str, float]:
         """
-        v6.23: Applique la structure Core/Satellite pour crypto.
-        
-        Core: BTC + ETH (60-70% du budget crypto)
-        Satellite: Autres cryptos filtrées par DD (30-40% restant)
+        v6.35: Core/Satellite DYNAMIQUE — top cryptos par mérite, pas hardcodé.
+
+        Utilise select_crypto_core_satellite() de preset_meta.py pour classer
+        les cryptos par score composite (Sharpe, ret_90d, drawdown, vol).
+        Le core = top N, le satellite = suivants filtrés par drawdown.
         """
-        config = CRYPTO_CORE_SATELLITE.get(profile.name, {})
-        if not config.get("enabled", False):
+        config = CRYPTO_CORE_CONFIG.get(profile.name)
+        if config is None:
             return allocation
-        
+
         asset_lookup = {c.id: c for c in candidates}
-        
-        # Calculer budget crypto total actuel
+
+        # Budget crypto total actuel
         crypto_total = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
         )
-        
+
         if crypto_total < 0.5:
             return allocation  # Pas de crypto, rien à faire
-        
-        # Retirer toutes les cryptos existantes
-        crypto_ids = [aid for aid in allocation 
-                     if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"]
+
+        # Construire la liste de dicts crypto depuis candidates (avec source_data)
+        crypto_dicts = []
+        for c in candidates:
+            if c.category != "Crypto":
+                continue
+            sd = c.source_data or {}
+            d = {
+                "_asset_id": c.id,
+                "symbol": c.ticker or c.id,
+                "sharpe_ratio": sd.get("sharpe_ratio"),
+                "ret_90d_pct": sd.get("ret_90d_pct"),
+                "ret_1y_pct": sd.get("ret_1y_pct"),
+                "drawdown_90d": sd.get("drawdown_90d_pct") or sd.get("drawdown_90d"),
+                "vol_30d_annual": sd.get("vol_30d_annual_pct") or sd.get("vol_30d_annual"),
+            }
+            crypto_dicts.append(d)
+
+        if not crypto_dicts:
+            return allocation
+
+        # === APPEL DYNAMIQUE ===
+        core_list, sat_list, meta = select_crypto_core_satellite(
+            crypto_dicts, profile.name
+        )
+
+        logger.info(
+            f"[v6.35 DYNAMIC CRYPTO] {profile.name}: "
+            f"core={meta['core_symbols']}, satellite={meta['satellite_symbols']}, "
+            f"ranked={meta['total_ranked']}"
+        )
+
+        # Retirer toutes les cryptos existantes de l'allocation
+        crypto_ids = [
+            aid for aid in list(allocation.keys())
+            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+        ]
         for aid in crypto_ids:
             del allocation[aid]
-        
-        # === CORE: BTC + ETH ===
-        core_budget = crypto_total * config["core_pct"]
-        core_assets = config["core_assets"]
-        core_split = config["core_split"]
-        
-        # === CORE: BTC + ETH ===
-        core_budget = crypto_total * config["core_pct"]
-        core_assets = config["core_assets"]
-        core_split = config["core_split"]
-        
-        for i, core_pattern in enumerate(core_assets):
-            # v6.24 FIX: Matching flexible via crypto_utils
-            base_currency = core_pattern.split("/")[0]  # "BTC" ou "ETH"
-            
-            if HAS_CRYPTO_UTILS:
-                core_asset = find_crypto_by_base(candidates, base_currency, portfolio_base="EUR")
-            else:
-                # Fallback: matching exact (comportement legacy)
-                core_asset = next((c for c in candidates if c.id == core_pattern), None)
-            
-            if core_asset:
-                weight = core_budget * core_split[i]
-                if weight >= 0.5:
-                    allocation[core_asset.id] = round(weight, 2)
-                    logger.info(f"v6.24 CORE: {core_asset.id} (matched from {core_pattern}) = {weight:.2f}%")        
-        
-        # === SATELLITE: Autres cryptos ===
-        satellite_budget = crypto_total * (1 - config["core_pct"])
-        satellite_max = config["satellite_max_per_asset"] * crypto_total
-        satellite_dd_max = config["satellite_dd_max"]
-        
-        # v6.23 P0 FIX: Exclure par IDs déjà alloués, pas par patterns
-        core_ids_allocated = set(allocation.keys())
-        
-        # Filtrer et trier les satellites par score
-        satellite_candidates = [
-            c for c in candidates 
-            if c.category == "Crypto" 
-            and c.id not in core_ids_allocated  # FIX: utilise IDs réels, pas patterns
-            and abs(_clean_float(c.source_data.get("drawdown_90d_pct", 0) if c.source_data else 0, 0, -100, 100)) <= satellite_dd_max
-        ]
-        satellite_candidates = sorted(satellite_candidates, key=lambda x: (-x.score, x.id))
-        
-        remaining = satellite_budget
-        for sat in satellite_candidates:
-            if remaining < 0.5:
-                break
-            weight = min(satellite_max, remaining)
-            if weight >= 0.5:
-                allocation[sat.id] = round(weight, 2)
-                remaining -= weight
-                logger.info(f"v6.23 SATELLITE: {sat.id} = {weight:.2f}%")
-        
-        # Log résumé (v6.23 P0 FIX: utilise IDs réels, pas patterns)
-        core_final = sum(
+
+        # === ALLOUER CORE ===
+        core_pct = config["core_pct"]
+        core_budget = crypto_total * core_pct
+
+        if core_list:
+            per_core = core_budget / len(core_list)
+            for c in core_list:
+                aid = c.get("_asset_id")
+                if aid and per_core >= 0.5:
+                    allocation[aid] = round(per_core, 2)
+                    logger.info(
+                        f"  CORE: {c.get('symbol', aid)} = {per_core:.2f}% "
+                        f"(rank_score={c.get('_crypto_rank_score', 0):.3f})"
+                    )
+
+        # === ALLOUER SATELLITE ===
+        sat_budget = crypto_total * (1 - core_pct)
+
+        if sat_list:
+            per_sat = sat_budget / len(sat_list)
+            for c in sat_list:
+                aid = c.get("_asset_id")
+                if aid and per_sat >= 0.5:
+                    allocation[aid] = round(per_sat, 2)
+                    logger.info(
+                        f"  SATELLITE: {c.get('symbol', aid)} = {per_sat:.2f}% "
+                        f"(rank_score={c.get('_crypto_rank_score', 0):.3f})"
+                    )
+
+        # Log résumé final
+        crypto_final = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
-            and aid in core_ids_allocated
         )
-        sat_final = crypto_total - core_final
-        logger.info(f"v6.23 CRYPTO: core={core_final:.1f}%, satellite={sat_final:.1f}%, total={crypto_total:.1f}%")
-        
-        return allocation   
+        n_core_alloc = len([c for c in core_list if c.get("_asset_id") in allocation])
+        n_sat_alloc = len([c for c in sat_list if c.get("_asset_id") in allocation])
+        logger.info(
+            f"[v6.35] Crypto final: {crypto_final:.1f}% "
+            f"(core={n_core_alloc}, satellite={n_sat_alloc}, budget={crypto_total:.1f}%)"
+        )
+
+        return allocation
     def build_portfolio(
         self, 
         universe: List[Asset], 
