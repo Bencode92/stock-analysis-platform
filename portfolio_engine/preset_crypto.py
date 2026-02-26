@@ -343,7 +343,7 @@ def apply_hard_constraints(df: pd.DataFrame, profile: str) -> pd.DataFrame:
 # =============================================================================
 # PRESET FILTERS
 # =============================================================================
-def _ensure_blue_chips(df: pd.DataFrame, profile: str) -> pd.DataFrame:
+def _ensure_blue_chips(df: pd.DataFrame, profile: str, df_original: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """
     v1.3.0: Garantit que BTC et ETH sont présents dans la sélection.
     
@@ -376,13 +376,34 @@ def _ensure_blue_chips(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         f"[Crypto {profile}] Blue chips manquants: {missing} — injection fallback"
     )
     
-    # Construire les rows de fallback à partir du synthétique
-    fallback_rows = _BTC_ETH_SYNTHETIC[
-        _BTC_ETH_SYNTHETIC["currency_base"].isin(missing)
-    ].copy()
-    
+    # PATCH v8.6: Chercher les VRAIS BTC/ETH dans df_original (pré-filtres)
+    # Les vrais assets ont returns_series → pas de pénalité "no price history"
+    fallback_rows = pd.DataFrame()
+
+    if df_original is not None and not df_original.empty:
+        original_bases = df_original.apply(_get_currency_base, axis=1)
+        real_rows = df_original[original_bases.isin(missing)].copy()
+        if not real_rows.empty:
+            real_rows["_matched_preset"] = "blue_chip_restored"
+            real_rows["_is_synthetic"] = False
+            fallback_rows = real_rows
+            logger.info(
+                f"[Crypto {profile}] PATCH v8.6: {len(real_rows)} blue chips "
+                f"restaurés depuis données RÉELLES (avec price history)"
+            )
+
+    # Fallback synthétique UNIQUEMENT si pas trouvé dans l'original
+    if fallback_rows.empty:
+        fallback_rows = _BTC_ETH_SYNTHETIC[
+            _BTC_ETH_SYNTHETIC["currency_base"].isin(missing)
+        ].copy()
+        logger.warning(
+            f"[Crypto {profile}] Fallback SYNTHÉTIQUE pour {missing} "
+            f"(données réelles non disponibles)"
+        )
+
     # Assigner un score élevé pour garantir l'inclusion
-    fallback_rows["_profile_score"] = 75.0  # Score élevé mais pas max
+    fallback_rows["_profile_score"] = 75.0
     fallback_rows["_preset_profile"] = profile
     fallback_rows["_asset_class"] = "crypto"
     fallback_rows["_is_blue_chip"] = True
@@ -737,7 +758,7 @@ def select_crypto_for_profile(
         if profile in ("Modéré", "Agressif"):
             logger.warning(f"[Crypto {profile}] Univers vide après contraintes — injection blue chips fallback")
             empty_df = pd.DataFrame(columns=_BTC_ETH_SYNTHETIC.columns)
-            return _ensure_blue_chips(empty_df, profile)
+            return _ensure_blue_chips(empty_df, profile, df_original=df_clean)
         logger.info(f"[Crypto {profile}] Sélection finale: 0 cryptos (exclusion ou filtres stricts)")
         return df_constrained
     # Couche 2: Presets union
@@ -764,7 +785,7 @@ def select_crypto_for_profile(
     # Remplace l'ancien fallback v5.2.1 qui était Agressif-only et ne gérait
     # pas le cas où BTC/ETH sont absents du CSV source
     if profile in ("Modéré", "Agressif"):
-        df_sorted = _ensure_blue_chips(df_sorted, profile)
+        df_sorted = _ensure_blue_chips(df_sorted, profile, df_original=df_clean)
     
     return df_sorted
 
