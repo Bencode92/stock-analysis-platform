@@ -1,45 +1,39 @@
 # portfolio_engine/preset_crypto.py
 """
 =========================================
-Crypto Preset Selector v1.3.0
+Crypto Preset Selector v2.0.0
 =========================================
 
-Sélection de cryptomonnaies par profil (Stable/Modéré/Agressif).
+Sélection dynamique de cryptomonnaies par profil (Stable/Modéré/Agressif).
 
-v1.3.0: Fallback BTC/ETH robuste pour Modéré
-- FIX: Fallback BTC/ETH étendu au profil Modéré (était Agressif-only)
-- NEW: Injection synthétique BTC/ETH si absents du CSV source
-- NEW: _ensure_blue_chips() garantit BTC+ETH dans la sélection Modéré/Agressif
+v2.0.0: REFONTE COMPLÈTE — Pipeline 4 étapes
+=========================================
+BREAKING CHANGES vs v1.3.0:
+- SUPPRIMÉ: BTC/ETH forcés (hardcoded blue_chip + synthétiques)
+- SUPPRIMÉ: Preset union à base de quantiles (quality_risk, trend3_12m, etc.)
+- SUPPRIMÉ: _ensure_blue_chips(), _BTC_ETH_SYNTHETIC
+- NOUVEAU: Lecture dynamique du CSV complet (280+ assets)
+- NOUVEAU: Filtres durs par profil (valeurs absolues, pas quantiles)
+- NOUVEAU: Scoring pondéré différencié par profil
+- NOUVEAU: Diversification sectorielle (max 1 core/catégorie, max 2 total)
+- NOUVEAU: Split core/satellite automatique
 
-Sélection de cryptomonnaies par profil (Stable/Modéré/Agressif).
+Pipeline:
+  CSV (280+ assets)
+    → ① FILTRAGE dur (par profil)        → ~15-80 éligibles
+    → ② SCORING pondéré (par profil)     → ranked list
+    → ③ DIVERSIFICATION sectorielle      → max 1-2 par catégorie
+    → ④ SPLIT core/satellite             → 2 core + 2-3 satellite
 
-v1.2.0: Ajout preset blue_chip (BTC/ETH)
-- NEW: _preset_blue_chip pour BTC/ETH
-- UPDATE: Modéré inclut blue_chip en priorité
-
-v1.1.0: Alignement noms presets avec preset_meta.py
-- recovery → recovery_crypto
-
-Architecture 2 couches:
-1. Data QC + Hard constraints (quantiles adaptatifs)
-2. Presets (union simple) → _profile_score
-
-Presets disponibles:
-- blue_chip: BTC/ETH uniquement (v1.2.0)
-- quality_risk: Low vol, low DD, sharpe élevé
-- trend3_12m: Tendance moyen/long terme
-- swing7_30: Swing trading court terme
-- recovery_crypto: Contrarian, rebond post-DD
-- momentum24h: Momentum très court terme
-- highvol_lottery: Haute vol, spéculatif
-
-IMPORTANT:
-- Profil Stable → EXCLUSION TOTALE (crypto trop volatile)
-- Exclusion automatique des stablecoins
+INVARIANT PRÉSERVÉ:
+- API identique: select_crypto_for_profile(df, profile, top_n) → DataFrame
+- Profil Stable → EXCLUSION TOTALE (inchangé)
+- Stablecoins exclus (inchangé)
+- Colonnes de sortie: _profile_score, _preset_profile, _asset_class, etc.
 
 Colonnes attendues (df):
 - symbol, currency_base, currency_quote
-- ret_1d_pct, ret_7d_pct, ret_30d_pct, ret_90d_pct, ret_6m_pct, ret_1y_pct, ret_ytd_pct
+- ret_1d_pct, ret_7d_pct, ret_30d_pct, ret_90d_pct, ret_6m_pct, ret_1y_pct
 - vol_7d_annual_pct, vol_30d_annual_pct
 - sharpe_ratio, var_95_pct, atr14_pct, drawdown_90d_pct
 - tier1_listed, stale, data_points, coverage_ratio
@@ -47,7 +41,7 @@ Colonnes attendues (df):
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 
 import numpy as np
 import pandas as pd
@@ -58,101 +52,134 @@ logger = logging.getLogger("portfolio_engine.preset_crypto")
 # CONFIGURATION
 # =============================================================================
 
-# Stablecoins à exclure
+VERSION = "2.0.0"
+
+# Stablecoins à exclure (inchangé)
 STABLECOINS = {
-    "USDT", "USDC", "DAI", "TUSD", "BUSD", "FDUSD", "PYUSD", 
+    "USDT", "USDC", "DAI", "TUSD", "BUSD", "FDUSD", "PYUSD",
     "EURT", "EURS", "USDE", "UST", "FRAX", "LUSD", "GUSD",
     "USDP", "SUSD", "MIM", "DOLA", "cUSD", "OUSD", "HUSD"
 }
 
-# v1.2.0: Blue chip cryptos (established, high liquidity)
-BLUE_CHIP_CRYPTOS = {"BTC", "ETH"}
-
-# v1.3.0: Données synthétiques BTC/ETH pour fallback
-# Utilisées UNIQUEMENT si BTC/ETH absents du CSV source après filtres
-_BTC_ETH_SYNTHETIC = pd.DataFrame([
-    {
-        "symbol": "BTC/USD", "currency_base": "BTC", "currency_quote": "USD",
-        "ret_1d_pct": 0.0, "ret_7d_pct": 0.0, "ret_30d_pct": 0.0,
-        "ret_90d_pct": 0.0, "ret_6m_pct": 0.0, "ret_1y_pct": 0.0, "ret_ytd_pct": 0.0,
-        "vol_30d_annual_pct": 55.0, "vol_7d_annual_pct": 50.0,
-        "sharpe_ratio": 0.5, "var_95_pct": -8.0, "atr14_pct": 4.0,
-        "drawdown_90d_pct": -20.0,
-        "tier1_listed": True, "stale": False,
-        "data_points": 365, "coverage_ratio": 0.99,
-        "enough_history_90d": True, "enough_history_1y": True,
-        "ret_1y_suspect": False,
-        "_force_category": "crypto",
-        "_matched_preset": "blue_chip_fallback_synthetic",
-        "_is_synthetic": True,
-    },
-    {
-        "symbol": "ETH/USD", "currency_base": "ETH", "currency_quote": "USD",
-        "ret_1d_pct": 0.0, "ret_7d_pct": 0.0, "ret_30d_pct": 0.0,
-        "ret_90d_pct": 0.0, "ret_6m_pct": 0.0, "ret_1y_pct": 0.0, "ret_ytd_pct": 0.0,
-        "vol_30d_annual_pct": 65.0, "vol_7d_annual_pct": 60.0,
-        "sharpe_ratio": 0.4, "var_95_pct": -10.0, "atr14_pct": 5.0,
-        "drawdown_90d_pct": -25.0,
-        "tier1_listed": True, "stale": False,
-        "data_points": 365, "coverage_ratio": 0.99,
-        "enough_history_90d": True, "enough_history_1y": True,
-        "ret_1y_suspect": False,
-        "_force_category": "crypto",
-        "_matched_preset": "blue_chip_fallback_synthetic",
-        "_is_synthetic": True,
-    },
-])
-
-# Seuils Data Quality
+# Seuils Data Quality (inchangé)
 MIN_COVERAGE_RATIO = 0.85
 MIN_DATA_POINTS = 60  # ~2 mois de données
 
-# Presets par profil (union) - v1.2.0: blue_chip ajouté pour Modéré
-PROFILE_PRESETS = {
-    "Stable": [],  # EXCLUSION TOTALE - crypto trop volatile
-    "Modéré": ["blue_chip", "quality_risk", "trend3_12m", "swing7_30"],  # v1.2.0: blue_chip prioritaire
-    "Agressif": ["blue_chip", "momentum24h", "recovery_crypto", "swing7_30", "highvol_lottery"]
-}
-# Hard constraints par profil (quantiles)
-PROFILE_CONSTRAINTS = {
+# ─────────────────────────────────────────────────────────────────────────────
+# ① FILTRES DURS PAR PROFIL (valeurs absolues, PAS quantiles)
+# ─────────────────────────────────────────────────────────────────────────────
+# Logique: Modéré = très restrictif (low vol), Agressif = large mais garde-fous
+#
+# | Filtre           | Modéré      | Agressif    |
+# |------------------|-------------|-------------|
+# | vol_30d max      | 80%         | 200%        |
+# | drawdown_90d max | -35%        | -70%        |
+# | enough_history   | 1y required | 90d suffit  |
+# | pair             | /USD only   | /USD only   |
+# ─────────────────────────────────────────────────────────────────────────────
+
+PROFILE_HARD_FILTERS = {
     "Stable": {
-        # EXCLUSION - retourne DataFrame vide
-        "excluded": True,
+        "excluded": True,  # EXCLUSION TOTALE
     },
     "Modéré": {
-        "vol_max_quantile": 0.60,      # Vol < Q60
-        "dd_max_quantile": 0.40,       # DD < Q40 (moins sévère = OK)
-        "sharpe_min_quantile": 0.30,   # Sharpe > Q30
+        "vol_30d_max": 80.0,       # Volatilité annualisée max 80%
+        "drawdown_90d_max": -35.0, # Drawdown max -35%
+        "require_history_1y": True, # Exige 1 an d'historique
+        "usd_pairs_only": True,    # Paires /USD uniquement
     },
     "Agressif": {
-        "vol_max_quantile": 1.0,       # Pas de contrainte vol
-        "dd_max_quantile": 1.0,        # Pas de contrainte DD
-        "sharpe_min_quantile": 0.0,    # Pas de contrainte Sharpe
+        "vol_30d_max": 200.0,      # Large: accepte haute vol
+        "drawdown_90d_max": -70.0, # Accepte DD significatifs
+        "require_history_1y": False, # 90d suffit
+        "usd_pairs_only": True,
     },
 }
 
-# Poids scoring par profil
-SCORING_WEIGHTS = {
-    "Stable": {},  # N/A - exclusion
+# ─────────────────────────────────────────────────────────────────────────────
+# ② SCORING PONDÉRÉ PAR PROFIL
+# ─────────────────────────────────────────────────────────────────────────────
+# Chaque métrique est normalisée en percentile [0,1] puis pondérée.
+# Les poids "négatifs" (vol_penalty, dd_penalty) inversent le sens:
+#   score_vol = (1 - rank_percentile(vol)) * abs(weight)
+#
+# | Métrique     | Modéré | Agressif | Logique                         |
+# |--------------|--------|----------|---------------------------------|
+# | sharpe_ratio | 0.25   | 0.30     | Performance ajustée du risque   |
+# | ret_90d      | 0.10   | 0.25     | Momentum court terme            |
+# | ret_1y       | 0.15   | 0.15     | Track record long terme         |
+# | vol_penalty  | -0.30  | -0.10    | Modéré pénalise fort la vol     |
+# | dd_penalty   | -0.20  | -0.20    | Personne n'aime les drawdowns   |
+# ─────────────────────────────────────────────────────────────────────────────
+
+PROFILE_SCORING_WEIGHTS = {
+    "Stable": {},  # N/A — exclusion
     "Modéré": {
-        "sharpe": 0.25,        # Qualité risk-adjusted
-        "vol": 0.20,           # Vol contenue
-        "dd": 0.20,            # DD limité
-        "momentum_med": 0.20,  # Momentum moyen terme
-        "momentum_fast": 0.15, # Momentum court terme
+        "sharpe_ratio":  0.25,
+        "ret_90d":       0.10,
+        "ret_1y":        0.15,
+        "vol_penalty":  -0.30,  # Négatif = pénalise la haute vol
+        "dd_penalty":   -0.20,  # Négatif = pénalise le gros DD
     },
     "Agressif": {
-        "momentum_fast": 0.35, # Momentum prioritaire
-        "momentum_med": 0.20,
-        "vol": 0.15,           # Vol acceptée (peut être positive)
-        "dd": 0.15,            # DD moins pénalisant
-        "sharpe": 0.15,
+        "sharpe_ratio":  0.30,
+        "ret_90d":       0.25,
+        "ret_1y":        0.15,
+        "vol_penalty":  -0.10,  # Faible pénalité vol
+        "dd_penalty":   -0.20,
+    },
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ③ CATÉGORIES SECTORIELLES CRYPTO
+# ─────────────────────────────────────────────────────────────────────────────
+# Objectif: éviter la concentration (ex: PAXG + XAUT = double or tokenisé)
+#
+# Règles:
+#   - Max 1 par catégorie en CORE
+#   - Max 2 par catégorie au TOTAL (core + satellite)
+#   - Assets non catégorisés → catégorie "other" (max 1 total)
+# ─────────────────────────────────────────────────────────────────────────────
+
+CRYPTO_CATEGORIES = {
+    "tokenized_gold": ["PAXG", "XAUT"],
+    "blue_chip":      ["BTC", "ETH"],
+    "smart_contract": ["SOL", "AVAX", "DOT", "NEAR", "SUI", "ADA", "ATOM",
+                        "FTM", "ALGO", "EGLD", "HBAR", "ICP"],
+    "defi":           ["MORPHO", "AAVE", "UNI", "CRV", "PENDLE", "COMP",
+                        "MKR", "SNX", "SUSHI", "YFI", "DYDX", "1INCH"],
+    "payment":        ["TRX", "XRP", "XLM", "DASH"],
+    "privacy":        ["XMR", "ZEC", "SCRT"],
+    "pow_legacy":     ["DCR", "BCH", "LTC", "ZEN", "KMD"],
+    "exchange":       ["BNB", "OKB", "CRO", "FTT", "LEO"],
+    "meme":           ["DOGE", "SHIB", "PEPE", "FLOKI", "BONK", "WIF"],
+    "gaming_nft":     ["AXS", "SAND", "MANA", "ENJ", "GALA", "IMX"],
+    "storage":        ["FIL", "AR", "STORJ"],
+    "oracle":         ["LINK", "BAND", "API3"],
+    "layer2":         ["MATIC", "ARB", "OP", "STRK", "ZK"],
+}
+
+# Nombre d'assets core / satellite par profil
+CORE_SATELLITE_CONFIG = {
+    "Modéré": {
+        "n_core": 2,
+        "n_satellite": 2,     # 4 total — profil conservateur
+        "core_pct": 0.65,     # 65% du budget crypto en core
+        "max_per_cat_core": 1,
+        "max_per_cat_total": 2,
+    },
+    "Agressif": {
+        "n_core": 2,
+        "n_satellite": 3,     # 5 total — profil large
+        "core_pct": 0.55,     # 55% du budget crypto en core
+        "max_per_cat_core": 1,
+        "max_per_cat_total": 2,
     },
 }
 
 
 # =============================================================================
-# HELPERS
+# HELPERS (inchangés de v1.3.0)
 # =============================================================================
 
 def _to_numeric(series: pd.Series) -> pd.Series:
@@ -164,7 +191,6 @@ def _get_vol(row: pd.Series) -> float:
     """Récupère la volatilité (priorité vol_30d > vol_7d)."""
     vol_30d = row.get("vol_30d_annual_pct")
     vol_7d = row.get("vol_7d_annual_pct")
-    
     if pd.notna(vol_30d) and vol_30d > 0:
         return float(vol_30d)
     if pd.notna(vol_7d) and vol_7d > 0:
@@ -172,33 +198,23 @@ def _get_vol(row: pd.Series) -> float:
     return np.nan
 
 
-def _get_momentum_fast(row: pd.Series) -> float:
-    """Momentum court terme (7d + 1d)."""
-    ret_7d = row.get("ret_7d_pct", 0) or 0
-    ret_1d = row.get("ret_1d_pct", 0) or 0
-    return 0.6 * float(ret_7d) + 0.4 * float(ret_1d)
-
-
-def _get_momentum_med(row: pd.Series) -> float:
-    """Momentum moyen terme (30d + 90d)."""
-    ret_30d = row.get("ret_30d_pct", 0) or 0
-    ret_90d = row.get("ret_90d_pct", 0) or 0
-    return 0.5 * float(ret_30d) + 0.5 * float(ret_90d)
-
-
 def _get_currency_base(row: pd.Series) -> str:
-    """Extrait la currency base (BTC de BTC/EUR)."""
-    # Priorité: currency_base > symbol split
+    """Extrait la currency base (BTC de BTC/USD)."""
     base = row.get("currency_base")
     if pd.notna(base) and base:
         return str(base).upper().strip()
-    
     symbol = row.get("symbol")
     if pd.notna(symbol) and symbol:
-        # BTC/EUR → BTC
         return str(symbol).split("/")[0].upper().strip()
-    
     return ""
+
+
+def _get_category(currency_base: str) -> str:
+    """Retourne la catégorie sectorielle d'un crypto, ou 'other'."""
+    for category, members in CRYPTO_CATEGORIES.items():
+        if currency_base in members:
+            return category
+    return "other"
 
 
 def _rank_percentile(series: pd.Series, higher_is_better: bool = True) -> pd.Series:
@@ -220,7 +236,7 @@ def _normalize_score(score: pd.Series, min_val: float = 0, max_val: float = 100)
 
 
 # =============================================================================
-# DATA QUALITY FILTERS
+# ÉTAPE 0: DATA QUALITY (quasi-identique à v1.3.0)
 # =============================================================================
 
 def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
@@ -228,500 +244,459 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
     Couche 0: Filtres qualité données (communs à tous profils).
     
     Filtre:
-    - Exclut stablecoins
+    - Exclut stablecoins (sur symbol ET currency_base)
     - tier1_listed = True
     - stale = False
     - coverage_ratio >= seuil
-    - enough_history_90d = True
+    - enough_history_90d = True (minimum vital)
     - data_points >= seuil
     """
     if df.empty:
         return df
-    
+
     mask = pd.Series(True, index=df.index)
-    
-    # Exclure stablecoins
-    if "symbol" in df.columns:
-        symbol_upper = df["symbol"].fillna("").str.upper()
-        is_stable = symbol_upper.isin(STABLECOINS)
+
+    # Exclure stablecoins — sur currency_base (plus fiable que symbol)
+    if "currency_base" in df.columns:
+        base_upper = df["currency_base"].fillna("").str.upper().str.strip()
+        is_stable = base_upper.isin(STABLECOINS)
         mask &= ~is_stable
         excluded_count = is_stable.sum()
         if excluded_count > 0:
-            logger.debug(f"[Crypto] Exclusion {excluded_count} stablecoins")
-    
-    if "currency_base" in df.columns:
-        base_upper = df["currency_base"].fillna("").str.upper()
-        is_stable = base_upper.isin(STABLECOINS)
-        mask &= ~is_stable
-    
-    # tier1_listed (v5.2.1 FIX P2b: tolérant aux données manquantes)
+            logger.debug(f"[Crypto QC] Exclusion {excluded_count} stablecoins")
+
+    if "symbol" in df.columns:
+        # Backup: checker dans symbol aussi
+        symbol_upper = df["symbol"].fillna("").str.upper()
+        for sc in STABLECOINS:
+            mask &= ~symbol_upper.str.startswith(sc + "/")
+
+    # tier1_listed (tolérant aux données manquantes)
     if "tier1_listed" in df.columns:
         tier1 = df["tier1_listed"]
-        mask &= tier1.apply(lambda x: str(x).strip().lower() in ("true", "1", "yes")) | tier1.isna()
-    
-    # stale (v5.2.1 FIX P2b: tolérant aux données manquantes)
+        mask &= tier1.apply(
+            lambda x: str(x).strip().lower() in ("true", "1", "yes")
+        ) | tier1.isna()
+
+    # stale (tolérant aux données manquantes)
     if "stale" in df.columns:
         stale = df["stale"]
-        mask &= stale.apply(lambda x: str(x).strip().lower() in ("false", "0", "no")) | stale.isna()
-    
+        mask &= stale.apply(
+            lambda x: str(x).strip().lower() in ("false", "0", "no")
+        ) | stale.isna()
+
     # coverage_ratio
     if "coverage_ratio" in df.columns:
         coverage = _to_numeric(df["coverage_ratio"])
         mask &= (coverage >= MIN_COVERAGE_RATIO) | coverage.isna()
-    
-    # enough_history_90d (v5.2.1 FIX P2b: tolérant aux données manquantes)
+
+    # enough_history_90d (minimum vital — le filtre 1y est dans hard_filters)
     if "enough_history_90d" in df.columns:
         hist90 = df["enough_history_90d"]
-        mask &= hist90.apply(lambda x: str(x).strip().lower() in ("true", "1", "yes")) | hist90.isna()
-    
+        mask &= hist90.apply(
+            lambda x: str(x).strip().lower() in ("true", "1", "yes")
+        ) | hist90.isna()
+
     # data_points
     if "data_points" in df.columns:
         dp = _to_numeric(df["data_points"])
         mask &= (dp >= MIN_DATA_POINTS) | dp.isna()
-    
+
     filtered = df[mask].copy()
-    logger.info(f"[Crypto] Data QC: {len(df)} → {len(filtered)} ({len(df) - len(filtered)} exclus)")
-    
+    logger.info(
+        f"[Crypto QC] Data QC: {len(df)} → {len(filtered)} "
+        f"({len(df) - len(filtered)} exclus)"
+    )
     return filtered
 
 
 # =============================================================================
-# HARD CONSTRAINTS PAR PROFIL
+# ÉTAPE 1: FILTRES DURS PAR PROFIL
 # =============================================================================
 
-def apply_hard_constraints(df: pd.DataFrame, profile: str) -> pd.DataFrame:
+def apply_hard_filters(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     """
-    Couche 1: Contraintes hard par profil (quantiles adaptatifs).
-    """
-    if df.empty:
-        return df
+    Étape ①: Filtres durs par profil (valeurs absolues).
     
-    if profile not in PROFILE_CONSTRAINTS:
-        return df
-    
-    constraints = PROFILE_CONSTRAINTS[profile]
-    
-    # Profil Stable → EXCLUSION TOTALE
-    if constraints.get("excluded", False):
-        logger.info(f"[Crypto {profile}] EXCLUSION TOTALE - crypto non compatible avec profil Stable")
-        return pd.DataFrame(columns=df.columns)
-    
-    mask = pd.Series(True, index=df.index)
-    
-    # Volatilité max (quantile)
-    if constraints.get("vol_max_quantile", 1.0) < 1.0:
-        vol_col = df.apply(_get_vol, axis=1)
-        if vol_col.notna().any():
-            vol_threshold = vol_col.quantile(constraints["vol_max_quantile"])
-            mask &= (vol_col <= vol_threshold) | vol_col.isna()
-            logger.debug(f"[Crypto {profile}] Vol threshold Q{constraints['vol_max_quantile']*100:.0f} = {vol_threshold:.1f}%")
-    
-    # Drawdown max (quantile) - DD est négatif, donc on filtre ceux > threshold
-    if constraints.get("dd_max_quantile", 1.0) < 1.0:
-        if "drawdown_90d_pct" in df.columns:
-            dd = _to_numeric(df["drawdown_90d_pct"]).abs()  # Valeur absolue
-            if dd.notna().any():
-                dd_threshold = dd.quantile(constraints["dd_max_quantile"])
-                mask &= (dd <= dd_threshold) | dd.isna()
-                logger.debug(f"[Crypto {profile}] DD threshold Q{constraints['dd_max_quantile']*100:.0f} = {dd_threshold:.1f}%")
-    
-    # Sharpe min (quantile)
-    if constraints.get("sharpe_min_quantile", 0.0) > 0.0:
-        if "sharpe_ratio" in df.columns:
-            sharpe = _to_numeric(df["sharpe_ratio"])
-            if sharpe.notna().any():
-                sharpe_threshold = sharpe.quantile(constraints["sharpe_min_quantile"])
-                mask &= (sharpe >= sharpe_threshold) | sharpe.isna()
-                logger.debug(f"[Crypto {profile}] Sharpe threshold Q{constraints['sharpe_min_quantile']*100:.0f} = {sharpe_threshold:.2f}")
-    
-    filtered = df[mask].copy()
-    logger.info(f"[Crypto {profile}] Hard constraints: {len(df)} → {len(filtered)}")
-    
-    return filtered
-
-
-# =============================================================================
-# PRESET FILTERS
-# =============================================================================
-def _ensure_blue_chips(df: pd.DataFrame, profile: str, df_original: Optional[pd.DataFrame] = None) -> pd.DataFrame:
-    """
-    v1.3.0: Garantit que BTC et ETH sont présents dans la sélection.
-    
-    Si BTC ou ETH sont absents après tous les filtres, les réinjecte
-    depuis le DataFrame source ou en synthétique.
+    Contrairement à v1.x (quantiles), les seuils sont fixes et 
+    ne dépendent PAS du dataset → reproductibilité garantie.
     
     Args:
-        df: DataFrame de sélection finale (trié par score)
-        profile: Profil courant
+        df: DataFrame post-QC
+        profile: "Stable", "Modéré", ou "Agressif"
     
     Returns:
-        DataFrame avec BTC/ETH garantis en tête
+        DataFrame filtré. Vide pour Stable (exclusion).
     """
-    if profile not in ("Modéré", "Agressif"):
-        return df
-    
-    # Identifier les blue chips déjà présents
     if df.empty:
-        present_bases = set()
-    else:
-        present_bases = set(df.apply(_get_currency_base, axis=1).values)
-    
-    missing = BLUE_CHIP_CRYPTOS - present_bases
-    
-    if not missing:
-        logger.debug(f"[Crypto {profile}] Blue chips OK: BTC et ETH déjà présents")
         return df
-    
-    logger.warning(
-        f"[Crypto {profile}] Blue chips manquants: {missing} — injection fallback"
-    )
-    
-    # PATCH v8.6: Chercher les VRAIS BTC/ETH dans df_original (pré-filtres)
-    # Les vrais assets ont returns_series → pas de pénalité "no price history"
-    fallback_rows = pd.DataFrame()
 
-    if df_original is not None and not df_original.empty:
-        original_bases = df_original.apply(_get_currency_base, axis=1)
-        real_rows = df_original[original_bases.isin(missing)].copy()
-        if not real_rows.empty:
-            real_rows["_matched_preset"] = "blue_chip_restored"
-            real_rows["_is_synthetic"] = False
-            fallback_rows = real_rows
-            logger.info(
-                f"[Crypto {profile}] PATCH v8.6: {len(real_rows)} blue chips "
-                f"restaurés depuis données RÉELLES (avec price history)"
+    filters = PROFILE_HARD_FILTERS.get(profile, {})
+
+    # Profil Stable → EXCLUSION TOTALE
+    if filters.get("excluded", False):
+        logger.info(
+            f"[Crypto {profile}] EXCLUSION TOTALE — "
+            f"crypto non compatible avec profil Stable"
+        )
+        return pd.DataFrame(columns=df.columns)
+
+    mask = pd.Series(True, index=df.index)
+
+    # ── Paires /USD uniquement ──
+    if filters.get("usd_pairs_only", False):
+        if "currency_quote" in df.columns:
+            quote = df["currency_quote"].fillna("").str.upper().str.strip()
+            usd_mask = quote == "USD"
+            mask &= usd_mask
+            logger.debug(
+                f"[Crypto {profile}] USD pairs: "
+                f"{usd_mask.sum()}/{len(df)} passent"
             )
+        elif "symbol" in df.columns:
+            # Fallback: chercher /USD dans symbol
+            mask &= df["symbol"].fillna("").str.contains("/USD", case=False)
 
-    # Fallback synthétique UNIQUEMENT si pas trouvé dans l'original
-    if fallback_rows.empty:
-        fallback_rows = _BTC_ETH_SYNTHETIC[
-            _BTC_ETH_SYNTHETIC["currency_base"].isin(missing)
-        ].copy()
-        logger.warning(
-            f"[Crypto {profile}] Fallback SYNTHÉTIQUE pour {missing} "
-            f"(données réelles non disponibles)"
+    # ── Volatilité max ──
+    vol_max = filters.get("vol_30d_max")
+    if vol_max is not None:
+        vol_col = df.apply(_get_vol, axis=1)
+        vol_pass = (vol_col <= vol_max) | vol_col.isna()
+        mask &= vol_pass
+        logger.debug(
+            f"[Crypto {profile}] Vol ≤ {vol_max}%: "
+            f"{vol_pass.sum()}/{len(df)} passent"
         )
 
-    # Assigner un score élevé pour garantir l'inclusion
-    fallback_rows["_profile_score"] = 75.0
-    fallback_rows["_preset_profile"] = profile
-    fallback_rows["_asset_class"] = "crypto"
-    fallback_rows["_is_blue_chip"] = True
-    
-    # Concaténer : fallback en tête, puis le reste
-    result = pd.concat([fallback_rows, df], ignore_index=True)
-    
-    logger.info(
-        f"[Crypto {profile}] Après injection blue chips: "
-        f"{len(result)} cryptos (dont {len(fallback_rows)} synthétiques)"
-    )
-    
-    return result
-def _preset_blue_chip(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: Blue Chip (v1.2.0)
-    Top cryptos établies (BTC, ETH uniquement).
-    Garantit leur inclusion même si autres filtres sont stricts.
-    """
-    # Extraire currency_base pour chaque row
-    bases = df.apply(_get_currency_base, axis=1)
-    mask = bases.isin(BLUE_CHIP_CRYPTOS)
-    
-    count = mask.sum()
-    if count > 0:
-        logger.debug(f"[Crypto] Preset blue_chip: {count} cryptos (BTC/ETH)")
-    
-    return mask
+    # ── Drawdown max ──
+    dd_max = filters.get("drawdown_90d_max")
+    if dd_max is not None and "drawdown_90d_pct" in df.columns:
+        dd = _to_numeric(df["drawdown_90d_pct"])
+        # dd est négatif (ex: -35%), dd_max aussi → on filtre dd >= dd_max
+        dd_pass = (dd >= dd_max) | dd.isna()
+        mask &= dd_pass
+        logger.debug(
+            f"[Crypto {profile}] DD ≥ {dd_max}%: "
+            f"{dd_pass.sum()}/{len(df)} passent"
+        )
 
+    # ── Historique 1 an requis ──
+    if filters.get("require_history_1y", False):
+        if "enough_history_1y" in df.columns:
+            hist1y = df["enough_history_1y"]
+            hist_pass = hist1y.apply(
+                lambda x: str(x).strip().lower() in ("true", "1", "yes")
+            ) | hist1y.isna()
+            mask &= hist_pass
+            logger.debug(
+                f"[Crypto {profile}] History 1y: "
+                f"{hist_pass.sum()}/{len(df)} passent"
+            )
+        # Fallback: vérifier data_points >= 365
+        elif "data_points" in df.columns:
+            dp = _to_numeric(df["data_points"])
+            mask &= (dp >= 365) | dp.isna()
 
-def _preset_quality_risk(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: Quality Risk
-    Low vol, low DD, sharpe élevé.
-    """
-    mask = pd.Series(True, index=df.index)
-    
-    # Sharpe élevé (Q60)
-    if "sharpe_ratio" in df.columns:
-        sharpe = _to_numeric(df["sharpe_ratio"])
-        if sharpe.notna().any():
-            mask &= sharpe >= sharpe.quantile(0.60)
-    
-    # Vol basse (Q40)
-    vol_col = df.apply(_get_vol, axis=1)
-    if vol_col.notna().any():
-        mask &= vol_col <= vol_col.quantile(0.40)
-    
-    # DD bas (Q30 en valeur absolue)
-    if "drawdown_90d_pct" in df.columns:
-        dd = _to_numeric(df["drawdown_90d_pct"]).abs()
-        if dd.notna().any():
-            mask &= dd <= dd.quantile(0.30)
-    
-    return mask
+    # ── Exclure suspects ──
+    if "ret_1y_suspect" in df.columns:
+        suspect = df["ret_1y_suspect"]
+        mask &= suspect.apply(
+            lambda x: str(x).strip().lower() in ("false", "0", "no")
+        ) | suspect.isna()
 
-
-def _preset_trend3_12m(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: Trend 3-12 mois
-    Tendance moyen/long terme positive, vol raisonnable.
-    """
-    mask = pd.Series(True, index=df.index)
-    
-    # ret_90d positif (Q60)
-    if "ret_90d_pct" in df.columns:
-        ret_90d = _to_numeric(df["ret_90d_pct"])
-        if ret_90d.notna().any():
-            mask &= ret_90d >= ret_90d.quantile(0.60)
-    
-    # ret_6m ou ret_1y positif si dispo
-    if "ret_6m_pct" in df.columns:
-        ret_6m = _to_numeric(df["ret_6m_pct"])
-        if ret_6m.notna().any():
-            mask &= (ret_6m >= ret_6m.quantile(0.50)) | ret_6m.isna()
-    
-    # Vol raisonnable (Q70)
-    vol_col = df.apply(_get_vol, axis=1)
-    if vol_col.notna().any():
-        mask &= vol_col <= vol_col.quantile(0.70)
-    
-    # DD pas catastrophique (Q50)
-    if "drawdown_90d_pct" in df.columns:
-        dd = _to_numeric(df["drawdown_90d_pct"]).abs()
-        if dd.notna().any():
-            mask &= dd <= dd.quantile(0.50)
-    
-    return mask
-
-
-def _preset_swing7_30(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: Swing 7-30 jours
-    Momentum court terme, DD contrôlé.
-    """
-    mask = pd.Series(True, index=df.index)
-    
-    # ret_7d positif (Q50)
-    if "ret_7d_pct" in df.columns:
-        ret_7d = _to_numeric(df["ret_7d_pct"])
-        if ret_7d.notna().any():
-            mask &= ret_7d >= ret_7d.quantile(0.50)
-    
-    # ret_30d positif ou pas trop négatif
-    if "ret_30d_pct" in df.columns:
-        ret_30d = _to_numeric(df["ret_30d_pct"])
-        if ret_30d.notna().any():
-            mask &= ret_30d >= ret_30d.quantile(0.40)
-    
-    # DD pas trop sévère (Q40)
-    if "drawdown_90d_pct" in df.columns:
-        dd = _to_numeric(df["drawdown_90d_pct"]).abs()
-        if dd.notna().any():
-            mask &= dd <= dd.quantile(0.40)
-    
-    return mask
-
-
-def _preset_recovery_crypto(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: Recovery Crypto (v1.1.0: renommé depuis 'recovery')
-    Rebond après gros DD, momentum récent positif.
-    """
-    mask = pd.Series(True, index=df.index)
-    
-    # DD significatif (Q60+ en valeur absolue = gros DD)
-    if "drawdown_90d_pct" in df.columns:
-        dd = _to_numeric(df["drawdown_90d_pct"]).abs()
-        if dd.notna().any():
-            mask &= dd >= dd.quantile(0.60)
-    
-    # Rebond récent: ret_7d positif
-    if "ret_7d_pct" in df.columns:
-        ret_7d = _to_numeric(df["ret_7d_pct"])
-        if ret_7d.notna().any():
-            mask &= ret_7d > 0
-    
-    # Rebond récent: ret_30d pas trop négatif
-    if "ret_30d_pct" in df.columns:
-        ret_30d = _to_numeric(df["ret_30d_pct"])
-        if ret_30d.notna().any():
-            mask &= ret_30d >= ret_30d.quantile(0.30)
-    
-    return mask
-
-
-def _preset_momentum24h(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: Momentum 24h
-    Momentum très court terme, haute conviction.
-    """
-    mask = pd.Series(True, index=df.index)
-    
-    # ret_1d très positif (Q75)
-    if "ret_1d_pct" in df.columns:
-        ret_1d = _to_numeric(df["ret_1d_pct"])
-        if ret_1d.notna().any():
-            mask &= ret_1d >= ret_1d.quantile(0.75)
-    
-    # ret_7d aussi positif (Q60)
-    if "ret_7d_pct" in df.columns:
-        ret_7d = _to_numeric(df["ret_7d_pct"])
-        if ret_7d.notna().any():
-            mask &= ret_7d >= ret_7d.quantile(0.60)
-    
-    return mask
-
-
-def _preset_highvol_lottery(df: pd.DataFrame) -> pd.Series:
-    """
-    Preset: High Vol Lottery
-    Très haute volatilité, spéculatif.
-    """
-    mask = pd.Series(True, index=df.index)
-    
-    # Vol très haute (Q80+)
-    vol_col = df.apply(_get_vol, axis=1)
-    if vol_col.notna().any():
-        mask &= vol_col >= vol_col.quantile(0.80)
-    
-    # ATR élevé si dispo (Q75+)
-    if "atr14_pct" in df.columns:
-        atr = _to_numeric(df["atr14_pct"])
-        if atr.notna().any():
-            mask &= atr >= atr.quantile(0.75)
-    
-    return mask
-
-
-# Mapping preset name → function (v1.2.0: ajout blue_chip)
-PRESET_FUNCTIONS = {
-    "blue_chip": _preset_blue_chip,          # v1.2.0: NEW
-    "quality_risk": _preset_quality_risk,
-    "trend3_12m": _preset_trend3_12m,
-    "swing7_30": _preset_swing7_30,
-    "recovery_crypto": _preset_recovery_crypto,
-    "momentum24h": _preset_momentum24h,
-    "highvol_lottery": _preset_highvol_lottery,
-}
-
-
-def apply_presets_union(df: pd.DataFrame, profile: str) -> pd.DataFrame:
-    """
-    Couche 2: Union des presets pour le profil.
-    """
-    if df.empty:
-        return df
-    
-    preset_names = PROFILE_PRESETS.get(profile, [])
-    if not preset_names:
-        logger.warning(f"[Crypto] Aucun preset défini pour profil {profile}")
-        return df
-    
-    mask = pd.Series(False, index=df.index)
-    
-    for preset_name in preset_names:
-        if preset_name in PRESET_FUNCTIONS:
-            preset_mask = PRESET_FUNCTIONS[preset_name](df)
-            count_before = mask.sum()
-            mask |= preset_mask
-            count_added = mask.sum() - count_before
-            logger.debug(f"[Crypto {profile}] Preset '{preset_name}': +{count_added} actifs")
-    
     filtered = df[mask].copy()
-    logger.info(f"[Crypto {profile}] Presets union: {len(df)} → {len(filtered)}")
-    
+    logger.info(
+        f"[Crypto {profile}] Hard filters: {len(df)} → {len(filtered)} "
+        f"({len(df) - len(filtered)} exclus)"
+    )
+
+    # Log les assets qui passent pour debug
+    if len(filtered) > 0 and len(filtered) <= 20:
+        symbols = filtered["symbol"].tolist() if "symbol" in filtered.columns else []
+        logger.debug(f"[Crypto {profile}] Éligibles: {symbols}")
+
     return filtered
 
 
 # =============================================================================
-# SCORING
+# ÉTAPE 2: SCORING PONDÉRÉ
 # =============================================================================
 
 def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     """
-    Calcule le _profile_score pour chaque Crypto.
+    Étape ②: Scoring pondéré par profil.
+    
+    Chaque métrique est convertie en percentile [0,1] puis pondérée.
+    Les composantes "penalty" (vol, dd) sont inversées: haute vol → score bas.
+    
+    Contrairement à v1.x:
+    - Plus de presets (quality_risk, trend3_12m, etc.)
+    - Plus de blue_chip_bonus
+    - Score basé sur 5 métriques explicites
+    
+    Args:
+        df: DataFrame post-hard-filters
+        profile: "Modéré" ou "Agressif"
+    
+    Returns:
+        DataFrame avec colonnes _profile_score, _score_components, etc.
     """
     if df.empty:
         return df
-    
-    weights = SCORING_WEIGHTS.get(profile, SCORING_WEIGHTS["Modéré"])
+
+    weights = PROFILE_SCORING_WEIGHTS.get(profile, {})
     if not weights:
         return df
-    
-    # Calcul des composantes
-    scores = pd.DataFrame(index=df.index)
-    
-    # Sharpe score (higher is better)
+
+    # ── Extraire les métriques brutes ──
+    metrics = pd.DataFrame(index=df.index)
+
+    # Sharpe ratio (higher is better)
     if "sharpe_ratio" in df.columns:
-        sharpe = _to_numeric(df["sharpe_ratio"])
-        scores["sharpe"] = _rank_percentile(sharpe, higher_is_better=True)
+        metrics["sharpe_ratio"] = _to_numeric(df["sharpe_ratio"])
     else:
-        scores["sharpe"] = 0.5
-    
-    # Vol score (lower is better for Modéré, peut être higher pour Agressif)
-    vol_col = df.apply(_get_vol, axis=1)
-    higher_vol_better = (profile == "Agressif")  # En Agressif, high vol peut être positif
-    scores["vol"] = _rank_percentile(vol_col, higher_is_better=higher_vol_better)
-    
-    # DD score (lower is better - abs value)
+        metrics["sharpe_ratio"] = np.nan
+
+    # Return 90d (higher is better)
+    if "ret_90d_pct" in df.columns:
+        metrics["ret_90d"] = _to_numeric(df["ret_90d_pct"])
+    else:
+        metrics["ret_90d"] = np.nan
+
+    # Return 1y (higher is better)
+    if "ret_1y_pct" in df.columns:
+        metrics["ret_1y"] = _to_numeric(df["ret_1y_pct"])
+    else:
+        metrics["ret_1y"] = np.nan
+
+    # Volatilité (lower is better → score inversé)
+    metrics["vol"] = df.apply(_get_vol, axis=1)
+
+    # Drawdown (closer to 0 is better → score inversé sur abs)
     if "drawdown_90d_pct" in df.columns:
-        dd = _to_numeric(df["drawdown_90d_pct"]).abs()
-        scores["dd"] = _rank_percentile(dd, higher_is_better=False)
+        metrics["dd"] = _to_numeric(df["drawdown_90d_pct"]).abs()
     else:
-        scores["dd"] = 0.5
-    
-    # Momentum fast (7d + 1d) - higher is better
-    momentum_fast = df.apply(_get_momentum_fast, axis=1)
-    scores["momentum_fast"] = _rank_percentile(momentum_fast, higher_is_better=True)
-    
-    # Momentum med (30d + 90d) - higher is better
-    momentum_med = df.apply(_get_momentum_med, axis=1)
-    scores["momentum_med"] = _rank_percentile(momentum_med, higher_is_better=True)
-    
-    # v1.2.0: Bonus blue chip (stabilité)
-    if profile == "Modéré":
-        is_blue_chip = _preset_blue_chip(df)
-        # Blue chips get a small bonus in Modéré
-        scores["blue_chip_bonus"] = is_blue_chip.astype(float) * 0.1
-    
-    # Score pondéré
+        metrics["dd"] = np.nan
+
+    # ── Convertir en percentiles ──
+    scores = pd.DataFrame(index=df.index)
+    scores["sharpe_ratio"] = _rank_percentile(metrics["sharpe_ratio"], higher_is_better=True)
+    scores["ret_90d"]      = _rank_percentile(metrics["ret_90d"], higher_is_better=True)
+    scores["ret_1y"]       = _rank_percentile(metrics["ret_1y"], higher_is_better=True)
+    scores["vol_penalty"]  = _rank_percentile(metrics["vol"], higher_is_better=False)  # Low vol = high score
+    scores["dd_penalty"]   = _rank_percentile(metrics["dd"], higher_is_better=False)   # Low DD = high score
+
+    # ── Score composite pondéré ──
     total_score = pd.Series(0.0, index=df.index)
-    total_weight = 0.0
-    
+    total_abs_weight = 0.0
+
     for component, weight in weights.items():
         if component in scores.columns:
-            total_score += scores[component] * weight
-            total_weight += weight
-    
-    # Add blue chip bonus (not weighted, direct add)
-    if "blue_chip_bonus" in scores.columns:
-        total_score += scores["blue_chip_bonus"]
-    
-    if total_weight > 0:
-        total_score /= total_weight
-    
-    # Normalisation 0-100
+            # Les poids négatifs dans la config signifient "pénalité"
+            # Mais le score est déjà inversé (low vol → high score)
+            # Donc on utilise abs(weight) comme multiplicateur
+            total_score += scores[component] * abs(weight)
+            total_abs_weight += abs(weight)
+
+    if total_abs_weight > 0:
+        total_score /= total_abs_weight
+
+    # Normaliser 0-100
+    df = df.copy()
     df["_profile_score"] = _normalize_score(total_score, 0, 100).round(2)
     df["_preset_profile"] = profile
     df["_asset_class"] = "crypto"
-    
-    # v1.2.0: Marquer les blue chips
-    df["_is_blue_chip"] = _preset_blue_chip(df)
-    
-    logger.info(f"[Crypto {profile}] Scores: mean={df['_profile_score'].mean():.1f}, "
-                f"std={df['_profile_score'].std():.1f}, "
-                f"range=[{df['_profile_score'].min():.1f}, {df['_profile_score'].max():.1f}]")
-    
-    # v1.2.0: Log blue chips
-    n_blue = df["_is_blue_chip"].sum()
-    if n_blue > 0:
-        logger.info(f"[Crypto {profile}] Blue chips inclus: {n_blue} (BTC/ETH)")
-    
+
+    # Ajouter la catégorie sectorielle pour chaque asset
+    df["_crypto_category"] = df.apply(
+        lambda row: _get_category(_get_currency_base(row)), axis=1
+    )
+
+    # Stocker les composantes pour debug/audit
+    for comp in scores.columns:
+        df[f"_score_{comp}"] = scores[comp].round(3)
+
+    logger.info(
+        f"[Crypto {profile}] Scores: "
+        f"mean={df['_profile_score'].mean():.1f}, "
+        f"std={df['_profile_score'].std():.1f}, "
+        f"range=[{df['_profile_score'].min():.1f}, "
+        f"{df['_profile_score'].max():.1f}]"
+    )
+
     return df
 
 
 # =============================================================================
-# MAIN FUNCTION
+# ÉTAPE 3: SÉLECTION AVEC DIVERSIFICATION SECTORIELLE
+# =============================================================================
+
+def select_with_diversity(
+    df: pd.DataFrame,
+    profile: str,
+) -> pd.DataFrame:
+    """
+    Étape ③+④: Sélection core/satellite avec contraintes de diversification.
+    
+    Algorithme glouton:
+    1. Trier par _profile_score DESC
+    2. Sélectionner les CORE (n_core) en respectant max 1 par catégorie
+    3. Sélectionner les SATELLITE (n_satellite) en respectant max 2 par catégorie au total
+    4. Tagger chaque asset comme 'core' ou 'satellite'
+    
+    Args:
+        df: DataFrame avec _profile_score et _crypto_category
+        profile: "Modéré" ou "Agressif"
+    
+    Returns:
+        DataFrame réduit avec _role = 'core' | 'satellite'
+    """
+    if df.empty:
+        return df
+
+    config = CORE_SATELLITE_CONFIG.get(profile)
+    if config is None:
+        return df
+
+    n_core = config["n_core"]
+    n_satellite = config["n_satellite"]
+    max_per_cat_core = config["max_per_cat_core"]
+    max_per_cat_total = config["max_per_cat_total"]
+
+    # Trier par score DESC
+    df_sorted = df.sort_values("_profile_score", ascending=False).copy()
+
+    selected_indices = []
+    selected_roles = {}  # index → 'core' | 'satellite'
+    category_count_core = {}    # category → count in core
+    category_count_total = {}   # category → count total
+
+    # ── Phase 1: Sélection CORE ──
+    for idx, row in df_sorted.iterrows():
+        if len([i for i in selected_indices if selected_roles.get(i) == "core"]) >= n_core:
+            break
+
+        cat = row.get("_crypto_category", "other")
+
+        # Contrainte: max 1 par catégorie en core
+        if category_count_core.get(cat, 0) >= max_per_cat_core:
+            continue
+
+        selected_indices.append(idx)
+        selected_roles[idx] = "core"
+        category_count_core[cat] = category_count_core.get(cat, 0) + 1
+        category_count_total[cat] = category_count_total.get(cat, 0) + 1
+
+        base = _get_currency_base(row)
+        logger.debug(
+            f"[Crypto {profile}] CORE: {base} "
+            f"(cat={cat}, score={row['_profile_score']:.1f})"
+        )
+
+    # ── Phase 2: Sélection SATELLITE ──
+    for idx, row in df_sorted.iterrows():
+        if idx in selected_indices:
+            continue
+
+        n_sat_selected = len([
+            i for i in selected_indices if selected_roles.get(i) == "satellite"
+        ])
+        if n_sat_selected >= n_satellite:
+            break
+
+        cat = row.get("_crypto_category", "other")
+
+        # Contrainte: max 2 par catégorie au total
+        if category_count_total.get(cat, 0) >= max_per_cat_total:
+            continue
+
+        selected_indices.append(idx)
+        selected_roles[idx] = "satellite"
+        category_count_total[cat] = category_count_total.get(cat, 0) + 1
+
+        base = _get_currency_base(row)
+        logger.debug(
+            f"[Crypto {profile}] SATELLITE: {base} "
+            f"(cat={cat}, score={row['_profile_score']:.1f})"
+        )
+
+    # ── Construire le résultat ──
+    if not selected_indices:
+        logger.warning(f"[Crypto {profile}] Aucun asset sélectionné après diversification")
+        return pd.DataFrame(columns=df.columns)
+
+    result = df_sorted.loc[selected_indices].copy()
+    result["_role"] = result.index.map(selected_roles)
+
+    # Réordonner: core d'abord, puis satellite, par score DESC
+    result["_role_order"] = result["_role"].map({"core": 0, "satellite": 1})
+    result = result.sort_values(
+        ["_role_order", "_profile_score"],
+        ascending=[True, False]
+    ).drop(columns=["_role_order"])
+
+    # Log résumé
+    n_core_actual = (result["_role"] == "core").sum()
+    n_sat_actual = (result["_role"] == "satellite").sum()
+    categories_used = result["_crypto_category"].unique().tolist()
+
+    logger.info(
+        f"[Crypto {profile}] Sélection diversifiée: "
+        f"{n_core_actual} core + {n_sat_actual} satellite = "
+        f"{len(result)} total, catégories: {categories_used}"
+    )
+
+    return result
+
+
+# =============================================================================
+# DÉDUPLICATION PAIRES (USD vs EUR du même asset)
+# =============================================================================
+
+def _deduplicate_pairs(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Déduplique les paires du même asset (ex: BTC/USD et BTC/EUR).
+    
+    Garde la paire avec le plus de data_points, ou /USD par préférence.
+    """
+    if df.empty or "currency_base" not in df.columns:
+        return df
+
+    bases = df.apply(_get_currency_base, axis=1)
+    df = df.copy()
+    df["_base_dedup"] = bases
+
+    # Pour chaque base, garder le meilleur
+    best_indices = []
+    for base, group in df.groupby("_base_dedup"):
+        if len(group) == 1:
+            best_indices.append(group.index[0])
+        else:
+            # Préférer /USD
+            usd_rows = group[
+                group["symbol"].fillna("").str.contains("/USD", case=False)
+            ]
+            if not usd_rows.empty:
+                # Parmi les /USD, garder celui avec le plus de data_points
+                if "data_points" in group.columns:
+                    dp_vals = _to_numeric(usd_rows["data_points"]).fillna(0)
+                    best_indices.append(usd_rows.index[dp_vals.values.argmax()])
+                else:
+                    best_indices.append(usd_rows.index[0])
+            else:
+                # Pas de /USD → garder le premier
+                best_indices.append(group.index[0])
+
+    result = df.loc[best_indices].drop(columns=["_base_dedup"])
+    if len(result) < len(df):
+        logger.debug(
+            f"[Crypto] Déduplication paires: {len(df)} → {len(result)}"
+        )
+    return result
+
+
+# =============================================================================
+# FONCTION PRINCIPALE (API INCHANGÉE)
 # =============================================================================
 
 def select_crypto_for_profile(
@@ -732,84 +707,106 @@ def select_crypto_for_profile(
     """
     Sélectionne les cryptomonnaies pour un profil donné.
     
+    *** API IDENTIQUE À v1.3.0 — drop-in replacement ***
+    
+    Pipeline v2.0.0:
+      ⓪ Data QC (stablecoins, tier1, stale, coverage)
+      → Déduplication paires (BTC/USD vs BTC/EUR)
+      → ① Filtres durs par profil (vol max, dd max, historique)
+      → ② Scoring pondéré (sharpe, ret_90d, ret_1y, vol_penalty, dd_penalty)
+      → ③ Diversification sectorielle + split core/satellite
+    
     Args:
-        df: DataFrame avec les cryptos
+        df: DataFrame avec les cryptos (CSV complet)
         profile: "Stable", "Modéré", ou "Agressif"
-        top_n: Nombre max de cryptos à retourner (optionnel)
+        top_n: Nombre max de cryptos (ignoré en v2 — piloté par config)
     
     Returns:
-        DataFrame filtré avec _profile_score
+        DataFrame filtré avec _profile_score, _role, _crypto_category
         ATTENTION: Retourne vide pour profil "Stable" (exclusion)
     """
-    if profile not in PROFILE_PRESETS:
-        raise ValueError(f"Profil inconnu: {profile}. Valides: {list(PROFILE_PRESETS.keys())}")
-    
-    logger.info(f"[Crypto] Sélection pour profil {profile} - Univers initial: {len(df)}")
-    
-    # Couche 0: Data QC
+    valid_profiles = list(PROFILE_HARD_FILTERS.keys())
+    if profile not in valid_profiles:
+        raise ValueError(
+            f"Profil inconnu: {profile}. Valides: {valid_profiles}"
+        )
+
+    logger.info(
+        f"[Crypto v{VERSION}] Sélection pour profil {profile} "
+        f"— Univers initial: {len(df)}"
+    )
+
+    # ── Étape 0: Data QC ──
     df_clean = apply_data_qc_filters(df)
-    
-    # Couche 1: Hard constraints (inclut exclusion Stable)
-    df_constrained = apply_hard_constraints(df_clean, profile)
-    
-    # Si vide après contraintes
-    if df_constrained.empty:
-        # v1.3.1 FIX: Pour Modéré/Agressif, injecter BTC/ETH même si univers vide
-        if profile in ("Modéré", "Agressif"):
-            logger.warning(f"[Crypto {profile}] Univers vide après contraintes — injection blue chips fallback")
-            empty_df = pd.DataFrame(columns=_BTC_ETH_SYNTHETIC.columns)
-            return _ensure_blue_chips(empty_df, profile, df_original=df_clean)
-        logger.info(f"[Crypto {profile}] Sélection finale: 0 cryptos (exclusion ou filtres stricts)")
-        return df_constrained
-    # Couche 2: Presets union
-    df_preset = apply_presets_union(df_constrained, profile)
-    
-    # Fallback si univers vide
-    if df_preset.empty and not df_constrained.empty:
-        logger.warning(f"[Crypto {profile}] Presets vides, fallback sur contraintes hard")
-        df_preset = df_constrained
-    
-    # Scoring
-    df_scored = compute_profile_score(df_preset, profile)
-    
-    # Tri par score
-    df_sorted = df_scored.sort_values("_profile_score", ascending=False)
-    
-    # Top N
-    if top_n and len(df_sorted) > top_n:
-        df_sorted = df_sorted.head(top_n)
-       
-    logger.info(f"[Crypto {profile}] Sélection finale: {len(df_sorted)} cryptos")
-    
-    # v1.3.0: Garantir BTC/ETH pour Modéré et Agressif
-    # Remplace l'ancien fallback v5.2.1 qui était Agressif-only et ne gérait
-    # pas le cas où BTC/ETH sont absents du CSV source
-    if profile in ("Modéré", "Agressif"):
-        df_sorted = _ensure_blue_chips(df_sorted, profile, df_original=df_clean)
-    
-    return df_sorted
+
+    # ── Déduplication paires ──
+    df_dedup = _deduplicate_pairs(df_clean)
+    if len(df_dedup) < len(df_clean):
+        logger.info(
+            f"[Crypto] Après dédup paires: {len(df_clean)} → {len(df_dedup)}"
+        )
+
+    # ── Étape 1: Filtres durs ──
+    df_filtered = apply_hard_filters(df_dedup, profile)
+
+    if df_filtered.empty:
+        logger.info(
+            f"[Crypto {profile}] Sélection finale: 0 cryptos "
+            f"(exclusion ou filtres stricts)"
+        )
+        return df_filtered
+
+    # ── Étape 2: Scoring ──
+    df_scored = compute_profile_score(df_filtered, profile)
+
+    # ── Étape 3+4: Diversification + Core/Satellite ──
+    df_selected = select_with_diversity(df_scored, profile)
+
+    # ── Appliquer top_n si spécifié (backward compat) ──
+    if top_n and len(df_selected) > top_n:
+        df_selected = df_selected.head(top_n)
+
+    logger.info(
+        f"[Crypto {profile}] Sélection finale: {len(df_selected)} cryptos"
+    )
+
+    # ── Log résumé lisible ──
+    if not df_selected.empty:
+        for _, row in df_selected.iterrows():
+            base = _get_currency_base(row)
+            role = row.get("_role", "?")
+            score = row.get("_profile_score", 0)
+            cat = row.get("_crypto_category", "?")
+            sharpe = row.get("sharpe_ratio", "?")
+            vol = _get_vol(row)
+            logger.info(
+                f"  → [{role.upper():9s}] {base:8s} | "
+                f"score={score:5.1f} | cat={cat:15s} | "
+                f"sharpe={sharpe} | vol={vol}"
+            )
+
+    return df_selected
 
 
 # =============================================================================
-# UTILITIES
+# UTILITIES (backward compat)
 # =============================================================================
 
 def get_crypto_preset_summary() -> Dict[str, Any]:
-    """Retourne un résumé des presets Crypto."""
+    """Retourne un résumé des presets Crypto v2.0.0."""
     return {
-        "presets": list(PRESET_FUNCTIONS.keys()),
-        "stablecoins_excluded": list(STABLECOINS),
-        "blue_chips": list(BLUE_CHIP_CRYPTOS),
+        "version": VERSION,
+        "pipeline": "4-stage: QC → hard_filters → scoring → diversification",
+        "stablecoins_excluded": sorted(STABLECOINS),
+        "categories": {k: v for k, v in CRYPTO_CATEGORIES.items()},
         "profiles": {
             profile: {
-                "presets": presets,
-                "constraints": PROFILE_CONSTRAINTS[profile],
-                "weights": SCORING_WEIGHTS.get(profile, {}),
+                "hard_filters": PROFILE_HARD_FILTERS.get(profile, {}),
+                "scoring_weights": PROFILE_SCORING_WEIGHTS.get(profile, {}),
+                "core_satellite": CORE_SATELLITE_CONFIG.get(profile, {}),
             }
-            for profile, presets in PROFILE_PRESETS.items()
+            for profile in PROFILE_HARD_FILTERS.keys()
         },
-        "blue_chip_fallback": "synthetic BTC/ETH injected if missing",
-        "version": "1.3.0",
     }
 
 
@@ -819,40 +816,112 @@ def get_crypto_preset_summary() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    
-    # Test avec données fictives
-    test_data = pd.DataFrame({
-        "symbol": ["BTC/EUR", "ETH/EUR", "SOL/EUR", "DOGE/EUR", "XRP/EUR", "ADA/EUR", "AVAX/EUR", "LINK/EUR", "USDT/EUR", "USDC/EUR"],
-        "currency_base": ["BTC", "ETH", "SOL", "DOGE", "XRP", "ADA", "AVAX", "LINK", "USDT", "USDC"],
-        "ret_1d_pct": [2.5, 3.2, 5.1, 8.2, 1.2, 2.1, 4.5, 3.8, 0.01, 0.0],
-        "ret_7d_pct": [5.2, 7.1, 12.5, 15.2, 3.2, 4.5, 9.8, 8.2, 0.02, 0.0],
-        "ret_30d_pct": [12.5, 18.2, 25.1, -5.2, 8.1, 10.2, 22.5, 15.2, 0.01, 0.0],
-        "ret_90d_pct": [35.2, 45.1, 65.2, -15.2, 22.1, 28.5, 55.2, 42.1, 0.0, 0.0],
-        "ret_6m_pct": [52.1, 68.2, 120.5, -8.5, 35.2, 42.1, 95.2, 62.1, 0.0, 0.0],
-        "vol_30d_annual_pct": [45, 55, 85, 120, 65, 75, 95, 70, 2, 1],
-        "vol_7d_annual_pct": [42, 52, 80, 115, 62, 72, 90, 68, 1.5, 0.8],
-        "sharpe_ratio": [1.2, 1.5, 1.8, 0.3, 0.8, 0.9, 1.4, 1.1, 0.1, 0.05],
-        "drawdown_90d_pct": [-15, -18, -25, -45, -20, -22, -28, -19, -0.5, -0.2],
-        "atr14_pct": [4.2, 5.1, 8.5, 12.2, 6.1, 7.2, 9.5, 6.8, 0.1, 0.05],
-        "tier1_listed": [True, True, True, True, True, True, True, True, True, True],
-        "stale": [False, False, False, False, False, False, False, False, False, False],
-        "coverage_ratio": [0.98, 0.98, 0.95, 0.92, 0.95, 0.94, 0.93, 0.96, 0.99, 0.99],
-        "data_points": [365, 365, 300, 250, 365, 365, 280, 320, 365, 365],
-        "enough_history_90d": [True, True, True, True, True, True, True, True, True, True],
-    })
-    
-    print("\n" + "=" * 60)
-    print("TEST PRESET CRYPTO v1.2.0")
-    print("=" * 60)
-    
+
+    # Simuler un dataset réaliste avec les assets connus du CSV
+    test_data = pd.DataFrame([
+        # Blue chips (mauvais sharpe actuellement)
+        {"symbol": "BTC/USD", "currency_base": "BTC", "currency_quote": "USD",
+         "ret_90d_pct": -5.0, "ret_1y_pct": -19.0, "vol_30d_annual_pct": 48.0,
+         "sharpe_ratio": -3.59, "drawdown_90d_pct": -25.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.99,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        {"symbol": "ETH/USD", "currency_base": "ETH", "currency_quote": "USD",
+         "ret_90d_pct": -10.0, "ret_1y_pct": -38.0, "vol_30d_annual_pct": 62.0,
+         "sharpe_ratio": -3.48, "drawdown_90d_pct": -40.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.99,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        # Top performers
+        {"symbol": "DCR/USD", "currency_base": "DCR", "currency_quote": "USD",
+         "ret_90d_pct": 120.0, "ret_1y_pct": 157.0, "vol_30d_annual_pct": 98.8,
+         "sharpe_ratio": 6.57, "drawdown_90d_pct": -18.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        {"symbol": "MORPHO/USD", "currency_base": "MORPHO", "currency_quote": "USD",
+         "ret_90d_pct": 85.0, "ret_1y_pct": -8.5, "vol_30d_annual_pct": 137.9,
+         "sharpe_ratio": 4.55, "drawdown_90d_pct": -30.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.95,
+         "data_points": 200, "enough_history_90d": True, "enough_history_1y": False,
+         "ret_1y_suspect": False},
+
+        # Stable crypto
+        {"symbol": "PAXG/USD", "currency_base": "PAXG", "currency_quote": "USD",
+         "ret_90d_pct": 15.0, "ret_1y_pct": 77.0, "vol_30d_annual_pct": 60.0,
+         "sharpe_ratio": 0.25, "drawdown_90d_pct": -15.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        {"symbol": "XAUT/USD", "currency_base": "XAUT", "currency_quote": "USD",
+         "ret_90d_pct": 14.0, "ret_1y_pct": 72.0, "vol_30d_annual_pct": 55.0,
+         "sharpe_ratio": 0.20, "drawdown_90d_pct": -12.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.97,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        {"symbol": "TRX/USD", "currency_base": "TRX", "currency_quote": "USD",
+         "ret_90d_pct": 5.0, "ret_1y_pct": 26.0, "vol_30d_annual_pct": 27.7,
+         "sharpe_ratio": -1.17, "drawdown_90d_pct": -15.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        # Mid-tier
+        {"symbol": "BCH/USD", "currency_base": "BCH", "currency_quote": "USD",
+         "ret_90d_pct": 20.0, "ret_1y_pct": 70.7, "vol_30d_annual_pct": 92.0,
+         "sharpe_ratio": -1.48, "drawdown_90d_pct": -35.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        {"symbol": "XVG/USD", "currency_base": "XVG", "currency_quote": "USD",
+         "ret_90d_pct": -5.0, "ret_1y_pct": 4.0, "vol_30d_annual_pct": 105.0,
+         "sharpe_ratio": -1.80, "drawdown_90d_pct": -35.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.95,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        {"symbol": "SOL/USD", "currency_base": "SOL", "currency_quote": "USD",
+         "ret_90d_pct": -15.0, "ret_1y_pct": -25.0, "vol_30d_annual_pct": 95.0,
+         "sharpe_ratio": -2.10, "drawdown_90d_pct": -45.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.99,
+         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "ret_1y_suspect": False},
+
+        # High vol for aggressive
+        {"symbol": "PEPE/USD", "currency_base": "PEPE", "currency_quote": "USD",
+         "ret_90d_pct": 50.0, "ret_1y_pct": 200.0, "vol_30d_annual_pct": 180.0,
+         "sharpe_ratio": 1.20, "drawdown_90d_pct": -60.0,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.90,
+         "data_points": 200, "enough_history_90d": True, "enough_history_1y": False,
+         "ret_1y_suspect": False},
+    ])
+
+    print("\n" + "=" * 70)
+    print(f"TEST PRESET CRYPTO v{VERSION}")
+    print("=" * 70)
+
     for profile in ["Stable", "Modéré", "Agressif"]:
-        print(f"\n--- Profil: {profile} ---")
+        print(f"\n{'─' * 70}")
+        print(f"PROFIL: {profile}")
+        print(f"{'─' * 70}")
+
         result = select_crypto_for_profile(test_data.copy(), profile)
+
         if not result.empty:
-            cols = ["symbol", "sharpe_ratio", "vol_30d_annual_pct", "ret_90d_pct", "_profile_score", "_is_blue_chip"]
-            cols = [c for c in cols if c in result.columns]
-            print(result[cols].to_string(index=False))
+            display_cols = [
+                "symbol", "_role", "_crypto_category",
+                "_profile_score", "sharpe_ratio",
+                "vol_30d_annual_pct", "ret_1y_pct", "drawdown_90d_pct"
+            ]
+            display_cols = [c for c in display_cols if c in result.columns]
+            print(result[display_cols].to_string(index=False))
         else:
-            print("Aucune crypto sélectionnée (exclusion ou filtres stricts)")
-    
-    print("\n✅ Test terminé")
+            print("→ Aucune crypto sélectionnée")
+
+    print(f"\n✅ Test v{VERSION} terminé")
