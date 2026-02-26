@@ -77,7 +77,6 @@ MIN_DATA_POINTS = 60  # ~2 mois de données
 # | enough_history   | 1y required | 90d suffit  |
 # | pair             | /USD only   | /USD only   |
 # ─────────────────────────────────────────────────────────────────────────────
-
 PROFILE_HARD_FILTERS = {
     "Stable": {
         "excluded": True,  # EXCLUSION TOTALE
@@ -86,13 +85,13 @@ PROFILE_HARD_FILTERS = {
         "vol_30d_max": 80.0,       # Volatilité annualisée max 80%
         "drawdown_90d_max": -35.0, # Drawdown max -35%
         "require_history_1y": True, # Exige 1 an d'historique
-        "usd_pairs_only": True,    # Paires /USD uniquement
+        "usd_pairs_only": False,   # Accepte toutes paires (/EUR, /USD, etc.)
     },
     "Agressif": {
         "vol_30d_max": 200.0,      # Large: accepte haute vol
         "drawdown_90d_max": -70.0, # Accepte DD significatifs
         "require_history_1y": False, # 90d suffit
-        "usd_pairs_only": True,
+        "usd_pairs_only": False,   # Accepte toutes paires (/EUR, /USD, etc.)
     },
 }
 
