@@ -517,7 +517,7 @@
             <main class="page-main">
             <!-- ==================== STEP 1: FAMILLE ==================== -->
             <div class="step-panel active" id="step-1">
-                <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez l'âge du donateur et ajoutez les bénéficiaires — les abattements se calculent automatiquement.</div>
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez les donateurs (parents, grands-parents…) avec leur patrimoine propre, puis ajoutez les bénéficiaires. L'optimiseur calculera automatiquement le meilleur chemin de transmission.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-users"></i> Le donateur</div>
                     <div class="section-subtitle">Personne qui souhaite transmettre son patrimoine</div>
@@ -585,6 +585,33 @@
                     <button class="btn-add" onclick="SD.addBeneficiary()" style="margin-top:12px;">
                         <i class="fas fa-plus"></i> Ajouter un bénéficiaire
                     </button>
+                </div>
+
+                <!-- Multi-donateurs -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-people-arrows"></i> Donateurs (qui donne ?)</div>
+                    <div class="section-subtitle">Ajoutez chaque personne qui souhaite transmettre — chacun avec son patrimoine propre et son lien familial.</div>
+                    <div class="warning-box info" style="margin-bottom:12px;">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Avec plusieurs donateurs, l'optimiseur calcule <strong>tous les chemins de transmission possibles</strong> et identifie le plus avantageux fiscalement (direct vs indirect via un intermédiaire).</span>
+                    </div>
+                    <div class="presets" id="donor-presets">
+                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('parent_seul')">👤 Parent seul</button>
+                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_parents')">👫 2 Parents</button>
+                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('gp_seuls')">👴👵 Grands-parents</button>
+                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_gp')">👨‍👩‍👧 Parents + GP</button>
+                    </div>
+                    <div class="dynamic-list" id="donors-list"></div>
+                    <button class="btn-add" onclick="PathOptimizer.addDonor()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Ajouter un donateur
+                    </button>
+                </div>
+
+                <!-- Matrice donateurs × bénéficiaires -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-th"></i> Matrice des liens fiscaux</div>
+                    <div class="section-subtitle">Abattements et barèmes auto-détectés selon les rôles familiaux</div>
+                    <div id="path-matrix"></div>
                 </div>
             </div>
 
@@ -844,6 +871,16 @@
             <!-- ==================== STEP 5: RÉSULTATS ==================== -->
             <div class="step-panel" id="step-5">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Comparez les scénarios et consultez la stratégie recommandée avec son calendrier d'exécution.</div>
+                
+                <!-- PATH OPTIMIZER RESULTS -->
+                <div id="path-results-wrapper" style="display:none;">
+                    <div class="section-card" style="border-color:rgba(198,134,66,.25);margin-bottom:16px;">
+                        <div class="section-title"><i class="fas fa-route" style="color:var(--accent-green);"></i> Optimisation des chemins de transmission</div>
+                        <div class="section-subtitle">Tous les parcours possibles entre donateurs et bénéficiaires, classés par coût fiscal</div>
+                        <div id="path-results"></div>
+                    </div>
+                </div>
+
                 <div class="results-summary" id="results-hero">
                     <div class="big-number" id="best-net-amount">—</div>
                     <div class="subtitle">Montant net transmis optimal</div>
@@ -937,5 +974,6 @@
 
 <!-- External JS -->
 <script src="js/successions-donations.js"></script>
+<script src="js/path-optimizer.js"></script>
 </body>
 </html>
