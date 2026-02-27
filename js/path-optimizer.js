@@ -364,7 +364,7 @@ const PathOptimizer = (() => {
 
     function formatLien(lien) {
         const map = {
-            enfant: 'Enfant (LD)', petit_enfant: 'Petit-enfant (LD)',
+            enfant: 'Ligne directe (100k)', petit_enfant: 'Petit-enfant (LD)',
             arriere_petit_enfant: 'Arr. petit-enfant (LD)',
             conjoint_pacs_donation: 'Conjoint/PACS',
             frere_soeur: 'Frère/Sœur', neveu_niece: 'Neveu/Nièce',
@@ -611,7 +611,7 @@ const PathOptimizer = (() => {
                         const lienOpts = [
                             ['auto', `Auto : ${formatLien(autoLien)}`],
                             ['aucun', '🚫 Aucun lien'],
-                            ['enfant', 'Enfant (LD · 100k)'],
+                            ['enfant', 'Ligne directe (LD · 100k)'],
                             ['petit_enfant', 'Petit-enfant (LD · 31 865)'],
                             ['arriere_petit_enfant', 'Arr. petit-enfant (5 310)'],
                             ['neveu_niece', 'Neveu/Nièce (7 967)'],
@@ -682,7 +682,7 @@ const PathOptimizer = (() => {
                         const recvLienOpts = [
                             ['auto', `Auto : ${formatLien(autoLien)}`],
                             ['aucun', '🚫 Aucun lien'],
-                            ['enfant', 'Enfant (LD · 100k)'],
+                            ['enfant', 'Ligne directe (LD · 100k)'],
                             ['conjoint_pacs_donation', 'Conjoint/PACS (80 724)'],
                             ['petit_enfant', 'Petit-enfant (31 865)'],
                             ['frere_soeur', 'Frère/Sœur (15 932)'],
@@ -701,7 +701,7 @@ const PathOptimizer = (() => {
                         return `
                         <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.06);border:1px solid rgba(92,64,51,.1);">
                             <div>
-                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${od.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
+                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${od.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${od.nom}→${d.nom} = ${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
                                 <select style="font-size:.62rem;height:24px;margin-top:4px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
                                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                                     <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
