@@ -263,11 +263,30 @@ const PathOptimizer = (() => {
         if (!d) return;
         let entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
         if (!entry) {
-            entry = { deDonorId: fromDonorId, montant: 0 };
+            entry = { deDonorId: fromDonorId, montant: 0, lienOverride: null };
             d.donationsRecues.push(entry);
         }
         entry.montant = +montant || 0;
         renderDonorReceivedBar(donorId, fromDonorId);
+    }
+
+    function updateDonorRecvLien(donorId, fromDonorId, lienOverride) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        let entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
+        if (!entry) {
+            entry = { deDonorId: fromDonorId, montant: 0, lienOverride: null };
+            d.donationsRecues.push(entry);
+        }
+        entry.lienOverride = lienOverride === 'auto' ? null : lienOverride;
+        // Re-render this donor's card
+        const card = document.querySelector(`[data-donor-id="${donorId}"]`);
+        if (card) {
+            const bens = getBeneficiaries();
+            const newCard = document.createElement('div');
+            newCard.innerHTML = buildDonorCardHtml(d, bens);
+            card.replaceWith(newCard.firstElementChild);
+        }
     }
 
     function getDonorReceivedFrom(donorId, fromDonorId) {
@@ -524,8 +543,9 @@ const PathOptimizer = (() => {
         // Arr-GP → Parent = petit-enfant
         if (role1 === 'arr_grand_parent' && role2 === 'parent') return 'petit_enfant';
         if (role1 === 'parent' && role2 === 'arr_grand_parent') return 'petit_enfant';
-        // Parent ↔ Parent = entre époux (conjoint)
-        if (role1 === 'parent' && role2 === 'parent') return 'conjoint_pacs_donation';
+        // Parent ↔ Parent — ambigu ! Peut être conjoints, frères, ou sans lien
+        // On ne suppose PAS conjoint automatiquement — l'utilisateur doit override
+        if (role1 === 'parent' && role2 === 'parent') return 'tiers';
         // Oncle/Tante ↔ Parent = frère/sœur
         if (role1 === 'oncle_tante' && role2 === 'parent') return 'frere_soeur';
         if (role1 === 'parent' && role2 === 'oncle_tante') return 'frere_soeur';
@@ -650,15 +670,39 @@ const PathOptimizer = (() => {
                     </label>
                     ${otherDonors.map(od => {
                         const montant = getDonorReceivedFrom(d.id, od.id);
-                        const lien = detectLienBetweenDonors(od.role, d.role);
-                        const abat = ABATTEMENTS[lien] || ABATTEMENTS.tiers;
+                        const autoLien = detectLienBetweenDonors(od.role, d.role);
+                        // Check for override in donationsRecues
+                        const recvEntry = d.donationsRecues.find(e => e.deDonorId === od.id);
+                        const recvOverride = recvEntry ? recvEntry.lienOverride : null;
+                        const lien = recvOverride || autoLien;
+                        const abat = (lien === 'aucun') ? 0 : (ABATTEMENTS[lien] || ABATTEMENTS.tiers);
                         const restant = Math.max(0, abat - montant);
                         const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
                         const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+                        const recvLienOpts = [
+                            ['auto', `Auto : ${formatLien(autoLien)}`],
+                            ['aucun', '🚫 Aucun lien'],
+                            ['enfant', 'Enfant (LD · 100k)'],
+                            ['conjoint_pacs_donation', 'Conjoint/PACS (80 724)'],
+                            ['petit_enfant', 'Petit-enfant (31 865)'],
+                            ['frere_soeur', 'Frère/Sœur (15 932)'],
+                            ['neveu_niece', 'Neveu/Nièce (7 967)'],
+                            ['tiers', 'Tiers (1 594)']
+                        ].map(([v, l]) => `<option value="${v}" ${(recvOverride === v || (!recvOverride && v === 'auto')) ? 'selected' : ''}>${l}</option>`).join('');
+
+                        if (lien === 'aucun') {
+                            return `
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.03);border:1px dashed rgba(92,64,51,.08);opacity:.6;">
+                                <span style="font-size:.78rem;color:var(--text-muted);">← ${od.nom} 🚫</span>
+                                <select style="font-size:.62rem;height:24px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
+                            </div>`;
+                        }
+
                         return `
                         <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.06);border:1px solid rgba(92,64,51,.1);">
                             <div>
                                 <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${od.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
+                                <select style="font-size:.62rem;height:24px;margin-top:4px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
                                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                                     <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
                                         <div id="don-recv-bar-${d.id}-${od.id}" style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
@@ -1054,7 +1098,7 @@ const PathOptimizer = (() => {
     return {
         addDonor, removeDonor, updateDonor, getDonors,
         updateDonorDonation, updateDonorBenLien, getEffectiveLien, getDonorDonationForBen, getTotalDonationsForBen, getDonationDetailForBen,
-        updateDonorReceivedDonation, getDonorReceivedFrom,
+        updateDonorReceivedDonation, getDonorReceivedFrom, updateDonorRecvLien,
         applyDonorPreset,
         buildGraph, findAllPaths, optimizeAll,
         renderDonorList, updateMatrix, renderPathResults, refreshBenDonSummaries,
