@@ -81,11 +81,14 @@
         }
 
         /* ===== STEPPER ===== */
-        .stepper-bar {
-            height:var(--step-bar-h); padding:0 30px;
-            display:flex; align-items:center; justify-content:center;
+        .stepper-wrapper {
             border-bottom:1px solid var(--border-color);
             background:rgba(51,44,32,0.6); backdrop-filter:blur(10px);
+        }
+        .stepper-bar {
+            height:var(--step-bar-h); padding:0 32px;
+            display:flex; align-items:center; justify-content:center;
+            max-width:900px; margin:0 auto;
         }
         .step-item {
             display:flex; align-items:center; gap:8px;
@@ -444,7 +447,7 @@
         @media(max-width:768px){
             .sidebar{display:none} .main-content{margin-left:0} .bottom-bar{left:0}
             .form-grid,.form-grid.cols-3,.form-grid.cols-4{grid-template-columns:1fr}
-            .stepper-bar{overflow-x:auto;justify-content:flex-start;padding:0 16px}
+            .stepper-bar{overflow-x:auto;justify-content:flex-start;padding:0 16px;max-width:100%}
             .step-label,.step-sublabel{display:none}
             .form-container{padding:16px 16px 100px} .page-header,.bottom-bar{padding:0 16px}
             .section-card{padding:18px} .results-summary .big-number{font-size:1.8rem}
@@ -480,6 +483,7 @@
         </div>
 
         <!-- Stepper -->
+        <div class="stepper-wrapper">
         <div class="stepper-bar">
             <div class="step-item active" data-step="1" onclick="SD.goToStep(1)">
                 <div class="step-number"><span>1</span><i class="fas fa-check"></i></div>
@@ -505,6 +509,7 @@
                 <div class="step-number"><span>5</span><i class="fas fa-check"></i></div>
                 <div><div class="step-label">Résultats</div><div class="step-sublabel">Comparaison & stratégie</div></div>
             </div>
+        </div>
         </div>
 
         <div class="form-container">
