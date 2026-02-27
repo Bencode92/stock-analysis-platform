@@ -99,7 +99,8 @@ const PathOptimizer = (() => {
             id, role: role || 'parent', nom: nom || `Donateur ${id + 1}`,
             age: age || 60, patrimoine: patrimoine || 0,
             regime: regime || 'separation',
-            donationsParBen: [] // [{benId, montant}] — donations déjà faites par bénéficiaire
+            donationsParBen: [], // [{benId, montant}] — donations déjà faites aux bénéficiaires
+            donationsRecues: []  // [{deDonorId, montant}] — donations reçues d'un autre donateur
         };
         donors.push(donor);
         renderDonorList();
@@ -123,8 +124,12 @@ const PathOptimizer = (() => {
         } else {
             d[field] = value;
         }
-        if (field === 'role' || field === 'age') updateMatrix();
-        if (field === 'nom') renderDonorList(); // refresh dropdown labels
+        if (field === 'role' || field === 'age') { updateMatrix(); renderDonorList(); }
+        if (field === 'nom') {
+            const title = document.getElementById('donor-title-' + id);
+            if (title) title.textContent = value;
+            renderDonorList();
+        }
         if (typeof SD !== 'undefined' && SD.updateAside) SD.updateAside();
     }
 
@@ -173,6 +178,46 @@ const PathOptimizer = (() => {
     }
 
     function getDonors() { return [...donors]; }
+
+    // Inter-donor donations (ex: Martine a donné 50k à Gérald)
+    function updateDonorReceivedDonation(donorId, fromDonorId, montant) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        let entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
+        if (!entry) {
+            entry = { deDonorId: fromDonorId, montant: 0 };
+            d.donationsRecues.push(entry);
+        }
+        entry.montant = +montant || 0;
+        renderDonorReceivedBar(donorId, fromDonorId);
+    }
+
+    function getDonorReceivedFrom(donorId, fromDonorId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return 0;
+        const entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
+        return entry ? entry.montant : 0;
+    }
+
+    function renderDonorReceivedBar(donorId, fromDonorId) {
+        const d = donors.find(d => d.id === donorId);
+        const fromD = donors.find(dd => dd.id === fromDonorId);
+        if (!d || !fromD) return;
+        const montant = getDonorReceivedFrom(donorId, fromDonorId);
+        const lien = detectLienBetweenDonors(fromD.role, d.role);
+        const abat = ABATTEMENTS[lien] || ABATTEMENTS.tiers;
+        const restant = Math.max(0, abat - montant);
+        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
+        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+
+        const bar = document.getElementById(`don-recv-bar-${donorId}-${fromDonorId}`);
+        const rest = document.getElementById(`don-recv-rest-${donorId}-${fromDonorId}`);
+        if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
+        if (rest) {
+            rest.style.color = restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)';
+            rest.innerHTML = `${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>`;
+        }
+    }
 
     // ============================================================
     // 2. GRAPH — Liens familiaux auto-détectés
@@ -330,8 +375,9 @@ const PathOptimizer = (() => {
                 const lienInterTarget = detectLien(intermediaire.role, targetBeneficiary.lien);
                 if (lienInterTarget === 'tiers') continue; // l'intermédiaire n'a pas de lien avec la cible
 
-                // Hop 1 : donateur → intermédiaire (inter-donateur, pas de rappel fiscal tracé)
-                const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, 0);
+                // Hop 1 : donateur → intermédiaire (use inter-donor donation history)
+                const donAntInterDonor = getDonorReceivedFrom(intermediaire.id, donor.id);
+                const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, donAntInterDonor);
                 // Hop 2 : intermédiaire → cible (avec le net du hop 1)
                 const hop2 = calcHopCost(hop1.netTransmis, lienInterTarget, intermediaire.age, false, 0);
 
@@ -358,7 +404,8 @@ const PathOptimizer = (() => {
                 });
 
                 // Indirect NP + PP : donateur donne NP à intermédiaire, intermédiaire donne PP à cible après reconstitution
-                const hop1NP = calcHopCost(montant, lienDonorInter, donor.age, true, 0);
+                const donAntInterDonorNP = getDonorReceivedFrom(intermediaire.id, donor.id);
+                const hop1NP = calcHopCost(montant, lienDonorInter, donor.age, true, donAntInterDonorNP);
                 const hop2FromNP = calcHopCost(hop1NP.netTransmis, lienInterTarget, intermediaire.age, false, 0);
 
                 paths.push({
@@ -528,6 +575,45 @@ const PathOptimizer = (() => {
                     </div>
                 </div>
                 ${donBenHtml}
+                ${(() => {
+                    // Inter-donor donations: has this donor received from another donor?
+                    const otherDonors = donors.filter(od => od.id !== d.id);
+                    if (otherDonors.length === 0) return '';
+                    return `
+                    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(198,134,66,.08);">
+                        <label class="form-label" style="color:var(--primary-color);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-arrow-down"></i> Donations reçues d'un autre donateur <span style="font-size:.6rem;font-weight:400;color:var(--text-muted);">(pour les chemins indirects)</span>
+                        </label>
+                        ${otherDonors.map(od => {
+                            const montant = getDonorReceivedFrom(d.id, od.id);
+                            const lien = detectLienBetweenDonors(od.role, d.role);
+                            const abat = ABATTEMENTS[lien] || ABATTEMENTS.tiers;
+                            const restant = Math.max(0, abat - montant);
+                            const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
+                            const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+                            return `
+                            <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.06);border:1px solid rgba(92,64,51,.1);">
+                                <div>
+                                    <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${od.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
+                                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                                        <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
+                                            <div id="don-recv-bar-${d.id}-${od.id}" style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
+                                        </div>
+                                        <div id="don-recv-rest-${d.id}-${od.id}" style="font-size:.62rem;white-space:nowrap;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};">
+                                            ${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <input type="number" class="form-input" value="${montant}" min="0" step="1000"
+                                           style="font-size:.75rem;height:34px;text-align:right;"
+                                           placeholder="0"
+                                           onchange="PathOptimizer.updateDonorReceivedDonation(${d.id},${od.id},this.value)">
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>`;
+                })()}
             </div>`;
         }).join('');
         refreshBenDonSummaries();
@@ -837,6 +923,7 @@ const PathOptimizer = (() => {
     return {
         addDonor, removeDonor, updateDonor, getDonors,
         updateDonorDonation, getDonorDonationForBen, getTotalDonationsForBen, getDonationDetailForBen,
+        updateDonorReceivedDonation, getDonorReceivedFrom,
         applyDonorPreset,
         buildGraph, findAllPaths, optimizeAll,
         renderDonorList, updateMatrix, renderPathResults, refreshBenDonSummaries,
