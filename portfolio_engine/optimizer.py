@@ -4758,6 +4758,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
     Convertit l'univers scoré en List[Asset].
     
     v6.7 FIX: Génération robuste des IDs avec _is_valid_id().
+    v2.0.2 FIX: Restauration _profile_score crypto après normalisation.
     """
     assets = []
     
@@ -4852,7 +4853,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 f"min={arr.min():.1f}, max={arr.max():.1f}"
             )
 
-# v4.2.1c FIX CRITICAL: Normalisation scores par catégorie
+    # v4.2.1c FIX CRITICAL: Normalisation scores par catégorie
     # Corrige le mismatch Actions(mean=56) vs ETF/Bonds/Crypto(mean=12)
     # L'ordre intra-catégorie est préservé, seule l'échelle change
     TARGET_MEAN = 50.0
@@ -4891,5 +4892,23 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             f"BEFORE mean={cat_mean:.1f} std={cat_std:.1f} → "
             f"AFTER mean={new_scores.mean():.1f} std={new_scores.std():.1f}"
         )
+
+    # === FIX v2.0.2: Restaurer _profile_score pour crypto preset ===
+    # FactorScorer et rescore_universe_by_profile écrasent le score.
+    # On restaure _profile_score du preset (déjà risk-adjusted) pour
+    # que l'optimizer voie le vrai signal.
+    for asset in assets:
+        if getattr(asset, 'category', '') != 'Crypto':
+            continue
+        sd = getattr(asset, 'source_data', None) or {}
+        preset_score = sd.get('_profile_score')
+        if preset_score is not None:
+            old_score = asset.score
+            asset.score = float(preset_score)
+            logger.info(
+                f"[v2.0.2 CRYPTO SCORE RESTORE] {getattr(asset, 'name', '?')}: "
+                f"score {old_score:.1f} → {float(preset_score):.1f} "
+                f"(from _profile_score, role={sd.get('_role', '?')})"
+            )
 
     return assets
