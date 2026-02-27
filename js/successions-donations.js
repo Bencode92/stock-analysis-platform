@@ -166,6 +166,7 @@ const SD = (() => {
         }
 
         if (n === 3) updateSynthese();
+        updateAside();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -1261,10 +1262,91 @@ const SD = (() => {
     }
 
     // ============================================================
+    // ASIDE STICKY RÉSUMÉ
+    // ============================================================
+    function updateAside() {
+        // Donor
+        const age = el('donor-age') ? el('donor-age').value : '';
+        const mode = state.mode || 'donation';
+        const donorText = age ? `${age} ans · ${mode === 'donation' ? 'Donation' : 'Succession'}` : 'Non renseigné';
+        const asideDonor = document.getElementById('aside-donor');
+        if (asideDonor) asideDonor.innerHTML = age ? `<span class="val-highlight">${age} ans</span> · ${mode === 'donation' ? 'Donation' : 'Succession'}` : 'Non renseigné';
+
+        // Beneficiaries
+        const benList = document.querySelectorAll('#beneficiaries-list .list-item');
+        const asideBenef = document.getElementById('aside-benef');
+        if (asideBenef) {
+            if (benList.length > 0) {
+                const types = {};
+                benList.forEach(b => {
+                    const sel = b.querySelector('select');
+                    if (sel) { const v = sel.options[sel.selectedIndex]?.text || ''; types[v] = (types[v]||0) + 1; }
+                });
+                asideBenef.innerHTML = Object.entries(types).map(([k,v]) => `<span class="val-highlight">${v}</span> ${k}`).join(', ');
+            } else {
+                asideBenef.textContent = 'Aucun ajouté';
+            }
+        }
+
+        // Patrimoine
+        const asidePatri = document.getElementById('aside-patri');
+        if (asidePatri) {
+            const parts = [];
+            const immoList = document.querySelectorAll('#immo-list .list-item');
+            if (immoList.length > 0) parts.push(`${immoList.length} bien${immoList.length>1?'s':''} immo`);
+            const finVal = el('fin-global') ? el('fin-global').value : '';
+            if (finVal && +finVal > 0) parts.push(`${(+finVal).toLocaleString('fr-FR')} € financier`);
+            const avVal = el('av-capital') ? el('av-capital').value : '';
+            if (avVal && +avVal > 0) parts.push(`AV: ${(+avVal).toLocaleString('fr-FR')} €`);
+            asidePatri.innerHTML = parts.length > 0 ? parts.map(p => `<div>${p}</div>`).join('') : 'Non renseigné';
+        }
+
+        // Warnings
+        const asideWarn = document.getElementById('aside-warnings');
+        if (asideWarn) {
+            const warnings = [];
+            if (benList.length === 0) warnings.push({cls:'amber', icon:'fa-user-plus', text:'Ajoutez des bénéficiaires'});
+            const exoActive = document.getElementById('switch-790abis');
+            if (exoActive && exoActive.checked) warnings.push({cls:'coral', icon:'fa-hourglass-half', text:'790 A bis — avant 31/12/2026'});
+            if (currentStep >= 2 && (!el('fin-global') || !el('fin-global').value || +el('fin-global').value === 0) && document.querySelectorAll('#immo-list .list-item').length === 0) {
+                warnings.push({cls:'amber', icon:'fa-coins', text:'Renseignez le patrimoine'});
+            }
+            if (warnings.length === 0) warnings.push({cls:'green', icon:'fa-check', text:'Tout est prêt'});
+            asideWarn.innerHTML = warnings.map(w => `<div class="aside-warn-item ${w.cls}"><i class="fas ${w.icon}"></i> ${w.text}</div>`).join('');
+        }
+
+        // Progress
+        const progress = document.getElementById('aside-progress');
+        const hint = document.getElementById('aside-hint');
+        if (progress) progress.style.width = `${(currentStep / 5) * 100}%`;
+        if (hint) hint.textContent = `Étape ${currentStep} sur 5`;
+
+        // CTA
+        const asideCta = document.getElementById('aside-cta');
+        if (asideCta) {
+            if (currentStep === 4) { asideCta.textContent = 'Calculer →'; asideCta.onclick = () => SD.calculateResults(); }
+            else if (currentStep === 5) { asideCta.textContent = '↺ Recommencer'; asideCta.onclick = () => SD.goToStep(1); }
+            else { asideCta.textContent = 'Suivant →'; asideCta.onclick = () => SD.nextStep(); }
+        }
+    }
+
+    // ============================================================
     // INIT
     // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
         applyPreset('2enfants');
+        updateAside();
+
+        // Close tooltips on outside click
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.info-tip')) {
+                document.querySelectorAll('.info-tip.open').forEach(t => t.classList.remove('open'));
+            }
+        });
+
+        // Update aside on input changes
+        document.addEventListener('input', () => { clearTimeout(window._asideTO); window._asideTO = setTimeout(updateAside, 300); });
+        document.addEventListener('change', () => { clearTimeout(window._asideTO); window._asideTO = setTimeout(updateAside, 300); });
     });
 
     // ============================================================
@@ -1279,7 +1361,7 @@ const SD = (() => {
         addFinancial, removeFinancial, updateFin, refreshFinUI,
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
-        calculateResults, resetAll
+        calculateResults, resetAll, updateAside
     };
 
 })();
