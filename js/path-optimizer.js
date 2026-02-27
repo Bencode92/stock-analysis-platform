@@ -424,11 +424,15 @@ const PathOptimizer = (() => {
                     <div class="form-group">
                         <label class="form-label">Patrimoine propre (€)</label>
                         <input type="number" class="form-input" value="${d.patrimoine}" min="0" step="10000"
+                               placeholder="Valeur totale des biens"
                                onchange="PathOptimizer.updateDonor(${d.id},'patrimoine',this.value)">
+                        <div style="font-size:.62rem;color:var(--text-muted);margin-top:3px;">Inclure : appart, épargne, AV, etc. propres à cette personne</div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Donations ant. (€)</label>
+                        <label class="form-label" style="color:var(--accent-coral);">⚠️ Donations déjà faites (€)</label>
                         <input type="number" class="form-input" value="${d.donationAnterieure}" min="0" step="1000"
+                               style="border-color:rgba(255,107,107,.25);"
+                               placeholder="0 si aucune (rappel 15 ans)"
                                onchange="PathOptimizer.updateDonor(${d.id},'donationAnterieure',this.value)">
                     </div>
                 </div>
