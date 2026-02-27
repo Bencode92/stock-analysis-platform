@@ -306,7 +306,7 @@ const SD = (() => {
         el('beneficiaries-list').insertAdjacentHTML('beforeend', html);
     }
 
-    // -- Donations antérieures par donateur --
+    // -- Donations antérieures par donateur (liées à la cartographie) --
     let donAntIdCounter = 0;
 
     function addDonAnt(benId) {
@@ -314,7 +314,8 @@ const SD = (() => {
         if (!ben) return;
         if (!ben.donationsAnterieures) ben.donationsAnterieures = [];
         const daId = donAntIdCounter++;
-        ben.donationsAnterieures.push({ id: daId, de: '', role: 'parent', montant: 0, date: '' });
+        // donorId = lien vers PathOptimizer.getDonors()[x].id, -1 = "autre personne"
+        ben.donationsAnterieures.push({ id: daId, donorId: -1, donorNom: '', donorRole: 'parent', montant: 0 });
         renderDonAntList(benId);
         recalcDonAnt(benId);
     }
@@ -332,16 +333,49 @@ const SD = (() => {
         if (!ben || !ben.donationsAnterieures) return;
         const da = ben.donationsAnterieures.find(d => d.id === daId);
         if (!da) return;
-        if (field === 'montant') da[field] = +value || 0;
-        else da[field] = value;
+
+        if (field === 'montant') {
+            da.montant = +value || 0;
+        } else if (field === 'donorId') {
+            da.donorId = +value;
+            // Si c'est un donateur de la cartographie, copier son nom et rôle
+            if (da.donorId >= 0 && typeof PathOptimizer !== 'undefined') {
+                const donor = PathOptimizer.getDonors().find(d => d.id === da.donorId);
+                if (donor) { da.donorNom = donor.nom; da.donorRole = donor.role; }
+            }
+        } else if (field === 'donorNom') {
+            da.donorNom = value;
+        } else if (field === 'donorRole') {
+            da.donorRole = value;
+        }
+
+        renderDonAntList(benId);
         recalcDonAnt(benId);
     }
 
     function recalcDonAnt(benId) {
         const ben = state.beneficiaries.find(b => b.id === benId);
         if (!ben) return;
-        // Compat : met à jour le total global (utilisé par le moteur existant)
         ben.donationAnterieure = (ben.donationsAnterieures || []).reduce((s, d) => s + (d.montant || 0), 0);
+    }
+
+    // Abattement applicable selon le rôle du donateur par rapport au lien du bénéficiaire
+    function getAbatForDonorRole(donorRole, benLien) {
+        // Utilise la même logique que PathOptimizer.detectLien
+        const ROLE_TO_LIEN = {
+            parent:        { enfant: 'enfant', petit_enfant: 'petit_enfant' },
+            grand_parent:  { enfant: 'petit_enfant', petit_enfant: 'arriere_petit_enfant' },
+            arr_grand_parent: { enfant: 'arriere_petit_enfant' },
+            oncle_tante:   { enfant: 'neveu_niece' },
+            conjoint:      { enfant: 'enfant' },
+            tiers:         { enfant: 'tiers' }
+        };
+        const map = ROLE_TO_LIEN[donorRole];
+        const lienFiscal = map ? (map[benLien] || 'tiers') : 'tiers';
+
+        const ABAT = { enfant: 100000, petit_enfant: 31865, arriere_petit_enfant: 5310,
+            conjoint_pacs_donation: 80724, frere_soeur: 15932, neveu_niece: 7967, tiers: 1594 };
+        return { lienFiscal, abattement: ABAT[lienFiscal] || ABAT.tiers };
     }
 
     function renderDonAntList(benId) {
@@ -349,46 +383,81 @@ const SD = (() => {
         const container = el('don-ant-list-' + benId);
         if (!container || !ben) return;
 
-        const roleOpts = [
-            ['parent', 'Parent (père/mère)'],
-            ['grand_parent', 'Grand-parent'],
-            ['arr_grand_parent', 'Arrière-grand-parent'],
-            ['oncle_tante', 'Oncle / Tante'],
-            ['frere_soeur', 'Frère / Sœur'],
-            ['conjoint', 'Conjoint'],
-            ['tiers', 'Autre / Tiers']
-        ];
+        // Liste des donateurs de la cartographie
+        const cartoDonors = (typeof PathOptimizer !== 'undefined') ? PathOptimizer.getDonors() : [];
 
         if (!ben.donationsAnterieures || ben.donationsAnterieures.length === 0) {
-            container.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:4px 0;">Aucune donation antérieure déclarée.</div>';
+            container.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:4px 0;">Aucune donation antérieure déclarée — l\'abattement est entièrement disponible.</div>';
             return;
         }
 
-        container.innerHTML = ben.donationsAnterieures.map(da => `
-            <div style="display:grid;grid-template-columns:1fr 1fr 120px 28px;gap:8px;align-items:end;margin-bottom:6px;padding:8px;border-radius:8px;background:rgba(255,107,107,.03);border:1px solid rgba(255,107,107,.1);">
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" style="font-size:.6rem;">De qui ?</label>
-                    <input type="text" value="${da.de}" placeholder="Ex: Grand-mère Marie"
-                           style="font-size:.75rem;height:36px;"
-                           onchange="SD.updateDonAnt(${benId},${da.id},'de',this.value)">
+        const roleOpts = [
+            ['parent', 'Parent'], ['grand_parent', 'Grand-parent'],
+            ['arr_grand_parent', 'Arr. grand-parent'], ['oncle_tante', 'Oncle/Tante'],
+            ['frere_soeur', 'Frère/Sœur'], ['conjoint', 'Conjoint'], ['tiers', 'Autre']
+        ];
+
+        container.innerHTML = ben.donationsAnterieures.map(da => {
+            // Dropdown options : d'abord les donateurs de la cartographie, puis "Autre"
+            let donorSelectHtml = `<option value="-1" ${da.donorId === -1 ? 'selected' : ''}>— Autre personne —</option>`;
+            cartoDonors.forEach(cd => {
+                donorSelectHtml += `<option value="${cd.id}" ${da.donorId === cd.id ? 'selected' : ''}>${cd.nom} (${formatRoleShort(cd.role)})</option>`;
+            });
+
+            // Calcul abattement restant
+            const role = da.donorId >= 0 ? da.donorRole : da.donorRole;
+            const { lienFiscal, abattement } = getAbatForDonorRole(role, ben.lien);
+            const restant = Math.max(0, abattement - da.montant);
+            const pctUsed = abattement > 0 ? Math.min(100, (da.montant / abattement) * 100) : 100;
+            const barColor = pctUsed > 80 ? 'var(--accent-coral)' : pctUsed > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+
+            // Champ nom libre si "Autre personne"
+            const isOther = da.donorId === -1;
+
+            return `
+            <div style="margin-bottom:8px;padding:10px;border-radius:10px;background:rgba(255,107,107,.03);border:1px solid rgba(255,107,107,.08);">
+                <div style="display:grid;grid-template-columns:1fr ${isOther ? '1fr' : ''} 110px 28px;gap:8px;align-items:end;">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" style="font-size:.6rem;">Donateur</label>
+                        <select style="font-size:.75rem;height:34px;" onchange="SD.updateDonAnt(${benId},${da.id},'donorId',this.value)">${donorSelectHtml}</select>
+                    </div>
+                    ${isOther ? `
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" style="font-size:.6rem;">Nom + rôle</label>
+                        <div style="display:flex;gap:4px;">
+                            <input type="text" value="${da.donorNom}" placeholder="Nom"
+                                   style="font-size:.72rem;height:34px;flex:1;"
+                                   onchange="SD.updateDonAnt(${benId},${da.id},'donorNom',this.value)">
+                            <select style="font-size:.68rem;height:34px;width:100px;" onchange="SD.updateDonAnt(${benId},${da.id},'donorRole',this.value)">
+                                ${roleOpts.map(([v, l]) => `<option value="${v}" ${v === da.donorRole ? 'selected' : ''}>${l}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>` : ''}
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label" style="font-size:.6rem;">Montant (€)</label>
+                        <input type="number" value="${da.montant}" min="0" step="1000"
+                               style="font-size:.75rem;height:34px;border-color:rgba(255,107,107,.2);"
+                               onchange="SD.updateDonAnt(${benId},${da.id},'montant',this.value)">
+                    </div>
+                    <button class="btn-remove" style="width:28px;height:28px;font-size:.6rem;" onclick="SD.removeDonAnt(${benId},${da.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" style="font-size:.6rem;">Rôle du donateur</label>
-                    <select style="font-size:.75rem;height:36px;" onchange="SD.updateDonAnt(${benId},${da.id},'role',this.value)">
-                        ${roleOpts.map(([v, l]) => `<option value="${v}" ${v === da.role ? 'selected' : ''}>${l}</option>`).join('')}
-                    </select>
+                <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.1);overflow:hidden;">
+                        <div style="height:100%;width:${pctUsed}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
+                    </div>
+                    <div style="font-size:.62rem;white-space:nowrap;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};">
+                        ${restant > 0 ? `Restant : ${fmt(restant)}` : 'Abattement épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abattement)}</span>
+                    </div>
                 </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label" style="font-size:.6rem;">Montant (€)</label>
-                    <input type="number" value="${da.montant}" min="0" step="1000"
-                           style="font-size:.75rem;height:36px;border-color:rgba(255,107,107,.2);"
-                           onchange="SD.updateDonAnt(${benId},${da.id},'montant',this.value)">
-                </div>
-                <button class="btn-remove" style="width:28px;height:28px;font-size:.6rem;" onclick="SD.removeDonAnt(${benId},${da.id})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
+    }
+
+    function formatRoleShort(role) {
+        return { parent:'Parent', grand_parent:'GP', arr_grand_parent:'Arr.GP',
+            oncle_tante:'Oncle', conjoint:'Conjoint', tiers:'Tiers' }[role] || role;
     }
 
     function removeBeneficiary(id) {
