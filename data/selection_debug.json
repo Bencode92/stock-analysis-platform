@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-27-12-54-27",
-    "git_sha": "3573991fe",
-    "git_sha_full": "3573991fef3e5653d8da11cabff786eff0e72482",
+    "run_id": "2026-02-27-13-36-29",
+    "git_sha": "af4d5cfbc",
+    "git_sha_full": "af4d5cfbc5b4cd0c18fe358d9cd5912d0a6400d4",
     "config_hash": "6c942836",
     "universe_asof": "2026-02-27",
-    "timestamp_utc": "2026-02-27T12:54:27.726558+00:00",
+    "timestamp_utc": "2026-02-27T13:36:29.907997+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 203.85
+    "total_duration_sec": 196.4
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,12 +22,12 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3109,
-      "after": 3109,
+      "before": 3110,
+      "after": 3110,
       "rejected": 0,
       "equity": 1000,
       "etf": 1342,
-      "crypto": 343,
+      "crypto": 344,
       "bond": 424
     },
     "hard_filters_equity": {
@@ -155,19 +155,19 @@
         },
         {
           "ticker": "DCR/USD",
-          "score": 99.47
+          "score": 98.55
         },
         {
           "ticker": "TRX/USD",
-          "score": 97.54
+          "score": 97.62
         },
         {
           "ticker": "NFT/USD",
-          "score": 96.66
+          "score": 96.84
         },
         {
-          "ticker": "PORTO/USD",
-          "score": 93.9
+          "ticker": "GNO/USD",
+          "score": 92.85
         }
       ]
     },
@@ -335,15 +335,15 @@
         },
         {
           "ticker": "TRX/USD",
-          "score": 98.97
+          "score": 99.63
         },
         {
           "ticker": "NFT/USD",
-          "score": 92.47
+          "score": 92.51
         },
         {
           "ticker": "BTTN/USD",
-          "score": 71.23
+          "score": 71.16
         }
       ]
     },
@@ -3119,48 +3119,38 @@
       "criteria": {
         "vol_max": 200
       },
-      "total": 343,
+      "total": 344,
       "passed": 331,
       "top_20": [
         {
           "ticker": "DCR/USD",
           "name": "Decred",
-          "vol": 94.4,
-          "perf_1d": 7.5,
-          "perf_7d": 41.9,
-          "perf_30d": 72.1,
-          "perf_ytd": 95.6,
-          "sharpe": 8.2
-        },
-        {
-          "ticker": "MORPHO/USD",
-          "name": "Morpho",
-          "vol": 137.9,
-          "perf_1d": 0.4,
-          "perf_7d": 18.0,
-          "perf_30d": 55.7,
-          "perf_ytd": 68.8,
-          "sharpe": 4.46
+          "vol": 95.2,
+          "perf_1d": 8.6,
+          "perf_7d": 43.3,
+          "perf_30d": 73.8,
+          "perf_ytd": 97.6,
+          "sharpe": 8.27
         },
         {
           "ticker": "DBC/USD",
           "name": "DeepBrain Chain",
-          "vol": 192.8,
-          "perf_1d": 22.6,
-          "perf_7d": 0.4,
-          "perf_30d": 72.1,
-          "perf_ytd": 131.1,
-          "sharpe": 4.2
+          "vol": 188.0,
+          "perf_1d": 18.7,
+          "perf_7d": -2.8,
+          "perf_30d": 66.6,
+          "perf_ytd": 123.7,
+          "sharpe": 4.05
         },
         {
-          "ticker": "QSP/USD",
-          "name": "Quantstamp",
-          "vol": 183.0,
-          "perf_1d": 0.3,
-          "perf_7d": 4.6,
-          "perf_30d": 28.0,
-          "perf_ytd": 67.1,
-          "sharpe": 2.49
+          "ticker": "MORPHO/USD",
+          "name": "Morpho",
+          "vol": 139.2,
+          "perf_1d": -3.8,
+          "perf_7d": 13.1,
+          "perf_30d": 49.2,
+          "perf_ytd": 61.8,
+          "sharpe": 4.05
         },
         {
           "ticker": "FXS/USD",
@@ -3175,122 +3165,102 @@
         {
           "ticker": "HNT/USD",
           "name": "Helium",
-          "vol": 170.2,
-          "perf_1d": -1.1,
-          "perf_7d": -4.2,
-          "perf_30d": 25.0,
-          "perf_ytd": -8.7,
-          "sharpe": 2.42
+          "vol": 170.7,
+          "perf_1d": -3.0,
+          "perf_7d": -6.1,
+          "perf_30d": 22.5,
+          "perf_ytd": -10.5,
+          "sharpe": 2.27
+        },
+        {
+          "ticker": "QSP/USD",
+          "name": "Quantstamp",
+          "vol": 184.1,
+          "perf_1d": -4.5,
+          "perf_7d": -0.4,
+          "perf_30d": 21.9,
+          "perf_ytd": 59.2,
+          "sharpe": 2.16
         },
         {
           "ticker": "LUNC/USD",
           "name": "Terra Classic",
-          "vol": 113.0,
-          "perf_1d": 18.2,
-          "perf_7d": 20.7,
-          "perf_30d": 18.5,
-          "perf_ytd": 10.7,
-          "sharpe": 2.31
+          "vol": 95.9,
+          "perf_1d": 6.0,
+          "perf_7d": 8.1,
+          "perf_30d": 6.2,
+          "perf_ytd": -0.8,
+          "sharpe": 1.16
         },
         {
           "ticker": "ASTER/USDT",
           "name": "Aster",
           "vol": 115.0,
-          "perf_1d": 0.4,
-          "perf_7d": -3.9,
-          "perf_30d": 3.2,
-          "perf_ytd": -1.6,
-          "sharpe": 0.98
+          "perf_1d": -0.4,
+          "perf_7d": -4.7,
+          "perf_30d": 2.4,
+          "perf_ytd": -2.4,
+          "sharpe": 0.89
+        },
+        {
+          "ticker": "MOBI/USD",
+          "name": "Mobius",
+          "vol": 106.9,
+          "perf_1d": -0.9,
+          "perf_7d": 10.0,
+          "perf_30d": 2.0,
+          "perf_ytd": -17.0,
+          "sharpe": 0.78
         },
         {
           "ticker": "Pluton/USD",
           "name": "Pluton",
-          "vol": 165.7,
-          "perf_1d": -1.3,
-          "perf_7d": 11.5,
-          "perf_30d": -3.4,
-          "perf_ytd": 10.2,
-          "sharpe": 0.61
+          "vol": 166.0,
+          "perf_1d": -2.9,
+          "perf_7d": 9.7,
+          "perf_30d": -5.0,
+          "perf_ytd": 8.4,
+          "sharpe": 0.49
         },
         {
           "ticker": "HT/USD",
           "name": "Huobi Token",
-          "vol": 158.2,
-          "perf_1d": -5.3,
-          "perf_7d": -24.3,
-          "perf_30d": -5.5,
-          "perf_ytd": -6.5,
-          "sharpe": 0.49
+          "vol": 158.5,
+          "perf_1d": -5.9,
+          "perf_7d": -24.8,
+          "perf_30d": -6.1,
+          "perf_ytd": -7.2,
+          "sharpe": 0.44
         },
         {
-          "ticker": "REP/EUR",
-          "name": "Augur",
-          "vol": 193.1,
-          "perf_1d": 0.0,
-          "perf_7d": -14.9,
-          "perf_30d": -14.0,
-          "perf_ytd": -4.4,
-          "sharpe": 0.4
+          "ticker": "PI/USDT",
+          "name": "Pi",
+          "vol": 95.5,
+          "perf_1d": 0.7,
+          "perf_7d": -4.6,
+          "perf_30d": -3.1,
+          "perf_ytd": -17.5,
+          "sharpe": 0.3
         },
         {
           "ticker": "PI/USD",
           "name": "Plian",
           "vol": 95.3,
-          "perf_1d": 1.0,
-          "perf_7d": -4.1,
-          "perf_30d": -2.7,
-          "perf_ytd": -17.1,
-          "sharpe": 0.36
-        },
-        {
-          "ticker": "PI/USDT",
-          "name": "Pi",
-          "vol": 95.6,
-          "perf_1d": 1.1,
-          "perf_7d": -4.2,
-          "perf_30d": -2.8,
-          "perf_ytd": -17.1,
-          "sharpe": 0.36
+          "perf_1d": 0.5,
+          "perf_7d": -4.7,
+          "perf_30d": -3.3,
+          "perf_ytd": -17.6,
+          "sharpe": 0.29
         },
         {
           "ticker": "RIF/USD",
           "name": "Rootstock Infrastructure ",
-          "vol": 131.3,
-          "perf_1d": 0.0,
-          "perf_7d": -3.2,
-          "perf_30d": -9.2,
-          "perf_ytd": -7.9,
-          "sharpe": 0.31
-        },
-        {
-          "ticker": "HBAR/USD",
-          "name": "Hedera Hashgraph",
-          "vol": 98.3,
-          "perf_1d": 2.1,
-          "perf_7d": 5.0,
-          "perf_30d": -3.1,
-          "perf_ytd": -8.4,
-          "sharpe": 0.17
-        },
-        {
-          "ticker": "POL/USD",
-          "name": "POL",
-          "vol": 99.5,
-          "perf_1d": 3.8,
-          "perf_7d": 8.1,
-          "perf_30d": -4.2,
-          "perf_ytd": 7.9,
-          "sharpe": 0.08
-        },
-        {
-          "ticker": "NPC/USDT",
-          "name": "Non-Playable Coin",
-          "vol": 137.0,
-          "perf_1d": 1.5,
+          "vol": 131.4,
+          "perf_1d": -1.8,
           "perf_7d": -5.0,
-          "perf_30d": -8.6,
-          "perf_ytd": -22.6,
-          "sharpe": 0.03
+          "perf_30d": -10.8,
+          "perf_ytd": -9.6,
+          "sharpe": 0.14
         },
         {
           "ticker": "LEOu/USD",
@@ -3299,28 +3269,58 @@
           "perf_1d": -0.0,
           "perf_7d": 0.7,
           "perf_30d": -4.0,
-          "perf_ytd": -8.6,
+          "perf_ytd": -8.5,
           "sharpe": 0.01
         },
         {
-          "ticker": "WIN/USD",
-          "name": "WINkLink",
-          "vol": 78.3,
-          "perf_1d": -2.5,
-          "perf_7d": 13.4,
-          "perf_30d": -4.1,
-          "perf_ytd": -8.9,
-          "sharpe": 0.01
+          "ticker": "REP/EUR",
+          "name": "Augur",
+          "vol": 195.7,
+          "perf_1d": -8.9,
+          "perf_7d": -22.5,
+          "perf_30d": -21.7,
+          "perf_ytd": -12.9,
+          "sharpe": -0.15
         },
         {
-          "ticker": "GNO/EUR",
-          "name": "Gnosis",
-          "vol": 124.0,
-          "perf_1d": -1.8,
-          "perf_7d": 7.2,
-          "perf_30d": -9.6,
-          "perf_ytd": -0.1,
-          "sharpe": -0.1
+          "ticker": "NPC/USDT",
+          "name": "Non-Playable Coin",
+          "vol": 136.9,
+          "perf_1d": -1.4,
+          "perf_7d": -7.8,
+          "perf_30d": -11.2,
+          "perf_ytd": -24.8,
+          "sharpe": -0.23
+        },
+        {
+          "ticker": "ZIL/USD",
+          "name": "Zilliqa",
+          "vol": 163.7,
+          "perf_1d": 2.6,
+          "perf_7d": 3.4,
+          "perf_30d": -13.6,
+          "perf_ytd": -15.3,
+          "sharpe": -0.29
+        },
+        {
+          "ticker": "HBAR/USD",
+          "name": "Hedera Hashgraph",
+          "vol": 98.3,
+          "perf_1d": -2.3,
+          "perf_7d": 0.5,
+          "perf_30d": -7.3,
+          "perf_ytd": -12.3,
+          "sharpe": -0.37
+        },
+        {
+          "ticker": "POL/USD",
+          "name": "POL",
+          "vol": 98.6,
+          "perf_1d": 0.1,
+          "perf_7d": 4.2,
+          "perf_30d": -7.6,
+          "perf_ytd": 4.0,
+          "sharpe": -0.37
         }
       ]
     },
@@ -3535,7 +3535,20 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 0.29,
+    "details": {
+      "1_initial.after": {
+        "current": 3110,
+        "previous": 3109,
+        "delta": 1,
+        "pct_change": 0.03
+      },
+      "1_initial.crypto": {
+        "current": 344,
+        "previous": 343,
+        "delta": 1,
+        "pct_change": 0.29
+      }
+    }
   }
 }

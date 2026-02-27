@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-27T12:55:38.476698",
+  "timestamp": "2026-02-27T13:37:14.942943",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -10,8 +10,8 @@
     "etf_selected": 9,
     "etf_rejected_notable": 20,
     "crypto_initial": 6,
-    "crypto_selected": 0,
-    "crypto_rejected_notable": 6,
+    "crypto_selected": 3,
+    "crypto_rejected_notable": 3,
     "bonds_initial": 31,
     "bonds_selected": 9,
     "total_filters_applied": 4,
@@ -42,7 +42,7 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 4
+          "selected": 2
         },
         "quality_high_vol": {
           "total": 16,
@@ -1381,10 +1381,12 @@
         "ticker": "CF",
         "sort_score": 0.6574,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "momentum_trend",
         "profile_score": 0.6574,
         "buffett_score": 90.0,
+        "rejection_reason": "Filtré par hard_filters_Stable",
+        "rejection_filter": "hard_filters_Stable",
         "sector": "Matériaux",
         "country": "Etats-Unis",
         "volatility": 30.9,
@@ -4223,69 +4225,66 @@
         "ticker": "PAXG/USD",
         "sort_score": 100.0,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "crypto_preset_tokenized_gold",
         "profile_score": 100.0,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 54.5
       },
       {
         "rank": 2,
-        "name": "DCR/USD",
-        "ticker": "DCR/USD",
-        "sort_score": 99.47,
+        "name": "TRX/USD",
+        "ticker": "TRX/USD",
+        "sort_score": 99.63,
         "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "crypto_preset_pow_legacy",
-        "profile_score": 99.47,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 94.4
+        "selected": true,
+        "matched_preset": "crypto_preset_payment",
+        "profile_score": 99.63,
+        "volatility": 27.7
       },
       {
         "rank": 3,
-        "name": "TRX/USD",
-        "ticker": "TRX/USD",
-        "sort_score": 98.97,
+        "name": "DCR/USD",
+        "ticker": "DCR/USD",
+        "sort_score": 98.55,
         "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "crypto_preset_payment",
-        "profile_score": 98.97,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 27.6
+        "selected": true,
+        "matched_preset": "crypto_preset_pow_legacy",
+        "profile_score": 98.55,
+        "volatility": 95.2
       },
       {
         "rank": 4,
         "name": "NFT/USD",
         "ticker": "NFT/USD",
-        "sort_score": 96.66,
+        "sort_score": 96.84,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 96.66,
+        "profile_score": 96.84,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 49.2
       },
       {
         "rank": 5,
-        "name": "PORTO/USD",
-        "ticker": "PORTO/USD",
-        "sort_score": 93.9,
+        "name": "GNO/USD",
+        "ticker": "GNO/USD",
+        "sort_score": 92.85,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 93.9,
+        "profile_score": 92.85,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 86.1
+        "volatility": 104.5
       },
       {
         "rank": 6,
         "name": "BTTN/USD",
         "ticker": "BTTN/USD",
-        "sort_score": 71.23,
+        "sort_score": 71.16,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 71.23,
+        "profile_score": 71.16,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 71.2
       }
@@ -6006,10 +6005,12 @@
           "ticker": "CF",
           "sort_score": 0.6574,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "momentum_trend",
           "profile_score": 0.6574,
           "buffett_score": 90.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Matériaux",
           "country": "Etats-Unis",
           "volatility": 30.9,
@@ -6162,10 +6163,12 @@
           "ticker": "HWM",
           "sort_score": 0.5807,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "momentum_trend",
           "profile_score": 0.5807,
           "buffett_score": 86.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Industries",
           "country": "Etats-Unis",
           "volatility": 30.8,
@@ -15674,8 +15677,7 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
-  "crypto_selected": [],
-  "crypto_rejected": [
+  "crypto_selected": [
     {
       "name": "Unknown",
       "ticker": "PAXG/USD",
@@ -15684,37 +15686,42 @@
       "profile_score": 100.0,
       "volatility": 54.5,
       "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score profil élevé (100.00); Preset: crypto_preset_tokenized_gold"
     },
     {
       "name": "Unknown",
       "ticker": "DCR/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_pow_legacy",
-      "profile_score": 99.47,
-      "volatility": 94.4,
+      "profile_score": 98.55,
+      "volatility": 95.2,
       "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+      "selected": true,
+      "ranking": 2,
+      "selection_reason": "Score profil élevé (98.55); Preset: crypto_preset_pow_legacy"
     },
     {
       "name": "Unknown",
       "ticker": "TRX/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_payment",
-      "profile_score": 98.97,
-      "volatility": 27.6,
+      "profile_score": 99.63,
+      "volatility": 27.7,
       "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Score profil élevé (99.63); Preset: crypto_preset_payment"
+    }
+  ],
+  "crypto_rejected": [
     {
       "name": "Unknown",
       "ticker": "NFT/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 96.66,
+      "profile_score": 96.84,
       "volatility": 49.2,
       "radar_tilt": "neutral",
       "selected": false,
@@ -15722,11 +15729,11 @@
     },
     {
       "name": "Unknown",
-      "ticker": "PORTO/USD",
+      "ticker": "GNO/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 93.9,
-      "volatility": 86.1,
+      "profile_score": 92.85,
+      "volatility": 104.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -15736,7 +15743,7 @@
       "ticker": "BTTN/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 71.23,
+      "profile_score": 71.16,
       "volatility": 71.2,
       "radar_tilt": "neutral",
       "selected": false,
