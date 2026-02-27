@@ -235,7 +235,8 @@ const PathOptimizer = (() => {
             if (montant <= 0) continue;
 
             // Direct en PP
-            const hopPP = calcHopCost(montant, lienDirect, donor.age, false, donor.donationAnterieure);
+            const donAntDirect = getDonationsAntByRole(targetBeneficiary.id, donor.role);
+            const hopPP = calcHopCost(montant, lienDirect, donor.age, false, donAntDirect);
             paths.push({
                 type: 'direct_pp',
                 label: `${donor.nom} → ${targetBeneficiary.prenom} (PP)`,
@@ -252,7 +253,7 @@ const PathOptimizer = (() => {
             });
 
             // Direct en NP démembrée
-            const hopNP = calcHopCost(montant, lienDirect, donor.age, true, donor.donationAnterieure);
+            const hopNP = calcHopCost(montant, lienDirect, donor.age, true, donAntDirect);
             paths.push({
                 type: 'direct_np',
                 label: `${donor.nom} → ${targetBeneficiary.prenom} (NP ${Math.round(getNP(donor.age) * 100)}%)`,
@@ -540,6 +541,20 @@ const PathOptimizer = (() => {
             }
         });
         return bens;
+    }
+
+    // Récupérer les donations antérieures d'un bénéficiaire, par rôle du donateur
+    function getDonationsAntByRole(benId, donorRole) {
+        // Accède au state de SD via la public API ou le DOM
+        if (typeof SD !== 'undefined' && SD._getState) {
+            const ben = SD._getState().beneficiaries.find(b => String(b.id) === String(benId));
+            if (ben && ben.donationsAnterieures) {
+                return ben.donationsAnterieures
+                    .filter(da => da.role === donorRole)
+                    .reduce((s, da) => s + (da.montant || 0), 0);
+            }
+        }
+        return 0;
     }
 
     function formatRole(role) {
