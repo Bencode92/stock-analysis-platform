@@ -98,8 +98,8 @@ const PathOptimizer = (() => {
         const donor = {
             id, role: role || 'parent', nom: nom || `Donateur ${id + 1}`,
             age: age || 60, patrimoine: patrimoine || 0,
-            regime: regime || 'separation', // separation = patrimoine propre
-            donationAnterieure: 0
+            regime: regime || 'separation',
+            donationsParBen: [] // [{benId, montant}] — donations déjà faites par bénéficiaire
         };
         donors.push(donor);
         renderDonorList();
@@ -112,18 +112,64 @@ const PathOptimizer = (() => {
         if (idx >= 0) donors.splice(idx, 1);
         renderDonorList();
         updateMatrix();
+        refreshBenDonSummaries();
     }
 
     function updateDonor(id, field, value) {
         const d = donors.find(d => d.id === id);
         if (!d) return;
-        if (field === 'age' || field === 'patrimoine' || field === 'donationAnterieure') {
+        if (field === 'age' || field === 'patrimoine') {
             d[field] = +value || 0;
         } else {
             d[field] = value;
         }
         if (field === 'role' || field === 'age') updateMatrix();
+        if (field === 'nom') renderDonorList(); // refresh dropdown labels
         if (typeof SD !== 'undefined' && SD.updateAside) SD.updateAside();
+    }
+
+    // Donation donateur → bénéficiaire spécifique
+    function updateDonorDonation(donorId, benId, montant) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        let entry = d.donationsParBen.find(e => e.benId === benId);
+        if (!entry) {
+            entry = { benId, montant: 0 };
+            d.donationsParBen.push(entry);
+        }
+        entry.montant = +montant || 0;
+        // Re-render juste la barre d'abattement
+        renderDonorDonationBar(donorId, benId);
+        refreshBenDonSummaries();
+    }
+
+    function getDonorDonationForBen(donorId, benId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return 0;
+        const entry = d.donationsParBen.find(e => e.benId === benId);
+        return entry ? entry.montant : 0;
+    }
+
+    // Total des donations reçues par un bénéficiaire (tous donateurs confondus)
+    function getTotalDonationsForBen(benId) {
+        let total = 0;
+        for (const d of donors) {
+            const entry = d.donationsParBen.find(e => e.benId === benId);
+            if (entry) total += entry.montant;
+        }
+        return total;
+    }
+
+    // Détail des donations reçues par bénéficiaire
+    function getDonationDetailForBen(benId) {
+        const details = [];
+        for (const d of donors) {
+            const entry = d.donationsParBen.find(e => e.benId === benId);
+            if (entry && entry.montant > 0) {
+                details.push({ donorId: d.id, donorNom: d.nom, donorRole: d.role, montant: entry.montant });
+            }
+        }
+        return details;
     }
 
     function getDonors() { return [...donors]; }
@@ -284,8 +330,8 @@ const PathOptimizer = (() => {
                 const lienInterTarget = detectLien(intermediaire.role, targetBeneficiary.lien);
                 if (lienInterTarget === 'tiers') continue; // l'intermédiaire n'a pas de lien avec la cible
 
-                // Hop 1 : donateur → intermédiaire
-                const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, donor.donationAnterieure);
+                // Hop 1 : donateur → intermédiaire (inter-donateur, pas de rappel fiscal tracé)
+                const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, 0);
                 // Hop 2 : intermédiaire → cible (avec le net du hop 1)
                 const hop2 = calcHopCost(hop1.netTransmis, lienInterTarget, intermediaire.age, false, 0);
 
@@ -312,7 +358,7 @@ const PathOptimizer = (() => {
                 });
 
                 // Indirect NP + PP : donateur donne NP à intermédiaire, intermédiaire donne PP à cible après reconstitution
-                const hop1NP = calcHopCost(montant, lienDonorInter, donor.age, true, donor.donationAnterieure);
+                const hop1NP = calcHopCost(montant, lienDonorInter, donor.age, true, 0);
                 const hop2FromNP = calcHopCost(hop1NP.netTransmis, lienInterTarget, intermediaire.age, false, 0);
 
                 paths.push({
@@ -391,8 +437,52 @@ const PathOptimizer = (() => {
     function renderDonorList() {
         const container = document.getElementById('donors-list');
         if (!container) return;
+        const bens = getBeneficiaries();
 
-        container.innerHTML = donors.map(d => `
+        container.innerHTML = donors.map(d => {
+            // Per-beneficiary donation rows
+            let donBenHtml = '';
+            if (bens.length > 0) {
+                donBenHtml = `
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(198,134,66,.08);">
+                    <label class="form-label" style="color:var(--accent-coral);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-history"></i> Donations déjà faites (rappel 15 ans) — à qui ?
+                    </label>
+                    ${bens.map(b => {
+                        const montant = getDonorDonationForBen(d.id, b.id);
+                        const lienFiscal = detectLien(d.role, b.lien);
+                        const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
+                        const restant = Math.max(0, abat - montant);
+                        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
+                        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+                        return `
+                        <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
+                            <div>
+                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">→ ${b.prenom || 'Bénéf. ' + (bens.indexOf(b)+1)} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span></div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
+                                        <div id="don-bar-${d.id}-${b.id}" style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
+                                    </div>
+                                    <div id="don-rest-${d.id}-${b.id}" style="font-size:.62rem;white-space:nowrap;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};">
+                                        ${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <input type="number" class="form-input" value="${montant}" min="0" step="1000"
+                                       style="font-size:.75rem;height:34px;text-align:right;${montant > 0 ? 'border-color:rgba(255,107,107,.25);' : ''}"
+                                       placeholder="0"
+                                       onchange="PathOptimizer.updateDonorDonation(${d.id},${b.id},this.value)">
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    ${bens.length === 0 ? '<div style="font-size:.72rem;color:var(--text-muted);">Ajoutez des bénéficiaires d\'abord.</div>' : ''}
+                </div>`;
+            } else {
+                donBenHtml = `<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(198,134,66,.03);font-size:.72rem;color:var(--text-muted);"><i class="fas fa-info-circle"></i> Ajoutez des bénéficiaires ci-dessus pour déclarer les donations déjà faites.</div>`;
+            }
+
+            return `
             <div class="list-item" data-donor-id="${d.id}" style="animation:fadeSlide .3s ease;">
                 <div class="list-item-header">
                     <span class="list-item-title" id="donor-title-${d.id}">${d.nom}</span>
@@ -430,30 +520,69 @@ const PathOptimizer = (() => {
                         <div style="font-size:.62rem;color:var(--text-muted);margin-top:3px;">Inclure : appart, épargne, AV, etc. propres à cette personne</div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label" style="color:var(--accent-coral);">⚠️ Donations déjà faites (€)</label>
-                        <input type="number" class="form-input" value="${d.donationAnterieure}" min="0" step="1000"
-                               style="border-color:rgba(255,107,107,.25);"
-                               placeholder="0 si aucune (rappel 15 ans)"
-                               onchange="PathOptimizer.updateDonor(${d.id},'donationAnterieure',this.value)">
-                    </div>
-                </div>
-                <div class="form-grid cols-1">
-                    <div class="form-group">
                         <label class="form-label">Régime</label>
                         <select class="form-input" onchange="PathOptimizer.updateDonor(${d.id},'regime',this.value)">
-                            <option value="separation" ${d.regime === 'separation' ? 'selected' : ''}>Séparation de biens (patrimoine propre)</option>
-                            <option value="communaute" ${d.regime === 'communaute' ? 'selected' : ''}>Communauté (patrimoine commun avec conjoint)</option>
+                            <option value="separation" ${d.regime === 'separation' ? 'selected' : ''}>Séparation de biens</option>
+                            <option value="communaute" ${d.regime === 'communaute' ? 'selected' : ''}>Communauté</option>
                         </select>
                     </div>
                 </div>
-            </div>
-        `).join('');
+                ${donBenHtml}
+            </div>`;
+        }).join('');
     }
 
-    function renderDonorPresets() {
-        const container = document.getElementById('donor-presets');
-        if (!container) return;
-        // Presets are handled via onclick in HTML
+    function renderDonorDonationBar(donorId, benId) {
+        const d = donors.find(d => d.id === donorId);
+        const bens = getBeneficiaries();
+        const b = bens.find(b => String(b.id) === String(benId));
+        if (!d || !b) return;
+
+        const montant = getDonorDonationForBen(donorId, benId);
+        const lienFiscal = detectLien(d.role, b.lien);
+        const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
+        const restant = Math.max(0, abat - montant);
+        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
+        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+
+        const bar = document.getElementById(`don-bar-${donorId}-${benId}`);
+        const rest = document.getElementById(`don-rest-${donorId}-${benId}`);
+        if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
+        if (rest) {
+            rest.style.color = restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)';
+            rest.innerHTML = `${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>`;
+        }
+    }
+
+    // Refresh read-only summaries in beneficiary cards
+    function refreshBenDonSummaries() {
+        const bens = getBeneficiaries();
+        bens.forEach(b => {
+            const container = document.getElementById('don-summary-' + b.id);
+            if (!container) return;
+            const details = getDonationDetailForBen(b.id);
+            if (details.length === 0) {
+                container.innerHTML = '<span style="color:var(--text-muted);">Aucune donation reçue déclarée.</span>';
+            } else {
+                container.innerHTML = details.map(d =>
+                    `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.72rem;">
+                        <span>← ${d.donorNom} <span style="color:var(--text-muted);">(${formatRole(d.donorRole)})</span></span>
+                        <span style="font-weight:600;color:var(--accent-coral);">${fmt(d.montant)}</span>
+                    </div>`
+                ).join('') + `<div style="display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid rgba(198,134,66,.1);font-size:.72rem;font-weight:700;">
+                    <span>Total reçu</span><span style="color:var(--text-primary);">${fmt(details.reduce((s,d) => s + d.montant, 0))}</span>
+                </div>`;
+            }
+        });
+
+        // Sync SD state
+        if (typeof SD !== 'undefined' && SD._getState) {
+            const sdBens = SD._getState().beneficiaries;
+            bens.forEach(b => {
+                const sdBen = sdBens.find(sb => String(sb.id) === String(b.id));
+                if (sdBen) sdBen.donationAnterieure = getTotalDonationsForBen(b.id);
+            });
+        }
     }
 
     function applyDonorPreset(type) {
@@ -545,21 +674,7 @@ const PathOptimizer = (() => {
 
     // Récupérer les donations antérieures d'un bénéficiaire pour un donateur spécifique
     function getDonationsAntForDonor(benId, donorId, donorRole) {
-        if (typeof SD !== 'undefined' && SD._getState) {
-            const ben = SD._getState().beneficiaries.find(b => String(b.id) === String(benId));
-            if (ben && ben.donationsAnterieures) {
-                // D'abord chercher par donorId exact (lié à la cartographie)
-                const byId = ben.donationsAnterieures
-                    .filter(da => da.donorId === donorId)
-                    .reduce((s, da) => s + (da.montant || 0), 0);
-                if (byId > 0) return byId;
-                // Sinon fallback par rôle (pour les "autre personne")
-                return ben.donationsAnterieures
-                    .filter(da => da.donorId === -1 && da.donorRole === donorRole)
-                    .reduce((s, da) => s + (da.montant || 0), 0);
-            }
-        }
-        return 0;
+        return getDonorDonationForBen(donorId, benId);
     }
 
     function formatRole(role) {
@@ -696,10 +811,11 @@ const PathOptimizer = (() => {
     // INIT
     // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
-        // Observer les changements dans les bénéficiaires pour mettre à jour la matrice
         const benList = document.getElementById('beneficiaries-list');
         if (benList) {
-            const observer = new MutationObserver(() => { setTimeout(updateMatrix, 200); });
+            const observer = new MutationObserver(() => {
+                setTimeout(() => { updateMatrix(); renderDonorList(); }, 200);
+            });
             observer.observe(benList, { childList: true, subtree: true });
         }
     });
@@ -709,9 +825,10 @@ const PathOptimizer = (() => {
     // ============================================================
     return {
         addDonor, removeDonor, updateDonor, getDonors,
+        updateDonorDonation, getDonorDonationForBen, getTotalDonationsForBen, getDonationDetailForBen,
         applyDonorPreset,
         buildGraph, findAllPaths, optimizeAll,
-        renderDonorList, updateMatrix, renderPathResults,
+        renderDonorList, updateMatrix, renderPathResults, refreshBenDonSummaries,
         getBeneficiaries, fmt
     };
 
