@@ -21,7 +21,7 @@
             --accent-green:#10B981; --accent-emerald:#059669; --accent-blue:#3B82F6;
             --accent-red:#FF5252; --accent-amber:#FFB300; --accent-purple:#A78BFA; --accent-cyan:#C68642;
             --accent-coral:#FF6B6B; --accent-coral-light:#FF8A8A; --accent-coral-dark:#E85D5D;
-            --sidebar-w:60px; --header-h:70px; --step-bar-h:72px;
+            --sidebar-w:60px; --header-h:70px; --step-bar-h:56px;
             --transition-fast:0.15s ease; --transition-normal:0.3s ease;
         }
         html { font-size:14px; height:100%; }
@@ -88,8 +88,8 @@
             background:rgba(51,44,32,0.6); backdrop-filter:blur(10px);
         }
         .step-item {
-            display:flex; align-items:center; gap:10px;
-            cursor:pointer; padding:10px 14px; border-radius:12px; transition:all .25s;
+            display:flex; align-items:center; gap:8px;
+            cursor:pointer; padding:8px 10px; border-radius:10px; transition:all .25s;
         }
         .step-item:hover { background:rgba(198,134,66,0.08); }
         .step-item.active { background:rgba(198,134,66,0.12); }
@@ -106,13 +106,39 @@
             border-color:var(--primary-color); background:linear-gradient(135deg,var(--primary-color),var(--accent-color));
             color:#fff; box-shadow:0 0 20px rgba(198,134,66,0.4);
         }
-        .step-label { font-size:.82rem; font-weight:600; white-space:nowrap; }
-        .step-sublabel { font-size:.65rem; color:var(--text-muted); white-space:nowrap; }
-        .step-connector { width:40px; height:2px; background:rgba(198,134,66,0.15); margin:0 4px; flex-shrink:0; transition:background .3s; }
+        .step-label { font-size:.78rem; font-weight:600; white-space:nowrap; }
+        .step-sublabel { display:none; }
+        .step-connector { width:24px; height:2px; background:rgba(198,134,66,0.15); margin:0 2px; flex-shrink:0; transition:background .3s; }
         .step-connector.completed { background:linear-gradient(90deg,var(--accent-green),var(--accent-color)); }
 
         /* ===== FORM AREA ===== */
-        .form-container { flex:1; padding:24px 32px 100px; max-width:1000px; margin:0 auto; width:100%; animation:fadeInUp .6s ease-out; }
+        .form-container { flex:1; padding:24px 32px 100px; max-width:1200px; margin:0 auto; width:100%; animation:fadeInUp .6s ease-out; }
+        .page-grid { display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
+        .page-main { min-width:0; }
+        .page-aside { position:sticky; top:calc(var(--header-h) + var(--step-bar-h) + 18px); }
+        .aside-card {
+            background:rgba(51,44,32,0.75); border:1px solid rgba(198,134,66,0.14);
+            border-radius:16px; padding:18px; box-shadow:0 8px 28px rgba(0,0,0,0.28);
+        }
+        .aside-title { font-weight:800; font-size:.88rem; margin-bottom:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+        .aside-title i { color:var(--primary-color); font-size:.75rem; }
+        .aside-block { padding:10px 0; border-top:1px solid rgba(198,134,66,0.08); }
+        .aside-block:first-of-type { border-top:none; }
+        .aside-label { font-size:.65rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); font-weight:600; }
+        .aside-value { font-size:.85rem; font-weight:600; color:var(--text-secondary); margin-top:3px; }
+        .aside-value .val-highlight { color:var(--primary-color); font-weight:700; }
+        .aside-warnings { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+        .aside-warn-item { font-size:.72rem; padding:6px 10px; border-radius:8px; display:flex; align-items:center; gap:6px; }
+        .aside-warn-item.coral { background:rgba(255,107,107,.08); color:var(--accent-coral); border:1px solid rgba(255,107,107,.15); }
+        .aside-warn-item.amber { background:rgba(255,179,0,.08); color:var(--accent-amber); border:1px solid rgba(255,179,0,.15); }
+        .aside-warn-item.green { background:rgba(16,185,129,.08); color:var(--accent-green); border:1px solid rgba(16,185,129,.15); }
+        .aside-hint { font-size:.72rem; color:var(--text-muted); margin-top:10px; text-align:center; }
+        .aside-progress { height:4px; border-radius:4px; background:rgba(198,134,66,0.1); margin-top:12px; overflow:hidden; }
+        .aside-progress-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--primary-color),var(--primary-dark)); transition:width .4s ease; }
+        .aside-cta { width:100%; margin-top:12px; padding:10px; border-radius:10px; border:none; font-size:.78rem; font-weight:700;
+            background:linear-gradient(135deg,var(--primary-color),var(--accent-color)); color:#fff; cursor:pointer;
+            transition:all var(--transition-fast); }
+        .aside-cta:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(198,134,66,0.3); }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
         .step-panel { display:none; animation:fadeSlide .4s ease; }
         .step-panel.active { display:block; }
@@ -120,13 +146,14 @@
 
         /* ===== SECTION CARDS (glassmorphism) ===== */
         .section-card {
-            background:linear-gradient(135deg,rgba(51,44,32,0.95),rgba(60,52,38,0.95));
+            background:rgba(51,44,32,0.72);
             backdrop-filter:blur(15px);
             border:1px solid rgba(198,134,66,0.12); border-radius:16px;
             padding:28px; margin-bottom:20px;
-            transition:all var(--transition-normal); box-shadow:var(--shadow-card);
+            transition:border-color var(--transition-normal);
+            box-shadow:0 6px 20px rgba(0,0,0,0.28);
         }
-        .section-card:hover { border-color:rgba(198,134,66,0.3); transform:translateY(-1px); box-shadow:0 12px 40px rgba(198,134,66,0.12); }
+        .section-card:hover { border-color:rgba(198,134,66,0.22); box-shadow:0 8px 28px rgba(0,0,0,0.32); }
         .section-title {
             font-size:1.05rem; font-weight:700; margin-bottom:14px;
             display:flex; align-items:center; gap:12px;
@@ -151,14 +178,19 @@
             text-transform:uppercase; letter-spacing:.1em;
             display:flex; align-items:center; gap:6px;
         }
-        .info-tip { cursor:help; color:var(--text-muted); font-size:.7rem; position:relative; }
-        .info-tip:hover::after {
-            content:attr(data-tip); position:absolute; bottom:120%; left:50%; transform:translateX(-50%);
+        .info-tip { cursor:pointer; color:var(--text-muted); font-size:.7rem; position:relative; display:inline-flex; }
+        .info-tip .tip-bubble {
+            display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
             background:rgba(25,21,16,0.98); border:1px solid rgba(198,134,66,0.25);
             padding:10px 14px; border-radius:10px; font-size:.72rem; color:var(--text-primary);
             width:300px; z-index:99; font-weight:400; line-height:1.5; white-space:normal;
-            box-shadow:0 12px 40px rgba(0,0,0,.5); pointer-events:none; backdrop-filter:blur(10px);
+            box-shadow:0 12px 40px rgba(0,0,0,.5); backdrop-filter:blur(10px);
         }
+        .info-tip .tip-bubble::after {
+            content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+            border:6px solid transparent; border-top-color:rgba(198,134,66,0.25);
+        }
+        .info-tip.open .tip-bubble { display:block; animation:fadeIn .2s ease; }
         input[type="text"],input[type="number"],input[type="date"],select,textarea {
             background:var(--bg-input); border:2px solid var(--border-input); border-radius:10px;
             padding:.75rem 1rem; color:var(--text-primary); font-family:inherit;
@@ -396,6 +428,19 @@
         .text-coral { color:var(--accent-coral); }
 
         /* ===== RESPONSIVE ===== */
+        /* ===== STEP HELPER ===== */
+        .step-helper {
+            display:flex; align-items:center; gap:10px;
+            padding:12px 16px; border-radius:10px; margin-bottom:16px;
+            background:rgba(198,134,66,0.05); border:1px solid rgba(198,134,66,0.1);
+            font-size:.78rem; color:var(--text-secondary); line-height:1.5;
+        }
+        .step-helper i { color:var(--primary-color); font-size:.8rem; flex-shrink:0; }
+
+        @media(max-width:1024px){
+            .page-grid{grid-template-columns:1fr}
+            .page-aside{display:none}
+        }
         @media(max-width:768px){
             .sidebar{display:none} .main-content{margin-left:0} .bottom-bar{left:0}
             .form-grid,.form-grid.cols-3,.form-grid.cols-4{grid-template-columns:1fr}
@@ -463,8 +508,11 @@
         </div>
 
         <div class="form-container">
+          <div class="page-grid">
+            <main class="page-main">
             <!-- ==================== STEP 1: FAMILLE ==================== -->
             <div class="step-panel active" id="step-1">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez l'âge du donateur et ajoutez les bénéficiaires — les abattements se calculent automatiquement.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-users"></i> Le donateur</div>
                     <div class="section-subtitle">Personne qui souhaite transmettre son patrimoine</div>
@@ -476,7 +524,7 @@
                     </div>
                     <div class="form-grid" id="donor-fields">
                         <div class="form-group">
-                            <label class="form-label">Âge du donateur <span class="info-tip" data-tip="L'âge détermine le barème de démembrement (art. 669 CGI). Plus le donateur est jeune, plus la nue-propriété est faible = avantageux pour le donataire."><i class="fas fa-info-circle"></i></span></label>
+                            <label class="form-label">Âge du donateur <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">L'âge détermine le barème de démembrement (art. 669 CGI). Plus le donateur est jeune, plus la nue-propriété est faible = avantageux pour le donataire.</span></span></label>
                             <input type="number" id="donor1-age" min="18" max="110" placeholder="Ex: 58">
                         </div>
                         <div class="form-group" id="donor1-status-group">
@@ -496,7 +544,7 @@
                                 <input type="number" id="donor2-age" min="18" max="110" placeholder="Ex: 56">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Régime matrimonial <span class="info-tip" data-tip="En communauté réduite aux acquêts (défaut depuis 1966), seuls les biens acquis pendant le mariage sont communs. En séparation de biens, chaque époux conserve la propriété de ses biens."><i class="fas fa-info-circle"></i></span></label>
+                                <label class="form-label">Régime matrimonial <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">En communauté réduite aux acquêts (défaut depuis 1966), seuls les biens acquis pendant le mariage sont communs. En séparation de biens, chaque époux conserve la propriété de ses biens.</span></span></label>
                                 <select id="regime-matrimonial">
                                     <option value="communaute_acquets">Communauté réduite aux acquêts</option>
                                     <option value="communaute_universelle">Communauté universelle</option>
@@ -507,11 +555,11 @@
                         </div>
                         <div style="margin-top:12px;">
                             <div class="switch-row">
-                                <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" data-tip="Permet au conjoint survivant de choisir entre : usufruit total, 1/4 en PP + 3/4 en US, ou quotité disponible en PP."><i class="fas fa-info-circle"></i></span></span>
+                                <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir entre : usufruit total, 1/4 en PP + 3/4 en US, ou quotité disponible en PP.</span></span></span>
                                 <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
                             </div>
                             <div class="switch-row">
-                                <span class="switch-label">Clause de préciput <span class="info-tip" data-tip="Permet au survivant de prélever un bien (ex: la RP) avant le partage de la succession."><i class="fas fa-info-circle"></i></span></span>
+                                <span class="switch-label">Clause de préciput <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au survivant de prélever un bien (ex: la RP) avant le partage de la succession.</span></span></span>
                                 <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
                             </div>
                         </div>
@@ -537,6 +585,7 @@
 
             <!-- ==================== STEP 2: PATRIMOINE ==================== -->
             <div class="step-panel" id="step-2">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Ajoutez au moins 1 bien immobilier, un montant financier ou un capital en assurance-vie.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-sliders-h"></i> Mode de saisie</div>
                     <div class="toggle-group" id="detail-toggle">
@@ -624,6 +673,7 @@
 
             <!-- ==================== STEP 3: STRUCTURES ==================== -->
             <div class="step-panel" id="step-3">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Facultatif : si vous détenez des biens via SCI, SARL de famille ou en indivision, précisez ici.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-building"></i> Structures de détention existantes</div>
                     <div class="section-subtitle">Si vous détenez des biens via une société ou en indivision, précisez ici</div>
@@ -664,6 +714,7 @@
 
             <!-- ==================== STEP 4: OBJECTIF ==================== -->
             <div class="step-panel" id="step-4">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Activez les dispositifs pertinents : vente en viager, démembrement, exonération 790 A bis si applicable.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-bullseye"></i> Type d'opération</div>
                     <div class="form-group">
@@ -698,7 +749,7 @@
                     <div class="section-title"><i class="fas fa-home-lg-alt"></i> Exonération temporaire logement (790 A bis) <span class="badge-urgent"><i class="fas fa-hourglass-half"></i> Expire 31/12/2026</span></div>
                     <div class="section-subtitle">Dispositif exceptionnel du 15/02/2025 au <span class="countdown-text">31/12/2026</span></div>
                     <div class="switch-row">
-                        <span class="switch-label">Le donataire va acquérir un logement neuf/VEFA (RP) ou réaliser des travaux réno. énergétique ? <span class="info-tip" data-tip="Exonération de 100k€ par donateur, 300k€ max par donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans minimum. Cumulable avec abattement 100k enfant + 31 865€ don familial."><i class="fas fa-info-circle"></i></span></span>
+                        <span class="switch-label">Le donataire va acquérir un logement neuf/VEFA (RP) ou réaliser des travaux réno. énergétique ? <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Exonération de 100k€ par donateur, 300k€ max par donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans minimum. Cumulable avec abattement 100k enfant + 31 865€ don familial.</span></span></span>
                         <div class="switch" id="switch-790abis" onclick="SD.toggleSwitch(this);SD.toggleSection('exo-logement-details')"></div>
                     </div>
                     <div id="exo-logement-details" style="display:none; margin-top:16px;">
@@ -729,7 +780,7 @@
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-layer-group"></i> Démembrement</div>
                     <div class="switch-row">
-                        <span class="switch-label">Conserver l'usage / les revenus des biens ? <span class="info-tip" data-tip="Vous conservez l'usufruit (usage + revenus) et transmettez la nue-propriété. Au décès, la NP se transforme automatiquement en pleine propriété sans droits supplémentaires."><i class="fas fa-info-circle"></i></span></span>
+                        <span class="switch-label">Conserver l'usage / les revenus des biens ? <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Vous conservez l'usufruit (usage + revenus) et transmettez la nue-propriété. Au décès, la NP se transforme automatiquement en pleine propriété sans droits supplémentaires.</span></span></span>
                         <div class="switch" id="switch-demembrement" onclick="SD.toggleSwitch(this);SD.toggleSection('demembrement-options')"></div>
                     </div>
                     <div id="demembrement-options" style="display:none; margin-top:16px;">
@@ -787,6 +838,7 @@
 
             <!-- ==================== STEP 5: RÉSULTATS ==================== -->
             <div class="step-panel" id="step-5">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Comparez les scénarios et consultez la stratégie recommandée avec son calendrier d'exécution.</div>
                 <div class="results-summary" id="results-hero">
                     <div class="big-number" id="best-net-amount">—</div>
                     <div class="subtitle">Montant net transmis optimal</div>
@@ -828,6 +880,42 @@
                 </div>
             </div>
 
+            </main><!-- /page-main -->
+
+            <aside class="page-aside">
+                <div class="aside-card">
+                    <div class="aside-title"><i class="fas fa-clipboard-list"></i> Résumé</div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Donateur</div>
+                        <div class="aside-value" id="aside-donor">Non renseigné</div>
+                    </div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Bénéficiaires</div>
+                        <div class="aside-value" id="aside-benef">Aucun ajouté</div>
+                    </div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Patrimoine</div>
+                        <div class="aside-value" id="aside-patri">Non renseigné</div>
+                    </div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Alertes</div>
+                        <div class="aside-warnings" id="aside-warnings">
+                            <div class="aside-warn-item amber"><i class="fas fa-info-circle"></i> Remplissez l'étape 1</div>
+                        </div>
+                    </div>
+
+                    <div class="aside-progress"><div class="aside-progress-fill" id="aside-progress" style="width:0%"></div></div>
+                    <div class="aside-hint" id="aside-hint">Étape 1 sur 5</div>
+
+                    <button class="aside-cta" id="aside-cta" onclick="SD.nextStep()">Suivant →</button>
+                </div>
+            </aside>
+
+          </div><!-- /page-grid -->
         </div><!-- /form-container -->
 
         <!-- Bottom bar -->
