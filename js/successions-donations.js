@@ -252,6 +252,7 @@ const SD = (() => {
         state.beneficiaries.push({
             id, lien: defLien, prenom: defPrenom,
             age: null, handicap: false,
+            donationsAnterieures: [], // [{de: 'Grand-mère', role: 'grand_parent', montant: 50000, date: '2020-03-15'}]
             donationAnterieure: 0, dateDerniereDonation: ''
         });
 
@@ -265,7 +266,7 @@ const SD = (() => {
         ].map(([v, l]) => `<option value="${v}" ${v === defLien ? 'selected' : ''}>${l}</option>`).join('');
 
         const html = `
-        <div class="list-item" id="ben-${id}">
+        <div class="list-item" id="ben-${id}" data-ben-id="${id}">
             <div class="list-item-header">
                 <div class="list-item-title"><i class="fas fa-user"></i> Bénéficiaire ${id + 1}</div>
                 <button class="btn-remove" onclick="SD.removeBeneficiary(${id})"><i class="fas fa-times"></i></button>
@@ -284,27 +285,110 @@ const SD = (() => {
                     <input type="number" min="0" max="100" onchange="SD.updateBen(${id},'age',+this.value)" placeholder="Ex: 30">
                 </div>
             </div>
-            <div class="collapsible-header" onclick="SD.toggleCollapsible(this)" style="margin-top:4px;">
-                <span style="font-size:.78rem;color:var(--text-secondary);">Options avancées</span>
-                <i class="fas fa-chevron-down chevron" style="color:var(--text-muted);"></i>
+            <div class="form-group" style="margin-top:6px;">
+                <label class="form-label">Handicap reconnu</label>
+                <select onchange="SD.updateBen(${id},'handicap',this.value==='oui')">
+                    <option value="non">Non</option>
+                    <option value="oui">Oui (+159 325 €)</option>
+                </select>
             </div>
-            <div class="collapsible-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Handicap reconnu <span class="info-tip" data-tip="Abattement supplémentaire de 159 325 € cumulable avec l'abattement de parenté."><i class="fas fa-info-circle"></i></span></label>
-                        <select onchange="SD.updateBen(${id},'handicap',this.value==='oui')">
-                            <option value="non">Non</option>
-                            <option value="oui">Oui (+159 325 €)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Donation antérieure < 15 ans (€)</label>
-                        <input type="number" min="0" step="1000" onchange="SD.updateBen(${id},'donationAnterieure',+this.value)" placeholder="0">
-                    </div>
-                </div>
+
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(198,134,66,.1);">
+                <label class="form-label" style="color:var(--accent-coral);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-history"></i> Donations déjà reçues (rappel fiscal 15 ans)
+                </label>
+                <div id="don-ant-list-${id}" class="don-ant-list"></div>
+                <button class="btn-add" style="margin-top:6px;font-size:.72rem;padding:6px 12px;" onclick="SD.addDonAnt(${id})">
+                    <i class="fas fa-plus"></i> Ajouter une donation reçue
+                </button>
             </div>
         </div>`;
         el('beneficiaries-list').insertAdjacentHTML('beforeend', html);
+    }
+
+    // -- Donations antérieures par donateur --
+    let donAntIdCounter = 0;
+
+    function addDonAnt(benId) {
+        const ben = state.beneficiaries.find(b => b.id === benId);
+        if (!ben) return;
+        if (!ben.donationsAnterieures) ben.donationsAnterieures = [];
+        const daId = donAntIdCounter++;
+        ben.donationsAnterieures.push({ id: daId, de: '', role: 'parent', montant: 0, date: '' });
+        renderDonAntList(benId);
+        recalcDonAnt(benId);
+    }
+
+    function removeDonAnt(benId, daId) {
+        const ben = state.beneficiaries.find(b => b.id === benId);
+        if (!ben || !ben.donationsAnterieures) return;
+        ben.donationsAnterieures = ben.donationsAnterieures.filter(d => d.id !== daId);
+        renderDonAntList(benId);
+        recalcDonAnt(benId);
+    }
+
+    function updateDonAnt(benId, daId, field, value) {
+        const ben = state.beneficiaries.find(b => b.id === benId);
+        if (!ben || !ben.donationsAnterieures) return;
+        const da = ben.donationsAnterieures.find(d => d.id === daId);
+        if (!da) return;
+        if (field === 'montant') da[field] = +value || 0;
+        else da[field] = value;
+        recalcDonAnt(benId);
+    }
+
+    function recalcDonAnt(benId) {
+        const ben = state.beneficiaries.find(b => b.id === benId);
+        if (!ben) return;
+        // Compat : met à jour le total global (utilisé par le moteur existant)
+        ben.donationAnterieure = (ben.donationsAnterieures || []).reduce((s, d) => s + (d.montant || 0), 0);
+    }
+
+    function renderDonAntList(benId) {
+        const ben = state.beneficiaries.find(b => b.id === benId);
+        const container = el('don-ant-list-' + benId);
+        if (!container || !ben) return;
+
+        const roleOpts = [
+            ['parent', 'Parent (père/mère)'],
+            ['grand_parent', 'Grand-parent'],
+            ['arr_grand_parent', 'Arrière-grand-parent'],
+            ['oncle_tante', 'Oncle / Tante'],
+            ['frere_soeur', 'Frère / Sœur'],
+            ['conjoint', 'Conjoint'],
+            ['tiers', 'Autre / Tiers']
+        ];
+
+        if (!ben.donationsAnterieures || ben.donationsAnterieures.length === 0) {
+            container.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:4px 0;">Aucune donation antérieure déclarée.</div>';
+            return;
+        }
+
+        container.innerHTML = ben.donationsAnterieures.map(da => `
+            <div style="display:grid;grid-template-columns:1fr 1fr 120px 28px;gap:8px;align-items:end;margin-bottom:6px;padding:8px;border-radius:8px;background:rgba(255,107,107,.03);border:1px solid rgba(255,107,107,.1);">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label" style="font-size:.6rem;">De qui ?</label>
+                    <input type="text" value="${da.de}" placeholder="Ex: Grand-mère Marie"
+                           style="font-size:.75rem;height:36px;"
+                           onchange="SD.updateDonAnt(${benId},${da.id},'de',this.value)">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label" style="font-size:.6rem;">Rôle du donateur</label>
+                    <select style="font-size:.75rem;height:36px;" onchange="SD.updateDonAnt(${benId},${da.id},'role',this.value)">
+                        ${roleOpts.map(([v, l]) => `<option value="${v}" ${v === da.role ? 'selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label" style="font-size:.6rem;">Montant (€)</label>
+                    <input type="number" value="${da.montant}" min="0" step="1000"
+                           style="font-size:.75rem;height:36px;border-color:rgba(255,107,107,.2);"
+                           onchange="SD.updateDonAnt(${benId},${da.id},'montant',this.value)">
+                </div>
+                <button class="btn-remove" style="width:28px;height:28px;font-size:.6rem;" onclick="SD.removeDonAnt(${benId},${da.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
     }
 
     function removeBeneficiary(id) {
@@ -1389,11 +1473,13 @@ const SD = (() => {
         setMode, setDetailMode, setOperation,
         toggleSwitch, toggleSection, toggleCollapsible,
         applyPreset, addBeneficiary, removeBeneficiary, updateBen,
+        addDonAnt, removeDonAnt, updateDonAnt,
         addImmo, removeImmo, updateImmo, updateImmoTitle, refreshImmoUI,
         addFinancial, removeFinancial, updateFin, refreshFinUI,
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
-        calculateResults, resetAll, updateAside
+        calculateResults, resetAll, updateAside,
+        _getState: () => state
     };
 
 })();
