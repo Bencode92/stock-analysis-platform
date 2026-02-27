@@ -230,7 +230,10 @@ const SD = (() => {
     // -- Presets bénéficiaires --
     function applyPreset(type) {
         document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-        if (event && event.target) event.target.classList.add('active');
+        if (typeof event !== 'undefined' && event && event.target && event.target.closest) {
+            const btn = event.target.closest('.preset-btn');
+            if (btn) btn.classList.add('active');
+        }
 
         state.beneficiaries = [];
         el('beneficiaries-list').innerHTML = '';
@@ -259,7 +262,7 @@ const SD = (() => {
         });
 
         const opts = [
-            ['enfant', 'Enfant'], ['petit_enfant', 'Petit-enfant'],
+            ['enfant', 'Enfant (fils/fille)'], ['petit_enfant', 'Petit-enfant'],
             ['arriere_petit_enfant', 'Arrière-petit-enfant'],
             ['conjoint_pacs', 'Conjoint / Pacsé'],
             ['frere_soeur', 'Frère / Sœur'],
@@ -279,8 +282,9 @@ const SD = (() => {
                     <input type="text" value="${defPrenom}" onchange="SD.updateBen(${id},'prenom',this.value)" placeholder="Optionnel">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Lien de parenté</label>
+                    <label class="form-label">Génération</label>
                     <select onchange="SD.updateBen(${id},'lien',this.value)">${opts}</select>
+                    <div style="font-size:.58rem;color:var(--text-muted);margin-top:2px;">Le lien fiscal exact est auto-détecté par donateur</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Âge</label>
@@ -297,9 +301,9 @@ const SD = (() => {
 
             <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(198,134,66,.1);">
                 <label class="form-label" style="color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-history"></i> Donations déjà reçues <span style="font-size:.6rem;font-weight:400;">(déclarées dans la cartographie familiale ci-dessous)</span>
+                    <i class="fas fa-link"></i> Liens fiscaux auto-détectés + donations reçues
                 </label>
-                <div id="don-summary-${id}" style="font-size:.72rem;color:var(--text-muted);padding:4px 0;">Aucune donation reçue déclarée.</div>
+                <div id="don-summary-${id}" style="font-size:.72rem;color:var(--text-muted);padding:4px 0;">Ajoutez des donateurs dans la cartographie ci-dessous.</div>
             </div>
         </div>`;
         el('beneficiaries-list').insertAdjacentHTML('beforeend', html);
