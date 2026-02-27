@@ -592,6 +592,11 @@ MIN_ETF_IN_POOL = {
     "Modéré": 6,
     "Agressif": 6,
 }
+MIN_CRYPTO_IN_POOL = {
+    "Stable": 0,
+    "Modéré": 4,
+    "Agressif": 5,   # Preset sort 5, on les garde toutes
+}
 
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # v6.28 FIX B: Aligné avec max_single_position (15%) pour cohérence bounds SLSQP
@@ -1046,8 +1051,22 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
             return "cash_ultra_short", Role.DEFENSIVE
         return "defensif_oblig", Role.DEFENSIVE
     
-    # === CRYPTO ===
+# === CRYPTO === (respecte preset_crypto v2.0.1)
     if category == "Crypto":
+        # Priorité 1: Si preset_crypto a déjà assigné un rôle, le respecter
+        sd = asset.source_data or {}
+        preset_role = sd.get("_role")
+        if preset_role:
+            role_map = {
+                "core": Role.CORE,
+                "satellite": Role.SATELLITE,
+            }
+            mapped_role = role_map.get(str(preset_role).lower())
+            if mapped_role:
+                preset_name = sd.get("_matched_preset", "crypto_preset")
+                return preset_name, mapped_role
+
+        # Fallback: classification par volatilité (crypto hors preset)
         if any(kw in name_lower for kw in ["bitcoin", "btc", "ethereum", "eth"]):
             return "quality_risk", Role.CORE
         if vol > 100:
@@ -1055,7 +1074,6 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
         if vol > 60:
             return "momentum24h", Role.LOTTERY
         return "trend3_12m", Role.SATELLITE
-    
     # === ETF ===
     if category == "ETF":
         exposure = asset.exposure
@@ -2098,8 +2116,25 @@ class PortfolioOptimizer:
             logger.info(
                 f"PATCH v8.2 FIX A: Added {len(etf_to_add)} ETF to pool for "
                 f"{profile.name} (had {len(etf_in_pool)}, minimum {min_etf})"
-            )   
-        
+            )
+
+        # === FIX v2.0.1: GARANTIR MINIMUM CRYPTO DANS LE POOL ===
+        min_crypto = MIN_CRYPTO_IN_POOL.get(profile.name, 0)
+        crypto_in_pool_check = [a for a in selected if a.category == "Crypto"]
+
+        if len(crypto_in_pool_check) < min_crypto:
+            crypto_candidates = sorted(
+                [a for a in universe if a.category == "Crypto" and a not in selected],
+                key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
+            )
+            crypto_needed = min_crypto - len(crypto_in_pool_check)
+            crypto_to_add = crypto_candidates[:crypto_needed]
+            selected.extend(crypto_to_add)
+            logger.info(
+                f"FIX v2.0.1: Added {len(crypto_to_add)} crypto to pool for "
+                f"{profile.name} (had {len(crypto_in_pool_check)}, minimum {min_crypto})"
+            )
+
         # === v3.9: TOP-N GUARANTEED SELECTION ===
         # Garantit TOUJOURS 25 actifs minimum (sauf univers < 25)
         TARGET_N = 25
