@@ -518,62 +518,10 @@
             <!-- ==================== STEP 1: FAMILLE ==================== -->
             <div class="step-panel active" id="step-1">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez les donateurs (parents, grands-parents…) avec leur patrimoine propre, puis ajoutez les bénéficiaires. L'optimiseur calculera automatiquement le meilleur chemin de transmission.</div>
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-users"></i> Le donateur</div>
-                    <div class="section-subtitle">Personne qui souhaite transmettre son patrimoine</div>
-                    <div class="form-group" style="margin-bottom:16px;">
-                        <div class="toggle-group" id="mode-toggle">
-                            <button class="toggle-btn active" data-value="solo" onclick="SD.setMode('solo')">Personne seule</button>
-                            <button class="toggle-btn" data-value="couple" onclick="SD.setMode('couple')">Couple</button>
-                        </div>
-                    </div>
-                    <div class="form-grid" id="donor-fields">
-                        <div class="form-group">
-                            <label class="form-label">Âge du donateur <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">L'âge détermine le barème de démembrement (art. 669 CGI). Plus le donateur est jeune, plus la nue-propriété est faible = avantageux pour le donataire.</span></span></label>
-                            <input type="number" id="donor1-age" min="18" max="110" placeholder="Ex: 58">
-                        </div>
-                        <div class="form-group" id="donor1-status-group">
-                            <label class="form-label">Situation</label>
-                            <select id="donor1-status">
-                                <option value="celibataire">Célibataire</option>
-                                <option value="veuf">Veuf(ve)</option>
-                                <option value="divorce">Divorcé(e)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <!-- Couple fields -->
-                    <div id="couple-fields" style="display:none;">
-                        <div class="form-grid" style="margin-top:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Âge du conjoint</label>
-                                <input type="number" id="donor2-age" min="18" max="110" placeholder="Ex: 56">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Régime matrimonial <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">En communauté réduite aux acquêts (défaut depuis 1966), seuls les biens acquis pendant le mariage sont communs. En séparation de biens, chaque époux conserve la propriété de ses biens.</span></span></label>
-                                <select id="regime-matrimonial">
-                                    <option value="communaute_acquets">Communauté réduite aux acquêts</option>
-                                    <option value="communaute_universelle">Communauté universelle</option>
-                                    <option value="separation_biens">Séparation de biens</option>
-                                    <option value="participation_acquets">Participation aux acquêts</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="margin-top:12px;">
-                            <div class="switch-row">
-                                <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir entre : usufruit total, 1/4 en PP + 3/4 en US, ou quotité disponible en PP.</span></span></span>
-                                <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
-                            </div>
-                            <div class="switch-row">
-                                <span class="switch-label">Clause de préciput <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au survivant de prélever un bien (ex: la RP) avant le partage de la succession.</span></span></span>
-                                <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Bénéficiaires -->
                 <div class="section-card">
-                    <div class="section-title"><i class="fas fa-child"></i> Bénéficiaires (donataires)</div>
+                    <div class="section-title"><i class="fas fa-child"></i> Bénéficiaires (qui reçoit ?)</div>
                     <div class="section-subtitle">Qui recevra le patrimoine ? Ajoutez chaque bénéficiaire.</div>
                     <div class="presets">
                         <button class="preset-btn" onclick="SD.applyPreset('2enfants')">👨‍👧‍👦 2 enfants</button>
@@ -765,6 +713,33 @@
                             <button class="toggle-btn active" data-value="donation" onclick="SD.setOperation('donation')" style="flex:1;min-width:140px;">🎁 Donation</button>
                             <button class="toggle-btn" data-value="succession" onclick="SD.setOperation('succession')" style="flex:1;min-width:140px;">📋 Succession</button>
                             <button class="toggle-btn" data-value="both" onclick="SD.setOperation('both')" style="flex:1;min-width:140px;">📊 Comparer les deux</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Options succession (visible seulement si succession/comparer) -->
+                <div class="section-card" id="succession-options-section" style="display:none;">
+                    <div class="section-title"><i class="fas fa-scroll"></i> Options de succession</div>
+                    <div class="section-subtitle">Dispositions du vivant qui impactent la dévolution successorale</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Régime matrimonial</label>
+                            <select id="regime-matrimonial">
+                                <option value="communaute_acquets">Communauté réduite aux acquêts</option>
+                                <option value="communaute_universelle">Communauté universelle</option>
+                                <option value="separation_biens">Séparation de biens</option>
+                                <option value="participation_acquets">Participation aux acquêts</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <div class="switch-row">
+                            <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir entre : usufruit total, 1/4 en PP + 3/4 en US, ou quotité disponible en PP.</span></span></span>
+                            <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
+                        </div>
+                        <div class="switch-row">
+                            <span class="switch-label">Clause de préciput <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au survivant de prélever un bien (ex: la RP) avant le partage de la succession.</span></span></span>
+                            <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
                         </div>
                     </div>
                 </div>
