@@ -530,6 +530,7 @@ const PathOptimizer = (() => {
                 ${donBenHtml}
             </div>`;
         }).join('');
+        refreshBenDonSummaries();
     }
 
     function renderDonorDonationBar(donorId, benId) {
@@ -556,23 +557,29 @@ const PathOptimizer = (() => {
 
     // Refresh read-only summaries in beneficiary cards
     function refreshBenDonSummaries() {
+        _suppressObserver = true;
         const bens = getBeneficiaries();
         bens.forEach(b => {
             const container = document.getElementById('don-summary-' + b.id);
             if (!container) return;
-            const details = getDonationDetailForBen(b.id);
-            if (details.length === 0) {
-                container.innerHTML = '<span style="color:var(--text-muted);">Aucune donation reçue déclarée.</span>';
-            } else {
-                container.innerHTML = details.map(d =>
-                    `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.72rem;">
-                        <span>← ${d.donorNom} <span style="color:var(--text-muted);">(${formatRole(d.donorRole)})</span></span>
-                        <span style="font-weight:600;color:var(--accent-coral);">${fmt(d.montant)}</span>
-                    </div>`
-                ).join('') + `<div style="display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid rgba(198,134,66,.1);font-size:.72rem;font-weight:700;">
-                    <span>Total reçu</span><span style="color:var(--text-primary);">${fmt(details.reduce((s,d) => s + d.montant, 0))}</span>
-                </div>`;
+
+            if (donors.length === 0) {
+                container.innerHTML = '<span style="color:var(--text-muted);">Ajoutez des donateurs dans la cartographie ci-dessous.</span>';
+                return;
             }
+
+            container.innerHTML = donors.map(d => {
+                const lienFiscal = detectLien(d.role, b.lien);
+                const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
+                const montant = getDonorDonationForBen(d.id, b.id);
+                const restant = Math.max(0, abat - montant);
+                const hasGift = montant > 0;
+
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:.72rem;${hasGift ? 'font-weight:500;' : ''}">
+                    <span>← <strong>${d.nom}</strong> <span style="color:var(--text-muted);">(${formatRole(d.role)})</span> → <span style="color:var(--accent-caramel);">${formatLien(lienFiscal)}</span> · abat. ${fmt(abat)}</span>
+                    <span style="color:${hasGift ? 'var(--accent-coral)' : 'var(--accent-green)'};">${hasGift ? 'reçu ' + fmt(montant) + ' · reste ' + fmt(restant) : 'intact'}</span>
+                </div>`;
+            }).join('');
         });
 
         // Sync SD state
@@ -583,6 +590,7 @@ const PathOptimizer = (() => {
                 if (sdBen) sdBen.donationAnterieure = getTotalDonationsForBen(b.id);
             });
         }
+        setTimeout(() => { _suppressObserver = false; }, 50);
     }
 
     function applyDonorPreset(type) {
@@ -810,10 +818,13 @@ const PathOptimizer = (() => {
     // ============================================================
     // INIT
     // ============================================================
+    let _suppressObserver = false;
+
     document.addEventListener('DOMContentLoaded', () => {
         const benList = document.getElementById('beneficiaries-list');
         if (benList) {
             const observer = new MutationObserver(() => {
+                if (_suppressObserver) return;
                 setTimeout(() => { updateMatrix(); renderDonorList(); }, 200);
             });
             observer.observe(benList, { childList: true, subtree: true });
