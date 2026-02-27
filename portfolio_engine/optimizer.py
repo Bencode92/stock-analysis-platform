@@ -1051,15 +1051,16 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
             return "cash_ultra_short", Role.DEFENSIVE
         return "defensif_oblig", Role.DEFENSIVE
     
-# === CRYPTO === (respecte preset_crypto v2.0.1)
+# === CRYPTO === (v2.0.2: respecte preset_crypto)
     if category == "Crypto":
-        # Priorité 1: Si preset_crypto a déjà assigné un rôle, le respecter
+        # v2.0.2: Priorité au rôle assigné par preset_crypto
         sd = asset.source_data or {}
         preset_role = sd.get("_role")
         if preset_role:
             role_map = {
                 "core": Role.CORE,
                 "satellite": Role.SATELLITE,
+                "lottery": Role.LOTTERY,
             }
             mapped_role = role_map.get(str(preset_role).lower())
             if mapped_role:
@@ -1899,6 +1900,16 @@ class PortfolioOptimizer:
         logger.info("FIX C v8.3: Z-SCORE CALIBRATION PAR CATÉGORIE")
 
         for cat, arr in sorted(score_by_cat.items()):
+            # v2.0.2: Skip crypto — scores déjà risk-adjusted par preset
+            if cat == "Crypto":
+                cat_assets = [a for a in universe if a.category == cat]
+                for a in cat_assets:
+                    a._select_score = float(a.score)
+                logger.info(
+                    f"  {cat}: n={len(arr)} | SKIP z-score (risk-adjusted by preset)"
+                )
+                continue
+
             scores_np = np.array(arr, dtype=float)
             n_cat = len(scores_np)
             mu_cat = float(scores_np.mean())
@@ -2118,11 +2129,11 @@ class PortfolioOptimizer:
                 f"{profile.name} (had {len(etf_in_pool)}, minimum {min_etf})"
             )
 
-        # === FIX v2.0.1: GARANTIR MINIMUM CRYPTO DANS LE POOL ===
+        # === FIX v2.0.2: GARANTIR MINIMUM CRYPTO DANS LE POOL ===
         min_crypto = MIN_CRYPTO_IN_POOL.get(profile.name, 0)
         crypto_in_pool_check = [a for a in selected if a.category == "Crypto"]
 
-        if len(crypto_in_pool_check) < min_crypto:
+        if profile.crypto_max > 0 and len(crypto_in_pool_check) < min_crypto:
             crypto_candidates = sorted(
                 [a for a in universe if a.category == "Crypto" and a not in selected],
                 key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
@@ -2131,7 +2142,7 @@ class PortfolioOptimizer:
             crypto_to_add = crypto_candidates[:crypto_needed]
             selected.extend(crypto_to_add)
             logger.info(
-                f"FIX v2.0.1: Added {len(crypto_to_add)} crypto to pool for "
+                f"FIX v2.0.2: Added {len(crypto_to_add)} crypto to pool for "
                 f"{profile.name} (had {len(crypto_in_pool_check)}, minimum {min_crypto})"
             )
 
@@ -4841,7 +4852,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 f"min={arr.min():.1f}, max={arr.max():.1f}"
             )
 
-    # v4.2.1c FIX CRITICAL: Normalisation scores par catégorie
+# v4.2.1c FIX CRITICAL: Normalisation scores par catégorie
     # Corrige le mismatch Actions(mean=56) vs ETF/Bonds/Crypto(mean=12)
     # L'ordre intra-catégorie est préservé, seule l'échelle change
     TARGET_MEAN = 50.0
@@ -4851,6 +4862,14 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
     for cat, scores_list in cat_scores.items():
         if len(scores_list) < 5:
             continue
+        # v2.0.2: Skip crypto — scores déjà risk-adjusted par preset_crypto
+        if cat == "Crypto":
+            logger.info(
+                f"[v2.0.2] Skip normalization for {cat}: "
+                f"scores already risk-adjusted by preset"
+            )
+            continue
+
         arr = np.array(scores_list)
         cat_mean = arr.mean()
         cat_std = arr.std()
