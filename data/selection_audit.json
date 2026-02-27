@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-27T08:27:47.116877",
+  "timestamp": "2026-02-27T09:42:33.074453",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -42,11 +42,11 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 1
+          "selected": 2
         },
         "quality_high_vol": {
           "total": 16,
-          "selected": 4
+          "selected": 5
         },
         "quality_premium": {
           "total": 20,
@@ -716,12 +716,10 @@
         "ticker": "NVDA",
         "sort_score": 0.7658,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "quality_high_vol",
         "profile_score": 0.7658,
         "buffett_score": 94.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "volatility": 48.5,
@@ -2312,12 +2310,10 @@
         "ticker": "APH",
         "sort_score": 0.6039,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "momentum_trend",
         "profile_score": 0.6039,
         "buffett_score": 90.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "volatility": 31.2,
@@ -4227,18 +4223,19 @@
         "ticker": "PAXG/USD",
         "sort_score": 100.0,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "profile_score": 100.0,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 54.5
       },
       {
         "rank": 2,
         "name": "DCR/USD",
         "ticker": "DCR/USD",
-        "sort_score": 99.51,
+        "sort_score": 99.47,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 99.51,
+        "profile_score": 99.47,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 94.4
       },
@@ -4248,43 +4245,42 @@
         "ticker": "TRX/USD",
         "sort_score": 98.97,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 98.97,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 27.6
       },
       {
         "rank": 4,
-        "name": "MORPHO/USD",
-        "ticker": "MORPHO/USD",
-        "sort_score": 92.47,
+        "name": "NFT/USD",
+        "ticker": "NFT/USD",
+        "sort_score": 96.66,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 92.47,
+        "profile_score": 96.66,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 137.9
+        "volatility": 49.2
       },
       {
         "rank": 5,
-        "name": "OKB/USD",
-        "ticker": "OKB/USD",
-        "sort_score": 70.7,
+        "name": "PORTO/USD",
+        "ticker": "PORTO/USD",
+        "sort_score": 93.9,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 70.7,
+        "profile_score": 93.9,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 91.1
+        "volatility": 86.1
       },
       {
         "rank": 6,
-        "name": "PEPE/USD",
-        "ticker": "PEPE/USD",
-        "sort_score": 69.6,
+        "name": "BTTN/USD",
+        "ticker": "BTTN/USD",
+        "sort_score": 71.23,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 69.6,
+        "profile_score": 71.23,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 146.0
+        "volatility": 71.2
       }
     ],
     "bond": [
@@ -6103,12 +6099,10 @@
           "ticker": "APH",
           "sort_score": 0.6039,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "momentum_trend",
           "profile_score": 0.6039,
           "buffett_score": 90.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "volatility": 31.2,
@@ -6417,12 +6411,10 @@
           "ticker": "NVDA",
           "sort_score": 0.7658,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "quality_high_vol",
           "profile_score": 0.7658,
           "buffett_score": 94.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "volatility": 48.5,
@@ -15680,23 +15672,23 @@
   "crypto_selected": [
     {
       "name": "Unknown",
-      "ticker": "PAXG/USD",
+      "ticker": "TRX/USD",
       "category": "crypto",
-      "profile_score": 100.0,
-      "volatility": 54.5,
+      "profile_score": 98.97,
+      "volatility": 27.6,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 1,
-      "selection_reason": "Score profil élevé (100.00)"
+      "selection_reason": "Score profil élevé (98.97)"
     }
   ],
   "crypto_rejected": [
     {
       "name": "Unknown",
-      "ticker": "MORPHO/USD",
+      "ticker": "PAXG/USD",
       "category": "crypto",
-      "profile_score": 92.47,
-      "volatility": 137.9,
+      "profile_score": 100.0,
+      "volatility": 54.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -15705,7 +15697,7 @@
       "name": "Unknown",
       "ticker": "DCR/USD",
       "category": "crypto",
-      "profile_score": 99.51,
+      "profile_score": 99.47,
       "volatility": 94.4,
       "radar_tilt": "neutral",
       "selected": false,
@@ -15713,30 +15705,30 @@
     },
     {
       "name": "Unknown",
-      "ticker": "OKB/USD",
+      "ticker": "NFT/USD",
       "category": "crypto",
-      "profile_score": 70.7,
-      "volatility": 91.1,
+      "profile_score": 96.66,
+      "volatility": 49.2,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "PEPE/USD",
+      "ticker": "PORTO/USD",
       "category": "crypto",
-      "profile_score": 69.6,
-      "volatility": 146.0,
+      "profile_score": 93.9,
+      "volatility": 86.1,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "TRX/USD",
+      "ticker": "BTTN/USD",
       "category": "crypto",
-      "profile_score": 98.97,
-      "volatility": 27.6,
+      "profile_score": 71.23,
+      "volatility": 71.2,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"

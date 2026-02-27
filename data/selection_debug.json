@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-02-27-08-27-13",
-    "git_sha": "adfb260d7",
-    "git_sha_full": "adfb260d73937b349f2ca91c49c38dc2c075367b",
+    "run_id": "2026-02-27-09-41-46",
+    "git_sha": "ba0bd5e88",
+    "git_sha_full": "ba0bd5e88ab6146b87640d29e73497e30022112f",
     "config_hash": "6c942836",
     "universe_asof": "2026-02-27",
-    "timestamp_utc": "2026-02-27T08:27:13.270740+00:00",
+    "timestamp_utc": "2026-02-27T09:41:46.887217+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 159.43
+    "total_duration_sec": 166.86
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -154,20 +154,20 @@
           "score": 100.0
         },
         {
-          "ticker": "MORPHO/USD",
-          "score": 92.47
-        },
-        {
           "ticker": "DCR/USD",
-          "score": 99.51
+          "score": 99.47
         },
         {
-          "ticker": "OKB/USD",
-          "score": 70.7
+          "ticker": "TRX/USD",
+          "score": 97.54
         },
         {
-          "ticker": "PEPE/USD",
-          "score": 69.6
+          "ticker": "NFT/USD",
+          "score": 96.66
+        },
+        {
+          "ticker": "PORTO/USD",
+          "score": 93.9
         }
       ]
     },
@@ -323,8 +323,8 @@
     },
     "5_selection_crypto_Modéré": {
       "name": "selection_crypto",
-      "before": 2,
-      "after": 2,
+      "before": 4,
+      "after": 4,
       "rejected": 0,
       "category": "crypto",
       "profile": "Modéré",
@@ -336,6 +336,14 @@
         {
           "ticker": "TRX/USD",
           "score": 98.97
+        },
+        {
+          "ticker": "NFT/USD",
+          "score": 92.47
+        },
+        {
+          "ticker": "BTTN/USD",
+          "score": 71.23
         }
       ]
     },
@@ -3526,8 +3534,15 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 100.0,
+    "details": {
+      "5_selection_crypto_Modéré.after": {
+        "current": 4,
+        "previous": 2,
+        "delta": 2,
+        "pct_change": 100.0
+      }
+    }
   }
 }

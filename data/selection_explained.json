@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-27T08:27:47.205281",
+  "generated_at": "2026-02-27T09:42:33.168357",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,12 +201,12 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 16,
-    "selection_rate": "1.6%",
+    "total_selected": 18,
+    "selection_rate": "1.8%",
     "by_region": {
       "US": {
         "universe": 521,
-        "in_top_20_selected": 0
+        "in_top_20_selected": 1
       },
       "Europe": {
         "universe": 267,
@@ -220,16 +220,18 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 15
+        "selected": 16
       }
     }
   },
   "sectors_distribution": {
     "Technologie de l'information": {
-      "selected_count": 2,
+      "selected_count": 4,
       "selected_names": [
         "SK HYNIX INC",
-        "LAM RESEARCH CORP"
+        "LAM RESEARCH CORP",
+        "AMPHENOL CORP CLASS A",
+        "NVIDIA CORP"
       ]
     },
     "Industries": {
@@ -281,8 +283,8 @@
     "US": {
       "total_in_universe": 521,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 0,
-      "rejection_rate_top_20": "100%",
+      "selected_in_top_20": 1,
+      "rejection_rate_top_20": "95%",
       "stocks": [
         {
           "rank": 1,
@@ -292,13 +294,10 @@
           "market_cap_billions": 4761.3,
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
-          "selected": false,
-          "status": "❌ Hard filters [Modéré]: ❌ Volatilité > 45.0% (risque excessif)",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "hard_filter_reasons": [
-              "vol>45.0"
-            ],
-            "profile": "Modéré"
+            "status": "selected"
           },
           "buffett_score": 94.0,
           "composite_score": 0.604,
@@ -319,12 +318,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.569, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.671 < seuil 0.604",
           "details": {
-            "profile_score": 0.569,
-            "composite_score": 0.671,
             "sector": "Technologie de l'information",
-            "matched_preset": "quality_premium"
+            "sector_quota": "4/4",
+            "your_score": 0.671,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP"
+            ]
           },
           "buffett_score": 90.0,
           "composite_score": 0.671,
@@ -397,12 +402,18 @@
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.435, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.641 < seuil 0.604",
           "details": {
-            "profile_score": 0.435,
-            "composite_score": 0.641,
             "sector": "Technologie de l'information",
-            "matched_preset": "quality_premium"
+            "sector_quota": "4/4",
+            "your_score": 0.641,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP"
+            ]
           },
           "buffett_score": 100.0,
           "composite_score": 0.641,
@@ -842,12 +853,18 @@
           "sector": "Technologie de l'information",
           "country": "Pays-Bas",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.605, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.712 < seuil 0.604",
           "details": {
-            "profile_score": 0.605,
-            "composite_score": 0.712,
             "sector": "Technologie de l'information",
-            "matched_preset": "quality_premium"
+            "sector_quota": "4/4",
+            "your_score": 0.712,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP"
+            ]
           },
           "buffett_score": 100.0,
           "composite_score": 0.712,
@@ -1353,12 +1370,18 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.622, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.690 < seuil 0.604",
           "details": {
-            "profile_score": 0.622,
-            "composite_score": 0.69,
             "sector": "Technologie de l'information",
-            "matched_preset": "momentum_trend"
+            "sector_quota": "4/4",
+            "your_score": 0.69,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP"
+            ]
           },
           "buffett_score": 59.0,
           "composite_score": 0.69,
@@ -1378,12 +1401,18 @@
           "sector": "Technologie de l'information",
           "country": "Corée",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.495, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Technologie de l'information: 4/4), score 0.665 < seuil 0.604",
           "details": {
-            "profile_score": 0.495,
-            "composite_score": 0.665,
             "sector": "Technologie de l'information",
-            "matched_preset": "momentum_trend"
+            "sector_quota": "4/4",
+            "your_score": 0.665,
+            "min_selected_score": 0.604,
+            "selected_in_sector": [
+              "SK HYNIX INC",
+              "LAM RESEARCH CORP",
+              "AMPHENOL CORP CLASS ",
+              "NVIDIA CORP"
+            ]
           },
           "buffett_score": 59.0,
           "composite_score": 0.665,
@@ -2036,7 +2065,7 @@
         "ticker": "NVDA",
         "sort_score": 0.7658,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.6039,
         "profile_score": 0.7658,
         "buffett_score": 94.0,
@@ -2045,7 +2074,6 @@
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "matched_preset": "quality_high_vol",
-        "rejection_reason": "Score composite (0.766) insuffisant pour le quota",
         "roe": 119.18,
         "de_ratio": 0.13,
         "market_cap": "4761299320000",
