@@ -202,8 +202,8 @@ const SD = (() => {
         document.querySelectorAll('#mode-toggle .toggle-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.value === m);
         });
-        el('couple-fields').style.display = m === 'couple' ? '' : 'none';
-        el('donor1-status-group').style.display = m === 'couple' ? 'none' : '';
+        const cf = el('couple-fields'); if (cf) cf.style.display = m === 'couple' ? '' : 'none';
+        const ds = el('donor1-status-group'); if (ds) ds.style.display = m === 'couple' ? 'none' : '';
     }
 
     // -- Detail mode --
@@ -223,6 +223,8 @@ const SD = (() => {
             b.classList.toggle('active', b.dataset.value === op);
         });
         el('donation-type-section').style.display = op === 'succession' ? 'none' : '';
+        const succOpts = el('succession-options-section');
+        if (succOpts) succOpts.style.display = (op === 'succession' || op === 'both') ? '' : 'none';
     }
 
     // -- Presets bénéficiaires --
@@ -958,12 +960,25 @@ const SD = (() => {
     // SYNTHESE PATRIMONIALE
     // ============================================================
     function gatherInputs() {
-        state.donor1.age = +el('donor1-age').value || null;
-        if (state.mode === 'couple') {
-            state.donor2.age = +el('donor2-age').value || null;
-            state.regime = el('regime-matrimonial').value;
-            state.ddv = el('switch-ddv').classList.contains('on');
+        // Donateurs : prendre depuis PathOptimizer si disponible
+        if (typeof PathOptimizer !== 'undefined') {
+            const pDonors = PathOptimizer.getDonors();
+            if (pDonors.length > 0) {
+                state.donor1.age = pDonors[0].age || 60;
+                state.mode = pDonors.length >= 2 && pDonors[0].role === 'parent' && pDonors[1].role === 'parent' ? 'couple' : 'solo';
+                if (pDonors.length >= 2) state.donor2.age = pDonors[1].age || null;
+            }
+        } else {
+            const d1Age = el('donor1-age');
+            state.donor1.age = d1Age ? (+d1Age.value || null) : null;
         }
+
+        // Régime + DDV (maintenant dans Step 4)
+        const regimeEl = el('regime-matrimonial');
+        if (regimeEl) state.regime = regimeEl.value;
+        const ddvEl = el('switch-ddv');
+        if (ddvEl) state.ddv = ddvEl.classList.contains('on');
+
         if (state.detailMode === 'simplifie') {
             state.patrimoine.total = +el('total-patrimoine').value || 0;
             state.patrimoine.rp = +el('montant-rp').value || 0;
