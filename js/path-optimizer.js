@@ -235,7 +235,7 @@ const PathOptimizer = (() => {
             if (montant <= 0) continue;
 
             // Direct en PP
-            const donAntDirect = getDonationsAntByRole(targetBeneficiary.id, donor.role);
+            const donAntDirect = getDonationsAntForDonor(targetBeneficiary.id, donor.id, donor.role);
             const hopPP = calcHopCost(montant, lienDirect, donor.age, false, donAntDirect);
             paths.push({
                 type: 'direct_pp',
@@ -543,14 +543,19 @@ const PathOptimizer = (() => {
         return bens;
     }
 
-    // Récupérer les donations antérieures d'un bénéficiaire, par rôle du donateur
-    function getDonationsAntByRole(benId, donorRole) {
-        // Accède au state de SD via la public API ou le DOM
+    // Récupérer les donations antérieures d'un bénéficiaire pour un donateur spécifique
+    function getDonationsAntForDonor(benId, donorId, donorRole) {
         if (typeof SD !== 'undefined' && SD._getState) {
             const ben = SD._getState().beneficiaries.find(b => String(b.id) === String(benId));
             if (ben && ben.donationsAnterieures) {
+                // D'abord chercher par donorId exact (lié à la cartographie)
+                const byId = ben.donationsAnterieures
+                    .filter(da => da.donorId === donorId)
+                    .reduce((s, da) => s + (da.montant || 0), 0);
+                if (byId > 0) return byId;
+                // Sinon fallback par rôle (pour les "autre personne")
                 return ben.donationsAnterieures
-                    .filter(da => da.role === donorRole)
+                    .filter(da => da.donorId === -1 && da.donorRole === donorRole)
                     .reduce((s, da) => s + (da.montant || 0), 0);
             }
         }
