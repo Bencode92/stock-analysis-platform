@@ -20,6 +20,7 @@
             --text-primary:#FFFFFF; --text-secondary:#CBD5E1; --text-muted:#8B9CB0; --text-label:#A8B2CF;
             --accent-green:#10B981; --accent-emerald:#059669; --accent-blue:#3B82F6;
             --accent-red:#FF5252; --accent-amber:#FFB300; --accent-purple:#A78BFA; --accent-cyan:#00D9FF;
+            --accent-coral:#FF6B6B; --accent-coral-light:#FF8A8A; --accent-coral-dark:#E85D5D;
             --sidebar-w:60px; --header-h:70px; --step-bar-h:72px;
             --transition-fast:0.15s ease; --transition-normal:0.3s ease;
         }
@@ -367,6 +368,33 @@
         .btn-reset { background:none; border:none; color:var(--text-muted); font-size:.8rem; cursor:pointer; padding:8px; font-family:inherit; }
         .btn-reset:hover { color:var(--danger-color); }
 
+        /* ===== URGENCY ACCENT (coral) ===== */
+        .warning-box.urgent {
+            background:rgba(255,107,107,.08); border:1px solid rgba(255,107,107,.25);
+            border-left:4px solid var(--accent-coral); color:#ffb3b3;
+        }
+        .warning-box.urgent i { color:var(--accent-coral); }
+        .badge-urgent {
+            display:inline-flex; align-items:center; gap:5px;
+            padding:4px 12px; border-radius:20px; font-size:.72rem; font-weight:700;
+            background:rgba(255,107,107,.12); color:var(--accent-coral);
+            border:1px solid rgba(255,107,107,.25);
+            animation:pulseUrgent 2.5s ease-in-out infinite;
+        }
+        @keyframes pulseUrgent {
+            0%,100% { box-shadow:0 0 0 0 rgba(255,107,107,0); }
+            50% { box-shadow:0 0 12px 2px rgba(255,107,107,.2); }
+        }
+        .section-card.urgent-border { border-color:rgba(255,107,107,.3); }
+        .section-card.urgent-border:hover { border-color:rgba(255,107,107,.5); box-shadow:0 12px 40px rgba(255,107,107,.08); }
+        .section-card.urgent-border .section-title i {
+            background:linear-gradient(135deg,rgba(255,107,107,.2),rgba(255,107,107,.12));
+            color:var(--accent-coral);
+            box-shadow:0 4px 12px rgba(255,107,107,.2);
+        }
+        .countdown-text { color:var(--accent-coral); font-weight:700; font-variant-numeric:tabular-nums; }
+        .text-coral { color:var(--accent-coral); }
+
         /* ===== RESPONSIVE ===== */
         @media(max-width:768px){
             .sidebar{display:none} .main-content{margin-left:0} .bottom-bar{left:0}
@@ -660,15 +688,15 @@
                         <i class="fas fa-lightbulb"></i>
                         <span><strong>Donation-partage vs simple :</strong> la donation-partage fige la valeur au jour de l'acte. En donation simple, le bien est rapporté à la succession sur sa valeur au jour du décès.</span>
                     </div>
-                    <div class="warning-box success" style="margin-top:8px;">
+                    <div class="warning-box urgent" style="margin-top:8px;">
                         <i class="fas fa-star"></i>
-                        <span><strong>🆕 Exo. logement neuf/réno (art. 790 A bis) :</strong> jusqu'au 31/12/2026, don d'argent exonéré jusqu'à 100 000 €/donateur (max 300 000 €/donataire) pour achat RP neuve/VEFA ou travaux réno. énergétique MaPrimeRénov'. Cumulable avec les autres abattements.</span>
+                        <span><strong>🆕 Exo. logement neuf/réno (art. 790 A bis) :</strong> jusqu'au <span class="countdown-text">31/12/2026</span>, don d'argent exonéré jusqu'à 100 000 €/donateur (max 300 000 €/donataire) pour achat RP neuve/VEFA ou travaux réno. énergétique MaPrimeRénov'. Cumulable avec les autres abattements. <span class="badge-urgent"><i class="fas fa-hourglass-half"></i> Temporaire</span></span>
                     </div>
                 </div>
 
-                <div class="section-card" id="exo-logement-section">
-                    <div class="section-title"><i class="fas fa-home-lg-alt" style="color:var(--accent-green);"></i> Exonération temporaire logement (790 A bis)</div>
-                    <div class="section-subtitle">Dispositif exceptionnel du 15/02/2025 au 31/12/2026</div>
+                <div class="section-card urgent-border" id="exo-logement-section">
+                    <div class="section-title"><i class="fas fa-home-lg-alt"></i> Exonération temporaire logement (790 A bis) <span class="badge-urgent"><i class="fas fa-hourglass-half"></i> Expire 31/12/2026</span></div>
+                    <div class="section-subtitle">Dispositif exceptionnel du 15/02/2025 au <span class="countdown-text">31/12/2026</span></div>
                     <div class="switch-row">
                         <span class="switch-label">Le donataire va acquérir un logement neuf/VEFA (RP) ou réaliser des travaux réno. énergétique ? <span class="info-tip" data-tip="Exonération de 100k€ par donateur, 300k€ max par donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans minimum. Cumulable avec abattement 100k enfant + 31 865€ don familial."><i class="fas fa-info-circle"></i></span></span>
                         <div class="switch" id="switch-790abis" onclick="SD.toggleSwitch(this);SD.toggleSection('exo-logement-details')"></div>
@@ -687,9 +715,9 @@
                                 <input type="number" id="exo-logement-montant" step="1000" placeholder="Max 100 000 par donateur" max="100000">
                             </div>
                         </div>
-                        <div class="warning-box warn" style="margin-top:8px;">
+                        <div class="warning-box urgent" style="margin-top:8px;">
                             <i class="fas fa-clock"></i>
-                            <span><strong>Délais stricts :</strong> utilisation des fonds sous 6 mois · conservation du bien 5 ans minimum · non cumulable avec SCI, terrain à bâtir, résidence services.</span>
+                            <span><strong>Délais stricts :</strong> utilisation des fonds sous <span class="countdown-text">6 mois</span> · conservation du bien <span class="countdown-text">5 ans</span> minimum · non cumulable avec SCI, terrain à bâtir, résidence services.</span>
                         </div>
                         <div class="warning-box info" style="margin-top:8px;">
                             <i class="fas fa-calculator"></i>
