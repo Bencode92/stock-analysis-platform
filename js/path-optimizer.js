@@ -349,7 +349,7 @@ const PathOptimizer = (() => {
             arriere_petit_enfant: 'Arr. petit-enfant (LD)',
             conjoint_pacs_donation: 'Conjoint/PACS',
             frere_soeur: 'Frère/Sœur', neveu_niece: 'Neveu/Nièce',
-            tiers: 'Tiers'
+            tiers: 'Tiers', aucun: '🚫 Aucun lien'
         };
         return map[lien] || 'Tiers';
     }
@@ -402,6 +402,7 @@ const PathOptimizer = (() => {
             const lienDirect = getEffectiveLien(donor.id, targetBeneficiary.id, donor.role, targetBeneficiary.lien);
             const montant = donor.patrimoine;
             if (montant <= 0) continue;
+            if (lienDirect === 'aucun') continue; // Pas de lien = pas de chemin direct
 
             // Direct en PP
             const donAntDirect = getDonationsAntForDonor(targetBeneficiary.id, donor.id, donor.role);
@@ -589,6 +590,7 @@ const PathOptimizer = (() => {
                         const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
                         const lienOpts = [
                             ['auto', `Auto : ${formatLien(autoLien)}`],
+                            ['aucun', '🚫 Aucun lien'],
                             ['enfant', 'Enfant (LD · 100k)'],
                             ['petit_enfant', 'Petit-enfant (LD · 31 865)'],
                             ['arriere_petit_enfant', 'Arr. petit-enfant (5 310)'],
@@ -596,6 +598,19 @@ const PathOptimizer = (() => {
                             ['frere_soeur', 'Frère/Sœur (15 932)'],
                             ['tiers', 'Tiers (1 594)']
                         ].map(([v, l]) => `<option value="${v}" ${(currentOverride === v || (!currentOverride && v === 'auto')) ? 'selected' : ''}>${l}</option>`).join('');
+                        const isAucun = lienFiscal === 'aucun';
+                        if (isAucun) {
+                            return `
+                            <div style="display:grid;grid-template-columns:1fr;gap:6px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.02);border:1px dashed rgba(198,134,66,.08);opacity:.6;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <div>
+                                        <span style="font-size:.78rem;color:var(--text-muted);">→ ${b.prenom || 'Bénéf.'}</span>
+                                        <span style="font-size:.62rem;color:var(--text-muted);margin-left:6px;">🚫 Aucun lien</span>
+                                    </div>
+                                    <select style="font-size:.62rem;height:24px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorBenLien(${d.id},${b.id},this.value)">${lienOpts}</select>
+                                </div>
+                            </div>`;
+                        }
                         return `
                         <div style="display:grid;grid-template-columns:1fr 100px 120px;gap:6px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
                             <div>
@@ -767,6 +782,11 @@ const PathOptimizer = (() => {
 
             container.innerHTML = donors.map(d => {
                 const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
+                if (lienFiscal === 'aucun') {
+                    return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.68rem;opacity:.4;">
+                        <span>← ${d.nom}</span><span>🚫 aucun lien</span>
+                    </div>`;
+                }
                 const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
                 const montant = getDonorDonationForBen(d.id, b.id);
                 const restant = Math.max(0, abat - montant);
