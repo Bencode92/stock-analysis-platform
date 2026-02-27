@@ -343,10 +343,16 @@ const SD = (() => {
             // Bien
             valeur: 0,
             prixAcquisition: 0,
+            modeAcquisition: 'achat',       // achat | donation | succession | construction
+            valeurDeclaree: 0,              // Si reçu par donation/succession
+            droitsTransmission: 0,          // Droits payés lors de la transmission
+            recuDe: '',                     // Personne qui a transmis
             dateAcquisition: '',
             dateSortieRP: '',
             // Détention
             structure: 'direct',            // direct | sci_ir | sci_is | sarl_famille | indivision | demembre
+            // Propriétaires liés à la cartographie
+            owners: [],                     // [{personId, personNom, personType:'donor'|'ben'|'autre', role:'pp'|'us'|'np'|'indiv', quote: 100, lienAutre:''}]
             partRecettesCommHT: 0,
             // Charges
             credit: 0,
@@ -454,15 +460,53 @@ const SD = (() => {
 
             <!-- Acquisition & détention -->
             <div style="margin-top:16px;">
-                <div class="form-grid cols-3">
+                <div class="form-grid cols-2">
                     <div class="form-group">
-                        <label class="form-label">Prix d'acquisition (€)</label>
-                        <input type="number" step="1000" onchange="SD.updateImmo(${id},'prixAcquisition',+this.value)" placeholder="Ex: 310000">
+                        <label class="form-label">Mode d'acquisition</label>
+                        <select onchange="SD.updateImmo(${id},'modeAcquisition',this.value); SD.refreshImmoUI(${id})">
+                            <option value="achat">Achat</option>
+                            <option value="donation">Reçu par donation</option>
+                            <option value="succession">Reçu par succession</option>
+                            <option value="construction">Construction / VEFA</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Date d'acquisition</label>
                         <input type="date" onchange="SD.updateImmo(${id},'dateAcquisition',this.value)">
                     </div>
+                </div>
+
+                <!-- Si achat : prix d'achat -->
+                <div id="immo-achat-${id}">
+                    <div class="form-group" style="margin-top:8px;">
+                        <label class="form-label">Prix d'acquisition (€)</label>
+                        <input type="number" step="1000" onchange="SD.updateImmo(${id},'prixAcquisition',+this.value)" placeholder="Ex: 310000">
+                    </div>
+                </div>
+
+                <!-- Si donation/succession : valeur déclarée -->
+                <div id="immo-donation-${id}" style="display:none;margin-top:8px;padding:10px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.08);">
+                    <div class="form-grid cols-2">
+                        <div class="form-group">
+                            <label class="form-label" style="color:var(--accent-coral);">Valeur déclarée lors de la transmission (€)</label>
+                            <input type="number" step="1000" onchange="SD.updateImmo(${id},'valeurDeclaree',+this.value)" placeholder="Base pour la plus-value future">
+                            <div style="font-size:.58rem;color:var(--text-muted);margin-top:2px;">= prix de revient fiscal pour le calcul de plus-value à la revente</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Droits payés lors de la transmission (€)</label>
+                            <input type="number" step="100" onchange="SD.updateImmo(${id},'droitsTransmission',+this.value)" placeholder="0">
+                            <div style="font-size:.58rem;color:var(--text-muted);margin-top:2px;">Ajoutés au prix de revient si < 5 ans</div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:8px;">
+                        <label class="form-label">Reçu de qui ?</label>
+                        <select class="form-input" id="immo-recu-de-${id}" style="font-size:.75rem;height:34px;" onchange="SD.updateImmo(${id},'recuDe',this.value)">
+                            <option value="">— Choisir —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid cols-2" style="margin-top:12px;">
                     <div class="form-group">
                         <label class="form-label">Mode de détention</label>
                         <select onchange="SD.updateImmo(${id},'structure',this.value); SD.refreshImmoUI(${id})">
@@ -471,9 +515,27 @@ const SD = (() => {
                             <option value="sci_is">Via SCI à l'IS</option>
                             <option value="sarl_famille">Via SARL de famille (IR)</option>
                             <option value="indivision">En indivision</option>
-                            <option value="demembre">Démembré (US ou NP)</option>
+                            <option value="demembre">Démembré (US / NP)</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Crédit restant dû (€)</label>
+                        <input type="number" step="1000" onchange="SD.updateImmo(${id},'credit',+this.value)" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-grid cols-2" style="margin-top:4px;">
+                    <div class="form-group">
+                        <label class="form-label">Assurance décès (ADI) sur ce crédit ?</label>
+                        <select onchange="SD.updateImmo(${id},'creditADI',this.value==='oui')">
+                            <option value="non">Non — déductible du passif</option>
+                            <option value="oui">Oui — NON déductible (capital couvert)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Propriétaire(s) — apparaît pour tous les modes -->
+                <div id="immo-owners-${id}" style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.08);">
+                    <div id="immo-owners-content-${id}"></div>
                 </div>
             </div>
 
@@ -482,21 +544,6 @@ const SD = (() => {
                 <div class="form-group">
                     <label class="form-label">Date de sortie de la résidence principale <span class="info-tip" data-tip="Si le bien était votre RP et ne l'est plus, la plus-value n'est plus exonérée. La date de sortie RP détermine le début du calcul PV."><i class="fas fa-info-circle"></i></span></label>
                     <input type="date" onchange="SD.updateImmo(${id},'dateSortieRP',this.value)">
-                </div>
-            </div>
-
-            <!-- Crédit -->
-            <div class="form-grid" style="margin-top:12px;">
-                <div class="form-group">
-                    <label class="form-label">Crédit restant dû (€)</label>
-                    <input type="number" step="1000" onchange="SD.updateImmo(${id},'credit',+this.value)" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Assurance décès (ADI) sur ce crédit ?</label>
-                    <select onchange="SD.updateImmo(${id},'creditADI',this.value==='oui')">
-                        <option value="non">Non — déductible du passif</option>
-                        <option value="oui">Oui — NON déductible (soldé au décès)</option>
-                    </select>
                 </div>
             </div>
 
@@ -534,6 +581,7 @@ const SD = (() => {
             <div id="immo-warnings-${id}"></div>
         </div>`;
         el('immo-list').insertAdjacentHTML('beforeend', html);
+        refreshImmoUI(id);
     }
 
     function removeImmo(id) {
@@ -570,6 +618,27 @@ const SD = (() => {
 
         // Show/hide ex-RP field
         el('immo-exrp-' + id).style.display = isExRP ? '' : 'none';
+
+        // Render owners section
+        renderImmoOwners(id);
+
+        // Acquisition mode: show/hide fields
+        const isDonSuc = ['donation', 'succession'].includes(item.modeAcquisition);
+        const achatEl = el('immo-achat-' + id);
+        const donEl = el('immo-donation-' + id);
+        if (achatEl) achatEl.style.display = isDonSuc ? 'none' : '';
+        if (donEl) donEl.style.display = isDonSuc ? '' : 'none';
+
+        // Populate "reçu de" dropdown
+        if (isDonSuc) {
+            const recuSelect = el('immo-recu-de-' + id);
+            if (recuSelect) {
+                const persons = getPersonsList();
+                recuSelect.innerHTML = `<option value="">— Choisir —</option>` +
+                    persons.map(p => `<option value="${p.id}" ${item.recuDe === p.id ? 'selected' : ''}>${p.nom} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('') +
+                    `<option value="autre" ${item.recuDe === 'autre' ? 'selected' : ''}>Autre personne</option>`;
+            }
+        }
 
         // Update regime fiscal options based on location type
         const regimeSelect = el('regime-fiscal-' + id);
@@ -647,12 +716,145 @@ const SD = (() => {
     // ============================================================
     // FINANCIER
     // ============================================================
+    // === OWNERSHIP / PROPRIÉTAIRES ===
+    function getPersonsList() {
+        // Combine donors + beneficiaries from cartographie
+        const persons = [];
+        if (typeof PathOptimizer !== 'undefined') {
+            PathOptimizer.getDonors().forEach(d => {
+                persons.push({ id: 'd-' + d.id, nom: d.nom, type: 'donor', role: d.role });
+            });
+        }
+        state.beneficiaries.forEach(b => {
+            persons.push({ id: 'b-' + b.id, nom: b.prenom || 'Bénéf. ' + b.id, type: 'ben', lien: b.lien });
+        });
+        return persons;
+    }
+
+    function addImmoOwner(immoId) {
+        const item = state.immo.find(i => i.id === immoId);
+        if (!item) return;
+        item.owners.push({ personId: '', personNom: '', personType: 'autre', role: 'pp', quote: 100, lienAutre: '' });
+        renderImmoOwners(immoId);
+    }
+
+    function removeImmoOwner(immoId, idx) {
+        const item = state.immo.find(i => i.id === immoId);
+        if (!item) return;
+        item.owners.splice(idx, 1);
+        renderImmoOwners(immoId);
+    }
+
+    function updateImmoOwner(immoId, idx, field, value) {
+        const item = state.immo.find(i => i.id === immoId);
+        if (!item || !item.owners[idx]) return;
+        const o = item.owners[idx];
+
+        if (field === 'personId') {
+            o.personId = value;
+            if (value === 'autre') {
+                o.personType = 'autre';
+                o.personNom = '';
+            } else {
+                const persons = getPersonsList();
+                const p = persons.find(pp => pp.id === value);
+                if (p) { o.personNom = p.nom; o.personType = p.type; }
+            }
+        } else if (field === 'quote') {
+            o.quote = +value || 0;
+        } else if (field === 'role') {
+            o.role = value;
+        } else if (field === 'personNom') {
+            o.personNom = value;
+        }
+        renderImmoOwners(immoId);
+    }
+
+    function renderImmoOwners(immoId) {
+        const item = state.immo.find(i => i.id === immoId);
+        const container = el('immo-owners-content-' + immoId);
+        if (!container || !item) return;
+
+        const struct = item.structure;
+        const isDemembre = struct === 'demembre';
+        const isIndivision = struct === 'indivision';
+        const isSimple = !isDemembre && !isIndivision;
+
+        const persons = getPersonsList();
+        const personOpts = persons.map(p =>
+            `<option value="${p.id}">${p.nom} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`
+        ).join('') + `<option value="autre">— Autre personne —</option>`;
+
+        // For simple modes, just show single owner
+        if (isSimple) {
+            // Auto-set single owner if empty
+            if (item.owners.length === 0 && persons.length > 0) {
+                item.owners = [{ personId: persons[0].id, personNom: persons[0].nom, personType: persons[0].type, role: 'pp', quote: 100, lienAutre: '' }];
+            }
+            const o = item.owners[0] || {};
+            container.innerHTML = `
+                <label class="form-label" style="font-size:.72rem;margin-bottom:6px;display:flex;align-items:center;gap:4px;"><i class="fas fa-user"></i> Propriétaire</label>
+                <select class="form-input" style="font-size:.75rem;height:34px;" onchange="SD.updateImmoOwner(${immoId},0,'personId',this.value)">
+                    <option value="">— Choisir —</option>
+                    ${persons.map(p => `<option value="${p.id}" ${o.personId === p.id ? 'selected' : ''}>${p.nom} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('')}
+                    <option value="autre" ${o.personId === 'autre' ? 'selected' : ''}>— Autre personne —</option>
+                </select>
+                ${o.personId === 'autre' ? `<input type="text" class="form-input" value="${o.personNom}" placeholder="Nom" style="margin-top:6px;font-size:.72rem;height:32px;" onchange="SD.updateImmoOwner(${immoId},0,'personNom',this.value)">` : ''}`;
+            return;
+        }
+
+        // For indivision / démembrement : multi-owner
+        const roleLabel = isDemembre ? 'Droit' : 'Part';
+        const roleOpts = isDemembre
+            ? `<option value="us">Usufruitier</option><option value="np">Nu-propriétaire</option>`
+            : `<option value="indiv">Indivisaire</option>`;
+
+        let html = `<label class="form-label" style="font-size:.72rem;margin-bottom:8px;display:flex;align-items:center;gap:4px;">
+            <i class="fas fa-users"></i> ${isDemembre ? 'Démembrement — qui détient quoi ?' : 'Indivision — parts de chacun'}
+        </label>`;
+
+        const totalQuote = item.owners.reduce((s, o) => s + (o.quote || 0), 0);
+
+        html += item.owners.map((o, idx) => `
+            <div style="display:grid;grid-template-columns:1fr ${isDemembre ? '110px' : ''} 80px 28px;gap:6px;align-items:center;margin-bottom:6px;">
+                <div>
+                    <select class="form-input" style="font-size:.72rem;height:32px;" onchange="SD.updateImmoOwner(${immoId},${idx},'personId',this.value)">
+                        <option value="">— Choisir —</option>
+                        ${persons.map(p => `<option value="${p.id}" ${o.personId === p.id ? 'selected' : ''}>${p.nom}</option>`).join('')}
+                        <option value="autre" ${o.personId === 'autre' ? 'selected' : ''}>Autre</option>
+                    </select>
+                    ${o.personId === 'autre' ? `<input type="text" class="form-input" value="${o.personNom}" placeholder="Nom" style="margin-top:4px;font-size:.68rem;height:28px;" onchange="SD.updateImmoOwner(${immoId},${idx},'personNom',this.value)">` : ''}
+                </div>
+                ${isDemembre ? `<select class="form-input" style="font-size:.68rem;height:32px;" onchange="SD.updateImmoOwner(${immoId},${idx},'role',this.value)">
+                    <option value="us" ${o.role === 'us' ? 'selected' : ''}>Usufruitier</option>
+                    <option value="np" ${o.role === 'np' ? 'selected' : ''}>Nu-propriétaire</option>
+                </select>` : ''}
+                <div style="position:relative;">
+                    <input type="number" class="form-input" value="${o.quote}" min="0" max="100" style="font-size:.72rem;height:32px;text-align:right;padding-right:20px;" onchange="SD.updateImmoOwner(${immoId},${idx},'quote',this.value)">
+                    <span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:.62rem;color:var(--text-muted);">%</span>
+                </div>
+                <button class="btn-remove" style="width:28px;height:28px;font-size:.6rem;" onclick="SD.removeImmoOwner(${immoId},${idx})"><i class="fas fa-times"></i></button>
+            </div>
+        `).join('');
+
+        // Total bar
+        const pctColor = totalQuote === 100 ? 'var(--accent-green)' : totalQuote > 100 ? 'var(--accent-coral)' : 'var(--accent-amber)';
+        html += `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(198,134,66,.08);">
+                <button class="btn-add" style="font-size:.68rem;padding:4px 10px;" onclick="SD.addImmoOwner(${immoId})"><i class="fas fa-plus"></i> Ajouter</button>
+                <span style="font-size:.68rem;font-weight:600;color:${pctColor};">Total : ${totalQuote}%${totalQuote !== 100 ? ' ⚠️' : ' ✓'}</span>
+            </div>`;
+
+        container.innerHTML = html;
+    }
+
     function addFinancial() {
         const id = finIdCounter++;
         state.finance.push({
             id, type: 'assurance_vie', valeur: 0, versements: 0,
             dateOuverture: '', primesAvant70: 0, primesApres70: 0,
-            clauseBeneficiaire: 'standard'
+            clauseBeneficiaire: 'standard',
+            ownerId: '', ownerNom: ''   // Lié à la cartographie
         });
 
         const html = `
@@ -660,6 +862,12 @@ const SD = (() => {
             <div class="list-item-header">
                 <div class="list-item-title"><i class="fas fa-chart-line"></i> Actif financier ${id + 1}</div>
                 <button class="btn-remove" onclick="SD.removeFinancial(${id})"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label" style="font-size:.72rem;"><i class="fas fa-user"></i> Titulaire</label>
+                <select class="form-input" id="fin-owner-${id}" style="font-size:.75rem;height:34px;" onchange="SD.updateFin(${id},'ownerId',this.value)">
+                    <option value="">— Choisir le titulaire —</option>
+                </select>
             </div>
             <div class="form-grid">
                 <div class="form-group">
@@ -710,6 +918,7 @@ const SD = (() => {
             </div>
         </div>`;
         el('finance-list').insertAdjacentHTML('beforeend', html);
+        refreshFinUI(id);
     }
 
     function removeFinancial(id) { state.finance = state.finance.filter(i => i.id !== id); el('fin-' + id)?.remove(); }
@@ -718,6 +927,15 @@ const SD = (() => {
         const item = state.finance.find(i => i.id === id);
         const avSection = el('fin-av-' + id);
         if (avSection) avSection.style.display = (item && ['assurance_vie', 'contrat_capi'].includes(item.type)) ? '' : 'none';
+
+        // Populate owner dropdown
+        const ownerSelect = el('fin-owner-' + id);
+        if (ownerSelect && item) {
+            const persons = getPersonsList();
+            const current = item.ownerId;
+            ownerSelect.innerHTML = `<option value="">— Choisir le titulaire —</option>` +
+                persons.map(p => `<option value="${p.id}" ${current === p.id ? 'selected' : ''}>${p.nom} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('');
+        }
     }
 
     // ============================================================
@@ -767,14 +985,23 @@ const SD = (() => {
     // ============================================================
     function addDebt() {
         const id = debtIdCounter++;
-        state.debts.push({ id, type: 'credit_immo', montant: 0, adi: false });
+        state.debts.push({ id, type: 'credit_immo', montant: 0, adi: false, ownerId: '' });
+        const persons = getPersonsList();
+        const personOpts = `<option value="">— Débiteur —</option>` +
+            persons.map(p => `<option value="${p.id}">${p.nom}</option>`).join('');
         const html = `
         <div class="list-item" id="debt-${id}">
             <div class="list-item-header">
                 <div class="list-item-title"><i class="fas fa-file-invoice-dollar"></i> Dette ${id + 1}</div>
                 <button class="btn-remove" onclick="SD.removeDebt(${id})"><i class="fas fa-times"></i></button>
             </div>
-            <div class="form-grid cols-3">
+            <div class="form-grid cols-2" style="margin-bottom:8px;">
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.72rem;"><i class="fas fa-user"></i> Débiteur (qui doit ?)</label>
+                    <select class="form-input" style="font-size:.75rem;height:34px;" onchange="SD.updateDebt(${id},'ownerId',this.value)">
+                        ${personOpts}
+                    </select>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Type</label>
                     <select onchange="SD.updateDebt(${id},'type',this.value)">
@@ -785,6 +1012,8 @@ const SD = (() => {
                         <option value="autre">Autre</option>
                     </select>
                 </div>
+            </div>
+            <div class="form-grid cols-2">
                 <div class="form-group">
                     <label class="form-label">Montant (€)</label>
                     <input type="number" step="1000" onchange="SD.updateDebt(${id},'montant',+this.value)" placeholder="0">
@@ -1405,6 +1634,7 @@ const SD = (() => {
         toggleSwitch, toggleSection, toggleCollapsible,
         applyPreset, addBeneficiary, removeBeneficiary, updateBen,
         addImmo, removeImmo, updateImmo, updateImmoTitle, refreshImmoUI,
+        addImmoOwner, removeImmoOwner, updateImmoOwner,
         addFinancial, removeFinancial, updateFin, refreshFinUI,
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
