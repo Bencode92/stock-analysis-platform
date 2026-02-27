@@ -124,13 +124,50 @@ const PathOptimizer = (() => {
         } else {
             d[field] = value;
         }
-        if (field === 'role' || field === 'age') { updateMatrix(); renderDonorList(); }
+        if (field === 'role' || field === 'age') {
+            updateMatrix();
+            // Don't full re-render — just update labels in-place
+            updateDonorLabelsInPlace(id);
+            refreshBenDonSummaries();
+        }
         if (field === 'nom') {
             const title = document.getElementById('donor-title-' + id);
             if (title) title.textContent = value;
-            renderDonorList();
+            // Also refresh other donors that show "reçu de [nom]"
+            refreshBenDonSummaries();
         }
         if (typeof SD !== 'undefined' && SD.updateAside) SD.updateAside();
+    }
+
+    // Update only the lien labels and abattement bars without re-rendering the whole donor list
+    function updateDonorLabelsInPlace(donorId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        const bens = getBeneficiaries();
+
+        bens.forEach(b => {
+            const lienFiscal = detectLien(d.role, b.lien);
+            const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
+            const montant = getDonorDonationForBen(d.id, b.id);
+            const restant = Math.max(0, abat - montant);
+            const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
+            const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
+
+            // Update label
+            const labelEl = document.getElementById(`don-label-${d.id}-${b.id}`);
+            if (labelEl) labelEl.innerHTML = `→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span>`;
+
+            // Update bar
+            renderDonorDonationBar(d.id, b.id);
+        });
+
+        // Also update inter-donor labels
+        donors.filter(od => od.id !== d.id).forEach(od => {
+            // Labels where this donor receives from others
+            renderDonorReceivedBar(d.id, od.id);
+            // Labels where others receive from this donor
+            renderDonorReceivedBar(od.id, d.id);
+        });
     }
 
     // Donation donateur → bénéficiaire spécifique
@@ -434,12 +471,22 @@ const PathOptimizer = (() => {
     }
 
     function detectLienBetweenDonors(role1, role2) {
-        // Grand-parent → Parent = lien enfant (ligne directe)
+        // role1 = donateur qui donne, role2 = celui qui reçoit
+        // Grand-parent → Parent = GP donne à son enfant = lien "enfant" (100k abat.)
         if (role1 === 'grand_parent' && role2 === 'parent') return 'enfant';
+        // Parent → Grand-parent = enfant donne à son parent = lien "enfant" aussi (LD ascendante)
+        if (role1 === 'parent' && role2 === 'grand_parent') return 'enfant';
+        // Arr-GP → GP
         if (role1 === 'arr_grand_parent' && role2 === 'grand_parent') return 'enfant';
+        if (role1 === 'grand_parent' && role2 === 'arr_grand_parent') return 'enfant';
+        // Arr-GP → Parent = petit-enfant
         if (role1 === 'arr_grand_parent' && role2 === 'parent') return 'petit_enfant';
-        if (role1 === 'parent' && role2 === 'parent') return 'conjoint_pacs_donation'; // entre époux
+        if (role1 === 'parent' && role2 === 'arr_grand_parent') return 'petit_enfant';
+        // Parent ↔ Parent = entre époux (conjoint)
+        if (role1 === 'parent' && role2 === 'parent') return 'conjoint_pacs_donation';
+        // Oncle/Tante ↔ Parent = frère/sœur
         if (role1 === 'oncle_tante' && role2 === 'parent') return 'frere_soeur';
+        if (role1 === 'parent' && role2 === 'oncle_tante') return 'frere_soeur';
         return 'tiers';
     }
 
@@ -505,7 +552,7 @@ const PathOptimizer = (() => {
                         return `
                         <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
                             <div>
-                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">→ ${b.prenom || 'Bénéf. ' + (bens.indexOf(b)+1)} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span></div>
+                                <div id="don-label-${d.id}-${b.id}" style="font-size:.78rem;font-weight:600;color:var(--text-primary);">→ ${b.prenom || 'Bénéf. ' + (bens.indexOf(b)+1)} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span></div>
                                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                                     <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
                                         <div id="don-bar-${d.id}-${b.id}" style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
