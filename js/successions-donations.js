@@ -1026,7 +1026,7 @@ const SD = (() => {
             const droitsDonExo = calcDroitsForBens(Math.max(0, resteDon - (FISCAL.abattements.enfant + FISCAL.abattements.don_familial_argent) * nbDonors * nbBens / Math.max(1, nbBens)), bens, nbDonors, false);
             const fraisExo = Math.round(resteDon * FISCAL.fraisNotairePct);
             scenarios.push({
-                name: 'Don 790 A bis\n(logement neuf/réno)', short: 'Exo. logement 2026',
+                name: 'Don 790 A bis\n⏰ logement neuf/réno', short: '⚠️ Exo. logement 2026',
                 actifTransmis: totalNet, droits: droitsDonExo, frais: fraisExo, fraisAn: 0,
                 net: totalNet - droitsDonExo - fraisExo,
                 note: `${fmt(exoMontant)} exonérés (790 A bis) · Abat. cumulé max ${fmt(abatCumul)}/enfant`
@@ -1151,7 +1151,7 @@ const SD = (() => {
         }
         // 790 A bis deadline
         if (state.exoLogement.active) {
-            html += `<div class="warning-box success"><i class="fas fa-clock"></i><span><strong>Art. 790 A bis :</strong> exonération temporaire jusqu'au 31/12/2026. Fonds à utiliser sous 6 mois. Conservation du logement 5 ans minimum. Pensez à déclarer le don en ligne sur impots.gouv.fr (obligatoire depuis 01/2026).</span></div>`;
+            html += `<div class="warning-box urgent"><i class="fas fa-hourglass-half"></i><span><strong>Art. 790 A bis :</strong> exonération temporaire jusqu'au <span class="countdown-text">31/12/2026</span>. Fonds à utiliser sous <span class="countdown-text">6 mois</span>. Conservation du logement <span class="countdown-text">5 ans</span> minimum. Pensez à déclarer le don en ligne sur impots.gouv.fr (obligatoire depuis 01/2026).</span></div>`;
         }
         // Don manuel online declaration
         if (state.donationType === 'don_manuel') {
@@ -1183,11 +1183,12 @@ const SD = (() => {
         if (state.exoLogement.active && state.exoLogement.montant > 0) {
             const exoAmt = Math.min(state.exoLogement.montant, FISCAL.exoLogement.maxParDonateur) * nbDonors;
             steps.push({
-                title: `Don exonéré logement neuf/réno : ${fmt(exoAmt)}`,
-                desc: `Art. 790 A bis — jusqu'au 31/12/2026. Utilisation des fonds sous 6 mois. Conservation 5 ans. Cumulable avec abattement enfant + don familial argent.`,
-                amount: exoAmt
+                title: `⏰ Don exonéré logement neuf/réno : ${fmt(exoAmt)}`,
+                desc: `Art. 790 A bis — EXPIRE le 31/12/2026. Utilisation des fonds sous 6 mois. Conservation 5 ans. Cumulable avec abattement enfant + don familial argent.`,
+                amount: exoAmt,
+                urgent: true
             });
-            timeline.push({ when: 'Avant 31/12/2026', action: `Don 790 A bis : ${fmt(exoAmt)}` });
+            timeline.push({ when: '⚠️ Avant 31/12/2026', action: `Don 790 A bis : ${fmt(exoAmt)}` });
         }
 
         if (pat.immo > 100000) {
@@ -1208,10 +1209,10 @@ const SD = (() => {
         timeline.push({ when: 'Terme', action: 'Réunion US/NP → pleine propriété' });
 
         el('strategy-steps').innerHTML = steps.map((step, i) =>
-            `<div class="strategy-step">
-                <div class="strategy-step-num">${i + 1}</div>
+            `<div class="strategy-step${step.urgent ? ' urgent-border' : ''}" ${step.urgent ? 'style="border-color:rgba(255,107,107,.25);"' : ''}>
+                <div class="strategy-step-num" ${step.urgent ? 'style="background:linear-gradient(135deg,#FF6B6B,#E85D5D);"' : ''}>${i + 1}</div>
                 <div class="strategy-step-content">
-                    <h4>${step.title}</h4>
+                    <h4>${step.title}${step.urgent ? ' <span class="badge-urgent" style="font-size:.65rem;padding:2px 8px;"><i class="fas fa-hourglass-half"></i> Urgent</span>' : ''}</h4>
                     <p>${step.desc}</p>
                     ${step.amount ? `<div class="amount">${fmt(step.amount)}</div>` : ''}
                 </div>
