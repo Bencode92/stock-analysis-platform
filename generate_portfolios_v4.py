@@ -2037,6 +2037,28 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             for cr in profile_crypto_data:
                 cr["_force_category"] = "crypto"
                 cr["category"] = "crypto"
+            # === FIX v2.0.2: Propager _profile_score → score et _role ===
+            # preset_crypto calcule _profile_score (0-100) et _role (core/satellite)
+            # mais build_scored_universe/convert_universe_to_assets lit "score" et
+            # assign_preset_to_asset lit source_data["_role"].
+            # Sans ce mapping, score=0 (ou valeur brute CSV) et rôle=LOTTERY.
+            for cr in profile_crypto_data:
+                # 1) Score: _profile_score → score (ce que l'optimizer lit)
+                ps = cr.get("_profile_score")
+                if ps is not None:
+                    cr["score"] = float(ps)
+                    cr["profile_score"] = float(ps)
+                # 2) Rôle: déjà dans cr["_role"] — sera copié dans source_data
+                #    par convert_universe_to_assets (source_data = dict complet)
+                # 3) Preset name pour traçabilité
+                if not cr.get("_matched_preset"):
+                    cr["_matched_preset"] = f"crypto_preset_{cr.get('_crypto_category', 'other')}"
+            _propagated = sum(1 for c in profile_crypto_data if c.get("score", 0) > 0)
+            logger.info(
+                f"   [{profile}] FIX v2.0.2: {_propagated}/{len(profile_crypto_data)} "
+                f"crypto avec score propagé depuis _profile_score"
+            )
+            # === FIN FIX v2.0.2 ===
             # v1.5.3 FIX: Collect scored crypto for audit
             for _cr in profile_crypto_data:
                 _uid = _cr.get("symbol") or _cr.get("ticker") or _cr.get("name") or ""
