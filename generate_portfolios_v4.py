@@ -2120,8 +2120,59 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             profile, 
             market_context=market_context
         )
-        
+      
         assets = convert_universe_to_assets(scored_universe)
+        
+        # === FIX v2.0.2: Restaurer scores crypto après pipeline scoring ===
+        # build_raw_universe() + FactorScorer écrasent _profile_score.
+        # On restaure depuis profile_crypto_data (source de vérité).
+        if profile_crypto_data:
+            # Lookup par symbol: "PAXG/USD" → {score: 100, role: "core", ...}
+            crypto_lookup = {}
+            for cr in profile_crypto_data:
+                sym = cr.get("symbol") or cr.get("ticker") or ""
+                base = sym.split("/")[0].upper().strip() if "/" in sym else sym.upper().strip()
+                if base:
+                    crypto_lookup[base] = cr
+            
+            restored_count = 0
+            for asset in assets:
+                if getattr(asset, 'category', '') != 'Crypto':
+                    continue
+                # Matcher par nom ou ticker
+                asset_name = (getattr(asset, 'name', '') or '').upper().strip()
+                asset_ticker = (getattr(asset, 'ticker', '') or '').upper().strip()
+                # Extraire base du ticker (ex: "PAXG/USD" → "PAXG")
+                if '/' in asset_name:
+                    asset_base = asset_name.split('/')[0].strip()
+                elif '/' in asset_ticker:
+                    asset_base = asset_ticker.split('/')[0].strip()
+                else:
+                    asset_base = asset_ticker or asset_name
+                
+                cr = crypto_lookup.get(asset_base)
+                if cr and cr.get("_profile_score") is not None:
+                    old_score = asset.score
+                    asset.score = float(cr["_profile_score"])
+                    # Aussi injecter dans source_data pour assign_preset_to_asset
+                    if asset.source_data is None:
+                        asset.source_data = {}
+                    asset.source_data["_profile_score"] = cr["_profile_score"]
+                    asset.source_data["_role"] = cr.get("_role")
+                    asset.source_data["_crypto_category"] = cr.get("_crypto_category")
+                    asset.source_data["_matched_preset"] = cr.get("_matched_preset") or f"crypto_preset_{cr.get('_crypto_category', 'other')}"
+                    restored_count += 1
+                    logger.info(
+                        f"   [{profile}] FIX v2.0.2 RESTORE: {asset_base} "
+                        f"score {old_score:.1f} → {asset.score:.1f} "
+                        f"(role={cr.get('_role', '?')})"
+                    )
+            
+            if restored_count > 0:
+                logger.info(f"   [{profile}] FIX v2.0.2: {restored_count} crypto scores restaurés depuis preset")
+            elif profile_crypto_data:
+                logger.warning(f"   [{profile}] FIX v2.0.2: 0 crypto restaurées! Lookup keys: {list(crypto_lookup.keys())}")
+        # === FIN FIX v2.0.2 ===   
         
         # v4.13.2 FIX: Collecter TOUS les assets de TOUS les profils (union)
         for a in assets:
