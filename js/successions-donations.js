@@ -1069,6 +1069,19 @@ const SD = (() => {
         // Sort best first
         scenarios.sort((a, b) => b.net - a.net);
         renderResults(scenarios, pat);
+
+        // Path optimizer — multi-donateurs
+        if (typeof PathOptimizer !== 'undefined') {
+            const pathDonors = PathOptimizer.getDonors();
+            const wrapper = document.getElementById('path-results-wrapper');
+            if (pathDonors.length > 0 && wrapper) {
+                wrapper.style.display = '';
+                PathOptimizer.renderPathResults();
+            } else if (wrapper) {
+                wrapper.style.display = 'none';
+            }
+        }
+
         goToStep(5);
     }
 
@@ -1265,12 +1278,24 @@ const SD = (() => {
     // ASIDE STICKY RÉSUMÉ
     // ============================================================
     function updateAside() {
-        // Donor
-        const age = el('donor-age') ? el('donor-age').value : '';
-        const mode = state.mode || 'donation';
-        const donorText = age ? `${age} ans · ${mode === 'donation' ? 'Donation' : 'Succession'}` : 'Non renseigné';
+        // Donors (multi-donateur via PathOptimizer)
         const asideDonor = document.getElementById('aside-donor');
-        if (asideDonor) asideDonor.innerHTML = age ? `<span class="val-highlight">${age} ans</span> · ${mode === 'donation' ? 'Donation' : 'Succession'}` : 'Non renseigné';
+        if (asideDonor) {
+            if (typeof PathOptimizer !== 'undefined') {
+                const pDonors = PathOptimizer.getDonors();
+                if (pDonors.length > 0) {
+                    asideDonor.innerHTML = pDonors.map(d => 
+                        `<div><span class="val-highlight">${d.nom}</span> · ${d.age} ans · ${PathOptimizer.fmt(d.patrimoine)}</div>`
+                    ).join('');
+                } else {
+                    const age = el('donor1-age') ? el('donor1-age').value : '';
+                    asideDonor.innerHTML = age ? `<span class="val-highlight">${age} ans</span> · ${state.operation === 'succession' ? 'Succession' : 'Donation'}` : 'Non renseigné';
+                }
+            } else {
+                const age = el('donor1-age') ? el('donor1-age').value : '';
+                asideDonor.innerHTML = age ? `<span class="val-highlight">${age} ans</span>` : 'Non renseigné';
+            }
+        }
 
         // Beneficiaries
         const benList = document.querySelectorAll('#beneficiaries-list .list-item');
