@@ -1,10 +1,16 @@
 # portfolio_engine/preset_crypto.py
 """
 =========================================
-Crypto Preset Selector v2.0.0
+Crypto Preset Selector v2.0.1
 =========================================
 
 Sélection dynamique de cryptomonnaies par profil (Stable/Modéré/Agressif).
+
+v2.0.1: FIX — _get_currency_base extrait ticker depuis symbol (pas currency_base)
+=========================================
+FIX: currency_base contient les noms complets ("PAX Gold", "TRON", "Decred")
+     mais CRYPTO_CATEGORIES utilise les tickers ("PAXG", "TRX", "DCR").
+     → Extraction depuis symbol (PAXG/USD → PAXG) comme source primaire.
 
 v2.0.0: REFONTE COMPLÈTE — Pipeline 4 étapes
 =========================================
@@ -52,7 +58,7 @@ logger = logging.getLogger("portfolio_engine.preset_crypto")
 # CONFIGURATION
 # =============================================================================
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 # Stablecoins à exclure (inchangé)
 STABLECOINS = {
@@ -75,7 +81,7 @@ MIN_DATA_POINTS = 60  # ~2 mois de données
 # | vol_30d max      | 80%         | 200%        |
 # | drawdown_90d max | -35%        | -70%        |
 # | enough_history   | 1y required | 90d suffit  |
-# | pair             | /USD only   | /USD only   |
+# | pair             | all pairs   | all pairs   |
 # ─────────────────────────────────────────────────────────────────────────────
 PROFILE_HARD_FILTERS = {
     "Stable": {
@@ -178,7 +184,7 @@ CORE_SATELLITE_CONFIG = {
 
 
 # =============================================================================
-# HELPERS (inchangés de v1.3.0)
+# HELPERS
 # =============================================================================
 
 def _to_numeric(series: pd.Series) -> pd.Series:
@@ -198,13 +204,22 @@ def _get_vol(row: pd.Series) -> float:
 
 
 def _get_currency_base(row: pd.Series) -> str:
-    """Extrait la currency base (BTC de BTC/USD)."""
+    """
+    Extrait le TICKER normalisé depuis symbol (PAXG/USD → PAXG).
+    
+    v2.0.1 FIX: Priorité symbol > currency_base.
+    Le CSV a currency_base = "PAX Gold", "TRON", "Decred" (noms complets)
+    mais CRYPTO_CATEGORIES utilise les tickers: "PAXG", "TRX", "DCR".
+    Le symbol contient le bon ticker: "PAXG/USD", "TRX/USD", "DCR/USD".
+    """
+    # Priorité 1: extraire depuis symbol (le plus fiable)
+    symbol = row.get("symbol")
+    if pd.notna(symbol) and "/" in str(symbol):
+        return str(symbol).split("/")[0].upper().strip()
+    # Fallback: currency_base (peut être un nom complet, pas un ticker)
     base = row.get("currency_base")
     if pd.notna(base) and base:
         return str(base).upper().strip()
-    symbol = row.get("symbol")
-    if pd.notna(symbol) and symbol:
-        return str(symbol).split("/")[0].upper().strip()
     return ""
 
 
@@ -255,20 +270,20 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     mask = pd.Series(True, index=df.index)
 
-    # Exclure stablecoins — sur currency_base (plus fiable que symbol)
+    # Exclure stablecoins — sur symbol ticker (plus fiable)
+    if "symbol" in df.columns:
+        symbol_ticker = df["symbol"].fillna("").str.split("/").str[0].str.upper().str.strip()
+        is_stable_symbol = symbol_ticker.isin(STABLECOINS)
+        mask &= ~is_stable_symbol
+        excluded_count = is_stable_symbol.sum()
+        if excluded_count > 0:
+            logger.debug(f"[Crypto QC] Exclusion {excluded_count} stablecoins (via symbol)")
+
+    # Backup: checker currency_base aussi
     if "currency_base" in df.columns:
         base_upper = df["currency_base"].fillna("").str.upper().str.strip()
-        is_stable = base_upper.isin(STABLECOINS)
-        mask &= ~is_stable
-        excluded_count = is_stable.sum()
-        if excluded_count > 0:
-            logger.debug(f"[Crypto QC] Exclusion {excluded_count} stablecoins")
-
-    if "symbol" in df.columns:
-        # Backup: checker dans symbol aussi
-        symbol_upper = df["symbol"].fillna("").str.upper()
-        for sc in STABLECOINS:
-            mask &= ~symbol_upper.str.startswith(sc + "/")
+        is_stable_base = base_upper.isin(STABLECOINS)
+        mask &= ~is_stable_base
 
     # tier1_listed (tolérant aux données manquantes)
     if "tier1_listed" in df.columns:
@@ -346,7 +361,7 @@ def apply_hard_filters(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if filters.get("usd_pairs_only", False):
         if "currency_quote" in df.columns:
             quote = df["currency_quote"].fillna("").str.upper().str.strip()
-            usd_mask = quote == "USD"
+            usd_mask = quote.isin(["USD", "US DOLLAR"])
             mask &= usd_mask
             logger.debug(
                 f"[Crypto {profile}] USD pairs: "
@@ -656,18 +671,21 @@ def _deduplicate_pairs(df: pd.DataFrame) -> pd.DataFrame:
     """
     Déduplique les paires du même asset (ex: BTC/USD et BTC/EUR).
     
+    Utilise le ticker extrait de symbol (pas currency_base) pour grouper.
     Garde la paire avec le plus de data_points, ou /USD par préférence.
     """
-    if df.empty or "currency_base" not in df.columns:
+    if df.empty or "symbol" not in df.columns:
         return df
 
-    bases = df.apply(_get_currency_base, axis=1)
+    # Extraire le ticker depuis symbol (PAXG/USD → PAXG)
     df = df.copy()
-    df["_base_dedup"] = bases
+    df["_base_dedup"] = df["symbol"].fillna("").str.split("/").str[0].str.upper().str.strip()
 
     # Pour chaque base, garder le meilleur
     best_indices = []
     for base, group in df.groupby("_base_dedup"):
+        if not base:  # Skip empty
+            continue
         if len(group) == 1:
             best_indices.append(group.index[0])
         else:
@@ -683,13 +701,17 @@ def _deduplicate_pairs(df: pd.DataFrame) -> pd.DataFrame:
                 else:
                     best_indices.append(usd_rows.index[0])
             else:
-                # Pas de /USD → garder le premier
-                best_indices.append(group.index[0])
+                # Pas de /USD → garder celui avec le plus de data_points
+                if "data_points" in group.columns:
+                    dp_vals = _to_numeric(group["data_points"]).fillna(0)
+                    best_indices.append(group.index[dp_vals.values.argmax()])
+                else:
+                    best_indices.append(group.index[0])
 
     result = df.loc[best_indices].drop(columns=["_base_dedup"])
     if len(result) < len(df):
-        logger.debug(
-            f"[Crypto] Déduplication paires: {len(df)} → {len(result)}"
+        logger.info(
+            f"[Crypto] Après dédup paires: {len(df)} → {len(result)}"
         )
     return result
 
@@ -708,7 +730,7 @@ def select_crypto_for_profile(
     
     *** API IDENTIQUE À v1.3.0 — drop-in replacement ***
     
-    Pipeline v2.0.0:
+    Pipeline v2.0.1:
       ⓪ Data QC (stablecoins, tier1, stale, coverage)
       → Déduplication paires (BTC/USD vs BTC/EUR)
       → ① Filtres durs par profil (vol max, dd max, historique)
@@ -792,7 +814,7 @@ def select_crypto_for_profile(
 # =============================================================================
 
 def get_crypto_preset_summary() -> Dict[str, Any]:
-    """Retourne un résumé des presets Crypto v2.0.0."""
+    """Retourne un résumé des presets Crypto v2.0.1."""
     return {
         "version": VERSION,
         "pipeline": "4-stage: QC → hard_filters → scoring → diversification",
@@ -819,14 +841,14 @@ if __name__ == "__main__":
     # Simuler un dataset réaliste avec les assets connus du CSV
     test_data = pd.DataFrame([
         # Blue chips (mauvais sharpe actuellement)
-        {"symbol": "BTC/USD", "currency_base": "BTC", "currency_quote": "USD",
+        {"symbol": "BTC/USD", "currency_base": "Bitcoin", "currency_quote": "US Dollar",
          "ret_90d_pct": -5.0, "ret_1y_pct": -19.0, "vol_30d_annual_pct": 48.0,
          "sharpe_ratio": -3.59, "drawdown_90d_pct": -25.0,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.99,
          "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
-        {"symbol": "ETH/USD", "currency_base": "ETH", "currency_quote": "USD",
+        {"symbol": "ETH/USD", "currency_base": "Ethereum", "currency_quote": "US Dollar",
          "ret_90d_pct": -10.0, "ret_1y_pct": -38.0, "vol_30d_annual_pct": 62.0,
          "sharpe_ratio": -3.48, "drawdown_90d_pct": -40.0,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.99,
@@ -834,70 +856,70 @@ if __name__ == "__main__":
          "ret_1y_suspect": False},
 
         # Top performers
-        {"symbol": "DCR/USD", "currency_base": "DCR", "currency_quote": "USD",
-         "ret_90d_pct": 120.0, "ret_1y_pct": 157.0, "vol_30d_annual_pct": 98.8,
-         "sharpe_ratio": 6.57, "drawdown_90d_pct": -18.0,
+        {"symbol": "DCR/USD", "currency_base": "Decred", "currency_quote": "US Dollar",
+         "ret_90d_pct": 42.68, "ret_1y_pct": 174.12, "vol_30d_annual_pct": 94.36,
+         "sharpe_ratio": 8.20, "drawdown_90d_pct": -35.33,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
-        {"symbol": "MORPHO/USD", "currency_base": "MORPHO", "currency_quote": "USD",
-         "ret_90d_pct": 85.0, "ret_1y_pct": -8.5, "vol_30d_annual_pct": 137.9,
-         "sharpe_ratio": 4.55, "drawdown_90d_pct": -30.0,
+        {"symbol": "MORPHO/USD", "currency_base": "Morpho", "currency_quote": "US Dollar",
+         "ret_90d_pct": 21.47, "ret_1y_pct": -23.26, "vol_30d_annual_pct": 137.93,
+         "sharpe_ratio": 4.46, "drawdown_90d_pct": -30.97,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.95,
-         "data_points": 200, "enough_history_90d": True, "enough_history_1y": False,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
         # Stable crypto
-        {"symbol": "PAXG/USD", "currency_base": "PAXG", "currency_quote": "USD",
-         "ret_90d_pct": 15.0, "ret_1y_pct": 77.0, "vol_30d_annual_pct": 60.0,
-         "sharpe_ratio": 0.25, "drawdown_90d_pct": -15.0,
+        {"symbol": "PAXG/USD", "currency_base": "PAX Gold", "currency_quote": "US Dollar",
+         "ret_90d_pct": 24.81, "ret_1y_pct": 79.81, "vol_30d_annual_pct": 54.50,
+         "sharpe_ratio": -1.22, "drawdown_90d_pct": -15.24,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
-        {"symbol": "XAUT/USD", "currency_base": "XAUT", "currency_quote": "USD",
-         "ret_90d_pct": 14.0, "ret_1y_pct": 72.0, "vol_30d_annual_pct": 55.0,
-         "sharpe_ratio": 0.20, "drawdown_90d_pct": -12.0,
+        {"symbol": "XAUT/USD", "currency_base": "Tether Gold", "currency_quote": "US Dollar",
+         "ret_90d_pct": 24.54, "ret_1y_pct": None, "vol_30d_annual_pct": 54.27,
+         "sharpe_ratio": -1.26, "drawdown_90d_pct": -15.63,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.97,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "data_points": 283, "enough_history_90d": True, "enough_history_1y": False,
          "ret_1y_suspect": False},
 
-        {"symbol": "TRX/USD", "currency_base": "TRX", "currency_quote": "USD",
-         "ret_90d_pct": 5.0, "ret_1y_pct": 26.0, "vol_30d_annual_pct": 27.7,
-         "sharpe_ratio": -1.17, "drawdown_90d_pct": -15.0,
+        {"symbol": "TRX/USD", "currency_base": "TRON", "currency_quote": "US Dollar",
+         "ret_90d_pct": 1.68, "ret_1y_pct": 24.67, "vol_30d_annual_pct": 27.64,
+         "sharpe_ratio": -1.51, "drawdown_90d_pct": -15.43,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
         # Mid-tier
-        {"symbol": "BCH/USD", "currency_base": "BCH", "currency_quote": "USD",
-         "ret_90d_pct": 20.0, "ret_1y_pct": 70.7, "vol_30d_annual_pct": 92.0,
-         "sharpe_ratio": -1.48, "drawdown_90d_pct": -35.0,
+        {"symbol": "BCH/USD", "currency_base": "Bitcoin Cash", "currency_quote": "US Dollar",
+         "ret_90d_pct": -9.86, "ret_1y_pct": 61.79, "vol_30d_annual_pct": 108.96,
+         "sharpe_ratio": -1.80, "drawdown_90d_pct": -30.65,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
-        {"symbol": "XVG/USD", "currency_base": "XVG", "currency_quote": "USD",
-         "ret_90d_pct": -5.0, "ret_1y_pct": 4.0, "vol_30d_annual_pct": 105.0,
-         "sharpe_ratio": -1.80, "drawdown_90d_pct": -35.0,
-         "tier1_listed": True, "stale": False, "coverage_ratio": 0.95,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+        {"symbol": "OKB/USD", "currency_base": "OKB", "currency_quote": "US Dollar",
+         "ret_90d_pct": -29.79, "ret_1y_pct": 68.30, "vol_30d_annual_pct": 91.06,
+         "sharpe_ratio": -3.65, "drawdown_90d_pct": -42.24,
+         "tier1_listed": True, "stale": False, "coverage_ratio": 0.98,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
-        {"symbol": "SOL/USD", "currency_base": "SOL", "currency_quote": "USD",
-         "ret_90d_pct": -15.0, "ret_1y_pct": -25.0, "vol_30d_annual_pct": 95.0,
-         "sharpe_ratio": -2.10, "drawdown_90d_pct": -45.0,
+        {"symbol": "SOL/USD", "currency_base": "Solana", "currency_quote": "US Dollar",
+         "ret_90d_pct": -38.31, "ret_1y_pct": -36.89, "vol_30d_annual_pct": 106.94,
+         "sharpe_ratio": -3.64, "drawdown_90d_pct": -46.89,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.99,
-         "data_points": 365, "enough_history_90d": True, "enough_history_1y": True,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
 
-        # High vol for aggressive
-        {"symbol": "PEPE/USD", "currency_base": "PEPE", "currency_quote": "USD",
-         "ret_90d_pct": 50.0, "ret_1y_pct": 200.0, "vol_30d_annual_pct": 180.0,
-         "sharpe_ratio": 1.20, "drawdown_90d_pct": -60.0,
+        # Meme for aggressive
+        {"symbol": "PEPE/USD", "currency_base": "Pepe", "currency_quote": "US Dollar",
+         "ret_90d_pct": -18.22, "ret_1y_pct": -52.98, "vol_30d_annual_pct": 146.01,
+         "sharpe_ratio": -1.46, "drawdown_90d_pct": -52.23,
          "tier1_listed": True, "stale": False, "coverage_ratio": 0.90,
-         "data_points": 200, "enough_history_90d": True, "enough_history_1y": False,
+         "data_points": 425, "enough_history_90d": True, "enough_history_1y": True,
          "ret_1y_suspect": False},
     ])
 
