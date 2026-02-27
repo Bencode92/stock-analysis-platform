@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-27T09:42:33.074453",
+  "timestamp": "2026-02-27T10:08:53.785628",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -10,8 +10,8 @@
     "etf_selected": 9,
     "etf_rejected_notable": 20,
     "crypto_initial": 6,
-    "crypto_selected": 1,
-    "crypto_rejected_notable": 5,
+    "crypto_selected": 3,
+    "crypto_rejected_notable": 3,
     "bonds_initial": 31,
     "bonds_selected": 9,
     "total_filters_applied": 4,
@@ -42,7 +42,7 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 2
+          "selected": 3
         },
         "quality_high_vol": {
           "total": 16,
@@ -58,7 +58,7 @@
         },
         "rendement": {
           "total": 20,
-          "selected": 5
+          "selected": 4
         },
         "value_dividend": {
           "total": 20,
@@ -1341,10 +1341,12 @@
         "ticker": "ITW",
         "sort_score": 0.6605,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "rendement",
         "profile_score": 0.6605,
         "buffett_score": 76.0,
+        "rejection_reason": "Filtré par hard_filters_Agressif",
+        "rejection_filter": "hard_filters_Agressif",
         "sector": "Industries",
         "country": "Etats-Unis",
         "volatility": 19.7,
@@ -1379,12 +1381,10 @@
         "ticker": "CF",
         "sort_score": 0.6574,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "momentum_trend",
         "profile_score": 0.6574,
         "buffett_score": 90.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Matériaux",
         "country": "Etats-Unis",
         "volatility": 30.9,
@@ -4223,9 +4223,8 @@
         "ticker": "PAXG/USD",
         "sort_score": 100.0,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 100.0,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 54.5
       },
       {
@@ -4234,9 +4233,8 @@
         "ticker": "DCR/USD",
         "sort_score": 99.47,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "profile_score": 99.47,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 94.4
       },
       {
@@ -5999,12 +5997,10 @@
           "ticker": "CF",
           "sort_score": 0.6574,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "momentum_trend",
           "profile_score": 0.6574,
           "buffett_score": 90.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Matériaux",
           "country": "Etats-Unis",
           "volatility": 30.9,
@@ -7638,10 +7634,12 @@
           "ticker": "ITW",
           "sort_score": 0.6605,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "rendement",
           "profile_score": 0.6605,
           "buffett_score": 76.0,
+          "rejection_reason": "Filtré par hard_filters_Agressif",
+          "rejection_filter": "hard_filters_Agressif",
           "sector": "Industries",
           "country": "Etats-Unis",
           "volatility": 19.7,
@@ -15672,26 +15670,14 @@
   "crypto_selected": [
     {
       "name": "Unknown",
-      "ticker": "TRX/USD",
-      "category": "crypto",
-      "profile_score": 98.97,
-      "volatility": 27.6,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 1,
-      "selection_reason": "Score profil élevé (98.97)"
-    }
-  ],
-  "crypto_rejected": [
-    {
-      "name": "Unknown",
       "ticker": "PAXG/USD",
       "category": "crypto",
       "profile_score": 100.0,
       "volatility": 54.5,
       "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score profil élevé (100.00)"
     },
     {
       "name": "Unknown",
@@ -15700,9 +15686,23 @@
       "profile_score": 99.47,
       "volatility": 94.4,
       "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+      "selected": true,
+      "ranking": 2,
+      "selection_reason": "Score profil élevé (99.47)"
     },
+    {
+      "name": "Unknown",
+      "ticker": "TRX/USD",
+      "category": "crypto",
+      "profile_score": 98.97,
+      "volatility": 27.6,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Score profil élevé (98.97)"
+    }
+  ],
+  "crypto_rejected": [
     {
       "name": "Unknown",
       "ticker": "NFT/USD",
