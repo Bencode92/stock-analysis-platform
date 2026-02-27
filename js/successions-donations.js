@@ -1353,6 +1353,13 @@ const SD = (() => {
             else if (currentStep === 5) { asideCta.textContent = '↺ Recommencer'; asideCta.onclick = () => SD.goToStep(1); }
             else { asideCta.textContent = 'Suivant →'; asideCta.onclick = () => SD.nextStep(); }
         }
+
+        // Précédent in aside
+        const asidePrev = document.getElementById('aside-prev');
+        if (asidePrev) {
+            asidePrev.style.display = currentStep > 1 ? '' : 'none';
+            asidePrev.onclick = () => SD.prevStep();
+        }
     }
 
     // ============================================================
