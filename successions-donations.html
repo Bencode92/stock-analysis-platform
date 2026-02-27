@@ -587,30 +587,41 @@
                     </button>
                 </div>
 
-                <!-- Multi-donateurs -->
+                <!-- Cartographie familiale -->
                 <div class="section-card">
-                    <div class="section-title"><i class="fas fa-people-arrows"></i> Donateurs (qui donne ?)</div>
-                    <div class="section-subtitle">Ajoutez chaque personne qui souhaite transmettre — chacun avec son patrimoine propre et son lien familial.</div>
-                    <div class="warning-box info" style="margin-bottom:12px;">
-                        <i class="fas fa-lightbulb"></i>
-                        <span>Avec plusieurs donateurs, l'optimiseur calcule <strong>tous les chemins de transmission possibles</strong> et identifie le plus avantageux fiscalement (direct vs indirect via un intermédiaire).</span>
+                    <div class="section-title"><i class="fas fa-sitemap"></i> Cartographie familiale</div>
+                    <div class="section-subtitle">Listez toutes les personnes qui pourraient transmettre du patrimoine — l'optimiseur trouvera le meilleur chemin, y compris via des intermédiaires.</div>
+
+                    <div class="warning-box urgent" style="margin-bottom:14px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><strong>Obligatoire :</strong> pour chaque personne, déclarez les <strong>donations déjà effectuées</strong> (rappel fiscal 15 ans). Sans cette info, l'optimisation sera faussée.</span>
                     </div>
-                    <div class="presets" id="donor-presets">
-                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('parent_seul')">👤 Parent seul</button>
-                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_parents')">👫 2 Parents</button>
-                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('gp_seuls')">👴👵 Grands-parents</button>
-                        <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_gp')">👨‍👩‍👧 Parents + GP</button>
+
+                    <div class="step-helper" style="margin-bottom:14px;background:rgba(198,134,66,.08);">
+                        <i class="fas fa-route" style="color:var(--accent-green);"></i>
+                        <span>Même si un donateur n'est pas le parent direct du bénéficiaire, le moteur peut identifier un <strong>chemin indirect</strong> plus avantageux (ex: grand-mère → fils → petit-fils au lieu de grand-mère → petit-fils directement).</span>
                     </div>
+
+                    <div style="margin-bottom:16px;">
+                        <label class="form-label" style="margin-bottom:8px;">Profils types :</label>
+                        <div class="presets" id="donor-presets">
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('parent_seul')">👤 1 Parent</button>
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_parents')">👫 2 Parents</button>
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('gp_seuls')">👴👵 2 Grands-parents</button>
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_gp')">👨‍👩‍👧‍👦 Parents + GP</button>
+                        </div>
+                    </div>
+
                     <div class="dynamic-list" id="donors-list"></div>
                     <button class="btn-add" onclick="PathOptimizer.addDonor()" style="margin-top:12px;">
-                        <i class="fas fa-plus"></i> Ajouter un donateur
+                        <i class="fas fa-plus"></i> Ajouter un membre de la famille
                     </button>
                 </div>
 
                 <!-- Matrice donateurs × bénéficiaires -->
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-th"></i> Matrice des liens fiscaux</div>
-                    <div class="section-subtitle">Abattements et barèmes auto-détectés selon les rôles familiaux</div>
+                    <div class="section-subtitle">Abattements et barèmes auto-détectés selon les rôles familiaux — chaque croisement = un chemin possible</div>
                     <div id="path-matrix"></div>
                 </div>
             </div>
@@ -953,7 +964,10 @@
                     <div class="aside-progress"><div class="aside-progress-fill" id="aside-progress" style="width:0%"></div></div>
                     <div class="aside-hint" id="aside-hint">Étape 1 sur 5</div>
 
-                    <button class="aside-cta" id="aside-cta" onclick="SD.nextStep()">Suivant →</button>
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button class="aside-cta" id="aside-prev" style="display:none;flex:0 0 auto;width:auto;padding:10px 14px;background:rgba(198,134,66,.12);color:var(--primary-color);" onclick="SD.prevStep()">← Préc.</button>
+                        <button class="aside-cta" id="aside-cta" style="flex:1;" onclick="SD.nextStep()">Suivant →</button>
+                    </div>
                 </div>
             </aside>
 
