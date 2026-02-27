@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimisateur Succession & Donation | TradePulse</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --bg-primary:#0a0e17; --bg-secondary:#111827; --bg-card:#1a2332;
+            --bg-card-hover:#1f2b3d; --bg-input:#0d1520;
+            --border:#1e3a5f; --border-focus:#3b82f6;
+            --text-primary:#e2e8f0; --text-secondary:#94a3b8; --text-muted:#64748b;
+            --accent-blue:#3b82f6; --accent-green:#10b981; --accent-emerald:#059669;
+            --accent-red:#ef4444; --accent-amber:#f59e0b; --accent-purple:#8b5cf6;
+            --accent-cyan:#06b6d4;
+            --sidebar-w:60px; --header-h:64px; --step-bar-h:80px;
+        }
+        html { font-size:14px; }
+        body { font-family:'DM Sans',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; overflow-x:hidden; }
+        a { color:var(--accent-blue); text-decoration:none; }
+
+        /* ===== LAYOUT ===== */
+        .app-container { display:flex; min-height:100vh; }
+        .sidebar { position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w); background:var(--bg-secondary); border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:16px 0; z-index:100; }
+        .logo-small { font-weight:700; font-size:1.3rem; background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:24px; }
+        .nav-item { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); margin-bottom:8px; transition:all .2s; }
+        .nav-item:hover { background:var(--bg-card); color:var(--text-primary); }
+        .nav-item.active { background:rgba(59,130,246,.15); color:var(--accent-blue); }
+        .main-content { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; }
+
+        /* ===== HEADER ===== */
+        .page-header { height:var(--header-h); padding:0 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); background:rgba(17,24,39,.85); backdrop-filter:blur(12px); position:sticky; top:0; z-index:50; }
+        .page-header h1 { font-size:1.25rem; font-weight:600; display:flex; align-items:center; gap:10px; }
+        .page-header h1 i { color:var(--accent-emerald); background:rgba(16,185,129,.12); padding:8px; border-radius:10px; font-size:1rem; }
+        .badge-version { font-size:.7rem; padding:3px 8px; border-radius:6px; background:rgba(59,130,246,.15); color:var(--accent-blue); font-weight:500; font-family:'JetBrains Mono',monospace; }
+
+        /* ===== STEPPER ===== */
+        .stepper-bar { height:var(--step-bar-h); padding:0 32px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border); background:var(--bg-secondary); }
+        .step-item { display:flex; align-items:center; gap:10px; cursor:pointer; padding:12px 16px; border-radius:10px; transition:all .25s; }
+        .step-item:hover { background:var(--bg-card); }
+        .step-item.active { background:rgba(59,130,246,.1); }
+        .step-item.completed .step-number { background:var(--accent-green); border-color:var(--accent-green); }
+        .step-item.completed .step-number i { display:block; }
+        .step-item.completed .step-number span { display:none; }
+        .step-number { width:32px; height:32px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:600; flex-shrink:0; transition:all .25s; }
+        .step-number i { display:none; font-size:.75rem; }
+        .step-item.active .step-number { border-color:var(--accent-blue); background:var(--accent-blue); color:#fff; box-shadow:0 0 16px rgba(59,130,246,.3); }
+        .step-label { font-size:.8rem; font-weight:500; white-space:nowrap; }
+        .step-sublabel { font-size:.65rem; color:var(--text-muted); white-space:nowrap; }
+        .step-connector { width:40px; height:2px; background:var(--border); margin:0 4px; flex-shrink:0; }
+        .step-connector.completed { background:var(--accent-green); }
+
+        /* ===== FORM AREA ===== */
+        .form-container { flex:1; padding:24px 32px 100px; max-width:960px; margin:0 auto; width:100%; }
+        .step-panel { display:none; animation:fadeSlide .35s ease; }
+        .step-panel.active { display:block; }
+        @keyframes fadeSlide { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+
+        /* Section cards */
+        .section-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:20px; transition:border-color .2s; }
+        .section-card:hover { border-color:rgba(59,130,246,.3); }
+        .section-title { font-size:1rem; font-weight:600; margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+        .section-title i { color:var(--accent-blue); font-size:.9rem; }
+        .section-subtitle { font-size:.8rem; color:var(--text-secondary); margin-bottom:16px; }
+
+        /* Form elements */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+        .form-grid.cols-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+        .form-group { display:flex; flex-direction:column; gap:6px; }
+        .form-group.full-width { grid-column:1/-1; }
+        .form-label { font-size:.78rem; font-weight:500; color:var(--text-secondary); display:flex; align-items:center; gap:6px; }
+        .info-tip { cursor:help; color:var(--text-muted); font-size:.7rem; position:relative; }
+        .info-tip:hover::after { content:attr(data-tip); position:absolute; bottom:120%; left:50%; transform:translateX(-50%); background:var(--bg-primary); border:1px solid var(--border); padding:8px 12px; border-radius:8px; font-size:.7rem; color:var(--text-primary); width:280px; z-index:99; font-weight:400; line-height:1.4; white-space:normal; box-shadow:0 8px 24px rgba(0,0,0,.4); pointer-events:none; }
+        input[type="text"],input[type="number"],input[type="date"],select,textarea { background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text-primary); font-family:inherit; font-size:.85rem; transition:border-color .2s; width:100%; }
+        input:focus,select:focus,textarea:focus { outline:none; border-color:var(--accent-blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+        input::placeholder { color:var(--text-muted); }
+
+        /* Toggle */
+        .toggle-group { display:flex; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+        .toggle-btn { flex:1; padding:10px 16px; text-align:center; font-size:.8rem; font-weight:500; cursor:pointer; transition:all .2s; border:none; background:none; color:var(--text-secondary); font-family:inherit; }
+        .toggle-btn.active { background:var(--accent-blue); color:#fff; }
+        .toggle-btn:hover:not(.active) { background:var(--bg-card-hover); }
+
+        /* Switch */
+        .switch-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(30,58,95,.3); }
+        .switch-row:last-child { border-bottom:none; }
+        .switch-label { font-size:.82rem; flex:1; }
+        .switch { width:42px; height:24px; border-radius:12px; background:var(--bg-input); border:1px solid var(--border); position:relative; cursor:pointer; transition:all .25s; flex-shrink:0; }
+        .switch.on { background:var(--accent-blue); border-color:var(--accent-blue); }
+        .switch::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:2px; left:2px; transition:transform .25s; }
+        .switch.on::after { transform:translateX(18px); }
+
+        /* Dynamic list */
+        .dynamic-list { display:flex; flex-direction:column; gap:12px; }
+        .list-item { background:var(--bg-input); border:1px solid var(--border); border-radius:10px; padding:16px; position:relative; }
+        .list-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+        .list-item-title { font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:8px; }
+        .list-item-title i { color:var(--accent-cyan); font-size:.8rem; }
+        .btn-remove { background:rgba(239,68,68,.1); border:none; color:var(--accent-red); width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:.8rem; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+        .btn-remove:hover { background:rgba(239,68,68,.25); }
+        .btn-add { display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px; border:1px dashed var(--border); background:none; color:var(--accent-blue); font-size:.82rem; cursor:pointer; transition:all .2s; font-family:inherit; }
+        .btn-add:hover { border-color:var(--accent-blue); background:rgba(59,130,246,.05); }
+
+        /* Presets */
+        .presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+        .preset-btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); font-size:.75rem; cursor:pointer; transition:all .2s; font-family:inherit; }
+        .preset-btn:hover { border-color:var(--accent-blue); color:var(--accent-blue); }
+        .preset-btn.active { border-color:var(--accent-blue); background:rgba(59,130,246,.1); color:var(--accent-blue); }
+
+        /* Warnings */
+        .warning-box { padding:12px 16px; border-radius:10px; margin:12px 0; font-size:.8rem; display:flex; align-items:flex-start; gap:10px; line-height:1.5; }
+        .warning-box.error { background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); color:#fca5a5; }
+        .warning-box.warn { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.2); color:#fcd34d; }
+        .warning-box.info { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.2); color:#93c5fd; }
+        .warning-box.success { background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.2); color:#6ee7b7; }
+        .warning-box i { font-size:.9rem; margin-top:2px; flex-shrink:0; }
+
+        /* Collapsible */
+        .collapsible-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:10px 0; }
+        .collapsible-header i.chevron { transition:transform .25s; font-size:.7rem; }
+        .collapsible-header.open i.chevron { transform:rotate(180deg); }
+        .collapsible-body { display:none; padding-top:12px; }
+        .collapsible-body.open { display:block; }
+
+        /* Immobilier status tag */
+        .status-tag { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:6px; font-size:.7rem; font-weight:600; }
+        .status-tag.rp { background:rgba(16,185,129,.12); color:var(--accent-green); }
+        .status-tag.loue { background:rgba(59,130,246,.12); color:var(--accent-blue); }
+        .status-tag.vacant { background:rgba(245,158,11,.12); color:var(--accent-amber); }
+        .status-tag.meuble { background:rgba(139,92,246,.12); color:var(--accent-purple); }
+
+        /* ===== RESULTS (Step 5) ===== */
+        .results-summary { background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(59,130,246,.08)); border:1px solid rgba(16,185,129,.2); border-radius:14px; padding:28px; margin-bottom:24px; text-align:center; }
+        .results-summary .big-number { font-size:2.2rem; font-weight:700; background:linear-gradient(135deg,var(--accent-green),var(--accent-cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .results-summary .subtitle { color:var(--text-secondary); font-size:.85rem; margin-top:4px; }
+        .results-summary .saved { display:inline-block; margin-top:12px; padding:6px 16px; background:rgba(16,185,129,.12); border-radius:20px; color:var(--accent-green); font-size:.85rem; font-weight:600; }
+
+        .comparison-table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); margin-bottom:24px; }
+        .comparison-table { width:100%; border-collapse:collapse; font-size:.8rem; min-width:700px; }
+        .comparison-table thead { background:var(--bg-secondary); }
+        .comparison-table th,.comparison-table td { padding:12px 16px; text-align:right; border-bottom:1px solid rgba(30,58,95,.3); }
+        .comparison-table th:first-child,.comparison-table td:first-child { text-align:left; font-weight:500; }
+        .comparison-table th { font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; color:var(--text-secondary); }
+        .comparison-table tr:hover td { background:rgba(59,130,246,.03); }
+        .comparison-table .best-col { background:rgba(16,185,129,.06); }
+        .comparison-table .best-col-header { background:rgba(16,185,129,.12); color:var(--accent-green); }
+        .comparison-table .row-total { font-weight:700; font-size:.9rem; border-top:2px solid var(--border); }
+        .comparison-table .row-total td { padding:16px; }
+
+        .strategy-card { background:linear-gradient(135deg,var(--bg-card),rgba(16,185,129,.05)); border:1px solid rgba(16,185,129,.3); border-radius:14px; padding:28px; margin-bottom:24px; }
+        .strategy-card h3 { font-size:1rem; font-weight:600; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+        .strategy-step { display:flex; gap:16px; margin-bottom:16px; padding:16px; background:rgba(0,0,0,.15); border-radius:10px; }
+        .strategy-step-num { width:32px; height:32px; border-radius:50%; background:var(--accent-blue); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.85rem; flex-shrink:0; }
+        .strategy-step-content h4 { font-size:.9rem; margin-bottom:4px; }
+        .strategy-step-content p { font-size:.8rem; color:var(--text-secondary); line-height:1.5; }
+        .strategy-step-content .amount { color:var(--accent-green); font-weight:600; font-family:'JetBrains Mono',monospace; }
+
+        .chart-container { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px; }
+        .chart-bar-group { display:flex; flex-direction:column; gap:12px; padding:12px 0; }
+        .chart-bar-row { display:flex; align-items:center; gap:12px; }
+        .chart-bar-label { width:180px; font-size:.78rem; font-weight:500; text-align:right; flex-shrink:0; }
+        .chart-bar-track { flex:1; height:32px; background:var(--bg-input); border-radius:6px; overflow:hidden; }
+        .chart-bar-fill { height:100%; border-radius:6px; transition:width .8s cubic-bezier(.25,.46,.45,.94); display:flex; align-items:center; padding-left:12px; font-size:.75rem; font-weight:600; color:#fff; font-family:'JetBrains Mono',monospace; }
+        .chart-bar-fill.best { background:linear-gradient(90deg,var(--accent-green),var(--accent-emerald)); }
+        .chart-bar-fill.neutral { background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan)); }
+        .chart-bar-fill.worst { background:linear-gradient(90deg,var(--accent-red),#dc2626); }
+        .chart-bar-fill.mid { background:linear-gradient(90deg,var(--accent-amber),#d97706); }
+
+        .timeline { display:flex; align-items:flex-start; gap:0; padding:20px 0; overflow-x:auto; }
+        .timeline-node { display:flex; flex-direction:column; align-items:center; min-width:160px; text-align:center; }
+        .timeline-dot { width:14px; height:14px; border-radius:50%; background:var(--accent-blue); border:3px solid var(--bg-card); z-index:2; margin-bottom:8px; }
+        .timeline-node:first-child .timeline-dot { background:var(--accent-green); }
+        .timeline-label { font-size:.75rem; font-weight:600; margin-bottom:4px; }
+        .timeline-desc { font-size:.7rem; color:var(--text-secondary); max-width:140px; }
+        .timeline-connector { flex:1; height:2px; background:var(--border); align-self:center; margin-top:6px; min-width:40px; }
+
+        .disclaimer { background:var(--bg-secondary); border:1px solid var(--border); border-radius:10px; padding:16px 20px; margin-top:24px; font-size:.72rem; color:var(--text-muted); line-height:1.6; }
+        .disclaimer a { color:var(--accent-blue); font-size:.72rem; }
+
+        /* ===== BOTTOM BAR ===== */
+        .bottom-bar { position:fixed; bottom:0; left:var(--sidebar-w); right:0; height:64px; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 32px; z-index:50; }
+        .btn { padding:10px 24px; border-radius:8px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; border:none; }
+        .btn-secondary { background:var(--bg-card); color:var(--text-secondary); border:1px solid var(--border); }
+        .btn-secondary:hover { border-color:var(--accent-blue); color:var(--text-primary); }
+        .btn-primary { background:var(--accent-blue); color:#fff; }
+        .btn-primary:hover { background:#2563eb; box-shadow:0 4px 16px rgba(59,130,246,.3); }
+        .btn-success { background:var(--accent-green); color:#fff; }
+        .btn-success:hover { background:var(--accent-emerald); }
+        .btn-reset { background:none; border:none; color:var(--text-muted); font-size:.8rem; cursor:pointer; padding:8px; font-family:inherit; }
+        .btn-reset:hover { color:var(--accent-red); }
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:768px){
+            .sidebar{display:none} .main-content{margin-left:0} .bottom-bar{left:0}
+            .form-grid,.form-grid.cols-3,.form-grid.cols-4{grid-template-columns:1fr}
+            .stepper-bar{overflow-x:auto;justify-content:flex-start;padding:0 16px}
+            .step-label,.step-sublabel{display:none}
+            .form-container{padding:16px 16px 100px} .page-header,.bottom-bar{padding:0 16px}
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo-small">TP</div>
+        <a href="actualites.html" class="nav-item"><i class="fas fa-newspaper"></i></a>
+        <a href="portefeuilles.html" class="nav-item"><i class="fas fa-chart-pie"></i></a>
+        <a href="marches.html" class="nav-item"><i class="fas fa-chart-line"></i></a>
+        <a href="screener.html" class="nav-item"><i class="fas fa-search-dollar"></i></a>
+        <a href="guide-placements.html" class="nav-item"><i class="fas fa-book"></i></a>
+        <a href="successions-donations.html" class="nav-item active"><i class="fas fa-hand-holding-heart"></i></a>
+        <a href="parametres.html" class="nav-item" style="margin-top:auto;"><i class="fas fa-cog"></i></a>
+    </div>
+
+    <div class="main-content">
+        <!-- Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-hand-holding-heart"></i> Optimisateur Succession & Donation</h1>
+            <span class="badge-version">Barèmes 2026 · v2.0</span>
+        </div>
+
+        <!-- Stepper -->
+        <div class="stepper-bar">
+            <div class="step-item active" data-step="1" onclick="SD.goToStep(1)">
+                <div class="step-number"><span>1</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Famille</div><div class="step-sublabel">Qui transmet, à qui ?</div></div>
+            </div>
+            <div class="step-connector" id="conn-1"></div>
+            <div class="step-item" data-step="2" onclick="SD.goToStep(2)">
+                <div class="step-number"><span>2</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Patrimoine</div><div class="step-sublabel">Biens, dettes, charges</div></div>
+            </div>
+            <div class="step-connector" id="conn-2"></div>
+            <div class="step-item" data-step="3" onclick="SD.goToStep(3)">
+                <div class="step-number"><span>3</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Structures</div><div class="step-sublabel">SCI, SARL, indivision</div></div>
+            </div>
+            <div class="step-connector" id="conn-3"></div>
+            <div class="step-item" data-step="4" onclick="SD.goToStep(4)">
+                <div class="step-number"><span>4</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Objectif</div><div class="step-sublabel">Donation, succession, vente</div></div>
+            </div>
+            <div class="step-connector" id="conn-4"></div>
+            <div class="step-item" data-step="5" onclick="SD.goToStep(5)">
+                <div class="step-number"><span>5</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Résultats</div><div class="step-sublabel">Comparaison & stratégie</div></div>
+            </div>
+        </div>
+
+        <div class="form-container">
+
+            <!-- ==================== STEP 1: FAMILLE ==================== -->
+            <div class="step-panel active" id="step-1">
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-users"></i> Le donateur</div>
+                    <div class="section-subtitle">Personne qui souhaite transmettre son patrimoine</div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <div class="toggle-group" id="mode-toggle">
+                            <button class="toggle-btn active" data-value="solo" onclick="SD.setMode('solo')">Personne seule</button>
+                            <button class="toggle-btn" data-value="couple" onclick="SD.setMode('couple')">Couple</button>
+                        </div>
+                    </div>
+                    <div class="form-grid" id="donor-fields">
+                        <div class="form-group">
+                            <label class="form-label">Âge du donateur <span class="info-tip" data-tip="L'âge détermine le barème de démembrement (art. 669 CGI). Plus le donateur est jeune, plus la nue-propriété est faible = avantageux pour le donataire."><i class="fas fa-info-circle"></i></span></label>
+                            <input type="number" id="donor1-age" min="18" max="110" placeholder="Ex: 58">
+                        </div>
+                        <div class="form-group" id="donor1-status-group">
+                            <label class="form-label">Situation</label>
+                            <select id="donor1-status">
+                                <option value="celibataire">Célibataire</option>
+                                <option value="veuf">Veuf(ve)</option>
+                                <option value="divorce">Divorcé(e)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Couple fields -->
+                    <div id="couple-fields" style="display:none;">
+                        <div class="form-grid" style="margin-top:16px;">
+                            <div class="form-group">
+                                <label class="form-label">Âge du conjoint</label>
+                                <input type="number" id="donor2-age" min="18" max="110" placeholder="Ex: 56">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Régime matrimonial <span class="info-tip" data-tip="En communauté réduite aux acquêts (défaut depuis 1966), seuls les biens acquis pendant le mariage sont communs. En séparation de biens, chaque époux conserve la propriété de ses biens."><i class="fas fa-info-circle"></i></span></label>
+                                <select id="regime-matrimonial">
+                                    <option value="communaute_acquets">Communauté réduite aux acquêts</option>
+                                    <option value="communaute_universelle">Communauté universelle</option>
+                                    <option value="separation_biens">Séparation de biens</option>
+                                    <option value="participation_acquets">Participation aux acquêts</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <div class="switch-row">
+                                <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" data-tip="Permet au conjoint survivant de choisir entre : usufruit total, 1/4 en PP + 3/4 en US, ou quotité disponible en PP."><i class="fas fa-info-circle"></i></span></span>
+                                <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
+                            </div>
+                            <div class="switch-row">
+                                <span class="switch-label">Clause de préciput <span class="info-tip" data-tip="Permet au survivant de prélever un bien (ex: la RP) avant le partage de la succession."><i class="fas fa-info-circle"></i></span></span>
+                                <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bénéficiaires -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-child"></i> Bénéficiaires (donataires)</div>
+                    <div class="section-subtitle">Qui recevra le patrimoine ? Ajoutez chaque bénéficiaire.</div>
+                    <div class="presets">
+                        <button class="preset-btn" onclick="SD.applyPreset('2enfants')">👨‍👧‍👦 2 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyPreset('3enfants')">👨‍👧‍👦 3 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyPreset('conjoint2')">💑 Conjoint + 2 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyPreset('neveu')">🧑 1 neveu/nièce</button>
+                    </div>
+                    <div class="dynamic-list" id="beneficiaries-list"></div>
+                    <button class="btn-add" onclick="SD.addBeneficiary()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Ajouter un bénéficiaire
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== STEP 2: PATRIMOINE ==================== -->
+            <div class="step-panel" id="step-2">
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-sliders-h"></i> Mode de saisie</div>
+                    <div class="toggle-group" id="detail-toggle">
+                        <button class="toggle-btn active" data-value="simplifie" onclick="SD.setDetailMode('simplifie')">Simplifié</button>
+                        <button class="toggle-btn" data-value="detaille" onclick="SD.setDetailMode('detaille')">Détaillé (recommandé)</button>
+                    </div>
+                </div>
+
+                <!-- Mode simplifié -->
+                <div id="mode-simplifie">
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-wallet"></i> Patrimoine global</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Montant total à transmettre (€)</label>
+                                <input type="number" id="total-patrimoine" placeholder="Ex: 500000" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Type dominant</label>
+                                <select id="type-dominant">
+                                    <option value="financier">💰 Majoritairement financier</option>
+                                    <option value="immobilier">🏠 Majoritairement immobilier</option>
+                                    <option value="mixte">📊 Mixte</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dont résidence principale (€)</label>
+                                <input type="number" id="montant-rp" placeholder="Ex: 300000" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dettes / Crédits en cours (€)</label>
+                                <input type="number" id="total-dettes" placeholder="Ex: 80000" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode détaillé -->
+                <div id="mode-detaille" style="display:none;">
+                    <!-- IMMOBILIER -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-home"></i> Biens immobiliers</div>
+                        <div class="section-subtitle">Pour chaque bien : sa nature, son usage actuel, comment il est détenu et loué</div>
+                        <div class="dynamic-list" id="immo-list"></div>
+                        <button class="btn-add" onclick="SD.addImmo()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter un bien immobilier
+                        </button>
+                    </div>
+
+                    <!-- FINANCIER -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-piggy-bank"></i> Actifs financiers</div>
+                        <div class="dynamic-list" id="finance-list"></div>
+                        <button class="btn-add" onclick="SD.addFinancial()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter un actif financier
+                        </button>
+                    </div>
+
+                    <!-- PROFESSIONNEL -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-briefcase"></i> Actifs professionnels</div>
+                        <div class="dynamic-list" id="pro-list"></div>
+                        <button class="btn-add" onclick="SD.addProfessional()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter un actif professionnel
+                        </button>
+                    </div>
+
+                    <!-- PASSIF -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-file-invoice-dollar"></i> Passif (dettes déductibles)</div>
+                        <div class="section-subtitle">Seules les dettes sans assurance décès (ADI) sont déductibles de l'actif successoral</div>
+                        <div class="dynamic-list" id="debt-list"></div>
+                        <button class="btn-add" onclick="SD.addDebt()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter une dette
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Synthèse auto -->
+                <div class="section-card" id="synthese-patri" style="display:none;">
+                    <div class="section-title"><i class="fas fa-calculator"></i> Synthèse patrimoniale</div>
+                    <div id="synthese-content"></div>
+                </div>
+            </div>
+
+            <!-- ==================== STEP 3: STRUCTURES ==================== -->
+            <div class="step-panel" id="step-3">
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-building"></i> Structures de détention existantes</div>
+                    <div class="section-subtitle">Si vous détenez des biens via une société ou en indivision, précisez ici</div>
+                    <div id="structures-auto" class="warning-box info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Les structures sont détectées depuis vos biens saisis à l'étape 2. Si aucun bien n'est en société, passez directement à l'étape suivante.</span>
+                    </div>
+                    <div class="dynamic-list" id="structures-list" style="margin-top:16px;"></div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-people-arrows"></i> Indivision</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Des biens sont-ils en indivision ?</span>
+                        <div class="switch" id="switch-indivision" onclick="SD.toggleSwitch(this);SD.toggleSection('indivision-fields')"></div>
+                    </div>
+                    <div id="indivision-fields" style="display:none; margin-top:16px;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Quote-part du donateur (%)</label>
+                                <input type="number" id="indivision-quote" min="1" max="99" placeholder="Ex: 50">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Convention d'indivision signée ?</label>
+                                <select id="convention-indivision">
+                                    <option value="non">Non</option>
+                                    <option value="oui">Oui</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="warning-box info" style="margin-top:12px;">
+                            <i class="fas fa-info-circle"></i>
+                            <span>La sortie d'indivision entraîne des frais de partage (~2,5% de la valeur). La donation de droits indivis est possible mais plus complexe.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== STEP 4: OBJECTIF ==================== -->
+            <div class="step-panel" id="step-4">
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-bullseye"></i> Type d'opération</div>
+                    <div class="form-group">
+                        <div class="toggle-group" id="operation-toggle" style="flex-wrap:wrap;">
+                            <button class="toggle-btn active" data-value="donation" onclick="SD.setOperation('donation')" style="flex:1;min-width:140px;">🎁 Donation</button>
+                            <button class="toggle-btn" data-value="succession" onclick="SD.setOperation('succession')" style="flex:1;min-width:140px;">📋 Succession</button>
+                            <button class="toggle-btn" data-value="both" onclick="SD.setOperation('both')" style="flex:1;min-width:140px;">📊 Comparer les deux</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card" id="donation-type-section">
+                    <div class="section-title"><i class="fas fa-gift"></i> Type de donation</div>
+                    <div class="form-group full-width">
+                        <select id="donation-type">
+                            <option value="donation_partage">Donation-partage — valeur figée au jour de l'acte (recommandé)</option>
+                            <option value="donation_simple">Donation simple — rapport sur valeur au décès</option>
+                            <option value="don_manuel">Don manuel — sommes d'argent (déclaration en ligne obligatoire depuis 01/2026)</option>
+                        </select>
+                    </div>
+                    <div class="warning-box info" style="margin-top:8px;">
+                        <i class="fas fa-lightbulb"></i>
+                        <span><strong>Donation-partage vs simple :</strong> la donation-partage fige la valeur au jour de l'acte. En donation simple, le bien est rapporté à la succession sur sa valeur au jour du décès.</span>
+                    </div>
+                    <div class="warning-box success" style="margin-top:8px;">
+                        <i class="fas fa-star"></i>
+                        <span><strong>🆕 Exo. logement neuf/réno (art. 790 A bis) :</strong> jusqu'au 31/12/2026, don d'argent exonéré jusqu'à 100 000 €/donateur (max 300 000 €/donataire) pour achat RP neuve/VEFA ou travaux réno. énergétique MaPrimeRénov'. Cumulable avec les autres abattements.</span>
+                    </div>
+                </div>
+
+                <div class="section-card" id="exo-logement-section">
+                    <div class="section-title"><i class="fas fa-home-lg-alt" style="color:var(--accent-green);"></i> Exonération temporaire logement (790 A bis)</div>
+                    <div class="section-subtitle">Dispositif exceptionnel du 15/02/2025 au 31/12/2026</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Le donataire va acquérir un logement neuf/VEFA (RP) ou réaliser des travaux réno. énergétique ? <span class="info-tip" data-tip="Exonération de 100k€ par donateur, 300k€ max par donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans minimum. Cumulable avec abattement 100k enfant + 31 865€ don familial."><i class="fas fa-info-circle"></i></span></span>
+                        <div class="switch" id="switch-790abis" onclick="SD.toggleSwitch(this);SD.toggleSection('exo-logement-details')"></div>
+                    </div>
+                    <div id="exo-logement-details" style="display:none; margin-top:16px;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Objet du don</label>
+                                <select id="exo-logement-objet">
+                                    <option value="acquisition_neuf">Acquisition logement neuf / VEFA (RP)</option>
+                                    <option value="reno_energetique">Travaux réno. énergétique (RP)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Montant du don visé (€)</label>
+                                <input type="number" id="exo-logement-montant" step="1000" placeholder="Max 100 000 par donateur" max="100000">
+                            </div>
+                        </div>
+                        <div class="warning-box warn" style="margin-top:8px;">
+                            <i class="fas fa-clock"></i>
+                            <span><strong>Délais stricts :</strong> utilisation des fonds sous 6 mois · conservation du bien 5 ans minimum · non cumulable avec SCI, terrain à bâtir, résidence services.</span>
+                        </div>
+                        <div class="warning-box info" style="margin-top:8px;">
+                            <i class="fas fa-calculator"></i>
+                            <span><strong>Cumul maximal 1 parent → 1 enfant :</strong> 100 000 € (abat. enfant) + 31 865 € (don familial argent) + 100 000 € (790 A bis logement) = <strong>231 865 € sans droits</strong>. Avec 2 parents : <strong>463 730 €</strong>.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-layer-group"></i> Démembrement</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Conserver l'usage / les revenus des biens ? <span class="info-tip" data-tip="Vous conservez l'usufruit (usage + revenus) et transmettez la nue-propriété. Au décès, la NP se transforme automatiquement en pleine propriété sans droits supplémentaires."><i class="fas fa-info-circle"></i></span></span>
+                        <div class="switch" id="switch-demembrement" onclick="SD.toggleSwitch(this);SD.toggleSection('demembrement-options')"></div>
+                    </div>
+                    <div id="demembrement-options" style="display:none; margin-top:16px;">
+                        <div class="form-group">
+                            <label class="form-label">Type d'usufruit</label>
+                            <select id="usufruit-type">
+                                <option value="viager">Viager — jusqu'au décès (barème art. 669)</option>
+                                <option value="temporaire_10">Temporaire 10 ans (23%)</option>
+                                <option value="temporaire_15">Temporaire 15 ans (46%)</option>
+                                <option value="temporaire_20">Temporaire 20 ans (46% plafonné)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-tasks"></i> Objectifs</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Minimiser les droits</span>
+                        <div class="switch on" id="obj-minimiser"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Conserver les revenus le plus longtemps</span>
+                        <div class="switch" id="obj-revenus" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Protéger le conjoint survivant</span>
+                        <div class="switch" id="obj-conjoint" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Vendre un ou plusieurs biens</span>
+                        <div class="switch" id="obj-vendre" onclick="SD.toggleSwitch(this);SD.toggleSection('vente-section')"></div>
+                    </div>
+                </div>
+
+                <div class="section-card" id="vente-section" style="display:none;">
+                    <div class="section-title"><i class="fas fa-tag"></i> Projet de vente</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Prix de vente estimé (€)</label>
+                            <input type="number" id="prix-vente" placeholder="Ex: 400000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Horizon de vente</label>
+                            <select id="horizon-vente">
+                                <option value="1">Moins d'1 an</option>
+                                <option value="5" selected>1 à 5 ans</option>
+                                <option value="10">5 à 10 ans</option>
+                                <option value="20">Plus de 10 ans</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== STEP 5: RÉSULTATS ==================== -->
+            <div class="step-panel" id="step-5">
+                <div class="results-summary" id="results-hero">
+                    <div class="big-number" id="best-net-amount">—</div>
+                    <div class="subtitle">Montant net transmis optimal</div>
+                    <div class="saved" id="savings-badge">—</div>
+                </div>
+                <div id="results-warnings"></div>
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-table"></i> Comparaison des scénarios</div>
+                    <div class="comparison-table-wrap">
+                        <table class="comparison-table" id="comparison-table">
+                            <thead><tr id="table-header"></tr></thead>
+                            <tbody id="table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="section-title"><i class="fas fa-chart-bar"></i> Montant net transmis par scénario</div>
+                    <div class="chart-bar-group" id="chart-bars"></div>
+                </div>
+                <div class="strategy-card" id="strategy-card">
+                    <h3><i class="fas fa-lightbulb" style="color:var(--accent-amber);"></i> Stratégie recommandée</h3>
+                    <div id="strategy-steps"></div>
+                    <div style="margin-top:20px;padding:16px;background:rgba(16,185,129,.08);border-radius:10px;text-align:center;">
+                        <div style="font-size:.75rem;color:var(--text-secondary);">TOTAL NET TRANSMIS ESTIMÉ</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--accent-green);font-family:'JetBrains Mono',monospace;" id="strategy-total">—</div>
+                    </div>
+                </div>
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-stream"></i> Plan d'action</div>
+                    <div class="timeline" id="timeline"></div>
+                </div>
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-user-friends"></i> Détail par bénéficiaire</div>
+                    <div id="per-beneficiary-detail"></div>
+                </div>
+                <div class="disclaimer">
+                    <strong>⚠️ Avertissement :</strong> Simulation indicative basée sur les barèmes fiscaux au 01/01/2026 (gelés jusqu'en 2028 — PLF 2026). Ne constitue pas un conseil juridique, fiscal ou patrimonial personnalisé. <strong>Consultez un notaire et/ou un CGP</strong> avant toute décision.<br><br>
+                    Sources : <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006310173/" target="_blank">Art. 669 CGI</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030061736" target="_blank">Art. 777</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288653" target="_blank">Art. 990 I</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288569" target="_blank">Art. 757 B</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051281498" target="_blank">Art. 790 A bis (exo. logement)</a> · <a href="https://www.impots.gouv.fr/particulier/questions/je-vends-un-bien-immobilier-donne-en-location-meublee-comment-se-calcule-la" target="_blank">LMNP PV 2025</a>
+                </div>
+            </div>
+
+        </div><!-- /form-container -->
+
+        <!-- Bottom bar -->
+        <div class="bottom-bar">
+            <div><button class="btn-reset" onclick="SD.resetAll()"><i class="fas fa-redo"></i> Réinitialiser</button></div>
+            <div style="display:flex;gap:12px;">
+                <button class="btn btn-secondary" id="btn-prev" onclick="SD.prevStep()" style="display:none;"><i class="fas fa-arrow-left" style="margin-right:6px;"></i> Précédent</button>
+                <button class="btn btn-primary" id="btn-next" onclick="SD.nextStep()">Suivant <i class="fas fa-arrow-right" style="margin-left:6px;"></i></button>
+                <button class="btn btn-success" id="btn-calculate" onclick="SD.calculateResults()" style="display:none;"><i class="fas fa-calculator" style="margin-right:6px;"></i> Calculer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- External JS -->
+<script src="js/successions-donations.js"></script>
+</body>
+</html>
