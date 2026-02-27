@@ -1,0 +1,87 @@
+{
+  "version": "2026-01-01",
+  "type": "succession",
+  "source": "CGI - Légifrance - impots.gouv.fr",
+  "last_updated": "2026-01-01",
+  "note_generale": "Barèmes et abattements gelés jusqu'en 2028 (PLF 2026). Aucune revalorisation malgré l'inflation.",
+
+  "abattements": {
+    "enfant": { "montant": 100000, "article": "779-I CGI", "note": "Par parent et par enfant. Renouvelable tous les 15 ans" },
+    "petit_enfant": { "montant": 31865, "article": "779-IV CGI", "note": "En représentation d'un parent prédécédé : abattement enfant 100k" },
+    "arriere_petit_enfant": { "montant": 5310, "article": "779-V CGI" },
+    "conjoint_pacs": { "montant": null, "exonere": true, "article": "796-0 bis CGI", "note": "Exonération totale de droits de succession" },
+    "frere_soeur": { "montant": 15932, "article": "779-II CGI", "exoneration_conditions": "Célibataire/veuf/divorcé + >50 ans ou infirme + domicilié 5 ans avec le défunt" },
+    "neveu_niece": { "montant": 7967, "article": "779-V CGI" },
+    "tiers": { "montant": 1594, "article": "779-V CGI" },
+    "handicap": { "montant": 159325, "article": "779-II CGI", "note": "Cumulable avec abattement de parenté. PLF 2026 prévoit suppression progressive d'ici 2028" }
+  },
+
+  "baremes": {
+    "ligne_directe": {
+      "article": "777 CGI",
+      "tranches": [
+        { "de": 0, "a": 8072, "taux": 0.05 },
+        { "de": 8072, "a": 12109, "taux": 0.10 },
+        { "de": 12109, "a": 15932, "taux": 0.15 },
+        { "de": 15932, "a": 552324, "taux": 0.20 },
+        { "de": 552324, "a": 902838, "taux": 0.30 },
+        { "de": 902838, "a": 1805677, "taux": 0.40 },
+        { "de": 1805677, "a": null, "taux": 0.45 }
+      ]
+    },
+    "frere_soeur": {
+      "tranches": [
+        { "de": 0, "a": 24430, "taux": 0.35 },
+        { "de": 24430, "a": null, "taux": 0.45 }
+      ]
+    },
+    "neveu_niece": { "tranches": [{ "de": 0, "a": null, "taux": 0.55 }] },
+    "parents_4e_degre": { "tranches": [{ "de": 0, "a": null, "taux": 0.55 }] },
+    "tiers": { "tranches": [{ "de": 0, "a": null, "taux": 0.60 }] }
+  },
+
+  "assurance_vie": {
+    "art_990I": {
+      "champ": "Primes versées avant 70 ans",
+      "abattement_par_beneficiaire": 152500,
+      "taux_tranche1": 0.20,
+      "seuil_tranche2": 700000,
+      "taux_tranche2": 0.3125
+    },
+    "art_757B": {
+      "champ": "Primes versées après 70 ans",
+      "abattement_global": 30500,
+      "note": "Produits (intérêts) exonérés. Au-delà : DMTG classiques (art. 777)"
+    },
+    "primes_exagerees_seuil_alerte": 0.35
+  },
+
+  "abattement_rp": {
+    "taux": 0.20,
+    "article": "764 bis CGI",
+    "conditions": [
+      "RP du défunt au jour du décès",
+      "Occupée par conjoint/pacsé OU enfant mineur/protégé"
+    ],
+    "exclusion_sci": true
+  },
+
+  "passif_deductible": {
+    "forfait_frais_funeraires": 1500,
+    "regles": [
+      "Dettes certaines, liquides, exigibles au décès",
+      "Crédits ADI = NON déductibles (soldés au décès)",
+      "Créance de restitution quasi-usufruit = déductible"
+    ]
+  },
+
+  "delai_rappel_fiscal_ans": 15,
+  "frais_notaire_pct": 0.012,
+
+  "declaration_succession": {
+    "delai_france_metropolitaine_mois": 6,
+    "delai_hors_metropole_mois": 12,
+    "penalite_retard_interet_mensuel": 0.002,
+    "majoration_defaut_6mois": 0.10
+  }
+}
