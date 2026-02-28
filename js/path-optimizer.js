@@ -746,7 +746,8 @@ const PathOptimizer = (() => {
 
         // Conjoint selector
         const conjointOpts = `<option value="none"${!d.conjointId ? ' selected' : ''}>Aucun / Non renseigné</option>` +
-            otherDonors.map(od => `<option value="${od.id}"${d.conjointId === od.id ? ' selected' : ''}>${od.nom} (${formatRole(od.role)})</option>`).join('');
+            otherDonors.map(od => `<option value="${od.id}"${d.conjointId === od.id ? ' selected' : ''}>${od.nom} (${formatRole(od.role)})</option>`).join('') +
+            `<option value="autre"${d.conjointId === 'autre' ? ' selected' : ''}>— Autre (pas dans la cartographie) —</option>`;
 
         let html = `
         <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(92,64,51,.04);border:1px solid rgba(92,64,51,.1);">
@@ -788,24 +789,34 @@ const PathOptimizer = (() => {
             const linkedDonor = e.donorId ? donors.find(dd => dd.id === e.donorId) : null;
             const bens = getBeneficiaries();
             const entRole = mapEntourageLienToRole(e.lien, d.role);
-            const hasDonations = e.donationsParBen.some(x => x.montant > 0);
+            const hasDonations = e.donationsParBen && e.donationsParBen.some(x => x.montant > 0);
 
             let row = `
-            <div style="margin-bottom:8px;padding:6px 8px;border-radius:8px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.05);">
-                <div style="display:grid;grid-template-columns:1fr 120px 60px 60px 28px;gap:4px;align-items:center;">
-                    <input type="text" class="form-input" value="${linkedDonor ? linkedDonor.nom : e.nom}" placeholder="Nom"
-                           style="font-size:.68rem;height:28px;${linkedDonor ? 'opacity:.6;' : ''}"
+            <div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                    <input type="text" class="form-input" value="${linkedDonor ? linkedDonor.nom : e.nom}" placeholder="Prénom"
+                           style="font-size:.72rem;height:30px;flex:1;min-width:80px;${linkedDonor ? 'opacity:.6;' : ''}"
                            ${linkedDonor ? 'disabled' : ''}
                            onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'nom',this.value)">
-                    <select class="form-input" style="font-size:.65rem;height:28px;" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'lien',this.value)">
+                    <select class="form-input" style="font-size:.68rem;height:30px;flex:1;min-width:100px;" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'lien',this.value)">
                         ${lienOpts.map(([v, l]) => `<option value="${v}"${e.lien === v ? ' selected' : ''}>${l}</option>`).join('')}
                     </select>
-                    <input type="number" class="form-input" value="${e.age}" min="0" max="120" style="font-size:.68rem;height:28px;text-align:center;" placeholder="Âge"
-                           onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'age',this.value)">
-                    <button style="font-size:.58rem;height:28px;padding:0 6px;background:${hasDonations ? 'rgba(255,107,107,.15)' : 'rgba(198,134,66,.08)'};border:1px solid rgba(198,134,66,.15);border-radius:4px;color:var(--text-secondary);cursor:pointer;" onclick="PathOptimizer.toggleEntourageExpand(${d.id},${e.id})">
-                        ${e.expanded ? '▼' : '▶'} Don.${hasDonations ? ' ●' : ''}
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-muted);">
+                        <span>Âge</span>
+                        <input type="number" class="form-input" value="${e.age}" min="0" max="120" style="font-size:.68rem;height:26px;width:50px;text-align:center;"
+                               onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'age',this.value)">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-muted);">
+                        <span>Patrim.</span>
+                        <input type="number" class="form-input" value="${e.patrimoine}" min="0" step="10000" style="font-size:.68rem;height:26px;width:80px;text-align:right;"
+                               placeholder="0€" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'patrimoine',this.value)">
+                    </div>
+                    <button style="font-size:.62rem;height:26px;padding:0 8px;background:${hasDonations ? 'rgba(255,107,107,.15)' : 'rgba(198,134,66,.08)'};border:1px solid rgba(198,134,66,.15);border-radius:4px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;" onclick="PathOptimizer.toggleEntourageExpand(${d.id},${e.id})">
+                        ${e.expanded ? '▼' : '▶'} Donations${hasDonations ? ' ●' : ''}
                     </button>
-                    <button class="btn-remove" style="width:28px;height:28px;font-size:.55rem;" onclick="PathOptimizer.removeEntourage(${d.id},${e.id})"><i class="fas fa-times"></i></button>
+                    <button class="btn-remove" style="width:26px;height:26px;font-size:.55rem;flex-shrink:0;" onclick="PathOptimizer.removeEntourage(${d.id},${e.id})"><i class="fas fa-times"></i></button>
                 </div>`;
 
             // Expanded donation details
