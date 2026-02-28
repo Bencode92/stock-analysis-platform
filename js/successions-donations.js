@@ -20,88 +20,143 @@
 const SD = (() => {
 
     // ============================================================
-    // 1. FISCAL — Barèmes et constantes
+    // 1. FISCAL — Loaded from data/fiscal-donation-2026.json + fiscal-succession-2026.json
     // ============================================================
-    const FISCAL = {
+    let FISCAL = null;
+    const FISCAL_FALLBACK = {
         abattements: {
-            enfant: 100000,
-            petit_enfant: 31865,
-            arriere_petit_enfant: 5310,
-            conjoint_pacs_donation: 80724,
-            conjoint_pacs_succession: Infinity, // exonéré
-            frere_soeur: 15932,
-            neveu_niece: 7967,
-            tiers: 1594,
-            handicap: 159325,
-            don_familial_argent: 31865,
-            rappel_fiscal_ans: 15
+            enfant: 100000, petit_enfant: 31865, arriere_petit_enfant: 5310,
+            conjoint_pacs_donation: 80724, conjoint_pacs_succession: Infinity,
+            frere_soeur: 15932, neveu_niece: 7967, tiers: 1594,
+            handicap: 159325, don_familial_argent: 31865, rappel_fiscal_ans: 15
         },
-
         bareme_ligne_directe: [
-            { max: 8072, taux: 0.05 },
-            { max: 12109, taux: 0.10 },
-            { max: 15932, taux: 0.15 },
-            { max: 552324, taux: 0.20 },
-            { max: 902838, taux: 0.30 },
-            { max: 1805677, taux: 0.40 },
+            { max: 8072, taux: 0.05 }, { max: 12109, taux: 0.10 },
+            { max: 15932, taux: 0.15 }, { max: 552324, taux: 0.20 },
+            { max: 902838, taux: 0.30 }, { max: 1805677, taux: 0.40 },
             { max: Infinity, taux: 0.45 }
         ],
-        bareme_frere_soeur: [
-            { max: 24430, taux: 0.35 },
-            { max: Infinity, taux: 0.45 }
-        ],
+        bareme_frere_soeur: [ { max: 24430, taux: 0.35 }, { max: Infinity, taux: 0.45 } ],
         bareme_neveu_niece: [{ max: Infinity, taux: 0.55 }],
         bareme_tiers: [{ max: Infinity, taux: 0.60 }],
-
-        // Démembrement art. 669 CGI
         demembrement: [
-            { maxAge: 20, np: 0.10 },
-            { maxAge: 30, np: 0.20 },
-            { maxAge: 40, np: 0.30 },
-            { maxAge: 50, np: 0.40 },
-            { maxAge: 60, np: 0.50 },
-            { maxAge: 70, np: 0.60 },
-            { maxAge: 80, np: 0.70 },
-            { maxAge: 90, np: 0.80 },
-            { maxAge: Infinity, np: 0.90 }
+            { maxAge: 20, np: 0.10 }, { maxAge: 30, np: 0.20 }, { maxAge: 40, np: 0.30 },
+            { maxAge: 50, np: 0.40 }, { maxAge: 60, np: 0.50 }, { maxAge: 70, np: 0.60 },
+            { maxAge: 80, np: 0.70 }, { maxAge: 90, np: 0.80 }, { maxAge: Infinity, np: 0.90 }
         ],
-
-        // Assurance-vie
         av990I: { abattement: 152500, taux1: 0.20, seuil2: 700000, taux2: 0.3125 },
         av757B: { abattementGlobal: 30500 },
-        primesExagSeuil: 0.35,
-
-        // PV immobilière
-        pvIR: 0.19,
-        pvPS: 0.172,
-        lmnpAmortDate: '2025-02-15',
-
-        // Structure
-        sciMeubleTolerance: 0.10,
-        fraisNotairePct: 0.018,
-        fraisNotaireSuccPct: 0.012,
+        primesExagSeuil: 0.35, pvIR: 0.19, pvPS: 0.172, lmnpAmortDate: '2025-02-15',
+        sciMeubleTolerance: 0.10, fraisNotairePct: 0.018, fraisNotaireSuccPct: 0.012,
         fraisStructure: { sci_ir: 1100, sci_is: 2300, sarl: 3000, creation: 2000 },
-
-        // IS 2026
-        isReduit: { taux: 0.15, plafond: 42500 },
-        isNormal: 0.25,
-
-        // SSI
-        ssiMinimum: 1100,
-
-        // Dutreil
-        dutreilAbat: 0.75,
-        dutreilReduction: 0.50,
-
-        // Exonération temporaire logement 790 A bis (15/02/2025 → 31/12/2026)
-        exoLogement: {
-            maxParDonateur: 100000,
-            maxParDonataire: 300000,
-            delaiUtilisationMois: 6,
-            dureeConservationAns: 5,
-            dateFin: '2026-12-31'
-        }
+        isReduit: { taux: 0.15, plafond: 42500 }, isNormal: 0.25, ssiMinimum: 1100,
+        dutreilAbat: 0.75, dutreilReduction: 0.50,
+        exoLogement: { maxParDonateur: 100000, maxParDonataire: 300000,
+            delaiUtilisationMois: 6, dureeConservationAns: 5, dateFin: '2026-12-31' }
     };
+
+    // Helper: convert JSON bareme tranches {de,a,taux} → engine format {max,taux}
+    function parseTranches(tranches) {
+        return tranches.map(t => ({ max: t.a === null ? Infinity : t.a, taux: t.taux }));
+    }
+
+    async function loadFiscalData() {
+        try {
+            const [donResp, sucResp] = await Promise.all([
+                fetch('data/fiscal-donation-2026.json'),
+                fetch('data/fiscal-succession-2026.json')
+            ]);
+            const don = await donResp.json();
+            const suc = await sucResp.json();
+
+            // Merge: donation has most data, succession adds AV + RP abattement
+            const abat = {};
+            for (const [k, v] of Object.entries(don.abattements)) {
+                abat[k === 'conjoint_pacs' ? 'conjoint_pacs_donation' : k] = v.montant;
+            }
+            abat.conjoint_pacs_succession = Infinity; // exonéré
+            abat.don_familial_argent = don.abattements.don_familial_argent?.montant || 31865;
+            abat.rappel_fiscal_ans = don.delai_rappel_fiscal_ans || 15;
+
+            FISCAL = {
+                abattements: abat,
+
+                // Barèmes donation
+                bareme_ligne_directe: parseTranches(don.baremes.ligne_directe.tranches),
+                bareme_epoux_pacs: parseTranches(don.baremes.entre_epoux_pacs.tranches),
+                bareme_frere_soeur: parseTranches(don.baremes.frere_soeur.tranches),
+                bareme_neveu_niece: parseTranches(don.baremes.neveu_niece.tranches),
+                bareme_tiers: parseTranches(don.baremes.tiers.tranches),
+
+                // Démembrement art. 669
+                demembrement: don.demembrement_669.viager.map(t => ({ maxAge: t.age_max, np: t.nue_propriete })),
+                demembrement_temporaire: don.demembrement_669.temporaire,
+
+                // AV (from succession file)
+                av990I: {
+                    abattement: suc.assurance_vie.art_990I.abattement_par_beneficiaire,
+                    taux1: suc.assurance_vie.art_990I.taux_tranche1,
+                    seuil2: suc.assurance_vie.art_990I.seuil_tranche2,
+                    taux2: suc.assurance_vie.art_990I.taux_tranche2
+                },
+                av757B: { abattementGlobal: suc.assurance_vie.art_757B.abattement_global },
+                primesExagSeuil: suc.assurance_vie.primes_exagerees_seuil_alerte || 0.35,
+
+                // PV immobilière
+                pvIR: don.plus_value_immobiliere.taux_ir,
+                pvPS: don.plus_value_immobiliere.taux_ps,
+                pvAbattementIR: don.plus_value_immobiliere.abattement_ir_duree,
+                pvAbattementPS: don.plus_value_immobiliere.abattement_ps_duree,
+                pvSurtaxe: don.plus_value_immobiliere.surtaxe_pv_nette,
+                pvExonerations: don.plus_value_immobiliere.exonerations,
+                lmnpAmortDate: don.plus_value_immobiliere.lmnp_amort_reintegration.date_application,
+
+                // Structures
+                sciMeubleTolerance: don.sci_meuble_tolerance.seuil_pct,
+                fraisNotairePct: don.frais_notaire_donation.estimation_pct_global,
+                fraisNotaireSuccPct: suc.frais_notaire_pct || 0.012,
+                fraisStructure: {
+                    sci_ir: don.frais_structure_annuels.sci_ir.total,
+                    sci_is: don.frais_structure_annuels.sci_is.total,
+                    sarl: don.frais_structure_annuels.sarl_famille.total,
+                    creation: don.frais_structure_annuels.creation_sci
+                },
+                isReduit: don.is_2026.taux_reduit,
+                isNormal: don.is_2026.taux_normal,
+                ssiMinimum: don.cotisations_ssi_gerant_majoritaire.minimum_annuel,
+
+                // Dutreil
+                dutreilAbat: don.dutreil.abattement,
+                dutreilReduction: don.dutreil.reduction_donation_pp_avant_70,
+
+                // 790 A bis
+                exoLogement: {
+                    maxParDonateur: don.exoneration_temporaire_logement.montant_max_par_donateur,
+                    maxParDonataire: don.exoneration_temporaire_logement.montant_max_par_donataire,
+                    delaiUtilisationMois: don.exoneration_temporaire_logement.delai_utilisation_mois,
+                    dureeConservationAns: don.exoneration_temporaire_logement.duree_conservation_ans,
+                    dateFin: don.exoneration_temporaire_logement.periode.fin,
+                    exclusions: don.exoneration_temporaire_logement.exclusions
+                },
+
+                // Succession specifics
+                abattementRP: suc.abattement_rp,
+                passifDeductible: suc.passif_deductible,
+
+                // Raw data for detailed display
+                _raw: { donation: don, succession: suc }
+            };
+
+            console.log('[FISCAL] Loaded from fiscal-donation-2026.json v' + don.version + ' + fiscal-succession-2026.json v' + suc.version);
+        } catch (e) {
+            console.warn('[FISCAL] JSON files not found, using inline fallback', e);
+            FISCAL = FISCAL_FALLBACK;
+        }
+        window.__FISCAL__ = FISCAL;
+        if (typeof PathOptimizer !== 'undefined' && PathOptimizer.setFiscal) PathOptimizer.setFiscal(FISCAL);
+    }
+    loadFiscalData();
+
 
     // ============================================================
     // 2. STATE — État global
@@ -214,9 +269,46 @@ const SD = (() => {
         }
 
         let html = `
-        <div style="margin-top:20px;padding:16px;border-radius:12px;background:rgba(92,64,51,.06);border:2px solid rgba(198,134,66,.2);">
-            <div style="font-size:.88rem;font-weight:700;color:var(--primary-color);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                <i class="fas fa-sitemap"></i> Arbre familial — résumé
+        <div style="margin-top:20px;padding:16px;border-radius:12px;background:rgba(92,64,51,.06);border:2px solid rgba(198,134,66,.2);">`;
+
+        // Score de complétude
+        const checks = [];
+        const hasDonors = donors.length > 0;
+        const hasBens = bens.length > 0;
+        checks.push({ label: 'Donateurs', ok: hasDonors, critical: true });
+        checks.push({ label: 'Bénéficiaires', ok: hasBens, critical: true });
+        const allAges = donors.every(d => d.age > 0);
+        checks.push({ label: 'Âges donateurs', ok: allAges, critical: true });
+        const hasDonations = donors.some(d => d.donationsParBen.some(e => e.montant > 0));
+        const hasDates = donors.every(d => d.donationsParBen.filter(e => e.montant > 0).every(e => e.date));
+        checks.push({ label: 'Donations antérieures (dates)', ok: hasDates, critical: false });
+        const hasConjoint = donors.some(d => d.conjointId);
+        checks.push({ label: 'Conjoint renseigné', ok: hasConjoint || donors.length <= 1, critical: false });
+
+        const total = checks.length;
+        const passed = checks.filter(c => c.ok).length;
+        const pct = Math.round(passed / total * 100);
+        const barColor = pct === 100 ? 'var(--accent-green)' : pct >= 60 ? 'var(--accent-amber)' : 'var(--accent-coral)';
+        const criticalFail = checks.filter(c => c.critical && !c.ok);
+
+        html += `
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                <div style="font-size:.88rem;font-weight:700;color:var(--primary-color);display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-clipboard-check"></i> Qualité des données
+                </div>
+                <div style="flex:1;height:8px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
+                </div>
+                <span style="font-size:.72rem;font-weight:700;color:${barColor};">${pct}%</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+                ${checks.map(c => `<span style="font-size:.62rem;padding:3px 8px;border-radius:4px;background:${c.ok ? 'rgba(46,125,50,.1)' : c.critical ? 'rgba(255,107,107,.1)' : 'rgba(255,183,77,.1)'};color:${c.ok ? 'var(--accent-green)' : c.critical ? 'var(--accent-coral)' : 'var(--accent-amber)'};">${c.ok ? '✅' : c.critical ? '❌' : '⚠️'} ${c.label}</span>`).join('')}
+            </div>
+            ${criticalFail.length > 0 ? `<div style="font-size:.68rem;padding:8px 12px;border-radius:6px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);color:var(--accent-coral);margin-bottom:14px;"><strong>⛔ Bloquant :</strong> ${criticalFail.map(c => c.label).join(', ')} manquant(s).</div>` : ''}`;
+
+        html += `
+            <div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-sitemap"></i> Arbre familial
             </div>`;
 
         // Tree visualization
@@ -235,9 +327,15 @@ const SD = (() => {
         html += `</div>`;
 
         // Smart questions
-        if (questions.length > 0) {
-            html += `<div style="font-size:.78rem;font-weight:700;color:var(--accent-amber);margin-bottom:8px;"><i class="fas fa-lightbulb"></i> Questions pour optimiser :</div>`;
-            questions.forEach(q => {
+        // Sort questions: errors first, then warnings, then info. Max 3.
+        const sortedQ = questions.sort((a, b) => {
+            const sev = { error: 0, warn: 1, info: 2 };
+            return (sev[a.severity] || 3) - (sev[b.severity] || 3);
+        }).slice(0, 3);
+
+        if (sortedQ.length > 0) {
+            html += `<div style="font-size:.78rem;font-weight:700;color:var(--accent-amber);margin-bottom:8px;"><i class="fas fa-lightbulb"></i> Suggestions (${sortedQ.length}/${questions.length}) :</div>`;
+            sortedQ.forEach(q => {
                 const bgColor = q.severity === 'error' ? 'rgba(255,107,107,.1)' : q.severity === 'warn' ? 'rgba(255,183,77,.1)' : 'rgba(198,134,66,.04)';
                 const borderColor = q.severity === 'error' ? 'rgba(255,107,107,.3)' : q.severity === 'warn' ? 'rgba(255,183,77,.2)' : 'rgba(198,134,66,.1)';
                 html += `<div style="font-size:.7rem;padding:6px 10px;margin-bottom:4px;border-radius:6px;background:${bgColor};border:1px solid ${borderColor};color:var(--text-secondary);">
@@ -482,6 +580,7 @@ const SD = (() => {
             valeur: 0,
             prixAcquisition: 0,
             modeAcquisition: 'achat',       // achat | donation | succession | construction
+            operationEnvisagee: 'conserver', // conserver | vendre | donner_np | donner_pp | apporter_sci
             valeurDeclaree: 0,              // Si reçu par donation/succession
             droitsTransmission: 0,          // Droits payés lors de la transmission
             recuDe: '',                     // Personne qui a transmis
@@ -669,7 +768,20 @@ const SD = (() => {
                             <option value="oui">Oui — NON déductible (capital couvert)</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Opération envisagée <span class="info-tip" data-tip="Détermine le traitement fiscal : PV à calculer si vente, décote NP si donation démembrée, cession déguisée si apport SCI."><i class="fas fa-info-circle"></i></span></label>
+                        <select onchange="SD.updateImmo(${id},'operationEnvisagee',this.value); SD.refreshImmoUI(${id})">
+                            <option value="conserver">🏠 Conserver (succession)</option>
+                            <option value="vendre">💰 Vendre</option>
+                            <option value="donner_pp">🎁 Donner en pleine propriété</option>
+                            <option value="donner_np">📋 Donner la nue-propriété</option>
+                            <option value="apporter_sci">🏢 Apporter en SCI</option>
+                        </select>
+                    </div>
                 </div>
+
+                <!-- Warning opération -->
+                <div id="immo-op-warning-${id}" style="display:none;"></div>
 
                 <!-- Propriétaire(s) — apparaît pour tous les modes -->
                 <div id="immo-owners-${id}" style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.08);">
@@ -776,6 +888,23 @@ const SD = (() => {
                     persons.map(p => `<option value="${p.id}" ${item.recuDe === p.id ? 'selected' : ''}>${p.nom} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('') +
                     `<option value="autre" ${item.recuDe === 'autre' ? 'selected' : ''}>Autre personne</option>`;
             }
+        }
+
+        // Operation envisagée warnings
+        const opWarn = el('immo-op-warning-' + id);
+        if (opWarn) {
+            let opHtml = '';
+            if (item.operationEnvisagee === 'apporter_sci') {
+                opHtml = `<div class="warning-box error" style="margin-top:8px;"><i class="fas fa-exclamation-triangle"></i><span><strong>Apport en SCI = cession :</strong> l'apport d'un bien immobilier à une SCI constitue une cession à titre onéreux. La plus-value est immédiatement imposable (IR ${FISCAL ? (FISCAL.pvIR*100) : 19}% + PS ${FISCAL ? (FISCAL.pvPS*100) : 17.2}%). Le compteur d'abattement pour durée de détention repart à zéro dans la SCI.</span></div>`;
+            } else if (item.operationEnvisagee === 'vendre') {
+                opHtml = `<div class="warning-box warn" style="margin-top:8px;"><i class="fas fa-calculator"></i><span><strong>Vente :</strong> plus-value imposable sauf si résidence principale. Abattement pour durée de détention : exonération IR après 22 ans, exonération PS après 30 ans.</span></div>`;
+            } else if (item.operationEnvisagee === 'donner_np') {
+                opHtml = `<div class="warning-box info" style="margin-top:8px;"><i class="fas fa-info-circle"></i><span><strong>Donation NP :</strong> la valeur de la nue-propriété dépend de l'âge de l'usufruitier (table art. 669 CGI). Pas de plus-value à payer lors de la donation. L'usufruitier conserve le droit d'usage et les revenus.</span></div>`;
+            } else if (item.operationEnvisagee === 'donner_pp') {
+                opHtml = `<div class="warning-box info" style="margin-top:8px;"><i class="fas fa-gift"></i><span><strong>Donation PP :</strong> droits de donation calculés sur la valeur vénale. Le donateur perd tout droit sur le bien. Pas de plus-value à payer.</span></div>`;
+            }
+            opWarn.style.display = opHtml ? '' : 'none';
+            opWarn.innerHTML = opHtml;
         }
 
         // Update regime fiscal options based on location type
@@ -1038,11 +1167,11 @@ const SD = (() => {
                 <div class="form-grid cols-3">
                     <div class="form-group">
                         <label class="form-label">Primes avant 70 ans <span class="info-tip" data-tip="Art. 990 I : abattement de 152 500 € par bénéficiaire, puis 20% jusqu'à 700k€ et 31,25% au-delà."><i class="fas fa-info-circle"></i></span></label>
-                        <input type="number" step="1000" onchange="SD.updateFin(${id},'primesAvant70',+this.value)" placeholder="0">
+                        <input type="number" id="fin-av70-${id}" step="1000" onchange="SD.updateFin(${id},'primesAvant70',+this.value)" placeholder="0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Primes après 70 ans <span class="info-tip" data-tip="Art. 757 B : abattement global 30 500 € (partagé). Intérêts exonérés. Au-delà : DMTG classiques."><i class="fas fa-info-circle"></i></span></label>
-                        <input type="number" step="1000" onchange="SD.updateFin(${id},'primesApres70',+this.value)" placeholder="0">
+                        <input type="number" id="fin-apres70-${id}" step="1000" onchange="SD.updateFin(${id},'primesApres70',+this.value)" placeholder="0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Clause bénéficiaire</label>
@@ -1053,14 +1182,79 @@ const SD = (() => {
                         </select>
                     </div>
                 </div>
+                <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+                    <button type="button" style="font-size:.62rem;padding:4px 10px;border-radius:4px;background:rgba(198,134,66,.08);border:1px solid rgba(198,134,66,.15);color:var(--text-secondary);cursor:pointer;" onclick="SD.avJeNeSaisPas(${id})">
+                        🤷 Je ne sais pas → calcul conservateur
+                    </button>
+                    <span id="fin-av-warn-${id}" style="font-size:.58rem;color:var(--accent-amber);display:none;">⚠️ Tout traité comme après 70 ans (art. 757 B) — abattement réduit</span>
+                </div>
+                <div id="fin-av-beneficiaires-${id}" style="margin-top:10px;"></div>
             </div>
         </div>`;
         el('finance-list').insertAdjacentHTML('beforeend', html);
         refreshFinUI(id);
+        refreshAVBeneficiaires(id);
     }
 
     function removeFinancial(id) { state.finance = state.finance.filter(i => i.id !== id); el('fin-' + id)?.remove(); }
     function updateFin(id, field, val) { const item = state.finance.find(i => i.id === id); if (item) item[field] = val; }
+
+    function avJeNeSaisPas(id) {
+        const item = state.finance.find(i => i.id === id);
+        if (!item) return;
+        // Conservateur: tout comme après 70 ans
+        item.primesAvant70 = 0;
+        item.primesApres70 = item.versements || item.valeur || 0;
+        item.avUnknown = true;
+        const inputAv = el('fin-av70-' + id);
+        const inputAp = el('fin-apres70-' + id);
+        if (inputAv) inputAv.value = 0;
+        if (inputAp) inputAp.value = item.primesApres70;
+        const warn = el('fin-av-warn-' + id);
+        if (warn) warn.style.display = '';
+    }
+
+    function refreshAVBeneficiaires(id) {
+        const container = el('fin-av-beneficiaires-' + id);
+        if (!container) return;
+        const item = state.finance.find(i => i.id === id);
+        if (!item || item.type !== 'av') { container.innerHTML = ''; return; }
+
+        const bens = state.beneficiaries;
+        if (bens.length === 0) {
+            container.innerHTML = '<div style="font-size:.62rem;color:var(--text-muted);"><i class="fas fa-info-circle"></i> Ajoutez des bénéficiaires en étape 1 pour désigner les bénéficiaires AV.</div>';
+            return;
+        }
+
+        if (!item.avBeneficiaires) {
+            // Default: equal split
+            item.avBeneficiaires = bens.map(b => ({ benId: b.id, pct: Math.round(100 / bens.length) }));
+        }
+
+        let html = '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;"><i class="fas fa-users"></i> Bénéficiaires désignés du contrat AV</div>';
+        const total = item.avBeneficiaires.reduce((s, ab) => s + (ab.pct || 0), 0);
+        html += item.avBeneficiaires.map(ab => {
+            const b = bens.find(bb => bb.id === ab.benId);
+            if (!b) return '';
+            return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                <span style="font-size:.65rem;flex:1;">${b.prenom || 'Bénéf.'}</span>
+                <input type="number" class="form-input" value="${ab.pct}" min="0" max="100"
+                       style="font-size:.65rem;height:24px;width:60px;text-align:center;"
+                       onchange="SD.updateAVBenPct(${id},${ab.benId},+this.value)">
+                <span style="font-size:.6rem;color:var(--text-muted);">%</span>
+            </div>`;
+        }).join('');
+        html += `<div style="font-size:.58rem;margin-top:4px;color:${total === 100 ? 'var(--accent-green)' : 'var(--accent-coral)'};">Total : ${total}%${total !== 100 ? ' ⚠️ doit être 100%' : ' ✓'}</div>`;
+        container.innerHTML = html;
+    }
+
+    function updateAVBenPct(finId, benId, pct) {
+        const item = state.finance.find(i => i.id === finId);
+        if (!item || !item.avBeneficiaires) return;
+        const ab = item.avBeneficiaires.find(a => a.benId === benId);
+        if (ab) ab.pct = pct;
+        refreshAVBeneficiaires(finId);
+    }
     function refreshFinUI(id) {
         const item = state.finance.find(i => i.id === id);
         const avSection = el('fin-av-' + id);
@@ -1123,16 +1317,17 @@ const SD = (() => {
     // ============================================================
     function addDebt() {
         const id = debtIdCounter++;
-        state.debts.push({ id, type: 'credit_immo', montant: 0, adi: false, ownerId: '' });
+        state.debts.push({ id, type: 'credit_conso', montant: 0, adi: false, ownerId: '' });
         const persons = getPersonsList();
         const personOpts = `<option value="">— Débiteur —</option>` +
             persons.map(p => `<option value="${p.id}">${p.nom}</option>`).join('');
         const html = `
         <div class="list-item" id="debt-${id}">
             <div class="list-item-header">
-                <div class="list-item-title"><i class="fas fa-file-invoice-dollar"></i> Dette ${id + 1}</div>
+                <div class="list-item-title"><i class="fas fa-file-invoice-dollar"></i> Dette hors immo ${id + 1}</div>
                 <button class="btn-remove" onclick="SD.removeDebt(${id})"><i class="fas fa-times"></i></button>
             </div>
+            <div style="font-size:.58rem;color:var(--text-muted);margin-bottom:8px;padding:4px 8px;border-radius:4px;background:rgba(198,134,66,.03);"><i class="fas fa-info-circle"></i> Les crédits immobiliers se saisissent directement dans chaque fiche bien (ci-dessus).</div>
             <div class="form-grid cols-2" style="margin-bottom:8px;">
                 <div class="form-group">
                     <label class="form-label" style="font-size:.72rem;"><i class="fas fa-user"></i> Débiteur (qui doit ?)</label>
@@ -1143,7 +1338,6 @@ const SD = (() => {
                 <div class="form-group">
                     <label class="form-label">Type</label>
                     <select onchange="SD.updateDebt(${id},'type',this.value)">
-                        <option value="credit_immo">Crédit immobilier</option>
                         <option value="credit_conso">Crédit consommation</option>
                         <option value="dette_pro">Dette professionnelle</option>
                         <option value="impot">Impôt dû</option>
@@ -1773,7 +1967,7 @@ const SD = (() => {
         applyPreset, addBeneficiary, removeBeneficiary, updateBen,
         addImmo, removeImmo, updateImmo, updateImmoTitle, refreshImmoUI,
         addImmoOwner, removeImmoOwner, updateImmoOwner,
-        addFinancial, removeFinancial, updateFin, refreshFinUI,
+        addFinancial, removeFinancial, updateFin, refreshFinUI, avJeNeSaisPas, refreshAVBeneficiaires, updateAVBenPct,
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
         calculateResults, resetAll, updateAside,
