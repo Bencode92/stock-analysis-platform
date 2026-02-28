@@ -100,7 +100,10 @@ const PathOptimizer = (() => {
             age: age || 60, patrimoine: patrimoine || 0,
             regime: regime || 'separation',
             donationsParBen: [], // [{benId, montant}] — donations déjà faites aux bénéficiaires
-            donationsRecues: []  // [{deDonorId, montant}] — donations reçues d'un autre donateur
+            donationsRecues: [],
+            // Entourage — linked family members
+            conjointId: null,
+            entourage: []
         };
         donors.push(donor);
         // Full re-render: data is safe in donors[] array, so re-render is safe
@@ -462,20 +465,43 @@ const PathOptimizer = (() => {
             // === CHEMINS INDIRECTS : donateur → intermédiaire → cible ===
             if (maxHops < 2) continue;
 
-            // L'intermédiaire peut être un autre bénéficiaire ou un donateur
-            // Cas typique : grand-parent → parent (enfant) → petit-enfant (enfant du parent)
-            for (const intermediaire of donors) {
-                if (intermediaire.id === donor.id) continue;
+            // Build list of all potential intermediaries: other donors + entourage members
+            const intermediaires = [];
+            // Other donors
+            for (const od of donors) {
+                if (od.id === donor.id) continue;
+                intermediaires.push({ type: 'donor', id: od.id, nom: od.nom, role: od.role, age: od.age, patrimoine: od.patrimoine });
+            }
+            // Entourage members of all donors (not already in donors)
+            for (const d2 of donors) {
+                for (const ent of d2.entourage) {
+                    if (ent.donorId && donors.find(dd => dd.id === ent.donorId)) continue; // already in donors
+                    // Map entourage lien to a role for path calculation
+                    const entRole = mapEntourageLienToRole(ent.lien, d2.role);
+                    if (entRole) {
+                        intermediaires.push({
+                            type: 'entourage', id: 'ent-' + ent.id, nom: ent.nom || 'Membre',
+                            role: entRole, age: ent.age || 50, patrimoine: ent.patrimoine || 0,
+                            viadonor: d2.nom
+                        });
+                    }
+                }
+            }
 
+            for (const intermediaire of intermediaires) {
                 // Le donateur donne à l'intermédiaire, puis l'intermédiaire donne à la cible
-                const lienDonorInter = detectLienBetweenDonors(donor.role, intermediaire.role);
-                if (lienDonorInter === 'tiers') continue; // pas de lien familial direct
+                const lienDonorInter = intermediaire.type === 'donor'
+                    ? detectLienBetweenDonors(donor.role, intermediaire.role)
+                    : detectLienBetweenDonors(donor.role, intermediaire.role);
+                if (lienDonorInter === 'tiers') continue;
 
-                const lienInterTarget = detectLien(intermediaire.role, targetBeneficiary.lien);
-                if (lienInterTarget === 'tiers') continue; // l'intermédiaire n'a pas de lien avec la cible
+                const lienInterTarget = intermediaire.type === 'donor'
+                    ? getEffectiveLien(intermediaire.id, targetBeneficiary.id, intermediaire.role, targetBeneficiary.lien)
+                    : detectLien(intermediaire.role, targetBeneficiary.lien);
+                if (lienInterTarget === 'tiers' || lienInterTarget === 'aucun') continue;
 
                 // Hop 1 : donateur → intermédiaire (use inter-donor donation history)
-                const donAntInterDonor = getDonorReceivedFrom(intermediaire.id, donor.id);
+                const donAntInterDonor = intermediaire.type === 'donor' ? getDonorReceivedFrom(intermediaire.id, donor.id) : 0;
                 const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, donAntInterDonor);
                 // Hop 2 : intermédiaire → cible (avec le net du hop 1)
                 const hop2 = calcHopCost(hop1.netTransmis, lienInterTarget, intermediaire.age, false, 0);
@@ -483,9 +509,10 @@ const PathOptimizer = (() => {
                 const totalDroits = hop1.droits + hop2.droits;
                 const totalFrais = hop1.frais + hop2.frais;
 
+                const entTag = intermediaire.type === 'entourage' ? ' 👥' : '';
                 paths.push({
                     type: 'indirect',
-                    label: `${donor.nom} → ${intermediaire.nom} → ${targetBeneficiary.prenom}`,
+                    label: `${donor.nom} → ${intermediaire.nom}${entTag} → ${targetBeneficiary.prenom}`,
                     hops: [
                         { from: donor.nom, to: intermediaire.nom, ...hop1 },
                         { from: intermediaire.nom, to: targetBeneficiary.prenom, ...hop2 }
@@ -503,7 +530,7 @@ const PathOptimizer = (() => {
                 });
 
                 // Indirect NP + PP : donateur donne NP à intermédiaire, intermédiaire donne PP à cible après reconstitution
-                const donAntInterDonorNP = getDonorReceivedFrom(intermediaire.id, donor.id);
+                const donAntInterDonorNP = intermediaire.type === 'donor' ? getDonorReceivedFrom(intermediaire.id, donor.id) : 0;
                 const hop1NP = calcHopCost(montant, lienDonorInter, donor.age, true, donAntInterDonorNP);
                 const hop2FromNP = calcHopCost(hop1NP.netTransmis, lienInterTarget, intermediaire.age, false, 0);
 
@@ -530,6 +557,30 @@ const PathOptimizer = (() => {
         }
 
         return paths;
+    }
+
+    // Map entourage relationship to an equivalent donor role for path calculation
+    function mapEntourageLienToRole(entLien, parentDonorRole) {
+        // entLien = how this person relates to the donor who declared them
+        // parentDonorRole = role of the donor who declared this entourage member
+        const map = {
+            'frere': parentDonorRole,           // frère du parent = also a parent (same generation)
+            'enfant_propre': (() => {            // enfant du donateur
+                if (parentDonorRole === 'parent') return 'parent'; // enfant d'un parent = another parent (co-parent)
+                if (parentDonorRole === 'grand_parent') return 'parent'; // enfant d'un GP = parent
+                return null;
+            })(),
+            'parent_propre': (() => {
+                if (parentDonorRole === 'parent') return 'grand_parent';
+                if (parentDonorRole === 'grand_parent') return 'arr_grand_parent';
+                return null;
+            })(),
+            'cousin': 'oncle_tante',            // cousin du parent ≈ oncle/tante level
+            'oncle_tante': 'grand_parent',      // oncle du parent ≈ grand-parent level
+            'beau_enfant': parentDonorRole,     // beau-fils = same generation
+            'beau_frere': parentDonorRole,      // beau-frère = same generation
+        };
+        return map[entLien] || null;
     }
 
     function detectLienBetweenDonors(role1, role2) {
@@ -590,6 +641,126 @@ const PathOptimizer = (() => {
     // ============================================================
     // 5. UI — Rendu
     // ============================================================
+
+    // === ENTOURAGE ===
+    let entourageIdCounter = 0;
+
+    function addEntourage(donorId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        d.entourage.push({
+            id: entourageIdCounter++, nom: '', lien: 'frere', age: 50, patrimoine: 0,
+            donorId: null // link to existing donor if already in cartographie
+        });
+        renderDonorList();
+    }
+
+    function removeEntourage(donorId, entId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        d.entourage = d.entourage.filter(e => e.id !== entId);
+        renderDonorList();
+    }
+
+    function updateEntourage(donorId, entId, field, value) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        const e = d.entourage.find(e => e.id === entId);
+        if (!e) return;
+        if (field === 'age' || field === 'patrimoine') e[field] = +value || 0;
+        else if (field === 'donorId') {
+            if (value === 'none') { e.donorId = null; }
+            else { e.donorId = +value; const linked = donors.find(dd => dd.id === +value); if (linked) e.nom = linked.nom; }
+        }
+        else e[field] = value;
+    }
+
+    function updateDonorConjoint(donorId, conjointId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        d.conjointId = conjointId === 'none' ? null : +conjointId;
+        renderDonorList();
+    }
+
+    function buildEntourageHtml(d) {
+        const otherDonors = donors.filter(od => od.id !== d.id);
+
+        // Auto-detect: who's already linked from cartographie
+        const autoLinks = [];
+        otherDonors.forEach(od => {
+            const lien = detectLienBetweenDonors(d.role, od.role);
+            if (lien !== 'tiers') {
+                autoLinks.push({ donorId: od.id, nom: od.nom, lien, auto: true });
+            }
+        });
+
+        // Conjoint selector
+        const conjointOpts = `<option value="none"${!d.conjointId ? ' selected' : ''}>Aucun / Non renseigné</option>` +
+            otherDonors.map(od => `<option value="${od.id}"${d.conjointId === od.id ? ' selected' : ''}>${od.nom} (${formatRole(od.role)})</option>`).join('');
+
+        let html = `
+        <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(92,64,51,.04);border:1px solid rgba(92,64,51,.1);">
+            <label class="form-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px;color:var(--primary-color);">
+                <i class="fas fa-sitemap"></i> Entourage de ${d.nom} <span style="font-size:.58rem;font-weight:400;color:var(--text-muted);">(enrichit les chemins indirects)</span>
+            </label>
+
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:.75rem;margin-bottom:10px;">
+                <span style="color:var(--text-muted);">💍 Conjoint :</span>
+                <select class="form-input" style="font-size:.72rem;height:30px;" onchange="PathOptimizer.updateDonorConjoint(${d.id},this.value)">${conjointOpts}</select>
+            </div>`;
+
+        // Auto-detected links
+        if (autoLinks.length > 0) {
+            html += `<div style="font-size:.68rem;color:var(--text-muted);margin-bottom:8px;">
+                <strong>Liens auto-détectés :</strong> ${autoLinks.map(a => `${a.nom} (${formatLien(a.lien)})`).join(', ')}
+            </div>`;
+        }
+
+        // Manual entourage entries
+        html += `<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Autres membres liés :</div>`;
+
+        const lienOpts = [
+            ['frere', 'Frère / Sœur'],
+            ['enfant_propre', 'Enfant (propre, pas bénéficiaire)'],
+            ['parent_propre', 'Parent (propre)'],
+            ['cousin', 'Cousin(e)'],
+            ['oncle_tante', 'Oncle / Tante'],
+            ['beau_enfant', 'Beau-fils / Belle-fille'],
+            ['beau_frere', 'Beau-frère / Belle-sœur'],
+            ['autre', 'Autre']
+        ];
+
+        if (d.entourage.length === 0) {
+            html += `<div style="font-size:.68rem;color:var(--text-muted);padding:4px 0;">Aucun — ajoutez des frères/sœurs, cousins, etc.</div>`;
+        }
+
+        html += d.entourage.map(e => {
+            const linkedDonor = e.donorId ? donors.find(dd => dd.id === e.donorId) : null;
+            return `
+            <div style="display:grid;grid-template-columns:1fr 120px 60px 28px;gap:4px;align-items:center;margin-bottom:4px;">
+                <div style="display:flex;gap:4px;">
+                    <input type="text" class="form-input" value="${linkedDonor ? linkedDonor.nom : e.nom}" placeholder="Nom"
+                           style="font-size:.68rem;height:28px;flex:1;${linkedDonor ? 'opacity:.6;' : ''}"
+                           ${linkedDonor ? 'disabled' : ''}
+                           onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'nom',this.value)">
+                </div>
+                <select class="form-input" style="font-size:.65rem;height:28px;" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'lien',this.value)">
+                    ${lienOpts.map(([v, l]) => `<option value="${v}"${e.lien === v ? ' selected' : ''}>${l}</option>`).join('')}
+                </select>
+                <input type="number" class="form-input" value="${e.age}" min="0" max="120" style="font-size:.68rem;height:28px;text-align:center;" placeholder="Âge"
+                       onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'age',this.value)">
+                <button class="btn-remove" style="width:28px;height:28px;font-size:.55rem;" onclick="PathOptimizer.removeEntourage(${d.id},${e.id})"><i class="fas fa-times"></i></button>
+            </div>`;
+        }).join('');
+
+        html += `
+            <button class="btn-add" style="font-size:.65rem;padding:3px 8px;margin-top:6px;" onclick="PathOptimizer.addEntourage(${d.id})">
+                <i class="fas fa-plus"></i> Ajouter un membre
+            </button>
+        </div>`;
+
+        return html;
+    }
 
     function buildDonorCardHtml(d, bens) {
             // Per-beneficiary donation rows
@@ -771,6 +942,7 @@ const PathOptimizer = (() => {
                 </div>
                 ${donBenHtml}
                 ${donRecvHtml}
+                ${buildEntourageHtml(d)}
             </div>`;
     }
 
@@ -1098,6 +1270,7 @@ const PathOptimizer = (() => {
     // ============================================================
     return {
         addDonor, removeDonor, updateDonor, getDonors,
+        addEntourage, removeEntourage, updateEntourage, updateDonorConjoint,
         updateDonorDonation, updateDonorBenLien, getEffectiveLien, getDonorDonationForBen, getTotalDonationsForBen, getDonationDetailForBen,
         updateDonorReceivedDonation, getDonorReceivedFrom, updateDonorRecvLien,
         applyDonorPreset,
