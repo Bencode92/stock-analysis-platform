@@ -139,8 +139,146 @@ const SD = (() => {
     // ============================================================
     // 3. NAV — Navigation wizard
     // ============================================================
+    // === FAMILY VALIDATION + SMART QUESTIONS ===
+    function buildFamilyValidation() {
+        const donors = typeof PathOptimizer !== 'undefined' ? PathOptimizer.getDonors() : [];
+        const bens = state.beneficiaries;
+        if (donors.length === 0 && bens.length === 0) return;
+
+        const questions = [];
+        const tree = [];
+
+        // Build tree summary
+        donors.forEach(d => {
+            const links = [];
+            // Links to beneficiaries
+            bens.forEach(b => {
+                const lien = typeof PathOptimizer !== 'undefined'
+                    ? PathOptimizer.getEffectiveLien(d.id, b.id, d.role, b.lien)
+                    : 'tiers';
+                if (lien !== 'aucun') {
+                    const don = typeof PathOptimizer !== 'undefined' ? PathOptimizer.getDonorDonationForBen(d.id, b.id) : 0;
+                    links.push({ nom: b.prenom || 'Bénéf.', type: 'ben', lien, don });
+                }
+            });
+            // Entourage
+            const entourage = d.entourage || [];
+            entourage.forEach(e => {
+                links.push({ nom: e.nom || '?', type: 'entourage', lien: e.lien, don: 0 });
+            });
+            tree.push({ nom: d.nom, role: d.role, age: d.age, links, entLen: entourage.length, conjointId: d.conjointId });
+        });
+
+        // Smart questions
+        donors.forEach(d => {
+            if (!d.conjointId) {
+                questions.push({ icon: '💍', text: `${d.nom} a-t-il/elle un(e) conjoint(e) ou partenaire PACS ?`, severity: 'info' });
+            }
+            const hasFrere = (d.entourage || []).some(e => e.lien === 'frere');
+            if (!hasFrere && d.role === 'parent') {
+                questions.push({ icon: '👫', text: `${d.nom} a-t-il/elle des frères ou sœurs ? (= oncles/tantes des bénéficiaires → chemins indirects)`, severity: 'info' });
+            }
+            if (d.role === 'grand_parent') {
+                const childDonors = donors.filter(od => od.role === 'parent');
+                if (childDonors.length <= 1) {
+                    questions.push({ icon: '👨‍👩‍👧', text: `${d.nom} a-t-il/elle d'autres enfants que ${childDonors.map(c => c.nom).join(', ') || '?'} ? (= oncles/tantes des bénéficiaires)`, severity: 'warn' });
+                }
+            }
+        });
+
+        bens.forEach(b => {
+            const donorsLinked = donors.filter(d => {
+                const lien = typeof PathOptimizer !== 'undefined'
+                    ? PathOptimizer.getEffectiveLien(d.id, b.id, d.role, b.lien)
+                    : 'tiers';
+                return lien !== 'aucun' && lien !== 'tiers';
+            });
+            if (donorsLinked.length === 0) {
+                questions.push({ icon: '⚠️', text: `${b.prenom || 'Bénéficiaire'} n'a aucun lien fiscal avec les donateurs. Vérifiez les liens.`, severity: 'error' });
+            }
+            // Check for siblings
+            const otherBens = bens.filter(bb => bb.id !== b.id);
+            if (otherBens.length > 0) {
+                questions.push({ icon: '👯', text: `${b.prenom || 'Bénéf.'} a-t-il/elle des cousins liés aux donateurs ? (pas dans la liste actuelle)`, severity: 'info' });
+            }
+        });
+
+        // Render in a modal-like overlay at bottom of step 1
+        let container = el('family-validation');
+        if (!container) {
+            const panel = document.getElementById('step-1');
+            if (!panel) return;
+            container = document.createElement('div');
+            container.id = 'family-validation';
+            panel.appendChild(container);
+        }
+
+        let html = `
+        <div style="margin-top:20px;padding:16px;border-radius:12px;background:rgba(92,64,51,.06);border:2px solid rgba(198,134,66,.2);">
+            <div style="font-size:.88rem;font-weight:700;color:var(--primary-color);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-sitemap"></i> Arbre familial — résumé
+            </div>`;
+
+        // Tree visualization
+        html += `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;">`;
+        tree.forEach(t => {
+            html += `<div style="flex:1;min-width:200px;padding:10px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">
+                <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;">${t.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${formatRole(t.role)}, ${t.age} ans)</span></div>
+                ${t.links.map(l => {
+                    const icon = l.type === 'ben' ? '🎯' : '👤';
+                    const donStr = l.don > 0 ? ` · <span style="color:var(--accent-coral);">donné ${new Intl.NumberFormat('fr-FR').format(l.don)}€</span>` : '';
+                    return `<div style="font-size:.65rem;padding:2px 0;color:var(--text-secondary);">${icon} ${l.nom} — ${formatLienShort(l.lien)}${donStr}</div>`;
+                }).join('')}
+                ${t.links.length === 0 ? '<div style="font-size:.62rem;color:var(--text-muted);">Aucun lien</div>' : ''}
+            </div>`;
+        });
+        html += `</div>`;
+
+        // Smart questions
+        if (questions.length > 0) {
+            html += `<div style="font-size:.78rem;font-weight:700;color:var(--accent-amber);margin-bottom:8px;"><i class="fas fa-lightbulb"></i> Questions pour optimiser :</div>`;
+            questions.forEach(q => {
+                const bgColor = q.severity === 'error' ? 'rgba(255,107,107,.1)' : q.severity === 'warn' ? 'rgba(255,183,77,.1)' : 'rgba(198,134,66,.04)';
+                const borderColor = q.severity === 'error' ? 'rgba(255,107,107,.3)' : q.severity === 'warn' ? 'rgba(255,183,77,.2)' : 'rgba(198,134,66,.1)';
+                html += `<div style="font-size:.7rem;padding:6px 10px;margin-bottom:4px;border-radius:6px;background:${bgColor};border:1px solid ${borderColor};color:var(--text-secondary);">
+                    ${q.icon} ${q.text}
+                </div>`;
+            });
+        }
+
+        html += `
+            <div style="text-align:right;margin-top:12px;">
+                <span style="font-size:.68rem;color:var(--text-muted);">Tout est correct ? Cliquez "Suivant" pour continuer.</span>
+            </div>
+        </div>`;
+
+        container.innerHTML = html;
+    }
+
+    function formatLienShort(lien) {
+        const map = {
+            enfant: 'Enfant', petit_enfant: 'Petit-enfant', arriere_petit_enfant: 'Arr. petit-enfant',
+            conjoint_pacs_donation: 'Conjoint', frere_soeur: 'Frère/Sœur', neveu_niece: 'Neveu/Nièce',
+            frere: 'Frère/Sœur', enfant_propre: 'Enfant', parent_propre: 'Parent', cousin: 'Cousin',
+            oncle_tante: 'Oncle/Tante', beau_enfant: 'Beau-enfant', beau_frere: 'Beau-frère',
+            tiers: 'Tiers', aucun: 'Aucun lien'
+        };
+        return map[lien] || lien;
+    }
+
+    function formatRole(role) {
+        const map = { parent: 'Parent', grand_parent: 'Grand-parent', arr_grand_parent: 'Arr. GP', oncle_tante: 'Oncle/Tante', conjoint: 'Conjoint', tiers: 'Tiers' };
+        return map[role] || role;
+    }
+
     function goToStep(n) {
         if (n > currentStep + 1) return;
+
+        // When leaving step 1, show family validation
+        if (currentStep === 1 && n === 2) {
+            buildFamilyValidation();
+        }
+
         currentStep = n;
 
         document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
