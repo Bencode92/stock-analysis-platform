@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-27T13:37:14.942943",
+  "timestamp": "2026-02-28T08:14:57.338117",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -10,8 +10,8 @@
     "etf_selected": 9,
     "etf_rejected_notable": 20,
     "crypto_initial": 6,
-    "crypto_selected": 3,
-    "crypto_rejected_notable": 3,
+    "crypto_selected": 4,
+    "crypto_rejected_notable": 2,
     "bonds_initial": 31,
     "bonds_selected": 9,
     "total_filters_applied": 4,
@@ -4228,65 +4228,64 @@
         "selected": true,
         "matched_preset": "crypto_preset_tokenized_gold",
         "profile_score": 100.0,
-        "volatility": 54.5
+        "volatility": 55.1
       },
       {
         "rank": 2,
         "name": "TRX/USD",
         "ticker": "TRX/USD",
-        "sort_score": 99.63,
+        "sort_score": 95.53,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_payment",
-        "profile_score": 99.63,
-        "volatility": 27.7
+        "profile_score": 95.53,
+        "volatility": 27.9
       },
       {
         "rank": 3,
         "name": "DCR/USD",
         "ticker": "DCR/USD",
-        "sort_score": 98.55,
+        "sort_score": 95.01,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_pow_legacy",
-        "profile_score": 98.55,
-        "volatility": 95.2
+        "profile_score": 95.01,
+        "volatility": 99.7
       },
       {
         "rank": 4,
-        "name": "NFT/USD",
-        "ticker": "NFT/USD",
-        "sort_score": 96.84,
+        "name": "XAUT/USD",
+        "ticker": "XAUT/USD",
+        "sort_score": 91.92,
         "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 96.84,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 49.2
+        "selected": true,
+        "matched_preset": "crypto_preset_tokenized_gold",
+        "profile_score": 91.92,
+        "volatility": 54.7
       },
       {
         "rank": 5,
-        "name": "GNO/USD",
-        "ticker": "GNO/USD",
-        "sort_score": 92.85,
+        "name": "NFT/USD",
+        "ticker": "NFT/USD",
+        "sort_score": 90.82,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 92.85,
+        "profile_score": 90.82,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 104.5
+        "volatility": 48.0
       },
       {
         "rank": 6,
-        "name": "BTTN/USD",
-        "ticker": "BTTN/USD",
-        "sort_score": 71.16,
+        "name": "BTT/USD",
+        "ticker": "BTT/USD",
+        "sort_score": 78.35,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 71.16,
+        "profile_score": 78.35,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 71.2
+        "volatility": 69.9
       }
     ],
     "bond": [
@@ -15684,7 +15683,7 @@
       "category": "crypto",
       "matched_preset": "crypto_preset_tokenized_gold",
       "profile_score": 100.0,
-      "volatility": 54.5,
+      "volatility": 55.1,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 1,
@@ -15695,24 +15694,36 @@
       "ticker": "DCR/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_pow_legacy",
-      "profile_score": 98.55,
-      "volatility": 95.2,
+      "profile_score": 95.01,
+      "volatility": 99.7,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 2,
-      "selection_reason": "Score profil élevé (98.55); Preset: crypto_preset_pow_legacy"
+      "selection_reason": "Score profil élevé (95.01); Preset: crypto_preset_pow_legacy"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "XAUT/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_tokenized_gold",
+      "profile_score": 91.92,
+      "volatility": 54.7,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Score profil élevé (91.92); Preset: crypto_preset_tokenized_gold"
     },
     {
       "name": "Unknown",
       "ticker": "TRX/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_payment",
-      "profile_score": 99.63,
-      "volatility": 27.7,
+      "profile_score": 95.53,
+      "volatility": 27.9,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 3,
-      "selection_reason": "Score profil élevé (99.63); Preset: crypto_preset_payment"
+      "ranking": 4,
+      "selection_reason": "Score profil élevé (95.53); Preset: crypto_preset_payment"
     }
   ],
   "crypto_rejected": [
@@ -15721,30 +15732,19 @@
       "ticker": "NFT/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 96.84,
-      "volatility": 49.2,
+      "profile_score": 90.82,
+      "volatility": 48.0,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "GNO/USD",
+      "ticker": "BTT/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 92.85,
-      "volatility": 104.5,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "BTTN/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 71.16,
-      "volatility": 71.2,
+      "profile_score": 78.35,
+      "volatility": 69.9,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -15956,7 +15956,7 @@
   "radar_context": {
     "regime": "risk-on",
     "confidence": 0.86,
-    "as_of": "2026-02-27",
+    "as_of": "2026-02-28",
     "favored_sectors": [
       "energy",
       "materials",
