@@ -103,7 +103,9 @@ const PathOptimizer = (() => {
             donationsRecues: []  // [{deDonorId, montant}] — donations reçues d'un autre donateur
         };
         donors.push(donor);
-        appendDonorCard(donor);
+        // Full re-render: data is safe in donors[] array, so re-render is safe
+        // (donation values are stored in donationsParBen/donationsRecues, not in DOM)
+        renderDonorList();
         updateMatrix();
         refreshBenDonSummaries();
         return id;
@@ -112,8 +114,7 @@ const PathOptimizer = (() => {
     function removeDonor(id) {
         const idx = donors.findIndex(d => d.id === id);
         if (idx >= 0) donors.splice(idx, 1);
-        const card = document.querySelector(`[data-donor-id="${id}"]`);
-        if (card) card.remove();
+        renderDonorList();
         updateMatrix();
         refreshBenDonSummaries();
     }
