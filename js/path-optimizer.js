@@ -482,7 +482,7 @@ const PathOptimizer = (() => {
                         intermediaires.push({
                             type: 'entourage', id: 'ent-' + ent.id, nom: ent.nom || 'Membre',
                             role: entRole, age: ent.age || 50, patrimoine: ent.patrimoine || 0,
-                            viadonor: d2.nom
+                            viadonor: d2.nom, _entRef: ent
                         });
                     }
                 }
@@ -503,8 +503,15 @@ const PathOptimizer = (() => {
                 // Hop 1 : donateur → intermédiaire (use inter-donor donation history)
                 const donAntInterDonor = intermediaire.type === 'donor' ? getDonorReceivedFrom(intermediaire.id, donor.id) : 0;
                 const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, donAntInterDonor);
-                // Hop 2 : intermédiaire → cible (avec le net du hop 1)
-                const hop2 = calcHopCost(hop1.netTransmis, lienInterTarget, intermediaire.age, false, 0);
+                // Hop 2 : intermédiaire → cible
+                // For entourage members, check their donation history to this beneficiary
+                let donAntInterBen = 0;
+                if (intermediaire.type === 'entourage' && intermediaire._entRef) {
+                    donAntInterBen = getEntourageDonForBen(intermediaire._entRef, targetBeneficiary.id);
+                } else if (intermediaire.type === 'donor') {
+                    donAntInterBen = getDonorDonationForBen(intermediaire.id, targetBeneficiary.id);
+                }
+                const hop2 = calcHopCost(hop1.netTransmis, lienInterTarget, intermediaire.age, false, donAntInterBen);
 
                 const totalDroits = hop1.droits + hop2.droits;
                 const totalFrais = hop1.frais + hop2.frais;
@@ -650,7 +657,10 @@ const PathOptimizer = (() => {
         if (!d) return;
         d.entourage.push({
             id: entourageIdCounter++, nom: '', lien: 'frere', age: 50, patrimoine: 0,
-            donorId: null // link to existing donor if already in cartographie
+            donorId: null,
+            donationsParBen: [],    // [{benId, montant, lienOverride}]
+            donationsRecues: [],    // [{deId, deType:'donor'|'ent', montant}]
+            expanded: false         // toggle detail view
         });
         renderDonorList();
     }
@@ -673,6 +683,46 @@ const PathOptimizer = (() => {
             else { e.donorId = +value; const linked = donors.find(dd => dd.id === +value); if (linked) e.nom = linked.nom; }
         }
         else e[field] = value;
+    }
+
+    function toggleEntourageExpand(donorId, entId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        const e = d.entourage.find(e => e.id === entId);
+        if (!e) return;
+        e.expanded = !e.expanded;
+        renderDonorList();
+    }
+
+    function updateEntourageDonation(donorId, entId, benId, montant) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        const e = d.entourage.find(e => e.id === entId);
+        if (!e) return;
+        let entry = e.donationsParBen.find(x => x.benId === benId);
+        if (!entry) { entry = { benId, montant: 0, lienOverride: null }; e.donationsParBen.push(entry); }
+        entry.montant = +montant || 0;
+    }
+
+    function updateEntourageDonLien(donorId, entId, benId, lien) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        const e = d.entourage.find(e => e.id === entId);
+        if (!e) return;
+        let entry = e.donationsParBen.find(x => x.benId === benId);
+        if (!entry) { entry = { benId, montant: 0, lienOverride: null }; e.donationsParBen.push(entry); }
+        entry.lienOverride = lien === 'auto' ? null : lien;
+        renderDonorList();
+    }
+
+    function getEntourageDonForBen(entourage, benId) {
+        const entry = entourage.donationsParBen.find(x => x.benId === benId);
+        return entry ? entry.montant : 0;
+    }
+
+    function getEntourageLienOverride(entourage, benId) {
+        const entry = entourage.donationsParBen.find(x => x.benId === benId);
+        return entry ? entry.lienOverride : null;
     }
 
     function updateDonorConjoint(donorId, conjointId) {
@@ -736,21 +786,81 @@ const PathOptimizer = (() => {
 
         html += d.entourage.map(e => {
             const linkedDonor = e.donorId ? donors.find(dd => dd.id === e.donorId) : null;
-            return `
-            <div style="display:grid;grid-template-columns:1fr 120px 60px 28px;gap:4px;align-items:center;margin-bottom:4px;">
-                <div style="display:flex;gap:4px;">
+            const bens = getBeneficiaries();
+            const entRole = mapEntourageLienToRole(e.lien, d.role);
+            const hasDonations = e.donationsParBen.some(x => x.montant > 0);
+
+            let row = `
+            <div style="margin-bottom:8px;padding:6px 8px;border-radius:8px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.05);">
+                <div style="display:grid;grid-template-columns:1fr 120px 60px 60px 28px;gap:4px;align-items:center;">
                     <input type="text" class="form-input" value="${linkedDonor ? linkedDonor.nom : e.nom}" placeholder="Nom"
-                           style="font-size:.68rem;height:28px;flex:1;${linkedDonor ? 'opacity:.6;' : ''}"
+                           style="font-size:.68rem;height:28px;${linkedDonor ? 'opacity:.6;' : ''}"
                            ${linkedDonor ? 'disabled' : ''}
                            onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'nom',this.value)">
-                </div>
-                <select class="form-input" style="font-size:.65rem;height:28px;" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'lien',this.value)">
-                    ${lienOpts.map(([v, l]) => `<option value="${v}"${e.lien === v ? ' selected' : ''}>${l}</option>`).join('')}
-                </select>
-                <input type="number" class="form-input" value="${e.age}" min="0" max="120" style="font-size:.68rem;height:28px;text-align:center;" placeholder="Âge"
-                       onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'age',this.value)">
-                <button class="btn-remove" style="width:28px;height:28px;font-size:.55rem;" onclick="PathOptimizer.removeEntourage(${d.id},${e.id})"><i class="fas fa-times"></i></button>
-            </div>`;
+                    <select class="form-input" style="font-size:.65rem;height:28px;" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'lien',this.value)">
+                        ${lienOpts.map(([v, l]) => `<option value="${v}"${e.lien === v ? ' selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                    <input type="number" class="form-input" value="${e.age}" min="0" max="120" style="font-size:.68rem;height:28px;text-align:center;" placeholder="Âge"
+                           onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'age',this.value)">
+                    <button style="font-size:.58rem;height:28px;padding:0 6px;background:${hasDonations ? 'rgba(255,107,107,.15)' : 'rgba(198,134,66,.08)'};border:1px solid rgba(198,134,66,.15);border-radius:4px;color:var(--text-secondary);cursor:pointer;" onclick="PathOptimizer.toggleEntourageExpand(${d.id},${e.id})">
+                        ${e.expanded ? '▼' : '▶'} Don.${hasDonations ? ' ●' : ''}
+                    </button>
+                    <button class="btn-remove" style="width:28px;height:28px;font-size:.55rem;" onclick="PathOptimizer.removeEntourage(${d.id},${e.id})"><i class="fas fa-times"></i></button>
+                </div>`;
+
+            // Expanded donation details
+            if (e.expanded && bens.length > 0) {
+                row += `<div style="margin-top:6px;padding:8px;border-radius:6px;background:rgba(198,134,66,.03);border:1px dashed rgba(198,134,66,.08);">
+                    <div style="font-size:.62rem;font-weight:600;color:var(--accent-coral);margin-bottom:6px;">Donations faites par ${e.nom || 'ce membre'} aux bénéficiaires :</div>`;
+
+                row += bens.map(b => {
+                    const montant = getEntourageDonForBen(e, b.id);
+                    const override = getEntourageLienOverride(e, b.id);
+                    const autoLien = entRole ? detectLien(entRole, b.lien) : 'tiers';
+                    const effLien = override || autoLien;
+                    const abat = (effLien === 'aucun') ? 0 : (ABATTEMENTS[effLien] || ABATTEMENTS.tiers);
+                    const restant = Math.max(0, abat - montant);
+
+                    const lienSelectOpts = [
+                        ['auto', 'Auto : ' + formatLien(autoLien)],
+                        ['aucun', '🚫 Aucun lien'],
+                        ['enfant', 'Ligne directe (100k)'],
+                        ['petit_enfant', 'Petit-enfant (31 865)'],
+                        ['neveu_niece', 'Neveu/Nièce (7 967)'],
+                        ['frere_soeur', 'Frère/Sœur (15 932)'],
+                        ['tiers', 'Tiers (1 594)']
+                    ].map(([v, l]) => `<option value="${v}" ${(override === v || (!override && v === 'auto')) ? 'selected' : ''}>${l}</option>`).join('');
+
+                    if (effLien === 'aucun') {
+                        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;opacity:.5;font-size:.62rem;">
+                            <span>→ ${b.prenom || 'Bénéf.'}</span>
+                            <select style="font-size:.58rem;height:22px;padding:0 3px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-muted);border-radius:3px;" onchange="PathOptimizer.updateEntourageDonLien(${d.id},${e.id},${b.id},this.value)">${lienSelectOpts}</select>
+                            <span>🚫</span>
+                        </div>`;
+                    }
+
+                    return `<div style="display:grid;grid-template-columns:1fr 100px 90px;gap:4px;align-items:center;margin-bottom:4px;">
+                        <div>
+                            <div style="font-size:.62rem;font-weight:600;">→ ${b.prenom || 'Bénéf.'} <span style="color:var(--text-muted);">(${formatLien(effLien)} · ${fmt(abat)})</span></div>
+                            <select style="font-size:.55rem;height:20px;margin-top:2px;padding:0 3px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-muted);border-radius:3px;" onchange="PathOptimizer.updateEntourageDonLien(${d.id},${e.id},${b.id},this.value)">${lienSelectOpts}</select>
+                            <div style="font-size:.55rem;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};margin-top:2px;">Restant : ${fmt(restant)}</div>
+                        </div>
+                        <input type="number" class="form-input" value="${montant}" min="0" step="1000"
+                               style="font-size:.65rem;height:26px;text-align:right;"
+                               onchange="PathOptimizer.updateEntourageDonation(${d.id},${e.id},${b.id},this.value)">
+                        <div style="height:3px;border-radius:2px;background:rgba(198,134,66,.08);overflow:hidden;">
+                            <div style="height:100%;width:${abat > 0 ? Math.min(100, montant / abat * 100) : 100}%;background:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};border-radius:2px;"></div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                row += `</div>`;
+            } else if (e.expanded && bens.length === 0) {
+                row += `<div style="font-size:.62rem;color:var(--text-muted);padding:6px;">Ajoutez des bénéficiaires d'abord.</div>`;
+            }
+
+            row += `</div>`;
+            return row;
         }).join('');
 
         html += `
@@ -1271,6 +1381,7 @@ const PathOptimizer = (() => {
     return {
         addDonor, removeDonor, updateDonor, getDonors,
         addEntourage, removeEntourage, updateEntourage, updateDonorConjoint,
+        toggleEntourageExpand, updateEntourageDonation, updateEntourageDonLien,
         updateDonorDonation, updateDonorBenLien, getEffectiveLien, getDonorDonationForBen, getTotalDonationsForBen, getDonationDetailForBen,
         updateDonorReceivedDonation, getDonorReceivedFrom, updateDonorRecvLien,
         applyDonorPreset,
