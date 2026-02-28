@@ -34,40 +34,42 @@ const PathOptimizer = (() => {
         tiers:         { versEnfant: 'tiers' }
     };
 
-    // Abattements par lien (miroir FISCAL dans SD, mais accessible ici)
-    const ABATTEMENTS = {
-        enfant: 100000,
-        petit_enfant: 31865,
-        arriere_petit_enfant: 5310,
-        conjoint_pacs_donation: 80724,
-        conjoint_pacs_succession: Infinity,
-        frere_soeur: 15932,
-        neveu_niece: 7967,
-        tiers: 1594,
-        handicap: 159325,
-        don_familial_argent: 31865,
-        rappel_fiscal_ans: 15
+    // FISCAL — loaded from SD via setFiscal(), fallback to window.__FISCAL__ or hardcoded
+    let ABATTEMENTS = {
+        enfant: 100000, petit_enfant: 31865, arriere_petit_enfant: 5310,
+        conjoint_pacs_donation: 80724, conjoint_pacs_succession: Infinity,
+        frere_soeur: 15932, neveu_niece: 7967, tiers: 1594,
+        handicap: 159325, don_familial_argent: 31865, rappel_fiscal_ans: 15
     };
-
-    const BAREMES = {
-        ligne_directe: [
-            { max: 8072, taux: 0.05 }, { max: 12109, taux: 0.10 },
-            { max: 15932, taux: 0.15 }, { max: 552324, taux: 0.20 },
-            { max: 902838, taux: 0.30 }, { max: 1805677, taux: 0.40 },
-            { max: Infinity, taux: 0.45 }
-        ],
+    let BAREMES = {
+        ligne_directe: [ { max: 8072, taux: 0.05 }, { max: 12109, taux: 0.10 }, { max: 15932, taux: 0.15 }, { max: 552324, taux: 0.20 }, { max: 902838, taux: 0.30 }, { max: 1805677, taux: 0.40 }, { max: Infinity, taux: 0.45 } ],
         frere_soeur: [ { max: 24430, taux: 0.35 }, { max: Infinity, taux: 0.45 } ],
-        neveu_niece: [ { max: Infinity, taux: 0.55 } ],
-        tiers: [ { max: Infinity, taux: 0.60 } ]
+        neveu_niece: [{ max: Infinity, taux: 0.55 }],
+        tiers: [{ max: Infinity, taux: 0.60 }]
     };
-
-    const DEMEMBREMENT = [
-        { maxAge: 20, np: 0.10 }, { maxAge: 30, np: 0.20 },
-        { maxAge: 40, np: 0.30 }, { maxAge: 50, np: 0.40 },
-        { maxAge: 60, np: 0.50 }, { maxAge: 70, np: 0.60 },
-        { maxAge: 80, np: 0.70 }, { maxAge: 90, np: 0.80 },
-        { maxAge: Infinity, np: 0.90 }
+    let DEMEMBREMENT = [
+        { maxAge: 20, np: 0.10 }, { maxAge: 30, np: 0.20 }, { maxAge: 40, np: 0.30 },
+        { maxAge: 50, np: 0.40 }, { maxAge: 60, np: 0.50 }, { maxAge: 70, np: 0.60 },
+        { maxAge: 80, np: 0.70 }, { maxAge: 90, np: 0.80 }, { maxAge: Infinity, np: 0.90 }
     ];
+
+    function setFiscal(fiscal) {
+        if (!fiscal) return;
+        ABATTEMENTS = fiscal.abattements || ABATTEMENTS;
+        if (fiscal.bareme_ligne_directe) {
+            BAREMES = {
+                ligne_directe: fiscal.bareme_ligne_directe,
+                frere_soeur: fiscal.bareme_frere_soeur || BAREMES.frere_soeur,
+                neveu_niece: fiscal.bareme_neveu_niece || BAREMES.neveu_niece,
+                tiers: fiscal.bareme_tiers || BAREMES.tiers
+            };
+        }
+        if (fiscal.demembrement) DEMEMBREMENT = fiscal.demembrement;
+        console.log('[PathOptimizer] Fiscal data synced from SD');
+    }
+
+    // Try to sync from global on load
+    if (window.__FISCAL__) setFiscal(window.__FISCAL__);
 
     function getNP(age) {
         for (const t of DEMEMBREMENT) { if (age <= t.maxAge) return t.np; }
@@ -182,12 +184,45 @@ const PathOptimizer = (() => {
         if (!d) return;
         let entry = d.donationsParBen.find(e => e.benId === benId);
         if (!entry) {
-            entry = { benId, montant: 0, lienOverride: null };
+            entry = { benId, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
             d.donationsParBen.push(entry);
         }
         entry.montant = +montant || 0;
         renderDonorDonationBar(donorId, benId);
         refreshBenDonSummaries();
+    }
+
+    function updateDonorDonationDate(donorId, benId, dateStr) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        let entry = d.donationsParBen.find(e => e.benId === benId);
+        if (!entry) { entry = { benId, montant: 0, lienOverride: null, date: null, type: 'inconnue' }; d.donationsParBen.push(entry); }
+        entry.date = dateStr || null;
+        renderDonorList();
+    }
+
+    function updateDonorDonationType(donorId, benId, type) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return;
+        let entry = d.donationsParBen.find(e => e.benId === benId);
+        if (!entry) { entry = { benId, montant: 0, lienOverride: null, date: null, type: 'inconnue' }; d.donationsParBen.push(entry); }
+        entry.type = type;
+    }
+
+    // Check if a donation is within the 15-year recall period
+    function isDonationInRappel(dateStr) {
+        if (!dateStr) return true; // conservateur: si pas de date, on suppose dans le rappel
+        const donDate = new Date(dateStr);
+        const now = new Date();
+        const diffYears = (now - donDate) / (365.25 * 24 * 60 * 60 * 1000);
+        return diffYears < ABATTEMENTS.rappel_fiscal_ans;
+    }
+
+    // Get effective donation amount considering 15-year window
+    function getEffectiveDonation(entry) {
+        if (!entry || !entry.montant) return 0;
+        if (isDonationInRappel(entry.date)) return entry.montant;
+        return 0; // > 15 ans : abattement rechargé
     }
 
     // Override lien fiscal pour une paire donateur↔bénéficiaire
@@ -231,6 +266,14 @@ const PathOptimizer = (() => {
     }
 
     function getDonorDonationForBen(donorId, benId) {
+        const d = donors.find(d => d.id === donorId);
+        if (!d) return 0;
+        const entry = d.donationsParBen.find(e => e.benId === benId);
+        return entry ? getEffectiveDonation(entry) : 0;
+    }
+
+    // Raw amount (ignoring 15-year window) for display purposes
+    function getDonorDonationForBenRaw(donorId, benId) {
         const d = donors.find(d => d.id === donorId);
         if (!d) return 0;
         const entry = d.donationsParBen.find(e => e.benId === benId);
@@ -893,7 +936,9 @@ const PathOptimizer = (() => {
                         <i class="fas fa-history"></i> Donations déjà faites (rappel 15 ans) — à qui ?
                     </label>
                     ${bens.map(b => {
-                        const montant = getDonorDonationForBen(d.id, b.id);
+                        const donEntry = d.donationsParBen.find(e => e.benId === b.id);
+                        const montantRaw = donEntry ? donEntry.montant : 0;
+                        const montant = donEntry ? getEffectiveDonation(donEntry) : 0;
                         const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
                         const currentOverride = getLienOverride(d.id, b.id);
                         const autoLien = detectLien(d.role, b.lien);
@@ -940,12 +985,28 @@ const PathOptimizer = (() => {
                             </div>
                             <div style="font-size:.6rem;color:var(--text-muted);text-align:center;">${currentOverride ? '✏️' : '🤖'}</div>
                             <div>
-                                <input type="number" class="form-input" value="${montant}" min="0" step="1000"
-                                       style="font-size:.75rem;height:34px;text-align:right;${montant > 0 ? 'border-color:rgba(255,107,107,.25);' : ''}"
+                                <input type="number" class="form-input" value="${montantRaw}" min="0" step="1000"
+                                       style="font-size:.75rem;height:34px;text-align:right;${montantRaw > 0 ? 'border-color:rgba(255,107,107,.25);' : ''}"
                                        placeholder="0"
                                        onchange="PathOptimizer.updateDonorDonation(${d.id},${b.id},this.value)">
                             </div>
-                        </div>`;
+                        </div>
+                        ${montant > 0 ? `<div style="display:flex;gap:6px;align-items:center;margin-top:4px;padding-left:4px;">
+                            <input type="date" class="form-input" value="${donEntry?.date || ''}"
+                                   style="font-size:.6rem;height:24px;flex:1;max-width:130px;"
+                                   onchange="PathOptimizer.updateDonorDonationDate(${d.id},${b.id},this.value)">
+                            <select class="form-input" style="font-size:.58rem;height:24px;flex:1;max-width:120px;"
+                                    onchange="PathOptimizer.updateDonorDonationType(${d.id},${b.id},this.value)">
+                                <option value="inconnue" ${(donEntry?.type||'inconnue')==='inconnue'?'selected':''}>Type inconnu</option>
+                                <option value="notariee" ${donEntry?.type==='notariee'?'selected':''}>Notariée</option>
+                                <option value="don_manuel" ${donEntry?.type==='don_manuel'?'selected':''}>Don manuel</option>
+                            </select>
+                            ${donEntry?.date && !isDonationInRappel(donEntry.date)
+                                ? '<span style="font-size:.55rem;color:var(--accent-green);white-space:nowrap;">✅ > 15 ans : abattement rechargé</span>'
+                                : donEntry?.date
+                                    ? '<span style="font-size:.55rem;color:var(--accent-coral);white-space:nowrap;">⏳ dans le rappel 15 ans</span>'
+                                    : '<span style="font-size:.55rem;color:var(--accent-amber);white-space:nowrap;">⚠️ date inconnue → calcul conservateur</span>'}
+                        </div>` : ''}`;
                     }).join('')}
                 </div>`;
             } else {
@@ -1390,10 +1451,12 @@ const PathOptimizer = (() => {
     // PUBLIC API
     // ============================================================
     return {
+        setFiscal,
         addDonor, removeDonor, updateDonor, getDonors,
         addEntourage, removeEntourage, updateEntourage, updateDonorConjoint,
         toggleEntourageExpand, updateEntourageDonation, updateEntourageDonLien,
-        updateDonorDonation, updateDonorBenLien, getEffectiveLien, getDonorDonationForBen, getTotalDonationsForBen, getDonationDetailForBen,
+        updateDonorDonation, updateDonorDonationDate, updateDonorDonationType,
+        updateDonorBenLien, getEffectiveLien, getDonorDonationForBen, getDonorDonationForBenRaw, getTotalDonationsForBen, getDonationDetailForBen,
         updateDonorReceivedDonation, getDonorReceivedFrom, updateDonorRecvLien,
         applyDonorPreset,
         buildGraph, findAllPaths, optimizeAll,
