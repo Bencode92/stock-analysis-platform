@@ -296,36 +296,44 @@ const SD = (() => {
         const checks = [];
         const hasDonors = donors.length > 0;
         const hasBens = bens.length > 0;
-        checks.push({ label: 'Donateurs', ok: hasDonors, critical: true });
-        checks.push({ label: 'Bénéficiaires', ok: hasBens, critical: true });
+        checks.push({ label: 'Donateurs', ok: hasDonors, critical: true, detail: hasDonors ? donors.length + ' donateur(s)' : 'Aucun donateur' });
+        checks.push({ label: 'Bénéficiaires', ok: hasBens, critical: true, detail: hasBens ? bens.length + ' bénéficiaire(s)' : 'Aucun bénéficiaire' });
         const allAges = donors.every(d => d.age > 0);
-        checks.push({ label: 'Âges donateurs', ok: allAges, critical: true });
-        const hasDonations = donors.some(d => d.donationsParBen.some(e => e.montant > 0));
-        const hasDates = donors.every(d => d.donationsParBen.filter(e => e.montant > 0).every(e => e.date));
-        checks.push({ label: 'Donations antérieures (dates)', ok: hasDates, critical: false });
+        checks.push({ label: 'Âges', ok: allAges, critical: true, detail: allAges ? 'Tous renseignés' : 'Manquant(s) — impact démembrement' });
+        const donsWithAmount = donors.flatMap(d => d.donationsParBen.filter(e => e.montant > 0));
+        const hasDates = donsWithAmount.length === 0 || donsWithAmount.every(e => e.date);
+        checks.push({ label: 'Dates donations', ok: hasDates, critical: false, detail: donsWithAmount.length === 0 ? 'Aucune donation déclarée' : hasDates ? 'Toutes datées' : donsWithAmount.filter(e=>!e.date).length + ' sans date → conservateur' });
         const hasConjoint = donors.some(d => d.conjointId && d.conjointId !== 'none') || donors.some(d => d.role === 'conjoint');
-        checks.push({ label: 'Conjoint renseigné', ok: hasConjoint || donors.length <= 1, critical: false });
+        checks.push({ label: 'Conjoint', ok: hasConjoint || donors.length <= 1, critical: false, detail: hasConjoint ? 'Renseigné' : 'Non renseigné — impact régime matrimonial' });
 
         const total = checks.length;
         const passed = checks.filter(c => c.ok).length;
         const pct = Math.round(passed / total * 100);
-        const barColor = pct === 100 ? 'var(--accent-green)' : pct >= 60 ? 'var(--accent-amber)' : 'var(--accent-coral)';
         const criticalFail = checks.filter(c => c.critical && !c.ok);
 
         html += `
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                <div style="font-size:.88rem;font-weight:700;color:var(--primary-color);display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-clipboard-check"></i> Qualité des données
-                </div>
-                <div style="flex:1;height:8px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
-                    <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
-                </div>
-                <span style="font-size:.72rem;font-weight:700;color:${barColor};">${pct}%</span>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
-                ${checks.map(c => `<span style="font-size:.62rem;padding:3px 8px;border-radius:4px;background:${c.ok ? 'rgba(46,125,50,.1)' : c.critical ? 'rgba(255,107,107,.1)' : 'rgba(255,183,77,.1)'};color:${c.ok ? 'var(--accent-green)' : c.critical ? 'var(--accent-coral)' : 'var(--accent-amber)'};">${c.ok ? '✅' : c.critical ? '❌' : '⚠️'} ${c.label}</span>`).join('')}
-            </div>
-            ${criticalFail.length > 0 ? `<div style="font-size:.68rem;padding:8px 12px;border-radius:6px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);color:var(--accent-coral);margin-bottom:14px;"><strong>⛔ Bloquant :</strong> ${criticalFail.map(c => c.label).join(', ')} manquant(s).</div>` : ''}`;
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:8px;margin-bottom:16px;">
+                ${checks.map(c => {
+                    const bg = c.ok ? 'rgba(46,125,50,.08)' : c.critical ? 'rgba(255,107,107,.08)' : 'rgba(255,183,77,.08)';
+                    const brd = c.ok ? 'rgba(46,125,50,.2)' : c.critical ? 'rgba(255,107,107,.25)' : 'rgba(255,183,77,.2)';
+                    const clr = c.ok ? 'var(--accent-green)' : c.critical ? 'var(--accent-coral)' : 'var(--accent-amber)';
+                    const ico = c.ok ? '✓' : c.critical ? '✗' : '!';
+                    return `<div style="padding:10px 12px;border-radius:8px;background:${bg};border:1px solid ${brd};">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                            <span style="width:20px;height:20px;border-radius:50%;background:${clr};color:#fff;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${ico}</span>
+                            <span style="font-size:.72rem;font-weight:700;color:${clr};">${c.label}</span>
+                        </div>
+                        <div style="font-size:.6rem;color:var(--text-muted);line-height:1.3;">${c.detail}</div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+
+        if (criticalFail.length > 0) {
+            html += `<div style="font-size:.7rem;padding:10px 14px;border-radius:8px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);color:var(--accent-coral);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <span style="font-size:1.1rem;">⛔</span>
+                <span><strong>Bloquant :</strong> ${criticalFail.map(c => c.label).join(', ')} — à renseigner avant de continuer.</span>
+            </div>`;
+        }
 
         html += `
             <div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
