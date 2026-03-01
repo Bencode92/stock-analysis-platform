@@ -227,23 +227,17 @@ const PathOptimizer = (() => {
 
     // Override lien fiscal pour une paire donateur↔bénéficiaire
     function updateDonorBenLien(donorId, benId, lienOverride) {
-        const d = donors.find(d => d.id === donorId);
+        const d = donors.find(d => d.id === +donorId);
         if (!d) return;
-        let entry = d.donationsParBen.find(e => e.benId === benId);
+        const bid = +benId;
+        let entry = d.donationsParBen.find(e => +e.benId === bid);
         if (!entry) {
-            entry = { benId, montant: 0, lienOverride: null };
+            entry = { benId: bid, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
             d.donationsParBen.push(entry);
         }
         entry.lienOverride = lienOverride === 'auto' ? null : lienOverride;
-        // Full re-render needed for this donor to update abattement
-        const container = document.getElementById('donors-list');
-        const card = document.querySelector(`[data-donor-id="${donorId}"]`);
-        if (container && card) {
-            const bens = getBeneficiaries();
-            const newCard = document.createElement('div');
-            newCard.innerHTML = buildDonorCardHtml(d, bens);
-            card.replaceWith(newCard.firstElementChild);
-        }
+        // Re-render only the donation bar, not the whole card
+        renderDonorDonationBar(+donorId, bid);
         updateMatrix();
         refreshBenDonSummaries();
     }
@@ -1147,24 +1141,28 @@ const PathOptimizer = (() => {
 
 
     function renderDonorDonationBar(donorId, benId) {
-        const d = donors.find(d => d.id === donorId);
+        const d = donors.find(d => d.id === +donorId);
         const bens = getBeneficiaries();
         const b = bens.find(b => String(b.id) === String(benId));
         if (!d || !b) return;
 
         const montant = getDonorDonationForBen(donorId, benId);
         const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
-        const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
+        const abat = (lienFiscal === 'aucun') ? 0 : (ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers);
         const restant = Math.max(0, abat - montant);
         const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
         const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
 
         const bar = document.getElementById(`don-bar-${donorId}-${benId}`);
         const rest = document.getElementById(`don-rest-${donorId}-${benId}`);
+        const label = document.getElementById(`don-label-${donorId}-${benId}`);
         if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
         if (rest) {
             rest.style.color = restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)';
             rest.innerHTML = `${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>`;
+        }
+        if (label) {
+            label.innerHTML = `→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span>`;
         }
     }
 
