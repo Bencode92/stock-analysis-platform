@@ -206,27 +206,43 @@ const SD = (() => {
         // Build tree summary
         donors.forEach(d => {
             const links = [];
-            // Links to beneficiaries
+            // Links to beneficiaries — use RAW montant for display
             bens.forEach(b => {
                 const lien = typeof PathOptimizer !== 'undefined'
                     ? PathOptimizer.getEffectiveLien(d.id, b.id, d.role, b.lien)
                     : 'tiers';
                 if (lien !== 'aucun') {
-                    const don = typeof PathOptimizer !== 'undefined' ? PathOptimizer.getDonorDonationForBen(d.id, b.id) : 0;
+                    const don = typeof PathOptimizer !== 'undefined'
+                        ? (PathOptimizer.getDonorDonationForBenRaw ? PathOptimizer.getDonorDonationForBenRaw(d.id, b.id) : PathOptimizer.getDonorDonationForBen(d.id, b.id))
+                        : 0;
                     links.push({ nom: b.prenom || 'Bénéf.', type: 'ben', lien, don });
                 }
             });
-            // Entourage
+            // Inter-donateurs
+            const otherDonors = donors.filter(od => od.id !== d.id);
+            otherDonors.forEach(od => {
+                const lienAuto = typeof PathOptimizer !== 'undefined'
+                    ? PathOptimizer.getEffectiveLien(d.id, od.id, d.role, od.role)
+                    : 'tiers';
+                if (lienAuto !== 'tiers' && lienAuto !== 'aucun') {
+                    links.push({ nom: od.nom, type: 'donateur', lien: lienAuto, don: 0 });
+                }
+            });
+            // Entourage — skip empty names
             const entourage = d.entourage || [];
-            entourage.forEach(e => {
-                links.push({ nom: e.nom || '?', type: 'entourage', lien: e.lien, don: 0 });
+            entourage.filter(e => e.nom && e.nom.trim()).forEach(e => {
+                links.push({ nom: e.nom, type: 'entourage', lien: e.lien, don: 0 });
             });
             tree.push({ nom: d.nom, role: d.role, age: d.age, links, entLen: entourage.length, conjointId: d.conjointId });
         });
 
-        // Smart questions
+        // Smart questions — dedup and be smarter
+        // Check conjoint: consider both d.conjointId AND if another donor has role 'conjoint'
+        const hasConjointDonor = donors.some(d => d.role === 'conjoint');
         donors.forEach(d => {
-            if (!d.conjointId) {
+            const otherDonorIsConjoint = donors.some(od => od.id !== d.id && od.role === 'conjoint');
+            const hasEntourageConjoint = !!d.conjointId && d.conjointId !== 'none';
+            if (!otherDonorIsConjoint && !hasEntourageConjoint && d.role !== 'conjoint') {
                 questions.push({ icon: '💍', text: `${d.nom} a-t-il/elle un(e) conjoint(e) ou partenaire PACS ?`, severity: 'info' });
             }
             const hasFrere = (d.entourage || []).some(e => e.lien === 'frere');
@@ -239,8 +255,15 @@ const SD = (() => {
                     questions.push({ icon: '👨‍👩‍👧', text: `${d.nom} a-t-il/elle d'autres enfants que ${childDonors.map(c => c.nom).join(', ') || '?'} ? (= oncles/tantes des bénéficiaires)`, severity: 'warn' });
                 }
             }
+
+            // Check for donations without dates
+            const donsWithoutDate = (d.donationsParBen || []).filter(e => e.montant > 0 && !e.date);
+            if (donsWithoutDate.length > 0) {
+                questions.push({ icon: '📅', text: `${d.nom} : ${donsWithoutDate.length} donation(s) sans date → calcul conservateur (abattement réputé consommé)`, severity: 'warn' });
+            }
         });
 
+        // Beneficiary checks — ONE question for cousins, not per-ben
         bens.forEach(b => {
             const donorsLinked = donors.filter(d => {
                 const lien = typeof PathOptimizer !== 'undefined'
@@ -251,12 +274,10 @@ const SD = (() => {
             if (donorsLinked.length === 0) {
                 questions.push({ icon: '⚠️', text: `${b.prenom || 'Bénéficiaire'} n'a aucun lien fiscal avec les donateurs. Vérifiez les liens.`, severity: 'error' });
             }
-            // Check for siblings
-            const otherBens = bens.filter(bb => bb.id !== b.id);
-            if (otherBens.length > 0) {
-                questions.push({ icon: '👯', text: `${b.prenom || 'Bénéf.'} a-t-il/elle des cousins liés aux donateurs ? (pas dans la liste actuelle)`, severity: 'info' });
-            }
         });
+        if (bens.length >= 2) {
+            questions.push({ icon: '👯', text: `Les bénéficiaires ont-ils des cousins liés aux donateurs ? (pas dans la liste actuelle)`, severity: 'info' });
+        }
 
         // Render in a modal-like overlay at bottom of step 1
         let container = el('family-validation');
@@ -282,7 +303,7 @@ const SD = (() => {
         const hasDonations = donors.some(d => d.donationsParBen.some(e => e.montant > 0));
         const hasDates = donors.every(d => d.donationsParBen.filter(e => e.montant > 0).every(e => e.date));
         checks.push({ label: 'Donations antérieures (dates)', ok: hasDates, critical: false });
-        const hasConjoint = donors.some(d => d.conjointId);
+        const hasConjoint = donors.some(d => d.conjointId && d.conjointId !== 'none') || donors.some(d => d.role === 'conjoint');
         checks.push({ label: 'Conjoint renseigné', ok: hasConjoint || donors.length <= 1, critical: false });
 
         const total = checks.length;
@@ -317,9 +338,10 @@ const SD = (() => {
             html += `<div style="flex:1;min-width:200px;padding:10px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">
                 <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;">${t.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${formatRole(t.role)}, ${t.age} ans)</span></div>
                 ${t.links.map(l => {
-                    const icon = l.type === 'ben' ? '🎯' : '👤';
+                    const icon = l.type === 'ben' ? '🎯' : l.type === 'donateur' ? '💰' : '👤';
                     const donStr = l.don > 0 ? ` · <span style="color:var(--accent-coral);">donné ${new Intl.NumberFormat('fr-FR').format(l.don)}€</span>` : '';
-                    return `<div style="font-size:.65rem;padding:2px 0;color:var(--text-secondary);">${icon} ${l.nom} — ${formatLienShort(l.lien)}${donStr}</div>`;
+                    const dateWarn = l.type === 'ben' && l.don > 0 && !l.hasDate ? ' <span style="color:var(--accent-amber);font-size:.55rem;">📅?</span>' : '';
+                    return `<div style="font-size:.65rem;padding:2px 0;color:var(--text-secondary);">${icon} ${l.nom} — ${formatLienShort(l.lien)}${donStr}${dateWarn}</div>`;
                 }).join('')}
                 ${t.links.length === 0 ? '<div style="font-size:.62rem;color:var(--text-muted);">Aucun lien</div>' : ''}
             </div>`;
