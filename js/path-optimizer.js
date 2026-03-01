@@ -635,6 +635,8 @@ const PathOptimizer = (() => {
 
     function detectLienBetweenDonors(role1, role2) {
         // role1 = donateur qui donne, role2 = celui qui reçoit
+        // Conjoint ↔ anyone = conjoint_pacs_donation
+        if (role1 === 'conjoint' || role2 === 'conjoint') return 'conjoint_pacs_donation';
         // Grand-parent → Parent = GP donne à son enfant = lien "enfant" (100k abat.)
         if (role1 === 'grand_parent' && role2 === 'parent') return 'enfant';
         // Parent → Grand-parent = enfant donne à son parent = lien "enfant" aussi (LD ascendante)
