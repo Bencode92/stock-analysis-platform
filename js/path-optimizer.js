@@ -1451,7 +1451,7 @@ const PathOptimizer = (() => {
     // PUBLIC API
     // ============================================================
     return {
-        setFiscal,
+        setFiscal, isDonationInRappel,
         addDonor, removeDonor, updateDonor, getDonors,
         addEntourage, removeEntourage, updateEntourage, updateDonorConjoint,
         toggleEntourageExpand, updateEntourageDonation, updateEntourageDonLien,
