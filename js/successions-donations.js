@@ -885,33 +885,45 @@ const SD = (() => {
     function renderNode(p, levels) {
         const hasChildren = FamilyGraph.children(p.id).length > 0;
         const hasParents = FamilyGraph.parents(p.id).length > 0;
+        const hasSiblings = FamilyGraph.siblings(p.id).length > 0;
         const hasSpouse = !!FamilyGraph.spouse(p.id);
 
         const donorBg = p.isDonor ? 'rgba(198,134,66,.15)' : 'transparent';
         const benBorder = p.isBeneficiary ? '2px solid var(--accent-green)' : '1.5px solid rgba(198,134,66,.2)';
         const roleIcons = (p.isDonor ? '💰' : '') + (p.isBeneficiary ? '🎯' : '');
 
+        // Action buttons — contextual
+        const btnStyle = 'font-size:.52rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;white-space:nowrap;';
+
+        let topBtns = '';
+        if (!hasParents) {
+            topBtns = `<button onclick="SD.addRelative(${p.id},'parent')" style="${btnStyle}">↑ Parent</button>`;
+        }
+
+        let bottomBtns = `<button onclick="SD.addRelative(${p.id},'child')" style="${btnStyle}">↓ Enfant</button>`;
+        if (hasParents) {
+            bottomBtns = `<div style="display:flex;gap:3px;justify-content:center;">
+                <button onclick="SD.addRelative(${p.id},'sibling')" style="${btnStyle}">↔ Frère/Sœur</button>
+                <button onclick="SD.addRelative(${p.id},'child')" style="${btnStyle}">↓ Enfant</button>
+            </div>`;
+        }
+
         return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-            ${!hasParents ? `<button onclick="SD.addRelative(${p.id},'parent')" style="font-size:.55rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;" title="Ajouter un parent">+ Parent</button>` : ''}
+            ${topBtns}
             <div style="display:flex;align-items:center;gap:2px;">
-                ${!hasSpouse ? `<button onclick="SD.addRelative(${p.id},'spouse')" style="font-size:.5rem;padding:2px 4px;border:1px dashed rgba(255,107,107,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;writing-mode:vertical-rl;" title="Ajouter conjoint">+💍</button>` : ''}
-                <div style="padding:8px 12px;border-radius:10px;background:${donorBg};border:${benBorder};min-width:90px;text-align:center;position:relative;">
-                    <button onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.6;" title="Supprimer">✕</button>
-                    <input type="text" value="${p.nom}" placeholder="Nom" 
-                           style="font-size:.72rem;font-weight:700;text-align:center;background:none;border:none;border-bottom:1px solid rgba(198,134,66,.15);color:var(--text-primary);width:100%;padding:2px 0;outline:none;"
-                           onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);SD.renderFamilyTree();">
-                    <div style="display:flex;justify-content:center;gap:4px;margin-top:4px;">
-                        <input type="number" value="${p.age || ''}" placeholder="âge" min="0" max="120"
-                               style="font-size:.58rem;width:36px;text-align:center;background:rgba(198,134,66,.05);border:1px solid rgba(198,134,66,.1);border-radius:4px;color:var(--text-secondary);padding:2px;"
-                               onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
-                        <input type="number" value="${p.patrimoine || ''}" placeholder="patrim." min="0" step="10000"
-                               style="font-size:.58rem;width:60px;text-align:center;background:rgba(198,134,66,.05);border:1px solid rgba(198,134,66,.1);border-radius:4px;color:var(--text-secondary);padding:2px;"
-                               onchange="FamilyGraph.updatePerson(${p.id},'patrimoine',this.value);">
-                    </div>
-                    ${roleIcons ? `<div style="font-size:.6rem;margin-top:2px;">${roleIcons}</div>` : ''}
+                ${!hasSpouse ? `<button onclick="SD.addRelative(${p.id},'spouse')" style="font-size:.5rem;padding:2px 4px;border:1px dashed rgba(255,107,107,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;" title="Conjoint">💍</button>` : ''}
+                <div style="padding:8px 10px;border-radius:10px;background:${donorBg};border:${benBorder};min-width:80px;text-align:center;position:relative;">
+                    <button onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();" style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.45rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.5;" title="Supprimer">✕</button>
+                    <input type="text" value="${p.nom}" placeholder="Nom"
+                           style="font-size:.7rem;font-weight:700;text-align:center;background:none;border:none;border-bottom:1px solid rgba(198,134,66,.15);color:var(--text-primary);width:100%;padding:2px 0;outline:none;"
+                           onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);">
+                    <input type="number" value="${p.age || ''}" placeholder="âge" min="0" max="120"
+                           style="font-size:.55rem;width:36px;text-align:center;background:rgba(198,134,66,.05);border:1px solid rgba(198,134,66,.1);border-radius:4px;color:var(--text-secondary);padding:2px;margin-top:3px;"
+                           onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
+                    ${roleIcons ? `<div style="font-size:.55rem;margin-top:2px;">${roleIcons}</div>` : ''}
                 </div>
             </div>
-            ${!hasChildren ? `<button onclick="SD.addRelative(${p.id},'child')" style="font-size:.55rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;" title="Ajouter un enfant">+ Enfant</button>` : `<button onclick="SD.addRelative(${p.id},'child')" style="font-size:.5rem;padding:1px 4px;border:1px dashed rgba(198,134,66,.2);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;opacity:.5;" title="Encore un enfant">+</button>`}
+            ${bottomBtns}
         </div>`;
     }
 
@@ -922,19 +934,30 @@ const SD = (() => {
         if (type === 'child') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', fromId, newP.id);
-            // If from has a spouse, also add as parent
             const sp = FamilyGraph.spouse(fromId);
             if (sp) FamilyGraph.addRelation('parent', sp.id, newP.id);
         } else if (type === 'parent') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', newP.id, fromId);
+            // Also link parent to all siblings of from (same parents)
+            FamilyGraph.siblings(fromId).forEach(s => {
+                FamilyGraph.addRelation('parent', newP.id, s.id);
+            });
         } else if (type === 'spouse') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('spouse', fromId, newP.id);
-            // Spouse also becomes parent of from's children
             FamilyGraph.children(fromId).forEach(c => {
                 FamilyGraph.addRelation('parent', newP.id, c.id);
             });
+        } else if (type === 'sibling') {
+            // Add a sibling = child of from's parents
+            newP = FamilyGraph.addPerson('', 0);
+            const parents = FamilyGraph.parents(fromId);
+            if (parents.length > 0) {
+                parents.forEach(par => FamilyGraph.addRelation('parent', par.id, newP.id));
+            } else {
+                // No parents declared — create at same level (orphan)
+            }
         }
         renderFamilyTree();
     }
