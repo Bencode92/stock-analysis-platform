@@ -97,12 +97,16 @@ const PathOptimizer = (() => {
 
     function addDonor(role, nom, age, patrimoine, regime) {
         const id = donorIdCounter++;
+        const bens = getBeneficiaries();
         const donor = {
             id, role: role || 'parent', nom: nom || `Donateur ${id + 1}`,
             age: age || 60, patrimoine: patrimoine || 0,
             regime: regime || 'separation',
-            donationsParBen: [], // [{benId, montant}] — donations déjà faites aux bénéficiaires
+            donationsParBen: [],
             donationsRecues: [],
+            // Explicit parentage: { benId: true } — which beneficiaries is this donor a direct parent/GP of
+            // Default: all current beneficiaries (user can uncheck)
+            linkedBens: Object.fromEntries(bens.map(b => [b.id, true])),
             // Entourage — linked family members
             conjointId: null,
             entourage: []
@@ -243,11 +247,33 @@ const PathOptimizer = (() => {
 
     // Get effective lien fiscal for a donor→beneficiary pair
     function getEffectiveLien(donorId, benId, donorRole, benLien) {
-        const d = donors.find(d => d.id === donorId);
+        const d = donors.find(d => d.id === +donorId);
         if (d) {
+            // 1. Manual override always wins
             const entry = d.donationsParBen.find(e => String(e.benId) === String(benId));
             if (entry && entry.lienOverride) return entry.lienOverride;
+
+            // 2. Check explicit parentage — if linkedBens exists and this ben is NOT linked
+            if (d.linkedBens && Object.keys(d.linkedBens).length > 0) {
+                const isLinked = d.linkedBens[benId] || d.linkedBens[String(benId)];
+                if (!isLinked) {
+                    // Not direct relative. Check cross-family links (neveu/nièce via sibling)
+                    const linkedDonors = donors.filter(od => od.id !== d.id && od.linkedBens && (od.linkedBens[benId] || od.linkedBens[String(benId)]));
+                    for (const ld of linkedDonors) {
+                        const interLien = detectLienBetweenDonors(d.role, ld.role);
+                        if (interLien === 'conjoint_pacs_donation') {
+                            // Conjoint of the actual parent → beau-parent, same as parent fiscally
+                            return detectLien(d.role, benLien || 'enfant');
+                        }
+                        if (interLien === 'frere_soeur' || d.role === 'oncle_tante') {
+                            return 'neveu_niece';
+                        }
+                    }
+                    return 'tiers';
+                }
+            }
         }
+        // 3. Fall back to role-based detection
         return detectLien(donorRole || 'parent', benLien || 'enfant');
     }
 
@@ -770,6 +796,17 @@ const PathOptimizer = (() => {
         renderDonorList();
     }
 
+    function toggleLinkedBen(donorId, benId, isLinked) {
+        const d = donors.find(d => d.id === +donorId);
+        if (!d) return;
+        if (!d.linkedBens) d.linkedBens = {};
+        d.linkedBens[benId] = isLinked;
+        // Full re-render to update lien labels, matrix, bars
+        renderDonorList();
+        updateMatrix();
+        refreshBenDonSummaries();
+    }
+
     function buildEntourageHtml(d) {
         const otherDonors = donors.filter(od => od.id !== d.id);
 
@@ -922,6 +959,29 @@ const PathOptimizer = (() => {
     }
 
     function buildDonorCardHtml(d, bens) {
+            // === LINKED BENEFICIARIES (parenté explicite) ===
+            let linkedBensHtml = '';
+            if (bens.length > 0) {
+                if (!d.linkedBens) d.linkedBens = Object.fromEntries(bens.map(b => [b.id, true]));
+                const linkedCount = bens.filter(b => d.linkedBens[b.id] || d.linkedBens[String(b.id)]).length;
+                linkedBensHtml = `
+                <div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">
+                    <label class="form-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-link"></i> Bénéficiaires directs de ${d.nom} <span style="font-size:.58rem;color:var(--text-muted);">(${linkedCount}/${bens.length} — décochez ceux qui ne sont pas vos enfants/petits-enfants)</span>
+                    </label>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                        ${bens.map(b => {
+                            const isLinked = d.linkedBens[b.id] || d.linkedBens[String(b.id)];
+                            const lien = getEffectiveLien(d.id, b.id, d.role, b.lien);
+                            return `<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.68rem;background:${isLinked ? 'rgba(46,125,50,.1)' : 'rgba(198,134,66,.03)'};border:1px solid ${isLinked ? 'rgba(46,125,50,.25)' : 'rgba(198,134,66,.08)'};color:${isLinked ? 'var(--accent-green)' : 'var(--text-muted)'};">
+                                <input type="checkbox" ${isLinked ? 'checked' : ''} onchange="PathOptimizer.toggleLinkedBen(${d.id},${b.id},this.checked)" style="accent-color:var(--accent-green);">
+                                ${b.prenom || 'Bénéf.'} <span style="font-size:.55rem;opacity:.7;">${formatLienShort(lien)}</span>
+                            </label>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+
             // Per-beneficiary donation rows
             let donBenHtml = '';
             if (bens.length > 0) {
@@ -1118,6 +1178,7 @@ const PathOptimizer = (() => {
                         </select>
                     </div>
                 </div>
+                ${linkedBensHtml}
                 ${donBenHtml}
                 ${donRecvHtml}
                 ${buildEntourageHtml(d)}
