@@ -1,1528 +1,1486 @@
-/**
- * ================================================================
- * PATH OPTIMIZER — Moteur d'optimisation multi-donateurs
- * ================================================================
- * Complète successions-donations.js sans le modifier.
- * 
- * Architecture :
- *   1. DONORS    — Gestion de la liste de donateurs multiples
- *   2. GRAPH     — Construction du graphe familial (donateurs ↔ bénéficiaires)
- *   3. PATHS     — Calcul de tous les chemins de transmission possibles
- *   4. OPTIMIZER — Classement des chemins par coût fiscal net
- *   5. UI        — Rendu de la matrice et des résultats de chemins
- * 
- * Dépendance : utilise SD (successions-donations.js) pour les constantes FISCAL,
- *              les fonctions calcDroits, getBareme, getAbattement, getNPRatio.
- * ================================================================
- */
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acquisition Pipeline — Pappers · Actify · BODACC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base: #06090f;
+  --bg-card: #0d1117;
+  --bg-elevated: #151b25;
+  --bg-input: #1a2233;
+  --border: #1e293b;
+  --border-hover: #334155;
+  --text: #e2e8f0;
+  --text-muted: #8892a4;
+  --text-dim: #4a5568;
+  --accent-pappers: #3b82f6;
+  --accent-actify: #f43f5e;
+  --accent-bodacc: #eab308;
+  --accent-green: #22c55e;
+  --accent-cyan: #06b6d4;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-body: 'Work Sans', sans-serif;
+}
 
-const PathOptimizer = (() => {
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-    // ============================================================
-    // 1. DONORS — Gestion multi-donateurs
-    // ============================================================
-    let donorIdCounter = 0;
-    const donors = [];
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-    // Relations familiales et liens fiscaux auto-détectés
-    const ROLE_MAP = {
-        parent:        { versEnfant: 'enfant', versPetitEnfant: 'petit_enfant', versArrPetitEnfant: 'arriere_petit_enfant' },
-        grand_parent:  { versEnfant: 'petit_enfant', versPetitEnfant: 'arriere_petit_enfant' },
-        arr_grand_parent: { versEnfant: 'arriere_petit_enfant' },
-        oncle_tante:   { versEnfant: 'neveu_niece' },
-        conjoint:      { versEnfant: 'enfant' }, // beau-parent, même abattement si adoption
-        tiers:         { versEnfant: 'tiers' }
-    };
+/* === HEADER === */
+header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  height: 60px;
+}
+.logo {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.logo span { color: var(--accent-cyan); }
 
-    // FISCAL — loaded from SD via setFiscal(), fallback to window.__FISCAL__ or hardcoded
-    let ABATTEMENTS = {
-        enfant: 100000, petit_enfant: 31865, arriere_petit_enfant: 5310,
-        conjoint_pacs_donation: 80724, conjoint_pacs_succession: Infinity,
-        frere_soeur: 15932, neveu_niece: 7967, tiers: 1594,
-        handicap: 159325, don_familial_argent: 31865, rappel_fiscal_ans: 15
-    };
-    let BAREMES = {
-        ligne_directe: [ { max: 8072, taux: 0.05 }, { max: 12109, taux: 0.10 }, { max: 15932, taux: 0.15 }, { max: 552324, taux: 0.20 }, { max: 902838, taux: 0.30 }, { max: 1805677, taux: 0.40 }, { max: Infinity, taux: 0.45 } ],
-        frere_soeur: [ { max: 24430, taux: 0.35 }, { max: Infinity, taux: 0.45 } ],
-        neveu_niece: [{ max: Infinity, taux: 0.55 }],
-        tiers: [{ max: Infinity, taux: 0.60 }]
-    };
-    let DEMEMBREMENT = [
-        { maxAge: 20, np: 0.10 }, { maxAge: 30, np: 0.20 }, { maxAge: 40, np: 0.30 },
-        { maxAge: 50, np: 0.40 }, { maxAge: 60, np: 0.50 }, { maxAge: 70, np: 0.60 },
-        { maxAge: 80, np: 0.70 }, { maxAge: 90, np: 0.80 }, { maxAge: Infinity, np: 0.90 }
-    ];
+nav { display: flex; gap: 4px; }
+.tab-btn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+  position: relative;
+  top: 1px;
+}
+.tab-btn:hover { color: var(--text); background: var(--bg-elevated); }
+.tab-btn.active {
+  color: var(--text);
+  background: var(--bg-base);
+  border-color: var(--border);
+  border-bottom-color: var(--bg-base);
+}
+.tab-btn[data-tab="pappers"].active { color: var(--accent-pappers); }
+.tab-btn[data-tab="actify"].active { color: var(--accent-actify); }
+.tab-btn[data-tab="bodacc"].active { color: var(--accent-bodacc); }
 
-    function setFiscal(fiscal) {
-        if (!fiscal) return;
-        ABATTEMENTS = fiscal.abattements || ABATTEMENTS;
-        if (fiscal.bareme_ligne_directe) {
-            BAREMES = {
-                ligne_directe: fiscal.bareme_ligne_directe,
-                frere_soeur: fiscal.bareme_frere_soeur || BAREMES.frere_soeur,
-                neveu_niece: fiscal.bareme_neveu_niece || BAREMES.neveu_niece,
-                tiers: fiscal.bareme_tiers || BAREMES.tiers
-            };
-        }
-        if (fiscal.demembrement) DEMEMBREMENT = fiscal.demembrement;
-        console.log('[PathOptimizer] Fiscal data synced from SD');
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.last-update {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* === MAIN === */
+main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* === SHARED COMPONENTS === */
+.section-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: 3px;
+  margin-bottom: 4px;
+}
+.section-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+input, select, textarea {
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+input:focus, select:focus { border-color: var(--accent-cyan); }
+input::placeholder { color: var(--text-dim); }
+
+label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--accent-pappers); color: #fff; }
+.btn-primary:hover { background: #2563eb; }
+.btn-danger { background: var(--accent-actify); color: #fff; }
+.btn-danger:hover { background: #e11d48; }
+.btn-warning { background: var(--accent-bodacc); color: #000; }
+.btn-warning:hover { background: #ca8a04; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.btn-outline:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+
+.badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--accent-pappers); }
+.badge-red { background: rgba(244,63,94,0.15); color: var(--accent-actify); }
+.badge-yellow { background: rgba(234,179,8,0.15); color: var(--accent-bodacc); }
+.badge-green { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* === TABLES === */
+.table-wrap {
+  overflow-x: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+thead th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+}
+thead th:hover { color: var(--text); }
+thead th.sorted-asc::after { content: " ▲"; color: var(--accent-cyan); }
+thead th.sorted-desc::after { content: " ▼"; color: var(--accent-cyan); }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(30,41,59,0.5);
+  vertical-align: top;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: rgba(6,182,212,0.04); }
+tbody tr:nth-child(even) { background: rgba(13,17,23,0.5); }
+tbody tr:nth-child(even):hover { background: rgba(6,182,212,0.04); }
+
+.link-cell a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.link-cell a:hover { text-decoration: underline; }
+
+/* === PAPPERS TAB === */
+.pappers-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.filters-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  position: sticky;
+  top: 84px;
+}
+.filters-panel h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-group { margin-bottom: 14px; }
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.filter-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+.token-input { position: relative; }
+.token-input input { padding-right: 36px; }
+.token-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.results-panel { min-width: 0; }
+.results-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.results-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.search-results-input { max-width: 280px; }
+
+/* === BODACC TAB === */
+.bodacc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.proc-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* === LOADING & EMPTY STATES === */
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+.loading-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+.empty-state h3 { color: var(--text-muted); margin-bottom: 8px; }
+
+/* === DATA SOURCE FILE INPUT === */
+.file-source {
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.file-source label { margin: 0; }
+
+/* === MODAL === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px;
+}
+.modal h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+.modal-close {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+.modal-field { margin-bottom: 10px; }
+.modal-field-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+.modal-field-value {
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* === ACTIFY FILTERS (v2) === */
+.actify-urgency-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.actify-ubadge {
+  display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card);
+  cursor: pointer; transition: all 0.2s; font-size: 13px; user-select: none;
+  font-family: var(--font-body);
+}
+.actify-ubadge:hover { background: var(--bg-elevated); }
+.actify-ubadge.active { border-color: var(--accent-cyan); background: rgba(6,182,212,0.08); }
+.actify-ubadge .udot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.actify-ubadge .ucount { font-weight: 700; font-size: 15px; font-family: var(--font-mono); }
+.actify-ubadge.ub-crit .udot { background: var(--accent-actify); }
+.actify-ubadge.ub-crit.active { border-color: var(--accent-actify); background: rgba(244,63,94,0.1); }
+.actify-ubadge.ub-warn .udot { background: #f59e0b; }
+.actify-ubadge.ub-warn.active { border-color: #f59e0b; background: rgba(245,158,11,0.1); }
+.actify-ubadge.ub-mid .udot { background: var(--accent-bodacc); }
+.actify-ubadge.ub-mid.active { border-color: var(--accent-bodacc); background: rgba(234,179,8,0.1); }
+.actify-ubadge.ub-ok .udot { background: var(--accent-green); }
+.actify-ubadge.ub-ok.active { border-color: var(--accent-green); background: rgba(34,197,94,0.1); }
+.actify-ubadge.ub-all .udot { background: var(--text-dim); }
+
+.actify-filter-bar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
+.actify-fg { display: flex; flex-direction: column; gap: 4px; }
+.actify-fg.fg-search { flex: 1; min-width: 200px; }
+.actify-fg.fg-dept { width: 160px; }
+.actify-fg.fg-sort { width: 160px; }
+
+.actify-sector-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.actify-sector-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-dim); font-weight: 600; margin-right: 4px;
+}
+.actify-schip {
+  font-size: 12px; padding: 4px 10px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text-muted); cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.actify-schip:hover { background: var(--bg-elevated); color: var(--text); }
+.actify-schip.active { background: rgba(6,182,212,0.1); border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.actify-schip .sc-count { font-size: 10px; opacity: 0.7; margin-left: 2px; }
+
+.actify-results-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px; padding: 8px 0; border-top: 1px solid var(--border);
+}
+.actify-results-count { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
+.actify-results-count strong { color: var(--accent-actify); font-size: 16px; }
+.actify-btn-reset {
+  font-size: 11px; padding: 4px 10px; border-radius: 4px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-dim); cursor: pointer; font-family: var(--font-mono);
+}
+.actify-btn-reset:hover { color: var(--accent-actify); border-color: var(--accent-actify); }
+
+.actify-table-wrap { max-height: 70vh; overflow-y: auto; }
+.actify-table-wrap::-webkit-scrollbar { width: 6px; }
+.actify-table-wrap::-webkit-scrollbar-track { background: var(--bg-card); }
+.actify-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.td-sector-tag {
+  font-size: 11px; display: inline-block; padding: 2px 6px; border-radius: 4px;
+  background: rgba(6,182,212,0.1); color: var(--accent-cyan); white-space: nowrap; margin-top: 2px;
+}
+.dl-crit { color: var(--accent-actify); font-weight: 600; }
+.dl-warn { color: #f59e0b; font-weight: 600; }
+.dl-mid { color: var(--accent-bodacc); font-weight: 600; }
+.dl-ok { color: var(--accent-green); font-weight: 600; }
+
+/* === RESPONSIVE === */
+@media (max-width: 900px) {
+  .pappers-layout { grid-template-columns: 1fr; }
+  .filters-panel { position: static; }
+  .actify-filter-bar { flex-direction: column; }
+  .actify-fg.fg-search, .actify-fg.fg-dept, .actify-fg.fg-sort { width: 100%; min-width: unset; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo"><span>▲</span> ACQUISITION <span>PIPELINE</span></div>
+    <nav>
+      <button class="tab-btn active" data-tab="pappers" onclick="switchTab('pappers')">⬡ PAPPERS</button>
+      <button class="tab-btn" data-tab="actify" onclick="switchTab('actify')">⬡ ACTIFY</button>
+      <button class="tab-btn" data-tab="bodacc" onclick="switchTab('bodacc')">⬡ BODACC</button>
+    </nav>
+    <div class="header-right">
+      <div class="status-dot"></div>
+      <span class="last-update" id="globalLastUpdate">—</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║           PAPPERS TAB                    ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<div class="tab-content active" id="tab-pappers">
+  <h2 class="section-title" style="color:var(--accent-pappers);">PAPPERS — RECHERCHE ENTREPRISES</h2>
+  <p class="section-subtitle">Chasse proactive : succession (dirigeant 55+) & distressed (procédure collective)</p>
+
+  <div class="pappers-layout">
+    <!-- FILTRES -->
+    <div class="filters-panel">
+      <h3>🔍 FILTRES</h3>
+
+      <div class="filter-group">
+        <label>Token API Pappers</label>
+        <div class="token-input">
+          <input type="password" id="pappersToken" placeholder="Votre clé API..." value="">
+          <button class="token-toggle" onclick="toggleTokenVisibility()" title="Afficher/masquer">👁</button>
+        </div>
+      </div>
+
+      <hr class="filter-divider">
+
+      <div class="filter-group">
+        <label>Codes NAF (séparés par virgule)</label>
+        <textarea id="pappersNaf" rows="3" placeholder="10.72Z, 25.14Z, 32.12Z...">10.72Z,10.82Z,23.13Z,23.41Z,25.14Z,25.71Z,32.12Z,15.12Z,20.42Z,16.29Z</textarea>
+      </div>
+
+      <div class="filter-group">
+        <label>Âge dirigeant</label>
+        <div class="filter-row">
+          <input type="number" id="pappersAgeMin" placeholder="Min" value="55">
+          <input type="number" id="pappersAgeMax" placeholder="Max" value="80">
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label>Chiffre d'affaires (€)</label>
+        <div class="filter-row">
+          <input type="number" id="pappersCaMin" placeholder="Min" value="300000">
+          <input type="number" id="pappersCaMax" placeholder="Max" value="5000000">
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label>Date création max (JJ-MM-AAAA)</label>
+        <input type="text" id="pappersDateMax" placeholder="01-01-2000" value="01-01-2000">
+      </div>
+
+      <div class="filter-group">
+        <label>Département(s) (ex: 75,92,69)</label>
+        <input type="text" id="pappersDept" placeholder="Vide = toute la France">
+      </div>
+
+      <div class="filter-group">
+        <label>Résultats par page</label>
+        <select id="pappersPerPage">
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+        </select>
+      </div>
+
+      <div class="filter-group" style="margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="pappersDistressed">
+          Canal Distressed (procédure collective)
+        </label>
+      </div>
+
+      <hr class="filter-divider">
+
+      <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:12px;" onclick="searchPappers()">
+        ⚡ RECHERCHER
+      </button>
+
+      <div id="pappersCredits" style="text-align:center;margin-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);"></div>
+    </div>
+
+    <!-- RÉSULTATS -->
+    <div class="results-panel">
+      <div class="stat-grid" id="pappersStats" style="display:none;">
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent-pappers);" id="pStatTotal">0</div><div class="stat-label">Résultats</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent-green);" id="pStatSaines">0</div><div class="stat-label">Saines</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent-actify);" id="pStatProc">0</div><div class="stat-label">Proc. collective</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent-bodacc);" id="pStatAgeMoy">—</div><div class="stat-label">Âge moyen dirigeant</div></div>
+      </div>
+
+      <div class="results-toolbar">
+        <input type="text" class="search-results-input" id="pappersSearch" placeholder="Filtrer les résultats..." oninput="filterPappersTable()">
+        <button class="btn btn-outline btn-sm" onclick="exportPappersCSV()">📥 Export CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="exportPappersJSON()">📥 Export JSON</button>
+        <span class="results-count" id="pappersResultsCount"></span>
+      </div>
+
+      <div class="file-source">
+        <label style="font-size:12px;color:var(--text-muted);">Ou charger depuis fichier :</label>
+        <input type="file" accept=".json" onchange="loadPappersFile(event)" style="max-width:250px;padding:4px;">
+      </div>
+
+      <div id="pappersLoading" class="loading" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p>Recherche Pappers en cours...</p>
+      </div>
+
+      <div id="pappersEmpty" class="empty-state">
+        <h3>Aucun résultat</h3>
+        <p>Entrez votre token Pappers et lancez une recherche,<br>ou chargez un fichier pappers_results.json</p>
+      </div>
+
+      <div class="table-wrap" id="pappersTableWrap" style="display:none;">
+        <table id="pappersTable">
+          <thead>
+            <tr>
+              <th onclick="sortPappersTable(0)">Entreprise</th>
+              <th onclick="sortPappersTable(1)">SIREN</th>
+              <th onclick="sortPappersTable(2)">NAF</th>
+              <th onclick="sortPappersTable(3)">Ville</th>
+              <th onclick="sortPappersTable(4)">Dép.</th>
+              <th onclick="sortPappersTable(5)">Dirigeant</th>
+              <th onclick="sortPappersTable(6)">Âge</th>
+              <th onclick="sortPappersTable(7)">CA (€)</th>
+              <th onclick="sortPappersTable(8)">Effectif</th>
+              <th onclick="sortPappersTable(9)">Création</th>
+              <th onclick="sortPappersTable(10)">Proc.</th>
+              <th>Lien</th>
+            </tr>
+          </thead>
+          <tbody id="pappersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║           ACTIFY TAB (v2 — filtres)      ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<div class="tab-content" id="tab-actify">
+  <h2 class="section-title" style="color:var(--accent-actify);">ACTIFY — REPRISES À LA BARRE</h2>
+  <p class="section-subtitle">Entreprises en liquidation judiciaire — Offres de reprise <span id="actifyMaj" style="font-size:11px;color:var(--text-dim);margin-left:8px;"></span></p>
+
+  <div class="file-source">
+    <label style="font-size:12px;color:var(--text-muted);">Charger données :</label>
+    <input type="file" accept=".json" id="actifyFileInput" style="max-width:250px;padding:4px;">
+    <span style="font-size:11px;color:var(--text-dim);">actify_listings.json</span>
+    <button class="btn btn-outline btn-sm" id="actifyExportCsv" style="margin-left:auto;">📥 Export CSV</button>
+  </div>
+
+  <!-- URGENCY BADGES -->
+  <div class="actify-urgency-bar" id="actifyUrgencyBar">
+    <div class="actify-ubadge ub-crit" data-urg="3"><span class="udot"></span><span class="ucount" id="aub3">0</span><span>≤ 3j</span></div>
+    <div class="actify-ubadge ub-warn" data-urg="7"><span class="udot"></span><span class="ucount" id="aub7">0</span><span>≤ 7j</span></div>
+    <div class="actify-ubadge ub-mid" data-urg="15"><span class="udot"></span><span class="ucount" id="aub15">0</span><span>≤ 15j</span></div>
+    <div class="actify-ubadge ub-ok" data-urg="30"><span class="udot"></span><span class="ucount" id="aub30">0</span><span>≤ 30j</span></div>
+    <div class="actify-ubadge ub-all active" data-urg="all"><span class="udot"></span><span class="ucount" id="aubAll">0</span><span>Tout</span></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="actify-filter-bar">
+    <div class="actify-fg fg-search">
+      <label>Recherche</label>
+      <input type="text" id="actifySearch2" placeholder="Ex: boulangerie, restaurant, bail...">
+    </div>
+    <div class="actify-fg fg-dept">
+      <label>Département(s)</label>
+      <input type="text" id="actifyDept" placeholder="75,92,69...">
+    </div>
+    <div class="actify-fg fg-sort">
+      <label>Tri</label>
+      <select id="actifySortSelect2">
+        <option value="deadline">Deadline ↑</option>
+        <option value="recent">Plus récent</option>
+        <option value="alpha">A → Z</option>
+        <option value="dept">Département</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- SECTOR CHIPS -->
+  <div class="actify-sector-bar" id="actifySectorBar">
+    <span class="actify-sector-label">Secteur :</span>
+  </div>
+
+  <!-- RESULTS COUNT -->
+  <div class="actify-results-header">
+    <div class="actify-results-count"><strong id="actifyFilteredCount">0</strong> résultat(s) sur <span id="actifyTotalCount">0</span></div>
+    <button class="actify-btn-reset" id="actifyReset">✕ Reset filtres</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap actify-table-wrap">
+    <table id="actifyTable2">
+      <thead>
+        <tr>
+          <th>Deadline</th>
+          <th>Titre</th>
+          <th>Lieu</th>
+          <th>Dép.</th>
+          <th>Résumé</th>
+          <th>Lien</th>
+        </tr>
+      </thead>
+      <tbody id="actifyTbody2">
+        <tr><td colspan="6"><div class="empty-state"><p>⏳ Chargement automatique...</p></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║           BODACC TAB                     ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<div class="tab-content" id="tab-bodacc">
+  <h2 class="section-title" style="color:var(--accent-bodacc);">BODACC — PROCÉDURES COLLECTIVES</h2>
+  <p class="section-subtitle">Ouvertures de RJ, LJ, plans de cession — signaux précoces pour la reprise</p>
+
+  <div class="file-source">
+    <label style="font-size:12px;color:var(--text-muted);">Charger données :</label>
+    <input type="file" accept=".json" onchange="loadBodaccFile(event)" style="max-width:250px;padding:4px;">
+    <span style="font-size:11px;color:var(--text-dim);">bodacc_alerts.json généré par le script Python</span>
+    <button class="btn btn-warning btn-sm" onclick="fetchBodaccLive()" style="margin-left:auto;">⚡ Fetch API Live</button>
+  </div>
+
+  <div class="stat-grid" id="bodaccStats" style="display:none;">
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent-bodacc);" id="bStatTotal">0</div><div class="stat-label">Annonces</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent-actify);" id="bStatRJ">0</div><div class="stat-label">Ouvertures RJ</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent-actify);" id="bStatCession">0</div><div class="stat-label">Plans de cession</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent-cyan);" id="bStatDate">—</div><div class="stat-label">Dernière MAJ</div></div>
+  </div>
+
+  <div class="bodacc-toolbar">
+    <input type="text" id="bodaccSearch" placeholder="Rechercher entreprise, tribunal, ville..." oninput="filterBodacc()" style="max-width:300px;">
+    <select id="bodaccTypeFilter" onchange="filterBodacc()" style="max-width:200px;">
+      <option value="">Tous types</option>
+      <option value="Plan de cession">Plans de cession</option>
+      <option value="Ouverture RJ">Ouvertures RJ</option>
+      <option value="Ouverture LJ">Ouvertures LJ</option>
+      <option value="Sauvegarde">Sauvegardes</option>
+    </select>
+    <input type="number" id="bodaccDays" placeholder="Jours" value="30" style="max-width:100px;" title="Nombre de jours (API live)">
+    <button class="btn btn-outline btn-sm" onclick="exportBodaccCSV()">📥 Export CSV</button>
+    <span class="results-count" id="bodaccCount"></span>
+  </div>
+
+  <div id="bodaccLoading" class="loading" style="display:none;">
+    <div class="loading-spinner"></div>
+    <p>Chargement BODACC en cours...</p>
+  </div>
+
+  <div id="bodaccEmpty" class="empty-state">
+    <h3>Aucune donnée BODACC</h3>
+    <p>Cliquez sur "Fetch API Live" ou chargez un fichier bodacc_alerts.json</p>
+  </div>
+
+  <div class="table-wrap" id="bodaccTableWrap" style="display:none;">
+    <table id="bodaccTable">
+      <thead>
+        <tr>
+          <th onclick="sortBodaccTable(0)">Type</th>
+          <th onclick="sortBodaccTable(1)">Entreprise</th>
+          <th onclick="sortBodaccTable(2)">Ville</th>
+          <th onclick="sortBodaccTable(3)">Dép.</th>
+          <th onclick="sortBodaccTable(4)">Tribunal</th>
+          <th onclick="sortBodaccTable(5)">Date</th>
+          <th onclick="sortBodaccTable(6)">Nature</th>
+          <th>Lien</th>
+        </tr>
+      </thead>
+      <tbody id="bodaccTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+<!-- MODAL pour détail Actify -->
+<div class="modal-overlay hidden" id="actifyModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 id="modalTitle"></h2>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════
+let pappersData = [];
+let actifyData = [];
+let bodaccData = [];
+let pappersSortCol = -1, pappersSortDir = 1;
+let bodaccSortCol = -1, bodaccSortDir = 1;
+
+// ═══════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// PAPPERS
+// ═══════════════════════════════════════
+function toggleTokenVisibility() {
+  const inp = document.getElementById('pappersToken');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function searchPappers() {
+  const token = document.getElementById('pappersToken').value.trim();
+  if (!token) { alert('Entrez votre token API Pappers'); return; }
+
+  const naf = document.getElementById('pappersNaf').value.replace(/\s/g, '');
+  const ageMin = document.getElementById('pappersAgeMin').value;
+  const ageMax = document.getElementById('pappersAgeMax').value;
+  const caMin = document.getElementById('pappersCaMin').value;
+  const caMax = document.getElementById('pappersCaMax').value;
+  const dateMax = document.getElementById('pappersDateMax').value;
+  const dept = document.getElementById('pappersDept').value.replace(/\s/g, '');
+  const perPage = document.getElementById('pappersPerPage').value;
+  const distressed = document.getElementById('pappersDistressed').checked;
+
+  const params = new URLSearchParams();
+  params.append('api_token', token);
+  if (naf) params.append('code_naf', naf);
+  if (ageMin && !distressed) params.append('age_dirigeant_min', ageMin);
+  if (ageMax && !distressed) params.append('age_dirigeant_max', ageMax);
+  if (caMin) params.append('chiffre_affaires_min', caMin);
+  if (caMax) params.append('chiffre_affaires_max', caMax);
+  if (dateMax && !distressed) params.append('date_creation_max', dateMax);
+  if (dept) params.append('departement', dept);
+  params.append('entreprise_cessee', 'false');
+  params.append('par_page', perPage);
+  params.append('page', '1');
+
+  document.getElementById('pappersLoading').style.display = 'block';
+  document.getElementById('pappersEmpty').style.display = 'none';
+  document.getElementById('pappersTableWrap').style.display = 'none';
+
+  try {
+    let allResults = [];
+    let page = 1;
+    let totalPages = 1;
+
+    while (page <= totalPages && page <= 5) {
+      params.set('page', page);
+      const resp = await fetch(`https://api.pappers.fr/v2/recherche?${params.toString()}`);
+      if (!resp.ok) { const err = await resp.text(); throw new Error(`HTTP ${resp.status}: ${err}`); }
+      const data = await resp.json();
+      const results = data.resultats || data.results || [];
+      const total = data.total || 0;
+      allResults.push(...results);
+      totalPages = Math.ceil(total / parseInt(perPage));
+      if (results.length < parseInt(perPage)) break;
+      page++;
+      await new Promise(r => setTimeout(r, 300));
     }
 
-    // Try to sync from global on load
-    if (window.__FISCAL__) setFiscal(window.__FISCAL__);
-
-    function getNP(age) {
-        for (const t of DEMEMBREMENT) { if (age <= t.maxAge) return t.np; }
-        return 0.90;
+    if (distressed) {
+      allResults = allResults.filter(r => r.procedure_collective_en_cours);
     }
 
-    function getBareme(lien) {
-        if (['enfant', 'petit_enfant', 'arriere_petit_enfant'].includes(lien)) return BAREMES.ligne_directe;
-        if (lien === 'frere_soeur') return BAREMES.frere_soeur;
-        if (lien === 'neveu_niece') return BAREMES.neveu_niece;
-        return BAREMES.tiers;
-    }
-
-    function calcDroits(base, bareme) {
-        if (base <= 0) return 0;
-        let droits = 0, prev = 0;
-        for (const tr of bareme) {
-            const taxable = Math.min(base, tr.max) - prev;
-            if (taxable > 0) droits += taxable * tr.taux;
-            prev = tr.max;
-            if (base <= tr.max) break;
-        }
-        return Math.max(0, Math.round(droits));
-    }
-
-    function addDonor(role, nom, age, patrimoine, regime) {
-        const id = donorIdCounter++;
-        const bens = getBeneficiaries();
-        const donor = {
-            id, role: role || 'parent', nom: nom || `Donateur ${id + 1}`,
-            age: age || 60, patrimoine: patrimoine || 0,
-            regime: regime || 'separation',
-            donationsParBen: [],
-            donationsRecues: [],
-            // Explicit parentage: { benId: true } — which beneficiaries is this donor a direct parent/GP of
-            // Default: all current beneficiaries (user can uncheck)
-            linkedBens: Object.fromEntries(bens.map(b => [b.id, true])),
-            // Entourage — linked family members
-            conjointId: null,
-            entourage: []
-        };
-        donors.push(donor);
-        // Full re-render: data is safe in donors[] array, so re-render is safe
-        // (donation values are stored in donationsParBen/donationsRecues, not in DOM)
-        renderDonorList();
-        updateMatrix();
-        refreshBenDonSummaries();
-        return id;
-    }
-
-    function removeDonor(id) {
-        const idx = donors.findIndex(d => d.id === id);
-        if (idx >= 0) donors.splice(idx, 1);
-        renderDonorList();
-        updateMatrix();
-        refreshBenDonSummaries();
-    }
-
-    function updateDonor(id, field, value) {
-        const d = donors.find(d => d.id === id);
-        if (!d) return;
-        if (field === 'age' || field === 'patrimoine') {
-            d[field] = +value || 0;
-        } else {
-            d[field] = value;
-        }
-        if (field === 'role' || field === 'age') {
-            updateMatrix();
-            // Role change affects inter-donor links on ALL cards → full re-render needed
-            renderDonorList();
-            refreshBenDonSummaries();
-        }
-        if (field === 'nom') {
-            // Name change affects inter-donor labels on other cards → full re-render
-            renderDonorList();
-            refreshBenDonSummaries();
-        }
-        if (typeof SD !== 'undefined' && SD.updateAside) SD.updateAside();
-    }
-
-    // Update only the lien labels and abattement bars without re-rendering the whole donor list
-    function updateDonorLabelsInPlace(donorId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        const bens = getBeneficiaries();
-
-        bens.forEach(b => {
-            const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
-            const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
-            const montant = getDonorDonationForBen(d.id, b.id);
-            const restant = Math.max(0, abat - montant);
-            const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
-            const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
-
-            // Update label
-            const labelEl = document.getElementById(`don-label-${d.id}-${b.id}`);
-            if (labelEl) labelEl.innerHTML = `→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span>`;
-
-            // Update bar
-            renderDonorDonationBar(d.id, b.id);
-        });
-
-        // Also update inter-donor labels
-        donors.filter(od => od.id !== d.id).forEach(od => {
-            // Labels where this donor receives from others
-            renderDonorReceivedBar(d.id, od.id);
-            // Labels where others receive from this donor
-            renderDonorReceivedBar(od.id, d.id);
-        });
-    }
-
-    // Donation donateur → bénéficiaire spécifique
-    function updateDonorDonation(donorId, benId, montant) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        let entry = d.donationsParBen.find(e => e.benId === benId);
-        if (!entry) {
-            entry = { benId, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
-            d.donationsParBen.push(entry);
-        }
-        entry.montant = +montant || 0;
-        renderDonorDonationBar(donorId, benId);
-        refreshBenDonSummaries();
-    }
-
-    function updateDonorDonationDate(donorId, benId, dateStr) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        let entry = d.donationsParBen.find(e => e.benId === benId);
-        if (!entry) { entry = { benId, montant: 0, lienOverride: null, date: null, type: 'inconnue' }; d.donationsParBen.push(entry); }
-        entry.date = dateStr || null;
-        renderDonorList();
-    }
-
-    function updateDonorDonationType(donorId, benId, type) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        let entry = d.donationsParBen.find(e => e.benId === benId);
-        if (!entry) { entry = { benId, montant: 0, lienOverride: null, date: null, type: 'inconnue' }; d.donationsParBen.push(entry); }
-        entry.type = type;
-    }
-
-    // Check if a donation is within the 15-year recall period
-    function isDonationInRappel(dateStr) {
-        if (!dateStr) return true; // conservateur: si pas de date, on suppose dans le rappel
-        const donDate = new Date(dateStr);
-        const now = new Date();
-        const diffYears = (now - donDate) / (365.25 * 24 * 60 * 60 * 1000);
-        return diffYears < ABATTEMENTS.rappel_fiscal_ans;
-    }
-
-    // Get effective donation amount considering 15-year window
-    function getEffectiveDonation(entry) {
-        if (!entry || !entry.montant) return 0;
-        if (isDonationInRappel(entry.date)) return entry.montant;
-        return 0; // > 15 ans : abattement rechargé
-    }
-
-    // Override lien fiscal pour une paire donateur↔bénéficiaire
-    function updateDonorBenLien(donorId, benId, lienOverride) {
-        const d = donors.find(d => d.id === +donorId);
-        if (!d) return;
-        const bid = +benId;
-        let entry = d.donationsParBen.find(e => +e.benId === bid);
-        if (!entry) {
-            entry = { benId: bid, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
-            d.donationsParBen.push(entry);
-        }
-        entry.lienOverride = lienOverride === 'auto' ? null : lienOverride;
-        // Re-render only the donation bar, not the whole card
-        renderDonorDonationBar(+donorId, bid);
-        updateMatrix();
-        refreshBenDonSummaries();
-    }
-
-    // Get effective lien fiscal for a donor→beneficiary pair
-    function getEffectiveLien(donorId, benId, donorRole, benLien) {
-        const d = donors.find(d => d.id === +donorId);
-        if (d) {
-            // 1. Manual override always wins
-            const entry = d.donationsParBen.find(e => String(e.benId) === String(benId));
-            if (entry && entry.lienOverride) return entry.lienOverride;
-
-            // 2. Check explicit parentage — if linkedBens exists and this ben is NOT linked
-            if (d.linkedBens && Object.keys(d.linkedBens).length > 0) {
-                const isLinked = d.linkedBens[benId] || d.linkedBens[String(benId)];
-                if (!isLinked) {
-                    // Not direct relative. Check cross-family links (neveu/nièce via sibling)
-                    const linkedDonors = donors.filter(od => od.id !== d.id && od.linkedBens && (od.linkedBens[benId] || od.linkedBens[String(benId)]));
-                    for (const ld of linkedDonors) {
-                        const interLien = detectLienBetweenDonors(d.role, ld.role);
-                        if (interLien === 'conjoint_pacs_donation') {
-                            // Conjoint of the actual parent → beau-parent, same as parent fiscally
-                            return detectLien(d.role, benLien || 'enfant');
-                        }
-                        if (interLien === 'frere_soeur' || d.role === 'oncle_tante') {
-                            return 'neveu_niece';
-                        }
-                    }
-                    return 'tiers';
-                }
-            }
-        }
-        // 3. Fall back to role-based detection
-        return detectLien(donorRole || 'parent', benLien || 'enfant');
-    }
-
-    function getLienOverride(donorId, benId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return null;
-        const entry = d.donationsParBen.find(e => String(e.benId) === String(benId));
-        return entry ? entry.lienOverride : null;
-    }
-
-    function getDonorDonationForBen(donorId, benId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return 0;
-        const entry = d.donationsParBen.find(e => e.benId === benId);
-        return entry ? getEffectiveDonation(entry) : 0;
-    }
-
-    // Raw amount (ignoring 15-year window) for display purposes
-    function getDonorDonationForBenRaw(donorId, benId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return 0;
-        const entry = d.donationsParBen.find(e => e.benId === benId);
-        return entry ? entry.montant : 0;
-    }
-
-    // Total des donations reçues par un bénéficiaire (tous donateurs confondus)
-    function getTotalDonationsForBen(benId) {
-        let total = 0;
-        for (const d of donors) {
-            const entry = d.donationsParBen.find(e => e.benId === benId);
-            if (entry) total += entry.montant;
-        }
-        return total;
-    }
-
-    // Détail des donations reçues par bénéficiaire
-    function getDonationDetailForBen(benId) {
-        const details = [];
-        for (const d of donors) {
-            const entry = d.donationsParBen.find(e => e.benId === benId);
-            if (entry && entry.montant > 0) {
-                details.push({ donorId: d.id, donorNom: d.nom, donorRole: d.role, montant: entry.montant });
-            }
-        }
-        return details;
-    }
-
-    function getDonors() { return [...donors]; }
-
-    // Inter-donor donations (ex: Martine a donné 50k à Gérald)
-    function updateDonorReceivedDonation(donorId, fromDonorId, montant) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        let entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
-        if (!entry) {
-            entry = { deDonorId: fromDonorId, montant: 0, lienOverride: null };
-            d.donationsRecues.push(entry);
-        }
-        entry.montant = +montant || 0;
-        renderDonorReceivedBar(donorId, fromDonorId);
-    }
-
-    function updateDonorRecvLien(donorId, fromDonorId, lienOverride) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        let entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
-        if (!entry) {
-            entry = { deDonorId: fromDonorId, montant: 0, lienOverride: null };
-            d.donationsRecues.push(entry);
-        }
-        entry.lienOverride = lienOverride === 'auto' ? null : lienOverride;
-        // Re-render this donor's card
-        const card = document.querySelector(`[data-donor-id="${donorId}"]`);
-        if (card) {
-            const bens = getBeneficiaries();
-            const newCard = document.createElement('div');
-            newCard.innerHTML = buildDonorCardHtml(d, bens);
-            card.replaceWith(newCard.firstElementChild);
-        }
-    }
-
-    function getDonorReceivedFrom(donorId, fromDonorId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return 0;
-        const entry = d.donationsRecues.find(e => e.deDonorId === fromDonorId);
-        return entry ? entry.montant : 0;
-    }
-
-    function renderDonorReceivedBar(donorId, fromDonorId) {
-        const d = donors.find(d => d.id === donorId);
-        const fromD = donors.find(dd => dd.id === fromDonorId);
-        if (!d || !fromD) return;
-        const montant = getDonorReceivedFrom(donorId, fromDonorId);
-        const lien = detectLienBetweenDonors(fromD.role, d.role);
-        const abat = ABATTEMENTS[lien] || ABATTEMENTS.tiers;
-        const restant = Math.max(0, abat - montant);
-        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
-        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
-
-        const bar = document.getElementById(`don-recv-bar-${donorId}-${fromDonorId}`);
-        const rest = document.getElementById(`don-recv-rest-${donorId}-${fromDonorId}`);
-        if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
-        if (rest) {
-            rest.style.color = restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)';
-            rest.innerHTML = `${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>`;
-        }
-    }
-
-    // ============================================================
-    // 2. GRAPH — Liens familiaux auto-détectés
-    // ============================================================
-    function detectLien(donorRole, beneficiaryLien) {
-        // donorRole = rôle du donateur dans la famille (parent, grand_parent, etc.)
-        // beneficiaryLien = lien du bénéficiaire par rapport à la famille (enfant, petit_enfant, etc.)
-        const map = ROLE_MAP[donorRole];
-        if (!map) return 'tiers';
-
-        // Mapping direct
-        if (beneficiaryLien === 'enfant') return map.versEnfant || 'tiers';
-        if (beneficiaryLien === 'petit_enfant') return map.versPetitEnfant || map.versEnfant || 'tiers';
-        if (beneficiaryLien === 'arriere_petit_enfant') return map.versArrPetitEnfant || 'tiers';
-        if (beneficiaryLien === 'neveu_niece') {
-            if (donorRole === 'oncle_tante') return 'neveu_niece';
-            return 'tiers';
-        }
-        if (beneficiaryLien === 'conjoint_pacs') return 'conjoint_pacs_donation';
-
-        return 'tiers';
-    }
-
-    function buildGraph(beneficiaries) {
-        // Retourne une matrice : pour chaque donateur × chaque bénéficiaire
-        // { lienFiscal, abattement, bareme, npRatio, coutDirect }
-        const matrix = [];
-        for (const d of donors) {
-            const row = { donor: d, links: [] };
-            for (const b of beneficiaries) {
-                const lien = getEffectiveLien(d.id, b.id, d.role, b.lien);
-                const abat = ABATTEMENTS[lien] || ABATTEMENTS.tiers;
-                const np = getNP(d.age);
-                row.links.push({
-                    beneficiary: b,
-                    lienFiscal: lien,
-                    abattement: abat,
-                    bareme: getBareme(lien),
-                    npRatio: np,
-                    lienLabel: formatLien(lien)
-                });
-            }
-            matrix.push(row);
-        }
-        return matrix;
-    }
-
-    function formatLien(lien) {
-        const map = {
-            enfant: 'Ligne directe (100k)', petit_enfant: 'Petit-enfant (LD)',
-            arriere_petit_enfant: 'Arr. petit-enfant (LD)',
-            conjoint_pacs_donation: 'Conjoint/PACS',
-            frere_soeur: 'Frère/Sœur', neveu_niece: 'Neveu/Nièce',
-            tiers: 'Tiers', aucun: '🚫 Aucun lien'
-        };
-        return map[lien] || 'Tiers';
-    }
-
-    function fmt(n) {
-        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
-    }
-
-    // ============================================================
-    // 3. PATHS — Calcul des chemins de transmission
-    // ============================================================
-    // Un chemin = séquence de hops : donateur → intermédiaire → ... → cible
-    // Chaque hop a un coût fiscal (droits + frais notaire)
-
-    function calcHopCost(montant, lienFiscal, donorAge, demembre, donationAnterieure) {
-        const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
-        const bareme = getBareme(lienFiscal);
-        const fraisNotaire = 0.018;
-
-        let assiette = montant;
-        if (demembre) {
-            assiette = Math.round(montant * getNP(donorAge));
-        }
-
-        const base = Math.max(0, assiette - abat + (donationAnterieure || 0));
-        const droits = calcDroits(base, bareme);
-        const frais = Math.round(assiette * fraisNotaire);
-
-        return {
-            assiette,
-            abattementUtilise: Math.min(abat, assiette),
-            baseTaxable: base,
-            droits,
-            frais,
-            total: droits + frais,
-            netTransmis: montant - droits - frais,
-            demembre,
-            lienFiscal
-        };
-    }
-
-    function findAllPaths(targetBeneficiary, beneficiaries, maxHops) {
-        // Pour un bénéficiaire cible, trouver tous les chemins possibles
-        // depuis chaque donateur (direct ou via un intermédiaire)
-        maxHops = maxHops || 2; // max 2 sauts (donateur → intermédiaire → cible)
-        const paths = [];
-
-        for (const donor of donors) {
-            // === CHEMIN DIRECT : donateur → cible ===
-            const lienDirect = getEffectiveLien(donor.id, targetBeneficiary.id, donor.role, targetBeneficiary.lien);
-            const montant = donor.patrimoine;
-            if (montant <= 0) continue;
-            if (lienDirect === 'aucun') continue; // Pas de lien = pas de chemin direct
-
-            // Direct en PP
-            const donAntDirect = getDonationsAntForDonor(targetBeneficiary.id, donor.id, donor.role);
-            const hopPP = calcHopCost(montant, lienDirect, donor.age, false, donAntDirect);
-            paths.push({
-                type: 'direct_pp',
-                label: `${donor.nom} → ${targetBeneficiary.prenom} (PP)`,
-                hops: [{ from: donor.nom, to: targetBeneficiary.prenom, ...hopPP }],
-                totalDroits: hopPP.droits,
-                totalFrais: hopPP.frais,
-                netFinal: hopPP.netTransmis,
-                montantInitial: montant,
-                tauxEffectif: ((hopPP.droits + hopPP.frais) / montant * 100).toFixed(1),
-                complexity: 1,
-                delaiAns: 0,
-                risqueAge: donor.age > 75 ? 'élevé' : donor.age > 65 ? 'moyen' : 'faible',
-                donor, target: targetBeneficiary
-            });
-
-            // Direct en NP démembrée
-            const hopNP = calcHopCost(montant, lienDirect, donor.age, true, donAntDirect);
-            paths.push({
-                type: 'direct_np',
-                label: `${donor.nom} → ${targetBeneficiary.prenom} (NP ${Math.round(getNP(donor.age) * 100)}%)`,
-                hops: [{ from: donor.nom, to: targetBeneficiary.prenom, ...hopNP }],
-                totalDroits: hopNP.droits,
-                totalFrais: hopNP.frais,
-                netFinal: hopNP.netTransmis,
-                montantInitial: montant,
-                tauxEffectif: ((hopNP.droits + hopNP.frais) / montant * 100).toFixed(1),
-                complexity: 1,
-                delaiAns: 0,
-                risqueAge: donor.age > 75 ? 'élevé' : donor.age > 65 ? 'moyen' : 'faible',
-                donor, target: targetBeneficiary
-            });
-
-            // === CHEMINS INDIRECTS : donateur → intermédiaire → cible ===
-            if (maxHops < 2) continue;
-
-            // Build list of all potential intermediaries: other donors + entourage members
-            const intermediaires = [];
-            // Other donors
-            for (const od of donors) {
-                if (od.id === donor.id) continue;
-                intermediaires.push({ type: 'donor', id: od.id, nom: od.nom, role: od.role, age: od.age, patrimoine: od.patrimoine });
-            }
-            // Entourage members of all donors (not already in donors)
-            for (const d2 of donors) {
-                for (const ent of d2.entourage) {
-                    if (ent.donorId && donors.find(dd => dd.id === ent.donorId)) continue; // already in donors
-                    // Map entourage lien to a role for path calculation
-                    const entRole = mapEntourageLienToRole(ent.lien, d2.role);
-                    if (entRole) {
-                        intermediaires.push({
-                            type: 'entourage', id: 'ent-' + ent.id, nom: ent.nom || 'Membre',
-                            role: entRole, age: ent.age || 50, patrimoine: ent.patrimoine || 0,
-                            viadonor: d2.nom, _entRef: ent
-                        });
-                    }
-                }
-            }
-
-            for (const intermediaire of intermediaires) {
-                // Le donateur donne à l'intermédiaire, puis l'intermédiaire donne à la cible
-                const lienDonorInter = intermediaire.type === 'donor'
-                    ? detectLienBetweenDonors(donor.role, intermediaire.role)
-                    : detectLienBetweenDonors(donor.role, intermediaire.role);
-                if (lienDonorInter === 'tiers') continue;
-
-                const lienInterTarget = intermediaire.type === 'donor'
-                    ? getEffectiveLien(intermediaire.id, targetBeneficiary.id, intermediaire.role, targetBeneficiary.lien)
-                    : detectLien(intermediaire.role, targetBeneficiary.lien);
-                if (lienInterTarget === 'tiers' || lienInterTarget === 'aucun') continue;
-
-                // Hop 1 : donateur → intermédiaire (use inter-donor donation history)
-                const donAntInterDonor = intermediaire.type === 'donor' ? getDonorReceivedFrom(intermediaire.id, donor.id) : 0;
-                const hop1 = calcHopCost(montant, lienDonorInter, donor.age, false, donAntInterDonor);
-                // Hop 2 : intermédiaire → cible
-                // For entourage members, check their donation history to this beneficiary
-                let donAntInterBen = 0;
-                if (intermediaire.type === 'entourage' && intermediaire._entRef) {
-                    donAntInterBen = getEntourageDonForBen(intermediaire._entRef, targetBeneficiary.id);
-                } else if (intermediaire.type === 'donor') {
-                    donAntInterBen = getDonorDonationForBen(intermediaire.id, targetBeneficiary.id);
-                }
-                const hop2 = calcHopCost(hop1.netTransmis, lienInterTarget, intermediaire.age, false, donAntInterBen);
-
-                const totalDroits = hop1.droits + hop2.droits;
-                const totalFrais = hop1.frais + hop2.frais;
-
-                const entTag = intermediaire.type === 'entourage' ? ' 👥' : '';
-                paths.push({
-                    type: 'indirect',
-                    label: `${donor.nom} → ${intermediaire.nom}${entTag} → ${targetBeneficiary.prenom}`,
-                    hops: [
-                        { from: donor.nom, to: intermediaire.nom, ...hop1 },
-                        { from: intermediaire.nom, to: targetBeneficiary.prenom, ...hop2 }
-                    ],
-                    totalDroits,
-                    totalFrais,
-                    netFinal: hop2.netTransmis,
-                    montantInitial: montant,
-                    tauxEffectif: ((totalDroits + totalFrais) / montant * 100).toFixed(1),
-                    complexity: 2,
-                    delaiAns: 0, // idéalement attendre 15 ans entre les deux
-                    delaiOptimal: ABATTEMENTS.rappel_fiscal_ans,
-                    risqueAge: donor.age > 75 ? 'élevé' : 'moyen',
-                    donor, intermediaire, target: targetBeneficiary
-                });
-
-                // Indirect NP + PP : donateur donne NP à intermédiaire, intermédiaire donne PP à cible après reconstitution
-                const donAntInterDonorNP = intermediaire.type === 'donor' ? getDonorReceivedFrom(intermediaire.id, donor.id) : 0;
-                const hop1NP = calcHopCost(montant, lienDonorInter, donor.age, true, donAntInterDonorNP);
-                const hop2FromNP = calcHopCost(hop1NP.netTransmis, lienInterTarget, intermediaire.age, false, 0);
-
-                paths.push({
-                    type: 'indirect_np',
-                    label: `${donor.nom} →NP→ ${intermediaire.nom} → ${targetBeneficiary.prenom}`,
-                    hops: [
-                        { from: donor.nom, to: intermediaire.nom, ...hop1NP },
-                        { from: intermediaire.nom, to: targetBeneficiary.prenom, ...hop2FromNP }
-                    ],
-                    totalDroits: hop1NP.droits + hop2FromNP.droits,
-                    totalFrais: hop1NP.frais + hop2FromNP.frais,
-                    netFinal: hop2FromNP.netTransmis,
-                    montantInitial: montant,
-                    tauxEffectif: (((hop1NP.droits + hop2FromNP.droits + hop1NP.frais + hop2FromNP.frais) / montant) * 100).toFixed(1),
-                    complexity: 2,
-                    delaiAns: 0,
-                    delaiOptimal: ABATTEMENTS.rappel_fiscal_ans,
-                    risqueAge: donor.age > 75 ? 'élevé' : 'moyen',
-                    donor, intermediaire, target: targetBeneficiary,
-                    note: `NP ${Math.round(getNP(donor.age) * 100)}% au 1er saut`
-                });
-            }
-        }
-
-        return paths;
-    }
-
-    // Map entourage relationship to an equivalent donor role for path calculation
-    function mapEntourageLienToRole(entLien, parentDonorRole) {
-        // entLien = how this person relates to the donor who declared them
-        // parentDonorRole = role of the donor who declared this entourage member
-        const map = {
-            'frere': parentDonorRole,           // frère du parent = also a parent (same generation)
-            'enfant_propre': (() => {            // enfant du donateur
-                if (parentDonorRole === 'parent') return 'parent'; // enfant d'un parent = another parent (co-parent)
-                if (parentDonorRole === 'grand_parent') return 'parent'; // enfant d'un GP = parent
-                return null;
-            })(),
-            'parent_propre': (() => {
-                if (parentDonorRole === 'parent') return 'grand_parent';
-                if (parentDonorRole === 'grand_parent') return 'arr_grand_parent';
-                return null;
-            })(),
-            'cousin': 'oncle_tante',            // cousin du parent ≈ oncle/tante level
-            'oncle_tante': 'grand_parent',      // oncle du parent ≈ grand-parent level
-            'beau_enfant': parentDonorRole,     // beau-fils = same generation
-            'beau_frere': parentDonorRole,      // beau-frère = same generation
-        };
-        return map[entLien] || null;
-    }
-
-    function detectLienBetweenDonors(role1, role2) {
-        // role1 = donateur qui donne, role2 = celui qui reçoit
-        // Conjoint ↔ anyone = conjoint_pacs_donation
-        if (role1 === 'conjoint' || role2 === 'conjoint') return 'conjoint_pacs_donation';
-        // Grand-parent → Parent = GP donne à son enfant = lien "enfant" (100k abat.)
-        if (role1 === 'grand_parent' && role2 === 'parent') return 'enfant';
-        // Parent → Grand-parent = enfant donne à son parent = lien "enfant" aussi (LD ascendante)
-        if (role1 === 'parent' && role2 === 'grand_parent') return 'enfant';
-        // Arr-GP → GP
-        if (role1 === 'arr_grand_parent' && role2 === 'grand_parent') return 'enfant';
-        if (role1 === 'grand_parent' && role2 === 'arr_grand_parent') return 'enfant';
-        // Arr-GP → Parent = petit-enfant
-        if (role1 === 'arr_grand_parent' && role2 === 'parent') return 'petit_enfant';
-        if (role1 === 'parent' && role2 === 'arr_grand_parent') return 'petit_enfant';
-        // Parent ↔ Parent — ambigu ! Peut être conjoints, frères, ou sans lien
-        // On ne suppose PAS conjoint automatiquement — l'utilisateur doit override
-        if (role1 === 'parent' && role2 === 'parent') return 'tiers';
-        // Oncle/Tante ↔ Parent = frère/sœur
-        if (role1 === 'oncle_tante' && role2 === 'parent') return 'frere_soeur';
-        if (role1 === 'parent' && role2 === 'oncle_tante') return 'frere_soeur';
-        return 'tiers';
-    }
-
-    // ============================================================
-    // 4. OPTIMIZER — Classement et recommandations
-    // ============================================================
-    function optimizeForTarget(targetBeneficiary, beneficiaries) {
-        const paths = findAllPaths(targetBeneficiary, beneficiaries, 2);
-        if (paths.length === 0) return { best: null, alternatives: [], all: [] };
-
-        // Tri par net final décroissant (le plus avantageux en premier)
-        paths.sort((a, b) => b.netFinal - a.netFinal);
-
-        // Tag best, best simple, best with delay
-        const best = paths[0];
-        const bestSimple = paths.find(p => p.complexity === 1) || best;
-        const bestWithDelay = paths.find(p => p.type === 'indirect' && p.delaiOptimal) || null;
-
-        return {
-            best,
-            bestSimple,
-            bestWithDelay,
-            all: paths,
-            savings: best.netFinal - paths[paths.length - 1].netFinal,
-            targetName: targetBeneficiary.prenom
-        };
-    }
-
-    function optimizeAll(beneficiaries) {
-        const results = {};
-        for (const b of beneficiaries) {
-            if (b.lien === 'conjoint_pacs') continue; // conjoint exonéré en succession
-            results[b.id] = optimizeForTarget(b, beneficiaries);
-        }
-        return results;
-    }
-
-    // ============================================================
-    // 5. UI — Rendu
-    // ============================================================
-
-    // === ENTOURAGE ===
-    let entourageIdCounter = 0;
-
-    function addEntourage(donorId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        d.entourage.push({
-            id: entourageIdCounter++, nom: '', lien: 'frere', age: 50, patrimoine: 0,
-            donorId: null,
-            donationsParBen: [],    // [{benId, montant, lienOverride}]
-            donationsRecues: [],    // [{deId, deType:'donor'|'ent', montant}]
-            expanded: false         // toggle detail view
-        });
-        renderDonorList();
-    }
-
-    function removeEntourage(donorId, entId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        d.entourage = d.entourage.filter(e => e.id !== entId);
-        renderDonorList();
-    }
-
-    function updateEntourage(donorId, entId, field, value) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        const e = d.entourage.find(e => e.id === entId);
-        if (!e) return;
-        if (field === 'age' || field === 'patrimoine') e[field] = +value || 0;
-        else if (field === 'donorId') {
-            if (value === 'none') { e.donorId = null; }
-            else { e.donorId = +value; const linked = donors.find(dd => dd.id === +value); if (linked) e.nom = linked.nom; }
-        }
-        else e[field] = value;
-    }
-
-    function toggleEntourageExpand(donorId, entId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        const e = d.entourage.find(e => e.id === entId);
-        if (!e) return;
-        e.expanded = !e.expanded;
-        renderDonorList();
-    }
-
-    function updateEntourageDonation(donorId, entId, benId, montant) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        const e = d.entourage.find(e => e.id === entId);
-        if (!e) return;
-        let entry = e.donationsParBen.find(x => x.benId === benId);
-        if (!entry) { entry = { benId, montant: 0, lienOverride: null }; e.donationsParBen.push(entry); }
-        entry.montant = +montant || 0;
-    }
-
-    function updateEntourageDonLien(donorId, entId, benId, lien) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        const e = d.entourage.find(e => e.id === entId);
-        if (!e) return;
-        let entry = e.donationsParBen.find(x => x.benId === benId);
-        if (!entry) { entry = { benId, montant: 0, lienOverride: null }; e.donationsParBen.push(entry); }
-        entry.lienOverride = lien === 'auto' ? null : lien;
-        renderDonorList();
-    }
-
-    function getEntourageDonForBen(entourage, benId) {
-        const entry = entourage.donationsParBen.find(x => x.benId === benId);
-        return entry ? entry.montant : 0;
-    }
-
-    function getEntourageLienOverride(entourage, benId) {
-        const entry = entourage.donationsParBen.find(x => x.benId === benId);
-        return entry ? entry.lienOverride : null;
-    }
-
-    function updateDonorConjoint(donorId, conjointId) {
-        const d = donors.find(d => d.id === donorId);
-        if (!d) return;
-        d.conjointId = conjointId === 'none' ? null : +conjointId;
-        renderDonorList();
-    }
-
-    function toggleLinkedBen(donorId, benId, isLinked) {
-        const d = donors.find(d => d.id === +donorId);
-        if (!d) return;
-        if (!d.linkedBens) d.linkedBens = {};
-        d.linkedBens[benId] = isLinked;
-        // Full re-render to update lien labels, matrix, bars
-        renderDonorList();
-        updateMatrix();
-        refreshBenDonSummaries();
-    }
-
-    function buildEntourageHtml(d) {
-        const otherDonors = donors.filter(od => od.id !== d.id);
-
-        // Auto-detect: who's already linked from cartographie
-        const autoLinks = [];
-        otherDonors.forEach(od => {
-            const lien = detectLienBetweenDonors(d.role, od.role);
-            if (lien !== 'tiers') {
-                autoLinks.push({ donorId: od.id, nom: od.nom, lien, auto: true });
-            }
-        });
-
-        // Conjoint selector
-        const conjointOpts = `<option value="none"${!d.conjointId ? ' selected' : ''}>Aucun / Non renseigné</option>` +
-            otherDonors.map(od => `<option value="${od.id}"${d.conjointId === od.id ? ' selected' : ''}>${od.nom} (${formatRole(od.role)})</option>`).join('') +
-            `<option value="autre"${d.conjointId === 'autre' ? ' selected' : ''}>— Autre (pas dans la cartographie) —</option>`;
-
-        let html = `
-        <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(92,64,51,.04);border:1px solid rgba(92,64,51,.1);">
-            <label class="form-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px;color:var(--primary-color);">
-                <i class="fas fa-sitemap"></i> Entourage de ${d.nom} <span style="font-size:.58rem;font-weight:400;color:var(--text-muted);">(enrichit les chemins indirects)</span>
-            </label>
-
-            <div style="display:flex;gap:8px;align-items:center;font-size:.75rem;margin-bottom:10px;flex-wrap:wrap;">
-                <span style="color:var(--text-muted);white-space:nowrap;">💍 Conjoint :</span>
-                <select class="form-input" style="font-size:.72rem;height:32px;min-width:200px;flex:1;" onchange="PathOptimizer.updateDonorConjoint(${d.id},this.value)">${conjointOpts}</select>
-            </div>`;
-
-        // Auto-detected links
-        if (autoLinks.length > 0) {
-            html += `<div style="font-size:.68rem;color:var(--text-muted);margin-bottom:8px;">
-                <strong>Liens auto-détectés :</strong> ${autoLinks.map(a => `${a.nom} (${formatLien(a.lien)})`).join(', ')}
-            </div>`;
-        }
-
-        // Manual entourage entries
-        html += `<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Autres membres liés :</div>`;
-
-        const lienOpts = [
-            ['frere', 'Frère / Sœur'],
-            ['enfant_propre', 'Enfant (propre, pas bénéficiaire)'],
-            ['parent_propre', 'Parent (propre)'],
-            ['cousin', 'Cousin(e)'],
-            ['oncle_tante', 'Oncle / Tante'],
-            ['beau_enfant', 'Beau-fils / Belle-fille'],
-            ['beau_frere', 'Beau-frère / Belle-sœur'],
-            ['autre', 'Autre']
-        ];
-
-        if (d.entourage.length === 0) {
-            html += `<div style="font-size:.68rem;color:var(--text-muted);padding:4px 0;">Aucun — ajoutez des frères/sœurs, cousins, etc.</div>`;
-        }
-
-        html += d.entourage.map(e => {
-            const linkedDonor = e.donorId ? donors.find(dd => dd.id === e.donorId) : null;
-            const bens = getBeneficiaries();
-            const entRole = mapEntourageLienToRole(e.lien, d.role);
-            const hasDonations = e.donationsParBen && e.donationsParBen.some(x => x.montant > 0);
-
-            let row = `
-            <div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
-                <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-                    <input type="text" class="form-input" value="${linkedDonor ? linkedDonor.nom : e.nom}" placeholder="Prénom"
-                           style="font-size:.72rem;height:30px;flex:1;min-width:80px;${linkedDonor ? 'opacity:.6;' : ''}"
-                           ${linkedDonor ? 'disabled' : ''}
-                           onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'nom',this.value)">
-                    <select class="form-input" style="font-size:.68rem;height:30px;flex:1;min-width:100px;" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'lien',this.value)">
-                        ${lienOpts.map(([v, l]) => `<option value="${v}"${e.lien === v ? ' selected' : ''}>${l}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-muted);">
-                        <span>Âge</span>
-                        <input type="number" class="form-input" value="${e.age}" min="0" max="120" style="font-size:.68rem;height:26px;width:50px;text-align:center;"
-                               onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'age',this.value)">
-                    </div>
-                    <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-muted);">
-                        <span>Patrim.</span>
-                        <input type="number" class="form-input" value="${e.patrimoine}" min="0" step="10000" style="font-size:.68rem;height:26px;width:80px;text-align:right;"
-                               placeholder="0€" onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'patrimoine',this.value)">
-                    </div>
-                    <button style="font-size:.62rem;height:26px;padding:0 8px;background:${hasDonations ? 'rgba(255,107,107,.15)' : 'rgba(198,134,66,.08)'};border:1px solid rgba(198,134,66,.15);border-radius:4px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;" onclick="PathOptimizer.toggleEntourageExpand(${d.id},${e.id})">
-                        ${e.expanded ? '▼' : '▶'} Donations${hasDonations ? ' ●' : ''}
-                    </button>
-                    <button class="btn-remove" style="width:26px;height:26px;font-size:.55rem;flex-shrink:0;" onclick="PathOptimizer.removeEntourage(${d.id},${e.id})"><i class="fas fa-times"></i></button>
-                </div>`;
-
-            // Expanded donation details
-            if (e.expanded && bens.length > 0) {
-                row += `<div style="margin-top:6px;padding:8px;border-radius:6px;background:rgba(198,134,66,.03);border:1px dashed rgba(198,134,66,.08);">
-                    <div style="font-size:.62rem;font-weight:600;color:var(--accent-coral);margin-bottom:6px;">Donations faites par ${e.nom || 'ce membre'} aux bénéficiaires :</div>`;
-
-                row += bens.map(b => {
-                    const montant = getEntourageDonForBen(e, b.id);
-                    const override = getEntourageLienOverride(e, b.id);
-                    const autoLien = entRole ? detectLien(entRole, b.lien) : 'tiers';
-                    const effLien = override || autoLien;
-                    const abat = (effLien === 'aucun') ? 0 : (ABATTEMENTS[effLien] || ABATTEMENTS.tiers);
-                    const restant = Math.max(0, abat - montant);
-
-                    const lienSelectOpts = [
-                        ['auto', 'Auto : ' + formatLien(autoLien)],
-                        ['aucun', '🚫 Aucun lien'],
-                        ['enfant', 'Ligne directe (100k)'],
-                        ['petit_enfant', 'Petit-enfant (31 865)'],
-                        ['neveu_niece', 'Neveu/Nièce (7 967)'],
-                        ['frere_soeur', 'Frère/Sœur (15 932)'],
-                        ['tiers', 'Tiers (1 594)']
-                    ].map(([v, l]) => `<option value="${v}" ${(override === v || (!override && v === 'auto')) ? 'selected' : ''}>${l}</option>`).join('');
-
-                    if (effLien === 'aucun') {
-                        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;opacity:.5;font-size:.62rem;">
-                            <span>→ ${b.prenom || 'Bénéf.'}</span>
-                            <select style="font-size:.58rem;height:22px;padding:0 3px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-muted);border-radius:3px;" onchange="PathOptimizer.updateEntourageDonLien(${d.id},${e.id},${b.id},this.value)">${lienSelectOpts}</select>
-                            <span>🚫</span>
-                        </div>`;
-                    }
-
-                    return `<div style="display:grid;grid-template-columns:1fr 100px 90px;gap:4px;align-items:center;margin-bottom:4px;">
-                        <div>
-                            <div style="font-size:.62rem;font-weight:600;">→ ${b.prenom || 'Bénéf.'} <span style="color:var(--text-muted);">(${formatLien(effLien)} · ${fmt(abat)})</span></div>
-                            <select style="font-size:.55rem;height:20px;margin-top:2px;padding:0 3px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-muted);border-radius:3px;" onchange="PathOptimizer.updateEntourageDonLien(${d.id},${e.id},${b.id},this.value)">${lienSelectOpts}</select>
-                            <div style="font-size:.55rem;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};margin-top:2px;">Restant : ${fmt(restant)}</div>
-                        </div>
-                        <input type="number" class="form-input" value="${montant}" min="0" step="1000"
-                               style="font-size:.65rem;height:26px;text-align:right;"
-                               onchange="PathOptimizer.updateEntourageDonation(${d.id},${e.id},${b.id},this.value)">
-                        <div style="height:3px;border-radius:2px;background:rgba(198,134,66,.08);overflow:hidden;">
-                            <div style="height:100%;width:${abat > 0 ? Math.min(100, montant / abat * 100) : 100}%;background:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};border-radius:2px;"></div>
-                        </div>
-                    </div>`;
-                }).join('');
-
-                row += `</div>`;
-            } else if (e.expanded && bens.length === 0) {
-                row += `<div style="font-size:.62rem;color:var(--text-muted);padding:6px;">Ajoutez des bénéficiaires d'abord.</div>`;
-            }
-
-            row += `</div>`;
-            return row;
-        }).join('');
-
-        html += `
-            <button class="btn-add" style="font-size:.65rem;padding:3px 8px;margin-top:6px;" onclick="PathOptimizer.addEntourage(${d.id})">
-                <i class="fas fa-plus"></i> Ajouter un membre
-            </button>
-        </div>`;
-
-        return html;
-    }
-
-    function buildDonorCardHtml(d, bens) {
-            // === LINKED BENEFICIARIES (parenté explicite) ===
-            let linkedBensHtml = '';
-            if (bens.length > 0) {
-                if (!d.linkedBens) d.linkedBens = Object.fromEntries(bens.map(b => [b.id, true]));
-                const linkedCount = bens.filter(b => d.linkedBens[b.id] || d.linkedBens[String(b.id)]).length;
-                linkedBensHtml = `
-                <div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">
-                    <label class="form-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-                        <i class="fas fa-link"></i> Bénéficiaires directs de ${d.nom} <span style="font-size:.58rem;color:var(--text-muted);">(${linkedCount}/${bens.length} — décochez ceux qui ne sont pas vos enfants/petits-enfants)</span>
-                    </label>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                        ${bens.map(b => {
-                            const isLinked = d.linkedBens[b.id] || d.linkedBens[String(b.id)];
-                            const lien = getEffectiveLien(d.id, b.id, d.role, b.lien);
-                            return `<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.68rem;background:${isLinked ? 'rgba(46,125,50,.1)' : 'rgba(198,134,66,.03)'};border:1px solid ${isLinked ? 'rgba(46,125,50,.25)' : 'rgba(198,134,66,.08)'};color:${isLinked ? 'var(--accent-green)' : 'var(--text-muted)'};">
-                                <input type="checkbox" ${isLinked ? 'checked' : ''} onchange="PathOptimizer.toggleLinkedBen(${d.id},${b.id},this.checked)" style="accent-color:var(--accent-green);">
-                                ${b.prenom || 'Bénéf.'} <span style="font-size:.55rem;opacity:.7;">${formatLienShort(lien)}</span>
-                            </label>`;
-                        }).join('')}
-                    </div>
-                </div>`;
-            }
-
-            // Per-beneficiary donation rows
-            let donBenHtml = '';
-            if (bens.length > 0) {
-                donBenHtml = `
-                <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(198,134,66,.08);">
-                    <label class="form-label" style="color:var(--accent-coral);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-                        <i class="fas fa-history"></i> Donations déjà faites (rappel 15 ans) — à qui ?
-                    </label>
-                    ${bens.map(b => {
-                        const donEntry = d.donationsParBen.find(e => e.benId === b.id);
-                        const montantRaw = donEntry ? donEntry.montant : 0;
-                        const montant = donEntry ? getEffectiveDonation(donEntry) : 0;
-                        const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
-                        const currentOverride = getLienOverride(d.id, b.id);
-                        const autoLien = detectLien(d.role, b.lien);
-                        const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
-                        const restant = Math.max(0, abat - montant);
-                        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
-                        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
-                        const lienOpts = [
-                            ['auto', `Auto : ${formatLien(autoLien)}`],
-                            ['aucun', '🚫 Aucun lien'],
-                            ['enfant', 'Ligne directe (LD · 100k)'],
-                            ['petit_enfant', 'Petit-enfant (LD · 31 865)'],
-                            ['arriere_petit_enfant', 'Arr. petit-enfant (5 310)'],
-                            ['neveu_niece', 'Neveu/Nièce (7 967)'],
-                            ['frere_soeur', 'Frère/Sœur (15 932)'],
-                            ['tiers', 'Tiers (1 594)']
-                        ].map(([v, l]) => `<option value="${v}" ${(currentOverride === v || (!currentOverride && v === 'auto')) ? 'selected' : ''}>${l}</option>`).join('');
-                        const isAucun = lienFiscal === 'aucun';
-                        if (isAucun) {
-                            return `
-                            <div style="display:grid;grid-template-columns:1fr;gap:6px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.02);border:1px dashed rgba(198,134,66,.08);opacity:.6;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;">
-                                    <div>
-                                        <span style="font-size:.78rem;color:var(--text-muted);">→ ${b.prenom || 'Bénéf.'}</span>
-                                        <span style="font-size:.62rem;color:var(--text-muted);margin-left:6px;">🚫 Aucun lien</span>
-                                    </div>
-                                    <select style="font-size:.62rem;height:24px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorBenLien(${d.id},${b.id},this.value)">${lienOpts}</select>
-                                </div>
-                            </div>`;
-                        }
-                        return `
-                        <div style="display:grid;grid-template-columns:1fr 100px 120px;gap:6px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
-                            <div>
-                                <div id="don-label-${d.id}-${b.id}" style="font-size:.78rem;font-weight:600;color:var(--text-primary);">→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span></div>
-                                <select style="font-size:.62rem;height:24px;margin-top:4px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;width:auto;" onchange="PathOptimizer.updateDonorBenLien(${d.id},${b.id},this.value)">${lienOpts}</select>
-                                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-                                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
-                                        <div id="don-bar-${d.id}-${b.id}" style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
-                                    </div>
-                                    <div id="don-rest-${d.id}-${b.id}" style="font-size:.62rem;white-space:nowrap;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};">
-                                        ${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="font-size:.6rem;color:var(--text-muted);text-align:center;">${currentOverride ? '✏️' : '🤖'}</div>
-                            <div>
-                                <input type="number" class="form-input" value="${montantRaw}" min="0" step="1000"
-                                       style="font-size:.75rem;height:34px;text-align:right;${montantRaw > 0 ? 'border-color:rgba(255,107,107,.25);' : ''}"
-                                       placeholder="0"
-                                       onchange="PathOptimizer.updateDonorDonation(${d.id},${b.id},this.value)">
-                            </div>
-                        </div>
-                        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;padding-left:4px;">
-                            <input type="date" class="form-input" value="${donEntry?.date || ''}"
-                                   style="font-size:.6rem;height:24px;flex:1;max-width:130px;"
-                                   title="Date de la donation (pour le rappel 15 ans)"
-                                   onchange="PathOptimizer.updateDonorDonationDate(${d.id},${b.id},this.value)">
-                            <select class="form-input" style="font-size:.58rem;height:24px;flex:1;max-width:120px;"
-                                    onchange="PathOptimizer.updateDonorDonationType(${d.id},${b.id},this.value)">
-                                <option value="inconnue" ${(donEntry?.type||'inconnue')==='inconnue'?'selected':''}>Type inconnu</option>
-                                <option value="notariee" ${donEntry?.type==='notariee'?'selected':''}>Notariée</option>
-                                <option value="don_manuel" ${donEntry?.type==='don_manuel'?'selected':''}>Don manuel</option>
-                            </select>
-                            ${montantRaw > 0 ? (donEntry?.date && !isDonationInRappel(donEntry.date)
-                                ? '<span style="font-size:.55rem;color:var(--accent-green);white-space:nowrap;">✅ > 15 ans</span>'
-                                : donEntry?.date
-                                    ? '<span style="font-size:.55rem;color:var(--accent-coral);white-space:nowrap;">⏳ rappel 15a</span>'
-                                    : '<span style="font-size:.55rem;color:var(--accent-amber);white-space:nowrap;">📅?</span>') : ''}
-                        </div>`;
-                    }).join('')}
-                </div>`;
-            } else {
-                donBenHtml = `<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(198,134,66,.03);font-size:.72rem;color:var(--text-muted);"><i class="fas fa-info-circle"></i> Ajoutez des bénéficiaires ci-dessus pour déclarer les donations déjà faites.</div>`;
-            }
-
-            // Inter-donor section
-            const otherDonors = donors.filter(od => od.id !== d.id);
-            let donRecvHtml = '';
-            if (otherDonors.length > 0) {
-                donRecvHtml = `
-                <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(198,134,66,.08);">
-                    <label class="form-label" style="color:var(--primary-color);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-                        <i class="fas fa-arrow-down"></i> Donations reçues d'un autre donateur <span style="font-size:.6rem;font-weight:400;color:var(--text-muted);">(pour les chemins indirects)</span>
-                    </label>
-                    ${otherDonors.map(od => {
-                        const montant = getDonorReceivedFrom(d.id, od.id);
-                        const autoLien = detectLienBetweenDonors(od.role, d.role);
-                        // Check for override in donationsRecues
-                        const recvEntry = d.donationsRecues.find(e => e.deDonorId === od.id);
-                        const recvOverride = recvEntry ? recvEntry.lienOverride : null;
-                        const lien = recvOverride || autoLien;
-                        const abat = (lien === 'aucun') ? 0 : (ABATTEMENTS[lien] || ABATTEMENTS.tiers);
-                        const restant = Math.max(0, abat - montant);
-                        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
-                        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
-                        const recvLienOpts = [
-                            ['auto', `Auto : ${formatLien(autoLien)}`],
-                            ['aucun', '🚫 Aucun lien'],
-                            ['enfant', 'Ligne directe (LD · 100k)'],
-                            ['conjoint_pacs_donation', 'Conjoint/PACS (80 724)'],
-                            ['petit_enfant', 'Petit-enfant (31 865)'],
-                            ['frere_soeur', 'Frère/Sœur (15 932)'],
-                            ['neveu_niece', 'Neveu/Nièce (7 967)'],
-                            ['tiers', 'Tiers (1 594)']
-                        ].map(([v, l]) => `<option value="${v}" ${(recvOverride === v || (!recvOverride && v === 'auto')) ? 'selected' : ''}>${l}</option>`).join('');
-
-                        if (lien === 'aucun') {
-                            return `
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.03);border:1px dashed rgba(92,64,51,.08);opacity:.6;">
-                                <span style="font-size:.78rem;color:var(--text-muted);">← ${od.nom} 🚫</span>
-                                <select style="font-size:.62rem;height:24px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
-                            </div>`;
-                        }
-
-                        return `
-                        <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.06);border:1px solid rgba(92,64,51,.1);">
-                            <div>
-                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${od.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${od.nom}→${d.nom} = ${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
-                                <select style="font-size:.62rem;height:24px;margin-top:4px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
-                                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-                                    <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
-                                        <div id="don-recv-bar-${d.id}-${od.id}" style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
-                                    </div>
-                                    <div id="don-recv-rest-${d.id}-${od.id}" style="font-size:.62rem;white-space:nowrap;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};">
-                                        ${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <input type="number" class="form-input" value="${montant}" min="0" step="1000"
-                                       style="font-size:.75rem;height:34px;text-align:right;"
-                                       placeholder="0"
-                                       onchange="PathOptimizer.updateDonorReceivedDonation(${d.id},${od.id},this.value)">
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-            }
-
-            return `
-            <div class="list-item" data-donor-id="${d.id}" style="animation:fadeSlide .3s ease;">
-                <div class="list-item-header">
-                    <span class="list-item-title" id="donor-title-${d.id}">${d.nom}</span>
-                    <button class="btn-remove" onclick="PathOptimizer.removeDonor(${d.id})"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="form-grid cols-2">
-                    <div class="form-group">
-                        <label class="form-label">Nom / Identifiant</label>
-                        <input type="text" class="form-input" value="${d.nom}" 
-                               onchange="PathOptimizer.updateDonor(${d.id},'nom',this.value)">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Rôle familial</label>
-                        <select class="form-input" onchange="PathOptimizer.updateDonor(${d.id},'role',this.value)">
-                            <option value="parent" ${d.role === 'parent' ? 'selected' : ''}>Parent</option>
-                            <option value="grand_parent" ${d.role === 'grand_parent' ? 'selected' : ''}>Grand-parent</option>
-                            <option value="arr_grand_parent" ${d.role === 'arr_grand_parent' ? 'selected' : ''}>Arrière-grand-parent</option>
-                            <option value="oncle_tante" ${d.role === 'oncle_tante' ? 'selected' : ''}>Oncle / Tante</option>
-                            <option value="conjoint" ${d.role === 'conjoint' ? 'selected' : ''}>Conjoint du parent</option>
-                            <option value="tiers" ${d.role === 'tiers' ? 'selected' : ''}>Tiers</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-grid cols-3">
-                    <div class="form-group">
-                        <label class="form-label">Âge</label>
-                        <input type="number" class="form-input" value="${d.age}" min="18" max="120"
-                               onchange="PathOptimizer.updateDonor(${d.id},'age',this.value)">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Patrimoine propre (€)</label>
-                        <input type="number" class="form-input" value="${d.patrimoine}" min="0" step="10000"
-                               placeholder="Valeur totale des biens"
-                               onchange="PathOptimizer.updateDonor(${d.id},'patrimoine',this.value)">
-                        <div style="font-size:.62rem;color:var(--text-muted);margin-top:3px;">Inclure : appart, épargne, AV, etc. propres à cette personne</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Régime</label>
-                        <select class="form-input" onchange="PathOptimizer.updateDonor(${d.id},'regime',this.value)">
-                            <option value="separation" ${d.regime === 'separation' ? 'selected' : ''}>Séparation de biens</option>
-                            <option value="communaute" ${d.regime === 'communaute' ? 'selected' : ''}>Communauté</option>
-                        </select>
-                    </div>
-                </div>
-                ${linkedBensHtml}
-                ${donBenHtml}
-                ${donRecvHtml}
-                ${buildEntourageHtml(d)}
-            </div>`;
-    }
-
-    function appendDonorCard(donor) {
-        const container = document.getElementById('donors-list');
-        if (!container) return;
-        const bens = getBeneficiaries();
-        container.insertAdjacentHTML('beforeend', buildDonorCardHtml(donor, bens));
-    }
-
-    function renderDonorList() {
-        const container = document.getElementById('donors-list');
-        if (!container) return;
-        const bens = getBeneficiaries();
-        container.innerHTML = donors.map(d => buildDonorCardHtml(d, bens)).join('');
-        refreshBenDonSummaries();
-    }
-
-
-    function renderDonorDonationBar(donorId, benId) {
-        const d = donors.find(d => d.id === +donorId);
-        const bens = getBeneficiaries();
-        const b = bens.find(b => String(b.id) === String(benId));
-        if (!d || !b) return;
-
-        const montant = getDonorDonationForBen(donorId, benId);
-        const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
-        const abat = (lienFiscal === 'aucun') ? 0 : (ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers);
-        const restant = Math.max(0, abat - montant);
-        const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
-        const barColor = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
-
-        const bar = document.getElementById(`don-bar-${donorId}-${benId}`);
-        const rest = document.getElementById(`don-rest-${donorId}-${benId}`);
-        const label = document.getElementById(`don-label-${donorId}-${benId}`);
-        if (bar) { bar.style.width = pct + '%'; bar.style.background = barColor; }
-        if (rest) {
-            rest.style.color = restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)';
-            rest.innerHTML = `${restant > 0 ? 'Restant : ' + fmt(restant) : 'Épuisé'} <span style="color:var(--text-muted);">/ ${fmt(abat)}</span>`;
-        }
-        if (label) {
-            label.innerHTML = `→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span>`;
-        }
-    }
-
-    // Refresh read-only summaries in beneficiary cards
-    function refreshBenDonSummaries() {
-        _suppressObserver = true;
-        const bens = getBeneficiaries();
-        bens.forEach(b => {
-            const container = document.getElementById('don-summary-' + b.id);
-            if (!container) return;
-
-            if (donors.length === 0) {
-                container.innerHTML = '<span style="color:var(--text-muted);">Ajoutez des donateurs dans la cartographie ci-dessous.</span>';
-                return;
-            }
-
-            container.innerHTML = donors.map(d => {
-                const lienFiscal = getEffectiveLien(d.id, b.id, d.role, b.lien);
-                if (lienFiscal === 'aucun') {
-                    return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.68rem;opacity:.4;">
-                        <span>← ${d.nom}</span><span>🚫 aucun lien</span>
-                    </div>`;
-                }
-                const abat = ABATTEMENTS[lienFiscal] || ABATTEMENTS.tiers;
-                const montant = getDonorDonationForBen(d.id, b.id);
-                const restant = Math.max(0, abat - montant);
-                const hasGift = montant > 0;
-
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:.72rem;${hasGift ? 'font-weight:500;' : ''}">
-                    <span>← <strong>${d.nom}</strong> <span style="color:var(--text-muted);">(${formatRole(d.role)})</span> → <span style="color:var(--accent-caramel);">${formatLien(lienFiscal)}</span> · abat. ${fmt(abat)}</span>
-                    <span style="color:${hasGift ? 'var(--accent-coral)' : 'var(--accent-green)'};">${hasGift ? 'reçu ' + fmt(montant) + ' · reste ' + fmt(restant) : 'intact'}</span>
-                </div>`;
-            }).join('');
-        });
-
-        // Sync SD state
-        if (typeof SD !== 'undefined' && SD._getState) {
-            const sdBens = SD._getState().beneficiaries;
-            bens.forEach(b => {
-                const sdBen = sdBens.find(sb => String(sb.id) === String(b.id));
-                if (sdBen) sdBen.donationAnterieure = getTotalDonationsForBen(b.id);
-            });
-        }
-        setTimeout(() => { _suppressObserver = false; }, 50);
-    }
-
-    function applyDonorPreset(type) {
-        donors.length = 0;
-        donorIdCounter = 0;
-
-        document.querySelectorAll('.donor-preset-btn').forEach(b => b.classList.remove('active'));
-        if (event && event.target) event.target.closest('.donor-preset-btn')?.classList.add('active');
-
-        const presets = {
-            'parent_seul': [
-                { role: 'parent', nom: 'Parent', age: 55, patrimoine: 300000, regime: 'separation' }
-            ],
-            'couple_parents': [
-                { role: 'parent', nom: 'Mère', age: 55, patrimoine: 200000, regime: 'separation' },
-                { role: 'parent', nom: 'Père', age: 58, patrimoine: 200000, regime: 'separation' }
-            ],
-            'couple_gp': [
-                { role: 'parent', nom: 'Mère', age: 55, patrimoine: 200000, regime: 'separation' },
-                { role: 'parent', nom: 'Père', age: 58, patrimoine: 200000, regime: 'separation' },
-                { role: 'grand_parent', nom: 'Grand-mère maternelle', age: 78, patrimoine: 150000, regime: 'separation' },
-                { role: 'grand_parent', nom: 'Grand-père maternel', age: 80, patrimoine: 150000, regime: 'separation' }
-            ],
-            'gp_seuls': [
-                { role: 'grand_parent', nom: 'Grand-mère', age: 75, patrimoine: 200000, regime: 'separation' },
-                { role: 'grand_parent', nom: 'Grand-père', age: 78, patrimoine: 200000, regime: 'separation' }
-            ]
-        };
-
-        const preset = presets[type] || presets['couple_parents'];
-        preset.forEach(p => addDonor(p.role, p.nom, p.age, p.patrimoine, p.regime));
-    }
-
-    function updateMatrix() {
-        // Met à jour l'affichage de la matrice donateurs × bénéficiaires
-        const container = document.getElementById('path-matrix');
-        if (!container) return;
-
-        // Récupérer les bénéficiaires depuis SD
-        const bens = getBeneficiaries();
-        if (donors.length === 0 || bens.length === 0) {
-            container.innerHTML = '<div class="aside-warn-item amber" style="margin:12px 0;"><i class="fas fa-info-circle"></i> Ajoutez au moins 1 donateur et 1 bénéficiaire pour voir la matrice.</div>';
-            return;
-        }
-
-        const matrix = buildGraph(bens);
-
-        let html = '<div style="overflow-x:auto;"><table class="comparison-table" style="font-size:.75rem;">';
-        html += '<thead><tr><th style="text-align:left;">Donateur</th><th>Âge</th><th>Patrimoine</th>';
-        bens.forEach(b => { html += `<th>${b.prenom}</th>`; });
-        html += '</tr></thead><tbody>';
-
-        matrix.forEach(row => {
-            html += `<tr><td style="text-align:left;font-weight:600;">${row.donor.nom}<br><span style="color:var(--text-muted);font-size:.65rem;">${formatRole(row.donor.role)}</span></td>`;
-            html += `<td>${row.donor.age} ans</td>`;
-            html += `<td>${fmt(row.donor.patrimoine)}</td>`;
-            row.links.forEach(link => {
-                const color = getAbatColor(link.abattement);
-                html += `<td style="text-align:center;">
-                    <div style="font-weight:600;color:${color};">${link.lienLabel}</div>
-                    <div style="font-size:.65rem;color:var(--text-muted);">Abat. ${fmt(link.abattement)}</div>
-                    <div style="font-size:.6rem;color:var(--text-muted);">NP ${Math.round(link.npRatio * 100)}%</div>
-                </td>`;
-            });
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div>';
-        container.innerHTML = html;
-    }
-
-    function getBeneficiaries() {
-        // Lire les bénéficiaires depuis le DOM (créés par SD)
-        const bens = [];
-        document.querySelectorAll('#beneficiaries-list .list-item').forEach(item => {
-            const id = item.dataset.benId;
-            const select = item.querySelector('select');
-            const nameInput = item.querySelector('input[type="text"]');
-            if (select) {
-                bens.push({
-                    id: id || bens.length,
-                    lien: select.value,
-                    prenom: nameInput ? nameInput.value : `Bénéf. ${bens.length + 1}`
-                });
-            }
-        });
-        return bens;
-    }
-
-    // Récupérer les donations antérieures d'un bénéficiaire pour un donateur spécifique
-    function getDonationsAntForDonor(benId, donorId, donorRole) {
-        return getDonorDonationForBen(donorId, benId);
-    }
-
-    function formatRole(role) {
-        const map = {
-            parent: 'Parent', grand_parent: 'Grand-parent',
-            arr_grand_parent: 'Arr. grand-parent',
-            oncle_tante: 'Oncle/Tante', conjoint: 'Conjoint parent',
-            tiers: 'Tiers'
-        };
-        return map[role] || role;
-    }
-
-    function getAbatColor(abat) {
-        if (abat >= 100000) return 'var(--accent-green)';
-        if (abat >= 30000) return 'var(--primary-color)';
-        if (abat >= 7000) return 'var(--accent-amber)';
-        return 'var(--accent-coral)';
-    }
-
-    // ============================================================
-    // RENDER PATH RESULTS
-    // ============================================================
-    function renderPathResults() {
-        const container = document.getElementById('path-results');
-        if (!container) return;
-
-        const bens = getBeneficiaries().filter(b => b.lien !== 'conjoint_pacs');
-        if (donors.length === 0 || bens.length === 0) {
-            container.innerHTML = '<div class="aside-warn-item amber" style="margin:12px 0;"><i class="fas fa-info-circle"></i> Ajoutez des donateurs et bénéficiaires d\'abord.</div>';
-            return;
-        }
-
-        const results = optimizeAll(bens);
-        let html = '';
-
-        for (const [benId, result] of Object.entries(results)) {
-            if (!result.best) continue;
-
-            html += `<div class="section-card" style="margin-bottom:16px;">`;
-            html += `<div class="section-title"><i class="fas fa-route"></i> Chemins vers ${result.targetName}</div>`;
-
-            // Best path highlight
-            html += `<div class="results-summary" style="margin-bottom:14px;">
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                    <div style="text-align:center;">
-                        <div style="font-size:.65rem;color:var(--text-muted);text-transform:uppercase;">Meilleur chemin</div>
-                        <div style="font-size:.85rem;font-weight:700;color:var(--accent-green);margin-top:4px;">${result.best.label}</div>
-                    </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:.65rem;color:var(--text-muted);text-transform:uppercase;">Net transmis</div>
-                        <div class="big-number" style="font-size:1.3rem;">${fmt(result.best.netFinal)}</div>
-                    </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:.65rem;color:var(--text-muted);text-transform:uppercase;">Taux effectif</div>
-                        <div style="font-size:1.1rem;font-weight:700;color:var(--accent-coral);">${result.best.tauxEffectif}%</div>
-                    </div>
-                </div>
-            </div>`;
-
-            // All paths table
-            html += `<div style="overflow-x:auto;"><table class="comparison-table" style="font-size:.72rem;">`;
-            html += `<thead><tr>
-                <th style="text-align:left;">Chemin</th>
-                <th>Type</th>
-                <th>Droits</th>
-                <th>Frais</th>
-                <th>Net transmis</th>
-                <th>Taux eff.</th>
-                <th>Complexité</th>
-                <th>Risque âge</th>
-            </tr></thead><tbody>`;
-
-            // Show top 6 paths
-            result.all.slice(0, 6).forEach((p, i) => {
-                const isBest = i === 0;
-                const rowStyle = isBest ? 'background:rgba(16,185,129,.06);' : '';
-                const badge = isBest ? '<span style="color:var(--accent-green);font-weight:700;"> ★</span>' : '';
-
-                html += `<tr style="${rowStyle}">
-                    <td style="text-align:left;font-weight:${isBest ? '700' : '500'};">${p.label}${badge}</td>
-                    <td>${formatPathType(p.type)}</td>
-                    <td style="color:var(--accent-coral);">${fmt(p.totalDroits)}</td>
-                    <td>${fmt(p.totalFrais)}</td>
-                    <td style="font-weight:700;color:${isBest ? 'var(--accent-green)' : 'var(--text-primary)'};">${fmt(p.netFinal)}</td>
-                    <td>${p.tauxEffectif}%</td>
-                    <td>${'●'.repeat(p.complexity)}${'○'.repeat(3 - p.complexity)}</td>
-                    <td><span style="color:${p.risqueAge === 'élevé' ? 'var(--accent-coral)' : p.risqueAge === 'moyen' ? 'var(--accent-amber)' : 'var(--accent-green)'};">${p.risqueAge}</span></td>
-                </tr>`;
-
-                // Show hop details for indirect paths
-                if (p.hops.length > 1) {
-                    p.hops.forEach((hop, hi) => {
-                        html += `<tr style="background:rgba(198,134,66,.03);">
-                            <td style="padding-left:24px;color:var(--text-muted);font-size:.65rem;">↳ ${hop.from} → ${hop.to}</td>
-                            <td style="color:var(--text-muted);font-size:.65rem;">${hop.demembre ? 'NP' : 'PP'}</td>
-                            <td style="font-size:.65rem;">${fmt(hop.droits)}</td>
-                            <td style="font-size:.65rem;">${fmt(hop.frais)}</td>
-                            <td style="font-size:.65rem;">${fmt(hop.netTransmis)}</td>
-                            <td colspan="2" style="font-size:.65rem;color:var(--text-muted);">Abat. ${fmt(hop.abattementUtilise)}</td>
-                            <td></td>
-                        </tr>`;
-                    });
-                }
-            });
-
-            html += `</tbody></table></div>`;
-
-            // Savings note
-            if (result.savings > 0) {
-                html += `<div class="warning-box success" style="margin-top:10px;">
-                    <i class="fas fa-piggy-bank"></i>
-                    <span><strong>Économie potentielle :</strong> ${fmt(result.savings)} entre le meilleur et le pire chemin.
-                    ${result.bestWithDelay ? `<br>💡 <strong>Avec patience (${result.bestWithDelay.delaiOptimal} ans entre les dons) :</strong> les abattements se rechargent → encore plus avantageux.` : ''}</span>
-                </div>`;
-            }
-
-            html += `</div>`;
-        }
-
-        container.innerHTML = html;
-    }
-
-    function formatPathType(type) {
-        const map = {
-            direct_pp: '<span style="color:var(--primary-color);">Direct PP</span>',
-            direct_np: '<span style="color:var(--accent-green);">Direct NP</span>',
-            indirect: '<span style="color:var(--accent-amber);">Indirect PP</span>',
-            indirect_np: '<span style="color:var(--accent-purple);">Indirect NP</span>'
-        };
-        return map[type] || type;
-    }
-
-    // ============================================================
-    // INIT
-    // ============================================================
-    let _suppressObserver = false;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const benList = document.getElementById('beneficiaries-list');
-        if (benList) {
-            const observer = new MutationObserver(() => {
-                if (_suppressObserver) return;
-                setTimeout(() => { updateMatrix(); renderDonorList(); }, 200);
-            });
-            observer.observe(benList, { childList: true, subtree: true });
-        }
+    pappersData = allResults.map(parsePappersResult);
+    renderPappersTable();
+    updatePappersStats();
+  } catch (err) {
+    alert(`Erreur Pappers API:\n${err.message}\n\nSi erreur CORS, utilisez le script Python.`);
+    console.error(err);
+  } finally {
+    document.getElementById('pappersLoading').style.display = 'none';
+  }
+}
+
+function parsePappersResult(r) {
+  const siege = r.siege || {};
+  const dirs = r.dirigeants || r.representants || [];
+  const mainDir = dirs.length > 0 ? dirs.sort((a,b) => (b.age||0) - (a.age||0))[0] : {};
+  return {
+    nom: r.nom_entreprise || r.denomination || '',
+    siren: r.siren || '',
+    code_naf: r.code_naf || '',
+    libelle_naf: r.libelle_code_naf || '',
+    ville: siege.ville || '',
+    departement: siege.departement || siege.code_postal?.substring(0,2) || '',
+    code_postal: siege.code_postal || '',
+    dirigeant: `${mainDir.prenom || ''} ${mainDir.nom || ''}`.trim(),
+    age: mainDir.age || '',
+    ca: r.chiffre_affaires || (r.finances && r.finances[0]?.chiffre_affaires) || '',
+    effectif: r.effectif || r.tranche_effectif || '',
+    date_creation: r.date_creation || '',
+    procedure: r.procedure_collective_en_cours ? '⚠️' : '✅',
+    procedure_bool: !!r.procedure_collective_en_cours,
+    url: `https://www.pappers.fr/entreprise/${r.siren}`,
+  };
+}
+
+function renderPappersTable() {
+  const tbody = document.getElementById('pappersTableBody');
+  const filtered = getFilteredPappers();
+  if (filtered.length === 0) {
+    document.getElementById('pappersTableWrap').style.display = 'none';
+    document.getElementById('pappersEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('pappersTableWrap').style.display = 'block';
+  document.getElementById('pappersEmpty').style.display = 'none';
+  tbody.innerHTML = filtered.map(c => `
+    <tr>
+      <td title="${esc(c.libelle_naf)}">${esc(c.nom)}</td>
+      <td style="font-family:var(--font-mono);font-size:12px;">${c.siren}</td>
+      <td><span class="badge badge-blue">${c.code_naf}</span></td>
+      <td>${esc(c.ville)}</td>
+      <td>${c.departement}</td>
+      <td>${esc(c.dirigeant)}</td>
+      <td style="font-family:var(--font-mono);text-align:center;${c.age>=60?'color:var(--accent-actify);font-weight:600':''}">${c.age||'—'}</td>
+      <td style="font-family:var(--font-mono);text-align:right;">${c.ca ? formatNumber(c.ca) : '—'}</td>
+      <td style="text-align:center;">${c.effectif||'—'}</td>
+      <td style="font-family:var(--font-mono);font-size:12px;">${c.date_creation||'—'}</td>
+      <td style="text-align:center;">${c.procedure}</td>
+      <td class="link-cell"><a href="${c.url}" target="_blank">Pappers↗</a></td>
+    </tr>
+  `).join('');
+  document.getElementById('pappersResultsCount').textContent = `${filtered.length} résultat${filtered.length>1?'s':''}`;
+}
+
+function getFilteredPappers() {
+  const q = document.getElementById('pappersSearch').value.toLowerCase();
+  if (!q) return pappersData;
+  return pappersData.filter(c =>
+    (c.nom+c.siren+c.ville+c.dirigeant+c.code_naf+c.libelle_naf).toLowerCase().includes(q)
+  );
+}
+
+function filterPappersTable() { renderPappersTable(); }
+
+function updatePappersStats() {
+  const d = pappersData;
+  document.getElementById('pappersStats').style.display = d.length > 0 ? 'grid' : 'none';
+  document.getElementById('pStatTotal').textContent = d.length;
+  document.getElementById('pStatSaines').textContent = d.filter(c => !c.procedure_bool).length;
+  document.getElementById('pStatProc').textContent = d.filter(c => c.procedure_bool).length;
+  const ages = d.filter(c => c.age).map(c => parseInt(c.age));
+  document.getElementById('pStatAgeMoy').textContent = ages.length ? Math.round(ages.reduce((a,b)=>a+b,0)/ages.length) : '—';
+}
+
+function sortPappersTable(col) {
+  if (pappersSortCol === col) pappersSortDir *= -1;
+  else { pappersSortCol = col; pappersSortDir = 1; }
+  const keys = ['nom','siren','code_naf','ville','departement','dirigeant','age','ca','effectif','date_creation','procedure_bool','url'];
+  const key = keys[col];
+  pappersData.sort((a,b) => {
+    let va = a[key], vb = b[key];
+    if (typeof va === 'number' || key === 'age' || key === 'ca') {
+      va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+    } else { va = String(va||'').toLowerCase(); vb = String(vb||'').toLowerCase(); }
+    return va < vb ? -pappersSortDir : va > vb ? pappersSortDir : 0;
+  });
+  document.querySelectorAll('#pappersTable thead th').forEach((th,i) => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if (i === col) th.classList.add(pappersSortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+  });
+  renderPappersTable();
+}
+
+function loadPappersFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const succ = data.succession?.companies || [];
+      const dist = data.distressed?.companies || [];
+      pappersData = [...succ, ...dist].map(c => ({
+        nom: c.nom || '', siren: c.siren || '', code_naf: c.code_naf || '', libelle_naf: c.libelle_naf || '',
+        ville: c.ville || '', departement: c.departement || '', code_postal: c.code_postal || '',
+        dirigeant: c.dirigeant?.nom || '', age: c.dirigeant?.age || '', ca: c.chiffre_affaires || '',
+        effectif: c.effectif || '', date_creation: c.date_creation || '',
+        procedure: c.procedure_collective ? '⚠️' : '✅', procedure_bool: !!c.procedure_collective,
+        url: c.url_pappers || `https://www.pappers.fr/entreprise/${c.siren}`,
+      }));
+      renderPappersTable();
+      updatePappersStats();
+      document.getElementById('globalLastUpdate').textContent = `Pappers: ${data.extracted_at?.substring(0,16) || 'fichier chargé'}`;
+    } catch (err) { alert('Erreur de lecture du fichier JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════
+// ACTIFY (v2 — filtered dashboard)
+// ═══════════════════════════════════════
+const SECTOR_RULES = {
+  'Restauration': ['restaurant', 'restauration', 'traiteur', 'pizzeria', 'brasserie', 'crêperie', 'snack', 'kebab', 'sushi', 'cuisine'],
+  'Bar / Café': ['bar', 'café', 'cafe', 'tabac', 'débit de boissons', 'bar-tabac', 'discothèque', 'pub'],
+  'Boulangerie': ['boulangerie', 'pâtisserie', 'patisserie', 'viennoiserie'],
+  'Alimentaire': ['alimentation', 'alimentaire', 'boucherie', 'charcuterie', 'épicerie', 'primeur', 'poissonnerie', 'fromagerie'],
+  'Habillement': ['habillement', 'vêtement', 'vetement', 'textile', 'mode', 'accessoires', 'chaussur', 'prêt-à-porter', 'maroquinerie', 'lingerie'],
+  'Beauté': ['coiffure', 'esthétique', 'beauté', 'parfumerie', 'spa', 'onglerie', 'institut'],
+  'Immobilier': ['immobilier', 'bail commercial', 'droit au bail', 'murs commerciaux'],
+  'BTP / Industrie': ['btp', 'industrie', 'industriel', 'construction', 'bâtiment', 'batiment', 'menuiserie', 'métallurgie', 'usinage', 'atelier', 'mécanique', 'fabrication', 'manufacture'],
+  'Services': ['service', 'transport', 'logistique', 'nettoyage', 'informatique', 'conseil', 'formation', 'auto-école', 'garage', 'carrosserie', 'imprimerie'],
+  'Hôtellerie': ['hôtel', 'hotel', 'hébergement', 'camping', 'gîte', 'tourisme'],
+};
+
+function classifyActifySector(l) {
+  const text = [l.titre||'', l.activite||'', l.description_resume||''].join(' ').toLowerCase();
+  for (const [sector, kws] of Object.entries(SECTOR_RULES)) {
+    for (const kw of kws) { if (text.includes(kw)) return sector; }
+  }
+  return 'Autre';
+}
+
+let actifyAllListings = [];
+let actifyFiltered = [];
+const ACTIFY_TODAY = new Date(); ACTIFY_TODAY.setHours(0,0,0,0);
+const actifyState = { urgency: 'all', search: '', depts: [], sectors: [], sort: 'deadline' };
+
+function actifyDaysUntil(iso) {
+  if (!iso) return Infinity;
+  return Math.ceil((new Date(iso) - ACTIFY_TODAY) / 864e5);
+}
+function actifyDlLabel(d) { return d===Infinity?'—':d<0?'Passée':d===0?'Auj.':d+'j'; }
+function actifyDlClass(d) { return d<=3?'dl-crit':d<=7?'dl-warn':d<=15?'dl-mid':'dl-ok'; }
+
+function loadActifyData(data) {
+  const raw = data.listings || data;
+  actifyAllListings = (Array.isArray(raw)?raw:[]).map(l => ({
+    ...l,
+    _sector: classifyActifySector(l),
+    _days: actifyDaysUntil(l.date_limite_offres_iso),
+  }));
+  actifyData = actifyAllListings;
+
+  document.getElementById('actifyTotalCount').textContent = actifyAllListings.length;
+  if (data.scraped_at) {
+    const d = new Date(data.scraped_at);
+    document.getElementById('actifyMaj').textContent =
+      '· MAJ ' + d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('globalLastUpdate').textContent = 'Actify: ' + data.scraped_at.substring(0,16);
+  }
+  buildActifyUrgency();
+  buildActifySectors();
+  applyActifyFilters();
+}
+
+function buildActifyUrgency() {
+  const b = {3:0,7:0,15:0,30:0};
+  for (const l of actifyAllListings) {
+    if(l._days<=3) b[3]++; if(l._days<=7) b[7]++; if(l._days<=15) b[15]++; if(l._days<=30) b[30]++;
+  }
+  document.getElementById('aub3').textContent = b[3];
+  document.getElementById('aub7').textContent = b[7];
+  document.getElementById('aub15').textContent = b[15];
+  document.getElementById('aub30').textContent = b[30];
+  document.getElementById('aubAll').textContent = actifyAllListings.length;
+}
+
+function buildActifySectors() {
+  const counts = {};
+  for (const l of actifyAllListings) counts[l._sector] = (counts[l._sector]||0)+1;
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const bar = document.getElementById('actifySectorBar');
+  bar.innerHTML = '<span class="actify-sector-label">Secteur :</span>';
+  for (const [s, c] of sorted) {
+    const chip = document.createElement('span');
+    chip.className = 'actify-schip';
+    chip.dataset.sector = s;
+    chip.innerHTML = s + ' <span class="sc-count">' + c + '</span>';
+    chip.addEventListener('click', function() {
+      const i = actifyState.sectors.indexOf(s);
+      if (i >= 0) actifyState.sectors.splice(i, 1); else actifyState.sectors.push(s);
+      bar.querySelectorAll('.actify-schip').forEach(c => c.classList.toggle('active', actifyState.sectors.includes(c.dataset.sector)));
+      applyActifyFilters();
     });
+    bar.appendChild(chip);
+  }
+}
 
-    // ============================================================
-    // PUBLIC API
-    // ============================================================
-    return {
-        setFiscal, isDonationInRappel,
-        addDonor, removeDonor, updateDonor, getDonors,
-        addEntourage, removeEntourage, updateEntourage, updateDonorConjoint,
-        toggleEntourageExpand, updateEntourageDonation, updateEntourageDonLien,
-        updateDonorDonation, updateDonorDonationDate, updateDonorDonationType,
-        updateDonorBenLien, getEffectiveLien, getDonorDonationForBen, getDonorDonationForBenRaw, getTotalDonationsForBen, getDonationDetailForBen,
-        updateDonorReceivedDonation, getDonorReceivedFrom, updateDonorRecvLien,
-        applyDonorPreset,
-        buildGraph, findAllPaths, optimizeAll,
-        renderDonorList, updateMatrix, renderPathResults, refreshBenDonSummaries,
-        getBeneficiaries, fmt
-    };
+document.getElementById('actifyUrgencyBar').addEventListener('click', function(e) {
+  const badge = e.target.closest('.actify-ubadge');
+  if (!badge) return;
+  const v = badge.dataset.urg;
+  actifyState.urgency = v === 'all' ? 'all' : parseInt(v);
+  this.querySelectorAll('.actify-ubadge').forEach(b => b.classList.remove('active'));
+  badge.classList.add('active');
+  applyActifyFilters();
+});
 
-})();
+let actifySearchTimeout;
+document.getElementById('actifySearch2').addEventListener('input', function() {
+  clearTimeout(actifySearchTimeout);
+  const self = this;
+  actifySearchTimeout = setTimeout(function() {
+    actifyState.search = self.value.trim().toLowerCase();
+    applyActifyFilters();
+  }, 150);
+});
+
+document.getElementById('actifyDept').addEventListener('input', function() {
+  const raw = this.value.trim();
+  actifyState.depts = raw ? raw.split(',').map(d => d.trim()).filter(Boolean) : [];
+  applyActifyFilters();
+});
+
+document.getElementById('actifySortSelect2').addEventListener('change', function() {
+  actifyState.sort = this.value;
+  applyActifyFilters();
+});
+
+document.getElementById('actifyReset').addEventListener('click', function() {
+  actifyState.urgency = 'all'; actifyState.search = ''; actifyState.depts = [];
+  actifyState.sectors = []; actifyState.sort = 'deadline';
+  document.getElementById('actifySearch2').value = '';
+  document.getElementById('actifyDept').value = '';
+  document.getElementById('actifySortSelect2').value = 'deadline';
+  document.querySelectorAll('#actifyUrgencyBar .actify-ubadge').forEach(b => b.classList.remove('active'));
+  document.querySelector('#actifyUrgencyBar [data-urg="all"]').classList.add('active');
+  document.querySelectorAll('.actify-schip').forEach(c => c.classList.remove('active'));
+  applyActifyFilters();
+});
+
+document.getElementById('actifyFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try { loadActifyData(JSON.parse(ev.target.result)); }
+    catch(err) { alert('JSON invalide: ' + err.message); }
+  };
+  reader.readAsText(file);
+});
+
+function applyActifyFilters() {
+  actifyFiltered = actifyAllListings.filter(l => {
+    if (actifyState.urgency !== 'all' && l._days > actifyState.urgency) return false;
+    if (actifyState.depts.length && !actifyState.depts.includes(l.departement)) return false;
+    if (actifyState.sectors.length && !actifyState.sectors.includes(l._sector)) return false;
+    if (actifyState.search) {
+      const h = [l.titre,l.description_resume,l.activite,l.ville,l.departement,l.adresse,l.code_postal].filter(Boolean).join(' ').toLowerCase();
+      if (!h.includes(actifyState.search)) return false;
+    }
+    return true;
+  });
+  actifyFiltered.sort(function(a,b) {
+    switch(actifyState.sort) {
+      case 'deadline': return (a._days===Infinity?9999:a._days)-(b._days===Infinity?9999:b._days);
+      case 'recent': return (b._days===Infinity?-9999:b._days)-(a._days===Infinity?-9999:a._days);
+      case 'alpha': return (a.titre||'').localeCompare(b.titre||'','fr');
+      case 'dept': return (a.departement||'99').localeCompare(b.departement||'99');
+      default: return 0;
+    }
+  });
+  document.getElementById('actifyFilteredCount').textContent = actifyFiltered.length;
+  renderActifyTable();
+}
+
+function renderActifyTable() {
+  const tbody = document.getElementById('actifyTbody2');
+  if (!actifyFiltered.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Aucune annonce ne correspond aux filtres</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = actifyFiltered.map(function(l) {
+    const dl = actifyDlLabel(l._days), dc = actifyDlClass(l._days);
+    const lieu = l.ville || l.lieu || '—';
+    const dept = l.departement || '—';
+    const resume = (l.description_resume || l.activite || '').substring(0, 120);
+    const url = l.url || '#';
+    return '<tr>' +
+      '<td class="' + dc + '" style="white-space:nowrap;font-family:var(--font-mono);font-size:13px;">' + dl + '</td>' +
+      '<td style="max-width:280px;"><a href="' + url + '" target="_blank" style="color:var(--text);text-decoration:none;font-weight:600;font-size:13px;">' + esc(l.titre||'—') + '</a>' +
+      (l._sector !== 'Autre' ? '<br><span class="td-sector-tag">' + l._sector + '</span>' : '') +
+      '</td>' +
+      '<td style="color:var(--text-muted);white-space:nowrap;font-size:13px;">' + esc(lieu) + '</td>' +
+      '<td style="font-weight:700;color:var(--accent-cyan);text-align:center;font-family:var(--font-mono);">' + dept + '</td>' +
+      '<td style="color:var(--text-dim);font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(resume) + '</td>' +
+      '<td class="link-cell"><a href="' + url + '" target="_blank">Actify↗</a></td>' +
+      '</tr>';
+  }).join('');
+}
+
+document.getElementById('actifyExportCsv').addEventListener('click', function() {
+  if (!actifyFiltered || !actifyFiltered.length) return;
+  const hdr = ['Titre','Secteur','Deadline','Jours','Ville','Département','Adresse','URL','Résumé'];
+  const rows = actifyFiltered.map(function(l) { return [
+    (l.titre||'').replace(/"/g,'""'), l._sector, l.date_limite_offres_iso||'',
+    l._days===Infinity?'':l._days, (l.ville||'').replace(/"/g,'""'),
+    l.departement||'', (l.adresse||'').replace(/\n/g,' ').replace(/"/g,'""'),
+    l.url||'', (l.description_resume||'').replace(/"/g,'""'),
+  ]; });
+  const csv = [hdr].concat(rows).map(function(r) { return r.map(function(c){return '"'+c+'"';}).join(','); }).join('\n');
+  downloadFile(csv, 'actify_filtre_' + new Date().toISOString().slice(0,10) + '.csv');
+});
+
+// ═══════════════════════════════════════
+// BODACC
+// ═══════════════════════════════════════
+async function fetchBodaccLive() {
+  const days = parseInt(document.getElementById('bodaccDays').value) || 30;
+  const dateFrom = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+  document.getElementById('bodaccLoading').style.display = 'block';
+  document.getElementById('bodaccEmpty').style.display = 'none';
+  document.getElementById('bodaccTableWrap').style.display = 'none';
+  try {
+    const where = encodeURIComponent(`familleavis_lib = 'Procédures collectives' AND dateparution >= '${dateFrom}'`);
+    const url = `https://bodacc-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/annonces-commerciales/records?where=${where}&order_by=dateparution+DESC&limit=100`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    bodaccData = (data.results || []).map(r => ({
+      type_procedure: classifyProcedure(r),
+      nom: r.commercant || r.personne || '—',
+      ville: r.ville || '',
+      departement: r.departement_code_etablissement || '',
+      tribunal: r.tribunal || '',
+      date: r.dateparution || '',
+      nature: r.nature || '',
+      contenu: r.contenu_annonce || r.jugement || '',
+      url: r.id_annonce ? `https://www.bodacc.fr/annonce/detail/${r.id_annonce}` : '',
+    }));
+    renderBodacc();
+    updateBodaccStats();
+    document.getElementById('globalLastUpdate').textContent = `BODACC: ${new Date().toISOString().substring(0,16)}`;
+  } catch (err) {
+    alert('Erreur API BODACC: ' + err.message);
+  } finally {
+    document.getElementById('bodaccLoading').style.display = 'none';
+  }
+}
+
+function classifyProcedure(r) {
+  const text = ((r.contenu_annonce || '') + ' ' + (r.nature || '')).toLowerCase();
+  if (text.includes('plan de cession')) return '🔴 Plan de cession';
+  if (text.includes('redressement') && text.includes('ouverture')) return '🟡 Ouverture RJ';
+  if (text.includes('liquidation') && text.includes('ouverture')) return '🔴 Ouverture LJ';
+  if (text.includes('sauvegarde')) return '🟢 Sauvegarde';
+  if (text.includes('redressement')) return '🟡 RJ';
+  if (text.includes('liquidation')) return '🔴 LJ';
+  if (text.includes('clôture') || text.includes('cloture')) return '⚪ Clôture';
+  return '⚪ Autre';
+}
+
+function loadBodaccFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      bodaccData = (data.records || []).map(r => ({
+        type_procedure: r.type_procedure || classifyProcedure(r),
+        nom: r.nom_entreprise || r.nom || r.commercant || '',
+        ville: r.ville || '',
+        departement: r.departement || '',
+        tribunal: r.tribunal || '',
+        date: r.date_parution || r.date || '',
+        nature: r.nature || '',
+        contenu: r.contenu || '',
+        url: r.url_bodacc || r.url || '',
+      }));
+      renderBodacc();
+      updateBodaccStats();
+    } catch (err) { alert('Erreur lecture JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function renderBodacc() {
+  const tbody = document.getElementById('bodaccTableBody');
+  const filtered = getFilteredBodacc();
+  if (filtered.length === 0) {
+    document.getElementById('bodaccTableWrap').style.display = 'none';
+    document.getElementById('bodaccEmpty').style.display = 'block';
+    return;
+  }
+  document.getElementById('bodaccTableWrap').style.display = 'block';
+  document.getElementById('bodaccEmpty').style.display = 'none';
+  tbody.innerHTML = filtered.map(r => {
+    const typeColor = r.type_procedure.includes('🔴') ? 'var(--accent-actify)' :
+                      r.type_procedure.includes('🟡') ? 'var(--accent-bodacc)' :
+                      r.type_procedure.includes('🟢') ? 'var(--accent-green)' : 'var(--text-dim)';
+    return `
+      <tr>
+        <td><span style="color:${typeColor};font-family:var(--font-mono);font-size:12px;font-weight:600;">${esc(r.type_procedure)}</span></td>
+        <td title="${esc(r.contenu?.substring(0,200))}">${esc(r.nom)}</td>
+        <td>${esc(r.ville)}</td>
+        <td>${r.departement}</td>
+        <td>${esc(r.tribunal)}</td>
+        <td style="font-family:var(--font-mono);font-size:12px;">${r.date}</td>
+        <td style="font-size:12px;max-width:200px;">${esc(r.nature)}</td>
+        <td class="link-cell">${r.url ? `<a href="${r.url}" target="_blank">BODACC↗</a>` : ''}</td>
+      </tr>
+    `;
+  }).join('');
+  document.getElementById('bodaccCount').textContent = `${filtered.length} annonce${filtered.length>1?'s':''}`;
+}
+
+function getFilteredBodacc() {
+  const q = (document.getElementById('bodaccSearch').value || '').toLowerCase();
+  const typeFilter = document.getElementById('bodaccTypeFilter').value;
+  return bodaccData.filter(r => {
+    if (typeFilter && !r.type_procedure.includes(typeFilter)) return false;
+    if (q && !(r.nom+r.ville+r.tribunal+r.nature+r.contenu).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function filterBodacc() { renderBodacc(); }
+
+function updateBodaccStats() {
+  document.getElementById('bodaccStats').style.display = bodaccData.length > 0 ? 'grid' : 'none';
+  document.getElementById('bStatTotal').textContent = bodaccData.length;
+  document.getElementById('bStatRJ').textContent = bodaccData.filter(r => r.type_procedure.includes('Ouverture RJ')).length;
+  document.getElementById('bStatCession').textContent = bodaccData.filter(r => r.type_procedure.includes('cession')).length;
+  document.getElementById('bStatDate').textContent = new Date().toLocaleDateString('fr-FR');
+}
+
+function sortBodaccTable(col) {
+  if (bodaccSortCol === col) bodaccSortDir *= -1;
+  else { bodaccSortCol = col; bodaccSortDir = 1; }
+  const keys = ['type_procedure','nom','ville','departement','tribunal','date','nature','url'];
+  const key = keys[col];
+  bodaccData.sort((a,b) => {
+    let va = String(a[key]||'').toLowerCase(), vb = String(b[key]||'').toLowerCase();
+    return va < vb ? -bodaccSortDir : va > vb ? bodaccSortDir : 0;
+  });
+  document.querySelectorAll('#bodaccTable thead th').forEach((th,i) => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if (i === col) th.classList.add(bodaccSortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+  });
+  renderBodacc();
+}
+
+// ═══════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════
+function toCSV(headers, rows) {
+  const escape = v => `"${String(v||'').replace(/"/g, '""')}"`;
+  return [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+}
+
+function downloadFile(content, filename, type) {
+  type = type || 'text/csv';
+  const blob = new Blob(['\uFEFF'+content], { type: type+';charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function exportPappersCSV() {
+  const headers = ['Entreprise','SIREN','Code NAF','Libellé NAF','Ville','Département','Dirigeant','Âge','CA','Effectif','Création','Proc. Collective','URL'];
+  const rows = pappersData.map(c => [c.nom,c.siren,c.code_naf,c.libelle_naf,c.ville,c.departement,c.dirigeant,c.age,c.ca,c.effectif,c.date_creation,c.procedure_bool?'Oui':'Non',c.url]);
+  downloadFile(toCSV(headers, rows), `pappers_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+function exportPappersJSON() {
+  downloadFile(JSON.stringify(pappersData, null, 2), `pappers_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+}
+
+function exportBodaccCSV() {
+  const headers = ['Type','Entreprise','Ville','Département','Tribunal','Date','Nature','URL'];
+  const rows = bodaccData.map(r => [r.type_procedure,r.nom,r.ville,r.departement,r.tribunal,r.date,r.nature,r.url]);
+  downloadFile(toCSV(headers, rows), `bodacc_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function esc(str) {
+  if (!str) return '';
+  const el = document.createElement('span');
+  el.textContent = str;
+  return el.innerHTML;
+}
+
+function formatNumber(n) {
+  if (!n && n !== 0) return '';
+  return parseInt(n).toLocaleString('fr-FR');
+}
+
+function closeModal() {
+  document.getElementById('actifyModal').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════
+// AUTO-LOAD from data/ directory
+// ═══════════════════════════════════════
+async function tryAutoLoad() {
+  try {
+    const resp = await fetch('data/actify_listings.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      loadActifyData(data);
+    }
+  } catch(e) {}
+  try {
+    const resp = await fetch('data/bodacc_alerts.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      bodaccData = (data.records || []).map(r => ({
+        type_procedure: r.type_procedure || '',
+        nom: r.nom_entreprise || r.nom || '',
+        ville: r.ville || '',
+        departement: r.departement || '',
+        tribunal: r.tribunal || '',
+        date: r.date_parution || r.date || '',
+        nature: r.nature || '',
+        contenu: r.contenu || '',
+        url: r.url_bodacc || r.url || '',
+      }));
+      renderBodacc();
+      updateBodaccStats();
+    }
+  } catch(e) {}
+  try {
+    const resp = await fetch('data/pappers_results.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      const succ = data.succession?.companies || [];
+      const dist = data.distressed?.companies || [];
+      pappersData = [...succ, ...dist].map(c => ({
+        nom: c.nom||'', siren: c.siren||'', code_naf: c.code_naf||'', libelle_naf: c.libelle_naf||'',
+        ville: c.ville||'', departement: c.departement||'', dirigeant: c.dirigeant?.nom||'',
+        age: c.dirigeant?.age||'', ca: c.chiffre_affaires||'', effectif: c.effectif||'',
+        date_creation: c.date_creation||'', procedure: c.procedure_collective?'⚠️':'✅',
+        procedure_bool: !!c.procedure_collective, url: c.url_pappers||'',
+      }));
+      renderPappersTable();
+      updatePappersStats();
+    }
+  } catch(e) {}
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', tryAutoLoad);
+</script>
+</body>
+</html>
