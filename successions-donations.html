@@ -203,6 +203,15 @@
         input:focus,select:focus,textarea:focus { outline:none; border-color:var(--primary-color); background:rgba(198,134,66,0.05); box-shadow:0 0 0 3px rgba(198,134,66,0.1); }
         input:hover,select:hover { background:var(--bg-input-hover); border-color:rgba(198,134,66,0.3); }
         input::placeholder { color:var(--text-muted); }
+        /* Tree node overrides */
+        .tn{padding:5px 10px;border-radius:8px;text-align:center;min-width:50px;position:relative;cursor:default;}
+        .tn-name{font-size:.72rem;font-weight:700;color:var(--text-primary);outline:none;display:block;min-width:30px;border-bottom:1px dotted rgba(198,134,66,.15);}
+        .tn-age{font-size:.55rem;color:var(--text-muted);margin-top:1px;}
+        .tn input.tn-in{all:unset;font-size:.55rem;width:24px;text-align:center;color:var(--text-muted);border-bottom:1px dotted rgba(198,134,66,.1);padding:0;height:auto;background:none;}
+        .tn .tn-del{position:absolute;top:-4px;right:-4px;width:13px;height:13px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;}
+        .tn:hover .tn-del{opacity:.7;}
+        .tb{font-size:.48rem;padding:1px 5px;border:1px dashed rgba(198,134,66,.22);background:none;color:var(--text-muted);border-radius:3px;cursor:pointer;white-space:nowrap;transition:color .15s;}
+        .tb:hover{color:var(--primary-color);border-color:var(--primary-color);}
         select {
             cursor:pointer; -webkit-appearance:none; appearance:none;
             background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B9CB0'/%3E%3C/svg%3E");
