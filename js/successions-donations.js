@@ -807,33 +807,28 @@ const SD = (() => {
         const persons = FamilyGraph.getPersons();
 
         if (persons.length === 0) {
-            container.innerHTML = `<div style="text-align:center;padding:40px 20px;">
-                <div style="font-size:2rem;margin-bottom:12px;">👨‍👩‍👧‍👦</div>
-                <div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:16px;">Commencez par un modèle ou ajoutez la première personne.</div>
-                <button class="btn-add" onclick="SD.addRootPerson()" style="font-size:.78rem;padding:10px 20px;">
-                    <i class="fas fa-plus"></i> Ajouter la première personne
-                </button>
+            container.innerHTML = `<div style="text-align:center;padding:30px;">
+                <div style="font-size:1.5rem;margin-bottom:8px;">👨‍👩‍👧‍👦</div>
+                <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:12px;">Choisissez un modèle ou ajoutez la première personne</div>
+                <button class="btn-add" onclick="SD.addRootPerson()" style="font-size:.72rem;padding:8px 16px;"><i class="fas fa-plus"></i> Première personne</button>
             </div>`;
-            // Also clear roles
-            const rolesC = el('family-roles-list');
-            if (rolesC) rolesC.innerHTML = '';
+            const rc = el('family-roles-list'); if (rc) rc.innerHTML = '';
             return;
         }
 
-        // Build tree by levels
         const levels = FamilyGraph.computeLevels();
         const maxLvl = Math.max(...Object.values(levels));
+        const s = 'font-size:.5rem;padding:1px 5px;border:1px dashed rgba(198,134,66,.25);background:none;color:var(--text-muted);border-radius:3px;cursor:pointer;white-space:nowrap;';
 
-        let html = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">';
+        let html = '<div style="display:flex;flex-direction:column;align-items:center;gap:0;">';
 
         for (let lvl = 0; lvl <= maxLvl; lvl++) {
             const lvlPersons = persons.filter(p => levels[p.id] === lvl);
             if (lvlPersons.length === 0) continue;
 
-            // Group by couples
+            // Group couples
             const rendered = new Set();
             const groups = [];
-
             lvlPersons.forEach(p => {
                 if (rendered.has(p.id)) return;
                 rendered.add(p.id);
@@ -846,84 +841,77 @@ const SD = (() => {
                 }
             });
 
-            // Render level
-            html += `<div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;width:100%;">`;
-            groups.forEach(group => {
-                if (group.length === 2) {
-                    // Couple
-                    html += `<div style="display:flex;align-items:center;gap:4px;">`;
-                    html += renderNode(group[0], levels);
-                    html += `<div style="font-size:.7rem;color:var(--accent-coral);padding:0 2px;" title="Conjoints">💍</div>`;
-                    html += renderNode(group[1], levels);
+            // + Parent buttons row (for root nodes only)
+            if (lvl === 0) {
+                const rootsWithoutParents = lvlPersons.filter(p => FamilyGraph.parents(p.id).length === 0);
+                if (rootsWithoutParents.length > 0) {
+                    html += `<div style="display:flex;justify-content:center;gap:12px;margin-bottom:3px;">`;
+                    // Deduplicate — one button per group
+                    groups.forEach(g => {
+                        const p = g[0];
+                        if (FamilyGraph.parents(p.id).length === 0) {
+                            html += `<button onclick="SD.addRelative(${p.id},'parent')" style="${s}">↑ Parent de ${p.nom || '?'}</button>`;
+                        }
+                    });
+                    html += `</div>`;
+                }
+            }
+
+            // Person row
+            html += `<div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;align-items:center;">`;
+            groups.forEach(g => {
+                if (g.length === 2) {
+                    html += `<div style="display:flex;align-items:center;gap:0;">`;
+                    html += nd(g[0]);
+                    html += `<span style="font-size:.55rem;color:var(--accent-coral);margin:0 1px;">💍</span>`;
+                    html += nd(g[1]);
                     html += `</div>`;
                 } else {
-                    html += renderNode(group[0], levels);
+                    const p = g[0];
+                    const noSpouse = !FamilyGraph.spouse(p.id);
+                    html += `<div style="display:flex;align-items:center;gap:0;">`;
+                    html += nd(p);
+                    if (noSpouse) html += `<button onclick="SD.addRelative(${p.id},'spouse')" style="${s}margin-left:2px;">💍</button>`;
+                    html += `</div>`;
                 }
             });
             html += `</div>`;
 
-            // Connector lines to next level
+            // Connector + child buttons
+            html += `<div style="display:flex;justify-content:center;gap:8px;margin:2px 0;">`;
+            groups.forEach(g => {
+                const p = g[0];
+                const ch = FamilyGraph.children(p.id);
+                html += `<div style="display:flex;gap:4px;align-items:center;">`;
+                html += `<button onclick="SD.addRelative(${p.id},'child')" style="${s}">↓ Enfant</button>`;
+                if (FamilyGraph.parents(p.id).length > 0) {
+                    html += `<button onclick="SD.addRelative(${p.id},'sibling')" style="${s}">↔ F/S</button>`;
+                }
+                html += `</div>`;
+            });
+            html += `</div>`;
+
             if (lvl < maxLvl) {
-                html += `<div style="display:flex;justify-content:center;"><div style="width:2px;height:16px;background:rgba(198,134,66,.25);"></div></div>`;
+                html += `<div style="width:1px;height:8px;background:rgba(198,134,66,.2);margin:0 auto;"></div>`;
             }
         }
 
-        // Add orphan button
-        html += `<div style="margin-top:12px;text-align:center;">
-            <button class="btn-add" onclick="SD.addRootPerson()" style="font-size:.68rem;padding:6px 14px;opacity:.7;">
-                <i class="fas fa-plus"></i> Ajouter une personne sans lien
-            </button>
-        </div>`;
-
+        html += `<div style="margin-top:8px;"><button class="btn-add" onclick="SD.addRootPerson()" style="font-size:.58rem;padding:4px 10px;opacity:.5;"><i class="fas fa-plus"></i> Personne sans lien</button></div>`;
         html += '</div>';
         container.innerHTML = html;
-
-        // Render roles grid
         renderFamilyRoles();
     }
 
-    function renderNode(p, levels) {
-        const hasChildren = FamilyGraph.children(p.id).length > 0;
-        const hasParents = FamilyGraph.parents(p.id).length > 0;
-        const hasSiblings = FamilyGraph.siblings(p.id).length > 0;
-        const hasSpouse = !!FamilyGraph.spouse(p.id);
-
-        const donorBg = p.isDonor ? 'rgba(198,134,66,.15)' : 'transparent';
-        const benBorder = p.isBeneficiary ? '2px solid var(--accent-green)' : '1.5px solid rgba(198,134,66,.2)';
-        const roleIcons = (p.isDonor ? '💰' : '') + (p.isBeneficiary ? '🎯' : '');
-
-        // Action buttons — contextual
-        const btnStyle = 'font-size:.52rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;white-space:nowrap;';
-
-        let topBtns = '';
-        if (!hasParents) {
-            topBtns = `<button onclick="SD.addRelative(${p.id},'parent')" style="${btnStyle}">↑ Parent</button>`;
-        }
-
-        let bottomBtns = `<button onclick="SD.addRelative(${p.id},'child')" style="${btnStyle}">↓ Enfant</button>`;
-        if (hasParents) {
-            bottomBtns = `<div style="display:flex;gap:3px;justify-content:center;">
-                <button onclick="SD.addRelative(${p.id},'sibling')" style="${btnStyle}">↔ Frère/Sœur</button>
-                <button onclick="SD.addRelative(${p.id},'child')" style="${btnStyle}">↓ Enfant</button>
-            </div>`;
-        }
-
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-            ${topBtns}
-            <div style="display:flex;align-items:center;gap:2px;">
-                ${!hasSpouse ? `<button onclick="SD.addRelative(${p.id},'spouse')" style="font-size:.5rem;padding:2px 4px;border:1px dashed rgba(255,107,107,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;" title="Conjoint">💍</button>` : ''}
-                <div style="padding:8px 10px;border-radius:10px;background:${donorBg};border:${benBorder};min-width:80px;text-align:center;position:relative;">
-                    <button onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();" style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.45rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.5;" title="Supprimer">✕</button>
-                    <input type="text" value="${p.nom}" placeholder="Nom"
-                           style="font-size:.7rem;font-weight:700;text-align:center;background:none;border:none;border-bottom:1px solid rgba(198,134,66,.15);color:var(--text-primary);width:100%;padding:2px 0;outline:none;"
-                           onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);">
-                    <input type="number" value="${p.age || ''}" placeholder="âge" min="0" max="120"
-                           style="font-size:.55rem;width:36px;text-align:center;background:rgba(198,134,66,.05);border:1px solid rgba(198,134,66,.1);border-radius:4px;color:var(--text-secondary);padding:2px;margin-top:3px;"
-                           onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
-                    ${roleIcons ? `<div style="font-size:.55rem;margin-top:2px;">${roleIcons}</div>` : ''}
-                </div>
-            </div>
-            ${bottomBtns}
+    // Compact node — just name + age, tiny
+    function nd(p) {
+        const db = p.isDonor ? 'rgba(198,134,66,.18)' : 'rgba(92,64,51,.06)';
+        const bb = p.isBeneficiary ? '1.5px solid var(--accent-green)' : '1px solid rgba(198,134,66,.15)';
+        const ri = (p.isDonor ? '💰' : '') + (p.isBeneficiary ? '🎯' : '');
+        return `<div style="padding:4px 8px;border-radius:6px;background:${db};border:${bb};text-align:center;min-width:60px;position:relative;">
+            <button onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();" style="position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.4;">✕</button>
+            <input type="text" value="${p.nom}" placeholder="Nom" style="font-size:.62rem;font-weight:700;text-align:center;background:none;border:none;color:var(--text-primary);width:100%;padding:0;outline:none;border-bottom:1px dotted rgba(198,134,66,.1);" onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);">
+            <input type="number" value="${p.age||''}" placeholder="âge" min="0" max="120" style="font-size:.5rem;width:28px;text-align:center;background:none;border:none;color:var(--text-muted);padding:0;outline:none;" onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
+            ${ri ? `<span style="font-size:.45rem;">${ri}</span>` : ''}
         </div>`;
     }
 
@@ -939,7 +927,6 @@ const SD = (() => {
         } else if (type === 'parent') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', newP.id, fromId);
-            // Also link parent to all siblings of from (same parents)
             FamilyGraph.siblings(fromId).forEach(s => {
                 FamilyGraph.addRelation('parent', newP.id, s.id);
             });
@@ -950,14 +937,9 @@ const SD = (() => {
                 FamilyGraph.addRelation('parent', newP.id, c.id);
             });
         } else if (type === 'sibling') {
-            // Add a sibling = child of from's parents
             newP = FamilyGraph.addPerson('', 0);
-            const parents = FamilyGraph.parents(fromId);
-            if (parents.length > 0) {
-                parents.forEach(par => FamilyGraph.addRelation('parent', par.id, newP.id));
-            } else {
-                // No parents declared — create at same level (orphan)
-            }
+            const pars = FamilyGraph.parents(fromId);
+            pars.forEach(par => FamilyGraph.addRelation('parent', par.id, newP.id));
         }
         renderFamilyTree();
     }
