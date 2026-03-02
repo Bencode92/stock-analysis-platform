@@ -134,14 +134,13 @@ const PathOptimizer = (() => {
         }
         if (field === 'role' || field === 'age') {
             updateMatrix();
-            // Don't full re-render — just update labels in-place
-            updateDonorLabelsInPlace(id);
+            // Role change affects inter-donor links on ALL cards → full re-render needed
+            renderDonorList();
             refreshBenDonSummaries();
         }
         if (field === 'nom') {
-            const title = document.getElementById('donor-title-' + id);
-            if (title) title.textContent = value;
-            // Also refresh other donors that show "reçu de [nom]"
+            // Name change affects inter-donor labels on other cards → full re-render
+            renderDonorList();
             refreshBenDonSummaries();
         }
         if (typeof SD !== 'undefined' && SD.updateAside) SD.updateAside();
@@ -794,9 +793,9 @@ const PathOptimizer = (() => {
                 <i class="fas fa-sitemap"></i> Entourage de ${d.nom} <span style="font-size:.58rem;font-weight:400;color:var(--text-muted);">(enrichit les chemins indirects)</span>
             </label>
 
-            <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:.75rem;margin-bottom:10px;">
-                <span style="color:var(--text-muted);">💍 Conjoint :</span>
-                <select class="form-input" style="font-size:.72rem;height:30px;" onchange="PathOptimizer.updateDonorConjoint(${d.id},this.value)">${conjointOpts}</select>
+            <div style="display:flex;gap:8px;align-items:center;font-size:.75rem;margin-bottom:10px;flex-wrap:wrap;">
+                <span style="color:var(--text-muted);white-space:nowrap;">💍 Conjoint :</span>
+                <select class="form-input" style="font-size:.72rem;height:32px;min-width:200px;flex:1;" onchange="PathOptimizer.updateDonorConjoint(${d.id},this.value)">${conjointOpts}</select>
             </div>`;
 
         // Auto-detected links
@@ -987,9 +986,10 @@ const PathOptimizer = (() => {
                                        onchange="PathOptimizer.updateDonorDonation(${d.id},${b.id},this.value)">
                             </div>
                         </div>
-                        ${montant > 0 ? `<div style="display:flex;gap:6px;align-items:center;margin-top:4px;padding-left:4px;">
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;padding-left:4px;">
                             <input type="date" class="form-input" value="${donEntry?.date || ''}"
                                    style="font-size:.6rem;height:24px;flex:1;max-width:130px;"
+                                   title="Date de la donation (pour le rappel 15 ans)"
                                    onchange="PathOptimizer.updateDonorDonationDate(${d.id},${b.id},this.value)">
                             <select class="form-input" style="font-size:.58rem;height:24px;flex:1;max-width:120px;"
                                     onchange="PathOptimizer.updateDonorDonationType(${d.id},${b.id},this.value)">
@@ -997,12 +997,12 @@ const PathOptimizer = (() => {
                                 <option value="notariee" ${donEntry?.type==='notariee'?'selected':''}>Notariée</option>
                                 <option value="don_manuel" ${donEntry?.type==='don_manuel'?'selected':''}>Don manuel</option>
                             </select>
-                            ${donEntry?.date && !isDonationInRappel(donEntry.date)
-                                ? '<span style="font-size:.55rem;color:var(--accent-green);white-space:nowrap;">✅ > 15 ans : abattement rechargé</span>'
+                            ${montantRaw > 0 ? (donEntry?.date && !isDonationInRappel(donEntry.date)
+                                ? '<span style="font-size:.55rem;color:var(--accent-green);white-space:nowrap;">✅ > 15 ans</span>'
                                 : donEntry?.date
-                                    ? '<span style="font-size:.55rem;color:var(--accent-coral);white-space:nowrap;">⏳ dans le rappel 15 ans</span>'
-                                    : '<span style="font-size:.55rem;color:var(--accent-amber);white-space:nowrap;">⚠️ date inconnue → calcul conservateur</span>'}
-                        </div>` : ''}`;
+                                    ? '<span style="font-size:.55rem;color:var(--accent-coral);white-space:nowrap;">⏳ rappel 15a</span>'
+                                    : '<span style="font-size:.55rem;color:var(--accent-amber);white-space:nowrap;">📅?</span>') : ''}
+                        </div>`;
                     }).join('')}
                 </div>`;
             } else {
