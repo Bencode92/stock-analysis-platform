@@ -195,193 +195,245 @@ const SD = (() => {
     // 3. NAV — Navigation wizard
     // ============================================================
     // === FAMILY VALIDATION + SMART QUESTIONS ===
-    function buildFamilyValidation() {
+    function buildFamilyTree() {
         const donors = typeof PathOptimizer !== 'undefined' ? PathOptimizer.getDonors() : [];
         const bens = state.beneficiaries;
-        if (donors.length === 0 && bens.length === 0) return;
+        const container = el('family-tree-container');
+        if (!container) return;
 
-        const questions = [];
-        const tree = [];
+        if (donors.length === 0 && bens.length === 0) {
+            container.style.display = 'block';
+            container.innerHTML = '<div class="section-card" style="text-align:center;padding:32px;"><i class="fas fa-users" style="font-size:2rem;color:var(--text-muted);"></i><div style="margin-top:12px;color:var(--text-muted);">Ajoutez des donateurs et bénéficiaires pour voir l\'arbre.</div></div>';
+            return;
+        }
 
-        // Build tree summary
+        const fmt = v => new Intl.NumberFormat('fr-FR').format(v) + '€';
+        const PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+
+        // Classify donors by level
+        const levels = { arr_grand_parent: 0, grand_parent: 1, parent: 2, conjoint: 2, oncle_tante: 2, tiers: 2 };
+        const donorsByLevel = {};
         donors.forEach(d => {
-            const links = [];
-            // Links to beneficiaries — use RAW montant for display
+            const lvl = levels[d.role] ?? 2;
+            if (!donorsByLevel[lvl]) donorsByLevel[lvl] = [];
+            donorsByLevel[lvl].push(d);
+        });
+
+        // Build edges: each donor → each beneficiary
+        const edges = [];
+        donors.forEach(d => {
             bens.forEach(b => {
-                const lien = typeof PathOptimizer !== 'undefined'
-                    ? PathOptimizer.getEffectiveLien(d.id, b.id, d.role, b.lien)
-                    : 'tiers';
-                if (lien !== 'aucun') {
-                    const don = typeof PathOptimizer !== 'undefined'
-                        ? (PathOptimizer.getDonorDonationForBenRaw ? PathOptimizer.getDonorDonationForBenRaw(d.id, b.id) : PathOptimizer.getDonorDonationForBen(d.id, b.id))
-                        : 0;
-                    links.push({ nom: b.prenom || 'Bénéf.', type: 'ben', lien, don });
-                }
+                const lien = PO ? PO.getEffectiveLien(d.id, b.id, d.role, b.lien) : 'tiers';
+                if (lien === 'aucun') return;
+                const donEntry = d.donationsParBen.find(e => +e.benId === b.id);
+                const donne = donEntry ? donEntry.montant : 0;
+                const dateStr = donEntry?.date || null;
+                const inRappel = !dateStr || (PO && typeof PO.isDonationInRappel === 'function' ? PO.isDonationInRappel(dateStr) : true);
+                const effective = inRappel ? donne : 0;
+                const abat = FISCAL ? (FISCAL.abattements[lien] || FISCAL.abattements.tiers) : 1594;
+                const restant = Math.max(0, abat - effective);
+                const pctUsed = abat > 0 ? Math.min(100, (effective / abat) * 100) : 100;
+                edges.push({ from: d, to: b, lien, abat, donne, effective, restant, pctUsed, dateStr, inRappel, type: 'direct' });
             });
-            // Inter-donateurs
-            const otherDonors = donors.filter(od => od.id !== d.id);
-            otherDonors.forEach(od => {
-                const lienAuto = typeof PathOptimizer !== 'undefined'
-                    ? PathOptimizer.getEffectiveLien(d.id, od.id, d.role, od.role)
-                    : 'tiers';
-                if (lienAuto !== 'tiers' && lienAuto !== 'aucun') {
-                    links.push({ nom: od.nom, type: 'donateur', lien: lienAuto, don: 0 });
-                }
-            });
-            // Entourage — skip empty names
-            const entourage = d.entourage || [];
-            entourage.filter(e => e.nom && e.nom.trim()).forEach(e => {
-                links.push({ nom: e.nom, type: 'entourage', lien: e.lien, don: 0 });
-            });
-            tree.push({ nom: d.nom, role: d.role, age: d.age, links, entLen: entourage.length, conjointId: d.conjointId });
         });
 
-        // Smart questions — dedup and be smarter
-        // Check conjoint: consider both d.conjointId AND if another donor has role 'conjoint'
-        const hasConjointDonor = donors.some(d => d.role === 'conjoint');
+        // Inter-donor edges
+        const interEdges = [];
         donors.forEach(d => {
-            const otherDonorIsConjoint = donors.some(od => od.id !== d.id && od.role === 'conjoint');
-            const hasEntourageConjoint = !!d.conjointId && d.conjointId !== 'none';
-            if (!otherDonorIsConjoint && !hasEntourageConjoint && d.role !== 'conjoint') {
-                questions.push({ icon: '💍', text: `${d.nom} a-t-il/elle un(e) conjoint(e) ou partenaire PACS ?`, severity: 'info' });
-            }
-            const hasFrere = (d.entourage || []).some(e => e.lien === 'frere');
-            if (!hasFrere && d.role === 'parent') {
-                questions.push({ icon: '👫', text: `${d.nom} a-t-il/elle des frères ou sœurs ? (= oncles/tantes des bénéficiaires → chemins indirects)`, severity: 'info' });
-            }
-            if (d.role === 'grand_parent') {
-                const childDonors = donors.filter(od => od.role === 'parent');
-                if (childDonors.length <= 1) {
-                    questions.push({ icon: '👨‍👩‍👧', text: `${d.nom} a-t-il/elle d'autres enfants que ${childDonors.map(c => c.nom).join(', ') || '?'} ? (= oncles/tantes des bénéficiaires)`, severity: 'warn' });
+            donors.forEach(od => {
+                if (d.id >= od.id) return;
+                const lien = PO ? PO.getEffectiveLien(d.id, od.id, d.role, od.role) : 'tiers';
+                if (lien !== 'tiers' && lien !== 'aucun') {
+                    interEdges.push({ d1: d, d2: od, lien });
                 }
-            }
-
-            // Check for donations without dates
-            const donsWithoutDate = (d.donationsParBen || []).filter(e => e.montant > 0 && !e.date);
-            if (donsWithoutDate.length > 0) {
-                questions.push({ icon: '📅', text: `${d.nom} : ${donsWithoutDate.length} donation(s) sans date → calcul conservateur (abattement réputé consommé)`, severity: 'warn' });
-            }
-        });
-
-        // Beneficiary checks — ONE question for cousins, not per-ben
-        bens.forEach(b => {
-            const donorsLinked = donors.filter(d => {
-                const lien = typeof PathOptimizer !== 'undefined'
-                    ? PathOptimizer.getEffectiveLien(d.id, b.id, d.role, b.lien)
-                    : 'tiers';
-                return lien !== 'aucun' && lien !== 'tiers';
             });
-            if (donorsLinked.length === 0) {
-                questions.push({ icon: '⚠️', text: `${b.prenom || 'Bénéficiaire'} n'a aucun lien fiscal avec les donateurs. Vérifiez les liens.`, severity: 'error' });
-            }
         });
-        if (bens.length >= 2) {
-            questions.push({ icon: '👯', text: `Les bénéficiaires ont-ils des cousins liés aux donateurs ? (pas dans la liste actuelle)`, severity: 'info' });
-        }
 
-        // Render in a modal-like overlay at bottom of step 1
-        let container = el('family-validation');
-        if (!container) {
-            const panel = document.getElementById('step-1');
-            if (!panel) return;
-            container = document.createElement('div');
-            container.id = 'family-validation';
-            panel.appendChild(container);
-        }
+        // Entourage-based indirect paths
+        const indirectEdges = [];
+        donors.forEach(d => {
+            (d.entourage || []).filter(e => e.nom && e.nom.trim()).forEach(e => {
+                bens.forEach(b => {
+                    indirectEdges.push({ from: d, via: e, to: b });
+                });
+            });
+        });
 
-        let html = `
-        <div style="margin-top:20px;padding:16px;border-radius:12px;background:rgba(92,64,51,.06);border:2px solid rgba(198,134,66,.2);">`;
-
-        // Score de complétude
+        // === QUALITY CHECKS ===
         const checks = [];
-        const hasDonors = donors.length > 0;
-        const hasBens = bens.length > 0;
-        checks.push({ label: 'Donateurs', ok: hasDonors, critical: true, detail: hasDonors ? donors.length + ' donateur(s)' : 'Aucun donateur' });
-        checks.push({ label: 'Bénéficiaires', ok: hasBens, critical: true, detail: hasBens ? bens.length + ' bénéficiaire(s)' : 'Aucun bénéficiaire' });
-        const allAges = donors.every(d => d.age > 0);
-        checks.push({ label: 'Âges', ok: allAges, critical: true, detail: allAges ? 'Tous renseignés' : 'Manquant(s) — impact démembrement' });
+        checks.push({ label: 'Donateurs', ok: donors.length > 0, critical: true, detail: donors.length > 0 ? donors.length + ' donateur(s)' : 'Aucun' });
+        checks.push({ label: 'Bénéficiaires', ok: bens.length > 0, critical: true, detail: bens.length > 0 ? bens.length + ' bénéf.' : 'Aucun' });
+        checks.push({ label: 'Âges', ok: donors.every(d => d.age > 0), critical: true, detail: donors.every(d => d.age > 0) ? 'OK' : 'Manquant(s)' });
         const donsWithAmount = donors.flatMap(d => d.donationsParBen.filter(e => e.montant > 0));
         const hasDates = donsWithAmount.length === 0 || donsWithAmount.every(e => e.date);
-        checks.push({ label: 'Dates donations', ok: hasDates, critical: false, detail: donsWithAmount.length === 0 ? 'Aucune donation déclarée' : hasDates ? 'Toutes datées' : donsWithAmount.filter(e=>!e.date).length + ' sans date → conservateur' });
-        const hasConjoint = donors.some(d => d.conjointId && d.conjointId !== 'none') || donors.some(d => d.role === 'conjoint');
-        checks.push({ label: 'Conjoint', ok: hasConjoint || donors.length <= 1, critical: false, detail: hasConjoint ? 'Renseigné' : 'Non renseigné — impact régime matrimonial' });
+        checks.push({ label: 'Dates', ok: hasDates, critical: false, detail: donsWithAmount.length === 0 ? 'Aucune don.' : hasDates ? 'OK' : donsWithAmount.filter(e=>!e.date).length + ' sans date' });
+        const hasConj = donors.some(d => d.conjointId && d.conjointId !== 'none') || donors.some(d => d.role === 'conjoint');
+        checks.push({ label: 'Conjoint', ok: hasConj || donors.length <= 1, critical: false, detail: hasConj ? 'OK' : 'Non renseigné' });
 
-        const total = checks.length;
+        // === RENDER ===
+        let html = '<div class="section-card" style="margin-top:16px;padding:20px;">';
+
+        // Quality bar
         const passed = checks.filter(c => c.ok).length;
-        const pct = Math.round(passed / total * 100);
-        const criticalFail = checks.filter(c => c.critical && !c.ok);
-
-        html += `
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:8px;margin-bottom:16px;">
-                ${checks.map(c => {
-                    const bg = c.ok ? 'rgba(46,125,50,.08)' : c.critical ? 'rgba(255,107,107,.08)' : 'rgba(255,183,77,.08)';
-                    const brd = c.ok ? 'rgba(46,125,50,.2)' : c.critical ? 'rgba(255,107,107,.25)' : 'rgba(255,183,77,.2)';
-                    const clr = c.ok ? 'var(--accent-green)' : c.critical ? 'var(--accent-coral)' : 'var(--accent-amber)';
-                    const ico = c.ok ? '✓' : c.critical ? '✗' : '!';
-                    return `<div style="padding:10px 12px;border-radius:8px;background:${bg};border:1px solid ${brd};">
-                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                            <span style="width:20px;height:20px;border-radius:50%;background:${clr};color:#fff;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${ico}</span>
-                            <span style="font-size:.72rem;font-weight:700;color:${clr};">${c.label}</span>
-                        </div>
-                        <div style="font-size:.6rem;color:var(--text-muted);line-height:1.3;">${c.detail}</div>
-                    </div>`;
-                }).join('')}
-            </div>`;
-
-        if (criticalFail.length > 0) {
-            html += `<div style="font-size:.7rem;padding:10px 14px;border-radius:8px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);color:var(--accent-coral);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-                <span style="font-size:1.1rem;">⛔</span>
-                <span><strong>Bloquant :</strong> ${criticalFail.map(c => c.label).join(', ')} — à renseigner avant de continuer.</span>
-            </div>`;
-        }
-
-        html += `
-            <div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                <i class="fas fa-sitemap"></i> Arbre familial
-            </div>`;
-
-        // Tree visualization
-        html += `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;">`;
-        tree.forEach(t => {
-            html += `<div style="flex:1;min-width:200px;padding:10px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">
-                <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;">${t.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${formatRole(t.role)}, ${t.age} ans)</span></div>
-                ${t.links.map(l => {
-                    const icon = l.type === 'ben' ? '🎯' : l.type === 'donateur' ? '💰' : '👤';
-                    const donStr = l.don > 0 ? ` · <span style="color:var(--accent-coral);">donné ${new Intl.NumberFormat('fr-FR').format(l.don)}€</span>` : '';
-                    const dateWarn = l.type === 'ben' && l.don > 0 && !l.hasDate ? ' <span style="color:var(--accent-amber);font-size:.55rem;">📅?</span>' : '';
-                    return `<div style="font-size:.65rem;padding:2px 0;color:var(--text-secondary);">${icon} ${l.nom} — ${formatLienShort(l.lien)}${donStr}${dateWarn}</div>`;
-                }).join('')}
-                ${t.links.length === 0 ? '<div style="font-size:.62rem;color:var(--text-muted);">Aucun lien</div>' : ''}
-            </div>`;
-        });
-        html += `</div>`;
-
-        // Smart questions
-        // Sort questions: errors first, then warnings, then info. Max 3.
-        const sortedQ = questions.sort((a, b) => {
-            const sev = { error: 0, warn: 1, info: 2 };
-            return (sev[a.severity] || 3) - (sev[b.severity] || 3);
-        }).slice(0, 3);
-
-        if (sortedQ.length > 0) {
-            html += `<div style="font-size:.78rem;font-weight:700;color:var(--accent-amber);margin-bottom:8px;"><i class="fas fa-lightbulb"></i> Suggestions (${sortedQ.length}/${questions.length}) :</div>`;
-            sortedQ.forEach(q => {
-                const bgColor = q.severity === 'error' ? 'rgba(255,107,107,.1)' : q.severity === 'warn' ? 'rgba(255,183,77,.1)' : 'rgba(198,134,66,.04)';
-                const borderColor = q.severity === 'error' ? 'rgba(255,107,107,.3)' : q.severity === 'warn' ? 'rgba(255,183,77,.2)' : 'rgba(198,134,66,.1)';
-                html += `<div style="font-size:.7rem;padding:6px 10px;margin-bottom:4px;border-radius:6px;background:${bgColor};border:1px solid ${borderColor};color:var(--text-secondary);">
-                    ${q.icon} ${q.text}
-                </div>`;
-            });
-        }
-
-        html += `
-            <div style="text-align:right;margin-top:12px;">
-                <span style="font-size:.68rem;color:var(--text-muted);">Tout est correct ? Cliquez "Suivant" pour continuer.</span>
-            </div>
+        const total = checks.length;
+        html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+            ${checks.map(c => {
+                const clr = c.ok ? '#2e7d32' : c.critical ? '#ff6b6b' : '#ffb74d';
+                return `<span style="font-size:.62rem;padding:4px 10px;border-radius:20px;background:${clr}15;border:1px solid ${clr}40;color:${clr};font-weight:600;">${c.ok ? '✓' : c.critical ? '✗' : '!'} ${c.label}: ${c.detail}</span>`;
+            }).join('')}
         </div>`;
 
+        // === TREE VISUAL ===
+        html += '<div style="position:relative;overflow-x:auto;">';
+
+        // Render node helper
+        function nodeHtml(person, role, isdonor) {
+            const age = person.age ? `, ${person.age}a` : '';
+            const pat = isdonor && person.patrimoine ? `<div style="font-size:.55rem;color:var(--text-muted);">${fmt(person.patrimoine)}</div>` : '';
+            const roleLabel = formatRole(role);
+            const bgColor = isdonor ? 'linear-gradient(135deg, rgba(198,134,66,.12), rgba(198,134,66,.06))' : 'linear-gradient(135deg, rgba(46,125,50,.12), rgba(46,125,50,.06))';
+            const borderColor = isdonor ? 'rgba(198,134,66,.3)' : 'rgba(46,125,50,.3)';
+            const iconColor = isdonor ? 'var(--primary-color)' : 'var(--accent-green)';
+            return `<div style="display:inline-flex;flex-direction:column;align-items:center;padding:10px 14px;border-radius:10px;background:${bgColor};border:1.5px solid ${borderColor};min-width:100px;text-align:center;">
+                <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);">${person.prenom || person.nom || '?'}</div>
+                <div style="font-size:.58rem;color:${iconColor};font-weight:600;">${roleLabel}${age}</div>
+                ${pat}
+            </div>`;
+        }
+
+        // Arrow/edge helper
+        function edgeHtml(edge) {
+            const pct = edge.pctUsed;
+            const barColor = pct > 80 ? '#ff6b6b' : pct > 50 ? '#ffb74d' : '#2e7d32';
+            const lienLabel = formatLienShort(edge.lien);
+            const dateTag = edge.donne > 0 ? (edge.dateStr
+                ? (edge.inRappel ? `<span style="color:#ff6b6b;">⏳${edge.dateStr.slice(0,4)}</span>` : `<span style="color:#2e7d32;">✅${edge.dateStr.slice(0,4)}</span>`)
+                : '<span style="color:#ffb74d;">📅?</span>') : '';
+            return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;">
+                <div style="width:2px;height:12px;background:${barColor};"></div>
+                <div style="font-size:.58rem;font-weight:600;color:${barColor};white-space:nowrap;">${lienLabel}</div>
+                <div style="width:60px;height:4px;border-radius:2px;background:rgba(198,134,66,.1);overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px;"></div>
+                </div>
+                <div style="font-size:.52rem;color:var(--text-muted);">
+                    ${edge.donne > 0 ? `<span style="color:${barColor};">${fmt(edge.donne)}</span> / ` : ''}${fmt(edge.abat)} ${dateTag}
+                </div>
+                <div style="width:2px;height:12px;background:${barColor};"></div>
+                <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${barColor};"></div>
+            </div>`;
+        }
+
+        // Group by level and render
+        const sortedLevels = Object.keys(donorsByLevel).sort((a,b) => +a - +b);
+
+        sortedLevels.forEach((lvl, li) => {
+            const lvlDonors = donorsByLevel[lvl];
+
+            // Donor row
+            html += `<div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:4px;">`;
+            lvlDonors.forEach(d => {
+                html += nodeHtml(d, d.role, true);
+            });
+            html += '</div>';
+
+            // Edges from this level to beneficiaries
+            const lvlEdges = edges.filter(e => lvlDonors.some(d => d.id === e.from.id));
+            if (lvlEdges.length > 0) {
+                html += `<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">`;
+                // Group by beneficiary to align columns
+                bens.forEach(b => {
+                    const benEdges = lvlEdges.filter(e => e.to.id === b.id);
+                    if (benEdges.length === 0) {
+                        html += `<div style="width:100px;"></div>`;
+                        return;
+                    }
+                    html += '<div style="display:flex;gap:8px;justify-content:center;">';
+                    benEdges.forEach(e => {
+                        html += `<div style="display:flex;flex-direction:column;align-items:center;">
+                            <div style="font-size:.5rem;color:var(--text-muted);margin-bottom:2px;">${e.from.nom}</div>
+                            ${edgeHtml(e)}
+                        </div>`;
+                    });
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            // Inter-donor edges at this level
+            const lvlInter = interEdges.filter(ie => lvlDonors.some(d => d.id === ie.d1.id || d.id === ie.d2.id));
+            if (lvlInter.length > 0) {
+                html += `<div style="display:flex;justify-content:center;gap:12px;margin:4px 0;">`;
+                lvlInter.forEach(ie => {
+                    html += `<span style="font-size:.55rem;padding:3px 8px;border-radius:12px;background:rgba(198,134,66,.08);border:1px dashed rgba(198,134,66,.2);color:var(--text-muted);">↔ ${ie.d1.nom} — ${ie.d2.nom} : ${formatLienShort(ie.lien)}</span>`;
+                });
+                html += '</div>';
+            }
+        });
+
+        // Beneficiary row
+        html += `<div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-top:4px;">`;
+        bens.forEach(b => {
+            html += nodeHtml(b, b.lien || 'enfant', false);
+        });
+        html += '</div>';
+
+        // Indirect paths summary
+        const entourageMembers = donors.flatMap(d => (d.entourage || []).filter(e => e.nom && e.nom.trim()).map(e => ({ ...e, donorNom: d.nom })));
+        if (entourageMembers.length > 0) {
+            html += `<div style="margin-top:16px;padding:12px;border-radius:8px;background:rgba(198,134,66,.04);border:1px dashed rgba(198,134,66,.15);">
+                <div style="font-size:.72rem;font-weight:700;color:var(--primary-color);margin-bottom:6px;"><i class="fas fa-route"></i> Chemins indirects via entourage</div>`;
+            entourageMembers.forEach(e => {
+                html += `<div style="font-size:.62rem;color:var(--text-secondary);padding:2px 0;">
+                    ${e.donorNom} → <strong>${e.nom}</strong> (${formatLienShort(e.lien)}) → bénéficiaires
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        html += '</div>'; // close relative
+
+        // Suggestions
+        const questions = [];
+        donors.forEach(d => {
+            const otherIsConjoint = donors.some(od => od.id !== d.id && od.role === 'conjoint');
+            const hasEntConj = d.conjointId && d.conjointId !== 'none';
+            if (!otherIsConjoint && !hasEntConj && d.role !== 'conjoint') {
+                questions.push({ icon: '💍', text: `${d.nom} : conjoint ?`, severity: 'info' });
+            }
+            const noDateDons = (d.donationsParBen || []).filter(e => e.montant > 0 && !e.date);
+            if (noDateDons.length > 0) {
+                questions.push({ icon: '📅', text: `${d.nom} : ${noDateDons.length} donation(s) sans date`, severity: 'warn' });
+            }
+        });
+        bens.forEach(b => {
+            const linked = donors.some(d => {
+                const lien = PO ? PO.getEffectiveLien(d.id, b.id, d.role, b.lien) : 'tiers';
+                return lien !== 'aucun' && lien !== 'tiers';
+            });
+            if (!linked) questions.push({ icon: '⚠️', text: `${b.prenom} : aucun lien fiscal`, severity: 'error' });
+        });
+
+        if (questions.length > 0) {
+            const sorted = questions.sort((a,b) => ({ error:0, warn:1, info:2 }[a.severity]||3) - ({ error:0, warn:1, info:2 }[b.severity]||3)).slice(0, 4);
+            html += `<div style="margin-top:14px;"><div style="font-size:.72rem;font-weight:700;color:var(--accent-amber);margin-bottom:6px;"><i class="fas fa-lightbulb"></i> Suggestions</div>`;
+            sorted.forEach(q => {
+                const bg = q.severity === 'error' ? 'rgba(255,107,107,.08)' : q.severity === 'warn' ? 'rgba(255,183,77,.08)' : 'rgba(198,134,66,.04)';
+                const border = q.severity === 'error' ? 'rgba(255,107,107,.2)' : q.severity === 'warn' ? 'rgba(255,183,77,.2)' : 'rgba(198,134,66,.1)';
+                html += `<div style="font-size:.65rem;padding:6px 10px;margin-bottom:4px;border-radius:6px;background:${bg};border:1px solid ${border};color:var(--text-secondary);">${q.icon} ${q.text}</div>`;
+            });
+            html += '</div>';
+        }
+
+        html += `<div style="text-align:center;margin-top:14px;font-size:.6rem;color:var(--text-muted);">Tout est correct ? Cliquez "Suivant" pour continuer.</div>`;
+        html += '</div>'; // close section-card
+
+        container.style.display = 'block';
         container.innerHTML = html;
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    // Keep old name for backward compat
+    function buildFamilyValidation() { buildFamilyTree(); }
 
     function formatLienShort(lien) {
         const map = {
@@ -2001,6 +2053,7 @@ const SD = (() => {
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
         calculateResults, resetAll, updateAside,
+        buildFamilyTree,
         _getState: () => state
     };
 
