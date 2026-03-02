@@ -525,12 +525,11 @@
             <main class="page-main">
                         <!-- ==================== STEP 1: ARBRE FAMILIAL ==================== -->
             <div class="step-panel active" id="step-1">
-                <div class="step-helper"><i class="fas fa-sitemap"></i> Construisez votre arbre familial : ajoutez les personnes, déclarez les liens (parent de, marié à), puis cochez qui transmet et qui reçoit. Le système déduit tous les liens fiscaux automatiquement.</div>
+                <div class="step-helper"><i class="fas fa-sitemap"></i> Construisez votre arbre familial. Cliquez sur <strong>+ Enfant</strong>, <strong>+ Parent</strong> ou <strong>+ 💍</strong> autour de chaque personne. Le système déduit tous les liens fiscaux automatiquement.</div>
 
-                <!-- Presets familiaux -->
+                <!-- Presets -->
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-magic"></i> Démarrage rapide</div>
-                    <div class="section-subtitle">Choisissez un modèle familial, puis personnalisez-le.</div>
                     <div class="presets" id="family-presets">
                         <button class="preset-btn" onclick="SD.applyFamilyPreset('couple_2enfants')">👨‍👩‍👧‍👦 Couple + 2 enfants</button>
                         <button class="preset-btn" onclick="SD.applyFamilyPreset('couple_3enfants')">👨‍👩‍👧‍👦 Couple + 3 enfants</button>
@@ -539,54 +538,30 @@
                     </div>
                 </div>
 
-                <!-- Personnes -->
+                <!-- Interactive Tree -->
                 <div class="section-card">
-                    <div class="section-title"><i class="fas fa-users"></i> Personnes</div>
-                    <div class="section-subtitle">Ajoutez toutes les personnes impliquées dans la transmission.</div>
-                    <div class="dynamic-list" id="family-persons-list"></div>
-                    <button class="btn-add" onclick="SD.addFamilyPerson()" style="margin-top:12px;">
-                        <i class="fas fa-plus"></i> Ajouter une personne
-                    </button>
+                    <div class="section-title"><i class="fas fa-project-diagram"></i> Arbre familial</div>
+                    <div class="section-subtitle">Cliquez sur les boutons + pour construire l'arbre. Éditez les noms et âges directement.</div>
+                    <div id="family-persons-list"></div>
                 </div>
 
-                <!-- Relations -->
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-link"></i> Liens familiaux</div>
-                    <div class="section-subtitle">Déclarez les relations : "est parent de" ou "marié/pacsé avec".</div>
-                    <div id="family-relations-list"></div>
-                    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-                        <button class="btn-add" onclick="SD.addFamilyRelation('parent')" style="flex:1;min-width:180px;">
-                            <i class="fas fa-arrow-down"></i> Ajouter un lien parent → enfant
-                        </button>
-                        <button class="btn-add" onclick="SD.addFamilyRelation('spouse')" style="flex:1;min-width:180px;">
-                            <i class="fas fa-heart"></i> Ajouter un lien conjoint/pacsé
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Rôles : qui donne, qui reçoit -->
+                <!-- Roles -->
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-exchange-alt"></i> Qui transmet ? Qui reçoit ?</div>
-                    <div class="section-subtitle">Cochez les donateurs (💰) et bénéficiaires (🎯) parmi les personnes déclarées.</div>
+                    <div class="section-subtitle">Cochez 💰 (donateur) et 🎯 (bénéficiaire). Le lien fiscal est auto-calculé.</div>
                     <div id="family-roles-list"></div>
                 </div>
 
-                <!-- Arbre visuel + Matrice -->
-                <div class="section-card" id="family-tree-preview" style="display:none;">
-                    <div class="section-title"><i class="fas fa-project-diagram"></i> Arbre & Liens fiscaux</div>
-                    <div id="family-tree-visual"></div>
-                    <div id="family-matrix"></div>
-                </div>
-
+                <!-- Verify -->
                 <div style="text-align:center;margin-top:16px;">
                     <button class="btn-primary" onclick="SD.buildFamilyTree()" style="padding:12px 28px;font-size:.82rem;border-radius:10px;background:linear-gradient(135deg, var(--primary-color), #8b6914);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(198,134,66,.3);transition:all .2s;">
                         <i class="fas fa-project-diagram"></i> &nbsp;Vérifier ma cartographie
                     </button>
                 </div>
+                <div id="family-tree-container" style="display:none;"></div>
             </div>
 
-
-            <!-- ==================== STEP 2: DONATIONS & DÉTAILS ==================== -->
+                        <!-- ==================== STEP 2: DONATIONS & DÉTAILS ==================== -->
             <div class="step-panel" id="step-2">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez les donateurs (parents, grands-parents…) avec leur patrimoine propre, puis ajoutez les bénéficiaires. L'optimiseur calculera automatiquement le meilleur chemin de transmission.</div>
 
@@ -1044,7 +1019,6 @@
 
 <!-- External JS -->
 <script src="js/successions-donations.js"></script>
-<script src="js/family-graph.js"></script>
 <script src="js/path-optimizer.js"></script>
 </body>
 </html>
