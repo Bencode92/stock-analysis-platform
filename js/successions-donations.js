@@ -1,4 +1,347 @@
 /**
+ * FamilyGraph.js — Moteur de graphe familial pour succession/donation
+ * 
+ * Relations simples → liens fiscaux automatiques :
+ *   addPerson("Marie-Jo", 60)
+ *   addRelation('parent', marieJo, catherine)   // Marie-Jo est parent de Catherine
+ *   addRelation('spouse', catherine, christophe) // Catherine mariée à Christophe
+ * 
+ * → computeFiscalLien(marieJo, baptiste) = 'petit_enfant' (31 865€)
+ */
+const FamilyGraph = (function() {
+    'use strict';
+
+    let persons = [];
+    let relations = [];
+    let idCounter = 0;
+
+    // ============================================================
+    // 1. PERSON CRUD
+    // ============================================================
+    function addPerson(nom, age, patrimoine, regime) {
+        const id = idCounter++;
+        const p = {
+            id, nom: nom || `Personne ${id + 1}`,
+            age: age || 0,
+            patrimoine: patrimoine || 0,
+            regime: regime || 'communaute',
+            isDonor: false,
+            isBeneficiary: false,
+            isDeceased: false
+        };
+        persons.push(p);
+        return p;
+    }
+
+    function removePerson(id) {
+        persons = persons.filter(p => p.id !== +id);
+        relations = relations.filter(r => r.from !== +id && r.to !== +id);
+    }
+
+    function updatePerson(id, field, value) {
+        const p = persons.find(p => p.id === +id);
+        if (!p) return;
+        if (field === 'age' || field === 'patrimoine') p[field] = +value || 0;
+        else p[field] = value;
+    }
+
+    function getPerson(id) { return persons.find(p => p.id === +id); }
+    function getPersons() { return [...persons]; }
+    function getDonors() { return persons.filter(p => p.isDonor); }
+    function getBeneficiaries() { return persons.filter(p => p.isBeneficiary); }
+
+    function toggleRole(id, role, val) {
+        const p = getPerson(id);
+        if (!p) return;
+        if (role === 'donor') p.isDonor = !!val;
+        if (role === 'beneficiary') p.isBeneficiary = !!val;
+    }
+
+    // ============================================================
+    // 2. RELATIONS
+    // ============================================================
+    // type: 'parent' (from is parent OF to) | 'spouse' (bidirectional)
+    function addRelation(type, fromId, toId) {
+        const f = +fromId, t = +toId;
+        if (f === t) return;
+        if (type === 'spouse') {
+            // Only 1 spouse per person
+            relations = relations.filter(r => !(r.type === 'spouse' && (r.from === f || r.to === f)));
+            relations = relations.filter(r => !(r.type === 'spouse' && (r.from === t || r.to === t)));
+        }
+        if (!relations.some(r => r.type === type && r.from === f && r.to === t)) {
+            relations.push({ type, from: f, to: t });
+        }
+    }
+
+    function removeRelation(type, fromId, toId) {
+        relations = relations.filter(r => !(r.type === type && r.from === +fromId && r.to === +toId));
+        // For spouse, also check reverse
+        if (type === 'spouse') {
+            relations = relations.filter(r => !(r.type === 'spouse' && r.from === +toId && r.to === +fromId));
+        }
+    }
+
+    function getRelations() { return [...relations]; }
+
+    // ============================================================
+    // 3. GRAPH TRAVERSAL
+    // ============================================================
+    function parents(pid) {
+        return relations.filter(r => r.type === 'parent' && r.to === +pid).map(r => getPerson(r.from)).filter(Boolean);
+    }
+
+    function children(pid) {
+        return relations.filter(r => r.type === 'parent' && r.from === +pid).map(r => getPerson(r.to)).filter(Boolean);
+    }
+
+    function spouse(pid) {
+        const r = relations.find(r => r.type === 'spouse' && (r.from === +pid || r.to === +pid));
+        if (!r) return null;
+        return getPerson(r.from === +pid ? r.to : r.from);
+    }
+
+    function siblings(pid) {
+        const ps = parents(pid);
+        const ids = new Set();
+        ps.forEach(p => children(p.id).forEach(c => { if (c.id !== +pid) ids.add(c.id); }));
+        return [...ids].map(id => getPerson(id)).filter(Boolean);
+    }
+
+    function grandchildren(pid) {
+        const gc = [];
+        children(pid).forEach(c => children(c.id).forEach(gc2 => gc.push(gc2)));
+        return gc;
+    }
+
+    function grandparents(pid) {
+        const gp = [];
+        parents(pid).forEach(p => parents(p.id).forEach(gp2 => gp.push(gp2)));
+        return gp;
+    }
+
+    function greatGrandchildren(pid) {
+        const ggc = [];
+        grandchildren(pid).forEach(gc => children(gc.id).forEach(ggc2 => ggc.push(ggc2)));
+        return ggc;
+    }
+
+    function unclesAunts(pid) {
+        // Parents' siblings + their spouses
+        const result = [];
+        parents(pid).forEach(p => {
+            siblings(p.id).forEach(s => {
+                result.push(s);
+                const sp = spouse(s.id);
+                if (sp && !result.some(r => r.id === sp.id)) result.push(sp);
+            });
+        });
+        return result;
+    }
+
+    function nephewsNieces(pid) {
+        // Siblings' children + spouse's siblings' children
+        const result = [];
+        const addChildren = (arr) => arr.forEach(s => children(s.id).forEach(c => {
+            if (!result.some(r => r.id === c.id)) result.push(c);
+        }));
+        addChildren(siblings(pid));
+        const sp = spouse(pid);
+        if (sp) addChildren(siblings(sp.id));
+        return result;
+    }
+
+    // ============================================================
+    // 4. FISCAL LIEN COMPUTATION
+    // ============================================================
+    function computeFiscalLien(fromId, toId) {
+        const f = +fromId, t = +toId;
+        if (f === t) return 'self';
+
+        // Direct child / parent
+        if (children(f).some(c => c.id === t)) return 'enfant';
+        if (parents(f).some(p => p.id === t)) return 'enfant'; // LD ascendante
+
+        // Spouse
+        const sp = spouse(f);
+        if (sp && sp.id === t) return 'conjoint_pacs_donation';
+
+        // Grandchild / grandparent
+        if (grandchildren(f).some(gc => gc.id === t)) return 'petit_enfant';
+        if (grandparents(f).some(gp => gp.id === t)) return 'petit_enfant';
+
+        // Great-grandchild
+        if (greatGrandchildren(f).some(ggc => ggc.id === t)) return 'arriere_petit_enfant';
+
+        // Sibling
+        if (siblings(f).some(s => s.id === t)) return 'frere_soeur';
+
+        // Nephew/niece
+        if (nephewsNieces(f).some(n => n.id === t)) return 'neveu_niece';
+        // Uncle/aunt (reverse of nephew)
+        if (unclesAunts(f).some(u => u.id === t)) return 'neveu_niece';
+
+        return 'tiers';
+    }
+
+    // Build full matrix donateurs × bénéficiaires
+    function buildMatrix() {
+        const ds = getDonors();
+        const bs = getBeneficiaries();
+        return ds.map(d => ({
+            donor: d,
+            links: bs.map(b => ({
+                beneficiary: b,
+                lien: computeFiscalLien(d.id, b.id)
+            }))
+        }));
+    }
+
+    // ============================================================
+    // 5. TREE LEVELS — for visual rendering
+    // ============================================================
+    function computeLevels() {
+        const levels = {};
+        // Roots = persons with no parents declared
+        const roots = persons.filter(p => parents(p.id).length === 0);
+
+        function walk(pid, depth) {
+            if (levels[pid] !== undefined && levels[pid] <= depth) return;
+            levels[pid] = depth;
+            // Spouse at same level
+            const sp = spouse(pid);
+            if (sp && (levels[sp.id] === undefined || levels[sp.id] > depth)) {
+                levels[sp.id] = depth;
+            }
+            children(pid).forEach(c => walk(c.id, depth + 1));
+        }
+
+        roots.forEach(r => walk(r.id, 0));
+
+        // Any unvisited persons at max+1
+        const maxLvl = Math.max(0, ...Object.values(levels));
+        persons.forEach(p => { if (levels[p.id] === undefined) levels[p.id] = maxLvl + 1; });
+
+        return levels;
+    }
+
+    // ============================================================
+    // 6. SYNC to PathOptimizer — bridge old system
+    // ============================================================
+    function syncToPathOptimizer() {
+        if (typeof PathOptimizer === 'undefined') return;
+
+        const ds = getDonors();
+        const bs = getBeneficiaries();
+
+        // Clear old data
+        const oldDonors = PathOptimizer.getDonors ? PathOptimizer.getDonors() : [];
+        oldDonors.forEach(d => { if (PathOptimizer.removeDonor) PathOptimizer.removeDonor(d.id); });
+
+        // Recreate donors with graph-computed liens
+        ds.forEach(d => {
+            const role = inferRole(d.id);
+            const newId = PathOptimizer.addDonor(role, d.nom, d.age, d.patrimoine, d.regime);
+            // Set linkedBens based on graph
+            const donor = PathOptimizer.getDonors().find(dd => dd.id === newId);
+            if (donor) {
+                donor.linkedBens = {};
+                bs.forEach(b => {
+                    const lien = computeFiscalLien(d.id, b.id);
+                    donor.linkedBens[b.id] = (lien !== 'tiers');
+                });
+                // Map original person id for later reference
+                donor._graphId = d.id;
+            }
+        });
+
+        // Update beneficiaries in SD state
+        if (typeof SD !== 'undefined' && SD._getState) {
+            const state = SD._getState();
+            state.beneficiaries = bs.map(b => ({
+                id: b.id,
+                prenom: b.nom,
+                age: b.age,
+                lien: inferBenLien(b.id),
+                generation: inferGeneration(b.id)
+            }));
+        }
+    }
+
+    // Infer old-style "role" from graph position
+    function inferRole(personId) {
+        const bs = getBeneficiaries();
+        // If has grandchildren in bens → grand_parent
+        if (bs.some(b => grandchildren(personId).some(gc => gc.id === b.id))) return 'grand_parent';
+        if (bs.some(b => greatGrandchildren(personId).some(ggc => ggc.id === b.id))) return 'arr_grand_parent';
+        // If has children in bens → parent
+        if (bs.some(b => children(personId).some(c => c.id === b.id))) return 'parent';
+        // If spouse of someone who has children in bens → conjoint
+        const sp = spouse(personId);
+        if (sp && bs.some(b => children(sp.id).some(c => c.id === b.id))) return 'conjoint';
+        // If nephews/nieces in bens → oncle_tante
+        if (bs.some(b => nephewsNieces(personId).some(n => n.id === b.id))) return 'oncle_tante';
+        return 'tiers';
+    }
+
+    function inferBenLien(personId) {
+        const ds = getDonors();
+        // If has parents in donors → enfant
+        if (ds.some(d => parents(personId).some(p => p.id === d.id))) return 'enfant';
+        if (ds.some(d => grandparents(personId).some(gp => gp.id === d.id))) return 'petit_enfant';
+        return 'enfant';
+    }
+
+    function inferGeneration(personId) {
+        const ds = getDonors();
+        if (ds.some(d => grandparents(personId).some(gp => gp.id === d.id))) return 'petit_enfant';
+        return 'enfant';
+    }
+
+    // ============================================================
+    // 7. SERIALIZATION
+    // ============================================================
+    function exportData() {
+        return { persons: persons.map(p => ({...p})), relations: [...relations], idCounter };
+    }
+
+    function importData(data) {
+        persons = (data.persons || []).map(p => ({...p}));
+        relations = data.relations || [];
+        idCounter = data.idCounter || persons.length;
+    }
+
+    function reset() {
+        persons = [];
+        relations = [];
+        idCounter = 0;
+    }
+
+    // ============================================================
+    // EXPORTS
+    // ============================================================
+    return {
+        // Persons
+        addPerson, removePerson, updatePerson, getPerson, getPersons,
+        getDonors, getBeneficiaries, toggleRole,
+        // Relations
+        addRelation, removeRelation, getRelations,
+        // Graph queries
+        parents, children, spouse, siblings,
+        grandchildren, grandparents, greatGrandchildren,
+        unclesAunts, nephewsNieces,
+        // Fiscal
+        computeFiscalLien, buildMatrix,
+        // Visual
+        computeLevels,
+        // Bridge
+        syncToPathOptimizer, inferRole,
+        // Data
+        exportData, importData, reset
+    };
+})();
+
+/**
  * ================================================================
  * OPTIMISATEUR SUCCESSION & DONATION — TradePulse
  * ================================================================
@@ -454,73 +797,151 @@ const SD = (() => {
     // ============================================================
     // FAMILY GRAPH UI — Step 1
     // ============================================================
-    function renderFamilyPersons() {
+    // ============================================================
+    // FAMILY GRAPH UI — Interactive vertical tree
+    // ============================================================
+
+    function renderFamilyTree() {
         const container = el('family-persons-list');
         if (!container) return;
         const persons = FamilyGraph.getPersons();
-        container.innerHTML = persons.map(p => `
-            <div class="card" data-person-id="${p.id}" style="padding:12px;margin-bottom:8px;border-radius:10px;background:rgba(92,64,51,.06);border:1px solid rgba(92,64,51,.12);">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <input type="text" class="form-input" value="${p.nom}" placeholder="Nom"
-                           style="flex:2;min-width:120px;font-weight:700;"
-                           onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);SD.renderFamilyRelations();SD.renderFamilyRoles();">
-                    <input type="number" class="form-input" value="${p.age || ''}" placeholder="Âge" min="0" max="120"
-                           style="width:70px;"
-                           onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
-                    <input type="number" class="form-input" value="${p.patrimoine || ''}" placeholder="Patrimoine (€)" min="0" step="10000"
-                           style="width:130px;"
-                           onchange="FamilyGraph.updatePerson(${p.id},'patrimoine',this.value);">
-                    <select class="form-input" style="width:140px;" onchange="FamilyGraph.updatePerson(${p.id},'regime',this.value);">
-                        <option value="communaute" ${p.regime === 'communaute' ? 'selected' : ''}>Communauté</option>
-                        <option value="separation" ${p.regime === 'separation' ? 'selected' : ''}>Séparation</option>
-                        <option value="participation" ${p.regime === 'participation' ? 'selected' : ''}>Participation</option>
-                    </select>
-                    <button class="btn-icon-danger" onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyAll();" title="Supprimer">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
+
+        if (persons.length === 0) {
+            container.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+                <div style="font-size:2rem;margin-bottom:12px;">👨‍👩‍👧‍👦</div>
+                <div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:16px;">Commencez par un modèle ou ajoutez la première personne.</div>
+                <button class="btn-add" onclick="SD.addRootPerson()" style="font-size:.78rem;padding:10px 20px;">
+                    <i class="fas fa-plus"></i> Ajouter la première personne
+                </button>
+            </div>`;
+            // Also clear roles
+            const rolesC = el('family-roles-list');
+            if (rolesC) rolesC.innerHTML = '';
+            return;
+        }
+
+        // Build tree by levels
+        const levels = FamilyGraph.computeLevels();
+        const maxLvl = Math.max(...Object.values(levels));
+
+        let html = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">';
+
+        for (let lvl = 0; lvl <= maxLvl; lvl++) {
+            const lvlPersons = persons.filter(p => levels[p.id] === lvl);
+            if (lvlPersons.length === 0) continue;
+
+            // Group by couples
+            const rendered = new Set();
+            const groups = [];
+
+            lvlPersons.forEach(p => {
+                if (rendered.has(p.id)) return;
+                rendered.add(p.id);
+                const sp = FamilyGraph.spouse(p.id);
+                if (sp && levels[sp.id] === lvl && !rendered.has(sp.id)) {
+                    rendered.add(sp.id);
+                    groups.push([p, sp]);
+                } else {
+                    groups.push([p]);
+                }
+            });
+
+            // Render level
+            html += `<div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;width:100%;">`;
+            groups.forEach(group => {
+                if (group.length === 2) {
+                    // Couple
+                    html += `<div style="display:flex;align-items:center;gap:4px;">`;
+                    html += renderNode(group[0], levels);
+                    html += `<div style="font-size:.7rem;color:var(--accent-coral);padding:0 2px;" title="Conjoints">💍</div>`;
+                    html += renderNode(group[1], levels);
+                    html += `</div>`;
+                } else {
+                    html += renderNode(group[0], levels);
+                }
+            });
+            html += `</div>`;
+
+            // Connector lines to next level
+            if (lvl < maxLvl) {
+                html += `<div style="display:flex;justify-content:center;"><div style="width:2px;height:16px;background:rgba(198,134,66,.25);"></div></div>`;
+            }
+        }
+
+        // Add orphan button
+        html += `<div style="margin-top:12px;text-align:center;">
+            <button class="btn-add" onclick="SD.addRootPerson()" style="font-size:.68rem;padding:6px 14px;opacity:.7;">
+                <i class="fas fa-plus"></i> Ajouter une personne sans lien
+            </button>
+        </div>`;
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Render roles grid
+        renderFamilyRoles();
     }
 
-    function renderFamilyRelations() {
-        const container = el('family-relations-list');
-        if (!container) return;
-        const rels = FamilyGraph.getRelations();
-        const persons = FamilyGraph.getPersons();
-        const opts = persons.map(p => `<option value="${p.id}">${p.nom || 'Personne ' + p.id}</option>`).join('');
+    function renderNode(p, levels) {
+        const hasChildren = FamilyGraph.children(p.id).length > 0;
+        const hasParents = FamilyGraph.parents(p.id).length > 0;
+        const hasSpouse = !!FamilyGraph.spouse(p.id);
 
-        container.innerHTML = rels.map((r, i) => {
-            const fromP = FamilyGraph.getPerson(r.from);
-            const toP = FamilyGraph.getPerson(r.to);
-            if (r.type === 'parent') {
-                return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.08);">
-                    <select class="form-input" style="flex:1;font-size:.72rem;" onchange="SD.updateFamilyRelation(${i},'from',this.value)">
-                        ${persons.map(p => `<option value="${p.id}" ${p.id === r.from ? 'selected' : ''}>${p.nom}</option>`).join('')}
-                    </select>
-                    <span style="font-size:.68rem;color:var(--primary-color);font-weight:700;white-space:nowrap;"><i class="fas fa-arrow-right"></i> parent de <i class="fas fa-arrow-right"></i></span>
-                    <select class="form-input" style="flex:1;font-size:.72rem;" onchange="SD.updateFamilyRelation(${i},'to',this.value)">
-                        ${persons.map(p => `<option value="${p.id}" ${p.id === r.to ? 'selected' : ''}>${p.nom}</option>`).join('')}
-                    </select>
-                    <button class="btn-icon-danger" onclick="SD.removeFamilyRelation(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
-                </div>`;
-            } else {
-                return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.08);">
-                    <select class="form-input" style="flex:1;font-size:.72rem;" onchange="SD.updateFamilyRelation(${i},'from',this.value)">
-                        ${persons.map(p => `<option value="${p.id}" ${p.id === r.from ? 'selected' : ''}>${p.nom}</option>`).join('')}
-                    </select>
-                    <span style="font-size:.68rem;color:var(--accent-coral);font-weight:700;white-space:nowrap;">💍 marié/pacsé avec</span>
-                    <select class="form-input" style="flex:1;font-size:.72rem;" onchange="SD.updateFamilyRelation(${i},'to',this.value)">
-                        ${persons.map(p => `<option value="${p.id}" ${p.id === r.to ? 'selected' : ''}>${p.nom}</option>`).join('')}
-                    </select>
-                    <button class="btn-icon-danger" onclick="SD.removeFamilyRelation(${i})" title="Supprimer"><i class="fas fa-times"></i></button>
-                </div>`;
-            }
-        }).join('');
+        const donorBg = p.isDonor ? 'rgba(198,134,66,.15)' : 'transparent';
+        const benBorder = p.isBeneficiary ? '2px solid var(--accent-green)' : '1.5px solid rgba(198,134,66,.2)';
+        const roleIcons = (p.isDonor ? '💰' : '') + (p.isBeneficiary ? '🎯' : '');
 
-        if (rels.length === 0) {
-            container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:.72rem;">Aucun lien déclaré. Utilisez les boutons ci-dessous pour ajouter des relations.</div>';
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+            ${!hasParents ? `<button onclick="SD.addRelative(${p.id},'parent')" style="font-size:.55rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;" title="Ajouter un parent">+ Parent</button>` : ''}
+            <div style="display:flex;align-items:center;gap:2px;">
+                ${!hasSpouse ? `<button onclick="SD.addRelative(${p.id},'spouse')" style="font-size:.5rem;padding:2px 4px;border:1px dashed rgba(255,107,107,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;writing-mode:vertical-rl;" title="Ajouter conjoint">+💍</button>` : ''}
+                <div style="padding:8px 12px;border-radius:10px;background:${donorBg};border:${benBorder};min-width:90px;text-align:center;position:relative;">
+                    <button onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();" style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.6;" title="Supprimer">✕</button>
+                    <input type="text" value="${p.nom}" placeholder="Nom" 
+                           style="font-size:.72rem;font-weight:700;text-align:center;background:none;border:none;border-bottom:1px solid rgba(198,134,66,.15);color:var(--text-primary);width:100%;padding:2px 0;outline:none;"
+                           onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);SD.renderFamilyTree();">
+                    <div style="display:flex;justify-content:center;gap:4px;margin-top:4px;">
+                        <input type="number" value="${p.age || ''}" placeholder="âge" min="0" max="120"
+                               style="font-size:.58rem;width:36px;text-align:center;background:rgba(198,134,66,.05);border:1px solid rgba(198,134,66,.1);border-radius:4px;color:var(--text-secondary);padding:2px;"
+                               onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
+                        <input type="number" value="${p.patrimoine || ''}" placeholder="patrim." min="0" step="10000"
+                               style="font-size:.58rem;width:60px;text-align:center;background:rgba(198,134,66,.05);border:1px solid rgba(198,134,66,.1);border-radius:4px;color:var(--text-secondary);padding:2px;"
+                               onchange="FamilyGraph.updatePerson(${p.id},'patrimoine',this.value);">
+                    </div>
+                    ${roleIcons ? `<div style="font-size:.6rem;margin-top:2px;">${roleIcons}</div>` : ''}
+                </div>
+            </div>
+            ${!hasChildren ? `<button onclick="SD.addRelative(${p.id},'child')" style="font-size:.55rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.3);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;" title="Ajouter un enfant">+ Enfant</button>` : `<button onclick="SD.addRelative(${p.id},'child')" style="font-size:.5rem;padding:1px 4px;border:1px dashed rgba(198,134,66,.2);background:none;color:var(--text-muted);border-radius:4px;cursor:pointer;opacity:.5;" title="Encore un enfant">+</button>`}
+        </div>`;
+    }
+
+    function addRelative(fromId, type) {
+        const from = FamilyGraph.getPerson(fromId);
+        if (!from) return;
+        let newP;
+        if (type === 'child') {
+            newP = FamilyGraph.addPerson('', 0);
+            FamilyGraph.addRelation('parent', fromId, newP.id);
+            // If from has a spouse, also add as parent
+            const sp = FamilyGraph.spouse(fromId);
+            if (sp) FamilyGraph.addRelation('parent', sp.id, newP.id);
+        } else if (type === 'parent') {
+            newP = FamilyGraph.addPerson('', 0);
+            FamilyGraph.addRelation('parent', newP.id, fromId);
+        } else if (type === 'spouse') {
+            newP = FamilyGraph.addPerson('', 0);
+            FamilyGraph.addRelation('spouse', fromId, newP.id);
+            // Spouse also becomes parent of from's children
+            FamilyGraph.children(fromId).forEach(c => {
+                FamilyGraph.addRelation('parent', newP.id, c.id);
+            });
         }
+        renderFamilyTree();
+    }
+
+    function addRootPerson() {
+        FamilyGraph.addPerson('', 0);
+        renderFamilyTree();
     }
 
     function renderFamilyRoles() {
@@ -528,66 +949,45 @@ const SD = (() => {
         if (!container) return;
         const persons = FamilyGraph.getPersons();
         if (persons.length === 0) {
-            container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:.72rem;">Ajoutez des personnes d\'abord.</div>';
+            container.innerHTML = '';
             return;
         }
-        container.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;align-items:center;">
-            <div style="font-size:.62rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Personne</div>
-            <div style="font-size:.62rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;text-align:center;">💰 Donateur</div>
-            <div style="font-size:.62rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;text-align:center;">🎯 Bénéficiaire</div>
-            ${persons.map(p => `
-                <div style="font-size:.75rem;font-weight:600;color:var(--text-primary);padding:6px 0;">${p.nom} ${p.age ? '<span style="font-size:.6rem;color:var(--text-muted);">(' + p.age + 'a)</span>' : ''}</div>
-                <div style="text-align:center;">
-                    <input type="checkbox" ${p.isDonor ? 'checked' : ''} onchange="FamilyGraph.toggleRole(${p.id},'donor',this.checked);SD.renderFamilyRoles();" style="accent-color:var(--primary-color);width:18px;height:18px;cursor:pointer;">
+        const levels = FamilyGraph.computeLevels();
+        // Sort by level
+        const sorted = [...persons].sort((a, b) => (levels[a.id] || 0) - (levels[b.id] || 0));
+
+        container.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:3px 10px;align-items:center;">
+            <div style="font-size:.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Personne</div>
+            <div style="font-size:.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;text-align:center;">Lien auto</div>
+            <div style="font-size:.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;text-align:center;">💰</div>
+            <div style="font-size:.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;text-align:center;">🎯</div>
+            ${sorted.map(p => {
+                const role = FamilyGraph.inferRole(p.id);
+                const roleLabel = { parent: 'Parent', grand_parent: 'Grand-parent', arr_grand_parent: 'Arr. GP', conjoint: 'Conjoint', oncle_tante: 'Oncle/Tante', tiers: '—' }[role] || '—';
+                return `
+                <div style="font-size:.72rem;font-weight:600;color:var(--text-primary);padding:5px 0;border-bottom:1px solid rgba(198,134,66,.05);">${p.nom || '?'} ${p.age ? '<span style="font-size:.58rem;color:var(--text-muted);">(' + p.age + 'a)</span>' : ''}</div>
+                <div style="font-size:.58rem;color:var(--text-muted);text-align:center;border-bottom:1px solid rgba(198,134,66,.05);">${roleLabel}</div>
+                <div style="text-align:center;border-bottom:1px solid rgba(198,134,66,.05);">
+                    <input type="checkbox" ${p.isDonor ? 'checked' : ''} onchange="FamilyGraph.toggleRole(${p.id},'donor',this.checked);SD.renderFamilyTree();" style="accent-color:var(--primary-color);width:16px;height:16px;cursor:pointer;">
                 </div>
-                <div style="text-align:center;">
-                    <input type="checkbox" ${p.isBeneficiary ? 'checked' : ''} onchange="FamilyGraph.toggleRole(${p.id},'beneficiary',this.checked);SD.renderFamilyRoles();" style="accent-color:var(--accent-green);width:18px;height:18px;cursor:pointer;">
-                </div>
-            `).join('')}
+                <div style="text-align:center;border-bottom:1px solid rgba(198,134,66,.05);">
+                    <input type="checkbox" ${p.isBeneficiary ? 'checked' : ''} onchange="FamilyGraph.toggleRole(${p.id},'beneficiary',this.checked);SD.renderFamilyTree();" style="accent-color:var(--accent-green);width:16px;height:16px;cursor:pointer;">
+                </div>`;
+            }).join('')}
         </div>
-        <div style="margin-top:8px;font-size:.62rem;color:var(--text-muted);">
-            ${FamilyGraph.getDonors().length} donateur(s), ${FamilyGraph.getBeneficiaries().length} bénéficiaire(s)
+        <div style="margin-top:6px;font-size:.6rem;color:var(--text-muted);">
+            💰 ${FamilyGraph.getDonors().length} donateur(s) · 🎯 ${FamilyGraph.getBeneficiaries().length} bénéficiaire(s)
         </div>`;
     }
 
-    function renderFamilyAll() {
-        renderFamilyPersons();
-        renderFamilyRelations();
-        renderFamilyRoles();
-    }
-
-    function addFamilyPerson() {
-        FamilyGraph.addPerson('', 0);
-        renderFamilyAll();
-    }
-
-    function addFamilyRelation(type) {
-        const persons = FamilyGraph.getPersons();
-        if (persons.length < 2) {
-            alert('Ajoutez au moins 2 personnes d\'abord.');
-            return;
-        }
-        FamilyGraph.addRelation(type, persons[0].id, persons[1].id);
-        renderFamilyRelations();
-    }
-
-    function updateFamilyRelation(index, field, value) {
-        const rels = FamilyGraph.getRelations();
-        if (!rels[index]) return;
-        const old = rels[index];
-        FamilyGraph.removeRelation(old.type, old.from, old.to);
-        if (field === 'from') FamilyGraph.addRelation(old.type, +value, old.to);
-        else FamilyGraph.addRelation(old.type, old.from, +value);
-        renderFamilyRelations();
-    }
-
-    function removeFamilyRelation(index) {
-        const rels = FamilyGraph.getRelations();
-        if (!rels[index]) return;
-        const r = rels[index];
-        FamilyGraph.removeRelation(r.type, r.from, r.to);
-        renderFamilyRelations();
-    }
+    // === ALIASES for backward compat ===
+    function renderFamilyAll() { renderFamilyTree(); }
+    function renderFamilyPersons() { renderFamilyTree(); }
+    function renderFamilyRelations() {} // No longer separate
+    function addFamilyPerson() { addRootPerson(); }
+    function addFamilyRelation() {} // No longer needed
+    function updateFamilyRelation() {}
+    function removeFamilyRelation() {}
 
     // === PRESETS ===
     function applyFamilyPreset(type) {
@@ -599,10 +999,7 @@ const SD = (() => {
                 const e1 = FamilyGraph.addPerson('Enfant 1', 25);
                 const e2 = FamilyGraph.addPerson('Enfant 2', 22);
                 FamilyGraph.addRelation('spouse', m.id, p.id);
-                FamilyGraph.addRelation('parent', m.id, e1.id);
-                FamilyGraph.addRelation('parent', m.id, e2.id);
-                FamilyGraph.addRelation('parent', p.id, e1.id);
-                FamilyGraph.addRelation('parent', p.id, e2.id);
+                [e1, e2].forEach(e => { FamilyGraph.addRelation('parent', m.id, e.id); FamilyGraph.addRelation('parent', p.id, e.id); });
                 m.isDonor = true; p.isDonor = true;
                 e1.isBeneficiary = true; e2.isBeneficiary = true;
             },
@@ -634,8 +1031,8 @@ const SD = (() => {
             },
             'recomposee': () => {
                 const m = FamilyGraph.addPerson('Mère', 50, 150000);
-                const p = FamilyGraph.addPerson('Père', 52, 150000);
                 const bp = FamilyGraph.addPerson('Beau-père', 55, 100000);
+                const p = FamilyGraph.addPerson('Père', 52, 150000);
                 const e1 = FamilyGraph.addPerson('Enfant commun', 20);
                 const e2 = FamilyGraph.addPerson('Enfant du père', 24);
                 FamilyGraph.addRelation('spouse', m.id, bp.id);
@@ -647,10 +1044,10 @@ const SD = (() => {
             }
         };
         (presets[type] || presets['couple_2enfants'])();
-        renderFamilyAll();
+        renderFamilyTree();
     }
 
-    // === SYNC to Step 2 ===
+    // === SYNC Graph → Step 2 ===
     function syncGraphToStep2() {
         if (typeof FamilyGraph === 'undefined') return;
         const donors = FamilyGraph.getDonors();
@@ -661,20 +1058,18 @@ const SD = (() => {
             id: b.id,
             prenom: b.nom,
             age: b.age || 0,
-            lien: FamilyGraph.inferRole ? 'enfant' : 'enfant',
+            lien: 'enfant',
             generation: 'enfant'
         }));
 
         // Sync donors to PathOptimizer
         if (typeof PathOptimizer !== 'undefined') {
-            // Clear existing
             const old = PathOptimizer.getDonors();
             old.forEach(d => { if (PathOptimizer.removeDonor) PathOptimizer.removeDonor(d.id); });
 
             donors.forEach(d => {
                 const role = FamilyGraph.inferRole(d.id);
                 PathOptimizer.addDonor(role, d.nom, d.age, d.patrimoine, d.regime);
-                // Set linkedBens from graph
                 const newDonor = PathOptimizer.getDonors().find(dd => dd.nom === d.nom);
                 if (newDonor) {
                     newDonor.linkedBens = {};
@@ -682,13 +1077,11 @@ const SD = (() => {
                     bens.forEach(b => {
                         const lien = FamilyGraph.computeFiscalLien(d.id, b.id);
                         newDonor.linkedBens[b.id] = (lien !== 'tiers');
-                        // Also set lienOverride from graph computation
                         let entry = newDonor.donationsParBen.find(e => +e.benId === b.id);
                         if (!entry) {
                             entry = { benId: b.id, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
                             newDonor.donationsParBen.push(entry);
                         }
-                        // Set override to graph-computed lien so matrix is correct
                         entry.lienOverride = lien;
                     });
                 }
@@ -696,7 +1089,6 @@ const SD = (() => {
             if (PathOptimizer.updateMatrix) PathOptimizer.updateMatrix();
             if (PathOptimizer.renderDonorList) PathOptimizer.renderDonorList();
         }
-        // Render ben list in step 2
         renderBenList();
         if (typeof PathOptimizer !== 'undefined') {
             PathOptimizer.refreshBenDonSummaries();
@@ -2313,8 +2705,9 @@ const SD = (() => {
         calculateResults, resetAll, updateAside,
         buildFamilyTree,
         // Family graph UI
-        renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles,
+        renderFamilyTree, renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles,
         addFamilyPerson, addFamilyRelation, updateFamilyRelation, removeFamilyRelation,
+        addRelative, addRootPerson,
         applyFamilyPreset, syncGraphToStep2,
         _getState: () => state
     };
