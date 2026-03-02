@@ -490,27 +490,32 @@
         <div class="stepper-bar">
             <div class="step-item active" data-step="1" onclick="SD.goToStep(1)">
                 <div class="step-number"><span>1</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Famille</div><div class="step-sublabel">Qui transmet, à qui ?</div></div>
+                <div><div class="step-label">Arbre</div><div class="step-sublabel">Famille & liens</div></div>
             </div>
             <div class="step-connector" id="conn-1"></div>
             <div class="step-item" data-step="2" onclick="SD.goToStep(2)">
                 <div class="step-number"><span>2</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Patrimoine</div><div class="step-sublabel">Biens, dettes, charges</div></div>
+                <div><div class="step-label">Donations</div><div class="step-sublabel">Historique & dates</div></div>
             </div>
             <div class="step-connector" id="conn-2"></div>
             <div class="step-item" data-step="3" onclick="SD.goToStep(3)">
                 <div class="step-number"><span>3</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Structures</div><div class="step-sublabel">SCI, SARL, indivision</div></div>
+                <div><div class="step-label">Patrimoine</div><div class="step-sublabel">Biens, dettes, AV</div></div>
             </div>
             <div class="step-connector" id="conn-3"></div>
             <div class="step-item" data-step="4" onclick="SD.goToStep(4)">
                 <div class="step-number"><span>4</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Objectif</div><div class="step-sublabel">Donation, succession, vente</div></div>
+                <div><div class="step-label">Structures</div><div class="step-sublabel">SCI, SARL</div></div>
             </div>
             <div class="step-connector" id="conn-4"></div>
             <div class="step-item" data-step="5" onclick="SD.goToStep(5)">
                 <div class="step-number"><span>5</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Résultats</div><div class="step-sublabel">Comparaison & stratégie</div></div>
+                <div><div class="step-label">Objectif</div><div class="step-sublabel">Donation, succession</div></div>
+            </div>
+            <div class="step-connector" id="conn-5"></div>
+            <div class="step-item" data-step="6" onclick="SD.goToStep(6)">
+                <div class="step-number"><span>6</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Résultats</div><div class="step-sublabel">Stratégie optimale</div></div>
             </div>
         </div>
         </div>
@@ -518,8 +523,71 @@
         <div class="form-container">
           <div class="page-grid">
             <main class="page-main">
-            <!-- ==================== STEP 1: FAMILLE ==================== -->
+                        <!-- ==================== STEP 1: ARBRE FAMILIAL ==================== -->
             <div class="step-panel active" id="step-1">
+                <div class="step-helper"><i class="fas fa-sitemap"></i> Construisez votre arbre familial : ajoutez les personnes, déclarez les liens (parent de, marié à), puis cochez qui transmet et qui reçoit. Le système déduit tous les liens fiscaux automatiquement.</div>
+
+                <!-- Presets familiaux -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-magic"></i> Démarrage rapide</div>
+                    <div class="section-subtitle">Choisissez un modèle familial, puis personnalisez-le.</div>
+                    <div class="presets" id="family-presets">
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('couple_2enfants')">👨‍👩‍👧‍👦 Couple + 2 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('couple_3enfants')">👨‍👩‍👧‍👦 Couple + 3 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('gp_parents_enfants')">👴👵 GP + Parents + Enfants</button>
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('recomposee')">💑 Famille recomposée</button>
+                    </div>
+                </div>
+
+                <!-- Personnes -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-users"></i> Personnes</div>
+                    <div class="section-subtitle">Ajoutez toutes les personnes impliquées dans la transmission.</div>
+                    <div class="dynamic-list" id="family-persons-list"></div>
+                    <button class="btn-add" onclick="SD.addFamilyPerson()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Ajouter une personne
+                    </button>
+                </div>
+
+                <!-- Relations -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-link"></i> Liens familiaux</div>
+                    <div class="section-subtitle">Déclarez les relations : "est parent de" ou "marié/pacsé avec".</div>
+                    <div id="family-relations-list"></div>
+                    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                        <button class="btn-add" onclick="SD.addFamilyRelation('parent')" style="flex:1;min-width:180px;">
+                            <i class="fas fa-arrow-down"></i> Ajouter un lien parent → enfant
+                        </button>
+                        <button class="btn-add" onclick="SD.addFamilyRelation('spouse')" style="flex:1;min-width:180px;">
+                            <i class="fas fa-heart"></i> Ajouter un lien conjoint/pacsé
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rôles : qui donne, qui reçoit -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-exchange-alt"></i> Qui transmet ? Qui reçoit ?</div>
+                    <div class="section-subtitle">Cochez les donateurs (💰) et bénéficiaires (🎯) parmi les personnes déclarées.</div>
+                    <div id="family-roles-list"></div>
+                </div>
+
+                <!-- Arbre visuel + Matrice -->
+                <div class="section-card" id="family-tree-preview" style="display:none;">
+                    <div class="section-title"><i class="fas fa-project-diagram"></i> Arbre & Liens fiscaux</div>
+                    <div id="family-tree-visual"></div>
+                    <div id="family-matrix"></div>
+                </div>
+
+                <div style="text-align:center;margin-top:16px;">
+                    <button class="btn-primary" onclick="SD.buildFamilyTree()" style="padding:12px 28px;font-size:.82rem;border-radius:10px;background:linear-gradient(135deg, var(--primary-color), #8b6914);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(198,134,66,.3);transition:all .2s;">
+                        <i class="fas fa-project-diagram"></i> &nbsp;Vérifier ma cartographie
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- ==================== STEP 2: DONATIONS & DÉTAILS ==================== -->
+            <div class="step-panel" id="step-2">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez les donateurs (parents, grands-parents…) avec leur patrimoine propre, puis ajoutez les bénéficiaires. L'optimiseur calculera automatiquement le meilleur chemin de transmission.</div>
 
                 <!-- Bénéficiaires -->
@@ -585,8 +653,10 @@
                 <div id="family-tree-container" style="display:none;"></div>
             </div>
 
-            <!-- ==================== STEP 2: PATRIMOINE ==================== -->
-            <div class="step-panel" id="step-2">
+            
+
+            <!-- ==================== STEP 3: PATRIMOINE ==================== -->
+            <div class="step-panel" id="step-3">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Ajoutez au moins 1 bien immobilier, un montant financier ou un capital en assurance-vie.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-sliders-h"></i> Mode de saisie</div>
@@ -673,8 +743,8 @@
                 </div>
             </div>
 
-            <!-- ==================== STEP 3: STRUCTURES ==================== -->
-            <div class="step-panel" id="step-3">
+            <!-- ==================== STEP 4: STRUCTURES ==================== -->
+            <div class="step-panel" id="step-4">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Facultatif : si vous détenez des biens via SCI, SARL de famille ou en indivision, précisez ici.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-building"></i> Structures de détention existantes</div>
@@ -714,8 +784,8 @@
                 </div>
             </div>
 
-            <!-- ==================== STEP 4: OBJECTIF ==================== -->
-            <div class="step-panel" id="step-4">
+            <!-- ==================== STEP 5: OBJECTIF ==================== -->
+            <div class="step-panel" id="step-5">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Activez les dispositifs pertinents : vente en viager, démembrement, exonération 790 A bis si applicable.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-bullseye"></i> Type d'opération</div>
@@ -865,8 +935,8 @@
                 </div>
             </div>
 
-            <!-- ==================== STEP 5: RÉSULTATS ==================== -->
-            <div class="step-panel" id="step-5">
+            <!-- ==================== STEP 6: RÉSULTATS ==================== -->
+            <div class="step-panel" id="step-6">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Comparez les scénarios et consultez la stratégie recommandée avec son calendrier d'exécution.</div>
                 
                 <!-- PATH OPTIMIZER RESULTS -->
@@ -974,6 +1044,7 @@
 
 <!-- External JS -->
 <script src="js/successions-donations.js"></script>
+<script src="js/family-graph.js"></script>
 <script src="js/path-optimizer.js"></script>
 </body>
 </html>
