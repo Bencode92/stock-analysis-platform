@@ -575,6 +575,14 @@
                     <div class="section-subtitle">Abattements et barèmes auto-détectés selon les rôles familiaux — chaque croisement = un chemin possible</div>
                     <div id="path-matrix"></div>
                 </div>
+
+                <!-- Verify + Family Tree -->
+                <div style="text-align:center;margin-top:16px;">
+                    <button class="btn-primary" onclick="SD.buildFamilyTree()" style="padding:12px 28px;font-size:.82rem;border-radius:10px;background:linear-gradient(135deg, var(--primary-color), #8b6914);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(198,134,66,.3);transition:all .2s;">
+                        <i class="fas fa-project-diagram"></i> &nbsp;Vérifier ma cartographie
+                    </button>
+                </div>
+                <div id="family-tree-container" style="display:none;"></div>
             </div>
 
             <!-- ==================== STEP 2: PATRIMOINE ==================== -->
