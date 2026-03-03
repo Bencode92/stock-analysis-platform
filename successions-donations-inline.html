@@ -3750,9 +3750,12 @@ const SD = (() => {
             addPoly([[midX, topParent], [midX, barY]], 'ft-link-parent');
             addDot(midX, barY);
 
-            // Horizontal bar
+            // Horizontal bar or elbow for single child
             if (childBoxes.length > 1) {
                 addPoly([[minX, barY], [maxX, barY]], 'ft-link-parent');
+            } else {
+                var cx = childBoxes[0].box.x;
+                if (Math.abs(cx - midX) > 1) addPoly([[midX, barY], [cx, barY]], 'ft-link-parent');
             }
 
             // Drops to each child
@@ -4010,6 +4013,18 @@ const SD = (() => {
         items += `<div class="ft-ctx-sep"></div>`;
         items += `<div class="ft-ctx-item" onclick="FamilyGraph.toggleRole(${pid},'donor',${!p.isDonor});SD.closeCtx();SD.renderFamilyTree();">${p.isDonor ? '☑' : '☐'} Donateur 💰</div>`;
         items += `<div class="ft-ctx-item" onclick="FamilyGraph.toggleRole(${pid},'beneficiary',${!p.isBeneficiary});SD.closeCtx();SD.renderFamilyTree();">${p.isBeneficiary ? '☑' : '☐'} Bénéficiaire 🎯</div>`;
+        // Detach links
+        const detachPars = FamilyGraph.parents(pid);
+        if (detachPars.length > 0 || hasSpouse) {
+            items += `<div class="ft-ctx-sep"></div>`;
+            detachPars.forEach(par => {
+                items += `<div class="ft-ctx-item ft-ctx-danger" onclick="FamilyGraph.removeRelation('parent',${par.id},${pid});SD.closeCtx();SD.renderFamilyTree();"><i class="fas fa-unlink"></i> Détacher de ${par.nom || 'parent'}</div>`;
+            });
+            if (hasSpouse) {
+                const dsp = FamilyGraph.spouse(pid);
+                items += `<div class="ft-ctx-item ft-ctx-danger" onclick="FamilyGraph.removeRelation('spouse',${pid},${dsp.id});SD.closeCtx();SD.renderFamilyTree();"><i class="fas fa-heart-broken"></i> Retirer conjoint (${dsp.nom || '?'})</div>`;
+            }
+        }
         // Delete
         items += `<div class="ft-ctx-sep"></div>`;
         items += `<div class="ft-ctx-item ft-ctx-danger" onclick="FamilyGraph.removePerson(${pid});SD.closeCtx();SD.renderFamilyTree();"><i class="fas fa-trash"></i> Supprimer</div>`;
