@@ -60,7 +60,7 @@ const FamilyGraph = (function() {
     // ============================================================
     // 2. RELATIONS
     // ============================================================
-    // type: 'parent' (from is parent OF to) | 'spouse' (bidirectional)
+    // type: 'parent' (from is parent OF to) | 'spouse' (bidirectional) | 'sibling' (bidirectional)
     let relSeq = 0;
     function addRelation(type, fromId, toId) {
         const f = +fromId, t = +toId;
@@ -69,6 +69,10 @@ const FamilyGraph = (function() {
             // Only 1 spouse per person
             relations = relations.filter(r => !(r.type === 'spouse' && (r.from === f || r.to === f)));
             relations = relations.filter(r => !(r.type === 'spouse' && (r.from === t || r.to === t)));
+        }
+        if (type === 'sibling') {
+            // Don't duplicate — check both directions
+            if (relations.some(r => r.type === 'sibling' && ((r.from === f && r.to === t) || (r.from === t && r.to === f)))) return;
         }
         if (!relations.some(r => r.type === type && r.from === f && r.to === t)) {
             relations.push({ type, from: f, to: t, seq: relSeq++ });
@@ -107,10 +111,16 @@ const FamilyGraph = (function() {
     }
 
     function siblings(pid) {
-        const ps = parents(pid);
+        const id = +pid;
         const ids = new Set();
-        ps.forEach(p => children(p.id).forEach(c => { if (c.id !== +pid) ids.add(c.id); }));
-        return [...ids].map(id => getPerson(id)).filter(Boolean);
+        // Via shared parents
+        parents(id).forEach(p => children(p.id).forEach(c => { if (c.id !== id) ids.add(c.id); }));
+        // Via direct sibling relations
+        relations.filter(r => r.type === 'sibling').forEach(r => {
+            if (r.from === id) ids.add(r.to);
+            if (r.to === id) ids.add(r.from);
+        });
+        return [...ids].map(id2 => getPerson(id2)).filter(Boolean);
     }
 
     function grandchildren(pid) {
@@ -1007,8 +1017,41 @@ const SD = (() => {
         // Mark all parents as rendered
         parentPersons.forEach(p => renderedIds.add(p.id));
 
-        // Render parents row
+        // Render parents row WITH their direct siblings
         html += '<div class="ft-parents">';
+
+        // Collect direct siblings of each parent (not yet rendered)
+        const leftSibs = []; // siblings of first parent (go left)
+        const rightSibs = []; // siblings of second/only parent (go right)
+
+        parentPersons.forEach((p, idx) => {
+            const sibs = FamilyGraph.siblings(p.id).filter(s => !renderedIds.has(s.id));
+            sibs.forEach(s => {
+                renderedIds.add(s.id);
+                if (idx === 0 && parentPersons.length === 2) {
+                    leftSibs.push(s);
+                } else {
+                    rightSibs.push(s);
+                }
+            });
+        });
+
+        // Left siblings (with their spouses on exterior left)
+        leftSibs.forEach(s => {
+            const sSp = FamilyGraph.spouse(s.id);
+            if (sSp && !renderedIds.has(sSp.id)) {
+                renderedIds.add(sSp.id);
+                html += `<div class="ft-couple">`;
+                html += ftNode(sSp);
+                html += `<div class="ft-couple-bar"></div>`;
+                html += ftNode(s);
+                html += `</div>`;
+            } else {
+                html += ftNode(s);
+            }
+        });
+
+        // The couple (or single parent)
         if (parentPersons.length === 2) {
             html += `<div class="ft-couple">`;
             html += ftNode(parentPersons[0]);
@@ -1018,6 +1061,22 @@ const SD = (() => {
         } else {
             html += ftNode(parentPersons[0]);
         }
+
+        // Right siblings (with their spouses on exterior right)
+        rightSibs.forEach(s => {
+            const sSp = FamilyGraph.spouse(s.id);
+            if (sSp && !renderedIds.has(sSp.id)) {
+                renderedIds.add(sSp.id);
+                html += `<div class="ft-couple">`;
+                html += ftNode(s);
+                html += `<div class="ft-couple-bar"></div>`;
+                html += ftNode(sSp);
+                html += `</div>`;
+            } else {
+                html += ftNode(s);
+            }
+        });
+
         html += '</div>';
 
         // Find children of these parents
@@ -1284,17 +1343,8 @@ const SD = (() => {
                 // Has parents — new person is also their child
                 pars.forEach(par => FamilyGraph.addRelation('parent', par.id, newP.id));
             } else {
-                // No parents — create a shared invisible parent to link them
-                const sharedParent = FamilyGraph.addPerson('Parent', 0);
-                FamilyGraph.addRelation('parent', sharedParent.id, fromId);
-                FamilyGraph.addRelation('parent', sharedParent.id, newP.id);
-                // Edit the shared parent too
-                renderFamilyTree();
-                setTimeout(() => {
-                    editNode(newP.id);
-                    // Remind user to also name the shared parent
-                }, 50);
-                return;
+                // No parents — just create a direct sibling link
+                FamilyGraph.addRelation('sibling', fromId, newP.id);
             }
         }
         renderFamilyTree();
