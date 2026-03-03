@@ -202,23 +202,29 @@ const FamilyGraph = (function() {
     // ============================================================
     function computeLevels() {
         const levels = {};
-        // Roots = persons with no parents declared
+        // True roots = persons with no parents
         const roots = persons.filter(p => parents(p.id).length === 0);
 
+        // BFS from roots — always push children deeper
         function walk(pid, depth) {
-            if (levels[pid] !== undefined && levels[pid] <= depth) return;
+            // Allow updates if this pushes deeper (child must be > parent)
+            if (levels[pid] !== undefined && levels[pid] >= depth) return;
             levels[pid] = depth;
             // Spouse at same level
             const sp = spouse(pid);
-            if (sp && (levels[sp.id] === undefined || levels[sp.id] > depth)) {
-                levels[sp.id] = depth;
+            if (sp) {
+                if (levels[sp.id] === undefined || levels[sp.id] < depth) {
+                    levels[sp.id] = depth;
+                    // Also walk spouse's children
+                    children(sp.id).forEach(c => walk(c.id, depth + 1));
+                }
             }
             children(pid).forEach(c => walk(c.id, depth + 1));
         }
 
         roots.forEach(r => walk(r.id, 0));
 
-        // Any unvisited persons at max+1
+        // Unvisited persons at max+1
         const maxLvl = Math.max(0, ...Object.values(levels));
         persons.forEach(p => { if (levels[p.id] === undefined) levels[p.id] = maxLvl + 1; });
 
@@ -909,22 +915,18 @@ const SD = (() => {
 
         const hasParents = FamilyGraph.parents(pid).length > 0;
         const hasSpouse = !!FamilyGraph.spouse(pid);
-        const hasSiblings = FamilyGraph.siblings(pid).length > 0;
 
         let items = '';
         // Edit
         items += `<div class="ft-ctx-item" onclick="SD.editNode(${pid})"><i class="fas fa-pen"></i> Modifier</div>`;
-        // Add relatives
-        if (!hasParents) {
-            items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'parent')"><i class="fas fa-arrow-up"></i> + Parent</div>`;
-        }
+        items += `<div class="ft-ctx-sep"></div>`;
+        // Add relatives — always show all options
+        items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'parent')"><i class="fas fa-arrow-up"></i> + Parent</div>`;
         if (!hasSpouse) {
             items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'spouse')"><i class="fas fa-heart"></i> + Conjoint</div>`;
         }
         items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'child')"><i class="fas fa-arrow-down"></i> + Enfant</div>`;
-        if (hasParents) {
-            items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'sibling')"><i class="fas fa-arrows-alt-h"></i> + Frère/Sœur</div>`;
-        }
+        items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'sibling')"><i class="fas fa-arrows-alt-h"></i> + Frère/Sœur</div>`;
         // Roles
         items += `<div class="ft-ctx-sep"></div>`;
         items += `<div class="ft-ctx-item" onclick="FamilyGraph.toggleRole(${pid},'donor',${!p.isDonor});SD.closeCtx();SD.renderFamilyTree();">${p.isDonor ? '☑' : '☐'} Donateur 💰</div>`;
@@ -989,6 +991,7 @@ const SD = (() => {
         } else if (type === 'parent') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', newP.id, fromId);
+            // Also link to siblings (they share the same new parent)
             FamilyGraph.siblings(fromId).forEach(s => {
                 FamilyGraph.addRelation('parent', newP.id, s.id);
             });
@@ -1000,11 +1003,24 @@ const SD = (() => {
             });
         } else if (type === 'sibling') {
             newP = FamilyGraph.addPerson('', 0);
-            FamilyGraph.parents(fromId).forEach(par => {
-                FamilyGraph.addRelation('parent', par.id, newP.id);
-            });
+            const pars = FamilyGraph.parents(fromId);
+            if (pars.length > 0) {
+                // Has parents — new person is also their child
+                pars.forEach(par => FamilyGraph.addRelation('parent', par.id, newP.id));
+            } else {
+                // No parents — create a shared invisible parent to link them
+                const sharedParent = FamilyGraph.addPerson('Parent', 0);
+                FamilyGraph.addRelation('parent', sharedParent.id, fromId);
+                FamilyGraph.addRelation('parent', sharedParent.id, newP.id);
+                // Edit the shared parent too
+                renderFamilyTree();
+                setTimeout(() => {
+                    editNode(newP.id);
+                    // Remind user to also name the shared parent
+                }, 50);
+                return;
+            }
         }
-        // Auto-open edit for the new person
         renderFamilyTree();
         if (newP) {
             setTimeout(() => editNode(newP.id), 50);
