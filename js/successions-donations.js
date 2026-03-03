@@ -1038,14 +1038,9 @@ const SD = (() => {
             children.forEach(child => {
                 renderedIds.add(child.id);
                 const childSpouse = FamilyGraph.spouse(child.id);
-                // Only capture spouse here if they have NO parents of their own
-                // If spouse has parents, they'll be rendered in their own family block
-                // and the SVG couple line will connect them horizontally
-                const captureSpouse = childSpouse
-                    && !renderedIds.has(childSpouse.id)
-                    && FamilyGraph.parents(childSpouse.id).length === 0;
-                if (captureSpouse) renderedIds.add(childSpouse.id);
-                childUnits.push({ child, spouse: captureSpouse ? childSpouse : null });
+                const hasSpouse = childSpouse && !renderedIds.has(childSpouse.id);
+                if (hasSpouse) renderedIds.add(childSpouse.id);
+                childUnits.push({ child, spouse: hasSpouse ? childSpouse : null });
             });
 
             // Keep natural order (insertion order)
