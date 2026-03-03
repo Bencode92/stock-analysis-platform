@@ -849,8 +849,7 @@ const SD = (() => {
         }
         roots.sort((a, b) => countDescendants(b.id) - countDescendants(a.id));
 
-        // Group roots — but don't capture a spouse here if they will be reached
-        // as a child of another root (they'll be rendered in renderFamilyUnit instead)
+        // Group roots
         const rendered = new Set();
         const familyUnits = [];
 
@@ -859,14 +858,39 @@ const SD = (() => {
             rendered.add(r.id);
 
             const sp = FamilyGraph.spouse(r.id);
-            // Only pair with spouse if spouse is ALSO a root (no parents)
-            // If spouse has parents, they'll be reached via the recursive render
             if (sp && !rendered.has(sp.id) && FamilyGraph.parents(sp.id).length === 0) {
                 rendered.add(sp.id);
                 familyUnits.push({ persons: [r, sp], type: 'couple' });
             } else {
                 familyUnits.push({ persons: [r], type: 'single' });
             }
+        });
+
+        // Reorder: units whose children are spouses of children of OTHER units go FIRST (left)
+        // "Parent Père" provides Père who is spouse of Mère → goes before "Marie-Jo"
+        // A unit is a "spouse provider" if one of its children married into another family
+        // i.e., a child has a spouse whose parents are in a DIFFERENT root unit
+        function isSpouseProvider(unit) {
+            const unitRootIds = new Set(unit.persons.map(p => p.id));
+            const childIds = new Set();
+            unit.persons.forEach(p => FamilyGraph.children(p.id).forEach(c => childIds.add(c.id)));
+            for (const cid of childIds) {
+                const sp = FamilyGraph.spouse(cid);
+                if (sp) {
+                    // Does the spouse's parents come from a different root?
+                    const spParents = FamilyGraph.parents(sp.id);
+                    if (spParents.length > 0 && !spParents.some(pp => unitRootIds.has(pp.id))) {
+                        return true; // child is married into another family
+                    }
+                }
+            }
+            return false;
+        }
+
+        familyUnits.sort((a, b) => {
+            const aP = isSpouseProvider(a) ? 0 : 1;
+            const bP = isSpouseProvider(b) ? 0 : 1;
+            return aP - bP;
         });
 
         // Also find orphans (persons with parents but whose parents aren't in graph)
@@ -1037,27 +1061,26 @@ const SD = (() => {
             FamilyGraph.children(p.id).forEach(c => childIds.add(c.id));
         });
 
-        // Remove already rendered children (prevents duplication)
-        const children = [...childIds]
-            .filter(cid => !renderedIds.has(cid))
-            .map(cid => FamilyGraph.getPerson(cid))
-            .filter(Boolean);
+        // Separate: real children (not yet rendered)
+        const allChildPersons = [...childIds].map(cid => FamilyGraph.getPerson(cid)).filter(Boolean);
+        const children = allChildPersons.filter(c => !renderedIds.has(c.id));
 
         if (children.length > 0) {
-            // Vertical connector from parents to children
             html += '<div class="ft-connector"><div class="ft-vline"></div></div>';
-
-            // Children row — first show ALL siblings together, then sub-families below
-            // Phase 1: Render siblings row (children + their spouses on exterior)
             html += '<div class="ft-children">';
 
             const childUnits = [];
             children.forEach(child => {
                 renderedIds.add(child.id);
                 const childSpouse = FamilyGraph.spouse(child.id);
-                const hasSpouse = childSpouse && !renderedIds.has(childSpouse.id);
-                if (hasSpouse) renderedIds.add(childSpouse.id);
-                childUnits.push({ child, spouse: hasSpouse ? childSpouse : null });
+                // Only capture spouse here if they have NO parents of their own
+                // If spouse has parents, they'll be rendered in their own family block
+                // and the SVG couple line will connect them horizontally
+                const captureSpouse = childSpouse
+                    && !renderedIds.has(childSpouse.id)
+                    && FamilyGraph.parents(childSpouse.id).length === 0;
+                if (captureSpouse) renderedIds.add(childSpouse.id);
+                childUnits.push({ child, spouse: captureSpouse ? childSpouse : null });
             });
 
             // Keep natural order (insertion order)
