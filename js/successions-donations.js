@@ -825,78 +825,136 @@ const SD = (() => {
 
         if (persons.length === 0) {
             container.innerHTML = `<div style="text-align:center;padding:24px;">
-                <div style="font-size:1.3rem;margin-bottom:6px;">👨‍👩‍👧‍👦</div>
-                <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:10px;">Choisissez un modèle ou commencez de zéro</div>
-                <button class="tb" onclick="SD.addRootPerson()" style="font-size:.6rem;padding:4px 12px;"><i class="fas fa-plus"></i> Première personne</button>
+                <div style="font-size:1.3rem;margin-bottom:6px;">\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:10px;">Choisissez un mod\u00e8le ou commencez de z\u00e9ro</div>
+                <button class="tb" onclick="SD.addRootPerson()" style="font-size:.6rem;padding:4px 12px;"><i class="fas fa-plus"></i> Premi\u00e8re personne</button>
             </div>`;
             renderFamilyRoles();
             return;
         }
 
-        // Find root persons: no parents declared
-        const roots = persons.filter(p => FamilyGraph.parents(p.id).length === 0);
+        // Compute levels: each person gets a generation number (0 = top)
+        const levels = FamilyGraph.computeLevels();
+        const maxLvl = Math.max(0, ...Object.values(levels));
 
-        // Stable order by ID (order of creation)
-        roots.sort((a, b) => a.id - b.id);
-
-        // Group roots
-        const rendered = new Set();
-        const familyUnits = [];
-
-        roots.forEach(r => {
-            if (rendered.has(r.id)) return;
-            rendered.add(r.id);
-
-            const sp = FamilyGraph.spouse(r.id);
-            if (sp && !rendered.has(sp.id) && FamilyGraph.parents(sp.id).length === 0) {
-                rendered.add(sp.id);
-                familyUnits.push({ persons: [r, sp], type: 'couple' });
-            } else {
-                familyUnits.push({ persons: [r], type: 'single' });
-            }
+        // Group persons by level
+        const byLvl = [];
+        for (let i = 0; i <= maxLvl; i++) byLvl.push([]);
+        persons.forEach(p => {
+            const L = levels[p.id] !== undefined ? levels[p.id] : 0;
+            byLvl[L].push(p);
         });
 
-        // Also find orphans (persons with parents but whose parents aren't in graph)
-        const allRenderedIds = new Set();
-
-        let html = '<div class="ft-canvas">';
-
-        // Render each family unit as a recursive subtree
-        let unitCount = 0;
-        familyUnits.forEach((unit) => {
-            // Skip if all persons in this unit are already rendered by a previous unit
-            if (unit.persons.every(p => allRenderedIds.has(p.id))) return;
-            if (unitCount > 0) html += '<div class="ft-family-sep"></div>';
-            html += renderFamilyUnit(unit.persons, allRenderedIds, 0);
-            unitCount++;
-        });
-
-        // Render any person not yet rendered (siblings of parents, etc.) as their own unit
-        let changed = true;
-        while (changed) {
-            changed = false;
-            persons.forEach(p => {
-                if (allRenderedIds.has(p.id)) return;
-                changed = true;
-                const sp = FamilyGraph.spouse(p.id);
-                if (sp && !allRenderedIds.has(sp.id)) {
-                    html += `<div class="ft-family-sep"></div>`;
-                    html += renderFamilyUnit([p, sp], allRenderedIds, 0);
-                } else {
-                    html += `<div class="ft-family-sep"></div>`;
-                    html += renderFamilyUnit([p], allRenderedIds, 0);
-                }
-            });
+        // Order each level: spouses adjacent, siblings grouped by parent position
+        for (let L = 0; L <= maxLvl; L++) {
+            byLvl[L] = orderLevelPersons(byLvl[L], L, levels, byLvl);
         }
 
+        // Render level by level (each level = horizontal row)
+        let html = '<div class="ft-canvas ft-levels">';
+        for (let L = 0; L <= maxLvl; L++) {
+            if (!byLvl[L].length) continue;
+            html += '<div class="ft-level">';
+            byLvl[L].forEach(p => {
+                // Check if this person and next person are spouses
+                html += ftNode(p);
+            });
+            html += '</div>';
+        }
         html += '</div>';
-        html += `<div id="ft-ctx" class="ft-ctx" style="display:none;"></div>`;
+        html += '<div id="ft-ctx" class="ft-ctx" style="display:none;"></div>';
 
         container.innerHTML = html;
         renderFamilyRoles();
-        // Draw SVG links after DOM is ready
         requestAnimationFrame(drawFamilyLinks);
     }
+
+    function orderLevelPersons(arr, L, levels, byLvl) {
+        if (arr.length <= 1) return arr;
+
+        // Build blocks: spouse pairs stay together, others solo
+        const used = new Set();
+        const blocks = [];
+
+        arr.forEach(p => {
+            if (used.has(p.id)) return;
+            used.add(p.id);
+
+            const sp = FamilyGraph.spouse(p.id);
+            if (sp && levels[sp.id] === L && !used.has(sp.id)) {
+                used.add(sp.id);
+                // Blood child goes center, spouse goes exterior
+                blocks.push({ persons: [p, sp], anchor: getAnchor(p, L, levels, byLvl) });
+            } else {
+                blocks.push({ persons: [p], anchor: getAnchor(p, L, levels, byLvl) });
+            }
+        });
+
+        // Sort blocks by anchor (parent position in level above)
+        blocks.sort((a, b) => a.anchor - b.anchor);
+
+        // Flatten: for each block, put spouse on exterior
+        const result = [];
+        blocks.forEach((block, idx) => {
+            if (block.persons.length === 2) {
+                const [p1, p2] = block.persons;
+                // Which one has parents in level above?
+                const p1HasParents = FamilyGraph.parents(p1.id).some(par => levels[par.id] === L - 1);
+                const p2HasParents = FamilyGraph.parents(p2.id).some(par => levels[par.id] === L - 1);
+
+                if (p1HasParents && !p2HasParents) {
+                    // p1 is blood, p2 is spouse
+                    if (idx === 0 && blocks.length > 1) {
+                        result.push(p2, p1); // spouse LEFT for first block
+                    } else {
+                        result.push(p1, p2); // spouse RIGHT
+                    }
+                } else if (p2HasParents && !p1HasParents) {
+                    if (idx === 0 && blocks.length > 1) {
+                        result.push(p1, p2);
+                    } else {
+                        result.push(p2, p1);
+                    }
+                } else {
+                    result.push(p1, p2); // default order
+                }
+            } else {
+                result.push(block.persons[0]);
+            }
+        });
+
+        return result;
+    }
+
+    function getAnchor(p, L, levels, byLvl) {
+        // Anchor = position of parents in level above
+        const pars = FamilyGraph.parents(p.id);
+        if (pars.length > 0 && L > 0) {
+            const prevLevel = byLvl[L - 1];
+            const indices = pars
+                .map(par => prevLevel.findIndex(x => x.id === par.id))
+                .filter(i => i >= 0);
+            if (indices.length > 0) {
+                return indices.reduce((a, b) => a + b, 0) / indices.length;
+            }
+        }
+        // Try spouse's parents
+        const sp = FamilyGraph.spouse(p.id);
+        if (sp) {
+            const spPars = FamilyGraph.parents(sp.id);
+            if (spPars.length > 0 && L > 0) {
+                const prevLevel = byLvl[L - 1];
+                const indices = spPars
+                    .map(par => prevLevel.findIndex(x => x.id === par.id))
+                    .filter(i => i >= 0);
+                if (indices.length > 0) {
+                    return indices.reduce((a, b) => a + b, 0) / indices.length;
+                }
+            }
+        }
+        return p.id; // fallback
+    }
+
 
     function drawFamilyLinks() {
         const canvas = document.querySelector('#family-persons-list .ft-canvas');
