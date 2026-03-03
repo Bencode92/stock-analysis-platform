@@ -61,6 +61,7 @@ const FamilyGraph = (function() {
     // 2. RELATIONS
     // ============================================================
     // type: 'parent' (from is parent OF to) | 'spouse' (bidirectional)
+    let relSeq = 0;
     function addRelation(type, fromId, toId) {
         const f = +fromId, t = +toId;
         if (f === t) return;
@@ -70,7 +71,7 @@ const FamilyGraph = (function() {
             relations = relations.filter(r => !(r.type === 'spouse' && (r.from === t || r.to === t)));
         }
         if (!relations.some(r => r.type === type && r.from === f && r.to === t)) {
-            relations.push({ type, from: f, to: t });
+            relations.push({ type, from: f, to: t, seq: relSeq++ });
         }
     }
 
@@ -92,7 +93,11 @@ const FamilyGraph = (function() {
     }
 
     function children(pid) {
-        return relations.filter(r => r.type === 'parent' && r.from === +pid).map(r => getPerson(r.to)).filter(Boolean);
+        return relations
+            .filter(r => r.type === 'parent' && r.from === +pid)
+            .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0))
+            .map(r => getPerson(r.to))
+            .filter(Boolean);
     }
 
     function spouse(pid) {
@@ -927,12 +932,14 @@ const SD = (() => {
             const el = canvas.querySelector(`[data-pid="${pid}"]`);
             if (!el) return null;
             const r = el.getBoundingClientRect();
+            const sx = canvas.scrollLeft || 0;
+            const sy = canvas.scrollTop || 0;
             return {
-                x: (r.left - canvasRect.left) + r.width / 2,
-                top: r.top - canvasRect.top,
-                bottom: (r.top - canvasRect.top) + r.height,
-                left: r.left - canvasRect.left,
-                right: (r.left - canvasRect.left) + r.width
+                x: (r.left - canvasRect.left) + sx + r.width / 2,
+                top: (r.top - canvasRect.top) + sy,
+                bottom: (r.top - canvasRect.top) + sy + r.height,
+                left: (r.left - canvasRect.left) + sx,
+                right: (r.left - canvasRect.left) + sx + r.width
             };
         }
 
@@ -1053,14 +1060,22 @@ const SD = (() => {
                 childUnits.push({ child, spouse: hasSpouse ? childSpouse : null });
             });
 
-            // Keep natural order (insertion order) — don't sort
-            // Spouse always on RIGHT (exterior)
-            childUnits.forEach((cu) => {
+            // Keep natural order (insertion order)
+            // Spouse placement: first child → spouse LEFT, others → spouse RIGHT
+            // This keeps siblings adjacent in the center
+            childUnits.forEach((cu, idx) => {
                 if (cu.spouse) {
+                    const spouseGoesLeft = (idx === 0 && childUnits.length > 1);
                     html += `<div class="ft-couple">`;
-                    html += ftNode(cu.child);
-                    html += `<div class="ft-couple-bar"></div>`;
-                    html += ftNode(cu.spouse);
+                    if (spouseGoesLeft) {
+                        html += ftNode(cu.spouse);
+                        html += `<div class="ft-couple-bar"></div>`;
+                        html += ftNode(cu.child);
+                    } else {
+                        html += ftNode(cu.child);
+                        html += `<div class="ft-couple-bar"></div>`;
+                        html += ftNode(cu.spouse);
+                    }
                     html += `</div>`;
                 } else {
                     html += `<div class="ft-leaf">${ftNode(cu.child)}</div>`;
