@@ -828,119 +828,214 @@ const SD = (() => {
             return;
         }
 
-        const levels = FamilyGraph.computeLevels();
-        const maxLvl = Math.max(...Object.values(levels));
+        // Find root persons: no parents declared
+        const roots = persons.filter(p => FamilyGraph.parents(p.id).length === 0);
+
+        // Group roots by family: roots that share children (via spouse) = same family
+        const rendered = new Set();
+        const familyUnits = [];
+
+        roots.forEach(r => {
+            if (rendered.has(r.id)) return;
+            rendered.add(r.id);
+
+            // Check if root has spouse who is also a root
+            const sp = FamilyGraph.spouse(r.id);
+            if (sp && roots.find(rr => rr.id === sp.id) && !rendered.has(sp.id)) {
+                rendered.add(sp.id);
+                familyUnits.push({ persons: [r, sp], type: 'couple' });
+            } else {
+                familyUnits.push({ persons: [r], type: 'single' });
+            }
+        });
+
+        // Also find orphans (persons with parents but whose parents aren't in graph)
+        const allRenderedIds = new Set();
 
         let html = '<div class="ft-canvas">';
 
-        for (let lvl = 0; lvl <= maxLvl; lvl++) {
-            const lvlPersons = persons.filter(p => levels[p.id] === lvl);
-            if (lvlPersons.length === 0) continue;
+        // Render each family unit as a recursive subtree
+        familyUnits.forEach((unit, ui) => {
+            if (ui > 0) html += '<div class="ft-family-sep"></div>';
+            html += renderFamilyUnit(unit.persons, allRenderedIds, 0);
+        });
 
-            // === GROUPING LOGIC ===
-            // Blood siblings grouped together + their spouses attached
-            // CRITICAL: do NOT follow siblings of a spouse (prevents cross-family contamination)
-            const rendered = new Set();
-            const clusters = [];
-
-            lvlPersons.forEach(p => {
-                if (rendered.has(p.id)) return;
-
-                // Step 1: Find blood siblings (share at least one parent)
-                const bloodIds = new Set([p.id]);
-                FamilyGraph.siblings(p.id).forEach(s => {
-                    if (levels[s.id] === lvl) bloodIds.add(s.id);
-                });
-
-                // Step 2: Attach spouses of blood siblings (but do NOT follow their siblings)
-                const groupIds = new Set([...bloodIds]);
-                [...bloodIds].forEach(id => {
-                    const sp = FamilyGraph.spouse(id);
-                    if (sp && levels[sp.id] === lvl) groupIds.add(sp.id);
-                });
-
-                // Skip already rendered
-                const ids = [...groupIds].filter(id => !rendered.has(id));
-                if (ids.length === 0) return;
-                ids.forEach(id => rendered.add(id));
-
-                // Step 3: Build render items — each blood sibling as a unit (optionally with spouse)
-                // Order: sib1(+spouse) — sib2(+spouse) — sib3(+spouse)
-                // Spouse is always on the OUTSIDE (left for first, right for last, alternating)
-                const items = [];
-                const used = new Set();
-
-                [...bloodIds].forEach(bid => {
-                    if (used.has(bid)) return;
-                    used.add(bid);
-                    const sp = FamilyGraph.spouse(bid);
-                    if (sp && ids.includes(sp.id) && !used.has(sp.id)) {
-                        used.add(sp.id);
-                        items.push({ type: 'couple', sib: bid, spouse: sp.id });
-                    } else {
-                        items.push({ type: 'single', id: bid });
-                    }
-                });
-
-                // Leftovers
-                ids.forEach(id => {
-                    if (!used.has(id)) {
-                        used.add(id);
-                        items.push({ type: 'single', id });
-                    }
-                });
-
-                if (items.length > 0) clusters.push(items);
-            });
-
-            // Render row
-            html += `<div class="ft-row">`;
-            clusters.forEach((cluster, ci) => {
-                const isMulti = cluster.length > 1;
-                if (isMulti) html += `<div class="ft-sibgroup">`;
-
-                cluster.forEach((item, ii) => {
-                    if (ii > 0 && isMulti) html += `<div class="ft-sib-sep"></div>`;
-                    if (item.type === 'couple') {
-                        const sibP = FamilyGraph.getPerson(item.sib);
-                        const spP = FamilyGraph.getPerson(item.spouse);
-                        html += `<div class="ft-couple">`;
-                        // Spouse on OUTSIDE: if this is the first item, spouse goes LEFT
-                        // If last item or only item, spouse goes RIGHT
-                        // Default: spouse on RIGHT (sib on left = toward center)
-                        const spouseLeft = (ii === 0 && cluster.length > 1);
-                        if (spouseLeft) {
-                            html += ftNode(spP);
-                            html += `<div class="ft-couple-bar"></div>`;
-                            html += ftNode(sibP);
-                        } else {
-                            html += ftNode(sibP);
-                            html += `<div class="ft-couple-bar"></div>`;
-                            html += ftNode(spP);
-                        }
-                        html += `</div>`;
-                    } else {
-                        html += ftNode(FamilyGraph.getPerson(item.id));
-                    }
-                });
-
-                if (isMulti) html += `</div>`;
-                if (ci < clusters.length - 1) html += `<div style="width:16px;"></div>`;
-            });
-            html += `</div>`;
-            // Vertical connector
-            if (lvl < maxLvl) {
-                html += `<div class="ft-vline"></div>`;
+        // Any person not yet rendered (edge case)
+        persons.forEach(p => {
+            if (!allRenderedIds.has(p.id)) {
+                allRenderedIds.add(p.id);
+                html += `<div style="margin-top:8px;">${ftNode(p)}</div>`;
             }
-        }
+        });
 
-        html += `</div>`;
+        html += '</div>';
         html += `<div id="ft-ctx" class="ft-ctx" style="display:none;"></div>`;
 
         container.innerHTML = html;
         renderFamilyRoles();
+        // Draw SVG links after DOM is ready
+        requestAnimationFrame(drawFamilyLinks);
     }
 
+    function drawFamilyLinks() {
+        const canvas = document.querySelector('#family-persons-list .ft-canvas');
+        if (!canvas) return;
+
+        // Remove old svg
+        canvas.querySelectorAll('.ft-svg').forEach(s => s.remove());
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const w = canvas.scrollWidth;
+        const h = canvas.scrollHeight;
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('ft-svg');
+        svg.setAttribute('width', w);
+        svg.setAttribute('height', h);
+        svg.style.width = w + 'px';
+        svg.style.height = h + 'px';
+
+        function getBox(pid) {
+            const el = canvas.querySelector(`[data-pid="${pid}"]`);
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            return {
+                x: (r.left - canvasRect.left) + r.width / 2,
+                top: r.top - canvasRect.top,
+                bottom: (r.top - canvasRect.top) + r.height,
+                left: r.left - canvasRect.left,
+                right: (r.left - canvasRect.left) + r.width
+            };
+        }
+
+        const rels = FamilyGraph.getRelations();
+
+        // Spouse lines (horizontal)
+        rels.filter(r => r.type === 'spouse').forEach(r => {
+            const a = getBox(r.from), b = getBox(r.to);
+            if (!a || !b) return;
+            const y = (a.top + a.bottom) / 2;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('class', 'ft-link-spouse');
+            line.setAttribute('x1', Math.min(a.right, b.right));
+            line.setAttribute('y1', y);
+            line.setAttribute('x2', Math.max(a.left, b.left));
+            line.setAttribute('y2', y);
+            svg.appendChild(line);
+        });
+
+        // Parent -> child lines (vertical with bend)
+        rels.filter(r => r.type === 'parent').forEach(r => {
+            const p = getBox(r.from), c = getBox(r.to);
+            if (!p || !c) return;
+
+            const midY = (p.bottom + c.top) / 2;
+            const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            pl.setAttribute('class', 'ft-link-parent');
+            pl.setAttribute('points', `${p.x},${p.bottom} ${p.x},${midY} ${c.x},${midY} ${c.x},${c.top}`);
+            svg.appendChild(pl);
+        });
+
+        canvas.prepend(svg);
+    }
+
+    // Render a family unit: parent(s) at top, their children below, recursively
+    function renderFamilyUnit(parentPersons, renderedIds, depth) {
+        let html = '<div class="ft-unit">';
+
+        // Mark all parents as rendered
+        parentPersons.forEach(p => renderedIds.add(p.id));
+
+        // Render parents row
+        html += '<div class="ft-parents">';
+        if (parentPersons.length === 2) {
+            html += `<div class="ft-couple">`;
+            html += ftNode(parentPersons[0]);
+            html += `<div class="ft-couple-bar"></div>`;
+            html += ftNode(parentPersons[1]);
+            html += `</div>`;
+        } else {
+            html += ftNode(parentPersons[0]);
+        }
+        html += '</div>';
+
+        // Find children of these parents
+        const childIds = new Set();
+        parentPersons.forEach(p => {
+            FamilyGraph.children(p.id).forEach(c => childIds.add(c.id));
+        });
+
+        // Remove already rendered children (prevents duplication)
+        const children = [...childIds]
+            .filter(cid => !renderedIds.has(cid))
+            .map(cid => FamilyGraph.getPerson(cid))
+            .filter(Boolean);
+
+        if (children.length > 0) {
+            // Vertical connector from parents to children
+            html += '<div class="ft-connector"><div class="ft-vline"></div></div>';
+
+            // Children row — each child may have their own spouse + sub-children
+            html += '<div class="ft-children">';
+
+            children.forEach(child => {
+                renderedIds.add(child.id);
+
+                const childSpouse = FamilyGraph.spouse(child.id);
+                const hasSpouseNotRendered = childSpouse && !renderedIds.has(childSpouse.id);
+
+                // Check if this child has their own children
+                const grandkids = FamilyGraph.children(child.id)
+                    .filter(gc => !renderedIds.has(gc.id));
+
+                if (hasSpouseNotRendered || grandkids.length > 0) {
+                    // This child forms their own family unit
+                    const unitParents = hasSpouseNotRendered
+                        ? [child, childSpouse]
+                        : [child];
+                    if (hasSpouseNotRendered) renderedIds.add(childSpouse.id);
+                    html += renderFamilyUnit(unitParents, renderedIds, depth + 1);
+                } else {
+                    // Leaf child — just render the node
+                    html += `<div class="ft-leaf">${ftNode(child)}</div>`;
+                }
+            });
+
+            html += '</div>';
+        }
+
+        // Also render siblings of the parents that aren't yet rendered (uncles/aunts)
+        parentPersons.forEach(p => {
+            const sibs = FamilyGraph.siblings(p.id).filter(s => !renderedIds.has(s.id));
+            sibs.forEach(sib => {
+                renderedIds.add(sib.id);
+                // Uncle/aunt may have their own family unit
+                const sibSpouse = FamilyGraph.spouse(sib.id);
+                const sibChildren = FamilyGraph.children(sib.id).filter(c => !renderedIds.has(c.id));
+
+                if (sibSpouse && !renderedIds.has(sibSpouse.id) || sibChildren.length > 0) {
+                    const sibUnit = [];
+                    sibUnit.push(sib);
+                    if (sibSpouse && !renderedIds.has(sibSpouse.id)) {
+                        renderedIds.add(sibSpouse.id);
+                        sibUnit.push(sibSpouse);
+                    }
+                    html += `<div class="ft-sibling-unit">`;
+                    html += `<div class="ft-sib-label">(${p.nom ? 'frère/sœur de ' + p.nom : 'fratrie'})</div>`;
+                    html += renderFamilyUnit(sibUnit, renderedIds, depth);
+                    html += `</div>`;
+                } else {
+                    html += `<div class="ft-sibling-unit">`;
+                    html += `<div class="ft-sib-label">(${p.nom ? 'frère/sœur de ' + p.nom : 'fratrie'})</div>`;
+                    html += ftNode(sib);
+                    html += `</div>`;
+                }
+            });
+        });
+
+        html += '</div>';
+        return html;
+    }
     function ftNode(p) {
         const isDonor = p.isDonor;
         const isBen = p.isBeneficiary;
