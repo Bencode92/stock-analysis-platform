@@ -845,9 +845,25 @@ const SD = (() => {
             byLvl[L].push(p);
         });
 
-        // Order each level: spouses adjacent, siblings grouped by parent position
-        for (let L = 0; L <= maxLvl; L++) {
-            byLvl[L] = orderLevelPersons(byLvl[L], L, levels, byLvl);
+        // Find connected components
+        const compOf = {};
+        let compId = 0;
+        function floodFill(pid, cid) {
+            if (compOf[pid] !== undefined) return;
+            compOf[pid] = cid;
+            FamilyGraph.parents(pid).forEach(par => floodFill(par.id, cid));
+            FamilyGraph.children(pid).forEach(ch => floodFill(ch.id, cid));
+            var sp = FamilyGraph.spouse(pid);
+            if (sp) floodFill(sp.id, cid);
+        }
+        persons.forEach(p => { if (compOf[p.id] === undefined) { floodFill(p.id, compId); compId++; } });
+        const compOrder = {};
+        let cOrd = 0;
+        byLvl[0].forEach(p => { if (compOrder[compOf[p.id]] === undefined) compOrder[compOf[p.id]] = cOrd++; });
+        persons.forEach(p => { if (compOrder[compOf[p.id]] === undefined) compOrder[compOf[p.id]] = cOrd++; });
+        for (var pass = 0; pass < 4; pass++) {
+            for (var L2 = 0; L2 <= maxLvl; L2++) byLvl[L2] = orderLevelPersons(byLvl[L2], L2, levels, byLvl, compOf, compOrder);
+            for (var L3 = maxLvl; L3 >= 0; L3--) byLvl[L3] = orderLevelPersons(byLvl[L3], L3, levels, byLvl, compOf, compOrder);
         }
 
         // Render level by level (each level = horizontal row)
