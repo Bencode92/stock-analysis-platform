@@ -831,7 +831,21 @@ const SD = (() => {
         // Find root persons: no parents declared
         const roots = persons.filter(p => FamilyGraph.parents(p.id).length === 0);
 
-        // Group roots by family: roots that share children (via spouse) = same family
+        // Sort roots: those with more descendants first (grandparents before lone parents)
+        // This ensures the tree is built top-down correctly
+        function countDescendants(pid, visited = new Set()) {
+            if (visited.has(pid)) return 0;
+            visited.add(pid);
+            let count = 0;
+            FamilyGraph.children(pid).forEach(c => {
+                count += 1 + countDescendants(c.id, visited);
+            });
+            return count;
+        }
+        roots.sort((a, b) => countDescendants(b.id) - countDescendants(a.id));
+
+        // Group roots — but don't capture a spouse here if they will be reached
+        // as a child of another root (they'll be rendered in renderFamilyUnit instead)
         const rendered = new Set();
         const familyUnits = [];
 
@@ -839,9 +853,10 @@ const SD = (() => {
             if (rendered.has(r.id)) return;
             rendered.add(r.id);
 
-            // Include spouse even if they have parents (not root)
             const sp = FamilyGraph.spouse(r.id);
-            if (sp && !rendered.has(sp.id)) {
+            // Only pair with spouse if spouse is ALSO a root (no parents)
+            // If spouse has parents, they'll be reached via the recursive render
+            if (sp && !rendered.has(sp.id) && FamilyGraph.parents(sp.id).length === 0) {
                 rendered.add(sp.id);
                 familyUnits.push({ persons: [r, sp], type: 'couple' });
             } else {
@@ -855,9 +870,13 @@ const SD = (() => {
         let html = '<div class="ft-canvas">';
 
         // Render each family unit as a recursive subtree
-        familyUnits.forEach((unit, ui) => {
-            if (ui > 0) html += '<div class="ft-family-sep"></div>';
+        let unitCount = 0;
+        familyUnits.forEach((unit) => {
+            // Skip if all persons in this unit are already rendered by a previous unit
+            if (unit.persons.every(p => allRenderedIds.has(p.id))) return;
+            if (unitCount > 0) html += '<div class="ft-family-sep"></div>';
             html += renderFamilyUnit(unit.persons, allRenderedIds, 0);
+            unitCount++;
         });
 
         // Render any person not yet rendered (siblings of parents, etc.) as their own unit
