@@ -984,7 +984,7 @@ const SD = (() => {
 
                 if (areSpouses) {
                     const midX = (p1.x + p2.x) / 2;
-                    const joinY = Math.max(p1.bottom, p2.bottom) + 6;
+                    const joinY = Math.max(p1.bottom, p2.bottom) + 10;
                     const midY = (joinY + c.top) / 2;
                     // Trunk from couple center down to child
                     addPoly([[midX, joinY], [midX, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
@@ -1053,15 +1053,8 @@ const SD = (() => {
                 childUnits.push({ child, spouse: hasSpouse ? childSpouse : null });
             });
 
-            // Sort: singles first (left), then couples (right)
-            // This puts Cécile LEFT, Mère+Père RIGHT
-            childUnits.sort((a, b) => {
-                if (!a.spouse && b.spouse) return -1;  // singles left
-                if (a.spouse && !b.spouse) return 1;   // couples right
-                return 0;
-            });
-
-            // Render — spouse always on OUTSIDE (right = exterior)
+            // Keep natural order (insertion order) — don't sort
+            // Spouse always on RIGHT (exterior)
             childUnits.forEach((cu) => {
                 if (cu.spouse) {
                     html += `<div class="ft-couple">`;
