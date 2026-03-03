@@ -205,6 +205,9 @@
         input::placeholder { color:var(--text-muted); }
         /* ===== FAMILY TREE — Compact visual ===== */
         .ft-canvas{display:flex;flex-direction:row;align-items:flex-start;gap:60px;justify-content:center;padding:32px 24px;position:relative;flex-wrap:wrap;min-height:100px;overflow-x:auto;}
+        .ft-canvas.ft-levels{flex-direction:column;align-items:center;gap:24px;flex-wrap:nowrap;overflow:auto;padding:28px 20px;}
+        .ft-level{display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap;width:max-content;}
+
         .ft-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:0;}
         .ft-link-parent{stroke:rgba(198,134,66,.35);stroke-width:1.5;fill:none;}
         .ft-link-spouse{stroke:rgba(255,107,107,.45);stroke-width:2;}
@@ -1114,7 +1117,7 @@
 </div>
 
 <!-- External JS -->
-<script src="js/successions-donations.js?v=20260303b"></script>
-<script src="js/path-optimizer.js"></script>
+<script src="js/successions-donations.js?v=20260303c"></script>
+<script src="js/path-optimizer.js?v=20260303c"></script>
 </body>
 </html>
