@@ -836,18 +836,8 @@ const SD = (() => {
         // Find root persons: no parents declared
         const roots = persons.filter(p => FamilyGraph.parents(p.id).length === 0);
 
-        // Sort roots: those with more descendants first (grandparents before lone parents)
-        // This ensures the tree is built top-down correctly
-        function countDescendants(pid, visited = new Set()) {
-            if (visited.has(pid)) return 0;
-            visited.add(pid);
-            let count = 0;
-            FamilyGraph.children(pid).forEach(c => {
-                count += 1 + countDescendants(c.id, visited);
-            });
-            return count;
-        }
-        roots.sort((a, b) => countDescendants(b.id) - countDescendants(a.id));
+        // Stable order by ID (order of creation)
+        roots.sort((a, b) => a.id - b.id);
 
         // Group roots
         const rendered = new Set();
@@ -864,33 +854,6 @@ const SD = (() => {
             } else {
                 familyUnits.push({ persons: [r], type: 'single' });
             }
-        });
-
-        // Reorder: units whose children are spouses of children of OTHER units go FIRST (left)
-        // "Parent Père" provides Père who is spouse of Mère → goes before "Marie-Jo"
-        // A unit is a "spouse provider" if one of its children married into another family
-        // i.e., a child has a spouse whose parents are in a DIFFERENT root unit
-        function isSpouseProvider(unit) {
-            const unitRootIds = new Set(unit.persons.map(p => p.id));
-            const childIds = new Set();
-            unit.persons.forEach(p => FamilyGraph.children(p.id).forEach(c => childIds.add(c.id)));
-            for (const cid of childIds) {
-                const sp = FamilyGraph.spouse(cid);
-                if (sp) {
-                    // Does the spouse's parents come from a different root?
-                    const spParents = FamilyGraph.parents(sp.id);
-                    if (spParents.length > 0 && !spParents.some(pp => unitRootIds.has(pp.id))) {
-                        return true; // child is married into another family
-                    }
-                }
-            }
-            return false;
-        }
-
-        familyUnits.sort((a, b) => {
-            const aP = isSpouseProvider(a) ? 0 : 1;
-            const bP = isSpouseProvider(b) ? 0 : 1;
-            return aP - bP;
         });
 
         // Also find orphans (persons with parents but whose parents aren't in graph)
@@ -982,7 +945,9 @@ const SD = (() => {
             if (!a || !b) return;
             const leftN = a.left <= b.left ? a : b;
             const rightN = leftN === a ? b : a;
-            const y = (a.top + a.bottom) / 2;
+            const y1 = (leftN.top + leftN.bottom) / 2;
+            const y2 = (rightN.top + rightN.bottom) / 2;
+            const y = (y1 + y2) / 2;
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('class', 'ft-link-spouse');
             line.setAttribute('x1', leftN.right);
