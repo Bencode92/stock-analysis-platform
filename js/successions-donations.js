@@ -864,32 +864,25 @@ const SD = (() => {
                 if (ids.length === 0) return;
                 ids.forEach(id => rendered.add(id));
 
-                // Step 3: Order — blood singles first (left), then blood+spouse couples (right)
+                // Step 3: Build render items — each blood sibling as a unit (optionally with spouse)
+                // Order: sib1(+spouse) — sib2(+spouse) — sib3(+spouse)
+                // Spouse is always on the OUTSIDE (left for first, right for last, alternating)
                 const items = [];
                 const used = new Set();
 
-                // Singles first (blood sibs without spouse in cluster)
                 [...bloodIds].forEach(bid => {
                     if (used.has(bid)) return;
+                    used.add(bid);
                     const sp = FamilyGraph.spouse(bid);
-                    if (!sp || !ids.includes(sp.id)) {
-                        used.add(bid);
+                    if (sp && ids.includes(sp.id) && !used.has(sp.id)) {
+                        used.add(sp.id);
+                        items.push({ type: 'couple', sib: bid, spouse: sp.id });
+                    } else {
                         items.push({ type: 'single', id: bid });
                     }
                 });
 
-                // Couples next (blood sib on left, spouse on right)
-                [...bloodIds].forEach(bid => {
-                    if (used.has(bid)) return;
-                    const sp = FamilyGraph.spouse(bid);
-                    if (sp && ids.includes(sp.id) && !used.has(sp.id)) {
-                        used.add(bid);
-                        used.add(sp.id);
-                        items.push({ type: 'couple', sib: bid, spouse: sp.id });
-                    }
-                });
-
-                // Leftovers (shouldn't happen, but safety net)
+                // Leftovers
                 ids.forEach(id => {
                     if (!used.has(id)) {
                         used.add(id);
@@ -912,9 +905,19 @@ const SD = (() => {
                         const sibP = FamilyGraph.getPerson(item.sib);
                         const spP = FamilyGraph.getPerson(item.spouse);
                         html += `<div class="ft-couple">`;
-                        html += ftNode(sibP);
-                        html += `<div class="ft-couple-bar"></div>`;
-                        html += ftNode(spP);
+                        // Spouse on OUTSIDE: if this is the first item, spouse goes LEFT
+                        // If last item or only item, spouse goes RIGHT
+                        // Default: spouse on RIGHT (sib on left = toward center)
+                        const spouseLeft = (ii === 0 && cluster.length > 1);
+                        if (spouseLeft) {
+                            html += ftNode(spP);
+                            html += `<div class="ft-couple-bar"></div>`;
+                            html += ftNode(sibP);
+                        } else {
+                            html += ftNode(sibP);
+                            html += `<div class="ft-couple-bar"></div>`;
+                            html += ftNode(spP);
+                        }
                         html += `</div>`;
                     } else {
                         html += ftNode(FamilyGraph.getPerson(item.id));
