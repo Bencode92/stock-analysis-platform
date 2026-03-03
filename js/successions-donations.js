@@ -837,26 +837,69 @@ const SD = (() => {
             const lvlPersons = persons.filter(p => levels[p.id] === lvl);
             if (lvlPersons.length === 0) continue;
 
-            // Group by family clusters: siblings + their spouses
+            // Group by family clusters: siblings together, spouses attached
             const rendered = new Set();
             const clusters = [];
 
             lvlPersons.forEach(p => {
                 if (rendered.has(p.id)) return;
 
-                // Find the full cluster: this person + siblings + all spouses
-                const cluster = [];
-                const sibs = [p, ...FamilyGraph.siblings(p.id).filter(s => levels[s.id] === lvl)];
+                // Collect all siblings at this level (including p)
+                const sibIds = new Set([p.id]);
+                FamilyGraph.siblings(p.id).forEach(s => {
+                    if (levels[s.id] === lvl) sibIds.add(s.id);
+                });
+                // Also check if p is someone's spouse — include that person's siblings
+                const allPersons = FamilyGraph.getPersons().filter(pp => levels[pp.id] === lvl);
+                allPersons.forEach(pp => {
+                    const sp = FamilyGraph.spouse(pp.id);
+                    if (sp && sibIds.has(sp.id)) {
+                        // pp is spouse of a sibling — include pp's siblings too
+                        sibIds.add(pp.id);
+                        FamilyGraph.siblings(pp.id).forEach(s => {
+                            if (levels[s.id] === lvl) sibIds.add(s.id);
+                        });
+                    }
+                });
 
-                sibs.forEach(s => {
-                    if (rendered.has(s.id)) return;
-                    rendered.add(s.id);
-                    const sp = FamilyGraph.spouse(s.id);
-                    if (sp && levels[sp.id] === lvl && !rendered.has(sp.id)) {
+                // Skip already rendered
+                const unrendered = [...sibIds].filter(id => !rendered.has(id));
+                if (unrendered.length === 0) return;
+
+                // Build ordered list: for each sibling, show them + their spouse
+                // Siblings first (blood relatives), spouses attached
+                const bloodSibs = unrendered.filter(id => {
+                    // Is this person a sibling of another in the group (shares parents)?
+                    const parents = FamilyGraph.parents(id);
+                    return parents.length > 0 && unrendered.some(oid => oid !== id && FamilyGraph.parents(oid).some(op => parents.some(pp => pp.id === op.id)));
+                });
+                // If no blood sibs found, just use all
+                const orderedSibs = bloodSibs.length > 0 ? bloodSibs : unrendered.filter(id => !FamilyGraph.spouse(id) || !unrendered.includes(FamilyGraph.spouse(id).id));
+
+                const cluster = [];
+                const clusterRendered = new Set();
+
+                // Render each blood sibling, then attach their spouse
+                orderedSibs.forEach(sid => {
+                    if (clusterRendered.has(sid)) return;
+                    clusterRendered.add(sid);
+                    rendered.add(sid);
+                    const sp = FamilyGraph.spouse(sid);
+                    if (sp && unrendered.includes(sp.id) && !clusterRendered.has(sp.id)) {
+                        clusterRendered.add(sp.id);
                         rendered.add(sp.id);
-                        cluster.push({ type: 'couple', a: s, b: sp });
+                        cluster.push({ type: 'couple', sib: sid, spouse: sp.id });
                     } else {
-                        cluster.push({ type: 'single', a: s });
+                        cluster.push({ type: 'single', id: sid });
+                    }
+                });
+
+                // Any remaining unrendered in this group
+                unrendered.forEach(id => {
+                    if (!clusterRendered.has(id)) {
+                        clusterRendered.add(id);
+                        rendered.add(id);
+                        cluster.push({ type: 'single', id });
                     }
                 });
 
@@ -866,30 +909,29 @@ const SD = (() => {
             // Render row
             html += `<div class="ft-row">`;
             clusters.forEach((cluster, ci) => {
-                // Wrap sibling cluster in a group with subtle bracket
                 const isMulti = cluster.length > 1;
                 if (isMulti) html += `<div class="ft-sibgroup">`;
 
                 cluster.forEach((item, ii) => {
                     if (ii > 0 && isMulti) html += `<div class="ft-sib-sep"></div>`;
                     if (item.type === 'couple') {
+                        // Sibling first, then couple bar, then spouse
+                        const sibP = FamilyGraph.getPerson(item.sib);
+                        const spP = FamilyGraph.getPerson(item.spouse);
                         html += `<div class="ft-couple">`;
-                        html += ftNode(item.a);
+                        html += ftNode(sibP);
                         html += `<div class="ft-couple-bar"></div>`;
-                        html += ftNode(item.b);
+                        html += ftNode(spP);
                         html += `</div>`;
                     } else {
-                        html += ftNode(item.a);
+                        html += ftNode(FamilyGraph.getPerson(item.id));
                     }
                 });
 
                 if (isMulti) html += `</div>`;
-
-                // Gap between clusters
                 if (ci < clusters.length - 1) html += `<div style="width:16px;"></div>`;
             });
             html += `</div>`;
-
             // Vertical connector
             if (lvl < maxLvl) {
                 html += `<div class="ft-vline"></div>`;
