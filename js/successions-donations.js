@@ -845,25 +845,9 @@ const SD = (() => {
             byLvl[L].push(p);
         });
 
-        // Find connected components
-        const compOf = {};
-        let compId = 0;
-        function floodFill(pid, cid) {
-            if (compOf[pid] !== undefined) return;
-            compOf[pid] = cid;
-            FamilyGraph.parents(pid).forEach(par => floodFill(par.id, cid));
-            FamilyGraph.children(pid).forEach(ch => floodFill(ch.id, cid));
-            var sp = FamilyGraph.spouse(pid);
-            if (sp) floodFill(sp.id, cid);
-        }
-        persons.forEach(p => { if (compOf[p.id] === undefined) { floodFill(p.id, compId); compId++; } });
-        const compOrder = {};
-        let cOrd = 0;
-        byLvl[0].forEach(p => { if (compOrder[compOf[p.id]] === undefined) compOrder[compOf[p.id]] = cOrd++; });
-        persons.forEach(p => { if (compOrder[compOf[p.id]] === undefined) compOrder[compOf[p.id]] = cOrd++; });
-        for (var pass = 0; pass < 4; pass++) {
-            for (var L2 = 0; L2 <= maxLvl; L2++) byLvl[L2] = orderLevelPersons(byLvl[L2], L2, levels, byLvl, compOf, compOrder);
-            for (var L3 = maxLvl; L3 >= 0; L3--) byLvl[L3] = orderLevelPersons(byLvl[L3], L3, levels, byLvl, compOf, compOrder);
+        // Order each level: spouses adjacent, siblings grouped by parent position
+        for (let L = 0; L <= maxLvl; L++) {
+            byLvl[L] = orderLevelPersons(byLvl[L], L, levels, byLvl);
         }
 
         // Render level by level (each level = horizontal row)
@@ -871,14 +855,9 @@ const SD = (() => {
         for (let L = 0; L <= maxLvl; L++) {
             if (!byLvl[L].length) continue;
             html += '<div class="ft-level">';
-            let prevComp = null;
             byLvl[L].forEach(p => {
-                const comp = compOf ? compOf[p.id] : 0;
-                if (prevComp !== null && comp !== prevComp) {
-                    html += '<div class="ft-comp-gap"></div>';
-                }
+                // Check if this person and next person are spouses
                 html += ftNode(p);
-                prevComp = comp;
             });
             html += '</div>';
         }
@@ -887,6 +866,10 @@ const SD = (() => {
 
         container.innerHTML = html;
         renderFamilyRoles();
+        if (!window._ftResizeBound) {
+            window._ftResizeBound = true;
+            window.addEventListener('resize', function() { requestAnimationFrame(drawFamilyLinks); }, { passive: true });
+        }
         requestAnimationFrame(drawFamilyLinks);
     }
 
@@ -980,11 +963,13 @@ const SD = (() => {
     function drawFamilyLinks() {
         const canvas = document.querySelector('#family-persons-list .ft-canvas');
         if (!canvas) return;
+
         canvas.querySelectorAll('.ft-svg').forEach(s => s.remove());
 
         const canvasRect = canvas.getBoundingClientRect();
         const w = canvas.scrollWidth;
         const h = canvas.scrollHeight;
+
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('ft-svg');
         svg.setAttribute('width', w);
@@ -993,7 +978,7 @@ const SD = (() => {
         svg.style.height = h + 'px';
 
         function getBox(pid) {
-            const el = canvas.querySelector('[data-pid="' + pid + '"]');
+            const el = canvas.querySelector(`[data-pid="${pid}"]`);
             if (!el) return null;
             const r = el.getBoundingClientRect();
             const sx = canvas.scrollLeft || 0;
@@ -1010,22 +995,13 @@ const SD = (() => {
         function addPoly(points, cls) {
             const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
             pl.setAttribute('class', cls);
-            pl.setAttribute('points', points.map(function(p){return p[0]+','+p[1]}).join(' '));
+            pl.setAttribute('points', points.map(p => `${p[0]},${p[1]}`).join(' '));
             svg.appendChild(pl);
-        }
-
-        function addDot(x, y) {
-            const ci = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            ci.setAttribute('class', 'ft-link-dot');
-            ci.setAttribute('cx', x);
-            ci.setAttribute('cy', y);
-            ci.setAttribute('r', 3.2);
-            svg.appendChild(ci);
         }
 
         const rels = FamilyGraph.getRelations();
 
-        // 1) Spouse lines
+        // 1) Spouse lines — robust left/right detection
         rels.filter(r => r.type === 'spouse').forEach(r => {
             const a = getBox(r.from), b = getBox(r.to);
             if (!a || !b) return;
@@ -1033,153 +1009,60 @@ const SD = (() => {
             const rightN = leftN === a ? b : a;
             const y1 = (leftN.top + leftN.bottom) / 2;
             const y2 = (rightN.top + rightN.bottom) / 2;
-            if (Math.abs(y1 - y2) < 6) {
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('class', 'ft-link-spouse');
-                line.setAttribute('x1', leftN.right);
-                line.setAttribute('y1', y1);
-                line.setAttribute('x2', rightN.left);
-                line.setAttribute('y2', y1);
-                svg.appendChild(line);
-            } else {
-                const midX = (leftN.right + rightN.left) / 2;
-                addPoly([[leftN.right, y1], [midX, y1], [midX, y2], [rightN.left, y2]], 'ft-link-spouse');
-            }
+            const y = (y1 + y2) / 2;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('class', 'ft-link-spouse');
+            line.setAttribute('x1', leftN.right);
+            line.setAttribute('y1', y);
+            line.setAttribute('x2', rightN.left);
+            line.setAttribute('y2', y);
+            svg.appendChild(line);
         });
 
-        // 2) Parent -> children, grouped by couple or single parent (trunk + branches)
-        const childrenByParent = new Map();
+        // 2) Parent→child — group by child for clean couple trunks
+        const parentsByChild = new Map();
         rels.filter(r => r.type === 'parent').forEach(r => {
-            if (!childrenByParent.has(r.from)) childrenByParent.set(r.from, new Set());
-            childrenByParent.get(r.from).add(r.to);
+            if (!parentsByChild.has(r.to)) parentsByChild.set(r.to, []);
+            parentsByChild.get(r.to).push(r.from);
         });
 
-        const intersect = function(A, B) {
-            const out = new Set();
-            if (!A || !B) return out;
-            for (const v of A) if (B.has(v)) out.add(v);
-            return out;
-        };
+        parentsByChild.forEach((pids, childId) => {
+            const uniq = [...new Set(pids)];
+            const c = getBox(childId);
+            if (!c) return;
 
-        const coveredByCouple = new Map();
-        const markCovered = function(pid, cid) {
-            if (!coveredByCouple.has(pid)) coveredByCouple.set(pid, new Set());
-            coveredByCouple.get(pid).add(cid);
-        };
+            // Couple case: 2 parents who are spouses → single trunk from middle
+            if (uniq.length === 2) {
+                const p1 = getBox(uniq[0]);
+                const p2 = getBox(uniq[1]);
+                if (!p1 || !p2) return;
 
-        // Build unique spouse pairs
-        const spousePairs = [];
-        rels.filter(r => r.type === 'spouse').forEach(r => {
-            const a = Math.min(r.from, r.to);
-            const b = Math.max(r.from, r.to);
-            spousePairs.push([a, b]);
-        });
-        const seen = new Set();
-        const uniqPairs = spousePairs.filter(function(p) {
-            const k = p[0] + '-' + p[1];
-            if (seen.has(k)) return false;
-            seen.add(k);
-            return true;
-        });
+                const s = FamilyGraph.spouse(uniq[0]);
+                const areSpouses = s && s.id === uniq[1];
 
-        // 2a) Couple trunks (children with BOTH parents as spouses)
-        uniqPairs.forEach(function(pair) {
-            const p1 = pair[0], p2 = pair[1];
-            const kids1 = childrenByParent.get(p1);
-            const kids2 = childrenByParent.get(p2);
-            const shared = intersect(kids1, kids2);
-            if (shared.size === 0) return;
-
-            const b1 = getBox(p1), b2 = getBox(p2);
-            if (!b1 || !b2) return;
-
-            const childBoxes = [];
-            shared.forEach(function(cid) {
-                const box = getBox(cid);
-                if (box) childBoxes.push({ cid: cid, box: box });
-            });
-            if (childBoxes.length === 0) return;
-
-            const topParent = Math.max(b1.bottom, b2.bottom);
-            const midX = (b1.x + b2.x) / 2;
-            const minChildTop = Math.min.apply(null, childBoxes.map(function(x){return x.box.top}));
-            let barY = topParent + (minChildTop - topParent) / 2;
-
-            const xs = childBoxes.map(function(x){return x.box.x});
-            const minX = Math.min.apply(null, xs);
-            const maxX = Math.max.apply(null, xs);
-
-            // Trunk from couple midpoint down to bar
-            addPoly([[midX, topParent], [midX, barY]], 'ft-link-parent');
-            addDot(midX, barY);
-
-            // Horizontal bar or elbow for single child
-            if (childBoxes.length > 1) {
-                addPoly([[minX, barY], [maxX, barY]], 'ft-link-parent');
-            } else {
-                var cx = childBoxes[0].box.x;
-                if (Math.abs(cx - midX) > 1) addPoly([[midX, barY], [cx, barY]], 'ft-link-parent');
+                if (areSpouses) {
+                    const midX = (p1.x + p2.x) / 2;
+                    const joinY = Math.max(p1.bottom, p2.bottom) + 10;
+                    const midY = (joinY + c.top) / 2;
+                    // Trunk from couple center down to child
+                    addPoly([[midX, joinY], [midX, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
+                    return;
+                }
             }
 
-            // Drops to each child
-            childBoxes.forEach(function(item) {
-                addPoly([[item.box.x, barY], [item.box.x, item.box.top]], 'ft-link-parent');
-                addDot(item.box.x, barY);
-                markCovered(p1, item.cid);
-                markCovered(p2, item.cid);
+            // Fallback: one line per parent
+            uniq.forEach(pid => {
+                const p = getBox(pid);
+                if (!p) return;
+                const midY = (p.bottom + c.top) / 2;
+                addPoly([[p.x, p.bottom], [p.x, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
             });
-        });
-
-        // 2b) Single-parent trunks for remaining children
-        childrenByParent.forEach(function(kidsSet, pid) {
-            const pb = getBox(pid);
-            if (!pb) return;
-
-            const already = coveredByCouple.get(pid) || new Set();
-            const remaining = [];
-            kidsSet.forEach(function(cid) {
-                if (!already.has(cid)) remaining.push(cid);
-            });
-            if (remaining.length === 0) return;
-
-            const childBoxes = [];
-            remaining.forEach(function(cid) {
-                const box = getBox(cid);
-                if (box) childBoxes.push({ cid: cid, box: box });
-            });
-            if (childBoxes.length === 0) return;
-
-            const topParent = pb.bottom;
-            const minChildTop = Math.min.apply(null, childBoxes.map(function(x){return x.box.top}));
-            let barY = topParent + (minChildTop - topParent) / 2;
-
-            const xs = childBoxes.map(function(x){return x.box.x});
-            const minX = Math.min.apply(null, xs);
-            const maxX = Math.max.apply(null, xs);
-
-            if (childBoxes.length === 1) {
-                var cb = childBoxes[0].box;
-                addPoly([[pb.x, topParent], [pb.x, barY], [cb.x, barY], [cb.x, cb.top]], 'ft-link-parent');
-                addDot(pb.x, barY);
-                if (Math.abs(pb.x - cb.x) > 5) addDot(cb.x, barY);
-            } else {
-                addPoly([[pb.x, topParent], [pb.x, barY]], 'ft-link-parent');
-                addDot(pb.x, barY);
-                addPoly([[minX, barY], [maxX, barY]], 'ft-link-parent');
-                childBoxes.forEach(function(item) {
-                    addPoly([[item.box.x, barY], [item.box.x, item.box.top]], 'ft-link-parent');
-                    addDot(item.box.x, barY);
-                });
-            }
         });
 
         canvas.prepend(svg);
-
-        // Redraw on resize
-        window.addEventListener('resize', function() { requestAnimationFrame(drawFamilyLinks); });
     }
 
-
+    // Render a family unit: parent(s) at top, their children below, recursively
     function renderFamilyUnit(parentPersons, renderedIds, depth) {
         let html = '<div class="ft-unit">';
 
@@ -1376,18 +1259,6 @@ const SD = (() => {
         items += `<div class="ft-ctx-sep"></div>`;
         items += `<div class="ft-ctx-item" onclick="FamilyGraph.toggleRole(${pid},'donor',${!p.isDonor});SD.closeCtx();SD.renderFamilyTree();">${p.isDonor ? '☑' : '☐'} Donateur 💰</div>`;
         items += `<div class="ft-ctx-item" onclick="FamilyGraph.toggleRole(${pid},'beneficiary',${!p.isBeneficiary});SD.closeCtx();SD.renderFamilyTree();">${p.isBeneficiary ? '☑' : '☐'} Bénéficiaire 🎯</div>`;
-        // Detach links
-        const detachPars = FamilyGraph.parents(pid);
-        if (detachPars.length > 0 || hasSpouse) {
-            items += `<div class="ft-ctx-sep"></div>`;
-            detachPars.forEach(par => {
-                items += `<div class="ft-ctx-item ft-ctx-danger" onclick="FamilyGraph.removeRelation('parent',${par.id},${pid});SD.closeCtx();SD.renderFamilyTree();"><i class="fas fa-unlink"></i> Détacher de ${par.nom || 'parent'}</div>`;
-            });
-            if (hasSpouse) {
-                const dsp = FamilyGraph.spouse(pid);
-                items += `<div class="ft-ctx-item ft-ctx-danger" onclick="FamilyGraph.removeRelation('spouse',${pid},${dsp.id});SD.closeCtx();SD.renderFamilyTree();"><i class="fas fa-heart-broken"></i> Retirer conjoint (${dsp.nom || '?'})</div>`;
-            }
-        }
         // Delete
         items += `<div class="ft-ctx-sep"></div>`;
         items += `<div class="ft-ctx-item ft-ctx-danger" onclick="FamilyGraph.removePerson(${pid});SD.closeCtx();SD.renderFamilyTree();"><i class="fas fa-trash"></i> Supprimer</div>`;
@@ -1421,7 +1292,12 @@ const SD = (() => {
     function closeCtx() {
         const ctx = el('ft-ctx');
         if (ctx) ctx.style.display = 'none';
-        selectedNodeId = null;
+        if (selectedNodeId !== null) {
+            selectedNodeId = null;
+            renderFamilyTree();
+        } else {
+            selectedNodeId = null;
+        }
     }
 
     function editNode(pid) {
