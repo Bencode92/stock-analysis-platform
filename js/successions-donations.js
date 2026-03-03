@@ -837,34 +837,56 @@ const SD = (() => {
             const lvlPersons = persons.filter(p => levels[p.id] === lvl);
             if (lvlPersons.length === 0) continue;
 
-            // Group couples
+            // Group by family clusters: siblings + their spouses
             const rendered = new Set();
-            const groups = [];
+            const clusters = [];
+
             lvlPersons.forEach(p => {
                 if (rendered.has(p.id)) return;
-                rendered.add(p.id);
-                const sp = FamilyGraph.spouse(p.id);
-                if (sp && levels[sp.id] === lvl && !rendered.has(sp.id)) {
-                    rendered.add(sp.id);
-                    groups.push([p, sp]);
-                } else {
-                    groups.push([p]);
-                }
+
+                // Find the full cluster: this person + siblings + all spouses
+                const cluster = [];
+                const sibs = [p, ...FamilyGraph.siblings(p.id).filter(s => levels[s.id] === lvl)];
+
+                sibs.forEach(s => {
+                    if (rendered.has(s.id)) return;
+                    rendered.add(s.id);
+                    const sp = FamilyGraph.spouse(s.id);
+                    if (sp && levels[sp.id] === lvl && !rendered.has(sp.id)) {
+                        rendered.add(sp.id);
+                        cluster.push({ type: 'couple', a: s, b: sp });
+                    } else {
+                        cluster.push({ type: 'single', a: s });
+                    }
+                });
+
+                if (cluster.length > 0) clusters.push(cluster);
             });
 
-            // Row
+            // Render row
             html += `<div class="ft-row">`;
-            groups.forEach((g, gi) => {
-                if (g.length === 2) {
-                    // Couple bar
-                    html += `<div class="ft-couple">`;
-                    html += ftNode(g[0]);
-                    html += `<div class="ft-couple-bar"></div>`;
-                    html += ftNode(g[1]);
-                    html += `</div>`;
-                } else {
-                    html += ftNode(g[0]);
-                }
+            clusters.forEach((cluster, ci) => {
+                // Wrap sibling cluster in a group with subtle bracket
+                const isMulti = cluster.length > 1;
+                if (isMulti) html += `<div class="ft-sibgroup">`;
+
+                cluster.forEach((item, ii) => {
+                    if (ii > 0 && isMulti) html += `<div class="ft-sib-sep"></div>`;
+                    if (item.type === 'couple') {
+                        html += `<div class="ft-couple">`;
+                        html += ftNode(item.a);
+                        html += `<div class="ft-couple-bar"></div>`;
+                        html += ftNode(item.b);
+                        html += `</div>`;
+                    } else {
+                        html += ftNode(item.a);
+                    }
+                });
+
+                if (isMulti) html += `</div>`;
+
+                // Gap between clusters
+                if (ci < clusters.length - 1) html += `<div style="width:16px;"></div>`;
             });
             html += `</div>`;
 
@@ -875,8 +897,6 @@ const SD = (() => {
         }
 
         html += `</div>`;
-
-        // Context menu (hidden by default)
         html += `<div id="ft-ctx" class="ft-ctx" style="display:none;"></div>`;
 
         container.innerHTML = html;
