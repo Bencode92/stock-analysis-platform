@@ -848,7 +848,7 @@ const SD = (() => {
             rendered.add(r.id);
 
             const sp = FamilyGraph.spouse(r.id);
-            if (sp && !rendered.has(sp.id) && FamilyGraph.parents(sp.id).length === 0) {
+            if (sp && !rendered.has(sp.id)) {
                 rendered.add(sp.id);
                 familyUnits.push({ persons: [r, sp], type: 'couple' });
             } else {
@@ -1026,24 +1026,27 @@ const SD = (() => {
             FamilyGraph.children(p.id).forEach(c => childIds.add(c.id));
         });
 
-        // Separate: real children (not yet rendered)
+        // Separate: real children vs ghost (already rendered as spouse in another block)
         const allChildPersons = [...childIds].map(cid => FamilyGraph.getPerson(cid)).filter(Boolean);
         const children = allChildPersons.filter(c => !renderedIds.has(c.id));
+        const ghostChildren = allChildPersons.filter(c => renderedIds.has(c.id));
 
-        if (children.length > 0) {
+        if (children.length > 0 || ghostChildren.length > 0) {
             html += '<div class="ft-connector"><div class="ft-vline"></div></div>';
             html += '<div class="ft-children">';
+
+            // Ghost: already rendered elsewhere, shown as dashed reference
+            ghostChildren.forEach(gc => {
+                html += '<div class="ft-ghost">' + (gc.nom || '?') + ' \u2197</div>';
+            });
 
             const childUnits = [];
             children.forEach(child => {
                 renderedIds.add(child.id);
                 const childSpouse = FamilyGraph.spouse(child.id);
-                // Only capture spouse here if they have NO parents of their own
-                // If spouse has parents, they'll be rendered in their own family block
-                // and the SVG couple line will connect them horizontally
-                const captureSpouse = childSpouse
-                    && !renderedIds.has(childSpouse.id)
-                    && FamilyGraph.parents(childSpouse.id).length === 0;
+                // ALWAYS capture spouse — the couple must stay together visually
+                // If the spouse has parents, those parents render separately with a ghost reference
+                const captureSpouse = childSpouse && !renderedIds.has(childSpouse.id);
                 if (captureSpouse) renderedIds.add(childSpouse.id);
                 childUnits.push({ child, spouse: captureSpouse ? childSpouse : null });
             });
