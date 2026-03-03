@@ -818,7 +818,7 @@ const SD = (() => {
 
         const levels = FamilyGraph.computeLevels();
         const maxLvl = Math.max(...Object.values(levels));
-        // buttons use .tb class
+        const s = 'font-size:.5rem;padding:1px 5px;border:1px dashed rgba(198,134,66,.25);background:none;color:var(--text-muted);border-radius:3px;cursor:pointer;white-space:nowrap;';
 
         let html = '<div style="display:flex;flex-direction:column;align-items:center;gap:0;">';
 
@@ -850,7 +850,7 @@ const SD = (() => {
                     groups.forEach(g => {
                         const p = g[0];
                         if (FamilyGraph.parents(p.id).length === 0) {
-                            html += `<button onclick="SD.addRelative(${p.id},'parent')" class="tb">↑ Parent de ${p.nom || '?'}</button>`;
+                            html += `<button onclick="SD.addRelative(${p.id},'parent')" style="${s}">↑ Parent de ${p.nom || '?'}</button>`;
                         }
                     });
                     html += `</div>`;
@@ -883,9 +883,9 @@ const SD = (() => {
                 const p = g[0];
                 const ch = FamilyGraph.children(p.id);
                 html += `<div style="display:flex;gap:4px;align-items:center;">`;
-                html += `<button onclick="SD.addRelative(${p.id},'child')" class="tb">↓ Enfant</button>`;
+                html += `<button onclick="SD.addRelative(${p.id},'child')" style="${s}">↓ Enfant</button>`;
                 if (FamilyGraph.parents(p.id).length > 0) {
-                    html += `<button onclick="SD.addRelative(${p.id},'sibling')" class="tb">↔ F/S</button>`;
+                    html += `<button onclick="SD.addRelative(${p.id},'sibling')" style="${s}">↔ F/S</button>`;
                 }
                 html += `</div>`;
             });
@@ -907,11 +907,11 @@ const SD = (() => {
         const db = p.isDonor ? 'rgba(198,134,66,.18)' : 'rgba(92,64,51,.06)';
         const bb = p.isBeneficiary ? '1.5px solid var(--accent-green)' : '1px solid rgba(198,134,66,.15)';
         const ri = (p.isDonor ? '💰' : '') + (p.isBeneficiary ? '🎯' : '');
-        const ageStr = p.age ? p.age + 'a' : '';
-        return `<div class="tn" style="background:${db};border:${bb};">
-            <button class="tn-del" onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();">✕</button>
-            <span class="tn-name" contenteditable="true" onblur="FamilyGraph.updatePerson(${p.id},'nom',this.textContent)">${p.nom || '?'}</span>
-            <div class="tn-age">${ageStr ? ageStr : '<input class="tn-in" type="number" placeholder="âge" onchange="FamilyGraph.updatePerson(' + p.id + ',\'age\',this.value)">'}${ri ? ' ' + ri : ''}</div>
+        return `<div style="padding:4px 8px;border-radius:6px;background:${db};border:${bb};text-align:center;min-width:60px;position:relative;">
+            <button onclick="FamilyGraph.removePerson(${p.id});SD.renderFamilyTree();" style="position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:var(--accent-coral);color:#fff;border:none;font-size:.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.4;">✕</button>
+            <input type="text" value="${p.nom}" placeholder="Nom" style="font-size:.62rem;font-weight:700;text-align:center;background:none;border:none;color:var(--text-primary);width:100%;padding:0;outline:none;border-bottom:1px dotted rgba(198,134,66,.1);" onchange="FamilyGraph.updatePerson(${p.id},'nom',this.value);">
+            <input type="number" value="${p.age||''}" placeholder="âge" min="0" max="120" style="font-size:.5rem;width:28px;text-align:center;background:none;border:none;color:var(--text-muted);padding:0;outline:none;" onchange="FamilyGraph.updatePerson(${p.id},'age',this.value);">
+            ${ri ? `<span style="font-size:.45rem;">${ri}</span>` : ''}
         </div>`;
     }
 
