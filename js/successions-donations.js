@@ -837,73 +837,67 @@ const SD = (() => {
             const lvlPersons = persons.filter(p => levels[p.id] === lvl);
             if (lvlPersons.length === 0) continue;
 
-            // Group by family clusters: siblings together, spouses attached
+            // === GROUPING LOGIC ===
+            // Blood siblings grouped together + their spouses attached
+            // CRITICAL: do NOT follow siblings of a spouse (prevents cross-family contamination)
             const rendered = new Set();
             const clusters = [];
 
             lvlPersons.forEach(p => {
                 if (rendered.has(p.id)) return;
 
-                // Collect all siblings at this level (including p)
-                const sibIds = new Set([p.id]);
+                // Step 1: Find blood siblings (share at least one parent)
+                const bloodIds = new Set([p.id]);
                 FamilyGraph.siblings(p.id).forEach(s => {
-                    if (levels[s.id] === lvl) sibIds.add(s.id);
+                    if (levels[s.id] === lvl) bloodIds.add(s.id);
                 });
-                // Also check if p is someone's spouse — include that person's siblings
-                const allPersons = FamilyGraph.getPersons().filter(pp => levels[pp.id] === lvl);
-                allPersons.forEach(pp => {
-                    const sp = FamilyGraph.spouse(pp.id);
-                    if (sp && sibIds.has(sp.id)) {
-                        // pp is spouse of a sibling — include pp's siblings too
-                        sibIds.add(pp.id);
-                        FamilyGraph.siblings(pp.id).forEach(s => {
-                            if (levels[s.id] === lvl) sibIds.add(s.id);
-                        });
-                    }
+
+                // Step 2: Attach spouses of blood siblings (but do NOT follow their siblings)
+                const groupIds = new Set([...bloodIds]);
+                [...bloodIds].forEach(id => {
+                    const sp = FamilyGraph.spouse(id);
+                    if (sp && levels[sp.id] === lvl) groupIds.add(sp.id);
                 });
 
                 // Skip already rendered
-                const unrendered = [...sibIds].filter(id => !rendered.has(id));
-                if (unrendered.length === 0) return;
+                const ids = [...groupIds].filter(id => !rendered.has(id));
+                if (ids.length === 0) return;
+                ids.forEach(id => rendered.add(id));
 
-                // Build ordered list: for each sibling, show them + their spouse
-                // Siblings first (blood relatives), spouses attached
-                const bloodSibs = unrendered.filter(id => {
-                    // Is this person a sibling of another in the group (shares parents)?
-                    const parents = FamilyGraph.parents(id);
-                    return parents.length > 0 && unrendered.some(oid => oid !== id && FamilyGraph.parents(oid).some(op => parents.some(pp => pp.id === op.id)));
-                });
-                // If no blood sibs found, just use all
-                const orderedSibs = bloodSibs.length > 0 ? bloodSibs : unrendered.filter(id => !FamilyGraph.spouse(id) || !unrendered.includes(FamilyGraph.spouse(id).id));
+                // Step 3: Order — blood singles first (left), then blood+spouse couples (right)
+                const items = [];
+                const used = new Set();
 
-                const cluster = [];
-                const clusterRendered = new Set();
-
-                // Render each blood sibling, then attach their spouse
-                orderedSibs.forEach(sid => {
-                    if (clusterRendered.has(sid)) return;
-                    clusterRendered.add(sid);
-                    rendered.add(sid);
-                    const sp = FamilyGraph.spouse(sid);
-                    if (sp && unrendered.includes(sp.id) && !clusterRendered.has(sp.id)) {
-                        clusterRendered.add(sp.id);
-                        rendered.add(sp.id);
-                        cluster.push({ type: 'couple', sib: sid, spouse: sp.id });
-                    } else {
-                        cluster.push({ type: 'single', id: sid });
+                // Singles first (blood sibs without spouse in cluster)
+                [...bloodIds].forEach(bid => {
+                    if (used.has(bid)) return;
+                    const sp = FamilyGraph.spouse(bid);
+                    if (!sp || !ids.includes(sp.id)) {
+                        used.add(bid);
+                        items.push({ type: 'single', id: bid });
                     }
                 });
 
-                // Any remaining unrendered in this group
-                unrendered.forEach(id => {
-                    if (!clusterRendered.has(id)) {
-                        clusterRendered.add(id);
-                        rendered.add(id);
-                        cluster.push({ type: 'single', id });
+                // Couples next (blood sib on left, spouse on right)
+                [...bloodIds].forEach(bid => {
+                    if (used.has(bid)) return;
+                    const sp = FamilyGraph.spouse(bid);
+                    if (sp && ids.includes(sp.id) && !used.has(sp.id)) {
+                        used.add(bid);
+                        used.add(sp.id);
+                        items.push({ type: 'couple', sib: bid, spouse: sp.id });
                     }
                 });
 
-                if (cluster.length > 0) clusters.push(cluster);
+                // Leftovers (shouldn't happen, but safety net)
+                ids.forEach(id => {
+                    if (!used.has(id)) {
+                        used.add(id);
+                        items.push({ type: 'single', id });
+                    }
+                });
+
+                if (items.length > 0) clusters.push(items);
             });
 
             // Render row
@@ -915,7 +909,6 @@ const SD = (() => {
                 cluster.forEach((item, ii) => {
                     if (ii > 0 && isMulti) html += `<div class="ft-sib-sep"></div>`;
                     if (item.type === 'couple') {
-                        // Sibling first, then couple bar, then spouse
                         const sibP = FamilyGraph.getPerson(item.sib);
                         const spP = FamilyGraph.getPerson(item.spouse);
                         html += `<div class="ft-couple">`;
@@ -949,23 +942,40 @@ const SD = (() => {
         const isDonor = p.isDonor;
         const isBen = p.isBeneficiary;
         const sel = selectedNodeId === p.id;
+        // Highlight parents/children of selected node
+        const isRelated = selectedNodeId !== null && selectedNodeId !== p.id && (
+            FamilyGraph.parents(selectedNodeId).some(par => par.id === p.id) ||
+            FamilyGraph.children(selectedNodeId).some(ch => ch.id === p.id) ||
+            (FamilyGraph.spouse(selectedNodeId) && FamilyGraph.spouse(selectedNodeId).id === p.id)
+        );
         const cls = ['ft-node'];
         if (isDonor) cls.push('ft-donor');
         if (isBen) cls.push('ft-ben');
         if (sel) cls.push('ft-sel');
+        if (isRelated) cls.push('ft-related');
 
         const age = p.age ? `, ${p.age}a` : '';
         const icons = (isDonor ? ' 💰' : '') + (isBen ? ' 🎯' : '');
         const name = p.nom || '?';
 
+        // Show relationship label if related to selected
+        let relLabel = '';
+        if (isRelated && selectedNodeId !== null) {
+            if (FamilyGraph.parents(selectedNodeId).some(par => par.id === p.id)) relLabel = '↑ parent';
+            else if (FamilyGraph.children(selectedNodeId).some(ch => ch.id === p.id)) relLabel = '↓ enfant';
+            else relLabel = '💍';
+        }
+
         return `<div class="${cls.join(' ')}" onclick="SD.onNodeClick(event,${p.id})" data-pid="${p.id}">
             <span class="ft-label">${name}${age}${icons}</span>
+            ${relLabel ? `<span class="ft-rel-tag">${relLabel}</span>` : ''}
         </div>`;
     }
 
     function onNodeClick(e, pid) {
         e.stopPropagation();
         selectedNodeId = pid;
+        renderFamilyTree(); // re-render to show highlights
         showContextMenu(pid, e);
     }
 
@@ -987,8 +997,22 @@ const SD = (() => {
         if (!hasSpouse) {
             items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'spouse')"><i class="fas fa-heart"></i> + Conjoint</div>`;
         }
-        items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'child')"><i class="fas fa-arrow-down"></i> + Enfant</div>`;
+        // Child: if has spouse, offer "du couple" (default) — always available as solo too
+        const sp = FamilyGraph.spouse(pid);
+        if (sp) {
+            items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'child')"><i class="fas fa-arrow-down"></i> + Enfant du couple</div>`;
+            items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'child_solo')"><i class="fas fa-arrow-down"></i> + Enfant de ${p.nom} seul</div>`;
+        } else {
+            items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'child')"><i class="fas fa-arrow-down"></i> + Enfant</div>`;
+        }
         items += `<div class="ft-ctx-item" onclick="SD.addRelative(${pid},'sibling')"><i class="fas fa-arrows-alt-h"></i> + Frère/Sœur</div>`;
+        // Oncle/Tante shortcut: add sibling to a parent of this person
+        const pars = FamilyGraph.parents(pid);
+        if (pars.length > 0) {
+            pars.forEach(par => {
+                items += `<div class="ft-ctx-item" onclick="SD.addRelative(${par.id},'sibling')"><i class="fas fa-user-friends"></i> + Oncle/Tante (côté ${par.nom || '?'})</div>`;
+            });
+        }
         // Roles
         items += `<div class="ft-ctx-sep"></div>`;
         items += `<div class="ft-ctx-item" onclick="FamilyGraph.toggleRole(${pid},'donor',${!p.isDonor});SD.closeCtx();SD.renderFamilyTree();">${p.isDonor ? '☑' : '☐'} Donateur 💰</div>`;
@@ -1045,11 +1069,14 @@ const SD = (() => {
         const from = FamilyGraph.getPerson(fromId);
         if (!from) return;
         let newP;
-        if (type === 'child') {
+        if (type === 'child' || type === 'child_solo') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', fromId, newP.id);
-            const sp = FamilyGraph.spouse(fromId);
-            if (sp) FamilyGraph.addRelation('parent', sp.id, newP.id);
+            // child = du couple (both parents), child_solo = only this parent
+            if (type === 'child') {
+                const sp = FamilyGraph.spouse(fromId);
+                if (sp) FamilyGraph.addRelation('parent', sp.id, newP.id);
+            }
         } else if (type === 'parent') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', newP.id, fromId);
@@ -1060,9 +1087,8 @@ const SD = (() => {
         } else if (type === 'spouse') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('spouse', fromId, newP.id);
-            FamilyGraph.children(fromId).forEach(c => {
-                FamilyGraph.addRelation('parent', newP.id, c.id);
-            });
+            // Ne PAS auto-ajouter comme parent des enfants existants
+            // L'utilisateur le fera manuellement si nécessaire
         } else if (type === 'sibling') {
             newP = FamilyGraph.addPerson('', 0);
             const pars = FamilyGraph.parents(fromId);
