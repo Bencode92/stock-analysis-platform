@@ -389,8 +389,16 @@ PRESET_CONFIGS: Dict[str, PresetConfig] = {
         role=ETFRole.SATELLITE,
         risk=ETFRiskLevel.HIGH,
         correlation_group=CorrelationGroup.EQUITY_BROAD,
-        description="Financials, Industrials, Materials",
-        profiles=["Agressif"],
+        description="Financials, Industrials, Materials, Energy",
+        profiles=["Modéré", "Agressif"],
+    ),
+    "sector_energy": PresetConfig(
+        name="sector_energy",
+        role=ETFRole.SATELLITE,
+        risk=ETFRiskLevel.MODERATE,
+        correlation_group=CorrelationGroup.COMMODITY_BROAD,
+        description="Energy sector equity ETFs (oil, gas, exploration)",
+        profiles=["Modéré", "Agressif"],
     ),
     
     # ALTERNATIVES
@@ -439,6 +447,8 @@ PROFILE_PRESET_PRIORITY: Dict[str, List[str]] = {
         "croissance_tech",
         "emergents",
         "sector_defensive",
+        "sector_cyclical",
+        "sector_energy",
         "inflation_shield",
         "or_physique",
     ],
@@ -449,6 +459,7 @@ PROFILE_PRESET_PRIORITY: Dict[str, List[str]] = {
         "emergents",
         "income_options",
         "sector_cyclical",
+        "sector_energy",
         "commodities_broad",
     ],
 }
@@ -538,6 +549,12 @@ PRESET_RULES: Dict[str, Dict[str, float]] = {
     "sector_cyclical": {
         "ter_max": 1.00,
     },
+   "sector_energy": {
+        "ter_max": 0.80,
+        "vol_max": 35.0,
+        "aum_min": 200_000_000,
+    },
+
     "inflation_shield": {
         "ter_max": 1.20,
     },
@@ -2056,6 +2073,49 @@ def _preset_sector_cyclical(df: pd.DataFrame) -> pd.Series:
         sector_ok |= name.str.contains(s, regex=False)
     
     return mask & sector_ok & _check_preset_rules(df, "sector_cyclical")
+def _preset_sector_energy(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: Sector Energy
+    ETFs actions secteur énergie (XLE, VDE, XOP, IEO, etc.)
+    
+    Différent de commodities_broad (USO, UNG = commodity physique/futures).
+    Cible les ETFs qui détiennent des ACTIONS de compagnies énergie.
+    """
+    mask = _equity_like_gate(df, allow_data_missing=True)
+    
+    # Via sector_top (le plus fiable pour XLE: sector_top="Energy", weight=100%)
+    sector_top = _get_sector_top(df)
+    sector_bucket = _get_sector_bucket(df)
+    
+    energy_sector = (
+        sector_top.str.contains("energy", case=False, regex=False) |
+        sector_bucket.str.contains("energy", case=False, regex=False)
+    )
+    
+    # Concentration énergie significative (>50% du portefeuille en energy)
+    secw_frac = _get_sector_top_weight_frac(df)
+    high_energy_weight = (
+        energy_sector &
+        ((secw_frac >= 0.50) | secw_frac.isna())
+    )
+    
+    # Via name/objective (fallback pour ETFs pas encore enrichis)
+    obj = _safe_series(df, "objective").fillna("").astype(str).str.lower()
+    name = _safe_series(df, "name").fillna("").astype(str).str.lower()
+    
+    energy_kw = pd.Series(False, index=df.index)
+    keywords = [
+        "energy select", "energy sector", "oil & gas", "oil and gas",
+        "exploration & production", "e&p etf", "petroleum",
+        "clean energy", "solar energy", "renewable energy",
+    ]
+    for kw in keywords:
+        energy_kw |= obj.str.contains(kw, regex=False)
+        energy_kw |= name.str.contains(kw, regex=False)
+    
+    energy_ok = high_energy_weight | energy_kw
+    
+    return mask & energy_ok & _check_preset_rules(df, "sector_energy")   
 
 
 def _preset_inflation_shield(df: pd.DataFrame) -> pd.Series:
@@ -2178,6 +2238,7 @@ PRESET_FUNCTIONS: Dict[str, Callable[[pd.DataFrame], pd.Series]] = {
     "emergents": _preset_emergents,
     "sector_defensive": _preset_sector_defensive,
     "sector_cyclical": _preset_sector_cyclical,
+    "sector_energy": _preset_sector_energy,
     "inflation_shield": _preset_inflation_shield,
     "or_physique": _preset_or_physique,
     "commodities_broad": _preset_commodities_broad,
