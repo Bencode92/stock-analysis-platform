@@ -839,9 +839,9 @@ const SD = (() => {
             if (rendered.has(r.id)) return;
             rendered.add(r.id);
 
-            // Check if root has spouse who is also a root
+            // Include spouse even if they have parents (not root)
             const sp = FamilyGraph.spouse(r.id);
-            if (sp && roots.find(rr => rr.id === sp.id) && !rendered.has(sp.id)) {
+            if (sp && !rendered.has(sp.id)) {
                 rendered.add(sp.id);
                 familyUnits.push({ persons: [r, sp], type: 'couple' });
             } else {
@@ -860,13 +860,23 @@ const SD = (() => {
             html += renderFamilyUnit(unit.persons, allRenderedIds, 0);
         });
 
-        // Any person not yet rendered (edge case)
-        persons.forEach(p => {
-            if (!allRenderedIds.has(p.id)) {
-                allRenderedIds.add(p.id);
-                html += `<div style="margin-top:8px;">${ftNode(p)}</div>`;
-            }
-        });
+        // Render any person not yet rendered (siblings of parents, etc.) as their own unit
+        let changed = true;
+        while (changed) {
+            changed = false;
+            persons.forEach(p => {
+                if (allRenderedIds.has(p.id)) return;
+                changed = true;
+                const sp = FamilyGraph.spouse(p.id);
+                if (sp && !allRenderedIds.has(sp.id)) {
+                    html += `<div class="ft-family-sep"></div>`;
+                    html += renderFamilyUnit([p, sp], allRenderedIds, 0);
+                } else {
+                    html += `<div class="ft-family-sep"></div>`;
+                    html += renderFamilyUnit([p], allRenderedIds, 0);
+                }
+            });
+        }
 
         html += '</div>';
         html += `<div id="ft-ctx" class="ft-ctx" style="display:none;"></div>`;
@@ -881,7 +891,6 @@ const SD = (() => {
         const canvas = document.querySelector('#family-persons-list .ft-canvas');
         if (!canvas) return;
 
-        // Remove old svg
         canvas.querySelectorAll('.ft-svg').forEach(s => s.remove());
 
         const canvasRect = canvas.getBoundingClientRect();
@@ -908,32 +917,69 @@ const SD = (() => {
             };
         }
 
+        function addPoly(points, cls) {
+            const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            pl.setAttribute('class', cls);
+            pl.setAttribute('points', points.map(p => `${p[0]},${p[1]}`).join(' '));
+            svg.appendChild(pl);
+        }
+
         const rels = FamilyGraph.getRelations();
 
-        // Spouse lines (horizontal)
+        // 1) Spouse lines — robust left/right detection
         rels.filter(r => r.type === 'spouse').forEach(r => {
             const a = getBox(r.from), b = getBox(r.to);
             if (!a || !b) return;
+            const leftN = a.left <= b.left ? a : b;
+            const rightN = leftN === a ? b : a;
             const y = (a.top + a.bottom) / 2;
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('class', 'ft-link-spouse');
-            line.setAttribute('x1', Math.min(a.right, b.right));
+            line.setAttribute('x1', leftN.right);
             line.setAttribute('y1', y);
-            line.setAttribute('x2', Math.max(a.left, b.left));
+            line.setAttribute('x2', rightN.left);
             line.setAttribute('y2', y);
             svg.appendChild(line);
         });
 
-        // Parent -> child lines (vertical with bend)
+        // 2) Parent→child — group by child for clean couple trunks
+        const parentsByChild = new Map();
         rels.filter(r => r.type === 'parent').forEach(r => {
-            const p = getBox(r.from), c = getBox(r.to);
-            if (!p || !c) return;
+            if (!parentsByChild.has(r.to)) parentsByChild.set(r.to, []);
+            parentsByChild.get(r.to).push(r.from);
+        });
 
-            const midY = (p.bottom + c.top) / 2;
-            const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-            pl.setAttribute('class', 'ft-link-parent');
-            pl.setAttribute('points', `${p.x},${p.bottom} ${p.x},${midY} ${c.x},${midY} ${c.x},${c.top}`);
-            svg.appendChild(pl);
+        parentsByChild.forEach((pids, childId) => {
+            const uniq = [...new Set(pids)];
+            const c = getBox(childId);
+            if (!c) return;
+
+            // Couple case: 2 parents who are spouses → single trunk from middle
+            if (uniq.length === 2) {
+                const p1 = getBox(uniq[0]);
+                const p2 = getBox(uniq[1]);
+                if (!p1 || !p2) return;
+
+                const s = FamilyGraph.spouse(uniq[0]);
+                const areSpouses = s && s.id === uniq[1];
+
+                if (areSpouses) {
+                    const midX = (p1.x + p2.x) / 2;
+                    const joinY = Math.max(p1.bottom, p2.bottom) + 6;
+                    const midY = (joinY + c.top) / 2;
+                    // Trunk from couple center down to child
+                    addPoly([[midX, joinY], [midX, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
+                    return;
+                }
+            }
+
+            // Fallback: one line per parent
+            uniq.forEach(pid => {
+                const p = getBox(pid);
+                if (!p) return;
+                const midY = (p.bottom + c.top) / 2;
+                addPoly([[p.x, p.bottom], [p.x, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
+            });
         });
 
         canvas.prepend(svg);
@@ -1004,34 +1050,8 @@ const SD = (() => {
             html += '</div>';
         }
 
-        // Also render siblings of the parents that aren't yet rendered (uncles/aunts)
-        parentPersons.forEach(p => {
-            const sibs = FamilyGraph.siblings(p.id).filter(s => !renderedIds.has(s.id));
-            sibs.forEach(sib => {
-                renderedIds.add(sib.id);
-                // Uncle/aunt may have their own family unit
-                const sibSpouse = FamilyGraph.spouse(sib.id);
-                const sibChildren = FamilyGraph.children(sib.id).filter(c => !renderedIds.has(c.id));
-
-                if (sibSpouse && !renderedIds.has(sibSpouse.id) || sibChildren.length > 0) {
-                    const sibUnit = [];
-                    sibUnit.push(sib);
-                    if (sibSpouse && !renderedIds.has(sibSpouse.id)) {
-                        renderedIds.add(sibSpouse.id);
-                        sibUnit.push(sibSpouse);
-                    }
-                    html += `<div class="ft-sibling-unit">`;
-                    html += `<div class="ft-sib-label">(${p.nom ? 'frère/sœur de ' + p.nom : 'fratrie'})</div>`;
-                    html += renderFamilyUnit(sibUnit, renderedIds, depth);
-                    html += `</div>`;
-                } else {
-                    html += `<div class="ft-sibling-unit">`;
-                    html += `<div class="ft-sib-label">(${p.nom ? 'frère/sœur de ' + p.nom : 'fratrie'})</div>`;
-                    html += ftNode(sib);
-                    html += `</div>`;
-                }
-            });
-        });
+        // Siblings of parents are handled at the top level in renderFamilyTree
+        // They will be picked up as "unrendered persons" or via the orphan pass
 
         html += '</div>';
         return html;
@@ -2942,6 +2962,12 @@ const SD = (() => {
         applyPreset('2enfants');
         updateAside();
 
+        // Redraw SVG links on resize + font load
+        window.addEventListener('resize', () => requestAnimationFrame(() => { if (typeof SD !== 'undefined' && SD.drawFamilyLinks) SD.drawFamilyLinks(); }));
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => requestAnimationFrame(() => { if (typeof SD !== 'undefined' && SD.drawFamilyLinks) SD.drawFamilyLinks(); }));
+        }
+
         // Close tooltips on outside click
         document.addEventListener('click', e => {
             if (!e.target.closest('.info-tip')) {
@@ -2972,7 +2998,7 @@ const SD = (() => {
         // Family graph UI
         renderFamilyTree, renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles,
         addFamilyPerson, addFamilyRelation, updateFamilyRelation, removeFamilyRelation,
-        addRelative, addRootPerson, onNodeClick, editNode, showContextMenu, closeCtx,
+        addRelative, addRootPerson, onNodeClick, editNode, showContextMenu, closeCtx, drawFamilyLinks,
         applyFamilyPreset, syncGraphToStep2,
         _getState: () => state
     };
