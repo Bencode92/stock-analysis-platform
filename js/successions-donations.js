@@ -1040,33 +1040,85 @@ const SD = (() => {
             // Vertical connector from parents to children
             html += '<div class="ft-connector"><div class="ft-vline"></div></div>';
 
-            // Children row — each child may have their own spouse + sub-children
+            // Children row — first show ALL siblings together, then sub-families below
+            // Phase 1: Render siblings row (children + their spouses on exterior)
             html += '<div class="ft-children">';
 
+            const childUnits = [];
             children.forEach(child => {
                 renderedIds.add(child.id);
-
                 const childSpouse = FamilyGraph.spouse(child.id);
-                const hasSpouseNotRendered = childSpouse && !renderedIds.has(childSpouse.id);
-
-                // Check if this child has their own children
-                const grandkids = FamilyGraph.children(child.id)
-                    .filter(gc => !renderedIds.has(gc.id));
-
-                if (hasSpouseNotRendered || grandkids.length > 0) {
-                    // This child forms their own family unit
-                    const unitParents = hasSpouseNotRendered
-                        ? [child, childSpouse]
-                        : [child];
-                    if (hasSpouseNotRendered) renderedIds.add(childSpouse.id);
-                    html += renderFamilyUnit(unitParents, renderedIds, depth + 1);
-                } else {
-                    // Leaf child — just render the node
-                    html += `<div class="ft-leaf">${ftNode(child)}</div>`;
-                }
+                const hasSpouse = childSpouse && !renderedIds.has(childSpouse.id);
+                if (hasSpouse) renderedIds.add(childSpouse.id);
+                childUnits.push({ child, spouse: hasSpouse ? childSpouse : null });
             });
 
+            // Sort: singles first (left), then couples (right)
+            // This puts Cécile LEFT, Mère+Père RIGHT
+            childUnits.sort((a, b) => {
+                if (!a.spouse && b.spouse) return -1;  // singles left
+                if (a.spouse && !b.spouse) return 1;   // couples right
+                return 0;
+            });
+
+            // Render — spouse always on OUTSIDE (right = exterior)
+            childUnits.forEach((cu) => {
+                if (cu.spouse) {
+                    html += `<div class="ft-couple">`;
+                    html += ftNode(cu.child);
+                    html += `<div class="ft-couple-bar"></div>`;
+                    html += ftNode(cu.spouse);
+                    html += `</div>`;
+                } else {
+                    html += `<div class="ft-leaf">${ftNode(cu.child)}</div>`;
+                }
+            });
             html += '</div>';
+
+            // Phase 2: Render grandchildren below each child that has them
+            const grandParentUnits = childUnits.filter(cu => {
+                const parentIds = cu.spouse ? [cu.child.id, cu.spouse.id] : [cu.child.id];
+                const gkIds = new Set();
+                parentIds.forEach(pid => FamilyGraph.children(pid).forEach(gc => {
+                    if (!renderedIds.has(gc.id)) gkIds.add(gc.id);
+                }));
+                return gkIds.size > 0;
+            });
+
+            if (grandParentUnits.length > 0) {
+                html += '<div class="ft-grandchildren-row">';
+                grandParentUnits.forEach(cu => {
+                    const unitParents = cu.spouse ? [cu.child, cu.spouse] : [cu.child];
+                    // Render just the children part (parents already rendered above)
+                    const gkIds = new Set();
+                    unitParents.forEach(p => FamilyGraph.children(p.id).forEach(gc => {
+                        if (!renderedIds.has(gc.id)) gkIds.add(gc.id);
+                    }));
+                    const grandkids = [...gkIds].map(id => FamilyGraph.getPerson(id)).filter(Boolean);
+
+                    if (grandkids.length > 0) {
+                        html += '<div class="ft-gc-group">';
+                        html += '<div class="ft-connector"><div class="ft-vline"></div></div>';
+                        html += '<div class="ft-children">';
+                        grandkids.forEach(gk => {
+                            renderedIds.add(gk.id);
+                            const gkSpouse = FamilyGraph.spouse(gk.id);
+                            const gkHasSpouse = gkSpouse && !renderedIds.has(gkSpouse.id);
+                            const gkKids = FamilyGraph.children(gk.id).filter(c => !renderedIds.has(c.id));
+
+                            if (gkHasSpouse || gkKids.length > 0) {
+                                const gkUnit = gkHasSpouse ? [gk, gkSpouse] : [gk];
+                                if (gkHasSpouse) renderedIds.add(gkSpouse.id);
+                                html += renderFamilyUnit(gkUnit, renderedIds, depth + 2);
+                            } else {
+                                html += `<div class="ft-leaf">${ftNode(gk)}</div>`;
+                            }
+                        });
+                        html += '</div></div>';
+                    }
+                });
+                html += '</div>';
+            }
         }
 
         // Siblings of parents are handled at the top level in renderFamilyTree
