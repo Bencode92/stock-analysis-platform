@@ -1665,7 +1665,14 @@ const SD = (() => {
             if (lastBen) lastBen._graphId = b.id;
         });
 
-        // 2) Sync donors to PathOptimizer
+        // 2) Build graphId→sdBenId mapping
+        var graphToSdBen = {};
+        state.beneficiaries.forEach(function(sb) {
+            if (sb._graphId !== undefined) graphToSdBen[sb._graphId] = sb.id;
+        });
+        var sdBens = state.beneficiaries.slice(); // SD beneficiaries with correct IDs
+
+        // 3) Sync donors to PathOptimizer
         if (typeof PathOptimizer !== 'undefined') {
             var existingDonors = PathOptimizer.getDonors();
             existingDonors.forEach(d => { if (PathOptimizer.removeDonor) PathOptimizer.removeDonor(d.id); });
@@ -1685,10 +1692,11 @@ const SD = (() => {
                     newDonor._isIntermediary = !d.isDonor;
                     bens.forEach(b => {
                         var lien = FamilyGraph.computeFiscalLien(d.id, b.id);
-                        newDonor.linkedBens[b.id] = (lien !== 'tiers');
-                        var entry = newDonor.donationsParBen.find(e => +e.benId === b.id);
+                        var sdBenId = graphToSdBen[b.id] !== undefined ? graphToSdBen[b.id] : b.id;
+                        newDonor.linkedBens[sdBenId] = (lien !== 'tiers');
+                        var entry = newDonor.donationsParBen.find(e => +e.benId === sdBenId);
                         if (!entry) {
-                            entry = { benId: b.id, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
+                            entry = { benId: sdBenId, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
                             newDonor.donationsParBen.push(entry);
                         }
                         entry.lienOverride = lien;
@@ -3314,6 +3322,7 @@ const SD = (() => {
         setMode, setDetailMode, setOperation,
         toggleSwitch, toggleSection, toggleCollapsible,
         applyPreset, addBeneficiary, removeBeneficiary, updateBen,
+        getBeneficiaries: function() { return state.beneficiaries; },
         addImmo, removeImmo, updateImmo, updateImmoTitle, refreshImmoUI,
         addImmoOwner, removeImmoOwner, updateImmoOwner,
         addFinancial, removeFinancial, updateFin, refreshFinUI, avJeNeSaisPas, refreshAVBeneficiaires, updateAVBenPct,
