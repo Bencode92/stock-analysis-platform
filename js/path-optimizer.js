@@ -53,6 +53,7 @@ const PathOptimizer = (() => {
     };
     let BAREMES = {
         ligne_directe: [ { max: 8072, taux: 0.05 }, { max: 12109, taux: 0.10 }, { max: 15932, taux: 0.15 }, { max: 552324, taux: 0.20 }, { max: 902838, taux: 0.30 }, { max: 1805677, taux: 0.40 }, { max: Infinity, taux: 0.45 } ],
+        epoux_pacs: [ { max: 8072, taux: 0.05 }, { max: 12109, taux: 0.10 }, { max: 15932, taux: 0.15 }, { max: 552324, taux: 0.20 }, { max: 902838, taux: 0.30 }, { max: 1805677, taux: 0.40 }, { max: Infinity, taux: 0.45 } ],
         frere_soeur: [ { max: 24430, taux: 0.35 }, { max: Infinity, taux: 0.45 } ],
         neveu_niece: [{ max: Infinity, taux: 0.55 }],
         tiers: [{ max: Infinity, taux: 0.60 }]
@@ -69,6 +70,7 @@ const PathOptimizer = (() => {
         if (fiscal.bareme_ligne_directe) {
             BAREMES = {
                 ligne_directe: fiscal.bareme_ligne_directe,
+                epoux_pacs: fiscal.bareme_epoux_pacs || fiscal.bareme_ligne_directe,
                 frere_soeur: fiscal.bareme_frere_soeur || BAREMES.frere_soeur,
                 neveu_niece: fiscal.bareme_neveu_niece || BAREMES.neveu_niece,
                 tiers: fiscal.bareme_tiers || BAREMES.tiers
@@ -88,6 +90,7 @@ const PathOptimizer = (() => {
 
     function getBareme(lien) {
         if (['enfant', 'petit_enfant', 'arriere_petit_enfant'].includes(lien)) return BAREMES.ligne_directe;
+        if (lien === 'conjoint_pacs_donation') return BAREMES.epoux_pacs || BAREMES.ligne_directe;
         if (lien === 'frere_soeur') return BAREMES.frere_soeur;
         if (lien === 'neveu_niece') return BAREMES.neveu_niece;
         return BAREMES.tiers;
@@ -283,7 +286,7 @@ const PathOptimizer = (() => {
                     // Not direct relative. Check cross-family links (neveu/nièce via sibling)
                     const linkedDonors = donors.filter(od => od.id !== d.id && od.linkedBens && (od.linkedBens[benId] || od.linkedBens[String(benId)]));
                     for (const ld of linkedDonors) {
-                        const interLien = detectLienBetweenDonors(d.role, ld.role);
+                        const interLien = detectLienBetweenDonors(d.role, ld.role, d.id, ld.id);
                         if (interLien === 'conjoint_pacs_donation') {
                             // Conjoint of the actual parent → beau-parent, same as parent fiscally
                             return detectLien(d.role, benLien || 'enfant');
@@ -390,7 +393,7 @@ const PathOptimizer = (() => {
         const fromD = donors.find(dd => dd.id === fromDonorId);
         if (!d || !fromD) return;
         const montant = getDonorReceivedFrom(donorId, fromDonorId);
-        const lien = detectLienBetweenDonors(fromD.role, d.role);
+        const lien = detectLienBetweenDonors(fromD.role, d.role, fromD.id, d.id);
         const abat = ABATTEMENTS[lien] || ABATTEMENTS.tiers;
         const restant = Math.max(0, abat - montant);
         const pct = abat > 0 ? Math.min(100, (montant / abat) * 100) : 100;
@@ -576,8 +579,8 @@ const PathOptimizer = (() => {
             for (const intermediaire of intermediaires) {
                 // Le donateur donne à l'intermédiaire, puis l'intermédiaire donne à la cible
                 const lienDonorInter = intermediaire.type === 'donor'
-                    ? detectLienBetweenDonors(donor.role, intermediaire.role)
-                    : detectLienBetweenDonors(donor.role, intermediaire.role);
+                    ? detectLienBetweenDonors(donor.role, intermediaire.role, donor.id, intermediaire.id)
+                    : detectLienBetweenDonors(donor.role, intermediaire.role, donor.id, intermediaire.id);
                 if (lienDonorInter === 'tiers') continue;
 
                 const lienInterTarget = intermediaire.type === 'donor'
@@ -675,24 +678,33 @@ const PathOptimizer = (() => {
         return map[entLien] || null;
     }
 
-    function detectLienBetweenDonors(role1, role2) {
-        // role1 = donateur qui donne, role2 = celui qui reçoit
-        // Conjoint ↔ anyone = conjoint_pacs_donation
+    function graphLienBetweenDonors(donorId1, donorId2) {
+        if (typeof FamilyGraph === 'undefined') return null;
+        var d1 = donors.find(function(d){return d.id === +donorId1});
+        var d2 = donors.find(function(d){return d.id === +donorId2});
+        if (!d1 || !d2) return null;
+        if (d1._graphId === undefined || d2._graphId === undefined) return null;
+        var lien = FamilyGraph.computeFiscalLien(d1._graphId, d2._graphId);
+        if (!lien || lien === 'self') return null;
+        // Alliés = tiers fiscalement (sauf conjoint/pacs)
+        if (String(lien).startsWith('beau_')) return 'tiers';
+        return lien;
+    }
+
+    function detectLienBetweenDonors(role1, role2, donorId1, donorId2) {
+        // 1. Use FamilyGraph if available (most accurate)
+        var g = graphLienBetweenDonors(donorId1, donorId2);
+        if (g) return g;
+
+        // 2. Fallback heuristic based on roles
         if (role1 === 'conjoint' || role2 === 'conjoint') return 'conjoint_pacs_donation';
-        // Grand-parent → Parent = GP donne à son enfant = lien "enfant" (100k abat.)
         if (role1 === 'grand_parent' && role2 === 'parent') return 'enfant';
-        // Parent → Grand-parent = enfant donne à son parent = lien "enfant" aussi (LD ascendante)
         if (role1 === 'parent' && role2 === 'grand_parent') return 'enfant';
-        // Arr-GP → GP
         if (role1 === 'arr_grand_parent' && role2 === 'grand_parent') return 'enfant';
         if (role1 === 'grand_parent' && role2 === 'arr_grand_parent') return 'enfant';
-        // Arr-GP → Parent = petit-enfant
         if (role1 === 'arr_grand_parent' && role2 === 'parent') return 'petit_enfant';
         if (role1 === 'parent' && role2 === 'arr_grand_parent') return 'petit_enfant';
-        // Parent ↔ Parent — ambigu ! Peut être conjoints, frères, ou sans lien
-        // On ne suppose PAS conjoint automatiquement — l'utilisateur doit override
         if (role1 === 'parent' && role2 === 'parent') return 'tiers';
-        // Oncle/Tante ↔ Parent = frère/sœur
         if (role1 === 'oncle_tante' && role2 === 'parent') return 'frere_soeur';
         if (role1 === 'parent' && role2 === 'oncle_tante') return 'frere_soeur';
         return 'tiers';
@@ -836,7 +848,7 @@ const PathOptimizer = (() => {
         // Auto-detect: who's already linked from cartographie
         const autoLinks = [];
         otherDonors.forEach(od => {
-            const lien = detectLienBetweenDonors(d.role, od.role);
+            const lien = detectLienBetweenDonors(d.role, od.role, d.id, od.id);
             if (lien !== 'tiers') {
                 autoLinks.push({ donorId: od.id, nom: od.nom, lien, auto: true });
             }
@@ -1103,7 +1115,7 @@ const PathOptimizer = (() => {
                     </label>
                     ${otherDonors.map(od => {
                         const montant = getDonorReceivedFrom(d.id, od.id);
-                        const autoLien = detectLienBetweenDonors(od.role, d.role);
+                        const autoLien = detectLienBetweenDonors(od.role, d.role, od.id, d.id);
                         // Check for override in donationsRecues
                         const recvEntry = d.donationsRecues.find(e => e.deDonorId === od.id);
                         const recvOverride = recvEntry ? recvEntry.lienOverride : null;
