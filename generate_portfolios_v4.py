@@ -1991,6 +1991,24 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
                     etf["category"] = "etf"
+                # === FIX v2.1.0: Propager _profile_score → score pour ETFs ===
+                # Même pattern que crypto FIX v2.0.2 — preset_etf calcule _profile_score
+                # mais build_scored_universe/FactorScorer écrase "score" avec composite_score.
+                # Sans propagation, 91% des ETFs perdent leur score preset.
+                for etf in profile_etf_data:
+                    ps = etf.get("_profile_score")
+                    if ps is not None:
+                        etf["score"] = float(ps)
+                        etf["profile_score"] = float(ps)
+                        etf["composite_score"] = float(ps)
+                    if not etf.get("_matched_preset"):
+                        etf["_matched_preset"] = "etf_unclassified"
+                _etf_propagated = sum(1 for e in profile_etf_data if e.get("score", 0) > 0)
+                logger.info(
+                    f"   [{profile}] FIX v2.1.0: {_etf_propagated}/{len(profile_etf_data)} "
+                    f"ETFs avec score propagé depuis _profile_score"
+                )
+                # === FIN FIX v2.1.0 ===
                 # v1.5.3 FIX: Collect scored ETFs for audit
                 for _etf in profile_etf_data:
                     _uid = _etf.get("etfsymbol") or _etf.get("ticker") or _etf.get("name") or ""
@@ -2173,6 +2191,56 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             elif profile_crypto_data:
                 logger.warning(f"   [{profile}] FIX v2.0.2: 0 crypto restaurées! Lookup keys: {list(crypto_lookup.keys())}")
         # === FIN FIX v2.0.2 ===   
+        
+        # === FIX v2.1.0: Restaurer scores ETF après pipeline scoring ===
+        # Même pattern que crypto FIX v2.0.2 RESTORE.
+        # build_raw_universe() + FactorScorer écrasent _profile_score ETF.
+        # On restaure depuis profile_etf_data (source de vérité).
+        if profile_etf_data:
+            etf_lookup = {}
+            for etf in profile_etf_data:
+                sym = etf.get("etfsymbol") or etf.get("ticker") or etf.get("symbol") or ""
+                base = sym.upper().strip()
+                if base:
+                    etf_lookup[base] = etf
+                # Aussi par ISIN si disponible
+                isin = etf.get("isin", "")
+                if isin and str(isin).strip().upper() not in ("", "NAN", "NONE"):
+                    etf_lookup[str(isin).strip().upper()] = etf
+            
+            etf_restored_count = 0
+            for asset in assets:
+                cat = getattr(asset, 'category', '') or ''
+                if cat.lower() not in ('etf',):
+                    continue
+                # Matcher par id, ticker ou name
+                asset_id = str(getattr(asset, 'id', '') or '').upper().strip()
+                asset_ticker = str(getattr(asset, 'ticker', '') or '').upper().strip()
+                
+                etf_original = etf_lookup.get(asset_id) or etf_lookup.get(asset_ticker)
+                if etf_original and etf_original.get("_profile_score") is not None:
+                    original_score = float(etf_original["_profile_score"])
+                    # Restaurer seulement si le score preset est meilleur
+                    if original_score > asset.score:
+                        old_score = asset.score
+                        asset.score = original_score
+                        if asset.source_data is None:
+                            asset.source_data = {}
+                        asset.source_data["_profile_score"] = etf_original["_profile_score"]
+                        asset.source_data["_matched_preset"] = etf_original.get("_matched_preset", "")
+                        asset.source_data["_role"] = etf_original.get("_role", "")
+                        etf_restored_count += 1
+                        logger.info(
+                            f"   [{profile}] FIX v2.1.0 RESTORE ETF: {asset_id} "
+                            f"score {old_score:.1f} → {asset.score:.1f} "
+                            f"(preset={etf_original.get('_matched_preset', '?')})"
+                        )
+            
+            if etf_restored_count > 0:
+                logger.info(f"   [{profile}] FIX v2.1.0: {etf_restored_count} ETF scores restaurés depuis preset_etf")
+            elif profile_etf_data:
+                logger.warning(f"   [{profile}] FIX v2.1.0: 0 ETF restaurés! Lookup keys sample: {list(etf_lookup.keys())[:10]}")
+        # === FIN FIX v2.1.0 ===
         
         # v4.13.2 FIX: Collecter TOUS les assets de TOUS les profils (union)
         for a in assets:
@@ -2735,6 +2803,21 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 for etf in profile_etf_data:
                     etf["_force_category"] = "etf"
                     etf["category"] = "etf"
+                # === FIX v2.1.0: Propager _profile_score → score pour ETFs (EU/US) ===
+                for etf in profile_etf_data:
+                    ps = etf.get("_profile_score")
+                    if ps is not None:
+                        etf["score"] = float(ps)
+                        etf["profile_score"] = float(ps)
+                        etf["composite_score"] = float(ps)
+                    if not etf.get("_matched_preset"):
+                        etf["_matched_preset"] = "etf_unclassified"
+                _etf_propagated = sum(1 for e in profile_etf_data if e.get("score", 0) > 0)
+                logger.info(
+                    f"   [{profile}] FIX v2.1.0 EU/US: {_etf_propagated}/{len(profile_etf_data)} "
+                    f"ETFs avec score propagé depuis _profile_score"
+                )
+                # === FIN FIX v2.1.0 EU/US ===
                 # v1.5.3 FIX: Collect scored ETFs for audit
                 for _etf in profile_etf_data:
                     _uid = _etf.get("etfsymbol") or _etf.get("ticker") or _etf.get("name") or ""
@@ -2784,6 +2867,43 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
         profile_universe = profile_equities + profile_universe_others
         scored_universe = rescore_universe_by_profile(profile_universe, profile, market_context=None)
         assets = convert_universe_to_assets(scored_universe)
+        
+        # === FIX v2.1.0: Restaurer scores ETF après pipeline scoring (EU/US) ===
+        if profile_etf_data:
+            etf_lookup = {}
+            for etf in profile_etf_data:
+                sym = etf.get("etfsymbol") or etf.get("ticker") or etf.get("symbol") or ""
+                base = sym.upper().strip()
+                if base:
+                    etf_lookup[base] = etf
+                isin = etf.get("isin", "")
+                if isin and str(isin).strip().upper() not in ("", "NAN", "NONE"):
+                    etf_lookup[str(isin).strip().upper()] = etf
+            
+            etf_restored_count = 0
+            for asset in assets:
+                cat = getattr(asset, 'category', '') or ''
+                if cat.lower() not in ('etf',):
+                    continue
+                asset_id = str(getattr(asset, 'id', '') or '').upper().strip()
+                asset_ticker = str(getattr(asset, 'ticker', '') or '').upper().strip()
+                
+                etf_original = etf_lookup.get(asset_id) or etf_lookup.get(asset_ticker)
+                if etf_original and etf_original.get("_profile_score") is not None:
+                    original_score = float(etf_original["_profile_score"])
+                    if original_score > asset.score:
+                        old_score = asset.score
+                        asset.score = original_score
+                        if asset.source_data is None:
+                            asset.source_data = {}
+                        asset.source_data["_profile_score"] = etf_original["_profile_score"]
+                        asset.source_data["_matched_preset"] = etf_original.get("_matched_preset", "")
+                        asset.source_data["_role"] = etf_original.get("_role", "")
+                        etf_restored_count += 1
+            
+            if etf_restored_count > 0:
+                logger.info(f"   [{profile}] FIX v2.1.0 EU/US: {etf_restored_count} ETF scores restaurés depuis preset_etf")
+        # === FIN FIX v2.1.0 EU/US ===
         
         # Collecter tous les assets (union des 3 profils)
         for a in assets:
