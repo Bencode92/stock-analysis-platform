@@ -845,22 +845,90 @@ const SD = (() => {
             byLvl[L].push(p);
         });
 
-        // Order each level: spouses adjacent, siblings grouped by parent position
-        for (let L = 0; L <= maxLvl; L++) {
-            byLvl[L] = orderLevelPersons(byLvl[L], L, levels, byLvl);
+        // Order: bottom-up first (so roots use children positions), then top-down
+        for (var Lup = maxLvl; Lup >= 0; Lup--) {
+            byLvl[Lup] = orderLevelPersons(byLvl[Lup], Lup, levels, byLvl);
+        }
+        for (var Ldn = 1; Ldn <= maxLvl; Ldn++) {
+            byLvl[Ldn] = orderLevelPersons(byLvl[Ldn], Ldn, levels, byLvl);
         }
 
-        // Render level by level (each level = horizontal row)
-        let html = '<div class="ft-canvas ft-levels">';
-        for (let L = 0; L <= maxLvl; L++) {
-            if (!byLvl[L].length) continue;
-            html += '<div class="ft-level">';
-            byLvl[L].forEach(p => {
-                // Check if this person and next person are spouses
-                html += ftNode(p);
+
+        // === ABSOLUTE POSITIONING LAYOUT ===
+        var nodeW = 160, gapX = 36, gapY = 85;
+        var maxCols = 0;
+        for (var cl = 0; cl <= maxLvl; cl++) maxCols = Math.max(maxCols, byLvl[cl].length);
+        var totalW = maxCols * (nodeW + gapX);
+        var posX = {}, posY = {};
+
+        // Initial X: center each level
+        for (var cl2 = 0; cl2 <= maxLvl; cl2++) {
+            var n = byLvl[cl2].length;
+            var levelW = n * (nodeW + gapX) - gapX;
+            var offX = (totalW - levelW) / 2;
+            byLvl[cl2].forEach(function(p, idx) {
+                posX[p.id] = offX + idx * (nodeW + gapX);
+                posY[p.id] = cl2 * gapY;
             });
-            html += '</div>';
         }
+
+        // Iterative: center parents above children
+        for (var adj = 0; adj < 5; adj++) {
+            for (var al = maxLvl - 1; al >= 0; al--) {
+                var processed = new Set();
+                byLvl[al].forEach(function(p) {
+                    if (processed.has(p.id)) return;
+                    var sp = FamilyGraph.spouse(p.id);
+                    var allKids = FamilyGraph.children(p.id).slice();
+                    if (sp && levels[sp.id] === al) {
+                        processed.add(sp.id);
+                        FamilyGraph.children(sp.id).forEach(function(k) {
+                            if (!allKids.some(function(kk){return kk.id===k.id})) allKids.push(k);
+                        });
+                    }
+                    processed.add(p.id);
+                    if (allKids.length === 0) return;
+                    var sumCX = 0, cntC = 0;
+                    allKids.forEach(function(k) { if (posX[k.id] !== undefined) { sumCX += posX[k.id] + nodeW/2; cntC++; } });
+                    if (cntC === 0) return;
+                    var childCenter = sumCX / cntC;
+                    if (sp && levels[sp.id] === al) {
+                        var coupleW = nodeW * 2 + gapX;
+                        var coupleLeft = childCenter - coupleW / 2;
+                        var leftP = posX[p.id] < posX[sp.id] ? p : sp;
+                        var rightP = leftP === p ? sp : p;
+                        posX[leftP.id] = coupleLeft;
+                        posX[rightP.id] = coupleLeft + nodeW + gapX;
+                    } else {
+                        posX[p.id] = childCenter - nodeW / 2;
+                    }
+                });
+                // Fix overlaps
+                var lvlArr = byLvl[al].slice().sort(function(a,b){return posX[a.id]-posX[b.id]});
+                for (var fi = 1; fi < lvlArr.length; fi++) {
+                    var minX = posX[lvlArr[fi-1].id] + nodeW + gapX;
+                    if (posX[lvlArr[fi].id] < minX) posX[lvlArr[fi].id] = minX;
+                }
+            }
+        }
+
+        // Normalize
+        var minPX = Infinity;
+        persons.forEach(function(p) { if (posX[p.id] !== undefined && posX[p.id] < minPX) minPX = posX[p.id]; });
+        if (minPX === Infinity) minPX = 0;
+        persons.forEach(function(p) { if (posX[p.id] !== undefined) posX[p.id] -= minPX; });
+        var maxPX = 0, maxPY2 = 0;
+        persons.forEach(function(p) { var r = (posX[p.id]||0)+nodeW; if(r>maxPX)maxPX=r; var b=(posY[p.id]||0)+60; if(b>maxPY2)maxPY2=b; });
+
+        // Render
+        let html = '<div class="ft-canvas ft-levels" style="position:relative;width:'+(maxPX+60)+'px;height:'+(maxPY2+40)+'px;min-height:'+(maxPY2+40)+'px;">';
+        persons.forEach(function(p) {
+            if (posX[p.id] === undefined) return;
+            var origHtml = ftNode(p);
+            var styleAdd = 'position:absolute;left:'+Math.round(posX[p.id])+'px;top:'+Math.round(posY[p.id])+'px;width:'+nodeW+'px;';
+            origHtml = origHtml.replace('class="ft-node', 'style="'+styleAdd+'" class="ft-node');
+            html += origHtml;
+        });
         html += '</div>';
         html += '<div id="ft-ctx" class="ft-ctx" style="display:none;"></div>';
 
@@ -888,7 +956,7 @@ const SD = (() => {
             if (sp && levels[sp.id] === L && !used.has(sp.id)) {
                 used.add(sp.id);
                 // Blood child goes center, spouse goes exterior
-                blocks.push({ persons: [p, sp], anchor: getAnchor(p, L, levels, byLvl) });
+                blocks.push({ persons: [p, sp], anchor: (getAnchor(p, L, levels, byLvl) + getAnchor(sp, L, levels, byLvl)) / 2 });
             } else {
                 blocks.push({ persons: [p], anchor: getAnchor(p, L, levels, byLvl) });
             }
@@ -956,7 +1024,23 @@ const SD = (() => {
                 }
             }
         }
-        return p.id; // fallback
+        // Try children in level below
+        if (L < byLvl.length - 1) {
+            var kids = FamilyGraph.children(p.id);
+            var nextLevel = byLvl[L + 1];
+            if (kids.length > 0 && nextLevel) {
+                var indices = kids.map(function(k){return nextLevel.findIndex(function(x){return x.id===k.id})}).filter(function(i){return i>=0});
+                if (indices.length > 0) return indices.reduce(function(a,b){return a+b},0) / indices.length;
+            }
+            if (sp) {
+                var spKids = FamilyGraph.children(sp.id);
+                if (spKids.length > 0 && nextLevel) {
+                    var indices2 = spKids.map(function(k){return nextLevel.findIndex(function(x){return x.id===k.id})}).filter(function(i){return i>=0});
+                    if (indices2.length > 0) return indices2.reduce(function(a,b){return a+b},0) / indices2.length;
+                }
+            }
+        }
+        return p.id;
     }
 
 
@@ -1019,44 +1103,95 @@ const SD = (() => {
             svg.appendChild(line);
         });
 
-        // 2) Parent→child — group by child for clean couple trunks
-        const parentsByChild = new Map();
-        rels.filter(r => r.type === 'parent').forEach(r => {
-            if (!parentsByChild.has(r.to)) parentsByChild.set(r.to, []);
-            parentsByChild.get(r.to).push(r.from);
+        // 2) Parent→child — group by PARENT (or COUPLE) for trunk+branches
+        var childrenByParent = new Map();
+        rels.filter(function(r){return r.type==='parent'}).forEach(function(r){
+            if(!childrenByParent.has(r.from)) childrenByParent.set(r.from, new Set());
+            childrenByParent.get(r.from).add(r.to);
         });
 
-        parentsByChild.forEach((pids, childId) => {
-            const uniq = [...new Set(pids)];
-            const c = getBox(childId);
-            if (!c) return;
+        // Track children already drawn via couple trunk
+        var coveredByCouple = new Map();
+        function markCov(pid,cid){if(!coveredByCouple.has(pid))coveredByCouple.set(pid,new Set());coveredByCouple.get(pid).add(cid);}
 
-            // Couple case: 2 parents who are spouses → single trunk from middle
-            if (uniq.length === 2) {
-                const p1 = getBox(uniq[0]);
-                const p2 = getBox(uniq[1]);
-                if (!p1 || !p2) return;
+        // Find unique spouse pairs
+        var spousePairsSeen = new Set();
+        var uniqSpousePairs = [];
+        rels.filter(function(r){return r.type==='spouse'}).forEach(function(r){
+            var a=Math.min(r.from,r.to), b=Math.max(r.from,r.to), k=a+'-'+b;
+            if(!spousePairsSeen.has(k)){spousePairsSeen.add(k);uniqSpousePairs.push([a,b]);}
+        });
 
-                const s = FamilyGraph.spouse(uniq[0]);
-                const areSpouses = s && s.id === uniq[1];
+        // 2a) Couple trunks: children shared by both spouses
+        uniqSpousePairs.forEach(function(pair){
+            var p1id=pair[0], p2id=pair[1];
+            var k1=childrenByParent.get(p1id), k2=childrenByParent.get(p2id);
+            if(!k1||!k2) return;
+            var shared=new Set();
+            k1.forEach(function(v){if(k2.has(v))shared.add(v);});
+            if(shared.size===0) return;
+            var b1=getBox(p1id), b2=getBox(p2id);
+            if(!b1||!b2) return;
+            var cboxes=[];
+            shared.forEach(function(cid){var box=getBox(cid);if(box)cboxes.push({cid:cid,box:box});});
+            if(cboxes.length===0) return;
 
-                if (areSpouses) {
-                    const midX = (p1.x + p2.x) / 2;
-                    const joinY = Math.max(p1.bottom, p2.bottom) + 10;
-                    const midY = (joinY + c.top) / 2;
-                    // Trunk from couple center down to child
-                    addPoly([[midX, joinY], [midX, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
-                    return;
-                }
+            var topP=Math.max(b1.bottom,b2.bottom);
+            var midX=(b1.x+b2.x)/2;
+            var minCTop=Math.min.apply(null,cboxes.map(function(x){return x.box.top}));
+            var barY=topP+(minCTop-topP)/2;
+
+            // Trunk from couple midpoint
+            addPoly([[midX,topP],[midX,barY]],'ft-link-parent');
+
+            // Horizontal bar
+            var xs=cboxes.map(function(x){return x.box.x});
+            var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs);
+            if(cboxes.length>1){
+                addPoly([[minX,barY],[maxX,barY]],'ft-link-parent');
+            } else {
+                var cx=cboxes[0].box.x;
+                if(Math.abs(cx-midX)>1) addPoly([[midX,barY],[cx,barY]],'ft-link-parent');
             }
 
-            // Fallback: one line per parent
-            uniq.forEach(pid => {
-                const p = getBox(pid);
-                if (!p) return;
-                const midY = (p.bottom + c.top) / 2;
-                addPoly([[p.x, p.bottom], [p.x, midY], [c.x, midY], [c.x, c.top]], 'ft-link-parent');
+            // Drops to each child
+            cboxes.forEach(function(item){
+                addPoly([[item.box.x,barY],[item.box.x,item.box.top]],'ft-link-parent');
+                markCov(p1id,item.cid);markCov(p2id,item.cid);
             });
+        });
+
+        // 2b) Single-parent trunks for remaining children
+        childrenByParent.forEach(function(kidsSet,pid){
+            var pb=getBox(pid);
+            if(!pb) return;
+            var already=coveredByCouple.get(pid)||new Set();
+            var rem=[];
+            kidsSet.forEach(function(cid){if(!already.has(cid))rem.push(cid);});
+            if(rem.length===0) return;
+            var cboxes=[];
+            rem.forEach(function(cid){var box=getBox(cid);if(box)cboxes.push({cid:cid,box:box});});
+            if(cboxes.length===0) return;
+
+            var topP=pb.bottom;
+            var minCTop=Math.min.apply(null,cboxes.map(function(x){return x.box.top}));
+            var barY=topP+(minCTop-topP)/2;
+
+            if(cboxes.length===1){
+                // Single child: line hugging right/left side to avoid crossing other trunks
+                var cb=cboxes[0].box;
+                // Go straight down from parent to just above child top, then horizontal to child
+                // Single child: direct line from parent bottom-center to child top-center
+                addPoly([[pb.x,topP],[cb.x,cb.top]],"ft-link-parent");
+            } else {
+                // Multiple children: trunk + bar + drops
+                addPoly([[pb.x,topP],[pb.x,barY]],'ft-link-parent');
+                var xs=cboxes.map(function(x){return x.box.x});
+                addPoly([[Math.min.apply(null,xs),barY],[Math.max.apply(null,xs),barY]],'ft-link-parent');
+                cboxes.forEach(function(item){
+                    addPoly([[item.box.x,barY],[item.box.x,item.box.top]],'ft-link-parent');
+                });
+            }
         });
 
         canvas.prepend(svg);
@@ -1328,8 +1463,10 @@ const SD = (() => {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('parent', newP.id, fromId);
             // Also link to siblings (they share the same new parent)
+            const spGuard = FamilyGraph.spouse(fromId);
             FamilyGraph.siblings(fromId).forEach(s => {
-                FamilyGraph.addRelation('parent', newP.id, s.id);
+                if (spGuard && s.id === spGuard.id) return;
+                FamilyGraph.addRelation("parent", newP.id, s.id);
             });
         } else if (type === 'spouse') {
             newP = FamilyGraph.addPerson('', 0);
@@ -1548,6 +1685,11 @@ const SD = (() => {
         }
 
         if (n === 4) updateSynthese();
+        // Hide aside on step 1, show on step 2+
+        var asideEl = document.querySelector(".page-aside");
+        var gridEl = document.querySelector(".page-grid");
+        if (asideEl) asideEl.style.display = currentStep <= 1 ? "none" : "";
+        if (gridEl) gridEl.style.gridTemplateColumns = currentStep <= 1 ? "1fr" : "";
         updateAside();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
