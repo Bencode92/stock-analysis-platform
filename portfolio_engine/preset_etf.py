@@ -1,7 +1,7 @@
 # portfolio_engine/preset_etf.py
 """
 =========================================
-ETF Preset Selector v2.2.15
+ETF Preset Selector v2.4.0
 =========================================
 
 CHANGEMENTS vs v2.2.13 (fix scoring flat 50.1):
@@ -490,6 +490,15 @@ PROFILE_CONSTRAINTS: Dict[str, Dict[str, float]] = {
         "hhi_max": 1.0,
         "holding_top_max": 1.0,
     },
+}
+
+# === FIX v2.4.0: Fill-up targets ===
+# Après presets union, on complète avec les meilleurs ETFs non-matchés
+# jusqu'à fill_target. Garantit un pool ETF suffisant pour l'optimizer.
+FILL_TARGET: Dict[str, int] = {
+    "Stable": 18,     # 5 presets × ~3 + fill
+    "Modéré": 25,     # 11 presets × ~2 + fill
+    "Agressif": 25,   # 8 presets × ~2 + fill
 }
 
 # FIX v2.2.7: Métriques requises par profil (colonnes qui ne doivent pas être NaN)
@@ -2716,6 +2725,60 @@ def select_etfs_for_profile(
     else:
         meta["stages"]["fallback"] = False
     
+    # =========================================================================
+    # Couche 2b: FIX v2.4.0 — Quality Fill-Up
+    # =========================================================================
+    fill_target = FILL_TARGET.get(profile, 20)
+
+    if len(d2) < fill_target and len(d1) > len(d2):
+        d2_indices = set(d2.index)
+        d1_remaining = d1[~d1.index.isin(d2_indices)].copy()
+
+        if not d1_remaining.empty:
+            fill_score = pd.Series(0.0, index=d1_remaining.index)
+
+            mom = _compute_momentum(d1_remaining)
+            mom_rank = mom.rank(pct=True, method="average").fillna(0.5)
+            fill_score += 0.40 * mom_rank
+
+            aum = _to_numeric(_safe_series(d1_remaining, "aum_usd"))
+            aum_rank = aum.rank(pct=True, method="average").fillna(0.3)
+            fill_score += 0.30 * aum_rank
+
+            ter = _to_numeric(_safe_series(d1_remaining, "total_expense_ratio"))
+            ter_rank = (1 - ter.rank(pct=True, method="average")).fillna(0.5)
+            fill_score += 0.30 * ter_rank
+
+            d1_remaining["_fill_score"] = fill_score
+            d1_remaining = d1_remaining.sort_values("_fill_score", ascending=False)
+
+            n_fill = fill_target - len(d2)
+            fill_candidates = d1_remaining.head(n_fill).copy()
+            fill_candidates["_matched_preset"] = "quality_fill"
+
+            n_preset = len(d2)
+            d2 = pd.concat([d2, fill_candidates], ignore_index=False)
+
+            logger.info(
+                f"[ETF {profile}] FIX v2.4.0 Fill-Up: +{len(fill_candidates)} ETFs "
+                f"({n_preset} preset + {len(fill_candidates)} fill = {len(d2)} total)"
+            )
+            meta["stages"]["fill_up"] = {
+                "preset_matched": n_preset,
+                "fill_added": len(fill_candidates),
+                "total": len(d2),
+                "target": fill_target,
+            }
+
+            if "_fill_score" in d2.columns:
+                d2 = d2.drop(columns=["_fill_score"], errors="ignore")
+    else:
+        meta["stages"]["fill_up"] = {
+            "preset_matched": len(d2), "fill_added": 0,
+            "total": len(d2), "target": fill_target,
+        }
+    # === FIN FIX v2.4.0 ===
+
     # Couche 3: Scoring
     d3 = compute_profile_score(d2, profile)
     
