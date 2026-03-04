@@ -587,10 +587,11 @@ MIN_DEFENSIVE_IN_POOL = {
 }
 
 # PATCH v8.2: Minimum ETF dans le pool par profil (NOUVEAU)
+# === FIX v2.2.0: 6→10 pour couvrir tous les presets ETF ===
 MIN_ETF_IN_POOL = {
-    "Stable": 6,
-    "Modéré": 6,
-    "Agressif": 6,
+    "Stable": 8,
+    "Modéré": 10,
+    "Agressif": 12,
 }
 MIN_CRYPTO_IN_POOL = {
     "Stable": 0,
@@ -1770,7 +1771,11 @@ class PortfolioOptimizer:
             selected_etfs, etf_meta = select_etfs_via_preset_engine(
                 etf_assets,
                 profile_name=profile.name,
-                top_n=min(30, profile.max_assets),
+                # === FIX v2.2.0: top_n=30 au lieu de min(30, max_assets)=18 ===
+                # max_assets=18 tronquait à 18 ETFs → pool trop petit pour
+                # couvrir tous les presets (sector_cyclical exclu).
+                # 30 ETFs = assez pour couvrir 10 presets × ~3 ETFs/preset.
+                top_n=30,
                 strict_metrics=False,  # False = évite résultats vides
             )
             
@@ -1909,6 +1914,22 @@ class PortfolioOptimizer:
                     f"  {cat}: n={len(arr)} | SKIP z-score (risk-adjusted by preset)"
                 )
                 continue
+            # === FIX v2.2.0: Skip z-score pour ETFs ===
+            # Même logique que crypto: preset_etf.py produit des scores
+            # déjà risk-adjusted et cross-category. Le z-score détruit
+            # la discrimination (σ=0.65 → tout s'effondre vers μ=50).
+            # Sans ce skip: XLE 99.47 → _select_score 57 (sous les equities)
+            # Avec ce skip: XLE 99.47 → _select_score 99.47 (compétitif)
+            if cat == "ETF":
+                cat_assets = [a for a in universe if a.category == cat]
+                for a in cat_assets:
+                    a._select_score = float(a.score)
+                logger.info(
+                    f"  {cat}: n={len(arr)} | SKIP z-score (risk-adjusted by preset_etf) "
+                    f"FIX v2.2.0"
+                )
+                continue
+            # === FIN FIX v2.2.0 ===
 
             scores_np = np.array(arr, dtype=float)
             n_cat = len(scores_np)
@@ -2128,6 +2149,49 @@ class PortfolioOptimizer:
                 f"PATCH v8.2 FIX A: Added {len(etf_to_add)} ETF to pool for "
                 f"{profile.name} (had {len(etf_in_pool)}, minimum {min_etf})"
             )
+
+        # === FIX v2.2.0: DIVERSITÉ PAR PRESET ETF ===
+        # Garantir au moins 1 ETF par preset qui a des candidats.
+        # Sans ceci, sector_cyclical (XLE, VDE, URA) = 0 sélectionné
+        # car coeur_global monopolise les slots.
+        ETF_PRESET_MIN = 1  # Minimum 1 ETF par preset présent
+        etf_in_pool_ids = {a.id for a in selected if a.category == "ETF"}
+        etf_presets_in_pool = set()
+        for a in selected:
+            if a.category == "ETF" and a.source_data:
+                p = a.source_data.get("_matched_preset", "")
+                if p:
+                    etf_presets_in_pool.add(p)
+        
+        # Trouver les presets manquants
+        preset_candidates = {}
+        for a in universe:
+            if a.category != "ETF" or a.id in etf_in_pool_ids:
+                continue
+            p = (a.source_data or {}).get("_matched_preset", "")
+            if p and p not in etf_presets_in_pool:
+                if p not in preset_candidates:
+                    preset_candidates[p] = []
+                preset_candidates[p].append(a)
+        
+        etf_preset_added = 0
+        for preset, candidates in preset_candidates.items():
+            candidates.sort(key=lambda x: (-getattr(x, "_select_score", x.score), x.id))
+            to_add = candidates[:ETF_PRESET_MIN]
+            selected.extend(to_add)
+            etf_preset_added += len(to_add)
+            for a in to_add:
+                logger.info(
+                    f"FIX v2.2.0 PRESET DIVERSITY: Added {a.id} "
+                    f"(preset={preset}, score={a.score:.1f}) to pool for {profile.name}"
+                )
+        
+        if etf_preset_added > 0:
+            logger.info(
+                f"FIX v2.2.0: {etf_preset_added} ETFs ajoutés pour diversité preset "
+                f"({list(preset_candidates.keys())})"
+            )
+        # === FIN FIX v2.2.0 ===
 
         # === FIX v2.0.2: GARANTIR MINIMUM CRYPTO DANS LE POOL ===
         min_crypto = MIN_CRYPTO_IN_POOL.get(profile.name, 0)
