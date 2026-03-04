@@ -552,7 +552,7 @@ const SD = (() => {
         finance: [],
         pro: [],
         debts: [],
-        operation: 'donation',
+        operation: 'both',
         donationType: 'donation_partage',
         demembrement: false,
         usufruit: 'viager',
@@ -1774,7 +1774,14 @@ const SD = (() => {
     function toggleCollapsible(header) {
         header.classList.toggle('open');
         const body = header.nextElementSibling;
-        body.classList.toggle('open');
+        if (body) {
+            const isOpen = header.classList.contains('open');
+            body.style.display = isOpen ? 'block' : 'none';
+            body.classList.toggle('open', isOpen);
+        }
+        // Rotate chevron if present
+        const chevron = header.querySelector('.fa-chevron-down, .fa-chevron-right, .chevron');
+        if (chevron) chevron.style.transform = header.classList.contains('open') ? 'rotate(180deg)' : '';
     }
 
     /**
@@ -2000,7 +2007,9 @@ const SD = (() => {
         document.querySelectorAll('#operation-toggle .toggle-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.value === op);
         });
-        el('donation-type-section').style.display = op === 'succession' ? 'none' : '';
+        // Legacy section refs removed — donation-type and succession-options are now in collapsed "Options avancées"
+        const donTypeEl = el('donation-type-section');
+        if (donTypeEl) donTypeEl.style.display = op === 'succession' ? 'none' : '';
         const succOpts = el('succession-options-section');
         if (succOpts) succOpts.style.display = (op === 'succession' || op === 'both') ? '' : 'none';
     }
@@ -3145,7 +3154,7 @@ const SD = (() => {
             state.patrimoine.dettes = +el('total-dettes').value || 0;
             state.patrimoine.type = el('type-dominant').value;
         }
-        state.operation = document.querySelector('#operation-toggle .toggle-btn.active')?.dataset.value || 'donation';
+        state.operation = document.querySelector('#operation-toggle .toggle-btn.active')?.dataset.value || 'both';
         state.donationType = el('donation-type')?.value || 'donation_partage';
         state.demembrement = el('switch-demembrement')?.classList.contains('on') || false;
         state.usufruit = el('usufruit-type')?.value || 'viager';
@@ -4046,7 +4055,7 @@ const SD = (() => {
                     ).join('');
                 } else {
                     const age = el('donor1-age') ? el('donor1-age').value : '';
-                    asideDonor.innerHTML = age ? `<span class="val-highlight">${age} ans</span> · ${state.operation === 'succession' ? 'Succession' : 'Donation'}` : 'Non renseigné';
+                    asideDonor.innerHTML = age ? `<span class="val-highlight">${age} ans</span> · Donation & succession` : 'Non renseigné';
                 }
             } else {
                 const age = el('donor1-age') ? el('donor1-age').value : '';
