@@ -1919,6 +1919,8 @@ const SD = (() => {
             // Propriétaires liés à la cartographie
             owners: [],                     // [{personId, personNom, personType:'donor'|'ben'|'autre', role:'pp'|'us'|'np'|'indiv', quote: 100, lienAutre:''}]
             partRecettesCommHT: 0,
+            societeNom: '',
+            societeCapital: 0,
             // Charges
             credit: 0,
             creditADI: false,
@@ -2373,7 +2375,9 @@ const SD = (() => {
         const struct = item.structure;
         const isDemembre = struct === 'demembre';
         const isIndivision = struct === 'indivision';
-        const isSimple = !isDemembre && !isIndivision;
+        const isSociete = ['sci_ir', 'sci_is', 'sarl_famille'].includes(struct);
+        const isMultiOwner = isDemembre || isIndivision || isSociete;
+        const isSimple = !isMultiOwner;
 
         const persons = getPersonsList();
         const personOpts = persons.map(p =>
@@ -2398,20 +2402,44 @@ const SD = (() => {
             return;
         }
 
-        // For indivision / démembrement : multi-owner
+        // For indivision / démembrement / SCI / SARL : multi-owner
         const roleLabel = isDemembre ? 'Droit' : 'Part';
         const roleOpts = isDemembre
             ? `<option value="us">Usufruitier</option><option value="np">Nu-propriétaire</option>`
             : `<option value="indiv">Indivisaire</option>`;
 
+        var structLabel = isDemembre ? 'Démembrement — qui détient quoi ?'
+            : isIndivision ? 'Indivision — parts de chacun'
+            : isSociete ? (struct === 'sci_ir' ? 'SCI IR' : struct === 'sci_is' ? 'SCI IS' : 'SARL Famille') + ' — associés et répartition des parts'
+            : 'Propriétaires';
+
         let html = `<label class="form-label" style="font-size:.72rem;margin-bottom:8px;display:flex;align-items:center;gap:4px;">
-            <i class="fas fa-users"></i> ${isDemembre ? 'Démembrement — qui détient quoi ?' : 'Indivision — parts de chacun'}
+            <i class="fas fa-users"></i> ${structLabel}
         </label>`;
+
+        // SCI/SARL: add name and optional info
+        if (isSociete) {
+            html += `<div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.68rem;">Nom de la société</label>
+                    <input type="text" class="form-input" value="${item.societeNom || ''}" placeholder="Ex: SCI Familiale Dupont"
+                        style="font-size:.72rem;height:32px;" onchange="SD.updateImmo(${immoId},'societeNom',this.value)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.68rem;">Capital social (€)</label>
+                    <input type="number" class="form-input" value="${item.societeCapital || ''}" placeholder="Ex: 1000" step="100"
+                        style="font-size:.72rem;height:32px;" onchange="SD.updateImmo(${immoId},'societeCapital',+this.value)">
+                </div>
+            </div>`;
+            if (struct === 'sci_ir' && item.usageActuel === 'locatif' && ['meuble_longue_duree','meuble_courte','meuble_saisonnier'].includes(item.typeLocation)) {
+                html += `<div class="warning-box error" style="margin-bottom:8px;font-size:.65rem;"><i class="fas fa-exclamation-triangle"></i> <strong>Risque requalification IS :</strong> SCI IR + location meublée. Si recettes meublées > 10% du CA HT, l'administration peut requalifier la SCI en IS (BOI-IS-CHAMP-20-10-20).</div>`;
+            }
+        }
 
         const totalQuote = item.owners.reduce((s, o) => s + (o.quote || 0), 0);
 
         html += item.owners.map((o, idx) => `
-            <div style="display:grid;grid-template-columns:1fr ${isDemembre ? '110px' : ''} 80px 28px;gap:6px;align-items:center;margin-bottom:6px;">
+            <div style="display:grid;grid-template-columns:1fr ${(isDemembre || isSociete) ? '110px' : ''} 80px 28px;gap:6px;align-items:center;margin-bottom:6px;">
                 <div>
                     <select class="form-input" style="font-size:.72rem;height:32px;" onchange="SD.updateImmoOwner(${immoId},${idx},'personId',this.value)">
                         <option value="">— Choisir —</option>
@@ -2423,6 +2451,10 @@ const SD = (() => {
                 ${isDemembre ? `<select class="form-input" style="font-size:.68rem;height:32px;" onchange="SD.updateImmoOwner(${immoId},${idx},'role',this.value)">
                     <option value="us" ${o.role === 'us' ? 'selected' : ''}>Usufruitier</option>
                     <option value="np" ${o.role === 'np' ? 'selected' : ''}>Nu-propriétaire</option>
+                </select>` : isSociete ? `<select class="form-input" style="font-size:.68rem;height:32px;" onchange="SD.updateImmoOwner(${immoId},${idx},'role',this.value)">
+                    <option value="pp" ${o.role === 'pp' || !o.role ? 'selected' : ''}>PP (pleine prop.)</option>
+                    <option value="np" ${o.role === 'np' ? 'selected' : ''}>NP (nue-prop.)</option>
+                    <option value="us" ${o.role === 'us' ? 'selected' : ''}>US (usufruit)</option>
                 </select>` : ''}
                 <div style="position:relative;">
                     <input type="number" class="form-input" value="${o.quote}" min="0" max="100" style="font-size:.72rem;height:32px;text-align:right;padding-right:20px;" onchange="SD.updateImmoOwner(${immoId},${idx},'quote',this.value)">
@@ -2448,7 +2480,7 @@ const SD = (() => {
         state.finance.push({
             id, type: 'assurance_vie', valeur: 0, versements: 0,
             dateOuverture: '', primesAvant70: 0, primesApres70: 0,
-            clauseBeneficiaire: 'standard',
+            clauseBeneficiaire: 'standard', demembrement: 'pp',
             ownerId: '', ownerNom: ''   // Lié à la cartographie
         });
 
@@ -2559,7 +2591,19 @@ const SD = (() => {
             item.avBeneficiaires = bens.map(b => ({ benId: b.id, pct: Math.round(100 / bens.length) }));
         }
 
-        let html = '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;"><i class="fas fa-users"></i> Bénéficiaires désignés du contrat AV</div>';
+        let html = '';
+        var typeLabel = item.type === 'contrat_capi' ? 'contrat de capitalisation' : 'contrat AV';
+        
+        if (item.type === 'contrat_capi') {
+            html += '<div style="font-size:.62rem;padding:6px 10px;border-radius:6px;background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.15);color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-info-circle"></i> Le contrat de capitalisation entre dans la succession (contrairement à l\'AV). Il peut être démembré (US/NP) de son vivant.</div>';
+            html += '<div style="margin-bottom:8px;"><label class="form-label" style="font-size:.68rem;">Démembrement du contrat</label>';
+            html += '<select class="form-input" style="font-size:.72rem;height:30px;" onchange="SD.updateFin(' + id + ',\'demembrement\',this.value)">';
+            html += '<option value="pp"' + (item.demembrement !== 'demembre' ? ' selected' : '') + '>Pleine propriété</option>';
+            html += '<option value="demembre"' + (item.demembrement === 'demembre' ? ' selected' : '') + '>Démembré (NP aux enfants, US au souscripteur)</option>';
+            html += '</select></div>';
+        }
+        
+        html += '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;"><i class="fas fa-users"></i> Bénéficiaires désignés du ' + typeLabel + '</div>';
         const total = item.avBeneficiaires.reduce((s, ab) => s + (ab.pct || 0), 0);
         html += item.avBeneficiaires.map(ab => {
             const b = bens.find(bb => bb.id === ab.benId);
@@ -3287,8 +3331,8 @@ const SD = (() => {
         });
 
         // Update aside on input changes
-        document.addEventListener('input', () => { clearTimeout(window._asideTO); window._asideTO = setTimeout(updateAside, 300); });
-        document.addEventListener('change', () => { clearTimeout(window._asideTO); window._asideTO = setTimeout(updateAside, 300); });
+        document.addEventListener('input', () => { clearTimeout(window._asideTO); window._asideTO = setTimeout(() => { updateAside(); if (currentStep === 3) updateSynthese(); }, 300); });
+        document.addEventListener('change', () => { clearTimeout(window._asideTO); window._asideTO = setTimeout(() => { updateAside(); if (currentStep === 3) updateSynthese(); }, 300); });
     });
 
     // ============================================================
