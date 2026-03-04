@@ -1737,6 +1737,7 @@ const SD = (() => {
         }
 
         if (n === 3 || n === 4) updateSynthese();
+        if (n === 4) refreshObjectives();
         // Hide aside on step 1, show on step 2+
         var asideEl = document.querySelector(".page-aside");
         var gridEl = document.querySelector(".page-grid");
@@ -1759,6 +1760,10 @@ const SD = (() => {
 
     function toggleSwitch(elem) {
         elem.classList.toggle('on');
+        // Mark objectives switches as user-touched so refreshObjectives won't override
+        if (elem.id && elem.id.startsWith('obj-')) {
+            elem.dataset.userTouched = '1';
+        }
     }
 
     function toggleSection(id) {
@@ -1770,6 +1775,203 @@ const SD = (() => {
         header.classList.toggle('open');
         const body = header.nextElementSibling;
         body.classList.toggle('open');
+    }
+
+    /**
+     * refreshObjectives — analyse le patrimoine + famille et contextualise les objectifs
+     * Appelée automatiquement quand on arrive à l'étape 4
+     */
+    function refreshObjectives() {
+        const pat = computePatrimoine();
+        const bens = state.beneficiaries;
+        const nbBens = bens.filter(b => b.lien !== 'conjoint_pacs').length;
+        const hasConjoint = bens.some(b => b.lien === 'conjoint_pacs' || b.lien === 'conjoint_pacs_donation');
+        const nbChildren = bens.filter(b => b.lien === 'enfant').length;
+
+        // PathOptimizer donors info
+        const PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+        const donors = PO ? PO.getDonors() : [];
+        const donorAges = donors.map(d => d.age || 0).filter(a => a > 0);
+        const minDonorAge = donorAges.length > 0 ? Math.min(...donorAges) : (state.donor1.age || 60);
+        const maxDonorAge = donorAges.length > 0 ? Math.max(...donorAges) : minDonorAge;
+
+        // Detect grandchildren
+        const hasGrandchildren = bens.some(b => b.lien === 'petit_enfant' || b.lien === 'arriere_petit_enfant');
+
+        // Asset analysis
+        const hasImmo = pat.immo > 0 || state.immo.length > 0;
+        const hasFinancier = pat.financier > 0 || state.finance.length > 0;
+        const hasAV = state.finance.some(f => f.type === 'assurance_vie');
+        const hasCapi = state.finance.some(f => f.type === 'contrat_capi');
+        const totalAV = state.finance.filter(f => f.type === 'assurance_vie').reduce((s, f) => s + (f.valeur || 0), 0);
+
+        const npRatio = getNPRatio(minDonorAge);
+        const F = FISCAL || FISCAL_FALLBACK;
+        const nbDonors = Math.max(1, donors.length || (state.mode === 'couple' ? 2 : 1));
+        const abatEnfant = F.abattements.enfant;
+        const totalAbat = abatEnfant * Math.max(1, nbBens) * nbDonors;
+        const netTaxable = Math.max(0, pat.actifNet - totalAbat);
+
+        // Detect multi-generation potential
+        const hasDonorGP = donors.some(d => d.role === 'grand_parent' || d.role === 'gp');
+
+        // === Build objective configs ===
+        const objectives = [
+            {
+                id: 'obj-minimiser',
+                relevant: true,
+                autoCheck: true,
+                context: (() => {
+                    const p = [];
+                    p.push('Abattements disponibles : ' + Math.max(1, nbBens) + ' × ' + (nbDonors > 1 ? nbDonors + ' × ' : '') + fmt(abatEnfant) + ' = <strong>' + fmt(totalAbat) + '</strong>');
+                    if (netTaxable > 0) {
+                        p.push('Au-delà : <strong>' + fmt(netTaxable) + ' taxable</strong> (barème 5% à 45%)');
+                    } else {
+                        p.push('<span style="color:var(--accent-green);">Patrimoine net sous l\'abattement → <strong>0 € de droits</strong> en donation directe !</span>');
+                    }
+                    if (minDonorAge < 70) p.push('Donateur < 70 ans → <strong>réduction 50%</strong> des droits (art. 790 CGI)');
+                    else p.push('Donateur ≥ 70 ans → pas de réduction d\'âge. Privilégiez AV avant 70 ans.');
+                    return p.join('<br>');
+                })()
+            },
+            {
+                id: 'obj-revenus',
+                relevant: hasImmo || hasFinancier,
+                autoCheck: hasImmo && pat.immo > 100000,
+                context: hasImmo
+                    ? fmt(pat.immo) + ' d\'immo → démembrement NP (' + Math.round(npRatio * 100) + '%) = droits sur ' + fmt(Math.round(pat.immo * npRatio)) + ' au lieu de ' + fmt(pat.immo) + '.' + (hasCapi ? ' Capi démembrable aussi.' : '')
+                    : hasFinancier ? fmt(pat.financier) + ' financier → contrat de capi démembrable (antériorité conservée).' : ''
+            },
+            {
+                id: 'obj-controle',
+                relevant: hasImmo || hasCapi,
+                autoCheck: hasImmo && pat.immo > 200000,
+                context: hasImmo
+                    ? fmt(pat.immo) + ' d\'immo → SCI (gérance = contrôle + décote 15%).' + (hasCapi ? ' Capi en US = garde la main.' : '')
+                    : hasCapi ? 'Contrat de capi en quasi-usufruit : garde la main sur le capital.' : ''
+            },
+            {
+                id: 'obj-conjoint',
+                relevant: hasConjoint || state.mode === 'couple',
+                autoCheck: hasConjoint,
+                context: hasConjoint
+                    ? 'Conjoint détecté → DDV, clause AV démembrée, préciput RP. Exonération totale de droits entre époux/PACS.'
+                    : 'Pas de conjoint/PACS détecté.'
+            },
+            {
+                id: 'obj-egalite',
+                relevant: nbChildren >= 2,
+                autoCheck: nbChildren >= 2,
+                context: nbChildren >= 2
+                    ? nbChildren + ' enfants → donation-partage recommandée (valeur figée, pas de rapport).'
+                    : nbChildren === 1 ? '1 seul enfant → pas d\'enjeu d\'égalité.' : 'Ajoutez les bénéficiaires.'
+            },
+            {
+                id: 'obj-generation',
+                relevant: hasGrandchildren || hasDonorGP || hasAV,
+                autoCheck: hasGrandchildren || hasDonorGP,
+                context: (() => {
+                    const p = [];
+                    if (hasGrandchildren) p.push('Petit(s)-enfant(s) détecté(s) → abattement ' + fmt(F.abattements.petit_enfant) + ' chacun.');
+                    if (hasDonorGP) p.push('Grand-parent donateur → chemin indirect GP → parent (abat. ' + fmt(abatEnfant) + ') → enfant (abat. ' + fmt(abatEnfant) + ') = 2× abattements.');
+                    if (hasAV) p.push('AV : bénéficiaire libre = petit-fils possible (abat. ' + fmt(F.av990I.abattement) + ', art. 990 I).');
+                    else if (pat.financier > 50000) p.push(fmt(pat.financier) + ' financier → ouvrir AV avec clause petit-enfant.');
+                    if (p.length === 0) p.push('Ajoutez des petits-enfants ou un grand-parent donateur.');
+                    return p.join('<br>');
+                })()
+            },
+            {
+                id: 'obj-vendre',
+                relevant: hasImmo,
+                autoCheck: false,
+                context: hasImmo
+                    ? state.immo.length + ' bien(s) immo (' + fmt(pat.immo) + ') → calcul PV avec abattement durée. Comparer : vendre avant ou après donation.'
+                    : 'Pas de bien immobilier détecté.'
+            }
+        ];
+
+        // === Apply to DOM ===
+        objectives.forEach(function(obj) {
+            const switchEl = el(obj.id);
+            if (!switchEl) return;
+            const row = switchEl.closest('.switch-row');
+            if (!row) return;
+
+            // Context badge below the switch row
+            let contextEl = row.querySelector('.obj-context');
+            if (!contextEl) {
+                contextEl = document.createElement('div');
+                contextEl.className = 'obj-context';
+                contextEl.style.cssText = 'font-size:.72rem;color:var(--text-secondary);line-height:1.6;margin-top:6px;padding:8px 12px;border-radius:8px;background:rgba(198,134,66,.04);border-left:3px solid rgba(198,134,66,.15);';
+                row.style.flexWrap = 'wrap';
+                row.appendChild(contextEl);
+            }
+
+            if (obj.relevant && obj.context) {
+                contextEl.style.display = '';
+                contextEl.style.width = '100%';
+                var icon = obj.autoCheck
+                    ? '<i class="fas fa-check-circle" style="color:var(--accent-green);margin-right:6px;"></i>'
+                    : '<i class="fas fa-info-circle" style="color:var(--text-muted);margin-right:6px;"></i>';
+                contextEl.innerHTML = icon + obj.context;
+                contextEl.style.borderLeftColor = obj.autoCheck ? 'rgba(16,185,129,.3)' : 'rgba(198,134,66,.15)';
+            } else if (!obj.relevant) {
+                contextEl.style.display = '';
+                contextEl.style.width = '100%';
+                contextEl.innerHTML = '<i class="fas fa-minus-circle" style="color:var(--text-muted);margin-right:6px;opacity:.5;"></i><span style="opacity:.6;">Non applicable avec le patrimoine saisi.</span>';
+                contextEl.style.borderLeftColor = 'rgba(255,107,107,.15)';
+                switchEl.style.opacity = '0.4';
+                switchEl.style.pointerEvents = 'none';
+            } else {
+                contextEl.style.display = 'none';
+                switchEl.style.opacity = '';
+                switchEl.style.pointerEvents = '';
+            }
+
+            // Re-enable if relevant
+            if (obj.relevant) {
+                switchEl.style.opacity = '';
+                switchEl.style.pointerEvents = '';
+            }
+
+            // Auto-check on first visit (only if not manually touched)
+            if (obj.autoCheck && obj.relevant && !switchEl.dataset.userTouched) {
+                if (!switchEl.classList.contains('on')) {
+                    switchEl.classList.add('on');
+                }
+            }
+        });
+
+        // === Patrimoine summary banner at top ===
+        var summaryEl = el('obj-patrimoine-summary');
+        if (!summaryEl) {
+            var objCard = el('obj-minimiser') ? el('obj-minimiser').closest('.section-card') : null;
+            if (objCard) {
+                var subtitleEl = objCard.querySelector('.section-subtitle');
+                if (subtitleEl) {
+                    subtitleEl.insertAdjacentHTML('afterend', '<div id="obj-patrimoine-summary" style="margin-bottom:14px;"></div>');
+                    summaryEl = el('obj-patrimoine-summary');
+                }
+            }
+        }
+        if (summaryEl) {
+            var parts = [];
+            if (donors.length > 0) {
+                var donorLabels = donors.map(function(d) { return '<strong>' + esc(d.nom) + '</strong> ' + d.age + ' ans'; });
+                parts.push('<span style="color:var(--primary-color);">' + donorLabels.join(', ') + '</span>');
+            }
+            if (nbBens > 0) parts.push('<span style="color:var(--accent-green);font-weight:600;">' + nbBens + ' bénéficiaire' + (nbBens > 1 ? 's' : '') + '</span>');
+            if (pat.immo > 0) parts.push('🏠 Immo ' + fmt(pat.immo));
+            if (pat.financier > 0) parts.push('💰 Financier ' + fmt(pat.financier));
+            if (pat.pro > 0) parts.push('🏢 Pro ' + fmt(pat.pro));
+            if (pat.passif > 0) parts.push('📉 Passif ' + fmt(pat.passif));
+            parts.push('<strong style="color:var(--accent-green);">Net transmissible : ' + fmt(pat.actifNet) + '</strong>');
+
+            summaryEl.innerHTML = '<div style="padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,rgba(198,134,66,.08),rgba(16,185,129,.04));border:1px solid rgba(198,134,66,.15);font-size:.82rem;color:var(--text-secondary);line-height:1.8;">' +
+                '<div style="font-size:.75rem;font-weight:700;color:var(--primary-color);margin-bottom:6px;"><i class="fas fa-clipboard-check"></i> Votre situation (étapes 1-3)</div>' +
+                parts.join(' · ') +
+            '</div>';
+        }
     }
 
     // -- Mode couple/solo --
@@ -3958,7 +4160,7 @@ const SD = (() => {
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
         calculateResults, resetAll, updateAside,
-        buildFamilyTree,
+        buildFamilyTree, refreshObjectives,
         // Family graph UI
         renderFamilyTree, renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles,
         addFamilyPerson, addFamilyRelation, updateFamilyRelation, removeFamilyRelation,
