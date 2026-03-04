@@ -1971,7 +1971,7 @@ const SD = (() => {
             if (pat.immo > 0) parts.push('🏠 Immo ' + fmt(pat.immo));
             if (pat.financier > 0) parts.push('💰 Financier ' + fmt(pat.financier));
             if (pat.pro > 0) parts.push('🏢 Pro ' + fmt(pat.pro));
-            if (pat.passif > 0) parts.push('📉 Passif ' + fmt(pat.passif));
+            if (pat.passif > 0) parts.push('📉 Passif ' + fmt(pat.passif) + (pat.passifHorsFuneraires === 0 ? ' (frais funéraires)' : ''));
             parts.push('<strong style="color:var(--accent-green);">Net transmissible : ' + fmt(pat.actifNet) + '</strong>');
 
             summaryEl.innerHTML = '<div style="padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,rgba(198,134,66,.08),rgba(16,185,129,.04));border:1px solid rgba(198,134,66,.15);font-size:.82rem;color:var(--text-secondary);line-height:1.8;">' +
@@ -3204,14 +3204,17 @@ const SD = (() => {
         const proTotal = state.pro.reduce((s, i) => s + ((i.valeur || 0) * (i.pctDetention || 100) / 100), 0);
         const debtsDirect = state.debts.filter(d => !d.adi).reduce((s, d) => s + (d.montant || 0), 0);
         const immoCredits = state.immo.filter(i => !i.creditADI).reduce((s, i) => s + (i.credit || 0), 0);
-        const passif = debtsDirect + immoCredits + 1500; // + frais funéraires forfait
+        const fraisFuneraires = 1500; // Forfait art. 775 CGI — toujours déductible
+        const passifHorsFuneraires = debtsDirect + immoCredits;
+        const passif = passifHorsFuneraires + fraisFuneraires;
         const revenus = state.immo.reduce((s, i) => s + (i.loyerMensuel || 0) * 12, 0);
         const charges = state.immo.reduce((s, i) => s + (i.taxeFonciere || 0) + (i.chargesCopro || 0) + (i.assurancePNO || 0) + (i.travauxEntretien || 0) + (i.fraisGestion || 0), 0);
         return {
             actifBrut: immoTotal + finTotal + proTotal,
             immo: immoTotal, immoBrut: immoTotal,
             financier: finTotal, pro: proTotal,
-            passif, actifNet: immoTotal + finTotal + proTotal - passif,
+            passif, passifHorsFuneraires, fraisFuneraires,
+            actifNet: immoTotal + finTotal + proTotal - passif,
             revenus, charges
         };
     }
@@ -3234,7 +3237,7 @@ const SD = (() => {
                 <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Actif net taxable</div>
                 <div style="font-size:1.4rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent-cyan);">${fmt(s.actifNet)}</div>
                 <div style="margin-top:8px;font-size:.75rem;color:var(--text-secondary);">
-                    Passif : ${fmt(-s.passif)}${s.revenus > 0 ? ` · Rendement : ${fmt(s.revenus - s.charges)}/an (${rendement}%)` : ''}
+                    Passif : ${fmt(-s.passif)}${s.passif > 0 ? ` <span style="font-size:.65rem;color:var(--text-muted);">(${s.passifHorsFuneraires > 0 ? 'dettes ' + fmt(s.passifHorsFuneraires) + ' + ' : ''}frais funéraires 1 500 € — art. 775 CGI)</span>` : ''}${s.revenus > 0 ? ` · Rendement : ${fmt(s.revenus - s.charges)}/an (${rendement}%)` : ''}
                 </div>
             </div>
         </div>`;
