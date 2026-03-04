@@ -2815,6 +2815,9 @@ const SD = (() => {
             ownerSelect.innerHTML = `<option value="">— Choisir le titulaire —</option>` +
                 persons.map(p => `<option value="${p.id}" ${current === p.id ? 'selected' : ''}>${esc(p.nom)} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('');
         }
+
+        // FIX: re-render AV/capi beneficiaires section (includes démembrement dropdown for capi)
+        refreshAVBeneficiaires(id);
     }
 
     // ============================================================
