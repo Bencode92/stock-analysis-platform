@@ -1173,25 +1173,21 @@ const PathOptimizer = (() => {
                         <input type="number" class="form-input" value="${d.age}" min="18" max="120"
                                onchange="PathOptimizer.updateDonor(${d.id},'age',this.value)">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="display:none;">
                         <label class="form-label">Patrimoine propre (€)</label>
                         <input type="number" class="form-input" value="${d.patrimoine}" min="0" step="10000"
-                               placeholder="Valeur totale des biens"
                                onchange="PathOptimizer.updateDonor(${d.id},'patrimoine',this.value)">
-                        <div style="font-size:.62rem;color:var(--text-muted);margin-top:3px;">Inclure : appart, épargne, AV, etc. propres à cette personne</div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Régime</label>
+                    <div class="form-group" style="display:none;">
                         <select class="form-input" onchange="PathOptimizer.updateDonor(${d.id},'regime',this.value)">
-                            <option value="separation" ${d.regime === 'separation' ? 'selected' : ''}>Séparation de biens</option>
-                            <option value="communaute" ${d.regime === 'communaute' ? 'selected' : ''}>Communauté</option>
+                            <option value="communaute" selected>Communauté</option>
                         </select>
                     </div>
                 </div>
                 ${linkedBensHtml}
                 ${donBenHtml}
                 ${donRecvHtml}
-                ${buildEntourageHtml(d)}
+                
             </div>`;
     }
 
