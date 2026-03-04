@@ -3793,6 +3793,14 @@ const SD = (() => {
         }
         renderResults(scenarios, pat);
 
+        // ════════════════════════════════════════════════════════════
+        // TRANSMISSION MAP — Résultats par chemin (module externe)
+        // ════════════════════════════════════════════════════════════
+        if (typeof TransmissionEngine !== 'undefined') {
+            var txMap = TransmissionEngine.compute(pat, donorAge, nbDonors);
+            TransmissionEngine.render(txMap, pat);
+        }
+
         // Path optimizer — multi-donateurs
         if (typeof PathOptimizer !== 'undefined') {
             const pathDonors = PathOptimizer.getDonors();
@@ -3809,7 +3817,7 @@ const SD = (() => {
     }
 
     // ============================================================
-    // 6. RENDER — Affichage des résultats
+    // 6. RENDER — Affichage des résultats (scénarios flat, legacy)
     // ============================================================
     function renderResults(scenarios, pat) {
         const best = scenarios[0];
@@ -4170,6 +4178,13 @@ const SD = (() => {
         addDebt, removeDebt, updateDebt,
         calculateResults, resetAll, updateAside,
         buildFamilyTree, refreshObjectives,
+        // Fiscal utilities — exposed for TransmissionEngine
+        _fiscal: {
+            getAbattement, getBareme, calcDroits, getNPRatio, computePatrimoine,
+            fmt, esc, el,
+            getFISCAL: function() { return FISCAL || FISCAL_FALLBACK; },
+            getState: function() { return state; }
+        },
         // Family graph UI
         renderFamilyTree, renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles,
         addFamilyPerson, addFamilyRelation, updateFamilyRelation, removeFamilyRelation,
