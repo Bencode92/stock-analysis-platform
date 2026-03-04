@@ -950,6 +950,30 @@ def select_etfs_via_preset_engine(
         sym = asset.ticker or asset.id
         sd = asset.source_data if asset.source_data else {}
         
+        # === FIX v2.3.0: Multi-key asset_map pour éviter mapping failures ===
+        # Problème: convert_universe_to_assets peut perdre le ticker original.
+        # L'ETF CSV utilise "etfsymbol" comme clé primaire, mais Asset.ticker
+        # peut être None si le dict source n'a pas "ticker"/"symbol".
+        # On indexe par TOUTES les clés possibles pour maximiser les matches.
+        asset_map[sym] = asset
+        # Ajouter etfsymbol original du CSV si disponible
+        etfsym_orig = sd.get("etfsymbol") or sd.get("symbol") or sd.get("ticker")
+        if etfsym_orig and etfsym_orig != sym:
+            asset_map[str(etfsym_orig)] = asset
+        # Ajouter aussi par nom (fallback)
+        if asset.name and asset.name != sym:
+            asset_map[asset.name] = asset
+        # Ajouter par ISIN si disponible
+        isin = sd.get("isin")
+        if isin and isinstance(isin, str) and len(isin) > 3:
+            asset_map[isin] = asset
+        # === FIN FIX v2.3.0 ===
+        
+        # === FIX v2.3.0b: Utiliser etfsymbol original comme clé primaire ===
+        # Si l'ETF a un etfsymbol court (ex: "VPL"), l'utiliser au lieu du nom long
+        if etfsym_orig and len(str(etfsym_orig)) < len(sym):
+            sym = str(etfsym_orig)
+        
         rec = {
             "etfsymbol": sym,
             "symbol": sym,
@@ -1010,9 +1034,21 @@ def select_etfs_via_preset_engine(
     
     # === Reconvertir DataFrame → List[Asset] avec scores enrichis ===
     selected_assets = []
+    _mapping_failures = []  # FIX v2.3.0: Track failures
     for _, row in df_selected.iterrows():
         sym = row.get("etfsymbol") or row.get("symbol")
+        # === FIX v2.3.0: Multi-key lookup ===
         original_asset = asset_map.get(sym)
+        if original_asset is None:
+            # Essayer d'autres clés
+            for alt_key in [row.get("symbol"), row.get("name"), row.get("isin")]:
+                if alt_key and alt_key in asset_map:
+                    original_asset = asset_map[alt_key]
+                    break
+        if original_asset is None:
+            _mapping_failures.append(sym)
+            continue
+        # === FIN FIX v2.3.0 ===
         
         if original_asset:
             # Mettre à jour le score avec _profile_score de preset_etf
@@ -1029,6 +1065,26 @@ def select_etfs_via_preset_engine(
                     original_asset.role = parsed_role
             
             selected_assets.append(original_asset)
+    
+    # === FIX v2.3.0: Log mapping failures + fallback ===
+    if _mapping_failures:
+        logger.warning(
+            f"[preset_etf] FIX v2.3.0: {len(_mapping_failures)} mapping failures "
+            f"(df_selected={len(df_selected)}, reconstructed={len(selected_assets)}): "
+            f"{_mapping_failures[:5]}"
+        )
+        # FALLBACK: Si trop de pertes, retourner TOUS les ETFs input
+        # pour ne pas réduire artificiellement l'univers
+        if len(selected_assets) < len(etf_assets) * 0.5:
+            logger.warning(
+                f"[preset_etf] FIX v2.3.0 FALLBACK: mapping a perdu >50% des ETFs "
+                f"({len(selected_assets)}/{len(df_selected)}). "
+                f"Retour de TOUS les {len(etf_assets)} ETFs input."
+            )
+            meta["fallback"] = True
+            meta["fallback_reason"] = f"mapping_failures:{len(_mapping_failures)}/{len(df_selected)}"
+            return etf_assets[:top_n], meta
+    # === FIN FIX v2.3.0 ===
     
     meta["selected_count"] = len(selected_assets)
     logger.info(f"[preset_etf] {profile_name}: {len(etf_assets)} → {len(selected_assets)} ETF")
@@ -4847,7 +4903,10 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 default_vol = 15
             
             # ID generation with v6.7 validation
-            raw_id = item.get("id") or item.get("ticker") or item.get("symbol")
+            # === FIX v2.3.0: Ajouter "etfsymbol" dans la chaîne de résolution ===
+            # Les ETFs du CSV utilisent "etfsymbol" comme clé primaire, pas "ticker"
+            raw_id = (item.get("id") or item.get("ticker") or item.get("symbol") 
+                      or item.get("etfsymbol"))  # FIX v2.3.0
             if not _is_valid_id(raw_id):
                 raw_id = item.get("name") or f"{cat_normalized}_{len(assets)+1}"
             
@@ -4885,8 +4944,8 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 exposure=item.get("exposure"),
                 preset=item.get("preset"),
                 buffett_score=item.get("buffett_score") or item.get("_buffett_score"),
-                ticker=item.get("ticker") or item.get("symbol"),   # v6.18.3: FIX ticker_coverage
-                symbol=item.get("symbol") or item.get("ticker"),   # v6.18.3: alias
+                ticker=item.get("ticker") or item.get("symbol") or item.get("etfsymbol"),   # v6.18.3 + FIX v2.3.0
+                symbol=item.get("symbol") or item.get("ticker") or item.get("etfsymbol"),   # v6.18.3 + FIX v2.3.0
             )
             assets.append(asset)
 
