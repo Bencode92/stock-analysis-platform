@@ -261,7 +261,20 @@ const PathOptimizer = (() => {
         if (d) {
             // 1. Manual override always wins
             const entry = d.donationsParBen.find(e => String(e.benId) === String(benId));
-            if (entry && entry.lienOverride) return entry.lienOverride;
+            if (entry && entry.lienOverride && entry.lienOverride !== 'auto') return entry.lienOverride;
+
+            // 1b. Use FamilyGraph if available (most accurate)
+            if (typeof FamilyGraph !== 'undefined' && d._graphId !== undefined) {
+                // Find the graph ID of this beneficiary
+                var graphBenId = +benId;
+                if (typeof SD !== 'undefined' && SD.getBeneficiaries) {
+                    var sdBen = SD.getBeneficiaries().find(function(b){return b.id === +benId || String(b.id) === String(benId)});
+                    if (sdBen && sdBen._graphId !== undefined) graphBenId = sdBen._graphId;
+                }
+                // Also check if benId IS already a graph ID (when called from syncGraphToStep2)
+                var graphLien = FamilyGraph.computeFiscalLien(d._graphId, graphBenId);
+                if (graphLien && graphLien !== 'tiers' && graphLien !== 'self') return graphLien;
+            }
 
             // 2. Check explicit parentage — if linkedBens exists and this ben is NOT linked
             if (d.linkedBens && Object.keys(d.linkedBens).length > 0) {
