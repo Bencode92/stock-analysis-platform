@@ -115,7 +115,7 @@
         .step-connector.completed { background:linear-gradient(90deg,var(--accent-green),var(--accent-color)); }
 
         /* ===== FORM AREA ===== */
-        .form-container { flex:1; padding:24px 32px 100px; max-width:1200px; margin:0 auto; width:100%; animation:fadeInUp .6s ease-out; }
+        .form-container { flex:1; padding:24px 32px 100px; max-width:clamp(1100px, 94vw, 1600px); margin:0 auto; width:100%; animation:fadeInUp .6s ease-out; }
         .page-grid { display:grid; grid-template-columns:1fr 300px; gap:36px; align-items:start; }
         .page-main { min-width:0; }
         .page-aside { position:sticky; top:calc(var(--header-h) + var(--step-bar-h) + 18px); }
@@ -150,6 +150,7 @@
         /* ===== SECTION CARDS (glassmorphism) ===== */
         .section-card {
             background:rgba(51,44,32,0.72);
+            overflow-x:auto;
             backdrop-filter:blur(15px);
             border:1px solid rgba(198,134,66,0.12); border-radius:16px;
             padding:28px; margin-bottom:20px;
@@ -205,7 +206,7 @@
         input::placeholder { color:var(--text-muted); }
         /* ===== FAMILY TREE — Compact visual ===== */
         .ft-canvas{display:flex;flex-direction:row;align-items:flex-start;gap:60px;justify-content:center;padding:32px 24px;position:relative;flex-wrap:wrap;min-height:100px;overflow-x:auto;}
-        .ft-canvas.ft-levels{flex-direction:column;align-items:center;gap:24px;flex-wrap:nowrap;overflow:auto;padding:28px 20px;}
+        .ft-canvas.ft-levels{overflow:auto;padding:28px 20px;min-height:200px;}
         .ft-level{display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap;width:max-content;}
 
         .ft-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:0;}
@@ -551,6 +552,9 @@
             .form-container{padding:16px 16px 100px} .page-header,.bottom-bar{padding:0 16px}
             .section-card{padding:18px} .results-summary .big-number{font-size:1.8rem}
         }
+    
+        #family-persons-list .ft-canvas.ft-levels{ margin:0 auto; }
+        #family-persons-list{ padding-bottom:8px; }
     </style>
 </head>
 <body>
@@ -641,7 +645,7 @@
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-project-diagram"></i> Arbre familial</div>
                     <div class="section-subtitle">Cliquez sur les boutons + pour construire l'arbre. Éditez les noms et âges directement.</div>
-                    <div id="family-persons-list"></div>
+                    <div id="family-persons-list" style="overflow-x:auto;overflow-y:visible;"></div>
                 </div>
 
                 <!-- Roles -->
@@ -1065,7 +1069,7 @@
 
             </main><!-- /page-main -->
 
-            <aside class="page-aside">
+            <aside class="page-aside" style="display:none;">
                 <div class="aside-card">
                     <div class="aside-title"><i class="fas fa-clipboard-list"></i> Résumé</div>
 
