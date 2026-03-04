@@ -916,35 +916,72 @@
                 </div>
 
                 <div class="section-card">
-                    <div class="section-title"><i class="fas fa-tasks"></i> Objectifs</div>
+                    <div class="section-title"><i class="fas fa-tasks"></i> Objectifs de transmission</div>
+                    <div class="section-subtitle">Vos priorités déterminent les scénarios recommandés</div>
                     <div class="switch-row">
-                        <span class="switch-label">Minimiser les droits</span>
-                        <div class="switch on" id="obj-minimiser"></div>
+                        <span class="switch-label">Minimiser les droits de donation / succession <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Tous les scénarios seront classés par coût fiscal croissant. Active les chemins indirects (ex: grand-parent → parent → enfant pour cumuler les abattements).</span></span></span>
+                        <div class="switch on" id="obj-minimiser" onclick="SD.toggleSwitch(this)"></div>
                     </div>
                     <div class="switch-row">
-                        <span class="switch-label">Conserver les revenus le plus longtemps</span>
+                        <span class="switch-label">Conserver les revenus / l'usage des biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise le démembrement (US/NP), la clause AV démembrée, le quasi-usufruit. Le donateur conserve les loyers, dividendes ou l'usage du bien.</span></span></span>
                         <div class="switch" id="obj-revenus" onclick="SD.toggleSwitch(this)"></div>
                     </div>
                     <div class="switch-row">
-                        <span class="switch-label">Protéger le conjoint survivant</span>
+                        <span class="switch-label">Maintenir le contrôle sur le patrimoine <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la SCI (gérance), le contrat de capitalisation démembré, et les donations avec charges (obligation d'emploi, clause de retour). Le donateur garde la main.</span></span></span>
+                        <div class="switch" id="obj-controle" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Protéger le conjoint survivant <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Active les scénarios DDV (donation au dernier vivant), clause bénéficiaire AV au conjoint, usufruit universel, clause de préciput RP.</span></span></span>
                         <div class="switch" id="obj-conjoint" onclick="SD.toggleSwitch(this)"></div>
                     </div>
                     <div class="switch-row">
-                        <span class="switch-label">Vendre un ou plusieurs biens</span>
+                        <span class="switch-label">Égalité entre les enfants (donation-partage) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la donation-partage (valeur figée, pas de rapport) et le partage équitable entre héritiers. Évite les conflits successoraux.</span></span></span>
+                        <div class="switch" id="obj-egalite" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Transmettre à une génération plus lointaine (petit-enfant, etc.) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">AV : le bénéficiaire peut être le petit-fils. Chemin indirect : grand-parent → parent → enfant (2× abattement 100k). Donation transgénérationnelle (abat. 31 865 € petit-enfant).</span></span></span>
+                        <div class="switch" id="obj-generation" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Vendre un ou plusieurs biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Calcule la plus-value immobilière nette (abattement durée de détention + prélèvements sociaux). Compare : vendre avant ou après donation/succession.</span></span></span>
                         <div class="switch" id="obj-vendre" onclick="SD.toggleSwitch(this);SD.toggleSection('vente-section')"></div>
                     </div>
                 </div>
 
                 <div class="section-card" id="vente-section" style="display:none;">
-                    <div class="section-title"><i class="fas fa-tag"></i> Projet de vente</div>
+                    <div class="section-title"><i class="fas fa-tag"></i> Projet de vente — Plus-value immobilière</div>
+                    <div class="section-subtitle">Estimation de la plus-value nette après abattements pour durée de détention</div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">Prix de vente estimé (€)</label>
                             <input type="number" id="prix-vente" placeholder="Ex: 400000" step="1000">
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Prix d'acquisition (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Prix d'achat + frais d'acquisition (7,5% forfaitaires si pas de justificatifs) + travaux (15% forfaitaires si détenu > 5 ans).</span></span></label>
+                            <input type="number" id="prix-acquisition" placeholder="Ex: 250000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date d'acquisition</label>
+                            <input type="date" id="date-acquisition">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Type de bien</label>
+                            <select id="type-bien-vente">
+                                <option value="standard">Bien standard</option>
+                                <option value="rp">Résidence principale (exonérée)</option>
+                                <option value="terrain">Terrain à bâtir</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Travaux réels justifiés (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Si > forfait 15%, indiquez le montant réel. Sinon laissez vide, le forfait sera appliqué.</span></span></label>
+                            <input type="number" id="travaux-vente" placeholder="Laisser vide = forfait 15%" step="1000">
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Horizon de vente</label>
                             <select id="horizon-vente">
+                                <option value="0">Immédiat</option>
                                 <option value="1">Moins d'1 an</option>
                                 <option value="5" selected>1 à 5 ans</option>
                                 <option value="10">5 à 10 ans</option>
@@ -952,6 +989,7 @@
                             </select>
                         </div>
                     </div>
+                    <div id="pv-preview" style="display:none; margin-top:12px;"></div>
                 </div>
             </div>
 
