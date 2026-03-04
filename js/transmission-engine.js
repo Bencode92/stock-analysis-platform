@@ -515,12 +515,211 @@ const TransmissionEngine = (() => {
 
 
     // ================================================================
+    // 4. AI SUMMARY — Résumé narratif via Claude Sonnet (Anthropic API)
+    // ================================================================
+
+    /**
+     * generateNarrativeSummary — Envoie les résultats structurés à Claude
+     * et affiche un résumé clair, personnalisé, en français.
+     */
+    async function generateNarrativeSummary(txMap, pat) {
+        var container = el('ai-narrative-summary');
+        if (!container) return;
+
+        // Show loading state
+        container.style.display = '';
+        container.innerHTML = '<div style="padding:20px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);text-align:center;">' +
+            '<div style="font-size:.82rem;color:var(--primary-color);margin-bottom:8px;"><i class="fas fa-robot"></i> Analyse en cours...</div>' +
+            '<div style="font-size:.72rem;color:var(--text-muted);">Claude rédige votre synthèse personnalisée</div>' +
+            '<div style="margin-top:12px;"><div class="loading-dots" style="display:inline-flex;gap:4px;">' +
+            '<span style="width:6px;height:6px;border-radius:50%;background:var(--primary-color);animation:pulse 1.2s ease-in-out infinite;"></span>' +
+            '<span style="width:6px;height:6px;border-radius:50%;background:var(--primary-color);animation:pulse 1.2s ease-in-out .2s infinite;"></span>' +
+            '<span style="width:6px;height:6px;border-radius:50%;background:var(--primary-color);animation:pulse 1.2s ease-in-out .4s infinite;"></span>' +
+            '</div></div></div>';
+
+        // Build structured context for the AI
+        var st = state();
+        var contextData = buildAIContext(txMap, pat, st);
+
+        try {
+            var response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1000,
+                    system: buildSystemPrompt(),
+                    messages: [
+                        { role: 'user', content: contextData }
+                    ]
+                })
+            });
+
+            var data = await response.json();
+
+            if (data && data.content && data.content.length > 0) {
+                var text = data.content
+                    .filter(function(c) { return c.type === 'text'; })
+                    .map(function(c) { return c.text; })
+                    .join('\n');
+
+                renderNarrativeSummary(container, text, txMap);
+            } else {
+                renderFallbackSummary(container, txMap, pat);
+            }
+        } catch (err) {
+            console.warn('AI summary error:', err);
+            renderFallbackSummary(container, txMap, pat);
+        }
+    }
+
+    function buildSystemPrompt() {
+        return "Tu es un conseiller en gestion de patrimoine français expérimenté. " +
+            "Tu rédiges une synthèse claire et actionnable des résultats d'optimisation successorale et patrimoniale. " +
+            "Règles strictes :\n" +
+            "- Français courant, pas de jargon inutile, mais les termes techniques quand nécessaire (avec explication)\n" +
+            "- Structure : 1) Situation résumée (2 lignes max) 2) Statu quo chiffré 3) Stratégie recommandée par chemin donateur→bénéficiaire 4) Points de vigilance 5) Prochaines étapes concrètes\n" +
+            "- Mentionne les articles du CGI pertinents entre parenthèses\n" +
+            "- Mentionne les RISQUES et LIMITES (rappel fiscal 15 ans, abus de droit, primes exagérées)\n" +
+            "- Sois direct et actionnable : 'Faites X avant Y' plutôt que 'Il serait envisageable de considérer...'\n" +
+            "- Utilise des montants précis, pas d'arrondis vagues\n" +
+            "- Si un donateur a ≥ 70 ans, alerte sur l'urgence AV 990I vs 757B\n" +
+            "- Maximum 400 mots. Pas de bullet points excessifs. Prose lisible.\n" +
+            "- Termine par un disclaimer : 'Cette analyse est indicative. Consultez un notaire ou CGP pour valider la stratégie.'";
+    }
+
+    function buildAIContext(txMap, pat, st) {
+        var lines = [];
+        lines.push('=== SITUATION PATRIMONIALE ===');
+        lines.push('Patrimoine net transmissible : ' + fmt(pat.actifNet));
+        if (pat.immo > 0) lines.push('Immobilier : ' + fmt(pat.immo));
+        if (pat.financier > 0) lines.push('Financier : ' + fmt(pat.financier));
+        if (pat.pro > 0) lines.push('Professionnel : ' + fmt(pat.pro));
+        if (pat.passif > 0) lines.push('Passif : ' + fmt(pat.passif));
+
+        // AV/capi details
+        var avItems = st.finance ? st.finance.filter(function(f) { return f.type === 'assurance_vie'; }) : [];
+        var capiItems = st.finance ? st.finance.filter(function(f) { return f.type === 'contrat_capi'; }) : [];
+        if (avItems.length > 0) {
+            lines.push('Assurances-vie : ' + avItems.length + ' contrat(s), total ' + fmt(avItems.reduce(function(s, a) { return s + (a.valeur || 0); }, 0)));
+        }
+        if (capiItems.length > 0) {
+            lines.push('Contrats capi : ' + capiItems.length + ', total ' + fmt(capiItems.reduce(function(s, a) { return s + (a.valeur || 0); }, 0)));
+        }
+
+        // Immo details
+        var immoItems = st.immo || [];
+        immoItems.forEach(function(im) {
+            lines.push('Bien immo : ' + (im.titre || 'Bien') + ' = ' + fmt(im.valeur || 0) + ' (' + (im.type === 'rp' ? 'RP' : im.type === 'locatif' ? 'Locatif' : im.type === 'secondaire' ? 'Résidence secondaire' : im.type || '?') + ')');
+        });
+
+        lines.push('');
+        lines.push('=== OBJECTIFS ACTIVÉS ===');
+        var objLabels = {
+            minimiser: 'Minimiser les droits', revenus: 'Conserver revenus/usage',
+            controle: 'Maintenir le contrôle', conjoint: 'Protéger conjoint',
+            egalite: 'Égalité enfants', generation: 'Transmission génération lointaine',
+            vendre: 'Vendre un bien'
+        };
+        Object.keys(st.obj || {}).forEach(function(k) {
+            if (st.obj[k]) lines.push('✅ ' + (objLabels[k] || k));
+        });
+
+        lines.push('');
+        lines.push('=== RÉSULTATS PAR CHEMIN ===');
+        lines.push('Total statu quo (net transmis) : ' + fmt(txMap.totalStatuQuo));
+        lines.push('Total optimisé (net transmis) : ' + fmt(txMap.totalBest));
+        lines.push('Économie potentielle : ' + fmt(txMap.totalBest - txMap.totalStatuQuo));
+
+        txMap.pairs.forEach(function(pair) {
+            lines.push('');
+            lines.push('--- ' + (pair.donor.nom || 'Donateur') + ' → ' + (pair.ben.prenom || pair.ben.nom || 'Bénéficiaire') + ' (lien: ' + pair.lien + ', donateur ' + (pair.donor.age || '?') + ' ans) ---');
+
+            pair.channels.forEach(function(ch, i) {
+                var prefix = i === 0 ? '🏆 ' : '   ';
+                lines.push(prefix + ch.name + ' : droits ' + fmt(ch.droits) + ', net ' + fmt(ch.net) + ', taux effectif ' + ch.taux_effectif + '%');
+                if (ch.fraisAn > 0) lines.push('     Frais annuels : ' + fmt(ch.fraisAn));
+            });
+        });
+
+        // Vente context if active
+        if (st.obj && st.obj.vendre && st.vente && st.vente.prixVente > 0) {
+            lines.push('');
+            lines.push('=== PROJET DE VENTE ===');
+            lines.push('Prix vente : ' + fmt(st.vente.prixVente) + ', Prix acquisition : ' + fmt(st.vente.prixAcquisition));
+            lines.push('Type bien : ' + st.vente.typeBien + ', Horizon : ' + st.vente.horizon + ' ans');
+        }
+
+        return lines.join('\n');
+    }
+
+    function renderNarrativeSummary(container, text, txMap) {
+        // Convert markdown-style text to styled HTML
+        var html = text
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n{2,}/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+
+        container.innerHTML = '<div style="padding:22px 24px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+            '<div style="font-size:.85rem;font-weight:700;color:var(--primary-color);"><i class="fas fa-file-alt" style="margin-right:6px;"></i> Synthèse personnalisée</div>' +
+            '<span style="font-size:.58rem;padding:3px 8px;border-radius:4px;background:rgba(59,130,246,.1);color:#3b82f6;">Généré par Claude</span>' +
+            '</div>' +
+            '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.8;"><p>' + html + '</p></div>' +
+            '</div>';
+    }
+
+    /**
+     * renderFallbackSummary — Résumé statique si l'API est indisponible
+     */
+    function renderFallbackSummary(container, txMap, pat) {
+        var eco = txMap.totalBest - txMap.totalStatuQuo;
+        var statQuoDroits = pat.actifNet - txMap.totalStatuQuo;
+
+        var lines = [];
+        lines.push('<strong>Situation :</strong> Patrimoine net de ' + fmt(pat.actifNet) + ' à transmettre.');
+        lines.push('');
+
+        if (statQuoDroits > 0) {
+            lines.push('<strong>Sans optimisation :</strong> environ ' + fmt(statQuoDroits) + ' de droits de succession estimés.');
+        }
+
+        if (eco > 0) {
+            lines.push('<strong>Avec optimisation :</strong> économie potentielle de ' + fmt(eco) + ' en combinant les meilleurs canaux par chemin.');
+        }
+
+        lines.push('');
+
+        // Best per pair
+        txMap.pairs.forEach(function(pair) {
+            if (pair.best && pair.best.id !== 'succession') {
+                var donorLabel = pair.donor.nom || 'Donateur';
+                var benLabel = pair.ben.prenom || pair.ben.nom || 'Bénéficiaire';
+                lines.push('<strong>' + esc(donorLabel) + ' → ' + esc(benLabel) + ' :</strong> ' +
+                    pair.best.icon + ' ' + esc(pair.best.name) + ' = ' + fmt(pair.best.net) + ' net transmis (' + pair.best.taux_effectif + '% de droits effectifs).');
+            }
+        });
+
+        lines.push('');
+        lines.push('<em style="font-size:.7rem;color:var(--text-muted);">Cette analyse est indicative. Consultez un notaire ou CGP pour valider la stratégie.</em>');
+
+        container.innerHTML = '<div style="padding:22px 24px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+            '<div style="font-size:.85rem;font-weight:700;color:var(--primary-color);"><i class="fas fa-file-alt" style="margin-right:6px;"></i> Synthèse</div>' +
+            '</div>' +
+            '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.8;">' + lines.join('<br>') + '</div>' +
+            '</div>';
+    }
+
+
+    // ================================================================
     // PUBLIC API
     // ================================================================
     return {
         compute: computeTransmissionMap,
         render: renderTransmissionMap,
-        computeChannelsForPair: computeChannelsForPair
+        computeChannelsForPair: computeChannelsForPair,
+        generateSummary: generateNarrativeSummary
     };
 
 })();
