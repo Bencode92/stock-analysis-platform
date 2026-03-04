@@ -991,11 +991,11 @@
             <div class="step-panel" id="step-5">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Cliquez sur un canal pour voir le détail fiscal, les avantages et les risques.</div>
                 
+                <!-- AI NARRATIVE SUMMARY (appears first, above channel cards) -->
+                <div id="ai-narrative-summary" style="display:none;margin-bottom:20px;"></div>
+
                 <!-- TRANSMISSION MAP — résultats par chemin donateur → bénéficiaire -->
                 <div id="transmission-map"></div>
-
-                <!-- AI NARRATIVE SUMMARY -->
-                <div id="ai-narrative-summary" style="display:none;margin-bottom:20px;"></div>
 
                 <!-- PATH OPTIMIZER RESULTS -->
                 <div id="path-results-wrapper" style="display:none;">
@@ -1006,26 +1006,34 @@
                     </div>
                 </div>
 
-                <div class="results-summary" id="results-hero">
+                <div class="results-summary" id="results-hero" style="display:none;">
                     <div class="big-number" id="best-net-amount">—</div>
                     <div class="subtitle">Montant net transmis optimal</div>
                     <div class="saved" id="savings-badge">—</div>
                 </div>
                 <div id="results-warnings"></div>
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-table"></i> Comparaison des scénarios</div>
-                    <div class="comparison-table-wrap">
-                        <table class="comparison-table" id="comparison-table">
-                            <thead><tr id="table-header"></tr></thead>
-                            <tbody id="table-body"></tbody>
-                        </table>
+
+                <!-- Legacy scenarios — collapsible -->
+                <div class="section-card" style="margin-top:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="SD.toggleCollapsible('legacy-scenarios')">
+                        <div class="section-title" style="margin:0;"><i class="fas fa-table"></i> Tableau comparatif des scénarios</div>
+                        <i class="fas fa-chevron-down" id="legacy-scenarios-chevron" style="font-size:.7rem;color:var(--text-muted);transition:transform .3s;"></i>
+                    </div>
+                    <div id="legacy-scenarios" style="display:none;">
+                        <div class="comparison-table-wrap" style="margin-top:12px;">
+                            <table class="comparison-table" id="comparison-table">
+                                <thead><tr id="table-header"></tr></thead>
+                                <tbody id="table-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="chart-container" style="margin-top:12px;">
+                            <div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;"><i class="fas fa-chart-bar"></i> Montant net transmis par scénario</div>
+                            <div class="chart-bar-group" id="chart-bars"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <div class="section-title"><i class="fas fa-chart-bar"></i> Montant net transmis par scénario</div>
-                    <div class="chart-bar-group" id="chart-bars"></div>
-                </div>
-                <div class="strategy-card" id="strategy-card">
+
+                <div class="strategy-card" id="strategy-card" style="display:none;">
                     <h3><i class="fas fa-lightbulb" style="color:var(--accent-amber);"></i> Stratégie recommandée</h3>
                     <div id="strategy-steps"></div>
                     <div style="margin-top:20px;padding:16px;background:rgba(16,185,129,.08);border-radius:10px;text-align:center;">
