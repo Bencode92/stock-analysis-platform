@@ -1,3 +1,13 @@
+function formatLienShort(lien) {
+        var map = {
+            enfant: 'Enfant', petit_enfant: 'Petit-enfant', arriere_petit_enfant: 'Arr. petit-enfant',
+            conjoint_pacs_donation: 'Conjoint', frere_soeur: 'Frère/Sœur', neveu_niece: 'Neveu/Nièce',
+            frere: 'Frère/Sœur', enfant_propre: 'Enfant', parent_propre: 'Parent', cousin: 'Cousin',
+            oncle_tante: 'Oncle/Tante', beau_enfant: 'Beau-enfant', beau_frere: 'Beau-frère',
+            tiers: 'Tiers', aucun: 'Aucun lien'
+        };
+        return map[lien] || lien;
+    }
 /**
  * ================================================================
  * PATH OPTIMIZER — Moteur d'optimisation multi-donateurs
