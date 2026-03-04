@@ -556,8 +556,8 @@ const SD = (() => {
         donationType: 'donation_partage',
         demembrement: false,
         usufruit: 'viager',
-        objectives: { minimiser: true, revenus: false, conjoint: false, vendre: false },
-        vente: { prix: 0, horizon: 5 },
+        obj: { minimiser: true, revenus: false, controle: false, conjoint: false, egalite: false, generation: false, vendre: false },
+        vente: { prixVente: 0, prixAcquisition: 0, dateAcquisition: '', typeBien: 'standard', travaux: 0, horizon: 5 },
         exoLogement: { active: false, objet: 'acquisition_neuf', montant: 0 }
     };
 
@@ -2952,6 +2952,27 @@ const SD = (() => {
             state.exoLogement.objet = el('exo-logement-objet')?.value || 'acquisition_neuf';
             state.exoLogement.montant = Math.min(+el('exo-logement-montant')?.value || 0, FISCAL.exoLogement.maxParDonateur);
         }
+
+        // Objectifs — lus dans state.obj
+        state.obj = {
+            minimiser:  el('obj-minimiser')?.classList.contains('on') || false,
+            revenus:    el('obj-revenus')?.classList.contains('on') || false,
+            controle:   el('obj-controle')?.classList.contains('on') || false,
+            conjoint:   el('obj-conjoint')?.classList.contains('on') || false,
+            egalite:    el('obj-egalite')?.classList.contains('on') || false,
+            generation: el('obj-generation')?.classList.contains('on') || false,
+            vendre:     el('obj-vendre')?.classList.contains('on') || false
+        };
+
+        // Vente / Plus-value
+        state.vente = {
+            prixVente:      +el('prix-vente')?.value || 0,
+            prixAcquisition:+el('prix-acquisition')?.value || 0,
+            dateAcquisition: el('date-acquisition')?.value || '',
+            typeBien:        el('type-bien-vente')?.value || 'standard',
+            travaux:        +el('travaux-vente')?.value || 0,
+            horizon:        +el('horizon-vente')?.value || 5
+        };
     }
 
     function computePatrimoine() {
@@ -3171,6 +3192,101 @@ const SD = (() => {
         return droits;
     }
 
+    /**
+     * computePlusValue — Plus-value immobilière nette
+     * Abattements pour durée de détention (IR + PS distincts)
+     * IR : 6%/an de la 6e à 21e année, 4% la 22e → exo totale après 22 ans
+     * PS : 1,65%/an de la 6e à 21e, 1,60% la 22e, 9%/an de la 23e à 30e → exo après 30 ans
+     * Taux : 19% IR + 17,2% PS = 36,2% (+ surtaxe si PV > 50k)
+     */
+    function computePlusValue(vente) {
+        if (!vente || vente.prixVente <= 0) return null;
+        if (vente.typeBien === 'rp') return { pvBrute: 0, pvNetteIR: 0, pvNettePS: 0, irPV: 0, ps: 0, surtaxe: 0, totalPV: 0, exoneree: true, motif: 'Résidence principale exonérée' };
+
+        const prixVente = vente.prixVente;
+        const prixAchat = vente.prixAcquisition || 0;
+        if (prixAchat <= 0) return null;
+
+        // Durée de détention en années
+        let anneesDetention = 0;
+        if (vente.dateAcquisition) {
+            const dAcq = new Date(vente.dateAcquisition);
+            const now = new Date();
+            anneesDetention = Math.floor((now - dAcq) / (365.25 * 24 * 3600 * 1000));
+        }
+        anneesDetention = Math.max(0, anneesDetention + (vente.horizon || 0));
+
+        // Frais d'acquisition forfaitaires (7,5%) si pas de justificatifs
+        const fraisAcquisition = Math.round(prixAchat * 0.075);
+
+        // Travaux : forfait 15% si détention > 5 ans, sinon montant réel
+        let travaux = vente.travaux || 0;
+        if (travaux <= 0 && anneesDetention >= 5) {
+            travaux = Math.round(prixAchat * 0.15);
+        }
+
+        const prixRevient = prixAchat + fraisAcquisition + travaux;
+        const pvBrute = Math.max(0, prixVente - prixRevient);
+
+        if (pvBrute <= 0) return { pvBrute: 0, pvNetteIR: 0, pvNettePS: 0, irPV: 0, ps: 0, surtaxe: 0, totalPV: 0, exoneree: false, motif: 'Pas de plus-value' };
+
+        // Abattement IR (exo totale après 22 ans de détention)
+        let abatIR = 0;
+        if (anneesDetention >= 22) {
+            abatIR = 1;
+        } else if (anneesDetention >= 6) {
+            abatIR = (anneesDetention - 5) * 0.06;
+            if (anneesDetention >= 22) abatIR = 1; // 6%×16 = 96% + 4% = 100%
+            // Correction: 6e à 21e = 16 ans × 6% = 96%, 22e = 4% → total 100%
+            const full = Math.min(anneesDetention - 5, 16) * 0.06;
+            const last = anneesDetention >= 22 ? 0.04 : 0;
+            abatIR = Math.min(1, full + last);
+        }
+
+        // Abattement PS (exo totale après 30 ans)
+        let abatPS = 0;
+        if (anneesDetention >= 30) {
+            abatPS = 1;
+        } else if (anneesDetention >= 6) {
+            // 6e à 21e : 1,65%/an (16 ans max) = 26,4%
+            const part1 = Math.min(anneesDetention - 5, 16) * 0.0165;
+            // 22e année : 1,60%
+            const part2 = anneesDetention >= 22 ? 0.016 : 0;
+            // 23e à 30e : 9%/an (8 ans max)
+            const part3 = anneesDetention >= 23 ? Math.min(anneesDetention - 22, 8) * 0.09 : 0;
+            abatPS = Math.min(1, part1 + part2 + part3);
+        }
+
+        const pvNetteIR = Math.round(pvBrute * (1 - abatIR));
+        const pvNettePS = Math.round(pvBrute * (1 - abatPS));
+
+        const irPV = Math.round(pvNetteIR * 0.19);
+        const ps = Math.round(pvNettePS * 0.172);
+
+        // Surtaxe si PV nette IR > 50 000 €
+        let surtaxe = 0;
+        if (pvNetteIR > 260000) surtaxe = Math.round(pvNetteIR * 0.06);
+        else if (pvNetteIR > 250000) surtaxe = Math.round(pvNetteIR * 0.05 - 3000);
+        else if (pvNetteIR > 210000) surtaxe = Math.round(pvNetteIR * 0.04 - 5500);
+        else if (pvNetteIR > 200000) surtaxe = Math.round(pvNetteIR * 0.03 - 3600);
+        else if (pvNetteIR > 160000) surtaxe = Math.round(pvNetteIR * 0.03 - 6600);
+        else if (pvNetteIR > 150000) surtaxe = Math.round(pvNetteIR * 0.02 - 3200);
+        else if (pvNetteIR > 110000) surtaxe = Math.round(pvNetteIR * 0.02 - 5200);
+        else if (pvNetteIR > 100000) surtaxe = Math.round(pvNetteIR * 0.02 - 7200);
+        else if (pvNetteIR > 60000) surtaxe = Math.round(pvNetteIR * 0.02 - 8400);
+        else if (pvNetteIR > 50000) surtaxe = Math.round(pvNetteIR * 0.02 - 9600);
+
+        const totalPV = irPV + ps + Math.max(0, surtaxe);
+
+        return {
+            pvBrute, pvNetteIR, pvNettePS, abatIR: Math.round(abatIR * 100),
+            abatPS: Math.round(abatPS * 100), irPV, ps, surtaxe: Math.max(0, surtaxe),
+            totalPV, anneesDetention, prixRevient,
+            exoneree: abatIR >= 1 && abatPS >= 1,
+            motif: abatIR >= 1 && abatPS >= 1 ? 'Exonérée (détention > 30 ans)' : null
+        };
+    }
+
     function calcDroitsForBens(montant, bens, nbDonors, isSuccession) {
         if (montant <= 0 || bens.length === 0) return 0;
         let total = 0;
@@ -3203,44 +3319,62 @@ const SD = (() => {
             || (state.detailMode === 'simplifie' ? pat.financier * 0.5 : 0);
 
         const scenarios = [];
+        const obj = state.obj || {};
 
-        // 1. Succession brute
+        // === HELPER: tag scenarios by objective relevance ===
+        function tagScenario(s, tags, why) {
+            s.tags = tags || [];
+            s.why = why || '';
+            // Score: +1 for each active objective matched
+            s.objScore = s.tags.reduce((score, tag) => score + (obj[tag] ? 1 : 0), 0);
+            return s;
+        }
+
+        // ────────────────────────────────────────────────────────
+        // 1. STATU QUO — Succession brute si on ne fait rien
+        // ────────────────────────────────────────────────────────
         const droitsSucc = calcDroitsForBens(totalNet, bens, nbDonors, true);
         const fraisSucc = Math.round(totalNet * FISCAL.fraisNotaireSuccPct);
-        scenarios.push({
+        scenarios.push(tagScenario({
             name: 'Succession\nsans optimisation', short: 'Succession brute',
             actifTransmis: totalNet, droits: droitsSucc, frais: fraisSucc, fraisAn: 0,
-            net: totalNet - droitsSucc - fraisSucc
-        });
+            net: totalNet - droitsSucc - fraisSucc,
+            isBaseline: true
+        }, [], 'Statu quo : si rien n\'est fait, voici les droits de succession dus au décès. C\'est la référence pour mesurer les économies.'));
 
-        // 2. Donation PP
+        // ────────────────────────────────────────────────────────
+        // 2. Donation directe en pleine propriété
+        // ────────────────────────────────────────────────────────
         let droitsDonPP = calcDroitsForBens(totalNet, bens, nbDonors, false);
-        // FIX: appliquer réduction art. 790 CGI si donateur < 70 ans
         droitsDonPP = applyReductionAge(droitsDonPP, donorAge, false);
         const fraisDonPP = Math.round(totalNet * FISCAL.fraisNotairePct);
-        scenarios.push({
+        scenarios.push(tagScenario({
             name: 'Donation directe\npleine propriété', short: 'Donation PP',
             actifTransmis: totalNet, droits: droitsDonPP, frais: fraisDonPP, fraisAn: 0,
             net: totalNet - droitsDonPP - fraisDonPP
-        });
+        }, ['minimiser', 'egalite'],
+        `Donation directe : transfert immédiat de la PP. Abattement ${fmt(FISCAL.abattements.enfant)}/enfant/parent, renouvelable tous les 15 ans.${donorAge < 70 ? ' Réduction 50% (donateur < 70 ans, art. 790 CGI).' : ''} Favorise l\'égalité si donation-partage.`));
 
+        // ────────────────────────────────────────────────────────
         // 3. Donation démembrée (NP) sans structure
+        // ────────────────────────────────────────────────────────
         const npRatio = getNPRatio(donorAge);
         const valeurNP = Math.round(totalNet * npRatio);
         const droitsNP = calcDroitsForBens(valeurNP, bens, nbDonors, false);
         const fraisNP = Math.round(valeurNP * FISCAL.fraisNotairePct);
-        scenarios.push({
+        scenarios.push(tagScenario({
             name: `Donation NP (${Math.round(npRatio * 100)}%)\nsans structure`, short: `Donation NP ${Math.round(npRatio * 100)}%`,
             actifTransmis: totalNet, droits: droitsNP, frais: fraisNP, fraisAn: 0,
             net: totalNet - droitsNP - fraisNP,
             note: `NP = ${Math.round(npRatio * 100)}% (donateur ${donorAge} ans)`
-        });
+        }, ['minimiser', 'revenus', 'controle'],
+        `Démembrement : vous ne transmettez que la NP (${Math.round(npRatio * 100)}% de la valeur, art. 669) et conservez l'usufruit (revenus + usage). Au décès, la NP se transforme en PP sans droits supplémentaires. Double avantage : base taxable réduite + conservation des revenus.`));
 
+        // ────────────────────────────────────────────────────────
         // 4. Assurance-vie (990 I + 757 B)
+        // ────────────────────────────────────────────────────────
         if (avTotal > 0 || pat.financier > 50000) {
             const avCap = avTotal || Math.min(pat.financier, FISCAL.av990I.abattement * nbBens * 1.2);
-
-            // Use v2 if AV beneficiaries are defined, else fallback to legacy
             const avItems = state.finance.filter(f => f.type === 'assurance_vie');
             const hasRealBens = avItems.some(f => f.avBeneficiaires && f.avBeneficiaires.length > 0);
 
@@ -3256,48 +3390,56 @@ const SD = (() => {
 
             const reste = totalNet - avCap;
             const droitsReste = reste > 0 ? calcDroitsForBens(reste, bens, nbDonors, true) : 0;
-            scenarios.push({
+            scenarios.push(tagScenario({
                 name: 'Assurance-vie\n(art. 990 I + 757 B)', short: 'Assurance-vie',
                 actifTransmis: totalNet, droits: taxAV + tax757B + droitsReste,
                 frais: Math.round(avCap * 0.005), fraisAn: Math.round(avCap * 0.007),
                 net: totalNet - taxAV - tax757B - droitsReste - Math.round(avCap * 0.005),
                 note: `${fmt(avCap)} en AV · abat. ${fmt(FISCAL.av990I.abattement)}/bénéf. (990 I)${tax757B > 0 ? ' · 757 B: ' + fmt(tax757B) : ''}`
-            });
+            }, ['minimiser', 'generation'],
+            `Assurance-vie : hors succession, abattement de ${fmt(FISCAL.av990I.abattement)} par bénéficiaire (art. 990 I) pour les primes versées avant 70 ans. Le bénéficiaire est librement désigné — idéal pour transmettre à un petit-enfant ou un tiers sans passer par la succession. Après 70 ans : abattement global ${fmt(FISCAL.av757B.abattementGlobal)} seulement (art. 757 B), mais les intérêts sont exonérés.`));
         }
 
-        // 5. AV clause démembrée
+        // ────────────────────────────────────────────────────────
+        // 5. AV clause démembrée + quasi-usufruit
+        // ────────────────────────────────────────────────────────
         if ((avTotal > 0 || pat.financier > 100000) && state.demembrement) {
             const avCap = avTotal || Math.min(pat.financier, FISCAL.av990I.abattement * nbBens * 1.5);
             const taxAV = computeAV990I(avCap / nbBens, nbBens);
-            const reste = Math.max(0, totalNet - avCap - avCap); // créance de restitution
+            const reste = Math.max(0, totalNet - avCap - avCap);
             const droitsReste = calcDroitsForBens(reste, bens, nbDonors, true);
-            scenarios.push({
+            scenarios.push(tagScenario({
                 name: 'AV démembrée\n+ quasi-usufruit', short: 'AV + quasi-US',
                 actifTransmis: totalNet, droits: taxAV + droitsReste,
                 frais: Math.round(avCap * 0.005) + 800, fraisAn: Math.round(avCap * 0.007),
                 net: totalNet - taxAV - droitsReste - Math.round(avCap * 0.005) - 800,
                 note: 'Créance de restitution déductible'
-            });
+            }, ['minimiser', 'revenus', 'conjoint'],
+            'Clause AV démembrée : le conjoint reçoit le quasi-usufruit (capital disponible), les enfants la NP. Au décès du conjoint, créance de restitution déductible de l\'actif successoral → réduit les droits des enfants.'));
         }
 
-        // 5bis. Exonération 790 A bis (logement neuf/réno) — temporaire jusqu'au 31/12/2026
+        // ────────────────────────────────────────────────────────
+        // 5bis. Exonération 790 A bis (logement neuf/réno) — temporaire
+        // ────────────────────────────────────────────────────────
         if (state.exoLogement.active && state.exoLogement.montant > 0) {
             const exoMontant = Math.min(state.exoLogement.montant, FISCAL.exoLogement.maxParDonateur) * nbDonors;
-            // Cumul : abat enfant 100k + don familial 31 865 + exo 790 A bis 100k = 231 865 / parent / enfant
             const abatCumul = (FISCAL.abattements.enfant + FISCAL.abattements.don_familial_argent + FISCAL.exoLogement.maxParDonateur) * nbDonors;
             const resteDon = Math.max(0, totalNet - exoMontant);
             let droitsDonExo = calcDroitsForBens(Math.max(0, resteDon - (FISCAL.abattements.enfant + FISCAL.abattements.don_familial_argent) * nbDonors * nbBens / Math.max(1, nbBens)), bens, nbDonors, false);
             droitsDonExo = applyReductionAge(droitsDonExo, donorAge, false);
             const fraisExo = Math.round(resteDon * FISCAL.fraisNotairePct);
-            scenarios.push({
+            scenarios.push(tagScenario({
                 name: 'Don 790 A bis\n⏰ logement neuf/réno', short: '⚠️ Exo. logement 2026',
                 actifTransmis: totalNet, droits: droitsDonExo, frais: fraisExo, fraisAn: 0,
                 net: totalNet - droitsDonExo - fraisExo,
                 note: `${fmt(exoMontant)} exonérés (790 A bis) · Abat. cumulé max ${fmt(abatCumul)}/enfant`
-            });
+            }, ['minimiser'],
+            `⏰ TEMPORAIRE (expire 31/12/2026) : exonération de ${fmt(FISCAL.exoLogement.maxParDonateur)}/donateur pour achat RP neuve ou travaux réno. Cumulable avec abattement enfant + don familial = ${fmt(abatCumul)} sans droits par parent/enfant.`));
         }
 
+        // ────────────────────────────────────────────────────────
         // 6. SCI IR + donation NP parts
+        // ────────────────────────────────────────────────────────
         if (pat.immo > 100000) {
             const decote = 0.15;
             const valParts = pat.immo * (1 - decote);
@@ -3305,16 +3447,19 @@ const SD = (() => {
             const droitsSCI = calcDroitsForBens(valNPParts, bens, nbDonors, false);
             const droitsFin = pat.financier > 0 ? calcDroitsForBens(pat.financier, bens, nbDonors, true) : 0;
             const fraisSCI = Math.round(valNPParts * FISCAL.fraisNotairePct) + FISCAL.fraisStructure.creation;
-            scenarios.push({
+            scenarios.push(tagScenario({
                 name: 'SCI IR + donation\nNP parts (−15%)', short: 'SCI IR + NP',
                 actifTransmis: totalNet, droits: droitsSCI + droitsFin,
                 frais: fraisSCI, fraisAn: FISCAL.fraisStructure.sci_ir,
                 net: totalNet - droitsSCI - droitsFin - fraisSCI,
                 note: `Décote 15% · NP ${Math.round(npRatio * 100)}%`
-            });
+            }, ['minimiser', 'revenus', 'controle'],
+            `SCI IR : apport de l'immo à une SCI, puis donation de la NP des parts. Double levier : décote de 15% sur la valeur des parts (illiquidité) + démembrement NP (${Math.round(npRatio * 100)}%). Le donateur reste gérant = contrôle total. Frais de création ~${fmt(FISCAL.fraisStructure.creation)}.`));
         }
 
+        // ────────────────────────────────────────────────────────
         // 7. Contrat de capitalisation démembré
+        // ────────────────────────────────────────────────────────
         if (pat.financier > 150000) {
             const capiItems = state.finance.filter(f => f.type === 'contrat_capi');
             const capiTotal = capiItems.reduce((s, f) => s + (f.valeur || 0), 0);
@@ -3324,7 +3469,6 @@ const SD = (() => {
                 const hasNPBens = capiItems.some(f => f.npBeneficiaires && f.npBeneficiaires.length > 0 && f.demembrement === 'np_donation');
 
                 if (hasNPBens) {
-                    // Use real NP beneficiaries and computeCapiDemembre
                     let droitsCapiDem = 0;
                     let fraisCapiDem = 0;
                     let totalCreance = 0;
@@ -3334,37 +3478,108 @@ const SD = (() => {
                         fraisCapiDem += result.fraisNotaire;
                         totalCreance += result.creanceRestitution;
                     });
-                    // Réduction art. 790 CGI pour donation NP: pas applicable (NP)
-                    // Reste du patrimoine passe en succession, réduit par la créance de restitution
                     const reste = totalNet - capiOrEstimate;
                     const actifNetReduit = Math.max(0, reste - totalCreance);
                     const droitsResteSucc = actifNetReduit > 0 ? calcDroitsForBens(actifNetReduit, bens, nbDonors, true) : 0;
-                    scenarios.push({
+                    scenarios.push(tagScenario({
                         name: 'Capi démembré\n+ quasi-usufruit', short: 'Capi NP + quasi-US',
                         actifTransmis: totalNet, droits: droitsCapiDem + droitsResteSucc,
                         frais: fraisCapiDem, fraisAn: Math.round(capiOrEstimate * 0.007),
                         net: totalNet - droitsCapiDem - droitsResteSucc - fraisCapiDem,
                         note: `NP ${Math.round(npRatio * 100)}% · antériorité conservée${totalCreance > 0 ? ' · créance ' + fmt(totalCreance) + ' déductible' : ''}`
-                    });
+                    }, ['minimiser', 'revenus', 'controle'],
+                    `Contrat de capitalisation démembré : donation de la NP du contrat, conservation de l'US. Avantage unique : l'antériorité fiscale est conservée (pas de purge des PV). ${totalCreance > 0 ? 'Quasi-usufruit = créance de restitution de ' + fmt(totalCreance) + ' déductible au décès.' : ''}`));
                 } else {
-                    // Fallback: estimation sans bénéficiaires NP spécifiques
                     const valNPCapi = Math.round(capiOrEstimate * npRatio);
                     const droitsCapi = calcDroitsForBens(valNPCapi, bens, nbDonors, false);
                     const droitsImmo = pat.immo > 0 ? calcDroitsForBens(pat.immo, bens, nbDonors, true) : 0;
                     const fraisCapi = Math.round(valNPCapi * FISCAL.fraisNotairePct);
-                    scenarios.push({
+                    scenarios.push(tagScenario({
                         name: 'Contrat capi.\ndémembré', short: 'Capi. démembré',
                         actifTransmis: totalNet, droits: droitsCapi + droitsImmo,
                         frais: fraisCapi, fraisAn: Math.round(capiOrEstimate * 0.007),
                         net: totalNet - droitsCapi - droitsImmo - fraisCapi,
                         note: `NP ${Math.round(npRatio * 100)}% · antériorité conservée`
-                    });
+                    }, ['minimiser', 'revenus', 'controle'],
+                    `Contrat de capitalisation démembré : même principe que l'AV mais dans la succession. L'antériorité fiscale est conservée. Le souscripteur garde le contrôle comme usufruitier.`));
                 }
             }
         }
 
-        // Sort best first
-        scenarios.sort((a, b) => b.net - a.net);
+        // ────────────────────────────────────────────────────────
+        // 8. Plus-value immobilière (si objectif Vendre actif)
+        // ────────────────────────────────────────────────────────
+        if (obj.vendre && state.vente.prixVente > 0) {
+            const pv = computePlusValue(state.vente);
+            if (pv) {
+                // Preview dans l'étape 4
+                const pvPreview = el('pv-preview');
+                if (pvPreview) {
+                    pvPreview.style.display = '';
+                    if (pv.exoneree) {
+                        pvPreview.innerHTML = '<div class="warning-box success"><i class="fas fa-check-circle"></i> <span><strong>Exonération :</strong> ' + esc(pv.motif) + '</span></div>';
+                    } else {
+                        pvPreview.innerHTML = `<div class="warning-box info">
+                            <i class="fas fa-calculator"></i>
+                            <span>
+                                <strong>Estimation plus-value :</strong><br>
+                                PV brute : ${fmt(pv.pvBrute)} · Prix de revient : ${fmt(pv.prixRevient)}<br>
+                                Détention : ${pv.anneesDetention} ans · Abat. IR : ${pv.abatIR}% · Abat. PS : ${pv.abatPS}%<br>
+                                <strong>IR (19%) : ${fmt(pv.irPV)}</strong> · <strong>PS (17,2%) : ${fmt(pv.ps)}</strong>${pv.surtaxe > 0 ? ' · Surtaxe : ' + fmt(pv.surtaxe) : ''}<br>
+                                <span style="font-size:.9rem;font-weight:700;color:var(--accent-coral);">Total PV à payer : ${fmt(pv.totalPV)}</span> · <span style="color:var(--accent-green);">Net vendeur : ${fmt(state.vente.prixVente - pv.totalPV)}</span>
+                            </span>
+                        </div>`;
+                    }
+                }
+
+                // Scénario : vendre puis donner le produit net
+                if (!pv.exoneree && pv.totalPV > 0) {
+                    const produitNet = state.vente.prixVente - pv.totalPV;
+                    const droitsDonVente = calcDroitsForBens(produitNet, bens, nbDonors, false);
+                    const venteApportPatri = totalNet - (pat.immo || state.vente.prixVente) + produitNet;
+                    scenarios.push(tagScenario({
+                        name: 'Vendre puis\ndonner le produit', short: 'Vente + donation',
+                        actifTransmis: venteApportPatri, droits: droitsDonVente + pv.totalPV,
+                        frais: Math.round(produitNet * FISCAL.fraisNotairePct), fraisAn: 0,
+                        net: venteApportPatri - droitsDonVente - Math.round(produitNet * FISCAL.fraisNotairePct),
+                        note: `PV nette : ${fmt(pv.totalPV)} (IR ${fmt(pv.irPV)} + PS ${fmt(pv.ps)}) · Net vendeur : ${fmt(produitNet)}`
+                    }, ['vendre', 'minimiser'],
+                    `Vendre d'abord, puis donner le produit net. PV imposable : ${fmt(pv.pvBrute)} après ${pv.anneesDetention} ans de détention (abat. IR ${pv.abatIR}%, PS ${pv.abatPS}%). Alternative : donner avant de vendre pour purger la PV (le donataire vend ensuite → PV = 0 si vente rapide au prix de donation).`));
+
+                    // Scénario alternatif : donner AVANT de vendre (purge PV)
+                    const droitsDonAvant = calcDroitsForBens(state.vente.prixVente, bens, nbDonors, false);
+                    const droitsDonAvantRed = applyReductionAge(droitsDonAvant, donorAge, false);
+                    scenarios.push(tagScenario({
+                        name: 'Donner puis\nvendre (purge PV)', short: 'Donation + vente',
+                        actifTransmis: totalNet, droits: droitsDonAvantRed,
+                        frais: Math.round(state.vente.prixVente * FISCAL.fraisNotairePct), fraisAn: 0,
+                        net: totalNet - droitsDonAvantRed - Math.round(state.vente.prixVente * FISCAL.fraisNotairePct),
+                        note: `PV purgée : économie de ${fmt(pv.totalPV)} · Donation au prix de marché`
+                    }, ['vendre', 'minimiser'],
+                    `Donner le bien AVANT de vendre : la donation fixe un nouveau prix d'acquisition = valeur vénale. Si le donataire vend rapidement au même prix → PV = 0, économie de ${fmt(pv.totalPV)}. ⚠️ L'administration peut requalifier si vente < 2 ans (abus de droit).`));
+                }
+            }
+        }
+
+        // ────────────────────────────────────────────────────────
+        // SCORING : bonus objectifs + tri
+        // ────────────────────────────────────────────────────────
+        const activeObjCount = Object.values(obj).filter(Boolean).length;
+        if (activeObjCount > 0) {
+            // Tri pondéré : net fiscal + bonus pour chaque objectif matché
+            // Le bonus est proportionnel à l'écart max entre scénarios
+            const nets = scenarios.map(s => s.net);
+            const spread = Math.max(1, Math.max(...nets) - Math.min(...nets));
+            const bonusPerObj = spread * 0.08; // 8% de l'écart par objectif matché
+
+            scenarios.forEach(s => {
+                s.scoredNet = s.net + (s.objScore || 0) * bonusPerObj;
+            });
+            scenarios.sort((a, b) => b.scoredNet - a.scoredNet);
+        } else {
+            scenarios.forEach(s => { s.scoredNet = s.net; });
+            scenarios.sort((a, b) => b.net - a.net);
+        }
         renderResults(scenarios, pat);
 
         // Path optimizer — multi-donateurs
@@ -3424,18 +3639,61 @@ const SD = (() => {
             `<td class="${i === 0 ? 'best-col' : ''}">${pat.actifNet > 0 ? Math.round(s.net / pat.actifNet * 100) + '%' : '—'}</td>`
         ).join('')}</tr>`;
 
-        // Bar chart
+        // Bar chart with objective badges
         const maxNet = Math.max(...scenarios.map(s => s.net));
+        const objLabels = {
+            minimiser: '💰 Min. droits', revenus: '📊 Revenus', controle: '🔒 Contrôle',
+            conjoint: '💍 Conjoint', egalite: '⚖️ Égalité', generation: '👶 Génération', vendre: '🏷️ Vente'
+        };
+        const activeObjs = Object.entries(state.obj || {}).filter(([k,v]) => v).map(([k]) => k);
+
         el('chart-bars').innerHTML = scenarios.map((s, i) => {
             const pct = maxNet > 0 ? Math.round(s.net / maxNet * 100) : 0;
             const cls = i === 0 ? 'best' : (i >= scenarios.length - 1 ? 'worst' : (i === 1 ? 'neutral' : 'mid'));
+            // Objective match badges
+            const matchBadges = (s.tags || []).filter(t => activeObjs.includes(t))
+                .map(t => `<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(16,185,129,.12);color:var(--accent-green);margin-left:4px;">${objLabels[t] || t}</span>`).join('');
+            const baselineBadge = s.isBaseline ? '<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(255,107,107,.12);color:var(--accent-coral);margin-left:4px;">📌 Référence</span>' : '';
             return `<div class="chart-bar-row">
-                <div class="chart-bar-label">${s.short}</div>
+                <div class="chart-bar-label">${s.short}${baselineBadge}${matchBadges}</div>
                 <div class="chart-bar-track">
                     <div class="chart-bar-fill ${cls}" style="width:${pct}%;">${fmt(s.net)}</div>
                 </div>
             </div>`;
         }).join('');
+
+        // === WHY SECTION — explain each scenario ===
+        let whyHtml = '';
+        scenarios.forEach((s, i) => {
+            if (!s.why) return;
+            const baseline = scenarios.find(ss => ss.isBaseline);
+            const savings = baseline ? s.net - baseline.net : 0;
+            const savingsTag = savings > 0 ? `<span style="color:var(--accent-green);font-weight:700;">+${fmt(savings)} vs statu quo</span>` : (savings < 0 ? `<span style="color:var(--accent-coral);font-weight:600;">${fmt(savings)} vs statu quo</span>` : '');
+            const matchBadges = (s.tags || []).filter(t => activeObjs.includes(t))
+                .map(t => `<span style="font-size:.6rem;padding:2px 6px;border-radius:4px;background:rgba(16,185,129,.1);color:var(--accent-green);">${objLabels[t]}</span>`).join(' ');
+            const isBest = i === 0;
+
+            whyHtml += `<div style="padding:12px 16px;border-radius:10px;margin-bottom:8px;background:${isBest ? 'rgba(16,185,129,.06)' : 'rgba(198,134,66,.03)'};border:1px solid ${isBest ? 'rgba(16,185,129,.15)' : 'rgba(198,134,66,.06)'};">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:.82rem;font-weight:700;color:${isBest ? 'var(--accent-green)' : 'var(--text-primary)'};">${isBest ? '🏆 ' : ''}${esc(s.short)}</span>
+                    <span style="font-size:.78rem;font-family:'JetBrains Mono',monospace;">${savingsTag}</span>
+                </div>
+                <div style="font-size:.75rem;color:var(--text-secondary);line-height:1.6;">${s.why}</div>
+                ${matchBadges ? '<div style="margin-top:6px;">' + matchBadges + '</div>' : ''}
+                ${s.note ? '<div style="font-size:.65rem;color:var(--text-muted);margin-top:4px;">📝 ' + esc(s.note) + '</div>' : ''}
+            </div>`;
+        });
+
+        // Insert into a container — check if it exists, else create it
+        let whyContainer = el('scenario-why-section');
+        if (!whyContainer) {
+            const chartEl = el('chart-bars')?.closest('.chart-container');
+            if (chartEl) {
+                chartEl.insertAdjacentHTML('afterend', '<div class="section-card" id="scenario-why-section"><div class="section-title"><i class="fas fa-question-circle"></i> Pourquoi ces scénarios ?</div><div id="scenario-why-content"></div></div>');
+            }
+        }
+        const whyContent = el('scenario-why-content');
+        if (whyContent) whyContent.innerHTML = whyHtml;
 
         // Strategy
         renderStrategy(scenarios, pat);
