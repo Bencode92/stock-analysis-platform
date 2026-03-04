@@ -1020,11 +1020,16 @@ def build_raw_universe(
             else:
                 is_bond = "bond" in str(it.get("fund_type", "")).lower()
             row = {
-                "id": it.get("isin") or it.get("ticker") or it.get("symbol") or it.get("name") or f"ETF_{len(etf_rows)+1}",
+                # === FIX v2.3.1: Ajouter etfsymbol dans la chaîne de résolution ===
+                # preset_etf utilise "etfsymbol" comme clé primaire des ETFs.
+                # Sans cette propagation, convert_universe_to_assets perd le ticker
+                # → mapping failure silencieux dans optimizer (n=10 au lieu de 30).
+                "id": it.get("isin") or it.get("ticker") or it.get("symbol") or it.get("etfsymbol") or it.get("name") or f"ETF_{len(etf_rows)+1}",
                 "name": it.get("name"),
-                # === V3.1 FIX: Ajout ticker/symbol pour résolution API ===
-                "ticker": it.get("ticker") or it.get("symbol"),
-                "symbol": it.get("symbol") or it.get("ticker"),
+                # === V3.1 FIX + v2.3.1: Ajout ticker/symbol/etfsymbol ===
+                "ticker": it.get("ticker") or it.get("symbol") or it.get("etfsymbol"),
+                "symbol": it.get("symbol") or it.get("ticker") or it.get("etfsymbol"),
+                "etfsymbol": it.get("etfsymbol"),  # FIX v2.3.1: Propager pour optimizer
                 # Performance
                 "perf_24h": it.get("daily_change_pct"),
                 "ytd": it.get("ytd_return_pct") or it.get("ytd"),
@@ -1223,11 +1228,13 @@ def build_raw_universe_from_files(
         rows = []
         for _, r in df.iterrows():
             rows.append({
-                "id": r.get("isin") or r.get("ticker") or r.get("symbol") or r.get("name"),
+                # === FIX v2.3.1: Ajouter etfsymbol dans la chaîne de résolution ===
+                "id": r.get("isin") or r.get("ticker") or r.get("symbol") or r.get("etfsymbol") or r.get("name"),
                 "name": str(r.get("name", "")),
-                # === V3.1 FIX: Ajout ticker/symbol pour résolution API ===
-                "ticker": r.get("ticker") or r.get("symbol"),
-                "symbol": r.get("symbol") or r.get("ticker"),
+                # === V3.1 FIX + v2.3.1: Ajout ticker/symbol/etfsymbol ===
+                "ticker": r.get("ticker") or r.get("symbol") or r.get("etfsymbol"),
+                "symbol": r.get("symbol") or r.get("ticker") or r.get("etfsymbol"),
+                "etfsymbol": r.get("etfsymbol"),  # FIX v2.3.1: Propager
                 # Performance
                 "perf_24h": r.get("daily_change_pct"),
                 "ytd": r.get("ytd_return_pct"),
