@@ -376,16 +376,6 @@ const TransmissionEngine = (() => {
         var st = state();
         var html = '';
 
-        // ── HERO SUMMARY ──────────────────────────────────────
-        var statQuoDroits = pat.actifNet - txMap.totalStatuQuo;
-        var eco = txMap.totalBest - txMap.totalStatuQuo;
-        html += '<div style="padding:20px;border-radius:14px;background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(198,134,66,.06));border:1px solid rgba(16,185,129,.15);margin-bottom:20px;text-align:center;">';
-        html += '<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px;">Si on ne fait rien → droits estimés : <strong style="color:var(--accent-coral);">' + fmt(statQuoDroits > 0 ? statQuoDroits : 0) + '</strong></div>';
-        html += '<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px;">Avec optimisation → net transmis optimal :</div>';
-        html += '<div style="font-size:1.8rem;font-weight:800;color:var(--accent-green);font-variant-numeric:tabular-nums;">' + fmt(txMap.totalBest) + '</div>';
-        if (eco > 0) html += '<div style="font-size:.85rem;color:var(--accent-green);font-weight:600;margin-top:4px;">💰 ' + fmt(eco) + ' économisés vs statu quo</div>';
-        html += '</div>';
-
         // ── PER PAIR CARDS ────────────────────────────────────
         txMap.pairs.forEach(function(pair) {
             var donorLabel = esc(pair.donor.nom || 'Donateur');
@@ -515,40 +505,42 @@ const TransmissionEngine = (() => {
 
 
     // ================================================================
-    // 4. AI SUMMARY — Résumé narratif via Claude Sonnet (Anthropic API)
+    // 4. AI SUMMARY — Synthèse détaillée via Claude Opus (Anthropic API)
     // ================================================================
 
     /**
-     * generateNarrativeSummary — Envoie les résultats structurés à Claude
-     * et affiche un résumé clair, personnalisé, en français.
+     * generateNarrativeSummary — Envoie TOUT le contexte à Claude Opus
+     * et affiche une analyse complète et personnalisée en français.
      */
     async function generateNarrativeSummary(txMap, pat) {
         var container = el('ai-narrative-summary');
         if (!container) return;
 
-        // Show loading state
+        // Show loading state FIRST (summary is above channel cards)
         container.style.display = '';
-        container.innerHTML = '<div style="padding:20px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);text-align:center;">' +
-            '<div style="font-size:.82rem;color:var(--primary-color);margin-bottom:8px;"><i class="fas fa-robot"></i> Analyse en cours...</div>' +
-            '<div style="font-size:.72rem;color:var(--text-muted);">Claude rédige votre synthèse personnalisée</div>' +
-            '<div style="margin-top:12px;"><div class="loading-dots" style="display:inline-flex;gap:4px;">' +
-            '<span style="width:6px;height:6px;border-radius:50%;background:var(--primary-color);animation:pulse 1.2s ease-in-out infinite;"></span>' +
-            '<span style="width:6px;height:6px;border-radius:50%;background:var(--primary-color);animation:pulse 1.2s ease-in-out .2s infinite;"></span>' +
-            '<span style="width:6px;height:6px;border-radius:50%;background:var(--primary-color);animation:pulse 1.2s ease-in-out .4s infinite;"></span>' +
+        container.innerHTML = '<div style="padding:24px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);">' +
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
+            '<div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary-color),#d4a574);display:flex;align-items:center;justify-content:center;"><i class="fas fa-brain" style="color:#1a1a2e;font-size:.9rem;"></i></div>' +
+            '<div><div style="font-size:.88rem;font-weight:700;color:var(--primary-color);">Analyse patrimoniale en cours</div>' +
+            '<div style="font-size:.68rem;color:var(--text-muted);">Claude Opus rédige votre synthèse détaillée...</div></div></div>' +
+            '<div style="display:flex;justify-content:center;padding:12px 0;"><div style="display:inline-flex;gap:6px;">' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:var(--primary-color);animation:pulse 1.4s ease-in-out infinite;"></span>' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:var(--primary-color);animation:pulse 1.4s ease-in-out .25s infinite;"></span>' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:var(--primary-color);animation:pulse 1.4s ease-in-out .5s infinite;"></span>' +
             '</div></div></div>';
 
-        // Build structured context for the AI
+        // Build comprehensive context
         var st = state();
-        var contextData = buildAIContext(txMap, pat, st);
+        var contextData = buildFullContext(txMap, pat, st);
 
         try {
             var response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 1000,
-                    system: buildSystemPrompt(),
+                    model: 'claude-opus-4-6',
+                    max_tokens: 3000,
+                    system: buildDetailedSystemPrompt(),
                     messages: [
                         { role: 'user', content: contextData }
                     ]
@@ -563,7 +555,7 @@ const TransmissionEngine = (() => {
                     .map(function(c) { return c.text; })
                     .join('\n');
 
-                renderNarrativeSummary(container, text, txMap);
+                renderDetailedSummary(container, text, txMap, pat);
             } else {
                 renderFallbackSummary(container, txMap, pat);
             }
@@ -573,99 +565,378 @@ const TransmissionEngine = (() => {
         }
     }
 
-    function buildSystemPrompt() {
-        return "Tu es un conseiller en gestion de patrimoine français expérimenté. " +
-            "Tu rédiges une synthèse claire et actionnable des résultats d'optimisation successorale et patrimoniale. " +
-            "Règles strictes :\n" +
-            "- Français courant, pas de jargon inutile, mais les termes techniques quand nécessaire (avec explication)\n" +
-            "- Structure : 1) Situation résumée (2 lignes max) 2) Statu quo chiffré 3) Stratégie recommandée par chemin donateur→bénéficiaire 4) Points de vigilance 5) Prochaines étapes concrètes\n" +
-            "- Mentionne les articles du CGI pertinents entre parenthèses\n" +
-            "- Mentionne les RISQUES et LIMITES (rappel fiscal 15 ans, abus de droit, primes exagérées)\n" +
-            "- Sois direct et actionnable : 'Faites X avant Y' plutôt que 'Il serait envisageable de considérer...'\n" +
-            "- Utilise des montants précis, pas d'arrondis vagues\n" +
-            "- Si un donateur a ≥ 70 ans, alerte sur l'urgence AV 990I vs 757B\n" +
-            "- Maximum 400 mots. Pas de bullet points excessifs. Prose lisible.\n" +
-            "- Termine par un disclaimer : 'Cette analyse est indicative. Consultez un notaire ou CGP pour valider la stratégie.'";
+    function buildDetailedSystemPrompt() {
+        return "Tu es un conseiller senior en gestion de patrimoine et fiscalité successorale française (20+ ans d'expérience). " +
+            "Tu reçois l'intégralité du dossier d'un client : arbre familial, patrimoine détaillé, donations déjà réalisées, abattements consommés, objectifs, et les résultats chiffrés de chaque canal de transmission pour chaque chemin donateur→bénéficiaire.\n\n" +
+
+            "Rédige une ANALYSE COMPLÈTE et PERSONNALISÉE. Structure obligatoire :\n\n" +
+
+            "**1. DROITS DE SUCCESSION ESTIMÉS (statu quo)**\n" +
+            "Commence TOUJOURS par le montant TOTAL de droits que la famille devra payer si RIEN n'est fait. " +
+            "Détaille par bénéficiaire : qui paie combien, sur quelle base taxable, à quel taux. " +
+            "C'est le chiffre le plus important — il déclenche la prise de conscience.\n\n" +
+
+            "**2. ANALYSE PAR CHEMIN donateur → bénéficiaire**\n" +
+            "Pour CHAQUE paire donateur→bénéficiaire, fais une vraie analyse narrative :\n" +
+            "- Compare EXPLICITEMENT le scénario SUCCESSION (ne rien faire) vs le MEILLEUR canal de donation\n" +
+            "- Identifie clairement : 'Le canal qui produit le MOINS de droits est X, avec Y € de droits (Z% de taux effectif), contre W € en succession'\n" +
+            "- Explique le MÉCANISME fiscal (pas juste les chiffres) : pourquoi le démembrement réduit l'assiette, comment l'AV 990I sort de la succession, etc.\n" +
+            "- Mentionne ce que le donateur CONSERVE (revenus, usage, contrôle) et ce qu'il PERD (propriété, disponibilité)\n" +
+            "- Impact de l'âge : seuil 70 ans pour AV (990I vs 757B), réduction 50% si < 70 ans pour donation PP (art. 790 CGI)\n" +
+            "- Si grand-parent de 85+ ans : signale l'URGENCE absolue — une seule opération possible, l'espérance de vie ne permet pas de renouvellement d'abattement\n\n" +
+
+            "**3. DONATIONS ANTÉRIEURES et ABATTEMENTS CONSOMMÉS**\n" +
+            "Si des donations ont déjà été faites, explique leur impact CONCRET : combien d'abattement reste, quand il se renouvelle (rappel 15 ans, art. 784 CGI). " +
+            "Si aucune donation antérieure : souligne que TOUS les abattements sont disponibles et c'est une opportunité.\n\n" +
+
+            "**4. ASSURANCE-VIE vs CONTRAT DE CAPITALISATION**\n" +
+            "Si le patrimoine financier le permet, compare :\n" +
+            "- AV 990I : abattement 152 500 € par bénéficiaire, hors succession, bénéficiaire libre\n" +
+            "- Capi démembré : NP donné, antériorité fiscale conservée, quasi-usufruit possible\n" +
+            "- Mentionne le rachat annuel exonéré IR (4 600 € célibataire / 9 200 € couple après 8 ans)\n" +
+            "- Si montant > 152 500 € par bénéficiaire : le capi peut être plus intéressant car droits sur NP seulement\n\n" +
+
+            "**5. IMMOBILIER : RP, LOCATIF, RÉSIDENCE SECONDAIRE**\n" +
+            "Si de l'immobilier est présent, traite chaque type :\n" +
+            "- RP : abattement 20% en succession sur la valeur (art. 764 bis CGI si conjoint ou enfant y habite). Pas de PV à la vente.\n" +
+            "- Locatif : SCI possible (décote 15% + NP), calcul PV si vente. Comparer vente avant/après donation (purge PV).\n" +
+            "- Résidence secondaire : PV imposable (IR 19% + PS 17,2%), abattements durée détention. Donation avant vente = purge PV.\n\n" +
+
+            "**6. STRATÉGIE COMBINÉE RECOMMANDÉE**\n" +
+            "Propose LE plan d'action optimal qui COMBINE les meilleurs canaux. " +
+            "Exemple concret : 'Le père fait une donation NP de l'appartement + la mère ouvre une AV 990I de 150 000 € + le GP fait un don manuel de 31 865 € au petit-enfant'. " +
+            "Chiffre l'économie TOTALE par rapport au statu quo.\n\n" +
+
+            "**7. POINTS DE VIGILANCE**\n" +
+            "- Rappel fiscal 15 ans (art. 784 CGI) — si donation maintenant, prochaine tranche dans 15 ans\n" +
+            "- Risque de requalification / abus de droit (si donation puis vente < 2 ans)\n" +
+            "- Primes manifestement exagérées sur AV (art. L132-13 Code des assurances) si > 35% du patrimoine\n" +
+            "- SCI + meublé = risque requalification IS si revenus meublés > 10%\n" +
+            "- Exonération 790 A bis TEMPORAIRE (expire 31/12/2026) — signaler si applicable\n" +
+            "- Le régime matrimonial peut impacter la liquidation successorale\n\n" +
+
+            "**8. PROCHAINES ÉTAPES**\n" +
+            "Liste ordonnée d'actions concrètes avec timing.\n\n" +
+
+            "RÈGLES D'ÉCRITURE :\n" +
+            "- Français courant, termes techniques AVEC explication entre parenthèses\n" +
+            "- Articles CGI : art. 669, 757 B, 764 bis, 779 I, 784, 790, 790 A bis, 790 B, 990 I\n" +
+            "- Montants EXACTS tirés des données, pas d'arrondis\n" +
+            "- DIRECT : 'Faites ceci' pas 'Il conviendrait d'envisager'\n" +
+            "- Compare TOUJOURS à la succession (statu quo)\n" +
+            "- Prose fluide en paragraphes. Bullet points uniquement pour les étapes finales.\n" +
+            "- 800-1200 mots.\n" +
+            "- Termine TOUJOURS par : 'Avertissement : cette analyse est indicative et basée sur la fiscalité en vigueur en 2025-2026. Les montants sont des estimations. Consultez un notaire ou conseiller en gestion de patrimoine pour valider et mettre en œuvre cette stratégie.'";
     }
 
-    function buildAIContext(txMap, pat, st) {
+    function buildFullContext(txMap, pat, st) {
         var lines = [];
-        lines.push('=== SITUATION PATRIMONIALE ===');
-        lines.push('Patrimoine net transmissible : ' + fmt(pat.actifNet));
-        if (pat.immo > 0) lines.push('Immobilier : ' + fmt(pat.immo));
-        if (pat.financier > 0) lines.push('Financier : ' + fmt(pat.financier));
+        var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+
+        // ═══ 1. ARBRE FAMILIAL ═══
+        lines.push('═══════════════════════════════════════');
+        lines.push('1. ARBRE FAMILIAL & SITUATION CIVILE');
+        lines.push('═══════════════════════════════════════');
+        lines.push('Mode : ' + (st.mode === 'couple' ? 'Couple (2 donateurs)' : 'Individuel'));
+        if (st.donor1 && st.donor1.age) {
+            var statusMap = { celibataire: 'Célibataire', marie: 'Marié(e)', pacse: 'Pacsé(e)', divorce: 'Divorcé(e)', veuf: 'Veuf/ve' };
+            lines.push('Donateur principal : ' + (st.donor1.age || '?') + ' ans, ' + (statusMap[st.donor1.status] || st.donor1.status || '?'));
+        }
+        if (st.mode === 'couple' && st.donor2 && st.donor2.age) {
+            lines.push('Donateur 2 : ' + (st.donor2.age || '?') + ' ans');
+        }
+        var regimeMap = { communaute_acquets: 'Communauté réduite aux acquêts', separation: 'Séparation de biens', communaute_universelle: 'Communauté universelle', participation_acquets: 'Participation aux acquêts' };
+        lines.push('Régime matrimonial : ' + (regimeMap[st.regime] || st.regime || 'Non précisé'));
+
+        if (PO) {
+            var donors = PO.getDonors();
+            donors.forEach(function(d) {
+                lines.push('DONATEUR : ' + (d.nom || '?') + ', ' + (d.age || '?') + ' ans, rôle: ' + (d.role || '?'));
+                if (d.conjointAge) lines.push('  Conjoint : ' + (d.conjointNom || '?') + ', ' + d.conjointAge + ' ans');
+            });
+
+            var bens = PO.getBeneficiaries();
+            bens.forEach(function(b) {
+                var lien = b.lien || b.lienFiscalDonateur || '?';
+                var donAnt = PO.getTotalDonationsForBen ? PO.getTotalDonationsForBen(b.id) : 0;
+                lines.push('BÉNÉFICIAIRE : ' + (b.prenom || b.nom || '?') + ', lien fiscal: ' + lien +
+                    (donAnt > 0 ? ', donations antérieures reçues: ' + fmt(donAnt) : ', aucune donation antérieure'));
+            });
+        } else {
+            // Fallback
+            lines.push('Mode: ' + (st.mode || 'individuel'));
+            if (st.donor1) lines.push('DONATEUR principal : âge ' + (st.donor1.age || '?') + ' ans');
+            (st.beneficiaries || []).forEach(function(b) {
+                lines.push('BÉNÉFICIAIRE : ' + (b.prenom || b.nom || '?') + ', lien: ' + (b.lien || '?'));
+            });
+        }
+
+        // ═══ 2. DONATIONS DÉJÀ FAITES ═══
+        lines.push('');
+        lines.push('═══════════════════════════════════════');
+        lines.push('2. DONATIONS ANTÉRIEURES (rappel fiscal 15 ans)');
+        lines.push('═══════════════════════════════════════');
+
+        var hasDonations = false;
+        if (PO) {
+            var donors2 = PO.getDonors();
+            donors2.forEach(function(d) {
+                var bens2 = PO.getBeneficiaries();
+                bens2.forEach(function(b) {
+                    if (PO.getDonorDonationForBenRaw) {
+                        var raw = PO.getDonorDonationForBenRaw(d.id, b.id);
+                        if (raw && raw.montant > 0) {
+                            hasDonations = true;
+                            var dateStr = raw.date ? ' le ' + raw.date : '';
+                            var typeStr = raw.type ? ' (' + raw.type + ')' : '';
+                            lines.push(d.nom + ' → ' + (b.prenom || b.nom) + ' : ' + fmt(raw.montant) + dateStr + typeStr);
+
+                            // Abattement consommé
+                            var lien = b.lienFiscalDonateur || b.lien || 'enfant';
+                            var abatTotal = getAbattement(lien, false);
+                            var abatRestant = Math.max(0, abatTotal - raw.montant);
+                            lines.push('  → Abattement ' + formatLien(lien) + ' : ' + fmt(abatTotal) + ' total, ' + fmt(raw.montant) + ' consommé, RESTE : ' + fmt(abatRestant));
+                        }
+                    }
+                });
+            });
+        }
+        if (!hasDonations) {
+            lines.push('Aucune donation antérieure déclarée. Tous les abattements sont disponibles à 100%.');
+        }
+
+        // ═══ 3. PATRIMOINE DÉTAILLÉ ═══
+        lines.push('');
+        lines.push('═══════════════════════════════════════');
+        lines.push('3. PATRIMOINE DÉTAILLÉ');
+        lines.push('═══════════════════════════════════════');
+        lines.push('Actif net transmissible : ' + fmt(pat.actifNet));
+        if (pat.immo > 0) lines.push('Immobilier total : ' + fmt(pat.immo));
+        if (pat.financier > 0) lines.push('Financier total : ' + fmt(pat.financier));
         if (pat.pro > 0) lines.push('Professionnel : ' + fmt(pat.pro));
-        if (pat.passif > 0) lines.push('Passif : ' + fmt(pat.passif));
+        if (pat.passif > 0) lines.push('Passif (dettes) : ' + fmt(pat.passif));
 
-        // AV/capi details
-        var avItems = st.finance ? st.finance.filter(function(f) { return f.type === 'assurance_vie'; }) : [];
-        var capiItems = st.finance ? st.finance.filter(function(f) { return f.type === 'contrat_capi'; }) : [];
-        if (avItems.length > 0) {
-            lines.push('Assurances-vie : ' + avItems.length + ' contrat(s), total ' + fmt(avItems.reduce(function(s, a) { return s + (a.valeur || 0); }, 0)));
-        }
-        if (capiItems.length > 0) {
-            lines.push('Contrats capi : ' + capiItems.length + ', total ' + fmt(capiItems.reduce(function(s, a) { return s + (a.valeur || 0); }, 0)));
-        }
-
-        // Immo details
-        var immoItems = st.immo || [];
-        immoItems.forEach(function(im) {
-            lines.push('Bien immo : ' + (im.titre || 'Bien') + ' = ' + fmt(im.valeur || 0) + ' (' + (im.type === 'rp' ? 'RP' : im.type === 'locatif' ? 'Locatif' : im.type === 'secondaire' ? 'Résidence secondaire' : im.type || '?') + ')');
+        // Détail immobilier
+        (st.immo || []).forEach(function(im) {
+            var typeLabel = im.type === 'rp' ? 'Résidence principale' : im.type === 'locatif' ? 'Locatif' : im.type === 'secondaire' ? 'Résidence secondaire' : im.type || 'Non précisé';
+            lines.push('  🏠 ' + (im.titre || 'Bien immo') + ' : ' + fmt(im.valeur || 0) + ' (' + typeLabel + ')');
+            if (im.type === 'rp') {
+                lines.push('     → RP : abattement 20% en succession (art. 764 bis CGI) si conjoint/enfant y habite. Exonération PV à la vente.');
+            } else if (im.type === 'locatif') {
+                lines.push('     → Locatif : SCI possible (décote 15% + NP). PV imposable si vente. Comparer donation avant vente (purge PV).');
+            } else if (im.type === 'secondaire') {
+                lines.push('     → Résidence secondaire : PV imposable (IR 19% + PS 17,2%). Donation avant vente = purge PV possible.');
+            }
+            if (im.owners && im.owners.length > 0) {
+                im.owners.forEach(function(o) {
+                    lines.push('     Détenu par : ' + (o.nom || '?') + ' à ' + (o.pct || 100) + '% en ' + (o.regime || 'PP'));
+                });
+            }
         });
 
+        // Détail financier
+        (st.finance || []).forEach(function(f) {
+            var typeLabel = f.type === 'assurance_vie' ? 'Assurance-vie' : f.type === 'contrat_capi' ? 'Contrat de capitalisation' : f.type === 'pea' ? 'PEA' : f.type === 'compte_titre' ? 'Compte-titres' : f.type || '?';
+            lines.push('  💰 ' + typeLabel + ' : ' + fmt(f.valeur || 0));
+            if (f.type === 'assurance_vie') {
+                lines.push('     Souscripteur âge versement: ' + (f.ageVersement || '?') + ' ans → ' + (f.ageVersement && f.ageVersement < 70 ? 'art. 990 I (abat. 152 500 €/bénéf.)' : 'art. 757 B (abat. global 30 500 €)'));
+                lines.push('     Rachat annuel exonéré IR après 8 ans : 4 600 € (célibataire) / 9 200 € (couple)');
+                if (f.avBeneficiaires && f.avBeneficiaires.length > 0) {
+                    lines.push('     Clause bénéficiaire AV : ' + f.avBeneficiaires.map(function(b) { return (b.person ? (b.person.prenom || b.person.nom) : '?') + ' ' + (b.pct || '?') + '%'; }).join(', '));
+                } else {
+                    lines.push('     Clause bénéficiaire AV : NON DÉFINIE — à configurer');
+                }
+            }
+            if (f.type === 'contrat_capi') {
+                lines.push('     Avantage capi vs AV : antériorité fiscale conservée (pas de purge PV au décès)');
+                if (f.demembre) {
+                    lines.push('     Contrat démembré : NP donée, US conservé (quasi-usufruit possible)');
+                }
+                if (f.npBeneficiaires && f.npBeneficiaires.length > 0) {
+                    lines.push('     Bénéficiaires NP capi : ' + f.npBeneficiaires.map(function(b) { return (b.person ? (b.person.prenom || b.person.nom) : '?') + ' ' + (b.pct || '?') + '%'; }).join(', '));
+                }
+                lines.push('     Note : si montant AV dépasse 152 500 €/bénéficiaire, comparer avec un contrat capi (droits sur NP seulement)');
+            }
+        });
+
+        // Professionnel
+        (st.pro || []).forEach(function(p) {
+            lines.push('  🏢 ' + (p.nom || 'Actif pro') + ' : ' + fmt(p.valeur || 0) + ' (' + (p.type || '?') + ')');
+        });
+
+        // Dettes
+        (st.debts || []).forEach(function(d) {
+            lines.push('  📉 Dette : ' + (d.description || '?') + ' = ' + fmt(d.montant || 0));
+        });
+
+        // ═══ 4. OBJECTIFS ═══
         lines.push('');
-        lines.push('=== OBJECTIFS ACTIVÉS ===');
+        lines.push('═══════════════════════════════════════');
+        lines.push('4. OBJECTIFS DU CLIENT');
+        lines.push('═══════════════════════════════════════');
         var objLabels = {
-            minimiser: 'Minimiser les droits', revenus: 'Conserver revenus/usage',
-            controle: 'Maintenir le contrôle', conjoint: 'Protéger conjoint',
-            egalite: 'Égalité enfants', generation: 'Transmission génération lointaine',
-            vendre: 'Vendre un bien'
+            minimiser: 'Minimiser les droits de donation/succession',
+            revenus: 'Conserver les revenus et l\'usage des biens',
+            controle: 'Maintenir le contrôle sur le patrimoine',
+            conjoint: 'Protéger le conjoint survivant',
+            egalite: 'Assurer l\'égalité entre les enfants',
+            generation: 'Transmettre à la génération suivante (petits-enfants)',
+            vendre: 'Vendre un ou plusieurs biens'
         };
+        var activeCount = 0;
         Object.keys(st.obj || {}).forEach(function(k) {
-            if (st.obj[k]) lines.push('✅ ' + (objLabels[k] || k));
+            if (st.obj[k]) { lines.push('✅ ' + (objLabels[k] || k)); activeCount++; }
+            else lines.push('❌ ' + (objLabels[k] || k));
         });
 
+        // Démembrement activé ?
+        if (st.demembrement) {
+            lines.push('');
+            lines.push('Démembrement activé : type usufruit = ' + (st.usufruit || 'viager'));
+        }
+
+        // DDV / préciput
+        if (st.ddv) lines.push('Donation au dernier vivant (DDV) : activée');
+        if (st.preciput) lines.push('Clause de préciput : activée');
+
+        // Type de donation
+        var donTypeMap = { donation_partage: 'Donation-partage', donation_simple: 'Donation simple', don_manuel: 'Don manuel' };
+        lines.push('Type de donation envisagé : ' + (donTypeMap[st.donationType] || st.donationType || '?'));
+
+        // Exonération 790 A bis (logement neuf)
+        if (st.exoLogement && st.exoLogement.active) {
+            var exoObjMap = { acquisition_neuf: 'Acquisition neuf', construction: 'Construction', travaux_energetiques: 'Travaux énergétiques' };
+            lines.push('');
+            lines.push('EXONÉRATION 790 A bis ACTIVÉE :');
+            lines.push('  Objet : ' + (exoObjMap[st.exoLogement.objet] || st.exoLogement.objet));
+            lines.push('  Montant : ' + fmt(st.exoLogement.montant || 0));
+            lines.push('  Plafond : 100 000 € par donateur, 300 000 € par donataire');
+            lines.push('  Expire le 31/12/2026 — TEMPORAIRE');
+        }
+
+        // ═══ 5. RÉSULTATS CHIFFRÉS PAR CHEMIN ═══
         lines.push('');
-        lines.push('=== RÉSULTATS PAR CHEMIN ===');
-        lines.push('Total statu quo (net transmis) : ' + fmt(txMap.totalStatuQuo));
-        lines.push('Total optimisé (net transmis) : ' + fmt(txMap.totalBest));
-        lines.push('Économie potentielle : ' + fmt(txMap.totalBest - txMap.totalStatuQuo));
+        lines.push('═══════════════════════════════════════');
+        lines.push('5. RÉSULTATS CHIFFRÉS PAR CHEMIN');
+        lines.push('═══════════════════════════════════════');
+
+        var totalStatQuoDroits = 0;
+        var totalBestDroits = 0;
 
         txMap.pairs.forEach(function(pair) {
             lines.push('');
-            lines.push('--- ' + (pair.donor.nom || 'Donateur') + ' → ' + (pair.ben.prenom || pair.ben.nom || 'Bénéficiaire') + ' (lien: ' + pair.lien + ', donateur ' + (pair.donor.age || '?') + ' ans) ---');
+            lines.push('──── ' + (pair.donor.nom || 'Donateur') + ' (' + (pair.donor.age || '?') + ' ans, ' + (pair.donor.role || '?') + ') → ' + (pair.ben.prenom || pair.ben.nom || 'Bénéficiaire') + ' (lien fiscal: ' + pair.lien + ') ────');
+
+            var abatDisp = getAbattement(pair.lien, false);
+            lines.push('Abattement disponible en donation : ' + fmt(abatDisp));
+            lines.push('Abattement disponible en succession : ' + fmt(getAbattement(pair.lien, true)));
 
             pair.channels.forEach(function(ch, i) {
-                var prefix = i === 0 ? '🏆 ' : '   ';
-                lines.push(prefix + ch.name + ' : droits ' + fmt(ch.droits) + ', net ' + fmt(ch.net) + ', taux effectif ' + ch.taux_effectif + '%');
-                if (ch.fraisAn > 0) lines.push('     Frais annuels : ' + fmt(ch.fraisAn));
+                var marker = i === 0 ? '🏆 MEILLEUR' : (ch.id === 'succession' ? '📋 STATU QUO' : '  ');
+                lines.push(marker + ' | ' + ch.name);
+                lines.push('  Assiette: ' + fmt(ch.assiette) + ' | Abat: ' + fmt(ch.abattement) + ' | Base taxable: ' + fmt(ch.base_taxable));
+                lines.push('  Droits: ' + fmt(ch.droits) + ' | Frais: ' + fmt(ch.frais) + ' | NET TRANSMIS: ' + fmt(ch.net) + ' | Taux effectif: ' + ch.taux_effectif + '%');
+                if (ch.fraisAn > 0) lines.push('  Frais annuels récurrents: ' + fmt(ch.fraisAn));
+                if (ch.advantages && ch.advantages.length > 0) {
+                    lines.push('  Avantages: ' + ch.advantages.join(' | '));
+                }
+                if (ch.risks && ch.risks.length > 0) {
+                    lines.push('  Risques: ' + ch.risks.join(' | '));
+                }
             });
+
+            if (pair.statu_quo) totalStatQuoDroits += pair.statu_quo.droits;
+            if (pair.best) totalBestDroits += pair.best.droits;
         });
 
-        // Vente context if active
+        lines.push('');
+        lines.push('═══════════════════════════════════════');
+        lines.push('6. TOTAUX & COMPARAISON SUCCESSION vs DONATION');
+        lines.push('═══════════════════════════════════════');
+        lines.push('DROITS DE SUCCESSION si rien n\'est fait : ' + fmt(totalStatQuoDroits));
+        lines.push('DROITS avec stratégie optimale : ' + fmt(totalBestDroits));
+        lines.push('ÉCONOMIE TOTALE : ' + fmt(totalStatQuoDroits - totalBestDroits));
+        lines.push('NET TRANSMIS optimal : ' + fmt(txMap.totalBest));
+        lines.push('NET TRANSMIS statu quo : ' + fmt(txMap.totalStatuQuo));
+
+        // Explicit per-pair comparison
+        lines.push('');
+        lines.push('RÉSUMÉ PAR PAIRE (succession vs meilleur canal) :');
+        txMap.pairs.forEach(function(pair) {
+            var sq = pair.statu_quo;
+            var best = pair.best;
+            if (sq && best && best.id !== 'succession') {
+                lines.push('  ' + (pair.donor.nom || 'Donateur') + ' → ' + (pair.ben.prenom || pair.ben.nom) + ' :');
+                lines.push('    SUCCESSION : droits ' + fmt(sq.droits) + ', net ' + fmt(sq.net));
+                lines.push('    MEILLEUR (' + best.name + ') : droits ' + fmt(best.droits) + ', net ' + fmt(best.net));
+                lines.push('    → ÉCONOMIE : ' + fmt(best.net - sq.net) + ' (' + (sq.droits > 0 ? Math.round((1 - best.droits / sq.droits) * 100) : 0) + '% de droits en moins)');
+            }
+        });
+
+        // Vente context
         if (st.obj && st.obj.vendre && st.vente && st.vente.prixVente > 0) {
             lines.push('');
-            lines.push('=== PROJET DE VENTE ===');
-            lines.push('Prix vente : ' + fmt(st.vente.prixVente) + ', Prix acquisition : ' + fmt(st.vente.prixAcquisition));
-            lines.push('Type bien : ' + st.vente.typeBien + ', Horizon : ' + st.vente.horizon + ' ans');
+            lines.push('═══════════════════════════════════════');
+            lines.push('7. PROJET DE VENTE');
+            lines.push('═══════════════════════════════════════');
+            lines.push('Prix de vente visé : ' + fmt(st.vente.prixVente));
+            lines.push('Prix d\'acquisition : ' + fmt(st.vente.prixAcquisition));
+            lines.push('Date acquisition : ' + (st.vente.dateAcquisition || '?'));
+            lines.push('Type de bien : ' + st.vente.typeBien);
+            lines.push('Horizon de vente : ' + st.vente.horizon + ' ans');
         }
 
         return lines.join('\n');
     }
 
-    function renderNarrativeSummary(container, text, txMap) {
-        // Convert markdown-style text to styled HTML
+    function renderDetailedSummary(container, text, txMap, pat) {
+        // Convert markdown to styled HTML
         var html = text
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n{2,}/g, '</p><p>')
+            .replace(/##\s*(.+)/g, '<div style="font-size:.88rem;font-weight:700;color:var(--primary-color);margin:16px 0 6px;border-bottom:1px solid rgba(198,134,66,.12);padding-bottom:4px;">$1</div>')
+            .replace(/\n{2,}/g, '</p><p style="margin-bottom:10px;">')
+            .replace(/\n- /g, '<br>→ ')
+            .replace(/\n(\d+)\.\s/g, '<br><strong>$1.</strong> ')
             .replace(/\n/g, '<br>');
 
-        container.innerHTML = '<div style="padding:22px 24px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
-            '<div style="font-size:.85rem;font-weight:700;color:var(--primary-color);"><i class="fas fa-file-alt" style="margin-right:6px;"></i> Synthèse personnalisée</div>' +
-            '<span style="font-size:.58rem;padding:3px 8px;border-radius:4px;background:rgba(59,130,246,.1);color:#3b82f6;">Généré par Claude</span>' +
+        // Droits headline
+        var statQuoDroits = pat.actifNet - txMap.totalStatuQuo;
+        var eco = txMap.totalBest - txMap.totalStatuQuo;
+
+        var header = '';
+        header += '<div style="display:flex;gap:16px;margin-bottom:18px;flex-wrap:wrap;">';
+
+        // Droits estimés box
+        header += '<div style="flex:1;min-width:160px;padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.15);text-align:center;">';
+        header += '<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Droits si rien n\'est fait</div>';
+        header += '<div style="font-size:1.4rem;font-weight:800;color:var(--accent-coral);">' + fmt(statQuoDroits > 0 ? statQuoDroits : 0) + '</div>';
+        header += '</div>';
+
+        // Net optimal box
+        header += '<div style="flex:1;min-width:160px;padding:14px 18px;border-radius:12px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);text-align:center;">';
+        header += '<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Net transmis optimal</div>';
+        header += '<div style="font-size:1.4rem;font-weight:800;color:var(--accent-green);">' + fmt(txMap.totalBest) + '</div>';
+        header += '</div>';
+
+        // Économie box
+        if (eco > 0) {
+            header += '<div style="flex:1;min-width:160px;padding:14px 18px;border-radius:12px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.15);text-align:center;">';
+            header += '<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Économie potentielle</div>';
+            header += '<div style="font-size:1.4rem;font-weight:800;color:var(--primary-color);">' + fmt(eco) + '</div>';
+            header += '</div>';
+        }
+        header += '</div>';
+
+        container.innerHTML = '<div style="padding:24px;border-radius:16px;background:linear-gradient(135deg,rgba(198,134,66,.04),rgba(59,130,246,.02));border:1px solid rgba(198,134,66,.1);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">' +
+            '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary-color),#d4a574);display:flex;align-items:center;justify-content:center;"><i class="fas fa-brain" style="color:#1a1a2e;font-size:.9rem;"></i></div>' +
+            '<div><div style="font-size:.9rem;font-weight:700;color:var(--primary-color);">Analyse patrimoniale</div>' +
+            '<div style="font-size:.62rem;color:var(--text-muted);">Personnalisée en fonction de votre situation</div></div></div>' +
+            '<span style="font-size:.55rem;padding:3px 8px;border-radius:4px;background:rgba(59,130,246,.08);color:#3b82f6;">Claude Opus</span>' +
             '</div>' +
-            '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.8;"><p>' + html + '</p></div>' +
+            header +
+            '<div style="font-size:.8rem;color:var(--text-secondary);line-height:1.85;"><p style="margin-bottom:10px;">' + html + '</p></div>' +
             '</div>';
     }
 
@@ -675,39 +946,53 @@ const TransmissionEngine = (() => {
     function renderFallbackSummary(container, txMap, pat) {
         var eco = txMap.totalBest - txMap.totalStatuQuo;
         var statQuoDroits = pat.actifNet - txMap.totalStatuQuo;
+        var st = state();
 
         var lines = [];
-        lines.push('<strong>Situation :</strong> Patrimoine net de ' + fmt(pat.actifNet) + ' à transmettre.');
-        lines.push('');
 
+        // Droits en gras
         if (statQuoDroits > 0) {
-            lines.push('<strong>Sans optimisation :</strong> environ ' + fmt(statQuoDroits) + ' de droits de succession estimés.');
+            lines.push('<div style="padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.15);margin-bottom:14px;text-align:center;">');
+            lines.push('<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Droits de succession estimés (si rien n\'est fait)</div>');
+            lines.push('<div style="font-size:1.4rem;font-weight:800;color:var(--accent-coral);">' + fmt(statQuoDroits) + '</div>');
+            lines.push('</div>');
         }
 
-        if (eco > 0) {
-            lines.push('<strong>Avec optimisation :</strong> économie potentielle de ' + fmt(eco) + ' en combinant les meilleurs canaux par chemin.');
-        }
-
+        lines.push('<strong>Patrimoine net :</strong> ' + fmt(pat.actifNet) + ' à transmettre.');
         lines.push('');
 
-        // Best per pair
+        // Par chemin
         txMap.pairs.forEach(function(pair) {
+            var donorLabel = pair.donor.nom || 'Donateur';
+            var benLabel = pair.ben.prenom || pair.ben.nom || 'Bénéficiaire';
+            var lienLabel = formatLien(pair.lien);
+
+            lines.push('');
+            lines.push('<strong>' + esc(donorLabel) + ' → ' + esc(benLabel) + '</strong> (' + lienLabel + ', donateur ' + (pair.donor.age || '?') + ' ans) :');
+
+            if (pair.statu_quo) {
+                lines.push('Sans rien faire : <span style="color:var(--accent-coral);">' + fmt(pair.statu_quo.droits) + ' de droits</span>, net transmis ' + fmt(pair.statu_quo.net));
+            }
             if (pair.best && pair.best.id !== 'succession') {
-                var donorLabel = pair.donor.nom || 'Donateur';
-                var benLabel = pair.ben.prenom || pair.ben.nom || 'Bénéficiaire';
-                lines.push('<strong>' + esc(donorLabel) + ' → ' + esc(benLabel) + ' :</strong> ' +
-                    pair.best.icon + ' ' + esc(pair.best.name) + ' = ' + fmt(pair.best.net) + ' net transmis (' + pair.best.taux_effectif + '% de droits effectifs).');
+                var diff = pair.best.net - (pair.statu_quo ? pair.statu_quo.net : 0);
+                lines.push('Meilleur canal : ' + pair.best.icon + ' <strong>' + esc(pair.best.name) + '</strong> → <span style="color:var(--accent-green);">' + fmt(pair.best.net) + ' net</span>, droits ' + fmt(pair.best.droits) + ' (taux effectif ' + pair.best.taux_effectif + '%)');
+                if (diff > 0) lines.push('<span style="color:var(--accent-green);font-weight:600;">Économie : +' + fmt(diff) + ' vs statu quo</span>');
             }
         });
 
-        lines.push('');
-        lines.push('<em style="font-size:.7rem;color:var(--text-muted);">Cette analyse est indicative. Consultez un notaire ou CGP pour valider la stratégie.</em>');
+        if (eco > 0) {
+            lines.push('');
+            lines.push('<div style="padding:12px 16px;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);text-align:center;margin-top:10px;"><strong style="color:var(--accent-green);">Économie totale potentielle : ' + fmt(eco) + '</strong></div>');
+        }
 
-        container.innerHTML = '<div style="padding:22px 24px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(59,130,246,.04));border:1px solid rgba(198,134,66,.12);">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
-            '<div style="font-size:.85rem;font-weight:700;color:var(--primary-color);"><i class="fas fa-file-alt" style="margin-right:6px;"></i> Synthèse</div>' +
-            '</div>' +
-            '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.8;">' + lines.join('<br>') + '</div>' +
+        lines.push('');
+        lines.push('<em style="font-size:.68rem;color:var(--text-muted);">Analyse indicative. Consultez un notaire ou CGP pour valider la stratégie.</em>');
+
+        container.innerHTML = '<div style="padding:24px;border-radius:16px;background:linear-gradient(135deg,rgba(198,134,66,.04),rgba(59,130,246,.02));border:1px solid rgba(198,134,66,.1);">' +
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
+            '<div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary-color),#d4a574);display:flex;align-items:center;justify-content:center;"><i class="fas fa-file-alt" style="color:#1a1a2e;font-size:.9rem;"></i></div>' +
+            '<div style="font-size:.9rem;font-weight:700;color:var(--primary-color);">Synthèse des résultats</div></div>' +
+            '<div style="font-size:.8rem;color:var(--text-secondary);line-height:1.85;">' + lines.join('<br>') + '</div>' +
             '</div>';
     }
 
