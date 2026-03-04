@@ -596,9 +596,9 @@ SCORING_WEIGHTS: Dict[str, Dict[str, float]] = {
         "aum": 0.10,            # High AUM = liquidité
         "diversif_sector": -0.15,  # Low concentration secteur = bon
         "diversif_holdings": -0.10, # Low concentration titres = bon
-        "momentum": 0.08,       # High momentum = bonus
+        "momentum": 0.02,       # FIX v2.4.0-C: Stable ne chasse pas le momentum (0.08→0.02)
         "yield": 0.05,          # High yield = bonus
-        "data_quality": 0.02,   # High quality = bon
+        "data_quality": 0.03,   # High quality = bon (0.02→0.03, récupère le delta momentum)
     },
     "Modéré": {
         "vol": -0.15,
@@ -611,15 +611,14 @@ SCORING_WEIGHTS: Dict[str, Dict[str, float]] = {
         "data_quality": 0.05,
     },
     "Agressif": {
-        "momentum": 0.35,       # High momentum prioritaire
-        "yield": 0.12,          # High yield = revenu
-        "vol": 0.0,             # NEUTRE: on tolère toute vol, ni bonus ni malus
-                                # (mettre -0.03 si légère préférence low vol voulue)
-        "ter": -0.12,           # Low TER toujours bon
-        "aum": 0.10,            # Liquidité
-        "diversif_sector": -0.05,  # Concentration tolérée (poids faible)
-        "diversif_holdings": -0.05, # Concentration tolérée (poids faible)
-        "data_quality": 0.08,   # Qualité plus importante (positions risquées)
+        "momentum": 0.40,       # FIX v2.4.0-C: High momentum dominant (0.35→0.40)
+        "vol": 0.12,            # FIX v2.4.0-C: RÉCOMPENSE haute vol = upside potential (0.0→+0.12)
+        "yield": 0.08,          # FIX v2.4.0-C: Moins de poids yield, pas un profil income (0.12→0.08)
+        "ter": -0.10,           # Low TER toujours bon (0.12→0.10, léger relâchement)
+        "aum": 0.08,            # Liquidité (0.10→0.08)
+        "diversif_sector": 0.0, # FIX v2.4.0-C: Concentration OK en agressif (-0.05→0.0)
+        "diversif_holdings": 0.0, # FIX v2.4.0-C: Idem (-0.05→0.0)
+        "data_quality": 0.08,   # Qualité importante (positions risquées)
     },
 }
 
