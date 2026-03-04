@@ -806,69 +806,93 @@
 
             <!-- ==================== STEP 4: OBJECTIF ==================== -->
             <div class="step-panel" id="step-4">
-                <div class="step-helper"><i class="fas fa-lightbulb"></i> Activez les dispositifs pertinents : vente en viager, démembrement, exonération 790 A bis si applicable.</div>
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-bullseye"></i> Type d'opération</div>
-                    <div class="form-group">
-                        <div class="toggle-group" id="operation-toggle" style="flex-wrap:wrap;">
-                            <button class="toggle-btn active" data-value="donation" onclick="SD.setOperation('donation')" style="flex:1;min-width:140px;">🎁 Donation</button>
-                            <button class="toggle-btn" data-value="succession" onclick="SD.setOperation('succession')" style="flex:1;min-width:140px;">📋 Succession</button>
-                            <button class="toggle-btn" data-value="both" onclick="SD.setOperation('both')" style="flex:1;min-width:140px;">📊 Comparer les deux</button>
-                        </div>
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Vos priorités déterminent les scénarios. Le moteur compare automatiquement donation, succession et tous les leviers disponibles.</div>
+
+                <!-- ===== OBJECTIFS DE TRANSMISSION (section principale) ===== -->
+                <div class="section-card" style="border-color:rgba(198,134,66,.2);">
+                    <div class="section-title"><i class="fas fa-compass"></i> Que souhaitez-vous faire ?</div>
+                    <div class="section-subtitle">Vos priorités déterminent les scénarios recommandés</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Minimiser les droits de donation / succession <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Tous les scénarios seront classés par coût fiscal croissant. Active les chemins indirects (ex: grand-parent → parent → enfant pour cumuler les abattements).</span></span></span>
+                        <div class="switch on" id="obj-minimiser" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Conserver les revenus / l'usage des biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise le démembrement (US/NP), la clause AV démembrée, le quasi-usufruit. Le donateur conserve les loyers, dividendes ou l'usage du bien.</span></span></span>
+                        <div class="switch" id="obj-revenus" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Maintenir le contrôle sur le patrimoine <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la SCI (gérance), le contrat de capitalisation démembré, et les donations avec charges. Le donateur garde la main.</span></span></span>
+                        <div class="switch" id="obj-controle" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Protéger le conjoint survivant <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Active les scénarios DDV (donation au dernier vivant), clause bénéficiaire AV au conjoint, usufruit universel, clause de préciput RP.</span></span></span>
+                        <div class="switch" id="obj-conjoint" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Égalité entre les enfants <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la donation-partage (valeur figée, pas de rapport) et le partage équitable entre héritiers.</span></span></span>
+                        <div class="switch" id="obj-egalite" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Transmettre à une génération plus lointaine <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">AV : bénéficiaire libre (petit-fils). Chemin indirect GP → parent → enfant (2× abattement). Donation transgénérationnelle.</span></span></span>
+                        <div class="switch" id="obj-generation" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Vendre un ou plusieurs biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Calcule la plus-value immobilière nette. Compare : vendre avant ou après donation/succession.</span></span></span>
+                        <div class="switch" id="obj-vendre" onclick="SD.toggleSwitch(this);SD.toggleSection('vente-section')"></div>
                     </div>
                 </div>
 
-                <!-- Options succession (visible seulement si succession/comparer) -->
-                <div class="section-card" id="succession-options-section" style="display:none;">
-                    <div class="section-title"><i class="fas fa-scroll"></i> Options de succession</div>
-                    <div class="section-subtitle">Dispositions du vivant qui impactent la dévolution successorale</div>
+                <!-- ===== SECTION VENTE (conditionnelle) ===== -->
+                <div class="section-card" id="vente-section" style="display:none;">
+                    <div class="section-title"><i class="fas fa-tag"></i> Projet de vente — Plus-value immobilière</div>
+                    <div class="section-subtitle">Estimation de la plus-value nette après abattements pour durée de détention</div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Régime matrimonial</label>
-                            <select id="regime-matrimonial">
-                                <option value="communaute_acquets">Communauté réduite aux acquêts</option>
-                                <option value="communaute_universelle">Communauté universelle</option>
-                                <option value="separation_biens">Séparation de biens</option>
-                                <option value="participation_acquets">Participation aux acquêts</option>
+                            <label class="form-label">Prix de vente estimé (€)</label>
+                            <input type="number" id="prix-vente" placeholder="Ex: 400000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prix d'acquisition (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Prix d'achat + frais d'acquisition (7,5% forfaitaires) + travaux (15% forfaitaires si > 5 ans).</span></span></label>
+                            <input type="number" id="prix-acquisition" placeholder="Ex: 250000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date d'acquisition</label>
+                            <input type="date" id="date-acquisition">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Type de bien</label>
+                            <select id="type-bien-vente">
+                                <option value="standard">Bien standard</option>
+                                <option value="rp">Résidence principale (exonérée)</option>
+                                <option value="terrain">Terrain à bâtir</option>
                             </select>
                         </div>
                     </div>
-                    <div style="margin-top:12px;">
-                        <div class="switch-row">
-                            <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir entre : usufruit total, 1/4 en PP + 3/4 en US, ou quotité disponible en PP.</span></span></span>
-                            <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Travaux réels justifiés (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Si > forfait 15%, indiquez le montant réel. Sinon laissez vide.</span></span></label>
+                            <input type="number" id="travaux-vente" placeholder="Laisser vide = forfait 15%" step="1000">
                         </div>
-                        <div class="switch-row">
-                            <span class="switch-label">Clause de préciput <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au survivant de prélever un bien (ex: la RP) avant le partage de la succession.</span></span></span>
-                            <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
+                        <div class="form-group">
+                            <label class="form-label">Horizon de vente</label>
+                            <select id="horizon-vente">
+                                <option value="0">Immédiat</option>
+                                <option value="1">Moins d'1 an</option>
+                                <option value="5" selected>1 à 5 ans</option>
+                                <option value="10">5 à 10 ans</option>
+                                <option value="20">Plus de 10 ans</option>
+                            </select>
                         </div>
                     </div>
+                    <div id="pv-preview" style="display:none; margin-top:12px;"></div>
                 </div>
 
-                <div class="section-card" id="donation-type-section">
-                    <div class="section-title"><i class="fas fa-gift"></i> Type de donation</div>
-                    <div class="form-group full-width">
-                        <select id="donation-type">
-                            <option value="donation_partage">Donation-partage — valeur figée au jour de l'acte (recommandé)</option>
-                            <option value="donation_simple">Donation simple — rapport sur valeur au décès</option>
-                            <option value="don_manuel">Don manuel — sommes d'argent (déclaration en ligne obligatoire depuis 01/2026)</option>
-                        </select>
-                    </div>
-                    <div class="warning-box info" style="margin-top:8px;">
-                        <i class="fas fa-lightbulb"></i>
-                        <span><strong>Donation-partage vs simple :</strong> la donation-partage fige la valeur au jour de l'acte. En donation simple, le bien est rapporté à la succession sur sa valeur au jour du décès.</span>
-                    </div>
-                    <div class="warning-box urgent" style="margin-top:8px;">
-                        <i class="fas fa-star"></i>
-                        <span><strong>🆕 Exo. logement neuf/réno (art. 790 A bis) :</strong> jusqu'au <span class="countdown-text">31/12/2026</span>, don d'argent exonéré jusqu'à 100 000 €/donateur (max 300 000 €/donataire) pour achat RP neuve/VEFA ou travaux réno. énergétique MaPrimeRénov'. Cumulable avec les autres abattements. <span class="badge-urgent"><i class="fas fa-hourglass-half"></i> Temporaire</span></span>
-                    </div>
-                </div>
-
+                <!-- ===== ALERTE 790 A BIS (auto-affichée si pertinent) ===== -->
                 <div class="section-card urgent-border" id="exo-logement-section">
                     <div class="section-title"><i class="fas fa-home-lg-alt"></i> Exonération temporaire logement (790 A bis) <span class="badge-urgent"><i class="fas fa-hourglass-half"></i> Expire 31/12/2026</span></div>
-                    <div class="section-subtitle">Dispositif exceptionnel du 15/02/2025 au <span class="countdown-text">31/12/2026</span></div>
+                    <div class="section-subtitle">Don d'argent exonéré jusqu'à 100 000 €/donateur pour achat RP neuve/VEFA ou travaux réno. énergétique</div>
                     <div class="switch-row">
-                        <span class="switch-label">Le donataire va acquérir un logement neuf/VEFA (RP) ou réaliser des travaux réno. énergétique ? <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Exonération de 100k€ par donateur, 300k€ max par donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans minimum. Cumulable avec abattement 100k enfant + 31 865€ don familial.</span></span></span>
+                        <span class="switch-label">Le donataire va acquérir un logement neuf ou réaliser des travaux réno. ? <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">100k€/donateur, 300k€ max/donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans. Cumulable avec abattement enfant + don familial.</span></span></span>
                         <div class="switch" id="switch-790abis" onclick="SD.toggleSwitch(this);SD.toggleSection('exo-logement-details')"></div>
                     </div>
                     <div id="exo-logement-details" style="display:none; margin-top:16px;">
@@ -887,110 +911,79 @@
                         </div>
                         <div class="warning-box urgent" style="margin-top:8px;">
                             <i class="fas fa-clock"></i>
-                            <span><strong>Délais stricts :</strong> utilisation des fonds sous <span class="countdown-text">6 mois</span> · conservation du bien <span class="countdown-text">5 ans</span> minimum · non cumulable avec SCI, terrain à bâtir, résidence services.</span>
+                            <span><strong>Délais stricts :</strong> utilisation des fonds sous <span class="countdown-text">6 mois</span> · conservation du bien <span class="countdown-text">5 ans</span> minimum.</span>
                         </div>
                         <div class="warning-box info" style="margin-top:8px;">
                             <i class="fas fa-calculator"></i>
-                            <span><strong>Cumul maximal 1 parent → 1 enfant :</strong> 100 000 € (abat. enfant) + 31 865 € (don familial argent) + 100 000 € (790 A bis logement) = <strong>231 865 € sans droits</strong>. Avec 2 parents : <strong>463 730 €</strong>.</span>
+                            <span><strong>Cumul max 1 parent → 1 enfant :</strong> 100 000 € (enfant) + 31 865 € (don familial) + 100 000 € (790 A bis) = <strong>231 865 € sans droits</strong>. Avec 2 parents : <strong>463 730 €</strong>.</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-layer-group"></i> Démembrement</div>
-                    <div class="switch-row">
-                        <span class="switch-label">Conserver l'usage / les revenus des biens ? <span class="info-tip" onclick="this.classList.toggle("open");event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Vous conservez l'usufruit (usage + revenus) et transmettez la nue-propriété. Au décès, la NP se transforme automatiquement en pleine propriété sans droits supplémentaires.</span></span></span>
-                        <div class="switch" id="switch-demembrement" onclick="SD.toggleSwitch(this);SD.toggleSection('demembrement-options')"></div>
+                <!-- ===== OPTIONS AVANCÉES (repliable) ===== -->
+                <div class="section-card" style="padding:0;overflow:hidden;">
+                    <div class="collapsible-header" onclick="SD.toggleCollapsible(this)" style="padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                        <div class="section-title" style="margin:0;"><i class="fas fa-cogs"></i> Options avancées</div>
+                        <i class="fas fa-chevron-down" style="color:var(--text-muted);transition:transform .3s;"></i>
                     </div>
-                    <div id="demembrement-options" style="display:none; margin-top:16px;">
-                        <div class="form-group">
-                            <label class="form-label">Type d'usufruit</label>
-                            <select id="usufruit-type">
-                                <option value="viager">Viager — jusqu'au décès (barème art. 669)</option>
-                                <option value="temporaire_10">Temporaire 10 ans (23%)</option>
-                                <option value="temporaire_15">Temporaire 15 ans (46%)</option>
-                                <option value="temporaire_20">Temporaire 20 ans (46% plafonné)</option>
-                            </select>
+                    <div class="collapsible-body" style="display:none;padding:0 20px 20px;">
+
+                        <!-- Type d'opération (hidden, always "both") -->
+                        <div style="display:none;">
+                            <div class="toggle-group" id="operation-toggle">
+                                <button class="toggle-btn" data-value="donation">Donation</button>
+                                <button class="toggle-btn" data-value="succession">Succession</button>
+                                <button class="toggle-btn active" data-value="both" onclick="SD.setOperation('both')">Comparer</button>
+                            </div>
                         </div>
+
+                        <div class="form-grid" style="margin-bottom:16px;">
+                            <div class="form-group">
+                                <label class="form-label">Régime matrimonial</label>
+                                <select id="regime-matrimonial">
+                                    <option value="communaute_acquets">Communauté réduite aux acquêts</option>
+                                    <option value="communaute_universelle">Communauté universelle</option>
+                                    <option value="separation_biens">Séparation de biens</option>
+                                    <option value="participation_acquets">Participation aux acquêts</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Type de donation préféré</label>
+                                <select id="donation-type">
+                                    <option value="donation_partage">Donation-partage (recommandé)</option>
+                                    <option value="donation_simple">Donation simple</option>
+                                    <option value="don_manuel">Don manuel</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="switch-row">
+                            <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir : usufruit total, 1/4 PP + 3/4 US, ou quotité disponible en PP.</span></span></span>
+                            <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
+                        </div>
+                        <div class="switch-row">
+                            <span class="switch-label">Clause de préciput <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Le survivant prélève un bien (ex: RP) avant le partage.</span></span></span>
+                            <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
+                        </div>
+                        <div class="switch-row" style="margin-top:8px;">
+                            <span class="switch-label">Démembrement (conserver l'usufruit) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Transmettre la NP, conserver l'usufruit. Au décès, NP → PP sans droits.</span></span></span>
+                            <div class="switch" id="switch-demembrement" onclick="SD.toggleSwitch(this);SD.toggleSection('demembrement-options')"></div>
+                        </div>
+                        <div id="demembrement-options" style="display:none; margin-top:12px;">
+                            <div class="form-group">
+                                <label class="form-label">Type d'usufruit</label>
+                                <select id="usufruit-type">
+                                    <option value="viager">Viager — jusqu'au décès (art. 669)</option>
+                                    <option value="temporaire_10">Temporaire 10 ans (23%)</option>
+                                    <option value="temporaire_15">Temporaire 15 ans (46%)</option>
+                                    <option value="temporaire_20">Temporaire 20 ans (46% plafonné)</option>
+                                </select>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-tasks"></i> Objectifs de transmission</div>
-                    <div class="section-subtitle">Vos priorités déterminent les scénarios recommandés</div>
-                    <div class="switch-row">
-                        <span class="switch-label">Minimiser les droits de donation / succession <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Tous les scénarios seront classés par coût fiscal croissant. Active les chemins indirects (ex: grand-parent → parent → enfant pour cumuler les abattements).</span></span></span>
-                        <div class="switch on" id="obj-minimiser" onclick="SD.toggleSwitch(this)"></div>
-                    </div>
-                    <div class="switch-row">
-                        <span class="switch-label">Conserver les revenus / l'usage des biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise le démembrement (US/NP), la clause AV démembrée, le quasi-usufruit. Le donateur conserve les loyers, dividendes ou l'usage du bien.</span></span></span>
-                        <div class="switch" id="obj-revenus" onclick="SD.toggleSwitch(this)"></div>
-                    </div>
-                    <div class="switch-row">
-                        <span class="switch-label">Maintenir le contrôle sur le patrimoine <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la SCI (gérance), le contrat de capitalisation démembré, et les donations avec charges (obligation d'emploi, clause de retour). Le donateur garde la main.</span></span></span>
-                        <div class="switch" id="obj-controle" onclick="SD.toggleSwitch(this)"></div>
-                    </div>
-                    <div class="switch-row">
-                        <span class="switch-label">Protéger le conjoint survivant <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Active les scénarios DDV (donation au dernier vivant), clause bénéficiaire AV au conjoint, usufruit universel, clause de préciput RP.</span></span></span>
-                        <div class="switch" id="obj-conjoint" onclick="SD.toggleSwitch(this)"></div>
-                    </div>
-                    <div class="switch-row">
-                        <span class="switch-label">Égalité entre les enfants (donation-partage) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la donation-partage (valeur figée, pas de rapport) et le partage équitable entre héritiers. Évite les conflits successoraux.</span></span></span>
-                        <div class="switch" id="obj-egalite" onclick="SD.toggleSwitch(this)"></div>
-                    </div>
-                    <div class="switch-row">
-                        <span class="switch-label">Transmettre à une génération plus lointaine (petit-enfant, etc.) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">AV : le bénéficiaire peut être le petit-fils. Chemin indirect : grand-parent → parent → enfant (2× abattement 100k). Donation transgénérationnelle (abat. 31 865 € petit-enfant).</span></span></span>
-                        <div class="switch" id="obj-generation" onclick="SD.toggleSwitch(this)"></div>
-                    </div>
-                    <div class="switch-row">
-                        <span class="switch-label">Vendre un ou plusieurs biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Calcule la plus-value immobilière nette (abattement durée de détention + prélèvements sociaux). Compare : vendre avant ou après donation/succession.</span></span></span>
-                        <div class="switch" id="obj-vendre" onclick="SD.toggleSwitch(this);SD.toggleSection('vente-section')"></div>
-                    </div>
-                </div>
-
-                <div class="section-card" id="vente-section" style="display:none;">
-                    <div class="section-title"><i class="fas fa-tag"></i> Projet de vente — Plus-value immobilière</div>
-                    <div class="section-subtitle">Estimation de la plus-value nette après abattements pour durée de détention</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Prix de vente estimé (€)</label>
-                            <input type="number" id="prix-vente" placeholder="Ex: 400000" step="1000">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prix d'acquisition (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Prix d'achat + frais d'acquisition (7,5% forfaitaires si pas de justificatifs) + travaux (15% forfaitaires si détenu > 5 ans).</span></span></label>
-                            <input type="number" id="prix-acquisition" placeholder="Ex: 250000" step="1000">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Date d'acquisition</label>
-                            <input type="date" id="date-acquisition">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Type de bien</label>
-                            <select id="type-bien-vente">
-                                <option value="standard">Bien standard</option>
-                                <option value="rp">Résidence principale (exonérée)</option>
-                                <option value="terrain">Terrain à bâtir</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-grid" style="margin-top:10px;">
-                        <div class="form-group">
-                            <label class="form-label">Travaux réels justifiés (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Si > forfait 15%, indiquez le montant réel. Sinon laissez vide, le forfait sera appliqué.</span></span></label>
-                            <input type="number" id="travaux-vente" placeholder="Laisser vide = forfait 15%" step="1000">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Horizon de vente</label>
-                            <select id="horizon-vente">
-                                <option value="0">Immédiat</option>
-                                <option value="1">Moins d'1 an</option>
-                                <option value="5" selected>1 à 5 ans</option>
-                                <option value="10">5 à 10 ans</option>
-                                <option value="20">Plus de 10 ans</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="pv-preview" style="display:none; margin-top:12px;"></div>
-                </div>
             </div>
 
             <!-- ==================== STEP 5: RÉSULTATS ==================== -->
