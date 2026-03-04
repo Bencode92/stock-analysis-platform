@@ -186,6 +186,30 @@ const FamilyGraph = (function() {
         // Uncle/aunt (reverse of nephew)
         if (unclesAunts(f).some(u => u.id === t)) return 'neveu_niece';
 
+        // In-law: spouse's parent or parent's spouse's child etc.
+        // Beau-enfant: my child's spouse
+        var myKids = children(f);
+        for (var ki = 0; ki < myKids.length; ki++) {
+            var kidSp = spouse(myKids[ki].id);
+            if (kidSp && kidSp.id === t) return 'beau_enfant';
+        }
+        // Beau-parent: my spouse's parent
+        var mySp = spouse(f);
+        if (mySp) {
+            if (parents(mySp.id).some(function(pp){return pp.id === t})) return 'beau_enfant';
+            // My spouse's children (step-children)
+            children(mySp.id).forEach(function(){});
+        }
+        // Beau-frère/belle-soeur: sibling's spouse or spouse's sibling
+        if (mySp) {
+            if (siblings(mySp.id).some(function(s){return s.id === t})) return 'frere_soeur';
+        }
+        var mySibs = siblings(f);
+        for (var si = 0; si < mySibs.length; si++) {
+            var sibSp = spouse(mySibs[si].id);
+            if (sibSp && sibSp.id === t) return 'frere_soeur';
+        }
+
         return 'tiers';
     }
 
@@ -1471,8 +1495,10 @@ const SD = (() => {
         } else if (type === 'spouse') {
             newP = FamilyGraph.addPerson('', 0);
             FamilyGraph.addRelation('spouse', fromId, newP.id);
-            // Ne PAS auto-ajouter comme parent des enfants existants
-            // L'utilisateur le fera manuellement si nécessaire
+            // Auto-ajouter le conjoint comme co-parent des enfants existants
+            FamilyGraph.children(fromId).forEach(ch => {
+                FamilyGraph.addRelation('parent', newP.id, ch.id);
+            });
         } else if (type === 'sibling') {
             newP = FamilyGraph.addPerson('', 0);
             const pars = FamilyGraph.parents(fromId);
