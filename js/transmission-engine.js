@@ -46,10 +46,10 @@ const TransmissionEngine = (() => {
 
     /**
      * computeTransmissionMap
-     * @param {Object} pat - patrimoine (from computePatrimoine)
+     * @param {Object} pat - patrimoine GLOBAL (from computePatrimoine)
      * @param {number} fallbackAge - âge donateur par défaut
      * @param {number} nbDonors - nombre de donateurs
-     * @returns {{ pairs: Array, totalBest: number, totalStatuQuo: number, pat: Object }}
+     * @returns {{ pairs: Array, totalBest: number, totalStatuQuo: number, pat: Object, indirectPaths: Array }}
      */
     function computeTransmissionMap(pat, fallbackAge, nbDonors) {
         var FISC = F();
@@ -59,50 +59,259 @@ const TransmissionEngine = (() => {
         var allBens = st.beneficiaries.filter(function(b) { return b.lien !== 'conjoint_pacs'; });
         var obj = st.obj || {};
 
-        // Build donor↔beneficiary pairs
+        // ── 1. Compute per-donor patrimoine based on actual ownership ──
+        var donorPatrimoines = {};
+        if (donors.length > 0) {
+            donors.forEach(function(donor) {
+                donorPatrimoines[donor.id] = computeDonorPatrimoine(donor, st);
+            });
+        }
+
+        // ── 2. Build donor↔beneficiary pairs with per-donor patrimoine ──
         var pairs = [];
 
         if (donors.length > 0 && allBens.length > 0) {
             donors.forEach(function(donor) {
+                var donorPat = donorPatrimoines[donor.id] || { immo: 0, financier: 0, pro: 0, passif: 0, actifNet: 0, actifBrut: 0, details: [] };
+
+                // Skip donors with no patrimoine
+                if (donorPat.actifNet <= 0) return;
+
+                // Number of beneficiaries for THIS donor (for equal split)
+                var donorBenCount = allBens.length;
+
                 allBens.forEach(function(ben) {
                     var lien = ben.lienFiscalDonateur || ben.lien || 'tiers';
-                    if (PO && PO.detectLien) {
-                        var detected = PO.detectLien(donor.id, ben.id || ben.prenom);
-                        if (detected) lien = detected;
+                    if (PO && PO.getEffectiveLien) {
+                        var detected = PO.getEffectiveLien(donor.id, ben.id, donor.role, ben.lien);
+                        if (detected && detected !== 'aucun') lien = detected;
                     }
-                    pairs.push({ donor: donor, ben: ben, lien: lien });
-                });
-            });
-        } else {
-            // Fallback: single donor
-            allBens.forEach(function(ben) {
-                pairs.push({
-                    donor: { nom: 'Donateur', age: fallbackAge, role: 'parent' },
-                    ben: ben,
-                    lien: ben.lien || 'enfant'
+
+                    // Per-beneficiary share of THIS DONOR's patrimoine
+                    var benPat = {
+                        immo: Math.round(donorPat.immo / donorBenCount),
+                        financier: Math.round(donorPat.financier / donorBenCount),
+                        pro: Math.round(donorPat.pro / donorBenCount),
+                        passif: Math.round(donorPat.passif / donorBenCount),
+                        actifNet: Math.round(donorPat.actifNet / donorBenCount),
+                        actifBrut: Math.round(donorPat.actifBrut / donorBenCount),
+                        details: donorPat.details
+                    };
+
+                    pairs.push({ donor: donor, ben: ben, lien: lien, donorPat: donorPat, benPat: benPat, donorBenCount: donorBenCount });
                 });
             });
         }
 
-        // Compute channels for each pair
+        // Fallback: single donor, use global patrimoine
+        if (pairs.length === 0) {
+            allBens.forEach(function(ben) {
+                var benPat = {
+                    immo: Math.round(pat.immo / allBens.length),
+                    financier: Math.round(pat.financier / allBens.length),
+                    pro: Math.round(pat.pro / allBens.length),
+                    passif: Math.round(pat.passif / allBens.length),
+                    actifNet: Math.round(pat.actifNet / allBens.length),
+                    actifBrut: Math.round(pat.actifBrut / allBens.length),
+                    details: []
+                };
+                pairs.push({
+                    donor: { nom: 'Donateur', age: fallbackAge, role: 'parent', id: -1 },
+                    ben: ben,
+                    lien: ben.lien || 'enfant',
+                    donorPat: pat,
+                    benPat: benPat,
+                    donorBenCount: allBens.length
+                });
+            });
+        }
+
+        // ── 3. Compute channels for each pair using THEIR patrimoine ──
         var results = [];
         pairs.forEach(function(pair) {
-            var channels = computeChannelsForPair(pair, pat, FISC, obj);
+            var channels = computeChannelsForPair(pair, pair.benPat, FISC, obj);
             channels.sort(function(a, b) { return b.net - a.net; });
             results.push({
                 donor: pair.donor,
                 ben: pair.ben,
                 lien: pair.lien,
+                donorPat: pair.donorPat,
+                benPat: pair.benPat,
                 channels: channels,
                 best: channels[0] || null,
                 statu_quo: channels.find(function(c) { return c.id === 'succession'; }) || null
             });
         });
 
+        // ── 4. Detect indirect paths (GP → Parent → Child) ──
+        var indirectPaths = detectIndirectPaths(donors, allBens, donorPatrimoines, FISC);
+
         var totalBest = results.reduce(function(s, r) { return s + (r.best ? r.best.net : 0); }, 0);
         var totalStatuQuo = results.reduce(function(s, r) { return s + (r.statu_quo ? r.statu_quo.net : 0); }, 0);
 
-        return { pairs: results, totalBest: totalBest, totalStatuQuo: totalStatuQuo, pat: pat };
+        return { pairs: results, totalBest: totalBest, totalStatuQuo: totalStatuQuo, pat: pat, indirectPaths: indirectPaths, donorPatrimoines: donorPatrimoines };
+    }
+
+
+    // ================================================================
+    // 1b. PER-DONOR PATRIMOINE — Calcul basé sur la propriété réelle
+    // ================================================================
+
+    /**
+     * computeDonorPatrimoine — Calcule le patrimoine réellement détenu par un donateur
+     * en analysant les owners de chaque actif
+     */
+    function computeDonorPatrimoine(donor, st) {
+        var donorKey = 'd-' + donor.id; // Format used in getPersonsList()
+        var immo = 0, financier = 0, pro = 0, passif = 0;
+        var details = [];
+        var hasOwnership = false; // Track if ANY ownership data was found
+
+        // ── IMMOBILIER ──
+        (st.immo || []).forEach(function(im) {
+            if (!im.owners || im.owners.length === 0) return;
+            im.owners.forEach(function(o) {
+                if (String(o.personId) === donorKey) {
+                    hasOwnership = true;
+                    var quote = (o.quote || 100) / 100;
+                    var val = Math.round((im.valeur || 0) * quote);
+                    immo += val;
+                    details.push({
+                        type: 'immo', label: im.titre || 'Bien immo',
+                        valeur: val, quote: o.quote || 100, role: o.role || 'pp',
+                        sousType: im.type || '?', structure: im.structure || 'pp'
+                    });
+                }
+            });
+        });
+
+        // ── FINANCIER ──
+        (st.finance || []).forEach(function(f) {
+            if (String(f.ownerId) === donorKey) {
+                hasOwnership = true;
+                financier += (f.valeur || 0);
+                details.push({
+                    type: 'finance', label: f.type || 'Financier',
+                    valeur: f.valeur || 0, sousType: f.type,
+                    isAV: f.type === 'assurance_vie',
+                    isCapi: f.type === 'contrat_capi',
+                    avBeneficiaires: f.avBeneficiaires || [],
+                    npBeneficiaires: f.npBeneficiaires || [],
+                    ageVersement: f.ageVersement
+                });
+            }
+        });
+
+        // ── DETTES ──
+        (st.debts || []).forEach(function(d) {
+            if (String(d.ownerId) === donorKey) {
+                hasOwnership = true;
+                passif += (d.montant || 0);
+            }
+        });
+
+        // ── PRO (pas de champ owner → split entre donateurs) ──
+        var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+        var nbDonors = PO ? Math.max(1, PO.getDonors().length) : 1;
+        (st.pro || []).forEach(function(p) {
+            pro += Math.round((p.valeur || 0) / nbDonors);
+        });
+
+        var actifBrut = immo + financier + pro;
+        var actifNet = actifBrut - passif;
+
+        // ── FALLBACK : si AUCUNE donnée de propriété n'existe, ne pas retourner 0 ──
+        // (l'utilisateur n'a pas renseigné les propriétaires)
+        if (!hasOwnership && (st.immo.length > 0 || st.finance.length > 0)) {
+            // Check if this donor's patrimoine field was set in PathOptimizer
+            if (donor.patrimoine && donor.patrimoine > 0) {
+                return {
+                    immo: 0, financier: 0, pro: 0, passif: 0,
+                    actifNet: donor.patrimoine, actifBrut: donor.patrimoine,
+                    details: [{ type: 'global', label: 'Patrimoine déclaré (non ventilé)', valeur: donor.patrimoine }],
+                    fallback: true
+                };
+            }
+            // No ownership AND no patrimoine field → return empty (will be skipped)
+            return { immo: 0, financier: 0, pro: 0, passif: 0, actifNet: 0, actifBrut: 0, details: [], fallback: true, noData: true };
+        }
+
+        return { immo: immo, financier: financier, pro: pro, passif: passif, actifNet: actifNet, actifBrut: actifBrut, details: details, fallback: false };
+    }
+
+
+    // ================================================================
+    // 1c. INDIRECT PATHS — Détection des chemins indirects GP→Parent→Enfant
+    // ================================================================
+
+    /**
+     * detectIndirectPaths — Identifie les chaînes de transmission indirectes
+     * Ex: GP donne 100k au Parent (abat. 100k) → Parent donne 100k à l'Enfant (abat. 100k)
+     * = 200k transmis avec 0€ de droits vs GP→Enfant directement = abat. 31 865€ seulement
+     */
+    function detectIndirectPaths(donors, bens, donorPatrimoines, FISC) {
+        var paths = [];
+        var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+        if (!PO || donors.length < 2) return paths;
+
+        // Find GP/AGP donors and Parent donors
+        var gpDonors = donors.filter(function(d) { return d.role === 'grand_parent' || d.role === 'arr_grand_parent'; });
+        var parentDonors = donors.filter(function(d) { return d.role === 'parent'; });
+
+        gpDonors.forEach(function(gp) {
+            var gpPat = donorPatrimoines[gp.id];
+            if (!gpPat || gpPat.actifNet <= 0) return;
+
+            parentDonors.forEach(function(parent) {
+                bens.forEach(function(child) {
+                    // Direct path: GP → Child
+                    var lienDirect = 'petit_enfant';
+                    if (gp.role === 'arr_grand_parent') lienDirect = 'arriere_petit_enfant';
+                    var abatDirect = getAbattement(lienDirect, false);
+
+                    // Indirect path: GP → Parent → Child
+                    var abatGPtoParent = getAbattement('enfant', false); // 100 000 €
+                    var abatParentToChild = getAbattement('enfant', false); // 100 000 €
+                    var totalAbatIndirect = abatGPtoParent + abatParentToChild;
+
+                    // Only flag if indirect path gives MORE total abattement
+                    if (totalAbatIndirect > abatDirect) {
+                        var maxDirectExo = abatDirect;
+                        var maxIndirectExo = totalAbatIndirect;
+
+                        // Calculate actual savings on the GP's patrimoine
+                        var gpAmount = gpPat.actifNet;
+                        var amountViaParent = Math.min(gpAmount, abatGPtoParent);
+                        // The parent can then donate this to the child using their own abattement
+                        var amountParentToChild = Math.min(amountViaParent, abatParentToChild);
+
+                        // Direct: GP→Child, droits on (gpAmount - abatDirect)
+                        var droitsDirect = calcDroits(Math.max(0, gpAmount - abatDirect), getBareme(lienDirect));
+                        // Indirect: GP→Parent (0 droits if <= abatGPtoParent) + Parent→Child (0 if <= abatParentToChild)
+                        var droitsGPtoP = calcDroits(Math.max(0, gpAmount - abatGPtoParent), getBareme('enfant'));
+                        var droitsPtoC = calcDroits(Math.max(0, amountViaParent - abatParentToChild), getBareme('enfant'));
+                        var droitsIndirect = droitsGPtoP + droitsPtoC;
+
+                        if (droitsIndirect < droitsDirect) {
+                            paths.push({
+                                gp: gp,
+                                parent: parent,
+                                child: child,
+                                lienDirect: lienDirect,
+                                abatDirect: abatDirect,
+                                abatIndirect: totalAbatIndirect,
+                                droitsDirect: droitsDirect,
+                                droitsIndirect: droitsIndirect,
+                                economie: droitsDirect - droitsIndirect,
+                                description: gp.nom + ' → ' + parent.nom + ' (abat. ' + fmt(abatGPtoParent) + ') → ' + (child.prenom || child.nom) + ' (abat. ' + fmt(abatParentToChild) + ') = ' + fmt(totalAbatIndirect) + ' d\'abattements cumulés vs ' + fmt(abatDirect) + ' en direct. Économie : ' + fmt(droitsDirect - droitsIndirect)
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        return paths;
     }
 
 
@@ -110,7 +319,7 @@ const TransmissionEngine = (() => {
     // 2. CHANNELS — Calcul de chaque canal fiscal pour une paire
     // ================================================================
 
-    function computeChannelsForPair(pair, pat, FISC, obj) {
+    function computeChannelsForPair(pair, benPat, FISC, obj) {
         var donor = pair.donor;
         var lien = pair.lien;
         var donorAge = donor.age || 60;
@@ -118,24 +327,33 @@ const TransmissionEngine = (() => {
         var abat = getAbattement(lien, false);
         var abatSucc = getAbattement(lien, true);
         var bareme = getBareme(lien);
-        var st = state();
-        var nbBens = Math.max(1, st.beneficiaries.filter(function(b) { return b.lien !== 'conjoint_pacs'; }).length);
 
-        // Part du patrimoine pour ce bénéficiaire (répartition égale)
-        var partImmo = Math.round(pat.immo / nbBens);
-        var partFin = Math.round(pat.financier / nbBens);
-        var partTotal = Math.round(pat.actifNet / nbBens);
+        // benPat = already the per-beneficiary share of THIS DONOR's patrimoine
+        var partImmo = benPat.immo || 0;
+        var partFin = benPat.financier || 0;
+        var partTotal = benPat.actifNet || 0;
+        var partBrut = benPat.actifBrut || partTotal;
+
+        // Deduct prior donations from abattement (rappel fiscal 15 ans)
+        var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+        var donAnterieures = 0;
+        if (PO && PO.getDonorDonationForBenRaw && donor.id >= 0) {
+            var raw = PO.getDonorDonationForBenRaw(donor.id, pair.ben.id);
+            if (raw && raw.montant > 0) donAnterieures = raw.montant;
+        }
+        var abatRestant = Math.max(0, abat - donAnterieures);
+        var abatSuccRestant = Math.max(0, abatSucc - donAnterieures);
 
         var channels = [];
 
         // ─── 1. SUCCESSION (statu quo) ──────────────────────────
-        var baseSucc = Math.max(0, partTotal - abatSucc);
+        var baseSucc = Math.max(0, partTotal - abatSuccRestant);
         var droitsSucc = calcDroits(baseSucc, bareme);
         var fraisSucc = Math.round(partTotal * FISC.fraisNotaireSuccPct);
         channels.push({
             id: 'succession', name: 'Succession (statu quo)',
             icon: '📋', timing: 'Au décès', color: '#ff6b6b',
-            assiette: partTotal, abattement: abatSucc,
+            assiette: partTotal, abattement: abatSuccRestant,
             base_taxable: baseSucc, droits: droitsSucc, frais: fraisSucc,
             net: partTotal - droitsSucc - fraisSucc,
             taux_effectif: partTotal > 0 ? Math.round(droitsSucc / partTotal * 100) : 0,
@@ -147,14 +365,15 @@ const TransmissionEngine = (() => {
             risks: [
                 'Droits de succession au barème plein',
                 'Pas de réduction pour âge',
-                'Pas de choix du moment'
-            ],
+                'Pas de choix du moment',
+                donAnterieures > 0 ? 'Abattement partiellement consommé : ' + fmt(donAnterieures) + ' déjà utilisé → reste ' + fmt(abatSuccRestant) : null
+            ].filter(Boolean),
             objectives: [],
-            details: 'Si rien n\'est fait → droits au décès. Abattement ' + formatLien(lien) + ' : ' + fmt(abatSucc) + '.'
+            details: 'Statu quo → droits au décès. Abattement ' + formatLien(lien) + ' : ' + fmt(abatSucc) + (donAnterieures > 0 ? ' (dont ' + fmt(donAnterieures) + ' consommé → reste ' + fmt(abatSuccRestant) + ')' : '') + '.'
         });
 
         // ─── 2. DONATION DIRECTE PP ─────────────────────────────
-        var baseDonPP = Math.max(0, partTotal - abat);
+        var baseDonPP = Math.max(0, partTotal - abatRestant);
         var droitsDonPP = calcDroits(baseDonPP, bareme);
         var reduction = donorAge < 70 ? 0.50 : 0;
         var droitsDonPPRed = Math.round(droitsDonPP * (1 - reduction));
@@ -162,13 +381,13 @@ const TransmissionEngine = (() => {
         channels.push({
             id: 'donation_pp', name: 'Donation directe (PP)',
             icon: '🎁', timing: 'Maintenant', color: '#c68642',
-            assiette: partTotal, abattement: abat,
+            assiette: partTotal, abattement: abatRestant,
             base_taxable: baseDonPP, droits: droitsDonPPRed, frais: fraisDonPP,
             net: partTotal - droitsDonPPRed - fraisDonPP,
             taux_effectif: partTotal > 0 ? Math.round(droitsDonPPRed / partTotal * 100) : 0,
             fraisAn: 0,
             advantages: [
-                'Abattement ' + fmt(abat) + ' renouvelable tous les 15 ans',
+                'Abattement ' + fmt(abat) + ' renouvelable tous les 15 ans' + (donAnterieures > 0 ? ' (reste ' + fmt(abatRestant) + ')' : ''),
                 donorAge < 70 ? 'Réduction 50% (donateur < 70 ans, art. 790 CGI)' : null,
                 'Transmission immédiate, purge la plus-value'
             ].filter(Boolean),
@@ -177,18 +396,18 @@ const TransmissionEngine = (() => {
                 'Le donateur perd l\'usage du bien'
             ],
             objectives: ['minimiser', 'egalite'],
-            details: 'Abattement ' + fmt(abat) + ' (' + formatLien(lien) + ') · Base taxable : ' + fmt(baseDonPP) + (reduction > 0 ? ' · Réduction 50% → droits : ' + fmt(droitsDonPPRed) : '')
+            details: 'Abattement ' + fmt(abat) + (donAnterieures > 0 ? ' (reste ' + fmt(abatRestant) + ' après donations antérieures)' : '') + ' (' + formatLien(lien) + ') · Base taxable : ' + fmt(baseDonPP) + (reduction > 0 ? ' · Réduction 50% → droits : ' + fmt(droitsDonPPRed) : '')
         });
 
         // ─── 3. DONATION NP (démembrement) ──────────────────────
         var valeurNP = Math.round(partTotal * npRatio);
-        var baseNP = Math.max(0, valeurNP - abat);
+        var baseNP = Math.max(0, valeurNP - abatRestant);
         var droitsNP = calcDroits(baseNP, bareme);
         var fraisNP = Math.round(valeurNP * FISC.fraisNotairePct);
         channels.push({
             id: 'donation_np', name: 'Donation NP (' + Math.round(npRatio * 100) + '%)',
             icon: '🔑', timing: 'Maintenant', color: '#10b981',
-            assiette: valeurNP, abattement: abat,
+            assiette: valeurNP, abattement: abatRestant,
             base_taxable: baseNP, droits: droitsNP, frais: fraisNP,
             net: partTotal - droitsNP - fraisNP,
             taux_effectif: partTotal > 0 ? Math.round(droitsNP / partTotal * 100) : 0,
@@ -207,8 +426,8 @@ const TransmissionEngine = (() => {
         });
 
         // ─── 4. ASSURANCE-VIE (art. 990 I) — primes avant 70 ans ─
-        if (partFin > 0 || pat.financier > 50000) {
-            var avCap = partFin > 0 ? partFin : Math.round(pat.financier / nbBens);
+        if (partFin > 0 || partTotal > 50000) {
+            var avCap = partFin > 0 ? partFin : partTotal;
             var avAbat = FISC.av990I.abattement;
             var avBase = Math.max(0, avCap - avAbat);
             var avTr1 = Math.min(avBase, FISC.av990I.seuil2 - avAbat);
@@ -233,7 +452,7 @@ const TransmissionEngine = (() => {
                 risks: [
                     'Frais de gestion annuels (~0,7%)',
                     donorAge >= 70 ? 'Primes versées maintenant → art. 757 B (abattement réduit)' : null,
-                    pat.actifBrut > 0 && avCap / pat.actifBrut > FISC.primesExagSeuil ? 'Risque primes manifestement exagérées (' + Math.round(avCap / pat.actifBrut * 100) + '% du patrimoine)' : null
+                    partBrut > 0 && avCap / partBrut > FISC.primesExagSeuil ? 'Risque primes manifestement exagérées (' + Math.round(avCap / partBrut * 100) + '% du patrimoine)' : null
                 ].filter(Boolean),
                 objectives: ['minimiser', 'generation'],
                 details: 'Capital AV : ' + fmt(avCap) + ' · Abat. 990 I : ' + fmt(avAbat) + ' · 20% jusqu\'à ' + fmt(FISC.av990I.seuil2) + ', 31,25% au-delà'
@@ -241,10 +460,10 @@ const TransmissionEngine = (() => {
         }
 
         // ─── 5. AV 757 B (primes après 70 ans) ─────────────────
-        if (donorAge >= 70 && (partFin > 0 || pat.financier > 30000)) {
-            var av757Cap = partFin > 0 ? partFin : Math.round(pat.financier / nbBens);
+        if (donorAge >= 70 && (partFin > 0 || partTotal > 30000)) {
+            var av757Cap = partFin > 0 ? partFin : partTotal;
             var av757AbatGlobal = FISC.av757B.abattementGlobal;
-            var av757Abat = Math.round(av757AbatGlobal / nbBens);
+            var av757Abat = Math.round(av757AbatGlobal / (pair.donorBenCount || 1));
             var av757Base = Math.max(0, av757Cap - av757Abat);
             var av757Droits = calcDroits(av757Base, bareme);
             channels.push({
@@ -270,16 +489,16 @@ const TransmissionEngine = (() => {
         }
 
         // ─── 6. CONTRAT DE CAPITALISATION DÉMEMBRÉ ──────────────
-        if (partFin > 50000 || pat.financier > 100000) {
-            var capiCap = partFin > 0 ? partFin : Math.round(pat.financier / nbBens);
+        if (partFin > 50000 || partTotal > 100000) {
+            var capiCap = partFin > 0 ? partFin : partTotal;
             var capiNP = Math.round(capiCap * npRatio);
-            var capiBase = Math.max(0, capiNP - abat);
+            var capiBase = Math.max(0, capiNP - abatRestant);
             var capiDroits = calcDroits(capiBase, bareme);
             var capiFrais = Math.round(capiNP * FISC.fraisNotairePct);
             channels.push({
                 id: 'capi_demembre', name: 'Capi. démembré (NP)',
                 icon: '📊', timing: 'Maintenant', color: '#8b5cf6',
-                assiette: capiNP, abattement: abat,
+                assiette: capiNP, abattement: abatRestant,
                 base_taxable: capiBase, droits: capiDroits, frais: capiFrais,
                 net: capiCap - capiDroits - capiFrais,
                 taux_effectif: capiCap > 0 ? Math.round(capiDroits / capiCap * 100) : 0,
@@ -295,27 +514,27 @@ const TransmissionEngine = (() => {
                     'Contrat entre dans la succession (contrairement à l\'AV)'
                 ],
                 objectives: ['minimiser', 'revenus', 'controle'],
-                details: 'NP ' + Math.round(npRatio * 100) + '% = ' + fmt(capiNP) + ' · Abat. ' + fmt(abat) + ' · Avantage vs AV si montants > ' + fmt(FISC.av990I.abattement)
+                details: 'NP ' + Math.round(npRatio * 100) + '% = ' + fmt(capiNP) + ' · Abat. ' + fmt(abatRestant) + (donAnterieures > 0 ? ' (reste après donations ant.)' : '') + ' · Avantage vs AV si montants > ' + fmt(FISC.av990I.abattement)
             });
         }
 
         // ─── 7. SCI IR + DONATION NP PARTS ──────────────────────
-        if (partImmo > 50000 || pat.immo > 100000) {
-            var sciImmo = partImmo > 0 ? partImmo : Math.round(pat.immo / nbBens);
+        if (partImmo > 50000 || partTotal > 100000) {
+            var sciImmo = partImmo > 0 ? partImmo : partTotal;
             var decote = 0.15;
             var sciValParts = Math.round(sciImmo * (1 - decote));
             var sciNP = Math.round(sciValParts * npRatio);
-            var sciBase = Math.max(0, sciNP - abat);
+            var sciBase = Math.max(0, sciNP - abatRestant);
             var sciDroits = calcDroits(sciBase, bareme);
-            var sciFrais = Math.round(sciNP * FISC.fraisNotairePct) + Math.round(FISC.fraisStructure.creation / nbBens);
+            var sciFrais = Math.round(sciNP * FISC.fraisNotairePct) + Math.round(FISC.fraisStructure.creation / (pair.donorBenCount || 1));
             channels.push({
                 id: 'sci_np', name: 'SCI + donation NP parts',
                 icon: '🏢', timing: 'Maintenant', color: '#06b6d4',
-                assiette: sciNP, abattement: abat,
+                assiette: sciNP, abattement: abatRestant,
                 base_taxable: sciBase, droits: sciDroits, frais: sciFrais,
                 net: sciImmo - sciDroits - sciFrais,
                 taux_effectif: sciImmo > 0 ? Math.round(sciDroits / sciImmo * 100) : 0,
-                fraisAn: Math.round(FISC.fraisStructure.sci_ir / nbBens),
+                fraisAn: Math.round(FISC.fraisStructure.sci_ir / (pair.donorBenCount || 1)),
                 advantages: [
                     'Décote 15% sur la valeur des parts (illiquidité)',
                     'Donateur = gérant → contrôle total',
@@ -336,19 +555,20 @@ const TransmissionEngine = (() => {
         // ─── 8. DON MANUEL + DON FAMILIAL ARGENT ────────────────
         if (partFin > 0 && ['enfant', 'petit_enfant', 'arriere_petit_enfant', 'neveu_niece'].includes(lien)) {
             var donFamMax = FISC.abattements.don_familial_argent;
-            var donTotal = Math.min(partFin, abat + donFamMax);
+            var donTotal = Math.min(partFin, abatRestant + donFamMax);
+            var donDroits = donTotal <= (abatRestant + donFamMax) ? 0 : calcDroits(donTotal - abatRestant - donFamMax, bareme);
             channels.push({
                 id: 'don_manuel', name: 'Don manuel + familial',
                 icon: '💵', timing: 'Maintenant', color: '#22c55e',
-                assiette: donTotal, abattement: abat + donFamMax,
-                base_taxable: 0, droits: 0, frais: 0,
-                net: donTotal,
+                assiette: donTotal, abattement: abatRestant + donFamMax,
+                base_taxable: Math.max(0, donTotal - abatRestant - donFamMax), droits: donDroits, frais: 0,
+                net: donTotal - donDroits,
                 taux_effectif: 0,
                 fraisAn: 0,
                 advantages: [
-                    'Cumul abattement ' + formatLien(lien) + ' (' + fmt(abat) + ') + don familial (' + fmt(donFamMax) + ')',
-                    'Total exonéré : ' + fmt(abat + donFamMax) + ' par donateur',
-                    '0 € de droits si montant ≤ abattement',
+                    'Cumul abattement ' + formatLien(lien) + ' (' + fmt(abat) + (donAnterieures > 0 ? ', reste ' + fmt(abatRestant) : '') + ') + don familial (' + fmt(donFamMax) + ')',
+                    'Total exonéré disponible : ' + fmt(abatRestant + donFamMax) + ' par donateur',
+                    donDroits === 0 ? '0 € de droits' : null,
                     'Déclaration en ligne obligatoire (depuis 01/2026)'
                 ],
                 risks: [
@@ -357,7 +577,7 @@ const TransmissionEngine = (() => {
                     'Rappel fiscal 15 ans'
                 ],
                 objectives: ['minimiser'],
-                details: 'Max exonéré : ' + fmt(abat) + ' + ' + fmt(donFamMax) + ' = ' + fmt(abat + donFamMax) + '. Excédent taxé au barème.'
+                details: 'Abattement restant : ' + fmt(abatRestant) + ' + don familial ' + fmt(donFamMax) + ' = ' + fmt(abatRestant + donFamMax) + ' exonéré.' + (donAnterieures > 0 ? ' Donations antérieures : ' + fmt(donAnterieures) + ' (rappel 15 ans).' : '')
             });
         }
 
@@ -375,6 +595,43 @@ const TransmissionEngine = (() => {
 
         var st = state();
         var html = '';
+
+        // ── PER-DONOR PATRIMOINE SUMMARY (if multiple donors) ──
+        if (txMap.donorPatrimoines && Object.keys(txMap.donorPatrimoines).length > 1) {
+            var PO2 = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+            var donors2 = PO2 ? PO2.getDonors() : [];
+
+            html += '<div style="margin-bottom:16px;padding:16px;border-radius:12px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">';
+            html += '<div style="font-size:.78rem;font-weight:700;color:var(--primary-color);margin-bottom:10px;"><i class="fas fa-wallet" style="margin-right:6px;"></i> Patrimoine par donateur</div>';
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">';
+
+            Object.keys(txMap.donorPatrimoines).forEach(function(donorId) {
+                var dp = txMap.donorPatrimoines[donorId];
+                var donorInfo = donors2.find(function(d) { return String(d.id) === String(donorId); });
+                var donorLabel = donorInfo ? esc(donorInfo.nom) : 'Donateur';
+                var roleLabel = donorInfo ? formatLien(donorInfo.role === 'parent' ? 'enfant' : donorInfo.role) : '';
+
+                html += '<div style="padding:12px;border-radius:10px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.08);">';
+                html += '<div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">' + donorLabel + '</div>';
+                html += '<div style="font-size:.62rem;color:var(--text-muted);margin-bottom:6px;">' + (donorInfo ? donorInfo.role + ', ' + (donorInfo.age || '?') + ' ans' : '') + '</div>';
+                html += '<div style="font-size:1rem;font-weight:800;color:var(--primary-color);">' + fmt(dp.actifNet) + '</div>';
+
+                if (dp.immo > 0 || dp.financier > 0) {
+                    html += '<div style="font-size:.6rem;color:var(--text-muted);margin-top:4px;">';
+                    if (dp.immo > 0) html += 'Immo ' + fmt(dp.immo);
+                    if (dp.immo > 0 && dp.financier > 0) html += ' · ';
+                    if (dp.financier > 0) html += 'Fin. ' + fmt(dp.financier);
+                    html += '</div>';
+                }
+                if (dp.fallback) {
+                    html += '<div style="font-size:.55rem;color:var(--accent-coral);margin-top:2px;">⚠️ Propriété non ventilée</div>';
+                }
+
+                html += '</div>';
+            });
+
+            html += '</div></div>';
+        }
 
         // ── PER PAIR CARDS ────────────────────────────────────
         txMap.pairs.forEach(function(pair) {
@@ -394,6 +651,13 @@ const TransmissionEngine = (() => {
             html += '<span style="color:var(--accent-green);">' + benLabel + '</span>';
             html += '</div>';
             html += '<div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">' + lienLabel + ' · abattement ' + abatLabel + ' · donateur ' + (pair.donor.age || '?') + ' ans</div>';
+            // Show donor's actual patrimoine
+            if (pair.donorPat && pair.donorPat.actifNet > 0) {
+                html += '<div style="font-size:.65rem;color:var(--primary-color);margin-top:3px;">Patrimoine du donateur : ' + fmt(pair.donorPat.actifNet);
+                if (pair.donorPat.immo > 0) html += ' (immo ' + fmt(pair.donorPat.immo) + ')';
+                if (pair.donorPat.financier > 0) html += ' (fin. ' + fmt(pair.donorPat.financier) + ')';
+                html += ' · Part/bénéf. : ' + fmt(pair.benPat.actifNet) + '</div>';
+            }
             html += '</div>';
 
             if (pair.best) {
@@ -413,6 +677,33 @@ const TransmissionEngine = (() => {
 
             html += '</div>'; // close pair card
         });
+
+        // ── INDIRECT PATHS (GP → Parent → Child) ──────────────
+        if (txMap.indirectPaths && txMap.indirectPaths.length > 0) {
+            html += '<div class="section-card" style="margin-top:16px;border-color:rgba(59,130,246,.2);background:rgba(59,130,246,.03);">';
+            html += '<div style="font-size:.88rem;font-weight:700;color:#3b82f6;margin-bottom:10px;"><i class="fas fa-route" style="margin-right:6px;"></i> Chemins indirects détectés</div>';
+            html += '<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:12px;">Transmettre via un intermédiaire (parent) peut doubler les abattements disponibles.</div>';
+
+            txMap.indirectPaths.forEach(function(ip) {
+                html += '<div style="padding:12px 16px;border-radius:10px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.12);margin-bottom:8px;">';
+                html += '<div style="font-size:.8rem;font-weight:600;color:var(--text-primary);margin-bottom:6px;">';
+                html += esc(ip.gp.nom) + ' <i class="fas fa-arrow-right" style="font-size:.55rem;color:var(--text-muted);margin:0 4px;"></i> ';
+                html += esc(ip.parent.nom) + ' <i class="fas fa-arrow-right" style="font-size:.55rem;color:var(--text-muted);margin:0 4px;"></i> ';
+                html += esc(ip.child.prenom || ip.child.nom);
+                html += '</div>';
+
+                html += '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.72rem;">';
+                html += '<div><span style="color:var(--text-muted);">Direct (' + formatLien(ip.lienDirect) + ') :</span> abat. ' + fmt(ip.abatDirect) + ', droits <span style="color:var(--accent-coral);">' + fmt(ip.droitsDirect) + '</span></div>';
+                html += '<div><span style="color:var(--text-muted);">Indirect (via parent) :</span> abat. cumulés ' + fmt(ip.abatIndirect) + ', droits <span style="color:var(--accent-green);">' + fmt(ip.droitsIndirect) + '</span></div>';
+                html += '<div style="font-weight:700;color:var(--accent-green);">Économie : ' + fmt(ip.economie) + '</div>';
+                html += '</div>';
+
+                html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:6px;font-style:italic;">' + esc(ip.description) + '</div>';
+                html += '</div>';
+            });
+
+            html += '</div>';
+        }
 
         container.innerHTML = html;
     }
@@ -615,10 +906,14 @@ const TransmissionEngine = (() => {
             "- Exonération 790 A bis TEMPORAIRE (expire 31/12/2026) — signaler si applicable\n" +
             "- Le régime matrimonial peut impacter la liquidation successorale\n\n" +
 
-            "**8. PROCHAINES ÉTAPES**\n" +
+            "**8. CHEMINS INDIRECTS (GP → Parent → Enfant)**\n" +
+            "Si des chemins indirects sont détectés, explique POURQUOI ils sont souvent meilleurs : GP→Parent consomme un abattement enfant (100k) puis Parent→Enfant consomme un autre abattement enfant (100k) = 200k d'abattements cumulés, contre seulement 31 865 € pour un don direct GP→petit-enfant. Chiffre l'économie. C'est souvent le conseil le plus impactant.\n\n" +
+
+            "**9. PROCHAINES ÉTAPES**\n" +
             "Liste ordonnée d'actions concrètes avec timing.\n\n" +
 
             "RÈGLES D'ÉCRITURE :\n" +
+            "- CRITIQUE : Chaque donateur ne transmet QUE son propre patrimoine. Si la GM possède 400k et le père 200k, ne confonds PAS leurs patrimoines. Mentionne explicitement 'le patrimoine de [Nom] s'élève à X €'.\n" +
             "- Français courant, termes techniques AVEC explication entre parenthèses\n" +
             "- Articles CGI : art. 669, 757 B, 764 bis, 779 I, 784, 790, 790 A bis, 790 B, 990 I\n" +
             "- Montants EXACTS tirés des données, pas d'arrondis\n" +
@@ -814,10 +1109,47 @@ const TransmissionEngine = (() => {
             lines.push('  Expire le 31/12/2026 — TEMPORAIRE');
         }
 
-        // ═══ 5. RÉSULTATS CHIFFRÉS PAR CHEMIN ═══
+        // ═══ 5. PATRIMOINE PAR DONATEUR (propriété réelle) ═══
         lines.push('');
         lines.push('═══════════════════════════════════════');
-        lines.push('5. RÉSULTATS CHIFFRÉS PAR CHEMIN');
+        lines.push('5. PATRIMOINE PAR DONATEUR (basé sur la propriété réelle des actifs)');
+        lines.push('═══════════════════════════════════════');
+        lines.push('⚠️ IMPORTANT : Chaque donateur ne transmet QUE ce qu\'il possède. Les calculs ci-dessous sont basés sur la propriété réelle déclarée sur chaque actif (titulaire financier, propriétaire immobilier).');
+
+        if (txMap.donorPatrimoines) {
+            Object.keys(txMap.donorPatrimoines).forEach(function(donorId) {
+                var dp = txMap.donorPatrimoines[donorId];
+                var PO2 = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+                var donors2 = PO2 ? PO2.getDonors() : [];
+                var donorInfo = donors2.find(function(d) { return String(d.id) === String(donorId); });
+                var donorLabel = donorInfo ? donorInfo.nom + ' (' + donorInfo.role + ', ' + (donorInfo.age || '?') + ' ans)' : 'Donateur #' + donorId;
+
+                lines.push('');
+                lines.push('  ' + donorLabel + ' :');
+                lines.push('    Actif net transmissible : ' + fmt(dp.actifNet));
+                if (dp.immo > 0) lines.push('    Immobilier détenu : ' + fmt(dp.immo));
+                if (dp.financier > 0) lines.push('    Financier détenu : ' + fmt(dp.financier));
+                if (dp.pro > 0) lines.push('    Professionnel : ' + fmt(dp.pro));
+                if (dp.passif > 0) lines.push('    Passif : ' + fmt(dp.passif));
+                if (dp.fallback) lines.push('    ⚠️ Propriété non ventilée par actif — patrimoine global déclaré');
+
+                // Detail each asset
+                if (dp.details && dp.details.length > 0) {
+                    dp.details.forEach(function(d) {
+                        if (d.type === 'immo') {
+                            lines.push('    📌 ' + d.label + ' : ' + fmt(d.valeur) + ' (' + d.sousType + ', ' + (d.quote || 100) + '% en ' + (d.role || 'PP') + ')');
+                        } else if (d.type === 'finance') {
+                            lines.push('    📌 ' + d.label + ' : ' + fmt(d.valeur) + (d.isAV ? ' [Assurance-vie]' : '') + (d.isCapi ? ' [Contrat capi]' : ''));
+                        }
+                    });
+                }
+            });
+        }
+
+        // ═══ 6. RÉSULTATS CHIFFRÉS PAR CHEMIN ═══
+        lines.push('');
+        lines.push('═══════════════════════════════════════');
+        lines.push('6. RÉSULTATS CHIFFRÉS PAR CHEMIN');
         lines.push('═══════════════════════════════════════');
 
         var totalStatQuoDroits = 0;
@@ -827,9 +1159,27 @@ const TransmissionEngine = (() => {
             lines.push('');
             lines.push('──── ' + (pair.donor.nom || 'Donateur') + ' (' + (pair.donor.age || '?') + ' ans, ' + (pair.donor.role || '?') + ') → ' + (pair.ben.prenom || pair.ben.nom || 'Bénéficiaire') + ' (lien fiscal: ' + pair.lien + ') ────');
 
+            // Show THIS DONOR's patrimoine for this pair
+            if (pair.donorPat) {
+                lines.push('Patrimoine de CE donateur : ' + fmt(pair.donorPat.actifNet) + ' (immo ' + fmt(pair.donorPat.immo) + ', fin. ' + fmt(pair.donorPat.financier) + ')');
+            }
+            if (pair.benPat) {
+                lines.push('Part transmise à ce bénéficiaire : ' + fmt(pair.benPat.actifNet));
+            }
+
             var abatDisp = getAbattement(pair.lien, false);
-            lines.push('Abattement disponible en donation : ' + fmt(abatDisp));
-            lines.push('Abattement disponible en succession : ' + fmt(getAbattement(pair.lien, true)));
+            lines.push('Abattement total en donation : ' + fmt(abatDisp));
+            lines.push('Abattement total en succession : ' + fmt(getAbattement(pair.lien, true)));
+
+            // Check for prior donations eating into abattement
+            var PO3 = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+            if (PO3 && PO3.getDonorDonationForBenRaw && pair.donor.id >= 0) {
+                var rawDon = PO3.getDonorDonationForBenRaw(pair.donor.id, pair.ben.id);
+                if (rawDon && rawDon.montant > 0) {
+                    lines.push('⚠️ Donations antérieures de ce donateur vers ce bénéficiaire : ' + fmt(rawDon.montant));
+                    lines.push('   → Abattement restant : ' + fmt(Math.max(0, abatDisp - rawDon.montant)));
+                }
+            }
 
             pair.channels.forEach(function(ch, i) {
                 var marker = i === 0 ? '🏆 MEILLEUR' : (ch.id === 'succession' ? '📋 STATU QUO' : '  ');
@@ -851,7 +1201,7 @@ const TransmissionEngine = (() => {
 
         lines.push('');
         lines.push('═══════════════════════════════════════');
-        lines.push('6. TOTAUX & COMPARAISON SUCCESSION vs DONATION');
+        lines.push('7. TOTAUX & COMPARAISON SUCCESSION vs DONATION');
         lines.push('═══════════════════════════════════════');
         lines.push('DROITS DE SUCCESSION si rien n\'est fait : ' + fmt(totalStatQuoDroits));
         lines.push('DROITS avec stratégie optimale : ' + fmt(totalBestDroits));
@@ -873,11 +1223,30 @@ const TransmissionEngine = (() => {
             }
         });
 
+        // ═══ 8. CHEMINS INDIRECTS (GP → Parent → Enfant) ═══
+        if (txMap.indirectPaths && txMap.indirectPaths.length > 0) {
+            lines.push('');
+            lines.push('═══════════════════════════════════════');
+            lines.push('8. CHEMINS INDIRECTS DÉTECTÉS (transmission en cascade)');
+            lines.push('═══════════════════════════════════════');
+            lines.push('⚠️ IMPORTANT : Ces chemins sont souvent PLUS efficaces qu\'une donation directe GP→petit-enfant car ils cumulent les abattements en ligne directe.');
+
+            txMap.indirectPaths.forEach(function(ip) {
+                lines.push('');
+                lines.push('CHEMIN : ' + ip.gp.nom + ' → ' + ip.parent.nom + ' → ' + (ip.child.prenom || ip.child.nom));
+                lines.push('  Direct (' + ip.lienDirect + ') : abat. ' + fmt(ip.abatDirect) + ', droits ' + fmt(ip.droitsDirect));
+                lines.push('  Indirect (via parent) : abat. cumulés ' + fmt(ip.abatIndirect) + ', droits ' + fmt(ip.droitsIndirect));
+                lines.push('  ÉCONOMIE CHEMIN INDIRECT : ' + fmt(ip.economie));
+                lines.push('  → RECOMMANDATION : Faire 2 donations successives (GP→Parent puis Parent→Enfant) plutôt qu\'une donation directe GP→petit-enfant');
+                lines.push('  → ATTENTION : Le parent reçoit et RE-donne. Il consomme son propre abattement enfant. Vérifier qu\'il n\'a pas déjà donné à cet enfant.');
+            });
+        }
+
         // Vente context
         if (st.obj && st.obj.vendre && st.vente && st.vente.prixVente > 0) {
             lines.push('');
             lines.push('═══════════════════════════════════════');
-            lines.push('7. PROJET DE VENTE');
+            lines.push('9. PROJET DE VENTE');
             lines.push('═══════════════════════════════════════');
             lines.push('Prix de vente visé : ' + fmt(st.vente.prixVente));
             lines.push('Prix d\'acquisition : ' + fmt(st.vente.prixAcquisition));
