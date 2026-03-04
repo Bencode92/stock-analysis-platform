@@ -2030,7 +2030,10 @@ class PortfolioOptimizer:
             if sector_count[asset.sector] >= 8:
                 continue
             
-            if asset.category == "ETF" and asset.exposure and exposure_count[asset.exposure] >= 2:
+            # FIX v2.4.0-D: Max 1 ETF par exposure dans le pool final
+            # Le dedup garde 3/exposure dans l'univers (choix), mais le pool
+            # ne prend que le meilleur pour éviter les paires clone (XLE+VDE, GDXJ+SGDJ)
+            if asset.category == "ETF" and asset.exposure and exposure_count[asset.exposure] >= 1:
                 continue
             
             if asset.role == Role.LOTTERY and bucket_count["lottery"] >= 2:
