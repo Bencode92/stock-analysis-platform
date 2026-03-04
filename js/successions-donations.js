@@ -1697,10 +1697,7 @@ const SD = (() => {
             syncGraphToStep2();
         }
 
-        // Leaving step 2 (donations) → build family tree visual
-        if (currentStep === 2 && n === 3) {
-            buildFamilyValidation();
-        }
+
 
         currentStep = n;
 
@@ -1720,14 +1717,14 @@ const SD = (() => {
         });
 
         el('btn-prev').style.display = n > 1 ? '' : 'none';
-        el('btn-next').style.display = n < 6 ? '' : 'none';
-        el('btn-calculate').style.display = n === 5 ? '' : 'none';
-        if (n === 6) {
+        el('btn-next').style.display = n < 5 ? '' : 'none';
+        el('btn-calculate').style.display = n === 4 ? '' : 'none';
+        if (n === 5) {
             el('btn-next').style.display = 'none';
             el('btn-calculate').style.display = 'none';
         }
 
-        if (n === 4) updateSynthese();
+        if (n === 3 || n === 4) updateSynthese();
         // Hide aside on step 1, show on step 2+
         var asideEl = document.querySelector(".page-aside");
         var gridEl = document.querySelector(".page-grid");
@@ -1737,7 +1734,7 @@ const SD = (() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function nextStep() { if (currentStep < 6) goToStep(currentStep + 1); }
+    function nextStep() { if (currentStep < 5) goToStep(currentStep + 1); }
     function prevStep() { if (currentStep > 1) goToStep(currentStep - 1); }
 
     // ============================================================
@@ -2549,7 +2546,7 @@ const SD = (() => {
         const container = el('fin-av-beneficiaires-' + id);
         if (!container) return;
         const item = state.finance.find(i => i.id === id);
-        if (!item || item.type !== 'av') { container.innerHTML = ''; return; }
+        if (!item || !['assurance_vie','contrat_capi'].includes(item.type)) { container.innerHTML = ''; return; }
 
         const bens = state.beneficiaries;
         if (bens.length === 0) {
