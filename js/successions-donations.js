@@ -2606,12 +2606,12 @@ const SD = (() => {
         var typeLabel = item.type === 'contrat_capi' ? 'contrat de capitalisation' : 'contrat AV';
         
         if (item.type === 'contrat_capi') {
-            html += '<div style="font-size:.62rem;padding:6px 10px;border-radius:6px;background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.15);color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-info-circle"></i> Le contrat de capitalisation entre dans la succession (contrairement à l\'AV). Il peut être démembré (US/NP) de son vivant. <strong>L\'antériorité fiscale est conservée.</strong></div>';
-            html += '<div style="margin-bottom:8px;"><label class="form-label" style="font-size:.68rem;">Démembrement du contrat</label>';
-            html += '<select class="form-input" style="font-size:.72rem;height:30px;" onchange="SD.updateFin(' + id + ',\'demembrement\',this.value); SD.refreshAVBeneficiaires(' + id + ')">';
+            html += '<div style="font-size:.72rem;padding:8px 12px;border-radius:8px;background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.15);color:var(--accent-cyan);margin-bottom:10px;"><i class="fas fa-info-circle"></i> Le contrat de capitalisation entre dans la succession (contrairement à l\'AV). Il peut être démembré (US/NP) de son vivant. <strong>L\'antériorité fiscale est conservée.</strong></div>';
+            html += '<div style="margin-bottom:10px;"><label class="form-label" style="font-size:.72rem;">Démembrement du contrat</label>';
+            html += '<select class="form-input" style="font-size:.82rem;height:42px;padding-right:40px;" onchange="SD.updateFin(' + id + ',\'demembrement\',this.value); SD.refreshAVBeneficiaires(' + id + ')">';
             html += '<option value="pp"' + (item.demembrement === 'pp' || !item.demembrement ? ' selected' : '') + '>Pleine propriété (succession)</option>';
             html += '<option value="np_donation"' + (item.demembrement === 'np_donation' ? ' selected' : '') + '>Démembré — donation NP du vivant</option>';
-            html += '<option value="np_succession"' + (item.demembrement === 'np_succession' ? ' selected' : '') + '>Transmission en succession</option>';
+            html += '<option value="np_succession"' + (item.demembrement === 'np_succession' ? ' selected' : '') + '>Succession (NP + US)</option>';
             html += '</select></div>';
 
             // --- Démembrement NP du vivant ---
@@ -2621,26 +2621,26 @@ const SD = (() => {
                 const npRatio = getNPRatio(usAge);
                 const valeurNP = Math.round((item.valeur || 0) * npRatio);
 
-                html += '<div style="padding:10px;border-radius:8px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.12);margin-bottom:10px;">';
-                html += '<div style="font-size:.68rem;font-weight:700;color:var(--accent-green);margin-bottom:6px;"><i class="fas fa-hand-holding-heart"></i> Donation de la nue-propriété</div>';
-                html += '<div class="form-grid" style="gap:8px;">';
-                html += '<div class="form-group"><label class="form-label" style="font-size:.62rem;">Âge usufruitier</label>';
-                html += '<input type="number" class="form-input" style="font-size:.72rem;height:30px;" value="' + usAge + '" onchange="SD.updateFin(' + id + ',\'usAge\',+this.value); SD.refreshAVBeneficiaires(' + id + ')"></div>';
-                html += '<div class="form-group"><label class="form-label" style="font-size:.62rem;">Valeur NP (art. 669)</label>';
-                html += '<div style="font-size:.9rem;font-weight:700;color:var(--accent-green);padding-top:8px;">' + fmt(valeurNP) + ' <span style="font-size:.65rem;color:var(--text-muted);">(' + Math.round(npRatio * 100) + '% de ' + fmt(item.valeur || 0) + ')</span></div></div>';
+                html += '<div style="padding:14px;border-radius:10px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.12);margin-bottom:12px;">';
+                html += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-green);margin-bottom:8px;"><i class="fas fa-hand-holding-heart"></i> Donation de la nue-propriété</div>';
+                html += '<div class="form-grid" style="gap:10px;">';
+                html += '<div class="form-group"><label class="form-label" style="font-size:.72rem;">Âge usufruitier</label>';
+                html += '<input type="number" class="form-input" style="font-size:.82rem;height:36px;" value="' + usAge + '" onchange="SD.updateFin(' + id + ',\'usAge\',+this.value); SD.refreshAVBeneficiaires(' + id + ')"></div>';
+                html += '<div class="form-group"><label class="form-label" style="font-size:.72rem;">Valeur NP (art. 669)</label>';
+                html += '<div style="font-size:.95rem;font-weight:700;color:var(--accent-green);padding-top:8px;">' + fmt(valeurNP) + ' <span style="font-size:.72rem;color:var(--text-muted);">(' + Math.round(npRatio * 100) + '% de ' + fmt(item.valeur || 0) + ')</span></div></div>';
                 html += '</div>';
 
                 // Quasi-usufruit
-                html += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
+                html += '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;">';
                 html += '<div class="switch ' + (item.quasiUsufruit ? 'on' : '') + '" onclick="SD.updateFin(' + id + ',\'quasiUsufruit\',!' + !!item.quasiUsufruit + '); SD.refreshAVBeneficiaires(' + id + ')"></div>';
-                html += '<span style="font-size:.68rem;color:var(--text-secondary);">Quasi-usufruit (l\'US consomme le capital)</span>';
+                html += '<span style="font-size:.78rem;color:var(--text-secondary);">Quasi-usufruit (l\'US consomme le capital)</span>';
                 html += '</div>';
                 if (item.quasiUsufruit) {
-                    html += '<div style="font-size:.58rem;color:var(--accent-amber);margin-top:4px;padding:4px 8px;background:rgba(255,179,0,.06);border-radius:4px;"><i class="fas fa-info-circle"></i> Créance de restitution au décès = <strong>' + fmt(item.valeur || 0) + '</strong> déductible de l\'actif successoral.</div>';
+                    html += '<div style="font-size:.68rem;color:var(--accent-amber);margin-top:6px;padding:6px 10px;background:rgba(255,179,0,.06);border-radius:6px;"><i class="fas fa-info-circle"></i> Créance de restitution au décès = <strong>' + fmt(item.valeur || 0) + '</strong> déductible de l\'actif successoral.</div>';
                 }
 
                 // Nus-propriétaires — sélecteur multi-source
-                html += '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;"><i class="fas fa-user-friends"></i> Nus-propriétaires du contrat</div>';
+                html += '<div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);margin:12px 0 8px;"><i class="fas fa-user-friends"></i> Nus-propriétaires du contrat</div>';
                 html += buildAVBenSelector(id, item.npBeneficiaires, 'np');
                 html += '</div>'; // close green box
             }
@@ -2650,9 +2650,9 @@ const SD = (() => {
         const showClauseBen = item.type === 'assurance_vie' || (item.type === 'contrat_capi' && item.demembrement !== 'np_donation');
         if (showClauseBen) {
             const clauseLabel = item.type === 'contrat_capi' ? 'Héritiers du contrat (succession)' : 'Bénéficiaires désignés du ' + typeLabel;
-            html += '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;"><i class="fas fa-users"></i> ' + clauseLabel + '</div>';
+            html += '<div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;"><i class="fas fa-users"></i> ' + clauseLabel + '</div>';
             if (item.type === 'assurance_vie') {
-                html += '<div style="font-size:.58rem;color:var(--accent-amber);margin-bottom:6px;padding:4px 8px;background:rgba(255,179,0,.06);border-radius:4px;"><i class="fas fa-exclamation-triangle"></i> Rappel : la clause bénéficiaire AV est <strong>libre</strong>. Le bénéficiaire peut être différent des donataires.</div>';
+                html += '<div style="font-size:.68rem;color:var(--accent-amber);margin-bottom:8px;padding:6px 10px;background:rgba(255,179,0,.06);border-radius:6px;"><i class="fas fa-exclamation-triangle"></i> Rappel : la clause bénéficiaire AV est <strong>libre</strong>. Le bénéficiaire peut être différent des donataires.</div>';
             }
             html += buildAVBenSelector(id, item.avBeneficiaires, 'av');
         }
@@ -2679,33 +2679,33 @@ const SD = (() => {
         benList.forEach((ab, idx) => {
             const person = ab.person || {};
             const isCustom = person.sourceType === 'custom';
-            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:4px 6px;border-radius:6px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.06);">';
+            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:6px 8px;border-radius:8px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.06);">';
 
             if (isCustom) {
                 // Editable name + age + lien for custom persons
-                html += '<input type="text" class="form-input" style="font-size:.65rem;height:24px;width:80px;" placeholder="Nom" value="' + esc(person.nom || '') + '" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'nom\',this.value)">';
-                html += '<input type="number" class="form-input" style="font-size:.65rem;height:24px;width:40px;text-align:center;" placeholder="Âge" value="' + (person.age || '') + '" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'age\',+this.value)">';
-                html += '<select class="form-input" style="font-size:.6rem;height:24px;width:90px;" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'lienFiscalDonateur\',this.value)">';
+                html += '<input type="text" class="form-input" style="font-size:.78rem;height:32px;width:100px;" placeholder="Nom" value="' + esc(person.nom || '') + '" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'nom\',this.value)">';
+                html += '<input type="number" class="form-input" style="font-size:.78rem;height:32px;width:50px;text-align:center;" placeholder="Âge" value="' + (person.age || '') + '" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'age\',+this.value)">';
+                html += '<select class="form-input" style="font-size:.72rem;height:32px;width:110px;" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'lienFiscalDonateur\',this.value)">';
                 ['enfant','petit_enfant','arriere_petit_enfant','conjoint_pacs_donation','frere_soeur','neveu_niece','tiers'].forEach(l => {
                     html += '<option value="' + l + '"' + (person.lienFiscalDonateur === l ? ' selected' : '') + '>' + l.replace(/_/g,' ') + '</option>';
                 });
                 html += '</select>';
             } else {
                 // Display name + lien info
-                html += '<span style="font-size:.65rem;flex:1;">' + esc(person.nom || 'Bénéf.') + ' <span style="color:var(--text-muted);font-size:.55rem;">(' + (person.lienFiscalDonateur || '?').replace(/_/g,' ') + ')</span></span>';
+                html += '<span style="font-size:.78rem;flex:1;">' + esc(person.nom || 'Bénéf.') + ' <span style="color:var(--text-muted);font-size:.65rem;">(' + (person.lienFiscalDonateur || '?').replace(/_/g,' ') + ')</span></span>';
             }
 
-            html += '<input type="number" class="form-input" value="' + (ab.pct || 0) + '" min="0" max="100" style="font-size:.65rem;height:24px;width:52px;text-align:center;" onchange="SD.updateAVBenPct(' + finId + ',' + idx + ',\'' + targetType + '\',+this.value)">';
-            html += '<span style="font-size:.55rem;color:var(--text-muted);">%</span>';
-            html += '<button class="btn-remove" style="width:22px;height:22px;font-size:.55rem;" onclick="SD.removeAVBeneficiary(' + finId + ',' + idx + ',\'' + targetType + '\')"><i class="fas fa-times"></i></button>';
+            html += '<input type="number" class="form-input" value="' + (ab.pct || 0) + '" min="0" max="100" style="font-size:.78rem;height:32px;width:60px;text-align:center;" onchange="SD.updateAVBenPct(' + finId + ',' + idx + ',\'' + targetType + '\',+this.value)">';
+            html += '<span style="font-size:.68rem;color:var(--text-muted);">%</span>';
+            html += '<button class="btn-remove" style="width:26px;height:26px;font-size:.65rem;" onclick="SD.removeAVBeneficiary(' + finId + ',' + idx + ',\'' + targetType + '\')"><i class="fas fa-times"></i></button>';
             html += '</div>';
         });
 
         // Total indicator
-        html += '<div style="font-size:.55rem;margin:4px 0;color:' + (total === 100 ? 'var(--accent-green)' : 'var(--accent-coral)') + ';">Total : ' + total + '%' + (total !== 100 ? ' ⚠️ doit être 100%' : ' ✓') + '</div>';
+        html += '<div style="font-size:.68rem;margin:6px 0;color:' + (total === 100 ? 'var(--accent-green)' : 'var(--accent-coral)') + ';">Total : ' + total + '%' + (total !== 100 ? ' ⚠️ doit être 100%' : ' ✓') + '</div>';
 
         // Add button — dropdown multi-source
-        html += '<select class="form-input" style="font-size:.65rem;height:28px;margin-top:4px;color:var(--primary-color);" onchange="SD.addAVBenFromDropdown(' + finId + ',\'' + targetType + '\',this); this.selectedIndex=0;">';
+        html += '<select class="form-input" style="font-size:.78rem;height:38px;margin-top:6px;color:var(--primary-color);" onchange="SD.addAVBenFromDropdown(' + finId + ',\'' + targetType + '\',this); this.selectedIndex=0;">';
         html += '<option value="">+ Ajouter un bénéficiaire…</option>';
 
         // Source 1: donataires existants
