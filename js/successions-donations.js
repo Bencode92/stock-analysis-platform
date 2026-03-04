@@ -1604,31 +1604,57 @@ const SD = (() => {
         const donors = FamilyGraph.getDonors();
         const bens = FamilyGraph.getBeneficiaries();
 
-        // Sync beneficiaries to SD state
-        state.beneficiaries = bens.map(b => ({
-            id: b.id,
-            prenom: b.nom,
-            age: b.age || 0,
-            lien: 'enfant',
-            generation: 'enfant'
-        }));
+        // 1) Clear and rebuild beneficiaries list from graph
+        state.beneficiaries = [];
+        var benListEl = el('beneficiaries-list');
+        if (benListEl) benListEl.innerHTML = '';
+        benIdCounter = 0;
 
-        // Sync donors to PathOptimizer
+        bens.forEach(b => {
+            // Determine fiscal lien from first donor
+            var lien = 'enfant';
+            if (donors.length > 0) {
+                var computed = FamilyGraph.computeFiscalLien(donors[0].id, b.id);
+                if (computed) {
+                    // Map graph lien names to select option values
+                    var lienMap = {
+                        'enfant': 'enfant', 'petit-enfant': 'petit_enfant',
+                        'arriere-petit-enfant': 'arriere_petit_enfant',
+                        'conjoint': 'conjoint_pacs', 'frere-soeur': 'frere_soeur',
+                        'neveu-niece': 'neveu_niece', 'oncle-tante': 'tiers',
+                        'tiers': 'tiers', 'grand-parent': 'tiers'
+                    };
+                    lien = lienMap[computed] || 'enfant';
+                }
+            }
+            addBeneficiary(lien, b.nom || ('Bénéficiaire ' + (benIdCounter + 1)));
+            // Set age if available
+            var lastBen = state.beneficiaries[state.beneficiaries.length - 1];
+            if (lastBen && b.age) {
+                lastBen.age = b.age;
+                var ageInput = document.querySelector('#ben-' + lastBen.id + ' input[type=number]');
+                if (ageInput) ageInput.value = b.age;
+            }
+            // Store graph id for cross-reference
+            if (lastBen) lastBen._graphId = b.id;
+        });
+
+        // 2) Sync donors to PathOptimizer
         if (typeof PathOptimizer !== 'undefined') {
-            const old = PathOptimizer.getDonors();
-            old.forEach(d => { if (PathOptimizer.removeDonor) PathOptimizer.removeDonor(d.id); });
+            var existingDonors = PathOptimizer.getDonors();
+            existingDonors.forEach(d => { if (PathOptimizer.removeDonor) PathOptimizer.removeDonor(d.id); });
 
             donors.forEach(d => {
-                const role = FamilyGraph.inferRole(d.id);
-                PathOptimizer.addDonor(role, d.nom, d.age, d.patrimoine, d.regime);
-                const newDonor = PathOptimizer.getDonors().find(dd => dd.nom === d.nom);
+                var role = FamilyGraph.inferRole ? FamilyGraph.inferRole(d.id) : 'parent';
+                PathOptimizer.addDonor(role, d.nom, d.age, d.patrimoine || 0, d.regime || 'communaute');
+                var newDonor = PathOptimizer.getDonors().find(dd => dd.nom === d.nom);
                 if (newDonor) {
                     newDonor.linkedBens = {};
                     newDonor._graphId = d.id;
                     bens.forEach(b => {
-                        const lien = FamilyGraph.computeFiscalLien(d.id, b.id);
+                        var lien = FamilyGraph.computeFiscalLien(d.id, b.id);
                         newDonor.linkedBens[b.id] = (lien !== 'tiers');
-                        let entry = newDonor.donationsParBen.find(e => +e.benId === b.id);
+                        var entry = newDonor.donationsParBen.find(e => +e.benId === b.id);
                         if (!entry) {
                             entry = { benId: b.id, montant: 0, lienOverride: null, date: null, type: 'inconnue' };
                             newDonor.donationsParBen.push(entry);
@@ -1639,10 +1665,7 @@ const SD = (() => {
             });
             if (PathOptimizer.updateMatrix) PathOptimizer.updateMatrix();
             if (PathOptimizer.renderDonorList) PathOptimizer.renderDonorList();
-        }
-        renderBenList();
-        if (typeof PathOptimizer !== 'undefined') {
-            PathOptimizer.refreshBenDonSummaries();
+            PathOptimizer.refreshBenDonSummaries && PathOptimizer.refreshBenDonSummaries();
         }
     }
 
