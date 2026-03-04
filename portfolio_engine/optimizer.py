@@ -1,6 +1,6 @@
 # portfolio_engine/optimizer.py
 """
-Optimiseur de portefeuille v6.32.1c (P0 FIX scoring + z-score)
+Optimiseur de portefeuille v6.32.2 (P0 FIX scoring + z-score + dedup fix)
 
 CHANGEMENTS v6.28 (4 FIXES CRITIQUES):
 1. FIX A: vol_annual lit maintenant les vraies colonnes par catégorie:
@@ -129,8 +129,6 @@ try:
         PROFILE_BUCKET_TARGETS,
         EQUITY_PRESETS,
         select_equities_for_profile,  # ← NOUVELLE LIGNE
-        select_crypto_core_satellite,  # v5.3.0: Dynamic crypto core/satellite
-        CRYPTO_CORE_CONFIG,            # v5.3.0: Config par profil
         ETF_PRESETS,
         CRYPTO_PRESETS,
         Role,
@@ -171,10 +169,6 @@ except ImportError:
         return "OTHER"
     def get_stock_region_cap(profile: str, region: str) -> float:
         return 0.30
-    # Fallback v5.3.0: Dynamic crypto
-    CRYPTO_CORE_CONFIG = {}
-    def select_crypto_core_satellite(cryptos, profile):
-        return [], [], {"reason": "preset_meta_unavailable"}   
     # === Fallback EU/US v2.2 ===
     STOCK_REGION_CAPS_EUUS = {}
     ALLOWED_REGIONS_EUUS = {"EU", "US", "OTHER"}
@@ -587,31 +581,42 @@ MIN_DEFENSIVE_IN_POOL = {
 }
 
 # PATCH v8.2: Minimum ETF dans le pool par profil (NOUVEAU)
-# === FIX v2.2.0: 6→10 pour couvrir tous les presets ETF ===
 MIN_ETF_IN_POOL = {
-    "Stable": 8,
-    "Modéré": 10,
-    "Agressif": 12,
-}
-MIN_CRYPTO_IN_POOL = {
-    "Stable": 0,
-    "Modéré": 4,
-    "Agressif": 5,   # Preset sort 5, on les garde toutes
+    "Stable": 6,
+    "Modéré": 6,
+    "Agressif": 6,
 }
 
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # v6.28 FIX B: Aligné avec max_single_position (15%) pour cohérence bounds SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
-    "Stable": 10.0,   # v6.33 FIX: 15% → 10% (aligné avec max_single_position=10% pour Stable)
+    "Stable": 15.0,   # v6.28 FIX: 25% → 15% (aligné avec max_single_position global)
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
     "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
 }
 # ============= v6.23 CRYPTO CORE/SATELLITE =============
 
-# ============= v6.35 CRYPTO CORE/SATELLITE (DYNAMIC) =============
-# SUPPRIMÉ: L'ancien dict CRYPTO_CORE_SATELLITE qui hardcodait BTC/ETH.
-# Remplacé par CRYPTO_CORE_CONFIG dans preset_meta.py (v5.3.0).
-# La sélection se fait maintenant par mérite via select_crypto_core_satellite().
+CRYPTO_CORE_SATELLITE = {
+    "Agressif": {
+        "enabled": True,
+        "core_pct": 0.60,           # 60% du budget crypto en core
+        "core_assets": ["BTC/USD", "ETH/USD"],
+        "core_split": [0.50, 0.50], # 50/50 entre BTC et ETH
+        "satellite_max_per_asset": 0.15,  # Max 15% du budget crypto par alt
+        "satellite_dd_max": 35.0,   # Exclure alts avec DD > 35%
+    },
+    "Modéré": {
+        "enabled": True,
+        "core_pct": 0.70,           # 70% du budget crypto en core
+        "core_assets": ["BTC/USD", "ETH/USD"],
+        "core_split": [0.60, 0.40], # 60/40 BTC/ETH
+        "satellite_max_per_asset": 0.10,
+        "satellite_dd_max": 30.0,
+    },
+    "Stable": {
+        "enabled": False,  # Pas de crypto pour Stable
+    },
+}
 # P1 FIX v6.2: Minimum nombre de bonds distincts dans l'allocation finale
 MIN_DISTINCT_BONDS = {
     "Stable": 2,      # v6.11 FIX: 4 → 2 (cohérent avec max 18%)
@@ -950,30 +955,6 @@ def select_etfs_via_preset_engine(
         sym = asset.ticker or asset.id
         sd = asset.source_data if asset.source_data else {}
         
-        # === FIX v2.3.0: Multi-key asset_map pour éviter mapping failures ===
-        # Problème: convert_universe_to_assets peut perdre le ticker original.
-        # L'ETF CSV utilise "etfsymbol" comme clé primaire, mais Asset.ticker
-        # peut être None si le dict source n'a pas "ticker"/"symbol".
-        # On indexe par TOUTES les clés possibles pour maximiser les matches.
-        asset_map[sym] = asset
-        # Ajouter etfsymbol original du CSV si disponible
-        etfsym_orig = sd.get("etfsymbol") or sd.get("symbol") or sd.get("ticker")
-        if etfsym_orig and etfsym_orig != sym:
-            asset_map[str(etfsym_orig)] = asset
-        # Ajouter aussi par nom (fallback)
-        if asset.name and asset.name != sym:
-            asset_map[asset.name] = asset
-        # Ajouter par ISIN si disponible
-        isin = sd.get("isin")
-        if isin and isinstance(isin, str) and len(isin) > 3:
-            asset_map[isin] = asset
-        # === FIN FIX v2.3.0 ===
-        
-        # === FIX v2.3.0b: Utiliser etfsymbol original comme clé primaire ===
-        # Si l'ETF a un etfsymbol court (ex: "VPL"), l'utiliser au lieu du nom long
-        if etfsym_orig and len(str(etfsym_orig)) < len(sym):
-            sym = str(etfsym_orig)
-        
         rec = {
             "etfsymbol": sym,
             "symbol": sym,
@@ -1034,21 +1015,9 @@ def select_etfs_via_preset_engine(
     
     # === Reconvertir DataFrame → List[Asset] avec scores enrichis ===
     selected_assets = []
-    _mapping_failures = []  # FIX v2.3.0: Track failures
     for _, row in df_selected.iterrows():
         sym = row.get("etfsymbol") or row.get("symbol")
-        # === FIX v2.3.0: Multi-key lookup ===
         original_asset = asset_map.get(sym)
-        if original_asset is None:
-            # Essayer d'autres clés
-            for alt_key in [row.get("symbol"), row.get("name"), row.get("isin")]:
-                if alt_key and alt_key in asset_map:
-                    original_asset = asset_map[alt_key]
-                    break
-        if original_asset is None:
-            _mapping_failures.append(sym)
-            continue
-        # === FIN FIX v2.3.0 ===
         
         if original_asset:
             # Mettre à jour le score avec _profile_score de preset_etf
@@ -1065,26 +1034,6 @@ def select_etfs_via_preset_engine(
                     original_asset.role = parsed_role
             
             selected_assets.append(original_asset)
-    
-    # === FIX v2.3.0: Log mapping failures + fallback ===
-    if _mapping_failures:
-        logger.warning(
-            f"[preset_etf] FIX v2.3.0: {len(_mapping_failures)} mapping failures "
-            f"(df_selected={len(df_selected)}, reconstructed={len(selected_assets)}): "
-            f"{_mapping_failures[:5]}"
-        )
-        # FALLBACK: Si trop de pertes, retourner TOUS les ETFs input
-        # pour ne pas réduire artificiellement l'univers
-        if len(selected_assets) < len(etf_assets) * 0.5:
-            logger.warning(
-                f"[preset_etf] FIX v2.3.0 FALLBACK: mapping a perdu >50% des ETFs "
-                f"({len(selected_assets)}/{len(df_selected)}). "
-                f"Retour de TOUS les {len(etf_assets)} ETFs input."
-            )
-            meta["fallback"] = True
-            meta["fallback_reason"] = f"mapping_failures:{len(_mapping_failures)}/{len(df_selected)}"
-            return etf_assets[:top_n], meta
-    # === FIN FIX v2.3.0 ===
     
     meta["selected_count"] = len(selected_assets)
     logger.info(f"[preset_etf] {profile_name}: {len(etf_assets)} → {len(selected_assets)} ETF")
@@ -1108,23 +1057,8 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
             return "cash_ultra_short", Role.DEFENSIVE
         return "defensif_oblig", Role.DEFENSIVE
     
-# === CRYPTO === (v2.0.2: respecte preset_crypto)
+    # === CRYPTO ===
     if category == "Crypto":
-        # v2.0.2: Priorité au rôle assigné par preset_crypto
-        sd = asset.source_data or {}
-        preset_role = sd.get("_role")
-        if preset_role:
-            role_map = {
-                "core": Role.CORE,
-                "satellite": Role.SATELLITE,
-                "lottery": Role.LOTTERY,
-            }
-            mapped_role = role_map.get(str(preset_role).lower())
-            if mapped_role:
-                preset_name = sd.get("_matched_preset", "crypto_preset")
-                return preset_name, mapped_role
-
-        # Fallback: classification par volatilité (crypto hors preset)
         if any(kw in name_lower for kw in ["bitcoin", "btc", "ethereum", "eth"]):
             return "quality_risk", Role.CORE
         if vol > 100:
@@ -1132,6 +1066,7 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
         if vol > 60:
             return "momentum24h", Role.LOTTERY
         return "trend3_12m", Role.SATELLITE
+    
     # === ETF ===
     if category == "ETF":
         exposure = asset.exposure
@@ -1341,7 +1276,13 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     
     for asset in assets:
         if asset.category in ["ETF", "Obligations"] and asset.exposure is None:
-            asset.exposure = detect_etf_exposure(asset)
+            # FIX v2.4.0-A: Passer name/ticker/fund_type au lieu de l'objet Asset
+            _ft = (asset.source_data or {}).get("fund_type", "") if asset.source_data else ""
+            asset.exposure = detect_etf_exposure(
+                asset.name or "",
+                asset.ticker or asset.symbol or "",
+                _ft,
+            )
         
         if asset.category == "ETF":
             etfs_to_dedup.append(asset)
@@ -1355,15 +1296,20 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     deduplicated_etfs = []
     removed_count = 0
     
+    # FIX v2.4.0-B: Garder top N par exposition au lieu de 1
+    # 1 seul par groupe éliminait ~89/99 ETFs → pool trop petit pour l'optimizer
+    MAX_PER_EXPOSURE = 3
+    
     for exposure, group in exposure_groups.items():
         if exposure is None:
             deduplicated_etfs.extend(group)
         else:
             # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri stable
             sorted_group = sorted(group, key=lambda a: (a.score, a.id), reverse=True)
-            deduplicated_etfs.append(sorted_group[0])
-            if len(sorted_group) > 1:
-                removed_count += len(sorted_group) - 1
+            keep = sorted_group[:MAX_PER_EXPOSURE]
+            deduplicated_etfs.extend(keep)
+            if len(sorted_group) > len(keep):
+                removed_count += len(sorted_group) - len(keep)
     
     n_bonds_after = sum(1 for a in other_assets if a.category == "Obligations")
     n_etf_after = len(deduplicated_etfs)
@@ -1371,7 +1317,13 @@ def deduplicate_etfs(assets: List[Asset], prefer_by: str = "score") -> List[Asse
     logger.info(f"ETF dedup: ETF {n_etf_before}→{n_etf_after}, Bonds {n_bonds_before}→{n_bonds_after} (unchanged)")
     
     if removed_count > 0:
-        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs")
+        logger.info(f"ETF deduplication: removed {removed_count} redundant ETFs (max {MAX_PER_EXPOSURE}/exposure)")
+        # FIX v2.4.0: Log exposure distribution pour diagnostic
+        exp_dist = defaultdict(int)
+        for etf in deduplicated_etfs:
+            exp_dist[etf.exposure or "None"] += 1
+        top_exp = sorted(exp_dist.items(), key=lambda x: -x[1])[:8]
+        logger.info(f"ETF dedup exposures kept: {dict(top_exp)}")
     
     return other_assets + deduplicated_etfs
 
@@ -1827,11 +1779,7 @@ class PortfolioOptimizer:
             selected_etfs, etf_meta = select_etfs_via_preset_engine(
                 etf_assets,
                 profile_name=profile.name,
-                # === FIX v2.2.0: top_n=30 au lieu de min(30, max_assets)=18 ===
-                # max_assets=18 tronquait à 18 ETFs → pool trop petit pour
-                # couvrir tous les presets (sector_cyclical exclu).
-                # 30 ETFs = assez pour couvrir 10 presets × ~3 ETFs/preset.
-                top_n=30,
+                top_n=min(30, profile.max_assets),
                 strict_metrics=False,  # False = évite résultats vides
             )
             
@@ -1961,32 +1909,6 @@ class PortfolioOptimizer:
         logger.info("FIX C v8.3: Z-SCORE CALIBRATION PAR CATÉGORIE")
 
         for cat, arr in sorted(score_by_cat.items()):
-            # v2.0.2: Skip crypto — scores déjà risk-adjusted par preset
-            if cat == "Crypto":
-                cat_assets = [a for a in universe if a.category == cat]
-                for a in cat_assets:
-                    a._select_score = float(a.score)
-                logger.info(
-                    f"  {cat}: n={len(arr)} | SKIP z-score (risk-adjusted by preset)"
-                )
-                continue
-            # === FIX v2.2.0: Skip z-score pour ETFs ===
-            # Même logique que crypto: preset_etf.py produit des scores
-            # déjà risk-adjusted et cross-category. Le z-score détruit
-            # la discrimination (σ=0.65 → tout s'effondre vers μ=50).
-            # Sans ce skip: XLE 99.47 → _select_score 57 (sous les equities)
-            # Avec ce skip: XLE 99.47 → _select_score 99.47 (compétitif)
-            if cat == "ETF":
-                cat_assets = [a for a in universe if a.category == cat]
-                for a in cat_assets:
-                    a._select_score = float(a.score)
-                logger.info(
-                    f"  {cat}: n={len(arr)} | SKIP z-score (risk-adjusted by preset_etf) "
-                    f"FIX v2.2.0"
-                )
-                continue
-            # === FIN FIX v2.2.0 ===
-
             scores_np = np.array(arr, dtype=float)
             n_cat = len(scores_np)
             mu_cat = float(scores_np.mean())
@@ -2024,59 +1946,23 @@ class PortfolioOptimizer:
             key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
         )
         # =====================================================
-        # FIX v8.5 + PATCH v8.6: PÉNALITÉ CRYPTO SANS HISTORIQUE
-        # v8.6: BTC/ETH = artifact technique (données synthétiques),
-        #       pénalité réduite. Altcoins = risque réel, pénalité forte.
+        # FIX v8.5: PÉNALITÉ CRYPTO SANS HISTORIQUE
         # =====================================================
-        NO_HISTORY_PENALTY_DEFAULT = 0.50       # Altcoins : −50%
-        NO_HISTORY_PENALTY_BLUECHIP = 0.15      # BTC/ETH  : −15%
-        NO_HISTORY_MAX_WEIGHT_DEFAULT = 3.0     # Altcoins : max 3%
-        NO_HISTORY_MAX_WEIGHT_BLUECHIP = 5.0    # BTC/ETH  : max 5%
-
-        CRYPTO_BLUECHIPS = {"BTC", "ETH"}
-
-        # =====================================================
-        # FIX v8.5 + PATCH v8.6: PÉNALITÉ CRYPTO SANS HISTORIQUE
-        # v8.6: Si AUCUN crypto n'a returns_series, c'est structurel
-        #       (pas de données prix pour la classe entière) → skip pénalité
-        #       Si CERTAINS ont l'historique, pénaliser ceux qui ne l'ont pas
-        #       avec distinction blue chip (−15%) vs altcoin (−50%)
-        # =====================================================
-        NO_HISTORY_PENALTY_DEFAULT = 0.50
-        NO_HISTORY_PENALTY_BLUECHIP = 0.15
-        NO_HISTORY_MAX_WEIGHT_DEFAULT = 3.0
-        NO_HISTORY_MAX_WEIGHT_BLUECHIP = 5.0
-
-        CRYPTO_BLUECHIPS = {"BTC", "ETH"}
-
-        crypto_assets = [a for a in sorted_assets if a.category == "Crypto"]
-        crypto_with_history = sum(1 for a in crypto_assets if a.returns_series is not None)
-        skip_crypto_penalty = (len(crypto_assets) > 0 and crypto_with_history == 0)
-
-        if skip_crypto_penalty:
-            logger.info(
-                f"[PATCH v8.6] Aucun crypto n'a returns_series "
-                f"({len(crypto_assets)} cryptos) — pénalité désactivée (structurel)"
-            )
-
+        NO_HISTORY_SCORE_PENALTY = 0.50
+        NO_HISTORY_MAX_WEIGHT = 3.0
+        
         for asset in sorted_assets:
-            if asset.category == "Crypto" and asset.returns_series is None and not skip_crypto_penalty:
+            if asset.category == "Crypto" and asset.returns_series is None:
                 original_score = asset.score
-                # Identifier blue chips par base symbol
-                base_symbol = (asset.ticker or asset.id or "").split("/")[0].upper()
-                is_bluechip = base_symbol in CRYPTO_BLUECHIPS
-                penalty = NO_HISTORY_PENALTY_BLUECHIP if is_bluechip else NO_HISTORY_PENALTY_DEFAULT
-                max_w = NO_HISTORY_MAX_WEIGHT_BLUECHIP if is_bluechip else NO_HISTORY_MAX_WEIGHT_DEFAULT
-                asset.score *= (1 - penalty)
+                asset.score *= (1 - NO_HISTORY_SCORE_PENALTY)
                 if hasattr(asset, '_select_score'):
-                    asset._select_score *= (1 - penalty)
+                    asset._select_score *= (1 - NO_HISTORY_SCORE_PENALTY)
                 asset._no_history = True
-                asset._max_weight_override = max_w
-                tag = "BLUECHIP" if is_bluechip else "ALT"
+                asset._max_weight_override = NO_HISTORY_MAX_WEIGHT
                 logger.warning(
-                    f"[FIX v8.5+v8.6 {tag}] {asset.id}: no price history, "
-                    f"score {original_score:.1f} → {asset.score:.1f} "
-                    f"(penalty={penalty:.0%}), max_weight={max_w}%"
+                    f"[FIX v8.5] {asset.id}: no price history, "
+                    f"score {original_score:.1f} → {asset.score:.1f}, "
+                    f"max_weight capped at {NO_HISTORY_MAX_WEIGHT}%"
                 )
         
         # Re-trier après pénalité
@@ -2204,68 +2090,8 @@ class PortfolioOptimizer:
             logger.info(
                 f"PATCH v8.2 FIX A: Added {len(etf_to_add)} ETF to pool for "
                 f"{profile.name} (had {len(etf_in_pool)}, minimum {min_etf})"
-            )
-
-        # === FIX v2.2.0: DIVERSITÉ PAR PRESET ETF ===
-        # Garantir au moins 1 ETF par preset qui a des candidats.
-        # Sans ceci, sector_cyclical (XLE, VDE, URA) = 0 sélectionné
-        # car coeur_global monopolise les slots.
-        ETF_PRESET_MIN = 1  # Minimum 1 ETF par preset présent
-        etf_in_pool_ids = {a.id for a in selected if a.category == "ETF"}
-        etf_presets_in_pool = set()
-        for a in selected:
-            if a.category == "ETF" and a.source_data:
-                p = a.source_data.get("_matched_preset", "")
-                if p:
-                    etf_presets_in_pool.add(p)
+            )   
         
-        # Trouver les presets manquants
-        preset_candidates = {}
-        for a in universe:
-            if a.category != "ETF" or a.id in etf_in_pool_ids:
-                continue
-            p = (a.source_data or {}).get("_matched_preset", "")
-            if p and p not in etf_presets_in_pool:
-                if p not in preset_candidates:
-                    preset_candidates[p] = []
-                preset_candidates[p].append(a)
-        
-        etf_preset_added = 0
-        for preset, candidates in preset_candidates.items():
-            candidates.sort(key=lambda x: (-getattr(x, "_select_score", x.score), x.id))
-            to_add = candidates[:ETF_PRESET_MIN]
-            selected.extend(to_add)
-            etf_preset_added += len(to_add)
-            for a in to_add:
-                logger.info(
-                    f"FIX v2.2.0 PRESET DIVERSITY: Added {a.id} "
-                    f"(preset={preset}, score={a.score:.1f}) to pool for {profile.name}"
-                )
-        
-        if etf_preset_added > 0:
-            logger.info(
-                f"FIX v2.2.0: {etf_preset_added} ETFs ajoutés pour diversité preset "
-                f"({list(preset_candidates.keys())})"
-            )
-        # === FIN FIX v2.2.0 ===
-
-        # === FIX v2.0.2: GARANTIR MINIMUM CRYPTO DANS LE POOL ===
-        min_crypto = MIN_CRYPTO_IN_POOL.get(profile.name, 0)
-        crypto_in_pool_check = [a for a in selected if a.category == "Crypto"]
-
-        if profile.crypto_max > 0 and len(crypto_in_pool_check) < min_crypto:
-            crypto_candidates = sorted(
-                [a for a in universe if a.category == "Crypto" and a not in selected],
-                key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
-            )
-            crypto_needed = min_crypto - len(crypto_in_pool_check)
-            crypto_to_add = crypto_candidates[:crypto_needed]
-            selected.extend(crypto_to_add)
-            logger.info(
-                f"FIX v2.0.2: Added {len(crypto_to_add)} crypto to pool for "
-                f"{profile.name} (had {len(crypto_in_pool_check)}, minimum {min_crypto})"
-            )
-
         # === v3.9: TOP-N GUARANTEED SELECTION ===
         # Garantit TOUJOURS 25 actifs minimum (sauf univers < 25)
         TARGET_N = 25
@@ -2331,13 +2157,6 @@ class PortfolioOptimizer:
                     f"Stocks={len(pool_stocks)}, ETF={len(pool_etf)}, "
                     f"Bonds={len(pool_bonds)}, Crypto={len(pool_crypto)}, "
                     f"max_any_category={getattr(profile, 'max_any_category', 100)}%")
-
-        # === PATCH v8.6: ALERTE si crypto attendu mais absent du pool ===
-        if profile.crypto_max > 0 and len(pool_crypto) == 0:
-            logger.warning(
-                f"[PATCH v8.6 ALERT] {profile.name}: crypto_max={profile.crypto_max}% "
-                f"mais 0 crypto dans le pool. Vérifier scores ou données source."
-            )
         
         # Log bucket distribution
         bucket_dist = defaultdict(int)
@@ -2709,10 +2528,7 @@ class PortfolioOptimizer:
         max_single_bond = MAX_SINGLE_BOND_WEIGHT.get(profile.name, 10.0)
         min_distinct = MIN_DISTINCT_BONDS.get(profile.name, 2)
         
-       # v6.33 FIX: effective_max = min(max_single_bond, max_single_position)
-        # Sans ce fix, ceil(35/15)=3 bonds mais chaque bond cappé à 10% → 30% < 35%
-        effective_max_bond = min(max_single_bond, profile.max_single_position)
-        n_bonds_required = max(min_distinct, int(np.ceil(bonds_needed / effective_max_bond)))
+        n_bonds_required = max(min_distinct, int(np.ceil(bonds_needed / max_single_bond)))
         n_bonds_to_use = min(len(bonds), max(n_bonds_required, 3))
         
         if n_bonds_to_use > 0:
@@ -4662,108 +4478,95 @@ class PortfolioOptimizer:
         profile: ProfileConstraints
     ) -> Dict[str, float]:
         """
-        v6.35: Core/Satellite DYNAMIQUE — top cryptos par mérite, pas hardcodé.
-
-        Utilise select_crypto_core_satellite() de preset_meta.py pour classer
-        les cryptos par score composite (Sharpe, ret_90d, drawdown, vol).
-        Le core = top N, le satellite = suivants filtrés par drawdown.
+        v6.23: Applique la structure Core/Satellite pour crypto.
+        
+        Core: BTC + ETH (60-70% du budget crypto)
+        Satellite: Autres cryptos filtrées par DD (30-40% restant)
         """
-        config = CRYPTO_CORE_CONFIG.get(profile.name)
-        if config is None:
+        config = CRYPTO_CORE_SATELLITE.get(profile.name, {})
+        if not config.get("enabled", False):
             return allocation
-
+        
         asset_lookup = {c.id: c for c in candidates}
-
-        # Budget crypto total actuel
+        
+        # Calculer budget crypto total actuel
         crypto_total = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
         )
-
+        
         if crypto_total < 0.5:
             return allocation  # Pas de crypto, rien à faire
-
-        # Construire la liste de dicts crypto depuis candidates (avec source_data)
-        crypto_dicts = []
-        for c in candidates:
-            if c.category != "Crypto":
-                continue
-            sd = c.source_data or {}
-            d = {
-                "_asset_id": c.id,
-                "symbol": c.ticker or c.id,
-                "sharpe_ratio": sd.get("sharpe_ratio"),
-                "ret_90d_pct": sd.get("ret_90d_pct"),
-                "ret_1y_pct": sd.get("ret_1y_pct"),
-                "drawdown_90d": sd.get("drawdown_90d_pct") or sd.get("drawdown_90d"),
-                "vol_30d_annual": sd.get("vol_30d_annual_pct") or sd.get("vol_30d_annual"),
-            }
-            crypto_dicts.append(d)
-
-        if not crypto_dicts:
-            return allocation
-
-        # === APPEL DYNAMIQUE ===
-        core_list, sat_list, meta = select_crypto_core_satellite(
-            crypto_dicts, profile.name
-        )
-
-        logger.info(
-            f"[v6.35 DYNAMIC CRYPTO] {profile.name}: "
-            f"core={meta['core_symbols']}, satellite={meta['satellite_symbols']}, "
-            f"ranked={meta['total_ranked']}"
-        )
-
-        # Retirer toutes les cryptos existantes de l'allocation
-        crypto_ids = [
-            aid for aid in list(allocation.keys())
-            if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
-        ]
+        
+        # Retirer toutes les cryptos existantes
+        crypto_ids = [aid for aid in allocation 
+                     if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"]
         for aid in crypto_ids:
             del allocation[aid]
-
-        # === ALLOUER CORE ===
-        core_pct = config["core_pct"]
-        core_budget = crypto_total * core_pct
-
-        if core_list:
-            per_core = core_budget / len(core_list)
-            for c in core_list:
-                aid = c.get("_asset_id")
-                if aid and per_core >= 0.5:
-                    allocation[aid] = round(per_core, 2)
-                    logger.info(
-                        f"  CORE: {c.get('symbol', aid)} = {per_core:.2f}% "
-                        f"(rank_score={c.get('_crypto_rank_score', 0):.3f})"
-                    )
-
-        # === ALLOUER SATELLITE ===
-        sat_budget = crypto_total * (1 - core_pct)
-
-        if sat_list:
-            per_sat = sat_budget / len(sat_list)
-            for c in sat_list:
-                aid = c.get("_asset_id")
-                if aid and per_sat >= 0.5:
-                    allocation[aid] = round(per_sat, 2)
-                    logger.info(
-                        f"  SATELLITE: {c.get('symbol', aid)} = {per_sat:.2f}% "
-                        f"(rank_score={c.get('_crypto_rank_score', 0):.3f})"
-                    )
-
-        # Log résumé final
-        crypto_final = sum(
+        
+        # === CORE: BTC + ETH ===
+        core_budget = crypto_total * config["core_pct"]
+        core_assets = config["core_assets"]
+        core_split = config["core_split"]
+        
+        # === CORE: BTC + ETH ===
+        core_budget = crypto_total * config["core_pct"]
+        core_assets = config["core_assets"]
+        core_split = config["core_split"]
+        
+        for i, core_pattern in enumerate(core_assets):
+            # v6.24 FIX: Matching flexible via crypto_utils
+            base_currency = core_pattern.split("/")[0]  # "BTC" ou "ETH"
+            
+            if HAS_CRYPTO_UTILS:
+                core_asset = find_crypto_by_base(candidates, base_currency, portfolio_base="EUR")
+            else:
+                # Fallback: matching exact (comportement legacy)
+                core_asset = next((c for c in candidates if c.id == core_pattern), None)
+            
+            if core_asset:
+                weight = core_budget * core_split[i]
+                if weight >= 0.5:
+                    allocation[core_asset.id] = round(weight, 2)
+                    logger.info(f"v6.24 CORE: {core_asset.id} (matched from {core_pattern}) = {weight:.2f}%")        
+        
+        # === SATELLITE: Autres cryptos ===
+        satellite_budget = crypto_total * (1 - config["core_pct"])
+        satellite_max = config["satellite_max_per_asset"] * crypto_total
+        satellite_dd_max = config["satellite_dd_max"]
+        
+        # v6.23 P0 FIX: Exclure par IDs déjà alloués, pas par patterns
+        core_ids_allocated = set(allocation.keys())
+        
+        # Filtrer et trier les satellites par score
+        satellite_candidates = [
+            c for c in candidates 
+            if c.category == "Crypto" 
+            and c.id not in core_ids_allocated  # FIX: utilise IDs réels, pas patterns
+            and abs(_clean_float(c.source_data.get("drawdown_90d_pct", 0) if c.source_data else 0, 0, -100, 100)) <= satellite_dd_max
+        ]
+        satellite_candidates = sorted(satellite_candidates, key=lambda x: (-x.score, x.id))
+        
+        remaining = satellite_budget
+        for sat in satellite_candidates:
+            if remaining < 0.5:
+                break
+            weight = min(satellite_max, remaining)
+            if weight >= 0.5:
+                allocation[sat.id] = round(weight, 2)
+                remaining -= weight
+                logger.info(f"v6.23 SATELLITE: {sat.id} = {weight:.2f}%")
+        
+        # Log résumé (v6.23 P0 FIX: utilise IDs réels, pas patterns)
+        core_final = sum(
             w for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "Crypto"
+            and aid in core_ids_allocated
         )
-        n_core_alloc = len([c for c in core_list if c.get("_asset_id") in allocation])
-        n_sat_alloc = len([c for c in sat_list if c.get("_asset_id") in allocation])
-        logger.info(
-            f"[v6.35] Crypto final: {crypto_final:.1f}% "
-            f"(core={n_core_alloc}, satellite={n_sat_alloc}, budget={crypto_total:.1f}%)"
-        )
-
-        return allocation
+        sat_final = crypto_total - core_final
+        logger.info(f"v6.23 CRYPTO: core={core_final:.1f}%, satellite={sat_final:.1f}%, total={crypto_total:.1f}%")
+        
+        return allocation   
     def build_portfolio(
         self, 
         universe: List[Asset], 
@@ -4878,7 +4681,6 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
     Convertit l'univers scoré en List[Asset].
     
     v6.7 FIX: Génération robuste des IDs avec _is_valid_id().
-    v2.0.2 FIX: Restauration _profile_score crypto après normalisation.
     """
     assets = []
     
@@ -4903,10 +4705,7 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 default_vol = 15
             
             # ID generation with v6.7 validation
-            # === FIX v2.3.0: Ajouter "etfsymbol" dans la chaîne de résolution ===
-            # Les ETFs du CSV utilisent "etfsymbol" comme clé primaire, pas "ticker"
-            raw_id = (item.get("id") or item.get("ticker") or item.get("symbol") 
-                      or item.get("etfsymbol"))  # FIX v2.3.0
+            raw_id = item.get("id") or item.get("ticker") or item.get("symbol")
             if not _is_valid_id(raw_id):
                 raw_id = item.get("name") or f"{cat_normalized}_{len(assets)+1}"
             
@@ -4944,8 +4743,8 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 exposure=item.get("exposure"),
                 preset=item.get("preset"),
                 buffett_score=item.get("buffett_score") or item.get("_buffett_score"),
-                ticker=item.get("ticker") or item.get("symbol") or item.get("etfsymbol"),   # v6.18.3 + FIX v2.3.0
-                symbol=item.get("symbol") or item.get("ticker") or item.get("etfsymbol"),   # v6.18.3 + FIX v2.3.0
+                ticker=item.get("ticker") or item.get("symbol"),   # v6.18.3: FIX ticker_coverage
+                symbol=item.get("symbol") or item.get("ticker"),   # v6.18.3: alias
             )
             assets.append(asset)
 
@@ -4986,14 +4785,6 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
     for cat, scores_list in cat_scores.items():
         if len(scores_list) < 5:
             continue
-        # v2.0.2: Skip crypto — scores déjà risk-adjusted par preset_crypto
-        if cat == "Crypto":
-            logger.info(
-                f"[v2.0.2] Skip normalization for {cat}: "
-                f"scores already risk-adjusted by preset"
-            )
-            continue
-
         arr = np.array(scores_list)
         cat_mean = arr.mean()
         cat_std = arr.std()
@@ -5015,23 +4806,5 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
             f"BEFORE mean={cat_mean:.1f} std={cat_std:.1f} → "
             f"AFTER mean={new_scores.mean():.1f} std={new_scores.std():.1f}"
         )
-
-    # === FIX v2.0.2: Restaurer _profile_score pour crypto preset ===
-    # FactorScorer et rescore_universe_by_profile écrasent le score.
-    # On restaure _profile_score du preset (déjà risk-adjusted) pour
-    # que l'optimizer voie le vrai signal.
-    for asset in assets:
-        if getattr(asset, 'category', '') != 'Crypto':
-            continue
-        sd = getattr(asset, 'source_data', None) or {}
-        preset_score = sd.get('_profile_score')
-        if preset_score is not None:
-            old_score = asset.score
-            asset.score = float(preset_score)
-            logger.info(
-                f"[v2.0.2 CRYPTO SCORE RESTORE] {getattr(asset, 'name', '?')}: "
-                f"score {old_score:.1f} → {float(preset_score):.1f} "
-                f"(from _profile_score, role={sd.get('_role', '?')})"
-            )
 
     return assets
