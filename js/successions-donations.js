@@ -3799,6 +3799,8 @@ const SD = (() => {
         if (typeof TransmissionEngine !== 'undefined') {
             var txMap = TransmissionEngine.compute(pat, donorAge, nbDonors);
             TransmissionEngine.render(txMap, pat);
+            // Generate AI narrative summary (async, non-blocking)
+            TransmissionEngine.generateSummary(txMap, pat);
         }
 
         // Path optimizer — multi-donateurs
