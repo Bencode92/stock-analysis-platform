@@ -413,7 +413,16 @@ const SD = (() => {
             delaiUtilisationMois: 6, dureeConservationAns: 5, dateFin: '2026-12-31' }
     };
 
-    // Helper: convert JSON bareme tranches {de,a,taux} → engine format {max,taux}
+    // === XSS ESCAPE HELPER ===
+    function esc(str) {
+        if (str == null) return '';
+        const d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+    }
+
+    // === FISCAL READY FLAG ===
+    let FISCAL_READY = false;
     function parseTranches(tranches) {
         return tranches.map(t => ({ max: t.a === null ? Infinity : t.a, taux: t.taux }));
     }
@@ -510,6 +519,7 @@ const SD = (() => {
             console.warn('[FISCAL] JSON files not found, using inline fallback', e);
             FISCAL = FISCAL_FALLBACK;
         }
+        FISCAL_READY = true;
         window.__FISCAL__ = FISCAL;
         if (typeof PathOptimizer !== 'undefined' && PathOptimizer.setFiscal) PathOptimizer.setFiscal(FISCAL);
     }
@@ -525,6 +535,7 @@ const SD = (() => {
     let finIdCounter = 0;
     let proIdCounter = 0;
     let debtIdCounter = 0;
+    let avPersonIdCounter = 0;
 
     const state = {
         mode: 'solo',
@@ -534,6 +545,7 @@ const SD = (() => {
         ddv: false,
         preciput: false,
         beneficiaries: [],
+        avPersons: [],  // bénéficiaires AV/capi indépendants des donataires
         detailMode: 'simplifie',
         patrimoine: { total: 0, rp: 0, dettes: 0, type: 'financier' },
         immo: [],
@@ -653,7 +665,7 @@ const SD = (() => {
             const borderColor = isdonor ? 'rgba(198,134,66,.3)' : 'rgba(46,125,50,.3)';
             const iconColor = isdonor ? 'var(--primary-color)' : 'var(--accent-green)';
             return `<div style="display:inline-flex;flex-direction:column;align-items:center;padding:10px 14px;border-radius:10px;background:${bgColor};border:1.5px solid ${borderColor};min-width:100px;text-align:center;">
-                <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);">${person.prenom || person.nom || '?'}</div>
+                <div style="font-size:.78rem;font-weight:700;color:var(--text-primary);">${esc(person.prenom || person.nom || '?')}</div>
                 <div style="font-size:.58rem;color:${iconColor};font-weight:600;">${roleLabel}${age}</div>
                 ${pat}
             </div>`;
@@ -722,7 +734,7 @@ const SD = (() => {
             if (lvlInter.length > 0) {
                 html += `<div style="display:flex;justify-content:center;gap:12px;margin:4px 0;">`;
                 lvlInter.forEach(ie => {
-                    html += `<span style="font-size:.55rem;padding:3px 8px;border-radius:12px;background:rgba(198,134,66,.08);border:1px dashed rgba(198,134,66,.2);color:var(--text-muted);">↔ ${ie.d1.nom} — ${ie.d2.nom} : ${formatLienShort(ie.lien)}</span>`;
+                    html += `<span style="font-size:.55rem;padding:3px 8px;border-radius:12px;background:rgba(198,134,66,.08);border:1px dashed rgba(198,134,66,.2);color:var(--text-muted);">↔ ${esc(ie.d1.nom)} — ${esc(ie.d2.nom)} : ${formatLienShort(ie.lien)}</span>`;
                 });
                 html += '</div>';
             }
@@ -756,11 +768,11 @@ const SD = (() => {
             const otherIsConjoint = donors.some(od => od.id !== d.id && od.role === 'conjoint');
             const hasEntConj = d.conjointId && d.conjointId !== 'none';
             if (!otherIsConjoint && !hasEntConj && d.role !== 'conjoint') {
-                questions.push({ icon: '💍', text: `${d.nom} : conjoint ?`, severity: 'info' });
+                questions.push({ icon: '💍', text: `${esc(d.nom)} : conjoint ?`, severity: 'info' });
             }
             const noDateDons = (d.donationsParBen || []).filter(e => e.montant > 0 && !e.date);
             if (noDateDons.length > 0) {
-                questions.push({ icon: '📅', text: `${d.nom} : ${noDateDons.length} donation(s) sans date`, severity: 'warn' });
+                questions.push({ icon: '📅', text: `${esc(d.nom)} : ${noDateDons.length} donation(s) sans date`, severity: 'warn' });
             }
         });
         bens.forEach(b => {
@@ -768,7 +780,7 @@ const SD = (() => {
                 const lien = PO ? PO.getEffectiveLien(d.id, b.id, d.role, b.lien) : 'tiers';
                 return lien !== 'aucun' && lien !== 'tiers';
             });
-            if (!linked) questions.push({ icon: '⚠️', text: `${b.prenom} : aucun lien fiscal`, severity: 'error' });
+            if (!linked) questions.push({ icon: '⚠️', text: `${esc(b.prenom)} : aucun lien fiscal`, severity: 'error' });
         });
 
         if (questions.length > 0) {
@@ -2580,51 +2592,214 @@ const SD = (() => {
         const item = state.finance.find(i => i.id === id);
         if (!item || !['assurance_vie','contrat_capi'].includes(item.type)) { container.innerHTML = ''; return; }
 
-        const bens = state.beneficiaries;
-        if (bens.length === 0) {
-            container.innerHTML = '<div style="font-size:.62rem;color:var(--text-muted);"><i class="fas fa-info-circle"></i> Ajoutez des bénéficiaires en étape 1 pour désigner les bénéficiaires AV.</div>';
-            return;
+        // Init avBeneficiaires as empty if not set (user chooses, not forced)
+        if (!item.avBeneficiaires) {
+            item.avBeneficiaires = [];
         }
 
-        if (!item.avBeneficiaires) {
-            // Default: equal split
-            item.avBeneficiaires = bens.map(b => ({ benId: b.id, pct: Math.round(100 / bens.length) }));
+        // Init npBeneficiaires for capi
+        if (item.type === 'contrat_capi' && !item.npBeneficiaires) {
+            item.npBeneficiaires = [];
         }
 
         let html = '';
         var typeLabel = item.type === 'contrat_capi' ? 'contrat de capitalisation' : 'contrat AV';
         
         if (item.type === 'contrat_capi') {
-            html += '<div style="font-size:.62rem;padding:6px 10px;border-radius:6px;background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.15);color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-info-circle"></i> Le contrat de capitalisation entre dans la succession (contrairement à l\'AV). Il peut être démembré (US/NP) de son vivant.</div>';
+            html += '<div style="font-size:.62rem;padding:6px 10px;border-radius:6px;background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.15);color:var(--accent-cyan);margin-bottom:8px;"><i class="fas fa-info-circle"></i> Le contrat de capitalisation entre dans la succession (contrairement à l\'AV). Il peut être démembré (US/NP) de son vivant. <strong>L\'antériorité fiscale est conservée.</strong></div>';
             html += '<div style="margin-bottom:8px;"><label class="form-label" style="font-size:.68rem;">Démembrement du contrat</label>';
-            html += '<select class="form-input" style="font-size:.72rem;height:30px;" onchange="SD.updateFin(' + id + ',\'demembrement\',this.value)">';
-            html += '<option value="pp"' + (item.demembrement !== 'demembre' ? ' selected' : '') + '>Pleine propriété</option>';
-            html += '<option value="demembre"' + (item.demembrement === 'demembre' ? ' selected' : '') + '>Démembré (NP aux enfants, US au souscripteur)</option>';
+            html += '<select class="form-input" style="font-size:.72rem;height:30px;" onchange="SD.updateFin(' + id + ',\'demembrement\',this.value); SD.refreshAVBeneficiaires(' + id + ')">';
+            html += '<option value="pp"' + (item.demembrement === 'pp' || !item.demembrement ? ' selected' : '') + '>Pleine propriété (succession)</option>';
+            html += '<option value="np_donation"' + (item.demembrement === 'np_donation' ? ' selected' : '') + '>Démembré — donation NP du vivant</option>';
+            html += '<option value="np_succession"' + (item.demembrement === 'np_succession' ? ' selected' : '') + '>Transmission en succession</option>';
             html += '</select></div>';
+
+            // --- Démembrement NP du vivant ---
+            if (item.demembrement === 'np_donation') {
+                const donorAge = state.donor1.age || 60;
+                const usAge = item.usAge || donorAge;
+                const npRatio = getNPRatio(usAge);
+                const valeurNP = Math.round((item.valeur || 0) * npRatio);
+
+                html += '<div style="padding:10px;border-radius:8px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.12);margin-bottom:10px;">';
+                html += '<div style="font-size:.68rem;font-weight:700;color:var(--accent-green);margin-bottom:6px;"><i class="fas fa-hand-holding-heart"></i> Donation de la nue-propriété</div>';
+                html += '<div class="form-grid" style="gap:8px;">';
+                html += '<div class="form-group"><label class="form-label" style="font-size:.62rem;">Âge usufruitier</label>';
+                html += '<input type="number" class="form-input" style="font-size:.72rem;height:30px;" value="' + usAge + '" onchange="SD.updateFin(' + id + ',\'usAge\',+this.value); SD.refreshAVBeneficiaires(' + id + ')"></div>';
+                html += '<div class="form-group"><label class="form-label" style="font-size:.62rem;">Valeur NP (art. 669)</label>';
+                html += '<div style="font-size:.9rem;font-weight:700;color:var(--accent-green);padding-top:8px;">' + fmt(valeurNP) + ' <span style="font-size:.65rem;color:var(--text-muted);">(' + Math.round(npRatio * 100) + '% de ' + fmt(item.valeur || 0) + ')</span></div></div>';
+                html += '</div>';
+
+                // Quasi-usufruit
+                html += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
+                html += '<div class="switch ' + (item.quasiUsufruit ? 'on' : '') + '" onclick="SD.updateFin(' + id + ',\'quasiUsufruit\',!' + !!item.quasiUsufruit + '); SD.refreshAVBeneficiaires(' + id + ')"></div>';
+                html += '<span style="font-size:.68rem;color:var(--text-secondary);">Quasi-usufruit (l\'US consomme le capital)</span>';
+                html += '</div>';
+                if (item.quasiUsufruit) {
+                    html += '<div style="font-size:.58rem;color:var(--accent-amber);margin-top:4px;padding:4px 8px;background:rgba(255,179,0,.06);border-radius:4px;"><i class="fas fa-info-circle"></i> Créance de restitution au décès = <strong>' + fmt(item.valeur || 0) + '</strong> déductible de l\'actif successoral.</div>';
+                }
+
+                // Nus-propriétaires — sélecteur multi-source
+                html += '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin:10px 0 6px;"><i class="fas fa-user-friends"></i> Nus-propriétaires du contrat</div>';
+                html += buildAVBenSelector(id, item.npBeneficiaires, 'np');
+                html += '</div>'; // close green box
+            }
         }
         
-        html += '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;"><i class="fas fa-users"></i> Bénéficiaires désignés du ' + typeLabel + '</div>';
-        const total = item.avBeneficiaires.reduce((s, ab) => s + (ab.pct || 0), 0);
-        html += item.avBeneficiaires.map(ab => {
-            const b = bens.find(bb => bb.id === ab.benId);
-            if (!b) return '';
-            return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                <span style="font-size:.65rem;flex:1;">${b.prenom || 'Bénéf.'}</span>
-                <input type="number" class="form-input" value="${ab.pct}" min="0" max="100"
-                       style="font-size:.65rem;height:24px;width:60px;text-align:center;"
-                       onchange="SD.updateAVBenPct(${id},${ab.benId},+this.value)">
-                <span style="font-size:.6rem;color:var(--text-muted);">%</span>
-            </div>`;
-        }).join('');
-        html += `<div style="font-size:.58rem;margin-top:4px;color:${total === 100 ? 'var(--accent-green)' : 'var(--accent-coral)'};">Total : ${total}%${total !== 100 ? ' ⚠️ doit être 100%' : ' ✓'}</div>`;
+        // --- Clause bénéficiaire AV (ou capi en succession) ---
+        const showClauseBen = item.type === 'assurance_vie' || (item.type === 'contrat_capi' && item.demembrement !== 'np_donation');
+        if (showClauseBen) {
+            const clauseLabel = item.type === 'contrat_capi' ? 'Héritiers du contrat (succession)' : 'Bénéficiaires désignés du ' + typeLabel;
+            html += '<div style="font-size:.68rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;"><i class="fas fa-users"></i> ' + clauseLabel + '</div>';
+            if (item.type === 'assurance_vie') {
+                html += '<div style="font-size:.58rem;color:var(--accent-amber);margin-bottom:6px;padding:4px 8px;background:rgba(255,179,0,.06);border-radius:4px;"><i class="fas fa-exclamation-triangle"></i> Rappel : la clause bénéficiaire AV est <strong>libre</strong>. Le bénéficiaire peut être différent des donataires.</div>';
+            }
+            html += buildAVBenSelector(id, item.avBeneficiaires, 'av');
+        }
+
         container.innerHTML = html;
     }
 
-    function updateAVBenPct(finId, benId, pct) {
+    /**
+     * Construit le sélecteur multi-source de bénéficiaires (pour AV ou NP capi)
+     * @param {number} finId - ID du contrat finance
+     * @param {Array} benList - item.avBeneficiaires ou item.npBeneficiaires
+     * @param {string} targetType - 'av' ou 'np'
+     */
+    function buildAVBenSelector(finId, benList, targetType) {
+        const bens = state.beneficiaries;
+        const graphPersons = typeof FamilyGraph !== 'undefined'
+            ? FamilyGraph.getPersons().filter(p => !p.isDonor)
+            : [];
+
+        let html = '';
+
+        // Existing entries
+        const total = benList.reduce((s, ab) => s + (ab.pct || 0), 0);
+        benList.forEach((ab, idx) => {
+            const person = ab.person || {};
+            const isCustom = person.sourceType === 'custom';
+            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:4px 6px;border-radius:6px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.06);">';
+
+            if (isCustom) {
+                // Editable name + age + lien for custom persons
+                html += '<input type="text" class="form-input" style="font-size:.65rem;height:24px;width:80px;" placeholder="Nom" value="' + esc(person.nom || '') + '" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'nom\',this.value)">';
+                html += '<input type="number" class="form-input" style="font-size:.65rem;height:24px;width:40px;text-align:center;" placeholder="Âge" value="' + (person.age || '') + '" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'age\',+this.value)">';
+                html += '<select class="form-input" style="font-size:.6rem;height:24px;width:90px;" onchange="SD.updateAVBenPerson(' + finId + ',' + idx + ',\'' + targetType + '\',\'lienFiscalDonateur\',this.value)">';
+                ['enfant','petit_enfant','arriere_petit_enfant','conjoint_pacs_donation','frere_soeur','neveu_niece','tiers'].forEach(l => {
+                    html += '<option value="' + l + '"' + (person.lienFiscalDonateur === l ? ' selected' : '') + '>' + l.replace(/_/g,' ') + '</option>';
+                });
+                html += '</select>';
+            } else {
+                // Display name + lien info
+                html += '<span style="font-size:.65rem;flex:1;">' + esc(person.nom || 'Bénéf.') + ' <span style="color:var(--text-muted);font-size:.55rem;">(' + (person.lienFiscalDonateur || '?').replace(/_/g,' ') + ')</span></span>';
+            }
+
+            html += '<input type="number" class="form-input" value="' + (ab.pct || 0) + '" min="0" max="100" style="font-size:.65rem;height:24px;width:52px;text-align:center;" onchange="SD.updateAVBenPct(' + finId + ',' + idx + ',\'' + targetType + '\',+this.value)">';
+            html += '<span style="font-size:.55rem;color:var(--text-muted);">%</span>';
+            html += '<button class="btn-remove" style="width:22px;height:22px;font-size:.55rem;" onclick="SD.removeAVBeneficiary(' + finId + ',' + idx + ',\'' + targetType + '\')"><i class="fas fa-times"></i></button>';
+            html += '</div>';
+        });
+
+        // Total indicator
+        html += '<div style="font-size:.55rem;margin:4px 0;color:' + (total === 100 ? 'var(--accent-green)' : 'var(--accent-coral)') + ';">Total : ' + total + '%' + (total !== 100 ? ' ⚠️ doit être 100%' : ' ✓') + '</div>';
+
+        // Add button — dropdown multi-source
+        html += '<select class="form-input" style="font-size:.65rem;height:28px;margin-top:4px;color:var(--primary-color);" onchange="SD.addAVBenFromDropdown(' + finId + ',\'' + targetType + '\',this); this.selectedIndex=0;">';
+        html += '<option value="">+ Ajouter un bénéficiaire…</option>';
+
+        // Source 1: donataires existants
+        if (bens.length > 0) {
+            html += '<optgroup label="Donataires (étape 1)">';
+            bens.forEach(b => {
+                html += '<option value="ben-' + b.id + '">' + esc(b.prenom || 'Bénéf.') + ' (' + (b.lien || 'enfant') + ')</option>';
+            });
+            html += '</optgroup>';
+        }
+
+        // Source 2: arbre familial
+        if (graphPersons.length > 0) {
+            html += '<optgroup label="Arbre familial">';
+            graphPersons.forEach(p => {
+                html += '<option value="graph-' + p.id + '">' + esc(p.nom) + ' (' + (p.age || '?') + ' ans)</option>';
+            });
+            html += '</optgroup>';
+        }
+
+        // Source 3: saisie libre
+        html += '<optgroup label="Autre"><option value="custom">✏️ Saisie libre…</option></optgroup>';
+        html += '</select>';
+
+        return html;
+    }
+
+    function addAVBenFromDropdown(finId, targetType, selectEl) {
+        const val = selectEl.value;
+        if (!val) return;
         const item = state.finance.find(i => i.id === finId);
-        if (!item || !item.avBeneficiaires) return;
-        const ab = item.avBeneficiaires.find(a => a.benId === benId);
-        if (ab) ab.pct = pct;
+        if (!item) return;
+
+        const list = targetType === 'np' ? (item.npBeneficiaires || (item.npBeneficiaires = [])) : (item.avBeneficiaires || (item.avBeneficiaires = []));
+        let person;
+
+        if (val.startsWith('ben-')) {
+            const benId = +val.replace('ben-', '');
+            const b = state.beneficiaries.find(bb => bb.id === benId);
+            if (!b) return;
+            person = {
+                id: avPersonIdCounter++, nom: b.prenom || 'Bénéf.',
+                age: b.age || 0, lienFiscalDonateur: b.lien || 'enfant',
+                sourceType: 'beneficiary', sourceId: b.id
+            };
+        } else if (val.startsWith('graph-')) {
+            const gId = +val.replace('graph-', '');
+            const p = typeof FamilyGraph !== 'undefined' ? FamilyGraph.getPerson(gId) : null;
+            if (!p) return;
+            const donors = typeof FamilyGraph !== 'undefined' ? FamilyGraph.getDonors() : [];
+            const lien = donors.length > 0 ? FamilyGraph.computeFiscalLien(donors[0].id, p.id) : 'tiers';
+            person = {
+                id: avPersonIdCounter++, nom: p.nom,
+                age: p.age || 0, lienFiscalDonateur: lien,
+                sourceType: 'graph', sourceId: p.id
+            };
+        } else if (val === 'custom') {
+            person = {
+                id: avPersonIdCounter++, nom: '', age: 0,
+                lienFiscalDonateur: 'tiers', sourceType: 'custom', sourceId: null
+            };
+        } else {
+            return;
+        }
+
+        // Default pct: split remaining equally
+        const remaining = 100 - list.reduce((s, ab) => s + (ab.pct || 0), 0);
+        list.push({ person, pct: Math.max(0, remaining) });
+        refreshAVBeneficiaires(finId);
+    }
+
+    function removeAVBeneficiary(finId, idx, targetType) {
+        const item = state.finance.find(i => i.id === finId);
+        if (!item) return;
+        const list = targetType === 'np' ? item.npBeneficiaires : item.avBeneficiaires;
+        if (list && idx >= 0 && idx < list.length) list.splice(idx, 1);
+        refreshAVBeneficiaires(finId);
+    }
+
+    function updateAVBenPerson(finId, idx, targetType, field, value) {
+        const item = state.finance.find(i => i.id === finId);
+        if (!item) return;
+        const list = targetType === 'np' ? item.npBeneficiaires : item.avBeneficiaires;
+        if (!list || !list[idx] || !list[idx].person) return;
+        list[idx].person[field] = value;
+        refreshAVBeneficiaires(finId);
+    }
+
+    function updateAVBenPct(finId, idx, targetType, pct) {
+        const item = state.finance.find(i => i.id === finId);
+        if (!item) return;
+        const list = targetType === 'np' ? item.npBeneficiaires : item.avBeneficiaires;
+        if (!list || !list[idx]) return;
+        list[idx].pct = pct;
         refreshAVBeneficiaires(finId);
     }
     function refreshFinUI(id) {
@@ -2638,7 +2813,7 @@ const SD = (() => {
             const persons = getPersonsList();
             const current = item.ownerId;
             ownerSelect.innerHTML = `<option value="">— Choisir le titulaire —</option>` +
-                persons.map(p => `<option value="${p.id}" ${current === p.id ? 'selected' : ''}>${p.nom} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('');
+                persons.map(p => `<option value="${p.id}" ${current === p.id ? 'selected' : ''}>${esc(p.nom)} (${p.type === 'donor' ? 'donateur' : 'bénéf.'})</option>`).join('');
         }
     }
 
@@ -2870,11 +3045,127 @@ const SD = (() => {
         for (let i = 0; i < nbBen; i++) {
             const base = Math.max(0, capitalParBen - FISCAL.av990I.abattement);
             if (base <= 0) continue;
-            const tr1 = Math.min(base, FISCAL.av990I.seuil2);
+            const tr1 = Math.min(base, FISCAL.av990I.seuil2 - FISCAL.av990I.abattement);
             const tr2 = Math.max(0, base - tr1);
             totalTax += tr1 * FISCAL.av990I.taux1 + tr2 * FISCAL.av990I.taux2;
         }
         return Math.round(totalTax);
+    }
+
+    /**
+     * computeAV990I_v2 — calcul 990 I par bénéficiaire AV réel
+     * Utilise item.avBeneficiaires[].person au lieu de state.beneficiaries
+     */
+    function computeAV990I_v2(avItems) {
+        let totalTax = 0;
+        const details = [];
+        for (const item of avItems) {
+            if (item.type !== 'assurance_vie') continue;
+            const bens = item.avBeneficiaires || [];
+            if (bens.length === 0) continue;
+            for (const ab of bens) {
+                const pct = (ab.pct || 0) / 100;
+                const primesAv70 = Math.round((item.primesAvant70 || 0) * pct);
+                // Art. 990 I — primes avant 70 ans du souscripteur
+                let tax990I = 0;
+                if (primesAv70 > 0) {
+                    const base = Math.max(0, primesAv70 - FISCAL.av990I.abattement);
+                    if (base > 0) {
+                        const seuilNet = FISCAL.av990I.seuil2 - FISCAL.av990I.abattement;
+                        const tr1 = Math.min(base, seuilNet);
+                        const tr2 = Math.max(0, base - seuilNet);
+                        tax990I = Math.round(tr1 * FISCAL.av990I.taux1 + tr2 * FISCAL.av990I.taux2);
+                    }
+                }
+                totalTax += tax990I;
+                details.push({
+                    nom: ab.person ? ab.person.nom : '?',
+                    lien: ab.person ? ab.person.lienFiscalDonateur : 'tiers',
+                    pct: ab.pct, primesAv70, tax990I,
+                    abat990I: FISCAL.av990I.abattement
+                });
+            }
+        }
+        return { totalTax: Math.round(totalTax), details };
+    }
+
+    /**
+     * compute757B_global — abattement 757 B (30 500 € global partagé)
+     * L'abattement est GLOBAL (pas par bénéficiaire), réparti au prorata des primes après 70 ans.
+     * Sous 757 B, les intérêts/PV sont exonérés — seules les primes sont taxées.
+     */
+    function compute757B_global(avItems) {
+        const byBen = {};
+        for (const item of avItems) {
+            if (!['assurance_vie'].includes(item.type)) continue;
+            const bens = item.avBeneficiaires || [];
+            for (const ab of bens) {
+                const primesAp70 = Math.round((item.primesApres70 || 0) * ((ab.pct || 0) / 100));
+                if (primesAp70 <= 0) continue;
+                const key = ab.person ? ab.person.id : 'unknown';
+                if (!byBen[key]) byBen[key] = { person: ab.person, total: 0 };
+                byBen[key].total += primesAp70;
+            }
+        }
+        const totalPrimesAp70 = Object.values(byBen).reduce((s, b) => s + b.total, 0);
+        if (totalPrimesAp70 <= 0) return 0;
+
+        const abatGlobal = FISCAL.av757B.abattementGlobal; // 30 500 €
+        let totalTax = 0;
+        for (const entry of Object.values(byBen)) {
+            if (entry.total <= 0) continue;
+            const partAbat = Math.round(abatGlobal * (entry.total / totalPrimesAp70));
+            const base = Math.max(0, entry.total - partAbat);
+            const lien = entry.person ? entry.person.lienFiscalDonateur : 'tiers';
+            totalTax += calcDroits(base, getBareme(lien));
+        }
+        return Math.round(totalTax);
+    }
+
+    /**
+     * computeCapiDemembre — calcul fiscal du contrat de capitalisation démembré
+     */
+    function computeCapiDemembre(item, donorAge) {
+        const usAge = item.usAge || donorAge;
+        const npRatio = getNPRatio(usAge);
+        const valeurNP = Math.round((item.valeur || 0) * npRatio);
+        let totalDroits = 0;
+        const details = [];
+
+        const npBens = item.npBeneficiaires || [];
+        for (const ab of npBens) {
+            const part = Math.round(valeurNP * ((ab.pct || 0) / 100));
+            const lien = ab.person ? ab.person.lienFiscalDonateur : 'tiers';
+            const abat = getAbattement(lien, false);
+            // TODO: intégrer donations antérieures spécifiques si disponibles
+            const base = Math.max(0, part - abat);
+            const droits = calcDroits(base, getBareme(lien));
+            totalDroits += droits;
+            details.push({
+                nom: ab.person ? ab.person.nom : '?',
+                lien, part, abat, base, droits,
+                npPct: Math.round(npRatio * 100)
+            });
+        }
+
+        return {
+            valeurNP, npRatio, totalDroits,
+            fraisNotaire: Math.round(valeurNP * FISCAL.fraisNotairePct),
+            details,
+            avantageAnterioriteFiscale: true,
+            creanceRestitution: item.quasiUsufruit ? (item.valeur || 0) : 0
+        };
+    }
+
+    /**
+     * applyReductionAge — réduction pour âge du donateur (art. 790 CGI)
+     * Donation PP : -50% si donateur < 70 ans
+     * Donation NP : pas de réduction (abrogé pour NP)
+     */
+    function applyReductionAge(droits, donorAge, isDemembre) {
+        if (isDemembre) return droits; // pas de réduction pour donation NP
+        if (donorAge < 70) return Math.round(droits * 0.50);
+        return droits;
     }
 
     function calcDroitsForBens(montant, bens, nbDonors, isSuccession) {
@@ -2894,6 +3185,10 @@ const SD = (() => {
     // SCENARIOS GENERATOR
     // ============================================================
     function calculateResults() {
+        if (!FISCAL_READY) {
+            alert('Données fiscales en cours de chargement, veuillez patienter…');
+            return;
+        }
         gatherInputs();
         const pat = computePatrimoine();
         const bens = state.beneficiaries.filter(b => b.lien !== 'conjoint_pacs');
@@ -2916,7 +3211,9 @@ const SD = (() => {
         });
 
         // 2. Donation PP
-        const droitsDonPP = calcDroitsForBens(totalNet, bens, nbDonors, false);
+        let droitsDonPP = calcDroitsForBens(totalNet, bens, nbDonors, false);
+        // FIX: appliquer réduction art. 790 CGI si donateur < 70 ans
+        droitsDonPP = applyReductionAge(droitsDonPP, donorAge, false);
         const fraisDonPP = Math.round(totalNet * FISCAL.fraisNotairePct);
         scenarios.push({
             name: 'Donation directe\npleine propriété', short: 'Donation PP',
@@ -2936,18 +3233,32 @@ const SD = (() => {
             note: `NP = ${Math.round(npRatio * 100)}% (donateur ${donorAge} ans)`
         });
 
-        // 4. Assurance-vie (990 I)
+        // 4. Assurance-vie (990 I + 757 B)
         if (avTotal > 0 || pat.financier > 50000) {
             const avCap = avTotal || Math.min(pat.financier, FISCAL.av990I.abattement * nbBens * 1.2);
-            const taxAV = computeAV990I(avCap / nbBens, nbBens);
+
+            // Use v2 if AV beneficiaries are defined, else fallback to legacy
+            const avItems = state.finance.filter(f => f.type === 'assurance_vie');
+            const hasRealBens = avItems.some(f => f.avBeneficiaires && f.avBeneficiaires.length > 0);
+
+            let taxAV;
+            let tax757B = 0;
+            if (hasRealBens) {
+                const result990I = computeAV990I_v2(avItems);
+                taxAV = result990I.totalTax;
+                tax757B = compute757B_global(avItems);
+            } else {
+                taxAV = computeAV990I(avCap / nbBens, nbBens);
+            }
+
             const reste = totalNet - avCap;
             const droitsReste = reste > 0 ? calcDroitsForBens(reste, bens, nbDonors, true) : 0;
             scenarios.push({
-                name: 'Assurance-vie\n(art. 990 I)', short: 'Assurance-vie',
-                actifTransmis: totalNet, droits: taxAV + droitsReste,
+                name: 'Assurance-vie\n(art. 990 I + 757 B)', short: 'Assurance-vie',
+                actifTransmis: totalNet, droits: taxAV + tax757B + droitsReste,
                 frais: Math.round(avCap * 0.005), fraisAn: Math.round(avCap * 0.007),
-                net: totalNet - taxAV - droitsReste - Math.round(avCap * 0.005),
-                note: `${fmt(avCap)} en AV · abat. ${fmt(FISCAL.av990I.abattement)}/bénéf.`
+                net: totalNet - taxAV - tax757B - droitsReste - Math.round(avCap * 0.005),
+                note: `${fmt(avCap)} en AV · abat. ${fmt(FISCAL.av990I.abattement)}/bénéf. (990 I)${tax757B > 0 ? ' · 757 B: ' + fmt(tax757B) : ''}`
             });
         }
 
@@ -2972,7 +3283,8 @@ const SD = (() => {
             // Cumul : abat enfant 100k + don familial 31 865 + exo 790 A bis 100k = 231 865 / parent / enfant
             const abatCumul = (FISCAL.abattements.enfant + FISCAL.abattements.don_familial_argent + FISCAL.exoLogement.maxParDonateur) * nbDonors;
             const resteDon = Math.max(0, totalNet - exoMontant);
-            const droitsDonExo = calcDroitsForBens(Math.max(0, resteDon - (FISCAL.abattements.enfant + FISCAL.abattements.don_familial_argent) * nbDonors * nbBens / Math.max(1, nbBens)), bens, nbDonors, false);
+            let droitsDonExo = calcDroitsForBens(Math.max(0, resteDon - (FISCAL.abattements.enfant + FISCAL.abattements.don_familial_argent) * nbDonors * nbBens / Math.max(1, nbBens)), bens, nbDonors, false);
+            droitsDonExo = applyReductionAge(droitsDonExo, donorAge, false);
             const fraisExo = Math.round(resteDon * FISCAL.fraisNotairePct);
             scenarios.push({
                 name: 'Don 790 A bis\n⏰ logement neuf/réno', short: '⚠️ Exo. logement 2026',
@@ -3001,17 +3313,51 @@ const SD = (() => {
 
         // 7. Contrat de capitalisation démembré
         if (pat.financier > 150000) {
-            const valNPCapi = Math.round(pat.financier * npRatio);
-            const droitsCapi = calcDroitsForBens(valNPCapi, bens, nbDonors, false);
-            const droitsImmo = pat.immo > 0 ? calcDroitsForBens(pat.immo, bens, nbDonors, true) : 0;
-            const fraisCapi = Math.round(valNPCapi * FISCAL.fraisNotairePct);
-            scenarios.push({
-                name: 'Contrat capi.\ndémembré', short: 'Capi. démembré',
-                actifTransmis: totalNet, droits: droitsCapi + droitsImmo,
-                frais: fraisCapi, fraisAn: Math.round(pat.financier * 0.007),
-                net: totalNet - droitsCapi - droitsImmo - fraisCapi,
-                note: `NP ${Math.round(npRatio * 100)}% · antériorité conservée`
-            });
+            const capiItems = state.finance.filter(f => f.type === 'contrat_capi');
+            const capiTotal = capiItems.reduce((s, f) => s + (f.valeur || 0), 0);
+            const capiOrEstimate = capiTotal > 0 ? capiTotal : pat.financier * 0.5;
+
+            if (capiOrEstimate > 0) {
+                const hasNPBens = capiItems.some(f => f.npBeneficiaires && f.npBeneficiaires.length > 0 && f.demembrement === 'np_donation');
+
+                if (hasNPBens) {
+                    // Use real NP beneficiaries and computeCapiDemembre
+                    let droitsCapiDem = 0;
+                    let fraisCapiDem = 0;
+                    let totalCreance = 0;
+                    capiItems.filter(f => f.demembrement === 'np_donation').forEach(item => {
+                        const result = computeCapiDemembre(item, donorAge);
+                        droitsCapiDem += result.totalDroits;
+                        fraisCapiDem += result.fraisNotaire;
+                        totalCreance += result.creanceRestitution;
+                    });
+                    // Réduction art. 790 CGI pour donation NP: pas applicable (NP)
+                    // Reste du patrimoine passe en succession, réduit par la créance de restitution
+                    const reste = totalNet - capiOrEstimate;
+                    const actifNetReduit = Math.max(0, reste - totalCreance);
+                    const droitsResteSucc = actifNetReduit > 0 ? calcDroitsForBens(actifNetReduit, bens, nbDonors, true) : 0;
+                    scenarios.push({
+                        name: 'Capi démembré\n+ quasi-usufruit', short: 'Capi NP + quasi-US',
+                        actifTransmis: totalNet, droits: droitsCapiDem + droitsResteSucc,
+                        frais: fraisCapiDem, fraisAn: Math.round(capiOrEstimate * 0.007),
+                        net: totalNet - droitsCapiDem - droitsResteSucc - fraisCapiDem,
+                        note: `NP ${Math.round(npRatio * 100)}% · antériorité conservée${totalCreance > 0 ? ' · créance ' + fmt(totalCreance) + ' déductible' : ''}`
+                    });
+                } else {
+                    // Fallback: estimation sans bénéficiaires NP spécifiques
+                    const valNPCapi = Math.round(capiOrEstimate * npRatio);
+                    const droitsCapi = calcDroitsForBens(valNPCapi, bens, nbDonors, false);
+                    const droitsImmo = pat.immo > 0 ? calcDroitsForBens(pat.immo, bens, nbDonors, true) : 0;
+                    const fraisCapi = Math.round(valNPCapi * FISCAL.fraisNotairePct);
+                    scenarios.push({
+                        name: 'Contrat capi.\ndémembré', short: 'Capi. démembré',
+                        actifTransmis: totalNet, droits: droitsCapi + droitsImmo,
+                        frais: fraisCapi, fraisAn: Math.round(capiOrEstimate * 0.007),
+                        net: totalNet - droitsCapi - droitsImmo - fraisCapi,
+                        note: `NP ${Math.round(npRatio * 100)}% · antériorité conservée`
+                    });
+                }
+            }
         }
 
         // Sort best first
@@ -3203,7 +3549,7 @@ const SD = (() => {
             <div style="display:flex;align-items:center;gap:16px;padding:12px;background:var(--bg-input);border-radius:8px;margin-bottom:8px;">
                 <div style="width:36px;height:36px;border-radius:50%;background:rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;color:var(--accent-blue);"><i class="fas fa-user"></i></div>
                 <div style="flex:1;">
-                    <div style="font-weight:600;">${b.prenom || 'Bénéficiaire ' + (b.id + 1)}</div>
+                    <div style="font-weight:600;">${esc(b.prenom || 'Bénéficiaire ' + (b.id + 1))}</div>
                     <div style="font-size:.75rem;color:var(--text-secondary);">${liens[b.lien] || b.lien} · Abat. ${fmt(getAbattement(b.lien, false))}${b.handicap ? ' + 159 325 € handicap' : ''}${b.donationAnterieure > 0 ? ' · déjà reçu ' + fmt(b.donationAnterieure) : ''}</div>
                 </div>
                 <div style="text-align:right;">
@@ -3233,7 +3579,7 @@ const SD = (() => {
                 const pDonors = PathOptimizer.getDonors();
                 if (pDonors.length > 0) {
                     asideDonor.innerHTML = pDonors.map(d => 
-                        `<div><span class="val-highlight">${d.nom}</span> · ${d.age} ans · ${PathOptimizer.fmt(d.patrimoine)}</div>`
+                        `<div><span class="val-highlight">${esc(d.nom)}</span> · ${d.age} ans · ${PathOptimizer.fmt(d.patrimoine)}</div>`
                     ).join('');
                 } else {
                     const age = el('donor1-age') ? el('donor1-age').value : '';
@@ -3347,6 +3693,7 @@ const SD = (() => {
         addImmo, removeImmo, updateImmo, updateImmoTitle, refreshImmoUI,
         addImmoOwner, removeImmoOwner, updateImmoOwner,
         addFinancial, removeFinancial, updateFin, refreshFinUI, avJeNeSaisPas, refreshAVBeneficiaires, updateAVBenPct,
+        addAVBenFromDropdown, removeAVBeneficiary, updateAVBenPerson,
         addProfessional, removePro, updatePro,
         addDebt, removeDebt, updateDebt,
         calculateResults, resetAll, updateAside,
