@@ -28,6 +28,14 @@ function formatLienShort(lien) {
 
 const PathOptimizer = (() => {
 
+    // === XSS ESCAPE HELPER ===
+    function esc(str) {
+        if (str == null) return '';
+        const d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+    }
+
     // ============================================================
     // 1. DONORS — Gestion multi-donateurs
     // ============================================================
@@ -179,7 +187,7 @@ const PathOptimizer = (() => {
 
             // Update label
             const labelEl = document.getElementById(`don-label-${d.id}-${b.id}`);
-            if (labelEl) labelEl.innerHTML = `→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span>`;
+            if (labelEl) labelEl.innerHTML = `→ ${esc(b.prenom || 'Bénéf.')} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span>`;
 
             // Update bar
             renderDonorDonationBar(d.id, b.id);
@@ -326,11 +334,12 @@ const PathOptimizer = (() => {
     }
 
     // Total des donations reçues par un bénéficiaire (tous donateurs confondus)
+    // FIX: respecte le rappel fiscal 15 ans via getEffectiveDonation
     function getTotalDonationsForBen(benId) {
         let total = 0;
         for (const d of donors) {
             const entry = d.donationsParBen.find(e => e.benId === benId);
-            if (entry) total += entry.montant;
+            if (entry) total += getEffectiveDonation(entry);
         }
         return total;
     }
@@ -485,13 +494,15 @@ const PathOptimizer = (() => {
             assiette = Math.round(montant * getNP(donorAge));
         }
 
-        const base = Math.max(0, assiette - abat + (donationAnterieure || 0));
+        // FIX: les donations antérieures dans le rappel fiscal RÉDUISENT l'abattement disponible
+        const abatNet = Math.max(0, abat - (donationAnterieure || 0));
+        const base = Math.max(0, assiette - abatNet);
         const droits = calcDroits(base, bareme);
         const frais = Math.round(assiette * fraisNotaire);
 
         return {
             assiette,
-            abattementUtilise: Math.min(abat, assiette),
+            abattementUtilise: Math.min(abatNet, assiette),
             baseTaxable: base,
             droits,
             frais,
@@ -704,7 +715,16 @@ const PathOptimizer = (() => {
         if (role1 === 'grand_parent' && role2 === 'arr_grand_parent') return 'enfant';
         if (role1 === 'arr_grand_parent' && role2 === 'parent') return 'petit_enfant';
         if (role1 === 'parent' && role2 === 'arr_grand_parent') return 'petit_enfant';
-        if (role1 === 'parent' && role2 === 'parent') return 'tiers';
+        if (role1 === 'parent' && role2 === 'parent') {
+            // FIX: deux parents peuvent être conjoints (couple) — ne pas forcer tiers
+            // Vérifier si un conjoint est déclaré
+            const d1 = donors.find(d => d.id === donorId1);
+            const d2 = donors.find(d => d.id === donorId2);
+            if (d1 && d2 && (d1.conjointId === donorId2 || d2.conjointId === donorId1)) {
+                return 'conjoint_pacs_donation';
+            }
+            return 'tiers'; // parents non-conjoints = fallback tiers
+        }
         if (role1 === 'oncle_tante' && role2 === 'parent') return 'frere_soeur';
         if (role1 === 'parent' && role2 === 'oncle_tante') return 'frere_soeur';
         return 'tiers';
@@ -856,13 +876,13 @@ const PathOptimizer = (() => {
 
         // Conjoint selector
         const conjointOpts = `<option value="none"${!d.conjointId ? ' selected' : ''}>Aucun / Non renseigné</option>` +
-            otherDonors.map(od => `<option value="${od.id}"${d.conjointId === od.id ? ' selected' : ''}>${od.nom} (${formatRole(od.role)})</option>`).join('') +
+            otherDonors.map(od => `<option value="${od.id}"${d.conjointId === od.id ? ' selected' : ''}>${esc(od.nom)} (${formatRole(od.role)})</option>`).join('') +
             `<option value="autre"${d.conjointId === 'autre' ? ' selected' : ''}>— Autre (pas dans la cartographie) —</option>`;
 
         let html = `
         <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(92,64,51,.04);border:1px solid rgba(92,64,51,.1);">
             <label class="form-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px;color:var(--primary-color);">
-                <i class="fas fa-sitemap"></i> Entourage de ${d.nom} <span style="font-size:.58rem;font-weight:400;color:var(--text-muted);">(enrichit les chemins indirects)</span>
+                <i class="fas fa-sitemap"></i> Entourage de ${esc(d.nom)} <span style="font-size:.58rem;font-weight:400;color:var(--text-muted);">(enrichit les chemins indirects)</span>
             </label>
 
             <div style="display:flex;gap:8px;align-items:center;font-size:.75rem;margin-bottom:10px;flex-wrap:wrap;">
@@ -873,7 +893,7 @@ const PathOptimizer = (() => {
         // Auto-detected links
         if (autoLinks.length > 0) {
             html += `<div style="font-size:.68rem;color:var(--text-muted);margin-bottom:8px;">
-                <strong>Liens auto-détectés :</strong> ${autoLinks.map(a => `${a.nom} (${formatLien(a.lien)})`).join(', ')}
+                <strong>Liens auto-détectés :</strong> ${autoLinks.map(a => `${esc(a.nom)} (${formatLien(a.lien)})`).join(', ')}
             </div>`;
         }
 
@@ -904,7 +924,7 @@ const PathOptimizer = (() => {
             let row = `
             <div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
                 <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-                    <input type="text" class="form-input" value="${linkedDonor ? linkedDonor.nom : e.nom}" placeholder="Prénom"
+                    <input type="text" class="form-input" value="${esc(linkedDonor ? linkedDonor.nom : e.nom)}" placeholder="Prénom"
                            style="font-size:.72rem;height:30px;flex:1;min-width:80px;${linkedDonor ? 'opacity:.6;' : ''}"
                            ${linkedDonor ? 'disabled' : ''}
                            onchange="PathOptimizer.updateEntourage(${d.id},${e.id},'nom',this.value)">
@@ -932,7 +952,7 @@ const PathOptimizer = (() => {
             // Expanded donation details
             if (e.expanded && bens.length > 0) {
                 row += `<div style="margin-top:6px;padding:8px;border-radius:6px;background:rgba(198,134,66,.03);border:1px dashed rgba(198,134,66,.08);">
-                    <div style="font-size:.62rem;font-weight:600;color:var(--accent-coral);margin-bottom:6px;">Donations faites par ${e.nom || 'ce membre'} aux bénéficiaires :</div>`;
+                    <div style="font-size:.62rem;font-weight:600;color:var(--accent-coral);margin-bottom:6px;">Donations faites par ${esc(e.nom || 'ce membre')} aux bénéficiaires :</div>`;
 
                 row += bens.map(b => {
                     const montant = getEntourageDonForBen(e, b.id);
@@ -954,7 +974,7 @@ const PathOptimizer = (() => {
 
                     if (effLien === 'aucun') {
                         return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;opacity:.5;font-size:.62rem;">
-                            <span>→ ${b.prenom || 'Bénéf.'}</span>
+                            <span>→ ${esc(b.prenom || 'Bénéf.')}</span>
                             <select style="font-size:.58rem;height:22px;padding:0 3px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-muted);border-radius:3px;" onchange="PathOptimizer.updateEntourageDonLien(${d.id},${e.id},${b.id},this.value)">${lienSelectOpts}</select>
                             <span>🚫</span>
                         </div>`;
@@ -962,7 +982,7 @@ const PathOptimizer = (() => {
 
                     return `<div style="display:grid;grid-template-columns:1fr 100px 90px;gap:4px;align-items:center;margin-bottom:4px;">
                         <div>
-                            <div style="font-size:.62rem;font-weight:600;">→ ${b.prenom || 'Bénéf.'} <span style="color:var(--text-muted);">(${formatLien(effLien)} · ${fmt(abat)})</span></div>
+                            <div style="font-size:.62rem;font-weight:600;">→ ${esc(b.prenom || 'Bénéf.')} <span style="color:var(--text-muted);">(${formatLien(effLien)} · ${fmt(abat)})</span></div>
                             <select style="font-size:.55rem;height:20px;margin-top:2px;padding:0 3px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-muted);border-radius:3px;" onchange="PathOptimizer.updateEntourageDonLien(${d.id},${e.id},${b.id},this.value)">${lienSelectOpts}</select>
                             <div style="font-size:.55rem;color:${restant > 0 ? 'var(--accent-green)' : 'var(--accent-coral)'};margin-top:2px;">Restant : ${fmt(restant)}</div>
                         </div>
@@ -1002,7 +1022,7 @@ const PathOptimizer = (() => {
                 linkedBensHtml = `
                 <div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.1);">
                     <label class="form-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-                        <i class="fas fa-link"></i> Bénéficiaires directs de ${d.nom} <span style="font-size:.58rem;color:var(--text-muted);">(${linkedCount}/${bens.length} — décochez ceux qui ne sont pas vos enfants/petits-enfants)</span>
+                        <i class="fas fa-link"></i> Bénéficiaires directs de ${esc(d.nom)} <span style="font-size:.58rem;color:var(--text-muted);">(${linkedCount}/${bens.length} — décochez ceux qui ne sont pas vos enfants/petits-enfants)</span>
                     </label>
                     <div style="display:flex;flex-wrap:wrap;gap:6px;">
                         ${bens.map(b => {
@@ -1052,7 +1072,7 @@ const PathOptimizer = (() => {
                             <div style="display:grid;grid-template-columns:1fr;gap:6px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.02);border:1px dashed rgba(198,134,66,.08);opacity:.6;">
                                 <div style="display:flex;align-items:center;justify-content:space-between;">
                                     <div>
-                                        <span style="font-size:.78rem;color:var(--text-muted);">→ ${b.prenom || 'Bénéf.'}</span>
+                                        <span style="font-size:.78rem;color:var(--text-muted);">→ ${esc(b.prenom || 'Bénéf.')}</span>
                                         <span style="font-size:.62rem;color:var(--text-muted);margin-left:6px;">🚫 Aucun lien</span>
                                     </div>
                                     <select style="font-size:.62rem;height:24px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorBenLien(${d.id},${b.id},this.value)">${lienOpts}</select>
@@ -1062,7 +1082,7 @@ const PathOptimizer = (() => {
                         return `
                         <div style="display:grid;grid-template-columns:1fr 100px 120px;gap:6px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">
                             <div>
-                                <div id="don-label-${d.id}-${b.id}" style="font-size:.78rem;font-weight:600;color:var(--text-primary);">→ ${b.prenom || 'Bénéf.'} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span></div>
+                                <div id="don-label-${d.id}-${b.id}" style="font-size:.78rem;font-weight:600;color:var(--text-primary);">→ ${esc(b.prenom || 'Bénéf.')} <span style="font-size:.62rem;color:var(--text-muted);">(${formatLien(lienFiscal)} · abat. ${fmt(abat)})</span></div>
                                 <select style="font-size:.62rem;height:24px;margin-top:4px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;width:auto;" onchange="PathOptimizer.updateDonorBenLien(${d.id},${b.id},this.value)">${lienOpts}</select>
                                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                                     <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
@@ -1138,7 +1158,7 @@ const PathOptimizer = (() => {
                         if (lien === 'aucun') {
                             return `
                             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.03);border:1px dashed rgba(92,64,51,.08);opacity:.6;">
-                                <span style="font-size:.78rem;color:var(--text-muted);">← ${od.nom} 🚫</span>
+                                <span style="font-size:.78rem;color:var(--text-muted);">← ${esc(od.nom)} 🚫</span>
                                 <select style="font-size:.62rem;height:24px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
                             </div>`;
                         }
@@ -1146,7 +1166,7 @@ const PathOptimizer = (() => {
                         return `
                         <div style="display:grid;grid-template-columns:1fr 120px;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;border-radius:8px;background:rgba(92,64,51,.06);border:1px solid rgba(92,64,51,.1);">
                             <div>
-                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${od.nom} <span style="font-size:.62rem;color:var(--text-muted);">(${od.nom}→${d.nom} = ${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
+                                <div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">← reçu de ${esc(od.nom)} <span style="font-size:.62rem;color:var(--text-muted);">(${esc(od.nom)}→${esc(d.nom)} = ${formatLien(lien)} · abat. ${fmt(abat)})</span></div>
                                 <select style="font-size:.62rem;height:24px;margin-top:4px;padding:0 4px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.1);color:var(--text-secondary);border-radius:4px;" onchange="PathOptimizer.updateDonorRecvLien(${d.id},${od.id},this.value)">${recvLienOpts}</select>
                                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                                     <div style="flex:1;height:4px;border-radius:4px;background:rgba(198,134,66,.08);overflow:hidden;">
@@ -1171,13 +1191,13 @@ const PathOptimizer = (() => {
             return `
             <div class="list-item" data-donor-id="${d.id}" style="animation:fadeSlide .3s ease;">
                 <div class="list-item-header">
-                    <span class="list-item-title" id="donor-title-${d.id}">${d.nom}</span>
+                    <span class="list-item-title" id="donor-title-${d.id}">${esc(d.nom)}</span>
                     <button class="btn-remove" onclick="PathOptimizer.removeDonor(${d.id})"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="form-grid cols-2">
                     <div class="form-group">
                         <label class="form-label">Nom / Identifiant</label>
-                        <input type="text" class="form-input" value="${d.nom}" 
+                        <input type="text" class="form-input" value="${esc(d.nom)}" 
                                onchange="PathOptimizer.updateDonor(${d.id},'nom',this.value)">
                     </div>
                     <div class="form-group">
@@ -1430,7 +1450,7 @@ const PathOptimizer = (() => {
             if (!result.best) continue;
 
             html += `<div class="section-card" style="margin-bottom:16px;">`;
-            html += `<div class="section-title"><i class="fas fa-route"></i> Chemins vers ${result.targetName}</div>`;
+            html += `<div class="section-title"><i class="fas fa-route"></i> Chemins vers ${esc(result.targetName)}</div>`;
 
             // Best path highlight
             html += `<div class="results-summary" style="margin-bottom:14px;">
@@ -1470,7 +1490,7 @@ const PathOptimizer = (() => {
                 const badge = isBest ? '<span style="color:var(--accent-green);font-weight:700;"> ★</span>' : '';
 
                 html += `<tr style="${rowStyle}">
-                    <td style="text-align:left;font-weight:${isBest ? '700' : '500'};">${p.label}${badge}</td>
+                    <td style="text-align:left;font-weight:${isBest ? '700' : '500'};">${esc(p.label)}${badge}</td>
                     <td>${formatPathType(p.type)}</td>
                     <td style="color:var(--accent-coral);">${fmt(p.totalDroits)}</td>
                     <td>${fmt(p.totalFrais)}</td>
@@ -1484,7 +1504,7 @@ const PathOptimizer = (() => {
                 if (p.hops.length > 1) {
                     p.hops.forEach((hop, hi) => {
                         html += `<tr style="background:rgba(198,134,66,.03);">
-                            <td style="padding-left:24px;color:var(--text-muted);font-size:.65rem;">↳ ${hop.from} → ${hop.to}</td>
+                            <td style="padding-left:24px;color:var(--text-muted);font-size:.65rem;">↳ ${esc(hop.from)} → ${esc(hop.to)}</td>
                             <td style="color:var(--text-muted);font-size:.65rem;">${hop.demembre ? 'NP' : 'PP'}</td>
                             <td style="font-size:.65rem;">${fmt(hop.droits)}</td>
                             <td style="font-size:.65rem;">${fmt(hop.frais)}</td>
