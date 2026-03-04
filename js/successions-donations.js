@@ -1644,13 +1644,19 @@ const SD = (() => {
             var existingDonors = PathOptimizer.getDonors();
             existingDonors.forEach(d => { if (PathOptimizer.removeDonor) PathOptimizer.removeDonor(d.id); });
 
-            donors.forEach(d => {
+            // Add ALL non-beneficiary persons as potential donors/intermediaries
+            var benIds = new Set(bens.map(function(b){return b.id}));
+            var allPersons = FamilyGraph.getPersons();
+            allPersons.forEach(d => {
+                if (benIds.has(d.id)) return; // skip beneficiaries
                 var role = FamilyGraph.inferRole ? FamilyGraph.inferRole(d.id) : 'parent';
-                PathOptimizer.addDonor(role, d.nom, d.age, d.patrimoine || 0, d.regime || 'communaute');
-                var newDonor = PathOptimizer.getDonors().find(dd => dd.nom === d.nom);
+                PathOptimizer.addDonor(role, d.nom || ('Personne ' + d.id), d.age, 0, 'communaute');
+                var newDonor = PathOptimizer.getDonors().find(dd => dd.nom === (d.nom || ('Personne ' + d.id)));
                 if (newDonor) {
                     newDonor.linkedBens = {};
                     newDonor._graphId = d.id;
+                    newDonor._isDonor = d.isDonor || false;
+                    newDonor._isIntermediary = !d.isDonor;
                     bens.forEach(b => {
                         var lien = FamilyGraph.computeFiscalLien(d.id, b.id);
                         newDonor.linkedBens[b.id] = (lien !== 'tiers');
