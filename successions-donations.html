@@ -608,16 +608,11 @@
             <div class="step-connector" id="conn-3"></div>
             <div class="step-item" data-step="4" onclick="SD.goToStep(4)">
                 <div class="step-number"><span>4</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Structures</div><div class="step-sublabel">SCI, SARL</div></div>
+                <div><div class="step-label">Objectif</div><div class="step-sublabel">Donation, succession</div></div>
             </div>
             <div class="step-connector" id="conn-4"></div>
             <div class="step-item" data-step="5" onclick="SD.goToStep(5)">
                 <div class="step-number"><span>5</span><i class="fas fa-check"></i></div>
-                <div><div class="step-label">Objectif</div><div class="step-sublabel">Donation, succession</div></div>
-            </div>
-            <div class="step-connector" id="conn-5"></div>
-            <div class="step-item" data-step="6" onclick="SD.goToStep(6)">
-                <div class="step-number"><span>6</span><i class="fas fa-check"></i></div>
                 <div><div class="step-label">Résultats</div><div class="step-sublabel">Stratégie optimale</div></div>
             </div>
         </div>
@@ -809,49 +804,8 @@
                 </div>
             </div>
 
-            <!-- ==================== STEP 4: STRUCTURES ==================== -->
+            <!-- ==================== STEP 4: OBJECTIF ==================== -->
             <div class="step-panel" id="step-4">
-                <div class="step-helper"><i class="fas fa-lightbulb"></i> Facultatif : si vous détenez des biens via SCI, SARL de famille ou en indivision, précisez ici.</div>
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-building"></i> Structures de détention existantes</div>
-                    <div class="section-subtitle">Si vous détenez des biens via une société ou en indivision, précisez ici</div>
-                    <div id="structures-auto" class="warning-box info">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Les structures sont détectées depuis vos biens saisis à l'étape 2. Si aucun bien n'est en société, passez directement à l'étape suivante.</span>
-                    </div>
-                    <div class="dynamic-list" id="structures-list" style="margin-top:16px;"></div>
-                </div>
-
-                <div class="section-card">
-                    <div class="section-title"><i class="fas fa-people-arrows"></i> Indivision</div>
-                    <div class="switch-row">
-                        <span class="switch-label">Des biens sont-ils en indivision ?</span>
-                        <div class="switch" id="switch-indivision" onclick="SD.toggleSwitch(this);SD.toggleSection('indivision-fields')"></div>
-                    </div>
-                    <div id="indivision-fields" style="display:none; margin-top:16px;">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Quote-part du donateur (%)</label>
-                                <input type="number" id="indivision-quote" min="1" max="99" placeholder="Ex: 50">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Convention d'indivision signée ?</label>
-                                <select id="convention-indivision">
-                                    <option value="non">Non</option>
-                                    <option value="oui">Oui</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="warning-box info" style="margin-top:12px;">
-                            <i class="fas fa-info-circle"></i>
-                            <span>La sortie d'indivision entraîne des frais de partage (~2,5% de la valeur). La donation de droits indivis est possible mais plus complexe.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ==================== STEP 5: OBJECTIF ==================== -->
-            <div class="step-panel" id="step-5">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Activez les dispositifs pertinents : vente en viager, démembrement, exonération 790 A bis si applicable.</div>
                 <div class="section-card">
                     <div class="section-title"><i class="fas fa-bullseye"></i> Type d'opération</div>
@@ -1001,8 +955,8 @@
                 </div>
             </div>
 
-            <!-- ==================== STEP 6: RÉSULTATS ==================== -->
-            <div class="step-panel" id="step-6">
+            <!-- ==================== STEP 5: RÉSULTATS ==================== -->
+            <div class="step-panel" id="step-5">
                 <div class="step-helper"><i class="fas fa-lightbulb"></i> Comparez les scénarios et consultez la stratégie recommandée avec son calendrier d'exécution.</div>
                 
                 <!-- PATH OPTIMIZER RESULTS -->
