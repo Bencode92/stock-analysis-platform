@@ -508,20 +508,19 @@ const TransmissionEngine = (() => {
         // ─── 2. DONATION DIRECTE PP ─────────────────────────────
         var baseDonPP = Math.max(0, partTotal - abatRestant);
         var droitsDonPP = calcDroits(baseDonPP, bareme);
-        var reduction = donorAge < 70 ? 0.50 : 0;
-        var droitsDonPPRed = Math.round(droitsDonPP * (1 - reduction));
+        // NOTE: Art. 790 CGI réduction 50% s'applique UNIQUEMENT aux donations d'entreprise
+        // éligibles au Pacte Dutreil (art. 787 B/C), PAS aux donations classiques de patrimoine.
         var fraisDonPP = Math.round(partTotal * FISC.fraisNotairePct);
         channels.push({
             id: 'donation_pp', name: 'Donation directe (PP)',
             icon: '🎁', timing: 'Maintenant', color: '#c68642',
             assiette: partTotal, abattement: abatRestant,
-            base_taxable: baseDonPP, droits: droitsDonPPRed, frais: fraisDonPP,
-            net: partTotal - droitsDonPPRed - fraisDonPP,
-            taux_effectif: partTotal > 0 ? Math.round(droitsDonPPRed / partTotal * 100) : 0,
+            base_taxable: baseDonPP, droits: droitsDonPP, frais: fraisDonPP,
+            net: partTotal - droitsDonPP - fraisDonPP,
+            taux_effectif: partTotal > 0 ? Math.round(droitsDonPP / partTotal * 100) : 0,
             fraisAn: 0,
             advantages: [
                 'Abattement ' + fmt(abat) + ' renouvelable tous les 15 ans' + (donAnterieures > 0 ? ' (reste ' + fmt(abatRestant) + ')' : ''),
-                donorAge < 70 ? 'Réduction 50% (donateur < 70 ans, art. 790 CGI)' : null,
                 'Transmission immédiate, purge la plus-value'
             ].filter(Boolean),
             risks: [
@@ -529,7 +528,7 @@ const TransmissionEngine = (() => {
                 'Le donateur perd l\'usage du bien'
             ],
             objectives: ['minimiser', 'egalite'],
-            details: 'Abattement ' + fmt(abat) + (donAnterieures > 0 ? ' (reste ' + fmt(abatRestant) + ' après donations antérieures)' : '') + ' (' + formatLien(lien) + ') · Base taxable : ' + fmt(baseDonPP) + (reduction > 0 ? ' · Réduction 50% → droits : ' + fmt(droitsDonPPRed) : '')
+            details: 'Abattement ' + fmt(abat) + (donAnterieures > 0 ? ' (reste ' + fmt(abatRestant) + ' après donations antérieures)' : '') + ' (' + formatLien(lien) + ') · Base taxable : ' + fmt(baseDonPP) + ' · Droits : ' + fmt(droitsDonPP)
         });
 
         // ─── 3. DONATION NP (démembrement) ──────────────────────
@@ -555,20 +554,52 @@ const TransmissionEngine = (() => {
                 'Le nu-propriétaire ne peut pas vendre sans accord de l\'usufruitier'
             ],
             objectives: ['minimiser', 'revenus', 'controle'],
-            details: 'NP = ' + fmt(valeurNP) + ' (' + Math.round(npRatio * 100) + '% pour donateur de ' + donorAge + ' ans) · Économie vs PP : ' + fmt(droitsDonPPRed - droitsNP)
+            details: 'NP = ' + fmt(valeurNP) + ' (' + Math.round(npRatio * 100) + '% pour donateur de ' + donorAge + ' ans) · Économie vs PP : ' + fmt(droitsDonPP - droitsNP)
         });
 
         // ─── 4. ASSURANCE-VIE (art. 990 I) — primes avant 70 ans ─
-        // Access actual AV details from state for proper primes split
-        var avFinItems = state().finance ? state().finance.filter(function(f) { return f.type === 'assurance_vie'; }) : [];
+        // FIX B: Filter AV by OWNER of current donor, not all AV in state
+        var donorKey = 'd-' + poId;
+        var donorKeyAlt = 'd-' + donor.id;
+        var avFinItems = (state().finance || []).filter(function(f) {
+            if (f.type !== 'assurance_vie') return false;
+            // Match by ownerId
+            var fOwner = String(f.ownerId || '');
+            return fOwner === donorKey || fOwner === donorKeyAlt || fOwner === '' || !f.ownerId;
+        });
+        // If no AV matched and no ownerId on any AV, include all (legacy fallback)
+        if (avFinItems.length === 0) {
+            var anyAVHasOwner = (state().finance || []).some(function(f) { return f.type === 'assurance_vie' && f.ownerId; });
+            if (!anyAVHasOwner) {
+                avFinItems = (state().finance || []).filter(function(f) { return f.type === 'assurance_vie'; });
+            }
+        }
+
         var totalPrimesAv70 = avFinItems.reduce(function(s, f) { return s + (f.primesAvant70 || 0); }, 0);
         var totalPrimesAp70 = avFinItems.reduce(function(s, f) { return s + (f.primesApres70 || 0); }, 0);
         var totalAVCap = avFinItems.reduce(function(s, f) { return s + (f.valeur || 0); }, 0);
-        // Per-beneficiary share
+
+        // Per-beneficiary share — use clause bénéficiaire if available, else equal split
         var benCount = pair.donorBenCount || 1;
-        var benPrimesAv70 = Math.round(totalPrimesAv70 / benCount);
-        var benPrimesAp70 = Math.round(totalPrimesAp70 / benCount);
-        var benAVCap = Math.round(totalAVCap / benCount);
+        var benQuotePct = 100; // default: 100% to this beneficiary if single
+        // Check if any AV has clause bénéficiaire with this specific beneficiary
+        avFinItems.forEach(function(avItem) {
+            if (avItem.avBeneficiaires && avItem.avBeneficiaires.length > 0) {
+                var benEntry = avItem.avBeneficiaires.find(function(ab) {
+                    var abName = ab.person ? (ab.person.prenom || ab.person.nom || '') : '';
+                    var benName = pair.ben.prenom || pair.ben.nom || '';
+                    return abName === benName || String(ab.benId) === String(pair.ben.id);
+                });
+                if (benEntry && benEntry.pct) benQuotePct = benEntry.pct;
+            }
+        });
+        // If equal split (no clause or not found)
+        if (benQuotePct === 100 && benCount > 1) benQuotePct = Math.round(100 / benCount);
+        var quoteFactor = benQuotePct / 100;
+
+        var benPrimesAv70 = Math.round(totalPrimesAv70 * quoteFactor);
+        var benPrimesAp70 = Math.round(totalPrimesAp70 * quoteFactor);
+        var benAVCap = Math.round(totalAVCap * quoteFactor);
         // If no primes split data, fallback: assume all primes match donor age
         if (totalPrimesAv70 === 0 && totalPrimesAp70 === 0 && partFin > 0) {
             if (donorAge < 70) { benPrimesAv70 = partFin; benPrimesAp70 = 0; }
@@ -1038,7 +1069,7 @@ const TransmissionEngine = (() => {
             "- Identifie clairement : 'Le canal qui produit le MOINS de droits est X, avec Y € de droits (Z% de taux effectif), contre W € en succession'\n" +
             "- Explique le MÉCANISME fiscal (pas juste les chiffres) : pourquoi le démembrement réduit l'assiette, comment l'AV 990I sort de la succession, etc.\n" +
             "- Mentionne ce que le donateur CONSERVE (revenus, usage, contrôle) et ce qu'il PERD (propriété, disponibilité)\n" +
-            "- Impact de l'âge : seuil 70 ans pour AV (990I vs 757B), réduction 50% si < 70 ans pour donation PP (art. 790 CGI)\n" +
+            "- Impact de l'âge : seuil 70 ans pour AV (990I vs 757B). Note : la réduction de 50% (art. 790 CGI) ne s'applique qu'aux donations d'entreprise éligibles au Pacte Dutreil, PAS aux donations classiques.\n" +
             "- Si grand-parent de 85+ ans : signale l'URGENCE absolue — une seule opération possible, l'espérance de vie ne permet pas de renouvellement d'abattement\n\n" +
 
             "**3. DONATIONS ANTÉRIEURES et ABATTEMENTS CONSOMMÉS**\n" +
