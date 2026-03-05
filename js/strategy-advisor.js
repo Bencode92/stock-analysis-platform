@@ -75,16 +75,31 @@ const StrategyAdvisor = (() => {
                 }
 
                 var donAnterieures = 0;
+                var donAntDate = null;
+                var donAntHorsRappel = false;
                 if (po && po.getDonorDonationForBenRaw && donor._poId >= 0) {
                     var raw = po.getDonorDonationForBenRaw(donor._poId, ben.id);
-                    if (raw && raw.montant > 0) donAnterieures = raw.montant;
+                    if (raw && raw.montant > 0) {
+                        donAntDate = raw.date || null;
+                        // FIX 3: Check 15-year rappel fiscal
+                        if (po.isDonationInRappel && donAntDate) {
+                            if (po.isDonationInRappel(donAntDate)) {
+                                donAnterieures = raw.montant;
+                            } else {
+                                donAntHorsRappel = true; // > 15 ans, abattement rechargé
+                            }
+                        } else {
+                            donAnterieures = raw.montant; // conservative
+                        }
+                    }
                 }
                 var abatTotal = getAbattement(lien, false);
                 var abatRestant = Math.max(0, abatTotal - donAnterieures);
 
                 pairContexts.push({
                     donor: donor, ben: ben, lien: lien,
-                    donAnterieures: donAnterieures, abatTotal: abatTotal, abatRestant: abatRestant
+                    donAnterieures: donAnterieures, donAntDate: donAntDate, donAntHorsRappel: donAntHorsRappel,
+                    abatTotal: abatTotal, abatRestant: abatRestant
                 });
             });
         });
@@ -146,8 +161,14 @@ const StrategyAdvisor = (() => {
         ctx.pairContexts.forEach(function(pc) {
             if (pc.donAnterieures > 0) {
                 hasDon = true;
+                var dateInfo = pc.donAntDate ? ' le ' + pc.donAntDate : '';
                 alerts.push({ type: 'info', icon: '📋',
-                    text: esc(pc.donor.nom) + ' a déjà donné <strong>' + fmt(pc.donAnterieures) + '</strong> à ' + esc(pc.ben.prenom || pc.ben.nom) + '. Abattement ' + formatLien(pc.lien) + ' : reste <strong>' + fmt(pc.abatRestant) + '</strong> sur ' + fmt(pc.abatTotal) + ' (rappel fiscal 15 ans, art. 784 CGI).'
+                    text: esc(pc.donor.nom) + ' a déjà donné <strong>' + fmt(pc.donAnterieures) + '</strong> à ' + esc(pc.ben.prenom || pc.ben.nom) + dateInfo + ' (dans le rappel fiscal 15 ans). Abattement ' + formatLien(pc.lien) + ' : reste <strong>' + fmt(pc.abatRestant) + '</strong> sur ' + fmt(pc.abatTotal) + ' (art. 784 CGI).'
+                });
+            }
+            if (pc.donAntHorsRappel) {
+                alerts.push({ type: 'tip', icon: '✅',
+                    text: 'Bonne nouvelle : une donation antérieure de ' + esc(pc.donor.nom) + ' à ' + esc(pc.ben.prenom || pc.ben.nom) + ' est <strong>hors rappel fiscal</strong> (> 15 ans). L\'abattement ' + formatLien(pc.lien) + ' de <strong>' + fmt(pc.abatTotal) + '</strong> est entièrement rechargé.'
                 });
             }
         });
@@ -267,6 +288,21 @@ const StrategyAdvisor = (() => {
                 ]
             });
 
+            // FIX 4: Abus de droit — si vente envisagée, demander si déjà décidée
+            var locHorizonDecision = getDecision('immo-' + im.id, 'locatif-horizon');
+            if (locHorizonDecision === 'vendre_court') {
+                questions.push({
+                    id: 'vente-prearrangee',
+                    text: '⚠️ La vente est-elle déjà décidée, signée ou en cours de négociation ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'non', label: '❌ Non, c\'est un projet futur', hint: '→ Donation avant vente = purge PV (sécurisé)' },
+                        { value: 'negociation', label: '🤝 En négociation / offre reçue', hint: '→ ⚠️ Risque abus de droit si donation puis vente immédiate' },
+                        { value: 'oui', label: '✅ Oui, compromis signé ou vente actée', hint: '→ 🚨 Donation-cession DÉCONSEILLÉE (abus de droit quasi certain)' }
+                    ]
+                });
+            }
+
         } else if (usage === 'rs') {
             prose.push('<strong>' + label + '</strong> est une <strong>résidence secondaire</strong> estimée à ' + fmt(val) + '. La vente est soumise à la <strong>plus-value immobilière</strong> (36,2%). La donation avant vente purge la PV.');
 
@@ -280,6 +316,21 @@ const StrategyAdvisor = (() => {
                     { value: 'transmettre', label: '🎁 La transmettre directement', hint: '→ Donation PP ou NP' }
                 ]
             });
+
+            // FIX 4: Abus de droit pour RS aussi
+            var rsDecision = getDecision('immo-' + im.id, 'rs-projet');
+            if (rsDecision === 'vendre') {
+                questions.push({
+                    id: 'vente-prearrangee',
+                    text: '⚠️ La vente est-elle déjà décidée ou en cours ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'non', label: '❌ Non, projet futur', hint: '→ Donation avant vente = purge PV (OK)' },
+                        { value: 'negociation', label: '🤝 En négociation', hint: '→ ⚠️ Risque abus de droit' },
+                        { value: 'oui', label: '✅ Compromis signé', hint: '→ 🚨 Donation-cession déconseillée' }
+                    ]
+                });
+            }
         }
 
         // ── Structure de détention ──
@@ -750,6 +801,21 @@ const StrategyAdvisor = (() => {
         } else if (indirect === 'oui') {
             filtered.forEach(function(o) {
                 if (o.id.indexOf('indirect') >= 0) o.rank = Math.max(0, o.rank - 3);
+            });
+        }
+
+        // FIX 4: Abus de droit — si vente pré-arrangée, flag les donations
+        var ventePrearrangee = getDecision(assetKey, 'vente-prearrangee');
+        if (ventePrearrangee === 'oui' || ventePrearrangee === 'negociation') {
+            filtered.forEach(function(o) {
+                if (o.id === 'donation_np' || o.id === 'donation_pp' || o.id.indexOf('indirect') >= 0 || o.id === 'sci_np') {
+                    if (ventePrearrangee === 'oui') {
+                        o.risks = (o.risks || []).concat(['🚨 ABUS DE DROIT : vente déjà actée → donation-cession très probablement requalifiée (art. L64 LPF). Pénalités 40-80%.']);
+                        o.rank += 20;
+                    } else {
+                        o.risks = (o.risks || []).concat(['⚠️ Risque abus de droit si vente rapidement après donation. Attendre min. 2 ans.']);
+                    }
+                }
             });
         }
 
