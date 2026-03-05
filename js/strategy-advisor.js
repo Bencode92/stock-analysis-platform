@@ -190,7 +190,188 @@ const StrategyAdvisor = (() => {
 
 
     // ================================================================
-    // 3. IMMO OPTIONS — Options par bien immobilier
+    // 3. DIAGNOSTICS — Prose d'expert personnalisée par actif
+    // ================================================================
+
+    function buildImmoDiagnostic(im, ctx) {
+        var d = [];
+        var label = esc(im.label || 'Ce bien');
+        var val = im.valeur || 0;
+        var usage = im.usageActuel || 'rp';
+        var structure = im.structure || 'direct';
+
+        // ── Nature du bien ──
+        if (usage === 'rp') {
+            d.push('<strong>' + label + '</strong> est votre <strong>résidence principale</strong>, estimée à ' + fmt(val) + '.');
+            d.push('En tant que RP, ce bien bénéficie d\'un <strong>abattement de 20% en succession</strong> (art. 764 bis CGI) si le conjoint ou un enfant y habite au moment du décès. Il n\'y a <strong>aucune plus-value à la vente</strong>.');
+
+            // Key question
+            ctx.donors.forEach(function(donor) {
+                if (donor.age >= 80) {
+                    d.push('La question clé : <strong>' + esc(donor.nom) + ' souhaite-t-elle continuer à y vivre ?</strong> Si oui, la donation de la nue-propriété permet de transmettre tout en gardant l\'usage du logement. Si un départ en établissement est envisagé, la vente (exonérée de PV) puis le réinvestissement en assurance-vie ou don manuel pourrait être plus pertinent.');
+                } else {
+                    d.push(esc(donor.nom) + ' occupe ce logement — la donation de la nue-propriété lui permet de <strong>rester chez elle tout en transmettant</strong> à moindre coût fiscal.');
+                }
+            });
+
+        } else if (usage === 'locatif') {
+            var loyer = im.loyerMensuel || 0;
+            d.push('<strong>' + label + '</strong> est un <strong>bien locatif</strong> estimé à ' + fmt(val) + (loyer > 0 ? ', générant <strong>' + fmt(loyer) + '/mois</strong> de loyers (' + fmt(loyer * 12) + '/an)' : '') + '.');
+
+            if (loyer > 0) {
+                d.push('Ces revenus locatifs sont importants pour le donateur. Le <strong>démembrement</strong> (donation de la NP) permet de transmettre le bien tout en <strong>conservant les loyers</strong> jusqu\'au décès.');
+            }
+
+            // Location type
+            if (im.typeLocation === 'meuble_longue_duree' || im.typeLocation === 'meuble_courte' || im.typeLocation === 'meuble_saisonnier') {
+                d.push('⚠️ Ce bien est en <strong>location meublée</strong>. En cas d\'apport en SCI IR, attention au seuil de 10% de revenus meublés au-delà duquel la SCI risque d\'être <strong>requalifiée en IS</strong>.');
+            }
+
+            // PV latente
+            if (im.prixAcquisition > 0 && im.prixAcquisition < val) {
+                var pv = val - im.prixAcquisition;
+                d.push('La <strong>plus-value latente</strong> est estimée à ' + fmt(pv) + '. En cas de vente, elle serait imposée à 36,2% (IR 19% + PS 17,2%) après abattements pour durée de détention. <strong>Donner avant de vendre</strong> purge cette plus-value (le donataire revend à la valeur déclarée dans l\'acte).');
+            }
+
+        } else if (usage === 'rs') {
+            d.push('<strong>' + label + '</strong> est une <strong>résidence secondaire</strong> estimée à ' + fmt(val) + '.');
+            d.push('Contrairement à la RP, la vente d\'une résidence secondaire est <strong>soumise à la plus-value immobilière</strong> (IR 19% + PS 17,2%). La donation avant vente permet de <strong>purger la plus-value</strong>.');
+        }
+
+        // ── Structure de détention ──
+        if (structure === 'indivision' || (im.owners && im.owners.length > 1)) {
+            var ownerNames = (im.owners || []).map(function(o) {
+                var name = o.personNom || '';
+                if (!name && o.personId) {
+                    // Resolve from donors/intermediaries
+                    var allP = ctx.donors.concat(ctx.intermediaires || []);
+                    var pidStr = String(o.personId);
+                    allP.forEach(function(p) {
+                        if (p.nom && ('d-' + (p._poId >= 0 ? p._poId : p.id) === pidStr || 'd-' + p.id === pidStr)) name = p.nom;
+                    });
+                    // Also try FamilyGraph
+                    if (!name) {
+                        var fg2 = FG();
+                        if (fg2 && fg2.getPersons) {
+                            fg2.getPersons().forEach(function(fp) {
+                                if ('d-' + fp.id === pidStr || 'b-' + fp.id === pidStr || String(fp.id) === pidStr.replace('d-','').replace('b-','')) {
+                                    if (fp.nom) name = fp.nom;
+                                }
+                            });
+                        }
+                    }
+                }
+                return (name || '?') + ' (' + (o.quote || '?') + '%)';
+            }).join(', ');
+            d.push('');
+            d.push('Ce bien est détenu en <strong>indivision</strong> entre ' + ownerNames + '. L\'indivision complique la transmission : chaque indivisaire ne peut donner que <strong>sa propre quote-part</strong>. Deux options :');
+            d.push('→ <em>Sortir de l\'indivision</em> d\'abord (rachat de parts, partage notarié, vente), puis transmettre la pleine propriété');
+            d.push('→ <em>Donner la quote-part en l\'état</em> (possible mais le nu-propriétaire sera en indivision avec les autres — moins souple)');
+        } else if (structure === 'demembre') {
+            d.push('Ce bien est déjà <strong>démembré</strong>. Seul l\'usufruit ou la nue-propriété peut être transmis selon la position du donateur.');
+        } else if (structure === 'sci_ir' || structure === 'sci_is') {
+            d.push('Ce bien est détenu via une <strong>SCI</strong>. La transmission se fera par donation des parts sociales (avec décote d\'illiquidité ~15%).');
+        }
+
+        // ── Âge et démembrement ──
+        ctx.donors.forEach(function(donor) {
+            // Check if this donor owns this asset
+            var owns = !im.owners || im.owners.length === 0 || im.owners.some(function(o) {
+                return o.personNom === donor.nom || String(o.personId) === 'd-' + (donor._poId >= 0 ? donor._poId : donor.id);
+            });
+            if (!owns) return;
+
+            var npR = getNPRatio(donor.age);
+            d.push('');
+            d.push('À <strong>' + donor.age + ' ans</strong>, la nue-propriété représente <strong>' + Math.round(npR * 100) + '%</strong> de la valeur (barème art. 669 CGI). ' +
+                (npR >= 0.8 ? 'C\'est un ratio élevé — l\'avantage du démembrement est limité par l\'âge avancé. ' : '') +
+                (npR <= 0.5 ? 'Le démembrement est très avantageux à cet âge : les droits portent sur seulement ' + Math.round(npR * 100) + '% de la valeur. ' : '') +
+                'L\'usufruit (' + Math.round((1 - npR) * 100) + '%) permet de conserver ' + (usage === 'locatif' ? 'les loyers' : 'l\'usage du bien') + '.');
+        });
+
+        return d.join(' ');
+    }
+
+    function buildFinanceDiagnostic(fin, ctx) {
+        var d = [];
+        var cap = fin.valeur || 0;
+        var FISC = ctx.FISC;
+
+        // Find owner among donors
+        var donor = ctx.donors[0];
+        if (fin.ownerId) {
+            var po2 = PO();
+            if (po2) {
+                var pidStr = String(fin.ownerId);
+                if (pidStr.startsWith('d-')) {
+                    var poIdx = parseInt(pidStr.replace('d-', ''));
+                    var pod = po2.getDonors().find(function(d2) { return d2.id === poIdx; });
+                    if (pod) {
+                        var md = ctx.donors.find(function(cd) { return cd.nom === pod.nom; });
+                        if (md) donor = md;
+                    }
+                }
+            }
+        }
+        var donorAge = donor ? donor.age : 60;
+
+        if (fin.type === 'assurance_vie') {
+            var isAvant70 = donorAge < 70 || (fin.ageVersement && fin.ageVersement < 70);
+
+            d.push('Ce <strong>contrat d\'assurance-vie</strong> d\'une valeur de ' + fmt(cap) + ' est souscrit par ' + esc(donor ? donor.nom : '?') + '.');
+
+            if (isAvant70) {
+                d.push('Les primes ont été versées <strong>avant 70 ans</strong> → régime fiscal de l\'<strong>art. 990 I</strong> : abattement de <strong>' + fmt(FISC.av990I.abattement) + ' par bénéficiaire</strong>, puis 20% jusqu\'à ' + fmt(FISC.av990I.seuil2) + ' et 31,25% au-delà. C\'est le régime le plus favorable.');
+
+                if (cap > FISC.av990I.abattement) {
+                    d.push('Le capital (' + fmt(cap) + ') <strong>dépasse l\'abattement</strong> de ' + fmt(FISC.av990I.abattement) + '. Au-delà de ce seuil, un <strong>contrat de capitalisation démembré</strong> (donation de la NP) peut être fiscalement plus avantageux : les droits portent sur la nue-propriété seulement (' + Math.round(getNPRatio(donorAge) * 100) + '% à ' + donorAge + ' ans), avec l\'antériorité fiscale conservée.');
+                } else {
+                    d.push('Le capital reste <strong>sous l\'abattement</strong> de ' + fmt(FISC.av990I.abattement) + ' → au décès, le bénéficiaire recevra le capital <strong>en franchise de droits</strong>. C\'est la situation idéale — conservez ce contrat.');
+                }
+            } else {
+                d.push('Le souscripteur ayant <strong>plus de 70 ans</strong>, les primes versées relèvent de l\'<strong>art. 757 B</strong> : abattement global de seulement <strong>' + fmt(FISC.av757B.abattementGlobal) + '</strong> (partagé entre tous les bénéficiaires), puis barème de droit commun.');
+                d.push('<strong>Point positif :</strong> les intérêts et plus-values acquis depuis la souscription sont <strong>totalement exonérés</strong>. Seules les primes versées sont taxées.');
+                d.push('');
+                d.push('<strong>Stratégie à envisager :</strong> plutôt que de laisser le capital en AV (757B = peu d\'abattement), effectuez des <strong>rachats partiels annuels</strong> de ' + fmt(4600) + ' (exonérés d\'IR après 8 ans, art. 125-0 A CGI). Les sommes rachetées peuvent être transmises via <strong>don manuel</strong> (dans la limite des abattements disponibles) ou en <strong>présent d\'usage</strong> (anniversaire, Noël — non rapportable si proportionné au patrimoine).');
+
+                if (cap > 100000) {
+                    d.push('');
+                    d.push('Avec ' + fmt(cap) + ' en AV, une <strong>alternative sérieuse</strong> est le <strong>contrat de capitalisation</strong> : souscrire un capi, y transférer le capital, puis donner la nue-propriété. Les droits portent sur ' + Math.round(getNPRatio(donorAge) * 100) + '% seulement, et le quasi-usufruit permet de continuer à utiliser le capital. La créance de restitution sera déductible de la succession.');
+                }
+            }
+
+            // Clause bénéficiaire
+            if (fin.avBeneficiaires && fin.avBeneficiaires.length > 0) {
+                var benNames = fin.avBeneficiaires.map(function(b) { return (b.person ? b.person.prenom || b.person.nom : '?') + ' (' + (b.pct || '?') + '%)'; }).join(', ');
+                d.push('');
+                d.push('Clause bénéficiaire actuelle : ' + benNames + '. Vérifiez qu\'elle correspond à vos souhaits de transmission.');
+            } else {
+                d.push('');
+                d.push('⚠️ <strong>Clause bénéficiaire non définie</strong> dans l\'outil. Vérifiez votre contrat — c\'est elle qui détermine qui reçoit le capital au décès.');
+            }
+
+        } else if (fin.type === 'contrat_capi') {
+            d.push('Ce <strong>contrat de capitalisation</strong> d\'une valeur de ' + fmt(cap) + ' peut être transmis par <strong>donation de la nue-propriété</strong>.');
+            d.push('Avantages spécifiques du capi vs l\'AV : l\'<strong>antériorité fiscale est conservée</strong> (pas de purge des PV au décès), et le <strong>quasi-usufruit</strong> est possible : le donateur continue d\'utiliser le capital, et la créance de restitution sera <strong>déductible de l\'actif successoral</strong>.');
+            d.push('À ' + donorAge + ' ans, la NP = ' + Math.round(getNPRatio(donorAge) * 100) + '% → droits calculés sur ' + fmt(Math.round(cap * getNPRatio(donorAge))) + ' au lieu de ' + fmt(cap) + '.');
+
+        } else if (fin.type === 'pea' || fin.type === 'pea_pme') {
+            d.push('Le <strong>PEA</strong> de ' + fmt(cap) + ' ne peut pas être transmis par donation (le PEA est personnel et intransmissible du vivant). Au décès, il est clôturé et les gains sont exonérés d\'IR (seuls les prélèvements sociaux s\'appliquent). Le capital entre dans la succession.');
+            d.push('Stratégie : si vous souhaitez transmettre les liquidités, effectuez un <strong>retrait du PEA</strong> (exonéré d\'IR après 5 ans) puis transmettez via don manuel ou réinvestissez en AV/capi.');
+
+        } else if (fin.type === 'cto') {
+            d.push('Le <strong>compte-titres</strong> de ' + fmt(cap) + ' peut être transmis par donation. La donation <strong>purge la plus-value latente</strong> (le donataire acquiert les titres à leur valeur au jour de la donation). C\'est un avantage significatif si les titres ont fortement augmenté.');
+
+        } else {
+            d.push('Placement financier de ' + fmt(cap) + '.');
+        }
+
+        return d.join(' ');
+    }
+
+
+    // ================================================================
+    // 4. IMMO OPTIONS — Options par bien immobilier
     // ================================================================
 
     function analyzeImmo(im, ctx) {
@@ -201,12 +382,16 @@ const StrategyAdvisor = (() => {
             usage: im.usageActuel || 'rp',
             valeur: im.valeur || 0,
             options: [],
-            alerts: []
+            alerts: [],
+            diagnostic: '' // Expert narrative
         };
 
         if (result.valeur <= 0) return result;
 
         var FISC = ctx.FISC;
+
+        // ── BUILD EXPERT DIAGNOSTIC ──
+        result.diagnostic = buildImmoDiagnostic(im, ctx);
 
         // Find owners of this asset among donors
         var donorOwners = [];
@@ -403,10 +588,14 @@ const StrategyAdvisor = (() => {
             asset: fin, type: 'finance',
             label: fin.type === 'assurance_vie' ? 'Assurance-vie' : fin.type === 'contrat_capi' ? 'Contrat de capitalisation' : fin.type === 'pea' ? 'PEA' : 'Placement financier',
             valeur: fin.valeur || 0,
-            options: [], alerts: []
+            options: [], alerts: [],
+            diagnostic: ''
         };
 
         if (result.valeur <= 0) return result;
+
+        // Expert diagnostic
+        result.diagnostic = buildFinanceDiagnostic(fin, ctx);
 
         var FISC = ctx.FISC;
 
@@ -625,6 +814,13 @@ const StrategyAdvisor = (() => {
                 html += '</div>';
             }
             html += '</div>';
+
+            // Expert diagnostic
+            if (asset.diagnostic) {
+                html += '<div style="padding:14px 18px;border-radius:10px;background:rgba(198,134,66,.04);border-left:3px solid rgba(198,134,66,.2);margin-bottom:14px;font-size:.78rem;color:var(--text-secondary);line-height:1.85;">';
+                html += asset.diagnostic;
+                html += '</div>';
+            }
 
             // Options
             asset.options.forEach(function(opt, oi) {
