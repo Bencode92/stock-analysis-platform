@@ -816,7 +816,14 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "dividend_coverage": ["dividend_coverage", "interest_coverage"],
     "buffett_score": ["buffett_score", "_buffett_score"],
     "quality_score": ["quality_score"],
+    # v5.3.0: Quality subscores (peer-relative, calculés par stock-advanced-filter.js)
+    # Chaque subscore capture PLUSIEURS métriques brutes — évite la redondance
     "quality_value_sub": ["quality_subscores.value", "quality_value_sub", "value_subscore"],
+    "quality_quality_sub": ["quality_subscores.quality"],   # ROE + ROIC + net_margin
+    "quality_safety_sub": ["quality_subscores.safety"],     # D/E + payout ratio
+    "quality_growth_sub": ["quality_subscores.growth"],     # EPS growth + revenue growth
+    # v5.3.0: Forward-looking (ABSENT du quality score — seul facteur prédictif)
+    "eps_growth_forecast_5y": ["eps_growth_forecast_5y"],
 }
 
 METRIC_RANGES: Dict[str, Tuple[float, float]] = {
@@ -836,7 +843,13 @@ METRIC_RANGES: Dict[str, Tuple[float, float]] = {
     "payout_ratio": (0, 120),
     "dividend_coverage": (0, 10),
     "buffett_score": (20, 100),
+    # v5.3.0: Quality subscores (0-100 peer-relative)
     "quality_value_sub": (0, 100),
+    "quality_quality_sub": (0, 100),
+    "quality_safety_sub": (0, 100),
+    "quality_growth_sub": (0, 100),
+    # v5.3.0: Forward-looking growth forecast
+    "eps_growth_forecast_5y": (-10, 30),
 }
 
 
@@ -891,17 +904,24 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "equity_max_weight": 0.75,
         "min_equity_positions": 12,
         "score_weights": {
-            "perf_ytd": 0.00,
-            "perf_1y": 0.20,
-            "perf_3m": 0.10,
-            "eps_growth_5y": 0.15,
-            "roe": 0.10,
-            "fcf_yield": 0.05,
-            "max_drawdown_3y": -0.05,
-            "volatility_3y": 0.05,
-            "dividend_yield": -0.05,
-            "buffett_score": 0.10,
-            "quality_value_sub": 0.00,
+            # ═══ v5.3.0: SCORING v3 — 0 REDONDANCE ═══
+            # Quality subscores (peer-relative, capturent ROE/ROIC/D-E/P-E/FCF/EPS)
+            "quality_quality_sub": 0.10,   # ROE+ROIC+margin peer-relative
+            "quality_safety_sub":  0.05,   # D/E+payout peer-relative
+            "quality_value_sub":   0.05,   # P/E+FCF peer-relative
+            "quality_growth_sub":  0.15,   # EPS+revenue growth peer-relative
+            # Forward-looking (ABSENT du quality score!)
+            "eps_growth_forecast_5y": 0.15, # ★ Seul facteur prédictif
+            # Momentum (indépendant du quality score)
+            "perf_1y":             0.15,   # Momentum 1 an
+            "perf_3m":             0.10,   # Momentum court terme
+            # Risque (indépendant)
+            "volatility_3y":       0.05,   # Vol positive = upside potential
+            "max_drawdown_3y":    -0.05,   # Drawdown pénalisé
+            # Income
+            "dividend_yield":     -0.05,   # Négatif: growth > income
+            # SUPPRIMÉS (déjà dans subscores):
+            # roe, buffett_score, eps_growth_5y, fcf_yield, de_ratio
         },
         "description": "Profil orienté croissance/momentum, tolère la volatilité",
         "expected_vol_range": (15, 22),
@@ -922,18 +942,24 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "equity_max_weight": 0.60,
         "min_equity_positions": 10,
         "score_weights": {
-            "perf_ytd": 0.00,          # FIX v5.2.0-Q: 0.05→0.00 (réduit momentum-chasing)
-            "perf_1y": 0.05,           # FIX v5.2.0-Q: 0.10→0.05 (idem)
-            "perf_3m": 0.00,           # FIX v5.2.0-Q: 0.05→0.00 (idem)
-            "roe": 0.20,
-            "eps_growth_5y": 0.10,
-            "fcf_yield": 0.10,         # FIX v5.2.0-Q: 0.05→0.10 (FCF important pour Modéré)
-            "volatility_3y": -0.15,    # FIX v5.2.0-Q: -0.10→-0.15 (pénalise plus la vol)
-            "max_drawdown_3y": -0.10,  # FIX v5.2.0-Q: -0.05→-0.10 (drawdown compte plus)
-            "dividend_yield": 0.10,
-            "buffett_score": 0.15,
-            "quality_value_sub": 0.10,
-            "de_ratio": -0.05,         # FIX v5.2.0-Q: NEW — pénalité dette élevée
+            # ═══ v5.3.0: SCORING v3 — 0 REDONDANCE ═══
+            # Quality subscores — ÉQUILIBRÉ (50% du score)
+            "quality_quality_sub": 0.15,   # ROE+ROIC+margin — qualité business
+            "quality_safety_sub":  0.15,   # D/E+payout — solidité bilan
+            "quality_value_sub":   0.10,   # P/E+FCF — pas surpayer
+            "quality_growth_sub":  0.10,   # EPS+revenue — croissance passée
+            # Forward-looking
+            "eps_growth_forecast_5y": 0.10, # ★ Croissance future attendue
+            # Income
+            "dividend_yield":      0.10,   # Rendement courant
+            # Risque — PÈSE LOURD (20%)
+            "volatility_3y":      -0.10,   # Vol pénalisée
+            "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
+            # Momentum — RÉSIDUEL (10%)
+            "perf_1y":             0.05,   # Momentum léger
+            "perf_3m":             0.05,   # Momentum court
+            # SUPPRIMÉS (déjà dans subscores):
+            # roe, buffett_score, eps_growth_5y, fcf_yield, de_ratio
         },
         "description": "Profil équilibré qualité/momentum, risque maîtrisé",
         "expected_vol_range": (10, 15),
@@ -956,16 +982,21 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "equity_max_weight": 0.45,
         "min_equity_positions": 8,
         "score_weights": {
-            "perf_ytd": 0.00,
-            "perf_1y": 0.00,
-            "roe": 0.15,
-            "fcf_yield": 0.05,
-            "volatility_3y": -0.25,
-            "max_drawdown_3y": -0.15,
-            "dividend_yield": 0.20,
-            "dividend_growth_3y": 0.05,
-            "buffett_score": 0.15,
-            "quality_value_sub": 0.10,
+            # ═══ v5.3.0: SCORING v3 — 0 REDONDANCE ═══
+            # Quality subscores — SAFETY DOMINANT (45%)
+            "quality_quality_sub": 0.10,   # Qualité du business
+            "quality_safety_sub":  0.25,   # ★ Safety dominant — bilan solide
+            "quality_value_sub":   0.10,   # Pas surpayer
+            # Forward-looking
+            "eps_growth_forecast_5y": 0.05, # Croissance minimale requise
+            # Income — DOMINANT (25%)
+            "dividend_yield":      0.20,   # ★ Rendement prioritaire
+            "dividend_growth_3y":  0.05,   # Croissance du dividende
+            # Risque — TRÈS PÉNALISÉ (30%)
+            "volatility_3y":      -0.20,   # ★★ Vol très pénalisée
+            "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
+            # SUPPRIMÉS (déjà dans subscores):
+            # roe, buffett_score, eps_growth_5y, fcf_yield
         },
         "description": "Profil défensif, faible volatilité, haut dividende",
         "expected_vol_range": (6, 10),
