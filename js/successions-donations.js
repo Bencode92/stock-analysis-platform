@@ -1839,8 +1839,8 @@ const SD = (() => {
                     } else {
                         p.push('<span style="color:var(--accent-green);">Patrimoine net sous l\'abattement → <strong>0 € de droits</strong> en donation directe !</span>');
                     }
-                    if (minDonorAge < 70) p.push('Donateur < 70 ans → <strong>réduction 50%</strong> des droits (art. 790 CGI)');
-                    else p.push('Donateur ≥ 70 ans → pas de réduction d\'âge. Privilégiez AV avant 70 ans.');
+                    if (minDonorAge < 70) p.push('Donateur < 70 ans → primes AV versées maintenant = art. 990 I (abat. 152 500 €/bénéf.)');
+                    else p.push('Donateur ≥ 70 ans → primes AV en art. 757 B (abat. global 30 500 €). Privilégiez rachats + dons.');
                     return p.join('<br>');
                 })()
             },
