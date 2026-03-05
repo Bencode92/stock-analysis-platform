@@ -807,12 +807,19 @@
 
             <!-- ==================== STEP 4: OBJECTIF ==================== -->
             <div class="step-panel" id="step-4">
-                <div class="step-helper"><i class="fas fa-lightbulb"></i> Vos priorités déterminent les scénarios. Le moteur compare automatiquement donation, succession et tous les leviers disponibles.</div>
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Recommandations personnalisées actif par actif. Cliquez sur une option pour voir le détail fiscal.</div>
 
-                <!-- ===== OBJECTIFS DE TRANSMISSION (section principale) ===== -->
-                <div class="section-card" style="border-color:rgba(198,134,66,.2);">
-                    <div class="section-title"><i class="fas fa-compass"></i> Que souhaitez-vous faire ?</div>
-                    <div class="section-subtitle">Vos priorités déterminent les scénarios recommandés</div>
+                <!-- STRATEGY ADVISOR — Recommandations guidées par actif -->
+                <div id="strategy-advisor-container"></div>
+
+                <!-- ===== OBJECTIFS DE TRANSMISSION (repliable, ancien système) ===== -->
+                <div class="section-card" style="padding:0;overflow:hidden;margin-top:16px;">
+                    <div style="padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="SD.toggleCollapsible(this)">
+                        <div class="section-title" style="margin:0;"><i class="fas fa-sliders-h"></i> Objectifs de transmission (réglages)</div>
+                        <i class="fas fa-chevron-down" style="font-size:.7rem;color:var(--text-muted);transition:transform .3s;"></i>
+                    </div>
+                    <div style="display:none;padding:0 20px 20px;">
+                <div class="section-subtitle">Ajustez vos priorités — les recommandations ci-dessus s'adaptent automatiquement</div>
                     <div class="switch-row">
                         <span class="switch-label">Minimiser les droits de donation / succession <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Tous les scénarios seront classés par coût fiscal croissant. Active les chemins indirects (ex: grand-parent → parent → enfant pour cumuler les abattements).</span></span></span>
                         <div class="switch on" id="obj-minimiser" onclick="SD.toggleSwitch(this)"></div>
@@ -841,7 +848,8 @@
                         <span class="switch-label">Vendre un ou plusieurs biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Calcule la plus-value immobilière nette. Compare : vendre avant ou après donation/succession.</span></span></span>
                         <div class="switch" id="obj-vendre" onclick="SD.toggleSwitch(this);SD.toggleSection('vente-section')"></div>
                     </div>
-                </div>
+                    </div><!-- close legacy-objectives -->
+                </div><!-- close collapsible card -->
 
                 <!-- ===== SECTION VENTE (conditionnelle) ===== -->
                 <div class="section-card" id="vente-section" style="display:none;">
@@ -1015,9 +1023,9 @@
 
                 <!-- Legacy scenarios — collapsible -->
                 <div class="section-card" style="margin-top:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="SD.toggleCollapsible('legacy-scenarios')">
+                    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="SD.toggleCollapsible(this)">
                         <div class="section-title" style="margin:0;"><i class="fas fa-table"></i> Tableau comparatif des scénarios</div>
-                        <i class="fas fa-chevron-down" id="legacy-scenarios-chevron" style="font-size:.7rem;color:var(--text-muted);transition:transform .3s;"></i>
+                        <i class="fas fa-chevron-down" style="font-size:.7rem;color:var(--text-muted);transition:transform .3s;"></i>
                     </div>
                     <div id="legacy-scenarios" style="display:none;">
                         <div class="comparison-table-wrap" style="margin-top:12px;">
@@ -1109,8 +1117,9 @@
 </div>
 
 <!-- External JS -->
-<script src="js/successions-donations.js?v=20260304a"></script>
-<script src="js/path-optimizer.js?v=20260304a"></script>
-<script src="js/transmission-engine.js?v=20260304a"></script>
+<script src="js/successions-donations.js?v=20260305a"></script>
+<script src="js/path-optimizer.js?v=20260305a"></script>
+<script src="js/transmission-engine.js?v=20260305a"></script>
+<script src="js/strategy-advisor.js?v=20260305a"></script>
 </body>
 </html>
