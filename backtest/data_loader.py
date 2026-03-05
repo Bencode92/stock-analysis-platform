@@ -2,21 +2,18 @@
 """
 Chargement des données de prix historiques via Twelve Data API.
 
-V12: P1-7 - Load all profile-specific benchmarks
-- Import get_all_benchmark_symbols() from portfolio_engine.benchmarks
-- Automatically load QQQ, URTH, AGG and alternative benchmarks
-- Enhanced benchmark coverage reporting
+V13: FIX CRITIQUE - mic_code + exchange resolution for non-US tickers
+- Import TickerResolver from portfolio_engine.ticker_resolver
+- TwelveDataLoader accepts resolver for automatic mic_code/exchange/resolved_symbol
+- get_time_series: tries mic_code first, fallback exchange on API error
+- Mirrors tdParamTrials approach from stock-advanced-filter.js
+- Cache-busts previously-failed tickers
+- Tickers affected: AGS (XBRU), 2360 (XTAI), 3017 (XTAI), 1519 (XTAI), TLX (XETR), etc.
 
+V12: P1-7 - Load all profile-specific benchmarks
 V11: FIX - Rename calendar → trading_calendar (avoid stdlib shadowing)
 V10: FIX CRITIQUE - Suppression ffill() + calendar alignment
-- Import trading_calendar.align_to_reference_calendar() pour alignement propre
-- Plus de ffill() implicite (cassait la covariance)
-- Ajout DataQualityChecker pour validation
-
 V9: FIX - Lire _tickers en priorité (Solution C)
-- extract_portfolio_weights() lit d'abord le bloc _tickers
-- Fallback sur mapping nom→ticker si _tickers absent (rétrocompat)
-- Log le % de poids effectivement chargé et les tickers introuvables
 
 Documentation API: https://twelvedata.com/docs
 """
@@ -48,11 +45,19 @@ try:
 except ImportError:
     HAS_BENCHMARKS = False
     def get_all_benchmark_symbols():
-        # Fallback: return default benchmarks
         return ["URTH", "IEF", "QQQ", "AGG", "SPY"]
 
+# v13: Import TickerResolver
+try:
+    from portfolio_engine.ticker_resolver import TickerResolver, get_resolver
+    HAS_RESOLVER = True
+except ImportError:
+    HAS_RESOLVER = False
+    TickerResolver = None
+    def get_resolver(*a, **kw):
+        return None
+
 # Import trading_calendar pour alignement sans ffill
-# NOTE: Renamed from 'calendar' to 'trading_calendar' to avoid shadowing Python stdlib
 try:
     from portfolio_engine.trading_calendar import (
         align_to_reference_calendar,
@@ -133,12 +138,22 @@ def parse_yahoo_symbol(symbol: str) -> Tuple[str, Optional[str], Optional[str]]:
 
 
 class TwelveDataLoader:
-    """Client pour l'API Twelve Data avec gestion du rate limiting."""
+    """
+    Client pour l'API Twelve Data avec gestion du rate limiting.
+    
+    v13: Accepts TickerResolver for automatic mic_code/exchange/resolved_symbol
+    resolution of non-US tickers.
+    """
     
     BASE_URL = "https://api.twelvedata.com"
     PLAN_LIMITS = {"free": 8, "basic": 30, "pro": 120, "ultra": 500}
     
-    def __init__(self, api_key: Optional[str] = None, plan: str = "ultra"):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        plan: str = "ultra",
+        resolver: Optional["TickerResolver"] = None,
+    ):
         self.api_key = api_key or os.environ.get("TWELVE_DATA_API")
         if not self.api_key:
             raise ValueError("Twelve Data API key required.")
@@ -150,9 +165,14 @@ class TwelveDataLoader:
         requests_per_minute = self.PLAN_LIMITS.get(self.plan, 8)
         self.min_request_interval = 60.0 / requests_per_minute
         
-        # Log data source from METHODOLOGY
+        # v13: Store resolver
+        self.resolver = resolver
+        
         data_source = get_data_source_string()
         logger.info(f"TwelveDataLoader initialized: {data_source}, plan '{plan}' ({requests_per_minute} req/min)")
+        if resolver and resolver._loaded:
+            logger.info(f"   [v13] TickerResolver active: {len(resolver.mic_code_map)} mic_codes")
+        
         self._cache: Dict[str, pd.DataFrame] = {}
     
     def _rate_limit(self):
@@ -164,6 +184,73 @@ class TwelveDataLoader:
             time.sleep(self.min_request_interval - elapsed)
         self.last_request_time = time.time()
     
+    def _fetch_with_trials(
+        self,
+        symbol: str,
+        params_base: dict,
+        mic_code: Optional[str] = None,
+        exchange: Optional[str] = None,
+    ) -> Optional[dict]:
+        """
+        v13: Try API call with mic_code first, fallback to exchange, then bare.
+        Mirrors tdParamTrials from stock-advanced-filter.js.
+        
+        Returns parsed JSON response or None.
+        """
+        trials = []
+        if mic_code:
+            trials.append({"mic_code": mic_code})
+        if exchange:
+            trials.append({"exchange": exchange})
+        if not trials:
+            trials.append({})  # bare symbol
+        
+        last_error = None
+        
+        for i, extra in enumerate(trials):
+            params = {**params_base, **extra}
+            
+            trial_desc = f"mic_code={extra.get('mic_code')}" if 'mic_code' in extra \
+                else f"exchange={extra.get('exchange')}" if 'exchange' in extra \
+                else "bare"
+            
+            try:
+                response = self.session.get(
+                    f"{self.BASE_URL}/time_series", params=params, timeout=30
+                )
+                response.raise_for_status()
+                data = response.json()
+            except requests.exceptions.RequestException as e:
+                last_error = str(e)
+                if i < len(trials) - 1:
+                    time.sleep(0.3)
+                    continue
+                logger.warning(f"API error for {symbol}: {last_error}")
+                return None
+            
+            # Check API error
+            if "code" in data and data["code"] != 200:
+                last_error = data.get("message", "Unknown")
+                if i < len(trials) - 1:
+                    logger.debug(f"  ⚠️ {symbol} ({trial_desc}): {last_error}, trying next...")
+                    time.sleep(0.3)
+                    continue
+                logger.warning(f"API error for {symbol}: {last_error}")
+                return None
+            
+            if "values" not in data:
+                last_error = f"No data for {symbol} ({trial_desc})"
+                if i < len(trials) - 1:
+                    time.sleep(0.3)
+                    continue
+                logger.warning(last_error)
+                return None
+            
+            # Success
+            return data
+        
+        return None
+    
     def get_time_series(
         self,
         symbol: str,
@@ -171,8 +258,27 @@ class TwelveDataLoader:
         end_date: str,
         interval: str = "1day"
     ) -> Optional[pd.DataFrame]:
-        """Récupère les prix historiques pour un symbole."""
-        base_symbol, mic_code = parse_symbol_with_mic(symbol)
+        """
+        Récupère les prix historiques pour un symbole.
+        
+        v13: Uses TickerResolver to get mic_code/exchange/resolved_symbol.
+        Falls back to parse_symbol_with_mic for TICKER:MIC format.
+        """
+        # v13: Resolve symbol via TickerResolver
+        mic_code = None
+        exchange = None
+        api_symbol = symbol
+        
+        # Step 1: Check if symbol has explicit :MIC format
+        base_symbol, explicit_mic = parse_symbol_with_mic(symbol)
+        if explicit_mic:
+            api_symbol = base_symbol
+            mic_code = explicit_mic
+        # Step 2: Use TickerResolver
+        elif self.resolver:
+            resolved_sym, mic_code, exchange = self.resolver.resolve(symbol)
+            if resolved_sym and resolved_sym != symbol:
+                api_symbol = resolved_sym
         
         cache_key = f"{symbol}_{start_date}_{end_date}_{interval}"
         if cache_key in self._cache:
@@ -180,8 +286,8 @@ class TwelveDataLoader:
         
         self._rate_limit()
         
-        params = {
-            "symbol": base_symbol,
+        params_base = {
+            "symbol": api_symbol,
             "interval": interval,
             "start_date": start_date,
             "end_date": end_date,
@@ -190,22 +296,13 @@ class TwelveDataLoader:
             "timezone": "America/New_York",
         }
         
-        if mic_code:
-            params["mic_code"] = mic_code
+        # v13: Use _fetch_with_trials (mic_code → exchange → bare)
+        data = self._fetch_with_trials(api_symbol, params_base, mic_code, exchange)
+        
+        if data is None:
+            return None
         
         try:
-            response = self.session.get(f"{self.BASE_URL}/time_series", params=params, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            
-            if "code" in data and data["code"] != 200:
-                logger.warning(f"API error for {symbol}: {data.get('message', 'Unknown')}")
-                return None
-            
-            if "values" not in data:
-                logger.warning(f"No data for {symbol}")
-                return None
-            
             df = pd.DataFrame(data["values"])
             df["datetime"] = pd.to_datetime(df["datetime"])
             df = df.set_index("datetime").sort_index()
@@ -228,19 +325,13 @@ class TwelveDataLoader:
         start_date: str,
         end_date: str,
         interval: str = "1day",
-        align_calendar: bool = True,  # v10: NEW
-        validate_quality: bool = True,  # v10: NEW
+        align_calendar: bool = True,
+        validate_quality: bool = True,
     ) -> Tuple[pd.DataFrame, Dict]:
         """
         Récupère les prix pour plusieurs symboles.
         
-        v10 FIX:
-        - align_calendar=True: utilise trading_calendar.align_to_reference_calendar()
-        - validate_quality=True: utilise DataQualityChecker
-        - Plus de ffill() implicite
-        
-        Returns:
-            Tuple (prices_df, diagnostics)
+        v13: TickerResolver is used automatically via self.resolver.
         """
         all_data = {}
         loaded = 0
@@ -296,7 +387,18 @@ class TwelveDataLoader:
             "quality_validated": False,
         }
         
-        # ============ v10 FIX: CALENDAR ALIGNMENT (NO FFILL) ============
+        # v13: Log resolver stats
+        if self.resolver and self.resolver._loaded:
+            resolved_count = sum(
+                1 for s in symbols
+                if self.resolver.get_mic(s) or self.resolver.get_resolved_symbol(s) != s
+            )
+            diagnostics["resolver_stats"] = {
+                "symbols_with_mic": resolved_count,
+                "resolver_version": "1.0.0",
+            }
+        
+        # Calendar alignment
         if align_calendar and HAS_CALENDAR:
             logger.info("Aligning to NYSE calendar (no ffill)...")
             try:
@@ -304,7 +406,7 @@ class TwelveDataLoader:
                     prices_df,
                     reference_calendar="NYSE",
                     max_nan_pct=0.05,
-                    interpolation_method=None,  # NO interpolation
+                    interpolation_method=None,
                 )
                 diagnostics["calendar_aligned"] = True
                 diagnostics["calendar_report"] = cal_report.to_dict()
@@ -313,10 +415,9 @@ class TwelveDataLoader:
                 logger.warning(f"Calendar alignment failed: {e}, using raw data")
         elif not HAS_CALENDAR:
             logger.warning("⚠️ trading_calendar module not available, using dropna() fallback (NOT ffill)")
-            # FALLBACK SAFE: dropna au lieu de ffill
             prices_df = prices_df.dropna(how='any')
         
-        # ============ v10 FIX: DATA QUALITY VALIDATION ============
+        # Data quality validation
         if validate_quality and HAS_DATA_QUALITY:
             logger.info("Validating data quality...")
             checker = DataQualityChecker()
@@ -326,13 +427,12 @@ class TwelveDataLoader:
             
             if not quality_report.passed:
                 logger.warning(f"⚠️ Data quality issues: {quality_report.n_symbols_rejected} symbols rejected")
-                # Exclure les symboles problématiques
                 for symbol in quality_report.rejected_symbols:
                     if symbol in prices_df.columns:
                         prices_df = prices_df.drop(columns=[symbol])
                         logger.info(f"Excluded {symbol}: {quality_report.rejection_reasons.get(symbol)}")
         
-        # ============ v10 FIX: VALIDATE NO FFILL CONTAMINATION ============
+        # Validate no ffill contamination
         if HAS_CALENDAR:
             suspects = validate_no_ffill_contamination(prices_df)
             if suspects:
@@ -409,7 +509,6 @@ _NAME_TO_TICKER_CACHE: Optional[Dict[str, str]] = None
 
 
 def get_name_to_ticker_map() -> Dict[str, str]:
-    """Retourne le mapping nom → ticker (avec lazy loading)."""
     global _NAME_TO_TICKER_CACHE
     if _NAME_TO_TICKER_CACHE is None:
         _NAME_TO_TICKER_CACHE = build_name_to_ticker_map()
@@ -417,7 +516,6 @@ def get_name_to_ticker_map() -> Dict[str, str]:
 
 
 def name_to_ticker(name: str) -> Optional[str]:
-    """Convertit un nom d'actif en ticker."""
     if not name:
         return None
     
@@ -441,7 +539,6 @@ def name_to_ticker(name: str) -> Optional[str]:
 # ============ PORTFOLIO SYMBOL EXTRACTION ============
 
 def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> Tuple[Set[str], int, int]:
-    """Extrait tous les symboles uniques des portefeuilles générés."""
     symbols = set()
     total_requested = 0
     total_resolved = 0
@@ -490,7 +587,6 @@ def extract_portfolio_symbols(portfolios_path: str = "data/portfolios.json") -> 
 
 
 def parse_weight_value(weight) -> float:
-    """Parse un poids (string "14%" ou int 14 → float 0.14)."""
     if weight is None:
         return 0.0
     
@@ -511,7 +607,6 @@ def parse_weight_value(weight) -> float:
 
 
 def extract_portfolio_weights(portfolios_path: str = "data/portfolios.json") -> Dict[str, Dict[str, float]]:
-    """Extrait les poids de chaque profil depuis portfolios.json."""
     weights_by_profile = {}
     
     try:
@@ -591,16 +686,12 @@ def load_prices_for_backtest(
     portfolios_path: Optional[str] = "data/portfolios.json",
     include_benchmark: bool = True,
     benchmark_symbols: List[str] = None,
+    resolver: Optional["TickerResolver"] = None,  # v13
 ) -> Tuple[pd.DataFrame, Dict]:
     """
     Charge les prix pour le backtest.
     
-    V12 P1-7:
-    - Automatically loads all profile-specific benchmarks
-    - Uses get_all_benchmark_symbols() from portfolio_engine.benchmarks
-    - QQQ (Agressif), URTH (Modéré), AGG (Stable) + alternatives
-    
-    v10: Retourne maintenant (prices_df, diagnostics) au lieu de juste prices_df.
+    v13: Accepts TickerResolver for mic_code/exchange resolution.
     """
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
@@ -626,14 +717,12 @@ def load_prices_for_backtest(
     # V12 P1-7: Load ALL profile-specific benchmarks
     if include_benchmark:
         if benchmark_symbols is None:
-            # Get all benchmarks from portfolio_engine.benchmarks
             benchmark_symbols = get_all_benchmark_symbols()
             logger.info(f"P1-7: Loading {len(benchmark_symbols)} benchmark symbols: {benchmark_symbols}")
         
         for bench in benchmark_symbols:
             symbols.add(bench)
         
-        # Print benchmark info
         print(f"\n📊 BENCHMARKS (P1-7)")
         print(f"   Profile-specific: QQQ (Agressif), URTH (Modéré), AGG (Stable)")
         print(f"   Total benchmarks: {len(benchmark_symbols)}")
@@ -655,7 +744,15 @@ def load_prices_for_backtest(
     print(f"   Symbols to load: {len(symbols_list)}")
     print(f"   Symbols: {', '.join(symbols_list[:10])}{'...' if len(symbols_list) > 10 else ''}")
     
-    loader = TwelveDataLoader(api_key=api_key, plan=plan)
+    # v13: Auto-load resolver if not provided
+    if resolver is None and HAS_RESOLVER:
+        try:
+            resolver = get_resolver()
+        except Exception:
+            pass
+    
+    # v13: Pass resolver to TwelveDataLoader
+    loader = TwelveDataLoader(api_key=api_key, plan=plan, resolver=resolver)
     prices, diagnostics = loader.get_multiple_time_series(
         symbols=symbols_list,
         start_date=start_date,
@@ -664,7 +761,7 @@ def load_prices_for_backtest(
         validate_quality=True,
     )
     
-    # V12 P1-7: Add benchmark coverage to diagnostics
+    # V12 P1-7: Benchmark coverage
     if include_benchmark and benchmark_symbols:
         loaded_benchmarks = [b for b in benchmark_symbols if b in prices.columns]
         missing_benchmarks = [b for b in benchmark_symbols if b not in prices.columns]
@@ -688,14 +785,11 @@ def load_prices_for_backtest(
 
 
 def compute_returns(prices: pd.DataFrame) -> pd.DataFrame:
-    """Calcule les rendements journaliers (APRÈS alignement, sans fillna(0))."""
     returns = prices.pct_change()
-    # v10 FIX: dropna() au lieu de fillna(0)
     return returns.dropna()
 
 
 def compute_rolling_metrics(prices: pd.DataFrame, window: int = 20) -> Dict[str, pd.DataFrame]:
-    """Calcule les métriques roulantes pour le scoring."""
     returns = prices.pct_change()
     
     metrics = {
@@ -712,5 +806,4 @@ def compute_rolling_metrics(prices: pd.DataFrame, window: int = 20) -> Dict[str,
 
 
 def get_supported_exchanges() -> Dict[str, str]:
-    """Retourne les bourses supportées avec leur code MIC."""
     return YAHOO_TO_TWELVEDATA_MIC.copy()
