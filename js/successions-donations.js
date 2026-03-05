@@ -3400,10 +3400,13 @@ const SD = (() => {
 
     /**
      * applyReductionAge — réduction pour âge du donateur (art. 790 CGI)
-     * Donation PP : -50% si donateur < 70 ans
-     * Donation NP : pas de réduction (abrogé pour NP)
+     * ATTENTION : cette réduction de 50% ne s'applique qu'aux donations
+     * d'entreprise éligibles au Pacte Dutreil (art. 787 B/C), PAS aux
+     * donations classiques de patrimoine privé.
+     * Ref: BOFiP BOI-ENR-DMTG-10-20-40-10
      */
-    function applyReductionAge(droits, donorAge, isDemembre) {
+    function applyReductionAge(droits, donorAge, isDemembre, isDutreil) {
+        if (!isDutreil) return droits; // pas de réduction hors Dutreil
         if (isDemembre) return droits; // pas de réduction pour donation NP
         if (donorAge < 70) return Math.round(droits * 0.50);
         return droits;
