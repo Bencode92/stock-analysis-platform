@@ -201,7 +201,32 @@ const TransmissionEngine = (() => {
         var totalBest = results.reduce(function(s, r) { return s + (r.best ? r.best.net : 0); }, 0);
         var totalStatuQuo = results.reduce(function(s, r) { return s + (r.statu_quo ? r.statu_quo.net : 0); }, 0);
 
-        return { pairs: results, totalBest: totalBest, totalStatuQuo: totalStatuQuo, pat: pat, indirectPaths: indirectPaths, donorPatrimoines: donorPatrimoines };
+        // ── FIX 1: Progressivity check ──
+        // When multiple DMTG donations happen the same day from the same donor to the same beneficiary,
+        // the bases cumulate for progressive taxation. Check if individual channel estimates diverge
+        // from a cumulated calculation.
+        var progressivityWarnings = [];
+        results.forEach(function(pair) {
+            if (!pair.best || pair.best.id === 'succession') return;
+            // Check if the best channel is DMTG (not AV 990I which has its own regime)
+            var isDMTG = ['donation_pp', 'donation_np', 'don_manuel', 'sci_np'].indexOf(pair.best.id) >= 0 || pair.best.id.indexOf('indirect') >= 0;
+            if (isDMTG && pair.best.base_taxable > 0) {
+                // The channel already computes on the total benPat, so progressivity within one channel is OK
+                // But if user combines MULTIPLE channels (e.g., NP on immo + don manuel on cash), warn
+                var otherDMTG = pair.channels.filter(function(c) {
+                    return c.id !== pair.best.id && c.id !== 'succession' && ['av_990i', 'av_757b'].indexOf(c.id) < 0;
+                });
+                if (otherDMTG.length > 0) {
+                    progressivityWarnings.push({
+                        donor: pair.donor.nom,
+                        ben: pair.ben.prenom || pair.ben.nom,
+                        note: 'Si vous combinez plusieurs donations DMTG le même jour (ex: NP immo + don manuel), les bases se cumulent au barème progressif. Les droits réels peuvent être légèrement supérieurs aux estimations par canal isolé.'
+                    });
+                }
+            }
+        });
+
+        return { pairs: results, totalBest: totalBest, totalStatuQuo: totalStatuQuo, pat: pat, indirectPaths: indirectPaths, donorPatrimoines: donorPatrimoines, progressivityWarnings: progressivityWarnings };
     }
 
 
@@ -423,13 +448,30 @@ const TransmissionEngine = (() => {
         var partTotal = benPat.actifNet || 0;
         var partBrut = benPat.actifBrut || partTotal;
 
-        // Deduct prior donations from abattement (rappel fiscal 15 ans)
+        // Deduct prior donations from abattement (rappel fiscal 15 ans, art. 784 CGI)
+        // FIX: Use isDonationInRappel() to check if donation is within 15-year window
         var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
         var donAnterieures = 0;
+        var donAntDate = null;
+        var donAntHorsRappel = 0; // donations > 15 ans (abattement rechargé)
         var poId = donor._poId !== undefined ? donor._poId : donor.id;
         if (PO && PO.getDonorDonationForBenRaw && poId >= 0) {
             var raw = PO.getDonorDonationForBenRaw(poId, pair.ben.id);
-            if (raw && raw.montant > 0) donAnterieures = raw.montant;
+            if (raw && raw.montant > 0) {
+                donAntDate = raw.date || null;
+                // FIX: Only count donation in rappel if within 15 years
+                if (PO.isDonationInRappel && donAntDate) {
+                    if (PO.isDonationInRappel(donAntDate)) {
+                        donAnterieures = raw.montant;
+                    } else {
+                        donAntHorsRappel = raw.montant;
+                        // Donation > 15 ans → abattement rechargé, ne pas déduire
+                    }
+                } else {
+                    // No date → conservative: assume in rappel
+                    donAnterieures = raw.montant;
+                }
+            }
         }
         var abatRestant = Math.max(0, abat - donAnterieures);
         var abatSuccRestant = Math.max(0, abatSucc - donAnterieures);
@@ -456,7 +498,8 @@ const TransmissionEngine = (() => {
                 'Droits de succession au barème plein',
                 'Pas de réduction pour âge',
                 'Pas de choix du moment',
-                donAnterieures > 0 ? 'Abattement partiellement consommé : ' + fmt(donAnterieures) + ' déjà utilisé → reste ' + fmt(abatSuccRestant) : null
+                donAnterieures > 0 ? 'Abattement partiellement consommé : ' + fmt(donAnterieures) + ' déjà utilisé' + (donAntDate ? ' (don du ' + donAntDate + ', dans le rappel fiscal 15 ans)' : '') + ' → reste ' + fmt(abatSuccRestant) : null,
+                donAntHorsRappel > 0 ? '✅ Donation de ' + fmt(donAntHorsRappel) + ' hors rappel fiscal (> 15 ans) → abattement rechargé' : null
             ].filter(Boolean),
             objectives: [],
             details: 'Statu quo → droits au décès. Abattement ' + formatLien(lien) + ' : ' + fmt(abatSucc) + (donAnterieures > 0 ? ' (dont ' + fmt(donAnterieures) + ' consommé → reste ' + fmt(abatSuccRestant) + ')' : '') + '.'
@@ -516,10 +559,31 @@ const TransmissionEngine = (() => {
         });
 
         // ─── 4. ASSURANCE-VIE (art. 990 I) — primes avant 70 ans ─
-        if (partFin > 0 || partTotal > 50000) {
-            var avCap = partFin > 0 ? partFin : partTotal;
+        // Access actual AV details from state for proper primes split
+        var avFinItems = state().finance ? state().finance.filter(function(f) { return f.type === 'assurance_vie'; }) : [];
+        var totalPrimesAv70 = avFinItems.reduce(function(s, f) { return s + (f.primesAvant70 || 0); }, 0);
+        var totalPrimesAp70 = avFinItems.reduce(function(s, f) { return s + (f.primesApres70 || 0); }, 0);
+        var totalAVCap = avFinItems.reduce(function(s, f) { return s + (f.valeur || 0); }, 0);
+        // Per-beneficiary share
+        var benCount = pair.donorBenCount || 1;
+        var benPrimesAv70 = Math.round(totalPrimesAv70 / benCount);
+        var benPrimesAp70 = Math.round(totalPrimesAp70 / benCount);
+        var benAVCap = Math.round(totalAVCap / benCount);
+        // If no primes split data, fallback: assume all primes match donor age
+        if (totalPrimesAv70 === 0 && totalPrimesAp70 === 0 && partFin > 0) {
+            if (donorAge < 70) { benPrimesAv70 = partFin; benPrimesAp70 = 0; }
+            else { benPrimesAv70 = 0; benPrimesAp70 = partFin; }
+            benAVCap = partFin;
+        }
+
+        if (benPrimesAv70 > 0 || (donorAge < 70 && partFin > 0)) {
+            var avCap990 = benPrimesAv70 > 0 ? benPrimesAv70 : partFin;
+            // 990I: capital AV related to primes avant 70 (includes proportional gains)
+            var avCapWithGains = benAVCap > 0 && totalPrimesAv70 > 0
+                ? Math.round(benAVCap * (totalPrimesAv70 / (totalPrimesAv70 + totalPrimesAp70 || 1)))
+                : avCap990;
             var avAbat = FISC.av990I.abattement;
-            var avBase = Math.max(0, avCap - avAbat);
+            var avBase = Math.max(0, avCapWithGains - avAbat);
             var avTr1 = Math.min(avBase, FISC.av990I.seuil2 - avAbat);
             var avTr2 = Math.max(0, avBase - avTr1);
             var avDroits = Math.round(avTr1 * FISC.av990I.taux1 + avTr2 * FISC.av990I.taux2);
@@ -527,45 +591,48 @@ const TransmissionEngine = (() => {
             channels.push({
                 id: 'av_990i', name: 'Assurance-vie (990 I)',
                 icon: '🛡️', timing: 'Au décès', color: '#3b82f6',
-                assiette: avCap, abattement: avAbat,
-                base_taxable: avBase, droits: avDroits, frais: Math.round(avCap * 0.005),
-                net: avCap - avDroits - Math.round(avCap * 0.005),
-                taux_effectif: avCap > 0 ? Math.round(avDroits / avCap * 100) : 0,
-                fraisAn: Math.round(avCap * 0.007),
+                assiette: avCapWithGains, abattement: avAbat,
+                base_taxable: avBase, droits: avDroits, frais: Math.round(avCapWithGains * 0.005),
+                net: avCapWithGains - avDroits - Math.round(avCapWithGains * 0.005),
+                taux_effectif: avCapWithGains > 0 ? Math.round(avDroits / avCapWithGains * 100) : 0,
+                fraisAn: Math.round(avCapWithGains * 0.007),
                 advantages: [
                     'Hors succession — abattement ' + fmt(avAbat) + ' par bénéficiaire',
                     'Bénéficiaire libre : petit-enfant, tiers, association',
                     'Rachat annuel exonéré IR : ' + fmt(4600) + ' (célibataire) / ' + fmt(9200) + ' (couple) après 8 ans',
-                    'Primes avant 70 ans : fiscalité 990 I avantageuse',
-                    donorAge < 70 ? '⚠️ Verser AVANT 70 ans pour rester en 990 I' : '⚠️ Donateur ≥ 70 ans → primes en 757 B (moins favorable)'
+                    'Primes avant 70 ans : fiscalité 990 I avantageuse'
                 ],
                 risks: [
                     'Frais de gestion annuels (~0,7%)',
-                    donorAge >= 70 ? 'Primes versées maintenant → art. 757 B (abattement réduit)' : null,
-                    partBrut > 0 && avCap / partBrut > FISC.primesExagSeuil ? 'Risque primes manifestement exagérées (' + Math.round(avCap / partBrut * 100) + '% du patrimoine)' : null
+                    partBrut > 0 && avCapWithGains / partBrut > FISC.primesExagSeuil ? 'Risque primes manifestement exagérées (' + Math.round(avCapWithGains / partBrut * 100) + '% du patrimoine)' : null
                 ].filter(Boolean),
                 objectives: ['minimiser', 'generation'],
-                details: 'Capital AV : ' + fmt(avCap) + ' · Abat. 990 I : ' + fmt(avAbat) + ' · 20% jusqu\'à ' + fmt(FISC.av990I.seuil2) + ', 31,25% au-delà'
+                details: 'Primes avant 70 ans : ' + fmt(benPrimesAv70) + ' · Capital avec gains : ' + fmt(avCapWithGains) + ' · Abat. 990 I : ' + fmt(avAbat) + ' par bénéficiaire'
             });
         }
 
         // ─── 5. AV 757 B (primes après 70 ans) ─────────────────
-        if (donorAge >= 70 && (partFin > 0 || partTotal > 30000)) {
-            var av757Cap = partFin > 0 ? partFin : partTotal;
+        // FIX: Art. 757B → assiette = PRIMES versées après 70 ans SEULEMENT (intérêts exonérés)
+        if (benPrimesAp70 > 0 || (donorAge >= 70 && partFin > 0 && benPrimesAv70 === 0)) {
+            var av757Primes = benPrimesAp70 > 0 ? benPrimesAp70 : partFin; // primes seules
+            var av757CapTotal = benAVCap > 0 ? benAVCap : partFin; // capital total (pour net transmis)
             var av757AbatGlobal = FISC.av757B.abattementGlobal;
-            var av757Abat = Math.round(av757AbatGlobal / (pair.donorBenCount || 1));
-            var av757Base = Math.max(0, av757Cap - av757Abat);
+            var av757Abat = Math.round(av757AbatGlobal / benCount);
+            // FIX: base taxable = PRIMES après 70 - abattement (pas le capital total)
+            var av757Base = Math.max(0, av757Primes - av757Abat);
             var av757Droits = calcDroits(av757Base, bareme);
+            var av757Interets = Math.max(0, av757CapTotal - av757Primes); // intérêts exonérés
             channels.push({
                 id: 'av_757b', name: 'AV après 70 ans (757 B)',
                 icon: '📉', timing: 'Au décès', color: '#f59e0b',
-                assiette: av757Cap, abattement: av757Abat,
-                base_taxable: av757Base, droits: av757Droits, frais: Math.round(av757Cap * 0.005),
-                net: av757Cap - av757Droits - Math.round(av757Cap * 0.005),
-                taux_effectif: av757Cap > 0 ? Math.round(av757Droits / av757Cap * 100) : 0,
-                fraisAn: Math.round(av757Cap * 0.007),
+                assiette: av757Primes, abattement: av757Abat,
+                base_taxable: av757Base, droits: av757Droits, frais: Math.round(av757CapTotal * 0.005),
+                net: av757CapTotal - av757Droits - Math.round(av757CapTotal * 0.005),
+                taux_effectif: av757CapTotal > 0 ? Math.round(av757Droits / av757CapTotal * 100) : 0,
+                fraisAn: Math.round(av757CapTotal * 0.007),
                 advantages: [
-                    'Les INTÉRÊTS sont exonérés (seules les primes versées sont taxées)',
+                    'Intérêts acquis <strong>EXONÉRÉS</strong> : ' + fmt(av757Interets) + ' hors assiette taxable',
+                    'Seules les primes versées après 70 ans sont taxées : ' + fmt(av757Primes),
                     'Abattement global ' + fmt(av757AbatGlobal) + ' (partagé entre bénéficiaires)',
                     'Bénéficiaire libre'
                 ],
@@ -574,7 +641,7 @@ const TransmissionEngine = (() => {
                     'Barème de droit commun (non le forfait 20%/31,25%)'
                 ],
                 objectives: ['generation'],
-                details: 'Abat. global ' + fmt(av757AbatGlobal) + ' (part : ' + fmt(av757Abat) + '). Intérêts acquis exonérés. Barème succession.'
+                details: 'Primes après 70 ans : ' + fmt(av757Primes) + ' (taxées) · Intérêts : ' + fmt(av757Interets) + ' (EXONÉRÉS) · Capital total : ' + fmt(av757CapTotal) + ' · Abat. part : ' + fmt(av757Abat)
             });
         }
 
@@ -792,6 +859,14 @@ const TransmissionEngine = (() => {
                 html += '</div>';
             });
 
+            html += '</div>';
+        }
+
+        // ── PROGRESSIVITY WARNINGS (Fix 1) ──
+        if (txMap.progressivityWarnings && txMap.progressivityWarnings.length > 0) {
+            html += '<div style="margin-top:12px;padding:12px 16px;border-radius:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.12);font-size:.72rem;color:var(--text-secondary);line-height:1.7;">';
+            html += '<strong style="color:#f59e0b;">⚠️ Note sur la progressivité du barème</strong><br>';
+            html += 'Les droits sont estimés par canal fiscal. Si vous combinez plusieurs donations DMTG le même jour au même bénéficiaire (ex: donation NP immobilière + don manuel), les bases taxables se cumulent pour l\'application du barème progressif (art. 777 CGI). Les droits réels peuvent être légèrement supérieurs aux estimations individuelles. Consultez votre notaire pour le calcul définitif.';
             html += '</div>';
         }
 
