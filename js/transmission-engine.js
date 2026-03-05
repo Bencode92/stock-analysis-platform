@@ -558,61 +558,90 @@ const TransmissionEngine = (() => {
         });
 
         // ─── 4. ASSURANCE-VIE (art. 990 I) — primes avant 70 ans ─
-        // FIX B: Filter AV by OWNER of current donor, not all AV in state
+        // FIX B1: Filter AV strictly by OWNER of current donor
         var donorKey = 'd-' + poId;
         var donorKeyAlt = 'd-' + donor.id;
-        var avFinItems = (state().finance || []).filter(function(f) {
-            if (f.type !== 'assurance_vie') return false;
-            // Match by ownerId
-            var fOwner = String(f.ownerId || '');
-            return fOwner === donorKey || fOwner === donorKeyAlt || fOwner === '' || !f.ownerId;
+        var allAV = (state().finance || []).filter(function(f) { return f.type === 'assurance_vie'; });
+        var anyAVHasOwner = allAV.some(function(f) { return !!f.ownerId; });
+
+        var avFinItems = allAV.filter(function(f) {
+            if (!f.ownerId) return !anyAVHasOwner; // include only if NO contract has an owner (legacy)
+            var fOwner = String(f.ownerId);
+            return fOwner === donorKey || fOwner === donorKeyAlt;
         });
-        // If no AV matched and no ownerId on any AV, include all (legacy fallback)
-        if (avFinItems.length === 0) {
-            var anyAVHasOwner = (state().finance || []).some(function(f) { return f.type === 'assurance_vie' && f.ownerId; });
-            if (!anyAVHasOwner) {
-                avFinItems = (state().finance || []).filter(function(f) { return f.type === 'assurance_vie'; });
-            }
-        }
 
-        var totalPrimesAv70 = avFinItems.reduce(function(s, f) { return s + (f.primesAvant70 || 0); }, 0);
-        var totalPrimesAp70 = avFinItems.reduce(function(s, f) { return s + (f.primesApres70 || 0); }, 0);
-        var totalAVCap = avFinItems.reduce(function(s, f) { return s + (f.valeur || 0); }, 0);
+        // FIX B2: Calculate per-beneficiary share PER CONTRACT using clause bénéficiaire
+        var benPrimesAv70 = 0, benPrimesAp70 = 0, benAVCap = 0;
+        var hasAnyClause = false;
+        var totalPrimesAv70 = 0, totalPrimesAp70 = 0, totalAVCap = 0;
+        var avOwnerWarning = (anyAVHasOwner && avFinItems.length === 0);
 
-        // Per-beneficiary share — use clause bénéficiaire if available, else equal split
-        var benCount = pair.donorBenCount || 1;
-        var benQuotePct = 100; // default: 100% to this beneficiary if single
-        // Check if any AV has clause bénéficiaire with this specific beneficiary
-        avFinItems.forEach(function(avItem) {
-            if (avItem.avBeneficiaires && avItem.avBeneficiaires.length > 0) {
-                var benEntry = avItem.avBeneficiaires.find(function(ab) {
+        avFinItems.forEach(function(av) {
+            totalPrimesAv70 += (av.primesAvant70 || 0);
+            totalPrimesAp70 += (av.primesApres70 || 0);
+            totalAVCap += (av.valeur || 0);
+
+            // Find this beneficiary's % in this specific contract's clause
+            var pct = null; // null = no clause on this contract
+            if (av.avBeneficiaires && av.avBeneficiaires.length > 0) {
+                var benName = pair.ben.prenom || pair.ben.nom || '';
+                var benId = String(pair.ben.id);
+                var hit = av.avBeneficiaires.find(function(ab) {
                     var abName = ab.person ? (ab.person.prenom || ab.person.nom || '') : '';
-                    var benName = pair.ben.prenom || pair.ben.nom || '';
-                    return abName === benName || String(ab.benId) === String(pair.ben.id);
+                    return abName === benName || String(ab.benId || '') === benId;
                 });
-                if (benEntry && benEntry.pct) benQuotePct = benEntry.pct;
+                if (hit) { pct = (hit.pct || 0) / 100; hasAnyClause = true; }
+                else { pct = 0; hasAnyClause = true; } // clause exists but this ben not in it
+            }
+
+            if (pct !== null) {
+                benPrimesAv70 += Math.round((av.primesAvant70 || 0) * pct);
+                benPrimesAp70 += Math.round((av.primesApres70 || 0) * pct);
+                benAVCap += Math.round((av.valeur || 0) * pct);
             }
         });
-        // If equal split (no clause or not found)
-        if (benQuotePct === 100 && benCount > 1) benQuotePct = Math.round(100 / benCount);
-        var quoteFactor = benQuotePct / 100;
 
-        var benPrimesAv70 = Math.round(totalPrimesAv70 * quoteFactor);
-        var benPrimesAp70 = Math.round(totalPrimesAp70 * quoteFactor);
-        var benAVCap = Math.round(totalAVCap * quoteFactor);
-        // If no primes split data, fallback: assume all primes match donor age
-        if (totalPrimesAv70 === 0 && totalPrimesAp70 === 0 && partFin > 0) {
-            if (donorAge < 70) { benPrimesAv70 = partFin; benPrimesAp70 = 0; }
-            else { benPrimesAv70 = 0; benPrimesAp70 = partFin; }
-            benAVCap = partFin;
+        // Fallback: if no clause on any contract → equal split
+        if (!hasAnyClause && avFinItems.length > 0) {
+            var benCount = pair.donorBenCount || 1;
+            var q = 1 / benCount;
+            benPrimesAv70 = Math.round(totalPrimesAv70 * q);
+            benPrimesAp70 = Math.round(totalPrimesAp70 * q);
+            benAVCap = Math.round(totalAVCap * q);
         }
 
-        if (benPrimesAv70 > 0 || (donorAge < 70 && partFin > 0)) {
-            var avCap990 = benPrimesAv70 > 0 ? benPrimesAv70 : partFin;
-            // 990I: capital AV related to primes avant 70 (includes proportional gains)
-            var avCapWithGains = benAVCap > 0 && totalPrimesAv70 > 0
-                ? Math.round(benAVCap * (totalPrimesAv70 / (totalPrimesAv70 + totalPrimesAp70 || 1)))
-                : avCap990;
+        // If no primes split data, fallback: assume all primes match donor age
+        if (totalPrimesAv70 === 0 && totalPrimesAp70 === 0 && benAVCap > 0) {
+            if (donorAge < 70) { benPrimesAv70 = benAVCap; benPrimesAp70 = 0; }
+            else { benPrimesAv70 = 0; benPrimesAp70 = benAVCap; }
+        }
+        if (totalPrimesAv70 === 0 && totalPrimesAp70 === 0 && benAVCap === 0 && partFin > 0 && avFinItems.length === 0 && !avOwnerWarning) {
+            // No AV at all but financial patrimoine exists — skip AV channels
+        }
+
+        // Warning: AV exist but none assigned to this donor
+        if (avOwnerWarning) {
+            channels.push({
+                id: 'av_warning', name: '⚠️ AV non rattachée',
+                icon: '⚠️', timing: '', color: '#f59e0b',
+                assiette: 0, abattement: 0, base_taxable: 0, droits: 0, frais: 0, net: 0,
+                taux_effectif: 0, fraisAn: 0,
+                advantages: [],
+                risks: ['Des assurances-vie existent dans le dossier mais aucune n\'est rattachée à ' + esc(donor.nom || 'ce donateur') + '. Vérifiez le champ "Titulaire" dans l\'étape Patrimoine.'],
+                objectives: [],
+                details: 'Vérifiez que le titulaire de chaque contrat AV est bien renseigné.',
+                isBest: false, isWorst: false
+            });
+        }
+
+        // 990I only if actual AV contracts exist for this donor with primes avant 70
+        if (benPrimesAv70 > 0 && avFinItems.length > 0) {
+            // 990I: capital AV proportional to primes avant 70 (includes proportional gains)
+            var avCapWithGains = benAVCap;
+            if (totalPrimesAv70 > 0 && totalPrimesAp70 > 0 && benAVCap > 0) {
+                // Mixed contract: allocate capital pro-rata to primes avant 70
+                avCapWithGains = Math.round(benAVCap * (totalPrimesAv70 / (totalPrimesAv70 + totalPrimesAp70)));
+            }
             var avAbat = FISC.av990I.abattement;
             var avBase = Math.max(0, avCapWithGains - avAbat);
             var avTr1 = Math.min(avBase, FISC.av990I.seuil2 - avAbat);
@@ -643,16 +672,27 @@ const TransmissionEngine = (() => {
         }
 
         // ─── 5. AV 757 B (primes après 70 ans) ─────────────────
-        // FIX: Art. 757B → assiette = PRIMES versées après 70 ans SEULEMENT (intérêts exonérés)
-        if (benPrimesAp70 > 0 || (donorAge >= 70 && partFin > 0 && benPrimesAv70 === 0)) {
-            var av757Primes = benPrimesAp70 > 0 ? benPrimesAp70 : partFin; // primes seules
-            var av757CapTotal = benAVCap > 0 ? benAVCap : partFin; // capital total (pour net transmis)
+        // Art. 757B : assiette = PRIMES après 70 ans seulement (intérêts exonérés)
+        // Abattement = 30 500 € GLOBAL par assuré (pas par bénéficiaire)
+        // FIX: allocate pro-rata des primes reçues par ce bénéficiaire
+        if (benPrimesAp70 > 0 || (donorAge >= 70 && benAVCap > 0 && benPrimesAv70 === 0)) {
+            var av757Primes = benPrimesAp70 > 0 ? benPrimesAp70 : benAVCap;
+            var av757CapTotal = benAVCap > 0 ? benAVCap : av757Primes;
             var av757AbatGlobal = FISC.av757B.abattementGlobal;
-            var av757Abat = Math.round(av757AbatGlobal / benCount);
-            // FIX: base taxable = PRIMES après 70 - abattement (pas le capital total)
+            // Allocate global abattement pro-rata of primes received by this beneficiary
+            var av757Abat;
+            if (totalPrimesAp70 > 0 && benPrimesAp70 > 0) {
+                av757Abat = Math.round(av757AbatGlobal * (benPrimesAp70 / totalPrimesAp70));
+            } else {
+                // Fallback: equal split
+                var nbBensFallback = pair.donorBenCount || 1;
+                av757Abat = Math.round(av757AbatGlobal / nbBensFallback);
+            }
             var av757Base = Math.max(0, av757Primes - av757Abat);
             var av757Droits = calcDroits(av757Base, bareme);
-            var av757Interets = Math.max(0, av757CapTotal - av757Primes); // intérêts exonérés
+            var av757Interets = Math.max(0, av757CapTotal - av757Primes);
+            // Check if multiple bens have different liens (warning)
+            var hasMultiLien = state().beneficiaries && state().beneficiaries.filter(function(b) { return b.lien !== 'conjoint_pacs'; }).length > 1;
             channels.push({
                 id: 'av_757b', name: 'AV après 70 ans (757 B)',
                 icon: '📉', timing: 'Au décès', color: '#f59e0b',
@@ -664,15 +704,16 @@ const TransmissionEngine = (() => {
                 advantages: [
                     'Intérêts acquis <strong>EXONÉRÉS</strong> : ' + fmt(av757Interets) + ' hors assiette taxable',
                     'Seules les primes versées après 70 ans sont taxées : ' + fmt(av757Primes),
-                    'Abattement global ' + fmt(av757AbatGlobal) + ' (partagé entre bénéficiaires)',
+                    'Abattement global ' + fmt(av757AbatGlobal) + ' (part de ce bénéficiaire : ' + fmt(av757Abat) + ')',
                     'Bénéficiaire libre'
                 ],
                 risks: [
-                    'Abattement global ' + fmt(av757AbatGlobal) + ' seulement (vs ' + fmt(FISC.av990I.abattement) + ' en 990 I)',
-                    'Barème de droit commun (non le forfait 20%/31,25%)'
-                ],
+                    'Abattement global ' + fmt(av757AbatGlobal) + ' seulement (vs ' + fmt(FISC.av990I.abattement) + ' en 990 I par bénéficiaire)',
+                    'Barème de droit commun (non le forfait 20%/31,25%)',
+                    hasMultiLien ? '⚠️ Abattement 757 B global : la ventilation entre bénéficiaires peut varier si les liens fiscaux diffèrent. Calcul consolidé recommandé.' : null
+                ].filter(Boolean),
                 objectives: ['generation'],
-                details: 'Primes après 70 ans : ' + fmt(av757Primes) + ' (taxées) · Intérêts : ' + fmt(av757Interets) + ' (EXONÉRÉS) · Capital total : ' + fmt(av757CapTotal) + ' · Abat. part : ' + fmt(av757Abat)
+                details: 'Primes après 70 ans : ' + fmt(av757Primes) + ' (taxées) · Intérêts : ' + fmt(av757Interets) + ' (EXONÉRÉS) · Abat. global ' + fmt(av757AbatGlobal) + ', part pro-rata : ' + fmt(av757Abat)
             });
         }
 
