@@ -587,6 +587,134 @@ MIN_ETF_IN_POOL = {
     "Agressif": 6,
 }
 
+# ============= FIX v2.4.0-L: ETF SUPER-SECTOR CAP =============
+# Empêche la concentration excessive d'un super-secteur dans le pool ETF.
+# Cause: scoring momentum/vol favorise les commodities → 5/8 ETFs commodities.
+# Fix: max N ETFs par super-secteur, configurable par profil.
+
+ETF_SUPER_SECTOR_MAP = {
+    # --- Commodities & Resources ---
+    "energy": "commodities_resources",
+    "clean_energy": "commodities_resources",
+    "gold_physical": "commodities_resources",
+    "gold_miners": "commodities_resources",
+    "silver_physical": "commodities_resources",
+    "silver_miners": "commodities_resources",
+    "copper": "commodities_resources",
+    "metals_mining": "commodities_resources",
+    "uranium": "commodities_resources",
+    "natural_resources": "commodities_resources",
+    "lithium": "commodities_resources",
+    "nickel": "commodities_resources",
+    "rare_earth": "commodities_resources",
+    "steel": "commodities_resources",
+    "critical_materials": "commodities_resources",
+    "platinum": "commodities_resources",
+    "palladium": "commodities_resources",
+    "precious_metals": "commodities_resources",
+    "commodities": "commodities_resources",
+    "carbon": "commodities_resources",
+    "agribusiness": "commodities_resources",
+
+    # --- Tech & Innovation ---
+    "tech": "tech_innovation",
+    "semiconductor": "tech_innovation",
+    "cybersecurity": "tech_innovation",
+    "cloud_computing": "tech_innovation",
+    "robotics": "tech_innovation",
+    "innovation": "tech_innovation",
+    "fintech": "tech_innovation",
+    "exponential_tech": "tech_innovation",
+    "crypto_equity": "tech_innovation",
+    "space": "tech_innovation",
+    "electric_vehicles": "tech_innovation",
+
+    # --- Equity Broad US ---
+    "sp500": "equity_broad_us",
+    "us_total_market": "equity_broad_us",
+    "us_large_cap": "equity_broad_us",
+    "us_mid_cap": "equity_broad_us",
+    "us_small_cap": "equity_broad_us",
+    "us_micro_cap": "equity_broad_us",
+    "us_small_mid": "equity_broad_us",
+    "us_equity": "equity_broad_us",
+    "russell1000": "equity_broad_us",
+    "russell2000": "equity_broad_us",
+    "nasdaq100": "equity_broad_us",
+    "nasdaq_composite": "equity_broad_us",
+
+    # --- International & EM ---
+    "eafe": "international",
+    "eafe_min_vol": "international",
+    "international": "international",
+    "intl_equity": "international",
+    "intl_small_cap": "international",
+    "emerging_markets": "international",
+    "developed_markets": "international",
+    "acwi": "international",
+    "msci_world": "international",
+    "global_equity": "international",
+
+    # --- Country Single ---
+    "japan": "country_single",
+    "china": "country_single",
+    "india": "country_single",
+    "south_korea": "country_single",
+    "taiwan": "country_single",
+    "brazil": "country_single",
+    "mexico": "country_single",
+    "germany": "country_single",
+    "france": "country_single",
+    "united_kingdom": "country_single",
+    "canada": "country_single",
+    "australia": "country_single",
+    "hong_kong": "country_single",
+    "southeast_asia": "country_single",
+    "asia_ex_japan": "country_single",
+    "pacific_asia": "country_single",
+    "latin_america": "country_single",
+    "africa": "country_single",
+    "europe": "country_single",
+
+    # --- Defensive / Income ---
+    "min_vol": "defensive_income",
+    "dividend": "defensive_income",
+    "dividend_growth": "defensive_income",
+    "consumer_staples": "defensive_income",
+    "utilities": "defensive_income",
+    "healthcare": "defensive_income",
+    "pharma": "defensive_income",
+    "preferred_stock": "defensive_income",
+
+    # --- Real Assets ---
+    "reits": "real_assets",
+    "infrastructure": "real_assets",
+    "real_assets": "real_assets",
+    "construction": "real_assets",
+    "homebuilders": "real_assets",
+    "water": "real_assets",
+
+    # --- Sectors (Cyclical) ---
+    "financials": "sectors_cyclical",
+    "industrials": "sectors_cyclical",
+    "aerospace_defense": "sectors_cyclical",
+    "consumer_discretionary": "sectors_cyclical",
+    "transportation": "sectors_cyclical",
+    "communications": "sectors_cyclical",
+    "airlines": "sectors_cyclical",
+    "retail": "sectors_cyclical",
+    "solar": "sectors_cyclical",
+    "cannabis": "sectors_cyclical",
+    "gaming_esports": "sectors_cyclical",
+}
+
+# Max ETFs par super-secteur dans le pool final
+MAX_ETF_PER_SUPER_SECTOR = {
+    "Stable":    {"default": 2, "defensive_income": 3, "international": 3},
+    "Modéré":    {"default": 2, "international": 3, "defensive_income": 3},
+    "Agressif":  {"default": 3, "commodities_resources": 3, "tech_innovation": 3},
+}
+
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # v6.28 FIX B: Aligné avec max_single_position (15%) pour cohérence bounds SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
@@ -2000,6 +2128,11 @@ class PortfolioOptimizer:
         exposure_count = defaultdict(int)
         bucket_count = defaultdict(int)
         corporate_group_count = defaultdict(int)
+        super_sector_count = defaultdict(int)  # FIX v2.4.0-L
+        
+        # FIX v2.4.0-L: Limites super-secteur par profil
+        ss_limits = MAX_ETF_PER_SUPER_SECTOR.get(profile.name, {})
+        ss_default = ss_limits.get("default", 3)
         
         crypto_pool_count = 0
         crypto_scores = []
@@ -2036,6 +2169,19 @@ class PortfolioOptimizer:
             if asset.category == "ETF" and asset.exposure and exposure_count[asset.exposure] >= 1:
                 continue
             
+            # FIX v2.4.0-L: Max N ETFs par super-secteur
+            # Empêche 5 commodities dans un portefeuille Agressif
+            if asset.category == "ETF" and asset.exposure:
+                ss = ETF_SUPER_SECTOR_MAP.get(asset.exposure)
+                if ss:
+                    ss_max = ss_limits.get(ss, ss_default)
+                    if super_sector_count[ss] >= ss_max:
+                        logger.debug(
+                            f"Super-sector cap: {asset.id} ({asset.exposure}→{ss}) "
+                            f"rejected ({super_sector_count[ss]}/{ss_max})"
+                        )
+                        continue
+            
             if asset.role == Role.LOTTERY and bucket_count["lottery"] >= 2:
                 continue
             if asset.corporate_group and corporate_group_count[asset.corporate_group] >= MAX_STOCKS_PER_GROUP:
@@ -2046,6 +2192,10 @@ class PortfolioOptimizer:
             category_count[asset.category] += 1
             if asset.exposure:
                 exposure_count[asset.exposure] += 1
+                # FIX v2.4.0-L: Track super-sector
+                ss = ETF_SUPER_SECTOR_MAP.get(asset.exposure)
+                if ss and asset.category == "ETF":
+                    super_sector_count[ss] += 1
             if asset.role:
                 bucket_count[asset.role.value] += 1
             if asset.corporate_group:
@@ -2160,6 +2310,11 @@ class PortfolioOptimizer:
                     f"Stocks={len(pool_stocks)}, ETF={len(pool_etf)}, "
                     f"Bonds={len(pool_bonds)}, Crypto={len(pool_crypto)}, "
                     f"max_any_category={getattr(profile, 'max_any_category', 100)}%")
+        
+        # FIX v2.4.0-L: Super-sector diagnostic
+        if super_sector_count:
+            ss_sorted = sorted(super_sector_count.items(), key=lambda x: -x[1])
+            logger.info(f"[SUPER-SECTOR {profile.name}] ETF distribution: {dict(ss_sorted)}")
         
         # Log bucket distribution
         bucket_dist = defaultdict(int)
