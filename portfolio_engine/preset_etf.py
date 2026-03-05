@@ -658,9 +658,9 @@ SCORING_WEIGHTS: Dict[str, Dict[str, float]] = {
         "aum": 0.10,
         "diversif_sector": -0.12,
         "diversif_holdings": -0.08,
-        "momentum": 0.20,
-        "yield": 0.15,
-        "data_quality": 0.05,
+        "momentum": 0.22,       # FIX v2.4.0-O: 0.20→0.22 (récupère le delta yield)
+        "yield": 0.10,          # FIX v2.4.0-O: 0.15→0.10 (réduit biais income)
+        "data_quality": 0.06,   # FIX v2.4.0-O: 0.05→0.06
     },
     "Agressif": {
         "momentum": 0.40,       # FIX v2.4.0-C: High momentum dominant (0.35→0.40)
