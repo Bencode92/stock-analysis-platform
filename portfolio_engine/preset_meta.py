@@ -915,23 +915,25 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
             "roe_min": 8.0,
+            "de_ratio_max": 2.0,        # FIX v5.2.0-Q: D/E max (élimine VEDL D/E=1.4... non, 2.0 laisse passer)
             "quality_score_min": 40,    # v4.15: filtre qualité complémentaire au moat
         },
         "equity_min_weight": 0.40,
         "equity_max_weight": 0.60,
         "min_equity_positions": 10,
         "score_weights": {
-            "perf_ytd": 0.05,
-            "perf_1y": 0.10,
-            "perf_3m": 0.05,
+            "perf_ytd": 0.00,          # FIX v5.2.0-Q: 0.05→0.00 (réduit momentum-chasing)
+            "perf_1y": 0.05,           # FIX v5.2.0-Q: 0.10→0.05 (idem)
+            "perf_3m": 0.00,           # FIX v5.2.0-Q: 0.05→0.00 (idem)
             "roe": 0.20,
             "eps_growth_5y": 0.10,
-            "fcf_yield": 0.05,
-            "volatility_3y": -0.10,
-            "max_drawdown_3y": -0.05,
+            "fcf_yield": 0.10,         # FIX v5.2.0-Q: 0.05→0.10 (FCF important pour Modéré)
+            "volatility_3y": -0.15,    # FIX v5.2.0-Q: -0.10→-0.15 (pénalise plus la vol)
+            "max_drawdown_3y": -0.10,  # FIX v5.2.0-Q: -0.05→-0.10 (drawdown compte plus)
             "dividend_yield": 0.10,
             "buffett_score": 0.15,
             "quality_value_sub": 0.10,
+            "de_ratio": -0.05,         # FIX v5.2.0-Q: NEW — pénalité dette élevée
         },
         "description": "Profil équilibré qualité/momentum, risque maîtrisé",
         "expected_vol_range": (10, 15),
@@ -1186,7 +1188,7 @@ def compute_universe_stats(equities: List[Dict]) -> Dict[str, List[float]]:
 # ============ ASSIGN PRESET ============
 
 def assign_preset_to_equity(eq: Dict) -> str:
-    """v4.15: recovery AVANT agressif. Seuils Buffett -10 (JS strict)."""
+    """v5.2.0-Q: momentum_trend AVANT agressif. Quality escape preserved."""
     vol = get_metric_value(eq, "volatility_3y") or 25.0
     ytd = get_metric_value(eq, "perf_ytd") or 0.0
     perf_1y = get_metric_value(eq, "perf_1y") or 0.0
@@ -1197,29 +1199,38 @@ def assign_preset_to_equity(eq: Dict) -> str:
     if vol < 1 or vol > 120:
         vol = 25.0
     
+    # 1. Recovery (vol haute + drawdown)
     if vol >= 35 and ytd < -10:
         return "recovery"
-    # v5.1.2: Quality escape — vol haute mais qualité exceptionnelle
+    # 2. Quality escape (vol haute + qualité exceptionnelle)
     if vol >= 35 and buffett >= 80 and roe >= 20:
         if vol >= 48:
             logger.debug(f"Quality high-vol: {eq.get('ticker','?')} vol={vol:.1f} → quality_high_vol (SATELLITE)")
             return "quality_high_vol"
         logger.debug(f"Quality escape: {eq.get('ticker','?')} vol={vol:.1f} buff={buffett} roe={roe:.1f} → quality_premium")
         return "quality_premium"
+    # 3. FIX v5.2.0-Q: momentum_trend AVANT agressif catch-all
+    # Captures KIA, KB Financial, etc. qui ont bon momentum mais vol > 35%
+    if vol >= 28 and (ytd > 5 or perf_1y > 20):
+        return "momentum_trend"
+    # 4. Agressif catch-all (vol haute, pas de momentum clair)
     if vol >= 35:
         return "agressif"
+    # 5. Income/Defensive (vol basse)
     if vol < 22 and (div_yield > 1.5 or buffett >= 65):
         return "rendement" if div_yield > 2.0 else "defensif"
     if vol < 20 and buffett >= 60:
         return "low_volatility"
+    # 6. Quality premium (vol modérée + qualité)
     if vol < 30 and roe > 15 and buffett >= 55:
         return "quality_premium"
+    # 7. Value dividend
     if vol < 28 and div_yield > 1.0:
         return "value_dividend"
-    if vol >= 28 and (ytd > 5 or perf_1y > 20):
-        return "momentum_trend"
+    # 8. Croissance (vol modérée + performance positive)
     if vol >= 25 and ytd > 0:
         return "croissance"
+    # 9. Fallbacks
     if ytd > 5:
         return "croissance"
     elif div_yield > 1.0:
@@ -1352,6 +1363,12 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
             elif fcf < filters["fcf_yield_min"]:
                 reasons.append(f"fcf<{filters['fcf_yield_min']}")           
         
+        # FIX v5.2.0-Q: D/E ratio max filter (élimine les entreprises trop endettées)
+        if "de_ratio_max" in filters:
+            de = get_metric_value(eq, "de_ratio")
+            if de is not None and de > filters["de_ratio_max"]:
+                reasons.append(f"de>{filters['de_ratio_max']}")
+        
         if reasons:
             for r in reasons:
                 rejection_counts[r] = rejection_counts.get(r, 0) + 1
@@ -1464,6 +1481,12 @@ def apply_hard_filters_with_custom(
                 reasons.append("fcf_yield_missing")
             elif fcf < custom_filters["fcf_yield_min"]:
                 reasons.append(f"fcf<{custom_filters['fcf_yield_min']}")
+        
+        # FIX v5.2.0-Q: D/E ratio max filter
+        if "de_ratio_max" in custom_filters:
+            de = get_metric_value(eq, "de_ratio")
+            if de is not None and de > custom_filters["de_ratio_max"]:
+                reasons.append(f"de>{custom_filters['de_ratio_max']}")
         
         if reasons:
             for r in reasons:
@@ -1741,6 +1764,57 @@ def select_equities_for_profile(
             _selected.append(_eq)
         return _selected
     selected = _enforce_caps(sorted_eq, profile, target_n)
+
+    # FIX v5.2.0-Q: Sector diversity guarantee
+    # Garantit au moins 1 action par secteur couvert (si candidats disponibles)
+    # Évite 0 Healthcare, 0 Communication, etc.
+    MIN_SECTORS_REPRESENTED = {
+        "Agressif": 5,
+        "Modéré": 6,
+        "Stable": 4,
+    }
+    min_sectors = MIN_SECTORS_REPRESENTED.get(profile, 5)
+    sectors_in_sel = set(eq.get("sector") for eq in selected if eq.get("sector"))
+    
+    if len(sectors_in_sel) < min_sectors and len(sorted_eq) > target_n:
+        remaining = [eq for eq in sorted_eq if eq not in selected]
+        sectors_available = set(eq.get("sector") for eq in remaining if eq.get("sector"))
+        missing_sectors = sectors_available - sectors_in_sel
+        
+        injected = 0
+        for sector in missing_sectors:
+            if len(sectors_in_sel) >= min_sectors:
+                break
+            best = next((eq for eq in remaining if eq.get("sector") == sector), None)
+            if best and len(selected) > 2:
+                # Replace lowest-scored action in the most over-represented sector
+                sector_counts = {}
+                for eq in selected:
+                    s = eq.get("sector", "OTHER")
+                    sector_counts[s] = sector_counts.get(s, 0) + 1
+                most_common = max(sector_counts, key=sector_counts.get)
+                if sector_counts[most_common] >= 3:
+                    # Find worst in that sector
+                    worst_in_sector = min(
+                        [eq for eq in selected if eq.get("sector") == most_common],
+                        key=lambda x: x.get("_profile_score", 0)
+                    )
+                    idx = selected.index(worst_in_sector)
+                    selected[idx] = best
+                    sectors_in_sel.add(sector)
+                    injected += 1
+                    logger.info(
+                        f"   [{profile}] Sector diversity: replaced {worst_in_sector.get('ticker','?')} "
+                        f"({most_common}) with {best.get('ticker','?')} ({sector})"
+                    )
+        
+        if injected:
+            selected = sorted(selected, key=lambda x: x.get("_profile_score", 0), reverse=True)
+            meta["stages"]["sector_diversity"] = {
+                "injected": injected,
+                "sectors_before": len(sectors_in_sel) - injected,
+                "sectors_after": len(sectors_in_sel),
+            }
 
     # v5.2.1 FIX P2c: Preset diversity floor
     MIN_PRESETS_REPRESENTED = 4
