@@ -1737,7 +1737,10 @@ const SD = (() => {
         }
 
         if (n === 3 || n === 4) updateSynthese();
-        if (n === 4) refreshObjectives();
+        if (n === 4) {
+            refreshObjectives();
+            if (typeof StrategyAdvisor !== 'undefined') StrategyAdvisor.render();
+        }
         // Hide aside on step 1, show on step 2+
         var asideEl = document.querySelector(".page-aside");
         var gridEl = document.querySelector(".page-grid");
