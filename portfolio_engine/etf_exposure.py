@@ -897,7 +897,7 @@ TICKER_TO_EXPOSURE = {
     "tolz": "global_equity",
     "tov": "global_equity",
     "upgd": "global_equity",
-    "ura": "global_equity",
+    "ura": "uranium",
     "vegi": "global_equity",
     "vgfo": "global_equity",
     "vgsr": "global_equity",
@@ -2175,6 +2175,388 @@ TICKER_TO_EXPOSURE = {
     "wbat": "value",
     "wbif": "value",
     "wtv": "value",
+    # === COUNTRY SINGLE-COUNTRY ETFs (FIX v2.4.0-E) ===
+    "ewy": "south_korea",
+    "flkr": "south_korea",
+    "ewz": "brazil",
+    "flbr": "brazil",
+    "eww": "mexico",
+    "ewt": "taiwan",
+    "vnm": "vietnam",
+    "argt": "argentina",
+    "ksa": "saudi_arabia",
+    "tur": "turkey",
+    "eza": "south_africa",
+    "eis": "israel",
+    "thd": "thailand",
+    "ephe": "philippines",
+    "eido": "indonesia",
+    "ewm": "malaysia",
+
+    # === FIX v2.4.0-F: 336 nouveaux mappings (0 None dans combined) ===
+
+    # ── PAYS (19 Miscellaneous Region + extras) ──
+    "afk": "africa",
+    "bbca": "canada", "ewc": "canada", "flca": "canada",
+    "ech": "chile",
+    "epol": "poland",
+    "ewa": "australia",
+    "ewd": "sweden",
+    "ewg": "germany",
+    "ewi": "italy",
+    "ewl": "switzerland",
+    "ewn": "netherlands",
+    "ewo": "austria",
+    "ewp": "spain",
+    "ewq": "france",
+    "ews": "singapore",
+    "ewu": "united_kingdom", "flgb": "united_kingdom",
+    "uae": "uae",
+    "ilf": "latin_america",
+    "ipac": "pacific_asia", "vpl": "pacific_asia",
+
+    # ── LEVERAGED SINGLE-STOCK (26) ──
+    "aapb": "leveraged_single_stock", "amdl": "leveraged_single_stock",
+    "amzz": "leveraged_single_stock", "babx": "leveraged_single_stock",
+    "conl": "leveraged_single_stock", "fbl": "leveraged_single_stock",
+    "goox": "leveraged_single_stock", "msfl": "leveraged_single_stock",
+    "mstu": "leveraged_single_stock", "nflu": "leveraged_single_stock",
+    "nvdl": "leveraged_single_stock", "nvdx": "leveraged_single_stock",
+    "nvox": "leveraged_single_stock", "riox": "leveraged_single_stock",
+    "tslr": "leveraged_single_stock", "tslt": "leveraged_single_stock",
+    "tsl": "leveraged_single_stock",
+    "bulz": "leveraged_fang", "fngb": "leveraged_fang",
+    "fngo": "leveraged_fang", "fngu": "leveraged_fang",
+    "tark": "leveraged_fang",
+    "tqqq": "leveraged_nasdaq",
+    "msox": "leveraged_cannabis",
+    "oilu": "leveraged_energy",
+    "uvix": "leveraged_vix",
+
+    # ── DERIVATIVE INCOME (37) ──
+    "aiyy": "derivative_income", "amdy": "derivative_income",
+    "amzy": "derivative_income", "aply": "derivative_income",
+    "cony": "derivative_income", "cvny": "derivative_income",
+    "fby": "derivative_income", "gooy": "derivative_income",
+    "maro": "derivative_income", "mrny": "derivative_income",
+    "msfo": "derivative_income", "nfly": "derivative_income",
+    "nvdy": "derivative_income", "plty": "derivative_income",
+    "smcy": "derivative_income", "snoy": "derivative_income",
+    "tsly": "derivative_income", "tsmy": "derivative_income",
+    "fiat": "derivative_income", "icoi": "derivative_income",
+    "gpty": "derivative_income",
+    "jepi": "derivative_income_index", "jepq": "derivative_income_index",
+    "iqqq": "derivative_income_index", "ispy": "derivative_income_index",
+    "nusi": "derivative_income_index", "fepi": "derivative_income_index",
+    "efaa": "derivative_income_index", "qqa": "derivative_income_index",
+    "tspy": "derivative_income_index", "ymag": "derivative_income_index",
+    "fyee": "derivative_income_index", "khpi": "derivative_income_index",
+    "omah": "derivative_income_index", "papi": "derivative_income_index",
+    "putw": "derivative_income_index", "tcal": "derivative_income_index",
+    "svol": "volatility_strategy",
+    "iwmy": "derivative_income_index", "qqqy": "derivative_income_index",
+
+    # ── NATURAL RESOURCES (16) ──
+    "fiw": "water", "pho": "water",
+    "fmat": "materials", "iym": "materials", "vaw": "materials", "xlb": "materials",
+    "litp": "lithium",
+    "moo": "agribusiness",
+    "ige": "natural_resources", "nanr": "natural_resources", "mgnr": "natural_resources",
+    "nikl": "nickel",
+    "remx": "rare_earth",
+    "setm": "critical_materials",
+    "slx": "steel",
+    "xme": "metals_mining",
+
+    # ── HEALTH (15) ──
+    "arkg": "genomics",
+    "canc": "healthcare_sub",
+    "fbt": "biotech", "ibb": "biotech",
+    "fhlc": "healthcare", "fxh": "healthcare", "xlv": "healthcare",
+    "xhe": "healthcare", "rsph": "healthcare", "vht": "healthcare",
+    "pink": "healthcare", "sbio": "biotech",
+    "ihe": "pharma", "pph": "pharma", "xph": "pharma", "pjp": "pharma",
+    "ihi": "medical_devices",
+
+    # ── INDUSTRIALS (13) ──
+    "airr": "industrials", "fidu": "industrials", "iyj": "industrials",
+    "xli": "industrials", "prn": "industrials", "vis": "industrials",
+    "ita": "aerospace_defense", "misl": "aerospace_defense",
+    "ppa": "aerospace_defense", "xar": "aerospace_defense",
+    "iyt": "transportation", "xtn": "transportation",
+    "pkb": "construction",
+    "pave": "infrastructure", "grid": "infrastructure", "ifra": "infrastructure",
+
+    # ── US EQUITY / LARGE BLEND (54) ──
+    "apue": "us_equity", "avus": "us_equity", "bblu": "us_equity",
+    "bbus": "us_equity", "bibl": "us_equity", "cgus": "us_equity",
+    "dcor": "us_equity", "dfac": "us_equity", "esgv": "us_equity",
+    "flrg": "us_equity", "fndx": "us_equity", "fndb": "us_equity",
+    "gslc": "us_equity", "ilcb": "us_equity", "itot": "us_equity",
+    "jhml": "us_equity", "jhmm": "us_equity", "lrgf": "us_equity",
+    "lctu": "us_equity", "oef": "us_equity", "oneq": "us_equity",
+    "pbus": "us_equity", "ptnq": "us_equity", "ptlc": "us_equity",
+    "schb": "us_equity", "schk": "us_equity", "schx": "us_equity",
+    "sptm": "us_equity", "tonr": "us_equity", "usfr": "us_equity",
+    "vone": "us_equity", "voo": "us_equity", "vti": "us_equity",
+    "vthr": "us_equity",
+    "dfau": "us_equity", "dfsu": "us_equity", "dfus": "us_equity",
+    "dsi": "us_equity", "duhp": "us_equity", "eagl": "us_equity",
+    "fmil": "us_equity", "ftcs": "us_equity", "hcmt": "us_equity",
+    "hlal": "us_equity", "iusa": "us_equity", "iwl": "us_equity",
+    "iwv": "us_equity", "jpef": "us_equity", "lgh": "us_equity",
+    "mgc": "us_equity", "moat": "us_equity", "modl": "us_equity",
+    "nanc": "us_equity", "netz": "us_equity", "ptl": "us_equity",
+    "qus": "us_equity", "recs": "us_equity", "samt": "us_equity",
+    "sect": "us_equity", "strv": "us_equity", "tcaf": "us_equity",
+    "tilt": "us_equity", "topt": "us_equity", "tspa": "us_equity",
+    "ttac": "us_equity", "usmc": "us_equity", "uspx": "us_equity",
+    "vote": "us_equity", "xlsr": "us_equity", "zecp": "us_equity",
+
+    # ── EAFE / INTERNATIONAL (10) ──
+    "dbef": "eafe", "efa": "eafe", "efav": "eafe", "hefa": "eafe",
+    "iefa": "eafe", "qefa": "eafe", "spdw": "eafe", "vea": "eafe",
+    "dfax": "intl_equity", "feoe": "intl_equity", "veu": "intl_equity",
+
+    # ── CONSUMER (14) ──
+    "fdis": "consumer_discretionary", "iyc": "consumer_discretionary",
+    "vcr": "consumer_discretionary", "xly": "consumer_discretionary",
+    "pej": "consumer_discretionary",
+    "itb": "homebuilders", "xhb": "homebuilders",
+    "rth": "retail", "ibuy": "retail", "xrt": "retail",
+    "fsta": "consumer_staples", "fxg": "consumer_staples",
+    "iyk": "consumer_staples", "vdc": "consumer_staples", "xlp": "consumer_staples",
+
+    # ── PREFERRED STOCK (10) ──
+    "fpei": "preferred_stock", "pff": "preferred_stock", "pffa": "preferred_stock",
+    "pfld": "preferred_stock", "pfxf": "preferred_stock", "pgx": "preferred_stock",
+    "pref": "preferred_stock", "psk": "preferred_stock", "spff": "preferred_stock",
+    "vrp": "preferred_stock",
+
+    # ── COMMUNICATIONS (7) ──
+    "espo": "gaming_esports",
+    "fcom": "communications", "fdcf": "communications", "vox": "communications",
+    "xlc": "communications",
+    "iyz": "telecom", "xtl": "telecom",
+
+    # ── DIGITAL ASSETS / CRYPTO (12) ──
+    "bitq": "crypto_equity", "blok": "crypto_equity", "crpt": "crypto_equity",
+    "dapp": "crypto_equity", "fdig": "crypto_equity", "iblc": "crypto_equity",
+    "stce": "crypto_equity",
+    "eeth": "eth_etf", "ethu": "eth_etf", "seth": "eth_etf",
+    "yeth": "eth_etf", "etu": "eth_etf",
+    "xxrp": "crypto_leveraged",
+
+    # ── CURRENCY (7) ──
+    "fxc": "currency", "fxe": "currency", "fxf": "currency", "fxy": "currency",
+    "udn": "currency", "usdu": "currency", "uup": "currency",
+
+    # ── MISC SECTOR (7) ──
+    "cnbs": "cannabis", "mj": "cannabis", "msos": "cannabis",
+    "tan": "solar",
+    "ufo": "space",
+    "ipay": "fintech",
+    "xt": "exponential_tech",
+
+    # ── BONDS (divers) ──
+    "cary": "bonds_multisector", "cgms": "bonds_multisector",
+    "hsun": "bonds_multisector", "jpie": "bonds_multisector",
+    "nflt": "bonds_multisector", "pyld": "bonds_multisector",
+    "scio": "bonds_structured",
+    "cgcp": "bonds_core_plus", "drsk": "bonds_core_plus",
+    "evtr": "bonds_core_plus", "totl": "bonds_core_plus",
+    "high": "bonds_short", "jpld": "bonds_short", "sdsi": "bonds_short",
+    "fibr": "bonds_ig",
+    "jpgb": "bonds_global",
+    "lgov": "bonds_long_gov",
+    "lmbs": "bonds_mbs",
+    "ibca": "bonds_target_maturity",
+    "cwb": "convertibles",
+    "ivol": "inflation_hedge",
+    "hybi": "bonds_nontraditional",
+    "fisr": "bonds_core", "usdx": "bonds_core",
+
+    # ── STRATEGIES (divers) ──
+    "cta": "managed_futures", "dbmf": "managed_futures",
+    "kmlm": "managed_futures", "wtmf": "managed_futures",
+    "ntsx": "multi_asset_leveraged", "rssb": "multi_asset_leveraged",
+    "rsst": "multi_asset_leveraged",
+    "acio": "hedged_equity", "caos": "hedged_equity", "eggy": "hedged_equity",
+    "fheq": "hedged_equity", "helo": "hedged_equity", "heqt": "hedged_equity",
+    "sflr": "hedged_equity", "snth": "hedged_equity",
+    "clse": "long_short", "ftls": "long_short",
+    "btal": "market_neutral",
+    "qai": "multi_strategy",
+    "hndl": "allocation_balanced", "cgbl": "allocation_balanced",
+    "mdiv": "allocation_balanced",
+    "yyy": "allocation_income",
+    "cefs": "closed_end_fund",
+    "svxy": "volatility_strategy", "uvxy": "volatility_strategy",
+    "vixm": "volatility_strategy", "vixy": "volatility_strategy",
+
+    # ── SMALL / MID CAP ──
+    "fnda": "us_small_cap", "iwc": "us_micro_cap",
+    "prfz": "us_small_cap", "smmd": "us_small_mid",
+    "vss": "intl_small_cap",      # FIX I: ex-US, not us_small_cap
+
+    # === FIX v2.4.0-I: Corrections de classification ===
+
+    # ex-Japan / Asia Pacific (pas Japan)
+    "aaxj": "asia_ex_japan", "aia": "asia_ex_japan", "epp": "asia_ex_japan",
+
+    # Taiwan ≠ China
+    "fltw": "taiwan",  # Franklin FTSE Taiwan (fund_type "China Region" = Morningstar quirk)
+    "ewh": "hong_kong",  # iShares MSCI Hong Kong
+
+    # Faux positif China
+    "cneq": "us_equity",  # Alger Concentrated Equity (rien à voir avec la Chine)
+
+    # Inverse/Short overrides (empêcher mélange avec longs)
+    "dog": "dow30_inverse", "sdow": "dow30_inverse",
+    "sh": "sp500_inverse", "spdn": "sp500_inverse", "spxu": "sp500_inverse",
+    "rwm": "russell2000_inverse", "srty": "russell2000_inverse",
+    "dust": "gold_miners_inverse", "gdxd": "gold_miners_inverse",
+    "jdst": "gold_miners_inverse",
+    "gll": "gold_inverse",
+    "zsl": "silver_inverse",
+    "yxi": "china_inverse",
+
+    # === FIX v2.4.0-J: ETFs thématiques mal classés dans growth/mid_cap/europe ===
+    # Cause: fund_type Morningstar ("Large Growth","Mid-Cap Growth") matche
+    # les regex génériques AVANT les regex thématiques
+
+    # growth → corrections
+    "aor": "allocation_balanced",     # 60/40 Balanced, PAS growth
+    "bthm": "us_equity",             # Thematic Rotation, pas un facteur growth
+    "buzz": "us_equity",             # Social Sentiment, pas growth
+    "entr": "us_equity",             # Private-Public Crossover
+    "xovr": "us_equity",             # Private-Public Crossover
+    "ildr": "tech",                  # Innovation Leaders = tech
+    "pnqi": "tech",                  # NASDAQ Internet
+
+    # mid_cap → corrections
+    "arkk": "innovation",            # ARK Innovation
+    "arkw": "innovation",            # ARK Next Gen Internet
+    "arkx": "space",                 # ARK Space Exploration
+    "ffty": "innovation",            # Innovator IBD 50
+    "qqqj": "nasdaq100",            # NASDAQ Next Gen 100
+
+    # europe → corrections (secteur prime sur géo quand c'est un ETF sectoriel)
+    "euad": "aerospace_defense",     # Europe Aerospace & Defense = secteur
+    "eufn": "financials",            # Europe Financials = secteur
+
+    # === FIX v2.4.0-K: us_equity → catégories spécifiques ===
+    # Fix F avait mappé tous les "Large Blend" à us_equity en bloc.
+    # Résultat: VOO(us_equity) et SPY(sp500) ne se dédupliquent pas!
+
+    # S&P 500 (SPY/IVV/SPLG déjà sp500 dans dict original)
+    "voo": "sp500", "ptlc": "sp500", "strv": "sp500",
+    "ptl": "sp500", "lgh": "sp500",
+
+    # US Total Market
+    "vti": "us_total_market", "itot": "us_total_market",
+    "schb": "us_total_market", "sptm": "us_total_market",
+    "dfus": "us_total_market", "dfau": "us_total_market",
+    "dfac": "us_total_market", "iwv": "us_total_market",
+    "vthr": "us_total_market", "uspx": "us_total_market",
+    "pbus": "us_total_market", "ilcb": "us_total_market",
+    "iusa": "us_total_market",
+
+    # Russell 1000 / US Large Cap
+    "vone": "russell1000", "schx": "us_large_cap",
+    "mgc": "us_large_cap", "oef": "us_large_cap",
+    "topt": "us_large_cap", "iwl": "us_large_cap",
+    "usmc": "us_large_cap",
+
+    # Nasdaq Composite
+    "oneq": "nasdaq_composite",
+
+    # Nasdaq 100 (QQQ manquait!)
+    "qqq": "nasdaq100", "ptnq": "nasdaq100",
+
+    # Mid-Cap (était dans us_equity!)
+    "jhmm": "us_mid_cap",
+
+    # ESG
+    "dsi": "esg", "esgv": "esg", "lctu": "esg", "dfsu": "esg",
+
+    # Value-tilt
+    "fndx": "value", "fndb": "value", "moat": "value",
+    # Ces overrides écrasent les entrées originales (Python dict = last write wins)
+
+    # Pays
+    "grek": "greece", "gxg": "colombia", "asea": "southeast_asia",
+    "ndia": "india", "vnam": "vietnam", "braz": "brazil",
+    "norw": "norway", "dax": "germany", "epu": "peru",
+
+    # Énergie / Clean energy
+    "fan": "clean_energy", "rnrg": "clean_energy", "icln": "clean_energy",
+    "imsif": "clean_energy", "pbd": "clean_energy", "gex": "clean_energy",
+    "wndy": "clean_energy", "rnwz": "clean_energy", "ctec": "clean_energy",
+    "ixc": "energy", "fill": "energy", "mlpx": "energy", "mlpd": "energy",
+    "rays": "solar",
+
+    # Infrastructure
+    "bkgi": "infrastructure", "nfra": "infrastructure", "igf": "infrastructure",
+    "iisgf": "infrastructure", "tolz": "infrastructure", "gii": "infrastructure",
+    "bild": "infrastructure", "pwer": "infrastructure", "ipav": "infrastructure",
+    "dtcr": "infrastructure", "vpn": "infrastructure",
+
+    # Healthcare
+    "ixj": "healthcare", "htec": "healthcare", "gnom": "genomics",
+
+    # Tech / Fintech
+    "ixn": "tech", "finx": "fintech", "spte": "tech",
+    "aiq": "tech", "shld": "aerospace_defense",
+    "krop": "agribusiness", "gbcmf": "biotech",
+
+    # Financials
+    "ixg": "financials",
+
+    # Natural Resources
+    "gnr": "natural_resources", "gunr": "natural_resources",
+    "ftri": "natural_resources", "nres": "natural_resources",
+
+    # Value
+    "gval": "value", "cgv": "value", "cefa": "value", "tov": "value",
+
+    # Inflation
+    "irvh": "inflation_hedge", "infl": "inflation_hedge",
+
+    # === FIX v2.4.0-G2: 43 derniers global_equity reclassifiés ===
+    # (Ne restent que ~13 vrais ETFs monde en global_equity)
+
+    # Thematic / Tech
+    "acwv": "min_vol", "botz": "robotics", "robo": "robotics",
+    "fbot": "robotics", "bug": "cybersecurity", "clou": "cloud_computing",
+    "thnq": "tech", "driv": "electric_vehicles",
+    "bkch": "crypto_equity",
+
+    # Secteurs globaux
+    "exi": "industrials", "ixp": "communications", "jxi": "utilities",
+    "kxi": "consumer_staples", "rxi": "consumer_discretionary",
+    "mxi": "materials", "jets": "airlines", "zap": "utilities",
+
+    # Resources / Commodities
+    "cgw": "water", "copx": "copper", "lit": "lithium",
+    "mlpa": "energy", "pick": "metals_mining",
+    "ftgc": "commodities", "krbn": "carbon",
+
+    # Real Estate
+    "dfgr": "reits", "reet": "reits", "vnqi": "reits", "spre": "reits",
+
+    # Dividend / Income
+    "div": "dividend", "sdiv": "dividend", "gcow": "dividend",
+    "dnl": "dividend", "giax": "derivative_income",
+
+    # Allocation
+    "aoa": "allocation_aggressive", "aok": "allocation_conservative",
+    "aom": "allocation_balanced", "pcef": "allocation_income",
+    "raax": "real_assets", "rly": "real_assets",
+
+    # Preferred / Factor / Other
+    "pffd": "preferred_stock", "pffv": "preferred_stock",
+    "ausf": "multifactor", "psp": "private_equity",
 }
 
 # =============================================================================
@@ -2225,16 +2607,104 @@ KEYWORD_PATTERNS = [
     # Global / World
     (r"\bacwi\b", "acwi"),
     (r"\bmsci\s*world\b", "msci_world"),
-    (r"\bglobal\b(?!.*bond)(?!.*fixed)", "global_equity"),
+    (r"\bglobal\b(?!.*bond)(?!.*fixed)(?!.*energy)(?!.*infra)(?!.*health)(?!.*tech)(?!.*financ)(?!.*material)(?!.*resource)(?!.*water)(?!.*communi)", "global_equity"),
     
     # Régions
     (r"\bemerging\s*market|\bemerging\b", "emerging_markets"),
     (r"\bdeveloped\s*market|ftse\s*developed", "developed_markets"),
     (r"\binternational\b(?!.*bond)", "international"),
     (r"\beurope\b|\beurozone\b|\bstoxx\b", "europe"),
-    (r"\bjapan\b", "japan"),
+    (r"(?<!ex[\s\-])(?<!ex )\bjapan\b", "japan"),
     (r"\bchina\b|\bcsi\s*\d+", "china"),
     (r"\bindia\b", "india"),
+    # FIX v2.4.0-E: Country-specific patterns (évite exposure=None pour ETFs pays)
+    (r"\bkorea\b|\bkorean\b|\bcor[ée]e\b", "south_korea"),
+    (r"\bbrazil\b|\bbr[ée]sil\b", "brazil"),
+    (r"\bmexico\b|\bmexic", "mexico"),
+    (r"\btaiwan\b|\bta[ïi]wan\b", "taiwan"),
+    (r"\bvietnam\b", "vietnam"),
+    (r"\bindonesia\b", "indonesia"),
+    (r"\bthailand\b", "thailand"),
+    (r"\bphilippin", "philippines"),
+    (r"\bmalaysia\b", "malaysia"),
+    (r"\bturkey\b|\btürk", "turkey"),
+    (r"\bsaudi\b", "saudi_arabia"),
+    (r"\bsouth\s*africa\b", "south_africa"),
+    (r"\bisrael\b", "israel"),
+    (r"\bargentin", "argentina"),
+    # FIX v2.4.0-G: More countries + clean energy
+    (r"\bgreece\b|\bgreek\b", "greece"),
+    (r"\bcolombia\b", "colombia"),
+    (r"\bnorway\b|\bnorwegian\b", "norway"),
+    (r"\bperu\b|\bperuvian\b", "peru"),
+    (r"\bsoutheast\s*asia\b|\basean\b", "southeast_asia"),
+    (r"\basia\b.*\bex[\s\-]*japan\b|\bpacific\b.*\bex[\s\-]*japan\b", "asia_ex_japan"),
+    (r"\bhong\s*kong\b", "hong_kong"),
+    (r"\bclean\s*energy\b|\brenewable\s*energy\b|\bwind\s*energy\b", "clean_energy"),
+    # FIX v2.4.0-F: More country/region patterns
+    (r"\bcanada\b|\bcanadian\b", "canada"),
+    (r"\baustralia\b|\baustralian\b", "australia"),
+    (r"\bgermany\b|\bgerman\b", "germany"),
+    (r"\bfrance\b|\bfrench\b", "france"),
+    (r"\bunited\s*kingdom\b|\b(?:uk|u\.k\.)\b|\bbritish\b", "united_kingdom"),
+    (r"\bsweden\b|\bswedish\b", "sweden"),
+    (r"\bswitzerland\b|\bswiss\b", "switzerland"),
+    (r"\bspain\b|\bspanish\b", "spain"),
+    (r"\bitaly\b|\bitalian\b", "italy"),
+    (r"\bnetherlands\b|\bdutch\b", "netherlands"),
+    (r"\baustria\b|\baustrian\b", "austria"),
+    (r"\bpoland\b|\bpolish\b", "poland"),
+    (r"\bchile\b|\bchilean\b", "chile"),
+    (r"\bsingapore\b", "singapore"),
+    (r"\bpacific\b.*\basia\b|\basia\s*pacific\b", "pacific_asia"),
+    (r"\blatin\s*america\b", "latin_america"),
+    (r"\bafrica\b", "africa"),
+
+    # FIX v2.4.0-F: Sectors & strategies missing
+    (r"\bpharma", "pharma"),
+    (r"\bmedical\s*device", "medical_devices"),
+    (r"\bgenomic", "genomics"),
+    (r"\baerospace|defense\b", "aerospace_defense"),
+    (r"\btransport", "transportation"),
+    (r"\binfrastructur", "infrastructure"),
+    (r"\bindustrial", "industrials"),
+    (r"\bconsumer\s*discretionary\b", "consumer_discretionary"),
+    (r"\bconsumer\s*staple", "consumer_staples"),
+    (r"\bhomebuilder|home\s*construct", "homebuilders"),
+    (r"\bretail\b", "retail"),
+    (r"\bpreferred\s*(?:stock|securit)", "preferred_stock"),
+    (r"\bcommunication\s*service", "communications"),
+    (r"\btelecom", "telecom"),
+    (r"\bgaming\b|\besport", "gaming_esports"),
+    (r"\bcannabis\b|\bmarijuana\b", "cannabis"),
+    (r"\bsolar\b", "solar"),
+    (r"\bwater\b(?!.*mark)", "water"),
+    (r"\blithium\b", "lithium"),
+    (r"\bnickel\b", "nickel"),
+    (r"\brare\s*earth\b", "rare_earth"),
+    (r"\bsteel\b", "steel"),
+    (r"\bmaterial", "materials"),
+    (r"\bmanaged\s*futures\b", "managed_futures"),
+    (r"\bhedged\s*equity\b", "hedged_equity"),
+    (r"\bcovered\s*call\b|option\s*income\b|premium\s*income\b", "derivative_income"),
+    (r"\bcurrenc(?:y|ies)\b", "currency"),
+    (r"\bblockchain\b|crypto\s*industr", "crypto_equity"),
+    (r"\bvix\b|\bvolatility\b", "volatility_strategy"),
+    # FIX v2.4.0-G2: New thematic/sector patterns
+    (r"\brobotics?\b|\bautomation\b", "robotics"),
+    (r"\bcybersecur", "cybersecurity"),
+    (r"\bcloud\s*comput", "cloud_computing"),
+    (r"\belectric\s*vehicl|\bautonomous.*vehicl|\b(?:ev)\s*etf", "electric_vehicles"),
+    (r"\bairline|\bjets?\b|\baviation\b", "airlines"),
+    (r"\bcarbon\b(?!.*fiber)", "carbon"),
+    (r"\breit\b|\breal\s*estate\b", "reits"),
+    (r"\bprivate\s*equity\b", "private_equity"),
+    (r"\ballocation\b.*\baggressive\b", "allocation_aggressive"),
+    (r"\ballocation\b.*\bconservative\b", "allocation_conservative"),
+    (r"\ballocation\b.*\bmoderate\b|\ballocation\b.*\bbalanced\b", "allocation_balanced"),
+    
+    # FIX v2.4.0-J: Thematic patterns BEFORE factor patterns
+    (r"\binnovat", "innovation"),
     
     # Facteurs
     (r"\bequal\s*weight", "equal_weight"),
@@ -2284,6 +2754,8 @@ def detect_etf_exposure(name: str, ticker: str = "", fund_type: str = "") -> Opt
     Stratégie :
     1. Lookup direct sur ticker (O(1), pas de regex)
     2. Fallback sur regex avec word boundaries sur nom + fund_type
+    3. Si ETF inverse/short détecté, ajoute suffixe "_inverse" pour éviter
+       mélange avec les longs dans le dedup
     
     Args:
         name: Nom de l'ETF
@@ -2301,11 +2773,30 @@ def detect_etf_exposure(name: str, ticker: str = "", fund_type: str = "") -> Opt
     # 2. Fallback regex sur nom (avec word boundaries = safe)
     search_text = f"{name} {fund_type}".lower()
     
-    for pattern, exposure in _compiled_patterns():
+    exposure = None
+    for pattern, exp in _compiled_patterns():
         if pattern.search(search_text):
-            return exposure
+            exposure = exp
+            break
     
-    return None
+    if exposure is None:
+        return None
+
+    # 3. FIX v2.4.0-I: Suffixe _inverse pour short/inverse ETFs
+    # Empêche le dedup de mélanger SH (Short S&P500) avec SPY (Long S&P500)
+    # Note: "Short-Term Bond" ≠ short selling → check fund_type only for "Inverse"
+    if exposure and "inverse" not in exposure and "bear" not in exposure:
+        ft_lower = (fund_type or "").lower()
+        name_lower = (name or "").lower()
+        is_inverse = (
+            "inverse" in ft_lower
+            or re.search(r"\bshort\b(?!\s*(?:term|duration|dat))", name_lower)
+            or re.search(r"\bbear\b|\binverse\b", name_lower)
+        )
+        if is_inverse:
+            exposure = f"{exposure}_inverse"
+    
+    return exposure
 
 
 # =============================================================================
