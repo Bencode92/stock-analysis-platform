@@ -72,9 +72,9 @@ PROFILE_PRESETS = {
 # Hard constraints par profil
 PROFILE_CONSTRAINTS = {
     "Stable": {
-        "duration_max": 3.0,           # v6.33: 5→3 ans (ultra-short/short only)
-        "credit_min": 70,              # v6.33: 60→70 (A- minimum, pas BBB)
-        "vol_max_quantile": 0.30,      # v6.33: 0.40→0.30 (top 30% les moins volatils)
+        "duration_max": 5.0,           # FIX v2.4.0-O: 3→5 ans (permet corporate IG short)
+        "credit_min": 65,              # FIX v2.4.0-O: 70→65 (permet A-/BBB+ IG corps)
+        "vol_max_quantile": 0.35,      # FIX v2.4.0-O: 0.30→0.35 (légèrement plus large)
     },
     "Modéré": {
         "duration_max": 10.0,          # Duration max 10 ans
