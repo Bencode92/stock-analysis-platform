@@ -501,6 +501,58 @@ FILL_TARGET: Dict[str, int] = {
     "Agressif": 25,   # 8 presets × ~2 + fill
 }
 
+# ============= FIX v2.4.0-N: PER-PRESET MINIMUM QUOTAS =============
+# Garantit que chaque preset contribue au moins N ETFs à la sélection finale.
+# Sans ça, sector_cyclical monopolise les 100 places (momentum bias).
+# "0" = pas de minimum garanti, le preset peut être éliminé par le scoring.
+PRESET_MIN_QUOTAS: Dict[str, Dict[str, int]] = {
+    "Stable": {
+        "coeur_global": 3,
+        "min_vol_global": 2,
+        "rendement_etf": 2,
+        "sector_defensive": 1,
+        "or_physique": 1,
+    },
+    "Modéré": {
+        "coeur_global": 3,
+        "multi_factor": 2,
+        "qualite_value": 2,
+        "rendement_etf": 2,
+        "croissance_tech": 2,
+        "emergents": 2,
+        "sector_defensive": 1,
+        "sector_cyclical": 2,
+        "sector_energy": 1,
+        "inflation_shield": 1,
+    },
+    "Agressif": {
+        "multi_factor": 2,
+        "croissance_tech": 3,
+        "smid_quality": 1,
+        "emergents": 2,
+        "sector_cyclical": 3,
+        "sector_energy": 1,
+        "commodities_broad": 1,
+    },
+}
+
+# ============= FIX v2.4.0-N: CROSS-PROFILE ETF PENALTY =============
+# Score multiplier pour ETFs qui "appartiennent" naturellement à un profil.
+# Évite SCHY dans Stable ET Modéré, SCHD partout, etc.
+# Un ETF "core income" sera pénalisé dans le profil Agressif.
+CROSS_PROFILE_AFFINITY: Dict[str, Dict[str, float]] = {
+    # preset → {profil: multiplicateur}
+    # < 1.0 = pénalité, > 1.0 = bonus, 1.0 = neutre
+    "min_vol_global":    {"Stable": 1.0, "Modéré": 0.85, "Agressif": 0.60},
+    "rendement_etf":     {"Stable": 1.0, "Modéré": 0.90, "Agressif": 0.70},
+    "sector_defensive":  {"Stable": 1.0, "Modéré": 0.90, "Agressif": 0.65},
+    "sector_cyclical":   {"Stable": 0.70, "Modéré": 0.90, "Agressif": 1.0},
+    "commodities_broad": {"Stable": 0.50, "Modéré": 0.80, "Agressif": 1.0},
+    "smid_quality":      {"Stable": 0.60, "Modéré": 0.85, "Agressif": 1.0},
+    "emergents":         {"Stable": 0.65, "Modéré": 0.90, "Agressif": 1.0},
+    "income_options":    {"Stable": 0.50, "Modéré": 0.75, "Agressif": 1.0},
+}
+
 # FIX v2.2.7: Métriques requises par profil (colonnes qui ne doivent pas être NaN)
 # FIX v2.2.8: Support tuples = "au moins une des colonnes" (OR)
 # Permet de filtrer les ETF mal renseignés selon le niveau d'exigence du profil
@@ -2526,6 +2578,23 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     df["_preset_profile"] = profile
     df["_asset_class"] = "etf"
 
+    # FIX v2.4.0-N: Cross-profile affinity penalty
+    # Pénalise les ETFs "income" dans Agressif, les "cyclical" dans Stable, etc.
+    if "_matched_preset" in df.columns:
+        affinity_adjustments = 0
+        for idx, row in df.iterrows():
+            preset = row.get("_matched_preset", "")
+            if preset in CROSS_PROFILE_AFFINITY:
+                mult = CROSS_PROFILE_AFFINITY[preset].get(profile, 1.0)
+                if mult != 1.0:
+                    df.at[idx, "_profile_score"] = round(df.at[idx, "_profile_score"] * mult, 2)
+                    affinity_adjustments += 1
+        if affinity_adjustments > 0:
+            logger.info(
+                f"[ETF {profile}] Cross-profile affinity: "
+                f"{affinity_adjustments} scores adjusted"
+            )
+
     # FIX v2.2.15: Ne PAS réassigner _matched_preset si déjà peuplé
     # par apply_presets_union() sur l'univers complet (d1).
     # Le recalcul ici serait sur le sous-ensemble filtré (d2)
@@ -2788,9 +2857,52 @@ def select_etfs_for_profile(
     # Tri final
     d4 = d4.sort_values("_profile_score", ascending=False)
     
-    # Top N
+    # FIX v2.4.0-N: Quota-aware Top N selection
+    # Garantit que chaque preset contribue au moins N ETFs
     if top_n and len(d4) > top_n:
-        d4 = d4.head(top_n)
+        quotas = PRESET_MIN_QUOTAS.get(profile, {})
+        
+        if quotas and "_matched_preset" in d4.columns:
+            # Phase 1: Garantir les minimums par preset
+            guaranteed = pd.DataFrame()
+            remaining_indices = set(d4.index)
+            quota_filled = {}
+            
+            for preset, min_n in quotas.items():
+                preset_etfs = d4[
+                    (d4["_matched_preset"] == preset) & 
+                    (d4.index.isin(remaining_indices))
+                ].head(min_n)
+                
+                quota_filled[preset] = len(preset_etfs)
+                if not preset_etfs.empty:
+                    guaranteed = pd.concat([guaranteed, preset_etfs])
+                    remaining_indices -= set(preset_etfs.index)
+            
+            # Phase 2: Remplir les slots restants par meilleur score global
+            slots_remaining = top_n - len(guaranteed)
+            if slots_remaining > 0:
+                rest = d4[d4.index.isin(remaining_indices)].head(slots_remaining)
+                d4 = pd.concat([guaranteed, rest]).sort_values(
+                    "_profile_score", ascending=False
+                )
+            else:
+                d4 = guaranteed.sort_values("_profile_score", ascending=False)
+            
+            # Log quota results
+            preset_dist = d4["_matched_preset"].value_counts().to_dict()
+            logger.info(
+                f"[ETF {profile}] Quota-aware selection: "
+                f"guaranteed={len(guaranteed)}, fill={min(slots_remaining, len(d4)-len(guaranteed))}, "
+                f"total={len(d4)}"
+            )
+            logger.info(f"[ETF {profile}] Preset distribution: {preset_dist}")
+            meta["stages"]["quotas"] = {
+                "guaranteed": quota_filled,
+                "final_distribution": preset_dist,
+            }
+        else:
+            d4 = d4.head(top_n)
     
     meta["final_count"] = len(d4)
     logger.info(f"[ETF {profile}] Sélection finale: {len(d4)} ETF")
