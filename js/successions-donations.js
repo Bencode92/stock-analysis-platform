@@ -4057,10 +4057,15 @@ const SD = (() => {
     // ASIDE STICKY RÉSUMÉ
     // ============================================================
     function updateAside() {
-        // Donors (multi-donateur via PathOptimizer)
+        // Donors — use FamilyGraph checked donors (isDonor=true), NOT PathOptimizer (which includes intermediaries)
         const asideDonor = document.getElementById('aside-donor');
         if (asideDonor) {
-            if (typeof PathOptimizer !== 'undefined') {
+            var fgDonors = typeof FamilyGraph !== 'undefined' && FamilyGraph.getDonors ? FamilyGraph.getDonors() : [];
+            if (fgDonors.length > 0) {
+                asideDonor.innerHTML = fgDonors.map(d => 
+                    `<div><span class="val-highlight">${esc(d.nom)}</span> · ${d.age || '?'} ans</div>`
+                ).join('');
+            } else if (typeof PathOptimizer !== 'undefined') {
                 const pDonors = PathOptimizer.getDonors();
                 if (pDonors.length > 0) {
                     asideDonor.innerHTML = pDonors.map(d => 
