@@ -193,49 +193,93 @@ const StrategyAdvisor = (() => {
     // 3. DIAGNOSTICS — Prose d'expert personnalisée par actif
     // ================================================================
 
+    // Store user decisions
+    var decisions = {};
+
+    function getDecision(assetId, questionId) {
+        return decisions[assetId + ':' + questionId] || null;
+    }
+    function setDecision(assetId, questionId, value) {
+        decisions[assetId + ':' + questionId] = value;
+        // Re-render after decision
+        render();
+    }
+
     function buildImmoDiagnostic(im, ctx) {
-        var d = [];
+        var prose = [];
+        var questions = [];
         var label = esc(im.label || 'Ce bien');
         var val = im.valeur || 0;
         var usage = im.usageActuel || 'rp';
         var structure = im.structure || 'direct';
+        var assetId = 'immo-' + im.id;
 
         // ── Nature du bien ──
         if (usage === 'rp') {
-            d.push('<strong>' + label + '</strong> est votre <strong>résidence principale</strong>, estimée à ' + fmt(val) + '.');
-            d.push('En tant que RP, ce bien bénéficie d\'un <strong>abattement de 20% en succession</strong> (art. 764 bis CGI) si le conjoint ou un enfant y habite au moment du décès. Il n\'y a <strong>aucune plus-value à la vente</strong>.');
+            prose.push('<strong>' + label + '</strong> est votre <strong>résidence principale</strong>, estimée à ' + fmt(val) + '. En tant que RP : <strong>abattement 20% en succession</strong> (art. 764 bis CGI) et <strong>aucune plus-value à la vente</strong>.');
 
-            // Key question
             ctx.donors.forEach(function(donor) {
-                if (donor.age >= 80) {
-                    d.push('La question clé : <strong>' + esc(donor.nom) + ' souhaite-t-elle continuer à y vivre ?</strong> Si oui, la donation de la nue-propriété permet de transmettre tout en gardant l\'usage du logement. Si un départ en établissement est envisagé, la vente (exonérée de PV) puis le réinvestissement en assurance-vie ou don manuel pourrait être plus pertinent.');
-                } else {
-                    d.push(esc(donor.nom) + ' occupe ce logement — la donation de la nue-propriété lui permet de <strong>rester chez elle tout en transmettant</strong> à moindre coût fiscal.');
-                }
+                var donorLabel = esc(donor.nom);
+                questions.push({
+                    id: 'rp-intention-' + donor.id,
+                    text: donorLabel + ' souhaite-t-elle continuer à occuper ce logement ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'rester', label: '🏠 Oui, rester dans le logement', hint: '→ Donation NP recommandée (conserve l\'usage)' },
+                        { value: 'etablissement', label: '🏥 Départ en établissement envisagé', hint: '→ Vente RP (exonérée PV) + réinvestir en AV/don' },
+                        { value: 'indecis', label: '🤔 Pas encore décidé', hint: '→ On compare toutes les options' }
+                    ]
+                });
             });
 
         } else if (usage === 'locatif') {
             var loyer = im.loyerMensuel || 0;
-            d.push('<strong>' + label + '</strong> est un <strong>bien locatif</strong> estimé à ' + fmt(val) + (loyer > 0 ? ', générant <strong>' + fmt(loyer) + '/mois</strong> de loyers (' + fmt(loyer * 12) + '/an)' : '') + '.');
+            prose.push('<strong>' + label + '</strong> est un <strong>bien locatif</strong> estimé à ' + fmt(val) + (loyer > 0 ? ', générant <strong>' + fmt(loyer) + '/mois</strong> (' + fmt(loyer * 12) + '/an)' : '') + '.');
 
-            if (loyer > 0) {
-                d.push('Ces revenus locatifs sont importants pour le donateur. Le <strong>démembrement</strong> (donation de la NP) permet de transmettre le bien tout en <strong>conservant les loyers</strong> jusqu\'au décès.');
+            if (im.typeLocation && (im.typeLocation.indexOf('meuble') >= 0)) {
+                prose.push('⚠️ Location meublée : en cas d\'apport en SCI IR, risque de requalification IS si revenus meublés > 10%.');
             }
 
-            // Location type
-            if (im.typeLocation === 'meuble_longue_duree' || im.typeLocation === 'meuble_courte' || im.typeLocation === 'meuble_saisonnier') {
-                d.push('⚠️ Ce bien est en <strong>location meublée</strong>. En cas d\'apport en SCI IR, attention au seuil de 10% de revenus meublés au-delà duquel la SCI risque d\'être <strong>requalifiée en IS</strong>.');
-            }
-
-            // PV latente
             if (im.prixAcquisition > 0 && im.prixAcquisition < val) {
-                var pv = val - im.prixAcquisition;
-                d.push('La <strong>plus-value latente</strong> est estimée à ' + fmt(pv) + '. En cas de vente, elle serait imposée à 36,2% (IR 19% + PS 17,2%) après abattements pour durée de détention. <strong>Donner avant de vendre</strong> purge cette plus-value (le donataire revend à la valeur déclarée dans l\'acte).');
+                prose.push('Plus-value latente estimée : <strong>' + fmt(val - im.prixAcquisition) + '</strong>. Donner avant de vendre purge cette PV.');
             }
+
+            questions.push({
+                id: 'locatif-revenus',
+                text: 'Les revenus locatifs sont-ils importants pour le donateur ?',
+                type: 'qcm',
+                options: [
+                    { value: 'essentiels', label: '💰 Oui, essentiels au train de vie', hint: '→ Démembrement NP (conserve les loyers)' },
+                    { value: 'complementaires', label: '📊 Complémentaires mais pas vitaux', hint: '→ Démembrement NP ou SCI (conserve la gérance)' },
+                    { value: 'non', label: '❌ Non, le donateur peut s\'en passer', hint: '→ Donation PP possible (plus simple)' }
+                ]
+            });
+
+            questions.push({
+                id: 'locatif-horizon',
+                text: 'Quel est le projet pour ce bien ?',
+                type: 'qcm',
+                options: [
+                    { value: 'conserver', label: '🏠 Conserver et continuer à louer', hint: '→ Donation NP ou SCI + NP' },
+                    { value: 'vendre_court', label: '🏷️ Vente envisagée (< 3 ans)', hint: '→ Donner AVANT de vendre (purge PV)' },
+                    { value: 'vendre_long', label: '📅 Vente possible à long terme (> 5 ans)', hint: '→ SCI (souplesse) ou conserver' },
+                    { value: 'transmettre', label: '🎁 Transmettre rapidement', hint: '→ Donation PP ou NP selon contrôle souhaité' }
+                ]
+            });
 
         } else if (usage === 'rs') {
-            d.push('<strong>' + label + '</strong> est une <strong>résidence secondaire</strong> estimée à ' + fmt(val) + '.');
-            d.push('Contrairement à la RP, la vente d\'une résidence secondaire est <strong>soumise à la plus-value immobilière</strong> (IR 19% + PS 17,2%). La donation avant vente permet de <strong>purger la plus-value</strong>.');
+            prose.push('<strong>' + label + '</strong> est une <strong>résidence secondaire</strong> estimée à ' + fmt(val) + '. La vente est soumise à la <strong>plus-value immobilière</strong> (36,2%). La donation avant vente purge la PV.');
+
+            questions.push({
+                id: 'rs-projet',
+                text: 'Quel est le projet pour cette résidence secondaire ?',
+                type: 'qcm',
+                options: [
+                    { value: 'garder', label: '🏖️ La garder (usage familial)', hint: '→ Donation NP (famille conserve l\'usage)' },
+                    { value: 'vendre', label: '🏷️ La vendre', hint: '→ Donner avant de vendre = purge PV' },
+                    { value: 'transmettre', label: '🎁 La transmettre directement', hint: '→ Donation PP ou NP' }
+                ]
+            });
         }
 
         // ── Structure de détention ──
@@ -243,13 +287,11 @@ const StrategyAdvisor = (() => {
             var ownerNames = (im.owners || []).map(function(o) {
                 var name = o.personNom || '';
                 if (!name && o.personId) {
-                    // Resolve from donors/intermediaries
                     var allP = ctx.donors.concat(ctx.intermediaires || []);
                     var pidStr = String(o.personId);
                     allP.forEach(function(p) {
                         if (p.nom && ('d-' + (p._poId >= 0 ? p._poId : p.id) === pidStr || 'd-' + p.id === pidStr)) name = p.nom;
                     });
-                    // Also try FamilyGraph
                     if (!name) {
                         var fg2 = FG();
                         if (fg2 && fg2.getPersons) {
@@ -263,41 +305,59 @@ const StrategyAdvisor = (() => {
                 }
                 return (name || '?') + ' (' + (o.quote || '?') + '%)';
             }).join(', ');
-            d.push('');
-            d.push('Ce bien est détenu en <strong>indivision</strong> entre ' + ownerNames + '. L\'indivision complique la transmission : chaque indivisaire ne peut donner que <strong>sa propre quote-part</strong>. Deux options :');
-            d.push('→ <em>Sortir de l\'indivision</em> d\'abord (rachat de parts, partage notarié, vente), puis transmettre la pleine propriété');
-            d.push('→ <em>Donner la quote-part en l\'état</em> (possible mais le nu-propriétaire sera en indivision avec les autres — moins souple)');
-        } else if (structure === 'demembre') {
-            d.push('Ce bien est déjà <strong>démembré</strong>. Seul l\'usufruit ou la nue-propriété peut être transmis selon la position du donateur.');
-        } else if (structure === 'sci_ir' || structure === 'sci_is') {
-            d.push('Ce bien est détenu via une <strong>SCI</strong>. La transmission se fera par donation des parts sociales (avec décote d\'illiquidité ~15%).');
+
+            prose.push('Ce bien est en <strong>indivision</strong> entre ' + ownerNames + '. Chaque indivisaire ne peut donner que <strong>sa propre quote-part</strong>.');
+
+            questions.push({
+                id: 'indivision-sortie',
+                text: 'Comment souhaitez-vous traiter l\'indivision ?',
+                type: 'qcm',
+                options: [
+                    { value: 'sortir', label: '🔓 Sortir de l\'indivision d\'abord', hint: '→ Rachat de parts ou partage notarié, puis donation de la PP' },
+                    { value: 'donner_qp', label: '📝 Donner la quote-part en l\'état', hint: '→ Plus rapide mais le donataire reste en indivision' },
+                    { value: 'sci', label: '🏢 Apporter en SCI pour structurer', hint: '→ SCI = décote + contrôle + sortie progressive' },
+                    { value: 'rien', label: '⏳ Ne rien changer pour l\'instant', hint: '→ Transmission en succession (quote-part)' }
+                ]
+            });
         }
 
         // ── Âge et démembrement ──
         ctx.donors.forEach(function(donor) {
-            // Check if this donor owns this asset
             var owns = !im.owners || im.owners.length === 0 || im.owners.some(function(o) {
                 return o.personNom === donor.nom || String(o.personId) === 'd-' + (donor._poId >= 0 ? donor._poId : donor.id);
             });
             if (!owns) return;
 
             var npR = getNPRatio(donor.age);
-            d.push('');
-            d.push('À <strong>' + donor.age + ' ans</strong>, la nue-propriété représente <strong>' + Math.round(npR * 100) + '%</strong> de la valeur (barème art. 669 CGI). ' +
-                (npR >= 0.8 ? 'C\'est un ratio élevé — l\'avantage du démembrement est limité par l\'âge avancé. ' : '') +
-                (npR <= 0.5 ? 'Le démembrement est très avantageux à cet âge : les droits portent sur seulement ' + Math.round(npR * 100) + '% de la valeur. ' : '') +
-                'L\'usufruit (' + Math.round((1 - npR) * 100) + '%) permet de conserver ' + (usage === 'locatif' ? 'les loyers' : 'l\'usage du bien') + '.');
+            prose.push('À <strong>' + donor.age + ' ans</strong> (barème art. 669) : NP = <strong>' + Math.round(npR * 100) + '%</strong>, usufruit = ' + Math.round((1 - npR) * 100) + '%. ' +
+                (npR >= 0.8 ? 'Ratio élevé — l\'avantage fiscal du démembrement est réduit à cet âge.' : 'Le démembrement est avantageux : droits sur ' + Math.round(npR * 100) + '% seulement.'));
         });
 
-        return d.join(' ');
+        // ── Chemin indirect ? ──
+        var hasGPDonor = ctx.donors.some(function(d) { return d.role === 'grand_parent' || d.role === 'arr_grand_parent'; });
+        if (hasGPDonor && ctx.intermediaires.length > 0) {
+            questions.push({
+                id: 'chemin-indirect',
+                text: 'Envisagez-vous de passer par un intermédiaire (ex: Gérald) pour cumuler les abattements ?',
+                type: 'qcm',
+                options: [
+                    { value: 'oui', label: '✅ Oui, si c\'est plus avantageux', hint: '→ On calcule le chemin indirect optimal' },
+                    { value: 'non', label: '❌ Non, donation directe uniquement', hint: '→ Seul le chemin direct sera proposé' },
+                    { value: 'comparer', label: '🔄 Comparer les deux', hint: '→ On affiche direct ET indirect côte à côte' }
+                ]
+            });
+        }
+
+        return { prose: prose.join(' '), questions: questions };
     }
 
     function buildFinanceDiagnostic(fin, ctx) {
-        var d = [];
+        var prose = [];
+        var questions = [];
         var cap = fin.valeur || 0;
         var FISC = ctx.FISC;
+        var assetId = 'fin-' + fin.id;
 
-        // Find owner among donors
         var donor = ctx.donors[0];
         if (fin.ownerId) {
             var po2 = PO();
@@ -314,59 +374,94 @@ const StrategyAdvisor = (() => {
             }
         }
         var donorAge = donor ? donor.age : 60;
+        var donorName = donor ? esc(donor.nom) : '?';
 
         if (fin.type === 'assurance_vie') {
             var isAvant70 = donorAge < 70 || (fin.ageVersement && fin.ageVersement < 70);
 
-            d.push('Ce <strong>contrat d\'assurance-vie</strong> d\'une valeur de ' + fmt(cap) + ' est souscrit par ' + esc(donor ? donor.nom : '?') + '.');
+            prose.push('<strong>Assurance-vie</strong> de ' + fmt(cap) + ' souscrite par ' + donorName + '.');
 
             if (isAvant70) {
-                d.push('Les primes ont été versées <strong>avant 70 ans</strong> → régime fiscal de l\'<strong>art. 990 I</strong> : abattement de <strong>' + fmt(FISC.av990I.abattement) + ' par bénéficiaire</strong>, puis 20% jusqu\'à ' + fmt(FISC.av990I.seuil2) + ' et 31,25% au-delà. C\'est le régime le plus favorable.');
-
-                if (cap > FISC.av990I.abattement) {
-                    d.push('Le capital (' + fmt(cap) + ') <strong>dépasse l\'abattement</strong> de ' + fmt(FISC.av990I.abattement) + '. Au-delà de ce seuil, un <strong>contrat de capitalisation démembré</strong> (donation de la NP) peut être fiscalement plus avantageux : les droits portent sur la nue-propriété seulement (' + Math.round(getNPRatio(donorAge) * 100) + '% à ' + donorAge + ' ans), avec l\'antériorité fiscale conservée.');
+                prose.push('Primes versées <strong>avant 70 ans → art. 990 I</strong> : abattement <strong>' + fmt(FISC.av990I.abattement) + '/bénéficiaire</strong>, puis 20% / 31,25%.');
+                if (cap <= FISC.av990I.abattement) {
+                    prose.push('Le capital reste sous l\'abattement → <strong>0 € de droits au décès</strong>. Situation idéale.');
                 } else {
-                    d.push('Le capital reste <strong>sous l\'abattement</strong> de ' + fmt(FISC.av990I.abattement) + ' → au décès, le bénéficiaire recevra le capital <strong>en franchise de droits</strong>. C\'est la situation idéale — conservez ce contrat.');
+                    prose.push('Le capital dépasse l\'abattement de ' + fmt(FISC.av990I.abattement) + '. Au-delà, un contrat de capitalisation démembré peut être plus avantageux.');
                 }
             } else {
-                d.push('Le souscripteur ayant <strong>plus de 70 ans</strong>, les primes versées relèvent de l\'<strong>art. 757 B</strong> : abattement global de seulement <strong>' + fmt(FISC.av757B.abattementGlobal) + '</strong> (partagé entre tous les bénéficiaires), puis barème de droit commun.');
-                d.push('<strong>Point positif :</strong> les intérêts et plus-values acquis depuis la souscription sont <strong>totalement exonérés</strong>. Seules les primes versées sont taxées.');
-                d.push('');
-                d.push('<strong>Stratégie à envisager :</strong> plutôt que de laisser le capital en AV (757B = peu d\'abattement), effectuez des <strong>rachats partiels annuels</strong> de ' + fmt(4600) + ' (exonérés d\'IR après 8 ans, art. 125-0 A CGI). Les sommes rachetées peuvent être transmises via <strong>don manuel</strong> (dans la limite des abattements disponibles) ou en <strong>présent d\'usage</strong> (anniversaire, Noël — non rapportable si proportionné au patrimoine).');
+                prose.push(donorName + ' ayant <strong>plus de 70 ans → art. 757 B</strong> : abattement global <strong>' + fmt(FISC.av757B.abattementGlobal) + '</strong> seulement. Mais les <strong>intérêts acquis sont exonérés</strong> (seules les primes taxées).');
+            }
 
-                if (cap > 100000) {
-                    d.push('');
-                    d.push('Avec ' + fmt(cap) + ' en AV, une <strong>alternative sérieuse</strong> est le <strong>contrat de capitalisation</strong> : souscrire un capi, y transférer le capital, puis donner la nue-propriété. Les droits portent sur ' + Math.round(getNPRatio(donorAge) * 100) + '% seulement, et le quasi-usufruit permet de continuer à utiliser le capital. La créance de restitution sera déductible de la succession.');
-                }
+            questions.push({
+                id: 'av-strategie',
+                text: 'Quelle approche pour cette assurance-vie ?',
+                type: 'qcm',
+                options: [
+                    { value: 'conserver', label: '🛡️ Conserver le contrat jusqu\'au décès', hint: '→ Capital transmis au bénéficiaire (art. ' + (isAvant70 ? '990 I' : '757 B') + ')' },
+                    { value: 'rachats', label: '💸 Rachats progressifs + dons', hint: '→ ' + fmt(4600) + '/an exonéré IR (après 8 ans) + don manuel ou cadeau' },
+                    { value: 'capi', label: '📊 Transformer en contrat de capitalisation', hint: '→ Donner la NP, droits sur ' + Math.round(getNPRatio(donorAge) * 100) + '% seulement, antériorité conservée' },
+                    { value: 'comparer', label: '🔄 Voir toutes les options', hint: '→ Comparaison chiffrée complète' }
+                ]
+            });
+
+            if (!isAvant70 && cap > 50000) {
+                questions.push({
+                    id: 'av-usage-rachats',
+                    text: donorName + ' a-t-elle besoin de revenus complémentaires issus de cette AV ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'oui', label: '💰 Oui, les rachats sont nécessaires', hint: '→ Rachats réguliers + transmission du solde au décès' },
+                        { value: 'non', label: '❌ Non, l\'AV est un placement de transmission', hint: '→ Capi démembré ou modifier clause bénéficiaire' }
+                    ]
+                });
             }
 
             // Clause bénéficiaire
-            if (fin.avBeneficiaires && fin.avBeneficiaires.length > 0) {
-                var benNames = fin.avBeneficiaires.map(function(b) { return (b.person ? b.person.prenom || b.person.nom : '?') + ' (' + (b.pct || '?') + '%)'; }).join(', ');
-                d.push('');
-                d.push('Clause bénéficiaire actuelle : ' + benNames + '. Vérifiez qu\'elle correspond à vos souhaits de transmission.');
-            } else {
-                d.push('');
-                d.push('⚠️ <strong>Clause bénéficiaire non définie</strong> dans l\'outil. Vérifiez votre contrat — c\'est elle qui détermine qui reçoit le capital au décès.');
+            if (!fin.avBeneficiaires || fin.avBeneficiaires.length === 0) {
+                prose.push('⚠️ <strong>Clause bénéficiaire non définie</strong> — c\'est elle qui détermine qui reçoit le capital.');
+                questions.push({
+                    id: 'av-clause',
+                    text: 'Qui doit être désigné bénéficiaire de cette AV ?',
+                    type: 'text',
+                    placeholder: 'Ex: Andréa en PP, ou clause démembrée (US Gérald, NP Andréa)...'
+                });
             }
 
         } else if (fin.type === 'contrat_capi') {
-            d.push('Ce <strong>contrat de capitalisation</strong> d\'une valeur de ' + fmt(cap) + ' peut être transmis par <strong>donation de la nue-propriété</strong>.');
-            d.push('Avantages spécifiques du capi vs l\'AV : l\'<strong>antériorité fiscale est conservée</strong> (pas de purge des PV au décès), et le <strong>quasi-usufruit</strong> est possible : le donateur continue d\'utiliser le capital, et la créance de restitution sera <strong>déductible de l\'actif successoral</strong>.');
-            d.push('À ' + donorAge + ' ans, la NP = ' + Math.round(getNPRatio(donorAge) * 100) + '% → droits calculés sur ' + fmt(Math.round(cap * getNPRatio(donorAge))) + ' au lieu de ' + fmt(cap) + '.');
+            prose.push('<strong>Contrat de capitalisation</strong> de ' + fmt(cap) + '. Avantages spécifiques : <strong>antériorité fiscale conservée</strong>, quasi-usufruit possible (créance déductible au décès).');
+            prose.push('À ' + donorAge + ' ans, NP = ' + Math.round(getNPRatio(donorAge) * 100) + '% → droits sur ' + fmt(Math.round(cap * getNPRatio(donorAge))) + ' au lieu de ' + fmt(cap) + '.');
+
+            questions.push({
+                id: 'capi-strategie',
+                text: 'Souhaitez-vous démembrer ce contrat ?',
+                type: 'qcm',
+                options: [
+                    { value: 'demembrer', label: '🔑 Oui, donner la NP', hint: '→ Droits réduits, quasi-usufruit possible' },
+                    { value: 'conserver', label: '⏳ Non, conserver en l\'état', hint: '→ Transmission en succession au décès' }
+                ]
+            });
 
         } else if (fin.type === 'pea' || fin.type === 'pea_pme') {
-            d.push('Le <strong>PEA</strong> de ' + fmt(cap) + ' ne peut pas être transmis par donation (le PEA est personnel et intransmissible du vivant). Au décès, il est clôturé et les gains sont exonérés d\'IR (seuls les prélèvements sociaux s\'appliquent). Le capital entre dans la succession.');
-            d.push('Stratégie : si vous souhaitez transmettre les liquidités, effectuez un <strong>retrait du PEA</strong> (exonéré d\'IR après 5 ans) puis transmettez via don manuel ou réinvestissez en AV/capi.');
+            prose.push('<strong>PEA</strong> de ' + fmt(cap) + '. Le PEA est <strong>personnel et intransmissible</strong> du vivant. Au décès : clôture, gains exonérés d\'IR (seuls PS s\'appliquent), capital entre dans la succession.');
+            
+            questions.push({
+                id: 'pea-strategie',
+                text: 'Souhaitez-vous utiliser le PEA pour transmettre ?',
+                type: 'qcm',
+                options: [
+                    { value: 'retrait', label: '💸 Retirer et transmettre via don manuel', hint: '→ Retrait exonéré IR après 5 ans, puis don' },
+                    { value: 'conserver', label: '⏳ Garder le PEA (succession)', hint: '→ Gains exonérés IR au décès' }
+                ]
+            });
 
         } else if (fin.type === 'cto') {
-            d.push('Le <strong>compte-titres</strong> de ' + fmt(cap) + ' peut être transmis par donation. La donation <strong>purge la plus-value latente</strong> (le donataire acquiert les titres à leur valeur au jour de la donation). C\'est un avantage significatif si les titres ont fortement augmenté.');
+            prose.push('<strong>Compte-titres</strong> de ' + fmt(cap) + '. La donation <strong>purge la plus-value latente</strong> — avantage significatif si les titres ont fortement progressé.');
 
         } else {
-            d.push('Placement financier de ' + fmt(cap) + '.');
+            prose.push('Placement financier de ' + fmt(cap) + '.');
         }
 
-        return d.join(' ');
+        return { prose: prose.join(' '), questions: questions };
     }
 
 
@@ -383,6 +478,7 @@ const StrategyAdvisor = (() => {
             valeur: im.valeur || 0,
             options: [],
             alerts: [],
+            questions: [],
             diagnostic: '' // Expert narrative
         };
 
@@ -391,7 +487,9 @@ const StrategyAdvisor = (() => {
         var FISC = ctx.FISC;
 
         // ── BUILD EXPERT DIAGNOSTIC ──
-        result.diagnostic = buildImmoDiagnostic(im, ctx);
+        var diag = buildImmoDiagnostic(im, ctx);
+        result.diagnostic = diag.prose;
+        result.questions = diag.questions;
 
         // Find owners of this asset among donors
         var donorOwners = [];
@@ -568,14 +666,104 @@ const StrategyAdvisor = (() => {
             });
         });
 
-        // Sort options: lowest droits first
-        result.options.sort(function(a, b) { return a.droits - b.droits; });
-        if (result.options.length > 0) {
-            result.options[0].isBest = true;
-            result.options[0].rank = 0;
-        }
+        // Sort and filter based on user decisions
+        var assetKey = 'immo-' + im.id;
+        result.options = applyDecisions(result.options, assetKey, im, ctx);
 
         return result;
+    }
+
+    /**
+     * applyDecisions — Filter and re-rank options based on user QCM answers
+     */
+    function applyDecisions(options, assetKey, asset, ctx) {
+        // ── Hide options that don't match decisions ──
+        var filtered = options.slice();
+
+        // RP intention
+        var rpIntent = getDecision(assetKey, 'rp-intention-' + (ctx.donors[0] ? ctx.donors[0].id : ''));
+        if (!rpIntent) rpIntent = getDecision(assetKey, 'rp-intention-0');
+        if (rpIntent === 'etablissement') {
+            // Boost vente option, deprioritize NP
+            filtered.forEach(function(o) {
+                if (o.id === 'vendre') o.rank = 0;
+                if (o.id.indexOf('np') >= 0 || o.id.indexOf('sci') >= 0) o.rank += 5;
+            });
+        } else if (rpIntent === 'rester') {
+            // Boost NP options
+            filtered.forEach(function(o) {
+                if (o.id === 'donation_np' || o.id.indexOf('indirect') >= 0) o.rank = Math.max(0, o.rank - 2);
+                if (o.id === 'vendre') o.rank += 10;
+            });
+        }
+
+        // Locatif revenus
+        var locRevenu = getDecision(assetKey, 'locatif-revenus');
+        if (locRevenu === 'essentiels') {
+            filtered.forEach(function(o) {
+                if (o.id === 'donation_np' || o.id === 'sci_np' || o.id.indexOf('indirect') >= 0 || o.id === 'capi_demembre') o.rank = Math.max(0, o.rank - 2);
+                // Hide PP donation
+                if (o.id === 'donation_pp') o.hidden = true;
+            });
+        } else if (locRevenu === 'non') {
+            filtered.forEach(function(o) {
+                if (o.id === 'donation_pp') o.rank = Math.max(0, o.rank - 1);
+            });
+        }
+
+        // Locatif horizon
+        var locHorizon = getDecision(assetKey, 'locatif-horizon');
+        if (locHorizon === 'vendre_court') {
+            filtered.forEach(function(o) {
+                if (o.id === 'vendre') o.rank = 0;
+                if (o.id === 'donation_np') { o.rank = 1; o.explain += '<br><strong>💡 Astuce :</strong> donner la NP AVANT de vendre → purge de la plus-value. Le donataire revend ensuite sans PV.'; }
+            });
+        } else if (locHorizon === 'conserver') {
+            filtered.forEach(function(o) {
+                if (o.id === 'vendre') o.rank += 10;
+            });
+        }
+
+        // Indivision
+        var indivision = getDecision(assetKey, 'indivision-sortie');
+        if (indivision === 'sortir') {
+            filtered.forEach(function(o) {
+                if (o.id === 'donation_np' || o.id === 'donation_pp') {
+                    o.explain = '<strong>Après sortie d\'indivision :</strong> ' + o.explain;
+                }
+            });
+        } else if (indivision === 'sci') {
+            filtered.forEach(function(o) {
+                if (o.id === 'sci_np') o.rank = 0;
+            });
+        } else if (indivision === 'rien') {
+            // Only show succession
+            filtered.forEach(function(o) {
+                if (o.id !== 'succession') o.rank += 10;
+            });
+        }
+
+        // Chemin indirect preference
+        var indirect = getDecision(assetKey, 'chemin-indirect');
+        if (indirect === 'non') {
+            filtered = filtered.filter(function(o) { return o.id.indexOf('indirect') < 0; });
+        } else if (indirect === 'oui') {
+            filtered.forEach(function(o) {
+                if (o.id.indexOf('indirect') >= 0) o.rank = Math.max(0, o.rank - 3);
+            });
+        }
+
+        // Remove hidden
+        filtered = filtered.filter(function(o) { return !o.hidden; });
+
+        // Re-sort by rank then by droits
+        filtered.sort(function(a, b) { return a.rank !== b.rank ? a.rank - b.rank : a.droits - b.droits; });
+
+        // Re-mark best
+        filtered.forEach(function(o) { o.isBest = false; });
+        if (filtered.length > 0) filtered[0].isBest = true;
+
+        return filtered;
     }
 
 
@@ -588,14 +776,16 @@ const StrategyAdvisor = (() => {
             asset: fin, type: 'finance',
             label: fin.type === 'assurance_vie' ? 'Assurance-vie' : fin.type === 'contrat_capi' ? 'Contrat de capitalisation' : fin.type === 'pea' ? 'PEA' : 'Placement financier',
             valeur: fin.valeur || 0,
-            options: [], alerts: [],
+            options: [], alerts: [], questions: [],
             diagnostic: ''
         };
 
         if (result.valeur <= 0) return result;
 
         // Expert diagnostic
-        result.diagnostic = buildFinanceDiagnostic(fin, ctx);
+        var diag = buildFinanceDiagnostic(fin, ctx);
+        result.diagnostic = diag.prose;
+        result.questions = diag.questions;
 
         var FISC = ctx.FISC;
 
@@ -731,8 +921,20 @@ const StrategyAdvisor = (() => {
             });
         });
 
-        // Sort and mark best
-        result.options.sort(function(a, b) { return a.droits - b.droits; });
+        // Sort and filter based on decisions
+        var assetKey = 'fin-' + fin.id;
+        var avStrat = getDecision(assetKey, 'av-strategie');
+        
+        if (avStrat === 'rachats') {
+            result.options.forEach(function(o) { if (o.id === 'rachats_don') o.rank = 0; });
+        } else if (avStrat === 'capi') {
+            result.options.forEach(function(o) { if (o.id === 'capi_alt' || o.id === 'capi_demembre') o.rank = 0; });
+        } else if (avStrat === 'conserver') {
+            result.options.forEach(function(o) { if (o.id.indexOf('990') >= 0 || o.id.indexOf('757') >= 0) o.rank = 0; });
+        }
+
+        result.options.sort(function(a, b) { return a.rank !== b.rank ? a.rank - b.rank : a.droits - b.droits; });
+        result.options.forEach(function(o) { o.isBest = false; });
         if (result.options.length > 0) result.options[0].isBest = true;
 
         return result;
@@ -822,6 +1024,46 @@ const StrategyAdvisor = (() => {
                 html += '</div>';
             }
 
+            // Interactive questions
+            if (asset.questions && asset.questions.length > 0) {
+                html += '<div style="margin-bottom:16px;">';
+                asset.questions.forEach(function(q) {
+                    var assetKey = asset.type + '-' + (asset.asset.id || idx);
+                    var currentVal = getDecision(assetKey, q.id);
+
+                    html += '<div style="padding:12px 16px;border-radius:10px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.1);margin-bottom:8px;">';
+                    html += '<div style="font-size:.8rem;font-weight:600;color:var(--text-primary);margin-bottom:8px;"><i class="fas fa-question-circle" style="color:#3b82f6;margin-right:6px;"></i>' + q.text + '</div>';
+
+                    if (q.type === 'qcm') {
+                        html += '<div style="display:grid;gap:6px;">';
+                        q.options.forEach(function(opt) {
+                            var isSelected = currentVal === opt.value;
+                            var bg = isSelected ? 'rgba(16,185,129,.1)' : 'rgba(198,134,66,.03)';
+                            var border = isSelected ? 'rgba(16,185,129,.3)' : 'rgba(198,134,66,.08)';
+                            var checkIcon = isSelected ? '<i class="fas fa-check-circle" style="color:var(--accent-green);margin-right:6px;"></i>' : '<i class="far fa-circle" style="color:var(--text-muted);margin-right:6px;opacity:.5;"></i>';
+
+                            html += '<div style="padding:8px 12px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';cursor:pointer;transition:all .2s;" ';
+                            html += 'onmouseover="this.style.borderColor=\'rgba(16,185,129,.3)\'" onmouseout="this.style.borderColor=\'' + border + '\'" ';
+                            html += 'onclick="StrategyAdvisor.decide(\'' + assetKey + '\',\'' + q.id + '\',\'' + opt.value + '\')">';
+                            html += '<div style="display:flex;align-items:center;gap:8px;">';
+                            html += checkIcon;
+                            html += '<div style="flex:1;">';
+                            html += '<div style="font-size:.76rem;font-weight:' + (isSelected ? '600' : '400') + ';color:var(--text-primary);">' + opt.label + '</div>';
+                            if (opt.hint) html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">' + opt.hint + '</div>';
+                            html += '</div></div></div>';
+                        });
+                        html += '</div>';
+                    } else if (q.type === 'text') {
+                        html += '<input type="text" value="' + esc(currentVal || '') + '" placeholder="' + esc(q.placeholder || '') + '" ';
+                        html += 'style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid rgba(198,134,66,.15);background:var(--bg-input);color:var(--text-primary);font-size:.76rem;" ';
+                        html += 'onchange="StrategyAdvisor.decide(\'' + assetKey + '\',\'' + q.id + '\',this.value)">';
+                    }
+
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
             // Options
             asset.options.forEach(function(opt, oi) {
                 var bg = opt.isBest ? 'rgba(16,185,129,.06)' : opt.isWorst ? 'rgba(255,107,107,.04)' : 'rgba(198,134,66,.02)';
@@ -871,6 +1113,44 @@ const StrategyAdvisor = (() => {
             html += '</div>'; // section-card
         });
 
+        // ── SUMMARY BAR ──
+        if (result.assets.length > 0) {
+            var totalDroitsBest = 0, totalDroitsSucc = 0, totalNetBest = 0;
+            var chosenStrats = [];
+
+            result.assets.forEach(function(asset) {
+                var best = asset.options.find(function(o) { return o.isBest; });
+                var worst = asset.options.find(function(o) { return o.isWorst; });
+                if (best) { totalDroitsBest += best.droits; totalNetBest += best.net; }
+                if (worst) totalDroitsSucc += worst.droits;
+                if (best && !best.isWorst) {
+                    chosenStrats.push(best.icon + ' ' + esc(asset.label) + ' → ' + esc(best.name.split('—')[0].trim()));
+                }
+            });
+
+            var eco = totalDroitsSucc - totalDroitsBest;
+
+            html += '<div style="padding:18px 22px;border-radius:14px;background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(198,134,66,.04));border:1px solid rgba(16,185,129,.15);margin-top:16px;">';
+            html += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-green);margin-bottom:10px;"><i class="fas fa-check-double" style="margin-right:6px;"></i> Résumé de la stratégie recommandée</div>';
+
+            // KPI row
+            html += '<div style="display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;">';
+            html += '<div style="flex:1;min-width:120px;text-align:center;"><div style="font-size:.58rem;text-transform:uppercase;color:var(--text-muted);">Droits optimisés</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-green);">' + fmt(totalDroitsBest) + '</div></div>';
+            html += '<div style="flex:1;min-width:120px;text-align:center;"><div style="font-size:.58rem;text-transform:uppercase;color:var(--text-muted);">Droits succession</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-coral);">' + fmt(totalDroitsSucc) + '</div></div>';
+            if (eco > 0) {
+                html += '<div style="flex:1;min-width:120px;text-align:center;"><div style="font-size:.58rem;text-transform:uppercase;color:var(--text-muted);">Économie</div><div style="font-size:1.1rem;font-weight:800;color:var(--primary-color);">' + fmt(eco) + '</div></div>';
+            }
+            html += '</div>';
+
+            // Strategy list
+            if (chosenStrats.length > 0) {
+                html += '<div style="font-size:.72rem;color:var(--text-secondary);line-height:1.8;">';
+                chosenStrats.forEach(function(s) { html += '<div>' + s + '</div>'; });
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
         container.innerHTML = html;
     }
 
@@ -881,7 +1161,9 @@ const StrategyAdvisor = (() => {
     return {
         analyze: analyze,
         render: render,
-        buildContext: buildContext
+        buildContext: buildContext,
+        decide: setDecision,
+        getDecisions: function() { return decisions; }
     };
 
 })();
