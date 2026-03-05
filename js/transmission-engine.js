@@ -34,7 +34,8 @@ const TransmissionEngine = (() => {
             enfant: 'enfant', petit_enfant: 'petit-enfant',
             arriere_petit_enfant: 'arrière-petit-enfant',
             conjoint_pacs: 'conjoint/PACS', conjoint_pacs_donation: 'conjoint/PACS',
-            frere_soeur: 'frère/sœur', neveu_niece: 'neveu/nièce', tiers: 'tiers'
+            frere_soeur: 'frère/sœur', neveu_niece: 'neveu/nièce', tiers: 'tiers',
+            parent: 'parent', grand_parent: 'grand-parent', arr_grand_parent: 'arrière-grand-parent'
         };
         return map[lien] || lien;
     }
@@ -228,9 +229,9 @@ const TransmissionEngine = (() => {
                     var val = Math.round((im.valeur || 0) * quote);
                     immo += val;
                     details.push({
-                        type: 'immo', label: im.titre || 'Bien immo',
+                        type: 'immo', label: im.label || 'Bien immo',
                         valeur: val, quote: o.quote || 100, role: o.role || 'pp',
-                        sousType: im.type || '?', structure: im.structure || 'pp'
+                        sousType: im.usageActuel || '?', structure: im.structure || 'pp'
                     });
                 }
             });
@@ -303,6 +304,7 @@ const TransmissionEngine = (() => {
     function detectIndirectPaths(donors, bens, donorPatrimoines, FISC) {
         var paths = [];
         var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+        var FG = typeof FamilyGraph !== 'undefined' ? FamilyGraph : null;
         if (!PO || donors.length < 2) return paths;
 
         // Find GP/AGP donors and Parent donors
@@ -311,36 +313,68 @@ const TransmissionEngine = (() => {
 
         gpDonors.forEach(function(gp) {
             var gpPat = donorPatrimoines[gp.id];
-            if (!gpPat || gpPat.actifNet <= 0) return;
+            // Don't require gpPat — use global if not available
+            var gpAmount = gpPat ? gpPat.actifNet : 0;
 
             parentDonors.forEach(function(parent) {
+                // ── CRITICAL: Determine ACTUAL fiscal lien GP → Parent ──
+                // Belle-fille/gendre = tiers, not enfant!
+                var lienGPtoParent = 'tiers'; // default conservative
+                if (FG && FG.computeFiscalLien) {
+                    // Use FamilyGraph to find relationship
+                    // GP's graph person id vs parent's graph person id
+                    var gpPersons = FG.getPersons ? FG.getPersons().filter(function(p) { return p.nom === gp.nom; }) : [];
+                    var parentPersons = FG.getPersons ? FG.getPersons().filter(function(p) { return p.nom === parent.nom; }) : [];
+                    if (gpPersons.length > 0 && parentPersons.length > 0) {
+                        var computedLien = FG.computeFiscalLien(gpPersons[0].id, parentPersons[0].id);
+                        if (computedLien && computedLien !== 'self') {
+                            // computeFiscalLien returns underscore format directly (enfant, petit_enfant, tiers...)
+                            lienGPtoParent = computedLien;
+                        }
+                    }
+                }
+                // Also try PO.getEffectiveLien as fallback
+                if (lienGPtoParent === 'tiers' && PO.getEffectiveLien) {
+                    var poLien = PO.getEffectiveLien(gp.id, parent.id, gp.role, parent.role);
+                    if (poLien && poLien !== 'aucun' && poLien !== 'tiers') {
+                        lienGPtoParent = poLien;
+                    }
+                }
+
+                // Skip if GP→Parent is tiers (belle-fille, gendre, etc.) — no benefit
+                var abatGPtoParent = getAbattement(lienGPtoParent, false);
+                if (lienGPtoParent === 'tiers' || abatGPtoParent < 10000) return;
+
                 bens.forEach(function(child) {
+                    // Determine Parent → Child lien
+                    var lienParentToChild = 'enfant'; // default
+                    if (FG && FG.computeFiscalLien) {
+                        var parentPersons2 = FG.getPersons ? FG.getPersons().filter(function(p) { return p.nom === parent.nom; }) : [];
+                        var childPersons = FG.getPersons ? FG.getPersons().filter(function(p) { return p.nom === (child.prenom || child.nom); }) : [];
+                        if (parentPersons2.length > 0 && childPersons.length > 0) {
+                            var cl = FG.computeFiscalLien(parentPersons2[0].id, childPersons[0].id);
+                            if (cl && cl !== 'self') {
+                                lienParentToChild = cl;
+                            }
+                        }
+                    }
+                    var abatParentToChild = getAbattement(lienParentToChild, false);
+
                     // Direct path: GP → Child
                     var lienDirect = 'petit_enfant';
                     if (gp.role === 'arr_grand_parent') lienDirect = 'arriere_petit_enfant';
                     var abatDirect = getAbattement(lienDirect, false);
 
-                    // Indirect path: GP → Parent → Child
-                    var abatGPtoParent = getAbattement('enfant', false); // 100 000 €
-                    var abatParentToChild = getAbattement('enfant', false); // 100 000 €
                     var totalAbatIndirect = abatGPtoParent + abatParentToChild;
 
                     // Only flag if indirect path gives MORE total abattement
                     if (totalAbatIndirect > abatDirect) {
-                        var maxDirectExo = abatDirect;
-                        var maxIndirectExo = totalAbatIndirect;
-
-                        // Calculate actual savings on the GP's patrimoine
-                        var gpAmount = gpPat.actifNet;
-                        var amountViaParent = Math.min(gpAmount, abatGPtoParent);
-                        // The parent can then donate this to the child using their own abattement
-                        var amountParentToChild = Math.min(amountViaParent, abatParentToChild);
-
-                        // Direct: GP→Child, droits on (gpAmount - abatDirect)
-                        var droitsDirect = calcDroits(Math.max(0, gpAmount - abatDirect), getBareme(lienDirect));
-                        // Indirect: GP→Parent (0 droits if <= abatGPtoParent) + Parent→Child (0 if <= abatParentToChild)
-                        var droitsGPtoP = calcDroits(Math.max(0, gpAmount - abatGPtoParent), getBareme('enfant'));
-                        var droitsPtoC = calcDroits(Math.max(0, amountViaParent - abatParentToChild), getBareme('enfant'));
+                        // Calculate actual savings
+                        var amount = gpAmount > 0 ? gpAmount : abatGPtoParent; // use abattement as reference if no pat
+                        var droitsDirect = calcDroits(Math.max(0, amount - abatDirect), getBareme(lienDirect));
+                        var amountViaParent = Math.min(amount, abatGPtoParent);
+                        var droitsGPtoP = calcDroits(Math.max(0, amount - abatGPtoParent), getBareme(lienGPtoParent));
+                        var droitsPtoC = calcDroits(Math.max(0, amountViaParent - abatParentToChild), getBareme(lienParentToChild));
                         var droitsIndirect = droitsGPtoP + droitsPtoC;
 
                         if (droitsIndirect < droitsDirect) {
@@ -349,12 +383,16 @@ const TransmissionEngine = (() => {
                                 parent: parent,
                                 child: child,
                                 lienDirect: lienDirect,
+                                lienGPtoParent: lienGPtoParent,
+                                lienParentToChild: lienParentToChild,
                                 abatDirect: abatDirect,
+                                abatGPtoParent: abatGPtoParent,
+                                abatParentToChild: abatParentToChild,
                                 abatIndirect: totalAbatIndirect,
                                 droitsDirect: droitsDirect,
                                 droitsIndirect: droitsIndirect,
                                 economie: droitsDirect - droitsIndirect,
-                                description: gp.nom + ' → ' + parent.nom + ' (abat. ' + fmt(abatGPtoParent) + ') → ' + (child.prenom || child.nom) + ' (abat. ' + fmt(abatParentToChild) + ') = ' + fmt(totalAbatIndirect) + ' d\'abattements cumulés vs ' + fmt(abatDirect) + ' en direct. Économie : ' + fmt(droitsDirect - droitsIndirect)
+                                description: gp.nom + ' → ' + parent.nom + ' (' + formatLien(lienGPtoParent) + ', abat. ' + fmt(abatGPtoParent) + ') → ' + (child.prenom || child.nom) + ' (' + formatLien(lienParentToChild) + ', abat. ' + fmt(abatParentToChild) + ') = ' + fmt(totalAbatIndirect) + ' d\'abattements cumulés vs ' + fmt(abatDirect) + ' en direct'
                             });
                         }
                     }
@@ -746,7 +784,7 @@ const TransmissionEngine = (() => {
 
                 html += '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.72rem;">';
                 html += '<div><span style="color:var(--text-muted);">Direct (' + formatLien(ip.lienDirect) + ') :</span> abat. ' + fmt(ip.abatDirect) + ', droits <span style="color:var(--accent-coral);">' + fmt(ip.droitsDirect) + '</span></div>';
-                html += '<div><span style="color:var(--text-muted);">Indirect (via parent) :</span> abat. cumulés ' + fmt(ip.abatIndirect) + ', droits <span style="color:var(--accent-green);">' + fmt(ip.droitsIndirect) + '</span></div>';
+                html += '<div><span style="color:var(--text-muted);">Indirect (' + formatLien(ip.lienGPtoParent || 'enfant') + ' + ' + formatLien(ip.lienParentToChild || 'enfant') + ') :</span> abat. cumulés ' + fmt(ip.abatIndirect) + ', droits <span style="color:var(--accent-green);">' + fmt(ip.droitsIndirect) + '</span></div>';
                 html += '<div style="font-weight:700;color:var(--accent-green);">Économie : ' + fmt(ip.economie) + '</div>';
                 html += '</div>';
 
@@ -1065,18 +1103,18 @@ const TransmissionEngine = (() => {
 
         // Détail immobilier
         (st.immo || []).forEach(function(im) {
-            var typeLabel = im.type === 'rp' ? 'Résidence principale' : im.type === 'locatif' ? 'Locatif' : im.type === 'secondaire' ? 'Résidence secondaire' : im.type || 'Non précisé';
-            lines.push('  🏠 ' + (im.titre || 'Bien immo') + ' : ' + fmt(im.valeur || 0) + ' (' + typeLabel + ')');
-            if (im.type === 'rp') {
+            var typeLabel = im.usageActuel === 'rp' ? 'Résidence principale' : im.usageActuel === 'locatif' ? 'Locatif' : im.usageActuel === 'rs' ? 'Résidence secondaire' : im.usageActuel || 'Non précisé';
+            lines.push('  🏠 ' + (im.label || 'Bien immo') + ' : ' + fmt(im.valeur || 0) + ' (' + typeLabel + ')');
+            if (im.usageActuel === 'rp') {
                 lines.push('     → RP : abattement 20% en succession (art. 764 bis CGI) si conjoint/enfant y habite. Exonération PV à la vente.');
-            } else if (im.type === 'locatif') {
+            } else if (im.usageActuel === 'locatif') {
                 lines.push('     → Locatif : SCI possible (décote 15% + NP). PV imposable si vente. Comparer donation avant vente (purge PV).');
-            } else if (im.type === 'secondaire') {
+            } else if (im.usageActuel === 'rs') {
                 lines.push('     → Résidence secondaire : PV imposable (IR 19% + PS 17,2%). Donation avant vente = purge PV possible.');
             }
             if (im.owners && im.owners.length > 0) {
                 im.owners.forEach(function(o) {
-                    lines.push('     Détenu par : ' + (o.nom || '?') + ' à ' + (o.pct || 100) + '% en ' + (o.regime || 'PP'));
+                    lines.push('     Détenu par : ' + (o.personNom || '?') + ' à ' + (o.quote || 100) + '% en ' + (o.role === 'us' ? 'usufruit' : o.role === 'np' ? 'nue-propriété' : o.role === 'indiv' ? 'indivision' : 'PP'));
                 });
             }
         });
@@ -1286,11 +1324,11 @@ const TransmissionEngine = (() => {
             txMap.indirectPaths.forEach(function(ip) {
                 lines.push('');
                 lines.push('CHEMIN : ' + ip.gp.nom + ' → ' + ip.parent.nom + ' → ' + (ip.child.prenom || ip.child.nom));
-                lines.push('  Direct (' + ip.lienDirect + ') : abat. ' + fmt(ip.abatDirect) + ', droits ' + fmt(ip.droitsDirect));
-                lines.push('  Indirect (via parent) : abat. cumulés ' + fmt(ip.abatIndirect) + ', droits ' + fmt(ip.droitsIndirect));
+                lines.push('  Direct (' + formatLien(ip.lienDirect) + ') : abat. ' + fmt(ip.abatDirect) + ', droits ' + fmt(ip.droitsDirect));
+                lines.push('  Indirect : ' + ip.gp.nom + '→' + ip.parent.nom + ' (' + formatLien(ip.lienGPtoParent || '?') + ', abat. ' + fmt(ip.abatGPtoParent) + ') + ' + ip.parent.nom + '→' + (ip.child.prenom || ip.child.nom) + ' (' + formatLien(ip.lienParentToChild || '?') + ', abat. ' + fmt(ip.abatParentToChild) + ') = droits ' + fmt(ip.droitsIndirect));
                 lines.push('  ÉCONOMIE CHEMIN INDIRECT : ' + fmt(ip.economie));
                 lines.push('  → RECOMMANDATION : Faire 2 donations successives (GP→Parent puis Parent→Enfant) plutôt qu\'une donation directe GP→petit-enfant');
-                lines.push('  → ATTENTION : Le parent reçoit et RE-donne. Il consomme son propre abattement enfant. Vérifier qu\'il n\'a pas déjà donné à cet enfant.');
+                lines.push('  → ATTENTION : Le parent reçoit et RE-donne. Il consomme son propre abattement ' + formatLien(ip.lienParentToChild || 'enfant') + '. Vérifier qu\'il n\'a pas déjà donné à cet enfant.');
             });
         }
 
@@ -1446,13 +1484,35 @@ const TransmissionEngine = (() => {
         // Describe patrimoine items
         var immoDescs = [];
         (st.immo || []).forEach(function(im) {
-            var typeMap = { rp: 'résidence principale', locatif: 'bien locatif', secondaire: 'résidence secondaire' };
-            var d = '<strong>' + esc(im.titre || 'Bien immobilier') + '</strong> (' + (typeMap[im.type] || im.type || '?') + ') estimé à ' + fmt(im.valeur || 0);
+            var typeMap = { rp: 'résidence principale', locatif: 'bien locatif', rs: 'résidence secondaire', vacant: 'vacant' };
+            var d = '<strong>' + esc(im.label || 'Bien immobilier') + '</strong> (' + (typeMap[im.usageActuel] || im.usageActuel || '?') + ') estimé à ' + fmt(im.valeur || 0);
             // Owner info
             if (im.owners && im.owners.length > 0) {
                 var ownerParts = im.owners.map(function(o) {
-                    var regime = o.role === 'us' ? 'en usufruit' : o.role === 'np' ? 'en nue-propriété' : 'en pleine propriété';
-                    return (o.personNom || '?') + ' (' + (o.quote || 100) + '% ' + regime + ')';
+                    var regime = o.role === 'us' ? 'en usufruit' : o.role === 'np' ? 'en nue-propriété' : o.role === 'indiv' ? 'en indivision' : 'en pleine propriété';
+                    var ownerName = o.personNom || '?';
+                    // Try to resolve name from PathOptimizer donors if empty
+                    if ((ownerName === '?' || ownerName === '') && o.personId) {
+                        var PO2 = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+                        if (PO2) {
+                            var pidStr = String(o.personId);
+                            if (pidStr.startsWith('d-')) {
+                                var poIdx = parseInt(pidStr.replace('d-', ''));
+                                var pod2 = PO2.getDonors().find(function(d) { return d.id === poIdx; });
+                                if (pod2) ownerName = pod2.nom;
+                            }
+                        }
+                        // Also try FamilyGraph
+                        if ((ownerName === '?' || ownerName === '') && FG && FG.getPersons) {
+                            var allFGP = FG.getPersons();
+                            allFGP.forEach(function(fp) {
+                                if (String(fp.id) === String(o.personId).replace('d-','').replace('b-','')) {
+                                    ownerName = fp.nom;
+                                }
+                            });
+                        }
+                    }
+                    return ownerName + ' (' + (o.quote || 100) + '% ' + regime + ')';
                 });
                 d += ', détenu par ' + ownerParts.join(' et ');
             }
@@ -1606,7 +1666,7 @@ const TransmissionEngine = (() => {
             txMap.indirectPaths.forEach(function(ip) {
                 prose += '<p style="margin:0 0 8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.04);border-left:3px solid #3b82f6;">';
                 prose += 'Plutôt qu\'une donation directe ' + esc(ip.gp.nom) + ' → ' + esc(ip.child.prenom || ip.child.nom) + ' (abattement ' + formatLien(ip.lienDirect) + ' de seulement ' + fmt(ip.abatDirect) + '), envisagez de passer par <strong>' + esc(ip.parent.nom) + '</strong> : ';
-                prose += esc(ip.gp.nom) + ' donne d\'abord à ' + esc(ip.parent.nom) + ' (abattement enfant ' + fmt(100000) + '), puis ' + esc(ip.parent.nom) + ' redonne à ' + esc(ip.child.prenom || ip.child.nom) + ' (abattement enfant ' + fmt(100000) + '). ';
+                prose += esc(ip.gp.nom) + ' donne d\'abord à ' + esc(ip.parent.nom) + ' (abattement ' + formatLien(ip.lienGPtoParent || 'enfant') + ' ' + fmt(ip.abatGPtoParent) + '), puis ' + esc(ip.parent.nom) + ' redonne à ' + esc(ip.child.prenom || ip.child.nom) + ' (abattement ' + formatLien(ip.lienParentToChild || 'enfant') + ' ' + fmt(ip.abatParentToChild) + '). ';
                 prose += 'Total : <strong>' + fmt(ip.abatIndirect) + ' d\'abattements cumulés</strong> vs ' + fmt(ip.abatDirect) + ' en direct. ';
                 prose += '<strong style="color:var(--accent-green);">Économie : ' + fmt(ip.economie) + '</strong>.';
                 prose += '</p>';
