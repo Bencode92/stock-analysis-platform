@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-05T08:26:28.641908",
+  "timestamp": "2026-03-05T09:52:01.414360",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -13,7 +13,7 @@
     "crypto_selected": 0,
     "crypto_rejected_notable": 7,
     "bonds_initial": 31,
-    "bonds_selected": 9,
+    "bonds_selected": 8,
     "total_filters_applied": 4,
     "etf_scoring_issues": 6,
     "category_rankings_sizes": {
@@ -68,7 +68,7 @@
       "etf": {
         "coeur_global": {
           "total": 20,
-          "selected": 7
+          "selected": 5
         },
         "commodities_broad": {
           "total": 2,
@@ -76,15 +76,15 @@
         },
         "croissance_tech": {
           "total": 20,
-          "selected": 2
+          "selected": 3
         },
         "emergents": {
           "total": 12,
-          "selected": 1
+          "selected": 0
         },
         "min_vol_global": {
           "total": 6,
-          "selected": 1
+          "selected": 2
         },
         "multi_factor": {
           "total": 20,
@@ -100,7 +100,7 @@
         },
         "sector_cyclical": {
           "total": 20,
-          "selected": 4
+          "selected": 5
         },
         "sector_defensive": {
           "total": 4,
@@ -2742,10 +2742,11 @@
         "ticker": "SPDW",
         "sort_score": 99.12,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "coeur_global",
         "composite_score": 99.12,
         "profile_score": 99.12,
+        "rejection_reason": "Score composite (99.120) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 14.7,
         "ytd": "3.42%",
@@ -2777,10 +2778,11 @@
         "ticker": "EWY",
         "sort_score": 98.94,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "emergents",
         "composite_score": 98.94,
         "profile_score": 98.94,
+        "rejection_reason": "Score composite (98.940) insuffisant pour le quota",
         "sector": "Technology",
         "volatility": 26.4,
         "ytd": "26.2%",
@@ -2864,11 +2866,10 @@
         "ticker": "COPX",
         "sort_score": 98.68,
         "sort_score_source": "composite_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "sector_cyclical",
         "composite_score": 98.68,
         "profile_score": 98.68,
-        "rejection_reason": "Score composite (98.680) insuffisant pour le quota",
         "sector": "Basic Materials",
         "volatility": 34.9,
         "ytd": "15.6%",
@@ -2918,11 +2919,10 @@
         "ticker": "PICK",
         "sort_score": 98.41,
         "sort_score_source": "composite_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "croissance_tech",
         "composite_score": 98.41,
         "profile_score": 98.41,
-        "rejection_reason": "Score composite (98.410) insuffisant pour le quota",
         "sector": "Basic Materials",
         "volatility": 25.2,
         "ytd": "12.47%",
@@ -3886,10 +3886,11 @@
         "ticker": "SPYV",
         "sort_score": 93.51,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "coeur_global",
         "composite_score": 93.51,
         "profile_score": 93.51,
+        "rejection_reason": "Score composite (93.510) insuffisant pour le quota",
         "sector": "Technology",
         "volatility": 12.9,
         "ytd": "2.42%",
@@ -4672,8 +4673,9 @@
         "ticker": "EMHC",
         "sort_score": 82.96,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "profile_score": 82.96,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 7.3,
         "ytd": "0.64%"
       },
@@ -8403,10 +8405,11 @@
           "ticker": "SPDW",
           "sort_score": 99.12,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "coeur_global",
           "composite_score": 99.12,
           "profile_score": 99.12,
+          "rejection_reason": "Score composite (99.120) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 14.7,
           "ytd": "3.42%",
@@ -8723,10 +8726,11 @@
           "ticker": "SPYV",
           "sort_score": 93.51,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "coeur_global",
           "composite_score": 93.51,
           "profile_score": 93.51,
+          "rejection_reason": "Score composite (93.510) insuffisant pour le quota",
           "sector": "Technology",
           "volatility": 12.9,
           "ytd": "2.42%",
@@ -8860,11 +8864,10 @@
           "ticker": "PICK",
           "sort_score": 98.41,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "croissance_tech",
           "composite_score": 98.41,
           "profile_score": 98.41,
-          "rejection_reason": "Score composite (98.410) insuffisant pour le quota",
           "sector": "Basic Materials",
           "volatility": 25.2,
           "ytd": "12.47%",
@@ -9298,10 +9301,11 @@
           "ticker": "EWY",
           "sort_score": 98.94,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "emergents",
           "composite_score": 98.94,
           "profile_score": 98.94,
+          "rejection_reason": "Score composite (98.940) insuffisant pour le quota",
           "sector": "Technology",
           "volatility": 26.4,
           "ytd": "26.2%",
@@ -9574,11 +9578,10 @@
           "ticker": "ACWV",
           "sort_score": 90.91,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "min_vol_global",
           "composite_score": 90.91,
           "profile_score": 90.91,
-          "rejection_reason": "Score composite (90.910) insuffisant pour le quota",
           "sector": "Technology",
           "volatility": 9.2,
           "ytd": "2.81%",
@@ -11138,11 +11141,10 @@
           "ticker": "COPX",
           "sort_score": 98.68,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "sector_cyclical",
           "composite_score": 98.68,
           "profile_score": 98.68,
-          "rejection_reason": "Score composite (98.680) insuffisant pour le quota",
           "sector": "Basic Materials",
           "volatility": 34.9,
           "ytd": "15.6%",
@@ -15961,20 +15963,6 @@
       "selection_reason": "Score profil élevé (99.21); Preset: sector_cyclical; Score composite élevé (99.21); Secteur favorisé RADAR (energy)"
     },
     {
-      "name": "iShares MSCI South Korea ETF",
-      "ticker": "EWY",
-      "category": "etf",
-      "matched_preset": "emergents",
-      "composite_score": 98.94,
-      "profile_score": 98.94,
-      "volatility": 26.4,
-      "sector": "Technology",
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 6,
-      "selection_reason": "Score profil élevé (98.94); Preset: emergents; Score composite élevé (98.94)"
-    },
-    {
       "name": "iShares MSCI Global Silver and Metals Miners ETF",
       "ticker": "SLVP",
       "category": "etf",
@@ -15985,8 +15973,36 @@
       "sector": "Basic Materials",
       "radar_tilt": "favored",
       "selected": true,
-      "ranking": 7,
+      "ranking": 6,
       "selection_reason": "Score profil élevé (98.81); Preset: sector_cyclical; Score composite élevé (98.81); Secteur favorisé RADAR (materials)"
+    },
+    {
+      "name": "Global X Copper Miners ETF",
+      "ticker": "COPX",
+      "category": "etf",
+      "matched_preset": "sector_cyclical",
+      "composite_score": 98.68,
+      "profile_score": 98.68,
+      "volatility": 34.9,
+      "sector": "Basic Materials",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 7,
+      "selection_reason": "Score profil élevé (98.68); Preset: sector_cyclical; Score composite élevé (98.68); Secteur favorisé RADAR (materials)"
+    },
+    {
+      "name": "iShares MSCI Global Metals & Mining Producers ETF",
+      "ticker": "PICK",
+      "category": "etf",
+      "matched_preset": "croissance_tech",
+      "composite_score": 98.41,
+      "profile_score": 98.41,
+      "volatility": 25.2,
+      "sector": "Basic Materials",
+      "radar_tilt": "favored",
+      "selected": true,
+      "ranking": 8,
+      "selection_reason": "Score profil élevé (98.41); Preset: croissance_tech; Score composite élevé (98.41); Secteur favorisé RADAR (materials)"
     },
     {
       "name": "Vanguard FTSE Pacific ETF",
@@ -15999,7 +16015,7 @@
       "sector": "Industrial",
       "radar_tilt": "favored",
       "selected": true,
-      "ranking": 8,
+      "ranking": 9,
       "selection_reason": "Score profil élevé (98.25); Preset: coeur_global; Score composite élevé (98.25); Secteur favorisé RADAR (industrials)"
     },
     {
@@ -16013,7 +16029,7 @@
       "sector": "Energy",
       "radar_tilt": "favored",
       "selected": true,
-      "ranking": 9,
+      "ranking": 10,
       "selection_reason": "Score profil élevé (100.00); Preset: coeur_global; Score composite élevé (100.00); Secteur favorisé RADAR (energy)"
     },
     {
@@ -16027,7 +16043,7 @@
       "sector": "Financial Services",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 10,
+      "ranking": 11,
       "selection_reason": "Score profil élevé (99.34); Preset: coeur_global; Score composite élevé (99.34)"
     },
     {
@@ -16041,7 +16057,7 @@
       "sector": "Financial Services",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 11,
+      "ranking": 12,
       "selection_reason": "Score profil élevé (99.78); Preset: qualite_value; Score composite élevé (99.78)"
     },
     {
@@ -16055,22 +16071,8 @@
       "sector": "Industrial",
       "radar_tilt": "favored",
       "selected": true,
-      "ranking": 12,
-      "selection_reason": "Score profil élevé (99.56); Preset: coeur_global; Score composite élevé (99.56); Secteur favorisé RADAR (industrials)"
-    },
-    {
-      "name": "SPDR Portfolio Developed World ex-US ETF",
-      "ticker": "SPDW",
-      "category": "etf",
-      "matched_preset": "coeur_global",
-      "composite_score": 99.12,
-      "profile_score": 99.12,
-      "volatility": 14.7,
-      "sector": "Financial Services",
-      "radar_tilt": "neutral",
-      "selected": true,
       "ranking": 13,
-      "selection_reason": "Score profil élevé (99.12); Preset: coeur_global; Score composite élevé (99.12)"
+      "selection_reason": "Score profil élevé (99.56); Preset: coeur_global; Score composite élevé (99.56); Secteur favorisé RADAR (industrials)"
     },
     {
       "name": "iShares MSCI EAFE Min Volatility Factor ETF",
@@ -16101,18 +16103,18 @@
       "selection_reason": "Score profil élevé (100.00); Preset: coeur_global; Score composite élevé (100.00)"
     },
     {
-      "name": "SPDR Portfolio S&P 500 Value ETF",
-      "ticker": "SPYV",
+      "name": "iShares MSCI Global Minimum Volatility ETF",
+      "ticker": "ACWV",
       "category": "etf",
-      "matched_preset": "coeur_global",
-      "composite_score": 93.51,
-      "profile_score": 93.51,
-      "volatility": 12.9,
+      "matched_preset": "min_vol_global",
+      "composite_score": 90.91,
+      "profile_score": 90.91,
+      "volatility": 9.2,
       "sector": "Technology",
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 16,
-      "selection_reason": "Score profil élevé (93.51); Preset: coeur_global; Score composite élevé (93.51)"
+      "selection_reason": "Score profil élevé (90.91); Preset: min_vol_global; Score composite élevé (90.91)"
     }
   ],
   "etf_rejected": [
@@ -16156,15 +16158,15 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
-      "name": "Global X Copper Miners ETF",
-      "ticker": "COPX",
+      "name": "iShares MSCI South Korea ETF",
+      "ticker": "EWY",
       "category": "etf",
-      "matched_preset": "sector_cyclical",
-      "composite_score": 98.68,
-      "profile_score": 98.68,
-      "volatility": 34.9,
-      "sector": "Basic Materials",
-      "radar_tilt": "favored",
+      "matched_preset": "emergents",
+      "composite_score": 98.94,
+      "profile_score": 98.94,
+      "volatility": 26.4,
+      "sector": "Technology",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -16177,19 +16179,6 @@
       "profile_score": 98.55,
       "volatility": 32.2,
       "sector": "Energy",
-      "radar_tilt": "favored",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "iShares MSCI Global Metals & Mining Producers ETF",
-      "ticker": "PICK",
-      "category": "etf",
-      "matched_preset": "croissance_tech",
-      "composite_score": 98.41,
-      "profile_score": 98.41,
-      "volatility": 25.2,
-      "sector": "Basic Materials",
       "radar_tilt": "favored",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16375,6 +16364,19 @@
       "radar_tilt": "favored",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Columbia EM Core ex-China ETF",
+      "ticker": "XCEM",
+      "category": "etf",
+      "matched_preset": "croissance_tech",
+      "composite_score": 96.3,
+      "profile_score": 96.3,
+      "volatility": 15.9,
+      "sector": "Technology",
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
   "crypto_selected": [],
@@ -16481,17 +16483,6 @@
       "selection_reason": "Score profil élevé (84.02)"
     },
     {
-      "name": "SPDR Bloomberg Emerging Markets USD Bond ETF",
-      "ticker": "EMHC",
-      "category": "bond",
-      "profile_score": 82.96,
-      "volatility": 7.3,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 3,
-      "selection_reason": "Score profil élevé (82.96)"
-    },
-    {
       "name": "iShares iBonds Oct 2026 Term TIPS ETF",
       "ticker": "IBIC",
       "category": "bond",
@@ -16499,7 +16490,7 @@
       "volatility": 2.7,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 4,
+      "ranking": 3,
       "selection_reason": "Score profil élevé (100.00)"
     },
     {
@@ -16510,7 +16501,7 @@
       "volatility": 2.3,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 5,
+      "ranking": 4,
       "selection_reason": "Score profil élevé (99.81)"
     },
     {
@@ -16521,7 +16512,7 @@
       "volatility": 2.5,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 6,
+      "ranking": 5,
       "selection_reason": "Score profil élevé (97.40)"
     },
     {
@@ -16532,7 +16523,7 @@
       "volatility": 1.4,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 7,
+      "ranking": 6,
       "selection_reason": "Score profil élevé (100.00)"
     },
     {
@@ -16543,7 +16534,7 @@
       "volatility": 2.9,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 8,
+      "ranking": 7,
       "selection_reason": "Score profil élevé (72.97)"
     },
     {
@@ -16554,7 +16545,7 @@
       "volatility": 2.4,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 9,
+      "ranking": 8,
       "selection_reason": "Score profil élevé (9.23)"
     }
   ],
