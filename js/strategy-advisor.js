@@ -1008,12 +1008,197 @@ const StrategyAdvisor = (() => {
 
 
     // ================================================================
-    // 5. ANALYZE — Point d'entrée
+    // 5. GLOBAL QUESTIONS — Entretien CGP avec vrais chiffres
+    // ================================================================
+
+    function generateGlobalQuestions(ctx) {
+        var questions = [];
+        var FISC = ctx.FISC;
+        var pat = ctx.pat;
+
+        // === SECTION 1: COMPRENDRE LA SITUATION ===
+
+        // Q: Testament vs Donation (éducation)
+        ctx.donors.forEach(function(donor) {
+            var donorLabel = esc(donor.nom);
+            var donorAge = donor.age || 60;
+
+            // Calculate statu quo droits for this donor
+            var totalDroitsSucc = 0;
+            ctx.pairContexts.forEach(function(pc) {
+                if (pc.donor.id !== donor.id) return;
+                var abatS = getAbattement(pc.lien, true);
+                var partTotal = Math.round(pat.actifNet / Math.max(1, ctx.bens.length));
+                var base = Math.max(0, partTotal - Math.max(0, abatS - pc.donAnterieures));
+                totalDroitsSucc += calcDroits(base, getBareme(pc.lien));
+            });
+
+            if (totalDroitsSucc > 5000) {
+                questions.push({
+                    id: 'global-testament-' + donor.id,
+                    section: 'comprendre',
+                    context: donorLabel + ' possède un patrimoine de <strong>' + fmt(pat.actifNet) + '</strong>. ' +
+                        'Si rien n\'est fait de son vivant (pas de donation, seulement un testament ou la succession légale), les droits de succession s\'élèveraient à environ <strong style="color:var(--accent-coral);">' + fmt(totalDroitsSucc) + '</strong>. ' +
+                        'La donation permet de réduire ces droits, mais implique de <strong>se dessaisir</strong> d\'une partie du patrimoine. Le démembrement est un entre-deux : on transmet la propriété future tout en gardant l\'usage et les revenus.',
+                    text: donorLabel + ' est-elle prête à envisager des donations de son vivant pour réduire ces droits ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'oui_pret', label: '✅ Oui, elle souhaite transmettre activement', hint: '→ On explore toutes les options (donation, démembrement, AV, SCI...)' },
+                        { value: 'prudent', label: '🔒 Oui mais en gardant le maximum de contrôle et de revenus', hint: '→ Démembrement NP, SCI, contrat de capitalisation en priorité' },
+                        { value: 'non', label: '⏳ Non, elle préfère que tout passe en succession', hint: '→ On optimise la succession (AV, clause bénéficiaire, testament)' },
+                        { value: 'ne_sait_pas', label: '🤔 Elle ne sait pas encore', hint: '→ On compare succession vs donation pour chaque actif' }
+                    ]
+                });
+            }
+
+            // Q: Besoins de revenus (global)
+            var totalLoyers = (ctx.immo || []).reduce(function(s, im) { return s + (im.loyerMensuel || 0); }, 0);
+            var totalFinancier = pat.financier || 0;
+
+            questions.push({
+                id: 'global-revenus-' + donor.id,
+                section: 'situation',
+                context: donorLabel + ' perçoit' + (totalLoyers > 0 ? ' <strong>' + fmt(totalLoyers) + '/mois de loyers</strong>' : '') +
+                    (totalFinancier > 0 ? (totalLoyers > 0 ? ' et' : '') + ' dispose de <strong>' + fmt(totalFinancier) + ' en placements financiers</strong>' : '') + '. ' +
+                    'Si elle donne un bien locatif en pleine propriété, elle perd les loyers. Si elle donne en nue-propriété, elle les conserve jusqu\'à son décès.',
+                text: donorLabel + ' a-t-elle besoin de l\'intégralité de ses revenus actuels pour vivre ?',
+                type: 'qcm',
+                options: [
+                    { value: 'essentiels', label: '💰 Oui, chaque euro compte', hint: '→ On privilégie les solutions qui préservent 100% des revenus' },
+                    { value: 'confortable', label: '📊 Non, elle est à l\'aise financièrement', hint: '→ Plus de leviers possibles (don manuel, rachats AV, donation PP...)' },
+                    { value: 'modeste', label: '🏠 Elle vit modestement mais n\'a pas de soucis', hint: '→ On sécurise les revenus essentiels et on optimise le reste' }
+                ]
+            });
+
+            // Q: Urgence / horizon
+            if (donorAge >= 75) {
+                questions.push({
+                    id: 'global-urgence-' + donor.id,
+                    section: 'situation',
+                    context: donorLabel + ' a <strong>' + donorAge + ' ans</strong>. Les abattements de donation ne se renouvellent que tous les <strong>15 ans</strong> (art. 784 CGI). ' +
+                        'À cet âge, il est réaliste de ne pouvoir faire <strong>qu\'une seule opération</strong> de donation.' +
+                        (donorAge >= 70 ? ' De plus, les primes d\'assurance-vie versées maintenant relèveraient de l\'<strong>art. 757 B</strong> (abattement global de 30 500 € seulement au lieu de 152 500 € par bénéficiaire en 990 I).' : ''),
+                    text: 'Comment évaluez-vous la situation de ' + donorLabel + ' ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'urgence', label: '🚨 Il faut agir rapidement', hint: '→ On priorise les opérations simples et rapides' },
+                        { value: 'serein', label: '🕰️ Elle est en bonne santé, on a du temps', hint: '→ On peut planifier sur 2-3 ans (SCI, transmission progressive)' },
+                        { value: 'incertain', label: '❓ Difficile à dire', hint: '→ On recommande d\'agir dans l\'année par prudence' }
+                    ]
+                });
+            }
+        });
+
+        // === SECTION 2: STRATÉGIE PATRIMONIALE ===
+
+        // Q: Chemin indirect (si GP → petit-enfant)
+        var hasGPDonor = ctx.donors.some(function(d) { return d.role === 'grand_parent' || d.role === 'arr_grand_parent'; });
+        var hasParentIntermediary = ctx.intermediaires.some(function(inter) {
+            var fg2 = FG();
+            if (!fg2 || !fg2.computeFiscalLien) return false;
+            // Check if this intermediary is an enfant of a GP donor
+            return ctx.donors.some(function(d) {
+                if (d.role !== 'grand_parent' && d.role !== 'arr_grand_parent') return false;
+                var lien = fg2.computeFiscalLien(d.id, inter.id);
+                return lien === 'enfant';
+            });
+        });
+
+        if (hasGPDonor && hasParentIntermediary) {
+            var gpDonor = ctx.donors.find(function(d) { return d.role === 'grand_parent' || d.role === 'arr_grand_parent'; });
+            var parentInter = ctx.intermediaires.find(function(inter) {
+                var fg2 = FG();
+                if (!fg2) return false;
+                return ctx.donors.some(function(d) {
+                    if (d.role !== 'grand_parent' && d.role !== 'arr_grand_parent') return false;
+                    return fg2.computeFiscalLien(d.id, inter.id) === 'enfant';
+                });
+            });
+            if (gpDonor && parentInter) {
+                var benExample = ctx.bens[0];
+                var abatDirect = getAbattement('petit_enfant', false);
+                var abatIndirect = getAbattement('enfant', false) * 2; // GP→Parent + Parent→Child
+
+                // Check if parent already gave to the child
+                var parentDonAnt = 0;
+                var po2 = PO();
+                if (po2 && po2.getDonorDonationForBenRaw && benExample) {
+                    var parentPod = po2.getDonors().find(function(pd) { return pd.nom === parentInter.nom; });
+                    if (parentPod) {
+                        var raw = po2.getDonorDonationForBenRaw(parentPod.id, benExample.id);
+                        if (raw && raw.montant > 0) parentDonAnt = raw.montant;
+                    }
+                }
+                var parentAbatRestant = Math.max(0, getAbattement('enfant', false) - parentDonAnt);
+
+                questions.push({
+                    id: 'global-indirect',
+                    section: 'strategie',
+                    context: 'Donation directe ' + esc(gpDonor.nom) + ' → ' + esc(benExample ? (benExample.prenom || benExample.nom) : '?') + ' : abattement petit-enfant de <strong>' + fmt(abatDirect) + '</strong> seulement. ' +
+                        'Mais si ' + esc(gpDonor.nom) + ' donne d\'abord à <strong>' + esc(parentInter.nom) + '</strong> (abattement enfant ' + fmt(getAbattement('enfant', false)) + '), puis ' + esc(parentInter.nom) + ' redonne au bénéficiaire (abattement enfant ' + fmt(parentAbatRestant) + (parentDonAnt > 0 ? ' — ' + fmt(parentDonAnt) + ' déjà donné' : '') + '), on cumule <strong>' + fmt(getAbattement('enfant', false) + parentAbatRestant) + ' d\'abattements</strong>.' +
+                        '<br><em>Contrepartie : ' + esc(parentInter.nom) + ' consomme son propre abattement et devient temporairement propriétaire.</em>',
+                    text: esc(parentInter.nom) + ' accepterait-il/elle de servir d\'intermédiaire pour cette transmission ?',
+                    type: 'qcm',
+                    options: [
+                        { value: 'oui', label: '✅ Oui, c\'est envisageable', hint: '→ Les résultats intégreront le chemin indirect' },
+                        { value: 'non', label: '❌ Non, préférence pour le direct', hint: '→ Seule la donation directe sera proposée' },
+                        { value: 'a_discuter', label: '💬 À discuter en famille', hint: '→ On compare les deux options dans les résultats' }
+                    ]
+                });
+            }
+        }
+
+        // Q: Transmission progressive vs immédiate
+        if (pat.actifNet > 200000) {
+            questions.push({
+                id: 'global-rythme',
+                section: 'strategie',
+                context: 'Deux approches possibles : <strong>tout transmettre maintenant</strong> (utilise les abattements en une fois, effet immédiat) ou <strong>transmettre progressivement</strong> (dons manuels réguliers, rachats AV, présents d\'usage — les abattements se rechargent tous les 15 ans). La transmission progressive est souvent plus souple mais moins « efficace » fiscalement si le patrimoine est important.',
+                text: 'Quelle approche de transmission correspond le mieux à la situation ?',
+                type: 'qcm',
+                options: [
+                    { value: 'immediat', label: '⚡ Transmettre le maximum maintenant', hint: '→ Utiliser les abattements en une opération' },
+                    { value: 'progressif', label: '📅 Transmettre progressivement sur plusieurs années', hint: '→ Rachats AV + dons manuels + présents d\'usage' },
+                    { value: 'mixte', label: '🔄 Un peu des deux : une opération principale + des dons réguliers', hint: '→ Donation NP/SCI pour l\'immo + rachats AV pour le financier' }
+                ]
+            });
+        }
+
+        // Q: Global pour chaque bien immo — vision d'ensemble
+        if (ctx.immo.length > 1) {
+            var immoList = ctx.immo.map(function(im) {
+                var usageMap = { rp: 'RP', locatif: 'Locatif', rs: 'Rés. secondaire' };
+                return esc(im.label || 'Bien') + ' (' + (usageMap[im.usageActuel] || '?') + ', ' + fmt(im.valeur || 0) + ')';
+            }).join(', ');
+
+            questions.push({
+                id: 'global-immo-vision',
+                section: 'strategie',
+                context: 'Le patrimoine immobilier comprend <strong>' + ctx.immo.length + ' biens</strong> : ' + immoList + '. ' +
+                    'Quand il y a plusieurs biens immobiliers, les regrouper dans une <strong>SCI</strong> peut simplifier la transmission (un seul acte pour donner les parts) et permettre une décote de ~15%. Mais la SCI a des coûts (création ~2 000 €, comptabilité ~1 100 €/an).',
+                text: 'Quel est le projet global pour le patrimoine immobilier ?',
+                type: 'qcm',
+                options: [
+                    { value: 'garder_tous', label: '🏠 Tout garder dans la famille', hint: '→ Donation NP ou SCI pour l\'ensemble' },
+                    { value: 'vendre_certains', label: '🏷️ Vendre certains biens', hint: '→ On identifiera lesquels dans les questions par actif' },
+                    { value: 'restructurer', label: '🏢 Restructurer (SCI, sortie indivision...)', hint: '→ On évaluera le regroupement en SCI' },
+                    { value: 'pas_encore_decide', label: '🤔 Pas encore décidé', hint: '→ On compare toutes les options par bien' }
+                ]
+            });
+        }
+
+        return questions;
+    }
+
+
+    // ================================================================
+    // 6. ANALYZE — Point d'entrée
     // ================================================================
 
     function analyze() {
         var ctx = buildContext();
         var alerts = generateAlerts(ctx);
+        var globalQuestions = generateGlobalQuestions(ctx);
         var assetAnalyses = [];
 
         ctx.immo.forEach(function(im) {
@@ -1026,7 +1211,7 @@ const StrategyAdvisor = (() => {
             if (a.options.length > 0 || (a.questions && a.questions.length > 0) || a.diagnostic) assetAnalyses.push(a);
         });
 
-        return { alerts: alerts, assets: assetAnalyses, ctx: ctx };
+        return { alerts: alerts, globalQuestions: globalQuestions, assets: assetAnalyses, ctx: ctx };
     }
 
 
@@ -1041,7 +1226,7 @@ const StrategyAdvisor = (() => {
         var result = analyze();
         var html = '';
 
-        // ── ALERTS ──
+        // ── ALERTS (unchanged) ──
         if (result.alerts.length > 0) {
             html += '<div style="margin-bottom:20px;">';
             result.alerts.forEach(function(a) {
@@ -1054,11 +1239,55 @@ const StrategyAdvisor = (() => {
             html += '</div>';
         }
 
-        // ── ASSET CARDS ──
+        // ── GLOBAL QUESTIONS (CGP interview) ──
+        if (result.globalQuestions && result.globalQuestions.length > 0) {
+            // Group by section
+            var sections = {};
+            result.globalQuestions.forEach(function(q) {
+                var sec = q.section || 'general';
+                if (!sections[sec]) sections[sec] = [];
+                sections[sec].push(q);
+            });
+
+            var sectionLabels = {
+                comprendre: { icon: '🧑‍💼', title: 'Comprendre la situation', subtitle: 'Ces questions nous aident à comprendre les enjeux avant de proposer des solutions' },
+                situation: { icon: '🏠', title: 'Situation personnelle', subtitle: 'Revenus, besoins, autonomie — ce qui détermine les solutions possibles' },
+                strategie: { icon: '🎯', title: 'Stratégie patrimoniale', subtitle: 'Comment transmettre : en direct, via un intermédiaire, progressivement...' }
+            };
+
+            Object.keys(sections).forEach(function(secKey) {
+                var secInfo = sectionLabels[secKey] || { icon: '📋', title: 'Questions', subtitle: '' };
+                var secQuestions = sections[secKey];
+
+                html += '<div class="section-card" style="margin-bottom:16px;border-color:rgba(198,134,66,.15);">';
+                html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
+                html += '<span style="font-size:1.2rem;">' + secInfo.icon + '</span>';
+                html += '<div><div style="font-size:.88rem;font-weight:700;color:var(--primary-color);">' + secInfo.title + '</div>';
+                html += '<div style="font-size:.68rem;color:var(--text-muted);">' + secInfo.subtitle + '</div></div>';
+                html += '</div>';
+
+                secQuestions.forEach(function(q) {
+                    html += renderQuestion(q, 'global');
+                });
+
+                html += '</div>';
+            });
+        }
+
+        // ── PER-ASSET CARDS (diagnostic + questions) ──
         if (result.assets.length === 0) {
             html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">';
             html += '<i class="fas fa-info-circle" style="font-size:2rem;margin-bottom:12px;display:block;"></i>';
             html += 'Ajoutez des actifs (immobilier, financier) à l\'étape 3 pour voir les recommandations.';
+            html += '</div>';
+        }
+
+        if (result.assets.length > 0) {
+            html += '<div class="section-card" style="margin-bottom:16px;border-color:rgba(198,134,66,.15);">';
+            html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
+            html += '<span style="font-size:1.2rem;">🏦</span>';
+            html += '<div><div style="font-size:.88rem;font-weight:700;color:var(--primary-color);">Vos actifs</div>';
+            html += '<div style="font-size:.68rem;color:var(--text-muted);">Pour chaque bien ou placement, quelques questions pour affiner la stratégie</div></div>';
             html += '</div>';
         }
 
@@ -1067,81 +1296,61 @@ const StrategyAdvisor = (() => {
             var typeIcon = asset.type === 'immo' ? '🏠' : '💰';
             var usageLabel = asset.type === 'immo' ? (usageMap[asset.usage] || '') : '';
 
-            html += '<div class="section-card" style="margin-bottom:16px;border-color:rgba(198,134,66,.15);">';
+            html += '<div style="padding:16px;border-radius:12px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.08);margin-bottom:12px;">';
 
             // Header
-            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
-            html += '<div>';
-            html += '<div style="font-size:.92rem;font-weight:700;color:var(--text-primary);">' + typeIcon + ' ' + esc(asset.label) + '</div>';
-            html += '<div style="font-size:.68rem;color:var(--text-muted);">' + usageLabel + (usageLabel ? ' · ' : '') + fmt(asset.valeur) + '</div>';
-            html += '</div>';
-            html += '</div>';
+            html += '<div style="font-size:.88rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;">' + typeIcon + ' ' + esc(asset.label) + '</div>';
+            html += '<div style="font-size:.68rem;color:var(--text-muted);margin-bottom:12px;">' + usageLabel + (usageLabel ? ' · ' : '') + fmt(asset.valeur) + '</div>';
 
-            // Expert diagnostic
+            // Expert diagnostic prose
             if (asset.diagnostic) {
-                html += '<div style="padding:14px 18px;border-radius:10px;background:rgba(198,134,66,.04);border-left:3px solid rgba(198,134,66,.2);margin-bottom:14px;font-size:.78rem;color:var(--text-secondary);line-height:1.85;">';
+                html += '<div style="font-size:.76rem;color:var(--text-secondary);line-height:1.85;margin-bottom:12px;padding:10px 14px;border-radius:8px;background:rgba(198,134,66,.03);border-left:3px solid rgba(198,134,66,.15);">';
                 html += asset.diagnostic;
                 html += '</div>';
             }
 
-            // Interactive questions
+            // Per-asset questions
             if (asset.questions && asset.questions.length > 0) {
                 asset.questions.forEach(function(q) {
                     var assetKey = asset.type + '-' + (asset.asset.id || idx);
-                    var currentVal = getDecision(assetKey, q.id);
-
-                    html += '<div style="padding:12px 16px;border-radius:10px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.1);margin-bottom:8px;">';
-                    html += '<div style="font-size:.8rem;font-weight:600;color:var(--text-primary);margin-bottom:8px;"><i class="fas fa-question-circle" style="color:#3b82f6;margin-right:6px;"></i>' + q.text + '</div>';
-
-                    if (q.type === 'qcm') {
-                        html += '<div style="display:grid;gap:6px;">';
-                        q.options.forEach(function(opt) {
-                            var isSelected = currentVal === opt.value;
-                            var bg = isSelected ? 'rgba(16,185,129,.1)' : 'rgba(198,134,66,.03)';
-                            var border = isSelected ? 'rgba(16,185,129,.3)' : 'rgba(198,134,66,.08)';
-                            var checkIcon = isSelected ? '<i class="fas fa-check-circle" style="color:var(--accent-green);margin-right:6px;"></i>' : '<i class="far fa-circle" style="color:var(--text-muted);margin-right:6px;opacity:.5;"></i>';
-
-                            html += '<div style="padding:8px 12px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';cursor:pointer;transition:all .2s;" ';
-                            html += 'onmouseover="this.style.borderColor=\'rgba(16,185,129,.3)\'" onmouseout="this.style.borderColor=\'' + border + '\'" ';
-                            html += 'onclick="StrategyAdvisor.decide(\'' + assetKey + '\',\'' + q.id + '\',\'' + opt.value + '\')">';
-                            html += '<div style="display:flex;align-items:center;gap:8px;">';
-                            html += checkIcon;
-                            html += '<div style="flex:1;">';
-                            html += '<div style="font-size:.76rem;font-weight:' + (isSelected ? '600' : '400') + ';color:var(--text-primary);">' + opt.label + '</div>';
-                            if (opt.hint) html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:2px;">' + opt.hint + '</div>';
-                            html += '</div></div></div>';
-                        });
-                        html += '</div>';
-                    } else if (q.type === 'text') {
-                        html += '<input type="text" value="' + esc(currentVal || '') + '" placeholder="' + esc(q.placeholder || '') + '" ';
-                        html += 'style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid rgba(198,134,66,.15);background:var(--bg-input);color:var(--text-primary);font-size:.76rem;" ';
-                        html += 'onchange="StrategyAdvisor.decide(\'' + assetKey + '\',\'' + q.id + '\',this.value)">';
-                    }
-
-                    html += '</div>';
+                    html += renderQuestion(q, assetKey);
                 });
             }
 
-            html += '</div>'; // section-card
+            html += '</div>'; // asset card
         });
 
-        // ── DECISIONS SUMMARY ──
-        var answeredCount = Object.keys(decisions).length;
-        var totalQuestions = result.assets.reduce(function(s, a) { return s + (a.questions ? a.questions.length : 0); }, 0);
+        if (result.assets.length > 0) {
+            html += '</div>'; // close section-card
+        }
 
-        if (totalQuestions > 0) {
+        // ── DECISIONS SUMMARY ──
+        var allQuestions = (result.globalQuestions || []).concat(
+            result.assets.reduce(function(arr, a) { return arr.concat(a.questions || []); }, [])
+        );
+        var totalQ = allQuestions.length;
+        var answeredCount = Object.keys(decisions).length;
+
+        if (totalQ > 0) {
             html += '<div style="padding:16px 20px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.04),rgba(59,130,246,.03));border:1px solid rgba(198,134,66,.1);margin-top:16px;">';
 
             if (answeredCount === 0) {
                 html += '<div style="font-size:.8rem;color:var(--text-muted);text-align:center;">';
                 html += '<i class="fas fa-hand-pointer" style="margin-right:6px;color:var(--primary-color);"></i>';
-                html += 'Répondez aux questions ci-dessus pour affiner les résultats. Les stratégies s\'adapteront à vos choix.';
+                html += 'Répondez aux questions ci-dessus — vos choix guideront les stratégies présentées dans les résultats.';
                 html += '</div>';
             } else {
-                html += '<div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:8px;"><i class="fas fa-clipboard-check" style="margin-right:6px;"></i> Vos choix (' + answeredCount + '/' + totalQuestions + ')</div>';
+                html += '<div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:8px;"><i class="fas fa-clipboard-check" style="margin-right:6px;"></i> Vos réponses (' + answeredCount + '/' + totalQ + ')</div>';
 
-                // List answered decisions
                 html += '<div style="font-size:.72rem;color:var(--text-secondary);line-height:1.8;">';
+                // Show global decisions
+                (result.globalQuestions || []).forEach(function(q) {
+                    var val = getDecision('global', q.id);
+                    if (!val) return;
+                    var chosenOpt = (q.options || []).find(function(o) { return o.value === val; });
+                    if (chosenOpt) html += '<div>→ ' + chosenOpt.label + '</div>';
+                });
+                // Show per-asset decisions
                 result.assets.forEach(function(asset) {
                     if (!asset.questions) return;
                     asset.questions.forEach(function(q) {
@@ -1149,16 +1358,13 @@ const StrategyAdvisor = (() => {
                         var val = getDecision(assetKey, q.id);
                         if (!val) return;
                         var chosenOpt = (q.options || []).find(function(o) { return o.value === val; });
-                        if (chosenOpt) {
-                            html += '<div>' + esc(asset.label) + ' → <strong>' + chosenOpt.label + '</strong></div>';
-                        } else if (val) {
-                            html += '<div>' + esc(asset.label) + ' → <em>' + esc(val) + '</em></div>';
-                        }
+                        if (chosenOpt) html += '<div>' + esc(asset.label) + ' → ' + chosenOpt.label + '</div>';
+                        else if (val) html += '<div>' + esc(asset.label) + ' → <em>' + esc(val) + '</em></div>';
                     });
                 });
                 html += '</div>';
 
-                html += '<div style="margin-top:10px;font-size:.7rem;color:var(--text-muted);"><i class="fas fa-arrow-right" style="margin-right:4px;"></i> Ces choix orienteront les stratégies présentées dans les résultats.</div>';
+                html += '<div style="margin-top:10px;font-size:.7rem;color:var(--text-muted);"><i class="fas fa-arrow-right" style="margin-right:4px;"></i> Cliquez sur "Calculer" pour voir les résultats adaptés à vos choix.</div>';
             }
             html += '</div>';
         }
@@ -1169,6 +1375,56 @@ const StrategyAdvisor = (() => {
         syncObjectivesFromDecisions();
     }
 
+    /**
+     * renderQuestion — Renders a single QCM or text question
+     */
+    function renderQuestion(q, assetKey) {
+        var currentVal = getDecision(assetKey, q.id);
+        var html = '';
+
+        html += '<div style="margin-bottom:12px;">';
+
+        // Educational context (the prose that makes you think)
+        if (q.context) {
+            html += '<div style="font-size:.76rem;color:var(--text-secondary);line-height:1.8;margin-bottom:10px;padding:10px 14px;border-radius:8px;background:rgba(59,130,246,.03);border-left:3px solid rgba(59,130,246,.12);">';
+            html += q.context;
+            html += '</div>';
+        }
+
+        // Question text
+        html += '<div style="font-size:.82rem;font-weight:600;color:var(--text-primary);margin-bottom:8px;">';
+        html += '<i class="fas fa-question-circle" style="color:#3b82f6;margin-right:6px;font-size:.75rem;"></i>' + q.text;
+        html += '</div>';
+
+        if (q.type === 'qcm') {
+            html += '<div style="display:grid;gap:6px;">';
+            (q.options || []).forEach(function(opt) {
+                var isSelected = currentVal === opt.value;
+                var bg = isSelected ? 'rgba(16,185,129,.1)' : 'rgba(198,134,66,.03)';
+                var border = isSelected ? 'rgba(16,185,129,.3)' : 'rgba(198,134,66,.08)';
+                var checkIcon = isSelected ? '<i class="fas fa-check-circle" style="color:var(--accent-green);margin-right:6px;"></i>' : '<i class="far fa-circle" style="color:var(--text-muted);margin-right:6px;opacity:.5;"></i>';
+
+                html += '<div style="padding:8px 12px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';cursor:pointer;transition:all .2s;" ';
+                html += 'onmouseover="this.style.borderColor=\'rgba(16,185,129,.3)\'" onmouseout="this.style.borderColor=\'' + border + '\'" ';
+                html += 'onclick="StrategyAdvisor.decide(\'' + assetKey + '\',\'' + q.id + '\',\'' + opt.value + '\')">';
+                html += '<div style="display:flex;align-items:center;gap:8px;">';
+                html += checkIcon;
+                html += '<div style="flex:1;">';
+                html += '<div style="font-size:.76rem;font-weight:' + (isSelected ? '600' : '400') + ';color:var(--text-primary);">' + opt.label + '</div>';
+                if (opt.hint) html += '<div style="font-size:.63rem;color:var(--text-muted);margin-top:2px;">' + opt.hint + '</div>';
+                html += '</div></div></div>';
+            });
+            html += '</div>';
+        } else if (q.type === 'text') {
+            html += '<input type="text" value="' + esc(currentVal || '') + '" placeholder="' + esc(q.placeholder || '') + '" ';
+            html += 'style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid rgba(198,134,66,.15);background:var(--bg-input);color:var(--text-primary);font-size:.76rem;" ';
+            html += 'onchange="StrategyAdvisor.decide(\'' + assetKey + '\',\'' + q.id + '\',this.value)">';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
 
     /**
      * syncObjectivesFromDecisions — Auto-set les toggles d'objectifs
@@ -1177,54 +1433,56 @@ const StrategyAdvisor = (() => {
     function syncObjectivesFromDecisions() {
         var s = st();
         var objState = s.obj || {};
-        var changed = false;
 
-        // Scan all decisions
-        var vals = Object.values(decisions);
+        // Scan all decisions by KEY (not just value) for precision
         var keys = Object.keys(decisions);
 
-        // Revenus : if any asset answered "essentiels" or "complementaires"
-        var wantsRevenus = vals.some(function(v) { return v === 'essentiels' || v === 'complementaires'; });
-        // Also if RP answered "rester" (wants to keep usage)
-        var wantsUsage = vals.some(function(v) { return v === 'rester' || v === 'garder'; });
-        if (wantsRevenus || wantsUsage) {
-            if (!objState.revenus) { objState.revenus = true; changed = true; }
-        }
-
-        // Contrôle : if SCI chosen or conserver
-        var wantsControle = vals.some(function(v) { return v === 'sci'; });
-        if (wantsControle) {
-            if (!objState.controle) { objState.controle = true; changed = true; }
-        }
-
-        // Vendre : if any vente horizon selected
-        var wantsVendre = vals.some(function(v) { return v === 'vendre_court' || v === 'vendre' || v === 'vendre_long'; });
-        if (wantsVendre) {
-            if (!objState.vendre) { objState.vendre = true; changed = true; }
-        }
-
-        // Génération : if indirect path chosen
-        var wantsGeneration = vals.some(function(v) { return v === 'oui'; });
-        // Check if the key is about indirect path
-        keys.forEach(function(k, i) {
-            if (k.indexOf('chemin-indirect') >= 0 && vals[i] === 'oui') {
-                if (!objState.generation) { objState.generation = true; changed = true; }
+        // ── Global: donation readiness ──
+        keys.forEach(function(k) {
+            var val = decisions[k];
+            if (k.indexOf('global-testament') >= 0) {
+                if (val === 'prudent') { objState.revenus = true; objState.controle = true; }
+                if (val === 'non') { /* succession only — no donation objectives */ }
+            }
+            if (k.indexOf('global-revenus') >= 0) {
+                if (val === 'essentiels') objState.revenus = true;
+                if (val === 'confortable') { /* more options available */ }
+            }
+            if (k.indexOf('global-indirect') >= 0) {
+                if (val === 'oui' || val === 'a_discuter') objState.generation = true;
+            }
+            if (k.indexOf('global-rythme') >= 0) {
+                // No direct objective mapping — used in Step 5 to filter
+            }
+            if (k.indexOf('global-immo-vision') >= 0) {
+                if (val === 'vendre_certains') objState.vendre = true;
+                if (val === 'restructurer') objState.controle = true;
+            }
+            // Per-asset decisions
+            if (k.indexOf('locatif-revenus') >= 0) {
+                if (val === 'essentiels' || val === 'complementaires') objState.revenus = true;
+            }
+            if (k.indexOf('locatif-horizon') >= 0 || k.indexOf('rs-projet') >= 0) {
+                if (val === 'vendre_court' || val === 'vendre' || val === 'vendre_long') objState.vendre = true;
+            }
+            if (k.indexOf('indivision-sortie') >= 0) {
+                if (val === 'sci') objState.controle = true;
+            }
+            if (k.indexOf('rp-intention') >= 0) {
+                if (val === 'rester') objState.revenus = true;
             }
         });
 
-        // Minimiser is always on
-        objState.minimiser = true;
+        objState.minimiser = true; // always on
 
-        // Update switch UI if changed
-        if (changed) {
-            ['minimiser', 'revenus', 'controle', 'conjoint', 'egalite', 'generation', 'vendre'].forEach(function(key) {
-                var switchEl = document.getElementById('obj-' + key);
-                if (switchEl) {
-                    if (objState[key]) switchEl.classList.add('on');
-                    else switchEl.classList.remove('on');
-                }
-            });
-        }
+        // Update switch UI
+        ['minimiser', 'revenus', 'controle', 'conjoint', 'egalite', 'generation', 'vendre'].forEach(function(key) {
+            var switchEl = document.getElementById('obj-' + key);
+            if (switchEl) {
+                if (objState[key]) switchEl.classList.add('on');
+                else switchEl.classList.remove('on');
+            }
+        });
     }
 
 
