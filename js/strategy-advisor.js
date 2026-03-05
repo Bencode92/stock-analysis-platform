@@ -237,7 +237,7 @@ const StrategyAdvisor = (() => {
 
         // ── Nature du bien ──
         if (usage === 'rp') {
-            prose.push('<strong>' + label + '</strong> est votre <strong>résidence principale</strong>, estimée à ' + fmt(val) + '. En tant que RP : <strong>abattement 20% en succession</strong> (art. 764 bis CGI) et <strong>aucune plus-value à la vente</strong>.');
+            prose.push('<strong>' + label + '</strong> est votre <strong>résidence principale</strong>, estimée à ' + fmt(val) + '. En tant que RP : <strong>abattement 20% en succession</strong> (art. 764 bis CGI) <em>uniquement si le conjoint/PACS ou un enfant mineur/majeur protégé y habite au moment du décès</em>. <strong>Aucune plus-value à la vente</strong>.');
 
             ctx.donors.forEach(function(donor) {
                 var donorLabel = esc(donor.nom);
@@ -813,7 +813,7 @@ const StrategyAdvisor = (() => {
                         o.risks = (o.risks || []).concat(['🚨 ABUS DE DROIT : vente déjà actée → donation-cession très probablement requalifiée (art. L64 LPF). Pénalités 40-80%.']);
                         o.rank += 20;
                     } else {
-                        o.risks = (o.risks || []).concat(['⚠️ Risque abus de droit si vente rapidement après donation. Attendre min. 2 ans.']);
+                        o.risks = (o.risks || []).concat(['⚠️ Risque abus de droit : l\'administration fiscale vérifie si la cession était déjà engagée (offre, négociation avancée, mandat de vente) avant la donation. Le critère n\'est pas un délai fixe mais l\'intention préexistante de vendre.']);
                     }
                 }
             });
