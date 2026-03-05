@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-05T10:25:53.926685",
+  "timestamp": "2026-03-05T10:46:45.842445",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -68,7 +68,7 @@
       "etf": {
         "coeur_global": {
           "total": 20,
-          "selected": 5
+          "selected": 6
         },
         "commodities_broad": {
           "total": 2,
@@ -84,7 +84,7 @@
         },
         "min_vol_global": {
           "total": 6,
-          "selected": 2
+          "selected": 1
         },
         "multi_factor": {
           "total": 20,
@@ -2831,10 +2831,11 @@
         "ticker": "EFAV",
         "sort_score": 98.7,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "min_vol_global",
         "composite_score": 98.7,
         "profile_score": 98.7,
+        "rejection_reason": "Score composite (98.700) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 11.0,
         "ytd": "4.66%",
@@ -3386,11 +3387,10 @@
         "ticker": "VTV",
         "sort_score": 96.1,
         "sort_score_source": "composite_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "coeur_global",
         "composite_score": 96.1,
         "profile_score": 96.1,
-        "rejection_reason": "Score composite (96.100) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 12.6,
         "ytd": "4.91%",
@@ -8655,11 +8655,10 @@
           "ticker": "VTV",
           "sort_score": 96.1,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "coeur_global",
           "composite_score": 96.1,
           "profile_score": 96.1,
-          "rejection_reason": "Score composite (96.100) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 12.6,
           "ytd": "4.91%",
@@ -9554,10 +9553,11 @@
           "ticker": "EFAV",
           "sort_score": 98.7,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "min_vol_global",
           "composite_score": 98.7,
           "profile_score": 98.7,
+          "rejection_reason": "Score composite (98.700) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 11.0,
           "ytd": "4.66%",
@@ -16034,18 +16034,18 @@
       "selection_reason": "Score profil élevé (99.56); Preset: coeur_global; Score composite élevé (99.56); Secteur favorisé RADAR (industrials)"
     },
     {
-      "name": "iShares MSCI EAFE Min Volatility Factor ETF",
-      "ticker": "EFAV",
+      "name": "Vanguard Value ETF",
+      "ticker": "VTV",
       "category": "etf",
-      "matched_preset": "min_vol_global",
-      "composite_score": 98.7,
-      "profile_score": 98.7,
-      "volatility": 11.0,
+      "matched_preset": "coeur_global",
+      "composite_score": 96.1,
+      "profile_score": 96.1,
+      "volatility": 12.6,
       "sector": "Financial Services",
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 11,
-      "selection_reason": "Score profil élevé (98.70); Preset: min_vol_global; Score composite élevé (98.70)"
+      "selection_reason": "Score profil élevé (96.10); Preset: coeur_global; Score composite élevé (96.10)"
     },
     {
       "name": "iShares Core Dividend Growth ETF",
