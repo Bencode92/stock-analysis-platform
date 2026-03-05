@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate_portfolios_v4.py - Orchestrateur complet v5.1.4 (Audit Cosmetic Fix)
+generate_portfolios_v4.py - Orchestrateur complet v5.1.5 (TickerResolver mic_code Fix)
 V5.1.4: FIX AUDIT COSMETIC
    - FIX: Pass profile_selections to create_selection_audit (fixes empty hard_filter_stats/profile_stats)
    - FIX: Pass etf_scoring_debug to create_selection_audit (fixes empty etf_scoring_debug)
@@ -160,6 +160,13 @@ except ImportError:
     HAS_RISK_ANALYSIS = False
     enrich_portfolio_with_risk_analysis = None
     fetch_and_enrich_risk_analysis = None     
+# === v1.1.0: Import TickerResolver pour résolution mic_code non-US ===
+try:
+    from portfolio_engine.ticker_resolver import TickerResolver, set_resolver
+    HAS_TICKER_RESOLVER = True
+except ImportError:
+    HAS_TICKER_RESOLVER = False
+    logger.warning("⚠️ ticker_resolver not available, non-US tickers may fail in backtest")
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
@@ -1798,6 +1805,23 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     logger.info(f"   Univers ETF/Bonds/Crypto: {len(universe_others)} actifs")
     logger.info(f"   Pool équités disponible: {len(eq_filtered)} (sélection par profil)")
     
+    # ============================================================
+    # FIX v1.1.0: Build TickerResolver from stock data
+    # Resolves non-US tickers: AGS→XBRU, 2360→XTAI, TLX→XETR, etc.
+    # Used by historical_data.py (VaR/CVaR) and backtest/data_loader.py
+    # ============================================================
+    ticker_resolver = None
+    if HAS_TICKER_RESOLVER:
+        ticker_resolver = TickerResolver.from_equities(eq_filtered)
+        set_resolver(ticker_resolver)  # Make globally available
+        logger.info(f"   ✅ TickerResolver built: {len(ticker_resolver.mic_code_map)} mic_codes, "
+                     f"{len(ticker_resolver.exchange_map)} exchanges, "
+                     f"{len(ticker_resolver.resolved_symbol_map)} resolved_symbols")
+        # Invalidate cache for previously-failed tickers (AGS, 2360, 3017, etc.)
+        _tickers_with_mic = [eq.get("ticker") for eq in eq_filtered if eq.get("data_mic")]
+        if _tickers_with_mic:
+            ticker_resolver.invalidate_cache_for(_tickers_with_mic, cache_dir="data/returns_cache")
+    
     # 8. Optimiser pour chaque profil
     # v5.1.4 FIX Step7: use_preset_etf=False car select_etfs_for_profile()
     # est déjà appelé L1873 avec le DataFrame complet (sector_top5, holdings_top10).
@@ -2770,6 +2794,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     all_assets = []
     all_assets_ids = set()
     equities_by_profile_euus = {}  # Pour diagnostic overlap
+    all_scored_etfs = {}  # v1.1.0 FIX: was missing → NameError on line 2825
     
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation EU/US {profile} (sélection PAR PROFIL)...")
@@ -3164,7 +3189,8 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
             start_date=start_date,
             end_date=end_date,
             api_key=api_key,
-            plan="ultra"
+            plan="ultra",
+            resolver=ticker_resolver,  # v1.1.0: mic_code resolution
         )
         
         if isinstance(result, tuple):
@@ -3342,7 +3368,8 @@ def run_backtest_euus_profiles(config: Dict) -> Dict:
             end_date=end_date,
             api_key=api_key,
             plan="ultra",
-            portfolios_path=euus_path
+            portfolios_path=euus_path,
+            resolver=ticker_resolver,  # v1.1.0: mic_code resolution
         )
         
         if isinstance(result, tuple):
