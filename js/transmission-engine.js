@@ -94,6 +94,30 @@ const TransmissionEngine = (() => {
             donorPatrimoines[donor.id] = computeDonorPatrimoine(donor, st);
         });
 
+        // ── FALLBACK: If ALL checked donors have noData, distribute global pat ──
+        var allNoData = checkedDonors.every(function(d) {
+            var dp = donorPatrimoines[d.id];
+            return !dp || dp.noData || dp.actifNet <= 0;
+        });
+        if (allNoData && checkedDonors.length > 0 && pat.actifNet > 0) {
+            // Distribute global patrimoine among checked donors
+            // Simple split — or if only 1 donor, give them everything
+            var nbChecked = checkedDonors.length;
+            checkedDonors.forEach(function(donor) {
+                donorPatrimoines[donor.id] = {
+                    immo: Math.round(pat.immo / nbChecked),
+                    financier: Math.round(pat.financier / nbChecked),
+                    pro: Math.round((pat.pro || 0) / nbChecked),
+                    passif: Math.round(pat.passif / nbChecked),
+                    actifNet: Math.round(pat.actifNet / nbChecked),
+                    actifBrut: Math.round((pat.actifBrut || pat.actifNet) / nbChecked),
+                    details: [{ type: 'global', label: 'Patrimoine global (propriété non ventilée par actif)', valeur: Math.round(pat.actifNet / nbChecked) }],
+                    fallback: true,
+                    noData: false
+                };
+            });
+        }
+
         // ── 2. Build donor↔beneficiary pairs with per-donor patrimoine ──
         var pairs = [];
 
