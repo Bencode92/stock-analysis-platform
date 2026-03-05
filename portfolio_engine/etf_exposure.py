@@ -2482,6 +2482,10 @@ TICKER_TO_EXPOSURE = {
 
     # Value-tilt
     "fndx": "value", "fndb": "value", "moat": "value",
+
+    # FIX v2.4.0-K2: Doublons restants dans selection_audit
+    "efav": "eafe_min_vol",     # EAFE Min Vol ≠ plain EAFE (VEA) ≠ Global Min Vol (ACWV)
+    "dgro": "dividend_growth",  # Dividend Growth ≠ plain Dividend (SCHD)
     # Ces overrides écrasent les entrées originales (Python dict = last write wins)
 
     # Pays
