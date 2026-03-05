@@ -54,24 +54,51 @@ const TransmissionEngine = (() => {
     function computeTransmissionMap(pat, fallbackAge, nbDonors) {
         var FISC = F();
         var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
-        var donors = PO ? PO.getDonors() : [];
+        var FG = typeof FamilyGraph !== 'undefined' ? FamilyGraph : null;
         var st = state();
+
+        // ── CRITICAL: Use ONLY checked donors from FamilyGraph ──
+        // FamilyGraph.getDonors() = persons with isDonor checkbox = true
+        // PathOptimizer.getDonors() = ALL non-beneficiaries (includes intermediaries) — DO NOT USE for pairs
+        var checkedDonors = [];
+        if (FG && FG.getDonors) {
+            var fgDonors = FG.getDonors(); // Only isDonor === true
+            // Map FG donors to PO donors for fiscal info
+            var poDonors = PO ? PO.getDonors() : [];
+            fgDonors.forEach(function(fgd) {
+                // Find matching PO donor by name
+                var pod = poDonors.find(function(pd) { return pd.nom === fgd.nom; });
+                checkedDonors.push({
+                    id: pod ? pod.id : fgd.id,
+                    nom: fgd.nom,
+                    age: fgd.age || (pod ? pod.age : fallbackAge),
+                    role: pod ? pod.role : (FG.inferRole ? FG.inferRole(fgd.id) : 'parent'),
+                    patrimoine: pod ? pod.patrimoine : 0,
+                    _fgId: fgd.id,
+                    _poId: pod ? pod.id : -1
+                });
+            });
+        } else if (PO) {
+            checkedDonors = PO.getDonors();
+        }
+
         var allBens = st.beneficiaries.filter(function(b) { return b.lien !== 'conjoint_pacs'; });
         var obj = st.obj || {};
 
+        // All PO donors (including intermediaries) for indirect path detection
+        var allPODonors = PO ? PO.getDonors() : [];
+
         // ── 1. Compute per-donor patrimoine based on actual ownership ──
         var donorPatrimoines = {};
-        if (donors.length > 0) {
-            donors.forEach(function(donor) {
-                donorPatrimoines[donor.id] = computeDonorPatrimoine(donor, st);
-            });
-        }
+        checkedDonors.forEach(function(donor) {
+            donorPatrimoines[donor.id] = computeDonorPatrimoine(donor, st);
+        });
 
         // ── 2. Build donor↔beneficiary pairs with per-donor patrimoine ──
         var pairs = [];
 
-        if (donors.length > 0 && allBens.length > 0) {
-            donors.forEach(function(donor) {
+        if (checkedDonors.length > 0 && allBens.length > 0) {
+            checkedDonors.forEach(function(donor) {
                 var donorPat = donorPatrimoines[donor.id] || { immo: 0, financier: 0, pro: 0, passif: 0, actifNet: 0, actifBrut: 0, details: [] };
 
                 // Skip donors with no patrimoine
@@ -82,8 +109,8 @@ const TransmissionEngine = (() => {
 
                 allBens.forEach(function(ben) {
                     var lien = ben.lienFiscalDonateur || ben.lien || 'tiers';
-                    if (PO && PO.getEffectiveLien) {
-                        var detected = PO.getEffectiveLien(donor.id, ben.id, donor.role, ben.lien);
+                    if (PO && PO.getEffectiveLien && donor._poId >= 0) {
+                        var detected = PO.getEffectiveLien(donor._poId, ben.id, donor.role, ben.lien);
                         if (detected && detected !== 'aucun') lien = detected;
                     }
 
@@ -144,7 +171,7 @@ const TransmissionEngine = (() => {
         });
 
         // ── 4. Detect indirect paths (GP → Parent → Child) ──
-        var indirectPaths = detectIndirectPaths(donors, allBens, donorPatrimoines, FISC);
+        var indirectPaths = detectIndirectPaths(allPODonors, allBens, donorPatrimoines, FISC);
 
         var totalBest = results.reduce(function(s, r) { return s + (r.best ? r.best.net : 0); }, 0);
         var totalStatuQuo = results.reduce(function(s, r) { return s + (r.statu_quo ? r.statu_quo.net : 0); }, 0);
@@ -337,8 +364,9 @@ const TransmissionEngine = (() => {
         // Deduct prior donations from abattement (rappel fiscal 15 ans)
         var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
         var donAnterieures = 0;
-        if (PO && PO.getDonorDonationForBenRaw && donor.id >= 0) {
-            var raw = PO.getDonorDonationForBenRaw(donor.id, pair.ben.id);
+        var poId = donor._poId !== undefined ? donor._poId : donor.id;
+        if (PO && PO.getDonorDonationForBenRaw && poId >= 0) {
+            var raw = PO.getDonorDonationForBenRaw(poId, pair.ben.id);
             if (raw && raw.montant > 0) donAnterieures = raw.montant;
         }
         var abatRestant = Math.max(0, abat - donAnterieures);
@@ -1314,55 +1342,288 @@ const TransmissionEngine = (() => {
      */
     function renderFallbackSummary(container, txMap, pat) {
         var eco = txMap.totalBest - txMap.totalStatuQuo;
-        var statQuoDroits = pat.actifNet - txMap.totalStatuQuo;
         var st = state();
+        var PO = typeof PathOptimizer !== 'undefined' ? PathOptimizer : null;
+        var FG = typeof FamilyGraph !== 'undefined' ? FamilyGraph : null;
 
-        var lines = [];
+        // Calculate total succession droits
+        var totalStatQuoDroits = 0;
+        txMap.pairs.forEach(function(p) { if (p.statu_quo) totalStatQuoDroits += p.statu_quo.droits; });
 
-        // Droits en gras
-        if (statQuoDroits > 0) {
-            lines.push('<div style="padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.15);margin-bottom:14px;text-align:center;">');
-            lines.push('<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Droits de succession estimés (si rien n\'est fait)</div>');
-            lines.push('<div style="font-size:1.4rem;font-weight:800;color:var(--accent-coral);">' + fmt(statQuoDroits) + '</div>');
-            lines.push('</div>');
+        var html = '';
+
+        // ── KPI BOXES ──
+        html += '<div style="display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;">';
+        html += '<div style="flex:1;min-width:150px;padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.15);text-align:center;">';
+        html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Droits si rien n\'est fait</div>';
+        html += '<div style="font-size:1.4rem;font-weight:800;color:var(--accent-coral);">' + fmt(totalStatQuoDroits) + '</div></div>';
+        html += '<div style="flex:1;min-width:150px;padding:14px 18px;border-radius:12px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);text-align:center;">';
+        html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Net transmis optimal</div>';
+        html += '<div style="font-size:1.4rem;font-weight:800;color:var(--accent-green);">' + fmt(txMap.totalBest) + '</div></div>';
+        if (eco > 0) {
+            html += '<div style="flex:1;min-width:150px;padding:14px 18px;border-radius:12px;background:rgba(198,134,66,.06);border:1px solid rgba(198,134,66,.15);text-align:center;">';
+            html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px;">Économie potentielle</div>';
+            html += '<div style="font-size:1.4rem;font-weight:800;color:var(--primary-color);">' + fmt(eco) + '</div></div>';
         }
+        html += '</div>';
 
-        lines.push('<strong>Patrimoine net :</strong> ' + fmt(pat.actifNet) + ' à transmettre.');
-        lines.push('');
+        // ── NARRATIVE SECTION ──
+        var prose = '';
 
-        // Par chemin
+        // § 1. SITUATION FAMILIALE
+        prose += '<div style="margin-bottom:16px;">';
+        prose += '<div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:6px;border-bottom:1px solid rgba(198,134,66,.1);padding-bottom:4px;">Situation familiale et patrimoniale</div>';
+        prose += '<p style="margin:0 0 8px;">';
+
+        // Describe donors
+        txMap.pairs.forEach(function(pair, idx) {
+            if (idx > 0) return; // Only first mention
+        });
+        var donorNames = [];
+        var donorDescs = [];
+        var seenDonors = {};
         txMap.pairs.forEach(function(pair) {
-            var donorLabel = pair.donor.nom || 'Donateur';
-            var benLabel = pair.ben.prenom || pair.ben.nom || 'Bénéficiaire';
-            var lienLabel = formatLien(pair.lien);
-
-            lines.push('');
-            lines.push('<strong>' + esc(donorLabel) + ' → ' + esc(benLabel) + '</strong> (' + lienLabel + ', donateur ' + (pair.donor.age || '?') + ' ans) :');
-
-            if (pair.statu_quo) {
-                lines.push('Sans rien faire : <span style="color:var(--accent-coral);">' + fmt(pair.statu_quo.droits) + ' de droits</span>, net transmis ' + fmt(pair.statu_quo.net));
+            var dkey = pair.donor.nom;
+            if (seenDonors[dkey]) return;
+            seenDonors[dkey] = true;
+            donorNames.push(esc(pair.donor.nom));
+            var age = pair.donor.age || '?';
+            var role = pair.donor.role || '?';
+            var roleLabel = { grand_parent: 'grand-parent', parent: 'parent', arr_grand_parent: 'arrière-grand-parent' }[role] || role;
+            var desc = '<strong>' + esc(pair.donor.nom) + '</strong> (' + age + ' ans, ' + roleLabel + ')';
+            if (pair.donorPat && pair.donorPat.actifNet > 0) {
+                desc += ', patrimoine de <strong>' + fmt(pair.donorPat.actifNet) + '</strong>';
+                var parts = [];
+                if (pair.donorPat.immo > 0) parts.push('immobilier ' + fmt(pair.donorPat.immo));
+                if (pair.donorPat.financier > 0) parts.push('financier ' + fmt(pair.donorPat.financier));
+                if (parts.length > 0) desc += ' (' + parts.join(', ') + ')';
             }
-            if (pair.best && pair.best.id !== 'succession') {
-                var diff = pair.best.net - (pair.statu_quo ? pair.statu_quo.net : 0);
-                lines.push('Meilleur canal : ' + pair.best.icon + ' <strong>' + esc(pair.best.name) + '</strong> → <span style="color:var(--accent-green);">' + fmt(pair.best.net) + ' net</span>, droits ' + fmt(pair.best.droits) + ' (taux effectif ' + pair.best.taux_effectif + '%)');
-                if (diff > 0) lines.push('<span style="color:var(--accent-green);font-weight:600;">Économie : +' + fmt(diff) + ' vs statu quo</span>');
-            }
+            donorDescs.push(desc);
         });
 
-        if (eco > 0) {
-            lines.push('');
-            lines.push('<div style="padding:12px 16px;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);text-align:center;margin-top:10px;"><strong style="color:var(--accent-green);">Économie totale potentielle : ' + fmt(eco) + '</strong></div>');
+        // Beneficiary names
+        var benNames = [];
+        var seenBens = {};
+        txMap.pairs.forEach(function(pair) {
+            var bkey = pair.ben.prenom || pair.ben.nom;
+            if (seenBens[bkey]) return;
+            seenBens[bkey] = true;
+            benNames.push('<strong>' + esc(bkey) + '</strong> (' + formatLien(pair.lien) + ')');
+        });
+
+        if (donorDescs.length === 1) {
+            prose += 'Le donateur est ' + donorDescs[0] + '. ';
+        } else {
+            prose += 'Les donateurs sont : ' + donorDescs.join(' ; ') + '. ';
+        }
+        prose += 'Le bénéficiaire est ' + benNames.join(', ') + '.';
+        prose += '</p>';
+
+        // Describe patrimoine items
+        var immoDescs = [];
+        (st.immo || []).forEach(function(im) {
+            var typeMap = { rp: 'résidence principale', locatif: 'bien locatif', secondaire: 'résidence secondaire' };
+            var d = '<strong>' + esc(im.titre || 'Bien immobilier') + '</strong> (' + (typeMap[im.type] || im.type || '?') + ') estimé à ' + fmt(im.valeur || 0);
+            // Owner info
+            if (im.owners && im.owners.length > 0) {
+                var ownerParts = im.owners.map(function(o) {
+                    var regime = o.role === 'us' ? 'en usufruit' : o.role === 'np' ? 'en nue-propriété' : 'en pleine propriété';
+                    return (o.personNom || '?') + ' (' + (o.quote || 100) + '% ' + regime + ')';
+                });
+                d += ', détenu par ' + ownerParts.join(' et ');
+            }
+            immoDescs.push(d);
+        });
+
+        if (immoDescs.length > 0) {
+            prose += '<p style="margin:0 0 8px;">Le patrimoine immobilier comprend : ' + immoDescs.join(' ; ') + '.</p>';
         }
 
-        lines.push('');
-        lines.push('<em style="font-size:.68rem;color:var(--text-muted);">Analyse indicative. Consultez un notaire ou CGP pour valider la stratégie.</em>');
+        // Financial
+        var finDescs = [];
+        (st.finance || []).forEach(function(f) {
+            var typeMap = { assurance_vie: 'assurance-vie', contrat_capi: 'contrat de capitalisation', pea: 'PEA', cto: 'compte-titres' };
+            finDescs.push((typeMap[f.type] || f.type) + ' de ' + fmt(f.valeur || 0));
+        });
+        if (finDescs.length > 0) {
+            prose += '<p style="margin:0 0 8px;">Patrimoine financier : ' + finDescs.join(', ') + '.</p>';
+        }
 
+        prose += '</div>';
+
+        // § 2. DROITS DE SUCCESSION (STATU QUO)
+        prose += '<div style="margin-bottom:16px;">';
+        prose += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-coral);margin-bottom:6px;border-bottom:1px solid rgba(255,107,107,.1);padding-bottom:4px;">⚠️ Droits de succession si rien n\'est fait</div>';
+        prose += '<p style="margin:0 0 8px;">';
+
+        if (totalStatQuoDroits > 0) {
+            prose += 'En l\'absence de toute optimisation, les droits de succession s\'élèveraient à <strong style="color:var(--accent-coral);">' + fmt(totalStatQuoDroits) + '</strong>. ';
+            txMap.pairs.forEach(function(pair) {
+                if (pair.statu_quo) {
+                    var donorLabel = esc(pair.donor.nom);
+                    var benLabel = esc(pair.ben.prenom || pair.ben.nom);
+                    prose += 'Au décès de ' + donorLabel + ', ' + benLabel + ' devrait payer <strong>' + fmt(pair.statu_quo.droits) + '</strong> de droits ';
+                    prose += '(sur une base taxable de ' + fmt(pair.statu_quo.base_taxable) + ' après abattement ' + formatLien(pair.lien) + ' de ' + fmt(pair.statu_quo.abattement) + ', taux effectif ' + pair.statu_quo.taux_effectif + '%). ';
+                }
+            });
+        } else {
+            prose += 'Bonne nouvelle : avec les abattements disponibles, les droits de succession seraient nuls en l\'état. ';
+        }
+
+        // Urgency based on age
+        txMap.pairs.forEach(function(pair) {
+            if (pair.donor.age >= 75) {
+                prose += '<strong style="color:var(--accent-coral);">Attention : ' + esc(pair.donor.nom) + ' a ' + pair.donor.age + ' ans — les abattements de donation ne se renouvellent que tous les 15 ans (art. 784 CGI). Il est urgent d\'agir.</strong> ';
+            }
+            if (pair.donor.age >= 70) {
+                prose += 'Important : ' + esc(pair.donor.nom) + ' a dépassé 70 ans, les primes versées sur une assurance-vie seront taxées selon l\'art. 757 B (abattement global de seulement 30 500 €) et non l\'art. 990 I (152 500 € par bénéficiaire). ';
+            }
+        });
+        prose += '</p></div>';
+
+        // § 3. DONATIONS ANTÉRIEURES
+        var hasDonations = false;
+        var donProseLines = [];
+        if (PO) {
+            txMap.pairs.forEach(function(pair) {
+                var poId = pair.donor._poId !== undefined ? pair.donor._poId : pair.donor.id;
+                if (PO.getDonorDonationForBenRaw && poId >= 0) {
+                    var raw = PO.getDonorDonationForBenRaw(poId, pair.ben.id);
+                    if (raw && raw.montant > 0) {
+                        hasDonations = true;
+                        var abatTotal = getAbattement(pair.lien, false);
+                        var reste = Math.max(0, abatTotal - raw.montant);
+                        donProseLines.push(esc(pair.donor.nom) + ' a déjà donné <strong>' + fmt(raw.montant) + '</strong> à ' + esc(pair.ben.prenom || pair.ben.nom) +
+                            (raw.date ? ' le ' + raw.date : '') + '. Abattement ' + formatLien(pair.lien) + ' de ' + fmt(abatTotal) + ' → <strong>reste ' + fmt(reste) + '</strong> disponible (rappel fiscal 15 ans, art. 784 CGI).');
+                    }
+                }
+            });
+        }
+        // Also check other donors (parents) even if not checked as donors
+        var allPODonors2 = PO ? PO.getDonors() : [];
+        allPODonors2.forEach(function(pod) {
+            // Skip if already covered as checked donor
+            var alreadyCovered = txMap.pairs.some(function(p) { return (p.donor._poId !== undefined ? p.donor._poId : p.donor.id) === pod.id; });
+            if (alreadyCovered) return;
+            txMap.pairs.forEach(function(pair) {
+                if (PO.getDonorDonationForBenRaw) {
+                    var raw = PO.getDonorDonationForBenRaw(pod.id, pair.ben.id);
+                    if (raw && raw.montant > 0) {
+                        hasDonations = true;
+                        donProseLines.push(esc(pod.nom) + ' (non donateur principal) a donné <strong>' + fmt(raw.montant) + '</strong> à ' + esc(pair.ben.prenom || pair.ben.nom) +
+                            (raw.date ? ' le ' + raw.date : '') + '. Cette donation consomme l\'abattement entre ces deux personnes.');
+                    }
+                }
+            });
+        });
+
+        if (hasDonations || donProseLines.length > 0) {
+            prose += '<div style="margin-bottom:16px;">';
+            prose += '<div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:6px;border-bottom:1px solid rgba(198,134,66,.1);padding-bottom:4px;">Donations antérieures</div>';
+            prose += '<p style="margin:0 0 8px;">' + donProseLines.join('<br>') + '</p></div>';
+        }
+
+        // § 4. ANALYSE PAR CHEMIN
+        prose += '<div style="margin-bottom:16px;">';
+        prose += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-green);margin-bottom:6px;border-bottom:1px solid rgba(16,185,129,.1);padding-bottom:4px;">Stratégies de transmission par chemin</div>';
+
+        txMap.pairs.forEach(function(pair) {
+            var donorLabel = esc(pair.donor.nom);
+            var benLabel = esc(pair.ben.prenom || pair.ben.nom);
+            var lienLabel = formatLien(pair.lien);
+            var sq = pair.statu_quo;
+            var best = pair.best;
+
+            prose += '<p style="margin:8px 0;padding:10px 14px;border-radius:10px;background:rgba(198,134,66,.03);border-left:3px solid var(--primary-color);">';
+            prose += '<strong>' + donorLabel + ' → ' + benLabel + '</strong> (' + lienLabel + ', patrimoine transmissible : ' + fmt(pair.benPat ? pair.benPat.actifNet : 0) + ')<br>';
+
+            if (best && best.id !== 'succession' && sq) {
+                prose += 'Le canal le plus avantageux est <strong style="color:var(--accent-green);">' + best.icon + ' ' + esc(best.name) + '</strong> avec seulement <strong>' + fmt(best.droits) + ' de droits</strong> (taux effectif ' + best.taux_effectif + '%), soit <strong style="color:var(--accent-green);">' + fmt(best.net) + ' net transmis</strong>. ';
+                prose += 'En comparaison, la succession coûterait ' + fmt(sq.droits) + ' de droits (' + sq.taux_effectif + '%). ';
+
+                // Explain mechanism
+                if (best.id === 'sci_np') {
+                    prose += 'La SCI permet une décote de 15% sur la valeur des parts (illiquidité) combinée au démembrement en nue-propriété (art. 669 CGI), ce qui réduit doublement l\'assiette taxable. Le donateur reste gérant et conserve le contrôle total. ';
+                } else if (best.id === 'donation_np') {
+                    prose += 'La donation en nue-propriété (art. 669 CGI) permet de transmettre à un coût fiscal réduit : les droits sont calculés sur la seule valeur de la nue-propriété (' + (pair.donor.age ? Math.round(getNPRatio(pair.donor.age) * 100) : '?') + '% à ' + (pair.donor.age || '?') + ' ans). L\'usufruitier conserve l\'usage et les revenus du bien. Au décès, la pleine propriété se reconstitue sans droits supplémentaires. ';
+                } else if (best.id === 'don_manuel') {
+                    prose += 'Le don manuel cumulé avec le don familial en argent permet de transmettre en franchise totale de droits dans la limite des abattements disponibles. ';
+                } else if (best.id === 'av_990i') {
+                    prose += 'L\'assurance-vie bénéficie d\'un régime fiscal séparé de la succession (art. 990 I CGI) avec un abattement de 152 500 € par bénéficiaire, et des taux de 20% puis 31,25% au-delà. ';
+                } else if (best.id === 'capi_demembre') {
+                    prose += 'Le contrat de capitalisation démembré combine l\'avantage de la donation en nue-propriété avec la conservation de l\'antériorité fiscale. Le quasi-usufruit est possible, et la créance de restitution sera déductible de la succession. ';
+                }
+
+                // What donor keeps vs loses
+                if (best.id.indexOf('np') >= 0 || best.id === 'sci_np' || best.id === 'capi_demembre') {
+                    prose += '<em>Le donateur conserve l\'usufruit (usage et revenus) mais perd la propriété du bien.</em> ';
+                } else if (best.id === 'donation_pp') {
+                    prose += '<em>Attention : le donateur se dessaisit définitivement du bien (propriété, usage, revenus).</em> ';
+                }
+
+                // Show top 2-3 channels
+                if (pair.channels.length >= 2) {
+                    var alt = pair.channels[1];
+                    if (alt.id !== 'succession') {
+                        prose += '<br><span style="font-size:.72rem;color:var(--text-muted);">Alternative : ' + alt.icon + ' ' + esc(alt.name) + ' → droits ' + fmt(alt.droits) + ', net ' + fmt(alt.net) + '.</span>';
+                    }
+                }
+            } else {
+                prose += 'La succession (statu quo) est déjà le meilleur scénario dans ce cas. ';
+            }
+            prose += '</p>';
+        });
+        prose += '</div>';
+
+        // § 5. CHEMINS INDIRECTS
+        if (txMap.indirectPaths && txMap.indirectPaths.length > 0) {
+            prose += '<div style="margin-bottom:16px;">';
+            prose += '<div style="font-size:.82rem;font-weight:700;color:#3b82f6;margin-bottom:6px;border-bottom:1px solid rgba(59,130,246,.1);padding-bottom:4px;">💡 Chemins indirects à envisager</div>';
+            txMap.indirectPaths.forEach(function(ip) {
+                prose += '<p style="margin:0 0 8px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,.04);border-left:3px solid #3b82f6;">';
+                prose += 'Plutôt qu\'une donation directe ' + esc(ip.gp.nom) + ' → ' + esc(ip.child.prenom || ip.child.nom) + ' (abattement ' + formatLien(ip.lienDirect) + ' de seulement ' + fmt(ip.abatDirect) + '), envisagez de passer par <strong>' + esc(ip.parent.nom) + '</strong> : ';
+                prose += esc(ip.gp.nom) + ' donne d\'abord à ' + esc(ip.parent.nom) + ' (abattement enfant ' + fmt(100000) + '), puis ' + esc(ip.parent.nom) + ' redonne à ' + esc(ip.child.prenom || ip.child.nom) + ' (abattement enfant ' + fmt(100000) + '). ';
+                prose += 'Total : <strong>' + fmt(ip.abatIndirect) + ' d\'abattements cumulés</strong> vs ' + fmt(ip.abatDirect) + ' en direct. ';
+                prose += '<strong style="color:var(--accent-green);">Économie : ' + fmt(ip.economie) + '</strong>.';
+                prose += '</p>';
+            });
+            prose += '</div>';
+        }
+
+        // § 6. PROCHAINES ÉTAPES
+        prose += '<div style="margin-bottom:12px;">';
+        prose += '<div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:6px;border-bottom:1px solid rgba(198,134,66,.1);padding-bottom:4px;">Prochaines étapes</div>';
+        prose += '<p style="margin:0 0 8px;">';
+
+        var steps = [];
+        var hasUrgentDonor = txMap.pairs.some(function(p) { return p.donor.age >= 70; });
+        if (hasUrgentDonor) {
+            steps.push('En priorité, verser sur une assurance-vie <strong>avant</strong> d\'éventuels seuils d\'âge (70 ans pour l\'art. 990 I)');
+        }
+        steps.push('Prendre rendez-vous chez un notaire pour formaliser les donations envisagées');
+        if ((st.immo || []).length > 0) {
+            steps.push('Évaluer précisément les biens immobiliers (expertise si nécessaire) pour asseoir les droits');
+        }
+        if (txMap.indirectPaths && txMap.indirectPaths.length > 0) {
+            steps.push('Étudier les chemins indirects (transmission en cascade) avec votre notaire');
+        }
+        steps.push('Vérifier le calendrier du rappel fiscal 15 ans sur les donations antérieures');
+
+        steps.forEach(function(s, i) {
+            prose += '<strong>' + (i + 1) + '.</strong> ' + s + '<br>';
+        });
+        prose += '</p></div>';
+
+        // Disclaimer
+        prose += '<div style="font-size:.65rem;color:var(--text-muted);font-style:italic;border-top:1px solid rgba(198,134,66,.08);padding-top:8px;">Avertissement : cette analyse est indicative et basée sur la fiscalité en vigueur en 2025-2026. Les montants sont des estimations. Consultez un notaire ou conseiller en gestion de patrimoine pour valider et mettre en œuvre cette stratégie.</div>';
+
+        // ── ASSEMBLE ──
         container.innerHTML = '<div style="padding:24px;border-radius:16px;background:linear-gradient(135deg,rgba(198,134,66,.04),rgba(59,130,246,.02));border:1px solid rgba(198,134,66,.1);">' +
-            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
-            '<div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary-color),#d4a574);display:flex;align-items:center;justify-content:center;"><i class="fas fa-file-alt" style="color:#1a1a2e;font-size:.9rem;"></i></div>' +
-            '<div style="font-size:.9rem;font-weight:700;color:var(--primary-color);">Synthèse des résultats</div></div>' +
-            '<div style="font-size:.8rem;color:var(--text-secondary);line-height:1.85;">' + lines.join('<br>') + '</div>' +
-            '</div>';
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">' +
+            '<div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary-color),#d4a574);display:flex;align-items:center;justify-content:center;"><i class="fas fa-brain" style="color:#1a1a2e;font-size:.9rem;"></i></div>' +
+            '<div><div style="font-size:.9rem;font-weight:700;color:var(--primary-color);">Analyse patrimoniale</div>' +
+            '<div style="font-size:.62rem;color:var(--text-muted);">Personnalisée en fonction de votre situation</div></div></div>' +
+            html + '<div style="font-size:.8rem;color:var(--text-secondary);line-height:1.85;">' + prose + '</div></div>';
     }
 
 
