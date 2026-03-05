@@ -715,6 +715,14 @@ MAX_ETF_PER_SUPER_SECTOR = {
     "Agressif":  {"default": 3, "commodities_resources": 3, "tech_innovation": 3},
 }
 
+# FIX v2.4.0-O: Minimum ETFs par super-secteur (garantit diversité)
+# Si un super-secteur a moins que le min, on injecte le meilleur ETF de ce secteur
+MIN_ETF_PER_SUPER_SECTOR = {
+    "Modéré":    {"equity_broad_us": 1, "international": 1},
+    "Agressif":  {"tech_innovation": 1},
+    "Stable":    {"defensive_income": 1},
+}
+
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # v6.28 FIX B: Aligné avec max_single_position (15%) pour cohérence bounds SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
@@ -928,14 +936,14 @@ PROFILES = {
         vol_target=12.0, 
         vol_tolerance=3.0,
         crypto_max=5.0, 
-        bonds_min=15.0,
+        bonds_min=22.0,            # FIX v2.4.0-O: 15→22% (vrai profil balanced)
         bonds_max=40.0,           # PATCH v8.4: cap obligations
         max_turnover=25.0,
         turnover_penalty=0.10,
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=65.0,
-        max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
+        max_single_position=10.0,  # FIX v2.4.0-O: 13→10% (SYY/EQNR ne dominent plus)
     ),
     "Stable": ProfileConstraints(
         name="Stable", 
@@ -2244,6 +2252,59 @@ class PortfolioOptimizer:
                 f"PATCH v8.2 FIX A: Added {len(etf_to_add)} ETF to pool for "
                 f"{profile.name} (had {len(etf_in_pool)}, minimum {min_etf})"
             )   
+        
+        # === FIX v2.4.0-O: GARANTIR MINIMUM CRYPTO DANS LE POOL ===
+        # Les crypto ont des scores pénalisés par FIX v8.5 (pas d'historique)
+        # → ne passent jamais le top-54 du pool. Injection forcée pour Agressif.
+        if profile.crypto_max > 0:
+            min_crypto_pool = 2 if profile.name == "Agressif" else 1
+            crypto_in_pool = [a for a in selected if a.category == "Crypto"]
+            
+            if len(crypto_in_pool) < min_crypto_pool:
+                crypto_candidates = sorted(
+                    [a for a in universe if a.category == "Crypto" and a not in selected],
+                    key=lambda x: (-x.score, x.id)
+                )
+                crypto_needed = min_crypto_pool - len(crypto_in_pool)
+                crypto_to_add = crypto_candidates[:crypto_needed]
+                selected.extend(crypto_to_add)
+                if crypto_to_add:
+                    logger.info(
+                        f"FIX v2.4.0-O: Added {len(crypto_to_add)} crypto to pool for "
+                        f"{profile.name} (had {len(crypto_in_pool)}, minimum {min_crypto_pool})"
+                    )
+        
+        # === FIX v2.4.0-O: GARANTIR MIN ETF PAR SUPER-SECTEUR ===
+        # Si equity_broad_us est requis pour Modéré mais absent du pool,
+        # injecter le meilleur ETF de ce super-secteur.
+        min_ss_reqs = MIN_ETF_PER_SUPER_SECTOR.get(profile.name, {})
+        if min_ss_reqs:
+            pool_etfs = [a for a in selected if a.category == "ETF"]
+            pool_ss_count = defaultdict(int)
+            for etf in pool_etfs:
+                ss = ETF_SUPER_SECTOR_MAP.get(etf.exposure)
+                if ss:
+                    pool_ss_count[ss] += 1
+            
+            for required_ss, min_n in min_ss_reqs.items():
+                if pool_ss_count[required_ss] < min_n:
+                    # Find best ETF of this super-sector not in pool
+                    candidates_ss = sorted(
+                        [a for a in universe 
+                         if a.category == "ETF" 
+                         and a not in selected
+                         and ETF_SUPER_SECTOR_MAP.get(a.exposure) == required_ss],
+                        key=lambda x: (-x.score, x.id)
+                    )
+                    needed = min_n - pool_ss_count[required_ss]
+                    to_add = candidates_ss[:needed]
+                    selected.extend(to_add)
+                    if to_add:
+                        tickers = [a.ticker or a.id for a in to_add]
+                        logger.info(
+                            f"FIX v2.4.0-O: Injected {len(to_add)} ETF for "
+                            f"super-sector {required_ss}: {tickers}"
+                        )
         
         # === v3.9: TOP-N GUARANTEED SELECTION ===
         # Garantit TOUJOURS 25 actifs minimum (sauf univers < 25)
