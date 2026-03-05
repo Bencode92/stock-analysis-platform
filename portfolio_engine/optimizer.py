@@ -2082,32 +2082,32 @@ class PortfolioOptimizer:
             key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
         )
         # =====================================================
-        # FIX v8.5: PÉNALITÉ CRYPTO SANS HISTORIQUE
+        # FIX v8.5 → v2.4.0-P: CRYPTO SANS HISTORIQUE
         # =====================================================
-        NO_HISTORY_SCORE_PENALTY = 0.50
-        NO_HISTORY_MAX_WEIGHT = 3.0
+        # Le cap de poids est LÉGITIME (pas de covariance = incertitude).
+        # La pénalité de score est un BUG — les métriques Sharpe/vol existent
+        # depuis preset_crypto, seule l'API de prix daily ne supporte pas 
+        # le format crypto (PAXG/USD). Ne pas pénaliser le score permet
+        # à SLSQP de décider honnêtement si la crypto mérite sa place.
+        NO_HISTORY_MAX_WEIGHT = 3.0  # Cap légitime (pas de covariance)
         
         for asset in sorted_assets:
             if asset.category == "Crypto" and asset.returns_series is None:
-                original_score = asset.score
-                asset.score *= (1 - NO_HISTORY_SCORE_PENALTY)
-                if hasattr(asset, '_select_score'):
-                    asset._select_score *= (1 - NO_HISTORY_SCORE_PENALTY)
                 asset._no_history = True
                 asset._max_weight_override = NO_HISTORY_MAX_WEIGHT
-                logger.warning(
-                    f"[FIX v8.5] {asset.id}: no price history, "
-                    f"score {original_score:.1f} → {asset.score:.1f}, "
+                logger.info(
+                    f"[FIX v2.4.0-P] {asset.id}: no price history, "
+                    f"score preserved at {asset.score:.1f}, "
                     f"max_weight capped at {NO_HISTORY_MAX_WEIGHT}%"
                 )
         
-        # Re-trier après pénalité
+        # Re-trier (stable, pas de pénalité score depuis v2.4.0-P)
         sorted_assets = sorted(
             sorted_assets,
             key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
         )
         # =====================================================
-        # FIN FIX v8.5
+        # FIN FIX v2.4.0-P (was v8.5)
         # =====================================================
         
         # === ÉTAPE 5b: Définir taille du pool ===
