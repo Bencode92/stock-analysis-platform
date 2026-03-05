@@ -942,14 +942,14 @@ PROFILES = {
         vol_target=6.0,
         vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=35.0,
-        bonds_max=60.0,           # PATCH v8.4: cap obligations
+        bonds_min=45.0,            # FIX v2.4.0-M: 35→45% (Stable = majorité obligations)
+        bonds_max=65.0,            # FIX v2.4.0-M: 60→65% (marge pour 5 bonds)
         max_turnover=15.0,
         turnover_penalty=0.20,
         score_scale=3.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
-        max_single_position=10.0,     # ÉTAIT 15.0 (default dataclass)
+        max_single_position=13.0,     # FIX v2.4.0-M: 10→13% (10% forçait equal-weight)
     ),
 }
 
@@ -2757,14 +2757,23 @@ class PortfolioOptimizer:
                         logger.debug(f"Skipping {asset.id}: {region} cap {region_cap:.0f}% reached")
                         continue
                 
+                # FIX v2.4.0-M: Score-proportional weight decay
+                # Premier actif du bucket = poids max, puis décroissance
+                # Évite le equal-weight 10% partout pour Stable
+                n_already_in_bucket = sum(1 for aid in allocation 
+                    if any(a.id == aid and a.role == role for a in sorted_candidates))
+                decay = max(0.6, 1.0 - n_already_in_bucket * 0.12)
+                
                 if role == Role.DEFENSIVE:
-                    base_weight = min(profile.max_single_position, 12.0)
+                    role_cap = 13.0 if profile.name == "Stable" else 12.0
+                    base_weight = min(profile.max_single_position, role_cap) * decay
                 elif role == Role.CORE:
-                    base_weight = min(profile.max_single_position, 10.0)
+                    role_cap = 11.0 if profile.name == "Stable" else 10.0
+                    base_weight = min(profile.max_single_position, role_cap) * decay
                 elif role == Role.SATELLITE:
-                    base_weight = min(profile.max_single_position, 8.0)
+                    base_weight = min(profile.max_single_position, 8.0) * decay
                 else:
-                    base_weight = min(5.0, profile.max_single_position)
+                    base_weight = min(5.0, profile.max_single_position) * decay
                 
                 # P1 FIX v6.19: Inclure available_sector dans le min
                 weight = min(base_weight, 100 - total_weight, target_pct - current_weight, available_sector)
