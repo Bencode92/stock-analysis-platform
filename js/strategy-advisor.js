@@ -952,12 +952,12 @@ const StrategyAdvisor = (() => {
 
         ctx.immo.forEach(function(im) {
             var a = analyzeImmo(im, ctx);
-            if (a.options.length > 0) assetAnalyses.push(a);
+            if (a.options.length > 0 || (a.questions && a.questions.length > 0) || a.diagnostic) assetAnalyses.push(a);
         });
 
         ctx.finance.forEach(function(fin) {
             var a = analyzeFinance(fin, ctx);
-            if (a.options.length > 0) assetAnalyses.push(a);
+            if (a.options.length > 0 || (a.questions && a.questions.length > 0) || a.diagnostic) assetAnalyses.push(a);
         });
 
         return { alerts: alerts, assets: assetAnalyses, ctx: ctx };
@@ -1009,12 +1009,6 @@ const StrategyAdvisor = (() => {
             html += '<div style="font-size:.92rem;font-weight:700;color:var(--text-primary);">' + typeIcon + ' ' + esc(asset.label) + '</div>';
             html += '<div style="font-size:.68rem;color:var(--text-muted);">' + usageLabel + (usageLabel ? ' · ' : '') + fmt(asset.valeur) + '</div>';
             html += '</div>';
-            if (asset.options.length > 0 && asset.options[0].isBest) {
-                html += '<div style="text-align:right;">';
-                html += '<div style="font-size:.58rem;color:var(--text-muted);">Recommandé</div>';
-                html += '<div style="font-size:.78rem;font-weight:700;color:var(--accent-green);">' + asset.options[0].icon + ' ' + esc(asset.options[0].name.split('—')[0].trim()) + '</div>';
-                html += '</div>';
-            }
             html += '</div>';
 
             // Expert diagnostic
@@ -1026,7 +1020,6 @@ const StrategyAdvisor = (() => {
 
             // Interactive questions
             if (asset.questions && asset.questions.length > 0) {
-                html += '<div style="margin-bottom:16px;">';
                 asset.questions.forEach(function(q) {
                     var assetKey = asset.type + '-' + (asset.asset.id || idx);
                     var currentVal = getDecision(assetKey, q.id);
@@ -1061,97 +1054,111 @@ const StrategyAdvisor = (() => {
 
                     html += '</div>';
                 });
-                html += '</div>';
             }
-
-            // Options
-            asset.options.forEach(function(opt, oi) {
-                var bg = opt.isBest ? 'rgba(16,185,129,.06)' : opt.isWorst ? 'rgba(255,107,107,.04)' : 'rgba(198,134,66,.02)';
-                var border = opt.isBest ? 'rgba(16,185,129,.2)' : opt.isWorst ? 'rgba(255,107,107,.12)' : 'rgba(198,134,66,.06)';
-
-                html += '<div style="padding:14px 16px;border-radius:10px;background:' + bg + ';border:1px solid ' + border + ';margin-bottom:8px;cursor:pointer;" onclick="this.querySelector(\'.sa-details\').style.display=this.querySelector(\'.sa-details\').style.display===\'none\'?\'\':\'none\'">';
-
-                // Row 1
-                html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">';
-                html += '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;">';
-                html += '<span style="font-size:1rem;">' + opt.icon + '</span>';
-                html += '<div>';
-                html += '<div style="font-size:.8rem;font-weight:600;color:var(--text-primary);">' + esc(opt.name.split('—')[0].trim());
-                if (opt.isBest) html += ' <span style="font-size:.58rem;padding:2px 6px;border-radius:4px;background:rgba(16,185,129,.15);color:var(--accent-green);">🏆 RECOMMANDÉ</span>';
-                html += '</div>';
-                html += '<div style="font-size:.62rem;color:var(--text-muted);">' + opt.timing + '</div>';
-                html += '</div></div>';
-
-                // Metrics
-                html += '<div style="display:flex;gap:14px;align-items:center;">';
-                html += '<div style="text-align:center;"><div style="font-size:.55rem;color:var(--text-muted);">Droits</div><div style="font-size:.82rem;font-weight:700;color:var(--accent-coral);">' + fmt(opt.droits) + '</div></div>';
-                html += '<div style="text-align:center;"><div style="font-size:.55rem;color:var(--text-muted);">Net transmis</div><div style="font-size:.88rem;font-weight:800;color:' + (opt.isBest ? 'var(--accent-green)' : 'var(--text-primary)') + ';">' + fmt(opt.net) + '</div></div>';
-                html += '</div></div>';
-
-                // Expandable details
-                html += '<div class="sa-details" style="display:' + (opt.isBest ? '' : 'none') + ';margin-top:10px;padding-top:10px;border-top:1px solid rgba(198,134,66,.08);">';
-                html += '<div style="font-size:.75rem;color:var(--text-secondary);line-height:1.8;margin-bottom:8px;">' + opt.explain + '</div>';
-
-                if (opt.advantages && opt.advantages.length > 0) {
-                    html += '<div style="font-size:.68rem;color:var(--accent-green);margin-bottom:4px;">';
-                    opt.advantages.forEach(function(a) { html += '<div>✅ ' + a + '</div>'; });
-                    html += '</div>';
-                }
-                if (opt.risks && opt.risks.length > 0) {
-                    html += '<div style="font-size:.68rem;color:var(--accent-coral);">';
-                    opt.risks.forEach(function(r) { html += '<div>⚠️ ' + r + '</div>'; });
-                    html += '</div>';
-                }
-                if (opt.fraisAn > 0) {
-                    html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:4px;">Frais annuels récurrents : ' + fmt(opt.fraisAn) + '</div>';
-                }
-
-                html += '</div>'; // sa-details
-                html += '</div>'; // option card
-            });
 
             html += '</div>'; // section-card
         });
 
-        // ── SUMMARY BAR ──
-        if (result.assets.length > 0) {
-            var totalDroitsBest = 0, totalDroitsSucc = 0, totalNetBest = 0;
-            var chosenStrats = [];
+        // ── DECISIONS SUMMARY ──
+        var answeredCount = Object.keys(decisions).length;
+        var totalQuestions = result.assets.reduce(function(s, a) { return s + (a.questions ? a.questions.length : 0); }, 0);
 
-            result.assets.forEach(function(asset) {
-                var best = asset.options.find(function(o) { return o.isBest; });
-                var worst = asset.options.find(function(o) { return o.isWorst; });
-                if (best) { totalDroitsBest += best.droits; totalNetBest += best.net; }
-                if (worst) totalDroitsSucc += worst.droits;
-                if (best && !best.isWorst) {
-                    chosenStrats.push(best.icon + ' ' + esc(asset.label) + ' → ' + esc(best.name.split('—')[0].trim()));
-                }
-            });
+        if (totalQuestions > 0) {
+            html += '<div style="padding:16px 20px;border-radius:14px;background:linear-gradient(135deg,rgba(198,134,66,.04),rgba(59,130,246,.03));border:1px solid rgba(198,134,66,.1);margin-top:16px;">';
 
-            var eco = totalDroitsSucc - totalDroitsBest;
-
-            html += '<div style="padding:18px 22px;border-radius:14px;background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(198,134,66,.04));border:1px solid rgba(16,185,129,.15);margin-top:16px;">';
-            html += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-green);margin-bottom:10px;"><i class="fas fa-check-double" style="margin-right:6px;"></i> Résumé de la stratégie recommandée</div>';
-
-            // KPI row
-            html += '<div style="display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;">';
-            html += '<div style="flex:1;min-width:120px;text-align:center;"><div style="font-size:.58rem;text-transform:uppercase;color:var(--text-muted);">Droits optimisés</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-green);">' + fmt(totalDroitsBest) + '</div></div>';
-            html += '<div style="flex:1;min-width:120px;text-align:center;"><div style="font-size:.58rem;text-transform:uppercase;color:var(--text-muted);">Droits succession</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent-coral);">' + fmt(totalDroitsSucc) + '</div></div>';
-            if (eco > 0) {
-                html += '<div style="flex:1;min-width:120px;text-align:center;"><div style="font-size:.58rem;text-transform:uppercase;color:var(--text-muted);">Économie</div><div style="font-size:1.1rem;font-weight:800;color:var(--primary-color);">' + fmt(eco) + '</div></div>';
-            }
-            html += '</div>';
-
-            // Strategy list
-            if (chosenStrats.length > 0) {
-                html += '<div style="font-size:.72rem;color:var(--text-secondary);line-height:1.8;">';
-                chosenStrats.forEach(function(s) { html += '<div>' + s + '</div>'; });
+            if (answeredCount === 0) {
+                html += '<div style="font-size:.8rem;color:var(--text-muted);text-align:center;">';
+                html += '<i class="fas fa-hand-pointer" style="margin-right:6px;color:var(--primary-color);"></i>';
+                html += 'Répondez aux questions ci-dessus pour affiner les résultats. Les stratégies s\'adapteront à vos choix.';
                 html += '</div>';
+            } else {
+                html += '<div style="font-size:.82rem;font-weight:700;color:var(--primary-color);margin-bottom:8px;"><i class="fas fa-clipboard-check" style="margin-right:6px;"></i> Vos choix (' + answeredCount + '/' + totalQuestions + ')</div>';
+
+                // List answered decisions
+                html += '<div style="font-size:.72rem;color:var(--text-secondary);line-height:1.8;">';
+                result.assets.forEach(function(asset) {
+                    if (!asset.questions) return;
+                    asset.questions.forEach(function(q) {
+                        var assetKey = asset.type + '-' + asset.asset.id;
+                        var val = getDecision(assetKey, q.id);
+                        if (!val) return;
+                        var chosenOpt = (q.options || []).find(function(o) { return o.value === val; });
+                        if (chosenOpt) {
+                            html += '<div>' + esc(asset.label) + ' → <strong>' + chosenOpt.label + '</strong></div>';
+                        } else if (val) {
+                            html += '<div>' + esc(asset.label) + ' → <em>' + esc(val) + '</em></div>';
+                        }
+                    });
+                });
+                html += '</div>';
+
+                html += '<div style="margin-top:10px;font-size:.7rem;color:var(--text-muted);"><i class="fas fa-arrow-right" style="margin-right:4px;"></i> Ces choix orienteront les stratégies présentées dans les résultats.</div>';
             }
             html += '</div>';
         }
 
         container.innerHTML = html;
+
+        // ── AUTO-DERIVE OBJECTIVES from decisions ──
+        syncObjectivesFromDecisions();
+    }
+
+
+    /**
+     * syncObjectivesFromDecisions — Auto-set les toggles d'objectifs
+     * en fonction des réponses QCM de l'utilisateur
+     */
+    function syncObjectivesFromDecisions() {
+        var s = st();
+        var objState = s.obj || {};
+        var changed = false;
+
+        // Scan all decisions
+        var vals = Object.values(decisions);
+        var keys = Object.keys(decisions);
+
+        // Revenus : if any asset answered "essentiels" or "complementaires"
+        var wantsRevenus = vals.some(function(v) { return v === 'essentiels' || v === 'complementaires'; });
+        // Also if RP answered "rester" (wants to keep usage)
+        var wantsUsage = vals.some(function(v) { return v === 'rester' || v === 'garder'; });
+        if (wantsRevenus || wantsUsage) {
+            if (!objState.revenus) { objState.revenus = true; changed = true; }
+        }
+
+        // Contrôle : if SCI chosen or conserver
+        var wantsControle = vals.some(function(v) { return v === 'sci'; });
+        if (wantsControle) {
+            if (!objState.controle) { objState.controle = true; changed = true; }
+        }
+
+        // Vendre : if any vente horizon selected
+        var wantsVendre = vals.some(function(v) { return v === 'vendre_court' || v === 'vendre' || v === 'vendre_long'; });
+        if (wantsVendre) {
+            if (!objState.vendre) { objState.vendre = true; changed = true; }
+        }
+
+        // Génération : if indirect path chosen
+        var wantsGeneration = vals.some(function(v) { return v === 'oui'; });
+        // Check if the key is about indirect path
+        keys.forEach(function(k, i) {
+            if (k.indexOf('chemin-indirect') >= 0 && vals[i] === 'oui') {
+                if (!objState.generation) { objState.generation = true; changed = true; }
+            }
+        });
+
+        // Minimiser is always on
+        objState.minimiser = true;
+
+        // Update switch UI if changed
+        if (changed) {
+            ['minimiser', 'revenus', 'controle', 'conjoint', 'egalite', 'generation', 'vendre'].forEach(function(key) {
+                var switchEl = document.getElementById('obj-' + key);
+                if (switchEl) {
+                    if (objState[key]) switchEl.classList.add('on');
+                    else switchEl.classList.remove('on');
+                }
+            });
+        }
     }
 
 
