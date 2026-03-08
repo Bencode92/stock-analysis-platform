@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-07T08:16:25.534906",
+  "timestamp": "2026-03-08T08:16:56.998459",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -9,9 +9,9 @@
     "etf_initial": 234,
     "etf_selected": 17,
     "etf_rejected_notable": 20,
-    "crypto_initial": 7,
+    "crypto_initial": 6,
     "crypto_selected": 2,
-    "crypto_rejected_notable": 5,
+    "crypto_rejected_notable": 4,
     "bonds_initial": 31,
     "bonds_selected": 9,
     "total_filters_applied": 4,
@@ -19,7 +19,7 @@
     "category_rankings_sizes": {
       "equity": 100,
       "etf": 100,
-      "crypto": 7,
+      "crypto": 6,
       "bond": 31
     },
     "preset_rankings_sizes": {
@@ -4333,78 +4333,66 @@
         "selected": true,
         "matched_preset": "crypto_preset_tokenized_gold",
         "profile_score": 100.0,
-        "volatility": 34.6
+        "volatility": 29.9
       },
       {
         "rank": 2,
         "name": "TRX/USD",
         "ticker": "TRX/USD",
-        "sort_score": 99.23,
+        "sort_score": 99.8,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_payment",
-        "profile_score": 99.23,
-        "volatility": 21.5
+        "profile_score": 99.8,
+        "volatility": 20.8
       },
       {
         "rank": 3,
-        "name": "XAUT/USD",
-        "ticker": "XAUT/USD",
-        "sort_score": 92.58,
+        "name": "NFT/USD",
+        "ticker": "NFT/USD",
+        "sort_score": 94.31,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_tokenized_gold",
-        "profile_score": 92.58,
+        "matched_preset": "crypto_preset_other",
+        "profile_score": 94.31,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 33.4
+        "volatility": 42.9
       },
       {
         "rank": 4,
-        "name": "MORPHO/USD",
-        "ticker": "MORPHO/USD",
-        "sort_score": 91.26,
+        "name": "XAUT/USD",
+        "ticker": "XAUT/USD",
+        "sort_score": 92.26,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_defi",
-        "profile_score": 91.26,
+        "matched_preset": "crypto_preset_tokenized_gold",
+        "profile_score": 92.26,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 127.2
+        "volatility": 28.3
       },
       {
         "rank": 5,
         "name": "GNO/USD",
         "ticker": "GNO/USD",
-        "sort_score": 91.25,
+        "sort_score": 91.94,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 91.25,
+        "profile_score": 91.94,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 88.7
+        "volatility": 69.8
       },
       {
         "rank": 6,
-        "name": "CRO/USD",
-        "ticker": "CRO/USD",
-        "sort_score": 84.16,
+        "name": "BTC/USD",
+        "ticker": "BTC/USD",
+        "sort_score": 84.63,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_exchange",
-        "profile_score": 84.16,
+        "matched_preset": "crypto_preset_blue_chip",
+        "profile_score": 84.63,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 59.6
-      },
-      {
-        "rank": 7,
-        "name": "BTT/USD",
-        "ticker": "BTT/USD",
-        "sort_score": 84.16,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 84.16,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 62.8
+        "volatility": 50.3
       }
     ],
     "bond": [
@@ -16526,7 +16514,7 @@
       "category": "crypto",
       "matched_preset": "crypto_preset_tokenized_gold",
       "profile_score": 100.0,
-      "volatility": 34.6,
+      "volatility": 29.9,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 1,
@@ -16537,33 +16525,33 @@
       "ticker": "TRX/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_payment",
-      "profile_score": 99.23,
-      "volatility": 21.5,
+      "profile_score": 99.8,
+      "volatility": 20.8,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 2,
-      "selection_reason": "Score profil élevé (99.23); Preset: crypto_preset_payment"
+      "selection_reason": "Score profil élevé (99.80); Preset: crypto_preset_payment"
     }
   ],
   "crypto_rejected": [
     {
       "name": "Unknown",
-      "ticker": "XAUT/USD",
+      "ticker": "NFT/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_tokenized_gold",
-      "profile_score": 92.58,
-      "volatility": 33.4,
+      "matched_preset": "crypto_preset_other",
+      "profile_score": 94.31,
+      "volatility": 42.9,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "MORPHO/USD",
+      "ticker": "XAUT/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_defi",
-      "profile_score": 91.26,
-      "volatility": 127.2,
+      "matched_preset": "crypto_preset_tokenized_gold",
+      "profile_score": 92.26,
+      "volatility": 28.3,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16573,30 +16561,19 @@
       "ticker": "GNO/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 91.25,
-      "volatility": 88.7,
+      "profile_score": 91.94,
+      "volatility": 69.8,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "CRO/USD",
+      "ticker": "BTC/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_exchange",
-      "profile_score": 84.16,
-      "volatility": 59.6,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "BTT/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 84.16,
-      "volatility": 62.8,
+      "matched_preset": "crypto_preset_blue_chip",
+      "profile_score": 84.63,
+      "volatility": 50.3,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16808,7 +16785,7 @@
   "radar_context": {
     "regime": "risk-on",
     "confidence": 0.86,
-    "as_of": "2026-03-07",
+    "as_of": "2026-03-08",
     "favored_sectors": [
       "energy",
       "materials",
