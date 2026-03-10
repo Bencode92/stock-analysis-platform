@@ -2,13 +2,11 @@
  * fiscal-optimizer.js - Module de simulation patrimoniale complète
  * TradePulse Finance Intelligence Platform
  * 
- * Version 3.0 - Corrections majeures :
- *   - PASS 2026 (48 060 €) + fallback 2025 (47 100 €)
- *   - Tranches IR revenus 2024 (barème 2025) corrigées
- *   - Plafond TNS élargi (10% de 8 PASS + 15% de 7 PASS)
- *   - Plafonnement du quotient familial (1 759 €/demi-part)
- *   - Avertissement fiscalité à la sortie du PER
- *   - CSG déductible 6,8% intégrée
+ * Version 3.1 - Ajout abattement 10% frais professionnels
+ *   - Le plafond PER salariés est calculé sur le NET IMPOSABLE
+ *     (après abattement 10% frais pro, plafonné à 14 171 €)
+ *   - Les TNS ne sont PAS concernés (charges réelles déduites)
+ *   - Source : article 163 quatervicies du CGI
  */
 
 const PatrimoineSimulator = (function() {
@@ -46,6 +44,16 @@ const PatrimoineSimulator = (function() {
 
     const PLAFOND_QF_DEMI_PART = 1759;
     const TAUX_CSG_DEDUCTIBLE = 0.068;
+
+    // NOUVEAU v3.1 : Abattement 10% pour frais professionnels (salariés uniquement)
+    // Source : article 83-3° du CGI
+    // Plancher : 495 € (2025) — on simplifie, rarement atteint
+    // Plafond : 14 171 € (revenus 2024, barème 2025)
+    const ABATTEMENT_FRAIS_PRO = {
+        taux: 0.10,
+        plafond: 14171,  // € — mis à jour chaque année
+        plancher: 495    // € — minimum garanti
+    };
 
     const CHARGES_PAR_TYPE = {
         salarie:       0.22,
@@ -98,6 +106,10 @@ const PatrimoineSimulator = (function() {
         }
     };
 
+    // =====================================================================
+    // FONCTIONS UTILITAIRES
+    // =====================================================================
+
     function setAnnee(annee) {
         if (PASS_PAR_ANNEE[annee]) {
             ANNEE_SIMULATION = annee;
@@ -107,6 +119,34 @@ const PatrimoineSimulator = (function() {
             console.warn(`Année ${annee} non supportée. Disponibles : ${Object.keys(PASS_PAR_ANNEE).join(', ')}`);
         }
     }
+
+    /**
+     * NOUVEAU v3.1 : Calcule l'abattement 10% pour frais professionnels
+     * S'applique uniquement aux salariés / cadres / fonctionnaires
+     * Les TNS déduisent leurs charges réelles, pas cet abattement forfaitaire.
+     * 
+     * @param {number} revenuNetCharges - Salaire net de charges sociales
+     * @param {string} typeRevenu - Type de statut
+     * @returns {number} Montant de l'abattement (0 pour les TNS)
+     */
+    function calculerAbattementFraisPro(revenuNetCharges, typeRevenu) {
+        // TNS et micro-entrepreneurs : pas d'abattement forfaitaire
+        if (typeRevenu === 'independant' || typeRevenu === 'microEntrepreneur') {
+            return 0;
+        }
+        // Salariés, cadres, fonctionnaires : abattement 10% plafonné
+        const abattementBrut = revenuNetCharges * ABATTEMENT_FRAIS_PRO.taux;
+        return Math.round(
+            Math.max(
+                ABATTEMENT_FRAIS_PRO.plancher,
+                Math.min(abattementBrut, ABATTEMENT_FRAIS_PRO.plafond)
+            )
+        );
+    }
+
+    // =====================================================================
+    // CALCUL D'IMPÔT
+    // =====================================================================
 
     function calculerImpot(revenuImposable, nbParts = null) {
         const parts = nbParts || state.nbParts || 1;
@@ -154,13 +194,29 @@ const PatrimoineSimulator = (function() {
         return 0;
     }
 
+    // =====================================================================
+    // PLAFONDS PER — CORRIGÉ v3.1 avec abattement frais pro
+    // =====================================================================
+
+    /**
+     * Calcul des plafonds PER avec distinction salariés / TNS
+     * 
+     * CORRECTION v3.1 : pour les salariés, la base de calcul du plafond PER
+     * est le revenu NET IMPOSABLE (après abattement 10% frais pro),
+     * pas le revenu net de charges.
+     * 
+     * Salariés : 10% du net imposable (net charges - 10% frais pro)
+     * TNS      : 10% du bénéfice imposable + 15% entre 1 et 8 PASS
+     */
     function calculerPlafondsPER(revenuProNet, plafondsReportables = null, typeRevenu = null) {
         const reportables = plafondsReportables || state.perPlafondsReportables;
         const type = typeRevenu || state.typeRevenu;
         const plafonds = getPlafondsPER();
         const isTNS = (type === 'independant');
         let plafondN;
+
         if (isTNS) {
+            // TNS : 10% du bénéfice (max 8 PASS) + 15% entre 1 et 8 PASS
             const beneficePlafonne = Math.min(revenuProNet, PASS_REF * 8);
             const enveloppe1 = beneficePlafonne * 0.10;
             const tranche1a8 = Math.max(0, Math.min(revenuProNet, PASS_REF * 8) - PASS_REF);
@@ -168,9 +224,14 @@ const PatrimoineSimulator = (function() {
             const plafondTheorique = enveloppe1 + enveloppe2;
             plafondN = Math.max(plafonds.TNS_MIN, Math.round(plafondTheorique));
         } else {
-            const plafondTheorique = revenuProNet * 0.10;
+            // CORRIGÉ v3.1 : salariés → appliquer l'abattement 10% frais pro
+            // avant de calculer le plafond PER
+            const abattement = calculerAbattementFraisPro(revenuProNet, type);
+            const netImposable = revenuProNet - abattement;
+            const plafondTheorique = netImposable * 0.10;
             plafondN = Math.max(plafonds.SALARIE_MIN, Math.min(Math.round(plafondTheorique), plafonds.SALARIE_MAX));
         }
+
         const plafondsParAnnee = {
             n3: Math.max(reportables.n3 || 0, 0),
             n2: Math.max(reportables.n2 || 0, 0),
@@ -181,6 +242,10 @@ const PatrimoineSimulator = (function() {
         const totalDisponible = totalReports + plafondN;
         return { plafondN, plafondsParAnnee, totalDisponible, totalReports, isTNS };
     }
+
+    // =====================================================================
+    // ALLOCATION PER (FIFO)
+    // =====================================================================
 
     function allouerVersementPER(montant, plafondsParAnnee) {
         const ordre = ['n3', 'n2', 'n1', 'n'];
@@ -204,6 +269,10 @@ const PatrimoineSimulator = (function() {
     function calculerPlafondsAnneeProchaine(plafondsRestants) {
         return { n3: plafondsRestants.n2 || 0, n2: plafondsRestants.n1 || 0, n1: plafondsRestants.n || 0 };
     }
+
+    // =====================================================================
+    // VERSEMENT OPTIMAL
+    // =====================================================================
 
     function calculerVersementOptimalPourChangerTranche(revenuImposable, plafondsReportables = null, nbParts = null, typeRevenu = null) {
         const reportables = plafondsReportables || state.perPlafondsReportables;
@@ -244,6 +313,10 @@ const PatrimoineSimulator = (function() {
         };
     }
 
+    // =====================================================================
+    // FISCALITÉ SORTIE PER
+    // =====================================================================
+
     function estimerFiscaliteSortiePER(totalVerse, plusValues, tmiSortie = 30) {
         const irSurCapital = totalVerse * (tmiSortie / 100);
         const pfuSurPV = plusValues * 0.30;
@@ -260,6 +333,10 @@ const PatrimoineSimulator = (function() {
         };
     }
 
+    // =====================================================================
+    // SIMULATION FISCALE COMPLÈTE — CORRIGÉ v3.1
+    // =====================================================================
+
     function calculerSimulationFiscale(params = {}) {
         state.revenuBrut = params.revenuBrut || state.revenuBrut;
         state.typeRevenu = params.typeRevenu || state.typeRevenu;
@@ -269,28 +346,45 @@ const PatrimoineSimulator = (function() {
         if (params.plafondsReportables) {
             state.perPlafondsReportables = { n1: params.plafondsReportables.n1 || 0, n2: params.plafondsReportables.n2 || 0, n3: params.plafondsReportables.n3 || 0 };
         }
+
+        // Revenu net de charges sociales
         const revenuNetCharges = state.revenuBrut * (1 - state.tauxCharges);
-        const netImposableSansPER = revenuNetCharges;
-        const { plafondN, plafondsParAnnee, totalDisponible } = calculerPlafondsPER(netImposableSansPER, state.perPlafondsReportables, state.typeRevenu);
+
+        // CORRIGÉ v3.1 : Appliquer l'abattement 10% frais pro pour les salariés
+        const abattement = calculerAbattementFraisPro(revenuNetCharges, state.typeRevenu);
+        const netImposableSansPER = revenuNetCharges - abattement;
+
+        // Plafonds PER (calculerPlafondsPER applique aussi l'abattement en interne)
+        const { plafondN, plafondsParAnnee, totalDisponible } = calculerPlafondsPER(revenuNetCharges, state.perPlafondsReportables, state.typeRevenu);
+
         const perVersement = state.revenuBrut * state.perPourcentage;
         const { utilisation, perDeductible, perNonDeductible, plafondsRestants } = allouerVersementPER(perVersement, plafondsParAnnee);
         const netImposableAvecPER = netImposableSansPER - perDeductible;
+
         const impotSansPER = calculerImpot(netImposableSansPER);
         const impotAvecPER = calculerImpot(netImposableAvecPER);
         const gainFiscal = impotSansPER - impotAvecPER;
+
         const netDispoSansPER = netImposableSansPER - impotSansPER;
         const netDispoAvecPER = netImposableAvecPER - impotAvecPER;
         const patrimoineGlobal = netDispoAvecPER + perVersement;
+
         const tauxMoyenSansPER = netImposableSansPER > 0 ? (impotSansPER / netImposableSansPER) * 100 : 0;
         const tauxMoyenAvecPER = netImposableAvecPER > 0 ? (impotAvecPER / netImposableAvecPER) * 100 : 0;
+
         Object.assign(state.resultats, {
             netImposableSansPER, netImposableAvecPER, perVersement, perDeductible, perNonDeductible,
             impotSansPER, impotAvecPER, gainFiscal, netDispoSansPER, netDispoAvecPER, patrimoineGlobal,
             tauxMoyenSansPER, tauxMoyenAvecPER, plafondPERActuel: plafondN, plafondPERTotalDispo: totalDisponible,
-            perUtilisationParAnnee: utilisation, perPlafondsRestants: plafondsRestants
+            perUtilisationParAnnee: utilisation, perPlafondsRestants: plafondsRestants,
+            abattementFraisPro: abattement  // NOUVEAU : exposé pour debug/affichage
         });
         return state.resultats;
     }
+
+    // =====================================================================
+    // BUDGET & ALLOCATION
+    // =====================================================================
 
     function calculerBudget(params = {}) {
         if (params.loyer) state.budget.loyer = params.loyer;
@@ -326,6 +420,10 @@ const PatrimoineSimulator = (function() {
         if (params.sauvegarder) sauvegarderResultats();
         return state.resultats;
     }
+
+    // =====================================================================
+    // PERSISTANCE
+    // =====================================================================
 
     function sauvegarderResultats() {
         try {
@@ -377,16 +475,21 @@ const PatrimoineSimulator = (function() {
 
     function getConstantesPER() {
         const p = getPlafondsPER();
-        return { PASS_REF, ANNEE_SIMULATION, PLAFOND_PER_MIN: p.SALARIE_MIN, PLAFOND_PER_MAX: p.SALARIE_MAX, PLAFOND_TNS_MAX: p.TNS_MAX };
+        return { PASS_REF, ANNEE_SIMULATION, PLAFOND_PER_MIN: p.SALARIE_MIN, PLAFOND_PER_MAX: p.SALARIE_MAX, PLAFOND_TNS_MAX: p.TNS_MAX, ABATTEMENT_FRAIS_PRO: ABATTEMENT_FRAIS_PRO };
     }
 
     function getTranchesImpot() { return [...TRANCHES_IMPOT]; }
+
+    // =====================================================================
+    // API PUBLIQUE
+    // =====================================================================
 
     return {
         calculerSimulationFiscale, calculerBudget, calculerAllocation, simulerPatrimoine,
         calculerImpot, calculerPlafondsPER, allouerVersementPER,
         calculerVersementOptimalPourChangerTranche, calculerPlafondsAnneeProchaine,
-        estimerFiscaliteSortiePER, getTauxMarginal, getTauxCharges, getConstantesPER,
+        estimerFiscaliteSortiePER, calculerAbattementFraisPro,
+        getTauxMarginal, getTauxCharges, getConstantesPER,
         getTranchesImpot, getState: () => ({...state}), setAnnee, resetState,
         sauvegarderResultats, chargerResultats, exporterDataGraphique
     };
@@ -400,19 +503,44 @@ const PatrimoineSimulator = (function() {
 function formatMontant(n) { return Math.round(n).toLocaleString('fr-FR'); }
 function formatPct(n) { return `${Math.round(n)} %`; }
 
+/**
+ * CORRIGÉ v3.1 : runScenarioPER applique aussi l'abattement frais pro
+ * pour que les 3 scénarios utilisent la même base imposable correcte
+ */
 function runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement }) {
     const tauxCharges = PatrimoineSimulator.getTauxCharges(statut);
     const revenuProNet = revenuBrut * (1 - tauxCharges);
+
+    // CORRIGÉ v3.1 : abattement 10% frais pro pour les salariés
+    const abattement = PatrimoineSimulator.calculerAbattementFraisPro(revenuProNet, statut);
+    const netImposableBase = revenuProNet - abattement;
+
     const { plafondN, plafondsParAnnee, totalDisponible, totalReports } = PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables, statut);
     const { utilisation, perDeductible, perNonDeductible, plafondsRestants } = PatrimoineSimulator.allouerVersementPER(perVersement, plafondsParAnnee);
-    const netImposableSansPER = revenuProNet;
-    const netImposableAvecPER = revenuProNet - perDeductible;
+
+    const netImposableSansPER = netImposableBase;
+    const netImposableAvecPER = netImposableBase - perDeductible;
+
     const impotSansPER = PatrimoineSimulator.calculerImpot(netImposableSansPER, nbParts);
     const impotAvecPER = PatrimoineSimulator.calculerImpot(netImposableAvecPER, nbParts);
     const plafondsAnneeProchaine = PatrimoineSimulator.calculerPlafondsAnneeProchaine(plafondsRestants);
-    return { revenuProNet, netImposableSansPER, netImposableAvecPER, impotSansPER, impotAvecPER, gainFiscal: impotSansPER - impotAvecPER, perVersement, perDeductible, perNonDeductible, plafondN, plafondTotal: totalDisponible, totalReports, utilisation, plafondsParAnnee, plafondsRestants, plafondsAnneeProchaine, tmiAvant: PatrimoineSimulator.getTauxMarginal(netImposableSansPER, nbParts), tmiApres: PatrimoineSimulator.getTauxMarginal(netImposableAvecPER, nbParts) };
+
+    return {
+        revenuProNet, abattementFraisPro: abattement,
+        netImposableSansPER, netImposableAvecPER, impotSansPER, impotAvecPER,
+        gainFiscal: impotSansPER - impotAvecPER,
+        perVersement, perDeductible, perNonDeductible, plafondN,
+        plafondTotal: totalDisponible, totalReports, utilisation,
+        plafondsParAnnee, plafondsRestants, plafondsAnneeProchaine,
+        tmiAvant: PatrimoineSimulator.getTauxMarginal(netImposableSansPER, nbParts),
+        tmiApres: PatrimoineSimulator.getTauxMarginal(netImposableAvecPER, nbParts)
+    };
 }
 
+/**
+ * Affiche la synthèse PER V3.1
+ * CORRIGÉ : affiche maintenant l'abattement frais pro dans la synthèse
+ */
 function afficherSynthesePER() {
     const brutInput = document.getElementById('salaire-brut-simple');
     const statutSelect = document.getElementById('statut-simple');
@@ -434,6 +562,7 @@ function afficherSynthesePER() {
     if (alerteN3) alerteN3.classList.toggle('hidden', plafondsReportables.n3 <= 0);
     const tauxCharges = PatrimoineSimulator.getTauxCharges(statut);
     const revenuProNet = brut * (1 - tauxCharges);
+    const abattement = PatrimoineSimulator.calculerAbattementFraisPro(revenuProNet, statut);
     const { plafondN, plafondsParAnnee, totalDisponible, totalReports } = PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables, statut);
     const scenSansPER = runScenarioPER({ revenuBrut: brut, statut, nbParts, plafondsReportables, perVersement: 0 });
     const revenuImposable = scenSansPER.netImposableSansPER;
@@ -461,7 +590,11 @@ function afficherSynthesePER() {
     const pvEstimees = versementMax * (Math.pow(1 + rendementAnnuel, horizonRetraite) - 1);
     const fiscSortie = PatrimoineSimulator.estimerFiscaliteSortiePER(versementMax, pvEstimees, tmiApresMax);
     const ANNEE = constantes.ANNEE_SIMULATION;
-    const html = `<div class="space-y-6"><div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-1 flex items-center gap-2"><span class="text-emerald-400">📊</span> Synthèse de votre situation</h3><p class="text-xs text-slate-400 mb-4">${situationLabel ? situationLabel+' – ' : ''}${isTNS ? 'TNS' : 'Salarié'} – Brut : ${formatMontant(brut)} € – ${ANNEE} (PASS ${formatMontant(constantes.PASS_REF)} €)</p><div class="grid md:grid-cols-3 gap-4 text-sm"><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Revenu imposable</p><p class="text-xl font-bold text-white">${formatMontant(revenuImposable)} €</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">TMI</p><p class="text-xl font-bold ${tmiAvant >= 30 ? 'text-orange-400' : 'text-white'}">${formatPct(tmiAvant)}</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Plafonds PER ${isTNS ? '(TNS)' : ''}</p><p class="text-xl font-bold text-emerald-400">${formatMontant(totalDisponible)} €</p><p class="text-xs text-slate-400 mt-1">${formatMontant(plafondN)} € année en cours${totalReports > 0 ? ' + '+formatMontant(totalReports)+' € reports' : ''}</p>${isTNS ? '<p class="text-xs text-blue-400 mt-1">Max TNS : '+formatMontant(constantes.PLAFOND_TNS_MAX)+' €</p>' : ''}</div></div>${nbParts > 1 ? '<div class="mt-3 text-xs text-slate-400"><i class="fas fa-users mr-1"></i> '+nbParts+' parts (plafonnement QF appliqué)</div>' : ''}</div><div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2"><span class="text-emerald-400">📈</span> Comparatif</h3><div class="overflow-x-auto"><table class="min-w-full text-sm text-slate-200 border-collapse"><thead><tr class="bg-slate-800/80 text-slate-300"><th class="px-3 py-3 text-left font-semibold rounded-tl-lg">Scénario</th><th class="px-3 py-3 text-right font-semibold">Versement</th><th class="px-3 py-3 text-right font-semibold">Impôt</th><th class="px-3 py-3 text-right font-semibold">Économie</th><th class="px-3 py-3 text-right font-semibold rounded-tr-lg">TMI</th></tr></thead><tbody><tr class="border-t border-slate-700"><td class="px-3 py-3 text-slate-400">Sans PER</td><td class="px-3 py-3 text-right text-slate-400">0 €</td><td class="px-3 py-3 text-right">${formatMontant(impotAvant)} €</td><td class="px-3 py-3 text-right text-slate-400">—</td><td class="px-3 py-3 text-right">${formatPct(tmiAvant)}</td></tr><tr class="border-t border-slate-700 ${optimisation.peutChangerTranche ? 'bg-purple-900/20' : ''}"><td class="px-3 py-3"><span class="${optimisation.peutChangerTranche ? 'text-purple-300 font-medium' : 'text-slate-300'}">${optimisation.peutChangerTranche ? '★ ' : ''}Optimal</span><div class="text-xs text-slate-500 mt-0.5">${versementOptimal > 0 ? (optimisation.peutChangerTranche ? formatPct(tmiAvant)+' → '+formatPct(tmiApresOptimal) : 'Plafond insuffisant') : 'Déjà en tranche basse'}</div></td><td class="px-3 py-3 text-right">${formatMontant(versementOptimal)} €</td><td class="px-3 py-3 text-right">${formatMontant(impotOptimal)} €</td><td class="px-3 py-3 text-right ${economieOptimal > 0 ? 'text-emerald-400 font-medium' : 'text-slate-400'}">${economieOptimal > 0 ? formatMontant(economieOptimal)+' €' : '—'}</td><td class="px-3 py-3 text-right">${formatPct(tmiApresOptimal)}</td></tr><tr class="border-t border-slate-700 bg-emerald-900/10"><td class="px-3 py-3"><span class="text-emerald-300 font-medium">⬆ Maximum</span><div class="text-xs text-slate-500 mt-0.5">Tout le plafond</div></td><td class="px-3 py-3 text-right text-emerald-300 font-medium">${formatMontant(versementMax)} €</td><td class="px-3 py-3 text-right">${formatMontant(impotMax)} €</td><td class="px-3 py-3 text-right text-emerald-400 font-bold">${formatMontant(economieMax)} €</td><td class="px-3 py-3 text-right">${formatPct(tmiApresMax)}</td></tr></tbody></table></div></div>${versementMax > 0 ? '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2"><span class="text-emerald-400">📋</span> Répartition plafonds <span class="text-xs font-normal text-slate-400">(scénario max)</span></h3><div class="space-y-3">'+(repartitionMax.n3 > 0 || plafondsReportables.n3 > 0 ? '<div class="flex items-center justify-between p-2 rounded-lg bg-amber-900/20 border border-amber-700/50"><div class="flex items-center gap-2"><span class="text-amber-400 text-xs">⚠️</span><span class="text-slate-300">N-3</span><span class="text-xs text-amber-400">(périme bientôt)</span></div><span class="font-medium text-amber-300">'+formatMontant(repartitionMax.n3)+' € / '+formatMontant(plafondsReportables.n3)+' €</span></div>' : '')+(repartitionMax.n2 > 0 || plafondsReportables.n2 > 0 ? '<div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/30"><span class="text-slate-300">N-2</span><span class="font-medium text-slate-200">'+formatMontant(repartitionMax.n2)+' € / '+formatMontant(plafondsReportables.n2)+' €</span></div>' : '')+(repartitionMax.n1 > 0 || plafondsReportables.n1 > 0 ? '<div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/30"><span class="text-slate-300">N-1</span><span class="font-medium text-slate-200">'+formatMontant(repartitionMax.n1)+' € / '+formatMontant(plafondsReportables.n1)+' €</span></div>' : '')+'<div class="flex items-center justify-between p-2 rounded-lg bg-emerald-900/20 border border-emerald-700/50"><div class="flex items-center gap-2"><span class="text-emerald-400">📅</span><span class="text-slate-300">Année N</span></div><span class="font-medium text-emerald-300">'+formatMontant(repartitionMax.n)+' € / '+formatMontant(plafondN)+' €</span></div></div><div class="mt-4 p-3 bg-slate-800/50 rounded-lg text-xs text-slate-400"><i class="fas fa-lightbulb text-yellow-400 mr-1"></i> FIFO : N-3 → N-2 → N-1 → N</div>'+(plafondsReportables.n3 > 0 ? '<p class="mt-2 text-xs text-amber-400"><i class="fas fa-exclamation-circle mr-1"></i>N-3 périme fin '+ANNEE+'</p>' : '')+(versementOptimal > 0 ? '<div class="mt-5 border-t border-slate-700 pt-4"><h4 class="text-sm font-semibold text-slate-200 mb-2">📅 Plafonds reportables l\'an prochain <span class="text-xs font-normal text-slate-400">(après versement optimal)</span></h4><div class="grid md:grid-cols-3 gap-3 text-sm"><div class="bg-slate-800/70 rounded-lg px-3 py-2"><p class="text-slate-400 text-xs">N-3</p><p class="text-slate-200 font-semibold">'+formatMontant(nextYearOptimal.n3)+' €</p></div><div class="bg-slate-800/70 rounded-lg px-3 py-2"><p class="text-slate-400 text-xs">N-2</p><p class="text-slate-200 font-semibold">'+formatMontant(nextYearOptimal.n2)+' €</p></div><div class="bg-slate-800/70 rounded-lg px-3 py-2"><p class="text-slate-400 text-xs">N-1</p><p class="text-slate-200 font-semibold">'+formatMontant(nextYearOptimal.n1)+' €</p></div></div></div>' : '')+'</div>' : ''}<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="text-orange-400">⚖️</span> Fiscalité sortie PER <span class="text-xs font-normal text-slate-400">(estimation capital)</span></h3><div class="grid md:grid-cols-2 gap-4 text-sm mb-4"><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Économie entrée</p><p class="text-xl font-bold text-emerald-400">+ ${formatMontant(economieMax)} €</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Impôt sortie estimé</p><p class="text-xl font-bold text-orange-400">- ${formatMontant(fiscSortie.totalFiscaliteSortie)} €</p><p class="text-xs text-slate-500 mt-1">Capital: ${formatMontant(fiscSortie.irSurCapital)} € + PV: ${formatMontant(fiscSortie.pfuSurPlusValues)} €</p></div></div><div class="p-3 rounded-lg text-xs ${tmiApresMax >= 30 ? 'bg-orange-900/20 border border-orange-700/50 text-orange-200' : 'bg-emerald-900/20 border border-emerald-700/50 text-emerald-200'}">${fiscSortie.avertissement}</div><p class="mt-3 text-xs text-slate-500">${horizonRetraite} ans, ${Math.round(rendementAnnuel*100)}%/an, TMI sortie = TMI après PER. En réalité, la TMI retraite sera probablement plus basse.</p></div>${plafondsReportables.n3 > 0 ? '<div class="bg-amber-900/20 border border-amber-600/50 rounded-2xl p-5"><h3 class="text-lg font-semibold text-amber-300 mb-2"><i class="fas fa-exclamation-triangle"></i> Urgence</h3><p class="text-sm text-slate-200"><strong class="text-amber-300">'+formatMontant(plafondsReportables.n3)+' €</strong> de N-3 périme fin '+ANNEE+'. À verser en priorité !</p></div>' : ''}<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-sm font-semibold text-slate-400 mb-3"><i class="fas fa-info-circle"></i> Infos ${ANNEE}</h3><div class="grid md:grid-cols-2 gap-3 text-xs text-slate-400"><div>Plafonds salariés : <strong class="text-slate-300">${formatMontant(constantes.PLAFOND_PER_MIN)} – ${formatMontant(constantes.PLAFOND_PER_MAX)} €</strong></div><div>Plafond TNS max : <strong class="text-slate-300">${formatMontant(constantes.PLAFOND_TNS_MAX)} €</strong></div><div>Reports sur 3 ans • Déblocage : RP, invalidité, décès</div></div></div></div>`;
+
+    // NOUVEAU v3.1 : ligne explicative de l'abattement dans la synthèse
+    const abattementInfo = abattement > 0 ? `<p class="text-xs text-slate-500 mt-1">Net charges ${formatMontant(revenuProNet)} € − abattement 10% frais pro ${formatMontant(abattement)} €</p>` : '';
+
+    const html = `<div class="space-y-6"><div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-1 flex items-center gap-2"><span class="text-emerald-400">📊</span> Synthèse de votre situation</h3><p class="text-xs text-slate-400 mb-4">${situationLabel ? situationLabel+' – ' : ''}${isTNS ? 'TNS' : 'Salarié'} – Brut : ${formatMontant(brut)} € – ${ANNEE} (PASS ${formatMontant(constantes.PASS_REF)} €)</p><div class="grid md:grid-cols-3 gap-4 text-sm"><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Revenu imposable</p><p class="text-xl font-bold text-white">${formatMontant(revenuImposable)} €</p>${abattementInfo}</div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">TMI</p><p class="text-xl font-bold ${tmiAvant >= 30 ? 'text-orange-400' : 'text-white'}">${formatPct(tmiAvant)}</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Plafonds PER ${isTNS ? '(TNS)' : ''}</p><p class="text-xl font-bold text-emerald-400">${formatMontant(totalDisponible)} €</p><p class="text-xs text-slate-400 mt-1">${formatMontant(plafondN)} € année en cours${totalReports > 0 ? ' + '+formatMontant(totalReports)+' € reports' : ''}</p>${isTNS ? '<p class="text-xs text-blue-400 mt-1">Max TNS : '+formatMontant(constantes.PLAFOND_TNS_MAX)+' €</p>' : ''}</div></div>${nbParts > 1 ? '<div class="mt-3 text-xs text-slate-400"><i class="fas fa-users mr-1"></i> '+nbParts+' parts (plafonnement QF appliqué)</div>' : ''}</div><div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2"><span class="text-emerald-400">📈</span> Comparatif</h3><div class="overflow-x-auto"><table class="min-w-full text-sm text-slate-200 border-collapse"><thead><tr class="bg-slate-800/80 text-slate-300"><th class="px-3 py-3 text-left font-semibold rounded-tl-lg">Scénario</th><th class="px-3 py-3 text-right font-semibold">Versement</th><th class="px-3 py-3 text-right font-semibold">Impôt</th><th class="px-3 py-3 text-right font-semibold">Économie</th><th class="px-3 py-3 text-right font-semibold rounded-tr-lg">TMI</th></tr></thead><tbody><tr class="border-t border-slate-700"><td class="px-3 py-3 text-slate-400">Sans PER</td><td class="px-3 py-3 text-right text-slate-400">0 €</td><td class="px-3 py-3 text-right">${formatMontant(impotAvant)} €</td><td class="px-3 py-3 text-right text-slate-400">—</td><td class="px-3 py-3 text-right">${formatPct(tmiAvant)}</td></tr><tr class="border-t border-slate-700 ${optimisation.peutChangerTranche ? 'bg-purple-900/20' : ''}"><td class="px-3 py-3"><span class="${optimisation.peutChangerTranche ? 'text-purple-300 font-medium' : 'text-slate-300'}">${optimisation.peutChangerTranche ? '★ ' : ''}Optimal</span><div class="text-xs text-slate-500 mt-0.5">${versementOptimal > 0 ? (optimisation.peutChangerTranche ? formatPct(tmiAvant)+' → '+formatPct(tmiApresOptimal) : 'Plafond insuffisant') : 'Déjà en tranche basse'}</div></td><td class="px-3 py-3 text-right">${formatMontant(versementOptimal)} €</td><td class="px-3 py-3 text-right">${formatMontant(impotOptimal)} €</td><td class="px-3 py-3 text-right ${economieOptimal > 0 ? 'text-emerald-400 font-medium' : 'text-slate-400'}">${economieOptimal > 0 ? formatMontant(economieOptimal)+' €' : '—'}</td><td class="px-3 py-3 text-right">${formatPct(tmiApresOptimal)}</td></tr><tr class="border-t border-slate-700 bg-emerald-900/10"><td class="px-3 py-3"><span class="text-emerald-300 font-medium">⬆ Maximum</span><div class="text-xs text-slate-500 mt-0.5">Tout le plafond</div></td><td class="px-3 py-3 text-right text-emerald-300 font-medium">${formatMontant(versementMax)} €</td><td class="px-3 py-3 text-right">${formatMontant(impotMax)} €</td><td class="px-3 py-3 text-right text-emerald-400 font-bold">${formatMontant(economieMax)} €</td><td class="px-3 py-3 text-right">${formatPct(tmiApresMax)}</td></tr></tbody></table></div></div>${versementMax > 0 ? '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2"><span class="text-emerald-400">📋</span> Répartition plafonds <span class="text-xs font-normal text-slate-400">(scénario max)</span></h3><div class="space-y-3">'+(repartitionMax.n3 > 0 || plafondsReportables.n3 > 0 ? '<div class="flex items-center justify-between p-2 rounded-lg bg-amber-900/20 border border-amber-700/50"><div class="flex items-center gap-2"><span class="text-amber-400 text-xs">⚠️</span><span class="text-slate-300">N-3</span><span class="text-xs text-amber-400">(périme bientôt)</span></div><span class="font-medium text-amber-300">'+formatMontant(repartitionMax.n3)+' € / '+formatMontant(plafondsReportables.n3)+' €</span></div>' : '')+(repartitionMax.n2 > 0 || plafondsReportables.n2 > 0 ? '<div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/30"><span class="text-slate-300">N-2</span><span class="font-medium text-slate-200">'+formatMontant(repartitionMax.n2)+' € / '+formatMontant(plafondsReportables.n2)+' €</span></div>' : '')+(repartitionMax.n1 > 0 || plafondsReportables.n1 > 0 ? '<div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/30"><span class="text-slate-300">N-1</span><span class="font-medium text-slate-200">'+formatMontant(repartitionMax.n1)+' € / '+formatMontant(plafondsReportables.n1)+' €</span></div>' : '')+'<div class="flex items-center justify-between p-2 rounded-lg bg-emerald-900/20 border border-emerald-700/50"><div class="flex items-center gap-2"><span class="text-emerald-400">📅</span><span class="text-slate-300">Année N</span></div><span class="font-medium text-emerald-300">'+formatMontant(repartitionMax.n)+' € / '+formatMontant(plafondN)+' €</span></div></div><div class="mt-4 p-3 bg-slate-800/50 rounded-lg text-xs text-slate-400"><i class="fas fa-lightbulb text-yellow-400 mr-1"></i> FIFO : N-3 → N-2 → N-1 → N</div>'+(plafondsReportables.n3 > 0 ? '<p class="mt-2 text-xs text-amber-400"><i class="fas fa-exclamation-circle mr-1"></i>N-3 périme fin '+ANNEE+'</p>' : '')+(versementOptimal > 0 ? '<div class="mt-5 border-t border-slate-700 pt-4"><h4 class="text-sm font-semibold text-slate-200 mb-2">📅 Plafonds reportables l\'an prochain <span class="text-xs font-normal text-slate-400">(après versement optimal)</span></h4><div class="grid md:grid-cols-3 gap-3 text-sm"><div class="bg-slate-800/70 rounded-lg px-3 py-2"><p class="text-slate-400 text-xs">N-3</p><p class="text-slate-200 font-semibold">'+formatMontant(nextYearOptimal.n3)+' €</p></div><div class="bg-slate-800/70 rounded-lg px-3 py-2"><p class="text-slate-400 text-xs">N-2</p><p class="text-slate-200 font-semibold">'+formatMontant(nextYearOptimal.n2)+' €</p></div><div class="bg-slate-800/70 rounded-lg px-3 py-2"><p class="text-slate-400 text-xs">N-1</p><p class="text-slate-200 font-semibold">'+formatMontant(nextYearOptimal.n1)+' €</p></div></div></div>' : '')+'</div>' : ''}<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="text-orange-400">⚖️</span> Fiscalité sortie PER <span class="text-xs font-normal text-slate-400">(estimation capital)</span></h3><div class="grid md:grid-cols-2 gap-4 text-sm mb-4"><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Économie entrée</p><p class="text-xl font-bold text-emerald-400">+ ${formatMontant(economieMax)} €</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-slate-400 mb-1">Impôt sortie estimé</p><p class="text-xl font-bold text-orange-400">- ${formatMontant(fiscSortie.totalFiscaliteSortie)} €</p><p class="text-xs text-slate-500 mt-1">Capital: ${formatMontant(fiscSortie.irSurCapital)} € + PV: ${formatMontant(fiscSortie.pfuSurPlusValues)} €</p></div></div><div class="p-3 rounded-lg text-xs ${tmiApresMax >= 30 ? 'bg-orange-900/20 border border-orange-700/50 text-orange-200' : 'bg-emerald-900/20 border border-emerald-700/50 text-emerald-200'}">${fiscSortie.avertissement}</div><p class="mt-3 text-xs text-slate-500">${horizonRetraite} ans, ${Math.round(rendementAnnuel*100)}%/an, TMI sortie = TMI après PER.</p></div>${plafondsReportables.n3 > 0 ? '<div class="bg-amber-900/20 border border-amber-600/50 rounded-2xl p-5"><h3 class="text-lg font-semibold text-amber-300 mb-2"><i class="fas fa-exclamation-triangle"></i> Urgence</h3><p class="text-sm text-slate-200"><strong class="text-amber-300">'+formatMontant(plafondsReportables.n3)+' €</strong> de N-3 périme fin '+ANNEE+'.</p></div>' : ''}<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-sm font-semibold text-slate-400 mb-3"><i class="fas fa-info-circle"></i> Infos ${ANNEE}</h3><div class="grid md:grid-cols-2 gap-3 text-xs text-slate-400"><div>Plafonds salariés : <strong class="text-slate-300">${formatMontant(constantes.PLAFOND_PER_MIN)} – ${formatMontant(constantes.PLAFOND_PER_MAX)} €</strong></div><div>Plafond TNS max : <strong class="text-slate-300">${formatMontant(constantes.PLAFOND_TNS_MAX)} €</strong></div><div>Abattement frais pro : 10% (max ${formatMontant(constantes.ABATTEMENT_FRAIS_PRO.plafond)} €)</div><div>Reports 3 ans • Déblocage : RP, invalidité, décès</div></div></div></div>`;
     resultatElement.innerHTML = html;
     resultatElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -486,7 +619,7 @@ window.formatMontant = formatMontant;
 window.formatPct = formatPct;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('PatrimoineSimulator v3.0 chargé (PASS 2026: 48060€, IR 2025)');
+    console.log('PatrimoineSimulator v3.1 (PASS 2026: 48060€, abattement 10% frais pro)');
     const btnAnalyser = document.getElementById('btn-analyser-per');
     if (btnAnalyser) btnAnalyser.addEventListener('click', afficherSynthesePER);
     const toggleAvance = document.getElementById('btn-toggle-avance');
