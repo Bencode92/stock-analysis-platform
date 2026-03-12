@@ -1812,13 +1812,19 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # ============================================================
     ticker_resolver = None
     if HAS_TICKER_RESOLVER:
-        ticker_resolver = TickerResolver.from_equities(eq_filtered)
+        # FIX: eq_filtered n'a PAS data_mic (strippé lors de eq_rows.append).
+        # On construit le resolver depuis stocks_data (les JSON bruts) qui contient
+        # data_mic, data_exchange, resolved_symbol pour chaque action.
+        _raw_stocks = []
+        for _sd in stocks_data:
+            _raw_stocks.extend(_sd.get("stocks", []) if isinstance(_sd, dict) else _sd)
+        ticker_resolver = TickerResolver.from_equities(_raw_stocks)
         set_resolver(ticker_resolver)  # Make globally available
         logger.info(f"   ✅ TickerResolver built: {len(ticker_resolver.mic_code_map)} mic_codes, "
                      f"{len(ticker_resolver.exchange_map)} exchanges, "
                      f"{len(ticker_resolver.resolved_symbol_map)} resolved_symbols")
         # Invalidate cache for previously-failed tickers (AGS, 2360, 3017, etc.)
-        _tickers_with_mic = [eq.get("ticker") for eq in eq_filtered if eq.get("data_mic")]
+        _tickers_with_mic = [s.get("ticker") for s in _raw_stocks if s.get("data_mic")]
         if _tickers_with_mic:
             ticker_resolver.invalidate_cache_for(_tickers_with_mic, cache_dir="data/returns_cache")
     
