@@ -1,13 +1,14 @@
 /**
- * fiscal-optimizations.js v2 — Optimisations fiscales intégrées dans les résultats
+ * fiscal-optimizations.js v2.1 — Don familial 31 865€ intégré
  *
- * 4 leviers avec calcul RÉEL des économies et affichage dans step 5 :
- * 1. SCI décote 15% → réduit l'assiette taxable, recalcule les droits
- * 2. AV exagérées → plafond prudent, droits si réintégrée, alternatives chiffrées
- * 3. Démembrement croisé SCI concubins → scénario complet avec économie
- * 4. Foncier rural 75% → réduction d'assiette et droits recalculés
+ * 5 leviers avec calcul RÉEL :
+ * 1. SCI décote 15%
+ * 2. AV exagérées
+ * 3. Démembrement croisé SCI concubins
+ * 4. Foncier rural 75%
+ * 5. NEW: Don familial 31 865€ (art. 790 G CGI) — cumulable avec abattement classique
  *
- * @version 2.0.0 — 2026-03-13
+ * @version 2.1.0 — 2026-03-13
  */
 const FiscalOptimizations = (function() {
     'use strict';
@@ -21,6 +22,9 @@ const FiscalOptimizations = (function() {
     var FONCIER_RURAL_RENDEMENT_MIN = 0.015;
     var FONCIER_RURAL_RENDEMENT_MAX = 0.02;
     var FONCIER_RURAL_TICKET_ENTREE = 5000;
+    var DON_FAMILIAL_MONTANT = 31865;
+    var DON_FAMILIAL_AGE_DONATEUR_MAX = 80;
+    var DON_FAMILIAL_AGE_DONATAIRE_MIN = 18;
 
     // ============================================================
     // 1. SCI DÉCOTE 15%
@@ -118,13 +122,125 @@ const FiscalOptimizations = (function() {
     }
 
     // ============================================================
-    // 5. CALCUL GLOBAL OPTIMISÉ — Scénario actuel vs optimisé
+    // 5. DON FAMILIAL 31 865€ (art. 790 G CGI)
     // ============================================================
 
     /**
-     * Calcule le scénario complet : situation actuelle + avec toutes les optimisations.
-     * Retourne les montants corrigés et l'économie totale.
+     * Calcule l'abattement supplémentaire du don familial de sommes d'argent.
+     * CUMULABLE avec l'abattement classique (100k enfant, 31 865 PE, etc.)
+     * Conditions : donateur < 80 ans, donataire ≥ 18 ans, don d'argent.
+     * Renouvelable tous les 15 ans.
+     *
+     * @param {Object} params
+     * @param {number} params.ageDonateur - Âge du donateur
+     * @param {number} params.ageDonataire - Âge du donataire
+     * @param {string} params.lien - 'enfant', 'petit_enfant', 'arriere_petit_enfant', 'neveu_niece'
+     * @param {number} params.nbDonors - Nombre de donateurs (1 ou 2 si couple)
+     * @param {number} params.nbBeneficiaires - Nombre de bénéficiaires éligibles
+     * @param {boolean} params.dejaUtilise - Don familial déjà utilisé dans les 15 dernières années
+     * @returns {Object} { eligible, montantParBenParDonateur, totalExonere, economieEstimee, conditions }
      */
+    function computeDonFamilial(params) {
+        var p = params || {};
+        var ageDonateur = p.ageDonateur || 50;
+        var ageDonataire = p.ageDonataire || 30;
+        var lien = p.lien || 'enfant';
+        var nbDonors = p.nbDonors || 1;
+        var nbBen = Math.max(1, p.nbBeneficiaires || 1);
+        var dejaUtilise = !!p.dejaUtilise;
+
+        // Liens éligibles au don familial
+        var liensEligibles = ['enfant', 'petit_enfant', 'arriere_petit_enfant', 'neveu_niece'];
+        var lienEligible = liensEligibles.indexOf(lien) >= 0;
+
+        // Vérifications
+        var donateurEligible = ageDonateur < DON_FAMILIAL_AGE_DONATEUR_MAX;
+        var donataireEligible = ageDonataire >= DON_FAMILIAL_AGE_DONATAIRE_MIN;
+        var eligible = lienEligible && donateurEligible && donataireEligible && !dejaUtilise;
+
+        if (!eligible) {
+            var raisons = [];
+            if (!lienEligible) raisons.push('lien ' + lien + ' non éligible (doit être enfant/PE/APE/neveu)');
+            if (!donateurEligible) raisons.push('donateur ≥ 80 ans (' + ageDonateur + 'a)');
+            if (!donataireEligible) raisons.push('donataire < 18 ans (' + ageDonataire + 'a)');
+            if (dejaUtilise) raisons.push('déjà utilisé (rappel fiscal 15 ans)');
+            return {
+                eligible: false, montantParBenParDonateur: 0, totalExonere: 0, economieEstimee: 0,
+                raisons: raisons,
+                explanation: 'Don familial 790 G non applicable : ' + raisons.join(', ') + '.'
+            };
+        }
+
+        var montantParBenParDonateur = DON_FAMILIAL_MONTANT;
+        var totalExonere = montantParBenParDonateur * nbDonors * nbBen;
+
+        // Estimation économie : taux moyen ~20% sur les montants qui auraient été taxés
+        var economieEstimee = Math.round(totalExonere * 0.20);
+
+        return {
+            eligible: true,
+            montantParBenParDonateur: montantParBenParDonateur,
+            totalExonere: totalExonere,
+            economieEstimee: economieEstimee,
+            nbDonors: nbDonors,
+            nbBeneficiaires: nbBen,
+            conditions: [
+                'Donateur < 80 ans (actuellement ' + ageDonateur + 'a ✅)',
+                'Donataire ≥ 18 ans (actuellement ' + ageDonataire + 'a ✅)',
+                'Don de sommes d\'argent uniquement (espèces, chèque, virement)',
+                'Cumulable avec abattement classique (100k enfant, 80 724€ conjoint...)',
+                'Renouvelable tous les 15 ans',
+                'Déclaration en ligne obligatoire sur impots.gouv.fr (depuis 01/2026)'
+            ],
+            cumulExemple: {
+                abattementClassique: lien === 'enfant' ? 100000 : lien === 'petit_enfant' ? 31865 : lien === 'neveu_niece' ? 7967 : 5310,
+                donFamilial: montantParBenParDonateur,
+                totalParBenParDonateur: (lien === 'enfant' ? 100000 : lien === 'petit_enfant' ? 31865 : lien === 'neveu_niece' ? 7967 : 5310) + montantParBenParDonateur,
+                totalParBenCouple: ((lien === 'enfant' ? 100000 : lien === 'petit_enfant' ? 31865 : lien === 'neveu_niece' ? 7967 : 5310) + montantParBenParDonateur) * Math.min(2, nbDonors)
+            },
+            explanation: 'Don familial (art. 790 G CGI) : ' + fmt(montantParBenParDonateur) + ' supplémentaires exonérés par bénéficiaire et par donateur. ' +
+                'Total pour ' + nbBen + ' bénéficiaire(s) × ' + nbDonors + ' donateur(s) = ' + fmt(totalExonere) + ' hors impôts.',
+            article: 'Art. 790 G CGI — Don familial de sommes d\'argent'
+        };
+    }
+
+    /**
+     * Calcule les droits AVEC et SANS don familial pour comparaison.
+     */
+    function computeDonFamilialImpact(montantDonation, lien, ageDonateur, ageDonataire, nbDonors) {
+        var F = SD._fiscal;
+        var donFam = computeDonFamilial({
+            ageDonateur: ageDonateur || 55, ageDonataire: ageDonataire || 30,
+            lien: lien || 'enfant', nbDonors: nbDonors || 1, nbBeneficiaires: 1
+        });
+        if (!donFam.eligible) return { eligible: false, economie: 0, donFamilial: donFam };
+
+        var abatClassique = F.getAbattement(lien || 'enfant', false) * (nbDonors || 1);
+
+        // SANS don familial
+        var baseSans = Math.max(0, montantDonation - abatClassique);
+        var droitsSans = F.calcDroits(baseSans, F.getBareme(lien || 'enfant'));
+
+        // AVEC don familial
+        var abatAvec = abatClassique + DON_FAMILIAL_MONTANT * (nbDonors || 1);
+        var baseAvec = Math.max(0, montantDonation - abatAvec);
+        var droitsAvec = F.calcDroits(baseAvec, F.getBareme(lien || 'enfant'));
+
+        return {
+            eligible: true,
+            droitsSansDonFamilial: droitsSans,
+            droitsAvecDonFamilial: droitsAvec,
+            economie: droitsSans - droitsAvec,
+            abatClassique: abatClassique,
+            abatTotal: abatAvec,
+            donFamilial: donFam
+        };
+    }
+
+    // ============================================================
+    // 6. CALCUL GLOBAL OPTIMISÉ
+    // ============================================================
+
     function computeOptimizedScenario() {
         var state = getState(); if (!state) return null;
         var F = SD._fiscal, FISCAL = F.getFISCAL(), pat = F.computePatrimoine();
@@ -134,10 +250,7 @@ const FiscalOptimizations = (function() {
         var nbDonors = state.mode === 'couple' ? 2 : 1;
         if (totalBrut <= 0 || bens.length === 0) return null;
 
-        // --- Calcul droits BRUT (sans optimisations) ---
-        var droitsBrut = calcDroitsForBens(totalBrut, bens, nbDonors, true);
-
-        // --- Collecte des optimisations applicables ---
+        var droitsBrut = calcDroitsForBens(totalBrut, bens, nbDonors, true, false);
         var optimisations = [];
         var assietteOptimisee = totalBrut;
 
@@ -164,7 +277,7 @@ const FiscalOptimizations = (function() {
                     id: 'sci_suggestion', label: 'SCI — Potentiel si mise en société', icon: 'fa-lightbulb', color: 'var(--accent-amber)',
                     reduction: 0, potentiel: potentielDecote,
                     detail: biensDirectSCI.length + ' bien(s) en détention directe éligible(s)',
-                    conseil: 'En logeant ces biens en SCI, décote potentielle de ' + fmt(potentielDecote) + '. Coût création ~' + fmt(SCI_FRAIS_NOTAIRE) + '. Avantages : transmission progressive des parts, gérance conservée.',
+                    conseil: 'En logeant ces biens en SCI, décote potentielle de ' + fmt(potentielDecote) + '. Coût création ~' + fmt(SCI_FRAIS_NOTAIRE) + '.',
                     article: 'Art. 1845+ Code civil'
                 });
             }
@@ -190,7 +303,7 @@ const FiscalOptimizations = (function() {
             });
         }
 
-        // 4. Suggestion foncier si patrimoine > 300k et pas de foncier
+        // 4. Suggestion foncier
         if (foncierTotal.count === 0 && totalBrut > 300000 && nbEnfants > 0) {
             var suggestionMontant = Math.min(100000, Math.round(totalBrut * 0.10));
             var suggFoncier = computeFoncierRural(suggestionMontant, 'gfv', nbEnfants);
@@ -198,7 +311,7 @@ const FiscalOptimizations = (function() {
                 id: 'foncier_suggestion', label: 'Foncier rural — Piste de diversification', icon: 'fa-seedling', color: 'var(--accent-emerald)',
                 reduction: 0, potentiel: suggFoncier.exoneration,
                 detail: 'Ex : ' + fmt(suggestionMontant) + ' en GFV → exo 75% = ' + fmt(suggFoncier.exoneration) + ' hors assiette',
-                conseil: 'Investir 5-10% du patrimoine en GFV/GFA/GFI. Exonération 75%, rendement 1,5-2%/an. Ticket dès ' + fmt(FONCIER_RURAL_TICKET_ENTREE) + '.',
+                conseil: 'Investir 5-10% du patrimoine en GFV/GFA/GFI. Exonération 75%, rendement 1,5-2%/an.',
                 article: 'Art. 793 CGI'
             });
         }
@@ -211,7 +324,7 @@ const FiscalOptimizations = (function() {
                 id: 'av_exagerees', label: 'AV exagérées — Risque réintégration', icon: 'fa-exclamation-triangle', color: 'var(--accent-coral)',
                 reduction: 0, risque: droitsReintegration,
                 detail: 'AV = ' + Math.round(avCheck.ratio * 100) + '% patrimoine (seuil 35%). Dépassement ' + fmt(avCheck.depassement),
-                conseil: 'Réduire l\'AV à ' + fmt(avCheck.seuilMax) + ' max. Réallouer le surplus (' + fmt(avCheck.depassement) + ') vers : donation NP (−' + fmt(Math.round(avCheck.depassement * 0.15)) + ' via décote), SCI, ou GFV (−75% d\'assiette).',
+                conseil: 'Réduire l\'AV à ' + fmt(avCheck.seuilMax) + ' max. Réallouer vers donation NP, SCI, ou GFV.',
                 article: 'L132-13 Code assurances — Cass. 2ème civ.'
             });
         }
@@ -228,18 +341,63 @@ const FiscalOptimizations = (function() {
                     id: 'croise_concubins', label: 'SCI croisée — Protection concubin', icon: 'fa-key', color: 'var(--accent-purple)',
                     reduction: 0, economie: dcResult.economie,
                     detail: 'Sans montage : ' + fmt(dcResult.scenarioDirect.droits) + ' (60%). Avec SCI croisée : ' + fmt(dcResult.scenarioCroise.droitsEnfants) + ' (ligne directe)',
-                    conseil: 'Survivant reste dans le logement SANS droits. Enfants héritent en NP au barème 5-45% (au lieu de 60%). Économie : ' + fmt(dcResult.economie) + '. Coût : ~' + fmt(dcResult.fraisCreation) + '.',
+                    conseil: 'Survivant reste dans le logement SANS droits. Enfants héritent en NP au barème 5-45%. Économie : ' + fmt(dcResult.economie) + '.',
                     article: 'Art. 1845+ CC — SCI démembrée'
                 });
             }
         }
 
-        // --- Calcul droits OPTIMISÉ ---
+        // 7. DON FAMILIAL 31 865€ (art. 790 G CGI)
+        var donFamilialEligible = false;
+        var donFamilialTotal = 0;
+        var donFamilialDetails = [];
+        var ageDonateur = 55; // âge par défaut
+        var donorsList = typeof FamilyGraph !== 'undefined' ? FamilyGraph.getDonors() : [];
+        if (donorsList.length > 0 && donorsList[0].age) ageDonateur = donorsList[0].age;
+
+        if (ageDonateur < DON_FAMILIAL_AGE_DONATEUR_MAX) {
+            bens.forEach(function(b) {
+                var liensOK = ['enfant', 'petit_enfant', 'arriere_petit_enfant', 'neveu_niece'];
+                if (liensOK.indexOf(b.lien) >= 0) {
+                    var ageBen = b.age || 30;
+                    if (ageBen >= DON_FAMILIAL_AGE_DONATAIRE_MIN) {
+                        donFamilialEligible = true;
+                        var montantBen = DON_FAMILIAL_MONTANT * nbDonors;
+                        donFamilialTotal += montantBen;
+                        donFamilialDetails.push({ nom: b.nom || b.lien, lien: b.lien, montant: montantBen });
+                    }
+                }
+            });
+        }
+
+        if (donFamilialEligible && donFamilialTotal > 0) {
+            // Calcul de l'économie réelle : droits SANS vs AVEC don familial
+            var droitsSansDonFam = calcDroitsForBens(assietteOptimisee, bens, nbDonors, true, false);
+            var droitsAvecDonFam = calcDroitsForBens(assietteOptimisee, bens, nbDonors, true, true);
+            var economieDonFam = droitsSansDonFam - droitsAvecDonFam;
+
+            var abatClassique = bens[0] && bens[0].lien === 'enfant' ? 100000 : 31865;
+            var cumulTotal = (abatClassique + DON_FAMILIAL_MONTANT) * nbDonors;
+
+            optimisations.push({
+                id: 'don_familial', label: 'Don familial — 31 865€ supplémentaires', icon: 'fa-gift', color: 'var(--accent-cyan)',
+                reduction: 0, economie: economieDonFam,
+                detail: donFamilialDetails.map(function(d) {
+                    return d.nom + ' (' + d.lien + ') : +' + fmt(d.montant) + ' exonéré';
+                }).join(' · ') + ' — Total : ' + fmt(donFamilialTotal) + ' d\'abattement supplémentaire',
+                conseil: 'Don de sommes d\'argent : ' + fmt(DON_FAMILIAL_MONTANT) + '/bénéficiaire/donateur, ' +
+                    'CUMULABLE avec abattement classique (' + fmt(abatClassique) + '). ' +
+                    'Cumul par enfant' + (nbDonors > 1 ? ' (2 parents)' : '') + ' : ' + fmt(cumulTotal) + ' sans droits. ' +
+                    'Conditions : donateur < 80 ans, donataire ≥ 18 ans. Déclaration en ligne impots.gouv.fr (obligatoire depuis 01/2026).',
+                article: 'Art. 790 G CGI — Renouvelable tous les 15 ans'
+            });
+        }
+
+        // --- Calcul droits OPTIMISÉ (avec don familial inclus) ---
         var assietteCorrigee = Math.max(0, assietteOptimisee);
-        var droitsOptimises = calcDroitsForBens(assietteCorrigee, bens, nbDonors, true);
+        var droitsOptimises = calcDroitsForBens(assietteCorrigee, bens, nbDonors, true, donFamilialEligible);
         var economieDroits = droitsBrut - droitsOptimises;
 
-        // Ajouter économie concubin si applicable
         var economieConcubin = 0;
         optimisations.forEach(function(o) { if (o.id === 'croise_concubins' && o.economie) economieConcubin = o.economie; });
 
@@ -250,19 +408,30 @@ const FiscalOptimizations = (function() {
             economieTotale: economieDroits + economieConcubin,
             optimisations: optimisations,
             nbEnfants: nbEnfants,
-            nbDonors: nbDonors
+            nbDonors: nbDonors,
+            donFamilialInclus: donFamilialEligible
         };
     }
 
-    function calcDroitsForBens(montant, bens, nbDonors, isSuccession) {
+    /**
+     * Calcul des droits avec option don familial.
+     * @param {boolean} avecDonFamilial - Si true, ajoute 31 865€ d'abattement par bén. éligible
+     */
+    function calcDroitsForBens(montant, bens, nbDonors, isSuccession, avecDonFamilial) {
         var F = SD._fiscal, FISCAL = F.getFISCAL();
         if (montant <= 0 || bens.length === 0) return 0;
         var total = 0;
+        var liensEligiblesDonFam = ['enfant', 'petit_enfant', 'arriere_petit_enfant', 'neveu_niece'];
         bens.forEach(function(b) {
             var part = montant / bens.length;
             var abat = F.getAbattement(b.lien, isSuccession) * nbDonors - (b.donationAnterieure || 0);
             var handicapAbat = b.handicap ? FISCAL.abattements.handicap : 0;
-            total += F.calcDroits(Math.max(0, part - abat - handicapAbat), F.getBareme(b.lien));
+            // Ajouter don familial si éligible
+            var donFamAbat = 0;
+            if (avecDonFamilial && liensEligiblesDonFam.indexOf(b.lien) >= 0) {
+                donFamAbat = DON_FAMILIAL_MONTANT * nbDonors;
+            }
+            total += F.calcDroits(Math.max(0, part - abat - handicapAbat - donFamAbat), F.getBareme(b.lien));
         });
         return total;
     }
@@ -270,11 +439,11 @@ const FiscalOptimizations = (function() {
     function calcDroitsReintegrationAV(depassement, bens, nbDonors) {
         var bensEnfants = bens.filter(function(b) { return b.lien === 'enfant'; });
         if (bensEnfants.length === 0) return 0;
-        return calcDroitsForBens(depassement, bensEnfants, nbDonors, true);
+        return calcDroitsForBens(depassement, bensEnfants, nbDonors, true, false);
     }
 
     // ============================================================
-    // 6. RENDU — Panneau « Solutions d'optimisation » step 5
+    // 7. RENDU — Panneau step 5
     // ============================================================
 
     function renderOptimizationsPanel() {
@@ -284,28 +453,22 @@ const FiscalOptimizations = (function() {
         var existing = document.getElementById('fiscal-optimizations-panel');
         if (existing) existing.remove();
 
-        var ecoSign = result.economieTotale > 0;
-        var ecoColor = ecoSign ? 'var(--accent-green)' : 'var(--text-muted)';
-
         var html = '<div class="section-card" id="fiscal-optimizations-panel" style="border-color:rgba(16,185,129,.25);margin-bottom:20px;">';
-
-        // Titre
         html += '<div class="section-title"><i class="fas fa-chess" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(5,150,105,.1));color:var(--accent-green);"></i> Solutions d\'optimisation fiscale</div>';
         html += '<div class="section-subtitle">Leviers concrets pour réduire les droits de succession — impact chiffré sur votre patrimoine</div>';
 
-        // Résumé économie
         if (result.economieTotale > 0) {
             html += '<div style="padding:20px;border-radius:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);margin-bottom:20px;text-align:center;">';
             html += '<div style="font-size:.78rem;color:var(--text-muted);">ÉCONOMIE TOTALE ESTIMÉE</div>';
             html += '<div style="font-size:1.8rem;font-weight:900;color:var(--accent-green);">' + fmt(result.economieTotale) + '</div>';
             html += '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:4px;">Droits bruts ' + fmt(result.brut.droits) + ' → optimisés ' + fmt(result.optimise.droits) + '</div>';
+            if (result.donFamilialInclus) html += '<div style="font-size:.68rem;color:var(--accent-cyan);margin-top:4px;">✅ Don familial 31 865€ inclus (art. 790 G CGI)</div>';
             html += '</div>';
         }
 
-        // Tableau assiette brut vs optimisé
+        // Tableau
         html += '<div style="overflow-x:auto;border-radius:12px;border:1px solid rgba(198,134,66,.1);margin-bottom:20px;">';
-        html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem;">';
-        html += '<thead><tr style="background:rgba(198,134,66,.06);">';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem;"><thead><tr style="background:rgba(198,134,66,.06);">';
         html += '<th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--text-muted);">Critère</th>';
         html += '<th style="padding:12px 16px;text-align:right;font-weight:600;color:var(--text-muted);">Actuel</th>';
         html += '<th style="padding:12px 16px;text-align:right;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.04);">Optimisé</th>';
@@ -317,74 +480,46 @@ const FiscalOptimizations = (function() {
         html += '<td style="padding:14px 16px;text-align:right;">' + fmt(result.brut.droits) + '</td>';
         html += '<td style="padding:14px 16px;text-align:right;background:rgba(16,185,129,.04);color:var(--accent-green);">' + fmt(result.optimise.droits);
         if (result.economieDroits > 0) html += ' <span style="font-size:.7rem;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,.12);">−' + fmt(result.economieDroits) + '</span>';
-        html += '</td></tr>';
-        html += '</tbody></table></div>';
+        html += '</td></tr></tbody></table></div>';
 
-        // Détail de chaque optimisation
-        result.optimisations.forEach(function(opt, idx) {
+        // Détail optimisations
+        result.optimisations.forEach(function(opt) {
             var isRisque = opt.id === 'av_exagerees';
             var isSuggestion = opt.id.indexOf('suggestion') >= 0;
-            var borderColor = isRisque ? 'rgba(255,107,107,.2)' : isSuggestion ? 'rgba(255,179,0,.15)' : 'rgba(16,185,129,.15)';
-            var bgColor = isRisque ? 'rgba(255,107,107,.03)' : isSuggestion ? 'rgba(255,179,0,.03)' : 'rgba(16,185,129,.03)';
+            var isDonFam = opt.id === 'don_familial';
+            var borderColor = isRisque ? 'rgba(255,107,107,.2)' : isSuggestion ? 'rgba(255,179,0,.15)' : isDonFam ? 'rgba(198,134,66,.2)' : 'rgba(16,185,129,.15)';
+            var bgColor = isRisque ? 'rgba(255,107,107,.03)' : isSuggestion ? 'rgba(255,179,0,.03)' : isDonFam ? 'rgba(198,134,66,.04)' : 'rgba(16,185,129,.03)';
 
             html += '<div style="padding:16px 18px;border-radius:12px;background:' + bgColor + ';border:1px solid ' + borderColor + ';margin-bottom:12px;">';
-
-            // Header avec icône et montant
             html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
-            html += '<div style="display:flex;align-items:center;gap:10px;">';
-            html += '<i class="fas ' + opt.icon + '" style="color:' + opt.color + ';font-size:.9rem;"></i>';
-            html += '<strong style="font-size:.85rem;">' + opt.label + '</strong>';
+            html += '<div style="display:flex;align-items:center;gap:10px;"><i class="fas ' + opt.icon + '" style="color:' + opt.color + ';font-size:.9rem;"></i>';
+            html += '<strong style="font-size:.85rem;">' + opt.label + '</strong></div>';
+
+            if (opt.reduction > 0) html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.1);">−' + fmt(opt.reduction) + ' d\'assiette</span>';
+            else if (opt.economie > 0) html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.1);">−' + fmt(opt.economie) + ' de droits</span>';
+            else if (opt.potentiel > 0) html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:600;color:var(--accent-amber);background:rgba(255,179,0,.1);">Potentiel : −' + fmt(opt.potentiel) + '</span>';
+            else if (opt.risque > 0) html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-coral);background:rgba(255,107,107,.1);">Risque : +' + fmt(opt.risque) + '</span>';
             html += '</div>';
 
-            if (opt.reduction > 0) {
-                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.1);">−' + fmt(opt.reduction) + ' d\'assiette</span>';
-            } else if (opt.economie > 0) {
-                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.1);">−' + fmt(opt.economie) + ' de droits</span>';
-            } else if (opt.potentiel > 0) {
-                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:600;color:var(--accent-amber);background:rgba(255,179,0,.1);">Potentiel : −' + fmt(opt.potentiel) + '</span>';
-            } else if (opt.risque > 0) {
-                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-coral);background:rgba(255,107,107,.1);">Risque : +' + fmt(opt.risque) + '</span>';
-            }
-            html += '</div>';
-
-            // Détail chiffré
-            if (opt.detail) {
-                html += '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.6;margin-bottom:6px;">' + opt.detail + '</div>';
-            }
-
-            // Conseil actionnable
-            html += '<div style="font-size:.78rem;color:var(--text-primary);line-height:1.6;padding:8px 12px;border-radius:8px;background:rgba(198,134,66,.04);border-left:3px solid ' + opt.color + ';">';
-            html += '<strong>Action :</strong> ' + opt.conseil;
-            html += '</div>';
-
-            // Article de loi
-            if (opt.article) {
-                html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:6px;"><i class="fas fa-gavel" style="margin-right:4px;"></i>' + opt.article + '</div>';
-            }
-
+            if (opt.detail) html += '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.6;margin-bottom:6px;">' + opt.detail + '</div>';
+            html += '<div style="font-size:.78rem;color:var(--text-primary);line-height:1.6;padding:8px 12px;border-radius:8px;background:rgba(198,134,66,.04);border-left:3px solid ' + opt.color + ';"><strong>Action :</strong> ' + opt.conseil + '</div>';
+            if (opt.article) html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:6px;"><i class="fas fa-gavel" style="margin-right:4px;"></i>' + opt.article + '</div>';
             html += '</div>';
         });
 
         html += '</div>';
 
-        // Injecter APRÈS le panneau civil-rights ou après transmission-map
         var anchor = document.getElementById('civil-rights-corrected') || document.getElementById('union-comparison-table') || document.getElementById('results-warnings') || document.getElementById('transmission-map');
-        if (anchor) {
-            anchor.insertAdjacentHTML('afterend', html);
-        }
+        if (anchor) anchor.insertAdjacentHTML('afterend', html);
     }
 
-    // Legacy warnings (gardé pour rétrocompatibilité mais réduit)
-    function renderOptimizationWarnings() {
-        // Remplacé par renderOptimizationsPanel() — on ne duplique plus les warnings
-    }
+    function renderOptimizationWarnings() {}
 
     // ============================================================
     // HELPERS
     // ============================================================
 
     function getState() { return (typeof SD !== 'undefined' && SD._getState) ? SD._getState() : null; }
-
     function fmt(n) {
         if (typeof SD !== 'undefined' && SD._fiscal && SD._fiscal.fmt) return SD._fiscal.fmt(n);
         return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
@@ -401,7 +536,7 @@ const FiscalOptimizations = (function() {
             _origCalc.call(SD);
             setTimeout(renderOptimizationsPanel, 350);
         };
-        console.log('[FiscalOptimizations v2] Patched — calculs intégrés dans résultats');
+        console.log('[FiscalOptimizations v2.1] Patched — don familial 31 865€ intégré');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 400); });
@@ -412,8 +547,13 @@ const FiscalOptimizations = (function() {
         checkPrimesExagerees: checkPrimesExagerees, detectAVExagerees: detectAVExagerees,
         computeDemembrementCroiseSCI: computeDemembrementCroiseSCI,
         computeFoncierRural: computeFoncierRural,
+        computeDonFamilial: computeDonFamilial,
+        computeDonFamilialImpact: computeDonFamilialImpact,
         computeOptimizedScenario: computeOptimizedScenario,
         SCI_DECOTE: SCI_DECOTE, AV_SEUIL_EXAGERE: AV_SEUIL_EXAGERE,
-        FONCIER_RURAL_EXONERATION: FONCIER_RURAL_EXONERATION, FONCIER_RURAL_PLAFOND: FONCIER_RURAL_PLAFOND
+        FONCIER_RURAL_EXONERATION: FONCIER_RURAL_EXONERATION, FONCIER_RURAL_PLAFOND: FONCIER_RURAL_PLAFOND,
+        DON_FAMILIAL_MONTANT: DON_FAMILIAL_MONTANT,
+        DON_FAMILIAL_AGE_DONATEUR_MAX: DON_FAMILIAL_AGE_DONATEUR_MAX,
+        DON_FAMILIAL_AGE_DONATAIRE_MIN: DON_FAMILIAL_AGE_DONATAIRE_MIN
     };
 })();
