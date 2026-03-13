@@ -583,9 +583,9 @@
         <!-- Header -->
         <div class="page-header">
             <h1><i class="fas fa-hand-holding-heart"></i> Optimisateur Succession & Donation</h1>
-            <span class="badge-version">Barèmes 2026 · v3.0</span>
+            <span class="badge-version">Barèmes 2026 · v3.1</span>
             <div style="font-size:.58rem;color:var(--text-muted);margin-top:4px;max-width:600px;text-align:center;line-height:1.4;">
-                ⚠️ Optimisation fiscale des droits de mutation (DMTG). Ne constitue pas un conseil en gestion de patrimoine. Barèmes CGI art. 669, 777, 779, 790 A bis, 990 I, 757 B.
+                ⚠️ Optimisation fiscale des droits de mutation (DMTG). Ne constitue pas un conseil en gestion de patrimoine. Barèmes CGI art. 669, 777, 779, 790 A bis, 990 I, 757 B. Droits civils art. 757, 515-6, 913 CC.
             </div>
         </div>
 
@@ -833,7 +833,7 @@
                         <div class="switch" id="obj-controle" onclick="SD.toggleSwitch(this)"></div>
                     </div>
                     <div class="switch-row">
-                        <span class="switch-label">Protéger le conjoint survivant <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Active les scénarios DDV (donation au dernier vivant), clause bénéficiaire AV au conjoint, usufruit universel, clause de préciput RP.</span></span></span>
+                        <span class="switch-label">Protéger le conjoint survivant <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Active les scénarios DDV (donation au dernier vivant), clause bénéficiaire AV au conjoint, usufruit universel, clause de préciput RP. Distingue mariage, PACS et concubinage (art. 757/515-6 CC).</span></span></span>
                         <div class="switch" id="obj-conjoint" onclick="SD.toggleSwitch(this)"></div>
                     </div>
                     <div class="switch-row">
@@ -967,7 +967,7 @@
                         </div>
 
                         <div class="switch-row">
-                            <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir : usufruit total, 1/4 PP + 3/4 US, ou quotité disponible en PP.</span></span></span>
+                            <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir : usufruit total, 1/4 PP + 3/4 US, ou quotité disponible en PP. Art. 1094-1 CC. Coût ~150€ chez le notaire. Applicable au mariage uniquement (pas PACS).</span></span></span>
                             <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
                         </div>
                         <div class="switch-row">
@@ -1059,7 +1059,7 @@
                 </div>
                 <div class="disclaimer">
                     <strong>⚠️ Avertissement :</strong> Simulation indicative basée sur les barèmes fiscaux au 01/01/2026 (gelés jusqu'en 2028 — PLF 2026). Ne constitue pas un conseil juridique, fiscal ou patrimonial personnalisé. <strong>Consultez un notaire et/ou un CGP</strong> avant toute décision.<br><br>
-                    Sources : <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006310173/" target="_blank">Art. 669 CGI</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030061736" target="_blank">Art. 777</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288653" target="_blank">Art. 990 I</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288569" target="_blank">Art. 757 B</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051281498" target="_blank">Art. 790 A bis (exo. logement)</a> · <a href="https://www.impots.gouv.fr/particulier/questions/je-vends-un-bien-immobilier-donne-en-location-meublee-comment-se-calcule-la" target="_blank">LMNP PV 2025</a>
+                    Sources : <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006310173/" target="_blank">Art. 669 CGI</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030061736" target="_blank">Art. 777</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288653" target="_blank">Art. 990 I</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288569" target="_blank">Art. 757 B</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051281498" target="_blank">Art. 790 A bis (exo. logement)</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006430879" target="_blank">Art. 757 CC (conjoint)</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006429067" target="_blank">Art. 515-6 CC (PACS)</a> · <a href="https://www.impots.gouv.fr/particulier/questions/je-vends-un-bien-immobilier-donne-en-location-meublee-comment-se-calcule-la" target="_blank">LMNP PV 2025</a>
                 </div>
             </div>
 
@@ -1121,5 +1121,6 @@
 <script src="js/path-optimizer.js?v=20260305a"></script>
 <script src="js/transmission-engine.js?v=20260305a"></script>
 <script src="js/strategy-advisor.js?v=20260305a"></script>
+<script src="js/civil-rights.js?v=20260313a"></script>
 </body>
 </html>
