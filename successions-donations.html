@@ -24,10 +24,1098 @@
             --sidebar-w:60px; --header-h:70px; --step-bar-h:56px;
             --transition-fast:0.15s ease; --transition-normal:0.3s ease;
         }
+        html { font-size:14px; height:100%; }
+        body {
+            font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+            background:linear-gradient(180deg,#191510 0%,#252018 100%);
+            color:var(--text-primary); min-height:100vh; overflow-x:hidden; line-height:1.6;
+        }
+        a { color:var(--primary-color); text-decoration:none; }
+
+        /* ===== LAYOUT ===== */
+        .app-container { display:flex; min-height:100vh; }
+        .sidebar {
+            position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w);
+            background:rgba(51,44,32,0.8); backdrop-filter:blur(15px);
+            border-right:1px solid var(--border-color);
+            display:flex; flex-direction:column; align-items:center; padding:16px 0; z-index:100;
+        }
+        .logo-small {
+            font-weight:900; font-size:1.3rem; color:var(--primary-color);
+            margin-bottom:24px; position:relative;
+        }
+        .logo-small::after {
+            content:''; position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+            width:24px; height:2px; background:linear-gradient(90deg,var(--primary-color),var(--accent-color));
+            border-radius:1px;
+        }
+        .nav-item {
+            width:44px; height:44px; border-radius:10px;
+            display:flex; align-items:center; justify-content:center;
+            color:var(--text-muted); margin-bottom:4px; transition:all .2s; text-decoration:none; font-size:1.1rem;
+        }
+        .nav-item:hover { background:rgba(198,134,66,0.1); color:var(--primary-color); }
+        .nav-item.active { background:rgba(198,134,66,0.15); color:var(--primary-color); border-left:3px solid var(--primary-color); }
+        .main-content { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; }
+
+        /* ===== HEADER ===== */
+        .page-header {
+            height:var(--header-h); padding:0 30px;
+            display:flex; align-items:center; justify-content:space-between;
+            border-bottom:1px solid var(--border-color);
+            background:rgba(25,21,16,0.95); backdrop-filter:blur(15px);
+            position:sticky; top:0; z-index:50;
+        }
+        .page-header h1 {
+            font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:12px;
+        }
+        .page-header h1 i {
+            color:var(--primary-color); background:rgba(198,134,66,0.15);
+            padding:8px; border-radius:10px; font-size:1rem;
+            box-shadow:0 4px 12px rgba(198,134,66,0.2);
+        }
+        .badge-version {
+            font-size:.7rem; padding:4px 12px; border-radius:20px;
+            background:rgba(198,134,66,0.15); color:var(--primary-color);
+            font-weight:600; letter-spacing:.05em; border:1px solid rgba(198,134,66,0.25);
+        }
+
+        /* ===== STEPPER ===== */
+        .stepper-wrapper {
+            border-bottom:1px solid var(--border-color);
+            background:rgba(51,44,32,0.6); backdrop-filter:blur(10px);
+        }
+        .stepper-bar {
+            height:var(--step-bar-h); padding:0 32px;
+            display:flex; align-items:center; justify-content:center;
+            max-width:900px; margin:0 auto;
+        }
+        .step-item {
+            display:flex; align-items:center; gap:8px;
+            cursor:pointer; padding:8px 10px; border-radius:10px; transition:all .25s;
+        }
+        .step-item:hover { background:rgba(198,134,66,0.08); }
+        .step-item.active { background:rgba(198,134,66,0.12); }
+        .step-item.completed .step-number { background:var(--accent-green); border-color:var(--accent-green); box-shadow:0 0 12px rgba(16,185,129,.3); }
+        .step-item.completed .step-number i { display:block; }
+        .step-item.completed .step-number span { display:none; }
+        .step-number {
+            width:32px; height:32px; border-radius:50%; border:2px solid rgba(198,134,66,0.3);
+            display:flex; align-items:center; justify-content:center;
+            font-size:.8rem; font-weight:700; flex-shrink:0; transition:all .25s;
+        }
+        .step-number i { display:none; font-size:.85rem; }
+        .step-item.active .step-number {
+            border-color:var(--primary-color); background:linear-gradient(135deg,var(--primary-color),var(--accent-color));
+            color:#fff; box-shadow:0 0 20px rgba(198,134,66,0.4);
+        }
+        .step-label { font-size:.78rem; font-weight:600; white-space:nowrap; }
+        .step-sublabel { display:none; }
+        .step-connector { width:24px; height:2px; background:rgba(198,134,66,0.15); margin:0 2px; flex-shrink:0; transition:background .3s; }
+        .step-connector.completed { background:linear-gradient(90deg,var(--accent-green),var(--accent-color)); }
+
+        /* ===== FORM AREA ===== */
+        .form-container { flex:1; padding:24px 32px 100px; max-width:clamp(1100px, 94vw, 1600px); margin:0 auto; width:100%; animation:fadeInUp .6s ease-out; }
+        .page-grid { display:grid; grid-template-columns:1fr 300px; gap:36px; align-items:start; }
+        .page-main { min-width:0; }
+        .page-aside { position:sticky; top:calc(var(--header-h) + var(--step-bar-h) + 18px); }
+        .aside-card {
+            background:rgba(51,44,32,0.75); border:1px solid rgba(198,134,66,0.14);
+            border-radius:16px; padding:18px; box-shadow:0 8px 28px rgba(0,0,0,0.28);
+        }
+        .aside-title { font-weight:800; font-size:.88rem; margin-bottom:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+        .aside-title i { color:var(--primary-color); font-size:.85rem; }
+        .aside-block { padding:10px 0; border-top:1px solid rgba(198,134,66,0.08); }
+        .aside-block:first-of-type { border-top:none; }
+        .aside-label { font-size:.65rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); font-weight:600; }
+        .aside-value { font-size:.85rem; font-weight:600; color:var(--text-secondary); margin-top:3px; }
+        .aside-value .val-highlight { color:var(--primary-color); font-weight:700; }
+        .aside-warnings { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+        .aside-warn-item { font-size:.72rem; padding:6px 10px; border-radius:8px; display:flex; align-items:center; gap:6px; }
+        .aside-warn-item.coral { background:rgba(255,107,107,.08); color:var(--accent-coral); border:1px solid rgba(255,107,107,.15); }
+        .aside-warn-item.amber { background:rgba(255,179,0,.08); color:var(--accent-amber); border:1px solid rgba(255,179,0,.15); }
+        .aside-warn-item.green { background:rgba(16,185,129,.08); color:var(--accent-green); border:1px solid rgba(16,185,129,.15); }
+        .aside-hint { font-size:.72rem; color:var(--text-muted); margin-top:10px; text-align:center; }
+        .aside-progress { height:4px; border-radius:4px; background:rgba(198,134,66,0.1); margin-top:12px; overflow:hidden; }
+        .aside-progress-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--primary-color),var(--primary-dark)); transition:width .4s ease; }
+        .aside-cta { width:100%; margin-top:12px; padding:10px; border-radius:10px; border:none; font-size:.78rem; font-weight:700;
+            background:linear-gradient(135deg,var(--primary-color),var(--accent-color)); color:#fff; cursor:pointer;
+            transition:all var(--transition-fast); }
+        .aside-cta:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(198,134,66,0.3); }
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+        .step-panel { display:none; animation:fadeSlide .4s ease; }
+        .step-panel.active { display:block; }
+        @keyframes fadeSlide { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+
+        /* ===== SECTION CARDS (glassmorphism) ===== */
+        .section-card {
+            background:rgba(51,44,32,0.72);
+            overflow-x:auto;
+            backdrop-filter:blur(15px);
+            border:1px solid rgba(198,134,66,0.12); border-radius:16px;
+            padding:28px; margin-bottom:20px;
+            transition:border-color var(--transition-normal);
+            box-shadow:0 6px 20px rgba(0,0,0,0.28);
+        }
+        .section-card:hover { border-color:rgba(198,134,66,0.22); box-shadow:0 8px 28px rgba(0,0,0,0.32); }
+        .section-title {
+            font-size:1.05rem; font-weight:700; margin-bottom:14px;
+            display:flex; align-items:center; gap:12px;
+        }
+        .section-title i {
+            color:var(--primary-color);
+            width:36px; height:36px; border-radius:10px;
+            background:linear-gradient(135deg,rgba(198,134,66,0.2),rgba(92,64,51,0.15));
+            display:flex; align-items:center; justify-content:center; font-size:.9rem;
+            box-shadow:0 4px 12px rgba(198,134,66,0.2);
+        }
+        .section-subtitle { font-size:.82rem; color:var(--text-muted); margin-bottom:16px; }
+
+        /* ===== FORM ELEMENTS ===== */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+        .form-grid.cols-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+        .form-group { display:flex; flex-direction:column; gap:7px; }
+        .form-group.full-width { grid-column:1/-1; }
+        .form-label {
+            font-size:.72rem; font-weight:600; color:var(--text-label);
+            text-transform:uppercase; letter-spacing:.1em;
+            display:flex; align-items:center; gap:6px;
+        }
+        .info-tip { cursor:pointer; color:var(--text-muted); font-size:.7rem; position:relative; display:inline-flex; }
+        .info-tip .tip-bubble {
+            display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+            background:rgba(25,21,16,0.98); border:1px solid rgba(198,134,66,0.25);
+            padding:10px 14px; border-radius:10px; font-size:.72rem; color:var(--text-primary);
+            width:300px; z-index:99; font-weight:400; line-height:1.5; white-space:normal;
+            box-shadow:0 12px 40px rgba(0,0,0,.5); backdrop-filter:blur(10px);
+        }
+        .info-tip .tip-bubble::after {
+            content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+            border:6px solid transparent; border-top-color:rgba(198,134,66,0.25);
+        }
+        .info-tip.open .tip-bubble { display:block; animation:fadeIn .2s ease; }
+        input[type="text"],input[type="number"],input[type="date"],select,textarea {
+            background:var(--bg-input); border:2px solid var(--border-input); border-radius:10px;
+            padding:.75rem 1rem; color:var(--text-primary); font-family:inherit;
+            font-size:.9rem; font-weight:500; transition:all var(--transition-fast);
+            width:100%; height:46px;
+        }
+        input:focus,select:focus,textarea:focus { outline:none; border-color:var(--primary-color); background:rgba(198,134,66,0.05); box-shadow:0 0 0 3px rgba(198,134,66,0.1); }
+        input:hover,select:hover { background:var(--bg-input-hover); border-color:rgba(198,134,66,0.3); }
+        input::placeholder { color:var(--text-muted); }
+        /* ===== FAMILY TREE — Compact visual ===== */
+        .ft-canvas{display:flex;flex-direction:row;align-items:flex-start;gap:60px;justify-content:center;padding:32px 24px;position:relative;flex-wrap:wrap;min-height:100px;overflow-x:auto;}
+        .ft-canvas.ft-levels{overflow:auto;padding:28px 20px;min-height:200px;}
+        .ft-level{display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap;width:max-content;}
+
+        .ft-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:0;}
+        .ft-link-parent{stroke:rgba(198,134,66,.35);stroke-width:1.5;fill:none;}
+        .ft-link-spouse{stroke:rgba(255,107,107,.45);stroke-width:2;}
+        .ft-family-sep{width:1px;height:40px;background:rgba(198,134,66,.1);align-self:center;}
+        .ft-unit{display:flex;flex-direction:column;align-items:center;gap:12px;}
+        .ft-parents{display:flex;justify-content:center;align-items:center;gap:28px;}
+        .ft-connector{display:flex;justify-content:center;}
+        .ft-vline{width:0;height:24px;}
+        .ft-children{display:flex;gap:36px;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+        .ft-grandchildren-row{display:flex;gap:24px;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+        .ft-gc-group{display:flex;flex-direction:column;align-items:center;}
+        .ft-leaf{display:flex;flex-direction:column;align-items:center;}
+        .ft-ghost{padding:4px 10px;border-radius:8px;border:1px dashed rgba(198,134,66,.2);color:var(--text-muted);font-size:.6rem;font-style:italic;opacity:.55;white-space:nowrap;}
+        .ft-sibling-unit{display:flex;flex-direction:column;align-items:center;margin-top:4px;padding:4px;border-left:1.5px dashed rgba(198,134,66,.12);}
+        .ft-sib-label{font-size:.4rem;color:var(--text-muted);opacity:.6;margin-bottom:2px;}
+        .ft-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;align-items:center;}
+        .ft-couple{display:flex;align-items:center;gap:0;margin:0 16px;}
+        .ft-couple-bar{width:36px;height:2px;background:var(--accent-coral);opacity:.6;}
+        .ft-sibgroup{display:flex;align-items:center;gap:0;padding:2px 4px;border-radius:8px;background:rgba(198,134,66,.04);border:1px dashed rgba(198,134,66,.1);}
+        .ft-sib-sep{width:8px;height:1px;background:rgba(198,134,66,.15);margin:0 2px;}
+        /* Nodes */
+        .ft-node{padding:10px 20px;border-radius:8px;background:rgba(92,64,51,.08);border:1px solid rgba(198,134,66,.15);cursor:pointer;transition:all .15s;white-space:nowrap;user-select:none;position:relative;z-index:1;}
+        .ft-node:hover{border-color:var(--primary-color);background:rgba(198,134,66,.1);box-shadow:0 2px 8px rgba(198,134,66,.15);}
+        .ft-node.ft-donor{background:rgba(198,134,66,.14);border-color:rgba(198,134,66,.3);}
+        .ft-node.ft-ben{border-color:var(--accent-green);border-width:1.5px;}
+        .ft-node.ft-sel{box-shadow:0 0 0 2px var(--primary-color);background:rgba(198,134,66,.18);}
+        .ft-node.ft-related{box-shadow:0 0 0 1.5px rgba(255,183,77,.5);background:rgba(255,183,77,.08);}
+        .ft-rel-tag{display:block;font-size:.42rem;color:var(--accent-amber);margin-top:1px;}
+        .ft-label{font-size:.85rem;font-weight:600;color:var(--text-primary);}
+        /* Context menu */
+        .ft-ctx{position:absolute;z-index:100;min-width:140px;background:var(--bg-card);border:1px solid rgba(198,134,66,.2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:4px 0;backdrop-filter:blur(8px);}
+        .ft-ctx-item{padding:6px 12px;font-size:.65rem;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .1s;}
+        .ft-ctx-item:hover{background:rgba(198,134,66,.1);color:var(--text-primary);}
+        .ft-ctx-item i{width:12px;text-align:center;font-size:.55rem;color:var(--primary-color);}
+        .ft-ctx-danger{color:var(--accent-coral)!important;}
+        .ft-ctx-danger:hover{background:rgba(255,107,107,.1)!important;}
+        .ft-ctx-danger i{color:var(--accent-coral)!important;}
+        .ft-ctx-sep{height:1px;background:rgba(198,134,66,.1);margin:3px 8px;}
+        /* Roles grid */
+        .ft-roles-grid{display:grid;grid-template-columns:1fr auto auto auto;gap:2px 8px;align-items:center;}
+        .ft-roles-hdr{font-size:.55rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;padding:4px 0;border-bottom:1px solid rgba(198,134,66,.08);}
+        .ft-roles-name{font-size:.68rem;font-weight:600;color:var(--text-primary);padding:4px 0;border-bottom:1px solid rgba(198,134,66,.03);}
+        .ft-roles-lien{font-size:.55rem;color:var(--text-muted);text-align:center;padding:4px 0;border-bottom:1px solid rgba(198,134,66,.03);}
+        .ft-roles-chk{text-align:center;padding:4px 0;border-bottom:1px solid rgba(198,134,66,.03);}
+        .ft-roles-chk input{width:15px;height:15px;cursor:pointer;}
+        .tb{font-size:.52rem;padding:2px 6px;border:1px dashed rgba(198,134,66,.22);background:none;color:var(--text-muted);border-radius:3px;cursor:pointer;white-space:nowrap;transition:color .15s;}
+        .tb:hover{color:var(--primary-color);border-color:var(--primary-color);}
+
+        .family-canvas{position:relative;overflow-x:auto;padding:12px 0;}
+        .fg-level{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:6px 0;}
+        .fg-couple{display:flex;align-items:center;gap:0;}
+        .fg-ring{font-size:.6rem;color:var(--accent-coral);margin:0 2px;}
+        .fg-connector{width:1px;height:12px;background:rgba(198,134,66,.18);margin:0 auto;}
+
+        .fg-node{
+            position:relative;min-width:100px;max-width:160px;padding:10px 14px;border-radius:12px;
+            background:rgba(51,44,32,.65);border:1px solid rgba(198,134,66,.12);
+            box-shadow:0 4px 16px rgba(0,0,0,.2);text-align:center;
+            transition:transform .15s,border-color .15s;cursor:default;
+        }
+        .fg-node:hover{transform:translateY(-1px);border-color:rgba(198,134,66,.25);}
+        .fg-node.is-donor{border-color:rgba(198,134,66,.35);}
+        .fg-node.is-ben{border-color:rgba(16,185,129,.35);}
+
+        .fg-name{font-weight:800;font-size:.85rem;color:var(--text-primary);outline:none;min-height:1em;border-bottom:1px dotted transparent;transition:border-color .15s;}
+        .fg-name:hover{border-bottom-color:rgba(198,134,66,.2);}
+        .fg-name:focus{border-bottom-color:var(--primary-color);}
+        .fg-meta{font-size:.65rem;color:var(--text-muted);margin-top:3px;display:flex;justify-content:center;gap:6px;align-items:center;}
+        .fg-meta .fg-age-input{all:unset;font-size:.65rem;width:28px;text-align:center;color:var(--text-muted);border-bottom:1px dotted rgba(198,134,66,.15);}
+        .fg-meta .fg-age-input:focus{border-bottom-color:var(--primary-color);color:var(--text-primary);}
+        .fg-badges{font-size:.55rem;margin-top:2px;}
+
+        /* Hover actions — slide out right */
+        .fg-actions{
+            position:absolute;top:50%;right:-6px;transform:translate(100%,-50%);
+            display:flex;flex-direction:column;gap:4px;
+            opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:10;
+        }
+        .fg-node:hover .fg-actions{opacity:1;pointer-events:auto;transform:translate(100%,-50%);}
+        .fg-act{
+            width:26px;height:26px;border-radius:8px;border:1px solid rgba(198,134,66,.15);
+            background:rgba(25,21,16,.92);color:var(--text-muted);cursor:pointer;
+            display:flex;align-items:center;justify-content:center;font-size:.55rem;transition:all .12s;
+        }
+        .fg-act:hover{background:rgba(198,134,66,.12);color:var(--primary-color);border-color:var(--primary-color);}
+
+        /* Delete — top right, appears on hover */
+        .fg-del{
+            position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:6px;
+            border:none;cursor:pointer;background:rgba(255,107,107,.1);color:var(--accent-coral);
+            font-size:.45rem;display:flex;align-items:center;justify-content:center;
+            opacity:0;transition:opacity .15s;
+        }
+        .fg-node:hover .fg-del{opacity:.8;}
+        select {
+            cursor:pointer; -webkit-appearance:none; appearance:none;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B9CB0'/%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 14px center; padding-right:36px;
+        }
+        select option { background:#191510; color:var(--text-primary); }
+
+        /* Toggle */
+        .toggle-group { display:flex; background:rgba(198,134,66,0.03); border:1px solid var(--border-input); border-radius:10px; overflow:hidden; }
+        .toggle-btn {
+            flex:1; padding:10px 18px; text-align:center; font-size:.82rem; font-weight:600;
+            cursor:pointer; transition:all .2s; border:none; background:none;
+            color:var(--text-muted); font-family:inherit;
+        }
+        .toggle-btn.active {
+            background:linear-gradient(135deg,var(--primary-color),var(--primary-dark));
+            color:#fff; font-weight:700; box-shadow:0 4px 12px rgba(198,134,66,0.3);
+        }
+        .toggle-btn:hover:not(.active) { background:rgba(198,134,66,0.08); color:var(--text-secondary); }
+
+        /* Switch */
+        .switch-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(198,134,66,0.06); }
+        .switch-row:last-child { border-bottom:none; }
+        .switch-label { font-size:.84rem; flex:1; color:var(--text-secondary); }
+        .switch {
+            width:44px; height:24px; border-radius:12px; background:rgba(198,134,66,0.08);
+            border:1px solid var(--border-input); position:relative; cursor:pointer;
+            transition:all .3s; flex-shrink:0;
+        }
+        .switch.on { background:var(--primary-color); border-color:var(--primary-color); box-shadow:0 0 12px rgba(198,134,66,.3); }
+        .switch::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:2px; left:2px; transition:transform .25s; }
+        .switch.on::after { transform:translateX(20px); }
+
+        /* Dynamic list */
+        .dynamic-list { display:flex; flex-direction:column; gap:12px; }
+        .list-item {
+            background:rgba(198,134,66,0.03); border:1px solid var(--border-input);
+            border-radius:12px; padding:18px; position:relative; transition:all var(--transition-normal);
+        }
+        .list-item:hover { border-color:rgba(198,134,66,0.25); }
+        .list-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+        .list-item-title { font-size:.88rem; font-weight:600; display:flex; align-items:center; gap:8px; }
+        .list-item-title i { color:var(--primary-color); }
+        .btn-remove { background:rgba(255,82,82,.1); border:none; color:var(--danger-color); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:.8rem; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+        .btn-remove:hover { background:rgba(255,82,82,.25); }
+        .btn-add {
+            display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:10px;
+            border:1px dashed rgba(198,134,66,0.3); background:none; color:var(--primary-color);
+            font-size:.84rem; cursor:pointer; transition:all .2s; font-family:inherit; font-weight:500;
+        }
+        .btn-add:hover { border-color:var(--primary-color); background:rgba(198,134,66,0.06); box-shadow:0 4px 16px rgba(198,134,66,.1); }
+
+        /* Presets */
+        .presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+        .preset-btn {
+            padding:8px 16px; border-radius:10px; border:1px solid var(--border-input);
+            background:rgba(198,134,66,0.03); color:var(--text-muted);
+            font-size:.78rem; cursor:pointer; transition:all .2s; font-family:inherit; font-weight:500;
+        }
+        .preset-btn:hover { border-color:var(--primary-color); color:var(--primary-color); background:rgba(198,134,66,.08); transform:translateY(-1px); }
+        .preset-btn.active { border-color:var(--primary-color); background:rgba(198,134,66,.12); color:var(--primary-color); box-shadow:0 4px 12px rgba(198,134,66,.15); }
+
+        /* Warnings */
+        .warning-box { padding:14px 18px; border-radius:12px; margin:12px 0; font-size:.82rem; display:flex; align-items:flex-start; gap:12px; line-height:1.6; backdrop-filter:blur(5px); }
+        .warning-box.error { background:rgba(255,82,82,.08); border:1px solid rgba(255,82,82,.2); border-left:4px solid var(--danger-color); color:#fca5a5; }
+        .warning-box.warn { background:rgba(255,179,0,.08); border:1px solid rgba(255,179,0,.2); border-left:4px solid var(--warning-color); color:#fcd34d; }
+        .warning-box.info { background:rgba(198,134,66,.08); border:1px solid rgba(198,134,66,.2); border-left:4px solid var(--primary-color); color:#93c5fd; }
+        .warning-box.success { background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.2); border-left:4px solid var(--accent-green); color:#6ee7b7; }
+        .warning-box i { font-size:.9rem; margin-top:2px; flex-shrink:0; }
+
+        /* Collapsible */
+        .collapsible-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:10px 0; }
+        .collapsible-header i.chevron { transition:transform .25s; font-size:.7rem; color:var(--primary-color); }
+        .collapsible-header.open i.chevron { transform:rotate(180deg); }
+        .collapsible-body { display:none; padding-top:12px; }
+        .collapsible-body.open { display:block; animation:fadeIn .3s ease; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes pulse { 0%,80%,100%{opacity:.3;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+
+        /* Status tags */
+        .status-tag { display:inline-flex; align-items:center; gap:4px; padding:4px 12px; border-radius:20px; font-size:.72rem; font-weight:600; }
+        .status-tag.rp { background:rgba(16,185,129,.12); color:var(--accent-green); border:1px solid rgba(16,185,129,.2); }
+        .status-tag.loue { background:rgba(198,134,66,.12); color:var(--primary-color); border:1px solid rgba(198,134,66,.2); }
+        .status-tag.vacant { background:rgba(255,179,0,.12); color:var(--warning-color); border:1px solid rgba(255,179,0,.2); }
+        .status-tag.meuble { background:rgba(167,139,250,.12); color:var(--accent-purple); border:1px solid rgba(167,139,250,.2); }
+
+        /* ===== RESULTS (Step 5) ===== */
+        .results-summary {
+            background:linear-gradient(135deg,rgba(198,134,66,.1),rgba(92,64,51,.08));
+            border:1px solid rgba(198,134,66,.25); border-radius:16px;
+            padding:32px; margin-bottom:24px; text-align:center;
+            box-shadow:0 8px 40px rgba(198,134,66,.1);
+        }
+        .results-summary .big-number {
+            font-size:2.5rem; font-weight:900;
+            background:linear-gradient(135deg,var(--primary-color),var(--accent-color));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-.02em;
+        }
+        .results-summary .subtitle { color:var(--text-secondary); font-size:.9rem; margin-top:6px; }
+        .results-summary .saved {
+            display:inline-block; margin-top:14px; padding:6px 20px;
+            background:rgba(16,185,129,.15); border-radius:20px; color:var(--accent-green);
+            font-size:.88rem; font-weight:700; border:1px solid rgba(16,185,129,.25);
+            box-shadow:0 4px 12px rgba(16,185,129,.15);
+        }
+
+        .comparison-table-wrap { overflow-x:auto; border-radius:16px; border:1px solid rgba(198,134,66,.15); margin-bottom:24px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+        .comparison-table {
+            width:100%; border-collapse:separate; border-spacing:0;
+            background:rgba(35,30,22,.6); font-size:.82rem; min-width:700px;
+        }
+        .comparison-table thead { background:linear-gradient(135deg,rgba(198,134,66,.12),rgba(92,64,51,.08)); }
+        .comparison-table th,.comparison-table td { padding:14px 18px; text-align:right; border-bottom:1px solid rgba(198,134,66,.05); }
+        .comparison-table th:first-child,.comparison-table td:first-child { text-align:left; font-weight:500; }
+        .comparison-table th { font-weight:700; font-size:.85rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary-color); }
+        .comparison-table tr:hover td { background:rgba(198,134,66,.04); }
+        .comparison-table .best-col { background:rgba(16,185,129,.06); }
+        .comparison-table .best-col-header { background:rgba(16,185,129,.12); color:var(--accent-green); }
+        .comparison-table .row-total { font-weight:700; font-size:.92rem; border-top:2px solid rgba(198,134,66,.2); }
+        .comparison-table .row-total td { padding:18px; }
+
+        .strategy-card {
+            background:linear-gradient(135deg,rgba(51,44,32,.95),rgba(92,64,51,.05));
+            border:1px solid rgba(92,64,51,.25); border-radius:16px;
+            padding:28px; margin-bottom:24px; box-shadow:0 8px 32px rgba(198,134,66,.08);
+        }
+        .strategy-card h3 { font-size:1.05rem; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:12px; color:var(--primary-color); }
+        .strategy-step {
+            display:flex; gap:16px; margin-bottom:14px; padding:18px;
+            background:rgba(0,0,0,.2); border-radius:12px; border:1px solid rgba(198,134,66,.06);
+            transition:all var(--transition-normal);
+        }
+        .strategy-step:hover { border-color:rgba(198,134,66,.15); }
+        .strategy-step-num {
+            width:34px; height:34px; border-radius:50%;
+            background:linear-gradient(135deg,var(--primary-color),var(--primary-dark));
+            color:#fff; display:flex; align-items:center; justify-content:center;
+            font-weight:800; font-size:.85rem; flex-shrink:0;
+            box-shadow:0 4px 12px rgba(198,134,66,.3);
+        }
+        .strategy-step-content h4 { font-size:.92rem; margin-bottom:4px; }
+        .strategy-step-content p { font-size:.82rem; color:var(--text-secondary); line-height:1.6; }
+        .strategy-step-content .amount { color:var(--accent-green); font-weight:700; font-variant-numeric:tabular-nums; }
+
+        .chart-container {
+            background:linear-gradient(135deg,rgba(51,44,32,.95),rgba(60,52,38,.95));
+            border:1px solid rgba(198,134,66,.12); border-radius:16px;
+            padding:24px; margin-bottom:24px; box-shadow:var(--shadow-card);
+        }
+        .chart-bar-group { display:flex; flex-direction:column; gap:12px; padding:12px 0; }
+        .chart-bar-row { display:flex; align-items:center; gap:12px; }
+        .chart-bar-label { width:180px; font-size:.8rem; font-weight:600; text-align:right; flex-shrink:0; color:var(--text-secondary); }
+        .chart-bar-track { flex:1; height:34px; background:rgba(198,134,66,.03); border-radius:8px; overflow:hidden; border:1px solid rgba(198,134,66,.06); }
+        .chart-bar-fill {
+            height:100%; border-radius:8px; transition:width .8s cubic-bezier(.25,.46,.45,.94);
+            display:flex; align-items:center; padding-left:14px;
+            font-size:.78rem; font-weight:700; color:#fff; font-variant-numeric:tabular-nums;
+        }
+        .chart-bar-fill.best { background:linear-gradient(90deg,var(--accent-green),var(--accent-emerald)); }
+        .chart-bar-fill.neutral { background:linear-gradient(90deg,var(--primary-color),var(--primary-dark)); }
+        .chart-bar-fill.worst { background:linear-gradient(90deg,var(--danger-color),#dc2626); }
+        .chart-bar-fill.mid { background:linear-gradient(90deg,var(--warning-color),#d97706); }
+
+        .timeline { display:flex; align-items:flex-start; gap:0; padding:20px 0; overflow-x:auto; }
+        .timeline-node { display:flex; flex-direction:column; align-items:center; min-width:160px; text-align:center; }
+        .timeline-dot { width:16px; height:24px; border-radius:50%; background:var(--primary-color); border:3px solid rgba(51,44,32,.95); z-index:2; margin-bottom:8px; box-shadow:0 0 10px rgba(198,134,66,.3); }
+        .timeline-node:first-child .timeline-dot { background:var(--accent-green); box-shadow:0 0 10px rgba(16,185,129,.3); }
+        .timeline-label { font-size:.78rem; font-weight:700; margin-bottom:4px; }
+        .timeline-desc { font-size:.72rem; color:var(--text-secondary); max-width:140px; }
+        .timeline-connector { flex:1; height:2px; background:rgba(198,134,66,.15); align-self:center; margin-top:6px; min-width:40px; }
+
+        .disclaimer {
+            background:linear-gradient(135deg,rgba(51,44,32,.6),rgba(25,21,16,.8));
+            border:1px solid var(--border-color); border-radius:12px;
+            padding:18px 22px; margin-top:24px; font-size:.74rem; color:var(--text-muted); line-height:1.7;
+        }
+        .disclaimer a { color:var(--primary-color); font-size:.74rem; }
+
+        /* ===== BOTTOM BAR ===== */
+        .bottom-bar {
+            position:fixed; bottom:0; left:var(--sidebar-w); right:0; height:64px;
+            background:rgba(51,44,32,.95); backdrop-filter:blur(15px);
+            border-top:1px solid var(--border-color);
+            display:flex; align-items:center; justify-content:space-between; padding:0 30px; z-index:50;
+        }
+        .btn { padding:10px 24px; border-radius:10px; font-family:inherit; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .2s; border:none; }
+        .btn-secondary { background:rgba(198,134,66,.06); color:var(--text-secondary); border:1px solid var(--border-input); }
+        .btn-secondary:hover { border-color:var(--primary-color); color:var(--primary-color); }
+        .btn-primary {
+            background:linear-gradient(135deg,var(--primary-color),var(--primary-dark));
+            color:#fff; font-weight:700; box-shadow:0 4px 16px rgba(198,134,66,.3);
+        }
+        .btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(198,134,66,.4); background:linear-gradient(135deg,var(--primary-light),var(--primary-color)); }
+        .btn-success {
+            background:linear-gradient(135deg,var(--accent-green),var(--accent-emerald));
+            color:#fff; font-weight:700; box-shadow:0 4px 16px rgba(16,185,129,.3);
+        }
+        .btn-success:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(16,185,129,.4); }
+        .btn-reset { background:none; border:none; color:var(--text-muted); font-size:.8rem; cursor:pointer; padding:8px; font-family:inherit; }
+        .btn-reset:hover { color:var(--danger-color); }
+
+        /* ===== URGENCY ACCENT (coral) ===== */
+        .warning-box.urgent {
+            background:rgba(255,107,107,.08); border:1px solid rgba(255,107,107,.25);
+            border-left:4px solid var(--accent-coral); color:#ffb3b3;
+        }
+        .warning-box.urgent i { color:var(--accent-coral); }
+        .badge-urgent {
+            display:inline-flex; align-items:center; gap:5px;
+            padding:4px 12px; border-radius:20px; font-size:.72rem; font-weight:700;
+            background:rgba(255,107,107,.12); color:var(--accent-coral);
+            border:1px solid rgba(255,107,107,.25);
+            animation:pulseUrgent 2.5s ease-in-out infinite;
+        }
+        @keyframes pulseUrgent {
+            0%,100% { box-shadow:0 0 0 0 rgba(255,107,107,0); }
+            50% { box-shadow:0 0 12px 2px rgba(255,107,107,.2); }
+        }
+        .section-card.urgent-border { border-color:rgba(255,107,107,.3); }
+        .section-card.urgent-border:hover { border-color:rgba(255,107,107,.5); box-shadow:0 12px 40px rgba(255,107,107,.08); }
+        .section-card.urgent-border .section-title i {
+            background:linear-gradient(135deg,rgba(255,107,107,.2),rgba(255,107,107,.12));
+            color:var(--accent-coral);
+            box-shadow:0 4px 12px rgba(255,107,107,.2);
+        }
+        .countdown-text { color:var(--accent-coral); font-weight:700; font-variant-numeric:tabular-nums; }
+        .text-coral { color:var(--accent-coral); }
+
+        /* ===== RESPONSIVE ===== */
+        /* ===== STEP HELPER ===== */
+        .step-helper {
+            display:flex; align-items:center; gap:10px;
+            padding:12px 16px; border-radius:10px; margin-bottom:16px;
+            background:rgba(198,134,66,0.05); border:1px solid rgba(198,134,66,0.1);
+            font-size:.78rem; color:var(--text-secondary); line-height:1.5;
+        }
+        .step-helper i { color:var(--primary-color); font-size:.8rem; flex-shrink:0; }
+
+        @media(max-width:1024px){
+            .page-grid{grid-template-columns:1fr}
+            .page-aside{display:none}
+        }
+        @media(max-width:768px){
+            .sidebar{display:none} .main-content{margin-left:0} .bottom-bar{left:0}
+            .form-grid,.form-grid.cols-3,.form-grid.cols-4{grid-template-columns:1fr}
+            .stepper-bar{overflow-x:auto;justify-content:flex-start;padding:0 16px;max-width:100%}
+            .step-label,.step-sublabel{display:none}
+            .form-container{padding:16px 16px 100px} .page-header,.bottom-bar{padding:0 16px}
+            .section-card{padding:18px} .results-summary .big-number{font-size:1.8rem}
+        }
+    
+        #family-persons-list .ft-canvas.ft-levels{ margin:0 auto; }
+        #family-persons-list{ padding-bottom:8px; }
     </style>
 </head>
 <body>
-<!-- RESTORED FROM MAIN — see full file at main branch -->
+<div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo-small">SF</div>
+        <a href="actualites.html" class="nav-item" title="Actualités"><i class="fas fa-newspaper"></i></a>
+        <a href="portefeuille.html?type=modere" class="nav-item" title="Portefeuilles"><i class="fas fa-chart-pie"></i></a>
+        <a href="dashboard.html" class="nav-item" title="Dashboard"><i class="fas fa-tachometer-alt"></i></a>
+        <a href="marches.html" class="nav-item" title="Marchés"><i class="fas fa-chart-line"></i></a>
+        <a href="secteurs.html" class="nav-item" title="Secteurs"><i class="fas fa-industry"></i></a>
+        <a href="liste.html" class="nav-item" title="Actions"><i class="fas fa-list"></i></a>
+        <a href="etf.html" class="nav-item" title="ETF"><i class="fas fa-funnel-dollar"></i></a>
+        <a href="crypto.html" class="nav-item" title="Crypto"><i class="fab fa-bitcoin"></i></a>
+        <a href="simulation.html" class="nav-item" title="Simulation"><i class="fas fa-calculator"></i></a>
+        <a href="guide-placements.html" class="nav-item" title="Guide Invest"><i class="fas fa-book"></i></a>
+        <a href="types-entreprise-v2.html" class="nav-item" title="Entreprise"><i class="fas fa-building"></i></a>
+        <a href="immoSim.html" class="nav-item" title="Immobilier"><i class="fas fa-home"></i></a>
+        <a href="successions-donations.html" class="nav-item active" title="Succession & Donation"><i class="fas fa-hand-holding-heart"></i></a>
+        <a href="parametres.html" class="nav-item" title="Paramètres" style="margin-top:auto;"><i class="fas fa-cog"></i></a>
+    </div>
+
+    <div class="main-content">
+        <!-- Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-hand-holding-heart"></i> Optimisateur Succession & Donation</h1>
+            <span class="badge-version">Barèmes 2026 · v3.1</span>
+            <div style="font-size:.58rem;color:var(--text-muted);margin-top:4px;max-width:600px;text-align:center;line-height:1.4;">
+                ⚠️ Optimisation fiscale des droits de mutation (DMTG). Ne constitue pas un conseil en gestion de patrimoine. Barèmes CGI art. 669, 777, 779, 790 A bis, 990 I, 757 B. Droits civils art. 757, 515-6, 913 CC.
+            </div>
+        </div>
+
+        <!-- Stepper -->
+        <div class="stepper-wrapper">
+        <div class="stepper-bar">
+            <div class="step-item active" data-step="1" onclick="SD.goToStep(1)">
+                <div class="step-number"><span>1</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Arbre</div><div class="step-sublabel">Famille & liens</div></div>
+            </div>
+            <div class="step-connector" id="conn-1"></div>
+            <div class="step-item" data-step="2" onclick="SD.goToStep(2)">
+                <div class="step-number"><span>2</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Donations</div><div class="step-sublabel">Historique & dates</div></div>
+            </div>
+            <div class="step-connector" id="conn-2"></div>
+            <div class="step-item" data-step="3" onclick="SD.goToStep(3)">
+                <div class="step-number"><span>3</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Patrimoine</div><div class="step-sublabel">Biens, dettes, AV</div></div>
+            </div>
+            <div class="step-connector" id="conn-3"></div>
+            <div class="step-item" data-step="4" onclick="SD.goToStep(4)">
+                <div class="step-number"><span>4</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Objectif</div><div class="step-sublabel">Donation, succession</div></div>
+            </div>
+            <div class="step-connector" id="conn-4"></div>
+            <div class="step-item" data-step="5" onclick="SD.goToStep(5)">
+                <div class="step-number"><span>5</span><i class="fas fa-check"></i></div>
+                <div><div class="step-label">Résultats</div><div class="step-sublabel">Stratégie optimale</div></div>
+            </div>
+        </div>
+        </div>
+
+        <div class="form-container">
+          <div class="page-grid">
+            <main class="page-main">
+                        <!-- ==================== STEP 1: ARBRE FAMILIAL ==================== -->
+            <div class="step-panel active" id="step-1">
+                <div class="step-helper"><i class="fas fa-sitemap"></i> Construisez votre arbre familial. Cliquez sur <strong>+ Enfant</strong>, <strong>+ Parent</strong> ou <strong>+ 💍</strong> autour de chaque personne. Le système déduit tous les liens fiscaux automatiquement.</div>
+
+                <!-- Presets -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-magic"></i> Démarrage rapide</div>
+                    <div class="presets" id="family-presets">
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('couple_2enfants')">👨‍👩‍👧‍👦 Couple + 2 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('couple_3enfants')">👨‍👩‍👧‍👦 Couple + 3 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('gp_parents_enfants')">👴👵 GP + Parents + Enfants</button>
+                        <button class="preset-btn" onclick="SD.applyFamilyPreset('recomposee')">💑 Famille recomposée</button>
+                    </div>
+                </div>
+
+                <!-- Interactive Tree -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-project-diagram"></i> Arbre familial</div>
+                    <div class="section-subtitle">Cliquez sur les boutons + pour construire l'arbre. Éditez les noms et âges directement.</div>
+                    <div id="family-persons-list" style="overflow-x:auto;overflow-y:visible;"></div>
+                </div>
+
+                <!-- Roles -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-exchange-alt"></i> Qui transmet ? Qui reçoit ?</div>
+                    <div class="section-subtitle">Cochez 💰 (donateur) et 🎯 (bénéficiaire). Le lien fiscal est auto-calculé.</div>
+                    <div id="family-roles-list"></div>
+                </div>
+
+
+            </div>
+
+                        <!-- ==================== STEP 2: DONATIONS & DÉTAILS ==================== -->
+            <div class="step-panel" id="step-2">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Renseignez les donateurs (parents, grands-parents…) avec leur patrimoine propre, puis ajoutez les bénéficiaires. L'optimiseur calculera automatiquement le meilleur chemin de transmission.</div>
+
+                <!-- Bénéficiaires -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-child"></i> Bénéficiaires (qui reçoit ?)</div>
+                    <div class="section-subtitle">Qui recevra le patrimoine ? Ajoutez chaque bénéficiaire.</div>
+                    <div class="presets">
+                        <button class="preset-btn" onclick="SD.applyPreset('2enfants')">👨‍👧‍👦 2 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyPreset('3enfants')">👨‍👧‍👦 3 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyPreset('conjoint2')">💑 Conjoint + 2 enfants</button>
+                        <button class="preset-btn" onclick="SD.applyPreset('neveu')">🧑 1 neveu/nièce</button>
+                    </div>
+                    <div class="dynamic-list" id="beneficiaries-list"></div>
+                    <button class="btn-add" onclick="SD.addBeneficiary()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Ajouter un bénéficiaire
+                    </button>
+                </div>
+
+                <!-- Cartographie familiale -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-sitemap"></i> Cartographie familiale</div>
+                    <div class="section-subtitle">Listez toutes les personnes qui pourraient transmettre du patrimoine — l'optimiseur trouvera le meilleur chemin, y compris via des intermédiaires.</div>
+
+                    <div class="warning-box urgent" style="margin-bottom:14px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><strong>Obligatoire :</strong> pour chaque personne, déclarez les <strong>donations déjà effectuées</strong> (rappel fiscal 15 ans). Sans cette info, l'optimisation sera faussée.</span>
+                    </div>
+
+                    <div class="step-helper" style="margin-bottom:14px;background:rgba(198,134,66,.08);">
+                        <i class="fas fa-route" style="color:var(--accent-green);"></i>
+                        <span>Même si un donateur n'est pas le parent direct du bénéficiaire, le moteur peut identifier un <strong>chemin indirect</strong> plus avantageux (ex: grand-mère → fils → petit-fils au lieu de grand-mère → petit-fils directement).</span>
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <label class="form-label" style="margin-bottom:8px;">Profils types :</label>
+                        <div class="presets" id="donor-presets">
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('parent_seul')">👤 1 Parent</button>
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_parents')">👫 2 Parents</button>
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('gp_seuls')">👴👵 2 Grands-parents</button>
+                            <button class="preset-btn donor-preset-btn" onclick="PathOptimizer.applyDonorPreset('couple_gp')">👨‍👩‍👧‍👦 Parents + GP</button>
+                        </div>
+                    </div>
+
+                    <div class="dynamic-list" id="donors-list"></div>
+                    <button class="btn-add" onclick="PathOptimizer.addDonor()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Ajouter un membre de la famille
+                    </button>
+                </div>
+
+                <!-- Matrice donateurs × bénéficiaires -->
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-th"></i> Matrice des liens fiscaux</div>
+                    <div class="section-subtitle">Abattements et barèmes auto-détectés selon les rôles familiaux — chaque croisement = un chemin possible</div>
+                    <div id="path-matrix"></div>
+                </div>
+
+
+            </div>
+
+            
+
+            <!-- ==================== STEP 3: PATRIMOINE ==================== -->
+            <div class="step-panel" id="step-3">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Ajoutez au moins 1 bien immobilier, un montant financier ou un capital en assurance-vie.</div>
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-sliders-h"></i> Mode de saisie</div>
+                    <div class="toggle-group" id="detail-toggle">
+                        <button class="toggle-btn active" data-value="simplifie" onclick="SD.setDetailMode('simplifie')">Simplifié</button>
+                        <button class="toggle-btn" data-value="detaille" onclick="SD.setDetailMode('detaille')">Détaillé (recommandé)</button>
+                    </div>
+                </div>
+
+                <!-- Mode simplifié -->
+                <div id="mode-simplifie">
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-wallet"></i> Patrimoine global</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Montant total à transmettre (€)</label>
+                                <input type="number" id="total-patrimoine" placeholder="Ex: 500000" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Type dominant</label>
+                                <select id="type-dominant">
+                                    <option value="financier">💰 Majoritairement financier</option>
+                                    <option value="immobilier">🏠 Majoritairement immobilier</option>
+                                    <option value="mixte">📊 Mixte</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dont résidence principale (€)</label>
+                                <input type="number" id="montant-rp" placeholder="Ex: 300000" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dettes hors immobilier (€) <span style="font-size:.58rem;color:var(--text-muted);">(crédits immo : dans chaque fiche bien)</span></label>
+                                <input type="number" id="total-dettes" placeholder="Ex: 80000" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode détaillé -->
+                <div id="mode-detaille" style="display:none;">
+                    <!-- IMMOBILIER -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-home"></i> Biens immobiliers</div>
+                        <div class="section-subtitle">Pour chaque bien : sa nature, son usage actuel, comment il est détenu et loué</div>
+                        <div class="dynamic-list" id="immo-list"></div>
+                        <button class="btn-add" onclick="SD.addImmo()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter un bien immobilier
+                        </button>
+                    </div>
+
+                    <!-- FINANCIER -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-piggy-bank"></i> Actifs financiers</div>
+                        <div class="dynamic-list" id="finance-list"></div>
+                        <button class="btn-add" onclick="SD.addFinancial()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter un actif financier
+                        </button>
+                    </div>
+
+                    <!-- PROFESSIONNEL -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-briefcase"></i> Actifs professionnels</div>
+                        <div class="dynamic-list" id="pro-list"></div>
+                        <button class="btn-add" onclick="SD.addProfessional()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter un actif professionnel
+                        </button>
+                    </div>
+
+                    <!-- PASSIF -->
+                    <div class="section-card">
+                        <div class="section-title"><i class="fas fa-file-invoice-dollar"></i> Passif (dettes déductibles)</div>
+                        <div class="section-subtitle">Seules les dettes sans assurance décès (ADI) sont déductibles de l'actif successoral</div>
+                        <div class="dynamic-list" id="debt-list"></div>
+                        <button class="btn-add" onclick="SD.addDebt()" style="margin-top:12px;">
+                            <i class="fas fa-plus"></i> Ajouter une dette
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Synthèse auto -->
+                <div class="section-card" id="synthese-patri">
+                    <div class="section-title"><i class="fas fa-calculator"></i> Synthèse patrimoniale</div>
+                    <div id="synthese-content"></div>
+                </div>
+            </div>
+
+            <!-- ==================== STEP 4: OBJECTIF ==================== -->
+            <div class="step-panel" id="step-4">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Recommandations personnalisées actif par actif. Cliquez sur une option pour voir le détail fiscal.</div>
+
+                <!-- STRATEGY ADVISOR — Recommandations guidées par actif -->
+                <div id="strategy-advisor-container"></div>
+
+                <!-- ===== OBJECTIFS DE TRANSMISSION (repliable, ancien système) ===== -->
+                <div class="section-card" style="padding:0;overflow:hidden;margin-top:16px;">
+                    <div style="padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="SD.toggleCollapsible(this)">
+                        <div class="section-title" style="margin:0;"><i class="fas fa-sliders-h"></i> Objectifs de transmission (réglages)</div>
+                        <i class="fas fa-chevron-down" style="font-size:.7rem;color:var(--text-muted);transition:transform .3s;"></i>
+                    </div>
+                    <div style="display:none;padding:0 20px 20px;">
+                <div class="section-subtitle">Ajustez vos priorités — les recommandations ci-dessus s'adaptent automatiquement</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Minimiser les droits de donation / succession <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Tous les scénarios seront classés par coût fiscal croissant. Active les chemins indirects (ex: grand-parent → parent → enfant pour cumuler les abattements).</span></span></span>
+                        <div class="switch on" id="obj-minimiser" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Conserver les revenus / l'usage des biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise le démembrement (US/NP), la clause AV démembrée, le quasi-usufruit. Le donateur conserve les loyers, dividendes ou l'usage du bien.</span></span></span>
+                        <div class="switch" id="obj-revenus" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Maintenir le contrôle sur le patrimoine <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la SCI (gérance), le contrat de capitalisation démembré, et les donations avec charges. Le donateur garde la main.</span></span></span>
+                        <div class="switch" id="obj-controle" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Protéger le conjoint survivant <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Active les scénarios DDV (donation au dernier vivant), clause bénéficiaire AV au conjoint, usufruit universel, clause de préciput RP. Distingue mariage, PACS et concubinage (art. 757/515-6 CC).</span></span></span>
+                        <div class="switch" id="obj-conjoint" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Égalité entre les enfants <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Favorise la donation-partage (valeur figée, pas de rapport) et le partage équitable entre héritiers.</span></span></span>
+                        <div class="switch" id="obj-egalite" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Transmettre à une génération plus lointaine <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">AV : bénéficiaire libre (petit-fils). Chemin indirect GP → parent → enfant (2× abattement). Donation transgénérationnelle.</span></span></span>
+                        <div class="switch" id="obj-generation" onclick="SD.toggleSwitch(this)"></div>
+                    </div>
+                    <div class="switch-row">
+                        <span class="switch-label">Vendre un ou plusieurs biens <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Calcule la plus-value immobilière nette. Compare : vendre avant ou après donation/succession.</span></span></span>
+                        <div class="switch" id="obj-vendre" onclick="SD.toggleSwitch(this);SD.toggleSection('vente-section')"></div>
+                    </div>
+                    </div><!-- close legacy-objectives -->
+                </div><!-- close collapsible card -->
+
+                <!-- ===== SECTION VENTE (conditionnelle) ===== -->
+                <div class="section-card" id="vente-section" style="display:none;">
+                    <div class="section-title"><i class="fas fa-tag"></i> Projet de vente — Plus-value immobilière</div>
+                    <div class="section-subtitle">Estimation de la plus-value nette après abattements pour durée de détention</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Prix de vente estimé (€)</label>
+                            <input type="number" id="prix-vente" placeholder="Ex: 400000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prix d'acquisition (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Prix d'achat + frais d'acquisition (7,5% forfaitaires) + travaux (15% forfaitaires si > 5 ans).</span></span></label>
+                            <input type="number" id="prix-acquisition" placeholder="Ex: 250000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date d'acquisition</label>
+                            <input type="date" id="date-acquisition">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Type de bien</label>
+                            <select id="type-bien-vente">
+                                <option value="standard">Bien standard</option>
+                                <option value="rp">Résidence principale (exonérée)</option>
+                                <option value="terrain">Terrain à bâtir</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Travaux réels justifiés (€) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Si > forfait 15%, indiquez le montant réel. Sinon laissez vide.</span></span></label>
+                            <input type="number" id="travaux-vente" placeholder="Laisser vide = forfait 15%" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Horizon de vente</label>
+                            <select id="horizon-vente">
+                                <option value="0">Immédiat</option>
+                                <option value="1">Moins d'1 an</option>
+                                <option value="5" selected>1 à 5 ans</option>
+                                <option value="10">5 à 10 ans</option>
+                                <option value="20">Plus de 10 ans</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="pv-preview" style="display:none; margin-top:12px;"></div>
+                </div>
+
+                <!-- ===== ALERTE 790 A BIS (auto-affichée si pertinent) ===== -->
+                <div class="section-card urgent-border" id="exo-logement-section">
+                    <div class="section-title"><i class="fas fa-home-lg-alt"></i> Exonération temporaire logement (790 A bis) <span class="badge-urgent"><i class="fas fa-hourglass-half"></i> Expire 31/12/2026</span></div>
+                    <div class="section-subtitle">Don d'argent exonéré jusqu'à 100 000 €/donateur pour achat RP neuve/VEFA ou travaux réno. énergétique</div>
+                    <div class="switch-row">
+                        <span class="switch-label">Le donataire va acquérir un logement neuf ou réaliser des travaux réno. ? <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">100k€/donateur, 300k€ max/donataire. Fonds à utiliser sous 6 mois. Conservation 5 ans. Cumulable avec abattement enfant + don familial.</span></span></span>
+                        <div class="switch" id="switch-790abis" onclick="SD.toggleSwitch(this);SD.toggleSection('exo-logement-details')"></div>
+                    </div>
+                    <div id="exo-logement-details" style="display:none; margin-top:16px;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Objet du don</label>
+                                <select id="exo-logement-objet">
+                                    <option value="acquisition_neuf">Acquisition logement neuf / VEFA (RP)</option>
+                                    <option value="reno_energetique">Travaux réno. énergétique (RP)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Montant du don visé (€)</label>
+                                <input type="number" id="exo-logement-montant" step="1000" placeholder="Max 100 000 par donateur" max="100000">
+                            </div>
+                        </div>
+                        <div class="warning-box urgent" style="margin-top:8px;">
+                            <i class="fas fa-clock"></i>
+                            <span><strong>Délais stricts :</strong> utilisation des fonds sous <span class="countdown-text">6 mois</span> · conservation du bien <span class="countdown-text">5 ans</span> minimum.</span>
+                        </div>
+                        <div class="warning-box info" style="margin-top:8px;">
+                            <i class="fas fa-calculator"></i>
+                            <span><strong>Cumul max 1 parent → 1 enfant :</strong> 100 000 € (enfant) + 31 865 € (don familial) + 100 000 € (790 A bis) = <strong>231 865 € sans droits</strong>. Avec 2 parents : <strong>463 730 €</strong>.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== OPTIONS AVANCÉES (repliable) ===== -->
+                <div class="section-card" style="padding:0;overflow:hidden;">
+                    <div class="collapsible-header" onclick="SD.toggleCollapsible(this)" style="padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                        <div class="section-title" style="margin:0;"><i class="fas fa-cogs"></i> Options avancées</div>
+                        <i class="fas fa-chevron-down" style="color:var(--text-muted);transition:transform .3s;"></i>
+                    </div>
+                    <div class="collapsible-body" style="display:none;padding:0 20px 20px;">
+
+                        <!-- Type d'opération (hidden, always "both") -->
+                        <div style="display:none;">
+                            <div class="toggle-group" id="operation-toggle">
+                                <button class="toggle-btn" data-value="donation">Donation</button>
+                                <button class="toggle-btn" data-value="succession">Succession</button>
+                                <button class="toggle-btn active" data-value="both" onclick="SD.setOperation('both')">Comparer</button>
+                            </div>
+                        </div>
+
+                        <div class="form-grid" style="margin-bottom:16px;">
+                            <div class="form-group">
+                                <label class="form-label">Régime matrimonial</label>
+                                <select id="regime-matrimonial">
+                                    <option value="communaute_acquets">Communauté réduite aux acquêts</option>
+                                    <option value="communaute_universelle">Communauté universelle</option>
+                                    <option value="separation_biens">Séparation de biens</option>
+                                    <option value="participation_acquets">Participation aux acquêts</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Type de donation préféré</label>
+                                <select id="donation-type">
+                                    <option value="donation_partage">Donation-partage (recommandé)</option>
+                                    <option value="donation_simple">Donation simple</option>
+                                    <option value="don_manuel">Don manuel</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="switch-row">
+                            <span class="switch-label">Donation au dernier vivant (DDV) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Permet au conjoint survivant de choisir : usufruit total, 1/4 PP + 3/4 US, ou quotité disponible en PP. Art. 1094-1 CC. Coût ~150€ chez le notaire. Applicable au mariage uniquement (pas PACS).</span></span></span>
+                            <div class="switch" id="switch-ddv" onclick="SD.toggleSwitch(this)"></div>
+                        </div>
+                        <div class="switch-row">
+                            <span class="switch-label">Clause de préciput <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Le survivant prélève un bien (ex: RP) avant le partage.</span></span></span>
+                            <div class="switch" id="switch-preciput" onclick="SD.toggleSwitch(this)"></div>
+                        </div>
+                        <div class="switch-row" style="margin-top:8px;">
+                            <span class="switch-label">Démembrement (conserver l'usufruit) <span class="info-tip" onclick="this.classList.toggle('open');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">Transmettre la NP, conserver l'usufruit. Au décès, NP → PP sans droits.</span></span></span>
+                            <div class="switch" id="switch-demembrement" onclick="SD.toggleSwitch(this);SD.toggleSection('demembrement-options')"></div>
+                        </div>
+                        <div id="demembrement-options" style="display:none; margin-top:12px;">
+                            <div class="form-group">
+                                <label class="form-label">Type d'usufruit</label>
+                                <select id="usufruit-type">
+                                    <option value="viager">Viager — jusqu'au décès (art. 669)</option>
+                                    <option value="temporaire_10">Temporaire 10 ans (23%)</option>
+                                    <option value="temporaire_15">Temporaire 15 ans (46%)</option>
+                                    <option value="temporaire_20">Temporaire 20 ans (46% plafonné)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==================== STEP 5: RÉSULTATS ==================== -->
+            <div class="step-panel" id="step-5">
+                <div class="step-helper"><i class="fas fa-lightbulb"></i> Cliquez sur un canal pour voir le détail fiscal, les avantages et les risques.</div>
+                
+                <!-- AI NARRATIVE SUMMARY (appears first, above channel cards) -->
+                <div id="ai-narrative-summary" style="display:none;margin-bottom:20px;"></div>
+
+                <!-- TRANSMISSION MAP — résultats par chemin donateur → bénéficiaire -->
+                <div id="transmission-map"></div>
+
+                <!-- PATH OPTIMIZER RESULTS -->
+                <div id="path-results-wrapper" style="display:none;">
+                    <div class="section-card" style="border-color:rgba(198,134,66,.25);margin-bottom:16px;">
+                        <div class="section-title"><i class="fas fa-route" style="color:var(--accent-green);"></i> Optimisation des chemins de transmission</div>
+                        <div class="section-subtitle">Tous les parcours possibles entre donateurs et bénéficiaires, classés par coût fiscal</div>
+                        <div id="path-results"></div>
+                    </div>
+                </div>
+
+                <div class="results-summary" id="results-hero" style="display:none;">
+                    <div class="big-number" id="best-net-amount">—</div>
+                    <div class="subtitle">Montant net transmis optimal</div>
+                    <div class="saved" id="savings-badge">—</div>
+                </div>
+                <div id="results-warnings"></div>
+
+                <!-- Legacy scenarios — collapsible -->
+                <div class="section-card" style="margin-top:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="SD.toggleCollapsible(this)">
+                        <div class="section-title" style="margin:0;"><i class="fas fa-table"></i> Tableau comparatif des scénarios</div>
+                        <i class="fas fa-chevron-down" style="font-size:.7rem;color:var(--text-muted);transition:transform .3s;"></i>
+                    </div>
+                    <div id="legacy-scenarios" style="display:none;">
+                        <div class="comparison-table-wrap" style="margin-top:12px;">
+                            <table class="comparison-table" id="comparison-table">
+                                <thead><tr id="table-header"></tr></thead>
+                                <tbody id="table-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="chart-container" style="margin-top:12px;">
+                            <div style="font-size:.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;"><i class="fas fa-chart-bar"></i> Montant net transmis par scénario</div>
+                            <div class="chart-bar-group" id="chart-bars"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="strategy-card" id="strategy-card" style="display:none;">
+                    <h3><i class="fas fa-lightbulb" style="color:var(--accent-amber);"></i> Stratégie recommandée</h3>
+                    <div id="strategy-steps"></div>
+                    <div style="margin-top:20px;padding:16px;background:rgba(16,185,129,.08);border-radius:10px;text-align:center;">
+                        <div style="font-size:.85rem;color:var(--text-secondary);">TOTAL NET TRANSMIS ESTIMÉ</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--accent-green);font-variant-numeric:tabular-nums;" id="strategy-total">—</div>
+                    </div>
+                </div>
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-stream"></i> Plan d'action</div>
+                    <div class="timeline" id="timeline"></div>
+                </div>
+                <div class="section-card">
+                    <div class="section-title"><i class="fas fa-user-friends"></i> Détail par bénéficiaire</div>
+                    <div id="per-beneficiary-detail"></div>
+                </div>
+                <div class="disclaimer">
+                    <strong>⚠️ Avertissement :</strong> Simulation indicative basée sur les barèmes fiscaux au 01/01/2026 (gelés jusqu'en 2028 — PLF 2026). Ne constitue pas un conseil juridique, fiscal ou patrimonial personnalisé. <strong>Consultez un notaire et/ou un CGP</strong> avant toute décision.<br><br>
+                    Sources : <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006310173/" target="_blank">Art. 669 CGI</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030061736" target="_blank">Art. 777</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288653" target="_blank">Art. 990 I</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288569" target="_blank">Art. 757 B</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051281498" target="_blank">Art. 790 A bis (exo. logement)</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006430879" target="_blank">Art. 757 CC (conjoint)</a> · <a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006429067" target="_blank">Art. 515-6 CC (PACS)</a> · <a href="https://www.impots.gouv.fr/particulier/questions/je-vends-un-bien-immobilier-donne-en-location-meublee-comment-se-calcule-la" target="_blank">LMNP PV 2025</a>
+                </div>
+            </div>
+
+            </main><!-- /page-main -->
+
+            <aside class="page-aside" style="display:none;">
+                <div class="aside-card">
+                    <div class="aside-title"><i class="fas fa-clipboard-list"></i> Résumé</div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Donateur</div>
+                        <div class="aside-value" id="aside-donor">Non renseigné</div>
+                    </div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Bénéficiaires</div>
+                        <div class="aside-value" id="aside-benef">Aucun ajouté</div>
+                    </div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Patrimoine</div>
+                        <div class="aside-value" id="aside-patri">Non renseigné</div>
+                    </div>
+
+                    <div class="aside-block">
+                        <div class="aside-label">Alertes</div>
+                        <div class="aside-warnings" id="aside-warnings">
+                            <div class="aside-warn-item amber"><i class="fas fa-info-circle"></i> Remplissez l'étape 1</div>
+                        </div>
+                    </div>
+
+                    <div class="aside-progress"><div class="aside-progress-fill" id="aside-progress" style="width:0%"></div></div>
+                    <div class="aside-hint" id="aside-hint">Étape 1 sur 5</div>
+
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button class="aside-cta" id="aside-prev" style="display:none;flex:0 0 auto;width:auto;padding:10px 14px;background:rgba(198,134,66,.12);color:var(--primary-color);" onclick="SD.prevStep()">← Préc.</button>
+                        <button class="aside-cta" id="aside-cta" style="flex:1;" onclick="SD.nextStep()">Suivant →</button>
+                    </div>
+                </div>
+            </aside>
+
+          </div><!-- /page-grid -->
+        </div><!-- /form-container -->
+
+        <!-- Bottom bar -->
+        <div class="bottom-bar">
+            <div><button class="btn-reset" onclick="SD.resetAll()"><i class="fas fa-redo"></i> Réinitialiser</button></div>
+            <div style="display:flex;gap:12px;">
+                <button class="btn btn-secondary" id="btn-prev" onclick="SD.prevStep()" style="display:none;"><i class="fas fa-arrow-left" style="margin-right:6px;"></i> Précédent</button>
+                <button class="btn btn-primary" id="btn-next" onclick="SD.nextStep()">Suivant <i class="fas fa-arrow-right" style="margin-left:6px;"></i></button>
+                <button class="btn btn-success" id="btn-calculate" onclick="SD.calculateResults()" style="display:none;"><i class="fas fa-calculator" style="margin-right:6px;"></i> Calculer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- External JS -->
 <script src="js/successions-donations.js?v=20260305a"></script>
 <script src="js/path-optimizer.js?v=20260305a"></script>
