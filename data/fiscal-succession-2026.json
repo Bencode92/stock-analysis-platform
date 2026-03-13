@@ -1,7 +1,7 @@
 {
   "version": "2026-01-01",
   "type": "succession",
-  "source": "CGI - Légifrance - impots.gouv.fr - Code civil",
+  "source": "CGI - Légifrance - impots.gouv.fr - Code civil - Capital mars 2026",
   "last_updated": "2026-03-13",
   "note_generale": "Barèmes et abattements gelés jusqu'en 2028 (PLF 2026). Aucune revalorisation malgré l'inflation.",
 
@@ -38,7 +38,40 @@
   "assurance_vie": {
     "art_990I": { "champ": "Primes versées avant 70 ans", "abattement_par_beneficiaire": 152500, "taux_tranche1": 0.20, "seuil_tranche2": 700000, "taux_tranche2": 0.3125 },
     "art_757B": { "champ": "Primes versées après 70 ans", "abattement_global": 30500, "note": "Produits exonérés. Au-delà : DMTG classiques (art. 777)" },
-    "primes_exagerees_seuil_alerte": 0.35
+    "primes_exagerees": {
+      "seuil_patrimoine_pct": 0.35,
+      "seuil_revenus_annuels_pct": 0.50,
+      "article": "L132-13 Code des assurances",
+      "consequence": "Réintégration du contrat dans la succession sur demande des héritiers réservataires",
+      "jurisprudence": "Cass. 2ème civ., 4 juillet 2007 + arrêts constants",
+      "criteres_tribunal": ["Âge et état de santé du souscripteur au moment des versements", "Situation patrimoniale et revenus", "Utilité du contrat pour le souscripteur"],
+      "note": "Les tribunaux jugent au cas par cas. >35% du patrimoine = alerte, >50% des revenus annuels = risque élevé."
+    }
+  },
+
+  "sci": {
+    "decote_parts_pct": 0.15,
+    "motif": "Illiquidité des parts sociales — admise par l'administration fiscale et la jurisprudence",
+    "frais_creation_euros": 1500,
+    "avantages": ["Décote 15% sur la valeur des parts", "Démembrement des parts (NP/US)", "Gestion centralisée (gérant = donateur)", "Transmission progressive des parts", "Démembrement croisé pour concubins"],
+    "demembrement_croise_concubins": {
+      "description": "Chaque concubin détient la NP de ses parts + l'US des parts de l'autre. Au décès : survivant reconstitue PP sans droits, enfants héritent NP en ligne directe (5-45% au lieu de 60%)",
+      "avantages": ["Survivant reste dans le logement", "Exonéré de droits sur ses propres parts", "Enfants au barème ligne directe (pas 60%)"],
+      "frais_creation_euros": 2000,
+      "conditions": ["Détention 50/50", "Clause dans les statuts SCI", "US croisé prévu dès l'origine"]
+    }
+  },
+
+  "foncier_rural": {
+    "exoneration_pct": 0.75,
+    "note": "Seuls 25% de la valeur sont soumis aux DMTG",
+    "types": {
+      "foret_gfi": { "label": "Forêt / GFI (Groupement Forestier d'Investissement)", "plafond_par_beneficiaire": null, "engagement": "Gestion durable 30 ans (régime Monichon)", "rendement_annuel": "1,5-2%" },
+      "vigne_gfv": { "label": "Vigne / GFV (Groupement Foncier Viticole)", "plafond_par_beneficiaire": 500000, "engagement": "Bail rural ≥ 18 ans", "rendement_annuel": "1,5-2%" },
+      "terre_agricole_gfa": { "label": "Terre agricole / GFA (Groupement Foncier Agricole)", "plafond_par_beneficiaire": 500000, "engagement": "Bail rural ≥ 18 ans", "rendement_annuel": "1,5-2%" }
+    },
+    "ticket_entree_min_euros": 5000,
+    "conservation_min_ans": 5
   },
 
   "abattement_rp": { "taux": 0.20, "article": "764 bis CGI", "conditions": ["RP du défunt au jour du décès", "Occupée par conjoint/pacsé OU enfant mineur/protégé"], "exclusion_sci": true },
@@ -84,7 +117,7 @@
       "droit_temporaire_1an": { "article": "515-6 al. 3 CC", "description": "Jouissance gratuite 1 an. Seul droit automatique du pacsé.", "duree_mois": 12, "charge_succession": true },
       "pas_de_droit_viager": true
     },
-    "concubin": { "aucun_droit": true, "note": "Aucun droit au logement." }
+    "concubin": { "aucun_droit": true, "note": "Aucun droit au logement. Seule solution : SCI à démembrement croisé." }
   },
 
   "mapping_fiscal_concubinage": {
@@ -92,7 +125,7 @@
     "abattement": 1594,
     "bareme": "tiers (60%)",
     "donation_entre_concubins": { "abattement": 0, "taux": 0.60, "article": "777 CGI tableau III", "note": "0€ abattement en donation (≠ 1594€ en succession)" },
-    "recommandations": ["AV (art. 990 I) : abat. 152 500€, taux 20%/31,25%", "Testament : QD taxée à 60%", "Tontine immobilière", "SCI avec décote"]
+    "recommandations": ["AV (art. 990 I) : abat. 152 500€, taux 20%/31,25%", "SCI démembrement croisé : survivant exonéré + enfants en ligne directe", "Testament : QD taxée à 60%", "Tontine immobilière", "GFV/GFA/GFI : exonération 75%"]
   },
 
   "tableau_comparatif_unions": {
@@ -102,10 +135,10 @@
       { "critere": "Droits de succession", "mariage": "Exonéré", "pacs": "Exonéré", "concubinage": "60%" },
       { "critere": "DDV", "mariage": "Oui (~150€)", "pacs": "Non", "concubinage": "Non" },
       { "critere": "Abattement donation", "mariage": "80 724€", "pacs": "80 724€", "concubinage": "0€" },
-      { "critere": "Droit logement", "mariage": "1 an + viager", "pacs": "1 an seulement", "concubinage": "Aucun" },
+      { "critere": "Droit logement", "mariage": "1 an + viager", "pacs": "1 an seulement", "concubinage": "Aucun (SCI croisée possible)" },
       { "critere": "Réversion", "mariage": "Oui (54%)", "pacs": "Non", "concubinage": "Non" },
       { "critere": "AV (990 I)", "mariage": "Exonéré", "pacs": "Exonéré", "concubinage": "Abat. 152 500€ puis 20%/31,25%" },
-      { "critere": "Recommandation", "mariage": "DDV + clause AV", "pacs": "Testament + AV", "concubinage": "AV seul outil < 60%" }
+      { "critere": "Recommandation", "mariage": "DDV + clause AV + SCI", "pacs": "Testament + AV", "concubinage": "AV + SCI croisée + GFV" }
     ]
   }
 }
