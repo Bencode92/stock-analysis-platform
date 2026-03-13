@@ -2201,7 +2201,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 cr = crypto_lookup.get(asset_base)
                 if cr and cr.get("_profile_score") is not None:
                     old_score = asset.score
-                    asset.score = float(cr["_profile_score"])
+                    preset_score = float(cr["_profile_score"])
+                    # v5.2.0: Satellite role gets -20% score discount
+                    # Rationale: satellite = niche/unrecognized category, 
+                    # shouldn't compete equally with core investments
+                    role = cr.get("_role", "core")
+                    if role == "satellite":
+                        preset_score *= 0.80  # 20% haircut
+                    asset.score = preset_score
                     # Aussi injecter dans source_data pour assign_preset_to_asset
                     if asset.source_data is None:
                         asset.source_data = {}
@@ -2453,6 +2460,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         # === FIX v5.2.0-C: Min weight enforcement — positions < 2% supprimées ===
         MIN_POSITION_WEIGHT = 2.0  # %
+        _small_positions = [(aid, w) for aid, w in allocation.items() if 0 < w < MIN_POSITION_WEIGHT]
+        logger.info(f"   [{profile}] 🧹 Dust check: {len(allocation)} positions, {len(_small_positions)} below {MIN_POSITION_WEIGHT}%")
+        if _small_positions:
+            for _aid, _w in _small_positions:
+                _a = next((a for a in assets if getattr(a, 'id', None) == _aid), None)
+                _n = getattr(_a, 'name', _aid)[:25] if _a else _aid
+                logger.info(f"   [{profile}] 🧹 Candidate: {_n} ({_aid}) = {_w:.2f}%")
+        
         _removed_dust = []
         _dust_total = 0.0
         _keep_total = 0.0
