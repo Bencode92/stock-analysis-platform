@@ -404,6 +404,50 @@ def apply_hard_filters(df: pd.DataFrame, profile: str) -> pd.DataFrame:
             lambda x: str(x).strip().lower() in ("false", "0", "no")
         ) | suspect.isna()
 
+    # v2.0.1 DEBUG: Log which filter rejects how many
+    if mask.sum() == 0 and len(df) > 0:
+        logger.warning(f"[Crypto {profile}] ⚠️ ALL {len(df)} assets rejected! Filter breakdown:")
+        _debug_mask = pd.Series(True, index=df.index)
+        
+        # USD pairs
+        if filters.get("usd_pairs_only", False) and "currency_quote" in df.columns:
+            quote = df["currency_quote"].fillna("").str.upper().str.strip()
+            _m = quote == "USD"
+            logger.warning(f"   USD pairs only: {_m.sum()}/{len(df)} pass (sample quotes: {quote.value_counts().head(5).to_dict()})")
+            _debug_mask &= _m
+        
+        # Vol
+        vol_max = filters.get("vol_30d_max")
+        if vol_max is not None:
+            vol_col = df.apply(_get_vol, axis=1)
+            _m = (vol_col <= vol_max) | vol_col.isna()
+            logger.warning(f"   Vol ≤ {vol_max}%: {_m.sum()}/{len(df)} pass (cumul: {(_debug_mask & _m).sum()})")
+            _debug_mask &= _m
+        
+        # DD
+        dd_max = filters.get("drawdown_90d_max")
+        if dd_max is not None and "drawdown_90d_pct" in df.columns:
+            dd = _to_numeric(df["drawdown_90d_pct"])
+            _m = (dd >= dd_max) | dd.isna()
+            logger.warning(f"   DD ≥ {dd_max}%: {_m.sum()}/{len(df)} pass (cumul: {(_debug_mask & _m).sum()})")
+            _debug_mask &= _m
+        
+        # History 1y
+        if filters.get("require_history_1y", False) and "enough_history_1y" in df.columns:
+            hist1y = df["enough_history_1y"]
+            _m = hist1y.apply(lambda x: str(x).strip().lower() in ("true", "1", "yes")) | hist1y.isna()
+            logger.warning(f"   History 1y: {_m.sum()}/{len(df)} pass (cumul: {(_debug_mask & _m).sum()})")
+            _debug_mask &= _m
+        
+        # Suspect
+        if "ret_1y_suspect" in df.columns:
+            suspect = df["ret_1y_suspect"]
+            _m = suspect.apply(lambda x: str(x).strip().lower() in ("false", "0", "no")) | suspect.isna()
+            logger.warning(f"   Not suspect: {_m.sum()}/{len(df)} pass (cumul: {(_debug_mask & _m).sum()})")
+            _debug_mask &= _m
+        
+        logger.warning(f"   Final cumul: {_debug_mask.sum()}/{len(df)}")
+    
     filtered = df[mask].copy()
     logger.info(
         f"[Crypto {profile}] Hard filters: {len(df)} → {len(filtered)} "
