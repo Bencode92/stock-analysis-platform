@@ -1,19 +1,19 @@
 {
   "version": "2026-01-01",
   "type": "succession",
-  "source": "CGI - Légifrance - impots.gouv.fr",
-  "last_updated": "2026-01-01",
+  "source": "CGI - Légifrance - impots.gouv.fr - Code civil",
+  "last_updated": "2026-03-13",
   "note_generale": "Barèmes et abattements gelés jusqu'en 2028 (PLF 2026). Aucune revalorisation malgré l'inflation.",
 
   "abattements": {
     "enfant": { "montant": 100000, "article": "779-I CGI", "note": "Par parent et par enfant. Renouvelable tous les 15 ans" },
     "petit_enfant": { "montant": 31865, "article": "779-IV CGI", "note": "En représentation d'un parent prédécédé : abattement enfant 100k" },
     "arriere_petit_enfant": { "montant": 5310, "article": "779-V CGI" },
-    "conjoint_pacs": { "montant": null, "exonere": true, "article": "796-0 bis CGI", "note": "Exonération totale de droits de succession" },
+    "conjoint_pacs": { "montant": null, "exonere": true, "article": "796-0 bis CGI", "note": "Exonération totale. S'applique au pacsé SI il reçoit (testament requis pour PACS)" },
     "frere_soeur": { "montant": 15932, "article": "779-II CGI", "exoneration_conditions": "Célibataire/veuf/divorcé + >50 ans ou infirme + domicilié 5 ans avec le défunt" },
     "neveu_niece": { "montant": 7967, "article": "779-V CGI" },
-    "tiers": { "montant": 1594, "article": "779-V CGI" },
-    "handicap": { "montant": 159325, "article": "779-II CGI", "note": "Cumulable avec abattement de parenté. PLF 2026 prévoit suppression progressive d'ici 2028" }
+    "tiers": { "montant": 1594, "article": "779-V CGI", "note": "Inclut les concubins (aucun abattement spécifique)" },
+    "handicap": { "montant": 159325, "article": "779-II CGI", "note": "Cumulable avec abattement de parenté" }
   },
 
   "baremes": {
@@ -29,59 +29,83 @@
         { "de": 1805677, "a": null, "taux": 0.45 }
       ]
     },
-    "frere_soeur": {
-      "tranches": [
-        { "de": 0, "a": 24430, "taux": 0.35 },
-        { "de": 24430, "a": null, "taux": 0.45 }
-      ]
-    },
+    "frere_soeur": { "tranches": [{ "de": 0, "a": 24430, "taux": 0.35 }, { "de": 24430, "a": null, "taux": 0.45 }] },
     "neveu_niece": { "tranches": [{ "de": 0, "a": null, "taux": 0.55 }] },
     "parents_4e_degre": { "tranches": [{ "de": 0, "a": null, "taux": 0.55 }] },
-    "tiers": { "tranches": [{ "de": 0, "a": null, "taux": 0.60 }] }
+    "tiers": { "tranches": [{ "de": 0, "a": null, "taux": 0.60 }], "note": "Concubins = tiers." }
   },
 
   "assurance_vie": {
-    "art_990I": {
-      "champ": "Primes versées avant 70 ans",
-      "abattement_par_beneficiaire": 152500,
-      "taux_tranche1": 0.20,
-      "seuil_tranche2": 700000,
-      "taux_tranche2": 0.3125
-    },
-    "art_757B": {
-      "champ": "Primes versées après 70 ans",
-      "abattement_global": 30500,
-      "note": "Produits (intérêts) exonérés. Au-delà : DMTG classiques (art. 777)"
-    },
+    "art_990I": { "champ": "Primes versées avant 70 ans", "abattement_par_beneficiaire": 152500, "taux_tranche1": 0.20, "seuil_tranche2": 700000, "taux_tranche2": 0.3125 },
+    "art_757B": { "champ": "Primes versées après 70 ans", "abattement_global": 30500, "note": "Produits exonérés. Au-delà : DMTG classiques (art. 777)" },
     "primes_exagerees_seuil_alerte": 0.35
   },
 
-  "abattement_rp": {
-    "taux": 0.20,
-    "article": "764 bis CGI",
-    "conditions": [
-      "RP du défunt au jour du décès",
-      "Occupée par conjoint/pacsé OU enfant mineur/protégé"
-    ],
-    "exclusion_sci": true
-  },
-
-  "passif_deductible": {
-    "forfait_frais_funeraires": 1500,
-    "regles": [
-      "Dettes certaines, liquides, exigibles au décès",
-      "Crédits ADI = NON déductibles (soldés au décès)",
-      "Créance de restitution quasi-usufruit = déductible"
-    ]
-  },
-
+  "abattement_rp": { "taux": 0.20, "article": "764 bis CGI", "conditions": ["RP du défunt au jour du décès", "Occupée par conjoint/pacsé OU enfant mineur/protégé"], "exclusion_sci": true },
+  "passif_deductible": { "forfait_frais_funeraires": 1500, "regles": ["Dettes certaines, liquides, exigibles au décès", "Crédits ADI = NON déductibles", "Créance de restitution quasi-usufruit = déductible"] },
   "delai_rappel_fiscal_ans": 15,
   "frais_notaire_pct": 0.012,
+  "declaration_succession": { "delai_france_metropolitaine_mois": 6, "delai_hors_metropole_mois": 12, "penalite_retard_interet_mensuel": 0.002, "majoration_defaut_6mois": 0.10 },
 
-  "declaration_succession": {
-    "delai_france_metropolitaine_mois": 6,
-    "delai_hors_metropole_mois": 12,
-    "penalite_retard_interet_mensuel": 0.002,
-    "majoration_defaut_6mois": 0.10
+  "donation_dernier_vivant": {
+    "article": "1094-1 Code civil",
+    "alias": "DDV / Donation entre époux",
+    "applicable_a": "mariage",
+    "non_applicable_a": ["pacs", "concubinage"],
+    "cout_notaire_euros": 150,
+    "revocable": true,
+    "options_conjoint_survivant": {
+      "avec_enfants": {
+        "option_usufruit_total": { "label": "100% en usufruit", "pp_fraction": 0, "usufruit_fraction": 1, "np_fraction_enfants": 1 },
+        "option_quotite_disponible_pp": { "label": "Quotité disponible en PP", "pp_fraction_1_enfant": 0.50, "pp_fraction_2_enfants": 0.3333, "pp_fraction_3_enfants_plus": 0.25, "article": "913 CC" },
+        "option_mixte": { "label": "25% PP + 75% usufruit", "pp_fraction": 0.25, "usufruit_fraction": 0.75, "np_fraction_enfants": 0.75 }
+      },
+      "sans_enfant": { "note": "Le conjoint hérite déjà de tout en PP (art. 757-2 CC)." }
+    },
+    "impact_fiscal": { "conjoint_exonere": true, "article_exoneration": "796-0 bis CGI", "note": "La DDV ne change pas la fiscalité. Elle change la RÉPARTITION civile." }
+  },
+
+  "regimes_matrimoniaux": {
+    "source": "Code civil - Livre III, Titre V",
+    "regimes": {
+      "communaute_reduite_acquets": { "label": "Communauté réduite aux acquêts", "article": "1400-1491 CC", "defaut": true, "description": "Régime légal par défaut. Biens acquis pendant le mariage = communs (50/50).", "impact_calcul": { "biens_communs_pct_defunt": 0.50, "biens_propres_pct_defunt": 1.00 } },
+      "communaute_universelle": { "label": "Communauté universelle", "article": "1526 CC", "defaut": false, "clause_attribution_integrale": { "description": "100% des biens reviennent au survivant. 0€ de droits au 1er décès.", "impact_calcul": { "masse_au_1er_deces": 0, "tout_au_survivant": true } }, "sans_clause": { "impact_calcul": { "biens_communs_pct_defunt": 0.50 } } },
+      "separation_biens": { "label": "Séparation de biens", "article": "1536-1543 CC", "defaut": false, "impact_calcul": { "biens_propres_pct_defunt": 1.00, "biens_communs_pct_defunt": 0 } },
+      "participation_acquets": { "label": "Participation aux acquêts", "article": "1569-1581 CC", "defaut": false, "impact_calcul": { "note": "Complexe : nécessite le calcul de la créance de participation" } }
+    }
+  },
+
+  "droits_logement_survivant": {
+    "conjoint_marie": {
+      "droit_viager": { "article": "764 CC", "description": "Droit viager au logement principal + mobilier.", "duree": "Viager" },
+      "droit_temporaire_1an": { "article": "763 CC", "description": "Jouissance gratuite du logement pendant 1 an.", "duree_mois": 12, "charge_succession": true }
+    },
+    "partenaire_pacse": {
+      "droit_temporaire_1an": { "article": "515-6 al. 3 CC", "description": "Jouissance gratuite 1 an. Seul droit automatique du pacsé.", "duree_mois": 12, "charge_succession": true },
+      "pas_de_droit_viager": true
+    },
+    "concubin": { "aucun_droit": true, "note": "Aucun droit au logement." }
+  },
+
+  "mapping_fiscal_concubinage": {
+    "categorie_fiscale": "tiers",
+    "abattement": 1594,
+    "bareme": "tiers (60%)",
+    "donation_entre_concubins": { "abattement": 0, "taux": 0.60, "article": "777 CGI tableau III", "note": "0€ abattement en donation (≠ 1594€ en succession)" },
+    "recommandations": ["AV (art. 990 I) : abat. 152 500€, taux 20%/31,25%", "Testament : QD taxée à 60%", "Tontine immobilière", "SCI avec décote"]
+  },
+
+  "tableau_comparatif_unions": {
+    "colonnes": ["Critère", "Mariage", "PACS", "Concubinage"],
+    "lignes": [
+      { "critere": "Héritage automatique", "mariage": "Oui — 25% PP ou 100% US", "pacs": "NON sans testament", "concubinage": "NON" },
+      { "critere": "Droits de succession", "mariage": "Exonéré", "pacs": "Exonéré", "concubinage": "60%" },
+      { "critere": "DDV", "mariage": "Oui (~150€)", "pacs": "Non", "concubinage": "Non" },
+      { "critere": "Abattement donation", "mariage": "80 724€", "pacs": "80 724€", "concubinage": "0€" },
+      { "critere": "Droit logement", "mariage": "1 an + viager", "pacs": "1 an seulement", "concubinage": "Aucun" },
+      { "critere": "Réversion", "mariage": "Oui (54%)", "pacs": "Non", "concubinage": "Non" },
+      { "critere": "AV (990 I)", "mariage": "Exonéré", "pacs": "Exonéré", "concubinage": "Abat. 152 500€ puis 20%/31,25%" },
+      { "critere": "Recommandation", "mariage": "DDV + clause AV", "pacs": "Testament + AV", "concubinage": "AV seul outil < 60%" }
+    ]
   }
 }
