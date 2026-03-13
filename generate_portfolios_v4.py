@@ -4226,6 +4226,21 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                     if not _is_internal_id(str(key)):
                         ticker_to_asset_info[key] = info
         
+        # v5.2.0-C: Belt-and-suspenders dust cleanup on _tickers before display rebuild
+        _tickers_raw = result[profile].get("_tickers", {})
+        _dust_tickers = {k: v for k, v in _tickers_raw.items() if 0 < v * 100 < 2.0}
+        if _dust_tickers:
+            _dust_sum = sum(_dust_tickers.values())
+            _keep_sum = sum(v for k, v in _tickers_raw.items() if k not in _dust_tickers and v > 0)
+            for k in _dust_tickers:
+                logger.info(f"   [{profile}] 🧹 Display dust cleanup: {k} {_dust_tickers[k]*100:.1f}%")
+                del _tickers_raw[k]
+            if _keep_sum > 0:
+                for k in _tickers_raw:
+                    if _tickers_raw[k] > 0:
+                        _tickers_raw[k] += _dust_sum * (_tickers_raw[k] / _keep_sum)
+            result[profile]["_tickers"] = _tickers_raw
+        
         # Rebuild sections depuis _tickers pour garantir cohérence
         # v4.14.0 FIX R6: Retourne aussi les poids numériques
         rebuilt_sections, rebuilt_numeric = rebuild_display_sections_from_tickers(
