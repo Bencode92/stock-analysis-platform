@@ -1,18 +1,18 @@
 {
   "version": "2026-01-01",
   "type": "succession",
-  "source": "CGI - Légifrance - impots.gouv.fr",
-  "last_updated": "2026-01-01",
+  "source": "CGI - Légifrance - impots.gouv.fr - Code civil",
+  "last_updated": "2026-03-13",
   "note_generale": "Barèmes et abattements gelés jusqu'en 2028 (PLF 2026). Aucune revalorisation malgré l'inflation.",
 
   "abattements": {
     "enfant": { "montant": 100000, "article": "779-I CGI", "note": "Par parent et par enfant. Renouvelable tous les 15 ans" },
     "petit_enfant": { "montant": 31865, "article": "779-IV CGI", "note": "En représentation d'un parent prédécédé : abattement enfant 100k" },
     "arriere_petit_enfant": { "montant": 5310, "article": "779-V CGI" },
-    "conjoint_pacs": { "montant": null, "exonere": true, "article": "796-0 bis CGI", "note": "Exonération totale de droits de succession" },
+    "conjoint_pacs": { "montant": null, "exonere": true, "article": "796-0 bis CGI", "note": "Exonération totale de droits de succession. S'applique aussi au pacsé SI il reçoit (testament requis pour PACS)" },
     "frere_soeur": { "montant": 15932, "article": "779-II CGI", "exoneration_conditions": "Célibataire/veuf/divorcé + >50 ans ou infirme + domicilié 5 ans avec le défunt" },
     "neveu_niece": { "montant": 7967, "article": "779-V CGI" },
-    "tiers": { "montant": 1594, "article": "779-V CGI" },
+    "tiers": { "montant": 1594, "article": "779-V CGI", "note": "Inclut les concubins (aucun abattement spécifique, traités comme tiers)" },
     "handicap": { "montant": 159325, "article": "779-II CGI", "note": "Cumulable avec abattement de parenté. PLF 2026 prévoit suppression progressive d'ici 2028" }
   },
 
@@ -37,7 +37,7 @@
     },
     "neveu_niece": { "tranches": [{ "de": 0, "a": null, "taux": 0.55 }] },
     "parents_4e_degre": { "tranches": [{ "de": 0, "a": null, "taux": 0.55 }] },
-    "tiers": { "tranches": [{ "de": 0, "a": null, "taux": 0.60 }] }
+    "tiers": { "tranches": [{ "de": 0, "a": null, "taux": 0.60 }], "note": "Concubins = tiers. Aucun barème spécifique." }
   },
 
   "assurance_vie": {
@@ -83,5 +83,225 @@
     "delai_hors_metropole_mois": 12,
     "penalite_retard_interet_mensuel": 0.002,
     "majoration_defaut_6mois": 0.10
+  },
+
+  "donation_dernier_vivant": {
+    "article": "1094-1 Code civil",
+    "alias": "DDV / Donation entre époux",
+    "applicable_a": "mariage",
+    "non_applicable_a": ["pacs", "concubinage"],
+    "cout_notaire_euros": 150,
+    "revocable": true,
+    "revocation_note": "Révocable à tout moment par acte notarié (sauf si consentie dans le contrat de mariage)",
+    "options_conjoint_survivant": {
+      "avec_enfants": {
+        "option_usufruit_total": {
+          "label": "100% en usufruit",
+          "pp_fraction": 0,
+          "usufruit_fraction": 1,
+          "np_fraction_enfants": 1,
+          "avantage": "Le conjoint conserve l'usage et les revenus de tous les biens. Au décès, NP → PP sans droits.",
+          "risque": "Les enfants ne reçoivent que la NP et doivent attendre le décès du conjoint pour la PP."
+        },
+        "option_quotite_disponible_pp": {
+          "label": "Quotité disponible en PP",
+          "pp_fraction_1_enfant": 0.50,
+          "pp_fraction_2_enfants": 0.3333,
+          "pp_fraction_3_enfants_plus": 0.25,
+          "article": "913 CC",
+          "avantage": "Le conjoint reçoit une part en PP immédiatement disponible.",
+          "risque": "Part plus réduite que l'option usufruit pour les patrimoines importants."
+        },
+        "option_mixte": {
+          "label": "25% PP + 75% usufruit",
+          "pp_fraction": 0.25,
+          "usufruit_fraction": 0.75,
+          "np_fraction_enfants": 0.75,
+          "avantage": "Compromis : le conjoint reçoit du liquide (25% PP) et conserve les revenus (75% US).",
+          "risque": "Complexité de gestion du démembrement."
+        }
+      },
+      "sans_enfant": {
+        "note": "Le conjoint hérite déjà de tout en PP (art. 757-2 CC). La DDV n'apporte rien de plus."
+      }
+    },
+    "impact_fiscal": {
+      "conjoint_exonere": true,
+      "article_exoneration": "796-0 bis CGI",
+      "note": "La DDV ne change pas la fiscalité (conjoint toujours exonéré). Elle change la RÉPARTITION civile."
+    }
+  },
+
+  "regimes_matrimoniaux": {
+    "source": "Code civil - Livre III, Titre V",
+    "note": "Le régime matrimonial détermine quels biens entrent dans la masse successorale. Impact MAJEUR sur l'assiette taxable.",
+    "regimes": {
+      "communaute_reduite_acquets": {
+        "label": "Communauté réduite aux acquêts",
+        "article": "1400-1491 CC",
+        "defaut": true,
+        "description": "Régime légal par défaut. Biens acquis pendant le mariage = communs (50/50). Biens propres (avant mariage, héritages) restent personnels.",
+        "masse_successorale": "50% des biens communs + 100% des biens propres du défunt",
+        "impact_calcul": {
+          "biens_communs_pct_defunt": 0.50,
+          "biens_propres_pct_defunt": 1.00
+        }
+      },
+      "communaute_universelle": {
+        "label": "Communauté universelle",
+        "article": "1526 CC",
+        "defaut": false,
+        "description": "TOUS les biens sont communs (même ceux acquis avant mariage, héritages, donations sauf clause contraire).",
+        "clause_attribution_integrale": {
+          "description": "Avec clause d'attribution intégrale : 100% des biens communs reviennent au survivant. AUCUN droit de succession (exonération conjoint). Les enfants n'héritent qu'au 2nd décès.",
+          "avantage": "Protection maximale du conjoint. Simplicité. 0€ de droits au 1er décès.",
+          "risque": "Les enfants ne reçoivent RIEN au 1er décès → droits potentiellement plus élevés au 2nd décès (cumul de patrimoine, pas de 'double abattement'). Action en retranchement possible (art. 1527 CC).",
+          "masse_successorale": "0 € (tout va au conjoint)",
+          "impact_calcul": {
+            "masse_au_1er_deces": 0,
+            "tout_au_survivant": true
+          }
+        },
+        "sans_clause": {
+          "description": "Sans clause d'attribution : 50% des biens communs entrent dans la succession.",
+          "masse_successorale": "50% de tous les biens",
+          "impact_calcul": {
+            "biens_communs_pct_defunt": 0.50
+          }
+        }
+      },
+      "separation_biens": {
+        "label": "Séparation de biens",
+        "article": "1536-1543 CC",
+        "defaut": false,
+        "description": "Chaque époux est propriétaire de ses biens. Pas de biens communs (sauf indivision volontaire).",
+        "masse_successorale": "100% des biens propres du défunt + sa quote-part des biens indivis",
+        "impact_calcul": {
+          "biens_propres_pct_defunt": 1.00,
+          "biens_communs_pct_defunt": 0
+        },
+        "avantage": "Clarté patrimoniale. Pas de risque de requalification.",
+        "risque": "Le conjoint survivant ne détient que SES biens propres → peut se retrouver démuni si le patrimoine est déséquilibré."
+      },
+      "participation_acquets": {
+        "label": "Participation aux acquêts",
+        "article": "1569-1581 CC",
+        "defaut": false,
+        "description": "Fonctionne comme une séparation de biens pendant le mariage, mais à la dissolution : créance de participation = 50% de l'enrichissement de chacun.",
+        "masse_successorale": "Biens propres du défunt - créance de participation due au survivant",
+        "impact_calcul": {
+          "note": "Complexe : nécessite le calcul de la créance de participation (enrichissement comparé)"
+        }
+      }
+    }
+  },
+
+  "droits_logement_survivant": {
+    "source": "Code civil",
+    "conjoint_marie": {
+      "droit_viager": {
+        "article": "764 CC",
+        "description": "Droit viager au logement principal + mobilier. Droit d'ordre public (ne peut être supprimé par testament). Vient en déduction de la part successorale du conjoint.",
+        "conditions": ["Logement = résidence principale au décès", "Propriété du défunt ou des 2 époux"],
+        "duree": "Viager (jusqu'au décès du conjoint)",
+        "valorisation": "Valorisé selon art. 669 CGI et déduit de la part du conjoint"
+      },
+      "droit_temporaire_1an": {
+        "article": "763 CC",
+        "description": "Jouissance gratuite du logement principal pendant 1 an. Automatique, gratuit, hors succession.",
+        "duree_mois": 12,
+        "charge_succession": true,
+        "note": "S'applique même si le logement appartient à un tiers (ex: via SCI). Charge de la succession."
+      }
+    },
+    "partenaire_pacse": {
+      "droit_temporaire_1an": {
+        "article": "515-6 al. 3 CC (renvoi à 763 CC)",
+        "description": "Jouissance gratuite du logement commun pendant 1 an. Seul droit automatique du pacsé survivant.",
+        "duree_mois": 12,
+        "charge_succession": true,
+        "important": "C'est le SEUL droit automatique du pacsé. Sans testament, il ne reçoit RIEN d'autre."
+      },
+      "pas_de_droit_viager": true,
+      "note": "Le pacsé n'a PAS de droit viager au logement (contrairement au conjoint marié). Après 12 mois, il doit quitter le logement sauf testament contraire."
+    },
+    "concubin": {
+      "aucun_droit": true,
+      "note": "Le concubin n'a AUCUN droit au logement. Il peut être expulsé dès le décès si le logement appartenait au défunt."
+    }
+  },
+
+  "mapping_fiscal_concubinage": {
+    "note": "Le concubinage (art. 515-8 CC) n'ouvre AUCUN droit successoral ni abattement fiscal spécifique.",
+    "categorie_fiscale": "tiers",
+    "abattement": 1594,
+    "bareme": "tiers (60% dès le 1er euro au-delà de l'abattement)",
+    "donation_entre_concubins": {
+      "abattement": 0,
+      "note": "Aucun abattement en donation entre concubins. Attention : l'abattement tiers de 1 594€ s'applique uniquement en succession, PAS en donation.",
+      "taux": 0.60,
+      "article": "777 CGI tableau III"
+    },
+    "recommandations": [
+      "Assurance-vie (art. 990 I) : abattement 152 500€/bénéficiaire, taux réduit 20%/31,25%",
+      "Testament : permet de léguer la quotité disponible mais taxée à 60%",
+      "Tontine immobilière : le bien revient au survivant mais droits de mutation à titre onéreux",
+      "SCI : donation de parts avec décote possible, mais toujours taux tiers 60%"
+    ]
+  },
+
+  "tableau_comparatif_unions": {
+    "note": "Synthèse des droits selon le type d'union — à afficher dans les résultats (step 5)",
+    "colonnes": ["Critère", "Mariage", "PACS", "Concubinage"],
+    "lignes": [
+      {
+        "critere": "Héritage automatique (sans testament)",
+        "mariage": "Oui — 25% PP ou 100% usufruit (art. 757 CC)",
+        "pacs": "NON — rien sans testament (art. 515-6 CC)",
+        "concubinage": "NON — aucun droit successoral"
+      },
+      {
+        "critere": "Droits de succession",
+        "mariage": "Exonéré (art. 796-0 bis CGI)",
+        "pacs": "Exonéré (art. 796-0 bis CGI)",
+        "concubinage": "60% (tiers fiscal, abattement 1 594€)"
+      },
+      {
+        "critere": "Donation au dernier vivant (DDV)",
+        "mariage": "Oui — augmente les droits du conjoint (art. 1094-1 CC)",
+        "pacs": "NON — pas de DDV entre pacsés",
+        "concubinage": "NON"
+      },
+      {
+        "critere": "Abattement en donation",
+        "mariage": "80 724€ (art. 790 E CGI)",
+        "pacs": "80 724€ (art. 790 F CGI)",
+        "concubinage": "0€ (tiers = 60% dès le 1er euro)"
+      },
+      {
+        "critere": "Droit au logement",
+        "mariage": "1 an gratuit (art. 763 CC) + viager (art. 764 CC)",
+        "pacs": "1 an gratuit seulement (art. 515-6 al. 3 CC)",
+        "concubinage": "Aucun droit"
+      },
+      {
+        "critere": "Pension de réversion",
+        "mariage": "Oui — régime général (54%) + complémentaires",
+        "pacs": "NON (sauf rares exceptions fonctionnaires)",
+        "concubinage": "NON"
+      },
+      {
+        "critere": "Assurance-vie (art. 990 I)",
+        "mariage": "Exonéré totalement (conjoint = bénéficiaire exonéré)",
+        "pacs": "Exonéré totalement (pacsé = bénéficiaire exonéré)",
+        "concubinage": "Abattement 152 500€ puis 20%/31,25% — SEUL outil efficace"
+      },
+      {
+        "critere": "Protection recommandée",
+        "mariage": "DDV (~150€) + clause bénéficiaire AV démembrée",
+        "pacs": "Testament OBLIGATOIRE + AV (clause bénéficiaire)",
+        "concubinage": "AV (seul outil < 60%) + testament (QD taxée à 60%)"
+      }
+    ]
   }
 }
