@@ -2357,12 +2357,57 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         }
         # === FIX v5.2.0: RADAR hard cap — régions "avoided" → max 5% par stock ===
         if market_context:
+            # Country name aliases (FR→EN, EN→FR, common variants)
+            _COUNTRY_ALIASES = {
+                "india": ["inde", "india", "indien"],
+                "inde": ["india", "inde", "indien"],
+                "brazil": ["brésil", "bresil", "brazil", "brasil"],
+                "brésil": ["brazil", "bresil", "brasil"],
+                "china": ["chine", "china"],
+                "chine": ["china", "chine"],
+                "mexico": ["mexique", "mexico"],
+                "mexique": ["mexico", "mexique"],
+                "israel": ["israël", "israel"],
+                "south-korea": ["corée", "coree", "korea", "south korea", "corée du sud"],
+                "corée": ["korea", "south-korea", "south korea", "corée du sud"],
+                "germany": ["allemagne", "germany"],
+                "allemagne": ["germany", "allemagne"],
+                "united-kingdom": ["royaume-uni", "uk", "united kingdom"],
+                "royaume-uni": ["uk", "united-kingdom", "united kingdom"],
+                "japan": ["japon", "japan"],
+                "japon": ["japan", "japon"],
+                "taiwan": ["taïwan", "taiwan"],
+                "taïwan": ["taiwan", "taïwan"],
+                "france": ["france"],
+                "spain": ["espagne", "spain"],
+                "espagne": ["spain", "espagne"],
+                "italy": ["italie", "italy"],
+                "italie": ["italy", "italie"],
+                "belgium": ["belgique", "belgium"],
+                "belgique": ["belgium", "belgique"],
+                "norway": ["norvège", "norvege", "norway"],
+                "norvège": ["norway", "norvege"],
+                "netherlands": ["pays-bas", "netherlands"],
+                "pays-bas": ["netherlands", "pays-bas"],
+                "switzerland": ["suisse", "switzerland"],
+                "suisse": ["switzerland", "suisse"],
+                "indonesia": ["indonésie", "indonesie", "indonesia"],
+                "indonésie": ["indonesia", "indonesie"],
+            }
+            
             _avoided_regions = set()
+            _avoided_expanded = set()  # includes all aliases
             _mt = market_context.get("macro_tilts", {})
             for r in _mt.get("avoided_regions", []):
-                _avoided_regions.add(r.lower().strip())
+                r_low = r.lower().strip()
+                _avoided_regions.add(r_low)
+                _avoided_expanded.add(r_low)
+                # Add all known aliases
+                for alias in _COUNTRY_ALIASES.get(r_low, []):
+                    _avoided_expanded.add(alias.lower())
             
-            if _avoided_regions:
+            if _avoided_expanded:
+                logger.info(f"   [{profile}] 🎯 RADAR avoided regions: {_avoided_regions} → expanded: {_avoided_expanded}")
                 RADAR_MAX_WEIGHT_PCT = 5.0  # 5% max per stock from avoided region
                 _capped = []
                 _surplus = 0.0
@@ -2375,13 +2420,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                         _non_avoided_total += w_pct
                         continue
                     
-                    country = (getattr(asset, 'country', '') or '').lower()
-                    region = (getattr(asset, 'region', '') or '').lower()
+                    country = (getattr(asset, 'country', '') or '').lower().strip()
+                    region = (getattr(asset, 'region', '') or '').lower().strip()
                     cat = (getattr(asset, 'category', '') or '').lower()
                     
                     # Only cap equities (not ETFs/bonds/crypto)
                     is_equity = cat in ('equity', 'stock', 'action')
-                    is_avoided = any(av in country or av in region for av in _avoided_regions)
+                    is_avoided = (country in _avoided_expanded) or (region in _avoided_expanded)
                     
                     if is_equity and is_avoided and w_pct > RADAR_MAX_WEIGHT_PCT:
                         _surplus += w_pct - RADAR_MAX_WEIGHT_PCT
