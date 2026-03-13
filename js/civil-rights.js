@@ -1,7 +1,8 @@
 /**
  * civil-rights.js — Module droits civils du conjoint survivant
- * v2.0 — Intégration DANS le calcul + warnings
- * @version 2.0.0 — 2026-03-13
+ * v2.1 — Ajout : conjoint + parents sans enfant (50%/25%/25%)
+ *         + conjoint + frères/sœurs (100% sauf droit de retour biens famille)
+ * @version 2.1.0 — 2026-03-13
  */
 const CivilRights = (function() {
     'use strict';
@@ -31,8 +32,18 @@ const CivilRights = (function() {
         var nbEnfants = p.nbEnfants || 0;
         var hasEnfantsAutreLit = !!p.hasEnfantsAutreLit;
         var conjointOption = p.conjointOption || 'pp';
-        var result = { ppFraction: 0, usufruitFraction: 0, npFractionChildren: 1, explanation: '', warnings: [], civilArticle: '' };
+        // v2.1 — nouveaux paramètres
+        var nbParentsVivants = p.nbParentsVivants || 0; // 0, 1, ou 2
+        var hasFreresSoeurs = !!p.hasFreresSoeurs;
+        var biensFamillePct = p.biensFamillePct || 0; // % du patrimoine reçu par donation/succession des parents
 
+        var result = { ppFraction: 0, usufruitFraction: 0, npFractionChildren: 1,
+            parentsFraction: 0, freresSoeursFraction: 0, droitRetourPct: 0,
+            explanation: '', warnings: [], civilArticle: '' };
+
+        // ============================================================
+        // CONCUBINAGE
+        // ============================================================
         if (unionType === 'concubinage') {
             if (!hasTestament) {
                 result.explanation = 'Concubin sans testament : aucun droit successoral. Les enfants h\u00e9ritent de 100%.';
@@ -48,6 +59,9 @@ const CivilRights = (function() {
             return result;
         }
 
+        // ============================================================
+        // PACS
+        // ============================================================
         if (unionType === 'pacs') {
             if (!hasTestament) {
                 result.explanation = 'Partenaire pacs\u00e9 sans testament : aucun droit successoral (art. 515-6 CC). Seul droit : jouissance gratuite du logement pendant 1 an.';
@@ -63,13 +77,70 @@ const CivilRights = (function() {
             return result;
         }
 
+        // ============================================================
+        // MARIAGE — SANS ENFANT
+        // ============================================================
         if (nbEnfants === 0) {
+
+            // CAS 1 : Sans enfant + parents vivants → conjoint 50%, parents 25% chacun (ou 25% au seul vivant)
+            // Art. 757-1 CC
+            if (nbParentsVivants > 0) {
+                result.ppFraction = 0.50;
+                result.parentsFraction = 0.50;
+                result.npFractionChildren = 0;
+
+                if (nbParentsVivants === 2) {
+                    result.explanation = 'Conjoint mari\u00e9 sans enfant, 2 parents vivants : conjoint 50% PP (exon\u00e9r\u00e9) + p\u00e8re 25% + m\u00e8re 25%.';
+                    result.civilArticle = 'Art. 757-1 CC';
+                } else {
+                    // 1 seul parent → 25% au parent, 75% au conjoint (25% du parent décédé va au conjoint)
+                    result.ppFraction = 0.75;
+                    result.parentsFraction = 0.25;
+                    result.explanation = 'Conjoint mari\u00e9 sans enfant, 1 parent vivant : conjoint 75% PP (exon\u00e9r\u00e9) + parent survivant 25%.';
+                    result.civilArticle = 'Art. 757-1 CC';
+                    result.warnings.push('\u2139\ufe0f Le parent d\u00e9c\u00e9d\u00e9 : sa part (25%) revient au conjoint (art. 757-1 al. 2 CC).');
+                }
+
+                result.warnings.push('\u2139\ufe0f Parents h\u00e9ritiers : tax\u00e9s au bar\u00e8me ascendant (art. 777 CGI). Abattement 100 000\u20ac/parent (art. 779 I CGI).');
+                return result;
+            }
+
+            // CAS 2 : Sans enfant + sans parents + frères/sœurs → conjoint 100% SAUF droit de retour
+            // Art. 757-2 CC + art. 757-3 CC (droit de retour frères/sœurs)
+            if (hasFreresSoeurs && biensFamillePct > 0) {
+                var droitRetour = Math.min(biensFamillePct, 1) * 0.50; // 50% des biens de famille reviennent aux frères/sœurs
+                result.ppFraction = 1 - droitRetour;
+                result.freresSoeursFraction = droitRetour;
+                result.droitRetourPct = droitRetour;
+                result.npFractionChildren = 0;
+                result.explanation = 'Conjoint mari\u00e9 sans enfant ni parents : h\u00e9rite de ' + Math.round(result.ppFraction * 100) + '% PP (exon\u00e9r\u00e9). Fr\u00e8res/s\u0153urs r\u00e9cup\u00e8rent ' + Math.round(droitRetour * 100) + '% via le droit de retour sur les biens de famille.';
+                result.civilArticle = 'Art. 757-2 + 757-3 CC (droit de retour)';
+                result.warnings.push('\u26a0\ufe0f Droit de retour (art. 757-3 CC) : les fr\u00e8res/s\u0153urs r\u00e9cup\u00e8rent 50% des biens re\u00e7us par le d\u00e9funt de ses parents (donation/succession). Porte sur les biens EN NATURE (pas si vendus/d\u00e9truits).');
+                result.warnings.push('\u2139\ufe0f Ce droit de retour peut \u00eatre neutralis\u00e9 par testament ou donation entre \u00e9poux (DDV).');
+                return result;
+            }
+
+            // CAS 3 : Sans enfant + frères/sœurs mais pas de biens de famille
+            if (hasFreresSoeurs && biensFamillePct === 0) {
+                result.ppFraction = 1;
+                result.npFractionChildren = 0;
+                result.explanation = 'Conjoint mari\u00e9 sans enfant ni parents : h\u00e9rite de 100% PP (exon\u00e9r\u00e9). Pas de biens de famille \u2192 pas de droit de retour.';
+                result.civilArticle = 'Art. 757-2 CC';
+                result.warnings.push('\u2139\ufe0f Fr\u00e8res/s\u0153urs : \u00e9vinc\u00e9s de la succession par le conjoint (sauf droit de retour sur biens de famille, art. 757-3 CC).');
+                return result;
+            }
+
+            // CAS 4 : Sans enfant, sans parents, sans frères/sœurs → conjoint 100%
             result.ppFraction = 1; result.npFractionChildren = 0;
-            result.explanation = 'Conjoint mari\u00e9 sans enfant : h\u00e9rite de la totalit\u00e9 en PP (exon\u00e9r\u00e9 de droits).';
+            result.explanation = 'Conjoint mari\u00e9 sans enfant : h\u00e9rite de la totalit\u00e9 en PP (exon\u00e9r\u00e9 de droits). Grands-parents \u00e9vinc\u00e9s (r\u00e9forme 2002).';
             result.civilArticle = 'Art. 757-2 CC';
+            result.warnings.push('\u2139\ufe0f Depuis la r\u00e9forme 2002, le conjoint prime sur les grands-parents. Ceux-ci conservent uniquement un droit \u00e0 cr\u00e9ance alimentaire (art. 758 CC).');
             return result;
         }
 
+        // ============================================================
+        // MARIAGE — AVEC ENFANTS + DDV
+        // ============================================================
         if (hasDDV) {
             var qdDDV = getQuotiteDisponible(nbEnfants);
             if (conjointOption === 'usufruit') {
@@ -88,6 +159,9 @@ const CivilRights = (function() {
             return result;
         }
 
+        // ============================================================
+        // MARIAGE — AVEC ENFANTS D'UN AUTRE LIT
+        // ============================================================
         if (hasEnfantsAutreLit) {
             result.ppFraction = 0.25; result.npFractionChildren = 0.75;
             result.explanation = 'Conjoint mari\u00e9 avec enfants d\'un autre lit : 25% en PP (art. 757 al. 2 CC).';
@@ -96,6 +170,9 @@ const CivilRights = (function() {
             return result;
         }
 
+        // ============================================================
+        // MARIAGE — AVEC ENFANTS COMMUNS (défaut)
+        // ============================================================
         if (conjointOption === 'usufruit') {
             result.usufruitFraction = 1; result.npFractionChildren = 1;
             result.explanation = 'Conjoint mari\u00e9 (enfants communs) \u2014 Option usufruit : 100% en usufruit.';
@@ -154,19 +231,26 @@ const CivilRights = (function() {
             childrenBase = Math.round(usPortion * npRatio);
             usAmount = usPortion;
         } else {
-            childrenBase = Math.round(totalNet * (1 - civilShare.ppFraction));
+            childrenBase = Math.round(totalNet * (1 - civilShare.ppFraction - civilShare.parentsFraction - civilShare.freresSoeursFraction));
         }
 
         if (civilShare.ppFraction === 1) childrenBase = 0;
+        // Si parents ou frères/sœurs héritent, les enfants ont 0 (car nbEnfants=0 dans ces cas)
+        if (civilShare.parentsFraction > 0 || civilShare.freresSoeursFraction > 0) childrenBase = 0;
 
         var explanation = '';
         if (civilShare.ppFraction === 1) explanation = 'Conjoint h\u00e9rite de 100% en PP (exon\u00e9r\u00e9). Enfants : 0\u20ac.';
+        else if (civilShare.parentsFraction > 0 && civilShare.ppFraction === 0.50) explanation = 'Conjoint : 50% PP (exon\u00e9r\u00e9). Parents : 25% chacun.';
+        else if (civilShare.parentsFraction > 0 && civilShare.ppFraction === 0.75) explanation = 'Conjoint : 75% PP (exon\u00e9r\u00e9). Parent survivant : 25%.';
+        else if (civilShare.freresSoeursFraction > 0) explanation = 'Conjoint : ' + Math.round(civilShare.ppFraction * 100) + '% PP. Fr\u00e8res/s\u0153urs : ' + Math.round(civilShare.freresSoeursFraction * 100) + '% (droit de retour).';
         else if (civilShare.ppFraction === 0.25 && civilShare.usufruitFraction === 0) explanation = 'Conjoint : 25% PP (exon\u00e9r\u00e9). Enfants : 75% = ' + F.fmt(childrenBase) + '.';
         else if (civilShare.ppFraction === 0.25 && civilShare.usufruitFraction === 0.75) explanation = 'Conjoint : 25% PP + US 75%. Enfants NP ' + Math.round(npRatio*100) + '% de 75% = ' + F.fmt(childrenBase) + '.';
         else if (civilShare.usufruitFraction === 1) explanation = 'Conjoint : 100% US. Enfants NP ' + Math.round(npRatio*100) + '% = ' + F.fmt(childrenBase) + ' (art. 669).';
         else if (civilShare.ppFraction > 0) explanation = 'Conjoint : ' + Math.round(civilShare.ppFraction*100) + '% PP. Enfants : ' + Math.round((1-civilShare.ppFraction)*100) + '% = ' + F.fmt(childrenBase) + '.';
 
-        return { childrenBase: childrenBase, conjointPPAmount: ppAmount, conjointUSAmount: usAmount, npRatio: npRatio, explanation: explanation };
+        return { childrenBase: childrenBase, conjointPPAmount: ppAmount, conjointUSAmount: usAmount, npRatio: npRatio,
+            parentsFraction: civilShare.parentsFraction, freresSoeursFraction: civilShare.freresSoeursFraction,
+            droitRetourPct: civilShare.droitRetourPct, explanation: explanation };
     }
 
     function computeCorrectedSuccession() {
@@ -199,7 +283,9 @@ const CivilRights = (function() {
         var totalDroitsCorrige = droitsCorrige + droitsConcubin;
         return {
             brut: { assiette: totalNet, droits: droitsBrut, frais: fraisBrut, net: totalNet - droitsBrut - fraisBrut },
-            corrige: { assietteEnfants: adjusted.childrenBase, conjointPP: adjusted.conjointPPAmount, conjointUS: adjusted.conjointUSAmount, npRatio: adjusted.npRatio, droitsEnfants: droitsCorrige, droitsConcubin: droitsConcubin, totalDroits: totalDroitsCorrige, frais: fraisCorrige, netEnfants: adjusted.childrenBase - droitsCorrige - fraisCorrige, explanation: adjusted.explanation },
+            corrige: { assietteEnfants: adjusted.childrenBase, conjointPP: adjusted.conjointPPAmount, conjointUS: adjusted.conjointUSAmount, npRatio: adjusted.npRatio,
+                parentsFraction: adjusted.parentsFraction, freresSoeursFraction: adjusted.freresSoeursFraction,
+                droitsEnfants: droitsCorrige, droitsConcubin: droitsConcubin, totalDroits: totalDroitsCorrige, frais: fraisCorrige, netEnfants: adjusted.childrenBase - droitsCorrige - fraisCorrige, explanation: adjusted.explanation },
             delta: droitsBrut - totalDroitsCorrige, civilShare: civilShare, conjointAge: conjointAge, unionType: state._unionType, nbEnfants: bens.length, totalNet: totalNet
         };
     }
@@ -231,7 +317,7 @@ const CivilRights = (function() {
         };
         var _origRefresh = SD.refreshObjectives;
         SD.refreshObjectives = function() { _origRefresh.call(SD); setTimeout(injectPacsWarningInObjectives, 50); };
-        console.log('[CivilRights v2] Patched SD.calculateResults');
+        console.log('[CivilRights v2.1] Patched SD.calculateResults');
     }
 
     function injectConjointContext() {
@@ -244,14 +330,31 @@ const CivilRights = (function() {
         if (!spouse) { state._civilRights = null; return; }
         var uType = FamilyGraph.getUnionType ? FamilyGraph.getUnionType(primaryDonor.id, spouse.id) : 'mariage';
         var nbEnfants = state.beneficiaries.filter(function(b) { return b.lien === 'enfant'; }).length;
-        var civilShare = computeConjointCivilShare({ unionType: uType, hasDDV: state.ddv || false, hasTestament: state._hasTestament || false, nbEnfants: nbEnfants, hasEnfantsAutreLit: hasEnfantsAutreLit(primaryDonor.id), conjointOption: state._conjointOption || 'pp', conjointAge: spouse.age || 65 });
+
+        // v2.1 — Détecter parents vivants et frères/sœurs
+        var nbParentsVivants = 0;
+        var hasFreresSoeurs = false;
+        if (typeof FamilyGraph !== 'undefined') {
+            var parents = FamilyGraph.parents ? FamilyGraph.parents(primaryDonor.id) : [];
+            nbParentsVivants = parents.filter(function(p) { return !p.decede; }).length;
+            var siblings = FamilyGraph.siblings ? FamilyGraph.siblings(primaryDonor.id) : [];
+            hasFreresSoeurs = siblings.length > 0;
+        }
+
+        var civilShare = computeConjointCivilShare({
+            unionType: uType, hasDDV: state.ddv || false, hasTestament: state._hasTestament || false,
+            nbEnfants: nbEnfants, hasEnfantsAutreLit: hasEnfantsAutreLit(primaryDonor.id),
+            conjointOption: state._conjointOption || 'pp', conjointAge: spouse.age || 65,
+            nbParentsVivants: nbParentsVivants, hasFreresSoeurs: hasFreresSoeurs,
+            biensFamillePct: state._biensFamillePct || 0
+        });
         state._civilRights = civilShare; state._unionType = uType; state._spouseId = spouse.id; state._spouseNom = spouse.nom;
     }
 
     function renderCorrectedScenario() {
         var result = computeCorrectedSuccession();
         if (!result) return;
-        if (result.delta === 0 && !result.civilShare.usufruitFraction && !result.civilShare.ppFraction) return;
+        if (result.delta === 0 && !result.civilShare.usufruitFraction && !result.civilShare.ppFraction && !result.civilShare.parentsFraction) return;
         var F = SD._fiscal, fmt = F.fmt, cr = result.civilShare;
         var existing = document.getElementById('civil-rights-corrected');
         if (existing) existing.remove();
@@ -267,6 +370,8 @@ const CivilRights = (function() {
         html += '<tr><td style="padding:10px 16px;">Assiette enfants</td><td style="padding:10px 16px;text-align:right;">' + fmt(result.brut.assiette) + '</td><td style="padding:10px 16px;text-align:right;background:rgba(59,130,246,.02);font-weight:700;">' + fmt(result.corrige.assietteEnfants) + '</td></tr>';
         html += '<tr><td style="padding:10px 16px;">Droits enfants</td><td style="padding:10px 16px;text-align:right;">' + fmt(result.brut.droits) + '</td><td style="padding:10px 16px;text-align:right;background:rgba(59,130,246,.02);font-weight:700;">' + fmt(result.corrige.droitsEnfants) + '</td></tr>';
         if (result.corrige.droitsConcubin > 0) html += '<tr><td style="padding:10px 16px;color:var(--accent-coral);">Droits concubin 60%</td><td style="padding:10px 16px;text-align:right;">\u2014</td><td style="padding:10px 16px;text-align:right;background:rgba(59,130,246,.02);color:var(--accent-coral);">' + fmt(result.corrige.droitsConcubin) + '</td></tr>';
+        if (result.corrige.parentsFraction > 0) html += '<tr><td style="padding:10px 16px;">Part des parents</td><td style="padding:10px 16px;text-align:right;">\u2014</td><td style="padding:10px 16px;text-align:right;background:rgba(59,130,246,.02);">' + Math.round(result.corrige.parentsFraction * 100) + '% (' + fmt(Math.round(result.totalNet * result.corrige.parentsFraction)) + ')</td></tr>';
+        if (result.corrige.freresSoeursFraction > 0) html += '<tr><td style="padding:10px 16px;">Droit de retour (fr\u00e8res/s\u0153urs)</td><td style="padding:10px 16px;text-align:right;">\u2014</td><td style="padding:10px 16px;text-align:right;background:rgba(59,130,246,.02);">' + Math.round(result.corrige.freresSoeursFraction * 100) + '% (' + fmt(Math.round(result.totalNet * result.corrige.freresSoeursFraction)) + ')</td></tr>';
         html += '<tr style="font-weight:700;border-top:2px solid rgba(198,134,66,.15);"><td style="padding:14px 16px;">TOTAL</td><td style="padding:14px 16px;text-align:right;">' + fmt(result.brut.droits) + '</td><td style="padding:14px 16px;text-align:right;background:rgba(59,130,246,.04);color:var(--accent-blue);">' + fmt(result.corrige.totalDroits) + '</td></tr>';
         html += '<tr><td colspan="2"></td><td style="padding:10px 16px;text-align:right;background:rgba(59,130,246,.04);"><span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:' + deltaColor + ';">' + deltaLabel + '</span></td></tr>';
         html += '</tbody></table></div></div>';
@@ -321,7 +426,7 @@ const CivilRights = (function() {
 
     function setUnionAndRefresh(id1, id2, type) { setUnionType(id1, id2, type); if (typeof SD !== 'undefined') { SD.closeCtx(); SD.renderFamilyTree(); } }
 
-    function init() { patchSD(); patchFamilyTreeUI(); console.log('[CivilRights v2] Loaded'); }
+    function init() { patchSD(); patchFamilyTreeUI(); console.log('[CivilRights v2.1] Loaded'); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else setTimeout(init, 200);
 
