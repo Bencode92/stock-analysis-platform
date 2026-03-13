@@ -1847,6 +1847,76 @@ def select_equities_for_profile(
                 "sectors_after": len(sectors_in_sel),
             }
 
+    # === FIX v5.3.0: Essential Sectors Guarantee ===
+    # Healthcare is a core diversifier — demand-inelastic, decorrelated from cycles.
+    # Unlike the generic sector count above, this ENSURES specific sectors are present.
+    # Runs even if we already have enough total sectors.
+    ESSENTIAL_SECTORS = {
+        "Agressif": ["Santé"],
+        "Modéré":   ["Santé"],
+        "Stable":   ["Santé"],  # Already handled by geo-resilience but belt-and-suspenders
+    }
+    
+    essential = ESSENTIAL_SECTORS.get(profile, [])
+    sectors_in_sel = set(eq.get("sector") for eq in selected if eq.get("sector"))
+    remaining_pool = [eq for eq in sorted_eq if eq not in selected]
+    _essential_injected = 0
+    
+    for req_sector in essential:
+        if req_sector in sectors_in_sel:
+            continue  # Already represented
+        
+        # Find best candidate from this sector in the full pool
+        candidates = [eq for eq in remaining_pool if eq.get("sector") == req_sector]
+        if not candidates:
+            logger.info(f"   [{profile}] 🏥 Essential sector '{req_sector}': no candidates in pool")
+            continue
+        
+        best_candidate = max(candidates, key=lambda x: x.get("_profile_score", 0))
+        best_score = best_candidate.get("_profile_score", 0)
+        
+        # Score floor: only inject if candidate has a reasonable score (>= 30th percentile)
+        all_scores = [eq.get("_profile_score", 0) for eq in selected if eq.get("_profile_score")]
+        p30 = sorted(all_scores)[len(all_scores) // 3] if all_scores else 0
+        
+        if best_score < p30 * 0.8:
+            logger.info(
+                f"   [{profile}] 🏥 Essential sector '{req_sector}': best candidate "
+                f"{best_candidate.get('ticker','?')} score={best_score:.3f} too low (floor={p30*0.8:.3f})"
+            )
+            continue
+        
+        # Find worst stock in most over-represented sector (threshold: >= 2 not 3)
+        sector_counts = {}
+        for eq in selected:
+            s = eq.get("sector", "OTHER")
+            sector_counts[s] = sector_counts.get(s, 0) + 1
+        
+        most_common = max(sector_counts, key=sector_counts.get)
+        if sector_counts[most_common] >= 2:
+            worst_in_sector = min(
+                [eq for eq in selected if eq.get("sector") == most_common],
+                key=lambda x: x.get("_profile_score", 0)
+            )
+            replaced_ticker = worst_in_sector.get("ticker", "?")
+            idx = selected.index(worst_in_sector)
+            selected[idx] = best_candidate
+            sectors_in_sel.add(req_sector)
+            _essential_injected += 1
+            logger.info(
+                f"   [{profile}] 🏥 Essential sector inject: {best_candidate.get('ticker','?')} "
+                f"({req_sector}, score={best_score:.3f}) replaces {replaced_ticker} "
+                f"({most_common}, score={worst_in_sector.get('_profile_score',0):.3f})"
+            )
+    
+    if _essential_injected:
+        selected = sorted(selected, key=lambda x: x.get("_profile_score", 0), reverse=True)
+        meta["stages"]["essential_sectors"] = {
+            "injected": _essential_injected,
+            "required": essential,
+            "sectors_after": list(sectors_in_sel),
+        }
+
     # v5.2.1 FIX P2c: Preset diversity floor
     MIN_PRESETS_REPRESENTED = 4
     presets_in_sel = set(eq.get("_matched_preset") for eq in selected)
