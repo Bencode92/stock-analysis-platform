@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-13-09-41-28",
-    "git_sha": "c6f012f7d",
-    "git_sha_full": "c6f012f7d0ac87971b9e25480383a2b178c1bd82",
+    "run_id": "2026-03-13-09-55-24",
+    "git_sha": "873448856",
+    "git_sha_full": "8734488568f02e29602d8601065952cd20429cbd",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-13",
-    "timestamp_utc": "2026-03-13T09:41:28.653823+00:00",
+    "timestamp_utc": "2026-03-13T09:55:24.640429+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 211.34
+    "total_duration_sec": 167.68
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -143,11 +143,33 @@
     },
     "5_selection_crypto_Agressif": {
       "name": "selection_crypto",
-      "before": 0,
-      "after": 0,
+      "before": 5,
+      "after": 5,
       "rejected": 0,
       "category": "crypto",
-      "profile": "Agressif"
+      "profile": "Agressif",
+      "top_k": [
+        {
+          "ticker": "MORPHO/USD",
+          "score": 95.02
+        },
+        {
+          "ticker": "OKB/USD",
+          "score": 86.49
+        },
+        {
+          "ticker": "PORTO/USD",
+          "score": 100.0
+        },
+        {
+          "ticker": "TRX/USD",
+          "score": 99.1
+        },
+        {
+          "ticker": "XRP/USD",
+          "score": 66.49
+        }
+      ]
     },
     "5_selection_bond_Agressif": {
       "name": "selection_bond",
@@ -301,11 +323,29 @@
     },
     "5_selection_crypto_Modéré": {
       "name": "selection_crypto",
-      "before": 0,
-      "after": 0,
+      "before": 4,
+      "after": 4,
       "rejected": 0,
       "category": "crypto",
-      "profile": "Modéré"
+      "profile": "Modéré",
+      "top_k": [
+        {
+          "ticker": "XRP/USD",
+          "score": 64.53
+        },
+        {
+          "ticker": "API3/USD",
+          "score": 57.86
+        },
+        {
+          "ticker": "TRX/USD",
+          "score": 100.0
+        },
+        {
+          "ticker": "PORTO/USD",
+          "score": 95.78
+        }
+      ]
     },
     "5_selection_bond_Modéré": {
       "name": "selection_bond",
