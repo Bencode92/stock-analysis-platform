@@ -2355,6 +2355,54 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "diagnostics": diagnostics,
             "assets": assets,
         }
+        # === FIX v5.2.0: RADAR hard cap — régions "avoided" → max 5% par stock ===
+        if market_context:
+            _avoided_regions = set()
+            _mt = market_context.get("macro_tilts", {})
+            for r in _mt.get("avoided_regions", []):
+                _avoided_regions.add(r.lower().strip())
+            
+            if _avoided_regions:
+                RADAR_MAX_WEIGHT_PCT = 5.0  # 5% max per stock from avoided region
+                _capped = []
+                _surplus = 0.0
+                _non_avoided_total = 0.0
+                
+                # Phase 1: identify stocks to cap
+                for aid, w_pct in allocation.items():
+                    asset = next((a for a in assets if getattr(a, 'id', None) == aid), None)
+                    if not asset:
+                        _non_avoided_total += w_pct
+                        continue
+                    
+                    country = (getattr(asset, 'country', '') or '').lower()
+                    region = (getattr(asset, 'region', '') or '').lower()
+                    cat = (getattr(asset, 'category', '') or '').lower()
+                    
+                    # Only cap equities (not ETFs/bonds/crypto)
+                    is_equity = cat in ('equity', 'stock', 'action')
+                    is_avoided = any(av in country or av in region for av in _avoided_regions)
+                    
+                    if is_equity and is_avoided and w_pct > RADAR_MAX_WEIGHT_PCT:
+                        _surplus += w_pct - RADAR_MAX_WEIGHT_PCT
+                        _capped.append((aid, getattr(asset, 'name', aid)[:25], w_pct))
+                        allocation[aid] = RADAR_MAX_WEIGHT_PCT
+                    else:
+                        _non_avoided_total += w_pct
+                
+                # Phase 2: redistribute surplus proportionally
+                if _surplus > 0 and _non_avoided_total > 0:
+                    for aid in allocation:
+                        if aid not in [c[0] for c in _capped] and allocation[aid] > 0:
+                            allocation[aid] += _surplus * (allocation[aid] / _non_avoided_total)
+                    
+                    for aid, name, old_w in _capped:
+                        logger.info(f"   [{profile}] 🎯 RADAR hard cap: {name} {old_w:.1f}%→{RADAR_MAX_WEIGHT_PCT:.1f}% (region avoided)")
+                    logger.info(f"   [{profile}] 🎯 RADAR surplus {_surplus:.1f}% redistribué aux non-avoided")
+                    
+                    # Re-round to 100%
+                    allocation = round_weights_to_100(allocation)
+        
         # === v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis ===
         try:
             tm = build_tickers_meta_for_risk(allocation, assets)
