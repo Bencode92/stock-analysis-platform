@@ -2451,6 +2451,35 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     # Re-round to 100%
                     allocation = round_weights_to_100(allocation)
         
+        # === FIX v5.2.0-C: Min weight enforcement — positions < 2% supprimées ===
+        MIN_POSITION_WEIGHT = 2.0  # %
+        _removed_dust = []
+        _dust_total = 0.0
+        _keep_total = 0.0
+        
+        for aid, w_pct in list(allocation.items()):
+            if 0 < w_pct < MIN_POSITION_WEIGHT:
+                asset = next((a for a in assets if getattr(a, 'id', None) == aid), None)
+                name = getattr(asset, 'name', aid)[:25] if asset else aid
+                _removed_dust.append((aid, name, w_pct))
+                _dust_total += w_pct
+                del allocation[aid]
+            elif w_pct > 0:
+                _keep_total += w_pct
+        
+        if _removed_dust and _keep_total > 0:
+            # Redistribute proportionally
+            for aid in allocation:
+                if allocation[aid] > 0:
+                    allocation[aid] += _dust_total * (allocation[aid] / _keep_total)
+            
+            for aid, name, old_w in _removed_dust:
+                logger.info(f"   [{profile}] 🧹 Dust removed: {name} {old_w:.1f}% < {MIN_POSITION_WEIGHT}%")
+            logger.info(f"   [{profile}] 🧹 {len(_removed_dust)} positions removed, {_dust_total:.1f}% redistributed")
+            
+            # Re-round
+            allocation = round_weights_to_100(allocation)
+        
         # === v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis ===
         try:
             tm = build_tickers_meta_for_risk(allocation, assets)
