@@ -142,21 +142,37 @@ PROFILE_SCORING_WEIGHTS = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 CRYPTO_CATEGORIES = {
-    "tokenized_gold": ["PAXG", "XAUT"],
-    "blue_chip":      ["BTC", "ETH"],
+    "tokenized_gold": ["PAXG", "XAUT", "PAX GOLD", "TETHER GOLD"],
+    "blue_chip":      ["BTC", "ETH", "BITCOIN", "ETHEREUM"],
     "smart_contract": ["SOL", "AVAX", "DOT", "NEAR", "SUI", "ADA", "ATOM",
-                        "FTM", "ALGO", "EGLD", "HBAR", "ICP"],
+                        "FTM", "ALGO", "EGLD", "HBAR", "ICP",
+                        "SOLANA", "AVALANCHE", "POLKADOT", "CARDANO", "COSMOS",
+                        "FANTOM", "ALGORAND", "HEDERA", "INTERNET COMPUTER"],
     "defi":           ["MORPHO", "AAVE", "UNI", "CRV", "PENDLE", "COMP",
-                        "MKR", "SNX", "SUSHI", "YFI", "DYDX", "1INCH"],
-    "payment":        ["TRX", "XRP", "XLM", "DASH"],
-    "privacy":        ["XMR", "ZEC", "SCRT"],
-    "pow_legacy":     ["DCR", "BCH", "LTC", "ZEN", "KMD"],
-    "exchange":       ["BNB", "OKB", "CRO", "FTT", "LEO"],
-    "meme":           ["DOGE", "SHIB", "PEPE", "FLOKI", "BONK", "WIF"],
-    "gaming_nft":     ["AXS", "SAND", "MANA", "ENJ", "GALA", "IMX"],
-    "storage":        ["FIL", "AR", "STORJ"],
-    "oracle":         ["LINK", "BAND", "API3"],
-    "layer2":         ["MATIC", "ARB", "OP", "STRK", "ZK"],
+                        "MKR", "SNX", "SUSHI", "YFI", "DYDX", "1INCH",
+                        "UNISWAP", "CURVE DAO", "MAKER", "SYNTHETIX"],
+    "payment":        ["TRX", "XRP", "XLM", "DASH",
+                        "TRON", "RIPPLE", "STELLAR", "STELLAR LUMENS"],
+    "privacy":        ["XMR", "ZEC", "SCRT", "MONERO", "ZCASH", "SECRET"],
+    "pow_legacy":     ["DCR", "BCH", "LTC", "ZEN", "KMD",
+                        "DECRED", "BITCOIN CASH", "LITECOIN", "HORIZEN", "KOMODO"],
+    "exchange":       ["BNB", "OKB", "CRO", "FTT", "LEO",
+                        "BINANCE COIN", "CRONOS", "UNUS SED LEO"],
+    "meme":           ["DOGE", "SHIB", "PEPE", "FLOKI", "BONK", "WIF",
+                        "DOGECOIN", "SHIBA INU", "BOOK OF MEME", "OFFICIAL TRUMP",
+                        "PUDGY PENGUINS"],
+    "gaming_nft":     ["AXS", "SAND", "MANA", "ENJ", "GALA", "IMX",
+                        "AXIE INFINITY", "THE SANDBOX", "DECENTRALAND",
+                        "ENJIN COIN", "IMMUTABLE X"],
+    "storage":        ["FIL", "AR", "STORJ", "FILECOIN", "ARWEAVE"],
+    "oracle":         ["LINK", "BAND", "API3", "CHAINLINK", "BAND PROTOCOL"],
+    "layer2":         ["MATIC", "ARB", "OP", "STRK", "ZK",
+                        "POLYGON", "ARBITRUM", "OPTIMISM", "STARKNET"],
+    # Fan tokens / sports — recognized category but low priority
+    "fan_token":      ["PORTO", "BAR", "PSG", "JUV", "ACM", "CHZ",
+                        "FC PORTO FAN TOKEN", "FC BARCELONA FAN TOKEN",
+                        "PARIS SAINT-GERMAIN FAN TOKEN", "JUVENTUS FAN TOKEN",
+                        "AC MILAN FAN TOKEN", "CHILIZ"],
 }
 
 # Nombre d'assets core / satellite par profil
@@ -211,8 +227,9 @@ def _get_currency_base(row: pd.Series) -> str:
 
 def _get_category(currency_base: str) -> str:
     """Retourne la catégorie sectorielle d'un crypto, ou 'other'."""
+    cb = currency_base.upper().strip()
     for category, members in CRYPTO_CATEGORIES.items():
-        if currency_base in members:
+        if cb in [m.upper() for m in members]:
             return category
     return "other"
 
@@ -657,11 +674,12 @@ def select_with_diversity(
 
         cat = row.get("_crypto_category", "other")
 
-        # v2.0.1: Tokens without a recognized category cannot be core
-        if cat == "other":
+        # v2.0.1: Tokens without recognized investment category cannot be core
+        # "other" = unknown, "fan_token" = sports/entertainment (not investment-grade)
+        if cat in ("other", "fan_token"):
             logger.debug(
                 f"[Crypto {profile}] SKIP CORE: {_get_currency_base(row)} "
-                f"(category='other' → satellite only)"
+                f"(category='{cat}' → satellite only)"
             )
             continue
 
