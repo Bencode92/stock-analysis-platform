@@ -1984,7 +1984,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 country = eq.get("country", "")
                 name_upper = (eq.get("name", "") or "").upper()
                 preset = eq.get("_matched_preset", "")
-                div_yield = float(eq.get("dividend_yield", "0").replace("%", "") or 0)
+                _dy_raw = eq.get("dividend_yield", 0)
+                try:
+                    div_yield = float(str(_dy_raw).replace("%", "").strip() or 0)
+                except (ValueError, TypeError):
+                    div_yield = 0.0
                 old_score = eq.get("_profile_score")
                 
                 if old_score is None:
