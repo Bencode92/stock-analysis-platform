@@ -2425,8 +2425,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     cat = (getattr(asset, 'category', '') or '').lower()
                     
                     # Only cap equities (not ETFs/bonds/crypto)
-                    is_equity = cat in ('equity', 'stock', 'action')
+                    is_equity = cat in ('equity', 'stock', 'action', 'actions', 'equities')
                     is_avoided = (country in _avoided_expanded) or (region in _avoided_expanded)
+                    
+                    if is_avoided and w_pct > 0:
+                        logger.info(f"   [{profile}] 🔍 RADAR check: {getattr(asset, 'name', aid)[:25]} | country='{country}' region='{region}' cat='{cat}' | avoided={is_avoided} equity={is_equity} w={w_pct:.1f}%")
                     
                     if is_equity and is_avoided and w_pct > RADAR_MAX_WEIGHT_PCT:
                         _surplus += w_pct - RADAR_MAX_WEIGHT_PCT
