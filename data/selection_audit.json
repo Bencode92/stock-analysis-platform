@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-13T10:08:04.113093",
+  "timestamp": "2026-03-13T10:22:14.610961",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -4377,9 +4377,10 @@
         "ticker": "PORTO/USD",
         "sort_score": 100.0,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "crypto_preset_fan_token",
         "profile_score": 100.0,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 49.3
       },
       {
@@ -4388,10 +4389,9 @@
         "ticker": "MORPHO/USD",
         "sort_score": 95.02,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "crypto_preset_defi",
         "profile_score": 95.02,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 113.3
       },
       {
@@ -16601,25 +16601,25 @@
     },
     {
       "name": "Unknown",
-      "ticker": "PORTO/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_fan_token",
-      "profile_score": 100.0,
-      "volatility": 49.3,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 2,
-      "selection_reason": "Score profil élevé (100.00); Preset: crypto_preset_fan_token"
-    }
-  ],
-  "crypto_rejected": [
-    {
-      "name": "Unknown",
       "ticker": "MORPHO/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_defi",
       "profile_score": 95.02,
       "volatility": 113.3,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 2,
+      "selection_reason": "Score profil élevé (95.02); Preset: crypto_preset_defi"
+    }
+  ],
+  "crypto_rejected": [
+    {
+      "name": "Unknown",
+      "ticker": "PORTO/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_fan_token",
+      "profile_score": 100.0,
+      "volatility": 49.3,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
