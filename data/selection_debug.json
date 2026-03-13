@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-13-09-03-58",
-    "git_sha": "502495682",
-    "git_sha_full": "5024956823649bd7c0894d9fd29080f3c83e70c4",
+    "run_id": "2026-03-13-09-26-30",
+    "git_sha": "c92feaa5b",
+    "git_sha_full": "c92feaa5bbd12e8979c809148c4da885a4569747",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-13",
-    "timestamp_utc": "2026-03-13T09:03:58.083844+00:00",
+    "timestamp_utc": "2026-03-13T09:26:30.917706+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 216.45
+    "total_duration_sec": 168.52
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -143,33 +143,11 @@
     },
     "5_selection_crypto_Agressif": {
       "name": "selection_crypto",
-      "before": 5,
-      "after": 5,
+      "before": 0,
+      "after": 0,
       "rejected": 0,
       "category": "crypto",
-      "profile": "Agressif",
-      "top_k": [
-        {
-          "ticker": "PORTO/USD",
-          "score": 100.0
-        },
-        {
-          "ticker": "TRX/USD",
-          "score": 98.98
-        },
-        {
-          "ticker": "MORPHO/USD",
-          "score": 94.93
-        },
-        {
-          "ticker": "LUNC/USD",
-          "score": 92.74
-        },
-        {
-          "ticker": "DCR/USD",
-          "score": 91.91
-        }
-      ]
+      "profile": "Agressif"
     },
     "5_selection_bond_Agressif": {
       "name": "selection_bond",
@@ -323,29 +301,11 @@
     },
     "5_selection_crypto_Modéré": {
       "name": "selection_crypto",
-      "before": 4,
-      "after": 4,
+      "before": 0,
+      "after": 0,
       "rejected": 0,
       "category": "crypto",
-      "profile": "Modéré",
-      "top_k": [
-        {
-          "ticker": "TRX/USD",
-          "score": 100.0
-        },
-        {
-          "ticker": "PORTO/USD",
-          "score": 95.84
-        },
-        {
-          "ticker": "NFT/USD",
-          "score": 91.09
-        },
-        {
-          "ticker": "BNB/USD",
-          "score": 91.09
-        }
-      ]
+      "profile": "Modéré"
     },
     "5_selection_bond_Modéré": {
       "name": "selection_bond",
@@ -3537,8 +3497,21 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 100.0,
+    "details": {
+      "5_selection_crypto_Agressif.after": {
+        "current": 0,
+        "previous": 5,
+        "delta": -5,
+        "pct_change": 100.0
+      },
+      "5_selection_crypto_Modéré.after": {
+        "current": 0,
+        "previous": 4,
+        "delta": -4,
+        "pct_change": 100.0
+      }
+    }
   }
 }

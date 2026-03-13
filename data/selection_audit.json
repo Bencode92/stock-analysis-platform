@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-13T09:04:46.704546",
+  "timestamp": "2026-03-13T09:27:14.846985",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -9,9 +9,9 @@
     "etf_initial": 235,
     "etf_selected": 15,
     "etf_rejected_notable": 20,
-    "crypto_initial": 7,
-    "crypto_selected": 2,
-    "crypto_rejected_notable": 5,
+    "crypto_initial": 340,
+    "crypto_selected": 0,
+    "crypto_rejected_notable": 10,
     "bonds_initial": 31,
     "bonds_selected": 8,
     "total_filters_applied": 4,
@@ -19,7 +19,7 @@
     "category_rankings_sizes": {
       "equity": 100,
       "etf": 100,
-      "crypto": 7,
+      "crypto": 100,
       "bond": 31
     },
     "preset_rankings_sizes": {
@@ -42,7 +42,7 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 1
+          "selected": 2
         },
         "quality_high_vol": {
           "total": 16,
@@ -58,7 +58,7 @@
         },
         "rendement": {
           "total": 20,
-          "selected": 2
+          "selected": 3
         },
         "value_dividend": {
           "total": 20,
@@ -975,12 +975,10 @@
         "ticker": "BBVA",
         "sort_score": 0.6896,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "momentum_trend",
         "profile_score": 0.6896,
         "buffett_score": 100.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Finance",
         "country": "Espagne",
         "volatility": 28.4,
@@ -995,12 +993,10 @@
         "ticker": "PEG",
         "sort_score": 0.6862,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "rendement",
         "profile_score": 0.6862,
         "buffett_score": 48.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Services publics",
         "country": "Etats-Unis",
         "volatility": 19.9,
@@ -4362,85 +4358,1003 @@
     "crypto": [
       {
         "rank": 1,
-        "name": "PORTO/USD",
-        "ticker": "PORTO/USD",
-        "sort_score": 100.0,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 100.0,
-        "volatility": 49.3
+        "name": "1000SATS/USD",
+        "ticker": "1000SATS/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 86.8
       },
       {
         "rank": 2,
-        "name": "TRX/USD",
-        "ticker": "TRX/USD",
-        "sort_score": 100.0,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "matched_preset": "crypto_preset_payment",
-        "profile_score": 100.0,
-        "volatility": 22.0
+        "name": "1INCH/USD",
+        "ticker": "1INCH/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 62.4
       },
       {
         "rank": 3,
-        "name": "MORPHO/USD",
-        "ticker": "MORPHO/USD",
-        "sort_score": 94.93,
-        "sort_score_source": "_profile_score",
+        "name": "AAVE/EUR",
+        "ticker": "AAVE/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
         "selected": false,
-        "matched_preset": "crypto_preset_defi",
-        "profile_score": 94.93,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 113.3
+        "volatility": 78.5
       },
       {
         "rank": 4,
-        "name": "LUNC/USD",
-        "ticker": "LUNC/USD",
-        "sort_score": 92.74,
-        "sort_score_source": "_profile_score",
+        "name": "AAVE/USD",
+        "ticker": "AAVE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
         "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 92.74,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 80.0
+        "volatility": 78.4
       },
       {
         "rank": 5,
-        "name": "DCR/USD",
-        "ticker": "DCR/USD",
-        "sort_score": 91.91,
-        "sort_score_source": "_profile_score",
+        "name": "ACA/USD",
+        "ticker": "ACA/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
         "selected": false,
-        "matched_preset": "crypto_preset_pow_legacy",
-        "profile_score": 91.91,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 93.0
+        "volatility": 147.8
       },
       {
         "rank": 6,
-        "name": "NFT/USD",
-        "ticker": "NFT/USD",
-        "sort_score": 91.09,
-        "sort_score_source": "_profile_score",
+        "name": "ACH/USD",
+        "ticker": "ACH/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
         "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 91.09,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 62.6
+      },
+      {
+        "rank": 7,
+        "name": "ADA/EUR",
+        "ticker": "ADA/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 79.0
+      },
+      {
+        "rank": 8,
+        "name": "ADA/USD",
+        "ticker": "ADA/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 81.0
+      },
+      {
+        "rank": 9,
+        "name": "AERO/USD",
+        "ticker": "AERO/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 108.1
+      },
+      {
+        "rank": 10,
+        "name": "AE/USD",
+        "ticker": "AE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 63.8
+      },
+      {
+        "rank": 11,
+        "name": "AKT/USD",
+        "ticker": "AKT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 108.4
+      },
+      {
+        "rank": 12,
+        "name": "ALGO/USD",
+        "ticker": "ALGO/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 58.3
+      },
+      {
+        "rank": 13,
+        "name": "ALICE/USD",
+        "ticker": "ALICE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 167.6
+      },
+      {
+        "rank": 14,
+        "name": "ALPINE/USD",
+        "ticker": "ALPINE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 43.7
+      },
+      {
+        "rank": 15,
+        "name": "AMPt/USD",
+        "ticker": "AMPt/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 41.7
+      },
+      {
+        "rank": 16,
+        "name": "ANKR/USD",
+        "ticker": "ANKR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 62.9
+      },
+      {
+        "rank": 17,
+        "name": "APE/USD",
+        "ticker": "APE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 64.3
+      },
+      {
+        "rank": 18,
+        "name": "API3/USD",
+        "ticker": "API3/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 44.0
+      },
+      {
+        "rank": 19,
+        "name": "APT/USD",
+        "ticker": "APT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 96.0
+      },
+      {
+        "rank": 20,
+        "name": "ARB/USD",
+        "ticker": "ARB/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 65.8
+      },
+      {
+        "rank": 21,
+        "name": "ARPA/USD",
+        "ticker": "ARPA/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 92.2
+      },
+      {
+        "rank": 22,
+        "name": "AR/USD",
+        "ticker": "AR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 82.8
+      },
+      {
+        "rank": 23,
+        "name": "ASTER/USDT",
+        "ticker": "ASTER/USDT",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 34.5
+      },
+      {
+        "rank": 24,
+        "name": "ASTR/USD",
+        "ticker": "ASTR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 54.0
+      },
+      {
+        "rank": 25,
+        "name": "ATA/USD",
+        "ticker": "ATA/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 64.0
+      },
+      {
+        "rank": 26,
+        "name": "ATLAS/USD",
+        "ticker": "ATLAS/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 58.3
+      },
+      {
+        "rank": 27,
+        "name": "ATOM/EUR",
+        "ticker": "ATOM/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 65.4
+      },
+      {
+        "rank": 28,
+        "name": "ATOM/USD",
+        "ticker": "ATOM/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 64.4
+      },
+      {
+        "rank": 29,
+        "name": "AUDIO/EUR",
+        "ticker": "AUDIO/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 125.8
+      },
+      {
+        "rank": 30,
+        "name": "AUDIO/USD",
+        "ticker": "AUDIO/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 53.7
+      },
+      {
+        "rank": 31,
+        "name": "A/USDT",
+        "ticker": "A/USDT",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 49.0
+      },
+      {
+        "rank": 32,
+        "name": "AVAX/EUR",
+        "ticker": "AVAX/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 70.6
+      },
+      {
+        "rank": 33,
+        "name": "AVAX/USD",
+        "ticker": "AVAX/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 72.8
+      },
+      {
+        "rank": 34,
+        "name": "AXL/USD",
+        "ticker": "AXL/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 83.5
+      },
+      {
+        "rank": 35,
+        "name": "AXS/EUR",
+        "ticker": "AXS/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 69.4
+      },
+      {
+        "rank": 36,
+        "name": "AXS/USD",
+        "ticker": "AXS/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 76.3
+      },
+      {
+        "rank": 37,
+        "name": "BADGER/USD",
+        "ticker": "BADGER/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 51.4
+      },
+      {
+        "rank": 38,
+        "name": "BAL/USD",
+        "ticker": "BAL/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 144.2
+      },
+      {
+        "rank": 39,
+        "name": "BAND/USD",
+        "ticker": "BAND/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 72.5
+      },
+      {
+        "rank": 40,
+        "name": "BAT/EUR",
+        "ticker": "BAT/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 62.7
+      },
+      {
+        "rank": 41,
+        "name": "BAT/USD",
+        "ticker": "BAT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 55.3
+      },
+      {
+        "rank": 42,
+        "name": "BCH/EUR",
+        "ticker": "BCH/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 73.5
+      },
+      {
+        "rank": 43,
+        "name": "BCH/USD",
+        "ticker": "BCH/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 73.2
+      },
+      {
+        "rank": 44,
+        "name": "BLAST/USD",
+        "ticker": "BLAST/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 55.7
+      },
+      {
+        "rank": 45,
+        "name": "BLUR/USD",
+        "ticker": "BLUR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 55.4
+      },
+      {
+        "rank": 46,
+        "name": "BLZE/USD",
+        "ticker": "BLZE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 51.0
+      },
+      {
+        "rank": 47,
+        "name": "BNB/EUR",
+        "ticker": "BNB/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 45.4
+      },
+      {
+        "rank": 48,
+        "name": "BNB/USD",
+        "ticker": "BNB/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 46.9
+      },
+      {
+        "rank": 49,
+        "name": "BNT/USD",
+        "ticker": "BNT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 59.0
+      },
+      {
+        "rank": 50,
+        "name": "BOME/USDT",
+        "ticker": "BOME/USDT",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 78.1
+      },
+      {
+        "rank": 51,
+        "name": "BONK/USDT",
+        "ticker": "BONK/USDT",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 93.5
+      },
+      {
+        "rank": 52,
+        "name": "BRETT/USD",
+        "ticker": "BRETT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 93.1
+      },
+      {
+        "rank": 53,
+        "name": "BSV/USD",
+        "ticker": "BSV/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 91.7
+      },
+      {
+        "rank": 54,
+        "name": "BTC/EUR",
+        "ticker": "BTC/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 49.5
+      },
+      {
+        "rank": 55,
+        "name": "BTC/USD",
+        "ticker": "BTC/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 51.2
+      },
+      {
+        "rank": 56,
+        "name": "BTS/USD",
+        "ticker": "BTS/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 24.1
+      },
+      {
+        "rank": 57,
+        "name": "BTTN/USD",
+        "ticker": "BTTN/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 62.3
+      },
+      {
+        "rank": 58,
+        "name": "BTT/USD",
+        "ticker": "BTT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 48.0
+      },
+      {
+        "rank": 59,
+        "name": "C98/USD",
+        "ticker": "C98/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 97.7
+      },
+      {
+        "rank": 60,
+        "name": "CAKE/USD",
+        "ticker": "CAKE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 62.1
+      },
+      {
+        "rank": 61,
+        "name": "CEEK/USD",
+        "ticker": "CEEK/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 83.2
+      },
+      {
+        "rank": 62,
+        "name": "CELO/USD",
+        "ticker": "CELO/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 60.2
+      },
+      {
+        "rank": 63,
+        "name": "CELR/USD",
+        "ticker": "CELR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 57.8
+      },
+      {
+        "rank": 64,
+        "name": "CFX/USD",
+        "ticker": "CFX/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 76.8
+      },
+      {
+        "rank": 65,
+        "name": "CGLD/USD",
+        "ticker": "CGLD/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 61.6
+      },
+      {
+        "rank": 66,
+        "name": "CHR/USD",
+        "ticker": "CHR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 66.6
+      },
+      {
+        "rank": 67,
+        "name": "CHZ/USD",
+        "ticker": "CHZ/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 83.9
+      },
+      {
+        "rank": 68,
+        "name": "CKB/USD",
+        "ticker": "CKB/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 52.9
+      },
+      {
+        "rank": 69,
+        "name": "COMP/USD",
+        "ticker": "COMP/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 121.6
+      },
+      {
+        "rank": 70,
+        "name": "CORE/USD",
+        "ticker": "CORE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 47.5
+      },
+      {
+        "rank": 71,
+        "name": "CORE/USD",
+        "ticker": "CORE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 49.2
+      },
+      {
+        "rank": 72,
+        "name": "COTI/USD",
+        "ticker": "COTI/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 65.0
+      },
+      {
+        "rank": 73,
+        "name": "CRO/USD",
+        "ticker": "CRO/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 41.1
       },
       {
-        "rank": 7,
-        "name": "BNB/USD",
-        "ticker": "BNB/USD",
-        "sort_score": 91.09,
-        "sort_score_source": "_profile_score",
+        "rank": 74,
+        "name": "CRV/EUR",
+        "ticker": "CRV/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
         "selected": false,
-        "matched_preset": "crypto_preset_exchange",
-        "profile_score": 91.09,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 46.9
+        "volatility": 74.8
+      },
+      {
+        "rank": 75,
+        "name": "CRV/USD",
+        "ticker": "CRV/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 75.5
+      },
+      {
+        "rank": 76,
+        "name": "CSPR/USD",
+        "ticker": "CSPR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 73.6
+      },
+      {
+        "rank": 77,
+        "name": "CTSI/USD",
+        "ticker": "CTSI/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 79.8
+      },
+      {
+        "rank": 78,
+        "name": "CVC/USD",
+        "ticker": "CVC/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 43.4
+      },
+      {
+        "rank": 79,
+        "name": "CVX/USD",
+        "ticker": "CVX/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 88.6
+      },
+      {
+        "rank": 80,
+        "name": "DASH/EUR",
+        "ticker": "DASH/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 80.2
+      },
+      {
+        "rank": 81,
+        "name": "DASH/USD",
+        "ticker": "DASH/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 80.3
+      },
+      {
+        "rank": 82,
+        "name": "DATA/USD",
+        "ticker": "DATA/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 172.7
+      },
+      {
+        "rank": 83,
+        "name": "DBC/USD",
+        "ticker": "DBC/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 155.0
+      },
+      {
+        "rank": 84,
+        "name": "DCR/USD",
+        "ticker": "DCR/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 93.0
+      },
+      {
+        "rank": 85,
+        "name": "DEGEN/USD",
+        "ticker": "DEGEN/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 85.8
+      },
+      {
+        "rank": 86,
+        "name": "DENT/USD",
+        "ticker": "DENT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 321.3
+      },
+      {
+        "rank": 87,
+        "name": "DGB/USD",
+        "ticker": "DGB/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 68.7
+      },
+      {
+        "rank": 88,
+        "name": "DOGE/EUR",
+        "ticker": "DOGE/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 90.3
+      },
+      {
+        "rank": 89,
+        "name": "DOGE/USD",
+        "ticker": "DOGE/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 91.2
+      },
+      {
+        "rank": 90,
+        "name": "DOGS/USDT",
+        "ticker": "DOGS/USDT",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 145.4
+      },
+      {
+        "rank": 91,
+        "name": "DOT/USD",
+        "ticker": "DOT/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 134.3
+      },
+      {
+        "rank": 92,
+        "name": "DUSK/USD",
+        "ticker": "DUSK/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 104.3
+      },
+      {
+        "rank": 93,
+        "name": "DYDX/USD",
+        "ticker": "DYDX/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 83.7
+      },
+      {
+        "rank": 94,
+        "name": "DYM/USD",
+        "ticker": "DYM/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 58.3
+      },
+      {
+        "rank": 95,
+        "name": "EGLD/EUR",
+        "ticker": "EGLD/EUR",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 67.6
+      },
+      {
+        "rank": 96,
+        "name": "EGLD/USD",
+        "ticker": "EGLD/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 69.1
+      },
+      {
+        "rank": 97,
+        "name": "ELF/USD",
+        "ticker": "ELF/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 39.5
+      },
+      {
+        "rank": 98,
+        "name": "ELON/USD",
+        "ticker": "ELON/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 76.0
+      },
+      {
+        "rank": 99,
+        "name": "ENA/USD",
+        "ticker": "ENA/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 91.8
+      },
+      {
+        "rank": 100,
+        "name": "ENJ/USD",
+        "ticker": "ENJ/USD",
+        "sort_score": 0.0,
+        "sort_score_source": "none",
+        "selected": false,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 54.2
       }
     ],
     "bond": [
@@ -6211,12 +7125,10 @@
           "ticker": "BBVA",
           "sort_score": 0.6896,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "momentum_trend",
           "profile_score": 0.6896,
           "buffett_score": 100.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Finance",
           "country": "Espagne",
           "volatility": 28.4,
@@ -7674,12 +8586,10 @@
           "ticker": "PEG",
           "sort_score": 0.6862,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "rendement",
           "profile_score": 0.6862,
           "buffett_score": 48.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Services publics",
           "country": "Etats-Unis",
           "volatility": 19.9,
@@ -16586,84 +17496,94 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
-  "crypto_selected": [
-    {
-      "name": "Unknown",
-      "ticker": "PORTO/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 100.0,
-      "volatility": 49.3,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 1,
-      "selection_reason": "Score profil élevé (100.00); Preset: crypto_preset_other"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "TRX/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_payment",
-      "profile_score": 100.0,
-      "volatility": 22.0,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 2,
-      "selection_reason": "Score profil élevé (100.00); Preset: crypto_preset_payment"
-    }
-  ],
+  "crypto_selected": [],
   "crypto_rejected": [
     {
       "name": "Unknown",
-      "ticker": "MORPHO/USD",
+      "ticker": "1000SATS/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_defi",
-      "profile_score": 94.93,
-      "volatility": 113.3,
+      "volatility": 86.8,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "LUNC/USD",
+      "ticker": "1INCH/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 92.74,
-      "volatility": 80.0,
+      "volatility": 62.4,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "DCR/USD",
+      "ticker": "AAVE/EUR",
       "category": "crypto",
-      "matched_preset": "crypto_preset_pow_legacy",
-      "profile_score": 91.91,
-      "volatility": 93.0,
+      "volatility": 78.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "NFT/USD",
+      "ticker": "AAVE/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 91.09,
-      "volatility": 41.1,
+      "volatility": 78.4,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "BNB/USD",
+      "ticker": "ACA/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_exchange",
-      "profile_score": 91.09,
-      "volatility": 46.9,
+      "volatility": 147.8,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "ACH/USD",
+      "category": "crypto",
+      "volatility": 62.6,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "ADA/EUR",
+      "category": "crypto",
+      "volatility": 79.0,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "ADA/USD",
+      "category": "crypto",
+      "volatility": 81.0,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "AERO/USD",
+      "category": "crypto",
+      "volatility": 108.1,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "AE/USD",
+      "category": "crypto",
+      "volatility": 63.8,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
