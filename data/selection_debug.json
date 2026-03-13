@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-13-13-05-55",
-    "git_sha": "a0db358a1",
-    "git_sha_full": "a0db358a15ec45d7107e73c5e7a85c2fc7c0509b",
+    "run_id": "2026-03-13-13-22-06",
+    "git_sha": "e2e372cdc",
+    "git_sha_full": "e2e372cdc620433834f0cc5522ec865ebe7fe316",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-13",
-    "timestamp_utc": "2026-03-13T13:05:55.504114+00:00",
+    "timestamp_utc": "2026-03-13T13:22:06.696680+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 197.51
+    "total_duration_sec": 180.5
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,12 +22,12 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3203,
-      "after": 3203,
+      "before": 3204,
+      "after": 3204,
       "rejected": 0,
       "equity": 1000,
       "etf": 1439,
-      "crypto": 340,
+      "crypto": 341,
       "bond": 424
     },
     "hard_filters_equity": {
@@ -151,11 +151,11 @@
       "top_k": [
         {
           "ticker": "TRX/USD",
-          "score": 99.1
+          "score": 97.66
         },
         {
           "ticker": "MORPHO/USD",
-          "score": 95.02
+          "score": 94.75
         },
         {
           "ticker": "PORTO/USD",
@@ -163,11 +163,11 @@
         },
         {
           "ticker": "LUNC/USD",
-          "score": 92.64
+          "score": 92.14
         },
         {
           "ticker": "DCR/USD",
-          "score": 92.19
+          "score": 91.91
         }
       ]
     },
@@ -334,16 +334,16 @@
           "score": 100.0
         },
         {
-          "ticker": "BNB/USD",
-          "score": 90.95
+          "ticker": "PAXG/USD",
+          "score": 91.72
         },
         {
           "ticker": "PORTO/USD",
-          "score": 95.78
+          "score": 96.62
         },
         {
-          "ticker": "NFT/USD",
-          "score": 90.95
+          "ticker": "BNB/USD",
+          "score": 91.12
         }
       ]
     },
@@ -3122,58 +3122,68 @@
       "criteria": {
         "vol_max": 200
       },
-      "total": 340,
-      "passed": 332,
+      "total": 341,
+      "passed": 333,
       "top_20": [
         {
           "ticker": "PI/USD",
           "name": "Plian",
-          "vol": 124.3,
-          "perf_1d": 7.3,
-          "perf_7d": 39.4,
-          "perf_30d": 93.8,
-          "perf_ytd": 42.1,
-          "sharpe": 8.37
+          "vol": 123.3,
+          "perf_1d": 2.8,
+          "perf_7d": 33.6,
+          "perf_30d": 85.7,
+          "perf_ytd": 36.1,
+          "sharpe": 8.0
         },
         {
           "ticker": "PI/USDT",
           "name": "Pi",
-          "vol": 124.6,
-          "perf_1d": 7.2,
-          "perf_7d": 39.5,
-          "perf_30d": 93.9,
-          "perf_ytd": 42.2,
-          "sharpe": 8.34
-        },
-        {
-          "ticker": "MORPHO/USD",
-          "name": "Morpho",
-          "vol": 113.3,
-          "perf_1d": -1.6,
-          "perf_7d": 8.7,
-          "perf_30d": 64.3,
-          "perf_ytd": 76.8,
-          "sharpe": 6.91
+          "vol": 123.6,
+          "perf_1d": 2.3,
+          "perf_7d": 33.0,
+          "perf_30d": 85.0,
+          "perf_ytd": 35.6,
+          "sharpe": 7.92
         },
         {
           "ticker": "TAO/USD",
           "name": "Bittensor",
-          "vol": 94.5,
-          "perf_1d": 6.9,
-          "perf_7d": 31.7,
-          "perf_30d": 30.5,
-          "perf_ytd": 1.1,
-          "sharpe": 6.49
+          "vol": 99.6,
+          "perf_1d": 12.0,
+          "perf_7d": 37.9,
+          "perf_30d": 36.7,
+          "perf_ytd": 5.9,
+          "sharpe": 6.78
+        },
+        {
+          "ticker": "MORPHO/USD",
+          "name": "Morpho",
+          "vol": 113.8,
+          "perf_1d": -2.7,
+          "perf_7d": 7.6,
+          "perf_30d": 62.5,
+          "perf_ytd": 74.8,
+          "sharpe": 6.77
         },
         {
           "ticker": "RENDER/USD",
           "name": "Render Token",
-          "vol": 90.5,
-          "perf_1d": 10.3,
-          "perf_7d": 38.1,
-          "perf_30d": 35.8,
-          "perf_ytd": 34.9,
-          "sharpe": 5.57
+          "vol": 93.5,
+          "perf_1d": 12.5,
+          "perf_7d": 40.9,
+          "perf_30d": 38.5,
+          "perf_ytd": 37.6,
+          "sharpe": 5.67
+        },
+        {
+          "ticker": "DBC/USD",
+          "name": "DeepBrain Chain",
+          "vol": 155.5,
+          "perf_1d": 7.8,
+          "perf_7d": 32.2,
+          "perf_30d": 95.1,
+          "perf_ytd": 204.0,
+          "sharpe": 5.55
         },
         {
           "ticker": "GRIN/USD",
@@ -3186,144 +3196,134 @@
           "sharpe": 5.49
         },
         {
-          "ticker": "DBC/USD",
-          "name": "DeepBrain Chain",
-          "vol": 155.0,
-          "perf_1d": 6.7,
-          "perf_7d": 30.8,
-          "perf_30d": 93.0,
-          "perf_ytd": 200.7,
-          "sharpe": 5.48
-        },
-        {
           "ticker": "QUICK/USD",
           "name": "QuickSwap",
-          "vol": 65.0,
-          "perf_1d": 2.4,
-          "perf_7d": 15.2,
-          "perf_30d": 20.5,
-          "perf_ytd": 2.1,
-          "sharpe": 5.05
-        },
-        {
-          "ticker": "AKT/USD",
-          "name": "Akash Network",
-          "vol": 108.4,
-          "perf_1d": 3.0,
-          "perf_7d": 28.1,
-          "perf_30d": 38.0,
-          "perf_ytd": 22.0,
-          "sharpe": 4.85
+          "vol": 64.9,
+          "perf_1d": 1.9,
+          "perf_7d": 14.6,
+          "perf_30d": 19.9,
+          "perf_ytd": 1.6,
+          "sharpe": 4.96
         },
         {
           "ticker": "ETHFI/USD",
           "name": "ether.fi",
-          "vol": 71.6,
-          "perf_1d": 1.1,
-          "perf_7d": 8.1,
-          "perf_30d": 21.4,
-          "perf_ytd": -22.3,
-          "sharpe": 4.77
+          "vol": 71.7,
+          "perf_1d": 1.4,
+          "perf_7d": 8.5,
+          "perf_30d": 21.8,
+          "perf_ytd": -22.1,
+          "sharpe": 4.83
         },
         {
-          "ticker": "QSP/USD",
-          "name": "Quantstamp",
-          "vol": 166.7,
-          "perf_1d": 0.1,
-          "perf_7d": 5.5,
-          "perf_30d": 20.7,
-          "perf_ytd": 98.3,
-          "sharpe": 4.34
+          "ticker": "AKT/USD",
+          "name": "Akash Network",
+          "vol": 108.3,
+          "perf_1d": 2.5,
+          "perf_7d": 27.5,
+          "perf_30d": 37.4,
+          "perf_ytd": 21.4,
+          "sharpe": 4.8
         },
         {
           "ticker": "NEAR/USD",
           "name": "NEAR Protocol",
-          "vol": 114.5,
-          "perf_1d": -1.6,
-          "perf_7d": 9.7,
-          "perf_30d": 31.4,
-          "perf_ytd": -17.3,
-          "sharpe": 4.08
+          "vol": 114.4,
+          "perf_1d": -1.1,
+          "perf_7d": 10.3,
+          "perf_30d": 32.1,
+          "perf_ytd": -16.8,
+          "sharpe": 4.14
+        },
+        {
+          "ticker": "QSP/USD",
+          "name": "Quantstamp",
+          "vol": 167.8,
+          "perf_1d": -3.7,
+          "perf_7d": 1.5,
+          "perf_30d": 16.1,
+          "perf_ytd": 90.9,
+          "sharpe": 4.04
         },
         {
           "ticker": "CFX/USD",
           "name": "Conflux",
-          "vol": 76.8,
-          "perf_1d": 5.6,
-          "perf_7d": 15.5,
-          "perf_30d": 5.6,
-          "perf_ytd": -24.5,
-          "sharpe": 3.86
-        },
-        {
-          "ticker": "LUNC/USD",
-          "name": "Terra Classic",
-          "vol": 80.0,
-          "perf_1d": 2.0,
-          "perf_7d": -1.6,
-          "perf_30d": 26.0,
-          "perf_ytd": 4.0,
-          "sharpe": 3.85
-        },
-        {
-          "ticker": "HNT/USD",
-          "name": "Helium",
-          "vol": 145.3,
-          "perf_1d": 3.6,
-          "perf_7d": -0.5,
-          "perf_30d": 28.5,
-          "perf_ytd": -21.8,
-          "sharpe": 3.68
-        },
-        {
-          "ticker": "OKB/USD",
-          "name": "OKB",
-          "vol": 98.0,
-          "perf_1d": -0.6,
-          "perf_7d": -0.1,
-          "perf_30d": 22.9,
-          "perf_ytd": -14.1,
-          "sharpe": 3.64
-        },
-        {
-          "ticker": "MNT/USD",
-          "name": "Mantle",
-          "vol": 57.6,
-          "perf_1d": 0.8,
-          "perf_7d": 5.7,
-          "perf_30d": 13.4,
-          "perf_ytd": -25.8,
-          "sharpe": 3.62
-        },
-        {
-          "ticker": "BNB/EUR",
-          "name": "Binance Coin",
-          "vol": 45.4,
-          "perf_1d": 2.3,
-          "perf_7d": 7.1,
-          "perf_30d": 11.0,
-          "perf_ytd": -21.2,
-          "sharpe": 3.47
-        },
-        {
-          "ticker": "AVAX/EUR",
-          "name": "Avalanche",
-          "vol": 70.6,
-          "perf_1d": 2.1,
-          "perf_7d": 10.6,
-          "perf_30d": 11.4,
-          "perf_ytd": -25.7,
-          "sharpe": 3.18
+          "vol": 77.6,
+          "perf_1d": 6.5,
+          "perf_7d": 16.5,
+          "perf_30d": 6.5,
+          "perf_ytd": -23.9,
+          "sharpe": 3.96
         },
         {
           "ticker": "BOME/USDT",
           "name": "BOOK OF MEME",
-          "vol": 78.1,
-          "perf_1d": 2.2,
-          "perf_7d": 16.5,
-          "perf_30d": 11.7,
-          "perf_ytd": -22.9,
-          "sharpe": 3.18
+          "vol": 81.6,
+          "perf_1d": 7.6,
+          "perf_7d": 22.6,
+          "perf_30d": 17.6,
+          "perf_ytd": -18.9,
+          "sharpe": 3.84
+        },
+        {
+          "ticker": "MNT/USD",
+          "name": "Mantle",
+          "vol": 57.7,
+          "perf_1d": 1.7,
+          "perf_7d": 6.6,
+          "perf_30d": 14.4,
+          "perf_ytd": -25.1,
+          "sharpe": 3.8
+        },
+        {
+          "ticker": "OKB/USD",
+          "name": "OKB",
+          "vol": 97.9,
+          "perf_1d": 0.2,
+          "perf_7d": 0.7,
+          "perf_30d": 23.9,
+          "perf_ytd": -13.4,
+          "sharpe": 3.74
+        },
+        {
+          "ticker": "BNB/EUR",
+          "name": "Binance Coin",
+          "vol": 46.1,
+          "perf_1d": 3.4,
+          "perf_7d": 8.3,
+          "perf_30d": 12.2,
+          "perf_ytd": -20.3,
+          "sharpe": 3.71
+        },
+        {
+          "ticker": "LUNC/USD",
+          "name": "Terra Classic",
+          "vol": 79.9,
+          "perf_1d": 1.0,
+          "perf_7d": -2.6,
+          "perf_30d": 24.8,
+          "perf_ytd": 3.0,
+          "sharpe": 3.7
+        },
+        {
+          "ticker": "HNT/USD",
+          "name": "Helium",
+          "vol": 145.2,
+          "perf_1d": 3.1,
+          "perf_7d": -1.0,
+          "perf_30d": 27.9,
+          "perf_ytd": -22.2,
+          "sharpe": 3.64
+        },
+        {
+          "ticker": "AVAX/EUR",
+          "name": "Avalanche",
+          "vol": 72.2,
+          "perf_1d": 5.1,
+          "perf_7d": 13.8,
+          "perf_30d": 14.7,
+          "perf_ytd": -23.5,
+          "sharpe": 3.61
         }
       ]
     },
@@ -3538,7 +3538,20 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 0.29,
+    "details": {
+      "1_initial.after": {
+        "current": 3204,
+        "previous": 3203,
+        "delta": 1,
+        "pct_change": 0.03
+      },
+      "1_initial.crypto": {
+        "current": 341,
+        "previous": 340,
+        "delta": 1,
+        "pct_change": 0.29
+      }
+    }
   }
 }

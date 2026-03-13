@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-13T13:06:39.114033",
+  "timestamp": "2026-03-13T13:22:48.980442",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -4384,66 +4384,66 @@
         "matched_preset": "crypto_preset_fan_token",
         "profile_score": 100.0,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 49.3
+        "volatility": 49.6
       },
       {
         "rank": 3,
         "name": "MORPHO/USD",
         "ticker": "MORPHO/USD",
-        "sort_score": 95.02,
+        "sort_score": 94.75,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_defi",
-        "profile_score": 95.02,
-        "volatility": 113.3
+        "profile_score": 94.75,
+        "volatility": 113.8
       },
       {
         "rank": 4,
         "name": "LUNC/USD",
         "ticker": "LUNC/USD",
-        "sort_score": 92.64,
+        "sort_score": 92.14,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 92.64,
+        "profile_score": 92.14,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 80.0
+        "volatility": 79.9
       },
       {
         "rank": 5,
         "name": "DCR/USD",
         "ticker": "DCR/USD",
-        "sort_score": 92.19,
+        "sort_score": 91.91,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_pow_legacy",
-        "profile_score": 92.19,
+        "profile_score": 91.91,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 93.0
       },
       {
         "rank": 6,
-        "name": "BNB/USD",
-        "ticker": "BNB/USD",
-        "sort_score": 90.95,
+        "name": "PAXG/USD",
+        "ticker": "PAXG/USD",
+        "sort_score": 91.72,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_exchange",
-        "profile_score": 90.95,
+        "matched_preset": "crypto_preset_tokenized_gold",
+        "profile_score": 91.72,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 46.9
+        "volatility": 31.0
       },
       {
         "rank": 7,
-        "name": "NFT/USD",
-        "ticker": "NFT/USD",
-        "sort_score": 90.95,
+        "name": "BNB/USD",
+        "ticker": "BNB/USD",
+        "sort_score": 91.12,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 90.95,
+        "matched_preset": "crypto_preset_exchange",
+        "profile_score": 91.12,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 41.1
+        "volatility": 47.5
       }
     ],
     "bond": [
@@ -16610,12 +16610,12 @@
       "ticker": "MORPHO/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_defi",
-      "profile_score": 95.02,
-      "volatility": 113.3,
+      "profile_score": 94.75,
+      "volatility": 113.8,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 2,
-      "selection_reason": "Score profil élevé (95.02); Preset: crypto_preset_defi"
+      "selection_reason": "Score profil élevé (94.75); Preset: crypto_preset_defi"
     }
   ],
   "crypto_rejected": [
@@ -16625,7 +16625,7 @@
       "category": "crypto",
       "matched_preset": "crypto_preset_fan_token",
       "profile_score": 100.0,
-      "volatility": 49.3,
+      "volatility": 49.6,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16635,8 +16635,8 @@
       "ticker": "LUNC/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 92.64,
-      "volatility": 80.0,
+      "profile_score": 92.14,
+      "volatility": 79.9,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16646,8 +16646,19 @@
       "ticker": "DCR/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_pow_legacy",
-      "profile_score": 92.19,
+      "profile_score": 91.91,
       "volatility": 93.0,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "PAXG/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_tokenized_gold",
+      "profile_score": 91.72,
+      "volatility": 31.0,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16657,19 +16668,8 @@
       "ticker": "BNB/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_exchange",
-      "profile_score": 90.95,
-      "volatility": 46.9,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "NFT/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 90.95,
-      "volatility": 41.1,
+      "profile_score": 91.12,
+      "volatility": 47.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
