@@ -1,129 +1,76 @@
 /**
- * fiscal-optimizations.js — Optimisations fiscales avancées
- * 
- * 4 leviers issus de la presse patrimoniale (Capital mars 2026) :
- * 1. SCI décote 15% sur parts (illiquidité admise par le fisc)
- * 2. Primes AV exagérées (seuil 35% patrimoine → risque réintégration)
- * 3. Démembrement croisé SCI concubins (protection logement sans taxe 60%)
- * 4. Foncier rural (forêts, vignes, GFV/GFA/GFI) — exonération 75%
+ * fiscal-optimizations.js v2 — Optimisations fiscales intégrées dans les résultats
  *
- * Charge APRÈS civil-rights.js et comparison-table-unions.js
- * @version 1.0.0 — 2026-03-13
+ * 4 leviers avec calcul RÉEL des économies et affichage dans step 5 :
+ * 1. SCI décote 15% → réduit l'assiette taxable, recalcule les droits
+ * 2. AV exagérées → plafond prudent, droits si réintégrée, alternatives chiffrées
+ * 3. Démembrement croisé SCI concubins → scénario complet avec économie
+ * 4. Foncier rural 75% → réduction d'assiette et droits recalculés
+ *
+ * @version 2.0.0 — 2026-03-13
  */
 const FiscalOptimizations = (function() {
     'use strict';
 
-    // ============================================================
-    // 1. SCI — DÉCOTE 15% SUR PARTS SOCIALES
-    // ============================================================
     var SCI_DECOTE = 0.15;
     var SCI_FRAIS_NOTAIRE = 1500;
+    var AV_SEUIL_EXAGERE = 0.35;
+    var AV_SEUIL_REVENUS_ANNUELS = 0.50;
+    var FONCIER_RURAL_EXONERATION = 0.75;
+    var FONCIER_RURAL_PLAFOND = 500000;
+    var FONCIER_RURAL_RENDEMENT_MIN = 0.015;
+    var FONCIER_RURAL_RENDEMENT_MAX = 0.02;
+    var FONCIER_RURAL_TICKET_ENTREE = 5000;
 
-    /**
-     * Applique la décote SCI de 15% sur la valeur d'un bien détenu via SCI.
-     * Les parts de SCI sont réputées illiquides → le fisc admet 15% de décote.
-     * @param {number} valeurBien - Valeur vénale du bien
-     * @param {string} detention - Mode de détention ('direct', 'sci_is', 'sci_ir', 'indivision')
-     * @returns {Object} { valeurFiscale, decote, economie, applicable, explanation }
-     */
+    // ============================================================
+    // 1. SCI DÉCOTE 15%
+    // ============================================================
+
     function applySCIDecote(valeurBien, detention) {
         var isSCI = detention === 'sci_is' || detention === 'sci_ir';
-        if (!isSCI || valeurBien <= 0) {
-            return { valeurFiscale: valeurBien, decote: 0, economie: 0, applicable: false, explanation: 'Détention directe — pas de décote SCI.' };
-        }
+        if (!isSCI || valeurBien <= 0) return { valeurFiscale: valeurBien, decote: 0, economie: 0, applicable: false, explanation: 'Détention directe — pas de décote SCI.' };
         var decote = Math.round(valeurBien * SCI_DECOTE);
-        var valeurFiscale = valeurBien - decote;
-        return {
-            valeurFiscale: valeurFiscale,
-            decote: decote,
-            economie: decote,
-            applicable: true,
-            fraisCreation: SCI_FRAIS_NOTAIRE,
-            explanation: 'SCI : décote 15% admise par le fisc (illiquidité des parts). Valeur ' + fmt(valeurBien) + ' → assiette fiscale ' + fmt(valeurFiscale) + ' (économie ' + fmt(decote) + ').' +
-                ' Frais de création SCI ~' + fmt(SCI_FRAIS_NOTAIRE) + '.'
-        };
+        return { valeurFiscale: valeurBien - decote, decote: decote, economie: decote, applicable: true, fraisCreation: SCI_FRAIS_NOTAIRE,
+            explanation: 'SCI : décote 15% (illiquidité). ' + fmt(valeurBien) + ' → ' + fmt(valeurBien - decote) + ' (−' + fmt(decote) + ').' };
     }
 
-    /**
-     * Calcule l'impact fiscal total de la décote SCI sur un patrimoine immobilier.
-     * Scanne tous les biens en mode détaillé et applique la décote si SCI.
-     */
     function computeSCIImpact() {
-        var state = getState();
-        if (!state) return null;
-        var biens = state.immos || [];
-        var totalDecote = 0, biensEligibles = 0, details = [];
+        var state = getState(); if (!state) return null;
+        var biens = state.immos || [], totalDecote = 0, biensEligibles = 0, details = [];
         biens.forEach(function(b) {
             var r = applySCIDecote(b.valeur || 0, b.detention || 'direct');
-            if (r.applicable) {
-                totalDecote += r.decote;
-                biensEligibles++;
-                details.push({ nom: b.nom || 'Bien immobilier', valeur: b.valeur, decote: r.decote, valeurFiscale: r.valeurFiscale });
-            }
+            if (r.applicable) { totalDecote += r.decote; biensEligibles++; details.push({ nom: b.nom || 'Bien', valeur: b.valeur, decote: r.decote, valeurFiscale: r.valeurFiscale }); }
         });
         return { totalDecote: totalDecote, biensEligibles: biensEligibles, details: details };
     }
 
     // ============================================================
-    // 2. PRIMES AV EXAGÉRÉES — ALERTE RÉINTÉGRATION
+    // 2. PRIMES AV EXAGÉRÉES
     // ============================================================
-    var AV_SEUIL_EXAGERE = 0.35;
-    var AV_SEUIL_REVENUS_ANNUELS = 0.50;
 
-    /**
-     * Vérifie si les primes AV sont exagérées eu égard au patrimoine.
-     * Si > 35% du patrimoine total → risque de réintégration dans la succession.
-     * Si > 50% des revenus annuels → risque aggravé (jurisprudence Cass. 2ème civ.).
-     *
-     * @param {number} totalPrimesAV - Total des primes versées en AV
-     * @param {number} patrimoineTotal - Patrimoine total (actif net)
-     * @param {number} revenusAnnuels - Revenus annuels du souscripteur (optionnel)
-     * @returns {Object} { isExagere, ratio, risque, warnings, recommandations }
-     */
     function checkPrimesExagerees(totalPrimesAV, patrimoineTotal, revenusAnnuels) {
         if (patrimoineTotal <= 0) return { isExagere: false, ratio: 0, risque: 'aucun', warnings: [], recommandations: [] };
         var ratio = totalPrimesAV / patrimoineTotal;
         var ratioRevenus = revenusAnnuels > 0 ? totalPrimesAV / revenusAnnuels : 0;
-        var warnings = [], recommandations = [];
-        var risque = 'aucun';
-
+        var warnings = [], recommandations = [], risque = 'aucun';
         if (ratio > AV_SEUIL_EXAGERE) {
             risque = ratioRevenus > AV_SEUIL_REVENUS_ANNUELS ? 'eleve' : 'moyen';
-            warnings.push('\u26a0\ufe0f Primes AV = ' + Math.round(ratio * 100) + '% du patrimoine (seuil alerte : 35%). ' +
-                'Les héritiers réservataires peuvent demander la réintégration du contrat dans la succession.');
-            if (ratioRevenus > AV_SEUIL_REVENUS_ANNUELS) {
-                warnings.push('\ud83d\udea8 Primes AV > 50% des revenus annuels → risque élevé de requalification (Cass. 2\u00e8me civ., arrêts constants).');
-            }
-            recommandations.push('Limiter les primes AV à ' + fmt(Math.round(patrimoineTotal * AV_SEUIL_EXAGERE)) + ' (35% du patrimoine).');
-            recommandations.push('Diversifier : démembrement immobilier, donation NP, SCI + décote 15%.');
-            recommandations.push('Étaler les versements dans le temps pour réduire le ratio annuel.');
-            if (revenusAnnuels > 0) recommandations.push('Plafond prudent/an : ' + fmt(Math.round(revenusAnnuels * 0.30)) + ' (30% des revenus).');
+            warnings.push('Primes AV = ' + Math.round(ratio * 100) + '% du patrimoine (seuil 35%). Risque réintégration.');
+            if (ratioRevenus > AV_SEUIL_REVENUS_ANNUELS) warnings.push('AV > 50% revenus annuels → risque élevé (Cass. 2ème civ.).');
+            recommandations.push('Limiter AV à ' + fmt(Math.round(patrimoineTotal * AV_SEUIL_EXAGERE)) + ' (35%).');
+            recommandations.push('Diversifier : démembrement NP, SCI décote 15%, GFV/GFA.');
+            recommandations.push('Étaler les versements dans le temps.');
         }
-
-        return {
-            isExagere: ratio > AV_SEUIL_EXAGERE,
-            ratio: ratio,
-            ratioRevenus: ratioRevenus,
-            risque: risque,
+        return { isExagere: ratio > AV_SEUIL_EXAGERE, ratio: ratio, ratioRevenus: ratioRevenus, risque: risque,
             seuilMax: Math.round(patrimoineTotal * AV_SEUIL_EXAGERE),
             depassement: ratio > AV_SEUIL_EXAGERE ? totalPrimesAV - Math.round(patrimoineTotal * AV_SEUIL_EXAGERE) : 0,
-            warnings: warnings,
-            recommandations: recommandations
-        };
+            warnings: warnings, recommandations: recommandations };
     }
 
-    /**
-     * Scanne le patrimoine et détecte les AV exagérées.
-     */
     function detectAVExagerees() {
-        var state = getState();
-        if (!state) return null;
-        var F = SD._fiscal;
-        var pat = F.computePatrimoine();
-        var totalAV = 0;
-        (state.financials || []).forEach(function(f) {
-            if (f.type === 'assurance_vie' || f.type === 'av_capitalisation') totalAV += (f.montant || 0);
-        });
+        var state = getState(); if (!state) return null;
+        var F = SD._fiscal, pat = F.computePatrimoine(), totalAV = 0;
+        (state.financials || []).forEach(function(f) { if (f.type === 'assurance_vie' || f.type === 'av_capitalisation') totalAV += (f.montant || 0); });
         return checkPrimesExagerees(totalAV, pat.actifNet, 0);
     }
 
@@ -131,198 +78,312 @@ const FiscalOptimizations = (function() {
     // 3. DÉMEMBREMENT CROISÉ SCI CONCUBINS
     // ============================================================
 
-    /**
-     * Calcule le montage "démembrement croisé SCI" pour concubins.
-     * Chaque concubin détient la NP de ses parts + l'US des parts de l'autre.
-     * Au décès, le survivant récupère la PP de ses parts (US s'éteint) SANS DROITS
-     * et conserve l'US des parts du défunt → reste dans le logement.
-     * Les héritiers du défunt récupèrent la NP.
-     *
-     * @param {number} valeurBien - Valeur du bien en SCI
-     * @param {number} ageA - Âge du concubin A
-     * @param {number} ageB - Âge du concubin B
-     * @param {number} nbEnfantsA - Enfants du concubin A
-     * @param {number} nbEnfantsB - Enfants du concubin B
-     * @returns {Object} Montage complet avec économie vs direct
-     */
     function computeDemembrementCroiseSCI(valeurBien, ageA, ageB, nbEnfantsA, nbEnfantsB) {
         var F = SD._fiscal;
         var partChacun = valeurBien / 2;
         var decotePartChacun = Math.round(partChacun * (1 - SCI_DECOTE));
-
-        // NP ratio selon âge (art. 669)
         var npRatioA = F.getNPRatio(ageA || 50);
-        var npRatioB = F.getNPRatio(ageB || 50);
-
-        // Scénario 1: SANS montage (concubin = tiers 60%)
         var droitsDirect = Math.round(Math.max(0, partChacun - 1594) * 0.60);
-
-        // Scénario 2: AVEC démembrement croisé SCI
-        // Au décès de A : le survivant B ne paie RIEN (l'US des parts de A qu'il détient s'éteint,
-        // et la NP de ses propres parts se reconstitue en PP sans droits).
-        // Les enfants de A héritent de la NP des parts de A (valorisée en NP après décote SCI).
         var npPartsA = Math.round(decotePartChacun * npRatioA);
-        var npPartsB = Math.round(decotePartChacun * npRatioB);
-
-        // Droits succession enfants sur NP (ligne directe, pas tiers !)
         var abatEnfantA = 100000 * Math.max(1, nbEnfantsA);
         var baseEnfantsA = Math.max(0, npPartsA - abatEnfantA);
         var droitsEnfantsA = baseEnfantsA > 0 ? F.calcDroits(baseEnfantsA / Math.max(1, nbEnfantsA), F.getBareme('enfant')) * Math.max(1, nbEnfantsA) : 0;
-
-        var economie = droitsDirect - droitsEnfantsA;
-
         return {
-            valeurBien: valeurBien,
-            partChacun: partChacun,
-            decotePartChacun: decotePartChacun,
-            scenarioDirect: { droits: droitsDirect, taux: 0.60, explanation: 'Concubin tiers : 60% sur ' + fmt(partChacun) + ' après abat. 1 594\u20ac.' },
-            scenarioCroise: {
-                droitsSurvivant: 0,
-                droitsEnfants: droitsEnfantsA,
-                npValeur: npPartsA,
-                explanation: 'D\u00e9membrement crois\u00e9 SCI : survivant exon\u00e9r\u00e9 (US s\'\u00e9teint + NP→PP sans droits). Enfants h\u00e9ritent NP ' + fmt(npPartsA) + ' (ligne directe, barème 5-45%).'
-            },
-            economie: economie,
-            fraisCreation: SCI_FRAIS_NOTAIRE + 500,
-            applicable: true,
-            conditions: ['Les 2 concubins doivent détenir 50/50', 'Chacun détient NP de ses parts + US des parts de l\'autre', 'Statuts SCI doivent prévoir la clause de démembrement croisé'],
-            warnings: nbEnfantsA === 0 ? ['Sans enfant de A, les parts NP vont aux héritiers légaux (parents, frères...)'] : []
+            valeurBien: valeurBien, partChacun: partChacun, decotePartChacun: decotePartChacun,
+            scenarioDirect: { droits: droitsDirect, taux: 0.60, explanation: 'Concubin tiers : 60% sur ' + fmt(partChacun) },
+            scenarioCroise: { droitsSurvivant: 0, droitsEnfants: droitsEnfantsA, npValeur: npPartsA,
+                explanation: 'SCI croisée : survivant 0€. Enfants NP ' + fmt(npPartsA) + ' en ligne directe.' },
+            economie: droitsDirect - droitsEnfantsA, fraisCreation: SCI_FRAIS_NOTAIRE + 500, applicable: true,
+            conditions: ['Détention 50/50', 'NP ses parts + US parts de l\'autre', 'Clause dans statuts SCI'],
+            warnings: nbEnfantsA === 0 ? ['Sans enfant, NP va aux héritiers légaux'] : []
         };
     }
 
     // ============================================================
-    // 4. FONCIER RURAL — EXONÉRATION 75% (GFV/GFA/GFI)
+    // 4. FONCIER RURAL 75%
     // ============================================================
-    var FONCIER_RURAL_EXONERATION = 0.75;
-    var FONCIER_RURAL_PLAFOND = 500000;
-    var FONCIER_RURAL_RENDEMENT_MIN = 0.015;
-    var FONCIER_RURAL_RENDEMENT_MAX = 0.02;
-    var FONCIER_RURAL_TICKET_ENTREE = 5000;
 
-    /**
-     * Calcule l'exonération 75% pour les actifs fonciers ruraux.
-     * S'applique aux : forêts (GFI), vignes (GFV), terres agricoles (GFA).
-     * Plafond : 500 000€ par bénéficiaire pour vignes/terres.
-     * Forêts : régime Monichon, pas de plafond mais engagement de gestion 30 ans.
-     *
-     * @param {number} valeur - Valeur de l'investissement foncier
-     * @param {string} type - 'foret'|'vigne'|'terre_agricole'|'gfv'|'gfa'|'gfi'
-     * @param {number} nbBeneficiaires - Nombre de bénéficiaires
-     * @returns {Object} { valeurTaxable, exoneration, economieEstimee, conditions }
-     */
     function computeFoncierRural(valeur, type, nbBeneficiaires) {
         if (valeur <= 0) return { valeurTaxable: valeur, exoneration: 0, economieEstimee: 0, applicable: false };
-        var nBen = Math.max(1, nbBeneficiaires || 1);
-        var partParBen = valeur / nBen;
+        var nBen = Math.max(1, nbBeneficiaires || 1), partParBen = valeur / nBen;
         var isForet = type === 'foret' || type === 'gfi';
-
-        // Plafond 500k€/bénéficiaire pour vigne/terre, pas de plafond forêt
         var baseExo = isForet ? partParBen : Math.min(partParBen, FONCIER_RURAL_PLAFOND);
         var exoParBen = Math.round(baseExo * FONCIER_RURAL_EXONERATION);
-        var taxableParBen = partParBen - exoParBen;
-        var totalExo = exoParBen * nBen;
-        var totalTaxable = taxableParBen * nBen;
-
-        // Estimation droits économisés (barème ligne directe ~20% moyen)
-        var economieEstimee = Math.round(totalExo * 0.20);
-
-        var typeLabel = { foret: 'For\u00eat (GFI)', vigne: 'Vigne (GFV)', terre_agricole: 'Terre agricole (GFA)', gfv: 'GFV', gfa: 'GFA', gfi: 'GFI' };
-
-        return {
-            valeurTaxable: totalTaxable,
-            exoneration: totalExo,
-            economieEstimee: economieEstimee,
-            applicable: true,
-            type: typeLabel[type] || type,
-            rendementEstime: FONCIER_RURAL_RENDEMENT_MIN + ' - ' + FONCIER_RURAL_RENDEMENT_MAX,
-            ticketEntree: FONCIER_RURAL_TICKET_ENTREE,
-            explanation: (typeLabel[type] || type) + ' : exonération 75% (seuls 25% taxés). ' +
-                fmt(valeur) + ' → assiette ' + fmt(totalTaxable) + '. ' +
-                '\u00c9conomie estim\u00e9e ~' + fmt(economieEstimee) + '.',
-            conditions: isForet
-                ? ['Engagement de gestion durable 30 ans (régime Monichon)', 'Pas de plafond par bénéficiaire', 'Rendement ~1,5-2%/an']
-                : ['Bail rural en cours (min. 18 ans pour terres, 25 ans pour vignes)', 'Plafond ' + fmt(FONCIER_RURAL_PLAFOND) + '/bénéficiaire', 'Conservation 5 ans minimum', 'Rendement ~1,5-2%/an', 'Ticket entrée dès ' + fmt(FONCIER_RURAL_TICKET_ENTREE)]
-        };
+        var totalExo = exoParBen * nBen, totalTaxable = (partParBen - exoParBen) * nBen;
+        var typeLabel = { foret: 'Forêt/GFI', vigne: 'Vigne/GFV', terre_agricole: 'Terre/GFA', gfv: 'GFV', gfa: 'GFA', gfi: 'GFI' };
+        return { valeurTaxable: totalTaxable, exoneration: totalExo, economieEstimee: Math.round(totalExo * 0.20),
+            applicable: true, type: typeLabel[type] || type, ticketEntree: FONCIER_RURAL_TICKET_ENTREE,
+            explanation: (typeLabel[type] || type) + ' : exo 75%. ' + fmt(valeur) + ' → taxable ' + fmt(totalTaxable),
+            conditions: isForet ? ['Gestion durable 30 ans', 'Pas de plafond'] : ['Bail rural ≥ 18 ans', 'Plafond ' + fmt(FONCIER_RURAL_PLAFOND) + '/bén.', 'Conservation 5 ans min.'] };
     }
 
     // ============================================================
-    // PATCH SD — Injection des warnings dans step 5
+    // 5. CALCUL GLOBAL OPTIMISÉ — Scénario actuel vs optimisé
     // ============================================================
 
-    function renderOptimizationWarnings() {
-        var warningsEl = document.getElementById('results-warnings');
-        if (!warningsEl) return;
-        var html = '';
+    /**
+     * Calcule le scénario complet : situation actuelle + avec toutes les optimisations.
+     * Retourne les montants corrigés et l'économie totale.
+     */
+    function computeOptimizedScenario() {
+        var state = getState(); if (!state) return null;
+        var F = SD._fiscal, FISCAL = F.getFISCAL(), pat = F.computePatrimoine();
+        var totalBrut = pat.actifNet;
+        var bens = state.beneficiaries || [];
+        var nbEnfants = bens.filter(function(b) { return b.lien === 'enfant'; }).length;
+        var nbDonors = state.mode === 'couple' ? 2 : 1;
+        if (totalBrut <= 0 || bens.length === 0) return null;
 
-        // --- SCI Décote ---
-        var sciImpact = computeSCIImpact();
-        if (sciImpact && sciImpact.biensEligibles > 0) {
-            html += '<div class="warning-box success" style="margin-top:8px;"><i class="fas fa-building"></i><span>';
-            html += '<strong>SCI — Décote 15% applicable</strong> sur ' + sciImpact.biensEligibles + ' bien(s). ';
-            html += 'Réduction d\'assiette : <strong>' + fmt(sciImpact.totalDecote) + '</strong>. ';
-            html += 'Les parts de SCI étant illiquides, le fisc admet cette décote sur leur valeur vénale.';
-            html += '</span></div>';
+        // --- Calcul droits BRUT (sans optimisations) ---
+        var droitsBrut = calcDroitsForBens(totalBrut, bens, nbDonors, true);
+
+        // --- Collecte des optimisations applicables ---
+        var optimisations = [];
+        var assietteOptimisee = totalBrut;
+
+        // 1. SCI décote 15%
+        var sciResult = computeSCIImpact();
+        if (sciResult && sciResult.totalDecote > 0) {
+            assietteOptimisee -= sciResult.totalDecote;
+            optimisations.push({
+                id: 'sci_decote', label: 'SCI — Décote 15% illiquidité', icon: 'fa-building', color: 'var(--accent-blue)',
+                reduction: sciResult.totalDecote, biensCount: sciResult.biensEligibles,
+                detail: sciResult.details.map(function(d) { return d.nom + ' : ' + fmt(d.valeur) + ' → ' + fmt(d.valeurFiscale); }).join(' · '),
+                conseil: 'Loger les biens immobiliers en SCI pour bénéficier de la décote 15%. Coût : ~' + fmt(SCI_FRAIS_NOTAIRE) + '/SCI.',
+                article: 'Jurisprudence constante — illiquidité des parts sociales'
+            });
         }
 
-        // --- AV Exagérées ---
-        var avCheck = detectAVExagerees();
-        if (avCheck && avCheck.isExagere) {
-            var cssClass = avCheck.risque === 'eleve' ? 'error' : 'warn';
-            var icon = avCheck.risque === 'eleve' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle';
-            html += '<div class="warning-box ' + cssClass + '" style="margin-top:8px;"><i class="fas ' + icon + '"></i><span>';
-            html += '<strong>\u26a0\ufe0f Primes AV potentiellement exagérées</strong> (' + Math.round(avCheck.ratio * 100) + '% du patrimoine, seuil 35%). ';
-            html += 'Risque : réintégration du contrat dans la succession par les héritiers réservataires. ';
-            html += '<br><strong>Plafond prudent :</strong> ' + fmt(avCheck.seuilMax) + '. ';
-            html += '<strong>Dépassement :</strong> ' + fmt(avCheck.depassement) + '.';
-            if (avCheck.recommandations.length > 0) {
-                html += '<br><em>Alternatives : ' + avCheck.recommandations.slice(0, 2).join(' · ') + '</em>';
+        // 2. Suggestion SCI pour biens en direct
+        var biensDirectSCI = (state.immos || []).filter(function(b) { return (b.detention === 'direct' || !b.detention) && (b.valeur || 0) > 50000; });
+        if (biensDirectSCI.length > 0 && (!sciResult || sciResult.biensEligibles === 0)) {
+            var potentielDecote = 0;
+            biensDirectSCI.forEach(function(b) { potentielDecote += Math.round((b.valeur || 0) * SCI_DECOTE); });
+            if (potentielDecote > 5000) {
+                optimisations.push({
+                    id: 'sci_suggestion', label: 'SCI — Potentiel si mise en société', icon: 'fa-lightbulb', color: 'var(--accent-amber)',
+                    reduction: 0, potentiel: potentielDecote,
+                    detail: biensDirectSCI.length + ' bien(s) en détention directe éligible(s)',
+                    conseil: 'En logeant ces biens en SCI, décote potentielle de ' + fmt(potentielDecote) + '. Coût création ~' + fmt(SCI_FRAIS_NOTAIRE) + '. Avantages : transmission progressive des parts, gérance conservée.',
+                    article: 'Art. 1845+ Code civil'
+                });
             }
-            html += '</span></div>';
         }
 
-        // --- Démembrement croisé SCI concubins ---
-        var state = getState();
-        if (state && state._unionType === 'concubinage') {
-            var immos = state.immos || [];
-            var totalImmo = 0;
-            immos.forEach(function(b) { totalImmo += (b.valeur || 0); });
-            if (totalImmo > 0) {
-                html += '<div class="warning-box info" style="margin-top:8px;"><i class="fas fa-key"></i><span>';
-                html += '<strong>\ud83c\udfe0 Concubinage + immobilier → SCI à démembrement croisé</strong><br>';
-                html += 'Permet au survivant de rester dans le logement sans payer 60%. ';
-                html += 'Chaque concubin détient la NP de ses parts + l\'US des parts de l\'autre. ';
-                html += 'Au décès : le survivant reconstitue la PP de ses parts (US s\'éteint) sans droits. ';
-                html += 'Les enfants héritent de la NP des parts du défunt au <strong>barème ligne directe (5-45%)</strong> au lieu de 60%. ';
-                html += 'Coût de mise en place : ~' + fmt(SCI_FRAIS_NOTAIRE + 500) + '.';
-                html += '</span></div>';
-            }
-        }
-
-        // --- Foncier rural ---
-        var financials = state ? (state.financials || []) : [];
-        financials.forEach(function(f) {
-            if (f.type === 'gfv' || f.type === 'gfa' || f.type === 'gfi' || f.type === 'foret' || f.type === 'vigne' || f.type === 'terre_agricole') {
-                var nBen = state.beneficiaries ? state.beneficiaries.filter(function(b) { return b.lien === 'enfant'; }).length : 1;
-                var r = computeFoncierRural(f.montant || 0, f.type, nBen);
-                if (r.applicable) {
-                    html += '<div class="warning-box success" style="margin-top:8px;"><i class="fas fa-tree"></i><span>';
-                    html += '<strong>\ud83c\udf3e ' + r.type + ' — Exonération 75%</strong>. ';
-                    html += r.explanation;
-                    html += '</span></div>';
-                }
+        // 3. Foncier rural
+        var foncierTotal = { exo: 0, count: 0, items: [] };
+        (state.financials || []).forEach(function(f) {
+            var types = ['gfv', 'gfa', 'gfi', 'foret', 'vigne', 'terre_agricole'];
+            if (types.indexOf(f.type) >= 0) {
+                var r = computeFoncierRural(f.montant || 0, f.type, nbEnfants || 1);
+                if (r.applicable) { foncierTotal.exo += r.exoneration; foncierTotal.count++; foncierTotal.items.push(r); }
             }
         });
+        if (foncierTotal.exo > 0) {
+            assietteOptimisee -= foncierTotal.exo;
+            optimisations.push({
+                id: 'foncier_rural', label: 'Foncier rural — Exonération 75%', icon: 'fa-tree', color: 'var(--accent-green)',
+                reduction: foncierTotal.exo, biensCount: foncierTotal.count,
+                detail: foncierTotal.items.map(function(i) { return i.type + ' : exo ' + fmt(i.exoneration); }).join(' · '),
+                conseil: 'Seuls 25% de la valeur sont taxés. Rendement 1,5-2%/an. Ticket dès ' + fmt(FONCIER_RURAL_TICKET_ENTREE) + '.',
+                article: 'Art. 793 CGI (GFV/GFA/GFI)'
+            });
+        }
 
-        if (html) warningsEl.insertAdjacentHTML('beforeend', html);
+        // 4. Suggestion foncier si patrimoine > 300k et pas de foncier
+        if (foncierTotal.count === 0 && totalBrut > 300000 && nbEnfants > 0) {
+            var suggestionMontant = Math.min(100000, Math.round(totalBrut * 0.10));
+            var suggFoncier = computeFoncierRural(suggestionMontant, 'gfv', nbEnfants);
+            optimisations.push({
+                id: 'foncier_suggestion', label: 'Foncier rural — Piste de diversification', icon: 'fa-seedling', color: 'var(--accent-emerald)',
+                reduction: 0, potentiel: suggFoncier.exoneration,
+                detail: 'Ex : ' + fmt(suggestionMontant) + ' en GFV → exo 75% = ' + fmt(suggFoncier.exoneration) + ' hors assiette',
+                conseil: 'Investir 5-10% du patrimoine en GFV/GFA/GFI. Exonération 75%, rendement 1,5-2%/an. Ticket dès ' + fmt(FONCIER_RURAL_TICKET_ENTREE) + '.',
+                article: 'Art. 793 CGI'
+            });
+        }
+
+        // 5. AV exagérées
+        var avCheck = detectAVExagerees();
+        if (avCheck && avCheck.isExagere) {
+            var droitsReintegration = calcDroitsReintegrationAV(avCheck.depassement, bens, nbDonors);
+            optimisations.push({
+                id: 'av_exagerees', label: 'AV exagérées — Risque réintégration', icon: 'fa-exclamation-triangle', color: 'var(--accent-coral)',
+                reduction: 0, risque: droitsReintegration,
+                detail: 'AV = ' + Math.round(avCheck.ratio * 100) + '% patrimoine (seuil 35%). Dépassement ' + fmt(avCheck.depassement),
+                conseil: 'Réduire l\'AV à ' + fmt(avCheck.seuilMax) + ' max. Réallouer le surplus (' + fmt(avCheck.depassement) + ') vers : donation NP (−' + fmt(Math.round(avCheck.depassement * 0.15)) + ' via décote), SCI, ou GFV (−75% d\'assiette).',
+                article: 'L132-13 Code assurances — Cass. 2ème civ.'
+            });
+        }
+
+        // 6. Démembrement croisé concubins
+        if (state._unionType === 'concubinage') {
+            var totalImmo = 0; var ageD = 50;
+            (state.immos || []).forEach(function(b) { totalImmo += (b.valeur || 0); });
+            var donors = typeof FamilyGraph !== 'undefined' ? FamilyGraph.getDonors() : [];
+            if (donors.length > 0 && donors[0].age) ageD = donors[0].age;
+            if (totalImmo > 0) {
+                var dcResult = computeDemembrementCroiseSCI(totalImmo, ageD, ageD, nbEnfants, 0);
+                optimisations.push({
+                    id: 'croise_concubins', label: 'SCI croisée — Protection concubin', icon: 'fa-key', color: 'var(--accent-purple)',
+                    reduction: 0, economie: dcResult.economie,
+                    detail: 'Sans montage : ' + fmt(dcResult.scenarioDirect.droits) + ' (60%). Avec SCI croisée : ' + fmt(dcResult.scenarioCroise.droitsEnfants) + ' (ligne directe)',
+                    conseil: 'Survivant reste dans le logement SANS droits. Enfants héritent en NP au barème 5-45% (au lieu de 60%). Économie : ' + fmt(dcResult.economie) + '. Coût : ~' + fmt(dcResult.fraisCreation) + '.',
+                    article: 'Art. 1845+ CC — SCI démembrée'
+                });
+            }
+        }
+
+        // --- Calcul droits OPTIMISÉ ---
+        var assietteCorrigee = Math.max(0, assietteOptimisee);
+        var droitsOptimises = calcDroitsForBens(assietteCorrigee, bens, nbDonors, true);
+        var economieDroits = droitsBrut - droitsOptimises;
+
+        // Ajouter économie concubin si applicable
+        var economieConcubin = 0;
+        optimisations.forEach(function(o) { if (o.id === 'croise_concubins' && o.economie) economieConcubin = o.economie; });
+
+        return {
+            brut: { assiette: totalBrut, droits: droitsBrut },
+            optimise: { assiette: assietteCorrigee, droits: droitsOptimises },
+            economieDroits: economieDroits,
+            economieTotale: economieDroits + economieConcubin,
+            optimisations: optimisations,
+            nbEnfants: nbEnfants,
+            nbDonors: nbDonors
+        };
+    }
+
+    function calcDroitsForBens(montant, bens, nbDonors, isSuccession) {
+        var F = SD._fiscal, FISCAL = F.getFISCAL();
+        if (montant <= 0 || bens.length === 0) return 0;
+        var total = 0;
+        bens.forEach(function(b) {
+            var part = montant / bens.length;
+            var abat = F.getAbattement(b.lien, isSuccession) * nbDonors - (b.donationAnterieure || 0);
+            var handicapAbat = b.handicap ? FISCAL.abattements.handicap : 0;
+            total += F.calcDroits(Math.max(0, part - abat - handicapAbat), F.getBareme(b.lien));
+        });
+        return total;
+    }
+
+    function calcDroitsReintegrationAV(depassement, bens, nbDonors) {
+        var bensEnfants = bens.filter(function(b) { return b.lien === 'enfant'; });
+        if (bensEnfants.length === 0) return 0;
+        return calcDroitsForBens(depassement, bensEnfants, nbDonors, true);
+    }
+
+    // ============================================================
+    // 6. RENDU — Panneau « Solutions d'optimisation » step 5
+    // ============================================================
+
+    function renderOptimizationsPanel() {
+        var result = computeOptimizedScenario();
+        if (!result || result.optimisations.length === 0) return;
+
+        var existing = document.getElementById('fiscal-optimizations-panel');
+        if (existing) existing.remove();
+
+        var ecoSign = result.economieTotale > 0;
+        var ecoColor = ecoSign ? 'var(--accent-green)' : 'var(--text-muted)';
+
+        var html = '<div class="section-card" id="fiscal-optimizations-panel" style="border-color:rgba(16,185,129,.25);margin-bottom:20px;">';
+
+        // Titre
+        html += '<div class="section-title"><i class="fas fa-chess" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(5,150,105,.1));color:var(--accent-green);"></i> Solutions d\'optimisation fiscale</div>';
+        html += '<div class="section-subtitle">Leviers concrets pour réduire les droits de succession — impact chiffré sur votre patrimoine</div>';
+
+        // Résumé économie
+        if (result.economieTotale > 0) {
+            html += '<div style="padding:20px;border-radius:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);margin-bottom:20px;text-align:center;">';
+            html += '<div style="font-size:.78rem;color:var(--text-muted);">ÉCONOMIE TOTALE ESTIMÉE</div>';
+            html += '<div style="font-size:1.8rem;font-weight:900;color:var(--accent-green);">' + fmt(result.economieTotale) + '</div>';
+            html += '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:4px;">Droits bruts ' + fmt(result.brut.droits) + ' → optimisés ' + fmt(result.optimise.droits) + '</div>';
+            html += '</div>';
+        }
+
+        // Tableau assiette brut vs optimisé
+        html += '<div style="overflow-x:auto;border-radius:12px;border:1px solid rgba(198,134,66,.1);margin-bottom:20px;">';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem;">';
+        html += '<thead><tr style="background:rgba(198,134,66,.06);">';
+        html += '<th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--text-muted);">Critère</th>';
+        html += '<th style="padding:12px 16px;text-align:right;font-weight:600;color:var(--text-muted);">Actuel</th>';
+        html += '<th style="padding:12px 16px;text-align:right;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.04);">Optimisé</th>';
+        html += '</tr></thead><tbody>';
+        html += '<tr><td style="padding:10px 16px;border-bottom:1px solid rgba(198,134,66,.05);">Assiette taxable</td>';
+        html += '<td style="padding:10px 16px;text-align:right;border-bottom:1px solid rgba(198,134,66,.05);">' + fmt(result.brut.assiette) + '</td>';
+        html += '<td style="padding:10px 16px;text-align:right;border-bottom:1px solid rgba(198,134,66,.05);background:rgba(16,185,129,.02);font-weight:700;">' + fmt(result.optimise.assiette) + '</td></tr>';
+        html += '<tr style="font-weight:700;border-top:2px solid rgba(198,134,66,.15);"><td style="padding:14px 16px;">Droits de succession</td>';
+        html += '<td style="padding:14px 16px;text-align:right;">' + fmt(result.brut.droits) + '</td>';
+        html += '<td style="padding:14px 16px;text-align:right;background:rgba(16,185,129,.04);color:var(--accent-green);">' + fmt(result.optimise.droits);
+        if (result.economieDroits > 0) html += ' <span style="font-size:.7rem;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,.12);">−' + fmt(result.economieDroits) + '</span>';
+        html += '</td></tr>';
+        html += '</tbody></table></div>';
+
+        // Détail de chaque optimisation
+        result.optimisations.forEach(function(opt, idx) {
+            var isRisque = opt.id === 'av_exagerees';
+            var isSuggestion = opt.id.indexOf('suggestion') >= 0;
+            var borderColor = isRisque ? 'rgba(255,107,107,.2)' : isSuggestion ? 'rgba(255,179,0,.15)' : 'rgba(16,185,129,.15)';
+            var bgColor = isRisque ? 'rgba(255,107,107,.03)' : isSuggestion ? 'rgba(255,179,0,.03)' : 'rgba(16,185,129,.03)';
+
+            html += '<div style="padding:16px 18px;border-radius:12px;background:' + bgColor + ';border:1px solid ' + borderColor + ';margin-bottom:12px;">';
+
+            // Header avec icône et montant
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+            html += '<div style="display:flex;align-items:center;gap:10px;">';
+            html += '<i class="fas ' + opt.icon + '" style="color:' + opt.color + ';font-size:.9rem;"></i>';
+            html += '<strong style="font-size:.85rem;">' + opt.label + '</strong>';
+            html += '</div>';
+
+            if (opt.reduction > 0) {
+                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.1);">−' + fmt(opt.reduction) + ' d\'assiette</span>';
+            } else if (opt.economie > 0) {
+                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,.1);">−' + fmt(opt.economie) + ' de droits</span>';
+            } else if (opt.potentiel > 0) {
+                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:600;color:var(--accent-amber);background:rgba(255,179,0,.1);">Potentiel : −' + fmt(opt.potentiel) + '</span>';
+            } else if (opt.risque > 0) {
+                html += '<span style="padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:var(--accent-coral);background:rgba(255,107,107,.1);">Risque : +' + fmt(opt.risque) + '</span>';
+            }
+            html += '</div>';
+
+            // Détail chiffré
+            if (opt.detail) {
+                html += '<div style="font-size:.78rem;color:var(--text-secondary);line-height:1.6;margin-bottom:6px;">' + opt.detail + '</div>';
+            }
+
+            // Conseil actionnable
+            html += '<div style="font-size:.78rem;color:var(--text-primary);line-height:1.6;padding:8px 12px;border-radius:8px;background:rgba(198,134,66,.04);border-left:3px solid ' + opt.color + ';">';
+            html += '<strong>Action :</strong> ' + opt.conseil;
+            html += '</div>';
+
+            // Article de loi
+            if (opt.article) {
+                html += '<div style="font-size:.65rem;color:var(--text-muted);margin-top:6px;"><i class="fas fa-gavel" style="margin-right:4px;"></i>' + opt.article + '</div>';
+            }
+
+            html += '</div>';
+        });
+
+        html += '</div>';
+
+        // Injecter APRÈS le panneau civil-rights ou après transmission-map
+        var anchor = document.getElementById('civil-rights-corrected') || document.getElementById('union-comparison-table') || document.getElementById('results-warnings') || document.getElementById('transmission-map');
+        if (anchor) {
+            anchor.insertAdjacentHTML('afterend', html);
+        }
+    }
+
+    // Legacy warnings (gardé pour rétrocompatibilité mais réduit)
+    function renderOptimizationWarnings() {
+        // Remplacé par renderOptimizationsPanel() — on ne duplique plus les warnings
     }
 
     // ============================================================
     // HELPERS
     // ============================================================
 
-    function getState() {
-        return (typeof SD !== 'undefined' && SD._getState) ? SD._getState() : null;
-    }
+    function getState() { return (typeof SD !== 'undefined' && SD._getState) ? SD._getState() : null; }
 
     function fmt(n) {
         if (typeof SD !== 'undefined' && SD._fiscal && SD._fiscal.fmt) return SD._fiscal.fmt(n);
@@ -330,7 +391,7 @@ const FiscalOptimizations = (function() {
     }
 
     // ============================================================
-    // INIT — Patch SD.calculateResults
+    // INIT
     // ============================================================
 
     function init() {
@@ -338,27 +399,21 @@ const FiscalOptimizations = (function() {
         var _origCalc = SD.calculateResults;
         SD.calculateResults = function() {
             _origCalc.call(SD);
-            setTimeout(renderOptimizationWarnings, 300);
+            setTimeout(renderOptimizationsPanel, 350);
         };
-        console.log('[FiscalOptimizations] Patched — SCI décote 15%, AV exagérées, démembrement croisé, foncier rural 75%');
+        console.log('[FiscalOptimizations v2] Patched — calculs intégrés dans résultats');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 400); });
     else setTimeout(init, 400);
 
-    // ============================================================
-    // PUBLIC API
-    // ============================================================
     return {
-        applySCIDecote: applySCIDecote,
-        computeSCIImpact: computeSCIImpact,
-        checkPrimesExagerees: checkPrimesExagerees,
-        detectAVExagerees: detectAVExagerees,
+        applySCIDecote: applySCIDecote, computeSCIImpact: computeSCIImpact,
+        checkPrimesExagerees: checkPrimesExagerees, detectAVExagerees: detectAVExagerees,
         computeDemembrementCroiseSCI: computeDemembrementCroiseSCI,
         computeFoncierRural: computeFoncierRural,
-        SCI_DECOTE: SCI_DECOTE,
-        AV_SEUIL_EXAGERE: AV_SEUIL_EXAGERE,
-        FONCIER_RURAL_EXONERATION: FONCIER_RURAL_EXONERATION,
-        FONCIER_RURAL_PLAFOND: FONCIER_RURAL_PLAFOND
+        computeOptimizedScenario: computeOptimizedScenario,
+        SCI_DECOTE: SCI_DECOTE, AV_SEUIL_EXAGERE: AV_SEUIL_EXAGERE,
+        FONCIER_RURAL_EXONERATION: FONCIER_RURAL_EXONERATION, FONCIER_RURAL_PLAFOND: FONCIER_RURAL_PLAFOND
     };
 })();
