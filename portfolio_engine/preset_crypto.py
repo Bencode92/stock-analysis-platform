@@ -343,19 +343,26 @@ def apply_hard_filters(df: pd.DataFrame, profile: str) -> pd.DataFrame:
 
     mask = pd.Series(True, index=df.index)
 
-    # ── Paires /USD uniquement ──
-    if filters.get("usd_pairs_only", False):
+    # ── Paires fiat uniquement (USD, EUR, GBP, etc.) ──
+    # v2.0.1: Accepter toutes devises fiat, pas seulement USD
+    # La déduplication amont gère déjà les doublons (BTC/USD vs BTC/EUR)
+    FIAT_QUOTES = {"USD", "US DOLLAR", "EUR", "EURO", "GBP", "BRITISH POUND",
+                   "CHF", "SWISS FRANC", "JPY", "JAPANESE YEN", "CAD", "CANADIAN DOLLAR",
+                   "AUD", "AUSTRALIAN DOLLAR"}
+    if filters.get("usd_pairs_only", False):  # Config key kept for backward compat
         if "currency_quote" in df.columns:
             quote = df["currency_quote"].fillna("").str.upper().str.strip()
-            usd_mask = quote == "USD"
-            mask &= usd_mask
+            fiat_mask = quote.isin(FIAT_QUOTES)
+            mask &= fiat_mask
             logger.debug(
-                f"[Crypto {profile}] USD pairs: "
-                f"{usd_mask.sum()}/{len(df)} passent"
+                f"[Crypto {profile}] Fiat pairs: "
+                f"{fiat_mask.sum()}/{len(df)} passent "
+                f"(quotes: {quote.value_counts().head(5).to_dict()})"
             )
         elif "symbol" in df.columns:
-            # Fallback: chercher /USD dans symbol
-            mask &= df["symbol"].fillna("").str.contains("/USD", case=False)
+            # Fallback: chercher /USD ou /EUR dans symbol
+            sym = df["symbol"].fillna("")
+            mask &= sym.str.contains("/USD|/EUR|/GBP|/CHF|/JPY", case=False, regex=True)
 
     # ── Volatilité max ──
     vol_max = filters.get("vol_30d_max")
@@ -412,8 +419,8 @@ def apply_hard_filters(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         # USD pairs
         if filters.get("usd_pairs_only", False) and "currency_quote" in df.columns:
             quote = df["currency_quote"].fillna("").str.upper().str.strip()
-            _m = quote == "USD"
-            logger.warning(f"   USD pairs only: {_m.sum()}/{len(df)} pass (sample quotes: {quote.value_counts().head(5).to_dict()})")
+            _m = quote.isin(FIAT_QUOTES)
+            logger.warning(f"   Fiat pairs: {_m.sum()}/{len(df)} pass (sample quotes: {quote.value_counts().head(5).to_dict()})")
             _debug_mask &= _m
         
         # Vol
