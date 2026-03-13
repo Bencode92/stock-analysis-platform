@@ -1941,7 +1941,103 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     )
                 except (AttributeError, TypeError) as e:
                     logger.debug(f"   [{profile}] track_profile_hard_filters not available: {e}")
-# === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
+# === FIX v5.2.0-3: Geopolitical Resilience Penalty (Stable only) ===
+        # Expert-validated: penalize sectors/countries exposed to geopolitical shocks
+        # Applied multiplicatively on _profile_score BEFORE optimizer
+        if profile == "Stable" and profile_equities:
+            _GEO_SECTOR_MULT = {
+                "Santé": 1.00, "Biens de consommation de base": 1.00,
+                "Services publics": 1.00, "Immobilier": 1.00,
+                "Technologie de l'information": 0.92, "Communication": 0.92,
+                "Finance": 0.93,
+                "Industries": 0.90,
+                "Biens de consommation cycliques": 0.85,
+                "Énergie": 0.80, "Energie": 0.80,
+                "Matériaux": 0.75, "Materiaux": 0.75,
+            }
+            _GEO_COUNTRY_FACTOR = {
+                "Etats-Unis": 1.0, "France": 1.0, "Allemagne": 1.0, "Royaume-Uni": 1.0,
+                "Japon": 1.0, "Canada": 1.0, "Australie": 1.0, "Pays-Bas": 1.0,
+                "Suisse": 1.0, "Belgique": 1.0, "Espagne": 1.0, "Italie": 1.0,
+                "Norvège": 1.0, "Suède": 1.0, "Danemark": 1.0, "Finlande": 1.0,
+                "Irlande": 1.0, "Autriche": 1.0, "Portugal": 1.0, "Singapour": 1.0,
+                "Hong Kong": 1.0, "Nouvelle-Zélande": 1.0,
+                "Corée": 1.3, "Taïwan": 1.3, "Israël": 1.3,
+                "Inde": 1.5, "Brésil": 1.5, "Mexique": 1.5, "Chili": 1.5,
+                "Malaisie": 1.4, "Thaïlande": 1.4, "Indonésie": 1.5,
+                "Pologne": 1.3, "République Tchèque": 1.3, "Grèce": 1.3,
+                "Turquie": 2.0, "Afrique du Sud": 1.8, "Argentine": 2.0,
+                "Chine": 1.8, "Russie": 2.5, "Colombie": 1.7,
+            }
+            _DEFENSE_KW = ["DEFENSE", "DEFENCE", "AEROSPACE", "MILITARY", "ROTEM",
+                           "RHEINMETALL", "HANWHA", "LEONARDO", "THALES", "BAE SYSTEMS",
+                           "ELBIT", "LOCKHEED", "RAYTHEON", "NORTHROP", "L3HARRIS",
+                           "SAAB", "DASSAULT AVIATION", "KONGSBERG", "GENERAL DYNAMICS"]
+            _SEMI_KW = ["SEMICONDUCTOR", "SEMI", "CHIP", "FOUNDRY", "TSMC", "ASML",
+                        "MICRON", "NVIDIA", "AMD", "QUALCOMM", "BROADCOM",
+                        "APPLIED MATERIALS", "LAM RESEARCH", "TOKYO ELECTRON"]
+            _DIV_SHIELD_SECTORS = {"Matériaux", "Materiaux", "Énergie", "Energie"}
+            
+            _geo_adjusted = 0
+            for eq in profile_equities:
+                sector = eq.get("sector", "")
+                country = eq.get("country", "")
+                name_upper = (eq.get("name", "") or "").upper()
+                preset = eq.get("_matched_preset", "")
+                div_yield = float(eq.get("dividend_yield", "0").replace("%", "") or 0)
+                old_score = eq.get("_profile_score")
+                
+                if old_score is None:
+                    continue
+                
+                # Base sector multiplier
+                sect_mult = _GEO_SECTOR_MULT.get(sector, 0.90)
+                
+                # Defense exception: bonus instead of penalty
+                is_defense = any(kw in name_upper for kw in _DEFENSE_KW)
+                if is_defense and sector == "Industries":
+                    eq["_profile_score"] = old_score * 1.05
+                    eq["_geo_resilience"] = "defense_bonus(×1.05)"
+                    _geo_adjusted += 1
+                    continue
+                
+                # Semi-conductor sub-penalty (-15% instead of -8%)
+                is_semi = any(kw in name_upper for kw in _SEMI_KW)
+                if is_semi and "information" in sector.lower():
+                    sect_mult = 0.85
+                
+                # Country factor amplifies penalty
+                c_factor = _GEO_COUNTRY_FACTOR.get(country, 1.3)
+                penalty = 1.0 - sect_mult
+                amplified = penalty * c_factor
+                final_mult = max(0.40, 1.0 - amplified)
+                
+                # Dividend shield for exposed sectors
+                if sector in _DIV_SHIELD_SECTORS and div_yield >= 3.0:
+                    final_mult = min(1.0, final_mult + 0.05)
+                
+                # Defensive preset bonus (+5% additive)
+                def_bonus = 0.05 if preset == "defensif" else 0.0
+                
+                new_score = old_score * final_mult + def_bonus
+                
+                if abs(new_score - old_score) > 0.001:
+                    eq["_profile_score"] = new_score
+                    eq["_geo_resilience"] = f"sect={sect_mult:.2f},ctry={c_factor:.1f},final=×{final_mult:.3f}"
+                    _geo_adjusted += 1
+            
+            if _geo_adjusted > 0:
+                # Log top adjustments
+                _sorted = sorted(profile_equities, key=lambda x: x.get("_profile_score", 0), reverse=True)
+                logger.info(f"   [Stable] 🌍 Geo-resilience: {_geo_adjusted}/{len(profile_equities)} scores adjusted")
+                for _eq in _sorted[:5]:
+                    logger.info(
+                        f"   [Stable] 🌍 Top: {_eq.get('name', '?')[:25]:25s} "
+                        f"score={_eq.get('_profile_score', 0):.3f} "
+                        f"geo={_eq.get('_geo_resilience', 'none')}"
+                    )
+        
+        # === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
         if HAS_MODULAR_SELECTORS:
             # --- ETF actions ---
             if not etf_df_master.empty:
