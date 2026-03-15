@@ -2557,6 +2557,185 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     
                     # Re-round to 100%
                     allocation = round_weights_to_100(allocation)
+            
+            # === FIX v5.3.1: AGGREGATE CAPS — secteurs/régions avoided + régions overheat ===
+            # Problème: le cap per-stock (5%) n'empêche pas 2×5% + ETF 9% = 19% dans la même zone.
+            # Ce fix ajoute un plafond AGRÉGÉ post-optimizer.
+            AGG_CAP_SECTOR_AVOIDED = 10.0   # max % total par secteur avoided
+            AGG_CAP_REGION_AVOIDED = 10.0   # max % total par région avoided
+            AGG_CAP_REGION_OVERHEAT = 12.0  # max % total par région overheat
+
+            # 1. Extraire avoided sectors depuis macro_tilts
+            _avoided_sectors_set = set()
+            for _s in _mt.get("avoided_sectors", []):
+                _avoided_sectors_set.add(_s.lower().strip())
+
+            # 2. Extraire overheat regions depuis RADAR diagnostics
+            _overheat_regions_set = set()
+            _overheat_regions_expanded = set()
+            _diag = market_context.get("_meta", {}).get("diagnostics", {})
+            for _rc in _diag.get("region_classifications", []):
+                if "overheat_w52" in (_rc.get("reason") or ""):
+                    _oh_key = _rc["key"].lower().strip()
+                    _overheat_regions_set.add(_oh_key)
+                    _overheat_regions_expanded.add(_oh_key)
+                    for _alias in _COUNTRY_ALIASES.get(_oh_key, []):
+                        _overheat_regions_expanded.add(_alias.lower())
+            
+            if _overheat_regions_set:
+                logger.info(f"   [{profile}] 🌡️ Overheat regions detected: {_overheat_regions_set}")
+
+            # 3. Build ETF symbol → sector mapping from RADAR diagnostics
+            _etf_to_sector = {}
+            for _sc in _diag.get("sector_classifications", []):
+                _sym = (_sc.get("symbol") or "").upper().strip()
+                if _sym and _sym != "N/A":
+                    _etf_to_sector[_sym] = _sc["key"].lower()
+
+            # 4. Helper: get sector for any asset
+            def _agg_get_sector(asset):
+                # a) Direct sector attribute (equities)
+                s = (_safe_get_attr(asset, 'sector') or '').lower().strip()
+                if s and s != 'unknown':
+                    # Normalize sector names to RADAR keys
+                    _SECTOR_NORMALIZE = {
+                        'financial services': 'financials', 'financial': 'financials',
+                        'finance': 'financials', 'banks': 'financials',
+                        'technology': 'information-technology', 'tech': 'information-technology',
+                        'basic materials': 'materials', 'basic-materials': 'materials',
+                        'consumer cyclical': 'consumer-discretionary',
+                        'consumer defensive': 'consumer-staples',
+                        'communication services': 'communication-services',
+                        'real estate': 'real-estate',
+                    }
+                    return _SECTOR_NORMALIZE.get(s, s)
+                # b) ETF: lookup via RADAR diagnostics symbol mapping
+                tk = (_safe_get_attr(asset, 'ticker') or _safe_get_attr(asset, 'name') or '').upper().strip()
+                if '/' in tk:
+                    tk = tk.split('/')[0].strip()
+                return _etf_to_sector.get(tk, '')
+
+            # 5. Helper: get canonical region for any asset
+            def _agg_get_region(asset):
+                c = (_safe_get_attr(asset, 'country') or '').lower().strip()
+                r = (getattr(asset, 'region', '') or '').lower().strip()
+                raw = c or r
+                if not raw:
+                    return ''
+                # Canonicalize via aliases
+                for _canon, _aliases in _COUNTRY_ALIASES.items():
+                    if raw == _canon or raw in [a.lower() for a in _aliases]:
+                        return _canon
+                return raw
+
+            # 6. Aggregate exposure by sector and region
+            _sec_totals = {}   # {sector: total_pct}
+            _sec_aids = {}     # {sector: [(aid, w)]}
+            _reg_totals = {}   # {region: total_pct}
+            _reg_aids = {}     # {region: [(aid, w)]}
+
+            for _aid, _w in allocation.items():
+                if _w <= 0:
+                    continue
+                _asset = next((a for a in assets if getattr(a, 'id', None) == _aid), None)
+                if not _asset:
+                    continue
+                # Sector
+                _sec = _agg_get_sector(_asset)
+                if _sec:
+                    _sec_totals[_sec] = _sec_totals.get(_sec, 0) + _w
+                    _sec_aids.setdefault(_sec, []).append((_aid, _w))
+                # Region
+                _reg = _agg_get_region(_asset)
+                if _reg:
+                    _reg_totals[_reg] = _reg_totals.get(_reg, 0) + _w
+                    _reg_aids.setdefault(_reg, []).append((_aid, _w))
+
+            # Log pre-cap exposure for avoided/overheat
+            for _sec in _avoided_sectors_set:
+                if _sec in _sec_totals:
+                    logger.info(f"   [{profile}] 📊 PRE-AGG sector '{_sec}' (AVOIDED): {_sec_totals[_sec]:.1f}%")
+            for _reg in _avoided_regions:
+                _rk = _reg.lower().strip()
+                if _rk in _reg_totals:
+                    logger.info(f"   [{profile}] 📊 PRE-AGG region '{_rk}' (AVOIDED): {_reg_totals[_rk]:.1f}%")
+            for _reg in _overheat_regions_set:
+                if _reg in _reg_totals:
+                    logger.info(f"   [{profile}] 📊 PRE-AGG region '{_reg}' (OVERHEAT): {_reg_totals[_reg]:.1f}%")
+
+            # 7. Apply aggregate caps
+            _agg_surplus = 0.0
+            _agg_capped_aids = set()
+
+            def _apply_agg_cap(group_aids, group_total, cap, label):
+                """Cap a group of assets to max cap%, return surplus."""
+                nonlocal _agg_surplus, _agg_capped_aids
+                if group_total <= cap:
+                    return
+                excess = group_total - cap
+                _agg_surplus += excess
+                ratio = cap / group_total
+                for _a_id, _a_w in group_aids:
+                    if _a_id in allocation:
+                        allocation[_a_id] = round(allocation[_a_id] * ratio, 2)
+                        _agg_capped_aids.add(_a_id)
+                logger.info(f"   [{profile}] 🚫 AGG CAP {label}: {group_total:.1f}%→{cap:.1f}%")
+
+            # 7a. Cap secteurs avoided
+            for _sec in _avoided_sectors_set:
+                _apply_agg_cap(
+                    _sec_aids.get(_sec, []),
+                    _sec_totals.get(_sec, 0),
+                    AGG_CAP_SECTOR_AVOIDED,
+                    f"sector '{_sec}' (avoided)"
+                )
+
+            # 7b. Cap régions avoided
+            for _r in list(_avoided_regions):
+                _rk = _r.lower().strip()
+                _apply_agg_cap(
+                    _reg_aids.get(_rk, []),
+                    _reg_totals.get(_rk, 0),
+                    AGG_CAP_REGION_AVOIDED,
+                    f"region '{_rk}' (avoided)"
+                )
+
+            # 7c. Cap régions overheat
+            for _r in _overheat_regions_set:
+                # Don't double-cap if already avoided
+                if _r in _avoided_expanded:
+                    continue
+                _apply_agg_cap(
+                    _reg_aids.get(_r, []),
+                    _reg_totals.get(_r, 0),
+                    AGG_CAP_REGION_OVERHEAT,
+                    f"region '{_r}' (overheat)"
+                )
+
+            # 8. Redistribute surplus to non-capped positions
+            if _agg_surplus > 0.5:  # Only redistribute if meaningful
+                _non_capped_total = sum(
+                    w for a_id, w in allocation.items()
+                    if a_id not in _agg_capped_aids and w > 0
+                )
+                if _non_capped_total > 0:
+                    for _a_id in allocation:
+                        if _a_id not in _agg_capped_aids and allocation[_a_id] > 0:
+                            allocation[_a_id] += _agg_surplus * (allocation[_a_id] / _non_capped_total)
+                    logger.info(f"   [{profile}] 🔄 AGG surplus {_agg_surplus:.1f}% redistribué aux {len(allocation) - len(_agg_capped_aids)} positions non-cappées")
+                
+                allocation = round_weights_to_100(allocation)
+            
+            # 9. Log post-cap exposure
+            for _sec in _avoided_sectors_set:
+                _new = sum(allocation.get(a_id, 0) for a_id, _ in _sec_aids.get(_sec, []))
+                if _new > 0:
+                    logger.info(f"   [{profile}] 📊 POST-AGG sector '{_sec}': {_new:.1f}%")
+            for _reg in list(set(list(_avoided_regions) + list(_overheat_regions_set))):
+                _rk = _reg.lower().strip()
+                _new = sum(allocation.get(a_id, 0) for a_id, _ in _reg_aids.get(_rk, []))
+                if _new > 0:
+                    logger.info(f"   [{profile}] 📊 POST-AGG region '{_rk}': {_new:.1f}%")
         
         # === FIX v5.2.0-C: Min weight enforcement — positions < 2% supprimées ===
         MIN_POSITION_WEIGHT = 2.0  # %
