@@ -2593,22 +2593,80 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     _etf_to_sector[_sym] = _sc["key"].lower()
 
             # 4. Helper: get sector for any asset
+            # Normalize sector names to RADAR keys
+            # Covers: FR (sector), EN API (sector_api), and common variants
+            _SECTOR_NORMALIZE = {
+                # === Financials ===
+                'finance': 'financials',
+                'financial services': 'financials',
+                'financial': 'financials',
+                'financials': 'financials',
+                'banks': 'financials',
+                'banking': 'financials',
+                'banque': 'financials',
+                'insurance': 'financials',
+                'assurance': 'financials',
+                'capital markets': 'financials',
+                'diversified financials': 'financials',
+                # === Industrials ===
+                'industries': 'industrials',
+                'industrials': 'industrials',
+                'industrial': 'industrials',
+                # === IT ===
+                "technologie de l'information": 'information-technology',
+                'technology': 'information-technology',
+                'tech': 'information-technology',
+                'information technology': 'information-technology',
+                'information-technology': 'information-technology',
+                # === Consumer Discretionary ===
+                'biens de consommation cycliques': 'consumer-discretionary',
+                'consumer cyclical': 'consumer-discretionary',
+                'consumer discretionary': 'consumer-discretionary',
+                'consumer-discretionary': 'consumer-discretionary',
+                # === Healthcare ===
+                'santé': 'healthcare',
+                'sante': 'healthcare',
+                'healthcare': 'healthcare',
+                'health care': 'healthcare',
+                # === Consumer Staples ===
+                'biens de consommation de base': 'consumer-staples',
+                'consumer defensive': 'consumer-staples',
+                'consumer staples': 'consumer-staples',
+                'consumer-staples': 'consumer-staples',
+                # === Materials ===
+                'matériaux': 'materials',
+                'materiaux': 'materials',
+                'materials': 'materials',
+                'basic materials': 'materials',
+                'basic-materials': 'materials',
+                # === Utilities ===
+                'services publics': 'utilities',
+                'utilities': 'utilities',
+                # === Communication Services ===
+                'la communication': 'communication-services',
+                'communication services': 'communication-services',
+                'communication-services': 'communication-services',
+                # === Real Estate ===
+                'immobilier': 'real-estate',
+                'real estate': 'real-estate',
+                'real-estate': 'real-estate',
+                # === Energy ===
+                'energie': 'energy',
+                'énergie': 'energy',
+                'energy': 'energy',
+                # === Other ===
+                'autres': 'other',
+                'other': 'other',
+            }
+
             def _agg_get_sector(asset):
-                # a) Direct sector attribute (equities)
-                s = (_safe_get_attr(asset, 'sector') or '').lower().strip()
-                if s and s != 'unknown':
-                    # Normalize sector names to RADAR keys
-                    _SECTOR_NORMALIZE = {
-                        'financial services': 'financials', 'financial': 'financials',
-                        'finance': 'financials', 'banks': 'financials',
-                        'technology': 'information-technology', 'tech': 'information-technology',
-                        'basic materials': 'materials', 'basic-materials': 'materials',
-                        'consumer cyclical': 'consumer-discretionary',
-                        'consumer defensive': 'consumer-staples',
-                        'communication services': 'communication-services',
-                        'real estate': 'real-estate',
-                    }
-                    return _SECTOR_NORMALIZE.get(s, s)
+                # a) Try sector field (FR), then sector_api (EN), then sector_top
+                for _field in ('sector', 'sector_api', 'sector_top'):
+                    s = (_safe_get_attr(asset, _field) or '').lower().strip()
+                    if s and s != 'unknown':
+                        normalized = _SECTOR_NORMALIZE.get(s)
+                        if normalized:
+                            return normalized
                 # b) ETF: lookup via RADAR diagnostics symbol mapping
                 tk = (_safe_get_attr(asset, 'ticker') or _safe_get_attr(asset, 'name') or '').upper().strip()
                 if '/' in tk:
