@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-14T08:21:07.043833",
+  "timestamp": "2026-03-15T08:23:50.101095",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -9,8 +9,8 @@
     "etf_initial": 235,
     "etf_selected": 15,
     "etf_rejected_notable": 20,
-    "crypto_initial": 6,
-    "crypto_selected": 2,
+    "crypto_initial": 7,
+    "crypto_selected": 3,
     "crypto_rejected_notable": 4,
     "bonds_initial": 31,
     "bonds_selected": 8,
@@ -19,7 +19,7 @@
     "category_rankings_sizes": {
       "equity": 100,
       "etf": 100,
-      "crypto": 6,
+      "crypto": 7,
       "bond": 31
     },
     "preset_rankings_sizes": {
@@ -42,7 +42,7 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 4
+          "selected": 3
         },
         "quality_high_vol": {
           "total": 17,
@@ -1029,10 +1029,12 @@
         "ticker": "CF",
         "sort_score": 0.6787,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "momentum_trend",
         "profile_score": 0.6787,
         "buffett_score": 90.0,
+        "rejection_reason": "Filtré par hard_filters_Stable",
+        "rejection_filter": "hard_filters_Stable",
         "sector": "Matériaux",
         "country": "Etats-Unis",
         "volatility": 32.6,
@@ -4362,66 +4364,77 @@
         "selected": true,
         "matched_preset": "crypto_preset_payment",
         "profile_score": 100.0,
-        "volatility": 22.5
+        "volatility": 23.0
       },
       {
         "rank": 2,
         "name": "PORTO/USD",
         "ticker": "PORTO/USD",
-        "sort_score": 98.38,
+        "sort_score": 99.35,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_fan_token",
-        "profile_score": 98.38,
+        "profile_score": 99.35,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 49.4
+        "volatility": 49.0
       },
       {
         "rank": 3,
         "name": "PAXG/USD",
         "ticker": "PAXG/USD",
-        "sort_score": 96.63,
+        "sort_score": 92.72,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_tokenized_gold",
-        "profile_score": 96.63,
-        "volatility": 29.8
+        "profile_score": 92.72,
+        "volatility": 28.6
       },
       {
         "rank": 4,
         "name": "MORPHO/USD",
         "ticker": "MORPHO/USD",
-        "sort_score": 93.14,
+        "sort_score": 92.45,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "crypto_preset_defi",
-        "profile_score": 93.14,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 116.3
+        "profile_score": 92.45,
+        "volatility": 115.2
       },
       {
         "rank": 5,
-        "name": "NFT/USD",
-        "ticker": "NFT/USD",
-        "sort_score": 92.76,
+        "name": "LUNC/USD",
+        "ticker": "LUNC/USD",
+        "sort_score": 90.27,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 92.76,
+        "profile_score": 90.27,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 41.1
+        "volatility": 79.8
       },
       {
         "rank": 6,
-        "name": "LUNC/USD",
-        "ticker": "LUNC/USD",
-        "sort_score": 91.51,
+        "name": "DCR/USD",
+        "ticker": "DCR/USD",
+        "sort_score": 89.34,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 91.51,
+        "matched_preset": "crypto_preset_pow_legacy",
+        "profile_score": 89.34,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 79.3
+        "volatility": 87.7
+      },
+      {
+        "rank": 7,
+        "name": "BNB/USD",
+        "ticker": "BNB/USD",
+        "sort_score": 87.69,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "matched_preset": "crypto_preset_exchange",
+        "profile_score": 87.69,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 46.5
       }
     ],
     "bond": [
@@ -6206,10 +6219,12 @@
           "ticker": "CF",
           "sort_score": 0.6787,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "momentum_trend",
           "profile_score": 0.6787,
           "buffett_score": 90.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Matériaux",
           "country": "Etats-Unis",
           "volatility": 32.6,
@@ -16575,7 +16590,7 @@
       "category": "crypto",
       "matched_preset": "crypto_preset_payment",
       "profile_score": 100.0,
-      "volatility": 22.5,
+      "volatility": 23.0,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 1,
@@ -16583,15 +16598,27 @@
     },
     {
       "name": "Unknown",
-      "ticker": "PAXG/USD",
+      "ticker": "MORPHO/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_tokenized_gold",
-      "profile_score": 96.63,
-      "volatility": 29.8,
+      "matched_preset": "crypto_preset_defi",
+      "profile_score": 92.45,
+      "volatility": 115.2,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 2,
-      "selection_reason": "Score profil élevé (96.63); Preset: crypto_preset_tokenized_gold"
+      "selection_reason": "Score profil élevé (92.45); Preset: crypto_preset_defi"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "PAXG/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_tokenized_gold",
+      "profile_score": 92.72,
+      "volatility": 28.6,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 3,
+      "selection_reason": "Score profil élevé (92.72); Preset: crypto_preset_tokenized_gold"
     }
   ],
   "crypto_rejected": [
@@ -16600,19 +16627,8 @@
       "ticker": "PORTO/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_fan_token",
-      "profile_score": 98.38,
-      "volatility": 49.4,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "MORPHO/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_defi",
-      "profile_score": 93.14,
-      "volatility": 116.3,
+      "profile_score": 99.35,
+      "volatility": 49.0,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16622,19 +16638,30 @@
       "ticker": "LUNC/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 91.51,
-      "volatility": 79.3,
+      "profile_score": 90.27,
+      "volatility": 79.8,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
       "name": "Unknown",
-      "ticker": "NFT/USD",
+      "ticker": "DCR/USD",
       "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 92.76,
-      "volatility": 41.1,
+      "matched_preset": "crypto_preset_pow_legacy",
+      "profile_score": 89.34,
+      "volatility": 87.7,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "BNB/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_exchange",
+      "profile_score": 87.69,
+      "volatility": 46.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -16835,7 +16862,7 @@
   "radar_context": {
     "regime": "neutral",
     "confidence": 0.6,
-    "as_of": "2026-03-14",
+    "as_of": "2026-03-15",
     "favored_sectors": [
       "energy",
       "materials"
