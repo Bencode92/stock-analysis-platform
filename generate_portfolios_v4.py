@@ -4628,6 +4628,25 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                 for k in _tickers_raw:
                     if _tickers_raw[k] > 0:
                         _tickers_raw[k] += _dust_sum * (_tickers_raw[k] / _keep_sum)
+            
+            # v5.3.1 FIX: Re-cap max single position after L2 dust redistribution
+            # Without this, positions capped by AGG cap get reinflated above 15%
+            _MAX_SINGLE_L2 = 0.15  # 15% in decimal
+            for _l2_iter in range(5):
+                _l2_over = {k: v for k, v in _tickers_raw.items() if v > _MAX_SINGLE_L2 + 0.001}
+                if not _l2_over:
+                    break
+                _l2_excess = 0.0
+                for k, v in _l2_over.items():
+                    _l2_excess += v - _MAX_SINGLE_L2
+                    logger.info(f"   [{profile}] 🔒 L2 max_single re-cap: {k} {v*100:.1f}%→{_MAX_SINGLE_L2*100:.1f}%")
+                    _tickers_raw[k] = _MAX_SINGLE_L2
+                _l2_eligible = sum(v for k, v in _tickers_raw.items() if k not in _l2_over and v > 0)
+                if _l2_eligible > 0 and _l2_excess > 0:
+                    for k in _tickers_raw:
+                        if k not in _l2_over and _tickers_raw[k] > 0:
+                            _tickers_raw[k] += _l2_excess * (_tickers_raw[k] / _l2_eligible)
+            
             result[profile]["_tickers"] = _tickers_raw
         
         # Rebuild sections depuis _tickers pour garantir cohérence
