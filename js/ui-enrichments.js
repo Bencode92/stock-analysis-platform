@@ -1,6 +1,6 @@
 /**
- * ui-enrichments.js v1.6 — Fix: polling pour menu contextuel (élément recréé à chaque render)
- * @version 1.6.0 — 2026-03-16
+ * ui-enrichments.js v1.7 — Fix: scan couples existants au init (preset avant patch)
+ * @version 1.7.0 — 2026-03-16
  */
 const UIEnrichments = (function() {
     'use strict';
@@ -39,6 +39,21 @@ const UIEnrichments = (function() {
         }
     }
 
+    // ============ 1b. SCAN COUPLES EXISTANTS (preset créé avant le patch) ============
+    function scanExistingCouples() {
+        if (typeof FamilyGraph === 'undefined' || !FamilyGraph.getPersons || !FamilyGraph.spouse) return;
+        if (document.getElementById('union-type-selector')) return; // déjà injecté
+        var persons = FamilyGraph.getPersons();
+        var seen = {};
+        persons.forEach(function(p) {
+            var sp = FamilyGraph.spouse(p.id);
+            if (sp && !seen[p.id] && !seen[sp.id]) {
+                seen[p.id] = true; seen[sp.id] = true;
+                injectUnionTypeSelector(p.id, sp.id);
+            }
+        });
+    }
+
     // ============ 2. Bloc union sous l'arbre ============
     function injectUnionTypeSelector(id1, id2) {
         var ex = document.getElementById('union-type-selector'); if(ex) ex.remove();
@@ -75,19 +90,18 @@ const UIEnrichments = (function() {
         el.innerHTML='<div style="padding:8px 12px;border-radius:8px;background:'+v[0]+';color:'+v[1]+';font-size:.78rem;line-height:1.5;"><i class="fas '+v[2]+'" style="margin-right:4px;"></i>'+v[3]+'</div>';
     }
 
-    // ============ 3. MENU CONTEXTUEL — Polling (élément recréé à chaque render) ============
+    // ============ 3. MENU CONTEXTUEL — Polling ============
     function startCtxMenuPolling() {
         setInterval(function() {
             var ctx = document.getElementById('ft-ctx');
             if (!ctx || ctx.style.display === 'none' || ctx.innerHTML.trim() === '') return;
-            if (ctx.querySelector('.uie-union-section')) return; // déjà enrichi
-            // Extraire le pid depuis SD.editNode(pid) dans le menu
+            if (ctx.querySelector('.uie-union-section')) return;
             var match = ctx.innerHTML.match(/SD\.editNode\((\d+)\)/);
             if (!match) return;
             var pid = parseInt(match[1]);
             if (typeof FamilyGraph === 'undefined' || !FamilyGraph.spouse) return;
             var sp = FamilyGraph.spouse(pid);
-            if (!sp) return; // Pas de conjoint → pas d'options union
+            if (!sp) return;
             enrichContextMenu(ctx, pid, sp);
         }, 150);
     }
@@ -97,7 +111,6 @@ const UIEnrichments = (function() {
         var currentType = FamilyGraph.getUnionType?FamilyGraph.getUnionType(id1,id2):'mariage';
         var currentRegime = _regimeStore[id1+'-'+id2]||_regimeStore[id2+'-'+id1]||'communaute_acquets';
         var spNom = sp.nom||'Conjoint';
-
         var h = '<div class="uie-union-section"><div class="ft-ctx-sep"></div>';
         h += '<div style="padding:6px 12px;font-size:.58rem;font-weight:700;color:var(--accent-coral);text-transform:uppercase;letter-spacing:.05em;">\u2764\ufe0f Union avec '+esc(spNom)+'</div>';
         UNION_TYPES.forEach(function(u) {
@@ -146,7 +159,10 @@ const UIEnrichments = (function() {
     }
     function observeFamilyTree() {
         var tree=document.getElementById('family-persons-list');
-        if(tree&&!_treeObserver){_treeObserver=new MutationObserver(function(){scheduleRefreshInternational();});_treeObserver.observe(tree,{childList:true,subtree:true,characterData:true});}
+        if(tree&&!_treeObserver){
+            _treeObserver=new MutationObserver(function(){scheduleRefreshInternational(); setTimeout(scanExistingCouples,500);});
+            _treeObserver.observe(tree,{childList:true,subtree:true,characterData:true});
+        }
         var roles=document.getElementById('family-roles-list');
         if(roles&&!_rolesObserver){_rolesObserver=new MutationObserver(function(){scheduleRefreshInternational();});_rolesObserver.observe(roles,{childList:true,subtree:true,attributes:true,attributeFilter:['checked','class']});
         roles.addEventListener('change',function(){scheduleRefreshInternational();});roles.addEventListener('click',function(){setTimeout(scheduleRefreshInternational,200);});}
@@ -211,12 +227,26 @@ const UIEnrichments = (function() {
     // ============ 8. INIT ============
     function init(){
         patchFamilyGraph();
-        var iv=setInterval(function(){if(typeof SD==='undefined')return;injectInternationalFields();enrichBeneficiaryOptions();injectTestamentSwitch();observeFamilyTree();wireGatherInputs();startCtxMenuPolling();clearInterval(iv);},1000);
-        document.addEventListener('click',function(e){if(e.target.closest('.step-item')){setTimeout(function(){injectInternationalFields();enrichBeneficiaryOptions();injectTestamentSwitch();observeFamilyTree();},400);}});
-        console.log('[UIEnrichments v1.6] Loaded \u2014 polling ctx menu + union + r\u00e9gime');
+        var iv=setInterval(function(){
+            if(typeof SD==='undefined')return;
+            scanExistingCouples(); // ← NOUVEAU : détecte les couples créés par preset AVANT le patch
+            injectInternationalFields();enrichBeneficiaryOptions();injectTestamentSwitch();
+            observeFamilyTree();wireGatherInputs();startCtxMenuPolling();
+            clearInterval(iv);
+        },1000);
+        document.addEventListener('click',function(e){
+            if(e.target.closest('.step-item')){
+                setTimeout(function(){scanExistingCouples();injectInternationalFields();enrichBeneficiaryOptions();injectTestamentSwitch();observeFamilyTree();},400);
+            }
+            // Preset buttons → rescan couples after tree rebuild
+            if(e.target.closest('.preset-btn')){
+                setTimeout(function(){scanExistingCouples();injectInternationalFields();},800);
+            }
+        });
+        console.log('[UIEnrichments v1.7] Loaded \u2014 scan couples existants + polling ctx');
     }
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(init,1200);});
     else setTimeout(init,1200);
 
-    return {onUnionTypeChange:onUnionTypeChange,onRegimeChange:onRegimeChange,onPaysChange:function(){},onPersonCountryChange:onPersonCountryChange,onPersonNationalityChange:onPersonNationalityChange,onTestamentChange:onTestamentChange,onAutreLitChange:onAutreLitChange,setUnionFromCtx:setUnionFromCtx,setRegimeFromCtx:setRegimeFromCtx,injectUnionTypeSelector:injectUnionTypeSelector,injectInternationalFields:injectInternationalFields,enrichState:enrichState};
+    return {onUnionTypeChange:onUnionTypeChange,onRegimeChange:onRegimeChange,onPaysChange:function(){},onPersonCountryChange:onPersonCountryChange,onPersonNationalityChange:onPersonNationalityChange,onTestamentChange:onTestamentChange,onAutreLitChange:onAutreLitChange,setUnionFromCtx:setUnionFromCtx,setRegimeFromCtx:setRegimeFromCtx,injectUnionTypeSelector:injectUnionTypeSelector,injectInternationalFields:injectInternationalFields,enrichState:enrichState,scanExistingCouples:scanExistingCouples};
 })();
