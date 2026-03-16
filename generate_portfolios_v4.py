@@ -4908,6 +4908,53 @@ def save_portfolios(portfolios: Dict, assets: list):
     
     v1_data = normalize_to_frontend_v1(portfolios, assets)
     
+    # === v5.3.1 NUCLEAR SAFETY NET: Cap all positions at 15% in BOTH _tickers and display ===
+    # This is the ABSOLUTE LAST checkpoint before writing JSON.
+    _NUCLEAR_MAX = 0.15  # 15% in decimal
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        if not _t:
+            continue
+        # Check and cap _tickers
+        _any_capped = False
+        for _nuc_iter in range(5):
+            _nuc_over = {k: v for k, v in _t.items() if v > _NUCLEAR_MAX + 0.001}
+            if not _nuc_over:
+                break
+            _nuc_excess = 0.0
+            for k, v in _nuc_over.items():
+                _nuc_excess += v - _NUCLEAR_MAX
+                logger.info(f"   [{_p_name}] 💣 NUCLEAR CAP: {k} {v*100:.1f}%→{_NUCLEAR_MAX*100:.1f}%")
+                _t[k] = _NUCLEAR_MAX
+                _any_capped = True
+            _nuc_elig = sum(v for k, v in _t.items() if k not in _nuc_over and v > 0)
+            if _nuc_elig > 0 and _nuc_excess > 0:
+                for k in _t:
+                    if k not in _nuc_over and _t[k] > 0:
+                        _t[k] += _nuc_excess * (_t[k] / _nuc_elig)
+        
+        if _any_capped:
+            # Rebuild display sections from capped _tickers
+            ticker_to_info = _p_data.get("_tickers_meta", {})
+            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                _p_data[_cat] = {}
+            _nw = {}
+            for _tk, _w_dec in _t.items():
+                _w_pct = round(_w_dec * 100, 1)
+                if _w_pct < 0.1:
+                    continue
+                _info = ticker_to_info.get(_tk, {})
+                _cat = _info.get("category", "ETF")
+                _nm = _info.get("name", _tk)
+                _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+                _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+                _nw[f"{_cat}:{_display}"] = _w_pct
+            _p_data["_numeric_weights"] = _nw
+            logger.info(f"   [{_p_name}] 💣 NUCLEAR: Display sections rebuilt after cap")
+    
     v1_path = CONFIG["output_path"]
     with open(v1_path, "w", encoding="utf-8") as f:
         json.dump(v1_data, f, ensure_ascii=False, indent=2)
