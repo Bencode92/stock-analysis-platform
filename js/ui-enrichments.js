@@ -1,12 +1,12 @@
 /**
- * ui-enrichments.js v1.7 — Fix: scan couples existants au init (preset avant patch)
- * @version 1.7.0 — 2026-03-16
+ * ui-enrichments.js v1.8 — Multi-couples : un bloc union PAR couple
+ * @version 1.8.0 — 2026-03-16
  */
 const UIEnrichments = (function() {
     'use strict';
 
     var _unionTypeStore = {}, _regimeStore = {}, _personCountryStore = {}, _personNationalityStore = {};
-    var _treeObserver = null, _rolesObserver = null, _refreshTimer = null, _lastPersonHash = '';
+    var _treeObserver = null, _rolesObserver = null, _refreshTimer = null, _lastPersonHash = '', _lastCoupleHash = '';
 
     var PAYS_OPTIONS = [
         ['FR','\ud83c\uddeb\ud83c\uddf7 France'],['DE','\ud83c\udde9\ud83c\uddea Allemagne'],['BE','\ud83c\udde7\ud83c\uddea Belgique'],['ES','\ud83c\uddea\ud83c\uddf8 Espagne'],
@@ -34,61 +34,96 @@ const UIEnrichments = (function() {
         }
         var _orig = FamilyGraph.addRelation;
         if (_orig && !FamilyGraph._uiEnrichPatched) {
-            FamilyGraph.addRelation = function(f,t,ty) { _orig.call(FamilyGraph,f,t,ty); if(ty==='spouse') setTimeout(function(){injectUnionTypeSelector(f,t);},300); };
+            FamilyGraph.addRelation = function(f,t,ty) { _orig.call(FamilyGraph,f,t,ty); if(ty==='spouse') setTimeout(scanExistingCouples,400); };
             FamilyGraph._uiEnrichPatched = true;
         }
     }
 
-    // ============ 1b. SCAN COUPLES EXISTANTS (preset créé avant le patch) ============
-    function scanExistingCouples() {
-        if (typeof FamilyGraph === 'undefined' || !FamilyGraph.getPersons || !FamilyGraph.spouse) return;
-        if (document.getElementById('union-type-selector')) return; // déjà injecté
-        var persons = FamilyGraph.getPersons();
-        var seen = {};
+    // ============ 1b. SCAN & RENDER ALL COUPLES ============
+    function findAllCouples() {
+        if (typeof FamilyGraph === 'undefined' || !FamilyGraph.getPersons || !FamilyGraph.spouse) return [];
+        var persons = FamilyGraph.getPersons(), seen = {}, couples = [];
         persons.forEach(function(p) {
             var sp = FamilyGraph.spouse(p.id);
             if (sp && !seen[p.id] && !seen[sp.id]) {
                 seen[p.id] = true; seen[sp.id] = true;
-                injectUnionTypeSelector(p.id, sp.id);
+                couples.push({ id1: p.id, id2: sp.id, nom1: p.nom||'?', nom2: sp.nom||'?' });
             }
         });
+        return couples;
     }
 
-    // ============ 2. Bloc union sous l'arbre ============
-    function injectUnionTypeSelector(id1, id2) {
-        var ex = document.getElementById('union-type-selector'); if(ex) ex.remove();
-        var tree = document.getElementById('family-persons-list'); if(!tree) return;
-        var p1 = FamilyGraph.getPerson?FamilyGraph.getPerson(id1):null;
-        var p2 = FamilyGraph.getPerson?FamilyGraph.getPerson(id2):null;
-        var ct = FamilyGraph.getUnionType?FamilyGraph.getUnionType(id1,id2):'mariage';
-        var cr = _regimeStore[id1+'-'+id2]||_regimeStore[id2+'-'+id1]||'communaute_acquets';
-        var uO = UNION_TYPES.map(function(u){return '<option value="'+u[0]+'"'+(u[0]===ct?' selected':'')+'>'+u[1]+'</option>';}).join('');
-        var rO = REGIMES.map(function(r){return '<option value="'+r[0]+'"'+(r[0]===cr?' selected':'')+'>'+r[1]+'</option>';}).join('');
-        var h = '<div id="union-type-selector" style="padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.15);margin-top:12px;">';
-        h += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-coral);margin-bottom:10px;"><i class="fas fa-heart" style="margin-right:6px;"></i>Union de <strong>'+esc((p1||{}).nom||'?')+'</strong> & <strong>'+esc((p2||{}).nom||'?')+'</strong></div>';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">Type d\'union</label>';
-        h += '<select id="select-union-type" onchange="UIEnrichments.onUnionTypeChange(this.value,'+id1+','+id2+')" style="border-color:rgba(255,107,107,.25);">'+uO+'</select></div>';
-        h += '<div class="form-group" id="regime-group"><label class="form-label">R\u00e9gime matrimonial</label>';
-        h += '<select id="select-regime-union" onchange="UIEnrichments.onRegimeChange(this.value,'+id1+','+id2+')" style="border-color:rgba(255,107,107,.25);">'+rO+'</select></div></div>';
-        h += '<div id="union-type-warning" style="margin-top:8px;font-size:.75rem;"></div></div>';
-        tree.insertAdjacentHTML('afterend', h);
-        updateUnionWarning(ct); toggleRegimeVisibility(ct);
+    function getCoupleHash() {
+        return findAllCouples().map(function(c){ return c.id1+'-'+c.id2; }).join('|');
     }
-    function onUnionTypeChange(t,a,b) { if(FamilyGraph.setUnionType)FamilyGraph.setUnionType(a,b,t); updateUnionWarning(t); toggleRegimeVisibility(t); }
+
+    function scanExistingCouples() {
+        var hash = getCoupleHash();
+        if (hash === _lastCoupleHash) return; // rien n'a changé
+        _lastCoupleHash = hash;
+        renderAllUnionBlocks();
+    }
+
+    function renderAllUnionBlocks() {
+        var tree = document.getElementById('family-persons-list'); if(!tree) return;
+        // Supprimer l'ancien conteneur
+        var old = document.getElementById('uie-unions-container'); if(old) old.remove();
+        var couples = findAllCouples();
+        if (couples.length === 0) return;
+
+        var container = '<div id="uie-unions-container" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">';
+        couples.forEach(function(c, idx) {
+            var ct = FamilyGraph.getUnionType ? FamilyGraph.getUnionType(c.id1, c.id2) : 'mariage';
+            var cr = _regimeStore[c.id1+'-'+c.id2] || _regimeStore[c.id2+'-'+c.id1] || 'communaute_acquets';
+            var uO = UNION_TYPES.map(function(u){ return '<option value="'+u[0]+'"'+(u[0]===ct?' selected':'')+'>'+u[1]+'</option>'; }).join('');
+            var rO = REGIMES.map(function(r){ return '<option value="'+r[0]+'"'+(r[0]===cr?' selected':'')+'>'+r[1]+'</option>'; }).join('');
+
+            container += '<div class="uie-couple-block" data-couple="'+c.id1+'-'+c.id2+'" style="padding:12px 16px;border-radius:12px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.12);">';
+            container += '<div style="font-size:.80rem;font-weight:700;color:var(--accent-coral);margin-bottom:8px;"><i class="fas fa-heart" style="margin-right:6px;"></i>'+esc(c.nom1)+' & '+esc(c.nom2)+'</div>';
+            container += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+            container += '<div class="form-group"><label class="form-label" style="font-size:.65rem;">Type d\'union</label>';
+            container += '<select class="uie-union-select" data-id1="'+c.id1+'" data-id2="'+c.id2+'" onchange="UIEnrichments.onUnionTypeChange(this.value,'+c.id1+','+c.id2+')" style="border-color:rgba(255,107,107,.2);font-size:.82rem;height:40px;">'+uO+'</select></div>';
+            container += '<div class="form-group uie-regime-group" data-couple="'+c.id1+'-'+c.id2+'" style="'+(ct!=='mariage'?'display:none;':'')+'">';
+            container += '<label class="form-label" style="font-size:.65rem;">R\u00e9gime matrimonial</label>';
+            container += '<select class="uie-regime-select" data-id1="'+c.id1+'" data-id2="'+c.id2+'" onchange="UIEnrichments.onRegimeChange(this.value,'+c.id1+','+c.id2+')" style="border-color:rgba(255,107,107,.2);font-size:.82rem;height:40px;">'+rO+'</select></div>';
+            container += '</div>';
+            // Warning
+            container += '<div class="uie-union-warning" data-couple="'+c.id1+'-'+c.id2+'" style="margin-top:6px;font-size:.73rem;">'+getWarningHtml(ct)+'</div>';
+            container += '</div>';
+        });
+        container += '</div>';
+        tree.insertAdjacentHTML('afterend', container);
+    }
+
+    function getWarningHtml(type) {
+        var m={concubinage:['rgba(255,107,107,.08)','var(--accent-coral)','fa-exclamation-triangle','<strong>Concubinage :</strong> 0 droit successoral. 60%. Seule l\'AV.'],
+            pacs:['rgba(255,179,0,.08)','var(--accent-amber)','fa-exclamation-triangle','<strong>PACS :</strong> exon\u00e9r\u00e9 mais 0 h\u00e9ritage sans testament.'],
+            mariage:['rgba(16,185,129,.06)','var(--accent-green)','fa-check-circle','<strong>Mariage :</strong> conjoint exon\u00e9r\u00e9 + h\u00e9ritage auto + DDV.']};
+        var v=m[type]||m.mariage;
+        return '<div style="padding:6px 10px;border-radius:8px;background:'+v[0]+';color:'+v[1]+';line-height:1.4;"><i class="fas '+v[2]+'" style="margin-right:4px;"></i>'+v[3]+'</div>';
+    }
+
+    // ============ 2. EVENTS union / régime ============
+    function onUnionTypeChange(t,a,b) {
+        if(FamilyGraph.setUnionType)FamilyGraph.setUnionType(a,b,t);
+        // Mettre à jour le warning et la visibilité du régime pour CE couple
+        var key = a+'-'+b;
+        var warn = document.querySelector('.uie-union-warning[data-couple="'+key+'"]');
+        if (!warn) { key = b+'-'+a; warn = document.querySelector('.uie-union-warning[data-couple="'+key+'"]'); }
+        if (warn) warn.innerHTML = getWarningHtml(t);
+        var rg = document.querySelector('.uie-regime-group[data-couple="'+key+'"]');
+        if (!rg) { rg = document.querySelector('.uie-regime-group[data-couple="'+b+'-'+a+'"]'); }
+        if (rg) rg.style.display = t === 'mariage' ? '' : 'none';
+    }
+
     function onRegimeChange(r,a,b) {
         _regimeStore[a+'-'+b]=r; _regimeStore[b+'-'+a]=r;
         var el=document.getElementById('regime-matrimonial'); if(el) el.value=r;
         var s=SD._getState?SD._getState():null; if(s) s.regime=r;
     }
-    function toggleRegimeVisibility(t) { var g=document.getElementById('regime-group'); if(g) g.style.display=t==='mariage'?'':'none'; }
-    function updateUnionWarning(t) {
-        var el=document.getElementById('union-type-warning'); if(!el) return;
-        var m={concubinage:['rgba(255,107,107,.08)','var(--accent-coral)','fa-exclamation-triangle','<strong>Concubinage :</strong> 0 droit successoral. 60%. Seule l\'AV est efficace.'],
-            pacs:['rgba(255,179,0,.08)','var(--accent-amber)','fa-exclamation-triangle','<strong>PACS :</strong> exon\u00e9r\u00e9 mais 0 h\u00e9ritage sans testament. DDV impossible.'],
-            mariage:['rgba(16,185,129,.06)','var(--accent-green)','fa-check-circle','<strong>Mariage :</strong> conjoint exon\u00e9r\u00e9 + h\u00e9ritage auto + DDV possible.']};
-        var v=m[t]||m.mariage;
-        el.innerHTML='<div style="padding:8px 12px;border-radius:8px;background:'+v[0]+';color:'+v[1]+';font-size:.78rem;line-height:1.5;"><i class="fas '+v[2]+'" style="margin-right:4px;"></i>'+v[3]+'</div>';
-    }
+
+    // Legacy compat
+    function injectUnionTypeSelector(id1, id2) { scanExistingCouples(); }
 
     // ============ 3. MENU CONTEXTUEL — Polling ============
     function startCtxMenuPolling() {
@@ -135,15 +170,19 @@ const UIEnrichments = (function() {
 
     function setUnionFromCtx(t,a,b) {
         if(FamilyGraph.setUnionType)FamilyGraph.setUnionType(a,b,t);
-        var sel=document.getElementById('select-union-type'); if(sel) sel.value=t;
-        updateUnionWarning(t); toggleRegimeVisibility(t);
+        // Mettre à jour le select du bon couple
+        var sel = document.querySelector('.uie-union-select[data-id1="'+a+'"][data-id2="'+b+'"]')
+               || document.querySelector('.uie-union-select[data-id1="'+b+'"][data-id2="'+a+'"]');
+        if(sel) sel.value = t;
+        onUnionTypeChange(t,a,b);
         if(typeof SD!=='undefined'&&SD.closeCtx) SD.closeCtx();
-        injectUnionTypeSelector(a,b);
     }
     function setRegimeFromCtx(r,a,b) {
         _regimeStore[a+'-'+b]=r; _regimeStore[b+'-'+a]=r;
         var el=document.getElementById('regime-matrimonial'); if(el) el.value=r;
-        var sl=document.getElementById('select-regime-union'); if(sl) sl.value=r;
+        var sl = document.querySelector('.uie-regime-select[data-id1="'+a+'"][data-id2="'+b+'"]')
+              || document.querySelector('.uie-regime-select[data-id1="'+b+'"][data-id2="'+a+'"]');
+        if(sl) sl.value = r;
         var s=SD._getState?SD._getState():null; if(s) s.regime=r;
         if(typeof SD!=='undefined'&&SD.closeCtx) SD.closeCtx();
     }
@@ -211,8 +250,18 @@ const UIEnrichments = (function() {
     function wireGatherInputs(){if(typeof SD==='undefined'||!SD._getState)return;var _o=SD.calculateResults;SD.calculateResults=function(){enrichState();_o.call(SD);};}
     function enrichState(){
         var s=SD._getState?SD._getState():null;if(!s)return;
-        var uS=document.getElementById('select-union-type');if(uS)s._unionType=uS.value;
-        var rS=document.getElementById('select-regime-union');if(rS)s.regime=rS.value;
+        // Lire le premier couple (donateur principal) pour state._unionType
+        var firstUnionSel = document.querySelector('.uie-union-select');
+        if(firstUnionSel) s._unionType = firstUnionSel.value;
+        var firstRegimeSel = document.querySelector('.uie-regime-select');
+        if(firstRegimeSel) s.regime = firstRegimeSel.value;
+        // Store toutes les unions par couple
+        var allSelects = document.querySelectorAll('.uie-union-select');
+        s._unions = {};
+        allSelects.forEach(function(sel) {
+            var key = sel.dataset.id1 + '-' + sel.dataset.id2;
+            s._unions[key] = sel.value;
+        });
         var d=(typeof FamilyGraph!=='undefined'&&FamilyGraph.getDonors)?FamilyGraph.getDonors():[];
         if(d.length>0){var mid=d[0].id;s._paysResidence=_personCountryStore[mid]||'FR';s._residenceEtranger=s._paysResidence!=='FR'?s._paysResidence:null;s._nationalite=_personNationalityStore[mid]||'FR';var sp=(typeof FamilyGraph!=='undefined'&&FamilyGraph.spouse)?FamilyGraph.spouse(mid):null;if(sp)s._paysConjoint=_personCountryStore[sp.id]||'';}
         var tE=document.getElementById('switch-testament');if(tE)s._hasTestament=tE.classList.contains('on');
@@ -229,7 +278,7 @@ const UIEnrichments = (function() {
         patchFamilyGraph();
         var iv=setInterval(function(){
             if(typeof SD==='undefined')return;
-            scanExistingCouples(); // ← NOUVEAU : détecte les couples créés par preset AVANT le patch
+            scanExistingCouples();
             injectInternationalFields();enrichBeneficiaryOptions();injectTestamentSwitch();
             observeFamilyTree();wireGatherInputs();startCtxMenuPolling();
             clearInterval(iv);
@@ -238,12 +287,11 @@ const UIEnrichments = (function() {
             if(e.target.closest('.step-item')){
                 setTimeout(function(){scanExistingCouples();injectInternationalFields();enrichBeneficiaryOptions();injectTestamentSwitch();observeFamilyTree();},400);
             }
-            // Preset buttons → rescan couples after tree rebuild
             if(e.target.closest('.preset-btn')){
                 setTimeout(function(){scanExistingCouples();injectInternationalFields();},800);
             }
         });
-        console.log('[UIEnrichments v1.7] Loaded \u2014 scan couples existants + polling ctx');
+        console.log('[UIEnrichments v1.8] Loaded \u2014 multi-couples + polling ctx');
     }
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(init,1200);});
     else setTimeout(init,1200);
