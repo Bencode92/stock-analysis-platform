@@ -1,20 +1,19 @@
 /**
  * ui-enrichments.js — Injecte les champs UI manquants + câble le state
  * 
- * v1.1 — Pays de résidence LIÉS aux personnes de l'arbre familial
+ * v1.2 — MutationObserver sur l'arbre → sync live avec "Situation internationale"
  *
- * @version 1.1.0 — 2026-03-16
+ * @version 1.2.0 — 2026-03-16
  */
 const UIEnrichments = (function() {
     'use strict';
 
-    // ============================================================
-    // 1. PATCH FamilyGraph — getUnionType()
-    // ============================================================
-
     var _unionTypeStore = {};
-    var _personCountryStore = {}; // clé: personId, valeur: 'FR'|'DE'|etc.
-    var _personNationalityStore = {}; // clé: personId, valeur: 'FR'|'DE'|etc.
+    var _personCountryStore = {};
+    var _personNationalityStore = {};
+    var _treeObserver = null;
+    var _refreshTimer = null;
+    var _lastPersonCount = 0;
 
     var PAYS_OPTIONS = [
         ['FR', '\ud83c\uddeb\ud83c\uddf7 France'], ['DE', '\ud83c\udde9\ud83c\uddea Allemagne'], ['BE', '\ud83c\udde7\ud83c\uddea Belgique'], ['ES', '\ud83c\uddea\ud83c\uddf8 Espagne'],
@@ -26,14 +25,16 @@ const UIEnrichments = (function() {
         ['OTHER', '\ud83c\udf0d Autre']
     ];
 
+    // ============================================================
+    // 1. PATCH FamilyGraph
+    // ============================================================
+
     function patchFamilyGraph() {
         if (typeof FamilyGraph === 'undefined') return;
 
         if (!FamilyGraph.getUnionType) {
             FamilyGraph.getUnionType = function(id1, id2) {
-                var key1 = id1 + '-' + id2;
-                var key2 = id2 + '-' + id1;
-                return _unionTypeStore[key1] || _unionTypeStore[key2] || 'mariage';
+                return _unionTypeStore[id1 + '-' + id2] || _unionTypeStore[id2 + '-' + id1] || 'mariage';
             };
         }
 
@@ -59,7 +60,7 @@ const UIEnrichments = (function() {
     }
 
     // ============================================================
-    // 2. INJECTION — Type d'union (Step 1)
+    // 2. Type d'union (Step 1)
     // ============================================================
 
     function injectUnionTypeSelector(id1, id2) {
@@ -77,18 +78,14 @@ const UIEnrichments = (function() {
 
         var html = '<div id="union-type-selector" style="padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.15);margin-top:12px;">';
         html += '<div style="font-size:.82rem;font-weight:700;color:var(--accent-coral);margin-bottom:8px;"><i class="fas fa-heart" style="margin-right:6px;"></i>Union de <strong>' + esc(nom1) + '</strong> & <strong>' + esc(nom2) + '</strong></div>';
-        html += '<div class="form-grid cols-3">';
-        html += '<div class="form-group">';
+        html += '<div class="form-grid cols-3"><div class="form-group">';
         html += '<label class="form-label">Type d\'union</label>';
         html += '<select id="select-union-type" onchange="UIEnrichments.onUnionTypeChange(this.value,' + id1 + ',' + id2 + ')" style="border-color:rgba(255,107,107,.25);">';
         html += '<option value="mariage"' + (currentType === 'mariage' ? ' selected' : '') + '>\ud83d\udc8d Mariage</option>';
         html += '<option value="pacs"' + (currentType === 'pacs' ? ' selected' : '') + '>\ud83d\udccb PACS</option>';
-        html += '<option value="concubinage"' + (currentType === 'concubinage' ? ' selected' : '') + '>\ud83e\udd1d Concubinage (union libre)</option>';
-        html += '</select>';
-        html += '</div>';
-        html += '</div>';
-        html += '<div id="union-type-warning" style="margin-top:8px;font-size:.75rem;"></div>';
-        html += '</div>';
+        html += '<option value="concubinage"' + (currentType === 'concubinage' ? ' selected' : '') + '>\ud83e\udd1d Concubinage</option>';
+        html += '</select></div></div>';
+        html += '<div id="union-type-warning" style="margin-top:8px;font-size:.75rem;"></div></div>';
 
         treeSection.insertAdjacentHTML('afterend', html);
         updateUnionWarning(currentType);
@@ -102,76 +99,96 @@ const UIEnrichments = (function() {
     function updateUnionWarning(type) {
         var el = document.getElementById('union-type-warning');
         if (!el) return;
-        if (type === 'concubinage') {
-            el.innerHTML = '<div style="padding:8px 12px;border-radius:8px;background:rgba(255,107,107,.08);color:var(--accent-coral);"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i><strong>Concubinage :</strong> aucun droit successoral. Tax\u00e9 \u00e0 60%. Seule l\'AV est efficace.</div>';
-        } else if (type === 'pacs') {
-            el.innerHTML = '<div style="padding:8px 12px;border-radius:8px;background:rgba(255,179,0,.08);color:var(--accent-amber);"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i><strong>PACS :</strong> exon\u00e9r\u00e9 mais AUCUN h\u00e9ritage sans testament ! DDV impossible.</div>';
-        } else {
-            el.innerHTML = '<div style="padding:8px 12px;border-radius:8px;background:rgba(16,185,129,.06);color:var(--accent-green);"><i class="fas fa-check-circle" style="margin-right:4px;"></i><strong>Mariage :</strong> conjoint exon\u00e9r\u00e9 + h\u00e9ritage automatique + DDV possible.</div>';
-        }
+        var msgs = {
+            concubinage: ['rgba(255,107,107,.08)', 'var(--accent-coral)', 'fa-exclamation-triangle', '<strong>Concubinage :</strong> aucun droit successoral. Tax\u00e9 \u00e0 60%. Seule l\'AV est efficace.'],
+            pacs: ['rgba(255,179,0,.08)', 'var(--accent-amber)', 'fa-exclamation-triangle', '<strong>PACS :</strong> exon\u00e9r\u00e9 mais AUCUN h\u00e9ritage sans testament ! DDV impossible.'],
+            mariage: ['rgba(16,185,129,.06)', 'var(--accent-green)', 'fa-check-circle', '<strong>Mariage :</strong> conjoint exon\u00e9r\u00e9 + h\u00e9ritage automatique + DDV possible.']
+        };
+        var m = msgs[type] || msgs.mariage;
+        el.innerHTML = '<div style="padding:8px 12px;border-radius:8px;background:' + m[0] + ';color:' + m[1] + ';"><i class="fas ' + m[2] + '" style="margin-right:4px;"></i>' + m[3] + '</div>';
     }
 
     // ============================================================
-    // 3. INJECTION — Pays résidence PAR PERSONNE (Step 1)
+    // 3. Pays résidence PAR PERSONNE — sync live avec l'arbre
     // ============================================================
+
+    function scheduleRefreshInternational() {
+        // Debounce : attendre 400ms après le dernier changement DOM
+        if (_refreshTimer) clearTimeout(_refreshTimer);
+        _refreshTimer = setTimeout(function() {
+            var persons = (typeof FamilyGraph !== 'undefined' && FamilyGraph.getPersons) ? FamilyGraph.getPersons() : [];
+            // Ne re-render que si le nombre de personnes a changé
+            if (persons.length !== _lastPersonCount) {
+                _lastPersonCount = persons.length;
+                injectInternationalFields();
+            }
+        }, 400);
+    }
+
+    function observeFamilyTree() {
+        var treeContainer = document.getElementById('family-persons-list');
+        if (!treeContainer || _treeObserver) return;
+
+        _treeObserver = new MutationObserver(function() {
+            scheduleRefreshInternational();
+        });
+
+        _treeObserver.observe(treeContainer, {
+            childList: true,
+            subtree: true,
+            characterData: true // détecte les changements de nom
+        });
+    }
 
     function injectInternationalFields() {
         var rolesSection = document.getElementById('family-roles-list');
         if (!rolesSection) return;
 
         var existing = document.getElementById('international-fields');
-        if (existing) existing.remove(); // Re-render si l'arbre a changé
+        if (existing) existing.remove();
 
-        // Récupérer les personnes de l'arbre
         var persons = [];
         if (typeof FamilyGraph !== 'undefined' && FamilyGraph.getPersons) {
             persons = FamilyGraph.getPersons();
         }
+        _lastPersonCount = persons.length;
 
-        if (persons.length === 0) return; // Pas encore de personnes
-
-        var paysOpts = PAYS_OPTIONS.map(function(p) {
-            return '<option value="' + p[0] + '"' + (p[0] === 'FR' ? ' selected' : '') + '>' + p[1] + '</option>';
-        }).join('');
+        if (persons.length === 0) return;
 
         var html = '<div id="international-fields" class="section-card" style="margin-top:12px;border-color:rgba(59,130,246,.15);">';
         html += '<div class="section-title"><i class="fas fa-globe-europe" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(59,130,246,.1));color:var(--accent-blue);"></i> Situation internationale</div>';
-        html += '<div class="section-subtitle">Indiquez le pays de r\u00e9sidence et la nationalit\u00e9 de chaque membre de la famille. Si tout le monde est fran\u00e7ais r\u00e9sidant en France, laissez les valeurs par d\u00e9faut.</div>';
+        html += '<div class="section-subtitle">Pays de r\u00e9sidence et nationalit\u00e9 de chaque membre. Laissez France par d\u00e9faut si pas concern\u00e9.</div>';
 
-        // Tableau personnes avec colonnes résidence + nationalité
         html += '<div style="overflow-x:auto;border-radius:10px;border:1px solid rgba(59,130,246,.1);">';
         html += '<table style="width:100%;border-collapse:collapse;font-size:.78rem;">';
         html += '<thead><tr style="background:rgba(59,130,246,.06);">';
         html += '<th style="padding:10px 12px;text-align:left;font-weight:600;">Personne</th>';
         html += '<th style="padding:10px 12px;text-align:left;font-weight:600;">R\u00f4le</th>';
-        html += '<th style="padding:10px 12px;text-align:left;font-weight:600;">Pays de r\u00e9sidence</th>';
+        html += '<th style="padding:10px 12px;text-align:left;font-weight:600;">R\u00e9sidence</th>';
         html += '<th style="padding:10px 12px;text-align:left;font-weight:600;">Nationalit\u00e9</th>';
         html += '</tr></thead><tbody>';
 
         persons.forEach(function(p) {
-            var storedCountry = _personCountryStore[p.id] || 'FR';
-            var storedNat = _personNationalityStore[p.id] || 'FR';
-            var role = p.isDonor ? '\ud83d\udcb0 Donateur' : p.isBen ? '\ud83c\udfaf B\u00e9n\u00e9ficiaire' : '\u2014';
-            var paysSelRes = PAYS_OPTIONS.map(function(opt) {
-                return '<option value="' + opt[0] + '"' + (opt[0] === storedCountry ? ' selected' : '') + '>' + opt[1] + '</option>';
-            }).join('');
-            var paysSelNat = PAYS_OPTIONS.map(function(opt) {
-                return '<option value="' + opt[0] + '"' + (opt[0] === storedNat ? ' selected' : '') + '>' + opt[1] + '</option>';
-            }).join('');
+            var storedC = _personCountryStore[p.id] || 'FR';
+            var storedN = _personNationalityStore[p.id] || 'FR';
+            var role = p.isDonor ? '\ud83d\udcb0 Donateur' : p.isBen ? '\ud83c\udfaf B\u00e9n\u00e9f.' : '\u2014';
+
+            var mkSel = function(stored) {
+                return PAYS_OPTIONS.map(function(o) {
+                    return '<option value="' + o[0] + '"' + (o[0] === stored ? ' selected' : '') + '>' + o[1] + '</option>';
+                }).join('');
+            };
 
             html += '<tr style="border-bottom:1px solid rgba(59,130,246,.05);">';
-            html += '<td style="padding:8px 12px;font-weight:600;">' + esc(p.nom || 'Sans nom') + (p.age ? ' (' + p.age + 'a)' : '') + '</td>';
-            html += '<td style="padding:8px 12px;font-size:.72rem;color:var(--text-muted);">' + role + '</td>';
-            html += '<td style="padding:8px 12px;"><select style="font-size:.78rem;height:36px;padding:4px 8px;" onchange="UIEnrichments.onPersonCountryChange(' + p.id + ',this.value)">' + paysSelRes + '</select></td>';
-            html += '<td style="padding:8px 12px;"><select style="font-size:.78rem;height:36px;padding:4px 8px;" onchange="UIEnrichments.onPersonNationalityChange(' + p.id + ',this.value)">' + paysSelNat + '</select></td>';
+            html += '<td style="padding:8px 12px;font-weight:600;">' + esc(p.nom || 'Sans nom') + (p.age ? ' <span style="color:var(--text-muted);font-weight:400;">(' + p.age + 'a)</span>' : '') + '</td>';
+            html += '<td style="padding:8px 12px;font-size:.70rem;color:var(--text-muted);">' + role + '</td>';
+            html += '<td style="padding:6px 8px;"><select style="font-size:.76rem;height:34px;padding:2px 6px;" onchange="UIEnrichments.onPersonCountryChange(' + p.id + ',this.value)">' + mkSel(storedC) + '</select></td>';
+            html += '<td style="padding:6px 8px;"><select style="font-size:.76rem;height:34px;padding:2px 6px;" onchange="UIEnrichments.onPersonNationalityChange(' + p.id + ',this.value)">' + mkSel(storedN) + '</select></td>';
             html += '</tr>';
         });
 
         html += '</tbody></table></div>';
-
-        // Info
-        html += '<div style="margin-top:8px;font-size:.72rem;color:var(--text-muted);"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Le r\u00e8glement UE 650/2012 s\'applique si le d\u00e9funt r\u00e9side hors France. Option loi fran\u00e7aise possible par testament (art. 22).</div>';
-
+        html += '<div style="margin-top:8px;font-size:.70rem;color:var(--text-muted);"><i class="fas fa-info-circle" style="margin-right:4px;"></i>R\u00e8glement UE 650/2012 : si le d\u00e9funt r\u00e9side hors France, loi du pays de r\u00e9sidence. Option loi fran\u00e7aise par testament (art. 22).</div>';
         html += '</div>';
 
         rolesSection.closest('.section-card').insertAdjacentHTML('afterend', html);
@@ -179,32 +196,27 @@ const UIEnrichments = (function() {
 
     function onPersonCountryChange(personId, country) {
         _personCountryStore[personId] = country;
-
-        // Mettre à jour le state pour le donateur principal
         var state = SD._getState ? SD._getState() : null;
         if (!state) return;
 
-        // Trouver si cette personne est le donateur principal
         var donors = (typeof FamilyGraph !== 'undefined' && FamilyGraph.getDonors) ? FamilyGraph.getDonors() : [];
         if (donors.length > 0 && donors[0].id === personId) {
             state._paysResidence = country;
             state._residenceEtranger = country !== 'FR' ? country : null;
         }
 
-        // Si c'est le conjoint
-        var spouse = (typeof FamilyGraph !== 'undefined' && FamilyGraph.spouse) ? FamilyGraph.spouse(personId) : null;
-        if (spouse) {
-            var spouseDonors = donors.filter(function(d) { return d.id === spouse.id; });
-            if (spouseDonors.length > 0) {
-                // C'est le conjoint d'un donateur
-                state._paysConjoint = country;
+        // Conjoint d'un donateur
+        if (typeof FamilyGraph !== 'undefined' && FamilyGraph.spouse) {
+            var sp = FamilyGraph.spouse(personId);
+            if (sp) {
+                var isSpouseDonor = donors.some(function(d) { return d.id === sp.id; });
+                if (isSpouseDonor) state._paysConjoint = country;
             }
         }
     }
 
     function onPersonNationalityChange(personId, nationality) {
         _personNationalityStore[personId] = nationality;
-
         var state = SD._getState ? SD._getState() : null;
         if (!state) return;
 
@@ -215,22 +227,20 @@ const UIEnrichments = (function() {
     }
 
     // ============================================================
-    // 4. INJECTION — Testament existant (Step 4)
+    // 4. Testament (Step 4)
     // ============================================================
 
     function injectTestamentSwitch() {
         var ddvSwitch = document.getElementById('switch-ddv');
-        if (!ddvSwitch) return;
-        if (document.getElementById('switch-testament')) return;
+        if (!ddvSwitch || document.getElementById('switch-testament')) return;
 
         var switchRow = ddvSwitch.closest('.switch-row');
         if (!switchRow) return;
 
         var html = '<div class="switch-row">';
-        html += '<span class="switch-label">Testament d\u00e9j\u00e0 r\u00e9dig\u00e9 ? <span class="info-tip" onclick="this.classList.toggle(\'open\');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">OBLIGATOIRE pour les pacs\u00e9s (sinon le partenaire ne re\u00e7oit RIEN). Recommand\u00e9 pour tous : permet de choisir la r\u00e9partition.</span></span></span>';
+        html += '<span class="switch-label">Testament d\u00e9j\u00e0 r\u00e9dig\u00e9 ? <span class="info-tip" onclick="this.classList.toggle(\'open\');event.stopPropagation()"><i class="fas fa-info-circle"></i><span class="tip-bubble">OBLIGATOIRE pour les pacs\u00e9s (sinon le partenaire ne re\u00e7oit RIEN). Recommand\u00e9 pour tous.</span></span></span>';
         html += '<div class="switch" id="switch-testament" onclick="SD.toggleSwitch(this);UIEnrichments.onTestamentChange()"></div>';
         html += '</div>';
-
         switchRow.insertAdjacentHTML('beforebegin', html);
     }
 
@@ -242,12 +252,12 @@ const UIEnrichments = (function() {
     }
 
     // ============================================================
-    // 5. ENRICHIR BÉNÉFICIAIRES — beau_enfant + isAutreLit
+    // 5. Bénéficiaires — beau_enfant + isAutreLit
     // ============================================================
 
     function enrichBeneficiaryOptions() {
         var list = document.getElementById('beneficiaries-list');
-        if (!list) return;
+        if (!list || list._uiEnrichObserved) return;
 
         var observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(m) {
@@ -259,6 +269,7 @@ const UIEnrichments = (function() {
             });
         });
         observer.observe(list, { childList: true });
+        list._uiEnrichObserved = true;
 
         list.querySelectorAll('.list-item').forEach(enrichBenItem);
     }
@@ -267,8 +278,8 @@ const UIEnrichments = (function() {
         if (item.querySelector('.autre-lit-check')) return;
         var benId = item.dataset.benId;
         if (benId === undefined) {
-            var idMatch = item.id.match(/ben-(\d+)/);
-            if (idMatch) benId = idMatch[1];
+            var m = item.id.match(/ben-(\d+)/);
+            if (m) benId = m[1];
         }
         if (benId === undefined) return;
 
@@ -283,13 +294,12 @@ const UIEnrichments = (function() {
         }
 
         var formGrid = item.querySelector('.form-grid');
-        if (formGrid && !item.querySelector('.autre-lit-check')) {
-            var checkHtml = '<div class="form-group autre-lit-check" style="margin-top:8px;">';
-            checkHtml += '<label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--text-secondary);cursor:pointer;">';
-            checkHtml += '<input type="checkbox" onchange="UIEnrichments.onAutreLitChange(' + benId + ',this.checked)" style="width:16px;height:16px;cursor:pointer;">';
-            checkHtml += 'Enfant d\'un autre lit (1\u00e8re union du d\u00e9funt)';
-            checkHtml += '</label></div>';
-            formGrid.insertAdjacentHTML('afterend', checkHtml);
+        if (formGrid) {
+            var h = '<div class="form-group autre-lit-check" style="margin-top:8px;">';
+            h += '<label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--text-secondary);cursor:pointer;">';
+            h += '<input type="checkbox" onchange="UIEnrichments.onAutreLitChange(' + benId + ',this.checked)" style="width:16px;height:16px;cursor:pointer;">';
+            h += 'Enfant d\'un autre lit</label></div>';
+            formGrid.insertAdjacentHTML('afterend', h);
         }
     }
 
@@ -301,12 +311,11 @@ const UIEnrichments = (function() {
     }
 
     // ============================================================
-    // 6. CÂBLAGE — enrichState avant calcul
+    // 6. enrichState avant calcul
     // ============================================================
 
     function wireGatherInputs() {
         if (typeof SD === 'undefined' || !SD._getState) return;
-
         var _origCalc = SD.calculateResults;
         SD.calculateResults = function() {
             enrichState();
@@ -318,41 +327,29 @@ const UIEnrichments = (function() {
         var state = SD._getState ? SD._getState() : null;
         if (!state) return;
 
-        // Union type
         var unionSel = document.getElementById('select-union-type');
         if (unionSel) state._unionType = unionSel.value;
 
-        // Pays résidence — depuis le store par personne (donateur principal)
         var donors = (typeof FamilyGraph !== 'undefined' && FamilyGraph.getDonors) ? FamilyGraph.getDonors() : [];
         if (donors.length > 0) {
-            var mainDonorId = donors[0].id;
-            state._paysResidence = _personCountryStore[mainDonorId] || 'FR';
+            var mid = donors[0].id;
+            state._paysResidence = _personCountryStore[mid] || 'FR';
             state._residenceEtranger = state._paysResidence !== 'FR' ? state._paysResidence : null;
-            state._nationalite = _personNationalityStore[mainDonorId] || 'FR';
-
-            // Conjoint du donateur principal
-            var sp = FamilyGraph.spouse ? FamilyGraph.spouse(mainDonorId) : null;
-            if (sp) {
-                state._paysConjoint = _personCountryStore[sp.id] || '';
-            }
+            state._nationalite = _personNationalityStore[mid] || 'FR';
+            var sp = (typeof FamilyGraph !== 'undefined' && FamilyGraph.spouse) ? FamilyGraph.spouse(mid) : null;
+            if (sp) state._paysConjoint = _personCountryStore[sp.id] || '';
         }
 
-        // Testament
         var testEl = document.getElementById('switch-testament');
         if (testEl) state._hasTestament = testEl.classList.contains('on');
-
-        // DDV
         var ddvEl = document.getElementById('switch-ddv');
         if (ddvEl) state._hasDDV = ddvEl.classList.contains('on');
 
-        // Beaux-enfants
         var nbBeaux = 0;
         state.beneficiaries.forEach(function(b) {
             if (b.lien === 'beau_enfant') { b.isBeauEnfant = true; nbBeaux++; }
         });
         state._nbBeauxEnfants = nbBeaux;
-
-        // Autre lit
         state._hasEnfantsAutreLit = state.beneficiaries.some(function(b) { return b.isAutreLit; });
     }
 
@@ -363,7 +360,7 @@ const UIEnrichments = (function() {
     function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
     // ============================================================
-    // 7. INIT
+    // 7. INIT — MutationObserver sur l'arbre familial
     // ============================================================
 
     function init() {
@@ -372,22 +369,15 @@ const UIEnrichments = (function() {
         var interval = setInterval(function() {
             if (typeof SD === 'undefined') return;
 
-            var step1 = document.getElementById('step-1');
-            if (step1 && step1.classList.contains('active')) {
-                injectInternationalFields();
-            }
-
-            var step2 = document.getElementById('step-2');
-            if (step2) enrichBeneficiaryOptions();
-
-            var step4 = document.getElementById('step-4');
-            if (step4) injectTestamentSwitch();
-
+            injectInternationalFields();
+            enrichBeneficiaryOptions();
+            injectTestamentSwitch();
+            observeFamilyTree();
             wireGatherInputs();
             clearInterval(interval);
         }, 1000);
 
-        // Réinjecter quand on change de step ou quand l'arbre est modifié
+        // Réinjecter quand on change de step
         document.addEventListener('click', function(e) {
             var stepItem = e.target.closest('.step-item');
             if (stepItem) {
@@ -395,17 +385,12 @@ const UIEnrichments = (function() {
                     injectInternationalFields();
                     enrichBeneficiaryOptions();
                     injectTestamentSwitch();
+                    observeFamilyTree();
                 }, 400);
-            }
-
-            // Détecter ajout/suppression personne dans l'arbre → refresh pays
-            var fgAct = e.target.closest('.fg-act') || e.target.closest('.tb') || e.target.closest('.preset-btn');
-            if (fgAct) {
-                setTimeout(injectInternationalFields, 600);
             }
         });
 
-        console.log('[UIEnrichments v1.1] Loaded \u2014 union, pays/personne, testament, beau-enfant, autre lit');
+        console.log('[UIEnrichments v1.2] Loaded \u2014 live sync arbre \u2194 international');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 1200); });
@@ -413,7 +398,7 @@ const UIEnrichments = (function() {
 
     return {
         onUnionTypeChange: onUnionTypeChange,
-        onPaysChange: function() {}, // legacy compat
+        onPaysChange: function() {},
         onPersonCountryChange: onPersonCountryChange,
         onPersonNationalityChange: onPersonNationalityChange,
         onTestamentChange: onTestamentChange,
