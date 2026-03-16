@@ -2857,6 +2857,11 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             # Re-round
             allocation = round_weights_to_100(allocation)
         
+        # === v5.3.1 FIX: Sync allocation back to portfolios dict ===
+        # round_weights_to_100() creates a NEW dict, so portfolios[profile]["allocation"]
+        # (set at line ~2460) becomes stale after caps/dust. Re-assign to propagate.
+        portfolios[profile]["allocation"] = allocation
+        
         # === v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis ===
         try:
             tm = build_tickers_meta_for_risk(allocation, assets)
