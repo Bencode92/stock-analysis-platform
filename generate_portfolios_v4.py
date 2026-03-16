@@ -2463,6 +2463,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "assets": assets,
         }
         # === FIX v5.2.0: RADAR hard cap — régions "avoided" → max 5% par stock ===
+        _agg_capped_aids = set()  # v5.3.1: track capped positions to protect from dust reinflation
         if market_context:
             # Country name aliases (FR→EN, EN→FR, common variants)
             _COUNTRY_ALIASES = {
@@ -2832,14 +2833,26 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 _keep_total += w_pct
         
         if _removed_dust and _keep_total > 0:
-            # Redistribute proportionally
-            for aid in allocation:
-                if allocation[aid] > 0:
-                    allocation[aid] += _dust_total * (allocation[aid] / _keep_total)
+            # Redistribute proportionally — but EXCLUDE agg-capped positions (v5.3.1)
+            # to prevent dust reinflation of avoided sector/region caps
+            _dust_eligible_total = sum(
+                w for aid, w in allocation.items() 
+                if w > 0 and aid not in _agg_capped_aids
+            )
+            if _dust_eligible_total > 0:
+                for aid in allocation:
+                    if allocation[aid] > 0 and aid not in _agg_capped_aids:
+                        allocation[aid] += _dust_total * (allocation[aid] / _dust_eligible_total)
+            elif _keep_total > 0:
+                # Fallback: all positions are capped, redistribute to all
+                for aid in allocation:
+                    if allocation[aid] > 0:
+                        allocation[aid] += _dust_total * (allocation[aid] / _keep_total)
             
             for aid, name, old_w in _removed_dust:
                 logger.info(f"   [{profile}] 🧹 Dust removed: {name} {old_w:.1f}% < {MIN_POSITION_WEIGHT}%")
-            logger.info(f"   [{profile}] 🧹 {len(_removed_dust)} positions removed, {_dust_total:.1f}% redistributed")
+            _n_protected = len([a for a in allocation if a in _agg_capped_aids and allocation[a] > 0])
+            logger.info(f"   [{profile}] 🧹 {len(_removed_dust)} positions removed, {_dust_total:.1f}% redistributed (protected {_n_protected} capped positions)")
             
             # Re-round
             allocation = round_weights_to_100(allocation)
