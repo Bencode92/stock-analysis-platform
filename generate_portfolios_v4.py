@@ -4660,6 +4660,28 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         # Cela évite les problèmes de précision et les faux warnings
         if rebuilt_numeric:
             rounded_rebuilt = round_weights_to_100(rebuilt_numeric, decimals=1)
+            
+            # === v5.3.1 SAFETY NET: Hard cap max single position at 15% ===
+            # This is the LAST checkpoint before JSON display is written.
+            # Catches any reinflation from upstream redistribution steps.
+            _FINAL_MAX_SINGLE = 15.0
+            for _fn_iter in range(5):
+                _fn_over = {k: v for k, v in rounded_rebuilt.items() if v > _FINAL_MAX_SINGLE + 0.05}
+                if not _fn_over:
+                    break
+                _fn_excess = 0.0
+                _fn_keys = set(_fn_over.keys())
+                for k, v in _fn_over.items():
+                    _fn_excess += v - _FINAL_MAX_SINGLE
+                    logger.info(f"   [{profile}] 🛡️ SAFETY NET: {k} {v:.1f}%→{_FINAL_MAX_SINGLE:.1f}%")
+                    rounded_rebuilt[k] = _FINAL_MAX_SINGLE
+                _fn_eligible = sum(v for k, v in rounded_rebuilt.items() if k not in _fn_keys and v > 0)
+                if _fn_eligible > 0 and _fn_excess > 0:
+                    for k in rounded_rebuilt:
+                        if k not in _fn_keys and rounded_rebuilt[k] > 0:
+                            rounded_rebuilt[k] += _fn_excess * (rounded_rebuilt[k] / _fn_eligible)
+                rounded_rebuilt = round_weights_to_100(rounded_rebuilt, decimals=1)
+            
             # Reconstruire les sections avec les poids arrondis (1 décimale)
             for cat in ["Actions", "ETF", "Obligations", "Crypto"]:
                 rebuilt_sections[cat] = {}
