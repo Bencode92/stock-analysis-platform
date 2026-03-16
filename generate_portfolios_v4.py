@@ -2795,6 +2795,28 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                             allocation[_a_id] += _agg_surplus * (allocation[_a_id] / _non_capped_total)
                     logger.info(f"   [{profile}] 🔄 AGG surplus {_agg_surplus:.1f}% redistribué aux {len(allocation) - len(_agg_capped_aids)} positions non-cappées")
                 
+                # 8b. Re-cap max single position after redistribution (schema limit = 15%)
+                _MAX_SINGLE_POST_AGG = 15.0
+                for _iter in range(5):  # max 5 iterations for cascading caps
+                    _over = [(a_id, w) for a_id, w in allocation.items() if w > _MAX_SINGLE_POST_AGG + 0.01]
+                    if not _over:
+                        break
+                    _excess2 = 0.0
+                    _capped2 = set()
+                    for _a_id, _a_w in _over:
+                        _excess2 += _a_w - _MAX_SINGLE_POST_AGG
+                        allocation[_a_id] = _MAX_SINGLE_POST_AGG
+                        _capped2.add(_a_id)
+                        _agg_capped_aids.add(_a_id)  # protect from dust reinflation too
+                        logger.info(f"   [{profile}] 🔒 POST-AGG max_single: {_a_id} {_a_w:.1f}%→{_MAX_SINGLE_POST_AGG:.1f}%")
+                    # Redistribute excess to remaining non-capped
+                    _eligible = sum(w for a_id, w in allocation.items() 
+                                    if a_id not in _agg_capped_aids and w > 0)
+                    if _eligible > 0 and _excess2 > 0:
+                        for _a_id in allocation:
+                            if _a_id not in _agg_capped_aids and allocation[_a_id] > 0:
+                                allocation[_a_id] += _excess2 * (allocation[_a_id] / _eligible)
+                
                 allocation = round_weights_to_100(allocation)
             
             # 9. Log post-cap exposure
