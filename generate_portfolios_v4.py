@@ -2662,21 +2662,33 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             def _agg_get_sector(asset):
                 # a) Try sector field (FR), then sector_api (EN), then sector_top
                 for _field in ('sector', 'sector_api', 'sector_top'):
-                    s = (_safe_get_attr(asset, _field) or '').lower().strip()
+                    s = _safe_get_attr(asset, _field) or ''
+                    if not isinstance(s, str):
+                        continue  # skip dicts/lists that source_data may return
+                    s = s.lower().strip()
                     if s and s != 'unknown':
                         normalized = _SECTOR_NORMALIZE.get(s)
                         if normalized:
                             return normalized
                 # b) ETF: lookup via RADAR diagnostics symbol mapping
-                tk = (_safe_get_attr(asset, 'ticker') or _safe_get_attr(asset, 'name') or '').upper().strip()
+                _tk_raw = _safe_get_attr(asset, 'ticker') or _safe_get_attr(asset, 'name') or ''
+                if not isinstance(_tk_raw, str):
+                    _tk_raw = str(_tk_raw)
+                tk = _tk_raw.upper().strip()
                 if '/' in tk:
                     tk = tk.split('/')[0].strip()
                 return _etf_to_sector.get(tk, '')
 
             # 5. Helper: get canonical region for any asset
             def _agg_get_region(asset):
-                c = (_safe_get_attr(asset, 'country') or '').lower().strip()
-                r = (getattr(asset, 'region', '') or '').lower().strip()
+                c = _safe_get_attr(asset, 'country') or ''
+                if not isinstance(c, str):
+                    c = ''
+                c = c.lower().strip()
+                r = getattr(asset, 'region', '') or ''
+                if not isinstance(r, str):
+                    r = ''
+                r = r.lower().strip()
                 raw = c or r
                 if not raw:
                     return ''
