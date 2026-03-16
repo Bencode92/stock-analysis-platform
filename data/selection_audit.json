@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-16T14:34:51.340605",
+  "timestamp": "2026-03-16T14:47:11.335888",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -7,11 +7,11 @@
     "equities_selected": 150,
     "equities_rejected_notable": 50,
     "etf_initial": 231,
-    "etf_selected": 17,
+    "etf_selected": 16,
     "etf_rejected_notable": 20,
     "crypto_initial": 6,
-    "crypto_selected": 2,
-    "crypto_rejected_notable": 4,
+    "crypto_selected": 1,
+    "crypto_rejected_notable": 5,
     "bonds_initial": 31,
     "bonds_selected": 8,
     "total_filters_applied": 4,
@@ -50,7 +50,7 @@
         },
         "quality_premium": {
           "total": 20,
-          "selected": 3
+          "selected": 2
         },
         "recovery": {
           "total": 20,
@@ -68,7 +68,7 @@
       "etf": {
         "coeur_global": {
           "total": 20,
-          "selected": 7
+          "selected": 6
         },
         "commodities_broad": {
           "total": 5,
@@ -880,10 +880,12 @@
         "ticker": "ITX",
         "sort_score": 0.7016,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "quality_premium",
         "profile_score": 0.7016,
         "buffett_score": 100.0,
+        "rejection_reason": "Filtré par hard_filters_Stable",
+        "rejection_filter": "hard_filters_Stable",
         "sector": "Biens de consommation cycliques",
         "country": "Espagne",
         "volatility": 22.5,
@@ -3042,10 +3044,11 @@
         "ticker": "VOE",
         "sort_score": 97.99,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "coeur_global",
         "composite_score": 97.99,
         "profile_score": 97.99,
+        "rejection_reason": "Score composite (97.990) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 14.2,
         "ytd": "2.35%",
@@ -4365,9 +4368,10 @@
         "ticker": "TRX/USD",
         "sort_score": 100.0,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "crypto_preset_payment",
         "profile_score": 100.0,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 22.9
       },
       {
@@ -6748,10 +6752,12 @@
           "ticker": "ITX",
           "sort_score": 0.7016,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "quality_premium",
           "profile_score": 0.7016,
           "buffett_score": 100.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Biens de consommation cycliques",
           "country": "Espagne",
           "volatility": 22.5,
@@ -8544,10 +8550,11 @@
           "ticker": "VOE",
           "sort_score": 97.99,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "coeur_global",
           "composite_score": 97.99,
           "profile_score": 97.99,
+          "rejection_reason": "Score composite (97.990) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 14.2,
           "ytd": "2.35%",
@@ -16322,20 +16329,6 @@
       "selection_reason": "Score profil élevé (100.00); Preset: coeur_global; Score composite élevé (100.00)"
     },
     {
-      "name": "Vanguard Mid-Cap Value ETF",
-      "ticker": "VOE",
-      "category": "etf",
-      "matched_preset": "coeur_global",
-      "composite_score": 97.99,
-      "profile_score": 97.99,
-      "volatility": 14.2,
-      "sector": "Financial Services",
-      "radar_tilt": "avoided",
-      "selected": true,
-      "ranking": 15,
-      "selection_reason": "Score profil élevé (97.99); Preset: coeur_global; Score composite élevé (97.99)"
-    },
-    {
       "name": "iShares Core Dividend Growth ETF",
       "ticker": "DGRO",
       "category": "etf",
@@ -16346,7 +16339,7 @@
       "sector": "Financial Services",
       "radar_tilt": "avoided",
       "selected": true,
-      "ranking": 16,
+      "ranking": 15,
       "selection_reason": "Score profil élevé (98.82); Preset: coeur_global; Score composite élevé (98.82)"
     },
     {
@@ -16360,7 +16353,7 @@
       "sector": "Technology",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 17,
+      "ranking": 16,
       "selection_reason": "Score profil élevé (95.29); Preset: min_vol_global; Score composite élevé (95.29)"
     }
   ],
@@ -16629,18 +16622,6 @@
   "crypto_selected": [
     {
       "name": "Unknown",
-      "ticker": "TRX/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_payment",
-      "profile_score": 100.0,
-      "volatility": 22.9,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 1,
-      "selection_reason": "Score profil élevé (100.00); Preset: crypto_preset_payment"
-    },
-    {
-      "name": "Unknown",
       "ticker": "PAXG/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_tokenized_gold",
@@ -16648,11 +16629,22 @@
       "volatility": 28.8,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 2,
+      "ranking": 1,
       "selection_reason": "Score profil élevé (93.58); Preset: crypto_preset_tokenized_gold"
     }
   ],
   "crypto_rejected": [
+    {
+      "name": "Unknown",
+      "ticker": "TRX/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_payment",
+      "profile_score": 100.0,
+      "volatility": 22.9,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
     {
       "name": "Unknown",
       "ticker": "MORPHO/USD",

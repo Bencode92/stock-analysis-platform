@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T14:34:51.427594",
+  "generated_at": "2026-03-16T14:47:11.422717",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,8 +201,8 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 14,
-    "selection_rate": "1.4%",
+    "total_selected": 13,
+    "selection_rate": "1.3%",
     "by_region": {
       "US": {
         "universe": 521,
@@ -210,7 +210,7 @@
       },
       "Europe": {
         "universe": 267,
-        "in_top_20_selected": 1
+        "in_top_20_selected": 0
       },
       "Asia": {
         "universe": 210,
@@ -220,7 +220,7 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 9
+        "selected": 8
       }
     }
   },
@@ -255,12 +255,6 @@
         "STATE BANK OF INDIA",
         "BANCO BILBAO VIZCAYA ARGE",
         "AGEAS SA"
-      ]
-    },
-    "Biens de consommation cycliques": {
-      "selected_count": 1,
-      "selected_names": [
-        "INDUSTRIA DE DISENO TEXTI"
       ]
     },
     "Immobilier": {
@@ -794,8 +788,8 @@
     "Europe": {
       "total_in_universe": 267,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 1,
-      "rejection_rate_top_20": "95%",
+      "selected_in_top_20": 0,
+      "rejection_rate_top_20": "100%",
       "stocks": [
         {
           "rank": 1,
@@ -1223,10 +1217,13 @@
           "market_cap_billions": 160.9,
           "sector": "Biens de consommation cycliques",
           "country": "Espagne",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.702, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.702,
+            "composite_score": 0.667,
+            "sector": "Biens de consommation cycliques",
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 100.0,
           "composite_score": 0.667,
@@ -2176,7 +2173,7 @@
         "ticker": "ITX",
         "sort_score": 0.7016,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "composite_score": 0.6666,
         "profile_score": 0.7016,
         "buffett_score": 100.0,
@@ -2185,6 +2182,7 @@
         "sector": "Biens de consommation cycliques",
         "country": "Espagne",
         "matched_preset": "quality_premium",
+        "rejection_reason": "Score composite (0.702) insuffisant pour le quota",
         "roe": 30.65,
         "de_ratio": 0.3,
         "market_cap": "160866852615",
