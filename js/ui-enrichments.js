@@ -1,9 +1,9 @@
 /**
  * ui-enrichments.js — Injecte les champs UI manquants + câble le state
  * 
- * v1.2 — MutationObserver sur l'arbre → sync live avec "Situation internationale"
+ * v1.3 — Sync live arbre + rôles → tableau international trié par importance
  *
- * @version 1.2.0 — 2026-03-16
+ * @version 1.3.0 — 2026-03-16
  */
 const UIEnrichments = (function() {
     'use strict';
@@ -12,8 +12,9 @@ const UIEnrichments = (function() {
     var _personCountryStore = {};
     var _personNationalityStore = {};
     var _treeObserver = null;
+    var _rolesObserver = null;
     var _refreshTimer = null;
-    var _lastPersonCount = 0;
+    var _lastPersonHash = '';
 
     var PAYS_OPTIONS = [
         ['FR', '\ud83c\uddeb\ud83c\uddf7 France'], ['DE', '\ud83c\udde9\ud83c\uddea Allemagne'], ['BE', '\ud83c\udde7\ud83c\uddea Belgique'], ['ES', '\ud83c\uddea\ud83c\uddf8 Espagne'],
@@ -109,35 +110,55 @@ const UIEnrichments = (function() {
     }
 
     // ============================================================
-    // 3. Pays résidence PAR PERSONNE — sync live avec l'arbre
+    // 3. Pays résidence PAR PERSONNE — sync live arbre + rôles
     // ============================================================
 
+    function getPersonHash() {
+        // Hash basé sur les personnes + leurs rôles pour détecter tout changement
+        var persons = (typeof FamilyGraph !== 'undefined' && FamilyGraph.getPersons) ? FamilyGraph.getPersons() : [];
+        return persons.map(function(p) {
+            return p.id + ':' + (p.nom || '') + ':' + (p.isDonor ? 'D' : '') + (p.isBen ? 'B' : '');
+        }).join('|');
+    }
+
     function scheduleRefreshInternational() {
-        // Debounce : attendre 400ms après le dernier changement DOM
         if (_refreshTimer) clearTimeout(_refreshTimer);
         _refreshTimer = setTimeout(function() {
-            var persons = (typeof FamilyGraph !== 'undefined' && FamilyGraph.getPersons) ? FamilyGraph.getPersons() : [];
-            // Ne re-render que si le nombre de personnes a changé
-            if (persons.length !== _lastPersonCount) {
-                _lastPersonCount = persons.length;
+            var hash = getPersonHash();
+            if (hash !== _lastPersonHash) {
+                _lastPersonHash = hash;
                 injectInternationalFields();
             }
         }, 400);
     }
 
     function observeFamilyTree() {
+        // Observer sur l'arbre visuel
         var treeContainer = document.getElementById('family-persons-list');
-        if (!treeContainer || _treeObserver) return;
+        if (treeContainer && !_treeObserver) {
+            _treeObserver = new MutationObserver(function() {
+                scheduleRefreshInternational();
+            });
+            _treeObserver.observe(treeContainer, { childList: true, subtree: true, characterData: true });
+        }
 
-        _treeObserver = new MutationObserver(function() {
-            scheduleRefreshInternational();
-        });
+        // Observer sur les rôles (checkboxes 💰/🎯)
+        var rolesContainer = document.getElementById('family-roles-list');
+        if (rolesContainer && !_rolesObserver) {
+            _rolesObserver = new MutationObserver(function() {
+                scheduleRefreshInternational();
+            });
+            _rolesObserver.observe(rolesContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ['checked', 'class'] });
 
-        _treeObserver.observe(treeContainer, {
-            childList: true,
-            subtree: true,
-            characterData: true // détecte les changements de nom
-        });
+            // Écouter les clics sur les checkboxes de rôle
+            rolesContainer.addEventListener('change', function() {
+                scheduleRefreshInternational();
+            });
+            rolesContainer.addEventListener('click', function() {
+                // Délai car le FamilyGraph met à jour après le clic
+                setTimeout(scheduleRefreshInternational, 200);
+            });
+        }
     }
 
     function injectInternationalFields() {
@@ -151,9 +172,16 @@ const UIEnrichments = (function() {
         if (typeof FamilyGraph !== 'undefined' && FamilyGraph.getPersons) {
             persons = FamilyGraph.getPersons();
         }
-        _lastPersonCount = persons.length;
+        _lastPersonHash = getPersonHash();
 
         if (persons.length === 0) return;
+
+        // Trier : donateurs en premier, puis bénéficiaires, puis les autres
+        persons.sort(function(a, b) {
+            var scoreA = (a.isDonor ? 0 : a.isBen ? 10 : 20);
+            var scoreB = (b.isDonor ? 0 : b.isBen ? 10 : 20);
+            return scoreA - scoreB;
+        });
 
         var html = '<div id="international-fields" class="section-card" style="margin-top:12px;border-color:rgba(59,130,246,.15);">';
         html += '<div class="section-title"><i class="fas fa-globe-europe" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(59,130,246,.1));color:var(--accent-blue);"></i> Situation internationale</div>';
@@ -171,7 +199,13 @@ const UIEnrichments = (function() {
         persons.forEach(function(p) {
             var storedC = _personCountryStore[p.id] || 'FR';
             var storedN = _personNationalityStore[p.id] || 'FR';
-            var role = p.isDonor ? '\ud83d\udcb0 Donateur' : p.isBen ? '\ud83c\udfaf B\u00e9n\u00e9f.' : '\u2014';
+
+            // Badge rôle coloré
+            var role = '\u2014';
+            var roleBg = 'transparent';
+            var roleColor = 'var(--text-muted)';
+            if (p.isDonor) { role = '\ud83d\udcb0 Donateur'; roleBg = 'rgba(198,134,66,.1)'; roleColor = 'var(--primary-color)'; }
+            else if (p.isBen) { role = '\ud83c\udfaf B\u00e9n\u00e9f.'; roleBg = 'rgba(16,185,129,.1)'; roleColor = 'var(--accent-green)'; }
 
             var mkSel = function(stored) {
                 return PAYS_OPTIONS.map(function(o) {
@@ -181,7 +215,7 @@ const UIEnrichments = (function() {
 
             html += '<tr style="border-bottom:1px solid rgba(59,130,246,.05);">';
             html += '<td style="padding:8px 12px;font-weight:600;">' + esc(p.nom || 'Sans nom') + (p.age ? ' <span style="color:var(--text-muted);font-weight:400;">(' + p.age + 'a)</span>' : '') + '</td>';
-            html += '<td style="padding:8px 12px;font-size:.70rem;color:var(--text-muted);">' + role + '</td>';
+            html += '<td style="padding:8px 12px;"><span style="font-size:.70rem;padding:2px 8px;border-radius:10px;background:' + roleBg + ';color:' + roleColor + ';font-weight:600;">' + role + '</span></td>';
             html += '<td style="padding:6px 8px;"><select style="font-size:.76rem;height:34px;padding:2px 6px;" onchange="UIEnrichments.onPersonCountryChange(' + p.id + ',this.value)">' + mkSel(storedC) + '</select></td>';
             html += '<td style="padding:6px 8px;"><select style="font-size:.76rem;height:34px;padding:2px 6px;" onchange="UIEnrichments.onPersonNationalityChange(' + p.id + ',this.value)">' + mkSel(storedN) + '</select></td>';
             html += '</tr>';
@@ -205,7 +239,6 @@ const UIEnrichments = (function() {
             state._residenceEtranger = country !== 'FR' ? country : null;
         }
 
-        // Conjoint d'un donateur
         if (typeof FamilyGraph !== 'undefined' && FamilyGraph.spouse) {
             var sp = FamilyGraph.spouse(personId);
             if (sp) {
@@ -360,7 +393,7 @@ const UIEnrichments = (function() {
     function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
     // ============================================================
-    // 7. INIT — MutationObserver sur l'arbre familial
+    // 7. INIT
     // ============================================================
 
     function init() {
@@ -390,7 +423,7 @@ const UIEnrichments = (function() {
             }
         });
 
-        console.log('[UIEnrichments v1.2] Loaded \u2014 live sync arbre \u2194 international');
+        console.log('[UIEnrichments v1.3] Loaded \u2014 live sync arbre+r\u00f4les \u2194 international');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 1200); });
