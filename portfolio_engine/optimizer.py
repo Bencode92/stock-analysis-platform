@@ -2771,8 +2771,10 @@ class PortfolioOptimizer:
         # DEFENSIVE bucket (sorted by vol). Result: only 2 actions.
         # Fix: Reserve slots for top actions BY SCORE before bucket filling.
         # This ensures VICI (#1 score 80), JNJ, GD, etc. get allocated.
+        # v5.3.2: Max 1 financials among reserved (prevents AGS+CS+HIG dominating)
         _MIN_ACTIONS_STABLE = 4
         _MAX_WEIGHT_ACTION_STABLE = 10.0
+        _MAX_FINANCIALS_RESERVED = 1  # v5.3.2: Sector diversity
         
         if profile.name == "Stable":
             _actions_pool = sorted(
@@ -2780,11 +2782,37 @@ class PortfolioOptimizer:
                 key=lambda a: (-a.score, a.vol_annual, a.id)
             )
             _actions_reserved = 0
+            _fin_reserved = 0  # v5.3.2: Track financials count
+            _FINANCIAL_KEYWORDS = {"finance", "financial", "financials", "financial services"}
+            
             for _act in _actions_pool:
                 if _actions_reserved >= _MIN_ACTIONS_STABLE:
                     break
                 if total_weight >= 95.0:
                     break
+                
+                # v5.3.2: Check if this is a financial stock
+                _act_sector = (getattr(_act, 'sector', '') or '').lower().strip()
+                _act_source_sector = ''
+                if hasattr(_act, 'source_data') and _act.source_data:
+                    _act_source_sector = (_act.source_data.get('sector', '') or '').lower().strip()
+                    _act_sector_api = (_act.source_data.get('sector_api', '') or '').lower().strip()
+                else:
+                    _act_sector_api = ''
+                
+                _is_fin = any(
+                    kw in s for s in [_act_sector, _act_source_sector, _act_sector_api]
+                    for kw in _FINANCIAL_KEYWORDS
+                )
+                
+                # v5.3.2: Skip if already at max financials
+                if _is_fin and _fin_reserved >= _MAX_FINANCIALS_RESERVED:
+                    logger.debug(
+                        f"   [Stable] Skip {_act.id}: financials cap "
+                        f"({_fin_reserved}/{_MAX_FINANCIALS_RESERVED})"
+                    )
+                    continue
+                
                 # Check sector cap
                 if sector_weights.get(_act.sector, 0) >= profile.max_sector:
                     continue
@@ -2809,16 +2837,19 @@ class PortfolioOptimizer:
                     if _act.role:
                         bucket_weights[_act.role.value] += _weight
                     _actions_reserved += 1
+                    if _is_fin:
+                        _fin_reserved += 1
                     logger.info(
                         f"   [Stable] 🎯 Action réservée #{_actions_reserved}: "
                         f"{_act.id} score={_act.score:.1f} vol={_act.vol_annual:.1f}% "
                         f"→ {_weight:.1f}%"
+                        f"{' [FIN]' if _is_fin else ''}"
                     )
             
             if _actions_reserved > 0:
                 logger.info(
-                    f"   [Stable] 🎯 v5.3.1: {_actions_reserved} actions réservées "
-                    f"({category_weights['Actions']:.1f}% total actions)"
+                    f"   [Stable] 🎯 v5.3.2: {_actions_reserved} actions réservées "
+                    f"({category_weights['Actions']:.1f}% total, {_fin_reserved} financials)"
                 )
         
         # === Remplir par bucket selon targets ===
