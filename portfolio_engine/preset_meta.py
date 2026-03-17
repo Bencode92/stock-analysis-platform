@@ -824,6 +824,8 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "quality_growth_sub": ["quality_subscores.growth"],     # EPS growth + revenue growth
     # v5.3.0: Forward-looking (ABSENT du quality score — seul facteur prédictif)
     "eps_growth_forecast_5y": ["eps_growth_forecast_5y"],
+    # v5.3.1: Quality coverage (% of metrics available — used by hard filter)
+    "quality_coverage": ["quality_coverage"],
 }
 
 METRIC_RANGES: Dict[str, Tuple[float, float]] = {
