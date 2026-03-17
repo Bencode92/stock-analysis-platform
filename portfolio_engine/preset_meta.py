@@ -1564,6 +1564,15 @@ def score_equity_for_profile(
         
         value = get_metric_value(stock, metric_key)
         
+        # v5.3.1 FIX: Cap safety_sub for FIN profile stocks
+        # FIN stocks get safety=100 automatically (payout always < 60%)
+        # This gives them a +6-7pt unfair advantage vs non-FIN in Modéré/Stable
+        # Cap at 85 to level the playing field
+        if metric_key == "quality_safety_sub" and value is not None:
+            _qp = stock.get("quality_profile") or ""
+            if _qp == "FIN" and value > 85:
+                value = 85.0
+        
         # Missing data handling
         if value is None:
             percentile = 1.0 if weight < 0 else 0.5
@@ -1742,6 +1751,28 @@ def select_equities_for_profile(
     # Score
     for eq in eq_hard:
         eq["_profile_score"] = score_equity_for_profile(eq, profile, universe_dists)
+    
+    # v5.3.1 FIX: Coverage haircut — penalize stocks with missing data
+    # SBIN (63%), SOLARINDS (64%), VEDL (64%) score too high because
+    # their weaknesses are invisible (missing roe_avg_3y, net_margin, etc.)
+    # Stocks with 100% coverage expose ALL their flaws → disadvantaged without this fix.
+    _coverage_adjusted = 0
+    for eq in eq_hard:
+        _cov = get_metric_value(eq, "quality_coverage")
+        if _cov is not None and _cov < 80:
+            _old = eq["_profile_score"]
+            if _cov < 60:
+                _mult = 0.80  # -20% haircut for very incomplete data
+            else:
+                _mult = 0.90  # -10% haircut for incomplete data
+            eq["_profile_score"] = _old * _mult
+            _coverage_adjusted += 1
+            _name = (eq.get("name") or eq.get("ticker") or "?")[:25]
+            logger.info(f"   [{profile}] 📉 Coverage haircut: {_name} coverage={_cov:.0f}% → score {_old:.3f}→{eq['_profile_score']:.3f} (×{_mult})")
+    
+    if _coverage_adjusted > 0:
+        logger.info(f"   [{profile}] 📉 Coverage haircut applied to {_coverage_adjusted} stocks")
+    
     sorted_eq = sorted(eq_hard, key=lambda x: x.get("_profile_score", 0), reverse=True)
     
     # v5.2.0: Dedup dual-listings (GOOG/GOOGL, BRK.A/BRK.B)
