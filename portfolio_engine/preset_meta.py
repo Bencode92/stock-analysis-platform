@@ -2038,7 +2038,9 @@ def select_equities_for_profile(
             )
             continue
         
-        # Find worst stock in most over-represented sector (threshold: >= 2 not 3)
+        # Find worst stock to replace
+        # v5.3.2: If a sector has >= 2 stocks, replace worst in that sector
+        # If NO sector has >= 2, replace the overall worst stock (Stable with 4 diversified actions)
         sector_counts = {}
         for eq in selected:
             s = eq.get("sector", "OTHER")
@@ -2046,8 +2048,18 @@ def select_equities_for_profile(
         
         most_common = max(sector_counts, key=sector_counts.get)
         if sector_counts[most_common] >= 2:
+            # Replace worst in over-represented sector
+            replaceable = [eq for eq in selected if eq.get("sector") == most_common]
+        else:
+            # v5.3.2: No sector has >= 2 → replace overall worst stock
+            # But protect stocks from essential sectors already injected
+            replaceable = [eq for eq in selected if eq.get("sector") not in essential]
+            if not replaceable:
+                replaceable = list(selected)  # fallback: all are replaceable
+        
+        if replaceable:
             worst_in_sector = min(
-                [eq for eq in selected if eq.get("sector") == most_common],
+                replaceable,
                 key=lambda x: x.get("_profile_score", 0)
             )
             replaced_ticker = worst_in_sector.get("ticker", "?")
@@ -2058,7 +2070,7 @@ def select_equities_for_profile(
             logger.info(
                 f"   [{profile}] 🏥 Essential sector inject: {best_candidate.get('ticker','?')} "
                 f"({req_sector}, score={best_score:.3f}) replaces {replaced_ticker} "
-                f"({most_common}, score={worst_in_sector.get('_profile_score',0):.3f})"
+                f"({worst_in_sector.get('sector','?')}, score={worst_in_sector.get('_profile_score',0):.3f})"
             )
     
     if _essential_injected:
