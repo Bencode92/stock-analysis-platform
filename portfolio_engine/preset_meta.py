@@ -2027,11 +2027,12 @@ def select_equities_for_profile(
         best_candidate = max(candidates, key=lambda x: x.get("_profile_score", 0))
         best_score = best_candidate.get("_profile_score", 0)
         
-        # Score floor: only inject if candidate has a reasonable score (>= 30th percentile)
+        # Score floor: only inject if candidate has a reasonable score (>= 60% of 30th percentile)
+        # v5.3.2: Lowered from 80% to 60% — healthcare scores structurally lower
         all_scores = [eq.get("_profile_score", 0) for eq in selected if eq.get("_profile_score")]
         p30 = sorted(all_scores)[len(all_scores) // 3] if all_scores else 0
         
-        if best_score < p30 * 0.8:
+        if best_score < p30 * 0.6:
             logger.info(
                 f"   [{profile}] 🏥 Essential sector '{req_sector}': best candidate "
                 f"{best_candidate.get('ticker','?')} score={best_score:.3f} too low (floor={p30*0.8:.3f})"
@@ -2149,11 +2150,11 @@ def select_equities_for_profile(
                 best_fav = max(_fav_candidates, key=lambda x: x.get("_profile_score", 0))
                 best_fav_score = best_fav.get("_profile_score", 0)
                 
-                # Score floor: candidate must be >= 60% of median selected score
+                # Score floor: candidate must be >= 50% of median selected score
                 _sel_scores = [eq.get("_profile_score", 0) for eq in selected]
                 _median_sel = sorted(_sel_scores)[len(_sel_scores) // 2] if _sel_scores else 0
                 
-                if best_fav_score < _median_sel * 0.6:
+                if best_fav_score < _median_sel * 0.5:
                     logger.info(
                         f"   [{profile}] 🎯 FAVORED sector '{fav_sector}': best={best_fav.get('ticker','?')} "
                         f"score={best_fav_score:.3f} too low (floor={_median_sel*0.6:.3f})"
@@ -2174,9 +2175,9 @@ def select_equities_for_profile(
                 
                 _worst = min(_replaceable, key=lambda x: x.get("_profile_score", 0))
                 
-                # Only replace if FAVORED candidate is at least 70% of worst's score
+                # Only replace if FAVORED candidate is at least 50% of worst's score
                 # (don't inject a terrible stock just because it's FAVORED)
-                if best_fav_score < _worst.get("_profile_score", 0) * 0.70:
+                if best_fav_score < _worst.get("_profile_score", 0) * 0.50:
                     logger.info(
                         f"   [{profile}] 🎯 FAVORED sector '{fav_sector}': {best_fav.get('ticker','?')} "
                         f"score={best_fav_score:.3f} < 70% of worst replaceable "
