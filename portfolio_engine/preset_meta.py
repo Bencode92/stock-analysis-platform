@@ -1894,6 +1894,58 @@ def select_equities_for_profile(
     if _coverage_adjusted > 0:
         logger.info(f"   [{profile}] 📉 Coverage haircut applied to {_coverage_adjusted} stocks")
     
+    # === v5.3.3: Intra-Industry Correlation Penalty ===
+    # Problem: Pool sent to Markowitz contains 4-5 semi (NVDA, MU, ASML, VRT).
+    # Markowitz piles them up (best Sharpe ex-post), but intra-semi corr ~0.65-0.75.
+    # Fix: If >= 3 stocks from same Industry (GICS level 3), penalize 3rd by -5%, 4th by -10%.
+    # This opens space for CF/EOG/TTE in the pool.
+    # Expert note: Use `industry` field (not `sector`). "Semiconductors" separates NVDA/MU/ASML
+    # from VRT ("Electronic Equipment, Instruments & Components").
+    _CORR_PENALTY_3RD = 0.95  # -5% on 3rd stock in same industry
+    _CORR_PENALTY_4TH = 0.90  # -10% on 4th+
+    _CORR_MIN_INDUSTRY_SIZE = 3  # Only penalize if >= 3 in same industry
+    
+    # Group by normalized industry
+    _industry_groups = {}
+    for eq in eq_hard:
+        _ind = (eq.get("industry") or "").strip().lower()
+        if not _ind:
+            continue
+        _industry_groups.setdefault(_ind, []).append(eq)
+    
+    _corr_penalized = 0
+    for _ind, _ind_stocks in _industry_groups.items():
+        if len(_ind_stocks) < _CORR_MIN_INDUSTRY_SIZE:
+            continue
+        
+        # Sort by score DESC within industry — penalize the lower-ranked ones
+        _ind_sorted = sorted(_ind_stocks, key=lambda x: x.get("_profile_score", 0), reverse=True)
+        
+        for _rank, eq in enumerate(_ind_sorted):
+            if _rank < 2:
+                continue  # Top 2 untouched
+            
+            _old = eq["_profile_score"]
+            _mult = _CORR_PENALTY_4TH if _rank >= 3 else _CORR_PENALTY_3RD
+            eq["_profile_score"] = _old * _mult
+            _corr_penalized += 1
+            
+            if _rank < 5:  # Only log first few
+                logger.info(
+                    f"   [{profile}] 🔗 Corr penalty: {eq.get('ticker','?')} "
+                    f"(industry={_ind[:30]}, rank #{_rank+1}/{len(_ind_sorted)}) "
+                    f"score {_old:.3f}→{eq['_profile_score']:.3f} (×{_mult})"
+                )
+    
+    if _corr_penalized > 0:
+        # Log top industries affected
+        _big_industries = [(k, len(v)) for k, v in _industry_groups.items() if len(v) >= _CORR_MIN_INDUSTRY_SIZE]
+        _big_industries.sort(key=lambda x: -x[1])
+        logger.info(
+            f"   [{profile}] 🔗 Corr penalty: {_corr_penalized} stocks penalized. "
+            f"Industries: {', '.join(f'{k}({n})' for k, n in _big_industries[:5])}"
+        )
+    
     sorted_eq = sorted(eq_hard, key=lambda x: x.get("_profile_score", 0), reverse=True)
     
     # v5.2.0: Dedup dual-listings (GOOG/GOOGL, BRK.A/BRK.B)
