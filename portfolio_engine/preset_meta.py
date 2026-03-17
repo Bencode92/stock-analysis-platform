@@ -899,6 +899,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "volatility_3y_min": 22.0,
             "volatility_3y_max": 120.0,
             "roe_min": 0.0,              # v5.2.0: blocks negative ROE (Seagate -324%)
+            "quality_coverage_min": 70,  # v5.3.1: éjecte actions avec trop de données manquantes (SOLARINDS 64%, VEDL 64%)
         },
         "equity_min_weight": 0.50,
         "equity_max_weight": 0.75,
@@ -935,8 +936,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
             "roe_min": 8.0,
-            "de_ratio_max": 2.0,        # FIX v5.2.0-Q: D/E max (élimine VEDL D/E=1.4... non, 2.0 laisse passer)
+            "de_ratio_max": 2.0,        # FIX v5.2.0-Q: D/E max
             "quality_score_min": 40,    # v4.15: filtre qualité complémentaire au moat
+            "quality_coverage_min": 70, # v5.3.1: éjecte actions avec données manquantes (SBIN 63%)
         },
         "equity_min_weight": 0.40,
         "equity_max_weight": 0.60,
@@ -977,6 +979,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "dividend_coverage_min": 1.2,
             "quality_score_min": 50,    # v4.15: filtre qualité complémentaire au moat
             "fcf_yield_min": 0.0,       # v4.15: exige FCF positif pour profil stable
+            "quality_coverage_min": 70, # v5.3.1: éjecte actions avec données manquantes
         },
         "equity_min_weight": 0.25,
         "equity_max_weight": 0.45,
@@ -1400,6 +1403,13 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
             if de is not None and de > filters["de_ratio_max"]:
                 reasons.append(f"de>{filters['de_ratio_max']}")
         
+        # v5.3.1: Quality coverage min filter (éjecte actions avec trop de données manquantes)
+        # SOLARINDS (64%), VEDL (64%), SBIN (63%) scorent trop haut car faiblesses invisibles
+        if "quality_coverage_min" in filters:
+            qcov = get_metric_value(eq, "quality_coverage")
+            if qcov is not None and qcov < filters["quality_coverage_min"]:
+                reasons.append(f"coverage<{filters['quality_coverage_min']}")
+        
         if reasons:
             for r in reasons:
                 rejection_counts[r] = rejection_counts.get(r, 0) + 1
@@ -1518,6 +1528,12 @@ def apply_hard_filters_with_custom(
             de = get_metric_value(eq, "de_ratio")
             if de is not None and de > custom_filters["de_ratio_max"]:
                 reasons.append(f"de>{custom_filters['de_ratio_max']}")
+        
+        # v5.3.1: Quality coverage min filter
+        if "quality_coverage_min" in custom_filters:
+            qcov = get_metric_value(eq, "quality_coverage")
+            if qcov is not None and qcov < custom_filters["quality_coverage_min"]:
+                reasons.append(f"coverage<{custom_filters['quality_coverage_min']}")
         
         if reasons:
             for r in reasons:
@@ -1741,6 +1757,109 @@ def select_equities_for_profile(
             else:
                 meta["stages"]["hard_filters"]["fallback"] = "buffett_20_only"
             meta["stages"]["hard_filters"]["relaxed"] = relaxed_steps
+    
+    # v5.3.1 FIX: Cumul AVOIDED exclusion
+    # If a stock has BOTH sector AVOIDED AND region AVOIDED → exclude
+    # Example: SBIN = Finance (AVOIDED) + India (AVOIDED) = double violation → OUT
+    # This prevents stocks with multiple RADAR violations from sneaking through
+    if market_context and len(eq_hard) > target_n:
+        _avoided_sectors = set(
+            market_context.get("macro_tilts", {}).get("avoided_sectors", [])
+        )
+        _avoided_regions = set(
+            market_context.get("macro_tilts", {}).get("avoided_regions", [])
+        )
+        
+        if _avoided_sectors and _avoided_regions:
+            # Sector normalization: FR/EN → RADAR key
+            _SEC_TO_RADAR = {
+                "finance": "financials", "financial services": "financials",
+                "la communication": "communication-services",
+                "communication services": "communication-services",
+                "technologie de l'information": "information-technology",
+                "technology": "information-technology",
+                "santé": "healthcare", "healthcare": "healthcare",
+                "industries": "industrials", "industrials": "industrials",
+                "matériaux": "materials", "basic materials": "materials",
+                "biens de consommation cycliques": "consumer-discretionary",
+                "consumer cyclical": "consumer-discretionary",
+                "biens de consommation de base": "consumer-staples",
+                "consumer defensive": "consumer-staples",
+                "immobilier": "real-estate", "real estate": "real-estate",
+                "energie": "energy", "energy": "energy",
+                "services publics": "utilities", "utilities": "utilities",
+            }
+            # Country normalization: FR → RADAR key
+            _COUNTRY_TO_RADAR = {
+                "inde": "india", "india": "india",
+                "allemagne": "germany", "germany": "germany",
+                "argentine": "argentina", "argentina": "argentina",
+                "etats-unis": "united-states", "united states": "united-states",
+                "royaume-uni": "united-kingdom", "united kingdom": "united-kingdom",
+                "france": "france", "espagne": "spain", "spain": "spain",
+                "belgique": "belgium", "belgium": "belgium",
+                "pays-bas": "netherlands", "netherlands": "netherlands",
+                "suisse": "switzerland", "switzerland": "switzerland",
+                "japon": "japan", "japan": "japan",
+                "chine": "china", "china": "china",
+                "corée du sud": "south-korea", "south korea": "south-korea",
+                "taïwan": "taiwan", "taiwan": "taiwan",
+                "brésil": "brazil", "brazil": "brazil",
+                "mexique": "mexico", "mexico": "mexico",
+                "australie": "australia", "australia": "australia",
+                "italie": "italy", "italy": "italy",
+                "hong kong": "hong-kong",
+                "singapour": "singapore", "singapore": "singapore",
+                "indonésie": "indonesia", "indonesia": "indonesia",
+            }
+            
+            _cumul_excluded = []
+            _eq_after_cumul = []
+            
+            for eq in eq_hard:
+                _sec_raw = (eq.get("sector") or eq.get("sector_api") or "").strip().lower()
+                _sec_radar = _SEC_TO_RADAR.get(_sec_raw, _sec_raw)
+                
+                _country_raw = (eq.get("country") or "").strip().lower()
+                _country_radar = _COUNTRY_TO_RADAR.get(_country_raw, _country_raw)
+                
+                _is_sector_avoided = _sec_radar in _avoided_sectors
+                _is_region_avoided = _country_radar in _avoided_regions
+                
+                if _is_sector_avoided and _is_region_avoided:
+                    _name = (eq.get("name") or eq.get("ticker") or "?")[:30]
+                    _cumul_excluded.append({
+                        "ticker": eq.get("ticker", "?"),
+                        "name": _name,
+                        "sector": _sec_radar,
+                        "region": _country_radar,
+                    })
+                    logger.info(
+                        f"   [{profile}] 🚫 CUMUL AVOIDED: {_name} "
+                        f"(sector={_sec_radar} AVOIDED + region={_country_radar} AVOIDED)"
+                    )
+                else:
+                    _eq_after_cumul.append(eq)
+            
+            if _cumul_excluded:
+                logger.info(
+                    f"   [{profile}] 🚫 Cumul AVOIDED: {len(_cumul_excluded)} excluded, "
+                    f"{len(_eq_after_cumul)} remaining"
+                )
+                meta["stages"]["cumul_avoided"] = {
+                    "excluded": _cumul_excluded,
+                    "before": len(eq_hard),
+                    "after": len(_eq_after_cumul),
+                }
+                # Only apply if we still have enough stocks
+                if len(_eq_after_cumul) >= target_n // 2:
+                    eq_hard = _eq_after_cumul
+                else:
+                    logger.warning(
+                        f"   [{profile}] ⚠️ Cumul AVOIDED: skipped, only "
+                        f"{len(_eq_after_cumul)} remaining (need {target_n // 2})"
+                    )
+                    meta["stages"]["cumul_avoided"]["skipped"] = True
     
     # Build distributions
     score_weights = policy.get("score_weights", {})
