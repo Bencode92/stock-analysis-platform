@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-17-12-46-53",
-    "git_sha": "42d1bd99e",
-    "git_sha_full": "42d1bd99e0b8641f736976e95f57b98a2e8a684c",
+    "run_id": "2026-03-17-12-58-50",
+    "git_sha": "00adfdea9",
+    "git_sha_full": "00adfdea9ade8b7f874d792220b5e38b1e01d5ac",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-17",
-    "timestamp_utc": "2026-03-17T12:46:53.201188+00:00",
+    "timestamp_utc": "2026-03-17T12:58:50.659824+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 180.0
+    "total_duration_sec": 176.92
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -43,51 +43,51 @@
     },
     "5_selection_equity_Agressif": {
       "name": "selection_equity",
-      "before": 285,
-      "after": 285,
+      "before": 350,
+      "after": 350,
       "rejected": 0,
       "category": "equity",
       "profile": "Agressif",
       "top_k": [
         {
           "ticker": "NVDA",
-          "score": 0.8353
-        },
-        {
-          "ticker": "HWM",
-          "score": 0.7905
+          "score": 0.8212
         },
         {
           "ticker": "VRT",
-          "score": 0.788
+          "score": 0.7746
         },
         {
-          "ticker": "ASML",
-          "score": 0.7737
+          "ticker": "HWM",
+          "score": 0.7708
         },
         {
           "ticker": "MU",
-          "score": 0.7655
+          "score": 0.7603
+        },
+        {
+          "ticker": "064350",
+          "score": 0.7545
+        },
+        {
+          "ticker": "ASML",
+          "score": 0.7517
         },
         {
           "ticker": "FSLR",
-          "score": 0.7541
+          "score": 0.7389
         },
         {
           "ticker": "CF",
-          "score": 0.7505
+          "score": 0.7377
         },
         {
-          "ticker": "LRCX",
-          "score": 0.7344
+          "ticker": "3017",
+          "score": 0.7373
         },
         {
-          "ticker": "NEM",
-          "score": 0.7328
-        },
-        {
-          "ticker": "ASM",
-          "score": 0.7284
+          "ticker": "1519",
+          "score": 0.732
         }
       ]
     },
@@ -3527,26 +3527,14 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 18.57,
+    "has_drift": true,
+    "drift_pct": 22.81,
     "details": {
       "5_selection_equity_Agressif.after": {
-        "current": 285,
-        "previous": 350,
-        "delta": -65,
-        "pct_change": 18.57
-      },
-      "5_selection_equity_Modéré.after": {
-        "current": 242,
-        "previous": 250,
-        "delta": -8,
-        "pct_change": 3.2
-      },
-      "5_selection_equity_Stable.after": {
-        "current": 106,
-        "previous": 129,
-        "delta": -23,
-        "pct_change": 17.83
+        "current": 350,
+        "previous": 285,
+        "delta": 65,
+        "pct_change": 22.81
       }
     }
   }
