@@ -1648,6 +1648,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 "quality_coverage": _safe_float(it.get("quality_coverage")),
                 "quality_profile": it.get("quality_profile"),  # "FIN", "YIELD", or "DEFAULT"
                 "sector_api": it.get("sector_api"),  # English sector name for RADAR normalization
+                "industry": it.get("industry"),  # v5.3.3: GICS level 3 for correlation penalty
                 # === v5.1.4: Préserver buffett_score JS expert ===
                 "buffett_score": _safe_float(it.get("buffett_score")),
                 # === Legacy ===
@@ -2505,6 +2506,141 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "diagnostics": diagnostics,
             "assets": assets,
         }
+        
+        # === v5.3.3: Post-Markowitz FAVORED Sector Guarantee ===
+        # Problem: FAVORED guarantee in preset_meta.py acts on pool selection, but
+        # Markowitz rebuilds allocation by mean-variance → ignores sector signal.
+        # Result: 0% Energy actions despite Energy FAVORED #1 (+27% YTD).
+        # Fix: After optimizer, if a FAVORED sector has 0% allocation in individual
+        # stocks → swap worst non-FAVORED, non-sole-sector stock with best FAVORED candidate.
+        # Expert protection: NEVER swap the ONLY representative of a sector.
+        if market_context and allocation:
+            _fav_sectors_radar = set(
+                market_context.get("macro_tilts", {}).get("favored_sectors", [])
+            )
+            _asset_lookup_fav = {a.id: a for a in assets}
+            
+            if _fav_sectors_radar:
+                # Normalize sectors for allocated stocks
+                _SEC_NORM = {
+                    "finance": "financials", "financial services": "financials",
+                    "technologie de l'information": "information-technology",
+                    "technology": "information-technology",
+                    "matériaux": "materials", "basic materials": "materials",
+                    "energie": "energy", "energy": "energy",
+                    "industries": "industrials", "industrials": "industrials",
+                    "santé": "healthcare", "healthcare": "healthcare",
+                    "biens de consommation cycliques": "consumer-discretionary",
+                    "consumer cyclical": "consumer-discretionary",
+                    "biens de consommation de base": "consumer-staples",
+                    "consumer defensive": "consumer-staples",
+                    "immobilier": "real-estate", "real estate": "real-estate",
+                    "services publics": "utilities", "utilities": "utilities",
+                    "la communication": "communication-services",
+                    "communication services": "communication-services",
+                }
+                
+                def _norm_sec(a):
+                    s = (getattr(a, 'sector', '') or '').lower().strip()
+                    sd = ''
+                    if hasattr(a, 'source_data') and a.source_data:
+                        sd = (a.source_data.get('sector', '') or '').lower().strip()
+                        sa = (a.source_data.get('sector_api', '') or '').lower().strip()
+                    else:
+                        sa = ''
+                    return _SEC_NORM.get(s, _SEC_NORM.get(sd, _SEC_NORM.get(sa, s)))
+                
+                # Find which FAVORED sectors are represented in Actions allocation
+                _alloc_equity_sectors = {}  # sector → list of (aid, weight)
+                _alloc_sector_counts = {}  # sector → count (for sole-sector protection)
+                
+                for aid, weight in allocation.items():
+                    a = _asset_lookup_fav.get(aid)
+                    if a and a.category == "Actions":
+                        _sec = _norm_sec(a)
+                        _alloc_equity_sectors.setdefault(_sec, []).append((aid, weight))
+                        _alloc_sector_counts[_sec] = _alloc_sector_counts.get(_sec, 0) + 1
+                
+                _missing_fav = [s for s in _fav_sectors_radar if s not in _alloc_equity_sectors]
+                _fav_swapped = 0
+                
+                for _fav_sec in sorted(_missing_fav):
+                    # Find best FAVORED candidate from full asset pool
+                    _fav_candidates = []
+                    for a in assets:
+                        if a.category != "Actions" or a.id in allocation:
+                            continue
+                        if _norm_sec(a) == _fav_sec:
+                            _fav_candidates.append(a)
+                    
+                    if not _fav_candidates:
+                        logger.info(f"   [{profile}] 🎯 POST-MKW FAVORED '{_fav_sec}': no candidates in pool")
+                        continue
+                    
+                    _best_fav = max(_fav_candidates, key=lambda a: a.score)
+                    
+                    # Find worst non-FAVORED equity that is NOT the sole representative of its sector
+                    _replaceable = []
+                    for aid, weight in allocation.items():
+                        a = _asset_lookup_fav.get(aid)
+                        if not a or a.category != "Actions":
+                            continue
+                        _a_sec = _norm_sec(a)
+                        # Don't replace if in FAVORED sector
+                        if _a_sec in _fav_sectors_radar:
+                            continue
+                        # Don't replace if sole representative of its sector (expert protection)
+                        if _alloc_sector_counts.get(_a_sec, 0) <= 1:
+                            # Check if this sector is "essential" (healthcare, utilities)
+                            # Still allow replacement if sector has no special protection
+                            _essential_secs = {"healthcare", "utilities"}
+                            if _a_sec in _essential_secs:
+                                continue
+                        _replaceable.append((aid, weight, a))
+                    
+                    if not _replaceable:
+                        logger.info(f"   [{profile}] 🎯 POST-MKW FAVORED '{_fav_sec}': no replaceable stocks")
+                        continue
+                    
+                    # Sort by score ASC → worst first
+                    _replaceable.sort(key=lambda x: x[2].score)
+                    _worst_aid, _worst_w, _worst_a = _replaceable[0]
+                    
+                    # Score check: FAVORED candidate must be at least 40% of worst's score
+                    if _best_fav.score < _worst_a.score * 0.40:
+                        logger.info(
+                            f"   [{profile}] 🎯 POST-MKW FAVORED '{_fav_sec}': "
+                            f"{_best_fav.name[:20]} score={_best_fav.score:.1f} too low vs "
+                            f"{_worst_a.name[:20]} score={_worst_a.score:.1f}"
+                        )
+                        continue
+                    
+                    # Swap
+                    _swap_w = allocation.pop(_worst_aid)
+                    allocation[_best_fav.id] = _swap_w
+                    _fav_swapped += 1
+                    
+                    # Update sector counts
+                    _old_sec = _norm_sec(_worst_a)
+                    _alloc_sector_counts[_old_sec] = _alloc_sector_counts.get(_old_sec, 1) - 1
+                    _alloc_sector_counts[_fav_sec] = _alloc_sector_counts.get(_fav_sec, 0) + 1
+                    _alloc_equity_sectors.setdefault(_fav_sec, []).append((_best_fav.id, _swap_w))
+                    
+                    logger.info(
+                        f"   [{profile}] 🎯 POST-MKW FAVORED inject: "
+                        f"{_best_fav.name[:25]} ({_fav_sec} FAVORED, score={_best_fav.score:.1f}) "
+                        f"replaces {_worst_a.name[:25]} ({_old_sec}, score={_worst_a.score:.1f}) "
+                        f"→ {_swap_w:.1f}%"
+                    )
+                
+                if _fav_swapped:
+                    allocation = round_weights_to_100(allocation, decimals=2)
+                    diagnostics["_post_mkw_favored"] = {
+                        "swapped": _fav_swapped,
+                        "missing_favored": _missing_fav,
+                    }
+                    logger.info(f"   [{profile}] 🎯 POST-MKW: {_fav_swapped} FAVORED sector(s) injected")
+        
         # === FIX v5.2.0: RADAR hard cap — régions "avoided" → max 5% par stock ===
         _agg_capped_aids = set()  # v5.3.1: track capped positions to protect from dust reinflation
         if market_context:
@@ -3318,6 +3454,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 "quality_coverage": _safe_float(it.get("quality_coverage")),
                 "quality_profile": it.get("quality_profile"),
                 "sector_api": it.get("sector_api"),
+                "industry": it.get("industry"),  # v5.3.3: GICS level 3
                 # === v5.1.4: Préserver buffett_score JS expert ===
                 "buffett_score": _safe_float(it.get("buffett_score")),
                 # === Legacy ===
@@ -5095,6 +5232,58 @@ def save_portfolios(portfolios: Dict, assets: list):
     # v4.14.0 R13: Sanity check automatique
     logger.info("\n=== SANITY CHECK v4.14.0 ===")
     sanity_check_portfolios(v1_data)
+    
+    # === v5.3.3: Expert Lineup Regression Test ===
+    # Compare produced portfolios against expert consensus targets.
+    # WARNING flag if overlap < 40%. Signal only, NOT optimization target.
+    _EXPERT_TARGETS = {
+        "Agressif": {"NVDA", "VRT", "ASML", "HWM", "CF", "EOG", "3017", "064350"},
+        "Modéré": {"RIO", "VICI", "TTE", "CF", "ROG", "ITX", "PEG"},
+        "Stable": {"VICI", "ROG", "TTE", "GD", "ENGI"},
+    }
+    logger.info("\n=== EXPERT LINEUP REGRESSION TEST v5.3.3 ===")
+    for _rt_profile, _rt_target in _EXPERT_TARGETS.items():
+        if _rt_profile not in v1_data:
+            continue
+        _rt_tickers = set()
+        _rt_data = v1_data[_rt_profile]
+        # Extract tickers from _tickers dict or from display sections
+        if "_tickers" in _rt_data:
+            _rt_tickers = set(_rt_data["_tickers"].keys())
+        else:
+            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                for _display_name in _rt_data.get(_cat, {}):
+                    # Extract ticker from "NAME (TICKER)" format
+                    if "(" in _display_name and ")" in _display_name:
+                        _tk = _display_name.split("(")[-1].rstrip(")")
+                        _rt_tickers.add(_tk)
+        
+        # Only compare equity tickers (not ETF/bonds)
+        _rt_equity = set()
+        _rt_meta = _rt_data.get("_tickers_meta", {})
+        for _tk in _rt_tickers:
+            if _rt_meta.get(_tk, {}).get("category") == "Actions":
+                _rt_equity.add(_tk)
+            elif not _rt_meta:
+                # Fallback: if no meta, include if looks like a stock ticker
+                _rt_equity.add(_tk)
+        
+        _overlap = _rt_equity & _rt_target
+        _missing = _rt_target - _rt_equity
+        _extra = _rt_equity - _rt_target
+        _overlap_pct = len(_overlap) / max(len(_rt_target), 1) * 100
+        
+        if _overlap_pct < 40:
+            logger.warning(
+                f"   ⚠️ [{_rt_profile}] EXPERT REGRESSION: overlap {_overlap_pct:.0f}% < 40% threshold! "
+                f"Match: {sorted(_overlap)} | Missing: {sorted(_missing)} | Extra: {sorted(_extra)}"
+            )
+        else:
+            logger.info(
+                f"   ✅ [{_rt_profile}] Expert overlap: {_overlap_pct:.0f}% "
+                f"({len(_overlap)}/{len(_rt_target)}) Match: {sorted(_overlap)} | "
+                f"Missing: {sorted(_missing)}"
+            )
 
 
 def save_portfolios_euus(portfolios: Dict, assets: list):
