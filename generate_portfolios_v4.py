@@ -4955,6 +4955,58 @@ def save_portfolios(portfolios: Dict, assets: list):
     
     v1_data = normalize_to_frontend_v1(portfolios, assets)
     
+    # === v5.3.2 EQUITY CAP: Individual stocks max 10% Agressif, 11% Modéré, 10% Stable ===
+    # Runs AFTER all post-processing (RADAR caps, AGG caps, dust cleanup)
+    # Catches VRT 11% that survived earlier cap due to redistribution
+    _EQ_CAP_FINAL = {"Agressif": 0.10, "Modéré": 0.11, "Stable": 0.10}
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        _meta = _p_data.get("_tickers_meta", {})
+        _cap = _EQ_CAP_FINAL.get(_p_name, 0.11)
+        _eq_any_capped = False
+        
+        for _nuc_eq_iter in range(5):
+            _eq_over = {}
+            for k, v in _t.items():
+                _info = _meta.get(k, {})
+                if _info.get("category") == "Actions" and v > _cap + 0.001:
+                    _eq_over[k] = v
+            if not _eq_over:
+                break
+            _eq_excess = 0.0
+            for k, v in _eq_over.items():
+                _eq_excess += v - _cap
+                logger.info(f"   [{_p_name}] 📉 EQUITY FINAL CAP: {k} {v*100:.1f}%→{_cap*100:.1f}%")
+                _t[k] = _cap
+                _eq_any_capped = True
+            # Redistribute to non-equity positions
+            _non_eq = {k: v for k, v in _t.items() if k not in _eq_over and v > 0 and _meta.get(k, {}).get("category") != "Actions"}
+            _total_non_eq = sum(_non_eq.values())
+            if _total_non_eq > 0 and _eq_excess > 0:
+                for k in _non_eq:
+                    _t[k] += _eq_excess * (_non_eq[k] / _total_non_eq)
+        
+        if _eq_any_capped:
+            logger.info(f"   [{_p_name}] 📉 EQUITY FINAL CAP applied — rebuilding display sections")
+            # Rebuild display
+            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                _p_data[_cat] = {}
+            _nw = {}
+            for _tk, _w_dec in _t.items():
+                _w_pct = round(_w_dec * 100, 1)
+                if _w_pct < 0.1:
+                    continue
+                _info = _meta.get(_tk, {})
+                _cat = _info.get("category", "ETF")
+                _nm = _info.get("name", _tk)
+                _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+                _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+                _nw[f"{_cat}:{_display}"] = _w_pct
+            _p_data["_numeric_weights"] = _nw
+
     # === v5.3.1 NUCLEAR SAFETY NET: Cap all positions at 15% in BOTH _tickers and display ===
     # This is the ABSOLUTE LAST checkpoint before writing JSON.
     _NUCLEAR_MAX = 0.15  # 15% in decimal
