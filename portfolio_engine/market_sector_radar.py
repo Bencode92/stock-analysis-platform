@@ -198,7 +198,7 @@ class RadarRules:
 
     # Tilt magnitudes (appliquées par apply_macro_tilts)
     tilt_favored: float = 0.15       # +15% score pour favored
-    tilt_avoided: float = -0.15      # -15% score pour avoided
+    tilt_avoided: float = -0.25      # -25% score pour avoided (v5.3.1: renforcé, -15% insuffisant)
     tilt_max: float = 0.30           # Plafond total
 
     # Smoothing: mélange ancien/nouveau contexte pour stabilité
