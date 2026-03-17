@@ -1905,6 +1905,16 @@ def select_equities_for_profile(
     _CORR_PENALTY_4TH = 0.90  # -10% on 4th+
     _CORR_MIN_INDUSTRY_SIZE = 3  # Only penalize if >= 3 in same industry
     
+    # v5.3.3: Whitelist — monopoles/unique leaders exempt from penalty.
+    # These stocks dominate their niche and don't correlate like peers.
+    _CORR_WHITELIST = {
+        "ASML",   # EUV lithography monopoly — not a generic semi equipment
+        "NVDA",   # AI GPU leader — unique position
+        "TSM",    # TSMC foundry monopoly
+        "LRCX",   # Etch equipment leader (oligopoly with 3 players)
+        "AMAT",   # Deposition equipment leader
+    }
+    
     # Group by normalized industry
     _industry_groups = {}
     for eq in eq_hard:
@@ -1924,6 +1934,16 @@ def select_equities_for_profile(
         for _rank, eq in enumerate(_ind_sorted):
             if _rank < 2:
                 continue  # Top 2 untouched
+            
+            # v5.3.3: Skip whitelisted monopoles/leaders
+            _tk = (eq.get("ticker") or "").upper()
+            if _tk in _CORR_WHITELIST:
+                if _rank < 5:
+                    logger.info(
+                        f"   [{profile}] 🔗 Corr WHITELIST: {_tk} "
+                        f"(industry={_ind[:30]}, rank #{_rank+1}) — exempt"
+                    )
+                continue
             
             _old = eq["_profile_score"]
             _mult = _CORR_PENALTY_4TH if _rank >= 3 else _CORR_PENALTY_3RD
