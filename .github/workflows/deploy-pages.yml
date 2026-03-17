@@ -18,6 +18,8 @@ on:
       - '*.html'
       - '*.js'
       - '*.css'
+      - 'js/**'
+      - 'css/**'
       - 'data/**'
       - '.github/workflows/deploy-pages.yml'
 
@@ -67,6 +69,12 @@ jobs:
           echo ""
           echo "📄 Pages HTML disponibles:"
           ls -la *.html 2>/dev/null || echo "Aucune page HTML trouvée"
+          
+          # Vérifier .nojekyll
+          if [ -f ".nojekyll" ]; then
+            echo ""
+            echo "✅ .nojekyll présent (Jekyll désactivé)"
+          fi
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
