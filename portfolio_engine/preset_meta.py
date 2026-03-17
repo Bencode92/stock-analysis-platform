@@ -2081,6 +2081,132 @@ def select_equities_for_profile(
             "sectors_after": list(sectors_in_sel),
         }
 
+    # === v5.3.2: FAVORED Sector Guarantee ===
+    # If RADAR says "energy FAVORED" and portfolio has 0% energy in actions → inject
+    # Same logic as ESSENTIAL_SECTORS but DYNAMIC based on RADAR signal
+    # Solves: 0% energy actions despite Energy FAVORED #1 (+27% YTD)
+    #         0% materials actions in Agressif despite Materials FAVORED
+    if market_context and len(selected) >= 4:
+        _favored_sectors_radar = set(
+            market_context.get("macro_tilts", {}).get("favored_sectors", [])
+        )
+        
+        if _favored_sectors_radar:
+            # Map FR sector names → RADAR keys
+            _FR_TO_RADAR = {
+                "finance": "financials", "financial services": "financials",
+                "technologie de l'information": "information-technology",
+                "technology": "information-technology",
+                "santé": "healthcare", "healthcare": "healthcare",
+                "matériaux": "materials", "basic materials": "materials",
+                "energie": "energy", "energy": "energy",
+                "industries": "industrials", "industrials": "industrials",
+                "biens de consommation cycliques": "consumer-discretionary",
+                "consumer cyclical": "consumer-discretionary",
+                "biens de consommation de base": "consumer-staples",
+                "consumer defensive": "consumer-staples",
+                "immobilier": "real-estate", "real estate": "real-estate",
+                "services publics": "utilities", "utilities": "utilities",
+                "la communication": "communication-services",
+                "communication services": "communication-services",
+            }
+            # Reverse map: RADAR key → FR sector names (for matching stock data)
+            _RADAR_TO_FR = {}
+            for fr_name, radar_key in _FR_TO_RADAR.items():
+                if radar_key not in _RADAR_TO_FR:
+                    _RADAR_TO_FR[radar_key] = set()
+                _RADAR_TO_FR[radar_key].add(fr_name)
+            
+            # Which FAVORED sectors are missing from the selected actions?
+            _sel_radar_sectors = set()
+            for eq in selected:
+                _s = (eq.get("sector") or "").lower().strip()
+                _s_api = (eq.get("sector_api") or "").lower().strip()
+                _sel_radar_sectors.add(_FR_TO_RADAR.get(_s, _s))
+                _sel_radar_sectors.add(_FR_TO_RADAR.get(_s_api, _s_api))
+            
+            _missing_favored = _favored_sectors_radar - _sel_radar_sectors
+            _favored_injected = 0
+            
+            remaining_pool = [eq for eq in sorted_eq if eq not in selected]
+            
+            for fav_sector in sorted(_missing_favored):
+                # Find candidates matching this RADAR sector
+                _fr_names = _RADAR_TO_FR.get(fav_sector, {fav_sector})
+                _fav_candidates = []
+                for eq in remaining_pool:
+                    _eq_sec = (eq.get("sector") or "").lower().strip()
+                    _eq_sec_api = (eq.get("sector_api") or "").lower().strip()
+                    _eq_radar = _FR_TO_RADAR.get(_eq_sec, _eq_sec)
+                    _eq_radar_api = _FR_TO_RADAR.get(_eq_sec_api, _eq_sec_api)
+                    if fav_sector in (_eq_radar, _eq_radar_api):
+                        _fav_candidates.append(eq)
+                
+                if not _fav_candidates:
+                    logger.info(f"   [{profile}] 🎯 FAVORED sector '{fav_sector}': no candidates in pool")
+                    continue
+                
+                best_fav = max(_fav_candidates, key=lambda x: x.get("_profile_score", 0))
+                best_fav_score = best_fav.get("_profile_score", 0)
+                
+                # Score floor: candidate must be >= 60% of median selected score
+                _sel_scores = [eq.get("_profile_score", 0) for eq in selected]
+                _median_sel = sorted(_sel_scores)[len(_sel_scores) // 2] if _sel_scores else 0
+                
+                if best_fav_score < _median_sel * 0.6:
+                    logger.info(
+                        f"   [{profile}] 🎯 FAVORED sector '{fav_sector}': best={best_fav.get('ticker','?')} "
+                        f"score={best_fav_score:.3f} too low (floor={_median_sel*0.6:.3f})"
+                    )
+                    continue
+                
+                # Find worst stock to replace (not in FAVORED or ESSENTIAL sectors)
+                _protected_sectors = _favored_sectors_radar | set(essential)
+                _replaceable = []
+                for eq in selected:
+                    _eq_sec = (eq.get("sector") or "").lower().strip()
+                    _eq_radar = _FR_TO_RADAR.get(_eq_sec, _eq_sec)
+                    if _eq_radar not in _protected_sectors:
+                        _replaceable.append(eq)
+                
+                if not _replaceable:
+                    _replaceable = list(selected)  # fallback
+                
+                _worst = min(_replaceable, key=lambda x: x.get("_profile_score", 0))
+                
+                # Only replace if FAVORED candidate is at least 70% of worst's score
+                # (don't inject a terrible stock just because it's FAVORED)
+                if best_fav_score < _worst.get("_profile_score", 0) * 0.70:
+                    logger.info(
+                        f"   [{profile}] 🎯 FAVORED sector '{fav_sector}': {best_fav.get('ticker','?')} "
+                        f"score={best_fav_score:.3f} < 70% of worst replaceable "
+                        f"{_worst.get('ticker','?')} score={_worst.get('_profile_score',0):.3f}"
+                    )
+                    continue
+                
+                _replaced_ticker = _worst.get("ticker", "?")
+                _replaced_sector = _worst.get("sector", "?")
+                _idx = selected.index(_worst)
+                selected[_idx] = best_fav
+                _favored_injected += 1
+                _sel_radar_sectors.add(fav_sector)
+                
+                logger.info(
+                    f"   [{profile}] 🎯 FAVORED sector inject: {best_fav.get('ticker','?')} "
+                    f"({fav_sector} FAVORED, score={best_fav_score:.3f}) replaces "
+                    f"{_replaced_ticker} ({_replaced_sector}, "
+                    f"score={_worst.get('_profile_score',0):.3f})"
+                )
+            
+            if _favored_injected:
+                selected = sorted(selected, key=lambda x: x.get("_profile_score", 0), reverse=True)
+                meta["stages"]["favored_sectors"] = {
+                    "injected": _favored_injected,
+                    "favored_radar": list(_favored_sectors_radar),
+                    "missing_before": list(_missing_favored),
+                    "sectors_after": list(_sel_radar_sectors),
+                }
+
     # v5.2.1 FIX P2c: Preset diversity floor
     MIN_PRESETS_REPRESENTED = 4
     presets_in_sel = set(eq.get("_matched_preset") for eq in selected)
