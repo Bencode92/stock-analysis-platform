@@ -1644,6 +1644,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 # === v4.15: Quality score (complément au Buffett moat gate) ===
                 "quality_score": _safe_float(it.get("quality_score")),
                 "quality_subscores": it.get("quality_subscores"),  # v5.1.2: nested dict for quality_value_sub
+                # v5.3.1: Quality coverage + profile (needed for hard filter + FIN safety cap)
+                "quality_coverage": _safe_float(it.get("quality_coverage")),
+                "quality_profile": it.get("quality_profile"),  # "FIN", "YIELD", or "DEFAULT"
+                "sector_api": it.get("sector_api"),  # English sector name for RADAR normalization
                 # === v5.1.4: Préserver buffett_score JS expert ===
                 "buffett_score": _safe_float(it.get("buffett_score")),
                 # === Legacy ===
@@ -3271,6 +3275,10 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 # === v4.15: Quality score (complément au Buffett moat gate) ===
                 "quality_score": _safe_float(it.get("quality_score")),
                 "quality_subscores": it.get("quality_subscores"),  # v5.1.2: nested dict for quality_value_sub
+                # v5.3.1: Quality coverage + profile (needed for hard filter + FIN safety cap)
+                "quality_coverage": _safe_float(it.get("quality_coverage")),
+                "quality_profile": it.get("quality_profile"),
+                "sector_api": it.get("sector_api"),
                 # === v5.1.4: Préserver buffett_score JS expert ===
                 "buffett_score": _safe_float(it.get("buffett_score")),
                 # === Legacy ===
