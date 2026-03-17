@@ -901,7 +901,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "volatility_3y_min": 22.0,
             "volatility_3y_max": 120.0,
             "roe_min": 0.0,              # v5.2.0: blocks negative ROE (Seagate -324%)
-            "quality_coverage_min": 70,  # v5.3.1: éjecte actions avec trop de données manquantes (SOLARINDS 64%, VEDL 64%)
+            "quality_coverage_min": 60,  # v5.3.1: Agressif tolère plus d'incertitude (60% vs 70% Modéré/Stable). Éjecte SOLARINDS 64%? Non, garde SK/TW (coverage ~64-75%)
         },
         "equity_min_weight": 0.50,
         "equity_max_weight": 0.75,
