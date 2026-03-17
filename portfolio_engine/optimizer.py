@@ -2766,6 +2766,61 @@ class PortfolioOptimizer:
             
             logger.info(f"P1 FIX v6.2: Distributed bonds across {len([b for b in bonds[:n_bonds_to_use] if b.id in allocation])} assets")
         
+        # === v5.3.1: Ensure minimum individual actions for Stable ===
+        # Problem: ETFs (ACWV vol 12%, EFAV 13%) beat all individual actions in
+        # DEFENSIVE bucket (sorted by vol). Result: only 2 actions.
+        # Fix: Reserve slots for top actions BY SCORE before bucket filling.
+        # This ensures VICI (#1 score 80), JNJ, GD, etc. get allocated.
+        _MIN_ACTIONS_STABLE = 4
+        _MAX_WEIGHT_ACTION_STABLE = 10.0
+        
+        if profile.name == "Stable":
+            _actions_pool = sorted(
+                [a for a in sorted_candidates if a.category == "Actions" and a.id not in allocation],
+                key=lambda a: (-a.score, a.vol_annual, a.id)
+            )
+            _actions_reserved = 0
+            for _act in _actions_pool:
+                if _actions_reserved >= _MIN_ACTIONS_STABLE:
+                    break
+                if total_weight >= 95.0:
+                    break
+                # Check sector cap
+                if sector_weights.get(_act.sector, 0) >= profile.max_sector:
+                    continue
+                # Check region cap
+                _region = get_region(_act.region)
+                _region_cap = get_stock_region_cap(profile.name, _region) * 100
+                if region_weights.get(_region, 0) >= _region_cap:
+                    continue
+                
+                _weight = min(
+                    _MAX_WEIGHT_ACTION_STABLE,
+                    profile.max_single_position,
+                    100 - total_weight,
+                    profile.max_sector - sector_weights.get(_act.sector, 0),
+                )
+                if _weight > 0.5:
+                    allocation[_act.id] = float(_weight)
+                    total_weight += _weight
+                    category_weights["Actions"] += _weight
+                    sector_weights[_act.sector] += _weight
+                    region_weights[_region] += _weight
+                    if _act.role:
+                        bucket_weights[_act.role.value] += _weight
+                    _actions_reserved += 1
+                    logger.info(
+                        f"   [Stable] 🎯 Action réservée #{_actions_reserved}: "
+                        f"{_act.id} score={_act.score:.1f} vol={_act.vol_annual:.1f}% "
+                        f"→ {_weight:.1f}%"
+                    )
+            
+            if _actions_reserved > 0:
+                logger.info(
+                    f"   [Stable] 🎯 v5.3.1: {_actions_reserved} actions réservées "
+                    f"({category_weights['Actions']:.1f}% total actions)"
+                )
+        
         # === Remplir par bucket selon targets ===
         for role in [Role.DEFENSIVE, Role.CORE, Role.SATELLITE, Role.LOTTERY]:
             if role not in bucket_targets:
