@@ -2445,6 +2445,45 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         # v4.14.0 R14-3: Post-processing unifié (prune + cap + round)
         allocation = post_process_allocation(allocation, profile_config, diagnostics, profile)
         
+        # === v5.3.2: Max single EQUITY cap (individual stocks only, not ETF/bonds) ===
+        # VRT was at 13% in Agressif — single stock risk too high for retail
+        # ETFs and bonds can remain at higher weights (diversified by nature)
+        _MAX_SINGLE_EQUITY = {
+            "Agressif": 10.0,
+            "Modéré": 11.0,
+            "Stable": 10.0,
+        }
+        _eq_cap = _MAX_SINGLE_EQUITY.get(profile, 11.0)
+        _asset_lookup = {a.id: a for a in assets}
+        _eq_capped = False
+        for aid, weight in list(allocation.items()):
+            _asset = _asset_lookup.get(aid)
+            if _asset and _asset.category == "Actions" and weight > _eq_cap + 0.01:
+                _excess = weight - _eq_cap
+                allocation[aid] = _eq_cap
+                # Redistribute excess pro-rata to non-equity positions
+                _others = {k: v for k, v in allocation.items() 
+                          if k != aid and _asset_lookup.get(k) and _asset_lookup[k].category != "Actions"}
+                if _others:
+                    _total_others = sum(_others.values())
+                    for k in _others:
+                        allocation[k] += _excess * (_others[k] / _total_others)
+                else:
+                    # Fallback: redistribute to all others
+                    _others_all = {k: v for k, v in allocation.items() if k != aid}
+                    _total_all = sum(_others_all.values())
+                    if _total_all > 0:
+                        for k in _others_all:
+                            allocation[k] += _excess * (_others_all[k] / _total_all)
+                logger.info(
+                    f"   [{profile}] 📉 Equity cap: {_asset.name[:25]} {weight:.1f}%→{_eq_cap:.1f}% "
+                    f"(excess {_excess:.1f}% redistributed)"
+                )
+                _eq_capped = True
+        
+        if _eq_capped:
+            allocation = round_weights_to_100(allocation, decimals=2)
+        
         # === PHASE 1: TRACE 5 - Optimizer allocation ===
         allocated_ids = set(allocation.keys())
         korea_allocated = []
