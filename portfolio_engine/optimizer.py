@@ -2903,10 +2903,53 @@ class PortfolioOptimizer:
                             )
                     
             if _actions_reserved > 0:
+                # v5.3.2: Sector diversity check — ensure min 3 distinct sectors
+                _reserved_ids = [aid for aid in allocation if any(
+                    a.id == aid and a.category == "Actions" for a in sorted_candidates
+                )]
+                _reserved_sectors = {}
+                for aid in _reserved_ids:
+                    _a = next((a for a in sorted_candidates if a.id == aid), None)
+                    if _a:
+                        _rsec = (getattr(_a, 'sector', '') or '').lower()
+                        _reserved_sectors.setdefault(_rsec, []).append(_a)
+                
+                _MIN_DISTINCT_SECTORS = 3
+                if len(_reserved_sectors) < _MIN_DISTINCT_SECTORS and len(_reserved_ids) >= _MIN_DISTINCT_SECTORS:
+                    # Find duplicate sector with > 1 stock → swap worst with new sector
+                    _dup_sectors = {s: assets for s, assets in _reserved_sectors.items() if len(assets) > 1}
+                    for _dup_sec, _dup_assets in _dup_sectors.items():
+                        if len(_reserved_sectors) >= _MIN_DISTINCT_SECTORS:
+                            break
+                        _worst_dup = min(_dup_assets, key=lambda a: a.score)
+                        # Find best from a new sector
+                        _existing_secs = set(_reserved_sectors.keys())
+                        _new_sec_candidates = [
+                            a for a in _actions_pool
+                            if a.id not in allocation
+                            and (getattr(a, 'sector', '') or '').lower() not in _existing_secs
+                        ]
+                        if _new_sec_candidates:
+                            _best_new = max(_new_sec_candidates, key=lambda a: a.score)
+                            if _best_new.score >= _worst_dup.score * 0.65:
+                                _old_w = allocation.pop(_worst_dup.id)
+                                allocation[_best_new.id] = _old_w
+                                sector_weights[_worst_dup.sector] -= _old_w
+                                sector_weights[_best_new.sector] = sector_weights.get(_best_new.sector, 0) + _old_w
+                                _new_sec = (getattr(_best_new, 'sector', '') or '').lower()
+                                _reserved_sectors.setdefault(_new_sec, []).append(_best_new)
+                                _reserved_sectors[_dup_sec].remove(_worst_dup)
+                                logger.info(
+                                    f"   [Stable] 🔄 Sector diversity: {_best_new.id} "
+                                    f"({_new_sec}) replaces {_worst_dup.id} "
+                                    f"({_dup_sec}) for sector diversity"
+                                )
+                
                 logger.info(
                     f"   [Stable] 🎯 v5.3.2: {_actions_reserved} actions réservées "
                     f"({category_weights['Actions']:.1f}% total, "
-                    f"{_fin_reserved} financials, {_healthcare_reserved} healthcare)"
+                    f"{_fin_reserved} financials, {_healthcare_reserved} healthcare, "
+                    f"{len(_reserved_sectors)} sectors)"
                 )
         
         # === Remplir par bucket selon targets ===
