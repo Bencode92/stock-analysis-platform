@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-17T12:59:32.706623",
+  "timestamp": "2026-03-17T13:14:29.636770",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -7,7 +7,7 @@
     "equities_selected": 150,
     "equities_rejected_notable": 50,
     "etf_initial": 228,
-    "etf_selected": 15,
+    "etf_selected": 14,
     "etf_rejected_notable": 20,
     "crypto_initial": 7,
     "crypto_selected": 1,
@@ -34,7 +34,7 @@
         },
         "defensif": {
           "total": 20,
-          "selected": 0
+          "selected": 1
         },
         "low_volatility": {
           "total": 3,
@@ -50,7 +50,7 @@
         },
         "quality_premium": {
           "total": 20,
-          "selected": 3
+          "selected": 2
         },
         "recovery": {
           "total": 20,
@@ -58,7 +58,7 @@
         },
         "rendement": {
           "total": 20,
-          "selected": 3
+          "selected": 4
         },
         "value_dividend": {
           "total": 20,
@@ -68,7 +68,7 @@
       "etf": {
         "coeur_global": {
           "total": 20,
-          "selected": 7
+          "selected": 6
         },
         "commodities_broad": {
           "total": 5,
@@ -1117,12 +1117,10 @@
         "ticker": "CS",
         "sort_score": 0.6738,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "rendement",
         "profile_score": 0.6738,
         "buffett_score": 100.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Finance",
         "country": "France",
         "volatility": 19.3,
@@ -1417,12 +1415,10 @@
         "ticker": "HIG",
         "sort_score": 0.6302,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "defensif",
         "profile_score": 0.6302,
         "buffett_score": 60.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Finance",
         "country": "Etats-Unis",
         "volatility": 20.9,
@@ -2492,10 +2488,11 @@
         "ticker": "SNA",
         "sort_score": 0.5511,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "quality_premium",
         "profile_score": 0.5511,
         "buffett_score": 95.0,
+        "rejection_reason": "Score composite (0.551) insuffisant pour le quota",
         "sector": "Industries",
         "country": "Etats-Unis",
         "volatility": 23.2,
@@ -3040,10 +3037,11 @@
         "ticker": "EFAV",
         "sort_score": 98.45,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "coeur_global",
         "composite_score": 98.45,
         "profile_score": 98.45,
+        "rejection_reason": "Score composite (98.450) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 10.9,
         "ytd": "4.97%",
@@ -5696,12 +5694,10 @@
           "ticker": "HIG",
           "sort_score": 0.6302,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "defensif",
           "profile_score": 0.6302,
           "buffett_score": 60.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Finance",
           "country": "Etats-Unis",
           "volatility": 20.9,
@@ -7086,10 +7082,11 @@
           "ticker": "SNA",
           "sort_score": 0.5511,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "quality_premium",
           "profile_score": 0.5511,
           "buffett_score": 95.0,
+          "rejection_reason": "Score composite (0.551) insuffisant pour le quota",
           "sector": "Industries",
           "country": "Etats-Unis",
           "volatility": 23.2,
@@ -7721,12 +7718,10 @@
           "ticker": "CS",
           "sort_score": 0.6738,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "rendement",
           "profile_score": 0.6738,
           "buffett_score": 100.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Finance",
           "country": "France",
           "volatility": 19.3,
@@ -8644,10 +8639,11 @@
           "ticker": "EFAV",
           "sort_score": 98.45,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "coeur_global",
           "composite_score": 98.45,
           "profile_score": 98.45,
+          "rejection_reason": "Score composite (98.450) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 10.9,
           "ytd": "4.97%",
@@ -16193,20 +16189,6 @@
       "selection_reason": "Score profil élevé (98.89); Preset: coeur_global; Score composite élevé (98.89)"
     },
     {
-      "name": "iShares MSCI EAFE Min Vol Factor ETF",
-      "ticker": "EFAV",
-      "category": "etf",
-      "matched_preset": "coeur_global",
-      "composite_score": 98.45,
-      "profile_score": 98.45,
-      "volatility": 10.9,
-      "sector": "Financial Services",
-      "radar_tilt": "avoided",
-      "selected": true,
-      "ranking": 11,
-      "selection_reason": "Score profil élevé (98.45); Preset: coeur_global; Score composite élevé (98.45)"
-    },
-    {
       "name": "Schwab U.S. Large-Cap Value ETF",
       "ticker": "SCHV",
       "category": "etf",
@@ -16217,7 +16199,7 @@
       "sector": "Financial Services",
       "radar_tilt": "avoided",
       "selected": true,
-      "ranking": 12,
+      "ranking": 11,
       "selection_reason": "Score profil élevé (98.23); Preset: coeur_global; Score composite élevé (98.23)"
     },
     {
@@ -16231,7 +16213,7 @@
       "sector": "Financial Services",
       "radar_tilt": "avoided",
       "selected": true,
-      "ranking": 13,
+      "ranking": 12,
       "selection_reason": "Score profil élevé (100.00); Preset: coeur_global; Score composite élevé (100.00)"
     },
     {
@@ -16245,7 +16227,7 @@
       "sector": "Financial Services",
       "radar_tilt": "avoided",
       "selected": true,
-      "ranking": 14,
+      "ranking": 13,
       "selection_reason": "Score profil élevé (98.82); Preset: coeur_global; Score composite élevé (98.82)"
     },
     {
@@ -16259,7 +16241,7 @@
       "sector": "Technology",
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 15,
+      "ranking": 14,
       "selection_reason": "Score profil élevé (94.12); Preset: min_vol_global; Score composite élevé (94.12)"
     }
   ],

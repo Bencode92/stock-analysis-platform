@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T12:59:32.792317",
+  "generated_at": "2026-03-17T13:14:29.729963",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,8 +201,8 @@
   },
   "summary": {
     "total_universe": 1000,
-    "total_selected": 13,
-    "selection_rate": "1.3%",
+    "total_selected": 14,
+    "selection_rate": "1.4%",
     "by_region": {
       "US": {
         "universe": 521,
@@ -220,7 +220,7 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 9
+        "selected": 11
       }
     }
   },
@@ -234,12 +234,11 @@
       ]
     },
     "Industries": {
-      "selected_count": 4,
+      "selected_count": 3,
       "selected_names": [
         "VERTIV HOLDINGS CLASS A",
         "HOWMET AEROSPACE INC",
-        "HYUNDAI-ROTEM",
-        "SNAP ON INC"
+        "HYUNDAI-ROTEM"
       ]
     },
     "Matériaux": {
@@ -256,9 +255,11 @@
       ]
     },
     "Finance": {
-      "selected_count": 1,
+      "selected_count": 3,
       "selected_names": [
-        "AGEAS SA"
+        "AGEAS SA",
+        "AXA SA",
+        "HARTFORD INSURANCE GROUP "
       ]
     },
     "Immobilier": {
@@ -1166,18 +1167,12 @@
           "sector": "Industries",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 4/4), score 0.516 < seuil 0.514",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.470, quota atteint)",
           "details": {
+            "profile_score": 0.47,
+            "composite_score": 0.516,
             "sector": "Industries",
-            "sector_quota": "4/4",
-            "your_score": 0.516,
-            "min_selected_score": 0.514,
-            "selected_in_sector": [
-              "VERTIV HOLDINGS CLAS",
-              "HOWMET AEROSPACE INC",
-              "HYUNDAI-ROTEM",
-              "SNAP ON INC"
-            ]
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 57.0,
           "composite_score": 0.516,
@@ -1271,18 +1266,12 @@
           "sector": "Industries",
           "country": "France",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 4/4), score 0.546 < seuil 0.514",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.405, quota atteint)",
           "details": {
+            "profile_score": 0.405,
+            "composite_score": 0.546,
             "sector": "Industries",
-            "sector_quota": "4/4",
-            "your_score": 0.546,
-            "min_selected_score": 0.514,
-            "selected_in_sector": [
-              "VERTIV HOLDINGS CLAS",
-              "HOWMET AEROSPACE INC",
-              "HYUNDAI-ROTEM",
-              "SNAP ON INC"
-            ]
+            "matched_preset": "quality_premium"
           },
           "buffett_score": 64.0,
           "composite_score": 0.546,
@@ -2415,7 +2404,7 @@
         "ticker": "CS",
         "sort_score": 0.6738,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.598,
         "profile_score": 0.6738,
         "buffett_score": 97.3,
@@ -2424,7 +2413,6 @@
         "sector": "Finance",
         "country": "France",
         "matched_preset": "rendement",
-        "rejection_reason": "Score composite (0.674) insuffisant pour le quota",
         "roe": 15.4,
         "de_ratio": 1.19,
         "market_cap": "80279880000",
@@ -3069,7 +3057,7 @@
         "ticker": "HIG",
         "sort_score": 0.6302,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "composite_score": 0.593,
         "profile_score": 0.6302,
         "buffett_score": 72.7,
@@ -3078,7 +3066,6 @@
         "sector": "Finance",
         "country": "Etats-Unis",
         "matched_preset": "defensif",
-        "rejection_reason": "Score composite (0.630) insuffisant pour le quota",
         "roe": 19.58,
         "de_ratio": 0.27,
         "market_cap": "37581814481",
