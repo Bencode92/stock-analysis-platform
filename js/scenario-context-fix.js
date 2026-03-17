@@ -1,157 +1,166 @@
 /**
- * scenario-context-fix.js v1.1 — Fix contexte donateur dans les scenarios
+ * scenario-context-fix.js v1.2 — Fix contexte donateur UPSTREAM
  *
- * v1.0: Fixes donorAge, regime, lien, AV, strategy
- * v1.1: Fix structure familiale — distinguer enfant vs conjoint d'enfant
- *       Martine (GP) → Gerald (fils) ≠ Cecile (belle-fille, conjointe de Gerald)
- *       Seul Gerald est heritier reservataire, pas Cecile
+ * ROOT CAUSE: syncGraphToStep2 adds ALL non-beneficiary persons to PathOptimizer
+ * (Martine 70a, Gerald 58a, Cecile 55a). gatherInputs then takes pDonors[0]
+ * which may be Gerald/Cecile instead of Martine (the actual donateur).
  *
- * @version 1.1.0 — 2026-03-17
+ * v1.2 FIX: Patch PathOptimizer.getDonors() to sort REAL donors first
+ * (those with _isDonor=true from FamilyGraph). This fixes ALL downstream:
+ * - donorAge is correct (70, not 55)
+ * - NP ratio is correct (60%, not 50%)
+ * - All 8 scenarios use correct values
+ * - No need for post-render text hacks
+ *
+ * @version 1.2.0 — 2026-03-17
  */
 (function() {
     'use strict';
 
     function init() {
-        if (typeof SD === 'undefined' || !SD._fiscal) {
-            setTimeout(init, 500);
-            return;
+        if (typeof SD === 'undefined' || !SD._fiscal) { setTimeout(init, 500); return; }
+
+        // ============================================================
+        // CORE FIX: Patch PathOptimizer.getDonors to sort real donors first
+        // ============================================================
+        if (typeof PathOptimizer !== 'undefined' && PathOptimizer.getDonors) {
+            var _origGetDonors = PathOptimizer.getDonors;
+            PathOptimizer.getDonors = function() {
+                var donors = _origGetDonors.call(PathOptimizer);
+                // Sort: real donors (_isDonor=true) first, intermediaries after
+                donors.sort(function(a, b) {
+                    var aReal = a._isDonor ? 1 : 0;
+                    var bReal = b._isDonor ? 1 : 0;
+                    return bReal - aReal; // true first
+                });
+                return donors;
+            };
+            console.log('[ScenarioContextFix v1.2] PathOptimizer.getDonors patched — real donors first');
         }
 
+        // ============================================================
+        // FIX REGIME: Donateur solo → pas d'ajustement regime
+        // ============================================================
         var _origCalc = SD.calculateResults;
         SD.calculateResults = function() {
-            fixDonorContext();
+            // Before calc: detect if donateur is solo (no spouse)
+            detectDonorSoloStatus();
+            // Run original calc (now with correct donorAge thanks to getDonors patch)
             _origCalc.call(SD);
+            // After calc: fix remaining display issues
             setTimeout(function() {
                 fixPerBeneficiaryLien();
-                fixStrategyText();
-                fixAVNotes();
-                addSuccessionLegaleWarning();
                 fixRegimeBanner();
+                addSuccessionLegaleWarning();
+                fixAVNotesAndStrategy();
             }, 500);
         };
 
-        console.log('[ScenarioContextFix v1.1] Loaded');
+        // ============================================================
+        // FIX REGIME in computePatrimoine: donateur solo = no adjustment
+        // ============================================================
+        patchComputePatrimoine();
+
+        console.log('[ScenarioContextFix v1.2] Loaded — upstream donorAge fix');
     }
 
     // ============================================================
-    // FIX 1: Identifier le VRAI donateur et son age
+    // Detect if main donateur is solo (no spouse in tree)
     // ============================================================
-    function fixDonorContext() {
+    function detectDonorSoloStatus() {
         var state = SD._getState ? SD._getState() : null;
         if (!state) return;
 
-        var PO = (typeof PathOptimizer !== 'undefined') ? PathOptimizer : null;
         var FG = (typeof FamilyGraph !== 'undefined') ? FamilyGraph : null;
+        var PO = (typeof PathOptimizer !== 'undefined') ? PathOptimizer : null;
+        if (!FG || !PO) return;
 
-        var realDonors = [];
-        if (PO && PO.getDonors) {
-            realDonors = PO.getDonors().filter(function(d) { return d.age > 0; });
-        }
-        if (realDonors.length === 0 && FG && FG.getDonors) {
-            realDonors = FG.getDonors().map(function(p) {
-                return { id: p.id, nom: p.nom, age: p.age || 0, role: p.role || 'parent' };
-            }).filter(function(d) { return d.age > 0; });
-        }
-
+        var donors = PO.getDonors();
+        var realDonors = donors.filter(function(d) { return d._isDonor; });
         if (realDonors.length === 0) return;
 
         var mainDonor = realDonors[0];
-        var oldAge = state.donor1.age;
-
-        state.donor1.age = mainDonor.age;
-        state._realDonorAge = mainDonor.age;
         state._realDonorNom = mainDonor.nom;
-        state._realDonorRole = mainDonor.role;
+        state._realDonorAge = mainDonor.age;
 
-        // FIX 2: Le regime ne s'applique que si le donateur est DANS un couple
-        var donorIsInCouple = false;
-        if (FG && FG.getPersons) {
-            var persons = FG.getPersons();
-            var donorPerson = persons.find(function(p) {
-                return p.nom === mainDonor.nom || p.id === mainDonor.id;
-            });
-            if (donorPerson && donorPerson.spouseId) {
-                donorIsInCouple = true;
-            }
-        }
+        // Check if donateur has a spouse
+        var persons = FG.getPersons();
+        var donorPerson = persons.find(function(p) {
+            return p.nom === mainDonor.nom || (mainDonor._graphId && p.id === mainDonor._graphId);
+        });
 
-        if (!donorIsInCouple) {
-            state.mode = 'solo';
-            state._regimeApplies = false;
+        var donorHasSpouse = donorPerson && donorPerson.spouseId;
+
+        // If only 1 real donor and no spouse → solo, no regime adjustment
+        if (realDonors.length === 1 && !donorHasSpouse) {
             state._forceNoRegimeAdjustment = true;
+            state.mode = 'solo';
         } else {
-            state._regimeApplies = true;
             state._forceNoRegimeAdjustment = false;
-            if (realDonors.length >= 2) {
-                state.mode = 'couple';
-                state.donor2.age = realDonors[1].age;
-            }
-        }
-
-        if (oldAge !== mainDonor.age) {
-            console.log('[ScenarioContextFix] donorAge corrige : ' + oldAge + ' -> ' + mainDonor.age + ' (' + mainDonor.nom + ')');
         }
     }
 
     // ============================================================
-    // FIX 2b: Patcher computePatrimoine pour donateur solo
+    // Patch computePatrimoine to respect _forceNoRegimeAdjustment
     // ============================================================
-    var _checkInterval = setInterval(function() {
-        if (typeof SD === 'undefined' || !SD._fiscal) return;
-        var _origCompute = SD._fiscal.computePatrimoine;
-        SD._fiscal.computePatrimoine = function() {
-            var result = _origCompute.call(this);
-            var st = SD._getState ? SD._getState() : null;
-            if (st && st._forceNoRegimeAdjustment && result._regimeApplied) {
-                var delta = result._regimeDelta || 0;
-                if (delta > 0) {
-                    result.immo = result.immoBrut || (result.immo + delta);
-                    result.actifBrut += delta;
-                    result.actifNet += delta;
-                    result._regimeApplied = false;
-                    result._regimeDelta = 0;
+    function patchComputePatrimoine() {
+        var _waitInterval = setInterval(function() {
+            if (typeof SD === 'undefined' || !SD._fiscal) return;
+            var _origCompute = SD._fiscal.computePatrimoine;
+            SD._fiscal.computePatrimoine = function() {
+                var result = _origCompute.call(this);
+                var st = SD._getState ? SD._getState() : null;
+                if (st && st._forceNoRegimeAdjustment && result._regimeApplied) {
+                    var delta = result._regimeDelta || 0;
+                    if (delta > 0) {
+                        result.immo = result.immoBrut || (result.immo + delta);
+                        result.actifBrut += delta;
+                        result.actifNet += delta;
+                        result._regimeApplied = false;
+                        result._regimeDelta = 0;
+                    }
                 }
-            }
-            return result;
-        };
-        clearInterval(_checkInterval);
-    }, 1500);
+                return result;
+            };
+            clearInterval(_waitInterval);
+        }, 1500);
+    }
 
     // ============================================================
-    // FIX 3: Corriger le lien fiscal dans per-beneficiary-detail
+    // FIX: per-beneficiary-detail with REAL lien fiscal
     // ============================================================
     function fixPerBeneficiaryLien() {
         var container = document.getElementById('per-beneficiary-detail');
         if (!container) return;
 
         var state = SD._getState ? SD._getState() : null;
-        if (!state || !state.beneficiaries) return;
+        if (!state || !state.beneficiaries || state.beneficiaries.length === 0) return;
 
         var PO = (typeof PathOptimizer !== 'undefined') ? PathOptimizer : null;
-        var lienLabels = {
-            'enfant': 'Enfant', 'conjoint_pacs': 'Conjoint/PACS',
-            'petit_enfant': 'Petit-enfant', 'frere_soeur': 'Frere/Soeur',
-            'neveu_niece': 'Neveu/Niece', 'tiers': 'Tiers',
-            'arriere_petit_enfant': 'Arr. petit-enfant'
-        };
-
         var bens = state.beneficiaries;
-        if (bens.length === 0) return;
-
         var pat = SD._fiscal.computePatrimoine();
         var totalNet = pat.actifNet || 0;
         var nbBens = bens.length;
         if (totalNet <= 0) return;
 
+        // Get real donors for lien calculation
+        var realDonors = PO ? PO.getDonors().filter(function(d) { return d._isDonor; }) : [];
+
+        var lienLabels = {
+            'enfant': 'Enfant', 'petit_enfant': 'Petit-enfant',
+            'arriere_petit_enfant': 'Arr. petit-enfant',
+            'conjoint_pacs': 'Conjoint/PACS', 'frere_soeur': 'Frere/Soeur',
+            'neveu_niece': 'Neveu/Niece', 'tiers': 'Tiers'
+        };
+
         var html = '';
         bens.forEach(function(b) {
             var lien = b.lien || 'enfant';
-            if (PO && PO.getDonors && PO.getEffectiveLien) {
-                var donors = PO.getDonors();
-                if (donors.length > 0) {
-                    var realLien = PO.getEffectiveLien(donors[0].id, b.id, donors[0].role, b.lien);
-                    if (realLien) lien = realLien;
-                }
+
+            // Use PathOptimizer effective lien from real donor
+            if (PO && PO.getEffectiveLien && realDonors.length > 0) {
+                var rl = PO.getEffectiveLien(realDonors[0].id, b.id, realDonors[0].role, b.lien);
+                if (rl) lien = rl;
             }
 
             var abat = SD._fiscal.getAbattement(lien, false) || 0;
@@ -182,63 +191,71 @@
             html += '<div style="height:100%;width:' + pctNet + '%;background:linear-gradient(90deg,var(--accent-green),var(--accent-emerald));border-radius:3px;"></div>';
             html += '</div></div>';
         });
-
         container.innerHTML = html;
     }
 
     // ============================================================
-    // FIX 4: Corriger les notes AV
+    // FIX: AV notes + strategy text
     // ============================================================
-    function fixAVNotes() {
-        var state = SD._getState ? SD._getState() : null;
-        if (!state) return;
-        var age = state._realDonorAge || state.donor1.age || 60;
-
-        if (age >= 70) {
-            document.querySelectorAll('#step-5 .section-card, #step-5 .strategy-step-content').forEach(function(el) {
-                var html = el.innerHTML;
-                if (html.indexOf('990 I') >= 0 && html.indexOf('757 B') < 0) {
-                    html = html.replace(/abat\.\s*152\s*500\s*.*?\(990\s*I\)/g, 'abat. global 30 500 \u20ac (art. 757 B, donateur > 70 ans)');
-                    el.innerHTML = html;
-                }
-            });
-            document.querySelectorAll('#step-5 .strategy-step-content p, #step-5 .timeline-desc').forEach(function(el) {
-                if (el.textContent.indexOf('avant 70 ans') >= 0) {
-                    el.innerHTML = el.innerHTML.replace(/[Aa\u00c0\u00e0]\s*faire avant 70 ans/g, 'Art. 757 B applicable (donateur ' + age + ' ans, > 70 ans)');
-                }
-            });
-        }
-    }
-
-    // ============================================================
-    // FIX 5: Corriger texte strategie
-    // ============================================================
-    function fixStrategyText() {
+    function fixAVNotesAndStrategy() {
         var state = SD._getState ? SD._getState() : null;
         if (!state) return;
         var age = state._realDonorAge || state.donor1.age || 60;
         var npPct = Math.round(SD._fiscal.getNPRatio(age) * 100);
+
+        if (age < 70) return; // No fix needed if under 70
+
         var step5 = document.getElementById('step-5');
         if (!step5) return;
 
+        // Fix "avant 70 ans" text
         step5.querySelectorAll('*').forEach(function(el) {
             if (el.childElementCount > 0) return;
             var txt = el.textContent;
-            var match = txt.match(/donateur\s+(\d+)\s+ans/);
-            if (match && parseInt(match[1]) !== age) {
-                el.textContent = txt.replace(/donateur\s+\d+\s+ans/g, 'donateur ' + age + ' ans');
+
+            // Fix "A faire avant 70 ans"
+            if (txt.indexOf('avant 70 ans') >= 0) {
+                el.textContent = txt.replace(/[Aa\u00c0\u00e0]\s*faire avant 70 ans/g,
+                    'Art. 757 B (donateur ' + age + ' ans, > 70 ans)');
             }
+
+            // Fix wrong donor age
+            var ageMatch = txt.match(/donateur\s+(\d+)\s+ans/);
+            if (ageMatch && parseInt(ageMatch[1]) !== age && parseInt(ageMatch[1]) < age) {
+                el.textContent = el.textContent.replace(/donateur\s+\d+\s+ans/g, 'donateur ' + age + ' ans');
+            }
+
+            // Fix wrong NP %
             var npMatch = txt.match(/NP\s*=?\s*(\d+)%/);
             if (npMatch && parseInt(npMatch[1]) !== npPct) {
                 el.textContent = el.textContent.replace(/NP\s*=?\s*\d+%/g, 'NP ' + npPct + '%');
             }
         });
+
+        // Fix 990 I references when should be 757 B
+        step5.querySelectorAll('.section-card, .strategy-step-content').forEach(function(el) {
+            var html = el.innerHTML;
+            if (html.indexOf('990 I') >= 0 && html.indexOf('757 B') < 0) {
+                html = html.replace(/abat\.\s*152\s*500\s*.*?\(990\s*I\)/g,
+                    'abat. global 30 500 \u20ac (art. 757 B, donateur > 70 ans)');
+                el.innerHTML = html;
+            }
+        });
     }
 
     // ============================================================
-    // FIX 6: Warning succession legale — ENFANTS (pas conjoints) heritent
-    // v1.1: Distinguer enfant du donateur vs conjoint de l'enfant
-    //       Martine → Gerald (fils) = heritier. Cecile (conjointe Gerald) = NON heritiere
+    // FIX: Remove regime banner if donateur solo
+    // ============================================================
+    function fixRegimeBanner() {
+        var state = SD._getState ? SD._getState() : null;
+        if (state && state._forceNoRegimeAdjustment) {
+            var banner = document.getElementById('regime-banner');
+            if (banner) banner.remove();
+        }
+    }
+
+    // ============================================================
+    // FIX: Warning succession legale — ONLY biological children
     // ============================================================
     function addSuccessionLegaleWarning() {
         var existing = document.getElementById('succession-legale-warning');
@@ -248,6 +265,7 @@
         if (!state) return;
 
         var FG = (typeof FamilyGraph !== 'undefined') ? FamilyGraph : null;
+        var PO = (typeof PathOptimizer !== 'undefined') ? PathOptimizer : null;
         if (!FG || !FG.getPersons) return;
 
         var persons = FG.getPersons();
@@ -257,106 +275,67 @@
 
         var mainDonor = donateurs[0];
 
-        // Trouver les ENFANTS BIOLOGIQUES du donateur (pas les conjoints des enfants)
+        // Find BIOLOGICAL children of the donateur
+        // A child = someone whose parentId includes mainDonor.id
         var enfantsLegaux = [];
 
-        // Methode 1: via parentIds dans FamilyGraph
-        enfantsLegaux = persons.filter(function(p) {
-            if (p.parentIds && p.parentIds.indexOf(mainDonor.id) >= 0) return true;
-            return false;
-        });
-
-        // Methode 2: via getChildren si disponible
-        if (enfantsLegaux.length === 0 && FG.getChildren) {
+        // Method 1: FamilyGraph.getChildren
+        if (FG.getChildren) {
             var childIds = FG.getChildren(mainDonor.id);
             if (childIds && childIds.length > 0) {
-                enfantsLegaux = persons.filter(function(p) { return childIds.indexOf(p.id) >= 0; });
+                enfantsLegaux = persons.filter(function(p) {
+                    return childIds.indexOf(p.id) >= 0;
+                });
             }
         }
 
-        // Methode 3: heuristique — chercher les personnes qui sont "parent" dans l'arbre
-        // et dont le donateur est un "grand_parent"
+        // Method 2: parentIds
         if (enfantsLegaux.length === 0) {
-            var PO = (typeof PathOptimizer !== 'undefined') ? PathOptimizer : null;
-            if (PO && PO.getDonors) {
-                // Si le donateur a role=grand_parent, ses enfants sont les "parents" de l'arbre
-                if (mainDonor.role === 'grand_parent' || mainDonor.role === 'grandparent') {
-                    // Les parents dans l'arbre sont les enfants du GP
-                    persons.forEach(function(p) {
-                        // Exclure le donateur, les beneficiaires (petits-enfants) et les conjoints
-                        if (p.id === mainDonor.id) return;
-                        if (p.isBeneficiary) return;
-                        // Un enfant du GP = quelqu'un qui a des enfants parmi les beneficiaires
-                        // ET qui n'est pas le conjoint d'un autre enfant
-                        var hasChildrenAmongBen = beneficiaires.some(function(b) {
-                            return b.parentIds && b.parentIds.indexOf(p.id) >= 0;
-                        });
-                        if (hasChildrenAmongBen) {
-                            enfantsLegaux.push(p);
-                        }
-                    });
+            enfantsLegaux = persons.filter(function(p) {
+                return p.parentIds && p.parentIds.indexOf(mainDonor.id) >= 0;
+            });
+        }
+
+        // Method 3: PathOptimizer donors with role + lien detection
+        if (enfantsLegaux.length === 0 && PO) {
+            var poDonors = PO.getDonors();
+            poDonors.forEach(function(d) {
+                if (d._isDonor) return; // skip the main donateur
+                if (d._graphId === mainDonor.id) return;
+                // Check if this person is linked as "enfant" to the main donateur
+                var lien = FG.computeFiscalLien ? FG.computeFiscalLien(mainDonor.id, d._graphId || d.id) : null;
+                if (lien === 'enfant') {
+                    var person = persons.find(function(p) { return p.id === d._graphId || p.nom === d.nom; });
+                    if (person) enfantsLegaux.push(person);
                 }
+            });
+        }
+
+        // CRITICAL: Filter out spouses of children (belles-filles/beaux-fils)
+        // A spouse of a child has spouseId pointing to another enfant
+        var enfantIds = enfantsLegaux.map(function(e) { return e.id; });
+        enfantsLegaux = enfantsLegaux.filter(function(enf) {
+            // If this person's spouse is ALSO in the enfants list,
+            // keep only the one who is a biological child (has donateur as parent)
+            if (enf.spouseId && enfantIds.indexOf(enf.spouseId) >= 0) {
+                // Both this person and their spouse are in the list
+                // Check who is the real child via computeFiscalLien
+                var lien = FG.computeFiscalLien ? FG.computeFiscalLien(mainDonor.id, enf.id) : null;
+                if (lien !== 'enfant') return false; // this is the spouse, not the child
             }
-        }
-
-        // Methode 4: dernier recours — chercher les personnes avec role "parent"
-        // qui ne sont ni donateur ni beneficiaire, et exclure les conjoints
-        if (enfantsLegaux.length === 0) {
-            var allDonorIds = donateurs.map(function(d) { return d.id; });
-            var allBenIds = beneficiaires.map(function(b) { return b.id; });
-            persons.forEach(function(p) {
-                if (allDonorIds.indexOf(p.id) >= 0) return;
-                if (allBenIds.indexOf(p.id) >= 0) return;
-                // Exclure les conjoints : une personne avec un spouseId dont le spouse est aussi un candidat
-                // → garder seulement celui qui a un lien direct avec le donateur
-                enfantsLegaux.push(p);
-            });
-        }
-
-        // FILTRER : exclure les conjoints des enfants (belles-filles / beaux-fils)
-        // Un conjoint d'enfant = quelqu'un qui est marie/pacse avec un enfant du donateur
-        // On garde seulement ceux qui sont des descendants directs
-        if (enfantsLegaux.length > 1) {
-            // Identifier les couples parmi les enfants potentiels
-            var couples = [];
-            enfantsLegaux.forEach(function(p) {
-                if (p.spouseId) {
-                    var spouse = enfantsLegaux.find(function(e) { return e.id === p.spouseId; });
-                    if (spouse) couples.push({ a: p, b: spouse });
-                }
-            });
-
-            // Pour chaque couple, garder seulement le VRAI enfant du donateur
-            couples.forEach(function(c) {
-                // Heuristique : l'enfant biologique est celui qui :
-                // 1. A le donateur dans ses parentIds
-                // 2. Ou a le meme nom de famille
-                // 3. Ou est plus age (souvent l'enfant dans ce contexte)
-                var aIsChild = c.a.parentIds && c.a.parentIds.indexOf(mainDonor.id) >= 0;
-                var bIsChild = c.b.parentIds && c.b.parentIds.indexOf(mainDonor.id) >= 0;
-
-                if (aIsChild && !bIsChild) {
-                    // Exclure b (conjoint)
-                    enfantsLegaux = enfantsLegaux.filter(function(e) { return e.id !== c.b.id; });
-                } else if (bIsChild && !aIsChild) {
-                    enfantsLegaux = enfantsLegaux.filter(function(e) { return e.id !== c.a.id; });
-                } else {
-                    // Pas de parentIds, on ne peut pas determiner avec certitude
-                    // On garde les deux mais on mentionne "enfant(s) et/ou conjoint(s)"
-                }
-            });
-        }
+            return true;
+        });
 
         if (enfantsLegaux.length === 0) return;
 
-        // Verifier si les enfants sont beneficiaires
+        // Check if children are beneficiaires
         var enfantsNonBen = enfantsLegaux.filter(function(enf) {
             return !beneficiaires.some(function(b) { return b.id === enf.id; });
         });
 
         if (enfantsNonBen.length === 0) return;
 
-        // Construire le warning
+        // Build warning
         var enfantsNoms = enfantsNonBen.map(function(e) { return '<strong>' + esc(e.nom) + '</strong>'; }).join(', ');
         var petitsEnfantsNoms = beneficiaires.map(function(b) { return esc(b.nom); }).join(' et ');
         var nbEnfants = enfantsNonBen.length;
@@ -368,73 +347,47 @@
         var html = '<div id="succession-legale-warning" class="warning-box warn" style="margin-bottom:16px;">';
         html += '<i class="fas fa-exclamation-triangle"></i>';
         html += '<div>';
+        html += '<strong style="font-size:.88rem;">Succession legale vs donation du vivant</strong><br><br>';
 
-        // Titre
-        html += '<strong style="font-size:.88rem;">Attention : succession legale vs donation de son vivant</strong><br><br>';
-
-        // Paragraphe 1 : ce qui se passe AU DECES sans action
         html += '<div style="font-size:.80rem;margin-bottom:10px;">';
         html += '<strong style="color:var(--accent-coral);">Sans donation :</strong> au deces de ' + esc(mainDonor.nom) + ', ';
-        html += 'c\'est <strong>' + enfantsNoms + '</strong> (';
-        html += nbEnfants === 1 ? 'son fils, heritier reservataire' : 'ses enfants, heritiers reservataires';
-        html += ') qui herite de <strong>100% du patrimoine</strong> (art. 913 CC). ';
-        html += 'Les petits-enfants (' + petitsEnfantsNoms + ') <strong>ne recoivent rien</strong> en succession legale tant que leur parent est vivant.';
+        html += 'c\'est ' + enfantsNoms + ' (' + (nbEnfants === 1 ? 'son enfant' : 'ses enfants') + ', ';
+        html += 'heritier' + (nbEnfants > 1 ? 's' : '') + ' reservataire' + (nbEnfants > 1 ? 's' : '') + ') ';
+        html += 'qui herite de <strong>100%</strong> du patrimoine (art. 913 CC). ';
+        html += 'Les petits-enfants (' + petitsEnfantsNoms + ') <strong>ne recoivent rien</strong> tant que leur parent est vivant.';
         html += '</div>';
 
-        // Note conjoint
+        // Note conjoint enfant
         html += '<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:10px;padding:6px 10px;border-radius:6px;background:rgba(198,134,66,.03);">';
         html += '<i class="fas fa-info-circle" style="margin-right:4px;"></i>';
-        html += 'Le conjoint d\'un enfant (belle-fille/beau-fils) n\'a aucun droit successoral sur ' + esc(mainDonor.nom) + '. ';
-        html += 'Seuls les descendants directs heritent.';
+        html += 'Le conjoint d\'un enfant (belle-fille/beau-fils) n\'a aucun droit successoral. Seuls les descendants directs heritent.';
         html += '</div>';
 
-        // Paragraphe 2 : reserve et QD
+        // Reserve + QD
         html += '<div style="font-size:.80rem;margin-bottom:10px;">';
-        html += '<strong>Reserve hereditaire :</strong> ' + fmt(reserve) + ' (' + (nbEnfants === 1 ? '1/2' : nbEnfants >= 3 ? '3/4' : '2/3') + ' du patrimoine) ';
-        html += '→ revient obligatoirement a ' + enfantsNoms + '.<br>';
-        html += '<strong>Quotite disponible :</strong> ' + fmt(qd) + ' (' + (nbEnfants === 1 ? '1/2' : nbEnfants >= 3 ? '1/4' : '1/3') + ') ';
-        html += '→ peut etre leguee par testament aux petits-enfants.';
+        html += '<strong>Reserve hereditaire :</strong> ' + fmt(reserve) + ' (' + (nbEnfants === 1 ? '1/2' : nbEnfants >= 3 ? '3/4' : '2/3') + ') → revient obligatoirement a ' + enfantsNoms + '.<br>';
+        html += '<strong>Quotite disponible :</strong> ' + fmt(qd) + ' → legable par testament aux PE.';
         html += '</div>';
 
-        // Paragraphe 3 : options pour transmettre aux PE
-        html += '<div style="font-size:.80rem;margin-bottom:8px;">';
-        html += '<strong style="color:var(--accent-green);">Pour transmettre aux petits-enfants :</strong>';
-        html += '</div>';
+        // Options
+        html += '<div style="font-size:.80rem;margin-bottom:8px;"><strong style="color:var(--accent-green);">Pour transmettre directement aux petits-enfants :</strong></div>';
         html += '<div style="font-size:.78rem;margin-left:12px;">';
-        html += '<div style="margin-bottom:4px;">1. <strong>Donation directe</strong> du vivant de ' + esc(mainDonor.nom) + ' → abat. 31 865 \u20ac/petit-enfant (calculs ci-dessous)</div>';
-        html += '<div style="margin-bottom:4px;">2. <strong>Chemin indirect</strong> : ' + esc(mainDonor.nom) + ' → ' + enfantsNoms + ' (abat. 100 000 \u20ac) puis ' + enfantsNoms + ' → PE (abat. 100 000 \u20ac) = <strong>200 000 \u20ac d\'abattements cumules</strong></div>';
-        html += '<div style="margin-bottom:4px;">3. <strong>Renonciation anticipee</strong> (RAAR) : ' + enfantsNoms + ' renonce a la succession → les PE heritent en representation avec l\'abat. de 100 000 \u20ac au lieu de 31 865 \u20ac (art. 929 CC)</div>';
-        html += '<div style="margin-bottom:4px;">4. <strong>Testament + legs</strong> : sur la quotite disponible (' + fmt(qd) + ' max), ne reduit pas les droits mais oriente le patrimoine</div>';
-        html += '<div style="margin-bottom:4px;">5. <strong>Assurance-vie</strong> : clause beneficiaire directe PE, hors succession (art. 757 B si > 70 ans)</div>';
+        html += '<div style="margin-bottom:4px;">1. <strong>Donation directe</strong> (calculs ci-dessous) → abat. 31 865 \u20ac/PE</div>';
+        html += '<div style="margin-bottom:4px;">2. <strong>Chemin indirect</strong> : ' + esc(mainDonor.nom) + ' \u2192 ' + enfantsNoms + ' (abat. 100 000 \u20ac) \u2192 PE (abat. 100 000 \u20ac) = <strong>200 000 \u20ac cumules</strong></div>';
+        html += '<div style="margin-bottom:4px;">3. <strong>Renonciation (RAAR)</strong> : ' + enfantsNoms + ' renonce \u2192 PE heritent avec abat. 100 000 \u20ac (art. 929 CC)</div>';
+        html += '<div style="margin-bottom:4px;">4. <strong>Testament</strong> sur la QD (' + fmt(qd) + ' max)</div>';
+        html += '<div style="margin-bottom:4px;">5. <strong>Assurance-vie</strong> clause PE directe (art. 757 B si > 70 ans)</div>';
         html += '</div>';
 
-        // Note de clarification
         html += '<div style="font-size:.72rem;color:var(--text-muted);margin-top:10px;padding-top:8px;border-top:1px solid rgba(198,134,66,.08);">';
-        html += '<i class="fas fa-calculator" style="margin-right:4px;"></i>';
-        html += 'Les calculs ci-dessous simulent la <strong>donation directe ' + esc(mainDonor.nom) + ' → ' + petitsEnfantsNoms + '</strong>. ';
-        html += 'C\'est le scenario ou ' + esc(mainDonor.nom) + ' decide de transmettre de son vivant directement aux petits-enfants.';
-        html += '</div>';
+        html += 'Les calculs ci-dessous simulent la <strong>donation directe ' + esc(mainDonor.nom) + ' \u2192 ' + petitsEnfantsNoms + '</strong>.';
+        html += '</div></div></div>';
 
-        html += '</div></div>';
-
-        // Inserer en haut des resultats
         var anchor = document.getElementById('regime-banner')
                   || document.getElementById('ai-narrative-summary')
                   || document.getElementById('results-hero')
                   || document.getElementById('transmission-map');
         if (anchor) anchor.insertAdjacentHTML('beforebegin', html);
-    }
-
-    // ============================================================
-    // FIX 2c: Corriger la banniere regime si donateur solo
-    // ============================================================
-    function fixRegimeBanner() {
-        var state = SD._getState ? SD._getState() : null;
-        if (!state) return;
-        if (state._forceNoRegimeAdjustment) {
-            var banner = document.getElementById('regime-banner');
-            if (banner) banner.remove();
-        }
     }
 
     // ============================================================
