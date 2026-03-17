@@ -2772,9 +2772,11 @@ class PortfolioOptimizer:
         # Fix: Reserve slots for top actions BY SCORE before bucket filling.
         # This ensures VICI (#1 score 80), JNJ, GD, etc. get allocated.
         # v5.3.2: Max 1 financials among reserved (prevents AGS+CS+HIG dominating)
-        _MIN_ACTIONS_STABLE = 4
+        # v5.3.2: Healthcare guarantee — if no healthcare reserved, inject best one
+        _MIN_ACTIONS_STABLE = 5  # v5.3.2: 5 actions (was 4) to have room for healthcare
         _MAX_WEIGHT_ACTION_STABLE = 10.0
         _MAX_FINANCIALS_RESERVED = 1  # v5.3.2: Sector diversity
+        _HEALTHCARE_KEYWORDS = {"santé", "healthcare", "health care", "health"}
         
         if profile.name == "Stable":
             _actions_pool = sorted(
@@ -2783,6 +2785,7 @@ class PortfolioOptimizer:
             )
             _actions_reserved = 0
             _fin_reserved = 0  # v5.3.2: Track financials count
+            _healthcare_reserved = 0  # v5.3.2: Track healthcare count
             _FINANCIAL_KEYWORDS = {"finance", "financial", "financials", "financial services"}
             
             for _act in _actions_pool:
@@ -2803,6 +2806,12 @@ class PortfolioOptimizer:
                 _is_fin = any(
                     kw in s for s in [_act_sector, _act_source_sector, _act_sector_api]
                     for kw in _FINANCIAL_KEYWORDS
+                )
+                
+                # v5.3.2: Detect healthcare
+                _is_healthcare = any(
+                    kw in s for s in [_act_sector, _act_source_sector, _act_sector_api]
+                    for kw in _HEALTHCARE_KEYWORDS
                 )
                 
                 # v5.3.2: Skip if already at max financials
@@ -2839,17 +2848,65 @@ class PortfolioOptimizer:
                     _actions_reserved += 1
                     if _is_fin:
                         _fin_reserved += 1
+                    if _is_healthcare:
+                        _healthcare_reserved += 1
                     logger.info(
                         f"   [Stable] 🎯 Action réservée #{_actions_reserved}: "
                         f"{_act.id} score={_act.score:.1f} vol={_act.vol_annual:.1f}% "
                         f"→ {_weight:.1f}%"
                         f"{' [FIN]' if _is_fin else ''}"
+                        f"{' [HC]' if _is_healthcare else ''}"
                     )
             
+            # v5.3.2: Healthcare guarantee — if no healthcare reserved, inject best one
+            if _actions_reserved > 0 and _healthcare_reserved == 0:
+                _hc_candidates = []
+                for _act in _actions_pool:
+                    if _act.id in allocation:
+                        continue
+                    _s = (getattr(_act, 'sector', '') or '').lower()
+                    _s2 = ''
+                    if hasattr(_act, 'source_data') and _act.source_data:
+                        _s2 = (_act.source_data.get('sector', '') or '').lower()
+                    if any(kw in s for s in [_s, _s2] for kw in _HEALTHCARE_KEYWORDS):
+                        _hc_candidates.append(_act)
+                
+                if _hc_candidates:
+                    _best_hc = max(_hc_candidates, key=lambda a: a.score)
+                    # Find worst non-healthcare reserved action to swap
+                    _reserved_ids = [aid for aid in allocation if aid.startswith("EQ_")]
+                    _reserved_assets = [a for a in _actions_pool if a.id in _reserved_ids]
+                    
+                    if _reserved_assets:
+                        _worst_reserved = min(_reserved_assets, key=lambda a: a.score)
+                        
+                        if _best_hc.score >= _worst_reserved.score * 0.75:
+                            # Swap: remove worst, add healthcare
+                            _old_weight = allocation.pop(_worst_reserved.id)
+                            allocation[_best_hc.id] = _old_weight
+                            
+                            # Update tracking
+                            sector_weights[_worst_reserved.sector] -= _old_weight
+                            sector_weights[_best_hc.sector] = sector_weights.get(_best_hc.sector, 0) + _old_weight
+                            
+                            _healthcare_reserved += 1
+                            logger.info(
+                                f"   [Stable] 🏥 Healthcare inject: {_best_hc.id} "
+                                f"score={_best_hc.score:.1f} replaces {_worst_reserved.id} "
+                                f"score={_worst_reserved.score:.1f} → {_old_weight:.1f}%"
+                            )
+                        else:
+                            logger.info(
+                                f"   [Stable] 🏥 Healthcare skip: best={_best_hc.id} "
+                                f"score={_best_hc.score:.1f} < 75% of worst reserved "
+                                f"score={_worst_reserved.score:.1f}"
+                            )
+                    
             if _actions_reserved > 0:
                 logger.info(
                     f"   [Stable] 🎯 v5.3.2: {_actions_reserved} actions réservées "
-                    f"({category_weights['Actions']:.1f}% total, {_fin_reserved} financials)"
+                    f"({category_weights['Actions']:.1f}% total, "
+                    f"{_fin_reserved} financials, {_healthcare_reserved} healthcare)"
                 )
         
         # === Remplir par bucket selon targets ===
