@@ -2785,10 +2785,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 logger.info(f"   [{profile}] 🏥 POST-MKW: {_ess_swapped} ESSENTIAL sector(s) injected")
         
         # === v5.3.3: AVOIDED Sector Equity Cap — max 5% per AVOIDED stock ===
-        # AGS (Finance AVOIDED) survives at 9% because scoring is too strong.
-        # Tilt -25% is a soft filter. This is the hard safety net.
-        # Cap applies uniformly across all 3 profiles (expert recommendation).
-        _AVOIDED_EQUITY_CAP = 5.0  # % max per stock in AVOIDED sector
+        # Uniform 5% across all profiles. Soft enough to keep good stocks (AGS),
+        # hard enough to prevent 9-10% concentration in AVOIDED sectors.
+        # No 0% ejection — that creates RADAR-dependent turnover.
+        _AVOIDED_EQUITY_CAP = 5.0
         if market_context and allocation:
             _avoided_secs_cap = set(
                 market_context.get("macro_tilts", {}).get("avoided_sectors", [])
@@ -5291,6 +5291,56 @@ def save_portfolios(portfolios: Dict, assets: list):
     os.makedirs(CONFIG["history_dir"], exist_ok=True)
     
     v1_data = normalize_to_frontend_v1(portfolios, assets)
+    
+    # === v5.3.3: ETF Sector Dedup — consolidate redundant ETFs ===
+    # XLE + VDE = same Energy US exposure (corr > 0.95). Keep most liquid, merge weight.
+    _ETF_DEDUP_GROUPS = {
+        # Group key → list of tickers that are near-identical
+        "energy_us": ["XLE", "VDE", "FENY", "IYE"],
+        "semi_us": ["SOXX", "SMH"],
+        "gold": ["GLD", "IAU", "SGOL"],
+    }
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        _meta = _p_data.get("_tickers_meta", {})
+        
+        for _group_name, _group_tickers in _ETF_DEDUP_GROUPS.items():
+            _found = [(tk, _t[tk]) for tk in _group_tickers if tk in _t]
+            if len(_found) < 2:
+                continue
+            
+            # Keep the one with highest weight (= most liquid / best scored)
+            _found.sort(key=lambda x: -x[1])
+            _keeper = _found[0]
+            _merged_weight = sum(w for _, w in _found)
+            
+            # Remove duplicates, add weight to keeper
+            for tk, w in _found[1:]:
+                del _t[tk]
+                logger.info(
+                    f"   [{_p_name}] 🔄 ETF DEDUP: {tk} ({w*100:.1f}%) merged into "
+                    f"{_keeper[0]} — group '{_group_name}'"
+                )
+            _t[_keeper[0]] = _merged_weight
+            
+            # Rebuild display for this portfolio
+            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                _p_data[_cat] = {}
+            _nw = {}
+            for _tk, _w_dec in _t.items():
+                _w_pct = round(_w_dec * 100, 1)
+                if _w_pct < 0.1:
+                    continue
+                _info = _meta.get(_tk, {})
+                _cat = _info.get("category", "ETF")
+                _nm = _info.get("name", _tk)
+                _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+                _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+                _nw[f"{_cat}:{_display}"] = _w_pct
+            _p_data["_numeric_weights"] = _nw
     
     # === v5.3.2 EQUITY CAP: Individual stocks max 10% Agressif, 11% Modéré, 10% Stable ===
     # Runs AFTER all post-processing (RADAR caps, AGG caps, dust cleanup)
