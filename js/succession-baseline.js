@@ -1,26 +1,26 @@
 /**
- * succession-baseline.js v1.0 — Section 1 : Succession brute baseline
+ * succession-baseline.js v1.1 — Section 1 : Succession brute baseline
  *
- * Affiche EN PREMIER dans le Step 5 :
- * 1. Qui herite legalement (enfants = reservataires, pas les PE)
- * 2. Bareme detaille tranche par tranche
- * 3. Cout total des droits = baseline pour mesurer les economies
- * 4. Reserve hereditaire + quotite disponible
+ * v1.1: SEPARATION AV / MASSE SUCCESSORALE
+ *   L'AV est HORS succession (art. L132-12 C.Ass.)
+ *   Masse successorale = patrimoine HORS AV
+ *   AV affichee separement avec 990I ou 757B selon age
+ *   Warning clause beneficiaire obligatoire
+ *   Reserve/QD calculees sur masse hors AV
  *
- * @version 1.0.0 — 2026-03-17
+ * @version 1.1.0 — 2026-03-18
  */
 (function() {
     'use strict';
 
     function init() {
         if (typeof SD === 'undefined' || !SD._fiscal) { setTimeout(init, 500); return; }
-
         var _origCalc = SD.calculateResults;
         SD.calculateResults = function() {
             _origCalc.call(SD);
             setTimeout(renderBaseline, 300);
         };
-        console.log('[SuccessionBaseline v1.0] Loaded');
+        console.log('[SuccessionBaseline v1.1] Loaded — AV hors succession');
     }
 
     function renderBaseline() {
@@ -31,38 +31,47 @@
         if (!state) return;
 
         var pat = SD._fiscal.computePatrimoine();
-        var actifNet = pat.actifNet || 0;
-        if (actifNet <= 0) return;
-
         var FG = (typeof FamilyGraph !== 'undefined') ? FamilyGraph : null;
         var PO = (typeof PathOptimizer !== 'undefined') ? PathOptimizer : null;
         var FISCAL = SD._fiscal.getFISCAL();
 
         // ============================================================
-        // 1. IDENTIFIER LES HERITIERS LEGAUX
+        // SEPARER AV DU PATRIMOINE SUCCESSORAL
+        // ============================================================
+        var avItems = (state.finance || []).filter(function(f) { return f.type === 'assurance_vie'; });
+        var totalAV = avItems.reduce(function(s, f) { return s + (f.valeur || 0); }, 0);
+        var totalPrimesAv70 = avItems.reduce(function(s, f) { return s + (f.primesAvant70 || 0); }, 0);
+        var totalPrimesAp70 = avItems.reduce(function(s, f) { return s + (f.primesApres70 || 0); }, 0);
+        // Si primes non ventilees, tout est considere apres 70 ans si donateur > 70
+        var donorAge = state._realDonorAge || state.donor1.age || 60;
+        if (totalPrimesAv70 === 0 && totalPrimesAp70 === 0 && totalAV > 0 && donorAge >= 70) {
+            totalPrimesAp70 = avItems.reduce(function(s, f) { return s + (f.versements || f.valeur || 0); }, 0);
+        }
+        var totalGainsAV = Math.max(0, totalAV - totalPrimesAv70 - totalPrimesAp70);
+
+        // MASSE SUCCESSORALE = patrimoine HORS AV
+        var masseSuccessorale = (pat.actifNet || 0) - totalAV;
+        if (masseSuccessorale <= 0 && totalAV <= 0) return;
+
+        // ============================================================
+        // IDENTIFIER LES HERITIERS LEGAUX
         // ============================================================
         var persons = FG ? FG.getPersons() : [];
         var donateurs = persons.filter(function(p) { return p.isDonor; });
         var beneficiaires = persons.filter(function(p) { return p.isBeneficiary; });
         var mainDonor = donateurs.length > 0 ? donateurs[0] : null;
-
         if (!mainDonor) return;
 
-        // Trouver les enfants biologiques du donateur
         var enfantsLegaux = findBiologicalChildren(mainDonor, persons, FG);
         var nbEnfants = enfantsLegaux.length;
 
-        // Si pas d'enfants trouves, les beneficiaires sont peut-etre les heritiers directs
         var heritiersLegaux = [];
         var lienHeritier = 'enfant';
-
         if (nbEnfants > 0) {
             heritiersLegaux = enfantsLegaux;
             lienHeritier = 'enfant';
         } else if (beneficiaires.length > 0) {
-            // Les beneficiaires coches sont les heritiers
             heritiersLegaux = beneficiaires;
-            // Determiner le lien
             if (PO && PO.getDonors && PO.getEffectiveLien) {
                 var poDonors = PO.getDonors().filter(function(d) { return d._isDonor; });
                 if (poDonors.length > 0 && beneficiaires.length > 0) {
@@ -70,7 +79,6 @@
                 }
             }
         }
-
         if (heritiersLegaux.length === 0) return;
 
         var nbHeritiers = heritiersLegaux.length;
@@ -79,28 +87,59 @@
         var isConjointExonere = lienHeritier === 'conjoint_pacs';
 
         // ============================================================
-        // 2. CALCUL BAREME DETAILLE
+        // CALCUL SUCCESSION (HORS AV)
         // ============================================================
-        var partParHeritier = Math.round(actifNet / nbHeritiers);
+        var partParHeritier = masseSuccessorale > 0 ? Math.round(masseSuccessorale / nbHeritiers) : 0;
         var baseParHeritier = Math.max(0, partParHeritier - abatParHeritier);
-
-        // Calcul tranche par tranche
         var tranches = calcTranches(baseParHeritier, bareme);
         var droitsParHeritier = tranches.total;
         var droitsTotal = droitsParHeritier * nbHeritiers;
         var netParHeritier = partParHeritier - droitsParHeritier;
         var tauxEffectif = partParHeritier > 0 ? (droitsParHeritier / partParHeritier * 100).toFixed(1) : '0';
-        var fraisNotaire = Math.round(actifNet * (FISCAL.fraisNotaireSuccPct || 0.012));
+        var fraisNotaire = Math.round(masseSuccessorale * (FISCAL.fraisNotaireSuccPct || 0.012));
 
-        // Reserve hereditaire
+        // CALCUL AV SEPAREMENT
+        var droitsAV = 0;
+        var avRegime = '';
+        if (totalAV > 0) {
+            if (totalPrimesAv70 > 0) {
+                // Art. 990 I : 152 500/beneficiaire
+                var nbBenAV = Math.max(1, beneficiaires.length);
+                var parBen990I = totalPrimesAv70 / nbBenAV;
+                var base990I = Math.max(0, parBen990I - FISCAL.av990I.abattement);
+                var seuil = FISCAL.av990I.seuil2 - FISCAL.av990I.abattement;
+                var tr1 = Math.min(base990I, seuil);
+                var tr2 = Math.max(0, base990I - seuil);
+                droitsAV += Math.round((tr1 * FISCAL.av990I.taux1 + tr2 * FISCAL.av990I.taux2) * nbBenAV);
+                avRegime = '990 I';
+            }
+            if (totalPrimesAp70 > 0) {
+                // Art. 757 B : abat. global 30 500, puis bareme DMTG
+                var baseAp70 = Math.max(0, totalPrimesAp70 - FISCAL.av757B.abattementGlobal);
+                // Taxe au bareme du lien beneficiaire (pas heritier legal)
+                var lienBenAV = 'enfant';
+                if (PO && PO.getDonors && PO.getEffectiveLien && beneficiaires.length > 0) {
+                    var rd = PO.getDonors().filter(function(d) { return d._isDonor; });
+                    if (rd.length > 0) lienBenAV = PO.getEffectiveLien(rd[0].id, beneficiaires[0].id, rd[0].role, beneficiaires[0].lien) || 'enfant';
+                }
+                var nbBen757B = Math.max(1, beneficiaires.length);
+                var parBen757B = baseAp70 / nbBen757B;
+                droitsAV += SD._fiscal.calcDroits(parBen757B, SD._fiscal.getBareme(lienBenAV)) * nbBen757B;
+                avRegime = avRegime ? avRegime + ' + 757 B' : '757 B';
+            }
+        }
+
+        var droitsTotalGlobal = droitsTotal + droitsAV;
+
+        // Reserve hereditaire (calculee sur masse HORS AV)
         var tauxReserve = nbEnfants === 1 ? 0.5 : (nbEnfants >= 3 ? 0.75 : 2/3);
-        var reserve = Math.round(actifNet * tauxReserve);
-        var qd = actifNet - reserve;
+        var reserve = Math.round(masseSuccessorale * tauxReserve);
+        var qd = masseSuccessorale - reserve;
         var reserveLabel = nbEnfants === 1 ? '1/2' : (nbEnfants >= 3 ? '3/4' : '2/3');
         var qdLabel = nbEnfants === 1 ? '1/2' : (nbEnfants >= 3 ? '1/4' : '1/3');
 
         // ============================================================
-        // 3. RENDER HTML
+        // RENDER HTML
         // ============================================================
         var html = '';
         html += '<div id="succession-baseline-panel" class="section-card" style="border-color:rgba(255,107,107,.3);margin-bottom:20px;background:linear-gradient(135deg,rgba(51,44,32,.95),rgba(60,40,35,.3));">';
@@ -121,14 +160,12 @@
             html += '<div style="font-size:.82rem;color:var(--text-primary);margin-bottom:6px;">';
             html += enfantsNoms + ' (' + (nbEnfants === 1 ? 'enfant unique' : nbEnfants + ' enfants') + ') \u2014 h\u00e9ritier' + (nbEnfants > 1 ? 's' : '') + ' r\u00e9servataire' + (nbEnfants > 1 ? 's' : '') + ' (art. 913 CC)';
             html += '</div>';
-
-            // Verifier si les PE sont les beneficiaires coches (donation scenario)
             var peNoms = beneficiaires.map(function(b) { return esc(b.nom); }).join(', ');
             if (beneficiaires.length > 0 && enfantsLegaux.every(function(e) { return !beneficiaires.some(function(b) { return b.id === e.id; }); })) {
                 html += '<div style="font-size:.75rem;color:var(--accent-amber);margin-top:6px;padding:6px 10px;border-radius:6px;background:rgba(255,179,0,.04);border:1px solid rgba(255,179,0,.08);">';
                 html += '<i class="fas fa-info-circle" style="margin-right:4px;"></i>';
                 html += 'Les b\u00e9n\u00e9ficiaires coch\u00e9s (' + peNoms + ') ne re\u00e7oivent <strong>rien</strong> en succession l\u00e9gale. ';
-                html += 'Pour qu\'ils re\u00e7oivent, il faut une <strong>donation du vivant</strong>, un <strong>testament</strong>, ou une <strong>renonciation</strong> de ' + enfantsNoms + '.';
+                html += 'Il faut une <strong>donation</strong>, un <strong>testament</strong>, ou une <strong>renonciation</strong> de ' + enfantsNoms + '.';
                 html += '</div>';
             }
         } else {
@@ -138,13 +175,20 @@
         }
         html += '</div>';
 
-        // PATRIMOINE TAXABLE
+        // ============================================================
+        // SECTION A : MASSE SUCCESSORALE (HORS AV)
+        // ============================================================
+        html += '<div style="font-size:.78rem;font-weight:700;color:var(--text-label);margin-bottom:10px;">';
+        html += '<i class="fas fa-home" style="margin-right:6px;font-size:.65rem;color:var(--primary-color);"></i>';
+        html += 'Masse successorale (hors assurance-vie)';
+        html += '</div>';
+
         html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">';
 
         html += '<div style="padding:14px;border-radius:12px;background:rgba(198,134,66,.04);border:1px solid rgba(198,134,66,.08);text-align:center;">';
         html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Patrimoine taxable</div>';
-        html += '<div style="font-size:1.2rem;font-weight:800;color:var(--text-primary);">' + fmt(actifNet) + '</div>';
-        html += '<div style="font-size:.62rem;color:var(--text-muted);">Immo ' + fmt(pat.immo) + ' \u00b7 Fin. ' + fmt(pat.financier) + (pat.pro > 0 ? ' \u00b7 Pro ' + fmt(pat.pro) : '') + '</div>';
+        html += '<div style="font-size:1.2rem;font-weight:800;color:var(--text-primary);">' + fmt(masseSuccessorale) + '</div>';
+        html += '<div style="font-size:.62rem;color:var(--text-muted);">Immo ' + fmt(pat.immo) + (pat.financier - totalAV > 0 ? ' \u00b7 Fin. (hors AV) ' + fmt(pat.financier - totalAV) : '') + '</div>';
         html += '</div>';
 
         html += '<div style="padding:14px;border-radius:12px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.12);text-align:center;">';
@@ -154,40 +198,32 @@
         html += '</div>';
 
         html += '<div style="padding:14px;border-radius:12px;background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.12);text-align:center;">';
-        html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Net re\u00e7u' + (nbHeritiers > 1 ? ' (total)' : '') + '</div>';
-        html += '<div style="font-size:1.2rem;font-weight:800;color:var(--accent-green);">' + fmt(actifNet - droitsTotal - fraisNotaire) + '</div>';
+        html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Net re\u00e7u par ' + esc(heritiersLegaux[0].nom) + '</div>';
+        html += '<div style="font-size:1.2rem;font-weight:800;color:var(--accent-green);">' + fmt(masseSuccessorale - droitsTotal - fraisNotaire) + '</div>';
         html += '<div style="font-size:.62rem;color:var(--text-muted);">Taux effectif ' + tauxEffectif + '%</div>';
         html += '</div>';
         html += '</div>';
 
         // BAREME DETAILLE
-        if (!isConjointExonere) {
+        if (!isConjointExonere && masseSuccessorale > 0) {
             html += '<div style="margin-bottom:16px;">';
-            html += '<div style="font-size:.78rem;font-weight:700;color:var(--text-label);margin-bottom:8px;display:flex;align-items:center;gap:6px;">';
-            html += '<i class="fas fa-table" style="font-size:.65rem;color:var(--primary-color);"></i>';
-            html += 'Bar\u00e8me d\u00e9taill\u00e9 par h\u00e9ritier (art. 777 CGI)';
-            html += '</div>';
-
-            // Info abattement
             html += '<div style="font-size:.72rem;color:var(--text-secondary);margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);">';
             html += 'Part brute : <strong>' + fmt(partParHeritier) + '</strong>';
             html += ' \u2212 abattement ' + formatLien(lienHeritier) + ' : <strong>' + fmt(abatParHeritier) + '</strong>';
             html += ' = base taxable : <strong style="color:var(--accent-coral);">' + fmt(baseParHeritier) + '</strong>';
             html += '</div>';
 
-            // Tableau tranches
             html += '<div style="overflow-x:auto;border-radius:10px;border:1px solid rgba(198,134,66,.1);">';
             html += '<table style="width:100%;border-collapse:collapse;font-size:.75rem;">';
             html += '<thead><tr style="background:rgba(198,134,66,.06);">';
-            html += '<th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--text-label);">Tranche</th>';
+            html += '<th style="padding:8px 12px;text-align:left;font-weight:600;color:var(--text-label);">Tranche (art. 777 CGI)</th>';
             html += '<th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text-label);">Taux</th>';
-            html += '<th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text-label);">Montant tax\u00e9</th>';
+            html += '<th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text-label);">Montant</th>';
             html += '<th style="padding:8px 12px;text-align:right;font-weight:600;color:var(--text-label);">Droits</th>';
             html += '</tr></thead><tbody>';
 
-            tranches.detail.forEach(function(tr, i) {
-                var isLast = i === tranches.detail.length - 1;
-                html += '<tr style="border-top:1px solid rgba(198,134,66,.04);' + (isLast ? 'font-weight:600;' : '') + '">';
+            tranches.detail.forEach(function(tr) {
+                html += '<tr style="border-top:1px solid rgba(198,134,66,.04);">';
                 html += '<td style="padding:6px 12px;color:var(--text-secondary);">' + tr.label + '</td>';
                 html += '<td style="padding:6px 12px;text-align:right;color:var(--text-secondary);">' + tr.tauxPct + '%</td>';
                 html += '<td style="padding:6px 12px;text-align:right;color:var(--text-secondary);">' + fmt(tr.montant) + '</td>';
@@ -195,174 +231,172 @@
                 html += '</tr>';
             });
 
-            // Total
-            html += '<tr style="border-top:2px solid rgba(198,134,66,.15);font-weight:700;font-size:.82rem;">';
-            html += '<td style="padding:8px 12px;" colspan="2">TOTAL par h\u00e9ritier</td>';
+            html += '<tr style="border-top:2px solid rgba(198,134,66,.15);font-weight:700;">';
+            html += '<td style="padding:8px 12px;" colspan="2">TOTAL</td>';
             html += '<td style="padding:8px 12px;text-align:right;">' + fmt(baseParHeritier) + '</td>';
-            html += '<td style="padding:8px 12px;text-align:right;color:var(--accent-coral);">' + fmt(droitsParHeritier) + '</td>';
+            html += '<td style="padding:8px 12px;text-align:right;color:var(--accent-coral);font-size:.85rem;">' + fmt(droitsTotal) + '</td>';
             html += '</tr>';
-
-            if (nbHeritiers > 1) {
-                html += '<tr style="font-weight:700;font-size:.85rem;background:rgba(255,107,107,.03);">';
-                html += '<td style="padding:8px 12px;" colspan="2">TOTAL (' + nbHeritiers + ' h\u00e9ritiers)</td>';
-                html += '<td style="padding:8px 12px;text-align:right;">' + fmt(baseParHeritier * nbHeritiers) + '</td>';
-                html += '<td style="padding:8px 12px;text-align:right;color:var(--accent-coral);font-size:.92rem;">' + fmt(droitsTotal) + '</td>';
-                html += '</tr>';
-            }
             html += '</tbody></table></div>';
-
-            // Detail par heritier si > 1
-            if (nbHeritiers > 1) {
-                html += '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">';
-                heritiersLegaux.forEach(function(h) {
-                    html += '<div style="flex:1;min-width:200px;padding:12px;border-radius:10px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.06);">';
-                    html += '<div style="font-size:.78rem;font-weight:700;">' + esc(h.nom) + '</div>';
-                    html += '<div style="font-size:.65rem;color:var(--text-muted);">' + formatLien(lienHeritier) + '</div>';
-                    html += '<div style="display:flex;justify-content:space-between;margin-top:6px;">';
-                    html += '<span style="font-size:.72rem;color:var(--text-secondary);">Re\u00e7oit : ' + fmt(partParHeritier) + '</span>';
-                    html += '<span style="font-size:.72rem;color:var(--accent-coral);">Droits : ' + fmt(droitsParHeritier) + '</span>';
-                    html += '</div>';
-                    html += '<div style="font-size:.85rem;font-weight:800;color:var(--accent-green);margin-top:4px;">Net : ' + fmt(netParHeritier) + '</div>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            }
-            html += '</div>';
-        } else {
-            html += '<div style="padding:14px;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);margin-bottom:16px;font-size:.82rem;">';
-            html += '<i class="fas fa-check-circle" style="color:var(--accent-green);margin-right:6px;"></i>';
-            html += '<strong>Conjoint/PACS exon\u00e9r\u00e9</strong> de droits de succession (art. 796-0 bis CGI). Seuls les frais notariaux s\'appliquent.';
             html += '</div>';
         }
 
-        // RESERVE + QD (si enfants existent)
-        if (nbEnfants > 0 && !isConjointExonere) {
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
+        // ============================================================
+        // SECTION B : ASSURANCE-VIE (HORS SUCCESSION)
+        // ============================================================
+        if (totalAV > 0) {
+            html += '<div style="margin-top:6px;margin-bottom:16px;padding:16px 18px;border-radius:12px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.12);">';
+            html += '<div style="font-size:.78rem;font-weight:700;color:var(--accent-blue);margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
+            html += '<i class="fas fa-shield-alt" style="font-size:.7rem;"></i>';
+            html += 'Assurance-vie \u2014 HORS succession (art. L132-12 C. Assurances)';
+            html += '</div>';
 
+            html += '<div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:10px;">';
+            html += 'L\'assurance-vie n\'entre <strong>pas</strong> dans la masse successorale. Elle est transmise directement aux b\u00e9n\u00e9ficiaires d\u00e9sign\u00e9s dans la clause, avec une fiscalit\u00e9 sp\u00e9cifique.';
+            html += '</div>';
+
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+            html += '<div style="padding:10px;border-radius:8px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.06);text-align:center;">';
+            html += '<div style="font-size:.55rem;text-transform:uppercase;color:var(--text-muted);">Capital AV</div>';
+            html += '<div style="font-size:1rem;font-weight:700;color:var(--accent-blue);">' + fmt(totalAV) + '</div>';
+            html += '</div>';
+            html += '<div style="padding:10px;border-radius:8px;background:rgba(255,107,107,.03);border:1px solid rgba(255,107,107,.06);text-align:center;">';
+            html += '<div style="font-size:.55rem;text-transform:uppercase;color:var(--text-muted);">Droits AV (art. ' + (avRegime || '757 B') + ')</div>';
+            html += '<div style="font-size:1rem;font-weight:700;color:var(--accent-coral);">' + fmt(droitsAV) + '</div>';
+            html += '</div>';
+            html += '</div>';
+
+            // Detail regime AV
+            if (donorAge >= 70) {
+                html += '<div style="font-size:.72rem;color:var(--text-secondary);padding:8px 10px;border-radius:6px;background:rgba(255,179,0,.03);border:1px solid rgba(255,179,0,.06);margin-bottom:8px;">';
+                html += '<i class="fas fa-exclamation-triangle" style="color:var(--accent-amber);margin-right:4px;"></i>';
+                html += '<strong>Art. 757 B</strong> (donateur > 70 ans) : abattement global <strong>30 500 \u20ac</strong> seulement (partag\u00e9 entre tous les b\u00e9n\u00e9ficiaires). ';
+                html += 'Les <strong>int\u00e9r\u00eats</strong> (' + fmt(totalGainsAV) + ') sont <strong>exon\u00e9r\u00e9s</strong>. Seules les primes (' + fmt(totalPrimesAp70) + ') sont tax\u00e9es au bar\u00e8me DMTG.';
+                html += '</div>';
+
+                if (totalPrimesAv70 > 0) {
+                    html += '<div style="font-size:.72rem;color:var(--accent-green);padding:6px 10px;border-radius:6px;background:rgba(16,185,129,.03);border:1px solid rgba(16,185,129,.06);margin-bottom:8px;">';
+                    html += '<i class="fas fa-check-circle" style="margin-right:4px;"></i>';
+                    html += '<strong>Art. 990 I</strong> (primes avant 70 ans) : ' + fmt(totalPrimesAv70) + ' b\u00e9n\u00e9ficient de l\'abattement <strong>152 500 \u20ac/b\u00e9n\u00e9ficiaire</strong>.';
+                    html += '</div>';
+                }
+            } else {
+                html += '<div style="font-size:.72rem;color:var(--accent-green);padding:8px 10px;border-radius:6px;background:rgba(16,185,129,.03);border:1px solid rgba(16,185,129,.06);margin-bottom:8px;">';
+                html += '<i class="fas fa-check-circle" style="margin-right:4px;"></i>';
+                html += '<strong>Art. 990 I</strong> (donateur < 70 ans) : abattement <strong>152 500 \u20ac par b\u00e9n\u00e9ficiaire</strong>. Tr\u00e8s avantageux.';
+                html += '</div>';
+            }
+
+            // Verifier clause beneficiaire
+            var hasClause = avItems.some(function(f) { return f.avBeneficiaires && f.avBeneficiaires.length > 0; });
+            if (!hasClause) {
+                html += '<div style="font-size:.72rem;color:var(--accent-coral);padding:8px 10px;border-radius:6px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.1);">';
+                html += '<i class="fas fa-exclamation-circle" style="margin-right:4px;"></i>';
+                html += '<strong>Clause b\u00e9n\u00e9ficiaire non renseign\u00e9e !</strong> Sans clause, le capital retombe dans la succession et perd tout avantage fiscal. ';
+                html += 'D\u00e9signez les b\u00e9n\u00e9ficiaires dans le Step 3 (section Actifs financiers → AV → B\u00e9n\u00e9ficiaires).';
+                html += '</div>';
+            }
+
+            html += '</div>';
+        }
+
+        // ============================================================
+        // TOTAL GLOBAL
+        // ============================================================
+        if (totalAV > 0) {
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">';
+            html += '<div style="padding:14px;border-radius:12px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.15);text-align:center;">';
+            html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Droits totaux (succession + AV)</div>';
+            html += '<div style="font-size:1.3rem;font-weight:900;color:var(--accent-coral);">' + fmt(droitsTotalGlobal) + '</div>';
+            html += '<div style="font-size:.62rem;color:var(--text-muted);">Succession ' + fmt(droitsTotal) + ' + AV ' + fmt(droitsAV) + '</div>';
+            html += '</div>';
+            html += '<div style="padding:14px;border-radius:12px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);text-align:center;">';
+            html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Net total transmis</div>';
+            html += '<div style="font-size:1.3rem;font-weight:900;color:var(--accent-green);">' + fmt((pat.actifNet || 0) - droitsTotalGlobal - fraisNotaire) + '</div>';
+            html += '</div>';
+            html += '</div>';
+        }
+
+        // RESERVE + QD (calculees sur masse HORS AV)
+        if (nbEnfants > 0 && !isConjointExonere && masseSuccessorale > 0) {
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">';
             html += '<div style="padding:12px;border-radius:10px;background:rgba(255,107,107,.03);border:1px solid rgba(255,107,107,.08);">';
             html += '<div style="font-size:.62rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;">R\u00e9serve h\u00e9r\u00e9ditaire (' + reserveLabel + ')</div>';
             html += '<div style="font-size:1rem;font-weight:700;color:var(--accent-coral);">' + fmt(reserve) + '</div>';
-            html += '<div style="font-size:.62rem;color:var(--text-muted);">Revient obligatoirement aux enfants (art. 913 CC)</div>';
+            html += '<div style="font-size:.60rem;color:var(--text-muted);">Calcul\u00e9e sur la masse successorale hors AV. Revient obligatoirement \u00e0 ' + enfantsNoms + '.</div>';
             html += '</div>';
-
             html += '<div style="padding:12px;border-radius:10px;background:rgba(16,185,129,.03);border:1px solid rgba(16,185,129,.08);">';
             html += '<div style="font-size:.62rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;">Quotit\u00e9 disponible (' + qdLabel + ')</div>';
             html += '<div style="font-size:1rem;font-weight:700;color:var(--accent-green);">' + fmt(qd) + '</div>';
-            html += '<div style="font-size:.62rem;color:var(--text-muted);">L\u00e9gable par testament (PE, tiers, association...)</div>';
+            html += '<div style="font-size:.60rem;color:var(--text-muted);">L\u00e9gable par testament aux PE. L\'AV s\'ajoute en plus (hors QD).</div>';
             html += '</div>';
-
             html += '</div>';
         }
 
-        // MESSAGE DE TRANSITION
+        // TRANSITION
         html += '<div style="margin-top:14px;padding:12px 16px;border-radius:10px;background:linear-gradient(135deg,rgba(198,134,66,.06),rgba(16,185,129,.04));border:1px solid rgba(198,134,66,.12);font-size:.78rem;color:var(--text-secondary);text-align:center;">';
         html += '<i class="fas fa-arrow-down" style="color:var(--primary-color);margin-right:6px;"></i>';
-        html += 'Les sections suivantes montrent comment <strong>r\u00e9duire ces ' + fmt(droitsTotal) + ' de droits</strong> gr\u00e2ce \u00e0 des donations, du d\u00e9membrement, ou de l\'assurance-vie.';
+        html += 'Les sections suivantes montrent comment <strong>r\u00e9duire ces ' + fmt(droitsTotalGlobal) + ' de droits</strong> gr\u00e2ce \u00e0 des donations, du d\u00e9membrement, ou de l\'optimisation AV.';
         html += '</div>';
 
         html += '</div>';
 
-        // INSERER EN PREMIER dans le Step 5 (avant le warning succession legale)
+        // INSERER EN PREMIER
         var step5 = document.getElementById('step-5');
         if (!step5) return;
         var firstCard = step5.querySelector('.step-helper');
-        if (firstCard) {
-            firstCard.insertAdjacentHTML('afterend', html);
-        } else {
-            step5.insertAdjacentHTML('afterbegin', html);
-        }
+        if (firstCard) firstCard.insertAdjacentHTML('afterend', html);
+        else step5.insertAdjacentHTML('afterbegin', html);
     }
 
-    // ============================================================
-    // CALCUL TRANCHES DETAILLE
-    // ============================================================
     function calcTranches(base, bareme) {
         if (base <= 0) return { total: 0, detail: [] };
-        var detail = [];
-        var prev = 0;
-        var total = 0;
-
+        var detail = [], prev = 0, total = 0;
         bareme.forEach(function(tr) {
             var taxable = Math.min(base, tr.max) - prev;
             if (taxable <= 0) return;
             var droits = Math.round(taxable * tr.taux);
             total += droits;
-            var label = fmt(prev) + ' \u2192 ' + (tr.max === Infinity ? 'au-del\u00e0' : fmt(tr.max));
-            detail.push({ label: label, taux: tr.taux, tauxPct: Math.round(tr.taux * 100), montant: taxable, droits: droits });
+            detail.push({ label: fmt(prev) + ' \u2192 ' + (tr.max === Infinity ? 'au-del\u00e0' : fmt(tr.max)), taux: tr.taux, tauxPct: Math.round(tr.taux * 100), montant: taxable, droits: droits });
             prev = tr.max;
         });
-
         return { total: Math.round(total), detail: detail };
     }
 
-    // ============================================================
-    // TROUVER LES ENFANTS BIOLOGIQUES
-    // ============================================================
     function findBiologicalChildren(donor, persons, FG) {
         var enfants = [];
-
-        // Method 1: getChildren
         if (FG && FG.getChildren) {
             var childIds = FG.getChildren(donor.id);
-            if (childIds && childIds.length > 0) {
-                enfants = persons.filter(function(p) { return childIds.indexOf(p.id) >= 0; });
-            }
+            if (childIds && childIds.length > 0) enfants = persons.filter(function(p) { return childIds.indexOf(p.id) >= 0; });
         }
-
-        // Method 2: parentIds
         if (enfants.length === 0) {
-            enfants = persons.filter(function(p) {
-                return p.parentIds && p.parentIds.indexOf(donor.id) >= 0;
-            });
+            enfants = persons.filter(function(p) { return p.parentIds && p.parentIds.indexOf(donor.id) >= 0; });
         }
-
-        // Method 3: computeFiscalLien
         if (enfants.length === 0 && FG && FG.computeFiscalLien) {
             persons.forEach(function(p) {
-                if (p.id === donor.id) return;
-                if (p.isBeneficiary) return; // les PE sont beneficiaires, pas enfants
-                var lien = FG.computeFiscalLien(donor.id, p.id);
-                if (lien === 'enfant') {
-                    // Verifier que ce n'est pas le conjoint d'un enfant
-                    var isSpouseOfAnother = enfants.some(function(e) { return e.spouseId === p.id; });
-                    if (!isSpouseOfAnother) enfants.push(p);
+                if (p.id === donor.id || p.isBeneficiary) return;
+                if (FG.computeFiscalLien(donor.id, p.id) === 'enfant') {
+                    if (!enfants.some(function(e) { return e.spouseId === p.id; })) enfants.push(p);
                 }
             });
         }
-
-        // Filter: remove spouses of children (belles-filles/beaux-fils)
         if (enfants.length > 1) {
-            var enfantIds = enfants.map(function(e) { return e.id; });
+            var eIds = enfants.map(function(e) { return e.id; });
             enfants = enfants.filter(function(enf) {
-                if (enf.spouseId && enfantIds.indexOf(enf.spouseId) >= 0) {
-                    // Both this person and spouse in list — keep only bio child
-                    if (FG && FG.computeFiscalLien) {
-                        var lien = FG.computeFiscalLien(donor.id, enf.id);
-                        return lien === 'enfant';
-                    }
+                if (enf.spouseId && eIds.indexOf(enf.spouseId) >= 0) {
+                    return FG && FG.computeFiscalLien ? FG.computeFiscalLien(donor.id, enf.id) === 'enfant' : true;
                 }
                 return true;
             });
         }
-
         return enfants;
     }
 
-    // ============================================================
-    // HELPERS
-    // ============================================================
     function fmt(n) { return SD._fiscal.fmt(n); }
     function esc(s) { return SD._fiscal.esc ? SD._fiscal.esc(s) : String(s).replace(/</g,'&lt;'); }
     function formatLien(lien) {
-        var m = { 'enfant':'Enfant', 'petit_enfant':'Petit-enfant', 'conjoint_pacs':'Conjoint',
-                  'frere_soeur':'Fr\u00e8re/S\u0153ur', 'neveu_niece':'Neveu/Ni\u00e8ce', 'tiers':'Tiers',
-                  'arriere_petit_enfant':'Arr. petit-enfant' };
-        return m[lien] || lien;
+        return { 'enfant':'Enfant', 'petit_enfant':'Petit-enfant', 'conjoint_pacs':'Conjoint', 'frere_soeur':'Fr\u00e8re/S\u0153ur', 'neveu_niece':'Neveu/Ni\u00e8ce', 'tiers':'Tiers' }[lien] || lien;
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 1400); });
-    } else {
-        setTimeout(init, 1400);
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 1400); });
+    else setTimeout(init, 1400);
 })();
