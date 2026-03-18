@@ -1765,6 +1765,52 @@ def select_equities_for_profile(
     # Example: SBIN = Finance (AVOIDED) + India (AVOIDED) = double violation → OUT
     # This prevents stocks with multiple RADAR violations from sneaking through
     
+    # === v5.3.3: Stable profile structural filters ===
+    # 1. Tobacco exclusion (SFDR Article 8 compliance for retail EU)
+    # 2. Data completeness (no PE or no dividend → exclude from Stable)
+    # These are investment principles, not tactical signals.
+    if profile == "Stable":
+        _pre_stable = len(eq_hard)
+        _tobacco_excluded = []
+        _data_excluded = []
+        _TOBACCO_KEYWORDS = {"tobacco", "tabac", "cigarettes", "cigars"}
+        
+        _stable_filtered = []
+        for eq in eq_hard:
+            _ind = (eq.get("industry") or "").strip().lower()
+            _name = (eq.get("name") or "").strip().lower()
+            
+            # Tobacco exclusion
+            if any(kw in _ind for kw in _TOBACCO_KEYWORDS):
+                _tobacco_excluded.append(eq.get("ticker", "?"))
+                continue
+            
+            # Data completeness: PE and dividend required for Stable
+            _pe = get_metric_value(eq, "pe_ratio")
+            _div = get_metric_value(eq, "dividend_yield")
+            if _pe is None or _pe <= 0 or _div is None:
+                _data_excluded.append(eq.get("ticker", "?"))
+                continue
+            
+            _stable_filtered.append(eq)
+        
+        if _tobacco_excluded:
+            logger.info(
+                f"   [{profile}] 🚭 Tobacco excluded: {', '.join(_tobacco_excluded[:5])}"
+            )
+        if _data_excluded:
+            logger.info(
+                f"   [{profile}] 📊 Data incomplete excluded: {len(_data_excluded)} stocks "
+                f"(no PE or no dividend) — e.g. {', '.join(_data_excluded[:5])}"
+            )
+        
+        if len(_stable_filtered) >= target_n // 2:
+            eq_hard = _stable_filtered
+            logger.info(f"   [{profile}] Stable filters: {_pre_stable}→{len(eq_hard)}")
+        else:
+            logger.info(f"   [{profile}] Stable filters skipped (too few remaining: {len(_stable_filtered)})")
+    
+    
     # v5.3.3: Sector normalization map — used by CUMUL AVOIDED, _enforce_caps, FAVORED guarantee
     _SEC_TO_RADAR = {
         "finance": "financials", "financial services": "financials",
