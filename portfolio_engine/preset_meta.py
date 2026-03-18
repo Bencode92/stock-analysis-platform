@@ -971,14 +971,14 @@ PROFILE_POLICY: Dict[str, Dict] = {
     },
     "Stable": {
         "allowed_equity_presets": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
-        "min_buffett_score": 70,
-        "min_quality_gate": 65,     # v4.15: OR gate
+        "min_buffett_score": 60,  # v5.3.3: was 70 — aligned with Modéré. Buffett = growth quality, not stability
+        "min_quality_gate": 62,   # v5.3.3: was 65 — slight relaxation, TTE quality=62 is legitimate
         "hard_filters": {
             "volatility_3y_max": 28.0,
             "roe_min": 10.0,
             "dividend_yield_min": 0.5,
             "payout_ratio_max": 85.0,
-            "dividend_coverage_min": 1.2,
+            "dividend_coverage_min": 1.0,  # v5.3.3: was 1.2 — ROG (0.82) still blocked. 1.0 = earnings cover dividend
             "quality_score_min": 50,    # v4.15: filtre qualité complémentaire au moat
             "fcf_yield_min": 0.0,       # v4.15: exige FCF positif pour profil stable
             "quality_coverage_min": 70, # v5.3.1: éjecte actions avec données manquantes
