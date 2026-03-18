@@ -1,22 +1,19 @@
 /**
- * multi-donations.js — Permet N donations par bénéficiaire (rappel fiscal précis)
+ * multi-donations.js v1.1 — Fix: debounce MutationObserver + prevent re-render loop
  *
- * Problème : path-optimizer.js stocke 1 seule donation par paire donateur→bénéficiaire.
- * Si Mère→Enfant1 a fait 50k€ en 2012 (hors rappel) + 30k€ en 2018 (dans rappel),
- * le total affiché devrait être 30k€ (seul dans rappel), pas 80k€.
+ * v1.1 FIXES:
+ * - MutationObserver debounced (500ms) to prevent input focus loss
+ * - Skip re-injection if currently editing (document.activeElement is input/select)
+ * - Date input uses onblur instead of onchange to prevent mid-edit triggers
  *
- * Solution : ce module ajoute un bouton "+" pour créer plusieurs lignes de donation.
- * Il surcharge getEffectiveDonation et getDonorDonationForBen pour sommer correctement.
- *
- * @version 1.0.0 — 2026-03-16
+ * @version 1.1.0 — 2026-03-18
  */
 const MultiDonations = (function() {
     'use strict';
 
-    // Store : donorId → benId → [{montant, date, type}]
     var _store = {};
-
     var RAPPEL_ANS = 15;
+    var _injecting = false; // v1.1: guard against re-entry
 
     function key(donorId, benId) { return donorId + ':' + benId; }
 
@@ -27,12 +24,11 @@ const MultiDonations = (function() {
     }
 
     function isDonationInRappel(dateStr) {
-        if (!dateStr) return true; // conservateur
+        if (!dateStr) return true;
         var d = new Date(dateStr), now = new Date();
         return (now - d) / (365.25 * 24 * 60 * 60 * 1000) < RAPPEL_ANS;
     }
 
-    // Somme des donations dans le rappel 15 ans
     function getEffectiveTotal(donorId, benId) {
         var entries = getEntries(donorId, benId);
         if (entries.length === 0) return 0;
@@ -43,7 +39,6 @@ const MultiDonations = (function() {
         return total;
     }
 
-    // Somme brute (toutes donations, dans ou hors rappel)
     function getRawTotal(donorId, benId) {
         var entries = getEntries(donorId, benId);
         return entries.reduce(function(s, e) { return s + (e.montant || 0); }, 0);
@@ -67,6 +62,7 @@ const MultiDonations = (function() {
         else if (field === 'date') entries[idx].date = value || null;
         else if (field === 'type') entries[idx].type = value;
         syncToPathOptimizer(donorId, benId);
+        // v1.1: DON'T re-render on update — just sync data + update bar
         updateBarDisplay(donorId, benId);
     }
 
@@ -77,16 +73,17 @@ const MultiDonations = (function() {
         renderDonationRows(donorId, benId);
     }
 
-    // Sync le total effectif vers PathOptimizer (qui ne voit qu'1 montant)
     function syncToPathOptimizer(donorId, benId) {
         if (typeof PathOptimizer === 'undefined' || !PathOptimizer.updateDonorDonation) return;
         var total = getEffectiveTotal(donorId, benId);
-        // Mettre le total dans le champ principal (PathOptimizer ne voit que ça)
+        // v1.1: prevent PathOptimizer from re-rendering the card
+        PathOptimizer._skipRender = true;
         PathOptimizer.updateDonorDonation(+donorId, +benId, total);
+        setTimeout(function() { PathOptimizer._skipRender = false; }, 100);
     }
 
     // ============================================================
-    // UI — Injecter les lignes de donation multiples
+    // UI
     // ============================================================
 
     function renderDonationRows(donorId, benId) {
@@ -109,9 +106,10 @@ const MultiDonations = (function() {
             html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;" class="multi-don-row">';
             html += '<input type="number" value="' + (e.montant || '') + '" min="0" step="1000" placeholder="Montant" ';
             html += 'style="font-size:.72rem;height:28px;width:100px;text-align:right;padding:2px 6px;' + (e.montant > 0 ? 'border-color:rgba(255,107,107,.25);' : '') + '" ';
-            html += 'onchange="MultiDonations.updateDonation(' + donorId + ',' + benId + ',' + idx + ',\'montant\',this.value)">';
+            html += 'onblur="MultiDonations.updateDonation(' + donorId + ',' + benId + ',' + idx + ',\'montant\',this.value)">';
+            // v1.1: use onblur instead of onchange for date to prevent mid-edit re-render
             html += '<input type="date" value="' + (e.date || '') + '" style="font-size:.60rem;height:28px;width:120px;padding:2px 4px;" ';
-            html += 'title="Date de la donation" onchange="MultiDonations.updateDonation(' + donorId + ',' + benId + ',' + idx + ',\'date\',this.value)">';
+            html += 'title="Date de la donation" onblur="MultiDonations.updateDonation(' + donorId + ',' + benId + ',' + idx + ',\'date\',this.value)">';
             html += '<select style="font-size:.58rem;height:28px;width:95px;padding:0 4px;" ';
             html += 'onchange="MultiDonations.updateDonation(' + donorId + ',' + benId + ',' + idx + ',\'type\',this.value)">';
             html += '<option value="inconnue"' + (e.type === 'inconnue' ? ' selected' : '') + '>Type?</option>';
@@ -128,7 +126,6 @@ const MultiDonations = (function() {
             html += '</div>';
         });
 
-        // Résumé
         var effectif = getEffectiveTotal(donorId, benId);
         var raw = getRawTotal(donorId, benId);
         if (entries.length > 1 && raw > 0) {
@@ -140,7 +137,6 @@ const MultiDonations = (function() {
             html += '</div>';
         }
 
-        // Bouton "+"
         html += '<button onclick="MultiDonations.addDonation(' + donorId + ',' + benId + ',0,null,\'inconnue\')" ';
         html += 'style="display:flex;align-items:center;gap:4px;padding:3px 10px;margin-top:2px;border:1px dashed rgba(255,107,107,.2);border-radius:6px;background:none;color:var(--accent-coral);font-size:.58rem;cursor:pointer;font-family:inherit;" title="Ajouter une donation ant\u00e9rieure">';
         html += '<i class="fas fa-plus" style="font-size:.45rem;"></i> Donation ant\u00e9rieure</button>';
@@ -149,16 +145,30 @@ const MultiDonations = (function() {
     }
 
     function updateBarDisplay(donorId, benId) {
-        // Mettre à jour la barre via PathOptimizer
-        syncToPathOptimizer(donorId, benId);
+        // Update the main input value without triggering re-render
+        var mainInput = document.querySelector('input[onchange*="updateDonorDonation(' + donorId + ',' + benId + ')"]');
+        if (mainInput) {
+            var effectif = getEffectiveTotal(donorId, benId);
+            mainInput.value = effectif;
+        }
     }
 
     // ============================================================
-    // INJECTION — Observer les donation rows pour ajouter le conteneur multi
+    // INJECTION — v1.1: debounced + skip if editing
     // ============================================================
 
+    var _debounceTimer = null;
+
     function injectMultiContainers() {
-        // Chercher toutes les lignes de donation existantes et ajouter un conteneur multi en dessous
+        // v1.1: Skip if user is currently editing an input
+        var active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA')) {
+            return; // Don't interrupt editing
+        }
+
+        if (_injecting) return;
+        _injecting = true;
+
         var donationInputs = document.querySelectorAll('input[onchange*="PathOptimizer.updateDonorDonation"]');
         donationInputs.forEach(function(input) {
             var match = input.getAttribute('onchange').match(/updateDonorDonation\((\d+),(\d+)/);
@@ -167,19 +177,16 @@ const MultiDonations = (function() {
             var containerId = 'multi-don-' + did + '-' + bid;
             if (document.getElementById(containerId)) return;
 
-            // Trouver la ligne date/type juste après
             var parent = input.closest('div[style*="grid-template-columns"]');
             if (!parent) return;
             var nextRow = parent.nextElementSibling;
 
-            // Créer le conteneur multi
             var div = document.createElement('div');
             div.id = containerId;
             div.style.cssText = 'margin-top:4px;padding:4px 0;';
             if (nextRow) nextRow.insertAdjacentElement('afterend', div);
             else parent.insertAdjacentElement('afterend', div);
 
-            // Migrer la donation existante si montant > 0
             var entries = getEntries(did, bid);
             if (entries.length === 0) {
                 var montant = +input.value || 0;
@@ -194,14 +201,20 @@ const MultiDonations = (function() {
                 }
             }
 
-            // Ne rendre que s'il y a des donations multiples
             if (entries.length > 1) {
                 renderDonationRows(did, bid);
-                // Masquer la ligne unique originale
                 if (parent) parent.style.display = 'none';
                 if (nextRow) nextRow.style.display = 'none';
             }
         });
+
+        _injecting = false;
+    }
+
+    // v1.1: Debounced version for MutationObserver
+    function injectMultiContainersDebounced() {
+        clearTimeout(_debounceTimer);
+        _debounceTimer = setTimeout(injectMultiContainers, 500);
     }
 
     // ============================================================
@@ -218,30 +231,29 @@ const MultiDonations = (function() {
     // ============================================================
 
     function init() {
-        // Observer le DOM pour injecter les conteneurs quand les donor cards sont rendues
         var interval = setInterval(function() {
             if (typeof PathOptimizer === 'undefined') return;
             injectMultiContainers();
 
-            // Re-injecter quand le DOM change
             var donorsList = document.getElementById('donors-list');
             if (donorsList) {
                 var obs = new MutationObserver(function() {
-                    setTimeout(injectMultiContainers, 300);
+                    // v1.1: debounced to prevent input focus loss
+                    injectMultiContainersDebounced();
                 });
+                // v1.1: only watch childList (not attributes or characterData)
                 obs.observe(donorsList, { childList: true, subtree: true });
             }
             clearInterval(interval);
         }, 1500);
 
-        // Re-injecter quand on change de step
         document.addEventListener('click', function(e) {
             if (e.target.closest('.step-item') || e.target.closest('.preset-btn')) {
                 setTimeout(injectMultiContainers, 800);
             }
         });
 
-        console.log('[MultiDonations v1.0] Loaded \u2014 N donations par b\u00e9n\u00e9ficiaire');
+        console.log('[MultiDonations v1.1] Loaded \u2014 debounced observer + onblur dates');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 1500); });
