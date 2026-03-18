@@ -1764,6 +1764,26 @@ def select_equities_for_profile(
     # If a stock has BOTH sector AVOIDED AND region AVOIDED → exclude
     # Example: SBIN = Finance (AVOIDED) + India (AVOIDED) = double violation → OUT
     # This prevents stocks with multiple RADAR violations from sneaking through
+    
+    # v5.3.3: Sector normalization map — used by CUMUL AVOIDED, _enforce_caps, FAVORED guarantee
+    _SEC_TO_RADAR = {
+        "finance": "financials", "financial services": "financials",
+        "la communication": "communication-services",
+        "communication services": "communication-services",
+        "technologie de l'information": "information-technology",
+        "technology": "information-technology",
+        "santé": "healthcare", "healthcare": "healthcare",
+        "industries": "industrials", "industrials": "industrials",
+        "matériaux": "materials", "basic materials": "materials",
+        "biens de consommation cycliques": "consumer-discretionary",
+        "consumer cyclical": "consumer-discretionary",
+        "biens de consommation de base": "consumer-staples",
+        "consumer defensive": "consumer-staples",
+        "immobilier": "real-estate", "real estate": "real-estate",
+        "energie": "energy", "energy": "energy",
+        "services publics": "utilities", "utilities": "utilities",
+    }
+    
     if market_context and len(eq_hard) > target_n:
         _avoided_sectors = set(
             market_context.get("macro_tilts", {}).get("avoided_sectors", [])
@@ -1773,24 +1793,7 @@ def select_equities_for_profile(
         )
         
         if _avoided_sectors and _avoided_regions:
-            # Sector normalization: FR/EN → RADAR key
-            _SEC_TO_RADAR = {
-                "finance": "financials", "financial services": "financials",
-                "la communication": "communication-services",
-                "communication services": "communication-services",
-                "technologie de l'information": "information-technology",
-                "technology": "information-technology",
-                "santé": "healthcare", "healthcare": "healthcare",
-                "industries": "industrials", "industrials": "industrials",
-                "matériaux": "materials", "basic materials": "materials",
-                "biens de consommation cycliques": "consumer-discretionary",
-                "consumer cyclical": "consumer-discretionary",
-                "biens de consommation de base": "consumer-staples",
-                "consumer defensive": "consumer-staples",
-                "immobilier": "real-estate", "real estate": "real-estate",
-                "energie": "energy", "energy": "energy",
-                "services publics": "utilities", "utilities": "utilities",
-            }
+            # Sector normalization: use _SEC_TO_RADAR defined above
             # Country normalization: FR → RADAR key
             _COUNTRY_TO_RADAR = {
                 "inde": "india", "india": "india",
@@ -1991,12 +1994,31 @@ def select_equities_for_profile(
         COUNTRY_CAP = 0.20 if _profile == "Agressif" else 0.15
         SECTOR_CAP = 0.25
         _region_caps = STOCK_REGION_CAPS.get(_profile, STOCK_REGION_CAPS["Modéré"])
+        
+        # v5.3.3: AVOIDED sector limit + FAVORED sector guarantee
+        _avoided_secs = set()
+        _favored_secs = set()
+        if market_context:
+            _avoided_secs = set(market_context.get("macro_tilts", {}).get("avoided_sectors", []))
+            _favored_secs = set(market_context.get("macro_tilts", {}).get("favored_sectors", []))
+        _MAX_PER_AVOIDED_SECTOR = 1  # Max stocks from any single AVOIDED sector
+        _avoided_sector_counts = {}
 
         for _eq in sorted_list:
             _country = _eq.get("country", "OTHER")
             _region = get_region(_country)
             _sector = _eq.get("sector", "OTHER")
+            
+            # Normalize sector for AVOIDED/FAVORED check
+            _sec_radar = _SEC_TO_RADAR.get(_sector.lower().strip(), _sector.lower().strip()) if _sector else ""
+            
             n = max(len(_selected), 1)
+
+            # v5.3.3: Hard limit on AVOIDED sector stocks
+            if _sec_radar in _avoided_secs:
+                if _avoided_sector_counts.get(_sec_radar, 0) >= _MAX_PER_AVOIDED_SECTOR:
+                    overflow.append(_eq)
+                    continue
 
             if (len(_selected) >= _target_n // 4 and (
                 region_counts.get(_region, 0) / n >= _region_caps.get(_region, DEFAULT_REGION_CAP) or
@@ -2009,8 +2031,79 @@ def select_equities_for_profile(
             region_counts[_region] = region_counts.get(_region, 0) + 1
             country_counts[_country] = country_counts.get(_country, 0) + 1
             sector_counts[_sector] = sector_counts.get(_sector, 0) + 1
+            if _sec_radar in _avoided_secs:
+                _avoided_sector_counts[_sec_radar] = _avoided_sector_counts.get(_sec_radar, 0) + 1
             if len(_selected) >= _target_n:
                 break
+
+        # v5.3.3: FAVORED sector guarantee — if a FAVORED sector has 0 stocks,
+        # inject best candidate from overflow, replacing worst non-FAVORED/non-essential
+        #
+        # v5.3.3: Profile-dependent eligibility — not all FAVORED sectors make sense
+        # in all profiles. Defensive sectors (utilities, staples) shouldn't be force-
+        # injected in Agressif. Cyclical sectors shouldn't be forced in Stable.
+        # The RADAR signal is correct, but portfolio construction must filter.
+        _FAVORED_ELIGIBLE = {
+            "Agressif": {"energy", "materials", "information-technology", "industrials"},
+            "Modéré":   {"energy", "materials", "utilities", "industrials", "healthcare"},
+            "Stable":   {"utilities", "healthcare", "consumer-staples", "energy"},
+        }
+        _profile_eligible = _FAVORED_ELIGIBLE.get(_profile, _favored_secs)
+        _active_favored = _favored_secs & _profile_eligible  # Intersection
+        
+        if _active_favored and len(_selected) >= _target_n // 2:
+            _sel_secs = set()
+            for _eq in _selected:
+                _s = _eq.get("sector", "")
+                _sr = _SEC_TO_RADAR.get(_s.lower().strip(), _s.lower().strip()) if _s else ""
+                _sel_secs.add(_sr)
+            
+            _missing_fav = _active_favored - _sel_secs
+            _essential_secs = {"healthcare", "utilities"}
+            
+            for _fav in sorted(_missing_fav):
+                # Find best from overflow + remaining sorted_list
+                _all_remaining = overflow + [e for e in sorted_list if e not in _selected and e not in overflow]
+                _fav_cands = [
+                    e for e in _all_remaining
+                    if _SEC_TO_RADAR.get((e.get("sector","").lower().strip()), "") == _fav
+                ]
+                if not _fav_cands:
+                    continue
+                _best = max(_fav_cands, key=lambda x: x.get("_profile_score", 0))
+                
+                # Find worst replaceable in _selected (not FAVORED, not sole essential)
+                _repl = []
+                for _eq in _selected:
+                    _sr = _SEC_TO_RADAR.get(_eq.get("sector","").lower().strip(), "")
+                    if _sr in _favored_secs:
+                        continue
+                    if _sr in _essential_secs:
+                        # Only allow replacement if there's another stock in this essential sector
+                        _ess_count = sum(1 for e in _selected 
+                                        if _SEC_TO_RADAR.get(e.get("sector","").lower().strip(), "") == _sr)
+                        if _ess_count <= 1:
+                            continue
+                    _repl.append(_eq)
+                
+                if not _repl:
+                    continue
+                
+                # Prefer AVOIDED stocks as replacement targets
+                _avoided_repl = [e for e in _repl 
+                                if _SEC_TO_RADAR.get(e.get("sector","").lower().strip(), "") in _avoided_secs]
+                if _avoided_repl:
+                    _worst = min(_avoided_repl, key=lambda x: x.get("_profile_score", 0))
+                else:
+                    _worst = min(_repl, key=lambda x: x.get("_profile_score", 0))
+                
+                _idx = _selected.index(_worst)
+                _selected[_idx] = _best
+                logger.info(
+                    f"   [{_profile}] 🎯 Pool FAVORED inject: {_best.get('ticker','?')} "
+                    f"({_fav}) replaces {_worst.get('ticker','?')} "
+                    f"({_SEC_TO_RADAR.get(_worst.get('sector','').lower().strip(), '?')})"
+                )
 
         # Backfill si pas assez
         for _eq in overflow:
