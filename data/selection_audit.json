@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-18T14:44:03.621430",
+  "timestamp": "2026-03-18T15:09:24.799126",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -7,7 +7,7 @@
     "equities_selected": 150,
     "equities_rejected_notable": 50,
     "etf_initial": 226,
-    "etf_selected": 13,
+    "etf_selected": 14,
     "etf_rejected_notable": 20,
     "crypto_initial": 7,
     "crypto_selected": 0,
@@ -58,7 +58,7 @@
         },
         "rendement": {
           "total": 20,
-          "selected": 4
+          "selected": 5
         },
         "value_dividend": {
           "total": 20,
@@ -68,7 +68,7 @@
       "etf": {
         "coeur_global": {
           "total": 20,
-          "selected": 5
+          "selected": 6
         },
         "commodities_broad": {
           "total": 5,
@@ -1688,12 +1688,10 @@
         "ticker": "NOVN",
         "sort_score": 0.5848,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "rendement",
         "profile_score": 0.5848,
         "buffett_score": 80.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Santé",
         "country": "Suisse",
         "volatility": 19.7,
@@ -3001,11 +2999,10 @@
         "ticker": "DGRO",
         "sort_score": 98.82,
         "sort_score_source": "composite_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "coeur_global",
         "composite_score": 98.82,
         "profile_score": 98.82,
-        "rejection_reason": "Score composite (98.820) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 12.0,
         "ytd": "1.89%",
@@ -7875,12 +7872,10 @@
           "ticker": "NOVN",
           "sort_score": 0.5848,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "rendement",
           "profile_score": 0.5848,
           "buffett_score": 80.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Santé",
           "country": "Suisse",
           "volatility": 19.7,
@@ -8651,11 +8646,10 @@
           "ticker": "DGRO",
           "sort_score": 98.82,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "coeur_global",
           "composite_score": 98.82,
           "profile_score": 98.82,
-          "rejection_reason": "Score composite (98.820) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 12.0,
           "ytd": "1.89%",
@@ -16352,6 +16346,20 @@
       "selected": true,
       "ranking": 13,
       "selection_reason": "Score profil élevé (100.00); Preset: coeur_global; Score composite élevé (100.00)"
+    },
+    {
+      "name": "iShares Core Dividend Growth ETF",
+      "ticker": "DGRO",
+      "category": "etf",
+      "matched_preset": "coeur_global",
+      "composite_score": 98.82,
+      "profile_score": 98.82,
+      "volatility": 12.0,
+      "sector": "Financial Services",
+      "radar_tilt": "avoided",
+      "selected": true,
+      "ranking": 14,
+      "selection_reason": "Score profil élevé (98.82); Preset: coeur_global; Score composite élevé (98.82)"
     }
   ],
   "etf_rejected": [
