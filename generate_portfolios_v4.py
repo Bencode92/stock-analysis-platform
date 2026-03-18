@@ -5429,8 +5429,10 @@ def save_portfolios(portfolios: Dict, assets: list):
                 logger.info(f"   [{_p_name}] 📊 ETF CAP: {k} {v*100:.1f}%→{_ETF_MAX*100:.1f}%")
                 _t[k] = _ETF_MAX
                 _etf_any_capped = True
-            # Redistribute to non-capped positions pro-rata
-            _non_capped = {k: v for k, v in _t.items() if k not in _etf_over and v > 0}
+            # Redistribute to non-equity positions only (prevents inflating stocks above equity cap)
+            _non_capped = {k: v for k, v in _t.items() 
+                          if k not in _etf_over and v > 0 
+                          and _meta.get(k, {}).get("category") != "Actions"}
             _total_nc = sum(_non_capped.values())
             if _total_nc > 0 and _etf_excess > 0:
                 for k in _non_capped:
@@ -5921,3 +5923,4 @@ def test_scoring_modes():
 
 if __name__ == "__main__":
     main()
+          
