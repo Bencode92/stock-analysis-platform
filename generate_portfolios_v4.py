@@ -5295,10 +5295,20 @@ def save_portfolios(portfolios: Dict, assets: list):
     # === v5.3.3: ETF Sector Dedup — consolidate redundant ETFs ===
     # XLE + VDE = same Energy US exposure (corr > 0.95). Keep most liquid, merge weight.
     _ETF_DEDUP_GROUPS = {
-        # Group key → list of tickers that are near-identical
+        # Group key → list of tickers that are near-identical (corr > 0.90)
+        # SECTOR DEDUP
         "energy_us": ["XLE", "VDE", "FENY", "IYE"],
         "semi_us": ["SOXX", "SMH"],
         "gold": ["GLD", "IAU", "SGOL"],
+        # US VALUE — same factor, different providers (corr > 0.95)
+        # VTV=CRSP Value, SCHV=Dow Jones Value, VONV=Russell 1000 Value, IVE=S&P 500 Value
+        "us_large_value": ["VTV", "SCHV", "VONV", "IVE", "VOOV", "RPV", "IUSV"],
+        # US DIVIDEND — same dividend quality methodology (corr > 0.90)
+        # SCHD=Dow Jones Dividend 100, DGRO=Morningstar Dividend Growth, VYM=Vanguard High Div
+        "us_dividend": ["SCHD", "DGRO", "VYM", "DVY", "HDV"],
+        # INTL DEVELOPED BROAD — same market cap weighted ex-US (corr > 0.95)
+        # VEA=FTSE Developed, EFA=MSCI EAFE, SPDW=S&P Developed ex-US
+        "intl_developed": ["VEA", "EFA", "IXUS", "IEFA", "IDEV", "SPDW"],
     }
     for _p_name in ["Agressif", "Modéré", "Stable"]:
         if _p_name not in v1_data:
