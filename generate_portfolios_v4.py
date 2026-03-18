@@ -2784,6 +2784,63 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 diagnostics["_post_mkw_essential"] = {"swapped": _ess_swapped}
                 logger.info(f"   [{profile}] 🏥 POST-MKW: {_ess_swapped} ESSENTIAL sector(s) injected")
         
+        # === v5.3.3: AVOIDED Sector Equity Cap — max 5% per AVOIDED stock ===
+        # AGS (Finance AVOIDED) survives at 9% because scoring is too strong.
+        # Tilt -25% is a soft filter. This is the hard safety net.
+        # Cap applies uniformly across all 3 profiles (expert recommendation).
+        _AVOIDED_EQUITY_CAP = 5.0  # % max per stock in AVOIDED sector
+        if market_context and allocation:
+            _avoided_secs_cap = set(
+                market_context.get("macro_tilts", {}).get("avoided_sectors", [])
+            )
+            if _avoided_secs_cap:
+                _av_asset_lookup = {a.id: a for a in assets}
+                _SEC_NORM_AV = {
+                    "finance": "financials", "financial services": "financials",
+                    "la communication": "communication-services",
+                    "communication services": "communication-services",
+                    "biens de consommation cycliques": "consumer-discretionary",
+                    "consumer cyclical": "consumer-discretionary",
+                }
+                
+                _avoided_capped = False
+                _total_excess = 0.0
+                _non_avoided_ids = []
+                
+                for aid, weight in list(allocation.items()):
+                    a = _av_asset_lookup.get(aid)
+                    if not a or a.category != "Actions":
+                        _non_avoided_ids.append(aid)
+                        continue
+                    
+                    _s = (getattr(a, 'sector', '') or '').lower().strip()
+                    _sd = ''
+                    if hasattr(a, 'source_data') and a.source_data:
+                        _sd = (a.source_data.get('sector_api', '') or '').lower().strip()
+                    _a_sec = _SEC_NORM_AV.get(_s, _SEC_NORM_AV.get(_sd, _s))
+                    
+                    if _a_sec in _avoided_secs_cap and weight > _AVOIDED_EQUITY_CAP + 0.01:
+                        _excess = weight - _AVOIDED_EQUITY_CAP
+                        allocation[aid] = _AVOIDED_EQUITY_CAP
+                        _total_excess += _excess
+                        _avoided_capped = True
+                        logger.info(
+                            f"   [{profile}] 🔴 AVOIDED CAP: {a.name[:25]} "
+                            f"({_a_sec}) {weight:.1f}%→{_AVOIDED_EQUITY_CAP:.1f}% "
+                            f"(excess {_excess:.1f}%)"
+                        )
+                    else:
+                        _non_avoided_ids.append(aid)
+                
+                if _avoided_capped and _total_excess > 0.01:
+                    _redist_pool = {k: v for k, v in allocation.items() if k in _non_avoided_ids and v > 0}
+                    _redist_total = sum(_redist_pool.values())
+                    if _redist_total > 0:
+                        for k in _redist_pool:
+                            allocation[k] += _total_excess * (_redist_pool[k] / _redist_total)
+                    allocation = round_weights_to_100(allocation, decimals=2)
+                    logger.info(f"   [{profile}] 🔴 AVOIDED CAP: {_total_excess:.1f}% redistributed")
+        
         # === FIX v5.2.0: RADAR hard cap — régions "avoided" → max 5% par stock ===
         _agg_capped_aids = set()  # v5.3.1: track capped positions to protect from dust reinflation
         if market_context:
