@@ -2773,7 +2773,7 @@ class PortfolioOptimizer:
         # This ensures VICI (#1 score 80), JNJ, GD, etc. get allocated.
         # v5.3.2: Max 1 financials among reserved (prevents AGS+CS+HIG dominating)
         # v5.3.2: Healthcare guarantee — if no healthcare reserved, inject best one
-        _MIN_ACTIONS_STABLE = 5  # v5.3.2: 5 actions (was 4) to have room for healthcare
+        _MIN_ACTIONS_STABLE = 6  # v5.3.3: 6 actions (was 5) — reduces idiosyncratic risk, ROG enters
         _MAX_WEIGHT_ACTION_STABLE = 10.0
         _MAX_FINANCIALS_RESERVED = 1  # v5.3.2: Sector diversity
         _HEALTHCARE_KEYWORDS = {"santé", "healthcare", "health care", "health"}
