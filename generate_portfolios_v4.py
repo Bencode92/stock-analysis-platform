@@ -5394,6 +5394,55 @@ def save_portfolios(portfolios: Dict, assets: list):
                 _nw[f"{_cat}:{_display}"] = _w_pct
             _p_data["_numeric_weights"] = _nw
 
+    # === v5.3.3: ETF Individual Cap — max 9% per ETF ===
+    # XLE at 11% after dedup is too concentrated. No single ETF should outweigh stocks.
+    _ETF_MAX = 0.09  # 9% in decimal
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        _meta = _p_data.get("_tickers_meta", {})
+        _etf_any_capped = False
+        
+        for _etf_cap_iter in range(3):
+            _etf_over = {}
+            for k, v in _t.items():
+                _info = _meta.get(k, {})
+                if _info.get("category") == "ETF" and v > _ETF_MAX + 0.001:
+                    _etf_over[k] = v
+            if not _etf_over:
+                break
+            _etf_excess = 0.0
+            for k, v in _etf_over.items():
+                _etf_excess += v - _ETF_MAX
+                logger.info(f"   [{_p_name}] 📊 ETF CAP: {k} {v*100:.1f}%→{_ETF_MAX*100:.1f}%")
+                _t[k] = _ETF_MAX
+                _etf_any_capped = True
+            # Redistribute to non-capped positions pro-rata
+            _non_capped = {k: v for k, v in _t.items() if k not in _etf_over and v > 0}
+            _total_nc = sum(_non_capped.values())
+            if _total_nc > 0 and _etf_excess > 0:
+                for k in _non_capped:
+                    _t[k] += _etf_excess * (_non_capped[k] / _total_nc)
+        
+        if _etf_any_capped:
+            logger.info(f"   [{_p_name}] 📊 ETF CAP applied — rebuilding display")
+            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                _p_data[_cat] = {}
+            _nw = {}
+            for _tk, _w_dec in _t.items():
+                _w_pct = round(_w_dec * 100, 1)
+                if _w_pct < 0.1:
+                    continue
+                _info = _meta.get(_tk, {})
+                _cat = _info.get("category", "ETF")
+                _nm = _info.get("name", _tk)
+                _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+                _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+                _nw[f"{_cat}:{_display}"] = _w_pct
+            _p_data["_numeric_weights"] = _nw
+
     # === v5.3.1 NUCLEAR SAFETY NET: Cap all positions at 15% in BOTH _tickers and display ===
     # This is the ABSOLUTE LAST checkpoint before writing JSON.
     _NUCLEAR_MAX = 0.15  # 15% in decimal
