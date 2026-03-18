@@ -1,4 +1,14 @@
 // stock-advanced-filter.js
+// Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.32:
+// - FIX: dividend_coverage + payout_ratio_ttm pour payeurs annuels/semestriels (ROG, NOVN, ZURN, ALV)
+// - La fenêtre TTM glissante capturait N+1 paiements quand les ex-dates dérivent
+// - NOUVEAU: dps_annualized — détecte overcounting via _ttmPaymentCount > freq
+// - NOUVEAU: détecte undercounting (0 paiements dans TTM pour payeur connu)
+// - Utilise annualRegular (median × freq) au lieu du TTM brut quand anomalie détectée
+// - Corrige coverage ET payout (même root cause → même fix)
+// - debug_dividends enrichi: annual_fix_applied, ttm_payment_count, dps_annualized
+// - Condition freq <= 2 protège les payeurs trimestriels (inchangés)
 // Version 3.27 - Quality Score: scoring relatif par peer group (secteur×région)
 // Changements v3.27:
 // - NOUVEAU: computeQualityScores() — scoring relatif par peer group (secteur×région)
@@ -1792,16 +1802,50 @@ async function enrichStock(stock) {
       ? ttmSumCalc
       : (Number.isFinite(dividend_yield_ttm) && price > 0 ? (dividend_yield_ttm/100)*price : null);
 
+    // ✅ v3.32: DPS annualisé — corrige double/sous-comptage pour payeurs annuels/semestriels
+    // La fenêtre TTM glissante capture N+1 paiements quand les ex-dates dérivent (overcounting)
+    // ou 0 paiements quand l'ex-date glisse vers l'avant (undercounting).
+    // Détection : nombre de paiements réguliers dans TTM vs fréquence attendue.
+    // Fix : utiliser annualRegular (median × freq) au lieu du TTM brut.
+    // Utilisé pour coverage ET payout (même root cause → même fix).
+    // Condition freq <= 2 protège les trimestriels (un payeur Q avec 5 dans TTM est un vrai edge case différent).
+    const _ttmPaymentCount = last12m.filter(d => !isSpecial(d.amount)).length;
+    const _ttmOvercounted = _ttmPaymentCount > freq && freq <= 2
+        && Number.isFinite(annualRegular) && annualRegular > 0;
+    const _ttmUndercounted = _ttmPaymentCount === 0 && freq >= 1
+        && Number.isFinite(annualRegular) && annualRegular > 0;
+    
+    const dps_annualized = (_ttmOvercounted || _ttmUndercounted) ? annualRegular : dps_ttm_used;
+    
+    if ((_ttmOvercounted || _ttmUndercounted) && CONFIG.DEBUG) {
+        const issue = _ttmOvercounted ? 'OVERCOUNTED' : 'UNDERCOUNTED';
+        console.log(
+            `[ANNUAL FIX] ${stock.symbol}: freq=${freq}, TTM has ${_ttmPaymentCount} regular payments ` +
+            `(expected ${freq}) → ${issue} → using annualRegular=${annualRegular.toFixed(2)} ` +
+            `instead of ttmSumCalc=${ttmSumCalc?.toFixed(2) ?? 'N/A'}`
+        );
+    }
+
+    // ✅ v3.32: Injecter la traçabilité annualization dans debug_dividends (après déclaration des variables)
+    if (debug_dividends) {
+        debug_dividends.annual_fix_applied = _ttmOvercounted || _ttmUndercounted;
+        debug_dividends.annual_fix_type = _ttmOvercounted ? 'overcounted' : (_ttmUndercounted ? 'undercounted' : null);
+        debug_dividends.ttm_payment_count = _ttmPaymentCount;
+        if (_ttmOvercounted || _ttmUndercounted) {
+            debug_dividends.dps_annualized = +dps_annualized.toFixed(4);
+        }
+    }
+
     const dps_reg_used = Number.isFinite(annualRegular) && annualRegular > 0
       ? annualRegular
       : (Number.isFinite(yield_regular) && price > 0 ? (yield_regular/100)*price : null);
 
-    // Payout TTM
+    // ✅ v3.32: Payout TTM — utilise dps_annualized (corrige payeurs annuels/semestriels)
     let payout_ratio_ttm = null;
     if (Number.isFinite(stats?.payout_ratio_api_pct)) {
       payout_ratio_ttm = Math.min(200, +stats.payout_ratio_api_pct.toFixed(1));
-    } else if (Number.isFinite(dps_ttm_used) && Number.isFinite(eps_ttm) && eps_ttm > 0) {
-      payout_ratio_ttm = Math.min(200, +((dps_ttm_used/eps_ttm)*100).toFixed(1));
+    } else if (Number.isFinite(dps_annualized) && Number.isFinite(eps_ttm) && eps_ttm > 0) {
+      payout_ratio_ttm = Math.min(200, +((dps_annualized/eps_ttm)*100).toFixed(1));
     } else if (Number.isFinite(dividend_yield_ttm) && Number.isFinite(stats?.pe_ratio)) {
       payout_ratio_ttm = Math.min(200, +((dividend_yield_ttm * stats.pe_ratio)).toFixed(1));
     }
@@ -1819,8 +1863,9 @@ async function enrichStock(stock) {
         payout_ratio_ttm < 60 ? 'moderate'     :
         payout_ratio_ttm < 80 ? 'high'         :
         payout_ratio_ttm < 100? 'very_high'    : 'unsustainable';
-      if (Number.isFinite(eps_ttm) && Number.isFinite(dps_ttm_used) && dps_ttm_used > 0) {
-        dividend_coverage = Number((eps_ttm / dps_ttm_used).toFixed(2));
+      // ✅ v3.32: Coverage — utilise dps_annualized (corrige payeurs annuels/semestriels)
+      if (Number.isFinite(eps_ttm) && Number.isFinite(dps_annualized) && dps_annualized > 0) {
+        dividend_coverage = Number((eps_ttm / dps_annualized).toFixed(2));
       }
     }
     
@@ -2758,7 +2803,7 @@ async function main() {
         .map(([k]) => k.toUpperCase())
         .join(', ');
     
-    console.log(`📊 Enrichissement complet des stocks (v3.27 - Quality Score peer group)`);
+    console.log(`📊 Enrichissement complet des stocks (v3.32 - Annual dividend fix + Quality Score peer group)`);
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
