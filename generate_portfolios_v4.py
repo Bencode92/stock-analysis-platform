@@ -2520,37 +2520,36 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             )
             _asset_lookup_fav = {a.id: a for a in assets}
             
+            # Shared sector normalization (used by FAVORED + ESSENTIAL guarantees)
+            _SEC_NORM = {
+                "finance": "financials", "financial services": "financials",
+                "technologie de l'information": "information-technology",
+                "technology": "information-technology",
+                "matériaux": "materials", "basic materials": "materials",
+                "energie": "energy", "energy": "energy",
+                "industries": "industrials", "industrials": "industrials",
+                "santé": "healthcare", "healthcare": "healthcare",
+                "biens de consommation cycliques": "consumer-discretionary",
+                "consumer cyclical": "consumer-discretionary",
+                "biens de consommation de base": "consumer-staples",
+                "consumer defensive": "consumer-staples",
+                "immobilier": "real-estate", "real estate": "real-estate",
+                "services publics": "utilities", "utilities": "utilities",
+                "la communication": "communication-services",
+                "communication services": "communication-services",
+            }
+            
+            def _norm_sec(a):
+                s = (getattr(a, 'sector', '') or '').lower().strip()
+                sd = ''
+                if hasattr(a, 'source_data') and a.source_data:
+                    sd = (a.source_data.get('sector', '') or '').lower().strip()
+                    sa = (a.source_data.get('sector_api', '') or '').lower().strip()
+                else:
+                    sa = ''
+                return _SEC_NORM.get(s, _SEC_NORM.get(sd, _SEC_NORM.get(sa, s)))
+            
             if _fav_sectors_radar:
-                # Normalize sectors for allocated stocks
-                _SEC_NORM = {
-                    "finance": "financials", "financial services": "financials",
-                    "technologie de l'information": "information-technology",
-                    "technology": "information-technology",
-                    "matériaux": "materials", "basic materials": "materials",
-                    "energie": "energy", "energy": "energy",
-                    "industries": "industrials", "industrials": "industrials",
-                    "santé": "healthcare", "healthcare": "healthcare",
-                    "biens de consommation cycliques": "consumer-discretionary",
-                    "consumer cyclical": "consumer-discretionary",
-                    "biens de consommation de base": "consumer-staples",
-                    "consumer defensive": "consumer-staples",
-                    "immobilier": "real-estate", "real estate": "real-estate",
-                    "services publics": "utilities", "utilities": "utilities",
-                    "la communication": "communication-services",
-                    "communication services": "communication-services",
-                }
-                
-                def _norm_sec(a):
-                    s = (getattr(a, 'sector', '') or '').lower().strip()
-                    sd = ''
-                    if hasattr(a, 'source_data') and a.source_data:
-                        sd = (a.source_data.get('sector', '') or '').lower().strip()
-                        sa = (a.source_data.get('sector_api', '') or '').lower().strip()
-                    else:
-                        sa = ''
-                    return _SEC_NORM.get(s, _SEC_NORM.get(sd, _SEC_NORM.get(sa, s)))
-                
-                # Find which FAVORED sectors are represented in Actions allocation
                 _alloc_equity_sectors = {}  # sector → list of (aid, weight)
                 _alloc_sector_counts = {}  # sector → count (for sole-sector protection)
                 
@@ -2566,11 +2565,28 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 
                 for _fav_sec in sorted(_missing_fav):
                     # Find best FAVORED candidate from full asset pool
+                    # v5.3.3: Exclude candidates from AVOIDED regions (don't inject India stocks)
+                    _avoided_regions_radar = set(
+                        market_context.get("macro_tilts", {}).get("avoided_regions", [])
+                    )
                     _fav_candidates = []
                     for a in assets:
                         if a.category != "Actions" or a.id in allocation:
                             continue
                         if _norm_sec(a) == _fav_sec:
+                            # Check region is not AVOIDED
+                            _a_region = (getattr(a, 'region', '') or '').lower().strip()
+                            _a_country = ''
+                            if hasattr(a, 'source_data') and a.source_data:
+                                _a_country = (a.source_data.get('country', '') or '').lower().strip()
+                            _COUNTRY_TO_REGION = {
+                                "inde": "india", "india": "india",
+                                "allemagne": "germany", "germany": "germany",
+                                "argentine": "argentina", "argentina": "argentina",
+                            }
+                            _a_reg_norm = _COUNTRY_TO_REGION.get(_a_country, _a_region)
+                            if _a_reg_norm in _avoided_regions_radar:
+                                continue
                             _fav_candidates.append(a)
                     
                     if not _fav_candidates:
@@ -2602,12 +2618,32 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                         logger.info(f"   [{profile}] 🎯 POST-MKW FAVORED '{_fav_sec}': no replaceable stocks")
                         continue
                     
-                    # Sort by score ASC → worst first
-                    _replaceable.sort(key=lambda x: x[2].score)
-                    _worst_aid, _worst_w, _worst_a = _replaceable[0]
+                    # v5.3.3: AVOIDED sector stocks are priority replacement targets
+                    # AGS (Finance AVOIDED, score 77.1) should be replaced before
+                    # ITX (Consumer Disc, score 45) — the signal matters more than the score
+                    _avoided_secs_radar = set(
+                        market_context.get("macro_tilts", {}).get("avoided_sectors", [])
+                    )
+                    _avoided_replaceable = [r for r in _replaceable if _norm_sec(r[2]) in _avoided_secs_radar]
                     
-                    # Score check: FAVORED candidate must be at least 40% of worst's score
-                    if _best_fav.score < _worst_a.score * 0.40:
+                    if _avoided_replaceable:
+                        # Replace worst AVOIDED stock first
+                        _avoided_replaceable.sort(key=lambda x: x[2].score)
+                        _worst_aid, _worst_w, _worst_a = _avoided_replaceable[0]
+                        logger.info(
+                            f"   [{profile}] 🎯 POST-MKW: targeting AVOIDED stock "
+                            f"{_worst_a.name[:25]} ({_norm_sec(_worst_a)}) for replacement"
+                        )
+                    else:
+                        # No AVOIDED stocks → fallback to worst by score
+                        _replaceable.sort(key=lambda x: x[2].score)
+                        _worst_aid, _worst_w, _worst_a = _replaceable[0]
+                    
+                    # Score check: FAVORED candidate must be competitive with the stock it replaces
+                    # v5.3.3: No score check when replacing AVOIDED stocks (signal > score)
+                    # v5.3.3: 65% threshold for non-AVOIDED (was 40% — SRG 38.6 replaced MU 76.0)
+                    _is_replacing_avoided = _norm_sec(_worst_a) in _avoided_secs_radar
+                    if not _is_replacing_avoided and _best_fav.score < _worst_a.score * 0.65:
                         logger.info(
                             f"   [{profile}] 🎯 POST-MKW FAVORED '{_fav_sec}': "
                             f"{_best_fav.name[:20]} score={_best_fav.score:.1f} too low vs "
@@ -2640,6 +2676,81 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                         "missing_favored": _missing_fav,
                     }
                     logger.info(f"   [{profile}] 🎯 POST-MKW: {_fav_swapped} FAVORED sector(s) injected")
+            
+            # === v5.3.3: Post-Markowitz ESSENTIAL Sector Guarantee (Healthcare) ===
+            # Same pattern as FAVORED guarantee but for structurally important sectors.
+            # Healthcare = 13% of MSCI World, most decorrelated from cycles.
+            # If 0% healthcare in equity allocation → inject best HC, replace worst AVOIDED or worst overall.
+            _ESSENTIAL_SECS_POST_MKW = {"healthcare"}
+            
+            # Recompute current equity sectors
+            _ess_equity_secs = set()
+            for aid in allocation:
+                a = _asset_lookup_fav.get(aid)
+                if a and a.category == "Actions":
+                    _ess_equity_secs.add(_norm_sec(a))
+            
+            _missing_essential = _ESSENTIAL_SECS_POST_MKW - _ess_equity_secs
+            _ess_swapped = 0
+            
+            for _ess_sec in sorted(_missing_essential):
+                # Find best candidate from this essential sector
+                _ess_candidates = [
+                    a for a in assets
+                    if a.category == "Actions" and a.id not in allocation and _norm_sec(a) == _ess_sec
+                ]
+                if not _ess_candidates:
+                    logger.info(f"   [{profile}] 🏥 POST-MKW ESSENTIAL '{_ess_sec}': no candidates")
+                    continue
+                
+                _best_ess = max(_ess_candidates, key=lambda a: a.score)
+                
+                # Find replacement target: prefer AVOIDED, then worst non-essential
+                _ess_replaceable = []
+                for aid, weight in allocation.items():
+                    a = _asset_lookup_fav.get(aid)
+                    if not a or a.category != "Actions":
+                        continue
+                    _a_sec = _norm_sec(a)
+                    if _a_sec in _ESSENTIAL_SECS_POST_MKW:
+                        continue  # Don't replace another essential
+                    if _a_sec in _fav_sectors_radar:
+                        continue  # Don't replace FAVORED
+                    _ess_replaceable.append((aid, weight, a))
+                
+                if not _ess_replaceable:
+                    logger.info(f"   [{profile}] 🏥 POST-MKW ESSENTIAL '{_ess_sec}': no replaceable")
+                    continue
+                
+                # Priority: AVOIDED stocks first, then worst by score
+                _avoided_secs = set(
+                    market_context.get("macro_tilts", {}).get("avoided_sectors", [])
+                )
+                
+                _avoided_ess = [r for r in _ess_replaceable if _norm_sec(r[2]) in _avoided_secs]
+                if _avoided_ess:
+                    _avoided_ess.sort(key=lambda x: x[2].score)
+                    _worst_aid, _worst_w, _worst_a = _avoided_ess[0]
+                else:
+                    _ess_replaceable.sort(key=lambda x: x[2].score)
+                    _worst_aid, _worst_w, _worst_a = _ess_replaceable[0]
+                
+                # Swap
+                _swap_w = allocation.pop(_worst_aid)
+                allocation[_best_ess.id] = _swap_w
+                _ess_swapped += 1
+                
+                logger.info(
+                    f"   [{profile}] 🏥 POST-MKW ESSENTIAL inject: "
+                    f"{_best_ess.name[:25]} ({_ess_sec}, score={_best_ess.score:.1f}) "
+                    f"replaces {_worst_a.name[:25]} ({_norm_sec(_worst_a)}, "
+                    f"score={_worst_a.score:.1f}) → {_swap_w:.1f}%"
+                )
+            
+            if _ess_swapped:
+                allocation = round_weights_to_100(allocation, decimals=2)
+                diagnostics["_post_mkw_essential"] = {"swapped": _ess_swapped}
+                logger.info(f"   [{profile}] 🏥 POST-MKW: {_ess_swapped} ESSENTIAL sector(s) injected")
         
         # === FIX v5.2.0: RADAR hard cap — régions "avoided" → max 5% par stock ===
         _agg_capped_aids = set()  # v5.3.1: track capped positions to protect from dust reinflation
