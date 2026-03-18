@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-18-09-51-48",
-    "git_sha": "7d8e35ddd",
-    "git_sha_full": "7d8e35ddd3fd43c5b41c35cf1b32383c513506a9",
+    "run_id": "2026-03-18-10-18-27",
+    "git_sha": "497de7ef7",
+    "git_sha_full": "497de7ef7c73d93c70b653845565d65a492c31cd",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-18",
-    "timestamp_utc": "2026-03-18T09:51:48.806636+00:00",
+    "timestamp_utc": "2026-03-18T10:18:27.961722+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 202.72
+    "total_duration_sec": 196.71
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -399,51 +399,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 107,
-      "after": 107,
+      "before": 106,
+      "after": 106,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "VICI",
-          "score": 0.7921
+          "score": 0.7935
         },
         {
           "ticker": "AGS",
-          "score": 0.7801
-        },
-        {
-          "ticker": "IMB",
-          "score": 0.6382
+          "score": 0.7802
         },
         {
           "ticker": "SNA",
-          "score": 0.6213
+          "score": 0.6245
         },
         {
           "ticker": "SCHN",
-          "score": 0.6205
+          "score": 0.6226
         },
         {
           "ticker": "RIO",
-          "score": 0.6188
+          "score": 0.6211
         },
         {
           "ticker": "ML",
-          "score": 0.6052
+          "score": 0.608
         },
         {
           "ticker": "BVI",
-          "score": 0.5955
+          "score": 0.5966
         },
         {
           "ticker": "GD",
-          "score": 0.5855
+          "score": 0.5883
         },
         {
           "ticker": "JNJ",
-          "score": 0.5846
+          "score": 0.5848
+        },
+        {
+          "ticker": "GGG",
+          "score": 0.5828
         }
       ]
     },
@@ -3539,7 +3539,14 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 0.93,
+    "details": {
+      "5_selection_equity_Stable.after": {
+        "current": 106,
+        "previous": 107,
+        "delta": -1,
+        "pct_change": 0.93
+      }
+    }
   }
 }
