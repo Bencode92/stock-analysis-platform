@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-18-12-54-43",
-    "git_sha": "29b9e5c26",
-    "git_sha_full": "29b9e5c26677a568bc2a7e683598e7c3c71074c7",
+    "run_id": "2026-03-18-14-15-49",
+    "git_sha": "ff10f2c2a",
+    "git_sha_full": "ff10f2c2a4c0762a8ad738b7b859ff84faa70826",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-18",
-    "timestamp_utc": "2026-03-18T12:54:43.785719+00:00",
+    "timestamp_utc": "2026-03-18T14:15:49.885916+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 203.8
+    "total_duration_sec": 191.91
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -51,11 +51,11 @@
       "top_k": [
         {
           "ticker": "NVDA",
-          "score": 0.813
+          "score": 0.8129
         },
         {
           "ticker": "VRT",
-          "score": 0.7726
+          "score": 0.7727
         },
         {
           "ticker": "HWM",
@@ -63,7 +63,7 @@
         },
         {
           "ticker": "064350",
-          "score": 0.7616
+          "score": 0.7619
         },
         {
           "ticker": "MU",
@@ -79,7 +79,7 @@
         },
         {
           "ticker": "3017",
-          "score": 0.7302
+          "score": 0.7306
         },
         {
           "ticker": "1519",
@@ -87,7 +87,7 @@
         },
         {
           "ticker": "2059",
-          "score": 0.7176
+          "score": 0.7175
         }
       ]
     },
@@ -235,7 +235,7 @@
         },
         {
           "ticker": "RIO",
-          "score": 0.7511
+          "score": 0.7503
         },
         {
           "ticker": "VICI",
@@ -243,7 +243,7 @@
         },
         {
           "ticker": "ITX",
-          "score": 0.7049
+          "score": 0.7054
         },
         {
           "ticker": "PEG",
@@ -259,7 +259,7 @@
         },
         {
           "ticker": "GLPI",
-          "score": 0.6574
+          "score": 0.6566
         },
         {
           "ticker": "IPN",
@@ -399,51 +399,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 118,
-      "after": 118,
+      "before": 120,
+      "after": 120,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "VICI",
-          "score": 0.7928
+          "score": 0.794
         },
         {
           "ticker": "AGS",
-          "score": 0.7822
+          "score": 0.7806
         },
         {
           "ticker": "SCHN",
-          "score": 0.6302
+          "score": 0.632
         },
         {
           "ticker": "SNA",
-          "score": 0.6251
+          "score": 0.6228
         },
         {
           "ticker": "RIO",
-          "score": 0.6225
+          "score": 0.6194
         },
         {
           "ticker": "ITX",
-          "score": 0.611
+          "score": 0.6091
         },
         {
           "ticker": "JNJ",
-          "score": 0.5967
+          "score": 0.5965
         },
         {
           "ticker": "GD",
-          "score": 0.5922
+          "score": 0.5937
         },
         {
           "ticker": "BVI",
-          "score": 0.5892
+          "score": 0.5881
         },
         {
           "ticker": "NOVN",
-          "score": 0.5847
+          "score": 0.5848
         }
       ]
     },
@@ -578,11 +578,11 @@
             "ticker": "FBK",
             "name": "FINECOBANK BANCA FINECO",
             "buffett": 75.0,
-            "vol": 35.3,
-            "div_yield": 1.43,
+            "vol": 35.2,
+            "div_yield": 1.44,
             "payout": 70.0,
-            "perf_ytd": -7.6,
-            "perf_1y": 11.1,
+            "perf_ytd": -7.7,
+            "perf_1y": 10.1,
             "mcap": "13.0B",
             "sector": "Finance"
           },
@@ -2880,10 +2880,10 @@
             "buffett": 94.0,
             "vol": 30.4,
             "roe": 12.9,
-            "div_yield": 3.73,
+            "div_yield": 3.7,
             "payout": 56.0,
-            "perf_ytd": -18.0,
-            "perf_1y": -23.5,
+            "perf_ytd": -17.4,
+            "perf_1y": -23.3,
             "mcap": "52.8B",
             "sector": "Finance"
           },
@@ -3539,7 +3539,14 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 1.69,
+    "details": {
+      "5_selection_equity_Stable.after": {
+        "current": 120,
+        "previous": 118,
+        "delta": 2,
+        "pct_change": 1.69
+      }
+    }
   }
 }
