@@ -2454,14 +2454,37 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             "Modéré": 11.0,
             "Stable": 10.0,
         }
+        # v5.3.3: PE-based cap — don't overweight extreme valuations
+        # Principle: stocks with PE > threshold get a lower weight cap
+        _PE_CAP_RULES = {
+            "Agressif": (60, 6.0),   # PE > 60 → max 6%
+            "Modéré":   (40, 5.0),   # PE > 40 → max 5%
+            "Stable":   (30, 5.0),   # PE > 30 → max 5%
+        }
         _eq_cap = _MAX_SINGLE_EQUITY.get(profile, 11.0)
+        _pe_threshold, _pe_cap = _PE_CAP_RULES.get(profile, (60, 6.0))
         _asset_lookup = {a.id: a for a in assets}
         _eq_capped = False
         for aid, weight in list(allocation.items()):
             _asset = _asset_lookup.get(aid)
-            if _asset and _asset.category == "Actions" and weight > _eq_cap + 0.01:
-                _excess = weight - _eq_cap
-                allocation[aid] = _eq_cap
+            if not _asset or _asset.category != "Actions":
+                continue
+            
+            # Get PE ratio
+            _pe = None
+            if hasattr(_asset, 'source_data') and _asset.source_data:
+                _pe = _asset.source_data.get('pe_ratio')
+            if _pe is None and hasattr(_asset, 'pe_ratio'):
+                _pe = getattr(_asset, 'pe_ratio', None)
+            
+            # Determine effective cap for this stock
+            _effective_cap = _eq_cap
+            if _pe is not None and _pe > _pe_threshold and _pe > 0:
+                _effective_cap = min(_eq_cap, _pe_cap)
+            
+            if weight > _effective_cap + 0.01:
+                _excess = weight - _effective_cap
+                allocation[aid] = _effective_cap
                 # Redistribute excess pro-rata to non-equity positions
                 _others = {k: v for k, v in allocation.items() 
                           if k != aid and _asset_lookup.get(k) and _asset_lookup[k].category != "Actions"}
@@ -2476,9 +2499,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     if _total_all > 0:
                         for k in _others_all:
                             allocation[k] += _excess * (_others_all[k] / _total_all)
+                _pe_str = f" PE={_pe:.0f}>{_pe_threshold}" if _pe and _pe > _pe_threshold else ""
                 logger.info(
-                    f"   [{profile}] 📉 Equity cap: {_asset.name[:25]} {weight:.1f}%→{_eq_cap:.1f}% "
-                    f"(excess {_excess:.1f}% redistributed)"
+                    f"   [{profile}] 📉 Equity cap: {_asset.name[:25]} {weight:.1f}%→{_effective_cap:.1f}% "
+                    f"(excess {_excess:.1f}% redistributed){_pe_str}"
                 )
                 _eq_capped = True
         
@@ -2550,6 +2574,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 return _SEC_NORM.get(s, _SEC_NORM.get(sd, _SEC_NORM.get(sa, s)))
             
             if _fav_sectors_radar:
+                # v5.3.3: Profile-dependent eligibility — same logic as _enforce_caps
+                _FAVORED_ELIGIBLE_POST = {
+                    "Agressif": {"energy", "materials", "information-technology", "industrials"},
+                    "Modéré":   {"energy", "materials", "utilities", "industrials", "healthcare"},
+                    "Stable":   {"utilities", "healthcare", "consumer-staples", "energy"},
+                }
+                _active_fav = _fav_sectors_radar & _FAVORED_ELIGIBLE_POST.get(profile, _fav_sectors_radar)
+                
                 _alloc_equity_sectors = {}  # sector → list of (aid, weight)
                 _alloc_sector_counts = {}  # sector → count (for sole-sector protection)
                 
@@ -2560,7 +2592,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                         _alloc_equity_sectors.setdefault(_sec, []).append((aid, weight))
                         _alloc_sector_counts[_sec] = _alloc_sector_counts.get(_sec, 0) + 1
                 
-                _missing_fav = [s for s in _fav_sectors_radar if s not in _alloc_equity_sectors]
+                _missing_fav = [s for s in _active_fav if s not in _alloc_equity_sectors]
                 _fav_swapped = 0
                 
                 for _fav_sec in sorted(_missing_fav):
