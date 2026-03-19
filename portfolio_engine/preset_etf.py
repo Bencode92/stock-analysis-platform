@@ -278,13 +278,18 @@ RADAR_PENALTY_EXPOSURES = {
     "telecom": 0.90,
 }
 RADAR_BONUS_EXPOSURES = {
-    "energy": 1.10,
-    "utilities": 1.10,
-    "materials": 1.10,
-    "natural_resources": 1.08,
-    "infrastructure": 1.05,
-    "clean_energy": 1.05,
-    "uranium": 1.05,
+    # v3.3: Réduit de ×1.10 à ×1.05 — le momentum capture déjà l'avantage
+    # RADAR départage à score égal, ne domine plus le scoring
+    "energy": 1.05,
+    "utilities": 1.05,
+    "materials": 1.05,
+    "natural_resources": 1.04,
+    "infrastructure": 1.03,
+    "clean_energy": 1.03,
+    "uranium": 1.03,
+    "rare_earth": 1.04,           # v3.3: ajouté (REMX)
+    "metals_mining": 1.04,        # v3.3: ajouté
+    "copper": 1.04,               # v3.3: ajouté
 }
 
 # v3.1.1: RADAR penalty/bonus via sector_top (fallback quand exposure ne matche pas)
@@ -297,11 +302,12 @@ RADAR_PENALTY_SECTOR_TOP = {
     "consumer discretionary": 0.88,
 }
 RADAR_BONUS_SECTOR_TOP = {
-    "energy": 1.10,
-    "utilities": 1.10,
-    "basic materials": 1.10,
-    "materials": 1.10,
-    "industrials": 1.03,
+    # v3.3: Réduit de ×1.10 à ×1.05
+    "energy": 1.05,
+    "utilities": 1.05,
+    "basic materials": 1.05,
+    "materials": 1.05,
+    "industrials": 1.02,
 }
 
 logger = logging.getLogger("portfolio_engine.preset_etf")
@@ -555,25 +561,25 @@ PROFILE_PRESET_PRIORITY: Dict[str, List[str]] = {
 PROFILE_PRESETS: Dict[str, List[str]] = PROFILE_PRESET_PRIORITY
 
 # Hard constraints par profil (SANS géographie)
+# v3.3: sector_concentration_max SUPPRIMÉ des 3 profils
+# Cause: XLV (100% Healthcare) éjecté par Stable(0.50) et Modéré(0.70)
+# Les exposure caps (MAX_ETF_PER_EXPOSURE_GROUP) gèrent la diversification
 PROFILE_CONSTRAINTS: Dict[str, Dict[str, float]] = {
     "Stable": {
         "vol_max_quantile": 0.35,
         "ter_max_quantile": 0.60,
-        "sector_concentration_max": 0.50,
         "hhi_max": 0.20,
         "holding_top_max": 0.12,
     },
     "Modéré": {
         "vol_max_quantile": 0.70,
         "ter_max_quantile": 0.80,
-        "sector_concentration_max": 0.70,
         "hhi_max": 0.30,
         "holding_top_max": 0.20,
     },
     "Agressif": {
         "vol_max_quantile": 1.0,
         "ter_max_quantile": 0.90,
-        "sector_concentration_max": 1.0,
         "hhi_max": 1.0,
         "holding_top_max": 1.0,
     },
@@ -605,41 +611,63 @@ PRESET_MIN_QUOTAS: Dict[str, Dict[str, int]] = {
     },
 }
 
-# v3.2: MAX ETFs par exposure group dans le top_n final
-# Empêche la sur-concentration (ex: 4/4 ETFs energy après RADAR bonus)
-# Appliqué APRÈS le scoring, AVANT la sélection finale
+# v3.3: MAX ETFs par exposure group dans le top_n final
+# Super-groupe "resources" = energy + materials + miners + commodities
+# Empêche 5/5 ETFs dans le même macro-secteur
 MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
     "Stable": {
-        "energy": 1, "commodities": 1, "gold_physical": 1,
-        "precious_miners": 1, "dividend": 2, "allocation": 2,
+        "resources": 1,        # Max 1 ETF energy/materials/miners/commodities
+        "dividend": 2,
+        "allocation": 2,
+        "healthcare": 1,
         "default": 2,
     },
     "Modéré": {
-        "energy": 2, "commodities": 2, "gold_physical": 1,
-        "precious_miners": 1, "dividend": 2,
+        "resources": 2,        # Max 2 ETFs energy/materials/miners/commodities
+        "dividend": 2,
+        "healthcare": 1,
         "default": 2,
     },
     "Agressif": {
-        "energy": 2, "commodities": 2, "gold_physical": 1,
-        "precious_miners": 1, "silver_miners": 1,
+        "resources": 3,        # Max 3 ETFs — force diversification vers tech/EM/intl
+        "healthcare": 1,
         "default": 2,
     },
 }
 
 # Mapping exposure → group pour les caps
+# v3.3: Tous les commodities/energy/materials → super-groupe "resources"
 EXPOSURE_TO_GROUP = {
-    "energy": "energy", "clean_energy": "energy", "uranium": "energy",
-    "commodities": "commodities", "real_assets": "commodities",
-    "gold_physical": "gold_physical",
-    "gold_miners": "precious_miners", "silver_physical": "precious_miners",
-    "silver_miners": "precious_miners",
+    # Resources super-group (energy + materials + miners + commodities)
+    "energy": "resources", "clean_energy": "resources", "uranium": "resources",
+    "commodities": "resources", "real_assets": "resources",
+    "gold_physical": "resources", "gold_miners": "resources",
+    "silver_physical": "resources", "silver_miners": "resources",
+    "materials": "resources", "natural_resources": "resources",
+    "rare_earth": "resources", "metals_mining": "resources",
+    "copper": "resources", "lithium": "resources",
+    "critical_materials": "resources", "steel": "resources",
+    "agribusiness": "resources",
+    
+    # Dividend
     "dividend": "dividend", "dividend_growth": "dividend",
+    
+    # Allocation
     "allocation_conservative": "allocation", "allocation_balanced": "allocation",
     "allocation_aggressive": "allocation", "allocation_income": "allocation",
-    "utilities": "utilities", "materials": "materials",
-    "natural_resources": "materials",
+    
+    # Healthcare
     "healthcare": "healthcare", "pharma": "healthcare", "biotech": "healthcare",
     "genomics": "healthcare", "medical_devices": "healthcare",
+    "healthcare_sub": "healthcare",
+    
+    # Tech
+    "tech": "tech", "semiconductor": "tech", "nasdaq100": "tech",
+    "nasdaq_composite": "tech", "robotics": "tech", "cybersecurity": "tech",
+    "cloud_computing": "tech", "innovation": "tech", "fintech": "tech",
+    
+    # Utilities (separate from resources — defensive)
+    "utilities": "utilities", "infrastructure": "infrastructure",
 }
 
 # ============= FIX v2.4.0-N: CROSS-PROFILE ETF PENALTY =============
@@ -714,11 +742,11 @@ PRESET_RULES: Dict[str, Dict[str, float]] = {
         "vol_max": 35.0,
         "aum_min": 200_000_000,
     },
-    # v3.1: Healthcare sector rules (relaxed from v2.4.1)
+    # v3.3: Healthcare sector rules (further relaxed)
     "sector_healthcare": {
         "ter_max": 1.00,
-        "vol_max": 30.0,
-        "aum_min": 100_000_000,
+        "vol_max": 35.0,           # v3.3: 30→35 (biotech XBI ~32%)
+        "aum_min": 50_000_000,     # v3.3: 100M→50M (plus de candidats)
     },
     "inflation_shield": {
         "ter_max": 1.20,
@@ -734,7 +762,7 @@ PRESET_RULES: Dict[str, Dict[str, float]] = {
 RELAX_STEPS: List[Tuple[str, float, float]] = [
     ("vol_max_quantile", +0.10, 1.00),
     ("ter_max_quantile", +0.10, 1.00),
-    ("sector_concentration_max", +0.10, 1.00),
+    # v3.3: sector_concentration_max supprimé (plus dans PROFILE_CONSTRAINTS)
     ("holding_top_max", +0.05, 1.00),
     ("hhi_max", +0.05, 1.00),
 ]
@@ -1722,10 +1750,15 @@ def _preset_sector_healthcare(df: pd.DataFrame) -> pd.Series:
     Preset: Sector Healthcare
     ETFs actions secteur santé (pharma, biotech, devices, services).
     XLV, VHT, IBB, IHI, IYH, FHLC, etc.
+    
+    v3.3: 3 paths de détection:
+    1. sector_top contient "health" + weight >= 50%
+    2. name/objective contient keywords HC
+    3. etf_exposure.py mappe vers healthcare/biotech/pharma/genomics/medical_devices
     """
     mask = _equity_like_gate(df, allow_data_missing=True)
     
-    # Via sector_top (le plus fiable pour XLV: sector_top="Healthcare", weight~100%)
+    # Path 1: Via sector_top (le plus fiable pour XLV: sector_top="Healthcare", weight~100%)
     sector_top = _get_sector_top(df)
     sector_bucket = _get_sector_bucket(df)
     
@@ -1734,14 +1767,13 @@ def _preset_sector_healthcare(df: pd.DataFrame) -> pd.Series:
         sector_bucket.str.contains("health", case=False, regex=False)
     )
     
-    # Concentration healthcare significative (>50% du portefeuille en healthcare)
     secw_frac = _get_sector_top_weight_frac(df)
     high_hc_weight = (
         healthcare_sector &
         ((secw_frac >= 0.50) | secw_frac.isna())
     )
     
-    # Via name/objective (fallback)
+    # Path 2: Via name/objective (fallback)
     obj = _safe_series(df, "objective").fillna("").astype(str).str.lower()
     name = _safe_series(df, "name").fillna("").astype(str).str.lower()
     
@@ -1749,13 +1781,33 @@ def _preset_sector_healthcare(df: pd.DataFrame) -> pd.Series:
     keywords = [
         "health care", "healthcare", "biotech", "biotechnology",
         "pharmaceutical", "pharma", "medical device", "medical instruments",
-        "genomics", "immunology",
+        "genomics", "immunology", "oncology", "cardiovascular",
     ]
     for kw in keywords:
         hc_kw |= obj.str.contains(kw, regex=False)
         hc_kw |= name.str.contains(kw, regex=False)
     
-    hc_ok = high_hc_weight | hc_kw
+    # Path 3: Via etf_exposure.py (attrape les biotech classés "Technology" dans sector_top)
+    hc_exposure = pd.Series(False, index=df.index)
+    if _HAS_EXPOSURE:
+        HC_EXPOSURES = {"healthcare", "biotech", "pharma", "genomics",
+                        "medical_devices", "healthcare_sub"}
+        sym = _get_symbol(df)
+        name_col = _safe_series(df, "name").fillna("").astype(str)
+        ft_col = _safe_series(df, "fund_type").fillna("").astype(str)
+        for idx in df.index:
+            exp = detect_etf_exposure(
+                name=name_col.get(idx, ""),
+                ticker=sym.get(idx, ""),
+                fund_type=ft_col.get(idx, ""),
+            )
+            if exp and exp in HC_EXPOSURES:
+                hc_exposure.at[idx] = True
+        n_from_exposure = hc_exposure.sum()
+        if n_from_exposure > 0:
+            logger.info(f"[v3.3] _preset_sector_healthcare: {n_from_exposure} ETFs matched via exposure")
+    
+    hc_ok = high_hc_weight | hc_kw | hc_exposure
     
     return mask & hc_ok & _check_preset_rules(df, "sector_healthcare")
 
