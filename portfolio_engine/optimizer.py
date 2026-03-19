@@ -2065,17 +2065,18 @@ class PortfolioOptimizer:
             # v3.4: SKIP z-score for ETFs — their scores come from preset_etf scoring
             # which is already calibrated. Z-score crushes them from max=100 to max=59.9
             # while Actions get max=92.7, making ETFs uncompetitive.
+            # v3.4.1: [40,85] was too generous → 7 ETFs at 50%. Lowered to [40,72].
+            # Actions range is [19, 92]. ETF top=72 ≈ top 7% of stocks → 4-5 ETFs enter pool naturally.
             if cat == "ETF":
-                # Preserve preset scores directly as _select_score
-                # Scale to [40, 85] range so top ETFs compete with top stocks
+                ETF_FLOOR = 40.0
+                ETF_CEIL = 72.0  # v3.4.1: was 85, caused 50% ETF allocation
                 if n_cat >= 2 and sigma_cat >= ZSCORE_MIN_STD:
                     etf_min = float(scores_np.min())
                     etf_max = float(scores_np.max())
                     etf_range = etf_max - etf_min if etf_max > etf_min else 1.0
                     for a in cat_assets:
-                        # Map [min, max] → [40, 85] to compete with Actions [19, 92]
                         norm = (float(a.score) - etf_min) / etf_range
-                        a._select_score = 40.0 + norm * 45.0
+                        a._select_score = ETF_FLOOR + norm * (ETF_CEIL - ETF_FLOOR)
                 else:
                     for a in cat_assets:
                         a._select_score = float(a.score)
