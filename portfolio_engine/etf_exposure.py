@@ -1723,7 +1723,7 @@ TICKER_TO_EXPOSURE = {
     "ovs": "small_cap",
     "pscc": "small_cap",
     "pscd": "small_cap",
-    "psce": "small_cap",
+    "psce": "energy",
     "pscf": "small_cap",
     "psch": "small_cap",
     "pscm": "small_cap",
