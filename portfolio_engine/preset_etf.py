@@ -589,37 +589,57 @@ FILL_TARGET: Dict[str, int] = {
 # ============= FIX v2.4.0-N: PER-PRESET MINIMUM QUOTAS =============
 # v2.4.1: +sector_healthcare, energy Modéré 1→2, rendement Stable 2→1
 PRESET_MIN_QUOTAS: Dict[str, Dict[str, int]] = {
+    # v3.2: Quotas MINIMAUX — seulement pour catégories qui ne peuvent pas
+    # entrer par scoring seul. Le scoring RADAR+performance décide le reste.
+    # AVANT: 9-14 slots garantis → pas de place pour les meilleurs ETFs
+    # APRÈS: 1-2 slots garantis → le scoring place les meilleurs
     "Stable": {
-        "coeur_global": 3,
-        "min_vol_global": 2,
-        "rendement_etf": 1,          # v2.4.1: was 2, libère slot pour healthcare
-        "sector_defensive": 1,
-        "sector_healthcare": 1,      # v2.4.1: NOUVEAU
-        "or_physique": 1,
+        "sector_healthcare": 1,      # HC ne peut pas entrer par score seul
     },
     "Modéré": {
-        "coeur_global": 1,           # v3.1.2: 3→1 (SPDW/SCHV remplissaient 3 slots)
-        "multi_factor": 2,
-        "qualite_value": 1,          # v3.1.2: 2→1 (libère slot pour energy/HC)
-        "rendement_etf": 1,          # v3.1.2: 2→1 (SCHD suffit)
-        "croissance_tech": 2,
-        "emergents": 2,
-        "sector_defensive": 1,
-        "sector_healthcare": 1,      # v2.4.1: NOUVEAU
-        "sector_cyclical": 2,
-        "sector_energy": 2,          # v2.4.1: was 1, protège XLE
-        "inflation_shield": 1,
+        "sector_healthcare": 1,      # HC ne peut pas entrer par score seul
+        "sector_energy": 1,          # Protège au moins 1 energy FAVORED
     },
     "Agressif": {
-        "multi_factor": 2,
-        "croissance_tech": 3,
-        "smid_quality": 1,
-        "emergents": 2,
-        "sector_cyclical": 3,
-        "sector_energy": 1,
-        "sector_healthcare": 1,      # v2.4.1: NOUVEAU
-        "commodities_broad": 1,
+        "sector_healthcare": 1,      # HC ne peut pas entrer par score seul
     },
+}
+
+# v3.2: MAX ETFs par exposure group dans le top_n final
+# Empêche la sur-concentration (ex: 4/4 ETFs energy après RADAR bonus)
+# Appliqué APRÈS le scoring, AVANT la sélection finale
+MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
+    "Stable": {
+        "energy": 1, "commodities": 1, "gold_physical": 1,
+        "precious_miners": 1, "dividend": 2, "allocation": 2,
+        "default": 2,
+    },
+    "Modéré": {
+        "energy": 2, "commodities": 2, "gold_physical": 1,
+        "precious_miners": 1, "dividend": 2,
+        "default": 2,
+    },
+    "Agressif": {
+        "energy": 2, "commodities": 2, "gold_physical": 1,
+        "precious_miners": 1, "silver_miners": 1,
+        "default": 2,
+    },
+}
+
+# Mapping exposure → group pour les caps
+EXPOSURE_TO_GROUP = {
+    "energy": "energy", "clean_energy": "energy", "uranium": "energy",
+    "commodities": "commodities", "real_assets": "commodities",
+    "gold_physical": "gold_physical",
+    "gold_miners": "precious_miners", "silver_physical": "precious_miners",
+    "silver_miners": "precious_miners",
+    "dividend": "dividend", "dividend_growth": "dividend",
+    "allocation_conservative": "allocation", "allocation_balanced": "allocation",
+    "allocation_aggressive": "allocation", "allocation_income": "allocation",
+    "utilities": "utilities", "materials": "materials",
+    "natural_resources": "materials",
+    "healthcare": "healthcare", "pharma": "healthcare", "biotech": "healthcare",
+    "genomics": "healthcare", "medical_devices": "healthcare",
 }
 
 # ============= FIX v2.4.0-N: CROSS-PROFILE ETF PENALTY =============
@@ -2237,7 +2257,52 @@ def select_etfs_for_profile(
                     remaining_indices -= set(preset_etfs.index)
             slots_remaining = top_n - len(guaranteed)
             if slots_remaining > 0:
-                rest = d4[d4.index.isin(remaining_indices)].head(slots_remaining)
+                # v3.2: Apply exposure caps to prevent over-concentration
+                rest_pool = d4[d4.index.isin(remaining_indices)].copy()
+                caps = MAX_ETF_PER_EXPOSURE_GROUP.get(profile, {})
+                if caps and _HAS_EXPOSURE:
+                    group_counts = {}
+                    # Count guaranteed ETFs per group
+                    sym_g = _get_symbol(guaranteed)
+                    name_g = _safe_series(guaranteed, "name").fillna("").astype(str)
+                    ft_g = _safe_series(guaranteed, "fund_type").fillna("").astype(str)
+                    for idx in guaranteed.index:
+                        exp = detect_etf_exposure(
+                            name=name_g.get(idx, ""),
+                            ticker=sym_g.get(idx, ""),
+                            fund_type=ft_g.get(idx, ""),
+                        )
+                        grp = EXPOSURE_TO_GROUP.get(exp, "other") if exp else "other"
+                        group_counts[grp] = group_counts.get(grp, 0) + 1
+                    
+                    # Select rest respecting caps
+                    selected_rest = []
+                    sym_r = _get_symbol(rest_pool)
+                    name_r = _safe_series(rest_pool, "name").fillna("").astype(str)
+                    ft_r = _safe_series(rest_pool, "fund_type").fillna("").astype(str)
+                    for idx in rest_pool.index:
+                        if len(selected_rest) >= slots_remaining:
+                            break
+                        exp = detect_etf_exposure(
+                            name=name_r.get(idx, ""),
+                            ticker=sym_r.get(idx, ""),
+                            fund_type=ft_r.get(idx, ""),
+                        )
+                        grp = EXPOSURE_TO_GROUP.get(exp, "other") if exp else "other"
+                        cap = caps.get(grp, caps.get("default", 3))
+                        current = group_counts.get(grp, 0)
+                        if current < cap:
+                            selected_rest.append(idx)
+                            group_counts[grp] = current + 1
+                        else:
+                            logger.info(
+                                f"[v3.2 {profile}] Capped {sym_r.get(idx, '?')} "
+                                f"(group={grp}, count={current}/{cap})"
+                            )
+                    rest = rest_pool.loc[selected_rest] if selected_rest else rest_pool.head(0)
+                    logger.info(f"[v3.2 {profile}] Exposure caps: {group_counts}")
+                else:
+                    rest = rest_pool.head(slots_remaining)
                 d4 = pd.concat([guaranteed, rest]).sort_values("_profile_score", ascending=False)
             else:
                 d4 = guaranteed.sort_values("_profile_score", ascending=False)
