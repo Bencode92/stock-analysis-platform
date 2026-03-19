@@ -4522,6 +4522,8 @@ class PortfolioOptimizer:
         # v6.29 FIX CRITIQUE: ENFORCE CRYPTO CAP EN DERNIER (après TOUTES les modifications)
         allocation = self._enforce_crypto_cap(allocation, candidates, profile)
         allocation = self._adjust_to_100(allocation, profile, candidates)
+        # v3.3: FINAL crypto cap — _adjust_to_100 peut re-inflater crypto au-dessus du cap
+        allocation = self._enforce_crypto_cap(allocation, candidates, profile)
         
         return allocation
 
