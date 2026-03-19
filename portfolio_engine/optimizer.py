@@ -1923,7 +1923,9 @@ class PortfolioOptimizer:
             selected_etfs, etf_meta = select_etfs_via_preset_engine(
                 etf_assets,
                 profile_name=profile.name,
-                top_n=min(30, profile.max_assets),
+                # v3.3.1: Reduced from 30 to 15. SCHY#167/VSS#157 shouldn't reach optimizer.
+                # Only top 15 scored ETFs enter the pool → optimizer picks best 4-5.
+                top_n=min(15, profile.max_assets),
                 strict_metrics=False,  # False = évite résultats vides
             )
             
@@ -4465,8 +4467,7 @@ class PortfolioOptimizer:
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_bonds_maximum(allocation, candidates, profile)  # PATCH v8.4
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
-            # v3.1.1: Force minimum ETF count (Stable: 3)
-            allocation = self._enforce_min_etf_count(allocation, candidates, profile)
+            # v3.3.1: min_etf moved to AFTER the loop (was undone by bonds_minimum iterations)
            
             
             # 3. Normaliser à 100% (avec respect cap bond)
@@ -4524,6 +4525,10 @@ class PortfolioOptimizer:
         allocation = self._adjust_to_100(allocation, profile, candidates)
         # v3.3: FINAL crypto cap — _adjust_to_100 peut re-inflater crypto au-dessus du cap
         allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+        
+        # v3.3.1: FORCE MINIMUM ETF COUNT — absolute last step
+        # Must be after ALL bonds_minimum/adjust_to_100 cycles
+        allocation = self._enforce_min_etf_count(allocation, candidates, profile)
         
         return allocation
 
