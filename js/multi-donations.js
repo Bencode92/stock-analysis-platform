@@ -1,13 +1,11 @@
 /**
- * multi-donations.js v2.2 — REPLACE original PathOptimizer donation UI
+ * multi-donations.js v2.3 — Show beneficiary name header + lien fiscal
  *
- * v2.2: The multi-donation UI REPLACES the original single input.
- * - Always hides the original PathOptimizer montant/date/type inputs
- * - Migrates existing values on first injection
- * - Is the SOLE interface for donation entry
- * - Syncs total effective amount back to PathOptimizer
+ * v2.3: Each donation block shows:
+ *   "→ Enfant 1 (Ligne directe · abat. 100 000 €)"
+ *   before the donation rows, so user knows WHO they're entering donations for
  *
- * @version 2.2.0 — 2026-03-19
+ * @version 2.3.0 — 2026-03-19
  */
 const MultiDonations = (function() {
     'use strict';
@@ -67,7 +65,7 @@ const MultiDonations = (function() {
     }
 
     // ============================================================
-    // RENDER
+    // RENDER — v2.3: with beneficiary name header
     // ============================================================
     function render(did, bid) {
         var c = document.getElementById('multi-don-' + did + '-' + bid);
@@ -75,7 +73,16 @@ const MultiDonations = (function() {
         var entries = getEntries(did, bid);
         var lien = getLien(did, bid);
         var abat = getAbat(lien);
+        var benName = getBenName(bid);
+        var lienLabel = getLienLabel(lien);
         var h = '';
+
+        // v2.3: Beneficiary header
+        h += '<div style="margin-bottom:6px;padding:6px 10px;border-radius:8px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.08;">';
+        h += '<div style="font-size:.78rem;font-weight:600;color:var(--text-primary);">';
+        h += '\u2192 <strong>' + esc(benName) + '</strong> ';
+        h += '<span style="font-size:.62rem;color:var(--text-muted);">(' + lienLabel + ' \u00b7 abat. ' + fmt(abat) + ')</span>';
+        h += '</div></div>';
 
         // Donation rows
         entries.forEach(function(e, i) {
@@ -120,7 +127,6 @@ const MultiDonations = (function() {
         if (entries.length === 0 && eff === 0) return '';
 
         var h = '<div style="margin-top:5px;padding:6px 8px;border-radius:6px;background:rgba(198,134,66,.03);border:1px solid rgba(198,134,66,.06);font-size:.60rem;">';
-
         if (hr > 0 && eff > 0) {
             h += '<div style="display:flex;gap:10px;margin-bottom:3px;flex-wrap:wrap;">';
             h += '<span style="color:var(--accent-green);">\u2705 Hors rappel : ' + fmt(hr) + '</span>';
@@ -131,15 +137,12 @@ const MultiDonations = (function() {
         } else if (hr > 0) {
             h += '<div style="margin-bottom:3px;color:var(--accent-green);">\u2705 Tout hors rappel. Abattement intact.</div>';
         }
-
-        // Bar
         var bc = pct > 80 ? 'var(--accent-coral)' : pct > 50 ? 'var(--accent-amber)' : 'var(--accent-green)';
         h += '<div style="display:flex;align-items:center;gap:8px;">';
         h += '<div style="flex:1;height:5px;border-radius:3px;background:rgba(198,134,66,.08);overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:3px;"></div></div>';
         h += '<div style="white-space:nowrap;font-weight:600;color:' + (rest > 0 ? 'var(--accent-green)' : 'var(--accent-coral)') + ';">';
         h += rest > 0 ? 'Reste ' + fmt(rest) : '\u26a0\ufe0f \u00c9puis\u00e9';
         h += ' <span style="color:var(--text-muted);font-weight:400;">/ ' + fmt(abat) + '</span></div></div>';
-
         if (eff > 0 && rest > 0) {
             h += '<div style="margin-top:3px;color:var(--text-muted);">\ud83d\udca1 Encore <strong style="color:var(--accent-green);">' + fmt(rest) + '</strong> sans droits.</div>';
         } else if (eff > 0 && rest === 0) {
@@ -153,7 +156,6 @@ const MultiDonations = (function() {
     function updateSummary(did, bid) {
         var el = document.getElementById('mds-' + did + '-' + bid);
         if (el) el.innerHTML = buildSummary(did, bid, getAbat(getLien(did, bid)));
-        // Update PathOptimizer bar too
         if (typeof PathOptimizer !== 'undefined') {
             try { PathOptimizer.renderDonorDonationBar(+did, +bid); } catch(e) {}
             try { PathOptimizer.refreshBenDonSummaries(); } catch(e) {}
@@ -161,7 +163,7 @@ const MultiDonations = (function() {
     }
 
     // ============================================================
-    // INJECTION — v2.2: REPLACE original inputs completely
+    // INJECTION — REPLACE original inputs
     // ============================================================
     function inject() {
         if (_injecting) return;
@@ -176,12 +178,15 @@ const MultiDonations = (function() {
             var cid = 'multi-don-' + did + '-' + bid;
             if (document.getElementById(cid)) return;
 
-            // Find original grid row (montant) and next row (date+type)
             var gridRow = input.closest('div[style*="grid-template-columns"]');
             if (!gridRow) return;
             var dateRow = gridRow.nextElementSibling;
 
-            // Migrate existing data BEFORE hiding
+            // Also hide the label row above (the "→ Enfant 1 (Ligne directe...)" text)
+            // We'll recreate it inside multi-donations
+            var labelRow = gridRow.previousElementSibling;
+
+            // Migrate existing data
             var entries = getEntries(did, bid);
             if (entries.length === 0) {
                 var montant = +input.value || 0;
@@ -192,26 +197,28 @@ const MultiDonations = (function() {
                 }
             }
 
-            // HIDE original inputs (v2.2: ALWAYS hide, multi-donations replaces them)
+            // HIDE original inputs
             gridRow.style.display = 'none';
             if (dateRow && (dateRow.querySelector('input[type="date"]') || dateRow.querySelector('select'))) {
                 dateRow.style.display = 'none';
             }
+            // Also hide the original label if it exists (we recreate it)
+            if (labelRow && labelRow.id && labelRow.id.indexOf('don-label') >= 0) {
+                labelRow.style.display = 'none';
+            }
 
-            // Create multi-donation container
+            // Create container
             var div = document.createElement('div');
             div.id = cid;
-            div.style.cssText = 'margin-top:4px;padding:4px 0;';
-            // Insert after the hidden dateRow (or gridRow)
+            div.style.cssText = 'margin-top:6px;margin-bottom:10px;padding:8px 10px;border-radius:10px;background:rgba(198,134,66,.02);border:1px solid rgba(198,134,66,.06);';
             var anchor = dateRow && dateRow.style.display === 'none' ? dateRow : gridRow;
             anchor.insertAdjacentElement('afterend', div);
 
-            // Render
             render(did, bid);
             count++;
         });
 
-        if (count > 0) console.log('[MultiDonations v2.2] Replaced ' + count + ' donation inputs');
+        if (count > 0) console.log('[MultiDonations v2.3] Replaced ' + count + ' donation inputs');
         _injecting = false;
     }
 
@@ -228,10 +235,43 @@ const MultiDonations = (function() {
         }
         return 'enfant';
     }
+
+    function getBenName(bid) {
+        if (typeof PathOptimizer !== 'undefined' && PathOptimizer.getBeneficiaries) {
+            var bs = PathOptimizer.getBeneficiaries();
+            var b = bs.find(function(x) { return String(x.id) === String(bid); });
+            if (b && b.prenom) return b.prenom;
+            if (b && b.nom) return b.nom;
+        }
+        // Fallback: try SD beneficiaries
+        if (typeof SD !== 'undefined' && SD._getState) {
+            var state = SD._getState();
+            if (state && state.beneficiaries) {
+                var sb = state.beneficiaries.find(function(x) { return String(x.id) === String(bid); });
+                if (sb) return sb.nom || sb.prenom || 'B\u00e9n\u00e9ficiaire';
+            }
+        }
+        return 'B\u00e9n\u00e9ficiaire ' + bid;
+    }
+
+    function getLienLabel(lien) {
+        var map = {
+            enfant: 'Ligne directe',
+            petit_enfant: 'Petit-enfant',
+            arriere_petit_enfant: 'Arr. petit-enfant',
+            conjoint_pacs_donation: 'Conjoint/PACS',
+            frere_soeur: 'Fr\u00e8re/S\u0153ur',
+            neveu_niece: 'Neveu/Ni\u00e8ce',
+            tiers: 'Tiers'
+        };
+        return map[lien] || lien;
+    }
+
     function getAbat(l) { return {enfant:100000,petit_enfant:31865,arriere_petit_enfant:5310,conjoint_pacs_donation:80724,frere_soeur:15932,neveu_niece:7967,tiers:1594}[l]||1594; }
     function yearsAgo(d) { return d ? Math.floor((new Date()-new Date(d))/(365.25*24*60*60*1000)) : '?'; }
     function getOldest(did, bid) { var o=null; getEntries(did,bid).forEach(function(e){if(e.date&&isDonationInRappel(e.date)&&(!o||new Date(e.date)<new Date(o)))o=e.date;}); return o; }
     function fmt(n) { return (n==null?0:n).toLocaleString('fr-FR')+' \u20ac'; }
+    function esc(s) { return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     // ============================================================
     // INIT
@@ -239,21 +279,14 @@ const MultiDonations = (function() {
     function init() {
         if (typeof PathOptimizer === 'undefined') { setTimeout(init, 500); return; }
         inject();
-
-        // Observer
         var dl = document.getElementById('donors-list');
         if (dl) new MutationObserver(injectDebounced).observe(dl, {childList:true, subtree:true});
-
-        // Periodic retry (first 30s)
         var n = 0, iv = setInterval(function() { inject(); if (++n >= 15) clearInterval(iv); }, 2000);
-
-        // Navigation
         document.addEventListener('click', function(e) {
             if (e.target.closest('.step-item,.preset-btn,.btn-primary,.btn-secondary,.aside-cta'))
                 { setTimeout(inject, 600); setTimeout(inject, 1500); }
         });
-
-        console.log('[MultiDonations v2.2] Loaded — replaces original donation inputs');
+        console.log('[MultiDonations v2.3] Loaded');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){setTimeout(init,1500);});
