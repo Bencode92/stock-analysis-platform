@@ -3251,7 +3251,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         for aid, w_pct in list(allocation.items()):
             if 0 < w_pct < MIN_POSITION_WEIGHT:
                 asset = next((a for a in assets if getattr(a, 'id', None) == aid), None)
+                cat = getattr(asset, 'category', '') if asset else ''
                 name = getattr(asset, 'name', aid)[:25] if asset else aid
+                # v3.4: Protect ETFs from dust cleanup — optimizer placed them for diversification
+                # EWY at 1.8% and SOXX at 0.7% were removed, leaving only 2 ETFs
+                if cat == 'ETF':
+                    logger.info(f"   [{profile}] 🧹 PROTECTED ETF: {name} ({aid}) = {w_pct:.2f}% (kept)")
+                    _keep_total += w_pct
+                    continue
                 _removed_dust.append((aid, name, w_pct))
                 _dust_total += w_pct
                 del allocation[aid]
