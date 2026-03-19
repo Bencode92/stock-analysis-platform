@@ -2062,6 +2062,31 @@ class PortfolioOptimizer:
 
             cat_assets = [a for a in universe if a.category == cat]
 
+            # v3.4: SKIP z-score for ETFs — their scores come from preset_etf scoring
+            # which is already calibrated. Z-score crushes them from max=100 to max=59.9
+            # while Actions get max=92.7, making ETFs uncompetitive.
+            if cat == "ETF":
+                # Preserve preset scores directly as _select_score
+                # Scale to [40, 85] range so top ETFs compete with top stocks
+                if n_cat >= 2 and sigma_cat >= ZSCORE_MIN_STD:
+                    etf_min = float(scores_np.min())
+                    etf_max = float(scores_np.max())
+                    etf_range = etf_max - etf_min if etf_max > etf_min else 1.0
+                    for a in cat_assets:
+                        # Map [min, max] → [40, 85] to compete with Actions [19, 92]
+                        norm = (float(a.score) - etf_min) / etf_range
+                        a._select_score = 40.0 + norm * 45.0
+                else:
+                    for a in cat_assets:
+                        a._select_score = float(a.score)
+                new_scores = [a._select_score for a in cat_assets]
+                logger.info(
+                    f"  {cat}: n={n_cat} | μ={mu_cat:.1f} σ={sigma_cat:.1f} → "
+                    f"v3.4 PRESET PRESERVE → [{min(new_scores):.1f}, {max(new_scores):.1f}] "
+                    f"mean={np.mean(new_scores):.1f}"
+                )
+                continue
+
             if n_cat >= ZSCORE_MIN_N and sigma_cat >= ZSCORE_MIN_STD:
                 for a in cat_assets:
                     z = (float(a.score) - mu_cat) / sigma_cat
