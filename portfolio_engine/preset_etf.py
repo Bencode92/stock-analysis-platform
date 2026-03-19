@@ -261,6 +261,7 @@ except ImportError:
 # v3.1: Exposures that are NOT equity ETFs (exclude from all equity presets)
 NON_EQUITY_EXPOSURES = {
     "preferred_stock", "convertibles", "covered_call",
+    "multi_asset",                   # v3.3: RLY, RAAX, MOOD — hybrid funds, not pure equity
     "bonds_global", "bonds_hy", "bonds_ig", "bonds_muni",
     "bonds_treasury", "bonds_multisector", "bonds_core",
     "bonds_core_plus", "bonds_short", "bonds_long_gov",
@@ -617,19 +618,24 @@ PRESET_MIN_QUOTAS: Dict[str, Dict[str, int]] = {
 MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
     "Stable": {
         "resources": 1,        # Max 1 ETF energy/materials/miners/commodities
+        "multi_asset": 1,      # v3.3.1: RLY/RAAX/MOOD = multi-asset, max 1
         "dividend": 2,
-        "allocation": 2,
+        "allocation": 1,       # v3.3.1: MDIV etc, max 1
         "healthcare": 1,
         "default": 2,
     },
     "Modéré": {
         "resources": 2,        # Max 2 ETFs energy/materials/miners/commodities
+        "multi_asset": 1,      # v3.3.1: max 1
         "dividend": 2,
+        "allocation": 1,       # v3.3.1: max 1
         "healthcare": 1,
         "default": 2,
     },
     "Agressif": {
         "resources": 3,        # Max 3 ETFs — force diversification vers tech/EM/intl
+        "multi_asset": 1,      # v3.3.1: max 1
+        "allocation": 1,       # v3.3.1: max 1
         "healthcare": 1,
         "default": 2,
     },
@@ -640,7 +646,7 @@ MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
 EXPOSURE_TO_GROUP = {
     # Resources super-group (energy + materials + miners + commodities)
     "energy": "resources", "clean_energy": "resources", "uranium": "resources",
-    "commodities": "resources", "real_assets": "resources",
+    "commodities": "resources",
     "gold_physical": "resources", "gold_miners": "resources",
     "silver_physical": "resources", "silver_miners": "resources",
     "materials": "resources", "natural_resources": "resources",
@@ -668,6 +674,10 @@ EXPOSURE_TO_GROUP = {
     
     # Utilities (separate from resources — defensive)
     "utilities": "utilities", "infrastructure": "infrastructure",
+    
+    # v3.3.1: Multi-asset (RLY, RAAX, MOOD — not pure equity, limit to 1)
+    "multi_asset": "multi_asset",
+    "real_assets": "multi_asset",      # RLY/RAAX = multi-asset real return
 }
 
 # ============= FIX v2.4.0-N: CROSS-PROFILE ETF PENALTY =============
