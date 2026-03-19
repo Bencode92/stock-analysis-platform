@@ -616,36 +616,43 @@ PRESET_MIN_QUOTAS: Dict[str, Dict[str, int]] = {
 # Super-groupe "resources" = energy + materials + miners + commodities
 # Empêche 5/5 ETFs dans le même macro-secteur
 MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
+    # v3.4: Energy séparé de resources — XLE/VDE/FENY sont corrélés >0.95
+    # Si 3 energy passent, dedup dans save_portfolios les fusionne → 1 ETF géant
     "Stable": {
-        "resources": 1,        # Max 1 ETF energy/materials/miners/commodities
-        "multi_asset": 1,      # v3.3.1: RLY/RAAX/MOOD = multi-asset, max 1
+        "energy": 1,           # v3.4: Max 1 energy ETF (XLE ou VDE, pas les deux)
+        "resources": 1,        # Max 1 non-energy resources (gold, materials, miners)
+        "multi_asset": 1,
         "dividend": 2,
-        "allocation": 1,       # v3.3.1: MDIV etc, max 1
+        "allocation": 1,
         "healthcare": 1,
         "default": 2,
     },
     "Modéré": {
-        "resources": 2,        # Max 2 ETFs energy/materials/miners/commodities
-        "multi_asset": 1,      # v3.3.1: max 1
+        "energy": 1,           # v3.4: Max 1 energy
+        "resources": 2,        # Max 2 non-energy resources
+        "multi_asset": 1,
         "dividend": 2,
-        "allocation": 1,       # v3.3.1: max 1
+        "allocation": 1,
         "healthcare": 1,
         "default": 2,
     },
     "Agressif": {
-        "resources": 3,        # Max 3 ETFs — force diversification vers tech/EM/intl
-        "multi_asset": 1,      # v3.3.1: max 1
-        "allocation": 1,       # v3.3.1: max 1
+        "energy": 1,           # v3.4: Max 1 energy (prevents XLE+VDE+FENY dedup disaster)
+        "resources": 2,        # Max 2 non-energy resources (gold + materials for diversification)
+        "multi_asset": 1,
+        "allocation": 1,
         "healthcare": 1,
         "default": 2,
     },
 }
 
 # Mapping exposure → group pour les caps
-# v3.3: Tous les commodities/energy/materials → super-groupe "resources"
+# v3.4: Energy séparé de resources (corr >0.95 entre XLE/VDE/FENY)
 EXPOSURE_TO_GROUP = {
-    # Resources super-group (energy + materials + miners + commodities)
-    "energy": "resources", "clean_energy": "resources", "uranium": "resources",
+    # Energy — separate group, cap 1 (XLE/VDE/FENY = quasi-identiques)
+    "energy": "energy", "clean_energy": "energy", "uranium": "energy",
+    
+    # Resources (non-energy: gold, materials, miners, commodities)
     "commodities": "resources",
     "gold_physical": "resources", "gold_miners": "resources",
     "silver_physical": "resources", "silver_miners": "resources",
