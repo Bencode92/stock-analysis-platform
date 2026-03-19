@@ -246,6 +246,47 @@ from typing import Dict, List, Optional, Any, Tuple, Union, Callable
 import numpy as np
 import pandas as pd
 
+# v3.1: Import exposure mapping for non-equity exclusion + RADAR
+try:
+    from portfolio_engine.etf_exposure import detect_etf_exposure
+    _HAS_EXPOSURE = True
+except ImportError:
+    try:
+        from etf_exposure import detect_etf_exposure
+        _HAS_EXPOSURE = True
+    except ImportError:
+        _HAS_EXPOSURE = False
+        logging.warning("etf_exposure.py not found — preferred securities exclusion disabled")
+
+# v3.1: Exposures that are NOT equity ETFs (exclude from all equity presets)
+NON_EQUITY_EXPOSURES = {
+    "preferred_stock", "convertibles", "covered_call",
+    "bonds_global", "bonds_hy", "bonds_ig", "bonds_muni",
+    "bonds_treasury", "bonds_multisector", "bonds_core",
+    "bonds_core_plus", "bonds_short", "bonds_long_gov",
+    "bonds_mbs", "bonds_target_maturity", "bonds_structured",
+    "bonds_nontraditional",
+    "derivative_income", "derivative_income_index",
+    "volatility_strategy", "currency",
+}
+
+# v3.1: RADAR sector penalty/bonus via exposure mapping
+RADAR_PENALTY_EXPOSURES = {
+    "financials": 0.85,
+    "communications": 0.85,
+    "consumer_discretionary": 0.85,
+    "telecom": 0.90,
+}
+RADAR_BONUS_EXPOSURES = {
+    "energy": 1.10,
+    "utilities": 1.10,
+    "materials": 1.10,
+    "natural_resources": 1.08,
+    "infrastructure": 1.05,
+    "clean_energy": 1.05,
+    "uranium": 1.05,
+}
+
 logger = logging.getLogger("portfolio_engine.preset_etf")
 
 
@@ -636,11 +677,11 @@ PRESET_RULES: Dict[str, Dict[str, float]] = {
         "vol_max": 35.0,
         "aum_min": 200_000_000,
     },
-    # v2.4.1: Healthcare sector rules
+    # v3.1: Healthcare sector rules (relaxed from v2.4.1)
     "sector_healthcare": {
-        "ter_max": 0.80,
-        "vol_max": 25.0,
-        "aum_min": 200_000_000,
+        "ter_max": 1.00,
+        "vol_max": 30.0,
+        "aum_min": 100_000_000,
     },
     "inflation_shield": {
         "ter_max": 1.20,
@@ -1050,7 +1091,24 @@ def _equity_like_gate(df: pd.DataFrame, allow_data_missing: bool = True) -> pd.S
         _is_options_overlay(reasons) |
         _is_leveraged(df)
     )
-    ok = ~is_alt & ~is_bad
+    # v3.1: Exclude non-equity via exposure mapping (preferred, bonds, etc.)
+    is_non_equity = pd.Series(False, index=df.index)
+    if _HAS_EXPOSURE:
+        sym_col = _get_symbol(df)
+        name_col = _safe_series(df, "name").fillna("").astype(str)
+        ft_col = _safe_series(df, "fund_type").fillna("").astype(str)
+        for idx in df.index:
+            exp = detect_etf_exposure(
+                name=name_col.get(idx, ""),
+                ticker=sym_col.get(idx, ""),
+                fund_type=ft_col.get(idx, ""),
+            )
+            if exp and exp in NON_EQUITY_EXPOSURES:
+                is_non_equity.at[idx] = True
+        n_excluded = is_non_equity.sum()
+        if n_excluded > 0:
+            logger.info(f"[v3.1] _equity_like_gate: {n_excluded} non-equity ETFs excluded via exposure")
+    ok = ~is_alt & ~is_bad & ~is_non_equity
     if not allow_data_missing:
         ok &= ~bucket.isin(BUCKET_DATA_MISSING)
     return ok
@@ -1884,6 +1942,28 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         total_weight += w
     if total_weight > 0:
         total /= total_weight
+    
+    # v3.1: RADAR sector penalty/bonus via exposure mapping
+    if _HAS_EXPOSURE:
+        _sym_col = _get_symbol(df)
+        _name_col = _safe_series(df, "name").fillna("").astype(str)
+        _ft_col = _safe_series(df, "fund_type").fillna("").astype(str)
+        radar_adj_count = 0
+        for idx in df.index:
+            exp = detect_etf_exposure(
+                name=_name_col.get(idx, ""),
+                ticker=_sym_col.get(idx, ""),
+                fund_type=_ft_col.get(idx, ""),
+            )
+            if exp:
+                if exp in RADAR_PENALTY_EXPOSURES:
+                    total.at[idx] *= RADAR_PENALTY_EXPOSURES[exp]
+                    radar_adj_count += 1
+                elif exp in RADAR_BONUS_EXPOSURES:
+                    total.at[idx] *= RADAR_BONUS_EXPOSURES[exp]
+                    radar_adj_count += 1
+        if radar_adj_count > 0:
+            logger.info(f"[v3.1 {profile}] RADAR adjustments: {radar_adj_count} ETFs")
     
     logger.warning(f"[DEBUG {profile}] === SCORES COMPOSANTS ===")
     for component in scores.columns:
