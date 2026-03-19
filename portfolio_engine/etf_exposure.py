@@ -963,7 +963,7 @@ TICKER_TO_EXPOSURE = {
     "zkbgf": "gold_physical",
 
     # === GROWTH (60) ===
-    "aor": "growth",
+    "aor": "allocation_balanced",
     "aotg": "growth",
     "aweg": "growth",
     "bamg": "growth",
@@ -1821,7 +1821,7 @@ TICKER_TO_EXPOSURE = {
     "rspu": "sp500",
     "rtm": "sp500",
     "rwl": "sp500",
-    "rye": "sp500",
+    "rye": "energy",
     "ryf": "sp500",
     "ryh": "sp500",
     "ryt": "sp500",
@@ -2388,7 +2388,7 @@ TICKER_TO_EXPOSURE = {
     "btal": "market_neutral",
     "qai": "multi_strategy",
     "hndl": "allocation_balanced", "cgbl": "allocation_balanced",
-    "mdiv": "allocation_balanced",
+    "mdiv": "allocation_income",
     "yyy": "allocation_income",
     "cefs": "closed_end_fund",
     "svxy": "volatility_strategy", "uvxy": "volatility_strategy",
@@ -2561,6 +2561,34 @@ TICKER_TO_EXPOSURE = {
     # Preferred / Factor / Other
     "pffd": "preferred_stock", "pffv": "preferred_stock",
     "ausf": "multifactor", "psp": "private_equity",
+
+    # === FIX v3.1: Tickers manquants (ranking v3, 2026-03-19) ===
+    # Preferred Securities (exclusion non-equity)
+    "fpe": "preferred_stock",       # First Trust Preferred Securities & Income
+    
+    # Energy (RADAR FAVORED)
+    "xes": "energy",               # SPDR S&P Oil & Gas Equipment
+    "xop": "energy",               # SPDR S&P Oil & Gas E&P
+    "oih": "energy",               # VanEck Oil Services
+    "ieo": "energy",               # iShares U.S. Oil & Gas E&P
+    "iez": "energy",               # iShares U.S. Oil Equipment
+    "crak": "energy",              # VanEck Oil Refiners
+    "amlp": "energy",              # Alerian MLP ETF
+    
+    # US Market
+    "vxf": "us_total_market",      # Vanguard Extended Market
+    
+    # Real Assets / Multi-Strategy
+    "ppi": "real_assets",          # Astoria Real Assets
+    "mood": "multifactor",         # Relative Sentiment Tactical
+    
+    # Dividend
+    "cdc": "dividend",             # VictoryShares US EQ Income
+    
+    # Healthcare (quota garanti)
+    "fcvt": "healthcare",          # First Trust Cardiovascular
+    "xhs": "healthcare",           # SPDR S&P Health Care Services
+
 }
 
 # =============================================================================
