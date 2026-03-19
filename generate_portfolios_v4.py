@@ -5527,6 +5527,72 @@ def save_portfolios(portfolios: Dict, assets: list):
             _p_data["_numeric_weights"] = _nw
             logger.info(f"   [{_p_name}] 💣 NUCLEAR: Display sections rebuilt after cap")
     
+    # === v3.3 CRYPTO NUCLEAR CAP: Force crypto <= crypto_max ABSOLUTE LAST ===
+    # ETF dedup, equity cap, and ETF cap all redistribute to non-equity including crypto.
+    # This final cap ensures crypto never exceeds the profile limit in the output JSON.
+    _CRYPTO_MAX_BY_PROFILE = {"Agressif": 0.10, "Modéré": 0.05, "Stable": 0.0}
+    try:
+        from optimizer import PROFILES as _OPT_PROFILES
+        for _pn in _CRYPTO_MAX_BY_PROFILE:
+            _op = _OPT_PROFILES.get(_pn)
+            if _op:
+                _CRYPTO_MAX_BY_PROFILE[_pn] = getattr(_op, "crypto_max", 10.0) / 100.0
+    except Exception:
+        pass  # Use defaults above
+    
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        _meta = _p_data.get("_tickers_meta", {})
+        if not _t:
+            continue
+        _crypto_max_dec = _CRYPTO_MAX_BY_PROFILE.get(_p_name, 0.10)
+        
+        # Find crypto tickers via _tickers_meta category
+        _crypto_tks = [k for k in _t if _meta.get(k, {}).get("category") == "Crypto"]
+        _crypto_total = sum(_t.get(k, 0) for k in _crypto_tks)
+        
+        if _crypto_total > _crypto_max_dec + 0.001 and _crypto_tks:
+            _ratio = _crypto_max_dec / _crypto_total if _crypto_total > 0 else 0
+            _freed = 0.0
+            for _ck in _crypto_tks:
+                _old = _t[_ck]
+                _new = _old * _ratio
+                if _new < 0.005:
+                    _freed += _old
+                    del _t[_ck]
+                else:
+                    _freed += _old - _new
+                    _t[_ck] = _new
+                logger.info(f"   [{_p_name}] 🪙 CRYPTO CAP: {_ck} {_old*100:.1f}%→{_new*100:.1f}%")
+            
+            # Redistribute to non-crypto
+            _non_crypto = {k: v for k, v in _t.items() if k not in _crypto_tks and v > 0}
+            _total_nc = sum(_non_crypto.values())
+            if _total_nc > 0 and _freed > 0.001:
+                for k in _non_crypto:
+                    _t[k] += _freed * (_non_crypto[k] / _total_nc)
+            
+            # Rebuild display
+            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                _p_data[_cat] = {}
+            _nw = {}
+            for _tk, _w_dec in _t.items():
+                _w_pct = round(_w_dec * 100, 1)
+                if _w_pct < 0.1:
+                    continue
+                _info = _meta.get(_tk, {})
+                _cat = _info.get("category", "ETF")
+                _nm = _info.get("name", _tk)
+                _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+                _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+                _nw[f"{_cat}:{_display}"] = _w_pct
+            _p_data["_numeric_weights"] = _nw
+            _crypto_after = sum(_t.get(k, 0) for k in _crypto_tks if k in _t) * 100
+            logger.info(f"   [{_p_name}] 🪙 CRYPTO NUCLEAR CAP: {_crypto_total*100:.1f}%→{_crypto_after:.1f}% (max={_crypto_max_dec*100:.0f}%)")
+    
     v1_path = CONFIG["output_path"]
     with open(v1_path, "w", encoding="utf-8") as f:
         json.dump(v1_data, f, ensure_ascii=False, indent=2)
