@@ -2556,7 +2556,7 @@ TICKER_TO_EXPOSURE = {
     # Allocation
     "aoa": "allocation_aggressive", "aok": "allocation_conservative",
     "aom": "allocation_balanced", "pcef": "allocation_income",
-    "raax": "real_assets", "rly": "real_assets",
+    "raax": "multi_asset", "rly": "multi_asset",
 
     # Preferred / Factor / Other
     "pffd": "preferred_stock", "pffv": "preferred_stock",
@@ -2580,13 +2580,13 @@ TICKER_TO_EXPOSURE = {
     
     # Real Assets / Multi-Strategy
     "ppi": "real_assets",          # Astoria Real Assets
-    "mood": "multifactor",         # Relative Sentiment Tactical
+    "mood": "multi_asset",         # Relative Sentiment Tactical
     
     # Dividend
     "cdc": "dividend",             # VictoryShares US EQ Income
     
     # Healthcare (quota garanti)
-    "fcvt": "healthcare",          # First Trust Cardiovascular
+    "fcvt": "convertibles",          # First Trust SSI Strategic Convertible (NOT healthcare)
     "xhs": "healthcare",           # SPDR S&P Health Care Services
 
 }
