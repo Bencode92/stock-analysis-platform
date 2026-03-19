@@ -962,6 +962,31 @@ def post_process_allocation(
     allocation = {k: float(v) for k, v in allocation.items()}
     allocation = round_weights_to_100(allocation, decimals=2)
     
+    # v3.3: ENFORCE CRYPTO CAP after normalization
+    # round_weights_to_100 scales proportionally → crypto can exceed cap
+    crypto_max = getattr(profile_config, "crypto_max", 10.0)
+    crypto_ids = [k for k, v in allocation.items() if "crypto" in k.lower() or "btc" in k.lower() or "eth" in k.lower() or "dcr" in k.lower() or "/usd" in k.lower()]
+    crypto_total = sum(allocation.get(k, 0) for k in crypto_ids)
+    if crypto_total > crypto_max + 0.1 and crypto_ids:
+        excess = crypto_total - crypto_max
+        # Scale down crypto proportionally
+        ratio = crypto_max / crypto_total if crypto_total > 0 else 0
+        freed = 0.0
+        for cid in crypto_ids:
+            old_w = allocation[cid]
+            new_w = round(old_w * ratio, 2)
+            freed += old_w - new_w
+            allocation[cid] = new_w
+        # Redistribute to non-crypto
+        non_crypto = {k: v for k, v in allocation.items() if k not in crypto_ids and v > 0}
+        if non_crypto and freed > 0.1:
+            total_nc = sum(non_crypto.values())
+            for k in non_crypto:
+                allocation[k] = round(allocation[k] + freed * (non_crypto[k] / total_nc), 2)
+        # Final normalization
+        allocation = round_weights_to_100(allocation, decimals=2)
+        logger.info(f"   [{profile_name}] v3.3: Crypto capped {crypto_total:.1f}% → {crypto_max}% (excess {excess:.1f}% redistributed)")
+    
     return allocation
 
 
