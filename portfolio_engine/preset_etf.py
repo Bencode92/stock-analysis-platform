@@ -287,6 +287,23 @@ RADAR_BONUS_EXPOSURES = {
     "uranium": 1.05,
 }
 
+# v3.1.1: RADAR penalty/bonus via sector_top (fallback quand exposure ne matche pas)
+# SPDW a exposure="eafe" mais sector_top="Financial Services" → doit être pénalisé
+RADAR_PENALTY_SECTOR_TOP = {
+    "financial services": 0.85,
+    "financials": 0.85,
+    "communication services": 0.85,
+    "consumer cyclical": 0.88,
+    "consumer discretionary": 0.88,
+}
+RADAR_BONUS_SECTOR_TOP = {
+    "energy": 1.10,
+    "utilities": 1.10,
+    "basic materials": 1.10,
+    "materials": 1.10,
+    "industrials": 1.03,
+}
+
 logger = logging.getLogger("portfolio_engine.preset_etf")
 
 
@@ -581,10 +598,10 @@ PRESET_MIN_QUOTAS: Dict[str, Dict[str, int]] = {
         "or_physique": 1,
     },
     "Modéré": {
-        "coeur_global": 3,
+        "coeur_global": 1,           # v3.1.2: 3→1 (SPDW/SCHV remplissaient 3 slots)
         "multi_factor": 2,
-        "qualite_value": 2,
-        "rendement_etf": 2,
+        "qualite_value": 1,          # v3.1.2: 2→1 (libère slot pour energy/HC)
+        "rendement_etf": 1,          # v3.1.2: 2→1 (SCHD suffit)
         "croissance_tech": 2,
         "emergents": 2,
         "sector_defensive": 1,
@@ -1943,7 +1960,8 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
     if total_weight > 0:
         total /= total_weight
     
-    # v3.1: RADAR sector penalty/bonus via exposure mapping
+    # v3.1.1: RADAR sector penalty/bonus via exposure + sector_top fallback
+    _st_col = _get_sector_top(df)  # sector_top column (lowercase)
     if _HAS_EXPOSURE:
         _sym_col = _get_symbol(df)
         _name_col = _safe_series(df, "name").fillna("").astype(str)
@@ -1955,15 +1973,41 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
                 ticker=_sym_col.get(idx, ""),
                 fund_type=_ft_col.get(idx, ""),
             )
+            adjusted = False
+            # Priority 1: Check exposure mapping
             if exp:
                 if exp in RADAR_PENALTY_EXPOSURES:
                     total.at[idx] *= RADAR_PENALTY_EXPOSURES[exp]
-                    radar_adj_count += 1
+                    adjusted = True
                 elif exp in RADAR_BONUS_EXPOSURES:
                     total.at[idx] *= RADAR_BONUS_EXPOSURES[exp]
-                    radar_adj_count += 1
+                    adjusted = True
+            # Priority 2: Fallback on sector_top (catches SPDW=eafe with sector_top=Financial Services)
+            if not adjusted:
+                st = _st_col.get(idx, "").lower().strip()
+                if st in RADAR_PENALTY_SECTOR_TOP:
+                    total.at[idx] *= RADAR_PENALTY_SECTOR_TOP[st]
+                    adjusted = True
+                elif st in RADAR_BONUS_SECTOR_TOP:
+                    total.at[idx] *= RADAR_BONUS_SECTOR_TOP[st]
+                    adjusted = True
+            if adjusted:
+                radar_adj_count += 1
         if radar_adj_count > 0:
-            logger.info(f"[v3.1 {profile}] RADAR adjustments: {radar_adj_count} ETFs")
+            logger.info(f"[v3.1.1 {profile}] RADAR adjustments: {radar_adj_count} ETFs")
+    else:
+        # No exposure module — use sector_top only
+        radar_adj_count = 0
+        for idx in df.index:
+            st = _st_col.get(idx, "").lower().strip()
+            if st in RADAR_PENALTY_SECTOR_TOP:
+                total.at[idx] *= RADAR_PENALTY_SECTOR_TOP[st]
+                radar_adj_count += 1
+            elif st in RADAR_BONUS_SECTOR_TOP:
+                total.at[idx] *= RADAR_BONUS_SECTOR_TOP[st]
+                radar_adj_count += 1
+        if radar_adj_count > 0:
+            logger.info(f"[v3.1.1 {profile}] RADAR sector_top adjustments: {radar_adj_count} ETFs")
     
     logger.warning(f"[DEBUG {profile}] === SCORES COMPOSANTS ===")
     for component in scores.columns:
