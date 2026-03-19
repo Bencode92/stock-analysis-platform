@@ -958,7 +958,7 @@ PROFILES = {
         vol_target=6.0,
         vol_tolerance=3.0,
         crypto_max=0.0, 
-        bonds_min=40.0,            # v3.1: 45→40% (libère 5% pour 3 ETFs au lieu de 2)
+        bonds_min=35.0,            # v3.1.2: 40→35% (3 ETFs need ~21%, actions ~34%, bonds ~35%)
         bonds_max=65.0,            # FIX v2.4.0-M: 60→65% (marge pour 5 bonds)
         max_turnover=15.0,
         turnover_penalty=0.20,
@@ -3444,6 +3444,8 @@ class PortfolioOptimizer:
                 allocation = self._adjust_to_100(allocation, profile)
                # === P0 FIX v6.22: FORCE CRYPTO CAP POST-SLSQP ===
                 allocation = self._enforce_crypto_cap(allocation, candidates, profile)
+                # === v3.1.1: FORCE MINIMUM ETF COUNT POST-SLSQP ===
+                allocation = self._enforce_min_etf_count(allocation, candidates, profile)
 
                 # === v6.24 FIX: APPLIQUER CORE/SATELLITE POST-SLSQP ===
                 allocation = self._apply_crypto_core_satellite(allocation, candidates, profile)
@@ -4058,6 +4060,7 @@ class PortfolioOptimizer:
             non_bonds = sorted(
                 [(aid, w) for aid, w in allocation.items()
                  if asset_lookup.get(aid) and asset_lookup[aid].category != "Obligations"
+                 and asset_lookup[aid].category != "ETF"  # v3.1.2: Protect ETFs from bond sourcing
                  and w > 3.0],
                 key=lambda x: (-x[1], x[0])
             )
@@ -4186,63 +4189,102 @@ class PortfolioOptimizer:
         profile: ProfileConstraints,
     ) -> Dict[str, float]:
         """
-        v3.1: Force minimum ETF count in final allocation.
+        v3.1.1: Force minimum ETF count in final allocation.
         Stable had only 2 ETFs (13.6%) — ensures at least 3.
         Funds sourced from bonds (reduce largest bond positions).
         """
         min_etf = MIN_ETF_IN_FINAL.get(profile.name, 3)
         asset_lookup = {c.id: c for c in candidates}
         
+        # Count ETFs currently in allocation with meaningful weight
         etf_in_alloc = [
             (aid, w) for aid, w in allocation.items()
             if asset_lookup.get(aid) and asset_lookup[aid].category == "ETF" and w > 1.0
         ]
         
+        logger.info(
+            f"[v3.1.1 {profile.name}] _enforce_min_etf_count: "
+            f"{len(etf_in_alloc)} ETFs in alloc (min={min_etf}), "
+            f"etf_ids={[asset_lookup[a].ticker for a, w in etf_in_alloc if asset_lookup.get(a)]}"
+        )
+        
         if len(etf_in_alloc) >= min_etf:
             return allocation
         
-        # Find ETFs in candidates not yet in allocation (or with tiny weight)
+        # Find ALL ETFs in candidates not yet meaningfully allocated
+        all_etf_candidates = [
+            c for c in candidates
+            if c.category == "ETF"
+            and c.id not in dict(etf_in_alloc)  # Not already counted
+        ]
+        
+        # Sort by score (best first)
         etf_candidates = sorted(
-            [c for c in candidates
-             if c.category == "ETF"
-             and allocation.get(c.id, 0) < 1.0],
-            key=lambda x: (-getattr(x, "_select_score", x.score), x.id)
+            all_etf_candidates,
+            key=lambda x: (-getattr(x, "_select_score", getattr(x, "score", 0)), x.id)
         )
         
         needed = min_etf - len(etf_in_alloc)
+        logger.info(
+            f"[v3.1.1 {profile.name}] Need {needed} more ETFs, "
+            f"{len(etf_candidates)} candidates available: "
+            f"{[c.ticker for c in etf_candidates[:5]]}"
+        )
+        
         if not etf_candidates or needed <= 0:
+            logger.warning(
+                f"[v3.1.1 {profile.name}] Cannot inject ETFs: "
+                f"needed={needed}, candidates={len(etf_candidates)}"
+            )
             return allocation
         
-        # Source funding from largest bond positions
-        bond_ids = sorted(
+        # Source funding from largest bond positions (take from bonds > 3%)
+        bond_sources = sorted(
             [(aid, w) for aid, w in allocation.items()
-             if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations" and w > 5.0],
+             if asset_lookup.get(aid) and asset_lookup[aid].category == "Obligations" and w > 3.0],
             key=lambda x: -x[1]
+        )
+        
+        logger.info(
+            f"[v3.1.1 {profile.name}] Bond funding sources: "
+            f"{[(asset_lookup[a].ticker, round(w, 1)) for a, w in bond_sources if asset_lookup.get(a)]}"
         )
         
         per_etf_weight = 5.0  # Target 5% per new ETF
         added = 0
         for etf_cand in etf_candidates[:needed]:
             funded = 0.0
-            for i, (bid, bw) in enumerate(bond_ids):
+            for i, (bid, bw) in enumerate(bond_sources):
                 if funded >= per_etf_weight:
                     break
-                take = min(per_etf_weight - funded, allocation.get(bid, 0) - 5.0)
-                if take > 0.5:
-                    allocation[bid] = round(allocation[bid] - take, 2)
+                current_bond_w = allocation.get(bid, 0)
+                # Keep at least 3% per bond position
+                available = current_bond_w - 3.0
+                take = min(per_etf_weight - funded, available)
+                if take > 0.3:
+                    allocation[bid] = round(current_bond_w - take, 2)
                     funded += take
-                    bond_ids[i] = (bid, allocation[bid])
+                    bond_sources[i] = (bid, allocation[bid])
             
-            if funded >= 2.0:  # At least 2% to be meaningful
-                allocation[etf_cand.id] = round(funded, 2)
+            if funded >= 1.5:  # At least 1.5% to be meaningful
+                # If ETF already in allocation with tiny weight, add to it
+                existing_w = allocation.get(etf_cand.id, 0)
+                allocation[etf_cand.id] = round(existing_w + funded, 2)
                 added += 1
                 logger.info(
-                    f"[v3.1 {profile.name}] Injected ETF {etf_cand.ticker} "
-                    f"at {funded:.1f}% (min_etf={min_etf})"
+                    f"[v3.1.1 {profile.name}] ✅ Injected ETF {etf_cand.ticker} "
+                    f"at {allocation[etf_cand.id]:.1f}% (sourced {funded:.1f}% from bonds)"
+                )
+            else:
+                logger.warning(
+                    f"[v3.1.1 {profile.name}] ❌ Could not fund ETF {etf_cand.ticker} "
+                    f"(only {funded:.1f}% available from bonds)"
                 )
         
         if added > 0:
-            logger.info(f"[v3.1] _enforce_min_etf_count: added {added} ETFs for {profile.name}")
+            logger.info(f"[v3.1.1] _enforce_min_etf_count: added {added} ETFs for {profile.name}")
+        else:
+            logger.warning(f"[v3.1.1] _enforce_min_etf_count: FAILED to add ETFs for {profile.name}")
         
         return allocation
 
@@ -4423,6 +4465,8 @@ class PortfolioOptimizer:
             allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
             allocation = self._enforce_bonds_maximum(allocation, candidates, profile)  # PATCH v8.4
             allocation = self._enforce_sector_caps(allocation, candidates, profile)
+            # v3.1.1: Force minimum ETF count (Stable: 3)
+            allocation = self._enforce_min_etf_count(allocation, candidates, profile)
            
             
             # 3. Normaliser à 100% (avec respect cap bond)
