@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-19-10-35-53",
-    "git_sha": "4fdb136ac",
-    "git_sha_full": "4fdb136ac7c60171889f41712886f91da437a9de",
+    "run_id": "2026-03-19-12-42-49",
+    "git_sha": "f93eed4d0",
+    "git_sha_full": "f93eed4d0354b51e71dde7ade282ee8bdf1e9e52",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-19",
-    "timestamp_utc": "2026-03-19T10:35:53.126451+00:00",
+    "timestamp_utc": "2026-03-19T12:42:49.893419+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 185.15
+    "total_duration_sec": 206.25
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -93,8 +93,8 @@
     },
     "5_selection_etf_Agressif": {
       "name": "selection_etf",
-      "before": 100,
-      "after": 100,
+      "before": 17,
+      "after": 17,
       "rejected": 0,
       "category": "etf",
       "profile": "Agressif",
@@ -108,36 +108,36 @@
           "score": 99.87
         },
         {
-          "ticker": "FENY",
-          "score": 99.74
-        },
-        {
-          "ticker": "XOP",
-          "score": 99.61
-        },
-        {
           "ticker": "GDXJ",
           "score": 99.49
         },
         {
-          "ticker": "OIH",
-          "score": 99.36
+          "ticker": "REMX",
+          "score": 98.46
         },
         {
-          "ticker": "IXC",
-          "score": 99.23
+          "ticker": "PSCE",
+          "score": 98.33
         },
         {
-          "ticker": "SLVP",
-          "score": 99.1
+          "ticker": "GDE",
+          "score": 97.3
         },
         {
-          "ticker": "URA",
-          "score": 98.97
+          "ticker": "XLU",
+          "score": 96.53
         },
         {
-          "ticker": "RYE",
-          "score": 98.84
+          "ticker": "VPU",
+          "score": 95.75
+        },
+        {
+          "ticker": "GNR",
+          "score": 95.37
+        },
+        {
+          "ticker": "NANR",
+          "score": 94.72
         }
       ]
     },
@@ -273,8 +273,8 @@
     },
     "5_selection_etf_Modéré": {
       "name": "selection_etf",
-      "before": 100,
-      "after": 100,
+      "before": 9,
+      "after": 9,
       "rejected": 0,
       "category": "etf",
       "profile": "Modéré",
@@ -288,36 +288,32 @@
           "score": 99.77
         },
         {
-          "ticker": "VSS",
-          "score": 99.55
-        },
-        {
-          "ticker": "FNDF",
-          "score": 99.32
-        },
-        {
           "ticker": "GCOW",
           "score": 99.1
         },
         {
-          "ticker": "DFIC",
-          "score": 98.87
+          "ticker": "GUNR",
+          "score": 70.88
         },
         {
-          "ticker": "VPL",
-          "score": 98.65
+          "ticker": "GNR",
+          "score": 64.79
         },
         {
-          "ticker": "CDC",
-          "score": 98.42
+          "ticker": "CERY",
+          "score": 39.73
         },
         {
-          "ticker": "SCHC",
-          "score": 98.19
+          "ticker": "GLDM",
+          "score": 39.5
         },
         {
-          "ticker": "LVHD",
-          "score": 97.97
+          "ticker": "BCD",
+          "score": 30.07
+        },
+        {
+          "ticker": "QQQ",
+          "score": 24.66
         }
       ]
     },
@@ -3527,8 +3523,21 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 91.0,
+    "details": {
+      "5_selection_etf_Agressif.after": {
+        "current": 17,
+        "previous": 100,
+        "delta": -83,
+        "pct_change": 83.0
+      },
+      "5_selection_etf_Modéré.after": {
+        "current": 9,
+        "previous": 100,
+        "delta": -91,
+        "pct_change": 91.0
+      }
+    }
   }
 }
