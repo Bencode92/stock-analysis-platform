@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-19-14-07-19",
-    "git_sha": "c351c8c63",
-    "git_sha_full": "c351c8c6397af1917d509c6211d339a89965ae92",
+    "run_id": "2026-03-19-14-36-31",
+    "git_sha": "078f9f09b",
+    "git_sha_full": "078f9f09b6bf4d1ff4df2bc1e725763b89e9b942",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-19",
-    "timestamp_utc": "2026-03-19T14:07:19.552711+00:00",
+    "timestamp_utc": "2026-03-19T14:36:31.223830+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 195.84
+    "total_duration_sec": 217.9
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -93,8 +93,8 @@
     },
     "5_selection_etf_Agressif": {
       "name": "selection_etf",
-      "before": 15,
-      "after": 15,
+      "before": 16,
+      "after": 16,
       "rejected": 0,
       "category": "etf",
       "profile": "Agressif",
@@ -113,31 +113,31 @@
         },
         {
           "ticker": "FLKR",
-          "score": 99.23
+          "score": 99.22
         },
         {
           "ticker": "EWY",
-          "score": 97.04
+          "score": 97.03
         },
         {
           "ticker": "SOXX",
-          "score": 96.65
+          "score": 96.64
         },
         {
           "ticker": "SMH",
-          "score": 96.14
+          "score": 96.12
         },
         {
           "ticker": "XLU",
-          "score": 96.01
+          "score": 95.99
         },
         {
           "ticker": "VPU",
-          "score": 94.59
+          "score": 94.83
         },
         {
           "ticker": "SCHD",
-          "score": 92.02
+          "score": 91.99
         }
       ]
     },
@@ -3528,7 +3528,14 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 6.67,
+    "details": {
+      "5_selection_etf_Agressif.after": {
+        "current": 16,
+        "previous": 15,
+        "delta": 1,
+        "pct_change": 6.67
+      }
+    }
   }
 }
