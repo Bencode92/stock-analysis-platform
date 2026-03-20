@@ -2050,12 +2050,26 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
         total /= total_weight
     
     # v3.1.1: RADAR sector penalty/bonus via exposure + sector_top fallback
+    # v5.4.0 P2: Beta gate — RADAR bonus only if ETF beta >= profile threshold
+    # Expert rec: XLU (beta 0.32) should not get bonus in Agressif
+    # Penalties always apply (avoid financials regardless of beta)
+    _RADAR_BETA_MIN = {
+        "Agressif": 0.80,   # Only high-beta ETFs get RADAR boost
+        "Modéré": 0.40,     # Most pass except ultra-defensive
+        "Stable": 0.0,      # No beta gate — low-beta welcome
+    }
+    _beta_gate = _RADAR_BETA_MIN.get(profile, 0.0)
+    _has_beta_col = "beta" in df.columns
+    if _has_beta_col:
+        _beta_col = pd.to_numeric(df["beta"], errors="coerce")
+    
     _st_col = _get_sector_top(df)  # sector_top column (lowercase)
     if _HAS_EXPOSURE:
         _sym_col = _get_symbol(df)
         _name_col = _safe_series(df, "name").fillna("").astype(str)
         _ft_col = _safe_series(df, "fund_type").fillna("").astype(str)
         radar_adj_count = 0
+        radar_beta_blocked = 0
         for idx in df.index:
             exp = detect_etf_exposure(
                 name=_name_col.get(idx, ""),
@@ -2063,14 +2077,24 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
                 fund_type=_ft_col.get(idx, ""),
             )
             adjusted = False
+            # Get beta for this ETF (null = no gate, let bonus through)
+            _etf_beta = _beta_col.get(idx) if _has_beta_col else None
+            _beta_ok = (_etf_beta is None) or (pd.isna(_etf_beta)) or (_etf_beta >= _beta_gate)
+            
             # Priority 1: Check exposure mapping
             if exp:
                 if exp in RADAR_PENALTY_EXPOSURES:
+                    # Penalties always apply regardless of beta
                     total.at[idx] *= RADAR_PENALTY_EXPOSURES[exp]
                     adjusted = True
                 elif exp in RADAR_BONUS_EXPOSURES:
-                    total.at[idx] *= RADAR_BONUS_EXPOSURES[exp]
-                    adjusted = True
+                    if _beta_ok:
+                        total.at[idx] *= RADAR_BONUS_EXPOSURES[exp]
+                        adjusted = True
+                    else:
+                        # Beta too low for this profile — skip bonus
+                        radar_beta_blocked += 1
+                        adjusted = True  # Don't fall through to sector_top
             # Priority 2: Fallback on sector_top (catches SPDW=eafe with sector_top=Financial Services)
             if not adjusted:
                 st = _st_col.get(idx, "").lower().strip()
@@ -2078,25 +2102,39 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
                     total.at[idx] *= RADAR_PENALTY_SECTOR_TOP[st]
                     adjusted = True
                 elif st in RADAR_BONUS_SECTOR_TOP:
-                    total.at[idx] *= RADAR_BONUS_SECTOR_TOP[st]
-                    adjusted = True
+                    if _beta_ok:
+                        total.at[idx] *= RADAR_BONUS_SECTOR_TOP[st]
+                        adjusted = True
+                    else:
+                        radar_beta_blocked += 1
+                        adjusted = True
             if adjusted:
                 radar_adj_count += 1
         if radar_adj_count > 0:
             logger.info(f"[v3.1.1 {profile}] RADAR adjustments: {radar_adj_count} ETFs")
+        if radar_beta_blocked > 0:
+            logger.info(f"[v5.4.0 {profile}] RADAR beta gate: {radar_beta_blocked} bonus blocked (beta < {_beta_gate})")
     else:
         # No exposure module — use sector_top only
         radar_adj_count = 0
+        radar_beta_blocked = 0
         for idx in df.index:
             st = _st_col.get(idx, "").lower().strip()
+            _etf_beta = _beta_col.get(idx) if _has_beta_col else None
+            _beta_ok = (_etf_beta is None) or (pd.isna(_etf_beta)) or (_etf_beta >= _beta_gate)
             if st in RADAR_PENALTY_SECTOR_TOP:
                 total.at[idx] *= RADAR_PENALTY_SECTOR_TOP[st]
                 radar_adj_count += 1
             elif st in RADAR_BONUS_SECTOR_TOP:
-                total.at[idx] *= RADAR_BONUS_SECTOR_TOP[st]
-                radar_adj_count += 1
+                if _beta_ok:
+                    total.at[idx] *= RADAR_BONUS_SECTOR_TOP[st]
+                    radar_adj_count += 1
+                else:
+                    radar_beta_blocked += 1
         if radar_adj_count > 0:
             logger.info(f"[v3.1.1 {profile}] RADAR sector_top adjustments: {radar_adj_count} ETFs")
+        if radar_beta_blocked > 0:
+            logger.info(f"[v5.4.0 {profile}] RADAR beta gate (fallback): {radar_beta_blocked} bonus blocked")
     
     logger.warning(f"[DEBUG {profile}] === SCORES COMPOSANTS ===")
     for component in scores.columns:
