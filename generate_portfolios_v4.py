@@ -5524,8 +5524,10 @@ def save_portfolios(portfolios: Dict, assets: list):
                 _t[_new_tk] = _old_w
                 # Update meta
                 _meta[_new_tk] = {
+                    "weight": _old_w,
                     "category": "ETF",
                     "name": {"IUSV": "iShares Core S&P U.S. Value ETF"}.get(_new_tk, _new_tk),
+                    "asset_ids": [],
                 }
                 logger.info(
                     f"   [{_p_name}] 🔄 P0-3 CROSS-PROFILE: {_old_tk} ({_old_w*100:.1f}%) "
@@ -5597,7 +5599,7 @@ def save_portfolios(portfolios: Dict, assets: list):
             if _largest and _largest[1] > _HC_TARGET_WEIGHT + 0.02:
                 _t[_largest[0]] -= _HC_TARGET_WEIGHT
                 _t[_hc_tk] = _HC_TARGET_WEIGHT
-                _meta[_hc_tk] = {"category": "ETF", "name": _hc_name, "exposure": "healthcare"}
+                _meta[_hc_tk] = {"weight": _HC_TARGET_WEIGHT, "category": "ETF", "name": _hc_name, "exposure": "healthcare", "asset_ids": []}
                 logger.info(
                     f"   [{_p_name}] 🏥 P0-4: Injected {_hc_tk} at {_HC_TARGET_WEIGHT*100:.1f}% "
                     f"(took from {_largest[0]})"
@@ -5630,7 +5632,7 @@ def save_portfolios(portfolios: Dict, assets: list):
                     f"   [{_p_name}] 🏥 P0-4: Replaced {_worst_tk} ({_worst_w*100:.1f}%) "
                     f"with {_hc_tk} — HC ETF enforcement"
                 )
-            _meta[_hc_tk] = {"category": "ETF", "name": _hc_name, "exposure": "healthcare"}
+            _meta[_hc_tk] = {"weight": _t.get(_hc_tk, _HC_TARGET_WEIGHT), "category": "ETF", "name": _hc_name, "exposure": "healthcare", "asset_ids": []}
         
         # Rebuild display
         for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
@@ -6181,4 +6183,3 @@ def test_scoring_modes():
 
 if __name__ == "__main__":
     main()
-          
