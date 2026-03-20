@@ -1,7 +1,9 @@
 // etf-bond-daily-metrics.js
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
 // Calcule: daily % (quote), YTD %, 1Y %, 1M %, 3M %, Vol 3Y % (annualisée) depuis /time_series
+// + Beta CAPM 126j vs SPY (P1)
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
+// v2.9: Beta CAPM 126j — Cov(Ri,Rm)/Var(Rm) vs SPY, 1 seul appel API supplémentaire
 // v2.8: Préserver colonnes Sector Guard (sector_bucket, sector_trust, sector_signal_ok, underlying_ticker)
 // v2.7: Anchor all date calculations on last.datetime (robustness fix for weekends/holidays)
 // v2.6: Add perf_1m_pct and perf_3m_pct for momentum scoring
@@ -84,6 +86,57 @@ function findCloseOnOrAfter(values, targetDate) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// v2.9: BETA CAPM — Cov(Ri,Rm) / Var(Rm)
+// Fenêtre par défaut: 126 jours de trading (~6 mois)
+// Benchmark: SPY (passé en paramètre)
+// Alignement par date (inner join) pour gérer les jours fériés
+// ═══════════════════════════════════════════════════════════════
+function computeBeta(assetValues, benchValues, window = 126) {
+  if (!assetValues || !benchValues || assetValues.length < 22 || benchValues.length < 22) return null;
+
+  // Trier du + ancien au + récent
+  const sortAsc = arr => [...arr].sort((a,b) => parseISODate(a.datetime) - parseISODate(b.datetime));
+  const assetSorted = sortAsc(assetValues);
+  const benchSorted = sortAsc(benchValues);
+
+  // Aligner par date (inner join sur datetime)
+  const benchMap = new Map(benchSorted.map(v => [v.datetime, Number(v.close)]));
+  const aligned = assetSorted
+    .filter(v => benchMap.has(v.datetime))
+    .map(v => ({ asset: Number(v.close), bench: benchMap.get(v.datetime) }))
+    .filter(v => Number.isFinite(v.asset) && v.asset > 0 && Number.isFinite(v.bench) && v.bench > 0);
+
+  // Prendre les N+1 derniers points (pour N rendements)
+  const slice = aligned.slice(-(window + 1));
+  if (slice.length < 22) return null; // min ~1 mois de données
+
+  // Rendements quotidiens
+  const assetRet = [], benchRet = [];
+  for (let i = 1; i < slice.length; i++) {
+    assetRet.push(slice[i].asset / slice[i-1].asset - 1);
+    benchRet.push(slice[i].bench / slice[i-1].bench - 1);
+  }
+
+  const m = assetRet.length;
+  const meanA = assetRet.reduce((a,b) => a+b, 0) / m;
+  const meanB = benchRet.reduce((a,b) => a+b, 0) / m;
+
+  let cov = 0, varB = 0;
+  for (let i = 0; i < m; i++) {
+    cov  += (assetRet[i] - meanA) * (benchRet[i] - meanB);
+    varB += (benchRet[i] - meanB) ** 2;
+  }
+
+  if (varB === 0) return null;
+  const beta = cov / varB;
+
+  // Sanity check: beta aberrant (>10 ou <-10) → null
+  if (!Number.isFinite(beta) || Math.abs(beta) > 10) return null;
+
+  return beta;
+}
+
 function computeVolPreferredFromSeries(values, opts = {}) {
   const cfg = { windows: [252*3, 252], minCoverage: 0.8, minSinceInception: 60, ...opts };
   const prices = [...values].sort((a,b)=> parseISODate(a.datetime) - parseISODate(b.datetime)).map(v => Number(v.close)).filter(v => Number.isFinite(v) && v > 0);
@@ -141,6 +194,7 @@ async function computeMetricsFor(symbolParam){
 
   const ts = await fetchTimeSeriesFrom(threeYearsAgoISO, symbolParam);
   if (!ts || ts.length===0) return { 
+    _rawTs: null,  // v2.9: expose pour beta
     as_of: todayISO(), 
     daily_change_pct, 
     ytd_return_pct: null, 
@@ -150,6 +204,7 @@ async function computeMetricsFor(symbolParam){
     vol_pct: null, 
     vol_window: '', 
     vol_3y_pct: null, 
+    beta: null,  // v2.9
     last_close 
   };
 
@@ -185,7 +240,6 @@ async function computeMetricsFor(symbolParam){
   }
 
   // v2.6: Calcul perf_1m (21 trading days) et perf_3m (63 trading days)
-  // Note: On garde 21/63 trading days (standard momentum académique Jegadeesh-Titman)
   let perf_1m_pct = null;
   let perf_3m_pct = null;
 
@@ -205,7 +259,8 @@ async function computeMetricsFor(symbolParam){
   let vol_3y_pct = (vol_window === '3y' && vol_pct != null) ? vol_pct : null;
 
   return { 
-    as_of: asOfDate.toISOString(),  // v2.7: as_of = date de la dernière donnée
+    _rawTs: ts,  // v2.9: expose time_series brut pour calcul beta dans main()
+    as_of: asOfDate.toISOString(),
     daily_change_pct: round(clampAbs(daily_change_pct, 100), 3), 
     ytd_return_pct: round(clampAbs(ytd_return_pct, 1000), 2), 
     one_year_return_pct: round(clampAbs(one_year_return_pct, 1000), 2), 
@@ -214,6 +269,7 @@ async function computeMetricsFor(symbolParam){
     vol_pct: round(vol_pct, 2), 
     vol_window: vol_window || '', 
     vol_3y_pct: round(vol_3y_pct, 2), 
+    beta: null,  // v2.9: placeholder, sera rempli dans main()
     last_close: round(last_close, 4) 
   };
 }
@@ -255,7 +311,7 @@ async function loadSectorGuardData(csvPath) {
 }
 
 async function main(){
-  console.log('⚡ Daily ETF/Bond metrics: perfs & risque (time_series + quote) v2.8');
+  console.log('⚡ Daily ETF/Bond metrics: perfs & risque (time_series + quote) v2.9 + Beta CAPM');
 
   const etfCsv = path.join(OUT_DIR, 'weekly_snapshot_etfs.csv');
   const bondCsv = path.join(OUT_DIR, 'weekly_snapshot_bonds.csv');
@@ -282,8 +338,8 @@ async function main(){
   const bondSectorGuard = await loadSectorGuardData(path.join(OUT_DIR, 'combined_bonds.csv'));
   console.log(`🛡️ Sector Guard préservé: ${etfSectorGuard.size} ETFs, ${bondSectorGuard.size} Bonds`);
 
-  // v2.6: Colonnes daily metrics avec perf_1m_pct et perf_3m_pct
-  const DAILY_METRICS_COLS = ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of'];
+  // v2.9: Colonnes daily metrics avec beta
+  const DAILY_METRICS_COLS = ['symbol','name','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of'];
 
   if (all.length === 0) {
     console.log('ℹ️  Aucune ligne dans les CSV weekly — je crée des fichiers daily vides.');
@@ -292,9 +348,9 @@ async function main(){
     await writeCSV(path.join(OUT_DIR, 'daily_metrics_etfs.csv'), [], DAILY_METRICS_COLS);
     await writeCSV(path.join(OUT_DIR, 'daily_metrics_bonds.csv'), [], DAILY_METRICS_COLS);
     await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'), JSON.stringify({ timestamp: todayISO(), etfs: [], bonds: [] }, null, 2));
-    // v2.8: Colonnes avec Sector Guard
-    await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score','sector_bucket','sector_trust','sector_signal_ok','underlying_ticker']);
-    await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm','bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score','sector_bucket','sector_trust','sector_signal_ok','underlying_ticker']);
+    // v2.9: Colonnes avec beta + Sector Guard
+    await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score','sector_bucket','sector_trust','sector_signal_ok','underlying_ticker']);
+    await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','aum_usd','total_expense_ratio','yield_ttm','bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating','objective','daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score','sector_bucket','sector_trust','sector_signal_ok','underlying_ticker']);
     await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'), [], ['symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage','aum_usd','total_expense_ratio','yield_ttm','objective','sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5','holding_top','holdings_top10','data_quality_score']);
     await fs.writeFile(path.join(OUT_DIR, 'combined_bonds_holdings.csv'), 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n');
     return;
@@ -305,17 +361,49 @@ async function main(){
   const allWithSymbolParam = uniqBy(all.map(x => ({ ...x, symbolParam: buildSymbolParam(x) })), i => `${i.type}:${i.symbolParam}`);
   console.log(`🔗 Résolution symbolParam: ${allWithSymbolParam.length} instruments`);
 
+  // ═══════════════════════════════════════════════════════════════
+  // v2.9: Fetch benchmark SPY une seule fois (1 appel API = 5 crédits)
+  // ═══════════════════════════════════════════════════════════════
+  console.log('📈 Fetch benchmark SPY pour calcul beta (126j)...');
+  const nowForBench = new Date();
+  const threeYAgoBench = new Date(nowForBench);
+  threeYAgoBench.setFullYear(nowForBench.getFullYear() - 3);
+  let benchTs = null;
+  try {
+    benchTs = await fetchTimeSeriesFrom(threeYAgoBench.toISOString().slice(0,10), 'SPY');
+    if (benchTs && benchTs.length > 0) {
+      console.log(`  ✅ SPY: ${benchTs.length} points chargés (${benchTs[benchTs.length-1]?.datetime} → ${benchTs[0]?.datetime})`);
+    } else {
+      console.log('  ⚠️ SPY: aucune donnée retournée — beta sera null pour tous');
+      benchTs = null;
+    }
+  } catch (e) {
+    console.log(`  ⚠️ SPY fetch échoué: ${e.message} — beta sera null pour tous`);
+    benchTs = null;
+  }
+
   const metricsMap = new Map();
+  let betaCount = 0;
   for (const it of allWithSymbolParam){
     try {
       const m = await computeMetricsFor(it.symbolParam);
+
+      // v2.9: Calcul beta à partir du time_series brut + benchmark SPY
+      if (benchTs && m._rawTs) {
+        const betaRaw = computeBeta(m._rawTs, benchTs, 126);
+        m.beta = betaRaw != null ? round(betaRaw, 2) : null;
+        if (m.beta != null) betaCount++;
+      }
+      delete m._rawTs; // cleanup — ne pas sérialiser dans le JSON
+
       metricsMap.set(it.symbol, { symbol: it.symbol, ...m });
-      console.log(`  · ${it.symbolParam} ⇒ D:${m.daily_change_pct}%  YTD:${m.ytd_return_pct}%  1Y:${m.one_year_return_pct}%  1M:${m.perf_1m_pct ?? '—'}%  3M:${m.perf_3m_pct ?? '—'}%  VOL:${m.vol_pct}% (${m.vol_window||'—'})  [VOL3Y:${m.vol_3y_pct ?? '—'}]`);
+      console.log(`  · ${it.symbolParam} ⇒ D:${m.daily_change_pct}%  YTD:${m.ytd_return_pct}%  1Y:${m.one_year_return_pct}%  1M:${m.perf_1m_pct ?? '—'}%  3M:${m.perf_3m_pct ?? '—'}%  VOL:${m.vol_pct}% (${m.vol_window||'—'})  BETA:${m.beta ?? '—'}  [VOL3Y:${m.vol_3y_pct ?? '—'}]`);
     } catch (e) {
       console.log(`  ! ${it.symbolParam} métriques KO: ${e.message}`);
-      metricsMap.set(it.symbol, { symbol: it.symbol, as_of: todayISO(), daily_change_pct: null, ytd_return_pct: null, one_year_return_pct: null, perf_1m_pct: null, perf_3m_pct: null, vol_pct: null, vol_window: '', vol_3y_pct: null, last_close: null });
+      metricsMap.set(it.symbol, { symbol: it.symbol, as_of: todayISO(), daily_change_pct: null, ytd_return_pct: null, one_year_return_pct: null, perf_1m_pct: null, perf_3m_pct: null, vol_pct: null, vol_window: '', vol_3y_pct: null, beta: null, last_close: null });
     }
   }
+  console.log(`📊 Beta calculé pour ${betaCount}/${allWithSymbolParam.length} instruments`);
 
   await fs.mkdir(OUT_DIR, { recursive: true });
 
@@ -395,13 +483,13 @@ async function main(){
     return { ...row, ...sg };
   });
 
-  // v2.8: colonnes avec Sector Guard
+  // v2.9: colonnes avec beta + Sector Guard
   await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), bondFinal, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type',
     'aum_usd','total_expense_ratio','yield_ttm',
     'bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating',
     'objective',
-    'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of',
+    'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of',
     'sector_top','sector_top_weight','country_top','country_top_weight',
     'sector_top5','country_top5',
     'holding_top','holdings_top10',
@@ -450,11 +538,11 @@ async function main(){
     return { ...row, ...sg };
   });
 
-  // v2.8: colonnes avec Sector Guard
+  // v2.9: colonnes avec beta + Sector Guard
   await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), etfFinal, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',
     'aum_usd','total_expense_ratio','yield_ttm','objective',
-    'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','last_close','as_of',
+    'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of',
     'sector_top','sector_top_weight','country_top','country_top_weight','sector_top5','country_top5',
     'holding_top','holdings_top10',
     'data_quality_score',
@@ -481,6 +569,10 @@ async function main(){
   const etfsWith1m = etfFinal.filter(e => e.perf_1m_pct != null && e.perf_1m_pct !== '').length;
   const etfsWith3m = etfFinal.filter(e => e.perf_3m_pct != null && e.perf_3m_pct !== '').length;
 
+  // v2.9: Stats beta
+  const etfsWithBeta = etfFinal.filter(e => e.beta != null && e.beta !== '').length;
+  const bondsWithBeta = bondFinal.filter(e => e.beta != null && e.beta !== '').length;
+
   // v2.8: Stats Sector Guard
   const etfsWithSectorGuard = etfFinal.filter(e => e.sector_bucket && e.sector_bucket !== '').length;
   const bondsWithSectorGuard = bondFinal.filter(e => e.sector_bucket && e.sector_bucket !== '').length;
@@ -490,6 +582,8 @@ async function main(){
   console.log(`📊 CSV Exposure créé avec ${etfExposureFiltered.length} ETFs`);
   console.log(`📈 ETFs avec perf_1m: ${etfsWith1m}/${etfFinal.length}`);
   console.log(`📈 ETFs avec perf_3m: ${etfsWith3m}/${etfFinal.length}`);
+  console.log(`📈 ETFs avec beta: ${etfsWithBeta}/${etfFinal.length}`);
+  console.log(`📈 Bonds avec beta: ${bondsWithBeta}/${bondFinal.length}`);
   console.log(`🛡️ ETFs avec Sector Guard: ${etfsWithSectorGuard}/${etfFinal.length}`);
   console.log(`🛡️ Bonds avec Sector Guard: ${bondsWithSectorGuard}/${bondFinal.length}`);
   console.log(`📈 Bonds avec duration: ${bondsWithDuration}/${bondFinal.length}`);
