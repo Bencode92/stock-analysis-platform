@@ -5331,16 +5331,25 @@ def save_portfolios(portfolios: Dict, assets: list):
         # SECTOR DEDUP
         "energy_us": ["XLE", "VDE", "FENY", "IYE"],
         "semi_us": ["SOXX", "SMH"],
-        "gold": ["GLD", "IAU", "SGOL"],
+        # v5.4.0 P0-1: Gold ALL — expert rec: max 1 gold ETF (physical + miners = same commodity bet)
+        # GDXJ (junior miners) + GDE (gold physical efficient) corr ~0.80+ on gold factor
+        # 14.5% combined gold = directional bet, not diversification → keep only 1
+        "gold_all": ["GLD", "IAU", "SGOL", "AAAU", "GDXJ", "GDX", "GDE", "PHYS", "BAR", "OUNZ"],
         # US VALUE — same factor, different providers (corr > 0.95)
         # VTV=CRSP Value, SCHV=Dow Jones Value, VONV=Russell 1000 Value, IVE=S&P 500 Value
         "us_large_value": ["VTV", "SCHV", "VONV", "IVE", "VOOV", "RPV", "IUSV"],
-        # US DIVIDEND — same dividend quality methodology (corr > 0.90)
-        # SCHD=Dow Jones Dividend 100, DGRO=Morningstar Dividend Growth, VYM=Vanguard High Div
-        "us_dividend": ["SCHD", "DGRO", "VYM", "DVY", "HDV"],
+        # v5.4.0 P0-2: HDV RETIRÉ du groupe — corr SCHD/HDV ~0.85, pas ~0.95
+        # HDV = high dividend yield (XOM/CVX/PM), SCHD = dividend quality (ABBV/MRK/HD)
+        # Complémentaires, pas redondants — expert rec: garder les deux dans Modéré
+        "us_dividend": ["SCHD", "DGRO", "VYM", "DVY"],
         # INTL DEVELOPED BROAD — same market cap weighted ex-US (corr > 0.95)
         # VEA=FTSE Developed, EFA=MSCI EAFE, SPDW=S&P Developed ex-US
         "intl_developed": ["VEA", "EFA", "IXUS", "IEFA", "IDEV", "SPDW"],
+    }
+    # v5.4.0: Preferred ticker per dedup group — if present, always keep this one
+    # Expert rec: GDE > GDXJ (efficient gold physical > junior miners risk)
+    _ETF_DEDUP_PREFER = {
+        "gold_all": "GDE",
     }
     for _p_name in ["Agressif", "Modéré", "Stable"]:
         if _p_name not in v1_data:
@@ -5354,9 +5363,16 @@ def save_portfolios(portfolios: Dict, assets: list):
             if len(_found) < 2:
                 continue
             
-            # Keep the one with highest weight (= most liquid / best scored)
-            _found.sort(key=lambda x: -x[1])
-            _keeper = _found[0]
+            # v5.4.0: Check for preferred ticker in this group
+            _preferred = _ETF_DEDUP_PREFER.get(_group_name)
+            _preferred_found = [f for f in _found if f[0] == _preferred]
+            if _preferred_found:
+                # Expert preference: always keep this ticker
+                _keeper = _preferred_found[0]
+            else:
+                # Default: keep the one with highest weight (= most liquid / best scored)
+                _found.sort(key=lambda x: -x[1])
+                _keeper = _found[0]
             _merged_weight = sum(w for _, w in _found)
             
             # Remove duplicates, add weight to keeper
@@ -5489,6 +5505,150 @@ def save_portfolios(portfolios: Dict, assets: list):
 
     # === v5.3.1 NUCLEAR SAFETY NET: Cap all positions at 15% in BOTH _tickers and display ===
     # This is the ABSOLUTE LAST checkpoint before writing JSON.
+    
+    # === v5.4.0 P0-3: Cross-profile ETF differentiation ===
+    # Expert rec: SCHY in Modéré AND Stable = overlap sans valeur. Stable gets IUSV instead.
+    # IUSV (S&P U.S. Value): lower beta, US large value, better differentiation from Modéré.
+    _PROFILE_ETF_REPLACE = {
+        "Stable": {"SCHY": "IUSV"},  # Expert rec: IUSV (value US) replaces SCHY (intl dividend)
+    }
+    for _p_name, _replacements in _PROFILE_ETF_REPLACE.items():
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        _meta = _p_data.get("_tickers_meta", {})
+        for _old_tk, _new_tk in _replacements.items():
+            if _old_tk in _t:
+                _old_w = _t.pop(_old_tk)
+                _t[_new_tk] = _old_w
+                # Update meta
+                _meta[_new_tk] = {
+                    "category": "ETF",
+                    "name": {"IUSV": "iShares Core S&P U.S. Value ETF"}.get(_new_tk, _new_tk),
+                }
+                logger.info(
+                    f"   [{_p_name}] 🔄 P0-3 CROSS-PROFILE: {_old_tk} ({_old_w*100:.1f}%) "
+                    f"replaced by {_new_tk} — expert rec for profile differentiation"
+                )
+                # Rebuild display
+                for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+                    _p_data[_cat] = {}
+                _nw = {}
+                for _tk, _w_dec in _t.items():
+                    _w_pct = round(_w_dec * 100, 1)
+                    if _w_pct < 0.1:
+                        continue
+                    _info = _meta.get(_tk, {})
+                    _cat = _info.get("category", "ETF")
+                    _nm = _info.get("name", _tk)
+                    _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+                    _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+                    _nw[f"{_cat}:{_display}"] = _w_pct
+                _p_data["_numeric_weights"] = _nw
+    
+    # === v5.4.0 P0-4: HC ETF enforcement ===
+    # Expert rec: Healthcare = 13% MSCI World, absence = pari sectoriel implicite non souhaité.
+    # Force HC ETF in each profile: XBI (vol 27%) for Agressif, XLV (vol 14%) for Modéré/Stable.
+    # Weight 3-4% when HC momentum negative, scales up when momentum positive.
+    _HC_ETF_BY_PROFILE = {
+        "Agressif": ("XBI", "SPDR S&P Biotech ETF"),
+        "Modéré": ("XLV", "Health Care Select Sector SPDR Fund"),
+        "Stable": ("XLV", "Health Care Select Sector SPDR Fund"),
+    }
+    _HC_TARGET_WEIGHT = 0.035  # 3.5% — conservative per expert when HC momentum negative
+    
+    for _p_name, (_hc_tk, _hc_name) in _HC_ETF_BY_PROFILE.items():
+        if _p_name not in v1_data:
+            continue
+        _p_data = v1_data[_p_name]
+        _t = _p_data.get("_tickers", {})
+        _meta = _p_data.get("_tickers_meta", {})
+        
+        # Check if any HC ETF already present
+        _hc_exposures = {"healthcare", "pharma", "biotech", "genomics", "medical_devices", "healthcare_sub"}
+        _has_hc_etf = False
+        for _tk in _t:
+            _info = _meta.get(_tk, {})
+            if _info.get("category") == "ETF":
+                _exp = _info.get("exposure", "")
+                if _exp in _hc_exposures:
+                    _has_hc_etf = True
+                    break
+        
+        if _has_hc_etf:
+            logger.info(f"   [{_p_name}] 🏥 P0-4: HC ETF already present — skip")
+            continue
+        
+        # Also skip if the HC ETF ticker itself is already there
+        if _hc_tk in _t:
+            logger.info(f"   [{_p_name}] 🏥 P0-4: {_hc_tk} already in portfolio — skip")
+            continue
+        
+        # Find worst-ranked ETF to replace (lowest weight, not HC)
+        _etf_candidates = [
+            (tk, w) for tk, w in _t.items()
+            if _meta.get(tk, {}).get("category") == "ETF"
+        ]
+        
+        if not _etf_candidates:
+            # No ETFs to replace — inject at target weight, take from largest position
+            _largest = max(_t.items(), key=lambda x: x[1]) if _t else None
+            if _largest and _largest[1] > _HC_TARGET_WEIGHT + 0.02:
+                _t[_largest[0]] -= _HC_TARGET_WEIGHT
+                _t[_hc_tk] = _HC_TARGET_WEIGHT
+                _meta[_hc_tk] = {"category": "ETF", "name": _hc_name, "exposure": "healthcare"}
+                logger.info(
+                    f"   [{_p_name}] 🏥 P0-4: Injected {_hc_tk} at {_HC_TARGET_WEIGHT*100:.1f}% "
+                    f"(took from {_largest[0]})"
+                )
+            else:
+                logger.info(f"   [{_p_name}] 🏥 P0-4: Cannot inject {_hc_tk} — no room")
+                continue
+        else:
+            # Replace smallest ETF with HC ETF
+            _etf_candidates.sort(key=lambda x: x[1])
+            _worst_tk, _worst_w = _etf_candidates[0]
+            
+            # Use the larger of: worst ETF weight or target weight (but not more than worst+1%)
+            _inject_w = max(_HC_TARGET_WEIGHT, min(_worst_w, _HC_TARGET_WEIGHT + 0.01))
+            
+            # If worst ETF is bigger than target, keep it but reduce; else replace entirely
+            if _worst_w > _inject_w + 0.005:
+                # Reduce worst, add HC
+                _t[_worst_tk] = _worst_w - _inject_w
+                _t[_hc_tk] = _inject_w
+                logger.info(
+                    f"   [{_p_name}] 🏥 P0-4: Injected {_hc_tk} at {_inject_w*100:.1f}% "
+                    f"(reduced {_worst_tk} {_worst_w*100:.1f}%→{(_worst_w-_inject_w)*100:.1f}%)"
+                )
+            else:
+                # Replace entirely
+                del _t[_worst_tk]
+                _t[_hc_tk] = _worst_w
+                logger.info(
+                    f"   [{_p_name}] 🏥 P0-4: Replaced {_worst_tk} ({_worst_w*100:.1f}%) "
+                    f"with {_hc_tk} — HC ETF enforcement"
+                )
+            _meta[_hc_tk] = {"category": "ETF", "name": _hc_name, "exposure": "healthcare"}
+        
+        # Rebuild display
+        for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
+            _p_data[_cat] = {}
+        _nw = {}
+        for _tk, _w_dec in _t.items():
+            _w_pct = round(_w_dec * 100, 1)
+            if _w_pct < 0.1:
+                continue
+            _info = _meta.get(_tk, {})
+            _cat = _info.get("category", "ETF")
+            _nm = _info.get("name", _tk)
+            _display = f"{_nm} ({_tk})" if _tk not in _nm else _nm
+            _p_data[_cat][_display] = f"{_w_pct:.1f}%"
+            _nw[f"{_cat}:{_display}"] = _w_pct
+        _p_data["_numeric_weights"] = _nw
+        logger.info(f"   [{_p_name}] 🏥 P0-4: {_hc_tk} injected — HC ETF enforced")
+
     _NUCLEAR_MAX = 0.15  # 15% in decimal
     for _p_name in ["Agressif", "Modéré", "Stable"]:
         if _p_name not in v1_data:
