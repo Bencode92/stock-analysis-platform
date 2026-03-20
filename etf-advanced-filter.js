@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v14.5: Fix detectETFType — Long-Short, VIX short, leveraged priority
 // v14.4: Sector Guard - enrichissement direct combined_etfs.csv pour portfolio engine
 // v14.3: Sector Guard - fix faux positifs (Low Vol, XLE/XOP/XME, ARKF)
 
@@ -197,7 +198,7 @@ const SECTOR_NORMALIZATION = {
 
 // === DETECT ETF TYPE v2 (fix faux positifs leveraged) ===
 const ETF_TYPE_RX = {
-  inverse: /\b(-?1x|inverse|short(?!\s*term)|bear|ultra\s*short|ultrashort)\b/i,
+  inverse: /\b(-?1x|inverse|short(?![\s\-]*term)|bear|ultra\s*short|ultrashort)\b/i,
   leveraged: /\b([23])\s*x\b|\b(2x|3x)\b|\bleveraged\b|\bultra\s*pro\b|\bultrapro\b/i,
   ultraAlone: /\bultra\b/i,
   ultraIssuer: /\b(proshares|direxion|graniteshares|t-?rex|tradr|microsectors)\b/i,
@@ -224,10 +225,32 @@ function detectETFType(symbol, name, objective) {
     return { type: 'structured', underlying_ticker };
   }
 
-  const isInverse = ETF_TYPE_RX.inverse.test(textLower);
+  // v14.5: Pre-checks before inverse/leveraged detection
+  const isLongShort = /\blong[\s\/\-]+short\b/i.test(textLower);
+  const isVixShort = /\bshort\s+(vix|volatility)\b/i.test(textLower) && !/\binverse\b/i.test(textLower);
+
+  let isInverse = ETF_TYPE_RX.inverse.test(textLower);
+  
+  // v14.5: Long-Short funds are NOT inverse (fixes CLSE, FTLS)
+  if (isInverse && isLongShort) isInverse = false;
+  
+  // v14.5: Short VIX/volatility products are NOT inverse
+  // Shorting volatility = effectively long market (fixes SVIX, SVXY)
+  if (isInverse && isVixShort) isInverse = false;
+
   // "Ultra" seul => leveraged seulement si issuer typique et pas ultrashort
   const isLeveraged = ETF_TYPE_RX.leveraged.test(textLower) ||
     (ETF_TYPE_RX.ultraAlone.test(textLower) && ETF_TYPE_RX.ultraIssuer.test(textLower) && !isInverse);
+
+  // v14.5: If both leveraged AND inverse match, check which is dominant
+  // Products like "2x Bitcoin Strategy" with "short-term" in text should be leveraged
+  if (isInverse && isLeveraged) {
+    const hasExplicitInverse = /\b(inverse|bear|-1x)\b/i.test(textLower);
+    if (!hasExplicitInverse) {
+      // "short" triggered inverse but explicit leverage (2x/3x) present → leveraged wins
+      isInverse = false;
+    }
+  }
 
   // Check if index derivative (no single stock)
   const isIndexDeriv = !underlying_ticker && ETF_TYPE_RX.indexDerivative.test(textLower);
