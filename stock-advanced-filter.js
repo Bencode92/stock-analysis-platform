@@ -1,4 +1,5 @@
 // stock-advanced-filter.js
+// Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
 // Changements v3.32:
 // - FIX: dividend_coverage + payout_ratio_ttm pour payeurs annuels/semestriels (ROG, NOVN, ZURN, ALV)
@@ -148,6 +149,7 @@ const CONFIG = {
 
 let creditsUsed = 0;
 let windowStart = Date.now();
+let BENCH_PRICES = [];  // v3.33: SPY closes for beta CAPM
 
 // Cache des succès pour optimiser les appels
 const successCache = new Map();
@@ -885,6 +887,13 @@ async function getPerformanceData(symbol, stock) {
                 series_start: prices[0]?.date ?? null,
                 series_end: prices.at(-1)?.date ?? null
             },
+            // ✅ v3.33: Beta CAPM maison (126j vs SPY)
+            beta_capm: (() => {
+                if (!BENCH_PRICES.length) return null;
+                const b = computeBetaCAPM(prices, BENCH_PRICES, 126);
+                return b != null ? Number(b.toFixed(2)) : null;
+            })(),
+
             __last_close: current,
             __prev_close: prev,
             __hi52: high52,
@@ -2034,6 +2043,11 @@ async function enrichStock(stock) {
         eps_ttm,                                   
         pe_ratio: stats?.pe_ratio || null,        
         
+        // ✅ v3.33: Beta — CAPM maison (126j vs SPY) + provider fallback
+        beta: perf?.beta_capm ?? (Number.isFinite(stats?.beta) ? stats.beta : null),
+        beta_capm: perf?.beta_capm ?? null,
+        beta_provider: Number.isFinite(stats?.beta) ? stats.beta : null,
+        
         // ✅ v3.30: Force number type pour les champs perf (évite strings "36.74" qui cassent les tris)
         volatility_3y: perf.volatility_3y != null ? +perf.volatility_3y : null,
         distance_52w_high: perf.distance_52w_high != null ? +perf.distance_52w_high : null,
@@ -2076,6 +2090,36 @@ function standardDeviation(values) {
     const avg = values.reduce((a, b) => a + b, 0) / values.length;
     const squareDiffs = values.map(value => Math.pow(value - avg, 2));
     return Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / values.length);
+}
+
+// ✅ v3.33: Beta CAPM — Cov(Ri,Rm) / Var(Rm) sur 126j vs SPY
+function computeBetaCAPM(assetPrices, benchPrices, window = 126) {
+  // assetPrices & benchPrices = [{date, close}, ...] triés ASC
+  const benchMap = new Map(benchPrices.map(p => [p.date, p.close]));
+  const aligned = assetPrices
+    .filter(p => benchMap.has(p.date))
+    .map(p => ({ asset: p.close, bench: benchMap.get(p.date) }))
+    .filter(v => v.asset > 0 && v.bench > 0);
+
+  const slice = aligned.slice(-(window + 1));
+  if (slice.length < 22) return null; // min ~1 mois
+
+  const assetRet = [], benchRet = [];
+  for (let i = 1; i < slice.length; i++) {
+    assetRet.push(slice[i].asset / slice[i-1].asset - 1);
+    benchRet.push(slice[i].bench / slice[i-1].bench - 1);
+  }
+
+  const m = assetRet.length;
+  const meanA = assetRet.reduce((a, b) => a + b, 0) / m;
+  const meanB = benchRet.reduce((a, b) => a + b, 0) / m;
+
+  let cov = 0, varB = 0;
+  for (let i = 0; i < m; i++) {
+    cov  += (assetRet[i] - meanA) * (benchRet[i] - meanB);
+    varB += (benchRet[i] - meanB) ** 2;
+  }
+  return varB === 0 ? null : cov / varB;
 }
 
 // ✅ v3.26: Drawdown forward correct (pic → creux dans le temps réel)
@@ -2709,6 +2753,7 @@ function buildOverview(byRegion){
     buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
     buffett_grade: s.buffett_grade || null,
     // ✅ v3.27: Quality Score
+    beta: s.beta == null ? null : Number(s.beta),
     quality_score: s.quality_score == null ? null : Number(s.quality_score),
     quality_grade: s.quality_grade || null,
     quality_coverage: s.quality_coverage == null ? null : Number(s.quality_coverage),
@@ -2816,6 +2861,25 @@ async function main() {
     ]);
     
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
+
+    // ✅ v3.33: Fetch SPY benchmark pour beta CAPM (1 seul appel API)
+    console.log('📈 Fetch benchmark SPY pour beta CAPM...');
+    try {
+        await pay(CONFIG.CREDITS.TIME_SERIES);
+        const spyData = await fetchTD('time_series', [{ symbol: 'SPY' }], {
+            interval: '1day', outputsize: 900, order: 'ASC', adjust: 'splits'
+        });
+        if (spyData?.values) {
+            BENCH_PRICES = spyData.values
+                .map(v => ({ date: (v.datetime || '').slice(0, 10), close: Number(v.close) }))
+                .filter(p => p.date && Number.isFinite(p.close) && p.close > 0);
+            console.log(`  ✅ SPY: ${BENCH_PRICES.length} points chargés pour beta CAPM`);
+        } else {
+            console.log('  ⚠️ SPY: pas de données — beta_capm sera null');
+        }
+    } catch (e) {
+        console.log(`  ⚠️ SPY fetch failed: ${e.message} — beta_capm sera null`);
+    }
     
     // ✅ v3.31f: Appliquer _banned (exclusion) et _alias (remapping ticker) depuis overrides
     //   Supporte _region: "US"|"EUROPE"|"ASIA" pour limiter l'override à une région
