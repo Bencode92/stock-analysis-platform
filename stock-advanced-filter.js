@@ -1,6 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.34: Winsorize returns at ±30% in computeBetaCAPM to prevent outlier corruption
 // Changements v3.32:
 // - FIX: dividend_coverage + payout_ratio_ttm pour payeurs annuels/semestriels (ROG, NOVN, ZURN, ALV)
 // - La fenêtre TTM glissante capturait N+1 paiements quand les ex-dates dérivent
@@ -2108,6 +2109,17 @@ function computeBetaCAPM(assetPrices, benchPrices, window = 126) {
   for (let i = 1; i < slice.length; i++) {
     assetRet.push(slice[i].asset / slice[i-1].asset - 1);
     benchRet.push(slice[i].bench / slice[i-1].bench - 1);
+  }
+
+  // v3.34: Winsorize returns at ±30% daily to prevent split/corporate-action outliers
+  // A ±30% daily cap is generous (only ~1-2 stocks/year legitimately move >30% intraday)
+  // Without this, a single aberrant return can produce β=47
+  const CAP = 0.30;
+  for (let i = 0; i < assetRet.length; i++) {
+    assetRet[i] = Math.max(-CAP, Math.min(CAP, assetRet[i]));
+  }
+  for (let i = 0; i < benchRet.length; i++) {
+    benchRet[i] = Math.max(-CAP, Math.min(CAP, benchRet[i]));
   }
 
   const m = assetRet.length;
