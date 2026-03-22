@@ -1,6 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.35: Regional benchmarks (SPY/VGK/INDA/EWY/EWT/AAXJ) for beta CAPM per region
 // Changements v3.34: Winsorize returns at ±30% in computeBetaCAPM to prevent outlier corruption
 // Changements v3.32:
 // - FIX: dividend_coverage + payout_ratio_ttm pour payeurs annuels/semestriels (ROG, NOVN, ZURN, ALV)
@@ -150,7 +151,57 @@ const CONFIG = {
 
 let creditsUsed = 0;
 let windowStart = Date.now();
-let BENCH_PRICES = [];  // v3.33: SPY closes for beta CAPM
+// v3.35: Regional benchmarks for beta CAPM
+const BENCH_DATA = {};  // { 'SPY': [{date, close}...], 'VGK': [...], ... }
+
+const REGION_BENCHMARKS = {
+  us:     [{ symbol: 'SPY', label: 'S&P 500' }],
+  europe: [{ symbol: 'VGK', label: 'FTSE Europe' }],
+  asia:   [
+    { symbol: 'INDA', label: 'MSCI India',       countries: ['inde', 'india'] },
+    { symbol: 'EWY',  label: 'MSCI South Korea',  countries: ['coree', 'korea', 'south korea', 'coree du sud'] },
+    { symbol: 'EWT',  label: 'MSCI Taiwan',        countries: ['taiwan', 'tai wan', 'taïwan'] },
+    { symbol: 'AAXJ', label: 'MSCI Asia ex-JP',    countries: [] },  // fallback
+  ]
+};
+
+// Resolve which benchmark prices to use for a given stock
+function getBenchForStock(stock, regionName) {
+  if (!regionName) return BENCH_DATA['SPY'] || [];
+  const rn = regionName.toLowerCase();
+  if (rn === 'us') return BENCH_DATA['SPY'] || [];
+  if (rn === 'europe') return BENCH_DATA['VGK'] || [];
+  if (rn === 'asia') {
+    const country = (stock.country || stock.Country || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const benchCfg = REGION_BENCHMARKS.asia.find(b =>
+      b.countries.length > 0 && b.countries.some(c => country.includes(c))
+    );
+    if (benchCfg && BENCH_DATA[benchCfg.symbol]?.length) return BENCH_DATA[benchCfg.symbol];
+    return BENCH_DATA['AAXJ'] || BENCH_DATA['SPY'] || [];  // fallback
+  }
+  return BENCH_DATA['SPY'] || [];
+}
+
+// Which benchmark symbol was used (for JSON output traceability)
+function getBenchSymbolForStock(stock, regionName) {
+  if (!regionName) return 'SPY';
+  const rn = regionName.toLowerCase();
+  if (rn === 'us') return 'SPY';
+  if (rn === 'europe') return 'VGK';
+  if (rn === 'asia') {
+    const country = (stock.country || stock.Country || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const benchCfg = REGION_BENCHMARKS.asia.find(b =>
+      b.countries.length > 0 && b.countries.some(c => country.includes(c))
+    );
+    if (benchCfg && BENCH_DATA[benchCfg.symbol]?.length) return benchCfg.symbol;
+    return BENCH_DATA['AAXJ']?.length ? 'AAXJ' : 'SPY';
+  }
+  return 'SPY';
+}
+
+let CURRENT_REGION = 'us';  // set before each region processing loop
 
 // Cache des succès pour optimiser les appels
 const successCache = new Map();
@@ -888,12 +939,14 @@ async function getPerformanceData(symbol, stock) {
                 series_start: prices[0]?.date ?? null,
                 series_end: prices.at(-1)?.date ?? null
             },
-            // ✅ v3.33: Beta CAPM maison (126j vs SPY)
+            // ✅ v3.35: Beta CAPM vs regional benchmark (SPY/VGK/INDA/EWY/EWT/AAXJ)
             beta_capm: (() => {
-                if (!BENCH_PRICES.length) return null;
-                const b = computeBetaCAPM(prices, BENCH_PRICES, 126);
+                const benchPrices = getBenchForStock(stock, CURRENT_REGION);
+                if (!benchPrices.length) return null;
+                const b = computeBetaCAPM(prices, benchPrices, 126);
                 return b != null ? Number(b.toFixed(2)) : null;
             })(),
+            beta_benchmark: getBenchSymbolForStock(stock, CURRENT_REGION),
 
             __last_close: current,
             __prev_close: prev,
@@ -2044,10 +2097,11 @@ async function enrichStock(stock) {
         eps_ttm,                                   
         pe_ratio: stats?.pe_ratio || null,        
         
-        // ✅ v3.33: Beta — CAPM maison (126j vs SPY) + provider fallback
+        // ✅ v3.35: Beta — CAPM vs regional benchmark + provider fallback
         beta: perf?.beta_capm ?? (Number.isFinite(stats?.beta) ? stats.beta : null),
         beta_capm: perf?.beta_capm ?? null,
         beta_provider: Number.isFinite(stats?.beta) ? stats.beta : null,
+        beta_benchmark: perf?.beta_benchmark ?? 'SPY',
         
         // ✅ v3.30: Force number type pour les champs perf (évite strings "36.74" qui cassent les tris)
         volatility_3y: perf.volatility_3y != null ? +perf.volatility_3y : null,
@@ -2874,24 +2928,35 @@ async function main() {
     
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
 
-    // ✅ v3.33: Fetch SPY benchmark pour beta CAPM (1 seul appel API)
-    console.log('📈 Fetch benchmark SPY pour beta CAPM...');
-    try {
-        await pay(CONFIG.CREDITS.TIME_SERIES);
-        const spyData = await fetchTD('time_series', [{ symbol: 'SPY' }], {
-            interval: '1day', outputsize: 900, order: 'ASC', adjust: 'splits'
-        });
-        if (spyData?.values) {
-            BENCH_PRICES = spyData.values
-                .map(v => ({ date: (v.datetime || '').slice(0, 10), close: Number(v.close) }))
-                .filter(p => p.date && Number.isFinite(p.close) && p.close > 0);
-            console.log(`  ✅ SPY: ${BENCH_PRICES.length} points chargés pour beta CAPM`);
-        } else {
-            console.log('  ⚠️ SPY: pas de données — beta_capm sera null');
+    // ✅ v3.35: Fetch regional benchmarks for beta CAPM
+    const regionKey = (REGIONS_INPUT === 'all') ? 'all' : REGIONS_INPUT;
+    let benchToFetch = [];
+    if (regionKey === 'all' || regionKey === 'us') benchToFetch.push(...REGION_BENCHMARKS.us);
+    if (regionKey === 'all' || regionKey === 'europe') benchToFetch.push(...REGION_BENCHMARKS.europe);
+    if (regionKey === 'all' || regionKey === 'asia') benchToFetch.push(...REGION_BENCHMARKS.asia);
+    // Deduplicate
+    benchToFetch = [...new Map(benchToFetch.map(b => [b.symbol, b])).values()];
+    
+    console.log(`📈 Fetch ${benchToFetch.length} benchmark(s) pour beta CAPM: ${benchToFetch.map(b => b.symbol).join(', ')}`);
+    for (const bench of benchToFetch) {
+        try {
+            await pay(CONFIG.CREDITS.TIME_SERIES);
+            const data = await fetchTD('time_series', [{ symbol: bench.symbol }], {
+                interval: '1day', outputsize: 900, order: 'ASC', adjust: 'splits'
+            });
+            if (data?.values) {
+                BENCH_DATA[bench.symbol] = data.values
+                    .map(v => ({ date: (v.datetime || '').slice(0, 10), close: Number(v.close) }))
+                    .filter(p => p.date && Number.isFinite(p.close) && p.close > 0);
+                console.log(`  ✅ ${bench.symbol} (${bench.label}): ${BENCH_DATA[bench.symbol].length} points`);
+            } else {
+                console.log(`  ⚠️ ${bench.symbol}: pas de données`);
+            }
+        } catch (e) {
+            console.log(`  ⚠️ ${bench.symbol} fetch failed: ${e.message}`);
         }
-    } catch (e) {
-        console.log(`  ⚠️ SPY fetch failed: ${e.message} — beta_capm sera null`);
     }
+    console.log(`  📊 Benchmarks chargés: ${Object.keys(BENCH_DATA).join(', ') || 'aucun'}\n`);
     
     // ✅ v3.31f: Appliquer _banned (exclusion) et _alias (remapping ticker) depuis overrides
     //   Supporte _region: "US"|"EUROPE"|"ASIA" pour limiter l'override à une région
@@ -2981,7 +3046,8 @@ async function main() {
     const byRegion = { US: [], EUROPE: [], ASIA: [] };
     
     for (const region of regions) {
-        console.log(`\n🌍 ${region.name.toUpperCase()}`);
+        CURRENT_REGION = region.name;  // v3.35: for getBenchForStock()
+        console.log(`\n🌍 ${region.name.toUpperCase()} (benchmark: ${region.name === 'us' ? 'SPY' : region.name === 'europe' ? 'VGK' : 'INDA/EWY/EWT/AAXJ'})`);
         const enrichedStocks = [];
         
         for (let i = 0; i < region.stocks.length; i += CONFIG.CHUNK_SIZE) {
