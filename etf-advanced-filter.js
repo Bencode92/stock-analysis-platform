@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v14.6: Add underlyings (MSTR,MARA,PLTR,ARKK), fix FX hedged, leveraged 1.25x
 // v14.5: Fix detectETFType — Long-Short, VIX short, leveraged priority
 // v14.4: Sector Guard - enrichissement direct combined_etfs.csv pour portfolio engine
 // v14.3: Sector Guard - fix faux positifs (Low Vol, XLE/XOP/XME, ARKF)
@@ -184,6 +185,23 @@ const SINGLE_STOCK_SECTORS = {
     'MU': { sector: 'Technology', country: 'United States' },
     'RIOT': { sector: 'Financial Services', country: 'United States' },
     'BABA': { sector: 'Consumer Cyclical', country: 'China' },
+    // v14.6: Additional high-profile underlyings for leveraged ETF detection
+    'MSTR': { sector: 'Technology', country: 'United States' },
+    'MARA': { sector: 'Financial Services', country: 'United States' },
+    'PLTR': { sector: 'Technology', country: 'United States' },
+    'SQ': { sector: 'Technology', country: 'United States' },
+    'SNAP': { sector: 'Communication Services', country: 'United States' },
+    'UBER': { sector: 'Technology', country: 'United States' },
+    'ARM': { sector: 'Technology', country: 'United States' },
+    'SMCI': { sector: 'Technology', country: 'United States' },
+    'CRWD': { sector: 'Technology', country: 'United States' },
+    'DKNG': { sector: 'Consumer Cyclical', country: 'United States' },
+    'SOFI': { sector: 'Financial Services', country: 'United States' },
+    'RDDT': { sector: 'Technology', country: 'United States' },
+    'HOOD': { sector: 'Financial Services', country: 'United States' },
+    'RKLB': { sector: 'Industrial', country: 'United States' },
+    'RIVN': { sector: 'Consumer Cyclical', country: 'United States' },
+    'LCID': { sector: 'Consumer Cyclical', country: 'United States' },
 };
 
 const SECTOR_NORMALIZATION = {
@@ -199,7 +217,7 @@ const SECTOR_NORMALIZATION = {
 // === DETECT ETF TYPE v2 (fix faux positifs leveraged) ===
 const ETF_TYPE_RX = {
   inverse: /\b(-?1x|inverse|short(?![\s\-]*term)|bear|ultra\s*short|ultrashort)\b/i,
-  leveraged: /\b([23])\s*x\b|\b(2x|3x)\b|\bleveraged\b|\bultra\s*pro\b|\bultrapro\b/i,
+  leveraged: /\b(\d+\.\d+)\s*x\b|\b([23])\s*x\b|\b(2x|3x)\b|\bleveraged\b|\bultra\s*pro\b|\bultrapro\b/i,
   ultraAlone: /\bultra\b/i,
   ultraIssuer: /\b(proshares|direxion|graniteshares|t-?rex|tradr|microsectors)\b/i,
   vehicle: /\b(etn|etc|notes?\b|grantor\s*trust|commodity\s*pool)\b/i,
@@ -369,8 +387,10 @@ function inferAltAsset(text, fundType = '') {
   // Commodity (with exclusion for sector/miners)
   if (isCommodityProduct(t, fundType)) return { alt: true, kind: 'commodity' };
   
-  // FX
-  if (FX_KEYWORDS.test(t) || String(fundType || '').toLowerCase().includes('currency')) return { alt: true, kind: 'fx' };
+  // FX (v14.6: exclude "currency hedged" equity ETFs like HEWJ, HFXI)
+  const ftLowerAlt = String(fundType || '').toLowerCase();
+  const isFxFundType = ftLowerAlt.includes('currency') && !ftLowerAlt.includes('hedged');
+  if (FX_KEYWORDS.test(t) || isFxFundType) return { alt: true, kind: 'fx' };
   
   return { alt: false, kind: null };
 }
