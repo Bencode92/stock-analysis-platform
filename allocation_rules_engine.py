@@ -31,7 +31,7 @@ def fetch_market_conditions(api_key: str = None) -> Dict[str, float]:
     
     # Try to find API key from env or config
     if not api_key:
-        api_key = os.environ.get("TWELVE_DATA_API_KEY") or os.environ.get("TD_API_KEY")
+        api_key = os.environ.get("TWELVE_DATA_API_KEY") or os.environ.get("TWELVE_DATA_API") or os.environ.get("TD_API_KEY")
     
     if not api_key:
         logger.warning("[MARKET] No Twelve Data API key found — market conditions disabled")
@@ -786,6 +786,29 @@ def apply_allocation_rules(
         return portfolio_data
     
     all_logs = [f"═══ ALLOCATION RULES ENGINE — {profile} ═══"]
+    
+    # Step -1: Supplement exposure lookup with known engine tickers
+    # These tickers may be injected by the engine (splits, hedges) and not in the pipeline's lookup
+    _ENGINE_KNOWN_EXPOSURES = {
+        "slv": "silver_physical", "sivr": "silver_physical",
+        "gde": "gold_physical", "gld": "gold_physical", "iau": "gold_physical",
+        "sgol": "gold_physical", "aaau": "gold_physical", "gldm": "gold_physical",
+        "gdxj": "gold_miners", "gdx": "gold_miners",
+        "slvp": "silver_miners", "silj": "silver_miners",
+        "xbi": "biotech", "xph": "pharma",
+        "xlv": "healthcare", "vht": "healthcare", "fhlc": "healthcare",
+        "ibit": "btc_etf", "fbtc": "btc_etf",
+        "lqd": "bonds_ig", "vcit": "bonds_ig", "igsb": "bonds_ig",
+        "scho": "bonds_treasury", "stip": "bonds_tips",
+        "vcsh": "bonds_ig_short", "agz": "bonds_treasury",
+        "iusv": "value", "schd": "dividend", "hdv": "dividend",
+        "schy": "dividend_intl", "fndf": "value_intl",
+        "remx": "rare_earth",
+    }
+    etf_exposure_lookup = dict(etf_exposure_lookup)  # copy to avoid mutating caller
+    for _tk, _exp in _ENGINE_KNOWN_EXPOSURES.items():
+        if _tk not in etf_exposure_lookup:
+            etf_exposure_lookup[_tk] = _exp
     
     # Step 0: Classify all positions
     classified = classify_portfolio(tickers, meta, rules, etf_exposure_lookup)
