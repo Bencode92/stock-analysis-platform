@@ -518,6 +518,104 @@ def apply_allocation_rules(
         tickers = {k: v * factor for k, v in tickers.items()}
         all_logs.append(f"♻️ Re-normalized from {total*100:.1f}% to 100%")
     
+    # Step 6b: BOND FLOOR — ensure minimum bond allocation per profile (BEFORE position cap)
+    _BOND_FLOOR = {"Agressif": 0.10, "Modéré": 0.20, "Stable": 0.35}
+    _FALLBACK_BONDS = ["SCHO", "STIP", "IGSB", "VCSH"]  # Short-duration safe options
+    _FALLBACK_BOND_NAMES = {
+        "SCHO": "Schwab Short-Term U.S. Treasury ETF",
+        "STIP": "iShares 0-5 Year TIPS Bond ETF",
+        "IGSB": "iShares 1-5 Year Investment Grade Corporate Bond ETF",
+        "VCSH": "Vanguard Short-Term Corporate Bond ETF",
+    }
+    _min_bonds = _BOND_FLOOR.get(profile, 0.0)
+    if _min_bonds > 0:
+        _bond_total = sum(v for k, v in tickers.items() 
+                         if meta.get(k, {}).get("category") == "Obligations")
+        if _bond_total < _min_bonds - 0.005:
+            _deficit = _min_bonds - _bond_total
+            # Take from largest non-bond positions
+            _non_bonds = [(k, v) for k, v in tickers.items() 
+                         if meta.get(k, {}).get("category") != "Obligations" and v > 0.02]
+            _non_bonds.sort(key=lambda x: -x[1])
+            _remaining = _deficit
+            for k, v in _non_bonds:
+                if _remaining <= 0.001:
+                    break
+                _take = min(v * 0.3, _remaining)
+                tickers[k] -= _take
+                _remaining -= _take
+            _added = _deficit - _remaining
+            
+            # Check if existing bonds can absorb (each stays below 15%)
+            _bonds = {k: v for k, v in tickers.items() 
+                     if meta.get(k, {}).get("category") == "Obligations"}
+            _bond_capacity = sum(max(0, 0.14 - v) for v in _bonds.values())  # room to 14% each
+            
+            if _bond_capacity >= _added and _bonds:
+                # Distribute to existing bonds pro-rata
+                _total_b = sum(_bonds.values())
+                for k in _bonds:
+                    tickers[k] += _added * (_bonds[k] / _total_b)
+                all_logs.append(f"🛡️ Bond floor: restored {_added*100:.1f}% to existing bonds")
+            else:
+                # Need to inject new bond position(s)
+                # First fill existing bonds to 14%
+                _given_to_existing = 0
+                for k, v in _bonds.items():
+                    _room = max(0, 0.14 - v)
+                    _give = min(_room, _added - _given_to_existing)
+                    tickers[k] += _give
+                    _given_to_existing += _give
+                
+                _still_needed = _added - _given_to_existing
+                if _still_needed > 0.005:
+                    # Inject fallback bond
+                    for _fb in _FALLBACK_BONDS:
+                        if _fb not in tickers:
+                            tickers[_fb] = _still_needed
+                            meta[_fb] = {
+                                "weight": _still_needed,
+                                "category": "Obligations",
+                                "name": _FALLBACK_BOND_NAMES.get(_fb, _fb),
+                                "asset_ids": [],
+                            }
+                            all_logs.append(f"🛡️ Bond floor: injected {_fb} at {_still_needed*100:.1f}% to reach {_min_bonds*100:.0f}% min")
+                            break
+                    else:
+                        all_logs.append(f"⚠️ Bond floor: could not reach {_min_bonds*100:.0f}% — all fallbacks already present")
+    
+    # Step 6c: POSITION CAP — no single position > 15% (AFTER bond floor)
+    # CRITICAL: redistribute within SAME asset class to preserve bond floor
+    _POS_MAX = 0.15
+    for _cap_iter in range(5):
+        _over = {k: v for k, v in tickers.items() if v > _POS_MAX + 0.001}
+        if not _over:
+            break
+        for k, v in _over.items():
+            _excess = v - _POS_MAX
+            tickers[k] = _POS_MAX
+            _over_cat = meta.get(k, {}).get("category", "ETF")
+            all_logs.append(f"📉 Position cap: {k} {v*100:.1f}% → {_POS_MAX*100:.0f}%")
+            # Redistribute within same category first, then any eligible
+            _same_cat = [(tk2, w2) for tk2, w2 in tickers.items()
+                        if tk2 != k and w2 < _POS_MAX - 0.01
+                        and meta.get(tk2, {}).get("category") == _over_cat]
+            if not _same_cat:
+                _same_cat = [(tk2, w2) for tk2, w2 in tickers.items()
+                            if tk2 != k and w2 < _POS_MAX - 0.01]
+            if _same_cat:
+                _total_sc = sum(w2 for _, w2 in _same_cat)
+                if _total_sc > 0:
+                    for tk2, w2 in _same_cat:
+                        add = _excess * (w2 / _total_sc)
+                        tickers[tk2] = min(tickers[tk2] + add, _POS_MAX)
+    
+    # Re-normalize after safety nets
+    total = sum(tickers.values())
+    if total > 0 and abs(total - 1.0) > 0.005:
+        factor = 1.0 / total
+        tickers = {k: v * factor for k, v in tickers.items()}
+    
     # Step 7: Rebuild display
     display, numeric = rebuild_display(tickers, meta)
     
