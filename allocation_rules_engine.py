@@ -716,9 +716,14 @@ def _load_beta_from_stocks_files() -> Dict[str, float]:
                     if isinstance(stocks, list):
                         for s in stocks:
                             tk = s.get("ticker", "")
-                            b = s.get("beta") or s.get("beta_capm")
+                            # v5.4.2: Prefer beta_provider (standard market beta)
+                            # over beta/beta_capm (regional benchmark, e.g. VGK)
+                            b = s.get("beta_provider") or s.get("beta") or s.get("beta_capm")
                             if tk and b is not None:
-                                betas[tk.upper()] = float(b)
+                                try:
+                                    betas[tk.upper()] = float(b)
+                                except (ValueError, TypeError):
+                                    pass
                 except Exception:
                     pass
                 break  # Found this file, move to next pattern
