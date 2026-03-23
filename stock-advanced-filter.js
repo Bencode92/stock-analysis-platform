@@ -1,6 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.37: INDA weekly (corr daily=-0.069 confirmed timezone mismatch)
 // Changements v3.36: Weekly beta for timezone-misaligned benchmarks (EWY/EWT/AAXJ → Korea/Taiwan)
 // Changements v3.35: Regional benchmarks (SPY/VGK/INDA/EWY/EWT/AAXJ) for beta CAPM per region
 // Changements v3.34: Winsorize returns at ±30% in computeBetaCAPM to prevent outlier corruption
@@ -159,7 +160,7 @@ const REGION_BENCHMARKS = {
   us:     [{ symbol: 'SPY', label: 'S&P 500' }],
   europe: [{ symbol: 'VGK', label: 'FTSE Europe' }],
   asia:   [
-    { symbol: 'INDA', label: 'MSCI India',       countries: ['inde', 'india'] },
+    { symbol: 'INDA', label: 'MSCI India',       countries: ['inde', 'india'], weekly: true },
     { symbol: 'EWY',  label: 'MSCI South Korea',  countries: ['coree', 'korea', 'south korea', 'coree du sud'], weekly: true },
     { symbol: 'EWT',  label: 'MSCI Taiwan',        countries: ['taiwan', 'tai wan', 'taïwan'], weekly: true },
     { symbol: 'AAXJ', label: 'MSCI Asia ex-JP',    countries: [], weekly: true },  // fallback — also timezone-misaligned
@@ -3135,7 +3136,7 @@ async function main() {
     
     for (const region of regions) {
         CURRENT_REGION = region.name;  // v3.35: for getBenchForStock()
-        const benchInfo = region.name === 'us' ? 'SPY (daily)' : region.name === 'europe' ? 'VGK (daily)' : 'INDA(daily)/EWY(weekly)/EWT(weekly)/AAXJ(weekly)';
+        const benchInfo = region.name === 'us' ? 'SPY (daily)' : region.name === 'europe' ? 'VGK (daily)' : 'INDA/EWY/EWT/AAXJ (all weekly)';
         console.log(`\n🌍 ${region.name.toUpperCase()} (benchmark: ${benchInfo})`);
         const enrichedStocks = [];
         
