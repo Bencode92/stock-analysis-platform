@@ -1184,12 +1184,34 @@ def build_tickers_meta_for_risk(
             "category": category,
             "name": name,
             "asset_ids": [],
-            # v5.4.1: propagate industry + beta for allocation_rules_engine
-            "industry": (a.source_data.get("industry", "") if hasattr(a, 'source_data') and a.source_data else ""),
-            "beta": (a.source_data.get("beta") or a.source_data.get("beta_capm") if hasattr(a, 'source_data') and a.source_data else None),
         })
         entry["weight"] += float(w_pct) / 100.0
         entry["asset_ids"].append(str(aid))
+        
+        # v5.4.1: Always try to propagate industry + beta (not just on first setdefault)
+        # source_data comes from stocks JSON, try multiple access patterns
+        _src = None
+        if hasattr(a, 'source_data') and a.source_data:
+            _src = a.source_data
+        elif hasattr(a, 'data') and isinstance(getattr(a, 'data', None), dict):
+            _src = a.data
+        
+        if _src:
+            if not entry.get("industry"):
+                entry["industry"] = _src.get("industry", "")
+            if entry.get("beta") is None:
+                entry["beta"] = _src.get("beta") or _src.get("beta_capm")
+        
+        # Fallback: try direct attributes on asset object
+        if entry.get("beta") is None:
+            for _attr in ["beta", "beta_capm"]:
+                _val = getattr(a, _attr, None)
+                if _val is not None:
+                    try:
+                        entry["beta"] = float(_val)
+                        break
+                    except (ValueError, TypeError):
+                        pass
 
     return meta
    
@@ -1856,6 +1878,17 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         logger.info(f"   ✅ TickerResolver built: {len(ticker_resolver.mic_code_map)} mic_codes, "
                      f"{len(ticker_resolver.exchange_map)} exchanges, "
                      f"{len(ticker_resolver.resolved_symbol_map)} resolved_symbols")
+        
+        # v5.4.1: Build ticker→beta/industry lookup for allocation_rules_engine
+        _ticker_fundamentals = {}
+        for _s in _raw_stocks:
+            _stk = _s.get("ticker", "")
+            if _stk:
+                _ticker_fundamentals[_stk.upper()] = {
+                    "beta": _s.get("beta") or _s.get("beta_capm"),
+                    "industry": _s.get("industry", ""),
+                }
+        logger.info(f"   ✅ Ticker fundamentals: {len(_ticker_fundamentals)} stocks with beta/industry")
         # Invalidate cache for previously-failed tickers (AGS, 2360, 3017, etc.)
         _tickers_with_mic = [s.get("ticker") for s in _raw_stocks if s.get("data_mic")]
         if _tickers_with_mic:
@@ -3301,6 +3334,24 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         # === v5.2.1 FIX: Build _tickers_meta BEFORE risk_analysis ===
         try:
             tm = build_tickers_meta_for_risk(allocation, assets)
+            
+            # v5.4.1: Enrich meta with beta/industry from raw stocks data
+            # build_tickers_meta_for_risk may not have access to source_data for all assets
+            try:
+                _enriched = 0
+                for _tk, _meta_entry in tm.items():
+                    _fund = _ticker_fundamentals.get(_tk.upper(), {})
+                    if _fund:
+                        if not _meta_entry.get("beta") and _fund.get("beta"):
+                            _meta_entry["beta"] = _fund["beta"]
+                            _enriched += 1
+                        if not _meta_entry.get("industry") and _fund.get("industry"):
+                            _meta_entry["industry"] = _fund["industry"]
+                if _enriched:
+                    logger.info(f"   [{profile}] v5.4.1: {_enriched} tickers enriched with beta from stocks data")
+            except NameError:
+                pass  # _ticker_fundamentals not built yet
+            
             portfolios[profile]["_tickers_meta"] = tm
             portfolios[profile]["_tickers"] = {k: v["weight"] for k, v in tm.items()}
             
@@ -5647,7 +5698,7 @@ def save_portfolios(portfolios: Dict, assets: list):
             # v2: Fetch market conditions and adjust rules BEFORE applying to portfolios
             _market_data = {}
             try:
-                _td_key = CONFIG.get("twelve_data_api_key") or os.environ.get("TWELVE_DATA_API_KEY")
+                _td_key = CONFIG.get("twelve_data_api_key") or os.environ.get("TWELVE_DATA_API_KEY") or os.environ.get("TWELVE_DATA_API")
                 _market_data = fetch_market_conditions(api_key=_td_key)
                 if _market_data:
                     _adjustments = evaluate_market_rules(_alloc_rules, _market_data)
