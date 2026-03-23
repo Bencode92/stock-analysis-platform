@@ -1,7 +1,7 @@
 """
-Allocation Rules Engine v1.0.0
+Allocation Rules Engine v2.0.0
 Reads allocation_rules.json and applies thematic caps, mandatory hedges,
-profile replacements, and ETF splits to generated portfolios.
+profile replacements, ETF splits, beta filter actions, and market conditions.
 
 Integration: called from generate_portfolios_v4.py post-processing.
 No hardcoded allocation logic — everything driven by the JSON config.
@@ -10,9 +10,204 @@ No hardcoded allocation logic — everything driven by the JSON config.
 import json
 import logging
 import os
+import urllib.request
+import urllib.error
 from typing import Dict, Tuple, Optional, Any
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# FETCH MARKET CONDITIONS (Principle 5)
+# =============================================================================
+
+def fetch_market_conditions(api_key: str = None) -> Dict[str, float]:
+    """
+    Fetch real-time market data for conditional rules evaluation.
+    Uses Twelve Data API (same as the rest of the pipeline).
+    Returns a dict of market indicators. Missing values = None (rule skipped).
+    """
+    data = {}
+    
+    # Try to find API key from env or config
+    if not api_key:
+        api_key = os.environ.get("TWELVE_DATA_API_KEY") or os.environ.get("TD_API_KEY")
+    
+    if not api_key:
+        logger.warning("[MARKET] No Twelve Data API key found — market conditions disabled")
+        return data
+    
+    def _fetch_price(symbol, days=5):
+        """Fetch last N days of closes for a symbol."""
+        try:
+            url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1day&outputsize={days}&apikey={api_key}"
+            req = urllib.request.Request(url, headers={"User-Agent": "AllocationEngine/2.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode())
+            if "values" in result:
+                closes = [float(v["close"]) for v in result["values"]]
+                return closes
+        except Exception as e:
+            logger.warning(f"[MARKET] Failed to fetch {symbol}: {e}")
+        return None
+    
+    def _fetch_quote(symbol):
+        """Fetch current quote for a symbol."""
+        try:
+            url = f"https://api.twelvedata.com/quote?symbol={symbol}&apikey={api_key}"
+            req = urllib.request.Request(url, headers={"User-Agent": "AllocationEngine/2.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode())
+            if "close" in result:
+                return float(result["close"])
+        except Exception as e:
+            logger.warning(f"[MARKET] Failed to fetch quote {symbol}: {e}")
+        return None
+    
+    # 1. Brent crude — avg 5 days
+    brent_closes = _fetch_price("BZ", days=5)
+    if brent_closes:
+        data["brent_usd_avg5d"] = sum(brent_closes) / len(brent_closes)
+        logger.info(f"[MARKET] Brent avg5d: ${data['brent_usd_avg5d']:.1f}")
+    
+    # 2. VIX
+    vix = _fetch_quote("VIX")
+    if vix:
+        data["vix"] = vix
+        logger.info(f"[MARKET] VIX: {vix:.1f}")
+    
+    # 3. Gold — current price + ATH for drawdown calculation
+    gold_closes = _fetch_price("XAU/USD", days=120)
+    if gold_closes:
+        current_gold = gold_closes[0]  # most recent
+        ath = max(gold_closes)
+        drawdown = ((ath - current_gold) / ath) * 100 if ath > 0 else 0
+        data["gold_price"] = current_gold
+        data["gold_ath_120d"] = ath
+        data["gold_drawdown_from_ath_pct"] = drawdown
+        logger.info(f"[MARKET] Gold: ${current_gold:.0f}, ATH(120d): ${ath:.0f}, DD: {drawdown:.1f}%")
+    
+    # 4. Fed funds rate delta — approximated via 2Y treasury yield change
+    # (actual Fed funds requires FRED API, 2Y yield is a proxy)
+    # For now, set to 0 (neutral) — can be enhanced with FRED later
+    data["fed_funds_rate_delta_6m"] = 0.0
+    
+    # 5. CPI — hard to get real-time, use last known value
+    # Default to current estimate (~2.4% as of March 2026)
+    data["cpi_yoy_pct"] = float(os.environ.get("CPI_YOY_PCT", "2.4"))
+    
+    # 6. IG spread — approximated via LQD yield - treasury yield
+    # This is a rough proxy; real spread data requires Bloomberg/ICE
+    data["ig_spread_bps"] = float(os.environ.get("IG_SPREAD_BPS", "135"))
+    
+    logger.info(f"[MARKET] Conditions loaded: {', '.join(f'{k}={v}' for k, v in data.items() if v is not None)}")
+    return data
+
+
+def evaluate_market_rules(rules: Dict, market_data: Dict) -> Dict:
+    """
+    Evaluate market condition rules and return adjusted caps/hedges.
+    Returns a dict of adjustments to apply.
+    """
+    adjustments = {
+        "thematic_cap_deltas": {},   # {theme: {profile: delta}}
+        "hedge_deltas": {},          # {hedge: {profile: delta}}
+        "active_rules": [],
+    }
+    
+    if not market_data:
+        return adjustments
+    
+    conditions = rules.get("market_conditions", {}).get("rules", [])
+    
+    for rule in conditions:
+        rule_id = rule.get("id", "?")
+        condition = rule.get("condition", "")
+        
+        # Simple condition evaluator — supports: var > N, var < N
+        try:
+            parts = condition.replace("  ", " ").split(" ")
+            if len(parts) != 3:
+                continue
+            var_name, operator, threshold = parts[0], parts[1], float(parts[2])
+            value = market_data.get(var_name)
+            
+            if value is None:
+                continue
+            
+            triggered = False
+            if operator == ">" and value > threshold:
+                triggered = True
+            elif operator == "<" and value < threshold:
+                triggered = True
+            elif operator == ">=" and value >= threshold:
+                triggered = True
+            elif operator == "<=" and value <= threshold:
+                triggered = True
+            
+            if not triggered:
+                continue
+            
+            adjustments["active_rules"].append(rule_id)
+            logger.info(f"[MARKET] Rule '{rule_id}' ACTIVE: {condition} (value={value:.1f})")
+            
+            for adj in rule.get("adjustments", []):
+                adj_type = adj.get("type", "")
+                profiles = adj.get("profiles", [])
+                
+                if adj_type == "thematic_cap_delta":
+                    theme = adj["theme"]
+                    delta = adj["delta_pct"]
+                    for p in profiles:
+                        adjustments["thematic_cap_deltas"].setdefault(theme, {})
+                        adjustments["thematic_cap_deltas"][theme][p] = \
+                            adjustments["thematic_cap_deltas"][theme].get(p, 0) + delta
+                
+                elif adj_type == "mandatory_hedge_delta":
+                    hedge = adj["hedge"]
+                    delta = adj["delta_pct"]
+                    for p in profiles:
+                        adjustments["hedge_deltas"].setdefault(hedge, {})
+                        adjustments["hedge_deltas"][hedge][p] = \
+                            adjustments["hedge_deltas"][hedge].get(p, 0) + delta
+                            
+        except Exception as e:
+            logger.warning(f"[MARKET] Error evaluating rule '{rule_id}': {e}")
+    
+    if adjustments["active_rules"]:
+        logger.info(f"[MARKET] Active rules: {adjustments['active_rules']}")
+    else:
+        logger.info("[MARKET] No market rules triggered")
+    
+    return adjustments
+
+
+def apply_market_adjustments(rules: Dict, adjustments: Dict) -> Dict:
+    """
+    Apply market condition adjustments to rules (modifies in-place).
+    Adjusts thematic_caps_pct and mandatory_hedges.
+    """
+    if not adjustments.get("active_rules"):
+        return rules
+    
+    # Adjust thematic caps
+    for theme, profile_deltas in adjustments.get("thematic_cap_deltas", {}).items():
+        if theme in rules.get("thematic_caps_pct", {}):
+            for profile, delta in profile_deltas.items():
+                old = rules["thematic_caps_pct"][theme].get(profile, 0)
+                rules["thematic_caps_pct"][theme][profile] = max(0, old + delta)
+                logger.info(f"[MARKET] Cap {theme}/{profile}: {old}% → {old + delta}%")
+    
+    # Adjust mandatory hedges
+    for hedge, profile_deltas in adjustments.get("hedge_deltas", {}).items():
+        for profile, delta in profile_deltas.items():
+            hedges = rules.get("mandatory_hedges", {}).get(profile, {})
+            if hedge in hedges:
+                old = hedges[hedge].get("min_pct", 0)
+                hedges[hedge]["min_pct"] = max(0, old + delta)
+                logger.info(f"[MARKET] Hedge {hedge}/{profile}: {old}% → {old + delta}%")
+    
+    return rules
 
 # =============================================================================
 # LOAD CONFIG
@@ -477,6 +672,87 @@ def rebuild_display(tickers: Dict[str, float], meta: Dict[str, Dict]) -> Tuple[D
 
 
 # =============================================================================
+# BETA FILTER ACTIONS (Principle 2 for stocks)
+# =============================================================================
+
+def apply_beta_filter_actions(
+    tickers: Dict[str, float],
+    meta: Dict[str, Dict],
+    profile: str,
+    rules: Dict,
+) -> Tuple[Dict[str, float], Dict[str, Dict], list]:
+    """
+    Remove or flag actions whose beta exceeds the profile threshold.
+    Beta data comes from _tickers_meta (propagated from stocks JSON).
+    """
+    beta_max_cfg = rules.get("beta_max_actions", {})
+    beta_max = beta_max_cfg.get(profile)
+    logs = []
+    
+    if beta_max is None:
+        return tickers, meta, logs  # No filter for this profile
+    
+    tickers = dict(tickers)
+    meta = {k: dict(v) for k, v in meta.items()}
+    
+    # Check for replacements in profile_replacements (so we don't remove + replace = conflict)
+    replacements = rules.get("profile_replacements", {}).get(profile, {})
+    
+    violators = []
+    for tk, w in list(tickers.items()):
+        info = meta.get(tk, {})
+        if info.get("category") != "Actions":
+            continue
+        
+        # Get beta — try multiple fields
+        beta = info.get("beta") or info.get("beta_capm")
+        if beta is None:
+            continue
+        
+        try:
+            beta = float(beta)
+        except (ValueError, TypeError):
+            continue
+        
+        if beta > beta_max:
+            # Check if there's already a replacement defined
+            if tk in replacements:
+                logs.append(f"⚠️ {tk} beta {beta:.2f} > max {beta_max} — replacement via profile_replacements")
+                continue  # Will be handled by apply_profile_replacements
+            
+            violators.append((tk, w, beta))
+    
+    if not violators:
+        return tickers, meta, logs
+    
+    # Remove violators and redistribute their weight
+    total_removed = 0
+    for tk, w, beta in violators:
+        del tickers[tk]
+        total_removed += w
+        logs.append(f"🚫 {tk} removed: beta {beta:.2f} > max {beta_max} for {profile}")
+    
+    # Redistribute to remaining actions (same category, below beta threshold)
+    remaining_actions = [(tk, w) for tk, w in tickers.items()
+                        if meta.get(tk, {}).get("category") == "Actions"]
+    if remaining_actions and total_removed > 0:
+        total_remaining = sum(w for _, w in remaining_actions)
+        if total_remaining > 0:
+            for tk, w in remaining_actions:
+                tickers[tk] += total_removed * (w / total_remaining)
+            logs.append(f"♻️ {total_removed*100:.1f}% redistributed to {len(remaining_actions)} remaining actions")
+    elif total_removed > 0:
+        # No remaining actions — redistribute to all
+        all_pos = [(tk, w) for tk, w in tickers.items() if w > 0]
+        total_all = sum(w for _, w in all_pos)
+        if total_all > 0:
+            for tk, w in all_pos:
+                tickers[tk] += total_removed * (w / total_all)
+    
+    return tickers, meta, logs
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
@@ -485,6 +761,7 @@ def apply_allocation_rules(
     profile: str,
     rules: Dict,
     etf_exposure_lookup: Dict[str, str],
+    market_data: Dict = None,
 ) -> Dict:
     """
     Main entry point. Applies all allocation rules to a single profile.
@@ -492,8 +769,9 @@ def apply_allocation_rules(
     Args:
         portfolio_data: the profile dict with _tickers, _tickers_meta, Actions, ETF, etc.
         profile: "Agressif", "Modéré", "Stable"
-        rules: loaded allocation_rules.json
+        rules: loaded allocation_rules.json (may be pre-adjusted by market conditions)
         etf_exposure_lookup: {ticker_lower: exposure_string}
+        market_data: optional dict of market indicators for conditional rules
     
     Returns:
         Modified portfolio_data (in-place + returned)
@@ -517,8 +795,12 @@ def apply_allocation_rules(
         theme_summary[t] = theme_summary.get(t, 0) + tickers.get(tk, 0)
     all_logs.append(f"Themes: {', '.join(f'{t}={w*100:.1f}%' for t, w in sorted(theme_summary.items(), key=lambda x:-x[1]))}")
     
-    # Step 1: Profile replacements (TTE → ENGI)
+    # Step 1: Profile replacements (TTE → IBE)
     tickers, meta, logs = apply_profile_replacements(tickers, meta, profile, rules)
+    all_logs.extend(logs)
+    
+    # Step 1b: Beta filter actions (remove high-beta stocks from Stable/Modéré)
+    tickers, meta, logs = apply_beta_filter_actions(tickers, meta, profile, rules)
     all_logs.extend(logs)
     
     # Step 2: ETF splits (SLVP → SLVP + SLV)
