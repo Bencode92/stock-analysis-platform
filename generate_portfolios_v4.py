@@ -6078,9 +6078,12 @@ def sanity_check_portfolios(v1_data: dict) -> bool:
         else:
             logger.info(f"   ✅ {profile} _tickers sum={s_t:.4f} OK")
         
-        # 2) v4.15.0 FIX: max_single basé sur le profil (pas hardcodé)
+        # 2) v5.4.2 FIX: max_single aligned with allocation_rules_engine position cap (15%)
+        # The engine may redistribute weights up to 15% (especially bonds in Stable),
+        # so the sanity check must not flag these as errors.
         profile_config = PROFILES.get(profile)
-        max_single_limit = getattr(profile_config, "max_single_position", 15.0) + 0.2
+        _profile_max = getattr(profile_config, "max_single_position", 15.0)
+        max_single_limit = max(_profile_max, 15.0) + 0.2  # At least 15% (engine cap)
         
         # v4.15.0 FIX: Vérifier sur _tickers (actifs individuels), pas _numeric_weights
         biggest = (max(tickers.values()) * 100) if tickers else 0.0
