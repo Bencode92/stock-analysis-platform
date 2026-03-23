@@ -1,0 +1,375 @@
+{
+  "_version": "1.0.0",
+  "_date": "2026-03-20",
+  "_description": "Règles d'allocation issues des revues expert (v1+v2). Lues par le pipeline à chaque run. Modifiables sans changement de code.",
+
+  "thematic_groups": {
+    "_doc": "Mapping industry → thème. Un titre peut appartenir à 1 seul thème. Le pipeline agrège les poids par thème et vérifie les caps.",
+
+    "semi_ai": {
+      "label": "Semi-conducteurs & AI",
+      "industries": [
+        "Semiconductors",
+        "Semiconductor Equipment & Materials",
+        "Electronic Components"
+      ],
+      "etf_exposures": ["semiconductor", "tech", "nasdaq100", "robotics", "innovation"],
+      "extra_tickers": ["VRT", "FLKR"],
+      "_rationale": "VRT = infra AI (cooling/power pour datacenters). FLKR = >50% Samsung/SK Hynix = semi déguisé en EM. Expert: corr ~0.85 en stress entre tous ces titres."
+    },
+
+    "energy_oil": {
+      "label": "Energy & Pétrole",
+      "industries": [
+        "Oil & Gas E&P",
+        "Oil & Gas Equipment & Services",
+        "Oil & Gas Integrated",
+        "Oil & Gas Midstream",
+        "Oil & Gas Refining & Marketing",
+        "Thermal Coal"
+      ],
+      "etf_exposures": ["energy"],
+      "extra_tickers": ["TPL"],
+      "_rationale": "TPL = Texas Pacific Land, revenus royalties pétrole/gaz. Inclut tout ce qui corrèle avec le Brent."
+    },
+
+    "precious_metals": {
+      "label": "Métaux précieux",
+      "industries": [
+        "Gold",
+        "Other Precious Metals & Mining"
+      ],
+      "etf_exposures": ["gold_physical", "gold_miners", "silver_physical", "silver_miners"],
+      "extra_tickers": [],
+      "_rationale": "GDE, GLD, GDXJ, SLVP, SLV — tout ce qui corrèle avec gold/silver spot."
+    },
+
+    "materials_mining": {
+      "label": "Matériaux & Mines",
+      "industries": [
+        "Other Industrial Metals & Mining",
+        "Steel",
+        "Aluminum",
+        "Copper",
+        "Metal Fabrication",
+        "Specialty Chemicals",
+        "Chemicals",
+        "Agricultural Inputs",
+        "Building Materials"
+      ],
+      "etf_exposures": ["materials", "natural_resources", "metals_mining", "copper", "lithium", "rare_earth", "critical_materials", "steel", "agribusiness"],
+      "extra_tickers": [],
+      "_rationale": "Cycle matériaux — corrélé avec la Chine et les taux."
+    },
+
+    "healthcare": {
+      "label": "Healthcare & Pharma",
+      "industries": [
+        "Biotechnology",
+        "Drug Manufacturers - General",
+        "Drug Manufacturers - Specialty & Generic",
+        "Medical Devices",
+        "Medical Instruments & Supplies",
+        "Medical Care Facilities",
+        "Medical Distribution",
+        "Health Information Services",
+        "Healthcare Plans",
+        "Diagnostics & Research",
+        "REIT - Healthcare Facilities"
+      ],
+      "etf_exposures": ["healthcare", "pharma", "biotech", "genomics", "medical_devices", "healthcare_sub"],
+      "extra_tickers": [],
+      "_rationale": "13% du MSCI World. Structurellement essentiel. Expert: forcer minimum."
+    },
+
+    "dividend_value": {
+      "label": "Dividend & Value",
+      "industries": [],
+      "etf_exposures": ["dividend", "dividend_growth", "value"],
+      "extra_tickers": [],
+      "_rationale": "SCHD, HDV, IUSV, VYM — ETFs dividend/value. Pas d'industry mapping car c'est un style, pas un secteur."
+    },
+
+    "defense_aero": {
+      "label": "Défense & Aérospatiale",
+      "industries": [
+        "Aerospace & Defense"
+      ],
+      "etf_exposures": [],
+      "extra_tickers": [],
+      "_rationale": "HWM, GD, LMT, RTX — décorrélé du cycle tech, tailwind géopolitique."
+    },
+
+    "utilities": {
+      "label": "Utilities",
+      "industries": [
+        "Utilities - Diversified",
+        "Utilities - Independent Power Producers",
+        "Utilities - Regulated Electric",
+        "Utilities - Regulated Gas",
+        "Utilities - Regulated Water",
+        "Utilities - Renewable"
+      ],
+      "etf_exposures": ["utilities", "clean_energy"],
+      "extra_tickers": [],
+      "_rationale": "Beta faible (~0.4-0.6). Expert: cohérent Stable/Modéré, pas Agressif."
+    },
+
+    "consumer_defensive": {
+      "label": "Consumer Défensif",
+      "industries": [
+        "Household & Personal Products",
+        "Packaged Foods",
+        "Beverages - Non-Alcoholic",
+        "Beverages - Brewers",
+        "Beverages - Wineries & Distilleries",
+        "Confectioners",
+        "Grocery Stores",
+        "Food Distribution",
+        "Tobacco",
+        "Discount Stores"
+      ],
+      "etf_exposures": [],
+      "extra_tickers": [],
+      "_rationale": "PG, NESN, KO — profil Stable. Beta faible, yield stable."
+    },
+
+    "financials": {
+      "label": "Financials",
+      "industries": [
+        "Banks - Diversified",
+        "Banks - Regional",
+        "Insurance - Diversified",
+        "Insurance - Life",
+        "Insurance - Property & Casualty",
+        "Insurance - Reinsurance",
+        "Insurance - Specialty",
+        "Insurance Brokers",
+        "Capital Markets",
+        "Asset Management",
+        "Credit Services",
+        "Financial Conglomerates",
+        "Financial Data & Stock Exchanges",
+        "Mortgage Finance"
+      ],
+      "etf_exposures": ["financials"],
+      "extra_tickers": [],
+      "_rationale": "Secteur RADAR évité. Cap naturellement bas via les pénalités RADAR."
+    },
+
+    "real_estate": {
+      "label": "Immobilier & REITs",
+      "industries": [
+        "REIT - Diversified",
+        "REIT - Industrial",
+        "REIT - Mortgage",
+        "REIT - Office",
+        "REIT - Residential",
+        "REIT - Retail",
+        "REIT - Specialty",
+        "Real Estate - Development",
+        "Real Estate - Diversified",
+        "Real Estate Services"
+      ],
+      "etf_exposures": [],
+      "extra_tickers": [],
+      "_rationale": "VICI est un REIT-Specialty (casinos). Corrélé taux. À capper dans Stable."
+    },
+
+    "tech_software": {
+      "label": "Tech Software & Services",
+      "industries": [
+        "Software - Application",
+        "Software - Infrastructure",
+        "Information Technology Services",
+        "Internet Content & Information",
+        "Internet Retail",
+        "Electronic Gaming & Multimedia",
+        "Computer Hardware",
+        "Communication Equipment",
+        "Consumer Electronics",
+        "Electronics & Computer Distribution"
+      ],
+      "etf_exposures": ["cloud_computing", "cybersecurity", "fintech", "nasdaq_composite"],
+      "extra_tickers": [],
+      "_rationale": "Différent de semi_ai — c'est le software/services, pas le hardware. Moins corrélé au cycle capex AI."
+    },
+
+    "industrials": {
+      "label": "Industrials & Transport",
+      "industries": [
+        "Farm & Heavy Construction Machinery",
+        "Specialty Industrial Machinery",
+        "Engineering & Construction",
+        "Building Products & Equipment",
+        "Electrical Equipment & Parts",
+        "Industrial Distribution",
+        "Integrated Freight & Logistics",
+        "Railroads",
+        "Marine Shipping",
+        "Trucking",
+        "Airlines",
+        "Airports & Air Services",
+        "Consulting Services",
+        "Specialty Business Services",
+        "Staffing & Employment Services",
+        "Packaging & Containers",
+        "Pollution & Treatment Controls",
+        "Scientific & Technical Instruments",
+        "Security & Protection Services",
+        "Rental & Leasing Services",
+        "Tools & Accessories"
+      ],
+      "etf_exposures": ["infrastructure"],
+      "extra_tickers": [],
+      "_rationale": "Cycle industriel. Corrélé PIB. Mid-beta."
+    },
+
+    "consumer_cyclical": {
+      "label": "Consumer Cyclique",
+      "industries": [
+        "Apparel Manufacturing",
+        "Apparel Retail",
+        "Auto Manufacturers",
+        "Auto Parts",
+        "Auto & Truck Dealerships",
+        "Department Stores",
+        "Footwear & Accessories",
+        "Furnishings, Fixtures & Appliances",
+        "Gambling",
+        "Home Improvement Retail",
+        "Lodging",
+        "Luxury Goods",
+        "Personal Services",
+        "Residential Construction",
+        "Resorts & Casinos",
+        "Restaurants",
+        "Specialty Retail",
+        "Travel Services"
+      ],
+      "etf_exposures": [],
+      "extra_tickers": [],
+      "_rationale": "Secteur RADAR évité. Consumer discretionary."
+    },
+
+    "telecom_media": {
+      "label": "Telecom & Media",
+      "industries": [
+        "Telecom Services",
+        "Entertainment",
+        "Publishing",
+        "Advertising Agencies"
+      ],
+      "etf_exposures": ["communications"],
+      "extra_tickers": [],
+      "_rationale": "Secteur RADAR évité. Communication services."
+    }
+  },
+
+  "thematic_caps_pct": {
+    "_doc": "Poids max (%) par thème et par profil. Si un thème dépasse le cap, le post-process réduit les positions les moins bien scorées de ce thème.",
+    "semi_ai":          { "Agressif": 25, "Modéré": 15, "Stable": 5 },
+    "energy_oil":       { "Agressif": 20, "Modéré": 15, "Stable": 10 },
+    "precious_metals":  { "Agressif": 15, "Modéré": 8,  "Stable": 5 },
+    "materials_mining":  { "Agressif": 15, "Modéré": 12, "Stable": 8 },
+    "healthcare":       { "Agressif": 15, "Modéré": 15, "Stable": 15 },
+    "dividend_value":   { "Agressif": 10, "Modéré": 25, "Stable": 25 },
+    "defense_aero":     { "Agressif": 12, "Modéré": 10, "Stable": 10 },
+    "utilities":        { "Agressif": 5,  "Modéré": 10, "Stable": 15 },
+    "consumer_defensive":{ "Agressif": 5, "Modéré": 12, "Stable": 20 },
+    "financials":       { "Agressif": 10, "Modéré": 12, "Stable": 12 },
+    "real_estate":      { "Agressif": 10, "Modéré": 12, "Stable": 10 },
+    "tech_software":    { "Agressif": 15, "Modéré": 12, "Stable": 8 },
+    "industrials":      { "Agressif": 15, "Modéré": 15, "Stable": 12 },
+    "consumer_cyclical": { "Agressif": 10, "Modéré": 8,  "Stable": 5 },
+    "telecom_media":    { "Agressif": 8,  "Modéré": 8,  "Stable": 5 }
+  },
+
+  "mandatory_hedges": {
+    "_doc": "Minimums obligatoires. Si le portefeuille n'atteint pas le minimum, le post-process injecte le ticker préféré en prenant sur la position la moins scorée.",
+    "Agressif": {
+      "gold": { "min_pct": 5, "preferred_tickers": ["GDE"], "type": "ETF" },
+      "healthcare_etf": { "min_pct": 3, "preferred_tickers": ["XBI"], "type": "ETF" },
+      "btc": { "min_pct": 2, "preferred_tickers": ["IBIT", "FBTC"], "type": "Crypto" }
+    },
+    "Modéré": {
+      "gold": { "min_pct": 3, "preferred_tickers": ["GLD"], "type": "ETF" },
+      "healthcare_etf": { "min_pct": 3, "preferred_tickers": ["XLV"], "type": "ETF" }
+    },
+    "Stable": {
+      "healthcare_etf": { "min_pct": 3, "preferred_tickers": ["XLV"], "type": "ETF" },
+      "ig_credit": { "min_pct": 10, "preferred_tickers": ["LQD", "VCIT"], "type": "Obligations" }
+    }
+  },
+
+  "max_correlated_block_pct": {
+    "_doc": "Aucun bloc thématique ne doit dépasser ce % en stress (corr > 0.80). C'est un safety net au-dessus des thematic_caps. Expert: 14 lignes Agressif = 3.5 facteurs en stress si pas cappé.",
+    "Agressif": 30,
+    "Modéré": 25,
+    "Stable": 20
+  },
+
+  "market_conditions": {
+    "_doc": "Règles conditionnelles évaluées à chaque run. Les données (brent, vix, gold) sont fetchées en début de pipeline. Chaque règle ajuste un thematic_cap ou un mandatory_hedge.",
+    "rules": [
+      {
+        "id": "iran_escalation",
+        "condition": "brent_usd > 100",
+        "adjustments": [
+          { "type": "thematic_cap_delta", "theme": "energy_oil", "delta_pct": 5, "profiles": ["Agressif", "Modéré"] },
+          { "type": "mandatory_hedge_delta", "hedge": "gold", "delta_pct": 2, "profiles": ["Agressif", "Modéré"] }
+        ],
+        "_rationale": "Conflit Iran matérialisé. Energy surperforme, gold = hedge géopolitique."
+      },
+      {
+        "id": "deescalation",
+        "condition": "brent_usd < 85",
+        "adjustments": [
+          { "type": "thematic_cap_delta", "theme": "energy_oil", "delta_pct": -5, "profiles": ["Agressif", "Modéré"] }
+        ],
+        "_rationale": "Dé-escalation Iran. Réduire surpondération energy. Expert: XOM 10.3% → 7% si Brent < 85$."
+      },
+      {
+        "id": "high_vol_regime",
+        "condition": "vix > 30",
+        "adjustments": [
+          { "type": "mandatory_hedge_delta", "hedge": "gold", "delta_pct": 2, "profiles": ["Agressif", "Modéré", "Stable"] },
+          { "type": "thematic_cap_delta", "theme": "semi_ai", "delta_pct": -5, "profiles": ["Agressif"] }
+        ],
+        "_rationale": "Vol élevée = renforcer hedges, réduire les paris directionnels."
+      },
+      {
+        "id": "gold_correction",
+        "condition": "gold_drawdown_from_ath_pct > 15",
+        "adjustments": [
+          { "type": "thematic_cap_delta", "theme": "precious_metals", "delta_pct": -3, "profiles": ["Agressif", "Modéré"] }
+        ],
+        "_rationale": "Or en correction technique (actuellement -18% du pic 5595$). Réduire exposition mais pas supprimer — thèse structurelle intacte."
+      },
+      {
+        "id": "fed_dovish_pivot",
+        "condition": "fed_funds_rate_delta_6m < -0.50",
+        "adjustments": [
+          { "type": "thematic_cap_delta", "theme": "semi_ai", "delta_pct": 5, "profiles": ["Agressif"] },
+          { "type": "thematic_cap_delta", "theme": "dividend_value", "delta_pct": -3, "profiles": ["Modéré", "Stable"] }
+        ],
+        "_rationale": "Pivot Fed = retour tech/growth. Relâcher le cap semi, réduire le tilt value."
+      }
+    ]
+  },
+
+  "profile_replacements": {
+    "_doc": "Remplacements directs pour cohérence profil.",
+    "Stable": {
+      "SCHY": { "replace_with": "IUSV", "name": "iShares Core S&P U.S. Value ETF", "reason": "Expert v1: SCHY overlap Modéré/Stable. IUSV (value US) différencie les profils." },
+      "TTE": { "replace_with": "ENGI", "name": "Engie SA", "reason": "Expert v2: Beta 0.9 → 0.5. Vol 22% → 15%. Yield similaire ~7%. Utilities > oil pour Stable." }
+    }
+  },
+
+  "etf_split_rules": {
+    "_doc": "Règles de split ETF pour réduire la vol d'une exposition. Expert v2: SLVP 9% trop concentré sur miners vol 43%.",
+    "Agressif": {
+      "SLVP": { "split_into": {"SLVP": 0.55, "SLV": 0.45}, "reason": "5% miners + 4% physique. Vol bloc ~35% au lieu de 43%." }
+    }
+  }
+}
