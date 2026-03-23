@@ -1,6 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.36: Weekly beta for timezone-misaligned benchmarks (EWY/EWT/AAXJ → Korea/Taiwan)
 // Changements v3.35: Regional benchmarks (SPY/VGK/INDA/EWY/EWT/AAXJ) for beta CAPM per region
 // Changements v3.34: Winsorize returns at ±30% in computeBetaCAPM to prevent outlier corruption
 // Changements v3.32:
@@ -159,9 +160,9 @@ const REGION_BENCHMARKS = {
   europe: [{ symbol: 'VGK', label: 'FTSE Europe' }],
   asia:   [
     { symbol: 'INDA', label: 'MSCI India',       countries: ['inde', 'india'] },
-    { symbol: 'EWY',  label: 'MSCI South Korea',  countries: ['coree', 'korea', 'south korea', 'coree du sud'] },
-    { symbol: 'EWT',  label: 'MSCI Taiwan',        countries: ['taiwan', 'tai wan', 'taïwan'] },
-    { symbol: 'AAXJ', label: 'MSCI Asia ex-JP',    countries: [] },  // fallback
+    { symbol: 'EWY',  label: 'MSCI South Korea',  countries: ['coree', 'korea', 'south korea', 'coree du sud'], weekly: true },
+    { symbol: 'EWT',  label: 'MSCI Taiwan',        countries: ['taiwan', 'tai wan', 'taïwan'], weekly: true },
+    { symbol: 'AAXJ', label: 'MSCI Asia ex-JP',    countries: [], weekly: true },  // fallback — also timezone-misaligned
   ]
 };
 
@@ -202,6 +203,20 @@ function getBenchSymbolForStock(stock, regionName) {
 }
 
 let CURRENT_REGION = 'us';  // set before each region processing loop
+
+// v3.36: Check if this stock's benchmark requires weekly returns (timezone mismatch)
+function needsWeeklyBeta(stock, regionName) {
+  if (!regionName || regionName.toLowerCase() !== 'asia') return false;
+  const country = (stock.country || stock.Country || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const benchCfg = REGION_BENCHMARKS.asia.find(b =>
+    b.countries.length > 0 && b.countries.some(c => country.includes(c))
+  );
+  if (benchCfg) return !!benchCfg.weekly;
+  // Fallback (AAXJ) is also weekly
+  const fallback = REGION_BENCHMARKS.asia.find(b => b.countries.length === 0);
+  return fallback ? !!fallback.weekly : false;
+}
 
 // Cache des succès pour optimiser les appels
 const successCache = new Map();
@@ -939,14 +954,18 @@ async function getPerformanceData(symbol, stock) {
                 series_start: prices[0]?.date ?? null,
                 series_end: prices.at(-1)?.date ?? null
             },
-            // ✅ v3.35: Beta CAPM vs regional benchmark (SPY/VGK/INDA/EWY/EWT/AAXJ)
+            // ✅ v3.36: Beta CAPM — daily (SPY/VGK/INDA) or weekly (EWY/EWT/AAXJ)
             beta_capm: (() => {
                 const benchPrices = getBenchForStock(stock, CURRENT_REGION);
                 if (!benchPrices.length) return null;
-                const b = computeBetaCAPM(prices, benchPrices, 126);
+                const useWeekly = needsWeeklyBeta(stock, CURRENT_REGION);
+                const b = useWeekly
+                  ? computeBetaWeekly(prices, benchPrices, 252)  // ~1 year weekly → ~50 obs
+                  : computeBetaCAPM(prices, benchPrices, 126);   // 126 daily obs
                 return b != null ? Number(b.toFixed(2)) : null;
             })(),
             beta_benchmark: getBenchSymbolForStock(stock, CURRENT_REGION),
+            beta_method: needsWeeklyBeta(stock, CURRENT_REGION) ? 'weekly' : 'daily',
 
             __last_close: current,
             __prev_close: prev,
@@ -2097,11 +2116,12 @@ async function enrichStock(stock) {
         eps_ttm,                                   
         pe_ratio: stats?.pe_ratio || null,        
         
-        // ✅ v3.35: Beta — CAPM vs regional benchmark + provider fallback
+        // ✅ v3.36: Beta — CAPM daily/weekly vs regional benchmark + provider fallback
         beta: perf?.beta_capm ?? (Number.isFinite(stats?.beta) ? stats.beta : null),
         beta_capm: perf?.beta_capm ?? null,
         beta_provider: Number.isFinite(stats?.beta) ? stats.beta : null,
         beta_benchmark: perf?.beta_benchmark ?? 'SPY',
+        beta_method: perf?.beta_method ?? 'daily',
         
         // ✅ v3.30: Force number type pour les champs perf (évite strings "36.74" qui cassent les tris)
         volatility_3y: perf.volatility_3y != null ? +perf.volatility_3y : null,
@@ -2174,6 +2194,74 @@ function computeBetaCAPM(assetPrices, benchPrices, window = 126) {
   }
   for (let i = 0; i < benchRet.length; i++) {
     benchRet[i] = Math.max(-CAP, Math.min(CAP, benchRet[i]));
+  }
+
+  const m = assetRet.length;
+  const meanA = assetRet.reduce((a, b) => a + b, 0) / m;
+  const meanB = benchRet.reduce((a, b) => a + b, 0) / m;
+
+  let cov = 0, varB = 0;
+  for (let i = 0; i < m; i++) {
+    cov  += (assetRet[i] - meanA) * (benchRet[i] - meanB);
+    varB += (benchRet[i] - meanB) ** 2;
+  }
+  return varB === 0 ? null : cov / varB;
+}
+
+// ✅ v3.36: Weekly beta for timezone-misaligned benchmarks (EWY, EWT, AAXJ)
+// Groups daily closes by ISO week → last close per week → weekly returns → Cov/Var
+// Solves: Korean stocks trade 9-15:30 KST, EWY trades 9:30-16 ET → 0 overlap on daily
+// Weekly returns dilute the timezone effect → correlation recovers to meaningful levels
+function computeBetaWeekly(assetPrices, benchPrices, windowDays = 252) {
+  // Group by ISO week: take last available close per week
+  function toWeeklyCloses(prices) {
+    const byWeek = new Map();
+    for (const p of prices) {
+      const dt = new Date(p.date + 'T00:00:00Z');
+      // ISO week: year + week number
+      const jan4 = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4));
+      const dayNum = Math.floor((dt - jan4) / 86400000) + jan4.getUTCDay();
+      const weekNum = Math.floor(dayNum / 7) + 1;
+      const key = `${dt.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+      // Keep last (most recent) close in each week
+      byWeek.set(key, { week: key, date: p.date, close: p.close });
+    }
+    return [...byWeek.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // Filter to windowDays of raw data, then group
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - windowDays);
+  const cutoffISO = cutoff.toISOString().slice(0, 10);
+
+  const assetRecent = assetPrices.filter(p => p.date >= cutoffISO);
+  const benchRecent = benchPrices.filter(p => p.date >= cutoffISO);
+
+  const assetWeekly = toWeeklyCloses(assetRecent);
+  const benchWeekly = toWeeklyCloses(benchRecent);
+
+  // Align by week key
+  const benchMap = new Map(benchWeekly.map(w => [w.week, w.close]));
+  const aligned = assetWeekly
+    .filter(w => benchMap.has(w.week))
+    .map(w => ({ asset: w.close, bench: benchMap.get(w.week) }))
+    .filter(v => v.asset > 0 && v.bench > 0);
+
+  if (aligned.length < 12) return null; // min ~3 months of weekly data
+
+  const assetRet = [], benchRet = [];
+  for (let i = 1; i < aligned.length; i++) {
+    assetRet.push(aligned[i].asset / aligned[i - 1].asset - 1);
+    benchRet.push(aligned[i].bench / aligned[i - 1].bench - 1);
+  }
+
+  // Winsorize weekly returns at ±50% (more generous than daily ±30%)
+  const CAP_W = 0.50;
+  for (let i = 0; i < assetRet.length; i++) {
+    assetRet[i] = Math.max(-CAP_W, Math.min(CAP_W, assetRet[i]));
+  }
+  for (let i = 0; i < benchRet.length; i++) {
+    benchRet[i] = Math.max(-CAP_W, Math.min(CAP_W, benchRet[i]));
   }
 
   const m = assetRet.length;
@@ -3047,7 +3135,8 @@ async function main() {
     
     for (const region of regions) {
         CURRENT_REGION = region.name;  // v3.35: for getBenchForStock()
-        console.log(`\n🌍 ${region.name.toUpperCase()} (benchmark: ${region.name === 'us' ? 'SPY' : region.name === 'europe' ? 'VGK' : 'INDA/EWY/EWT/AAXJ'})`);
+        const benchInfo = region.name === 'us' ? 'SPY (daily)' : region.name === 'europe' ? 'VGK (daily)' : 'INDA(daily)/EWY(weekly)/EWT(weekly)/AAXJ(weekly)';
+        console.log(`\n🌍 ${region.name.toUpperCase()} (benchmark: ${benchInfo})`);
         const enrichedStocks = [];
         
         for (let i = 0; i < region.stocks.length; i += CONFIG.CHUNK_SIZE) {
