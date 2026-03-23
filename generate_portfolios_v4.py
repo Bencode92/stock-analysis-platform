@@ -1200,7 +1200,23 @@ def build_tickers_meta_for_risk(
             if not entry.get("industry"):
                 entry["industry"] = _src.get("industry", "")
             if entry.get("beta") is None:
-                entry["beta"] = _src.get("beta") or _src.get("beta_capm")
+                # v5.4.2: Prefer beta_provider (standard market beta from data vendor)
+                # over beta/beta_capm which are vs REGIONAL benchmarks (VGK for EU)
+                # and near-zero for US stocks vs VGK.
+                # Priority: beta_provider > beta > beta_capm
+                _bp = _src.get("beta_provider")
+                if _bp is not None:
+                    try:
+                        entry["beta"] = float(_bp)
+                    except (ValueError, TypeError):
+                        pass
+                if entry.get("beta") is None:
+                    _b = _src.get("beta") or _src.get("beta_capm")
+                    if _b is not None:
+                        try:
+                            entry["beta"] = float(_b)
+                        except (ValueError, TypeError):
+                            pass
         
         # Fallback: try direct attributes on asset object
         if entry.get("beta") is None:
