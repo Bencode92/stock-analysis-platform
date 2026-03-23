@@ -64,17 +64,37 @@ def fetch_market_conditions(api_key: str = None) -> Dict[str, float]:
             logger.warning(f"[MARKET] Failed to fetch quote {symbol}: {e}")
         return None
     
-    # 1. Brent crude — avg 5 days
-    brent_closes = _fetch_price("BZ", days=5)
+    # 1. Brent crude — avg 5 days (try multiple symbols)
+    # Twelve Data commodity symbols: XBR/USD (Brent), XTI/USD (WTI), CL (futures)
+    # BZ = Kanzhun Ltd (NOT Brent!) — do NOT use
+    brent_closes = None
+    for brent_sym in ["XBR/USD", "XTI/USD", "CL"]:
+        brent_closes = _fetch_price(brent_sym, days=5)
+        if brent_closes:
+            # Sanity: ALL prices should be > $30 and < $300 (crude oil range)
+            if all(30 < p < 300 for p in brent_closes):
+                logger.info(f"[MARKET] Brent symbol resolved: {brent_sym}")
+                break
+        brent_closes = None
     if brent_closes:
         data["brent_usd_avg5d"] = sum(brent_closes) / len(brent_closes)
         logger.info(f"[MARKET] Brent avg5d: ${data['brent_usd_avg5d']:.1f}")
+    else:
+        logger.warning("[MARKET] Brent: no valid data — tried XBR/USD, XTI/USD, CL")
     
-    # 2. VIX
-    vix = _fetch_quote("VIX")
-    if vix:
-        data["vix"] = vix
-        logger.info(f"[MARKET] VIX: {vix:.1f}")
+    # 2. VIX — not available on Twelve Data (not a tradeable symbol)
+    # Use environment variable VIX_LEVEL, updated manually or by a separate job
+    # Default to 22 (neutral) if not set
+    _vix_env = os.environ.get("VIX_LEVEL")
+    if _vix_env:
+        try:
+            data["vix"] = float(_vix_env)
+            logger.info(f"[MARKET] VIX: {data['vix']:.1f} (from VIX_LEVEL env)")
+        except ValueError:
+            logger.warning(f"[MARKET] VIX_LEVEL invalid: {_vix_env}")
+    else:
+        data["vix"] = 22.0  # Neutral default — rule vix>30 won't trigger
+        logger.info("[MARKET] VIX: 22.0 (default — set VIX_LEVEL env for real data)")
     
     # 3. Gold — current price + ATH for drawdown calculation
     gold_closes = _fetch_price("XAU/USD", days=120)
@@ -675,6 +695,41 @@ def rebuild_display(tickers: Dict[str, float], meta: Dict[str, Dict]) -> Tuple[D
 # BETA FILTER ACTIONS (Principle 2 for stocks)
 # =============================================================================
 
+def _load_beta_from_stocks_files() -> Dict[str, float]:
+    """Load beta values from stocks JSON files as fallback when _tickers_meta.beta is None."""
+    betas = {}
+    stock_patterns = [
+        os.path.join("data", "stocks_us.json"),
+        os.path.join("data", "stocks_europe.json"),
+        os.path.join("data", "stocks_asia.json"),
+    ]
+    # Also check relative to engine location
+    engine_dir = os.path.dirname(os.path.abspath(__file__))
+    for pattern in stock_patterns:
+        for base in [os.getcwd(), engine_dir, os.path.join(engine_dir, "..")]:
+            fpath = os.path.join(base, pattern)
+            if os.path.isfile(fpath):
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    stocks = data.get("stocks", data) if isinstance(data, dict) else data
+                    if isinstance(stocks, list):
+                        for s in stocks:
+                            tk = s.get("ticker", "")
+                            b = s.get("beta") or s.get("beta_capm")
+                            if tk and b is not None:
+                                betas[tk.upper()] = float(b)
+                except Exception:
+                    pass
+                break  # Found this file, move to next pattern
+    if betas:
+        logger.info(f"[BETA] Loaded {len(betas)} betas from stocks files")
+    return betas
+
+# Module-level cache
+_BETA_CACHE: Dict[str, float] = {}
+
+
 def apply_beta_filter_actions(
     tickers: Dict[str, float],
     meta: Dict[str, Dict],
@@ -683,8 +738,10 @@ def apply_beta_filter_actions(
 ) -> Tuple[Dict[str, float], Dict[str, Dict], list]:
     """
     Remove or flag actions whose beta exceeds the profile threshold.
-    Beta data comes from _tickers_meta (propagated from stocks JSON).
+    Beta data comes from _tickers_meta, with fallback to stocks JSON files.
     """
+    global _BETA_CACHE
+    
     beta_max_cfg = rules.get("beta_max_actions", {})
     beta_max = beta_max_cfg.get(profile)
     logs = []
@@ -692,27 +749,45 @@ def apply_beta_filter_actions(
     if beta_max is None:
         return tickers, meta, logs  # No filter for this profile
     
+    logs.append(f"🔍 Beta filter: {profile} max={beta_max}, checking {sum(1 for t,m in meta.items() if m.get('category')=='Actions')} actions")
+    
     tickers = dict(tickers)
     meta = {k: dict(v) for k, v in meta.items()}
+    
+    # Load beta cache from stocks files if not yet loaded
+    if not _BETA_CACHE:
+        _BETA_CACHE = _load_beta_from_stocks_files()
+        logs.append(f"📊 Beta cache loaded: {len(_BETA_CACHE)} tickers from stocks files")
     
     # Check for replacements in profile_replacements (so we don't remove + replace = conflict)
     replacements = rules.get("profile_replacements", {}).get(profile, {})
     
     violators = []
+    _missing_beta = []
     for tk, w in list(tickers.items()):
         info = meta.get(tk, {})
         if info.get("category") != "Actions":
             continue
         
-        # Get beta — try multiple fields
+        # Get beta — try meta, then cache from stocks files
         beta = info.get("beta") or info.get("beta_capm")
         if beta is None:
+            beta = _BETA_CACHE.get(tk.upper())
+            if beta is not None:
+                meta[tk]["beta"] = beta  # Enrich meta for downstream use
+                logs.append(f"📊 {tk}: beta {beta:.2f} loaded from stocks file")
+        
+        if beta is None:
+            _missing_beta.append(tk)
             continue
         
         try:
             beta = float(beta)
         except (ValueError, TypeError):
+            _missing_beta.append(f"{tk}(invalid:{beta})")
             continue
+        
+        logs.append(f"  📊 {tk}: beta={beta:.2f} {'> max' if beta > beta_max else 'OK'}")
         
         if beta > beta_max:
             # Check if there's already a replacement defined
@@ -721,6 +796,9 @@ def apply_beta_filter_actions(
                 continue  # Will be handled by apply_profile_replacements
             
             violators.append((tk, w, beta))
+    
+    if _missing_beta:
+        logs.append(f"⚠️ Beta missing for {len(_missing_beta)} actions: {', '.join(_missing_beta[:5])} — skipped")
     
     if not violators:
         return tickers, meta, logs
