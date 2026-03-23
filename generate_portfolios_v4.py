@@ -4783,6 +4783,8 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "symbol": symbol,
             "isin": isin,
             "id": aid,
+            # v5.4.0: industry for thematic classification (allocation_rules_engine)
+            "industry": (a.source_data.get("industry", "") if hasattr(a, 'source_data') and a.source_data else ""),
         }
         
         if len(ticker_debug) < 5:
@@ -4976,6 +4978,8 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
                     "category": cat_v1,     # "Actions"/"ETF"/"Crypto"
                     "name": name,
                     "asset_ids": [],
+                    # v5.4.0: industry for allocation_rules_engine thematic classification
+                    "industry": info.get("industry", ""),
                 })
                 meta["weight"] += weight / 100.0
                 if str(original_id) not in meta["asset_ids"]:
@@ -5761,6 +5765,37 @@ def save_portfolios(portfolios: Dict, assets: list):
             _p_data["_numeric_weights"] = _nw
             _crypto_after = sum(_t.get(k, 0) for k in _crypto_tks if k in _t) * 100
             logger.info(f"   [{_p_name}] 🪙 CRYPTO NUCLEAR CAP: {_crypto_total*100:.1f}%→{_crypto_after:.1f}% (max={_crypto_max_dec*100:.0f}%)")
+    
+    # === v5.4.0: ALLOCATION RULES ENGINE ===
+    # Reads allocation_rules.json and applies:
+    # - Thematic caps (semi_ai ≤ 25% Agressif, etc.)
+    # - Mandatory hedges (gold, HC ETF, BTC, IG credit)
+    # - Profile replacements (TTE → ENGI in Stable, SCHY → IUSV)
+    # - ETF splits (SLVP → SLVP + SLV)
+    # All driven by JSON config, zero hardcoded allocation logic.
+    try:
+        from allocation_rules_engine import load_allocation_rules, apply_allocation_rules
+        try:
+            from portfolio_engine.etf_exposure import TICKER_TO_EXPOSURE as _TICKER_EXP
+        except ImportError:
+            try:
+                from etf_exposure import TICKER_TO_EXPOSURE as _TICKER_EXP
+            except ImportError:
+                _TICKER_EXP = {}
+                logger.warning("⚠️ [ALLOC_RULES] TICKER_TO_EXPOSURE not found — ETF themes will be limited")
+        
+        _alloc_rules = load_allocation_rules()
+        if _alloc_rules:
+            for _p_name in ["Agressif", "Modéré", "Stable"]:
+                if _p_name in v1_data:
+                    apply_allocation_rules(v1_data[_p_name], _p_name, _alloc_rules, _TICKER_EXP)
+            logger.info("✅ [ALLOC_RULES] Engine applied to all profiles")
+        else:
+            logger.info("ℹ️ [ALLOC_RULES] No rules file found — skipping")
+    except ImportError:
+        logger.warning("⚠️ [ALLOC_RULES] allocation_rules_engine.py not found — skipping")
+    except Exception as e:
+        logger.warning(f"⚠️ [ALLOC_RULES] Error: {e} — portfolios unchanged")
     
     v1_path = CONFIG["output_path"]
     with open(v1_path, "w", encoding="utf-8") as f:
