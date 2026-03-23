@@ -1184,6 +1184,9 @@ def build_tickers_meta_for_risk(
             "category": category,
             "name": name,
             "asset_ids": [],
+            # v5.4.1: propagate industry + beta for allocation_rules_engine
+            "industry": (a.source_data.get("industry", "") if hasattr(a, 'source_data') and a.source_data else ""),
+            "beta": (a.source_data.get("beta") or a.source_data.get("beta_capm") if hasattr(a, 'source_data') and a.source_data else None),
         })
         entry["weight"] += float(w_pct) / 100.0
         entry["asset_ids"].append(str(aid))
