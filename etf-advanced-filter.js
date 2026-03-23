@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v14.7: Name-to-ticker mapping, inverse leverage magnitude (-2x/-3x), unified lev extraction
 // v14.6: Add underlyings (MSTR,MARA,PLTR,ARKK), fix FX hedged, leveraged 1.25x
 // v14.5: Fix detectETFType — Long-Short, VIX short, leveraged priority
 // v14.4: Sector Guard - enrichissement direct combined_etfs.csv pour portfolio engine
@@ -204,6 +205,35 @@ const SINGLE_STOCK_SECTORS = {
     'LCID': { sector: 'Consumer Cyclical', country: 'United States' },
 };
 
+// v14.7: Company name → ticker mapping (when ticker not in ETF name/objective)
+const NAME_TO_TICKER = [
+  { rx: /\bmicrostrategy\b/i, ticker: 'MSTR' },
+  { rx: /\btesla\b/i, ticker: 'TSLA' },
+  { rx: /\bnvidia\b/i, ticker: 'NVDA' },
+  { rx: /\bnetflix\b/i, ticker: 'NFLX' },
+  { rx: /\bcoinbase\b/i, ticker: 'COIN' },
+  { rx: /\bamazon\b/i, ticker: 'AMZN' },
+  { rx: /\bapple\b(?!\s*(hospitality|inc))/i, ticker: 'AAPL' },
+  { rx: /\bmicrosoft\b/i, ticker: 'MSFT' },
+  { rx: /\balphabet\b/i, ticker: 'GOOGL' },
+  { rx: /\bmeta\s+platforms\b/i, ticker: 'META' },
+  { rx: /\bpalantir\b/i, ticker: 'PLTR' },
+  { rx: /\brobinhood\b/i, ticker: 'HOOD' },
+  { rx: /\bsuper\s*micro\b/i, ticker: 'SMCI' },
+  { rx: /\bcrowdstrike\b/i, ticker: 'CRWD' },
+  { rx: /\bbroadcom\b/i, ticker: 'AVGO' },
+  { rx: /\buber\b/i, ticker: 'UBER' },
+  { rx: /\bsnapchat\b|\bsnap\s+inc\b/i, ticker: 'SNAP' },
+  { rx: /\bdraftkings\b/i, ticker: 'DKNG' },
+  { rx: /\bsofi\b/i, ticker: 'SOFI' },
+  { rx: /\brocket\s*lab\b/i, ticker: 'RKLB' },
+  { rx: /\brivian\b/i, ticker: 'RIVN' },
+  { rx: /\blucid\b/i, ticker: 'LCID' },
+  { rx: /\breddit\b/i, ticker: 'RDDT' },
+  { rx: /\bmarathon\s*digital\b/i, ticker: 'MARA' },
+  { rx: /\bblock\s+inc\b|\bsquare\b/i, ticker: 'SQ' },
+];
+
 const SECTOR_NORMALIZATION = {
     'realestate': 'Real Estate', 'real-estate': 'Real Estate', 'real_estate': 'Real Estate',
     'financials': 'Financial Services', 'finance': 'Financial Services',
@@ -230,12 +260,21 @@ function detectETFType(symbol, name, objective) {
   const fullText = `${symbol} ${name || ''} ${objective || ''}`;
   const textLower = fullText.toLowerCase();
 
-  // Detect underlying ticker
+  // Detect underlying ticker — first by ticker match, then by company name
   let underlying_ticker = null;
   const m = fullText.match(SINGLE_STOCK_RX);
   if (m?.[0]) {
     const t = m[0].toUpperCase();
     if (SINGLE_STOCK_SECTORS[t]) underlying_ticker = t;
+  }
+  // v14.7: Fallback — company name matching (catches "MicroStrategy", "Netflix", etc.)
+  if (!underlying_ticker) {
+    for (const { rx, ticker } of NAME_TO_TICKER) {
+      if (rx.test(fullText) && SINGLE_STOCK_SECTORS[ticker]) {
+        underlying_ticker = ticker;
+        break;
+      }
+    }
   }
 
   // Structured vehicle (ETN/ETC/NOTE) - priority over leveraged
@@ -260,25 +299,34 @@ function detectETFType(symbol, name, objective) {
   const isLeveraged = ETF_TYPE_RX.leveraged.test(textLower) ||
     (ETF_TYPE_RX.ultraAlone.test(textLower) && ETF_TYPE_RX.ultraIssuer.test(textLower) && !isInverse);
 
-  // v14.5: If both leveraged AND inverse match, check which is dominant
-  // Products like "2x Bitcoin Strategy" with "short-term" in text should be leveraged
+  // v14.5+v14.7: If both leveraged AND inverse match, check which is dominant
   if (isInverse && isLeveraged) {
-    const hasExplicitInverse = /\b(inverse|bear|-1x)\b/i.test(textLower);
+    // v14.7: "short" (not "short-term") counts as explicit inverse
+    const hasExplicitInverse = /\b(inverse|bear|-1x)\b/i.test(textLower) ||
+      (/\bshort\b/i.test(textLower) && !/\bshort[\s-]*term\b/i.test(textLower));
     if (!hasExplicitInverse) {
-      // "short" triggered inverse but explicit leverage (2x/3x) present → leveraged wins
       isInverse = false;
     }
   }
+
+  // v14.7: Extract leverage magnitude (used for both leveraged AND inverse)
+  const levMatch = textLower.match(/\b(\d+(?:\.\d+)?)\s*x\b/);
+  let levNum = levMatch ? parseFloat(levMatch[1]) : null;
+  // v14.7: ProShares branding — UltraPro = 3x, Ultra = 2x, UltraShort = 2x inverse
+  if (!levNum && /\bultra\s*pro\b/i.test(textLower)) levNum = 3;
+  else if (!levNum && /\bultra\s*short\b|\bultrashort\b/i.test(textLower)) levNum = 2;
+  else if (!levNum && /\bultra\b/i.test(textLower) && ETF_TYPE_RX.ultraIssuer.test(textLower)) levNum = 2;
 
   // Check if index derivative (no single stock)
   const isIndexDeriv = !underlying_ticker && ETF_TYPE_RX.indexDerivative.test(textLower);
 
   if (isInverse) {
-    return { type: 'inverse', leverage: -1, underlying_ticker, is_index_derivative: isIndexDeriv };
+    // v14.7: Inverse leverage = negative magnitude (Bear 2X = -2, Bear 3X = -3, simple inverse = -1)
+    const inverseLev = levNum && levNum >= 2 ? -levNum : -1;
+    return { type: 'inverse', leverage: inverseLev, underlying_ticker, is_index_derivative: isIndexDeriv };
   }
   if (isLeveraged) {
-    const mm = textLower.match(/\b([23])\s*x\b|\b(2x|3x)\b/i);
-    const lev = mm ? parseInt((mm[1] || mm[2] || '2')[0], 10) : 2;
+    const lev = levNum && levNum >= 1.1 ? levNum : 2;
     return { type: 'leveraged', leverage: lev, underlying_ticker, is_index_derivative: isIndexDeriv };
   }
   if (underlying_ticker) {
