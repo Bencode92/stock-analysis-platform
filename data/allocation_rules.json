@@ -249,6 +249,13 @@
 
   "position_max": 0.15,
 
+  "beta_max_actions": {
+    "_doc": "v2: Beta max pour les actions par profil. Si une action dépasse le seuil, elle est remplacée par le profile_replacement si défini, sinon retirée et son poids redistribué. Le beta vient de _tickers_meta.beta ou du fichier stocks JSON.",
+    "Agressif": null,
+    "Modéré": 1.50,
+    "Stable": 0.85
+  },
+
   "bond_fallback_tickers": {
     "default": ["SCHO", "STIP", "IGSB", "VCSH"],
     "inflation_regime": ["STIP", "SCHO"]
