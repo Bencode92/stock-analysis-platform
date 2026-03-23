@@ -196,25 +196,54 @@ def apply_thematic_caps(
         excess = current - cap_dec
         logs.append(f"⚠️ {theme} = {current*100:.1f}% > cap {cap_pct}% → reducing by {excess*100:.1f}%")
         
-        # Reduce PROPORTIONALLY across all positions in this theme
-        # Each position shrinks by the same ratio (preserves relative conviction)
-        ratio = cap_dec / current  # e.g. 25/43 = 0.58 → each keeps 58% of its weight
+        # v2: Check cap_reduction_priority — reduce hedge tickers last
+        _priority = rules.get("cap_reduction_priority", {}).get(theme, {})
+        _reduce_last = set(_priority.get("reduce_last", []))
+        _reduce_first = set(_priority.get("reduce_first", []))
+        
+        # Split positions: reducible first, hedge last
+        _first_positions = [(tk, w) for tk, w in positions if tk in _reduce_first]
+        _last_positions = [(tk, w) for tk, w in positions if tk in _reduce_last]
+        _normal_positions = [(tk, w) for tk, w in positions if tk not in _reduce_first and tk not in _reduce_last]
+        
+        # Try reducing _first + _normal before touching _last
+        _first_total = sum(w for _, w in _first_positions) + sum(w for _, w in _normal_positions)
         
         total_reduced = 0
-        for tk, w in positions:
-            if tk not in tickers:
-                continue
-            new_w = w * ratio
-            # Floor at 1% to avoid dust
-            if new_w < 0.01:
-                total_reduced += tickers[tk]
-                logs.append(f"  🗑️ {tk}: {w*100:.1f}% → removed (below 1% after proportional cut)")
-                del tickers[tk]
-            else:
-                reduced = tickers[tk] - new_w
-                total_reduced += reduced
-                tickers[tk] = new_w
-                logs.append(f"  📉 {tk}: {w*100:.1f}% → {new_w*100:.1f}% (theme {theme})")
+        if _first_total >= excess + 0.001 and (_first_positions or _normal_positions):
+            # Can absorb all excess without touching hedge tickers
+            _reducible = _first_positions + _normal_positions
+            _red_total = sum(w for _, w in _reducible)
+            _ratio = max(0, (_red_total - excess) / _red_total) if _red_total > 0 else 0
+            for tk, w in _reducible:
+                if tk not in tickers:
+                    continue
+                new_w = w * _ratio
+                if new_w < 0.01:
+                    total_reduced += tickers[tk]
+                    logs.append(f"  🗑️ {tk}: {w*100:.1f}% → removed (below 1%)")
+                    del tickers[tk]
+                else:
+                    total_reduced += tickers[tk] - new_w
+                    tickers[tk] = new_w
+                    logs.append(f"  📉 {tk}: {w*100:.1f}% → {new_w*100:.1f}% (theme {theme})")
+            if _last_positions:
+                logs.append(f"  🛡️ Hedge tickers preserved: {', '.join(tk for tk, _ in _last_positions)}")
+        else:
+            # Must reduce everything proportionally
+            ratio = cap_dec / current
+            for tk, w in positions:
+                if tk not in tickers:
+                    continue
+                new_w = w * ratio
+                if new_w < 0.01:
+                    total_reduced += tickers[tk]
+                    logs.append(f"  🗑️ {tk}: {w*100:.1f}% → removed (below 1%)")
+                    del tickers[tk]
+                else:
+                    total_reduced += tickers[tk] - new_w
+                    tickers[tk] = new_w
+                    logs.append(f"  📉 {tk}: {w*100:.1f}% → {new_w*100:.1f}% (theme {theme})")
         
         # Redistribute to OTHER themes' equity/ETF positions (not bonds, not same theme)
         if total_reduced > 0:
@@ -518,8 +547,8 @@ def apply_allocation_rules(
         tickers = {k: v * factor for k, v in tickers.items()}
         all_logs.append(f"♻️ Re-normalized from {total*100:.1f}% to 100%")
     
-    # Step 6b: BOND FLOOR — ensure minimum bond allocation per profile (BEFORE position cap)
-    _BOND_FLOOR = {"Agressif": 0.10, "Modéré": 0.20, "Stable": 0.35}
+    # Step 6b: BOND FLOOR — read from config (v2: Stable 35→40%)
+    _BOND_FLOOR = rules.get("bond_floor", {"Agressif": 0.10, "Modéré": 0.20, "Stable": 0.40})
     _FALLBACK_BONDS = ["SCHO", "STIP", "IGSB", "VCSH"]  # Short-duration safe options
     _FALLBACK_BOND_NAMES = {
         "SCHO": "Schwab Short-Term U.S. Treasury ETF",
@@ -586,7 +615,7 @@ def apply_allocation_rules(
     
     # Step 6c: POSITION CAP — no single position > 15% (AFTER bond floor)
     # CRITICAL: redistribute within SAME asset class to preserve bond floor
-    _POS_MAX = 0.15
+    _POS_MAX = rules.get("position_max", 0.15)
     for _cap_iter in range(5):
         _over = {k: v for k, v in tickers.items() if v > _POS_MAX + 0.001}
         if not _over:
