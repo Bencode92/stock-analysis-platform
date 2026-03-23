@@ -774,13 +774,18 @@ def apply_beta_filter_actions(
         if info.get("category") != "Actions":
             continue
         
-        # Get beta — try meta, then cache from stocks files
-        beta = info.get("beta") or info.get("beta_capm")
-        if beta is None:
-            beta = _BETA_CACHE.get(tk.upper())
+        # Get beta — ALWAYS prefer cache (reads beta_provider from raw JSON files)
+        # over _tickers_meta (which may have regional beta, e.g. XOM vs VGK = 0.07)
+        beta = _BETA_CACHE.get(tk.upper())
+        if beta is not None:
+            if info.get("beta") is not None and abs(beta - (info.get("beta") or 0)) > 0.3:
+                logs.append(f"  📊 {tk}: cache={beta:.2f} vs meta={info.get('beta'):.2f} — using cache (beta_provider)")
+            meta[tk]["beta"] = beta  # Overwrite meta with correct value
+        else:
+            # Fallback to _tickers_meta if not in cache
+            beta = info.get("beta") or info.get("beta_capm")
             if beta is not None:
-                meta[tk]["beta"] = beta  # Enrich meta for downstream use
-                logs.append(f"📊 {tk}: beta {beta:.2f} loaded from stocks file")
+                logs.append(f"  📊 {tk}: beta={beta:.2f} from meta (no cache entry)")
         
         if beta is None:
             _missing_beta.append(tk)
