@@ -249,6 +249,18 @@
 
   "position_max": 0.15,
 
+  "crypto_position_cap": {
+    "_doc": "v2.1: Cap individuel par crypto. Les altcoins illiquides (MORPHO, TRX) sont cappés à 3%. BTC/ETH et leurs ETF à 5%. L'excès est redistribué aux positions non-crypto.",
+    "default_max_pct": 3.0,
+    "exceptions": {
+      "BTC": 5.0,
+      "ETH": 5.0,
+      "IBIT": 5.0,
+      "FBTC": 5.0,
+      "ETHE": 5.0
+    }
+  },
+
   "beta_max_actions": {
     "_doc": "v2: Beta max pour les actions par profil. Si une action dépasse le seuil, elle est remplacée par le profile_replacement si défini, sinon retirée et son poids redistribué. Le beta vient de _tickers_meta.beta ou du fichier stocks JSON.",
     "Agressif": null,
