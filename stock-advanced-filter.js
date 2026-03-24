@@ -1,6 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.39: Expert review — Blume adjustment, suspect 0.0/3.0, window 252d/504w, confidence flag
 // Changements v3.38: Smart beta selection — provider-first with sanity checks + divergence signal
 // Changements v3.37: INDA weekly (corr daily=-0.069 confirmed timezone mismatch)
 // Changements v3.36: Weekly beta for timezone-misaligned benchmarks (EWY/EWT/AAXJ → Korea/Taiwan)
@@ -962,8 +963,8 @@ async function getPerformanceData(symbol, stock) {
                 if (!benchPrices.length) return null;
                 const useWeekly = needsWeeklyBeta(stock, CURRENT_REGION);
                 const b = useWeekly
-                  ? computeBetaWeekly(prices, benchPrices, 252)  // ~1 year weekly → ~50 obs
-                  : computeBetaCAPM(prices, benchPrices, 126);   // 126 daily obs
+                  ? computeBetaWeekly(prices, benchPrices, 504)  // v3.39: 2 years weekly → ~104 obs (was 252/~50)
+                  : computeBetaCAPM(prices, benchPrices, 252);   // v3.39: 1 year daily → ~250 obs (was 126)
                 return b != null ? Number(b.toFixed(2)) : null;
             })(),
             beta_benchmark: getBenchSymbolForStock(stock, CURRENT_REGION),
@@ -2118,15 +2119,18 @@ async function enrichStock(stock) {
         eps_ttm,                                   
         pe_ratio: stats?.pe_ratio || null,        
         
-        // ✅ v3.38: Smart beta selection — provider-first with sanity checks
+        // ✅ v3.39: Smart beta selection — Blume adjusted, provider-first, confidence flag
         ...(() => {
           const bc = perf?.beta_capm ?? null;
           const bp = Number.isFinite(stats?.beta) ? stats.beta : null;
-          const sel = selectBeta(bc, bp, '');
+          const method = perf?.beta_method ?? 'daily';
+          const sel = selectBeta(bc, bp, '', method);
           return {
             beta: sel.beta != null ? +sel.beta.toFixed(2) : null,
+            beta_raw: sel.beta != null ? +((sel.beta - 0.33) / 0.67).toFixed(2) : null,  // reverse Blume for transparency
             beta_quality: sel.beta_quality,
             beta_divergence: sel.beta_divergence ?? null,
+            beta_confidence: sel.beta_confidence,
           };
         })(),
         beta_capm: perf?.beta_capm ?? null,
@@ -2287,45 +2291,53 @@ function computeBetaWeekly(assetPrices, benchPrices, windowDays = 252) {
   return varB === 0 ? null : cov / varB;
 }
 
-// ✅ v3.38: Smart beta selection — provider-first with sanity checks
-// Provider (Twelve Data) uses longer window (~2-3y) + optimal frequency → structurally better
-// CAPM (our calc) captures recent regime → useful as divergence signal
-function selectBeta(betaCAPM, betaProvider, sectorBucket) {
+// ✅ v3.39: Smart beta selection — expert-reviewed improvements
+// Phase 1: Blume adjustment (beta_adj = 0.33 + 0.67 * beta_raw) — Bloomberg standard
+// Phase 1: Suspect threshold tightened: β < 0.0 (was -0.3), |β| > 3.0 (was 5.0)
+// Phase 5: beta_confidence flag for Asia weekly betas
+function selectBeta(betaCAPM, betaProvider, sectorBucket, betaMethod) {
   const hasCAPM = betaCAPM != null && Number.isFinite(betaCAPM);
   const hasProv = betaProvider != null && Number.isFinite(betaProvider);
+  const isWeekly = betaMethod === 'weekly';
   
   if (!hasCAPM && !hasProv) {
-    return { beta: null, beta_quality: 'missing' };
+    return { beta: null, beta_quality: 'missing', beta_confidence: 'none' };
   }
   
   if (!hasProv) {
-    return { beta: hasCAPM ? betaCAPM : null, beta_quality: 'capm_only' };
+    const raw = hasCAPM ? betaCAPM : null;
+    const adj = raw != null ? 0.33 + 0.67 * raw : null;  // Blume (1975)
+    return { beta: adj, beta_quality: 'capm_only', beta_confidence: isWeekly ? 'low' : 'medium' };
   }
   
-  // Provider suspect checks:
-  // 1. Negative beta for equity (not crypto/commodity) — structurally absurd
+  // v3.39: Provider suspect checks — tightened per expert review
   const isCrypto = /crypto/i.test(sectorBucket || '');
   const isCommodity = /commodity|volatility/i.test(sectorBucket || '');
   const providerSuspect = 
-    (betaProvider < -0.3 && !isCrypto && !isCommodity) ||  // negative for equity
-    (Math.abs(betaProvider) > 5 && !isCrypto) ||            // extreme for non-crypto
+    (betaProvider < 0.0 && !isCrypto && !isCommodity) ||   // v3.39: plancher à 0.0 (was -0.3)
+    (Math.abs(betaProvider) > 3.0 && !isCrypto) ||          // v3.39: plafond à 3.0 (was 5.0)
     false;
   
   if (providerSuspect && hasCAPM) {
-    return { beta: betaCAPM, beta_quality: 'capm_suspect_prov' };
+    const adj = 0.33 + 0.67 * betaCAPM;  // Blume
+    return { beta: adj, beta_quality: 'capm_suspect_prov', beta_confidence: isWeekly ? 'low' : 'medium' };
   }
   
   if (!hasCAPM) {
-    return { beta: betaProvider, beta_quality: 'provider_only' };
+    const adj = 0.33 + 0.67 * betaProvider;  // Blume
+    return { beta: adj, beta_quality: 'provider_only', beta_confidence: 'medium' };
   }
   
-  // Both available, provider not suspect → use provider
+  // Both available, provider not suspect → use provider + Blume
+  const adj = 0.33 + 0.67 * betaProvider;  // Blume (1975) mean-reversion adjustment
   const divergence = Math.abs(betaCAPM - betaProvider);
+  const confidence = isWeekly && divergence > 0.8 ? 'low' : divergence > 0.8 ? 'medium' : 'high';
+  
   if (divergence > 0.8) {
-    return { beta: betaProvider, beta_quality: 'provider_capm_diverge', beta_divergence: +divergence.toFixed(2) };
+    return { beta: adj, beta_quality: 'provider_capm_diverge', beta_divergence: +divergence.toFixed(2), beta_confidence: confidence };
   }
   
-  return { beta: betaProvider, beta_quality: 'provider_confirmed', beta_divergence: +divergence.toFixed(2) };
+  return { beta: adj, beta_quality: 'provider_confirmed', beta_divergence: +divergence.toFixed(2), beta_confidence: confidence };
 }
 
 // ✅ v3.26: Drawdown forward correct (pic → creux dans le temps réel)
