@@ -1,6 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
+// Changements v3.38: Smart beta selection — provider-first with sanity checks + divergence signal
 // Changements v3.37: INDA weekly (corr daily=-0.069 confirmed timezone mismatch)
 // Changements v3.36: Weekly beta for timezone-misaligned benchmarks (EWY/EWT/AAXJ → Korea/Taiwan)
 // Changements v3.35: Regional benchmarks (SPY/VGK/INDA/EWY/EWT/AAXJ) for beta CAPM per region
@@ -2117,8 +2118,17 @@ async function enrichStock(stock) {
         eps_ttm,                                   
         pe_ratio: stats?.pe_ratio || null,        
         
-        // ✅ v3.36: Beta — CAPM daily/weekly vs regional benchmark + provider fallback
-        beta: perf?.beta_capm ?? (Number.isFinite(stats?.beta) ? stats.beta : null),
+        // ✅ v3.38: Smart beta selection — provider-first with sanity checks
+        ...(() => {
+          const bc = perf?.beta_capm ?? null;
+          const bp = Number.isFinite(stats?.beta) ? stats.beta : null;
+          const sel = selectBeta(bc, bp, '');
+          return {
+            beta: sel.beta != null ? +sel.beta.toFixed(2) : null,
+            beta_quality: sel.beta_quality,
+            beta_divergence: sel.beta_divergence ?? null,
+          };
+        })(),
         beta_capm: perf?.beta_capm ?? null,
         beta_provider: Number.isFinite(stats?.beta) ? stats.beta : null,
         beta_benchmark: perf?.beta_benchmark ?? 'SPY',
@@ -2275,6 +2285,47 @@ function computeBetaWeekly(assetPrices, benchPrices, windowDays = 252) {
     varB += (benchRet[i] - meanB) ** 2;
   }
   return varB === 0 ? null : cov / varB;
+}
+
+// ✅ v3.38: Smart beta selection — provider-first with sanity checks
+// Provider (Twelve Data) uses longer window (~2-3y) + optimal frequency → structurally better
+// CAPM (our calc) captures recent regime → useful as divergence signal
+function selectBeta(betaCAPM, betaProvider, sectorBucket) {
+  const hasCAPM = betaCAPM != null && Number.isFinite(betaCAPM);
+  const hasProv = betaProvider != null && Number.isFinite(betaProvider);
+  
+  if (!hasCAPM && !hasProv) {
+    return { beta: null, beta_quality: 'missing' };
+  }
+  
+  if (!hasProv) {
+    return { beta: hasCAPM ? betaCAPM : null, beta_quality: 'capm_only' };
+  }
+  
+  // Provider suspect checks:
+  // 1. Negative beta for equity (not crypto/commodity) — structurally absurd
+  const isCrypto = /crypto/i.test(sectorBucket || '');
+  const isCommodity = /commodity|volatility/i.test(sectorBucket || '');
+  const providerSuspect = 
+    (betaProvider < -0.3 && !isCrypto && !isCommodity) ||  // negative for equity
+    (Math.abs(betaProvider) > 5 && !isCrypto) ||            // extreme for non-crypto
+    false;
+  
+  if (providerSuspect && hasCAPM) {
+    return { beta: betaCAPM, beta_quality: 'capm_suspect_prov' };
+  }
+  
+  if (!hasCAPM) {
+    return { beta: betaProvider, beta_quality: 'provider_only' };
+  }
+  
+  // Both available, provider not suspect → use provider
+  const divergence = Math.abs(betaCAPM - betaProvider);
+  if (divergence > 0.8) {
+    return { beta: betaProvider, beta_quality: 'provider_capm_diverge', beta_divergence: +divergence.toFixed(2) };
+  }
+  
+  return { beta: betaProvider, beta_quality: 'provider_confirmed', beta_divergence: +divergence.toFixed(2) };
 }
 
 // ✅ v3.26: Drawdown forward correct (pic → creux dans le temps réel)
