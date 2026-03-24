@@ -783,9 +783,11 @@ FORCE_FALLBACK_PROFILES = {"Stable"}
 # Seuils momentum (perf_3m_min) par profil et rôle
 MOMENTUM_THRESHOLDS = {
     "Stable": {
-        Role.CORE: -10.0,
-        Role.DEFENSIVE: -15.0,
-        Role.SATELLITE: -20.0,
+        # v5.4.2: Relaxed for Stable — defensive stocks are MEANT to have flat/low momentum.
+        # Old: CORE -10%, DEFENSIVE -15% → too aggressive, filters utilities/staples.
+        Role.CORE: -15.0,
+        Role.DEFENSIVE: -20.0,
+        Role.SATELLITE: -25.0,
         Role.LOTTERY: -30.0,
     },
     "Modéré": {
@@ -926,8 +928,8 @@ class ProfileConstraints:
 PROFILES = {
     "Agressif": ProfileConstraints(
         name="Agressif", 
-        vol_target=18.0, 
-        vol_tolerance=3.0,
+        vol_target=24.0,              # v2.1: 18→24% (pool high-beta: NVDA 50%, VRT 55%, MU 42%)
+        vol_tolerance=6.0,            # v2.1: 3→6% (plage [18-30%], vol réalisée ~25% OK)
         crypto_max=10.0, 
         bonds_min=10.0,           # PATCH v8.4: 5→10%
         bonds_max=20.0,           # PATCH v8.4: cap obligations
@@ -974,8 +976,8 @@ PROFILES = {
 PROFILES_EUUS = {
     "Agressif": ProfileConstraints(
         name="Agressif", 
-        vol_target=18.0, 
-        vol_tolerance=3.0,
+        vol_target=24.0,              # v2.1: aligned with PROFILES global
+        vol_tolerance=6.0,
         crypto_max=10.0, 
         bonds_min=10.0,           # PATCH v8.4: 5→10%
         bonds_max=20.0,           # PATCH v8.4: cap obligations
@@ -2109,6 +2111,35 @@ class PortfolioOptimizer:
                 )
 
         logger.info("=" * 70)
+        
+        # === v5.4.2: DEFENSIVE QUALITY BONUS for Modéré/Stable ===
+        # Low-beta + yield stocks are structurally suited for these profiles
+        # but the generic scoring puts them in direct competition with high-momentum stocks.
+        # This bonus nudges the optimizer to naturally prefer them.
+        if profile.name in ("Modéré", "Stable"):
+            _dqb_count = 0
+            _dqb_boost = 3.0 if profile.name == "Stable" else 2.0  # Score points bonus
+            for a in universe:
+                if a.category != "Actions":
+                    continue
+                if not a.source_data:
+                    continue
+                _bp = a.source_data.get("beta_provider") or a.source_data.get("beta")
+                _yld = a.source_data.get("dividend_yield") or a.source_data.get("dividend_yield_ttm") or 0
+                _vol = a.source_data.get("volatility_3y") or 99
+                try:
+                    _bp = float(_bp) if _bp else 99
+                    _yld = float(_yld)
+                    _vol = float(_vol)
+                except (TypeError, ValueError):
+                    continue
+                # Defensive quality: low beta + meaningful yield + low vol
+                if _bp < 0.7 and _yld > 1.5 and _vol < 22:
+                    old = getattr(a, "_select_score", a.score)
+                    a._select_score = min(100.0, float(old) + _dqb_boost)
+                    _dqb_count += 1
+            if _dqb_count:
+                logger.info(f"  [v5.4.2] Defensive quality bonus: +{_dqb_boost}pts to {_dqb_count} stocks ({profile.name})")
         
         # === ÉTAPE 5: Tri par score avec tie-breaker par ID ===
         # v6.14 P0-2 FIX: Tie-breaker (score, id) pour tri totalement déterministe
