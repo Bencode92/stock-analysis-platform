@@ -5810,8 +5810,8 @@ def save_portfolios(portfolios: Dict, assets: list):
             "min_equity_sectors": 2,
             "min_lines": 8,
             "max_lines": 16,              # v5.4.2: engine injects XLV, GLD, VCIT, SCHO → up to 15-16 lines
-            "bond_floor_pct": 35,
-            "bond_ceil_pct": 50,
+            "bond_floor_pct": 40,         # v2.1: engine floor=45%, test floor=40% (marge)
+            "bond_ceil_pct": 55,          # v2.1: 50→55% (bond floor 45% + engine redistribution)
             "has_hedge_gold": True,
             "has_hedge_hc": True,
             "has_ig_credit": True,        # IG credit present (VCIT/LQD)
