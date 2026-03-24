@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v14.8: Fix BITX/MAGX (leveraged not inverse), DUST (inverse not leveraged) — ticker overrides
 // v14.7: Name-to-ticker mapping, inverse leverage magnitude (-2x/-3x), unified lev extraction
 // v14.6: Add underlyings (MSTR,MARA,PLTR,ARKK), fix FX hedged, leveraged 1.25x
 // v14.5: Fix detectETFType — Long-Short, VIX short, leveraged priority
@@ -257,6 +258,27 @@ const ETF_TYPE_RX = {
 const SINGLE_STOCK_RX = new RegExp(`\\b(${Object.keys(SINGLE_STOCK_SECTORS).join('|')})\\b`, 'i');
 
 function detectETFType(symbol, name, objective) {
+  // v14.8: Explicit ticker overrides for known misclassified ETFs
+  const TYPE_OVERRIDES = {
+    'BITX':  { type: 'leveraged', leverage: 2 },    // 2x Long Bitcoin — was misclassified inverse
+    'MAGX':  { type: 'leveraged', leverage: 2 },    // 2x Long MAGA ETF — was misclassified inverse
+    'DUST':  { type: 'inverse',   leverage: -2 },   // 2x Bear Gold Miners — was misclassified leveraged
+  };
+  const sym = (symbol || '').toUpperCase().trim();
+  if (TYPE_OVERRIDES[sym]) {
+    // Still detect underlying_ticker for context
+    const fullText = `${symbol} ${name || ''} ${objective || ''}`;
+    let underlying_ticker = null;
+    const m = fullText.match(SINGLE_STOCK_RX);
+    if (m?.[0] && SINGLE_STOCK_SECTORS[m[0].toUpperCase()]) underlying_ticker = m[0].toUpperCase();
+    if (!underlying_ticker) {
+      for (const { rx, ticker } of NAME_TO_TICKER) {
+        if (rx.test(fullText) && SINGLE_STOCK_SECTORS[ticker]) { underlying_ticker = ticker; break; }
+      }
+    }
+    return { ...TYPE_OVERRIDES[sym], underlying_ticker };
+  }
+
   const fullText = `${symbol} ${name || ''} ${objective || ''}`;
   const textLower = fullText.toLowerCase();
 
