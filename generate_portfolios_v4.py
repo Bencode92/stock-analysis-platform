@@ -5809,7 +5809,7 @@ def save_portfolios(portfolios: Dict, assets: list):
         "Stable": {
             "min_equity_sectors": 2,
             "min_lines": 8,
-            "max_lines": 14,
+            "max_lines": 16,              # v5.4.2: engine injects XLV, GLD, VCIT, SCHO → up to 15-16 lines
             "bond_floor_pct": 35,
             "bond_ceil_pct": 50,
             "has_hedge_gold": True,
