@@ -1,7 +1,7 @@
 // stock-advanced-filter.js
 // Version 3.33 - Beta CAPM 126j vs SPY pour toutes les actions
 // Version 3.32 - Fix: dividend annualization pour payeurs annuels/semestriels
-// Changements v3.39: Expert review — Blume adjustment, suspect 0.0/3.0, window 252d/504w, confidence flag
+// Changements v3.39: Expert review — Blume adjustment, suspect 0.0/3.0, window 252d/504w, confidence flag, EXSA:XETR replaces VGK for EU
 // Changements v3.38: Smart beta selection — provider-first with sanity checks + divergence signal
 // Changements v3.37: INDA weekly (corr daily=-0.069 confirmed timezone mismatch)
 // Changements v3.36: Weekly beta for timezone-misaligned benchmarks (EWY/EWT/AAXJ → Korea/Taiwan)
@@ -156,11 +156,11 @@ const CONFIG = {
 let creditsUsed = 0;
 let windowStart = Date.now();
 // v3.35: Regional benchmarks for beta CAPM
-const BENCH_DATA = {};  // { 'SPY': [{date, close}...], 'VGK': [...], ... }
+const BENCH_DATA = {};  // { 'SPY': [{date, close}...], 'EXSA': [...], ... }
 
 const REGION_BENCHMARKS = {
   us:     [{ symbol: 'SPY', label: 'S&P 500' }],
-  europe: [{ symbol: 'VGK', label: 'FTSE Europe' }],
+  europe: [{ symbol: 'EXSA', exchange: 'XETR', label: 'STOXX 600 (Xetra)' }],  // v3.39: local EU benchmark (was VGK NYSE)
   asia:   [
     { symbol: 'INDA', label: 'MSCI India',       countries: ['inde', 'india'], weekly: true },
     { symbol: 'EWY',  label: 'MSCI South Korea',  countries: ['coree', 'korea', 'south korea', 'coree du sud'], weekly: true },
@@ -174,7 +174,7 @@ function getBenchForStock(stock, regionName) {
   if (!regionName) return BENCH_DATA['SPY'] || [];
   const rn = regionName.toLowerCase();
   if (rn === 'us') return BENCH_DATA['SPY'] || [];
-  if (rn === 'europe') return BENCH_DATA['VGK'] || [];
+  if (rn === 'europe') return BENCH_DATA['EXSA'] || [];
   if (rn === 'asia') {
     const country = (stock.country || stock.Country || '').toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -192,7 +192,7 @@ function getBenchSymbolForStock(stock, regionName) {
   if (!regionName) return 'SPY';
   const rn = regionName.toLowerCase();
   if (rn === 'us') return 'SPY';
-  if (rn === 'europe') return 'VGK';
+  if (rn === 'europe') return 'EXSA';
   if (rn === 'asia') {
     const country = (stock.country || stock.Country || '').toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -3093,7 +3093,7 @@ async function main() {
     for (const bench of benchToFetch) {
         try {
             await pay(CONFIG.CREDITS.TIME_SERIES);
-            const data = await fetchTD('time_series', [{ symbol: bench.symbol }], {
+            const data = await fetchTD('time_series', [{ symbol: bench.symbol, ...(bench.exchange ? { exchange: bench.exchange } : {}) }], {
                 interval: '1day', outputsize: 900, order: 'ASC', adjust: 'splits'
             });
             if (data?.values) {
@@ -3199,7 +3199,7 @@ async function main() {
     
     for (const region of regions) {
         CURRENT_REGION = region.name;  // v3.35: for getBenchForStock()
-        const benchInfo = region.name === 'us' ? 'SPY (daily)' : region.name === 'europe' ? 'VGK (daily)' : 'INDA/EWY/EWT/AAXJ (all weekly)';
+        const benchInfo = region.name === 'us' ? 'SPY (daily)' : region.name === 'europe' ? 'EXSA/STOXX600 (daily)' : 'INDA/EWY/EWT/AAXJ (all weekly)';
         console.log(`\n🌍 ${region.name.toUpperCase()} (benchmark: ${benchInfo})`);
         const enrichedStocks = [];
         
