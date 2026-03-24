@@ -933,6 +933,41 @@ def apply_allocation_rules(
     tickers, meta, logs = apply_mandatory_hedges(tickers, meta, classified, profile, rules)
     all_logs.extend(logs)
     
+    # Step 5b: CRYPTO POSITION CAP — no single crypto > 3% (except BTC/ETH at 5%)
+    _CRYPTO_CAP = rules.get("crypto_position_cap", {})
+    _CRYPTO_DEFAULT_MAX = _CRYPTO_CAP.get("default_max_pct", 3.0) / 100.0
+    _CRYPTO_EXCEPTIONS = _CRYPTO_CAP.get("exceptions", {
+        "BTC": 5.0, "ETH": 5.0, "IBIT": 5.0, "FBTC": 5.0, "ETHE": 5.0, "ETHW": 5.0
+    })
+    _CRYPTO_EXCEPTIONS = {k.upper(): v / 100.0 for k, v in _CRYPTO_EXCEPTIONS.items()}
+    
+    _crypto_excess = 0.0
+    _crypto_capped = []
+    for tk, w in list(tickers.items()):
+        if meta.get(tk, {}).get("category") != "Crypto":
+            continue
+        # Check base symbol (TRX/USD → TRX, MORPHO/USD → MORPHO, IBIT → IBIT)
+        _base = tk.split("/")[0].upper() if "/" in tk else tk.upper()
+        _max = _CRYPTO_EXCEPTIONS.get(_base, _CRYPTO_DEFAULT_MAX)
+        if w > _max + 0.001:
+            _excess = w - _max
+            tickers[tk] = _max
+            _crypto_excess += _excess
+            _crypto_capped.append(f"{tk}: {w*100:.1f}% → {_max*100:.1f}%")
+    
+    if _crypto_excess > 0.001:
+        # Redistribute to non-crypto positions
+        _non_crypto = [(tk2, w2) for tk2, w2 in tickers.items()
+                      if meta.get(tk2, {}).get("category") != "Crypto" and w2 > 0.01]
+        if _non_crypto:
+            _total_nc = sum(w2 for _, w2 in _non_crypto)
+            if _total_nc > 0:
+                for tk2, w2 in _non_crypto:
+                    tickers[tk2] += _crypto_excess * (w2 / _total_nc)
+        for _cc in _crypto_capped:
+            all_logs.append(f"🪙 Crypto cap: {_cc}")
+        all_logs.append(f"♻️ {_crypto_excess*100:.1f}% crypto excess redistributed to {len(_non_crypto)} positions")
+    
     # Step 6: Normalize weights to 100%
     total = sum(tickers.values())
     if total > 0 and abs(total - 1.0) > 0.005:
