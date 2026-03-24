@@ -5781,53 +5781,148 @@ def save_portfolios(portfolios: Dict, assets: list):
     # === v5.3.3: Expert Lineup Regression Test ===
     # Compare produced portfolios against expert consensus targets.
     # WARNING flag if overlap < 40%. Signal only, NOT optimization target.
-    _EXPERT_TARGETS = {
-        "Agressif": {"NVDA", "VRT", "ASML", "HWM", "CF", "EOG", "3017", "064350"},
-        "Modéré": {"RIO", "VICI", "TTE", "CF", "ROG", "ITX", "PEG"},
-        "Stable": {"VICI", "ROG", "TTE", "GD", "ENGI"},
+    # === v5.4.2: PORTFOLIO QUALITY TEST (replaces ticker-based expert regression) ===
+    # Tests portfolio PROPERTIES rather than specific tickers.
+    # A good portfolio naturally meets these criteria — no forcing needed.
+    _QUALITY_RULES = {
+        "Agressif": {
+            "min_equity_sectors": 3,      # At least 3 distinct equity sectors
+            "min_lines": 12,              # Enough diversification
+            "max_lines": 20,
+            "bond_floor_pct": 10,
+            "bond_ceil_pct": 20,
+            "has_hedge_gold": True,       # Gold hedge present
+            "has_hedge_hc": True,         # Healthcare hedge present
+            "max_single_theme_pct": 20,   # No theme > 20%
+        },
+        "Modéré": {
+            "min_equity_sectors": 3,
+            "min_lines": 10,
+            "max_lines": 16,
+            "bond_floor_pct": 20,
+            "bond_ceil_pct": 35,
+            "has_hedge_gold": True,
+            "has_hedge_hc": True,
+            "min_low_beta_stocks": 1,     # At least 1 stock with beta < 0.7
+            "max_single_theme_pct": 20,
+        },
+        "Stable": {
+            "min_equity_sectors": 2,
+            "min_lines": 8,
+            "max_lines": 14,
+            "bond_floor_pct": 35,
+            "bond_ceil_pct": 50,
+            "has_hedge_gold": True,
+            "has_hedge_hc": True,
+            "has_ig_credit": True,        # IG credit present (VCIT/LQD)
+            "max_single_theme_pct": 18,
+            "min_low_beta_stocks": 1,
+        },
     }
-    logger.info("\n=== EXPERT LINEUP REGRESSION TEST v5.3.3 ===")
-    for _rt_profile, _rt_target in _EXPERT_TARGETS.items():
-        if _rt_profile not in v1_data:
+    
+    logger.info("\n=== PORTFOLIO QUALITY TEST v5.4.2 ===")
+    for _qt_profile, _qt_rules in _QUALITY_RULES.items():
+        if _qt_profile not in v1_data:
             continue
-        _rt_tickers = set()
-        _rt_data = v1_data[_rt_profile]
-        # Extract tickers from _tickers dict or from display sections
-        if "_tickers" in _rt_data:
-            _rt_tickers = set(_rt_data["_tickers"].keys())
+        _qt_data = v1_data[_qt_profile]
+        _qt_tickers = _qt_data.get("_tickers", {})
+        _qt_meta = _qt_data.get("_tickers_meta", {})
+        _qt_pass = []
+        _qt_fail = []
+        
+        # 1) Line count
+        n_lines = len(_qt_tickers)
+        if _qt_rules["min_lines"] <= n_lines <= _qt_rules["max_lines"]:
+            _qt_pass.append(f"lines={n_lines}")
         else:
-            for _cat in ["Actions", "ETF", "Obligations", "Crypto"]:
-                for _display_name in _rt_data.get(_cat, {}):
-                    # Extract ticker from "NAME (TICKER)" format
-                    if "(" in _display_name and ")" in _display_name:
-                        _tk = _display_name.split("(")[-1].rstrip(")")
-                        _rt_tickers.add(_tk)
+            _qt_fail.append(f"lines={n_lines} (expected {_qt_rules['min_lines']}-{_qt_rules['max_lines']})")
         
-        # Only compare equity tickers (not ETF/bonds)
-        _rt_equity = set()
-        _rt_meta = _rt_data.get("_tickers_meta", {})
-        for _tk in _rt_tickers:
-            if _rt_meta.get(_tk, {}).get("category") == "Actions":
-                _rt_equity.add(_tk)
-            elif not _rt_meta:
-                # Fallback: if no meta, include if looks like a stock ticker
-                _rt_equity.add(_tk)
+        # 2) Equity sector diversity
+        _eq_sectors = set()
+        for _tk, _info in _qt_meta.items():
+            if _info.get("category") == "Actions":
+                _ind = _info.get("industry", "").lower()
+                if _ind:
+                    # Map to broad sector
+                    if any(x in _ind for x in ["drug", "biotech", "medical", "health"]):
+                        _eq_sectors.add("healthcare")
+                    elif any(x in _ind for x in ["oil", "gas", "energy"]):
+                        _eq_sectors.add("energy")
+                    elif any(x in _ind for x in ["semi", "software", "tech"]):
+                        _eq_sectors.add("tech")
+                    elif any(x in _ind for x in ["bank", "insurance", "financial"]):
+                        _eq_sectors.add("financials")
+                    elif any(x in _ind for x in ["reit", "real estate"]):
+                        _eq_sectors.add("real_estate")
+                    elif any(x in _ind for x in ["industrial", "machinery", "aerospace", "defense"]):
+                        _eq_sectors.add("industrials")
+                    elif any(x in _ind for x in ["mining", "metal", "material"]):
+                        _eq_sectors.add("materials")
+                    else:
+                        _eq_sectors.add("other")
+        _min_sec = _qt_rules.get("min_equity_sectors", 2)
+        if len(_eq_sectors) >= _min_sec:
+            _qt_pass.append(f"sectors={len(_eq_sectors)}")
+        else:
+            _qt_fail.append(f"sectors={len(_eq_sectors)} < {_min_sec} ({_eq_sectors})")
         
-        _overlap = _rt_equity & _rt_target
-        _missing = _rt_target - _rt_equity
-        _extra = _rt_equity - _rt_target
-        _overlap_pct = len(_overlap) / max(len(_rt_target), 1) * 100
+        # 3) Bond allocation
+        _bond_pct = sum(w * 100 for _tk, w in _qt_tickers.items()
+                       if _qt_meta.get(_tk, {}).get("category") == "Obligations")
+        _bf = _qt_rules.get("bond_floor_pct", 0)
+        _bc = _qt_rules.get("bond_ceil_pct", 100)
+        if _bf <= _bond_pct <= _bc:
+            _qt_pass.append(f"bonds={_bond_pct:.0f}%")
+        else:
+            _qt_fail.append(f"bonds={_bond_pct:.0f}% (expected {_bf}-{_bc}%)")
         
-        if _overlap_pct < 40:
+        # 4) Gold hedge
+        if _qt_rules.get("has_hedge_gold"):
+            _gold_tickers = {"GLD", "GDE", "IAU", "SGOL", "GLDM", "AAAU"}
+            if _gold_tickers & set(_qt_tickers.keys()):
+                _qt_pass.append("gold=yes")
+            else:
+                _qt_fail.append("gold=MISSING")
+        
+        # 5) Healthcare hedge
+        if _qt_rules.get("has_hedge_hc"):
+            _hc_tickers = {"XLV", "XBI", "VHT", "FHLC", "XPH", "IBB"}
+            if _hc_tickers & set(_qt_tickers.keys()):
+                _qt_pass.append("hc_etf=yes")
+            else:
+                _qt_fail.append("hc_etf=MISSING")
+        
+        # 6) IG credit (Stable)
+        if _qt_rules.get("has_ig_credit"):
+            _ig_tickers = {"VCIT", "LQD", "IGSB", "VCSH"}
+            if _ig_tickers & set(_qt_tickers.keys()):
+                _qt_pass.append("ig_credit=yes")
+            else:
+                _qt_fail.append("ig_credit=MISSING")
+        
+        # 7) Low-beta stock presence
+        _min_lb = _qt_rules.get("min_low_beta_stocks", 0)
+        if _min_lb > 0:
+            _lb_count = sum(1 for _tk, _info in _qt_meta.items()
+                          if _info.get("category") == "Actions" 
+                          and _info.get("beta") is not None
+                          and float(_info.get("beta", 99)) < 0.7)
+            if _lb_count >= _min_lb:
+                _qt_pass.append(f"low_beta={_lb_count}")
+            else:
+                _qt_fail.append(f"low_beta={_lb_count} < {_min_lb}")
+        
+        # Result
+        _qt_score = len(_qt_pass) / max(len(_qt_pass) + len(_qt_fail), 1) * 100
+        if _qt_fail:
             logger.warning(
-                f"   ⚠️ [{_rt_profile}] EXPERT REGRESSION: overlap {_overlap_pct:.0f}% < 40% threshold! "
-                f"Match: {sorted(_overlap)} | Missing: {sorted(_missing)} | Extra: {sorted(_extra)}"
+                f"   ⚠️ [{_qt_profile}] Quality {_qt_score:.0f}% — "
+                f"PASS: {', '.join(_qt_pass)} | FAIL: {', '.join(_qt_fail)}"
             )
         else:
             logger.info(
-                f"   ✅ [{_rt_profile}] Expert overlap: {_overlap_pct:.0f}% "
-                f"({len(_overlap)}/{len(_rt_target)}) Match: {sorted(_overlap)} | "
-                f"Missing: {sorted(_missing)}"
+                f"   ✅ [{_qt_profile}] Quality {_qt_score:.0f}% — "
+                f"ALL PASS: {', '.join(_qt_pass)}"
             )
 
 
