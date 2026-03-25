@@ -41,7 +41,11 @@ VERSION = "1.0.0"
 # CONFIGURATION
 # =============================================================================
 
-API_URL = "https://api.anthropic.com/v1/messages"
+# API via Cloudflare Workers proxy (gère l'auth, pas besoin de clé API côté pipeline)
+API_URL = os.environ.get(
+    "ANTHROPIC_API_URL",
+    "https://studyforge-proxy.benoit-comas.workers.dev/v1/messages"
+)
 MODEL = "claude-opus-4-20250514"
 MAX_TOKENS = 2000
 TEMPERATURE = 0  # Déterminisme maximum
@@ -291,16 +295,14 @@ OUTPUT:
 
 def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Dict]:
     """
-    Appelle Claude Opus API.
-    Retourne le JSON parsé ou None si erreur.
+    Appelle Claude Opus via le proxy Cloudflare Workers.
+    Le proxy gère l'authentification — pas besoin de clé API côté pipeline.
+    Fallback sur API directe si ANTHROPIC_API_KEY est définie.
     """
     import urllib.request
     import urllib.error
     
     key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        logger.warning("[MI] No ANTHROPIC_API_KEY found — skipping AI analysis")
-        return None
     
     payload = {
         "model": MODEL,
@@ -314,11 +316,16 @@ def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Di
     
     headers = {
         "Content-Type": "application/json",
-        "x-api-key": key,
         "anthropic-version": "2023-06-01",
     }
     
+    # Si on a une clé API, l'envoyer (API directe ou proxy qui la forward)
+    if key:
+        headers["x-api-key"] = key
+    
     try:
+        logger.info(f"[MI] Calling {API_URL} (model={MODEL})")
+        
         req = urllib.request.Request(
             API_URL,
             data=json.dumps(payload).encode("utf-8"),
@@ -326,7 +333,7 @@ def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Di
             method="POST"
         )
         
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         
         # Extract text content
