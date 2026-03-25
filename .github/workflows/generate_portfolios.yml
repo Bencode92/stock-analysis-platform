@@ -56,7 +56,7 @@ jobs:
         run: |
           # v2.1: Update macro indicators (Twelve Data + FRED) before portfolio generation
           echo "📊 Updating macro context..."
-          python portfolio_engine/update_macro_context.py || echo "⚠️ Macro update failed — continuing with existing data"
+          python -m portfolio_engine.update_macro_context || echo "⚠️ Macro update failed — continuing with existing data"
           echo ""
           echo "🚀 Running portfolio engine..."
           python generate_portfolios_v4.py
