@@ -21,6 +21,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.API_CHAT }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
       # v5.1.0: Audit collector (none | summary | full)
       DEBUG_AUDIT: summary
 
@@ -52,7 +53,13 @@ jobs:
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
       - name: 🚀 Exécuter le moteur v5.2.0
-        run: python generate_portfolios_v4.py
+        run: |
+          # v2.1: Update macro indicators (Twelve Data + FRED) before portfolio generation
+          echo "📊 Updating macro context..."
+          python scripts/update_macro_context.py || echo "⚠️ Macro update failed — continuing with existing data"
+          echo ""
+          echo "🚀 Running portfolio engine..."
+          python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
       - name: ✅ Valider le schéma JSON
