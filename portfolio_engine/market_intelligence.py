@@ -41,11 +41,10 @@ VERSION = "1.0.0"
 # CONFIGURATION
 # =============================================================================
 
-# API via Cloudflare Workers proxy (gère l'auth, pas besoin de clé API côté pipeline)
-API_URL = os.environ.get(
-    "ANTHROPIC_API_URL",
-    "https://studyforge-proxy.benoit-comas.workers.dev/v1/messages"
-)
+# Backend: API directe avec clé. Frontend (browser): utilise le proxy workers.dev
+# Le pipeline GitHub Actions a ANTHROPIC_API_KEY dans ses secrets
+API_URL = os.environ.get("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
+PROXY_URL = "https://studyforge-proxy.benoit-comas.workers.dev/v1/messages"
 MODEL = "claude-opus-4-20250514"
 MAX_TOKENS = 2000
 TEMPERATURE = 0  # Déterminisme maximum
@@ -295,9 +294,8 @@ OUTPUT:
 
 def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Dict]:
     """
-    Appelle Claude Opus via le proxy Cloudflare Workers.
-    Le proxy gère l'authentification — pas besoin de clé API côté pipeline.
-    Fallback sur API directe si ANTHROPIC_API_KEY est définie.
+    Appelle Claude Opus.
+    Priorité: API directe avec clé (GitHub Actions) → proxy Cloudflare (fallback sans clé).
     """
     import urllib.request
     import urllib.error
@@ -314,20 +312,27 @@ def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Di
         ]
     }
     
-    headers = {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-    }
-    
-    # Si on a une clé API, l'envoyer (API directe ou proxy qui la forward)
+    # Stratégie: si on a une clé → API directe. Sinon → proxy (le proxy injecte la clé).
     if key:
-        headers["x-api-key"] = key
+        url = API_URL
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01",
+        }
+    else:
+        url = PROXY_URL
+        headers = {
+            "Content-Type": "application/json",
+            "anthropic-version": "2023-06-01",
+        }
+        logger.info("[MI] No API key found — using proxy")
     
     try:
-        logger.info(f"[MI] Calling {API_URL} (model={MODEL})")
+        logger.info(f"[MI] Calling {url} (model={MODEL})")
         
         req = urllib.request.Request(
-            API_URL,
+            url,
             data=json.dumps(payload).encode("utf-8"),
             headers=headers,
             method="POST"
@@ -370,7 +375,30 @@ def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Di
         return result
         
     except urllib.error.URLError as e:
-        logger.error(f"[MI] API network error: {e}")
+        logger.warning(f"[MI] API error: {e}")
+        # Fallback: try proxy if we used direct API
+        if key and url != PROXY_URL:
+            logger.info(f"[MI] Retrying via proxy: {PROXY_URL}")
+            try:
+                req2 = urllib.request.Request(
+                    PROXY_URL,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "anthropic-version": "2023-06-01"},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req2, timeout=60) as resp2:
+                    data = json.loads(resp2.read().decode("utf-8"))
+                text = ""
+                for block in data.get("content", []):
+                    if block.get("type") == "text":
+                        text += block["text"]
+                if text:
+                    text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+                    result = json.loads(text)
+                    logger.info(f"[MI] Proxy fallback OK — regime: {result.get('regime', '?')}")
+                    return result
+            except Exception as e2:
+                logger.error(f"[MI] Proxy fallback also failed: {e2}")
         return None
     except json.JSONDecodeError as e:
         logger.error(f"[MI] JSON parse error: {e}\nRaw: {text[:500]}")
