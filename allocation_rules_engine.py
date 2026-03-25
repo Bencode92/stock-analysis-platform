@@ -1182,11 +1182,41 @@ def apply_allocation_rules(
                         tickers[k] += _weight_to_redistribute * (_remaining_bonds[k] / _total_rb)
                     all_logs.append(f"♻️ Bond pref: {', '.join(_removed_bonds)} → redistributed pro-rata to {len(_remaining_bonds)} bonds")
     
+    # Step 6b3: TACTICAL CASH — reserve a % as uninvested cash (AI-driven)
+    # Reduces ALL positions proportionally to free up cash pocket
+    _CASH_PCT = rules.get("_cash_tactical", {}).get(profile, 0)
+    if _CASH_PCT and _CASH_PCT > 0:
+        _cash_frac = _CASH_PCT / 100.0
+        _cash_frac = min(_cash_frac, 0.20)  # Hard cap at 20%
+        
+        _total_before = sum(tickers.values())
+        if _total_before > 0:
+            # Reduce all positions proportionally
+            _scale = 1.0 - _cash_frac
+            for tk in tickers:
+                tickers[tk] *= _scale
+            
+            # Add _CASH as a virtual position (for display and tracking)
+            _actual_cash = _total_before * _cash_frac
+            tickers["_CASH"] = _actual_cash
+            meta["_CASH"] = {
+                "weight": _actual_cash,
+                "category": "Cash",
+                "name": "Cash Tactique (non investi)",
+                "asset_ids": [],
+            }
+            
+            _rationale = rules.get("_cash_tactical_rationale", "AI recommendation")
+            all_logs.append(
+                f"💰 Cash tactique: {_CASH_PCT}% réservé "
+                f"({_actual_cash*100:.1f}% du portefeuille) — {_rationale}"
+            )
+    
     # Step 6c: POSITION CAP — no single position > 15% (AFTER bond floor)
     # CRITICAL: redistribute within SAME asset class to preserve bond floor
     _POS_MAX = rules.get("position_max", 0.15)
     for _cap_iter in range(5):
-        _over = {k: v for k, v in tickers.items() if v > _POS_MAX + 0.001}
+        _over = {k: v for k, v in tickers.items() if v > _POS_MAX + 0.001 and k != "_CASH"}
         if not _over:
             break
         for k, v in _over.items():
@@ -1196,7 +1226,7 @@ def apply_allocation_rules(
             all_logs.append(f"📉 Position cap: {k} {v*100:.1f}% → {_POS_MAX*100:.0f}%")
             # Redistribute within same category first, then any eligible
             _same_cat = [(tk2, w2) for tk2, w2 in tickers.items()
-                        if tk2 != k and w2 < _POS_MAX - 0.01
+                        if tk2 != k and tk2 != "_CASH" and w2 < _POS_MAX - 0.01
                         and meta.get(tk2, {}).get("category") == _over_cat]
             if not _same_cat:
                 _same_cat = [(tk2, w2) for tk2, w2 in tickers.items()
@@ -1224,6 +1254,13 @@ def apply_allocation_rules(
     portfolio_data["Obligations"] = display.get("Obligations", {})
     portfolio_data["Crypto"] = display.get("Crypto", {})
     portfolio_data["_numeric_weights"] = numeric
+    
+    # Cash tactical display
+    if "_CASH" in tickers and tickers["_CASH"] > 0.001:
+        _cash_pct = round(tickers["_CASH"] * 100, 1)
+        portfolio_data["Cash"] = {f"Cash Tactique (non investi)": f"{_cash_pct}%"}
+        portfolio_data["_cash_tactical_pct"] = _cash_pct
+        portfolio_data["_cash_tactical_rationale"] = rules.get("_cash_tactical_rationale", "")
     
     # Log everything
     for line in all_logs:
