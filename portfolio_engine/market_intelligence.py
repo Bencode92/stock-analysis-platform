@@ -179,6 +179,24 @@ SENTIMENT:
 - Fear & Greed Index: {md.get('fear_greed_index', 'N/A')}
 """
 
+    # Add RADAR sector momentum context if available
+    if md.get('radar_regime') or md.get('sector_momentum_summary'):
+        prompt += f"""
+RADAR SECTOR MOMENTUM (analyse quantitative des secteurs):
+- Régime RADAR: {md.get('radar_regime', 'N/A')} (confidence: {md.get('radar_confidence', 'N/A')})
+- Secteurs favorisés: {md.get('favored_sectors', 'N/A')}
+- Secteurs évités: {md.get('avoided_sectors', 'N/A')}
+- Régions favorisées: {md.get('favored_regions', 'N/A')}
+- Régions évitées: {md.get('avoided_regions', 'N/A')}
+- Tendances clés: {md.get('key_trends', 'N/A')}
+- Risques identifiés: {md.get('risks', 'N/A')}
+- Détail secteurs (classification, beta, daily%): {md.get('sector_momentum_summary', 'N/A')}
+
+IMPORTANT: Le RADAR est PUREMENT quantitatif (momentum/beta). Il ne voit PAS les fondamentaux macro
+(inflation, taux, géopolitique). TON RÔLE est de COMBINER le signal RADAR avec les données macro 
+pour identifier le VRAI régime. Exemple: RADAR dit "neutral" mais Brent>$100 + CPI montant = STAGFLATION.
+"""
+
     # Add portfolio summary if available
     if portfolio_summary:
         prompt += f"""
