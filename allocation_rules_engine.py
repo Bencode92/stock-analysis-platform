@@ -1201,9 +1201,26 @@ def apply_allocation_rules(
                                      "name": "Schwab Short-Term U.S. Treasury ETF", "asset_ids": []}
             
             if _target and _target in tickers:
-                tickers[_target] += _weight_to_redistribute
+                _POS_LIMIT = 0.14  # Max 14% per position (leaves room for position cap at 15%)
+                _room = max(0, _POS_LIMIT - tickers[_target])
+                _to_target = min(_weight_to_redistribute, _room)
+                _overflow = _weight_to_redistribute - _to_target
+                
+                tickers[_target] += _to_target
                 meta[_target]["weight"] = tickers[_target]
-                all_logs.append(f"♻️ Bond pref: {', '.join(_removed_bonds)} → {_target} (+{_weight_to_redistribute*100:.1f}%)")
+                all_logs.append(f"♻️ Bond pref: {', '.join(_removed_bonds)} → {_target} (+{_to_target*100:.1f}%)")
+                
+                # Spread overflow pro-rata to other remaining bonds
+                if _overflow > 0.001:
+                    _other_bonds = {k: v for k, v in tickers.items()
+                                   if meta.get(k, {}).get("category") == "Obligations" 
+                                   and k != _target and v < _POS_LIMIT}
+                    _total_ob = sum(_other_bonds.values())
+                    if _total_ob > 0:
+                        for k in _other_bonds:
+                            _add = _overflow * (_other_bonds[k] / _total_ob)
+                            tickers[k] = min(tickers[k] + _add, _POS_LIMIT)
+                        all_logs.append(f"♻️ Bond pref: overflow {_overflow*100:.1f}% → pro-rata to {len(_other_bonds)} other bonds")
             elif _remaining_bonds:
                 # Pro-rata to remaining bonds
                 _total_rb = sum(_remaining_bonds.values())
