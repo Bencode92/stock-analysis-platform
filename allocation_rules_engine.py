@@ -1242,16 +1242,22 @@ def apply_allocation_rules(
                         add = _excess * (w2 / _total_sc)
                         tickers[tk2] = min(tickers[tk2] + add, _POS_MAX)
     
-    # Re-normalize after safety nets
-    total = sum(tickers.values())
+    # Re-normalize after safety nets (exclude internal keys like _CASH)
+    _real_tickers = {k: v for k, v in tickers.items() if not k.startswith("_")}
+    total = sum(_real_tickers.values())
     if total > 0 and abs(total - 1.0) > 0.005:
         factor = 1.0 / total
-        tickers = {k: v * factor for k, v in tickers.items()}
+        for k in _real_tickers:
+            tickers[k] = tickers[k] * factor
     
     # Step 7: Rebuild display
-    # Pop _CASH before rebuild (rebuild only knows Actions/ETF/Obligations/Crypto)
+    # Clean ALL internal keys from tickers and meta (schema only allows real assets)
+    _internal_keys = [k for k in tickers if k.startswith("_")]
     _cash_weight = tickers.pop("_CASH", 0)
-    _cash_meta = meta.pop("_CASH", None)
+    for _ik in _internal_keys:
+        tickers.pop(_ik, None)
+        meta.pop(_ik, None)
+    meta.pop("_CASH", None)  # Extra safety
     
     display, numeric = rebuild_display(tickers, meta)
     
@@ -1263,13 +1269,9 @@ def apply_allocation_rules(
     portfolio_data["Crypto"] = display.get("Crypto", {})
     portfolio_data["_numeric_weights"] = numeric
     
-    # Cash tactical display (re-add after rebuild)
+    # Cash tactical display (stored ONLY in _cash_tactical, NOT in _tickers/_tickers_meta)
     if _cash_weight > 0.001:
-        tickers["_CASH"] = _cash_weight
-        if _cash_meta:
-            meta["_CASH"] = _cash_meta
         _cash_pct = round(_cash_weight * 100, 1)
-        # Use _ prefix to pass schema validation (schema ignores _ keys)
         portfolio_data["_cash_tactical"] = {
             "pct": _cash_pct,
             "label": f"Cash Tactique (non investi): {_cash_pct}%",
