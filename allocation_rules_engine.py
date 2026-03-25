@@ -132,6 +132,7 @@ def evaluate_market_rules(rules: Dict, market_data: Dict) -> Dict:
     adjustments = {
         "thematic_cap_deltas": {},   # {theme: {profile: delta}}
         "hedge_deltas": {},          # {hedge: {profile: delta}}
+        "bond_preferences": [],      # v2.1: [{action, profiles, ...}]
         "active_rules": [],
     }
     
@@ -190,6 +191,15 @@ def evaluate_market_rules(rules: Dict, market_data: Dict) -> Dict:
                         adjustments["hedge_deltas"].setdefault(hedge, {})
                         adjustments["hedge_deltas"][hedge][p] = \
                             adjustments["hedge_deltas"][hedge].get(p, 0) + delta
+                
+                elif adj_type == "bond_preference":
+                    adjustments["bond_preferences"].append({
+                        "action": adj.get("action"),
+                        "profiles": profiles,
+                        "max_dur": adj.get("max_dur"),
+                        "fund_types": adj.get("fund_types", []),
+                        "rule_id": rule_id,
+                    })
                             
         except Exception as e:
             logger.warning(f"[MARKET] Error evaluating rule '{rule_id}': {e}")
@@ -226,6 +236,11 @@ def apply_market_adjustments(rules: Dict, adjustments: Dict) -> Dict:
                 old = hedges[hedge].get("min_pct", 0)
                 hedges[hedge]["min_pct"] = max(0, old + delta)
                 logger.info(f"[MARKET] Hedge {hedge}/{profile}: {old}% → {old + delta}%")
+    
+    # v2.1: Pass bond preferences to rules for the main function
+    if adjustments.get("bond_preferences"):
+        rules["_active_bond_preferences"] = adjustments["bond_preferences"]
+        logger.info(f"[MARKET] Bond preferences: {len(adjustments['bond_preferences'])} active")
     
     return rules
 
@@ -1040,6 +1055,119 @@ def apply_allocation_rules(
                             break
                     else:
                         all_logs.append(f"⚠️ Bond floor: could not reach {_min_bonds*100:.0f}% — all fallbacks already present")
+    
+    # Step 6b2: BOND PREFERENCE — apply market-driven bond adjustments
+    # This step swaps/reweights bonds based on active market rules (inflation → TIPS, stress → treasury, etc.)
+    _BOND_PREFS = rules.get("_active_bond_preferences", [])
+    
+    # Known TIPS tickers and Treasury tickers for swaps
+    _TIPS_TICKERS = {"STIP", "STPZ", "VTIP", "GTIP", "TIPX", "SCHP"}
+    _TREASURY_SHORT = {"SCHO", "VGSH", "SHY", "GBIL", "BIL", "SGOV", "CLTL", "TBIL", "CLIP"}
+    _TREASURY_ALL = _TREASURY_SHORT | {"IEF", "TLT", "GOVT", "AGZ", "IBTH", "OBIL"}
+    _AVOID_FT_LOWER = set()  # fund_types to avoid (populated by rules)
+    _PREFER_TIPS = False
+    _PREFER_TREASURY = False
+    _MAX_DURATION = None
+    
+    for pref in _BOND_PREFS:
+        if profile not in pref.get("profiles", []):
+            continue
+        action = pref.get("action", "")
+        
+        if action == "prefer_tips":
+            _PREFER_TIPS = True
+            all_logs.append(f"📈 Bond pref: TIPS preferred (rule: {pref.get('rule_id', '?')})")
+        elif action == "prefer_treasury":
+            _PREFER_TREASURY = True
+            all_logs.append(f"🏛️ Bond pref: Treasury preferred (rule: {pref.get('rule_id', '?')})")
+        elif action == "shorten_duration":
+            _MAX_DURATION = pref.get("max_dur", 5.0)
+            all_logs.append(f"⏱️ Bond pref: shorten duration max {_MAX_DURATION}y (rule: {pref.get('rule_id', '?')})")
+        elif action == "avoid_fund_types":
+            for ft in pref.get("fund_types", []):
+                _AVOID_FT_LOWER.add(ft.lower())
+            all_logs.append(f"🚫 Bond pref: avoid {pref.get('fund_types', [])} (rule: {pref.get('rule_id', '?')})")
+        elif action == "extend_duration_ok":
+            all_logs.append(f"📏 Bond pref: extended duration OK (rule: {pref.get('rule_id', '?')})")
+    
+    if _AVOID_FT_LOWER or _PREFER_TIPS or _PREFER_TREASURY or _MAX_DURATION:
+        _bond_tickers = {k: v for k, v in tickers.items()
+                        if meta.get(k, {}).get("category") == "Obligations"}
+        _weight_to_redistribute = 0.0
+        _removed_bonds = []
+        
+        # 1) Remove bonds matching avoid_fund_types
+        if _AVOID_FT_LOWER:
+            for tk in list(_bond_tickers.keys()):
+                _ft = meta.get(tk, {}).get("name", "").lower()
+                _fund_type_raw = ""
+                # Check fund_type in meta or in name
+                for _bad_ft in _AVOID_FT_LOWER:
+                    if _bad_ft in _ft or _bad_ft in tk.lower():
+                        _w = tickers.pop(tk, 0)
+                        if tk in meta:
+                            del meta[tk]
+                        _weight_to_redistribute += _w
+                        _removed_bonds.append(f"{tk} ({_w*100:.1f}%)")
+                        _bond_tickers.pop(tk, None)
+                        break
+        
+        # 2) Shorten duration: swap bonds with dur > max for short alternatives
+        if _MAX_DURATION and not _removed_bonds:  # Don't double-swap
+            for tk in list(_bond_tickers.keys()):
+                _tk_upper = tk.upper()
+                # Check if this bond is likely long duration (not in short treasury set, not TIPS short)
+                if _tk_upper not in _TREASURY_SHORT and _tk_upper not in _TIPS_TICKERS:
+                    # Heuristic: if we know it's long, swap it
+                    _name_lower = meta.get(tk, {}).get("name", "").lower()
+                    if any(kw in _name_lower for kw in ["long", "20+", "10-", "7-10", "intermediate"]):
+                        _w = tickers.pop(tk, 0)
+                        if tk in meta:
+                            del meta[tk]
+                        _weight_to_redistribute += _w
+                        _removed_bonds.append(f"{tk} ({_w*100:.1f}%, long dur)")
+                        _bond_tickers.pop(tk, None)
+        
+        # 3) Redistribute weight to preferred bonds
+        if _weight_to_redistribute > 0.001:
+            _remaining_bonds = {k: v for k, v in tickers.items()
+                               if meta.get(k, {}).get("category") == "Obligations"}
+            
+            # Determine best target
+            _target = None
+            if _PREFER_TIPS:
+                # Look for existing TIPS in portfolio
+                _tips_in_pf = [k for k in _remaining_bonds if k.upper() in _TIPS_TICKERS]
+                if _tips_in_pf:
+                    _target = _tips_in_pf[0]
+                else:
+                    # Inject STIP
+                    _target = "STIP"
+                    tickers[_target] = 0.0
+                    meta[_target] = {"weight": 0, "category": "Obligations", 
+                                     "name": "iShares 0-5 Year TIPS Bond ETF", "asset_ids": []}
+            elif _PREFER_TREASURY:
+                # Look for existing treasury in portfolio
+                _treas_in_pf = [k for k in _remaining_bonds if k.upper() in _TREASURY_SHORT]
+                if _treas_in_pf:
+                    _target = _treas_in_pf[0]
+                else:
+                    _target = "SCHO"
+                    tickers[_target] = 0.0
+                    meta[_target] = {"weight": 0, "category": "Obligations",
+                                     "name": "Schwab Short-Term U.S. Treasury ETF", "asset_ids": []}
+            
+            if _target and _target in tickers:
+                tickers[_target] += _weight_to_redistribute
+                meta[_target]["weight"] = tickers[_target]
+                all_logs.append(f"♻️ Bond pref: {', '.join(_removed_bonds)} → {_target} (+{_weight_to_redistribute*100:.1f}%)")
+            elif _remaining_bonds:
+                # Pro-rata to remaining bonds
+                _total_rb = sum(_remaining_bonds.values())
+                if _total_rb > 0:
+                    for k in _remaining_bonds:
+                        tickers[k] += _weight_to_redistribute * (_remaining_bonds[k] / _total_rb)
+                    all_logs.append(f"♻️ Bond pref: {', '.join(_removed_bonds)} → redistributed pro-rata to {len(_remaining_bonds)} bonds")
     
     # Step 6c: POSITION CAP — no single position > 15% (AFTER bond floor)
     # CRITICAL: redistribute within SAME asset class to preserve bond floor
