@@ -5751,6 +5751,25 @@ def save_portfolios(portfolios: Dict, assets: list):
                             "n_lines": len(_ps_tickers),
                         }
                 
+                # v2.1: Enrich _market_data with FRED data from market_context.json
+                # update_macro_context.py writes _market_data_flat with 15+ fields
+                # fetch_market_conditions() only has 8 fields — merge both
+                try:
+                    import json as _json_mi
+                    _mc_path = os.path.join("data", "market_context.json")
+                    if os.path.exists(_mc_path):
+                        with open(_mc_path, "r", encoding="utf-8") as _mc_f:
+                            _mc_data = _json_mi.load(_mc_f)
+                        _flat = _mc_data.get("_market_data_flat", {})
+                        if _flat:
+                            # Merge: _flat as base, _market_data overwrites (fresher)
+                            _merged = {**_flat, **{k: v for k, v in (_market_data or {}).items() if v is not None}}
+                            _n_before = len(_market_data or {})
+                            _market_data = _merged
+                            logger.info(f"🧠 [MI] Enriched market data: {_n_before} → {len(_market_data)} fields (FRED+TD)")
+                except Exception as _e_mc:
+                    logger.debug(f"[MI] Could not enrich from market_context.json: {_e_mc}")
+                
                 _ai_adjustments = get_ai_market_adjustments(
                     market_data=_market_data or None,
                     portfolio_summary=_portfolio_summary,
