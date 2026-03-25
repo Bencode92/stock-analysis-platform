@@ -241,84 +241,26 @@ Réponds UNIQUEMENT en JSON valide."""
 # FEW-SHOT EXAMPLES (pour calibrer le raisonnement)
 # =============================================================================
 
-FEW_SHOT_EXAMPLE = """Exemple de raisonnement attendu (mars 2026, crise Hormuz):
+FEW_SHOT_EXAMPLE = """EXEMPLES DE RAISONNEMENT (2 régimes différents):
 
-INPUT: Brent $101, CPI 2.8%, Fed hold 3.5-3.75%, VIX 27, IG spread 135bps, gold DD 16.5%
-RAISONNEMENT SECOND ORDRE:
-- Brent >$100 → coûts transport/énergie → CPI va monter vers 3.5%+ 
-- CPI montant → Fed ne peut PAS couper → taux restent élevés ou montent
-- Taux élevés + inflation → STAGFLATION (croissance ralentit, prix montent)
-- Stagflation → duration risk → raccourcir les bonds, TIPS > nominal
-- Stagflation → energy/gold surperforment, tech/growth sous-performent
-- Consumer staples/utilities = pricing power → résistent à l'inflation
-- HY bonds vulnérables → spreads vont s'écarter si récession
-- CLO/securitized → risque de liquidité en stress, pas adapté au Stable
-- Gold en correction mais narratif inflation intact → maintenir hedge
-- Dollar fort (flight to quality) → EM bonds sous pression
+═══ EXEMPLE 1: GOLDILOCKS (données fictives) ═══
+INPUT: Brent $65, CPI 2.0%, Fed -50bps en 6m, VIX 14, IG spread 85bps, gold DD 5%
+RAISONNEMENT: Pétrole bas + inflation target + Fed dovish = goldilocks.
+→ Risk-on: tech/growth surpondéré, duration longue OK, IG credit acceptable
+→ Gold réduit (pas de stress), cash 0%, semi/AI caps relevés
+OUTPUT: regime=goldilocks, confidence=4, energy -3%, ai_infra +5%, extend_duration_ok, cash 0%
 
-OUTPUT:
-{
-  "regime": "stagflation",
-  "regime_confidence": 4,
-  "regime_rationale": "Oil shock Hormuz pousse CPI vers 3.5%+, Fed bloquée entre inflation et croissance. Profil stagflationniste avec energy/gold leadership.",
-  "adjustments": [
-    {
-      "type": "thematic_cap_delta",
-      "action": "energy_oil +5%",
-      "params": {"theme": "energy_oil", "delta_pct": 5},
-      "profiles": ["Agressif", "Modéré"],
-      "conviction": 5,
-      "rationale": "Brent >$100 avec Hormuz fermé, Goldman cible $110 mars/avril"
-    },
-    {
-      "type": "mandatory_hedge_delta",
-      "action": "gold +2%",
-      "params": {"hedge": "gold", "delta_pct": 2},
-      "profiles": ["Agressif", "Modéré"],
-      "conviction": 4,
-      "rationale": "Hedge inflation intact malgré correction 16.5%, DD technique pas fondamental"
-    },
-    {
-      "type": "bond_preference",
-      "action": "TIPS preferred",
-      "params": {"action": "prefer_tips"},
-      "profiles": ["Modéré", "Stable"],
-      "conviction": 5,
-      "rationale": "CPI 2.8% et montant, oil shock va diffuser dans core inflation, TIPS protègent le rendement réel"
-    },
-    {
-      "type": "bond_preference",
-      "action": "shorten duration Stable",
-      "params": {"action": "shorten_duration", "max_dur": 5.0},
-      "profiles": ["Stable"],
-      "conviction": 4,
-      "rationale": "Fed hold + 12% proba hike → risque de taux asymétrique à la hausse"
-    },
-    {
-      "type": "bond_preference",
-      "action": "avoid securitized/CLO Stable",
-      "params": {"action": "avoid_fund_types", "fund_types": ["Securitized Bond", "Bank Loan"]},
-      "profiles": ["Modéré", "Stable"],
-      "conviction": 4,
-      "rationale": "CLO AAA = produits structurés avec risque de liquidité en stress, incompatible capital preservation"
-    }
-  ],
-  "bond_strategy": {
-    "regime_summary": "Stagflation: TIPS + short duration + avoid credit risk. Pas de HY dans Stable/Modéré.",
-    "prefer_tips": true,
-    "prefer_treasury": false,
-    "avoid_hy": true,
-    "avoid_securitized": true,
-    "avoid_em_bonds": true,
-    "max_duration_stable": 5.0,
-    "max_duration_moderate": 7.0
-  },
-  "warnings": [
-    "Si Hormuz rouvre, Brent retombe à $75 → reverser energy cap en 48h",
-    "Si CPI mars >3.5%, probabilité hike passe >50% → shorten duration à 3y max",
-    "Gold DD >20% = signal de liquidation forcée, pas de renforcement"
-  ]
-}"""
+═══ EXEMPLE 2: CRISIS / RISK-OFF (données fictives) ═══  
+INPUT: Brent $120, CPI 5.2%, Fed +75bps en 6m, VIX 42, IG spread 280bps, gold DD 2%
+RAISONNEMENT: Pétrole spike → inflation galopante → Fed hawkish agressif → récession.
+VIX >40 + spreads >250bps = crise de liquidité. Flight to quality radical.
+→ Treasury only (avoid TOUT crédit), gold max, cash 15-20%, equity minimal
+→ Avoid: HY, CLO, EM, corporate IG même court
+OUTPUT: regime=crisis, confidence=5, gold +5%, cash 15% tous, bonds=treasury only, duration max 2y
+
+IMPORTANT: Ces exemples illustrent le RAISONNEMENT, pas les données actuelles.
+Analyse les VRAIES données fournies ci-dessous sans te référer aux exemples.
+Le régime dépend des données, pas du template."""
 
 
 # =============================================================================
@@ -535,7 +477,7 @@ def _ai_to_engine_adjustments(ai_response: Dict) -> Dict:
         if bs.get("avoid_em_bonds"):
             adjustments["bond_preferences"].append({
                 "action": "avoid_fund_types",
-                "profiles": _bs_profiles_mod,
+                "profiles": _bs_profiles_all,  # v2.1 fix: global, pas que Modéré/Stable
                 "fund_types": ["Emerging Markets Bond"],
                 "rule_id": "ai_bond_strategy",
             })
