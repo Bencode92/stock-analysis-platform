@@ -1,0 +1,273 @@
+{
+  "timestamp": "2026-03-25T17:39:34.828469",
+  "version": "1.0.0",
+  "model": "claude-opus-4-20250514",
+  "market_data_input": {
+    "date": "2026-03-25",
+    "brent_usd": 103.79,
+    "brent_usd_avg5d": 102.36395,
+    "gold_usd": 4562.25752,
+    "silver_usd": 72.67082,
+    "vix": 22.0,
+    "fed_funds_rate": 3.64,
+    "cpi_index": 327.46,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 319.0,
+    "us_10y_yield": 4.34,
+    "us_2y_yield": 3.83,
+    "yield_curve_2s10s": 51.0,
+    "breakeven_5y": 2.55,
+    "sp500_level": 658.41,
+    "dxy": 120.2757,
+    "_stress_flags": [
+      "energy_shock"
+    ],
+    "gold_price": 4561.33428,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 14.436722737526186,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.6,
+    "favored_sectors": "energy",
+    "avoided_sectors": "communication-services, financials, consumer-discretionary",
+    "favored_regions": "south-korea, brazil, taiwan, turkey",
+    "avoided_regions": "india, germany, south-africa",
+    "key_trends": "Secteur leader: energy (+36.1% YTD) | Région leader: south-korea (+32.4% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: utilities (+30.9% sur 12 mois) | 6M leader: energy (+34.7% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, real-estate, consumer-discretionary | Régions en difficulté: germany, switzerland, italy | Concentration: peu de secteurs en zone favorable (rotation possible) | 6 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "healthcare(avoided,b=0.55,d=-0.13%), real-estate(neutral,b=0.52,d=-0.81%), utilities(neutral,b=0.36,d=1.08%), consumer-staples(neutral,b=0.26,d=0.53%), consumer-discretionary(avoided,b=1.11,d=-0.4%), information-technology(avoided,b=1.32,d=-1.09%), financials(avoided,b=0.94,d=0.05%), materials(neutral,b=0.84,d=1.89%), communication-services(avoided,b=1.12,d=-2.34%), energy(favored,b=0.75,d=2.03%), industrials(neutral,b=0.89,d=0.58%)"
+  },
+  "ai_response": {
+    "regime": "stagflation",
+    "regime_confidence": 4,
+    "regime_rationale": "Brent >$100 avec CPI 2.4% et Fed en pause malgré courbe pentifiée. Dollar fort (DXY 120) et gold/silver en hausse massive signalent stress monétaire.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Augmenter cap energy/oil",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 5,
+        "rationale": "Brent $104 avec momentum RADAR favorable, hedge naturel contre inflation persistante"
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Augmenter allocation gold",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold $4562 et silver $72 signalent débasement monétaire, protection contre stagflation"
+      },
+      {
+        "type": "bond_preference",
+        "action": "Privilégier TIPS et raccourcir duration",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 3.0
+        },
+        "profiles": [
+          "Stable",
+          "Modéré"
+        ],
+        "conviction": 5,
+        "rationale": "Breakeven 2.55% avec pétrole >$100 = risque inflation sous-estimé, éviter duration longue"
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Réduire allocation bonds",
+        "params": {
+          "delta_pct": -3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Bonds réels négatifs avec inflation latente, réduire exposition nominale"
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire tech/growth",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": -3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "Tech souffre en stagflation (beta 1.32), rotation vers value/commodities"
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Constituer poche cash opportuniste",
+        "params": {},
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX 22 en hausse avec spreads HY 319bps = stress croissant, garder munitions"
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "TIPS courts uniquement, éviter tout crédit et duration >3 ans",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 3.0,
+      "max_duration_moderate": 3.0
+    },
+    "cash_allocation": {
+      "_doc": "Cash tactique: poche à garder non investie pour opportunités futures ou protection",
+      "Agressif": 0,
+      "Modéré": 5,
+      "Stable": 10,
+      "rationale": "Cash pour acheter si VIX >30 ou spreads HY >400bps"
+    },
+    "warnings": [
+      "Pétrole >$100 peut déclencher récession si Fed réagit",
+      "Dollar DXY 120 = stress EM et risque de crise liquidité",
+      "Gold/silver ratio anormal suggère dislocation monétaire"
+    ]
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 5,
+        "Modéré": 5
+      },
+      "ai_infra": {
+        "Agressif": -3,
+        "Modéré": -3
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 3,
+        "Modéré": 3,
+        "Stable": 3
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Stable",
+          "Modéré"
+        ],
+        "max_dur": 3.0,
+        "fund_types": [],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Securitized Bond",
+          "Bank Loan"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 3.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 3.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_stagflation"
+    ],
+    "bond_floor_deltas": {
+      "Agressif": -3,
+      "Modéré": -3
+    },
+    "cash_tactical": {
+      "Modéré": 5,
+      "Stable": 10
+    },
+    "cash_tactical_rationale": "Cash pour acheter si VIX >30 ou spreads HY >400bps",
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 4,
+    "ai_warnings": [
+      "Pétrole >$100 peut déclencher récession si Fed réagit",
+      "Dollar DXY 120 = stress EM et risque de crise liquidité",
+      "Gold/silver ratio anormal suggère dislocation monétaire"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "TIPS courts uniquement, éviter tout crédit et duration >3 ans",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 3.0,
+      "max_duration_moderate": 3.0
+    }
+  },
+  "regime": "stagflation",
+  "warnings": [
+    "Pétrole >$100 peut déclencher récession si Fed réagit",
+    "Dollar DXY 120 = stress EM et risque de crise liquidité",
+    "Gold/silver ratio anormal suggère dislocation monétaire"
+  ]
+}
