@@ -141,6 +141,26 @@ def fetch_all_fred(api_key: str) -> Dict:
         else:
             logger.warning(f"[FRED] {name} ({series_id}): no data")
     
+    # CPI: calculate YoY% from index (need 13 months of data)
+    if "cpi" in results:
+        cpi_13m = fetch_fred_series("CPIAUCSL", api_key, n_obs=13)
+        if cpi_13m:
+            # Fetch full 13 obs to get 12-month-ago value
+            url = (
+                f"{FRED_BASE}?series_id=CPIAUCSL"
+                f"&sort_order=desc&limit=13"
+                f"&api_key={api_key}&file_type=json"
+            )
+            raw = _fetch_json(url)
+            if raw and "observations" in raw:
+                valid = [o for o in raw["observations"] if o.get("value", ".") != "."]
+                if len(valid) >= 13:
+                    latest_cpi = float(valid[0]["value"])
+                    year_ago_cpi = float(valid[12]["value"])
+                    cpi_yoy = round((latest_cpi / year_ago_cpi - 1) * 100, 2)
+                    results["cpi"]["yoy_pct"] = cpi_yoy
+                    logger.info(f"[FRED] CPI YoY: {cpi_yoy}% ({latest_cpi}/{year_ago_cpi})")
+    
     return results
 
 
@@ -266,9 +286,9 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
     
     # CPI
     if "cpi" in fred_data:
-        # CPIAUCSL is index level, need YoY change
         macro["cpi"] = {
             "index_value": fred_data["cpi"]["value"],
+            "yoy_pct": fred_data["cpi"].get("yoy_pct"),
             "date": fred_data["cpi"]["date"],
         }
     
@@ -363,7 +383,10 @@ def build_flat_market_data(macro: Dict) -> Dict:
     # Fed rate
     flat["fed_funds_rate"] = macro.get("fed_rate", {}).get("value")
     
-    # CPI — index to YoY requires historical data, pass index for now
+    # CPI YoY% (calculated from 13-month FRED data)
+    _cpi_yoy = macro.get("cpi", {}).get("yoy_pct")
+    if _cpi_yoy:
+        flat["cpi_yoy_pct"] = _cpi_yoy
     flat["cpi_index"] = macro.get("cpi", {}).get("index_value")
     
     # Spreads
