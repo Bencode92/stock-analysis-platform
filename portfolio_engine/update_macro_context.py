@@ -40,6 +40,7 @@ TWELVE_DATA_BASE = "https://api.twelvedata.com"
 FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 
 MARKET_CONTEXT_PATH = os.path.join("data", "market_context.json")
+MACRO_INDICATORS_PATH = os.path.join("data", "macro_indicators.json")
 
 # FRED series IDs
 FRED_SERIES = {
@@ -397,6 +398,7 @@ def build_flat_market_data(macro: Dict) -> Dict:
 def inject_into_market_context(macro: Dict, flat: Dict, path: str = MARKET_CONTEXT_PATH):
     """
     Read existing market_context.json, inject macro_environment + flat indicators.
+    Also writes a standalone macro_indicators.json (not overwritten by RADAR).
     """
     # Load existing
     ctx = {}
@@ -421,12 +423,27 @@ def inject_into_market_context(macro: Dict, flat: Dict, path: str = MARKET_CONTE
     ctx["_meta"]["macro_fields_filled"] = len(flat)
     ctx["_meta"]["macro_stress_flags"] = macro.get("_flags", [])
     
-    # Write
+    # Write market_context.json (may be overwritten by RADAR later)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(ctx, f, ensure_ascii=False, indent=2, default=str)
+    logger.info(f"[MACRO] Written {path}")
     
-    logger.info(f"[MACRO] ✅ Written {path} ({len(flat)} indicators)")
+    # Write standalone macro_indicators.json (NEVER overwritten by RADAR)
+    standalone = {
+        "_market_data_flat": flat,
+        "macro_environment": macro,
+        "_meta": {
+            "updated": datetime.now().isoformat(),
+            "sources": macro.get("_sources", []),
+            "fields": len(flat),
+            "stress_flags": macro.get("_flags", []),
+        }
+    }
+    os.makedirs(os.path.dirname(MACRO_INDICATORS_PATH), exist_ok=True)
+    with open(MACRO_INDICATORS_PATH, "w", encoding="utf-8") as f:
+        json.dump(standalone, f, ensure_ascii=False, indent=2, default=str)
+    logger.info(f"[MACRO] ✅ Written {MACRO_INDICATORS_PATH} ({len(flat)} indicators)")
     
     return ctx
 
