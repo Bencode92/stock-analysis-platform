@@ -1,0 +1,266 @@
+{
+  "timestamp": "2026-03-25T17:07:04.104972",
+  "version": "1.0.0",
+  "model": "claude-opus-4-20250514",
+  "market_data_input": {
+    "date": "2026-03-25",
+    "brent_usd": 101.04,
+    "brent_usd_avg5d": 102.40398760000001,
+    "gold_usd": 4556.3915,
+    "silver_usd": 72.67153,
+    "vix": 22.0,
+    "fed_funds_rate": 3.64,
+    "cpi_index": 327.46,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 319.0,
+    "us_10y_yield": 4.34,
+    "us_2y_yield": 3.83,
+    "yield_curve_2s10s": 51.0,
+    "breakeven_5y": 2.55,
+    "sp500_level": 658.05,
+    "dxy": 120.2757,
+    "_stress_flags": [
+      "energy_shock"
+    ],
+    "gold_price": 4552.09594,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 14.61001910177884,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.6,
+    "favored_sectors": "energy",
+    "avoided_sectors": "communication-services, financials, consumer-discretionary",
+    "favored_regions": "brazil, taiwan, turkey",
+    "avoided_regions": "india, germany, south-africa",
+    "key_trends": "Secteur leader: energy (+36.1% YTD) | Région leader: south-korea (+37.6% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: utilities (+30.9% sur 12 mois) | 6M leader: energy (+34.7% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, real-estate, consumer-discretionary | Régions en difficulté: germany, switzerland, italy | Concentration: peu de secteurs en zone favorable (rotation possible) | 6 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "healthcare(avoided,b=0.55,d=-0.13%), real-estate(neutral,b=0.52,d=-0.81%), utilities(neutral,b=0.36,d=1.08%), consumer-staples(neutral,b=0.26,d=0.53%), consumer-discretionary(avoided,b=1.11,d=-0.4%), information-technology(avoided,b=1.32,d=-1.09%), financials(avoided,b=0.94,d=0.05%), materials(neutral,b=0.84,d=1.89%), communication-services(avoided,b=1.12,d=-2.34%), energy(favored,b=0.75,d=2.03%), industrials(neutral,b=0.89,d=0.58%)"
+  },
+  "ai_response": {
+    "regime": "stagflation",
+    "regime_confidence": 4,
+    "regime_rationale": "Brent >$100 avec inflation 2.4% et Fed en pause à 3.64%. Courbe pentifiée (2s10s 51bps) signale risque de récession avec inflation persistante.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "energy_oil +5%",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 5,
+        "rationale": "Brent $101 avec momentum RADAR favorable, hedge naturel contre inflation énergétique"
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "gold +3%",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold $4556 malgré DD 14.6%, protection stagflation avec DXY élevé à 120"
+      },
+      {
+        "type": "bond_preference",
+        "action": "prefer_tips",
+        "params": {
+          "action": "prefer_tips"
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 5,
+        "rationale": "Breakeven 5Y 2.55% sous-estime risque inflation avec pétrole >$100"
+      },
+      {
+        "type": "bond_preference",
+        "action": "shorten duration",
+        "params": {
+          "action": "shorten_duration",
+          "max_dur": 4.0
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "10Y 4.34% avec Fed en pause, risque asymétrique vers taux plus hauts si inflation persiste"
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "bonds +5%",
+        "params": {
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX 22 et spreads IG 135bps signalent stress modéré, augmenter protection capital"
+      },
+      {
+        "type": "cash_tactical",
+        "action": "cash reserve 5%",
+        "params": {},
+        "profiles": [
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Flexibilité pour acheter si correction tech/comm services s'accentue avec RADAR négatif"
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Privilégier TIPS courte duration et éviter crédit risqué en stagflation",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 6.0
+    },
+    "cash_allocation": {
+      "_doc": "Cash tactique: poche à garder non investie pour opportunités futures ou protection",
+      "Agressif": 0,
+      "Modéré": 5,
+      "Stable": 3,
+      "rationale": "Poche opportuniste modérée avec T-bills 3.8% comme plancher de rendement"
+    },
+    "warnings": [
+      "Si Brent casse $105, probabilité hike Fed monte → réduire duration à 2-3 ans max",
+      "RADAR montre 6 secteurs en momentum négatif 6M → rotation sectorielle violente possible",
+      "DXY 120 historiquement élevé → risque de crise EM si maintien prolongé"
+    ]
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 5,
+        "Modéré": 5
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 3,
+        "Modéré": 3,
+        "Stable": 3
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": null,
+        "fund_types": [],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "fund_types": [],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Securitized Bond",
+          "Bank Loan"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 6.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_stagflation"
+    ],
+    "bond_floor_deltas": {
+      "Stable": 5
+    },
+    "cash_tactical": {
+      "Modéré": 5,
+      "Stable": 3
+    },
+    "cash_tactical_rationale": "Poche opportuniste modérée avec T-bills 3.8% comme plancher de rendement",
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 4,
+    "ai_warnings": [
+      "Si Brent casse $105, probabilité hike Fed monte → réduire duration à 2-3 ans max",
+      "RADAR montre 6 secteurs en momentum négatif 6M → rotation sectorielle violente possible",
+      "DXY 120 historiquement élevé → risque de crise EM si maintien prolongé"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Privilégier TIPS courte duration et éviter crédit risqué en stagflation",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 6.0
+    }
+  },
+  "regime": "stagflation",
+  "warnings": [
+    "Si Brent casse $105, probabilité hike Fed monte → réduire duration à 2-3 ans max",
+    "RADAR montre 6 secteurs en momentum négatif 6M → rotation sectorielle violente possible",
+    "DXY 120 historiquement élevé → risque de crise EM si maintien prolongé"
+  ]
+}
