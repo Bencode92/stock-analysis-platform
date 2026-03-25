@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-25T11:50:03.721020",
+  "timestamp": "2026-03-25T12:19:16.559925",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -34,7 +34,7 @@
         },
         "defensif": {
           "total": 20,
-          "selected": 1
+          "selected": 2
         },
         "low_volatility": {
           "total": 3,
@@ -50,7 +50,7 @@
         },
         "quality_premium": {
           "total": 20,
-          "selected": 0
+          "selected": 1
         },
         "recovery": {
           "total": 20,
@@ -62,7 +62,7 @@
         },
         "value_dividend": {
           "total": 20,
-          "selected": 2
+          "selected": 1
         }
       },
       "etf": {
@@ -857,12 +857,10 @@
         "ticker": "AGS",
         "sort_score": 0.7276,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "rendement",
         "profile_score": 0.7276,
         "buffett_score": 97.2,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Finance",
         "country": "Belgique",
         "volatility": 18.2,
@@ -1015,10 +1013,12 @@
         "ticker": "PEG",
         "sort_score": 0.6822,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "rendement",
         "profile_score": 0.6822,
         "buffett_score": 48.0,
+        "rejection_reason": "Filtré par hard_filters_Stable",
+        "rejection_filter": "hard_filters_Stable",
         "sector": "Services publics",
         "country": "Etats-Unis",
         "volatility": 19.9,
@@ -1942,12 +1942,10 @@
         "ticker": "GGG",
         "sort_score": 0.5716,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "defensif",
         "profile_score": 0.5716,
         "buffett_score": 100.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Industries",
         "country": "Etats-Unis",
         "volatility": 21.8,
@@ -2361,12 +2359,10 @@
         "ticker": "ASML",
         "sort_score": 0.5486,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "quality_premium",
         "profile_score": 0.5486,
         "buffett_score": 100.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Technologie de l'information",
         "country": "Pays-Bas",
         "volatility": 37.0,
@@ -5774,12 +5770,10 @@
           "ticker": "GGG",
           "sort_score": 0.5716,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "defensif",
           "profile_score": 0.5716,
           "buffett_score": 100.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Industries",
           "country": "Etats-Unis",
           "volatility": 21.8,
@@ -6984,12 +6978,10 @@
           "ticker": "ASML",
           "sort_score": 0.5486,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "quality_premium",
           "profile_score": 0.5486,
           "buffett_score": 100.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Technologie de l'information",
           "country": "Pays-Bas",
           "volatility": 37.0,
@@ -7664,12 +7656,10 @@
           "ticker": "AGS",
           "sort_score": 0.7276,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "rendement",
           "profile_score": 0.7276,
           "buffett_score": 97.2,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Finance",
           "country": "Belgique",
           "volatility": 18.2,
@@ -7684,10 +7674,12 @@
           "ticker": "PEG",
           "sort_score": 0.6822,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "rendement",
           "profile_score": 0.6822,
           "buffett_score": 48.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Services publics",
           "country": "Etats-Unis",
           "volatility": 19.9,
@@ -8279,10 +8271,12 @@
           "ticker": "BKW",
           "sort_score": 0.4762,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "value_dividend",
           "profile_score": 0.4762,
           "buffett_score": 52.0,
+          "rejection_reason": "Filtré par hard_filters_Agressif",
+          "rejection_filter": "hard_filters_Agressif",
           "sector": "Services publics",
           "country": "Suisse",
           "volatility": 23.9,
@@ -10188,10 +10182,10 @@
       "dividend_coverage": 1.52,
       "sector": "Matériaux",
       "country": "Royaume-Uni",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 6,
-      "selection_reason": "Qualité Buffett excellente (86); Preset: quality_premium; ROE élevé (20%); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (86); Preset: quality_premium; ROE élevé (20%)"
     },
     {
       "name": "SNAP ON INC",
@@ -10342,10 +10336,10 @@
       "dividend_coverage": 4.49,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 13,
-      "selection_reason": "Qualité Buffett excellente (90); Preset: momentum_trend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (90); Preset: momentum_trend"
     },
     {
       "name": "JOHNSON & JOHNSON",
@@ -10386,10 +10380,10 @@
       "dividend_coverage": 1.65,
       "sector": "Services publics",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 15,
-      "selection_reason": "Preset: rendement; Secteur favorisé RADAR (utilities)"
+      "selection_reason": "Preset: rendement"
     },
     {
       "name": "NOVARTIS AG",
@@ -10890,10 +10884,10 @@
       "dividend_coverage": 6.33,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 38,
-      "selection_reason": "Preset: momentum_trend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Preset: momentum_trend"
     },
     {
       "name": "UNION PACIFIC CORP",
@@ -11110,10 +11104,10 @@
       "dividend_coverage": 2.39,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 48,
-      "selection_reason": "Qualité Buffett solide (53); Preset: value_dividend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett solide (53); Preset: value_dividend"
     },
     {
       "name": "FREEPORT MCMORAN INC",
@@ -11132,10 +11126,10 @@
       "dividend_coverage": 2.9,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 49,
-      "selection_reason": "Qualité Buffett solide (66); Preset: momentum_trend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett solide (66); Preset: momentum_trend"
     },
     {
       "name": "SYSCO CORP",
@@ -11176,10 +11170,10 @@
       "dividend_coverage": 1.57,
       "sector": "Matériaux",
       "country": "Inde",
-      "radar_tilt": "favored",
+      "radar_tilt": "avoided",
       "selected": true,
       "ranking": 51,
-      "selection_reason": "Qualité Buffett excellente (84); Preset: momentum_trend; ROE élevé (38%); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (84); Preset: momentum_trend; ROE élevé (38%)"
     },
     {
       "name": "ROCHE HOLDING AG",
@@ -11220,10 +11214,10 @@
       "dividend_coverage": 2.12,
       "sector": "Matériaux",
       "country": "Royaume-Uni",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 53,
-      "selection_reason": "Preset: momentum_trend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Preset: momentum_trend"
     },
     {
       "name": "ALLEGION PLC",
@@ -11462,10 +11456,10 @@
       "dividend_coverage": 1.83,
       "sector": "Services publics",
       "country": "Suisse",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 64,
-      "selection_reason": "Qualité Buffett solide (52); Preset: value_dividend; Secteur favorisé RADAR (utilities)"
+      "selection_reason": "Qualité Buffett solide (52); Preset: value_dividend"
     },
     {
       "name": "SOLAR INDUSTRIES INDIA LTD",
@@ -11484,10 +11478,10 @@
       "dividend_coverage": 16.04,
       "sector": "Matériaux",
       "country": "Inde",
-      "radar_tilt": "favored",
+      "radar_tilt": "avoided",
       "selected": true,
       "ranking": 65,
-      "selection_reason": "Qualité Buffett excellente (97); Preset: quality_premium; ROE élevé (28%); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (97); Preset: quality_premium; ROE élevé (28%)"
     },
     {
       "name": "SWISSCOM AG",
@@ -11528,10 +11522,10 @@
       "dividend_coverage": 1.84,
       "sector": "Matériaux",
       "country": "France",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 67,
-      "selection_reason": "Qualité Buffett solide (58); Preset: defensif; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett solide (58); Preset: defensif"
     },
     {
       "name": "CORTEVA INC",
@@ -11550,10 +11544,10 @@
       "dividend_coverage": 2.46,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 68,
-      "selection_reason": "Preset: croissance; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Preset: croissance"
     },
     {
       "name": "RPM INTERNATIONAL INC",
@@ -11572,10 +11566,10 @@
       "dividend_coverage": 2.47,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 69,
-      "selection_reason": "Qualité Buffett excellente (77); Preset: quality_premium; ROE élevé (26%); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (77); Preset: quality_premium; ROE élevé (26%)"
     },
     {
       "name": "ILLINOIS TOOL INC",
@@ -11703,10 +11697,10 @@
       "dividend_coverage": 7.14,
       "sector": "Matériaux",
       "country": "Inde",
-      "radar_tilt": "favored",
+      "radar_tilt": "avoided",
       "selected": true,
       "ranking": 75,
-      "selection_reason": "Qualité Buffett excellente (94); Preset: momentum_trend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (94); Preset: momentum_trend"
     },
     {
       "name": "RYANAIR HOLDINGS PLC",
@@ -12427,10 +12421,10 @@
       "dividend_coverage": 1.6,
       "sector": "Matériaux",
       "country": "Suisse",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 108,
-      "selection_reason": "Qualité Buffett excellente (77); Preset: rendement; ROE élevé (23%); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett excellente (77); Preset: rendement; ROE élevé (23%)"
     },
     {
       "name": "LOTES LTD",
@@ -12756,10 +12750,10 @@
       "dividend_coverage": 7.25,
       "sector": "Matériaux",
       "country": "Etats-Unis",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 123,
-      "selection_reason": "Qualité Buffett solide (64); Preset: quality_premium; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett solide (64); Preset: quality_premium"
     },
     {
       "name": "MICHELIN",
@@ -13217,10 +13211,10 @@
       "dividend_coverage": 3.38,
       "sector": "Matériaux",
       "country": "Royaume-Uni",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 144,
-      "selection_reason": "Qualité Buffett solide (52); Preset: momentum_trend; Secteur favorisé RADAR (materials)"
+      "selection_reason": "Qualité Buffett solide (52); Preset: momentum_trend"
     },
     {
       "name": "AMUNDI SA",
@@ -13835,7 +13829,7 @@
       "dividend_coverage": 25.54,
       "sector": "Services publics",
       "country": "Corée",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Filtré par hard_filters_Stable",
       "rejection_filter": "hard_filters_Stable"
@@ -13899,7 +13893,7 @@
       "dividend_coverage": 0.81,
       "sector": "Matériaux",
       "country": "Corée",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Filtré par hard_filters_Stable",
       "rejection_filter": "hard_filters_Stable"
@@ -13960,7 +13954,7 @@
       "dividend_coverage": -23.24,
       "sector": "Matériaux",
       "country": "Corée",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Filtré par hard_filters_Stable",
       "rejection_filter": "hard_filters_Stable"
@@ -14416,10 +14410,10 @@
       "profile_score": 98.08,
       "volatility": 44.3,
       "sector": "Basic Materials",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 4,
-      "selection_reason": "Score profil élevé (98.08); Preset: sector_cyclical; Score composite élevé (98.08); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Score profil élevé (98.08); Preset: sector_cyclical; Score composite élevé (98.08)"
     },
     {
       "name": "VanEck Rare Earth and Strategic Metals ETF",
@@ -14430,10 +14424,10 @@
       "profile_score": 97.53,
       "volatility": 38.3,
       "sector": "Basic Materials",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": true,
       "ranking": 5,
-      "selection_reason": "Score profil élevé (97.53); Preset: sector_cyclical; Score composite élevé (97.53); Secteur favorisé RADAR (materials)"
+      "selection_reason": "Score profil élevé (97.53); Preset: sector_cyclical; Score composite élevé (97.53)"
     },
     {
       "name": "Schwab U.S. Dividend Equity ETF",
@@ -14582,7 +14576,7 @@
       "profile_score": 89.45,
       "volatility": 16.2,
       "sector": "Utilities",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14595,7 +14589,7 @@
       "profile_score": 87.81,
       "volatility": 16.1,
       "sector": "Utilities",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14634,7 +14628,7 @@
       "profile_score": 93.9,
       "volatility": 13.1,
       "sector": "Utilities",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14660,7 +14654,7 @@
       "profile_score": 66.9,
       "volatility": 16.6,
       "sector": "Basic Materials",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14673,7 +14667,7 @@
       "profile_score": 60.8,
       "volatility": 18.0,
       "sector": "Basic Materials",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14777,7 +14771,7 @@
       "profile_score": 89.02,
       "volatility": 11.0,
       "sector": "Utilities",
-      "radar_tilt": "favored",
+      "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
@@ -15050,9 +15044,7 @@
     "confidence": 0.6,
     "as_of": "2026-03-25",
     "favored_sectors": [
-      "energy",
-      "utilities",
-      "materials"
+      "energy"
     ],
     "avoided_sectors": [
       "communication-services",

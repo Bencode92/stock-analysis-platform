@@ -4,9 +4,7 @@
   "as_of": "2026-03-25",
   "macro_tilts": {
     "favored_sectors": [
-      "energy",
-      "utilities",
-      "materials"
+      "energy"
     ],
     "avoided_sectors": [
       "communication-services",
@@ -44,76 +42,87 @@
       "vol_3y": 13.86,
       "risk_flag": "defensive",
       "region": "US",
-      "classification": "avoided"
+      "classification": "avoided",
+      "daily": -0.13
     },
     "real-estate": {
       "beta": 0.52,
       "vol_3y": 17.07,
       "risk_flag": "defensive",
       "region": "US",
-      "classification": "avoided"
+      "classification": "neutral",
+      "daily": -0.81
     },
     "utilities": {
       "beta": 0.36,
       "vol_3y": 14.52,
       "risk_flag": "defensive",
       "region": "Europe",
-      "classification": "favored"
+      "classification": "neutral",
+      "daily": 1.08
     },
     "consumer-staples": {
       "beta": 0.26,
       "vol_3y": 13.88,
       "risk_flag": "defensive",
       "region": "US",
-      "classification": "neutral"
+      "classification": "neutral",
+      "daily": 0.53
     },
     "consumer-discretionary": {
       "beta": 1.11,
       "vol_3y": 20.54,
       "region": "US",
-      "classification": "avoided"
+      "classification": "avoided",
+      "daily": -0.4
     },
     "information-technology": {
       "beta": 1.32,
       "vol_3y": 23.03,
       "risk_flag": "high_beta",
       "region": "US",
-      "classification": "avoided"
+      "classification": "avoided",
+      "daily": -1.09
     },
     "financials": {
       "beta": 0.94,
       "vol_3y": 17.94,
       "region": "US",
-      "classification": "avoided"
+      "classification": "avoided",
+      "daily": 0.05
     },
     "materials": {
       "beta": 0.84,
       "vol_3y": 16.89,
       "region": "US",
-      "classification": "favored"
+      "classification": "neutral",
+      "daily": 1.89
     },
     "communication-services": {
       "beta": 1.12,
       "vol_3y": 21.69,
       "region": "US",
-      "classification": "avoided"
+      "classification": "avoided",
+      "daily": -2.34
     },
     "energy": {
       "beta": 0.75,
       "vol_3y": 21.5,
       "region": "US",
-      "classification": "favored"
+      "classification": "favored",
+      "daily": 2.03
     },
     "industrials": {
       "beta": 0.89,
       "vol_3y": 15.82,
       "region": "US",
-      "classification": "neutral"
+      "classification": "neutral",
+      "daily": 0.58
     }
   },
   "_meta": {
-    "generated_at": "2026-03-25T11:49:18.451404",
-    "model": "radar_deterministic_v1.6",
+    "generated_at": "2026-03-25T12:18:26.907652",
+    "model": "radar_deterministic_v1.6.1",
     "mode": "DATA_DRIVEN",
     "amf_compliant": true,
     "is_fallback": false,
@@ -194,7 +203,10 @@
       "tilt_favored": 0.15,
       "tilt_avoided": -0.25,
       "tilt_max": 0.3,
-      "smoothing_alpha": 0.3
+      "smoothing_alpha": 0.3,
+      "dead_zone_width": 1.0,
+      "dead_zone_m3_override": -5.0,
+      "circuit_breaker_daily": 5.0
     },
     "tilt_config": {
       "favored": 0.15,
@@ -216,10 +228,15 @@
       "avoided_rescued_by_w52": 0,
       "overheat_w52_count": 0,
       "cooling_m3_count": 5,
-      "fallback_activated": 3,
+      "fallback_activated": 0,
       "beta_high_beta_warnings": 1,
       "beta_defensive_flags": 4,
-      "beta_floor_neutral_count": 0
+      "beta_floor_neutral_count": 0,
+      "dead_zone_activated": 1,
+      "circuit_breaker_threshold": 5.0,
+      "dispersion_std": 13.04,
+      "dispersion_stressed": false,
+      "effective_ytd_max": 40.0
     },
     "diagnostics": {
       "sectors_loaded": 11,
@@ -254,8 +271,8 @@
           "beta_flag": "defensive",
           "beta_region": "US",
           "effective_momentum": -0.34,
-          "classification": "avoided",
-          "reason": "underperform|underperform_confirmed|defensive_asset",
+          "classification": "neutral",
+          "reason": "dead_zone|defensive_asset",
           "symbol": "XLRE",
           "selection_method": "preferred"
         },
@@ -271,8 +288,8 @@
           "beta_flag": "defensive",
           "beta_region": "Europe",
           "effective_momentum": 9.36,
-          "classification": "favored",
-          "reason": "out_of_range|divergent|defensive_asset|fallback_top_n",
+          "classification": "neutral",
+          "reason": "out_of_range|divergent|defensive_asset",
           "symbol": "EXH9",
           "selection_method": "medoid"
         },
@@ -356,8 +373,8 @@
           "beta_flag": null,
           "beta_region": "US",
           "effective_momentum": 6.97,
-          "classification": "favored",
-          "reason": "out_of_range|fallback_top_n",
+          "classification": "neutral",
+          "reason": "out_of_range",
           "symbol": "XLB",
           "selection_method": "preferred"
         },
@@ -391,7 +408,7 @@
           "beta_region": "US",
           "effective_momentum": 35.98,
           "classification": "favored",
-          "reason": "out_of_range|fallback_top_n",
+          "reason": "sweet_spot|w52_confirmed|m6_confirmed",
           "symbol": "XLE",
           "selection_method": "preferred"
         },
@@ -614,7 +631,7 @@
           "beta_region": "US",
           "effective_momentum": 0.99,
           "classification": "neutral",
-          "reason": "out_of_range|divergent",
+          "reason": "dead_zone",
           "symbol": "N/A",
           "selection_method": "N/A"
         },
