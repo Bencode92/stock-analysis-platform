@@ -1,7 +1,7 @@
 # portfolio_engine/preset_bond.py
 """
 =========================================
-Bond ETF Preset Selector v1.2.0
+Bond ETF Preset Selector v1.3.0
 =========================================
 
 Sélection d'ETF obligataires par profil (Stable/Modéré/Agressif).
@@ -66,7 +66,7 @@ RATING_TO_SCORE = {
 PROFILE_PRESETS = {
     "Stable": ["cash_ultra_short", "defensif_oblig"],
     "Modéré": ["defensif_oblig"],
-    "Agressif": ["high_yield"],
+    "Agressif": ["high_yield", "ig_credit"],  # v1.3.0: mix HY/IG (expert: corr HY/SPX ~0.7 en crise)
 }
 
 # Hard constraints par profil
@@ -93,6 +93,15 @@ MAX_PER_FUND_TYPE = {
     "Modéré": 2,       # v6.33: 3→2
     "Agressif": 5,
 }
+
+# v1.3.0: Limite de bonds HY par profil (expert: spread HY OAS ~320bps, risque pro-cyclique)
+# Max 1 HY pour Agressif, 0 pour les autres. Le reste en IG.
+MAX_HY_PER_PROFILE = {
+    "Stable": 0,
+    "Modéré": 0,
+    "Agressif": 1,
+}
+
 # Poids scoring par profil
 SCORING_WEIGHTS = {
     "Stable": {
@@ -413,11 +422,42 @@ def _preset_high_yield(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
+
+def _preset_ig_credit(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: Investment Grade Credit (v1.3.0)
+    Obligations IG corporate, duration moyenne.
+    Expert: mix HY/IG dans Agressif pour reduire correlation SPX en crise (~0.7 → ~0.3).
+    """
+    mask = pd.Series(False, index=df.index)
+    
+    # Via objective (keywords IG)
+    if "objective" in df.columns:
+        obj_lower = df["objective"].fillna("").str.lower()
+        for kw in ["investment grade", "corporate", "ig", "intermediate", "credit"]:
+            mask |= obj_lower.str.contains(kw, regex=False)
+    
+    # Via credit score (BBB- to AA+)
+    credit_col = df.apply(_get_credit_score, axis=1)
+    if credit_col.notna().any():
+        ig_credit = (credit_col >= 55) & (credit_col <= 90)
+        mask |= ig_credit
+    
+    # Exclude anything HY
+    if "objective" in df.columns:
+        obj_lower = df["objective"].fillna("").str.lower()
+        hy_mask = obj_lower.str.contains("high yield|high-yield|junk|speculative", regex=True)
+        mask &= ~hy_mask
+    
+    return mask
+
+
 # Mapping preset name → function (v1.1.0: aligné avec preset_meta.py)
 PRESET_FUNCTIONS = {
     "cash_ultra_short": _preset_cash_ultra_short,
     "defensif_oblig": _preset_defensif_oblig,
     "high_yield": _preset_high_yield,
+    "ig_credit": _preset_ig_credit,  # v1.3.0
 }
 
 
@@ -569,6 +609,19 @@ def select_bonds_for_profile(
     # Garantit la diversité des types obligataires dans la sélection finale
     df_sorted = _dedup_by_fund_type(df_sorted, profile)
     
+
+    # v1.3.0: Limite HY par profil (max 1 pour Agressif, 0 pour Stable/Modere)
+    _max_hy = MAX_HY_PER_PROFILE.get(profile, 0)
+    if "objective" in df_sorted.columns:
+        _obj_lower = df_sorted["objective"].fillna("").str.lower()
+        _is_hy = _obj_lower.str.contains("high yield|high-yield|junk|speculative", regex=True)
+        _hy_rows = df_sorted[_is_hy]
+        if len(_hy_rows) > _max_hy:
+            _keep_hy = _hy_rows.head(_max_hy).index
+            _drop_hy = _hy_rows.index.difference(_keep_hy)
+            df_sorted = df_sorted.drop(index=_drop_hy)
+            logger.info(f"[Bond {profile}] HY limit: kept {_max_hy}, dropped {len(_drop_hy)} excess HY")
+
     # Top N
     if top_n and len(df_sorted) > top_n:
         df_sorted = df_sorted.head(top_n)
