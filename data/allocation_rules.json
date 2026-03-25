@@ -293,5 +293,28 @@
     "_doc": "v2: expert Q7 et Q16.",
     "hedge_min_below_theme_cap": true,
     "equity_sum_below_budget": true
+  },
+
+  "rebalancing_rules": {
+    "_doc": "v2.1: Règles de rebalancing (expert flagged). Bandes de tolérance avant action.",
+    "tolerance_band_pct": {
+      "_doc": "Ne rebalancer que si l'écart vs cible dépasse ce seuil (en pp)",
+      "Agressif": 3.0,
+      "Modéré": 2.5,
+      "Stable": 2.0
+    },
+    "min_rebalance_interval_days": 5,
+    "max_rebalance_interval_days": 30,
+    "triggers": {
+      "_doc": "Rebalancing forcé si un de ces seuils est franchi",
+      "single_position_max_pct": 18.0,
+      "bond_floor_breach_pct": 2.0,
+      "vol_breach_pct": 5.0
+    },
+    "cost_assumptions": {
+      "equity_transaction_cost_pct": 0.10,
+      "bond_transaction_cost_pct": 0.05,
+      "crypto_transaction_cost_pct": 0.25
+    }
   }
 }
