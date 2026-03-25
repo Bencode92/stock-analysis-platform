@@ -1,8 +1,9 @@
 // etf-bond-daily-metrics.js
 // Daily scrape: perfs & risque, et fusion avec le weekly snapshot
 // Calcule: daily % (quote), YTD %, 1Y %, 1M %, 3M %, Vol 3Y % (annualisée) depuis /time_series
-// + Beta CAPM 126j vs SPY (P1)
+// + Beta CAPM 252j vs SPY (aligned with stock pipeline v3.39)
 // Sorties: data/daily_metrics.json, data/daily_metrics_*.csv, data/combined_*.{json,csv}
+// v3.0: Beta CAPM 252j (was 126j) — aligns with stock pipeline expert review recommendation
 // v2.9: Beta CAPM 126j — Cov(Ri,Rm)/Var(Rm) vs SPY, 1 seul appel API supplémentaire
 // v2.8: Préserver colonnes Sector Guard (sector_bucket, sector_trust, sector_signal_ok, underlying_ticker)
 // v2.7: Anchor all date calculations on last.datetime (robustness fix for weekends/holidays)
@@ -87,12 +88,12 @@ function findCloseOnOrAfter(values, targetDate) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// v2.9: BETA CAPM — Cov(Ri,Rm) / Var(Rm)
-// Fenêtre par défaut: 126 jours de trading (~6 mois)
+// v3.0: BETA CAPM — Cov(Ri,Rm) / Var(Rm)
+// Fenêtre par défaut: 252 jours de trading (~1 an) — aligned with stock pipeline v3.39
 // Benchmark: SPY (passé en paramètre)
 // Alignement par date (inner join) pour gérer les jours fériés
 // ═══════════════════════════════════════════════════════════════
-function computeBeta(assetValues, benchValues, window = 126) {
+function computeBeta(assetValues, benchValues, window = 252) {
   if (!assetValues || !benchValues || assetValues.length < 22 || benchValues.length < 22) return null;
 
   // Trier du + ancien au + récent
@@ -364,7 +365,7 @@ async function main(){
   // ═══════════════════════════════════════════════════════════════
   // v2.9: Fetch benchmark SPY une seule fois (1 appel API = 5 crédits)
   // ═══════════════════════════════════════════════════════════════
-  console.log('📈 Fetch benchmark SPY pour calcul beta (126j)...');
+  console.log('📈 Fetch benchmark SPY pour calcul beta (252j)...');
   const nowForBench = new Date();
   const threeYAgoBench = new Date(nowForBench);
   threeYAgoBench.setFullYear(nowForBench.getFullYear() - 3);
@@ -390,7 +391,7 @@ async function main(){
 
       // v2.9: Calcul beta à partir du time_series brut + benchmark SPY
       if (benchTs && m._rawTs) {
-        const betaRaw = computeBeta(m._rawTs, benchTs, 126);
+        const betaRaw = computeBeta(m._rawTs, benchTs, 252);
         m.beta = betaRaw != null ? round(betaRaw, 2) : null;
         if (m.beta != null) betaCount++;
       }
