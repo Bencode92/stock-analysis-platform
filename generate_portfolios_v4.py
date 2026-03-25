@@ -5694,7 +5694,8 @@ def save_portfolios(portfolios: Dict, assets: list):
     # - ETF splits (SLVP → SLVP + SLV)
     # - Beta filter actions (remove high-beta stocks from Stable)
     # - Market conditions (Brent, VIX, gold, CPI → adjust caps/hedges)
-    # All driven by JSON config, zero hardcoded allocation logic.
+    # - Market Intelligence v1.0: Claude Opus as CIO for dynamic allocation
+    # All driven by JSON config + AI analysis, zero hardcoded allocation logic.
     try:
         from allocation_rules_engine import (
             load_allocation_rules, apply_allocation_rules,
@@ -5720,15 +5721,62 @@ def save_portfolios(portfolios: Dict, assets: list):
                     _adjustments = evaluate_market_rules(_alloc_rules, _market_data)
                     if _adjustments.get("active_rules"):
                         _alloc_rules = apply_market_adjustments(_alloc_rules, _adjustments)
-                        logger.info(f"✅ [MARKET] {len(_adjustments['active_rules'])} market rules applied: {_adjustments['active_rules']}")
+                        logger.info(f"✅ [MARKET] {len(_adjustments['active_rules'])} hardcoded rules applied: {_adjustments['active_rules']}")
             except Exception as e:
                 logger.warning(f"⚠️ [MARKET] Market conditions fetch failed: {e} — using default rules")
+            
+            # v2.1: Market Intelligence — Claude Opus AI-driven adjustments
+            # Complements hardcoded rules with second-order macro analysis
+            # Fallback: if API unavailable, hardcoded rules above are sufficient
+            try:
+                try:
+                    from portfolio_engine.market_intelligence import get_ai_market_adjustments, integrate_ai_adjustments
+                except ImportError:
+                    from market_intelligence import get_ai_market_adjustments, integrate_ai_adjustments
+                
+                # Build portfolio summary for context
+                _portfolio_summary = {}
+                for _ps_name in ["Agressif", "Modéré", "Stable"]:
+                    if _ps_name in v1_data:
+                        _ps_tickers = v1_data[_ps_name].get("_tickers", {})
+                        _ps_meta = v1_data[_ps_name].get("_tickers_meta", {})
+                        _ps_bonds = {k: v for k, v in _ps_tickers.items() 
+                                    if _ps_meta.get(k, {}).get("category") == "Obligations"}
+                        _ps_equity = {k: v for k, v in _ps_tickers.items() 
+                                     if _ps_meta.get(k, {}).get("category") in ("Actions", "ETF")}
+                        _portfolio_summary[_ps_name] = {
+                            "bonds_pct": round(sum(_ps_bonds.values()) * 100, 1),
+                            "equity_pct": round(sum(_ps_equity.values()) * 100, 1),
+                            "bond_tickers": ", ".join(f"{k} ({v*100:.0f}%)" for k, v in sorted(_ps_bonds.items(), key=lambda x: -x[1])),
+                            "n_lines": len(_ps_tickers),
+                        }
+                
+                _ai_adjustments = get_ai_market_adjustments(
+                    market_data=_market_data or None,
+                    portfolio_summary=_portfolio_summary,
+                    fallback_rules=_alloc_rules,
+                )
+                
+                if _ai_adjustments.get("active_rules") and _ai_adjustments.get("ai_regime") != "fallback":
+                    _alloc_rules = integrate_ai_adjustments(_alloc_rules, _ai_adjustments)
+                    _ai_regime = _ai_adjustments.get("ai_regime", "unknown")
+                    _ai_conf = _ai_adjustments.get("ai_regime_confidence", "?")
+                    logger.info(f"🧠 [MI] AI regime: {_ai_regime} (confidence {_ai_conf}/5)")
+                    for _ai_w in _ai_adjustments.get("ai_warnings", []):
+                        logger.warning(f"🧠 [MI] Warning: {_ai_w}")
+                else:
+                    logger.info("🧠 [MI] AI analysis: no additional adjustments (or fallback mode)")
+                    
+            except ImportError:
+                logger.info("ℹ️ [MI] market_intelligence.py not found — using hardcoded rules only")
+            except Exception as e:
+                logger.warning(f"⚠️ [MI] AI analysis error: {e} — using hardcoded rules only")
             
             # Apply rules to each profile
             for _p_name in ["Agressif", "Modéré", "Stable"]:
                 if _p_name in v1_data:
                     apply_allocation_rules(v1_data[_p_name], _p_name, _alloc_rules, _TICKER_EXP, _market_data)
-            logger.info("✅ [ALLOC_RULES] Engine v2 applied to all profiles")
+            logger.info("✅ [ALLOC_RULES] Engine v2.1 applied to all profiles")
         else:
             logger.info("ℹ️ [ALLOC_RULES] No rules file found — skipping")
     except ImportError:
