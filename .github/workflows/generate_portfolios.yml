@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v5.1.0 + Audit Collector + Selection Explained + Backtest + Debug + Validation
+name: Génération des Portefeuilles v5.2.0 + Market Intelligence + Audit Collector + Backtest
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
 
-      - name: 🚀 Exécuter le moteur v5.1.0 + Audit Collector + Selection Explained + Backtest + Debug
+      - name: 🚀 Exécuter le moteur v5.2.0
         run: python generate_portfolios_v4.py
 
       # ============= v4.5 NEW: Schema Validation =============
@@ -99,6 +99,30 @@ jobs:
           EOF
           else
             echo "⚠️ market_context.json ABSENT (tilts neutres)"
+          fi
+          
+          # v2.1: Market Intelligence Audit
+          if ls data/market_intelligence_audit/*.json 1>/dev/null 2>&1; then
+            echo "✅ market_intelligence_audit/"
+            python3 << 'EOF'
+          import json, glob
+          for f in sorted(glob.glob("data/market_intelligence_audit/*.json"))[-1:]:
+              with open(f) as fh:
+                  data = json.load(fh)
+              regime = data.get("regime", "?")
+              ai = data.get("ai_response", {})
+              n_adj = len(ai.get("adjustments", []))
+              conf = ai.get("regime_confidence", "?")
+              md = data.get("market_data_input", {})
+              n_fields = sum(1 for v in md.values() if v and str(v) != "N/A" and str(v) != "None")
+              print(f"   Regime: {regime} (confidence {conf}/5)")
+              print(f"   Adjustments: {n_adj}")
+              print(f"   Market data fields filled: {n_fields}/{len(md)}")
+              for w in ai.get("warnings", []):
+                  print(f"   ⚠️ {w}")
+          EOF
+          else
+            echo "⚠️ market_intelligence_audit/ ABSENT"
           fi
           
           # Portfolios Global
@@ -158,7 +182,6 @@ jobs:
           print(f"   Total universe: {summary.get('total_universe', 0)}")
           print(f"   Total selected: {summary.get('total_selected', 0)}")
           print(f"   Selection rate: {summary.get('selection_rate', 'N/A')}")
-          # Show TOP caps by region
           top_caps = data.get("top_caps_by_region", {})
           for region in ["US", "Europe", "Asia"]:
               if region in top_caps:
@@ -226,7 +249,7 @@ jobs:
             echo "⚠️ backtest_debug.json ABSENT"
           fi
           
-          # v5.1.0: Selection Debug (audit_collector) - FIXED KEYS
+          # v5.1.0: Selection Debug (audit_collector)
           if [ -f data/selection_debug.json ]; then
             echo "✅ selection_debug.json (v5.1.0)"
             python3 << 'EOF'
@@ -255,7 +278,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v5.1.0 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v5.2.0 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -301,6 +324,41 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           
+          # v2.1: Market Intelligence Summary
+          if ls data/market_intelligence_audit/*.json 1>/dev/null 2>&1; then
+            echo "### 🧠 Market Intelligence (v2.1)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json, glob
+          for f in sorted(glob.glob("data/market_intelligence_audit/*.json"))[-1:]:
+              with open(f) as fh:
+                  data = json.load(fh)
+              ai = data.get("ai_response") or {}
+              regime = ai.get("regime", data.get("regime", "fallback"))
+              conf = ai.get("regime_confidence", "?")
+              n_adj = len(ai.get("adjustments", []))
+              bs = ai.get("bond_strategy", {})
+              md = data.get("market_data_input", {})
+              n_fields = sum(1 for v in md.values() if v and str(v) not in ("N/A", "None", "0", "0.0"))
+              print(f"| Metric | Value |")
+              print(f"|--------|-------|")
+              print(f"| Model | claude-opus-4 |")
+              print(f"| Regime | {regime} |")
+              print(f"| Confidence | {conf}/5 |")
+              print(f"| Adjustments | {n_adj} |")
+              print(f"| Market data fields | {n_fields}/{len(md)} |")
+              print(f"| TIPS preferred | {bs.get('prefer_tips', '?')} |")
+              print(f"| Avoid HY | {bs.get('avoid_hy', '?')} |")
+              print(f"| Max dur Stable | {bs.get('max_duration_stable', '?')}y |")
+              print(f"")
+              warnings = ai.get("warnings", [])
+              if warnings:
+                  print(f"**Warnings:**")
+                  for w in warnings:
+                      print(f"- ⚠️ {w}")
+          EOF
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           # v4.12.0: Selection Audit Summary
           if [ -f data/selection_audit.json ]; then
             echo "### 🔍 Selection Audit (v4.12.0)" >> $GITHUB_STEP_SUMMARY
@@ -322,7 +380,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           
-          # v5.1.0: Selection Debug Summary (audit_collector) - FIXED KEYS
+          # v5.1.0: Selection Debug Summary (audit_collector)
           if [ -f data/selection_debug.json ]; then
             echo "### 📊 Selection Debug (v5.1.0)" >> $GITHUB_STEP_SUMMARY
             python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
@@ -479,7 +537,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (v5.1.0 avec selection_debug.json)
+          # Ajouter les artefacts générés (v5.2.0 avec market_intelligence_audit)
           git add data/portfolios.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
@@ -489,41 +547,45 @@ jobs:
                   data/selection_audit.json \
                   data/selection_explained.json \
                   data/selection_debug.json \
+                  data/market_intelligence_audit/* \
                   data/portfolio_history/* || true
 
           # Si .gitignore les filtre, forcer l'ajout
-          if git check-ignore -q data/portfolios.json; then
+          if git check-ignore -q data/portfolios.json 2>/dev/null; then
             git add -f data/portfolios.json
           fi
-          if git check-ignore -q data/portfolios_euus.json; then
+          if git check-ignore -q data/portfolios_euus.json 2>/dev/null; then
             git add -f data/portfolios_euus.json
           fi
-          if git check-ignore -q data/backtest_results.json; then
+          if git check-ignore -q data/backtest_results.json 2>/dev/null; then
             git add -f data/backtest_results.json
           fi
-          if git check-ignore -q data/backtest_results_euus.json; then
+          if git check-ignore -q data/backtest_results_euus.json 2>/dev/null; then
             git add -f data/backtest_results_euus.json
           fi
-          if git check-ignore -q data/backtest_debug.json; then
+          if git check-ignore -q data/backtest_debug.json 2>/dev/null; then
             git add -f data/backtest_debug.json
           fi
-          if git check-ignore -q data/market_context.json; then
+          if git check-ignore -q data/market_context.json 2>/dev/null; then
             git add -f data/market_context.json
           fi
-          if git check-ignore -q data/selection_audit.json; then
+          if git check-ignore -q data/selection_audit.json 2>/dev/null; then
             git add -f data/selection_audit.json
           fi
-          if git check-ignore -q data/selection_explained.json; then
+          if git check-ignore -q data/selection_explained.json 2>/dev/null; then
             git add -f data/selection_explained.json
           fi
-          if git check-ignore -q data/selection_debug.json; then
+          if git check-ignore -q data/selection_debug.json 2>/dev/null; then
             git add -f data/selection_debug.json
           fi
-          if git check-ignore -q data/portfolio_history; then
+          if git check-ignore -q data/market_intelligence_audit 2>/dev/null; then
+            git add -f data/market_intelligence_audit/*.json || true
+          fi
+          if git check-ignore -q data/portfolio_history 2>/dev/null; then
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v5.1.0 RADAR + Audit Collector + Selection Explained + EU/US Focus + Backtest 90j ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v5.2.0 + Market Intelligence 🧠 + RADAR + Backtest 90j ✓" || echo "rien à committer"
 
           git push || (git pull --rebase origin main && git push)
 
