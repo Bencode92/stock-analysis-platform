@@ -1269,9 +1269,12 @@ def apply_allocation_rules(
         if _cash_meta:
             meta["_CASH"] = _cash_meta
         _cash_pct = round(_cash_weight * 100, 1)
-        portfolio_data["Cash"] = {f"Cash Tactique (non investi)": f"{_cash_pct}%"}
-        portfolio_data["_cash_tactical_pct"] = _cash_pct
-        portfolio_data["_cash_tactical_rationale"] = rules.get("_cash_tactical_rationale", "")
+        # Use _ prefix to pass schema validation (schema ignores _ keys)
+        portfolio_data["_cash_tactical"] = {
+            "pct": _cash_pct,
+            "label": f"Cash Tactique (non investi): {_cash_pct}%",
+            "rationale": rules.get("_cash_tactical_rationale", ""),
+        }
     
     # Log everything
     for line in all_logs:
