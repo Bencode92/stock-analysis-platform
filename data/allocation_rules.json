@@ -250,7 +250,7 @@
   "position_max": 0.15,
 
   "crypto_position_cap": {
-    "_doc": "v2.1: Cap individuel par crypto. Les altcoins illiquides (MORPHO, TRX) sont cappés à 3%. BTC/ETH et leurs ETF à 5%. L'excès est redistribué aux positions non-crypto.",
+    "_doc": "v2.1: Cap individuel par crypto. Les altcoins sont cappés à 3%. BTC/ETH et leurs ETF à 5%. L'excès est redistribué aux positions non-crypto. La blacklist crypto est gérée dans preset_crypto.py (hard filters). Le mix HY/IG est géré dans preset_bond.py (presets par profil).",
     "default_max_pct": 3.0,
     "exceptions": {
       "BTC": 5.0,
