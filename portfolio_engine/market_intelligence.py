@@ -584,8 +584,9 @@ def _save_audit(market_data: Dict, ai_response: Dict, adjustments: Dict):
 
 def load_market_context(path: str = None) -> Dict:
     """
-    Charge le market_context.json.
-    Cherche dans plusieurs emplacements.
+    Charge le market_context.json et retourne les données flat pour le prompt.
+    Cherche dans _market_data_flat (généré par update_macro_context.py),
+    puis dans les champs de premier niveau.
     """
     candidates = [
         path,
@@ -600,6 +601,48 @@ def load_market_context(path: str = None) -> Dict:
             with open(p, "r", encoding="utf-8") as f:
                 data = json.load(f)
             logger.info(f"[MI] Market context loaded from {p}")
+            
+            # Priorité: _market_data_flat (généré par update_macro_context.py)
+            flat = data.get("_market_data_flat", {})
+            if flat:
+                n_fields = sum(1 for v in flat.values() if v and str(v) not in ("N/A", "None"))
+                logger.info(f"[MI] Using flat market data: {n_fields} fields")
+                return flat
+            
+            # Fallback: extraire depuis macro_environment (ancienne structure)
+            macro = data.get("macro_environment", {})
+            if macro:
+                flat = {}
+                flat["date"] = datetime.now().strftime("%Y-%m-%d")
+                if "brent" in macro:
+                    flat["brent_usd"] = macro["brent"].get("price")
+                    flat["brent_usd_avg5d"] = macro["brent"].get("avg_5d", macro["brent"].get("price"))
+                if "gold" in macro:
+                    flat["gold_usd"] = macro["gold"].get("price")
+                if "vix" in macro:
+                    flat["vix"] = macro["vix"].get("value")
+                if "fed_rate" in macro:
+                    flat["fed_funds_rate"] = macro["fed_rate"].get("value")
+                if "ig_spread" in macro:
+                    flat["ig_spread_bps"] = macro["ig_spread"].get("value_bps")
+                if "hy_spread" in macro:
+                    flat["hy_spread_bps"] = macro["hy_spread"].get("value_bps")
+                if "us_10y_yield" in macro:
+                    flat["us_10y_yield"] = macro["us_10y_yield"].get("value")
+                if "us_2y_yield" in macro:
+                    flat["us_2y_yield"] = macro["us_2y_yield"].get("value")
+                if "breakeven_5y" in macro:
+                    flat["breakeven_5y"] = macro["breakeven_5y"].get("value")
+                if "sp500" in macro:
+                    flat["sp500_level"] = macro["sp500"].get("level")
+                if "dxy" in macro:
+                    flat["dxy"] = macro["dxy"].get("value")
+                if "silver" in macro:
+                    flat["silver_usd"] = macro["silver"].get("price")
+                logger.info(f"[MI] Extracted {len(flat)} fields from macro_environment")
+                return flat
+            
+            # Dernier fallback: retourner le dict tel quel
             return data
     
     logger.warning("[MI] market_context.json not found")
