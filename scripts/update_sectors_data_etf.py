@@ -4,6 +4,10 @@ Script de mise à jour des données sectorielles via Twelve Data API
 Utilise des ETFs sectoriels pour représenter les performances des secteurs
 Génère des libellés normalisés bilingues pour l'affichage
 
+v6 - AJOUT: Injection beta + vol_3y depuis combined_etfs.csv (zero API call supplémentaire)
+     - Nouvelle fonction load_beta_lookup()
+     - Champs beta, vol_3y dans chaque sector_entry
+     - Log de couverture beta
 v5 - AJOUT: Calcul 3M et 6M (momentum court/moyen terme)
      - Nouvelles métriques m3_num, m6_num
      - Dates de référence m3_ref_date, m6_ref_date
@@ -50,6 +54,9 @@ logger = logging.getLogger(__name__)
 # Configuration
 CSV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors_etf_mapping.csv")
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors.json")
+
+# v1.6: Fichier source pour beta et vol_3y (déjà enrichi par le pipeline ETF)
+COMBINED_ETFS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "combined_etfs.csv")
 
 # Référentiel sectoriel:
 #  - "ICB" (STOXX/FTSE) : Construction & Materials -> Industrials
@@ -319,6 +326,78 @@ def load_sectors_etf_mapping() -> List[Dict]:
     return rows
 
 
+# ==================== v1.6: Beta Lookup ====================
+
+def load_beta_lookup() -> Dict[str, Dict]:
+    """
+    Charge beta et vol_3y depuis combined_etfs.csv.
+    
+    v1.6: Zero API call supplémentaire — les données existent déjà
+    dans le pipeline ETF (colonnes 'beta' et 'vol_3y_pct').
+    
+    Retourne: {symbol: {"beta": float|None, "vol_3y": float|None}}
+    """
+    lookup: Dict[str, Dict] = {}
+    
+    try:
+        with open(COMBINED_ETFS_FILE, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            
+            # Vérifier que les colonnes existent
+            if reader.fieldnames:
+                has_beta = "beta" in reader.fieldnames
+                has_vol = "vol_3y_pct" in reader.fieldnames
+                if not has_beta:
+                    logger.warning("⚠️ Colonne 'beta' absente de combined_etfs.csv")
+                if not has_vol:
+                    logger.warning("⚠️ Colonne 'vol_3y_pct' absente de combined_etfs.csv")
+            
+            for row in reader:
+                sym = (row.get("symbol") or "").strip().upper()
+                if not sym:
+                    continue
+                
+                # Parser beta
+                beta = None
+                beta_raw = (row.get("beta") or "").strip()
+                if beta_raw and beta_raw not in ("", "N/A", "nan", "-"):
+                    try:
+                        val = float(beta_raw)
+                        if val == val:  # NaN check
+                            beta = val
+                    except (ValueError, TypeError):
+                        pass
+                
+                # Parser vol_3y
+                vol_3y = None
+                vol_raw = (row.get("vol_3y_pct") or "").strip()
+                if vol_raw and vol_raw not in ("", "N/A", "nan", "-"):
+                    try:
+                        val = float(vol_raw)
+                        if val == val:  # NaN check
+                            vol_3y = val
+                    except (ValueError, TypeError):
+                        pass
+                
+                if beta is not None or vol_3y is not None:
+                    lookup[sym] = {"beta": beta, "vol_3y": vol_3y}
+        
+        beta_count = sum(1 for v in lookup.values() if v.get("beta") is not None)
+        vol_count = sum(1 for v in lookup.values() if v.get("vol_3y") is not None)
+        logger.info(f"✅ Beta lookup chargé: {len(lookup)} ETFs ({beta_count} avec beta, {vol_count} avec vol_3y)")
+        
+    except FileNotFoundError:
+        logger.warning(f"⚠️ combined_etfs.csv non trouvé: {COMBINED_ETFS_FILE}")
+        logger.warning("   → Les champs beta/vol_3y seront null dans sectors.json")
+    except Exception as e:
+        logger.warning(f"⚠️ Erreur lecture combined_etfs.csv: {e}")
+        logger.warning("   → Les champs beta/vol_3y seront null dans sectors.json")
+    
+    return lookup
+
+# ============================================================
+
+
 def clean_sector_data(sector_dict: dict) -> dict:
     """Nettoie un dictionnaire en supprimant les propriétés temporaires"""
     return {k: v for k, v in sector_dict.items() if not k.startswith('_')}
@@ -423,6 +502,9 @@ def main():
     
     logger.info(f"📊 {len(sectors_mapping)} ETFs sectoriels à traiter")
     
+    # v1.6: Charger beta/vol depuis combined_etfs.csv (zero API call)
+    beta_lookup = load_beta_lookup()
+    
     # 2. Traiter chaque ETF
     processed_count = 0
     error_count = 0
@@ -430,6 +512,7 @@ def main():
     m3_missing_count = 0
     m6_missing_count = 0
     w52_missing_count = 0
+    beta_injected_count = 0  # v1.6
     year = dt.date.today().year
     
     for idx, etf in enumerate(sectors_mapping):
@@ -541,6 +624,15 @@ def main():
                 w52_missing_count += 1
                 logger.info(f"ℹ️ {sym}: Pas de données 52W (historique < 1 an)")
             
+            # ==================== v1.6: Beta depuis lookup ====================
+            beta_data = beta_lookup.get(sym, {})
+            etf_beta = beta_data.get("beta")
+            etf_vol_3y = beta_data.get("vol_3y")
+            
+            if etf_beta is not None:
+                beta_injected_count += 1
+            # ==================================================================
+            
             # ==================== Construire l'entrée ====================
             sector_entry = {
                 "symbol": sym,
@@ -562,6 +654,9 @@ def main():
                 "m3_num": float(m3_pct) if m3_pct is not None else None,
                 "m6_num": float(m6_pct) if m6_pct is not None else None,
                 "w52_num": float(w52_pct) if w52_pct is not None else None,
+                # v1.6: Beta et volatilité depuis combined_etfs.csv
+                "beta": etf_beta,
+                "vol_3y": etf_vol_3y,
                 "last_price_source": last_src,
                 "ytd_ref_date": base_date,
                 "m3_ref_date": base_3m_date,
@@ -578,11 +673,12 @@ def main():
             ALL_SECTORS.append(sector_entry.copy())
             processed_count += 1
             
-            # Log résumé
+            # Log résumé (v1.6: ajout beta)
             m3_str = f"3M: {m3_pct:+.2f}%" if m3_pct is not None else "3M: N/A"
             m6_str = f"6M: {m6_pct:+.2f}%" if m6_pct is not None else "6M: N/A"
             w52_str = f"52W: {w52_pct:+.2f}%" if w52_pct is not None else "52W: N/A"
-            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {m3_str} {m6_str} {w52_str}")
+            beta_str = f"β: {etf_beta:.2f}" if etf_beta is not None else "β: N/A"
+            logger.info(f"✅ {sym} [{category}]: {last} ({day_pct:+.2f}%) YTD: {ytd_pct:+.2f}% {m3_str} {m6_str} {w52_str} {beta_str}")
             
         except Exception as e:
             error_count += 1
@@ -605,6 +701,8 @@ def main():
     logger.info(f"\n📊 Résumé du traitement:")
     logger.info(f"  - ETFs traités avec succès: {processed_count}")
     logger.info(f"  - Erreurs: {error_count}")
+    # v1.6: Log couverture beta
+    logger.info(f"  - 📈 Beta injecté: {beta_injected_count}/{processed_count} ETFs")
     if ytd_warnings > 0:
         logger.info(f"  - ℹ️ Baselines YTD début {year}: {ytd_warnings}")
     if m3_missing_count > 0:
@@ -628,6 +726,13 @@ def main():
     SECTORS_DATA["meta"]["total_etfs"] = len(sectors_mapping)
     SECTORS_DATA["meta"]["errors_count"] = error_count
     SECTORS_DATA["meta"]["taxonomy"] = TAXONOMY
+    # v1.6: Beta coverage dans metadata
+    SECTORS_DATA["meta"]["beta_coverage"] = {
+        "injected": beta_injected_count,
+        "total": processed_count,
+        "source": "combined_etfs.csv",
+        "fields": ["beta", "vol_3y"]
+    }
     SECTORS_DATA["meta"]["ytd_calculation"] = {
         "method": "price_last_close_prev_year_to_last_close_with_fallback",
         "baseline_year": year - 1,
