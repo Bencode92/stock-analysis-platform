@@ -5751,24 +5751,55 @@ def save_portfolios(portfolios: Dict, assets: list):
                             "n_lines": len(_ps_tickers),
                         }
                 
-                # v2.1: Enrich _market_data with FRED data from market_context.json
-                # update_macro_context.py writes _market_data_flat with 15+ fields
-                # fetch_market_conditions() only has 8 fields — merge both
+                # v2.1: Enrich _market_data with FRED+TD from macro_indicators.json
+                # AND RADAR context from market_context.json
                 try:
                     import json as _json_mi
-                    _mc_path = os.path.join("data", "market_context.json")
-                    if os.path.exists(_mc_path):
-                        with open(_mc_path, "r", encoding="utf-8") as _mc_f:
+                    
+                    # 1) FRED+TD macro indicators (17 fields)
+                    _mi_path = "data/macro_indicators.json"
+                    if os.path.exists(_mi_path):
+                        with open(_mi_path, "r", encoding="utf-8") as _mc_f:
                             _mc_data = _json_mi.load(_mc_f)
                         _flat = _mc_data.get("_market_data_flat", {})
                         if _flat:
-                            # Merge: _flat as base, _market_data overwrites (fresher)
-                            _merged = {**_flat, **{k: v for k, v in (_market_data or {}).items() if v is not None}}
                             _n_before = len(_market_data or {})
+                            _merged = {**_flat, **{k: v for k, v in (_market_data or {}).items() if v is not None}}
                             _market_data = _merged
-                            logger.info(f"🧠 [MI] Enriched market data: {_n_before} → {len(_market_data)} fields (FRED+TD)")
+                            logger.info(f"🧠 [MI] Enriched with macro_indicators: {_n_before} → {len(_market_data)} fields")
+                    
+                    # 2) RADAR context (sector momentum, regime, risk profile)
+                    _radar_path = "data/market_context.json"
+                    if os.path.exists(_radar_path):
+                        with open(_radar_path, "r", encoding="utf-8") as _rc_f:
+                            _radar = _json_mi.load(_rc_f)
+                        
+                        # Extract RADAR signals for Claude
+                        _tilts = _radar.get("macro_tilts", {})
+                        _market_data["radar_regime"] = _radar.get("market_regime", "unknown")
+                        _market_data["radar_confidence"] = _radar.get("confidence", 0)
+                        _market_data["favored_sectors"] = ", ".join(_tilts.get("favored_sectors", []))
+                        _market_data["avoided_sectors"] = ", ".join(_tilts.get("avoided_sectors", []))
+                        _market_data["favored_regions"] = ", ".join(_tilts.get("favored_regions", []))
+                        _market_data["avoided_regions"] = ", ".join(_tilts.get("avoided_regions", []))
+                        _market_data["key_trends"] = " | ".join(_radar.get("key_trends", [])[:5])
+                        _market_data["risks"] = " | ".join(_radar.get("risks", [])[:4])
+                        
+                        # Sector momentum summary
+                        _srp = _radar.get("sector_risk_profile", {})
+                        _sector_summary = []
+                        for _sk, _sv in _srp.items():
+                            _cls = _sv.get("classification", "?")
+                            _beta = _sv.get("beta", "?")
+                            _daily = _sv.get("daily", "?")
+                            _sector_summary.append(f"{_sk}({_cls},b={_beta},d={_daily}%)")
+                        _market_data["sector_momentum_summary"] = ", ".join(_sector_summary)
+                        
+                        logger.info(f"🧠 [MI] Enriched with RADAR: regime={_market_data['radar_regime']}, "
+                                   f"{len(_srp)} sectors, favored=[{_market_data['favored_sectors']}]")
+                    
                 except Exception as _e_mc:
-                    logger.debug(f"[MI] Could not enrich from market_context.json: {_e_mc}")
+                    logger.debug(f"[MI] Could not enrich market data: {_e_mc}")
                 
                 _ai_adjustments = get_ai_market_adjustments(
                     market_data=_market_data or None,
