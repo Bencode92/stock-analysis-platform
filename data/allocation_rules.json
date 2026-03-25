@@ -170,7 +170,9 @@
         "condition": "brent_usd_avg5d > 100",
         "adjustments": [
           { "type": "thematic_cap_delta", "theme": "energy_oil", "delta_pct": 5, "profiles": ["Agressif", "Modéré"] },
-          { "type": "mandatory_hedge_delta", "hedge": "gold", "delta_pct": 2, "profiles": ["Agressif", "Modéré"] }
+          { "type": "mandatory_hedge_delta", "hedge": "gold", "delta_pct": 2, "profiles": ["Agressif", "Modéré"] },
+          { "type": "bond_preference", "action": "prefer_tips", "profiles": ["Modéré", "Stable"], "_reason": "Oil shock → inflation risk → TIPS hedge" },
+          { "type": "bond_preference", "action": "shorten_duration", "max_dur": 5.0, "profiles": ["Stable"], "_reason": "Volatility regime → reduce rate sensitivity" }
         ]
       },
       {
@@ -186,7 +188,9 @@
         "adjustments": [
           { "type": "mandatory_hedge_delta", "hedge": "gold", "delta_pct": 2, "profiles": ["Agressif", "Modéré", "Stable"] },
           { "type": "thematic_cap_delta", "theme": "semi", "delta_pct": -5, "profiles": ["Agressif"] },
-          { "type": "thematic_cap_delta", "theme": "ai_infra", "delta_pct": -5, "profiles": ["Agressif"] }
+          { "type": "thematic_cap_delta", "theme": "ai_infra", "delta_pct": -5, "profiles": ["Agressif"] },
+          { "type": "bond_preference", "action": "avoid_fund_types", "fund_types": ["Securitized Bond", "Bank Loan"], "profiles": ["Modéré", "Stable"], "_reason": "CLO/securitized gap out in liquidity crisis" },
+          { "type": "bond_preference", "action": "prefer_treasury", "profiles": ["Stable"], "_reason": "Flight to quality" }
         ]
       },
       {
@@ -203,7 +207,8 @@
           { "type": "thematic_cap_delta", "theme": "semi", "delta_pct": 3, "profiles": ["Agressif"] },
           { "type": "thematic_cap_delta", "theme": "ai_infra", "delta_pct": 3, "profiles": ["Agressif"] },
           { "type": "thematic_cap_delta", "theme": "dividend_value", "delta_pct": -3, "profiles": ["Modéré", "Stable"] },
-          { "type": "ig_credit_swap", "from": "VCIT", "to": "LQD", "profiles": ["Stable"] }
+          { "type": "ig_credit_swap", "from": "VCIT", "to": "LQD", "profiles": ["Stable"] },
+          { "type": "bond_preference", "action": "extend_duration_ok", "profiles": ["Modéré", "Stable"], "_reason": "Rate cuts → duration = tailwind" }
         ]
       },
       {
@@ -211,7 +216,8 @@
         "condition": "ig_spread_bps > 200",
         "adjustments": [
           { "type": "bond_floor_delta", "delta_pct": 5, "profiles": ["Stable"] },
-          { "type": "ig_credit_swap", "from": "VCIT", "to": "SCHO", "profiles": ["Stable"] }
+          { "type": "ig_credit_swap", "from": "VCIT", "to": "SCHO", "profiles": ["Stable"] },
+          { "type": "bond_preference", "action": "avoid_fund_types", "fund_types": ["High Yield Bond", "Securitized Bond", "Bank Loan", "Emerging Markets Bond"], "profiles": ["Agressif", "Modéré", "Stable"], "_reason": "Credit stress → flight to quality" }
         ]
       },
       {
@@ -219,7 +225,9 @@
         "condition": "cpi_yoy_pct > 4.0",
         "adjustments": [
           { "type": "mandatory_hedge_delta", "hedge": "gold", "delta_pct": 2, "profiles": ["Agressif", "Modéré", "Stable"] },
-          { "type": "bond_fallback_swap", "from": "SCHO", "to": "STIP", "profiles": ["Stable"] }
+          { "type": "bond_fallback_swap", "from": "SCHO", "to": "STIP", "profiles": ["Stable"] },
+          { "type": "bond_preference", "action": "prefer_tips", "profiles": ["Agressif", "Modéré", "Stable"], "_reason": "Inflation above target → real yield protection" },
+          { "type": "bond_preference", "action": "shorten_duration", "max_dur": 3.0, "profiles": ["Stable"], "_reason": "Inflation + potential hikes → minimize rate risk" }
         ]
       }
     ]
