@@ -693,11 +693,15 @@ def rebuild_display(tickers: Dict[str, float], meta: Dict[str, Dict]) -> Tuple[D
     numeric = {}
     
     for tk, w_dec in tickers.items():
+        if tk.startswith("_"):  # Skip internal keys (_CASH, etc.)
+            continue
         w_pct = round(w_dec * 100, 1)
         if w_pct < 0.1:
             continue
         info = meta.get(tk, {})
         cat = info.get("category", "ETF")
+        if cat not in display:
+            display[cat] = {}  # Handle unknown categories gracefully
         nm = info.get("name", tk)
         disp = f"{nm} ({tk})" if tk not in nm else nm
         display[cat][disp] = f"{w_pct:.1f}%"
@@ -1245,6 +1249,10 @@ def apply_allocation_rules(
         tickers = {k: v * factor for k, v in tickers.items()}
     
     # Step 7: Rebuild display
+    # Pop _CASH before rebuild (rebuild only knows Actions/ETF/Obligations/Crypto)
+    _cash_weight = tickers.pop("_CASH", 0)
+    _cash_meta = meta.pop("_CASH", None)
+    
     display, numeric = rebuild_display(tickers, meta)
     
     portfolio_data["_tickers"] = tickers
@@ -1255,9 +1263,12 @@ def apply_allocation_rules(
     portfolio_data["Crypto"] = display.get("Crypto", {})
     portfolio_data["_numeric_weights"] = numeric
     
-    # Cash tactical display
-    if "_CASH" in tickers and tickers["_CASH"] > 0.001:
-        _cash_pct = round(tickers["_CASH"] * 100, 1)
+    # Cash tactical display (re-add after rebuild)
+    if _cash_weight > 0.001:
+        tickers["_CASH"] = _cash_weight
+        if _cash_meta:
+            meta["_CASH"] = _cash_meta
+        _cash_pct = round(_cash_weight * 100, 1)
         portfolio_data["Cash"] = {f"Cash Tactique (non investi)": f"{_cash_pct}%"}
         portfolio_data["_cash_tactical_pct"] = _cash_pct
         portfolio_data["_cash_tactical_rationale"] = rules.get("_cash_tactical_rationale", "")
