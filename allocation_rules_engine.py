@@ -898,7 +898,8 @@ def apply_allocation_rules(
     # These tickers may be injected by the engine (splits, hedges) and not in the pipeline's lookup
     _ENGINE_KNOWN_EXPOSURES = {
         "slv": "silver_physical", "sivr": "silver_physical",
-        "gde": "gold_physical", "gld": "gold_physical", "iau": "gold_physical",
+        "gde": "gold_leveraged",  # v2.1 fix: GDE = gold futures + equity overlay, NOT pure gold
+        "gld": "gold_physical", "iau": "gold_physical",
         "sgol": "gold_physical", "aaau": "gold_physical", "gldm": "gold_physical",
         "gdxj": "gold_miners", "gdx": "gold_miners",
         "slvp": "silver_miners", "silj": "silver_miners",
@@ -1129,21 +1130,46 @@ def apply_allocation_rules(
                     _removed_bonds.append(f"{tk} ({_w*100:.1f}%)")
                     _bond_tickers.pop(tk, None)
         
-        # 2) Shorten duration: swap bonds with dur > max for short alternatives
-        if _MAX_DURATION and not _removed_bonds:  # Don't double-swap
+        # 2) Shorten duration: swap bonds exceeding max duration
+        # Known durations for common bond ETFs (fallback when meta doesn't have duration)
+        _KNOWN_DURATIONS = {
+            "VCIT": 6.2, "VCSH": 2.7, "BSV": 2.7, "VGSH": 1.9, "SCHO": 1.9,
+            "CLTL": 0.3, "STIP": 2.5, "STPZ": 2.8, "LQD": 8.4, "BND": 6.1,
+            "AGG": 6.0, "TLT": 17.0, "IEF": 7.5, "SCHP": 6.8, "PAAA": 0.2,
+            "JAAA": 0.2, "IBTH": 1.6, "GBIL": 0.4, "VTIP": 2.4, "IGSB": 2.6,
+            "EMHC": 5.5, "ANGL": 5.6, "HYG": 3.9, "JNK": 3.7, "USHY": 3.8,
+            "AVIG": 4.5, "AGGY": 4.2, "AGZ": 3.9, "AFIF": 5.5, "BSV": 2.7,
+        }
+        
+        if _MAX_DURATION:
             for tk in list(_bond_tickers.keys()):
                 _tk_upper = tk.upper()
-                # Check if this bond is likely long duration (not in short treasury set, not TIPS short)
-                if _tk_upper not in _TREASURY_SHORT and _tk_upper not in _TIPS_TICKERS:
-                    # Heuristic: if we know it's long, swap it
+                if _tk_upper in _TREASURY_SHORT or _tk_upper in _TIPS_TICKERS:
+                    continue  # Short treasury and TIPS are always OK
+                
+                # Check duration: meta first, then known table, then name heuristic
+                _dur = meta.get(tk, {}).get("duration")
+                if _dur is None:
+                    _dur = _KNOWN_DURATIONS.get(_tk_upper)
+                
+                _should_remove = False
+                if _dur is not None and _dur > _MAX_DURATION:
+                    _should_remove = True
+                    _reason = f"dur={_dur:.1f}y > max {_MAX_DURATION}y"
+                elif _dur is None:
+                    # Fallback: name heuristic for unknown bonds
                     _name_lower = meta.get(tk, {}).get("name", "").lower()
                     if any(kw in _name_lower for kw in ["long", "20+", "10-", "7-10", "intermediate"]):
-                        _w = tickers.pop(tk, 0)
-                        if tk in meta:
-                            del meta[tk]
-                        _weight_to_redistribute += _w
-                        _removed_bonds.append(f"{tk} ({_w*100:.1f}%, long dur)")
-                        _bond_tickers.pop(tk, None)
+                        _should_remove = True
+                        _reason = "long dur (name heuristic)"
+                
+                if _should_remove:
+                    _w = tickers.pop(tk, 0)
+                    if tk in meta:
+                        del meta[tk]
+                    _weight_to_redistribute += _w
+                    _removed_bonds.append(f"{tk} ({_w*100:.1f}%, {_reason})")
+                    _bond_tickers.pop(tk, None)
         
         # 3) Redistribute weight to preferred bonds
         if _weight_to_redistribute > 0.001:
