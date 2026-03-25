@@ -5697,10 +5697,16 @@ def save_portfolios(portfolios: Dict, assets: list):
     # - Market Intelligence v1.0: Claude Opus as CIO for dynamic allocation
     # All driven by JSON config + AI analysis, zero hardcoded allocation logic.
     try:
-        from allocation_rules_engine import (
-            load_allocation_rules, apply_allocation_rules,
-            fetch_market_conditions, evaluate_market_rules, apply_market_adjustments
-        )
+        try:
+            from portfolio_engine.allocation_rules_engine import (
+                load_allocation_rules, apply_allocation_rules,
+                fetch_market_conditions, evaluate_market_rules, apply_market_adjustments
+            )
+        except ImportError:
+            from allocation_rules_engine import (
+                load_allocation_rules, apply_allocation_rules,
+                fetch_market_conditions, evaluate_market_rules, apply_market_adjustments
+            )
         try:
             from portfolio_engine.etf_exposure import TICKER_TO_EXPOSURE as _TICKER_EXP
         except ImportError:
