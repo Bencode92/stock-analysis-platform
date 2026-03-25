@@ -51,15 +51,15 @@ FRED_SERIES = {
     "us_10y":    "DGS10",
     "us_2y":     "DGS2",
     "breakeven_5y": "T5YIE",
+    "brent":     "DCOILBRENTEU",   # Brent crude (FRED, daily, gratuit)
+    "dxy":       "DTWEXBGS",       # Trade-weighted USD index (proxy DXY)
 }
 
-# Twelve Data symbols
+# Twelve Data symbols (only verified free-tier symbols)
 TD_SYMBOLS = {
-    "brent":  "BZ1",
     "gold":   "XAU/USD",
     "silver": "XAG/USD",
-    "dxy":    "DX1",
-    "sp500":  "SPX",
+    "sp500":  "SPY",       # SPY ETF comme proxy S&P 500 (SPX pas dispo free tier)
 }
 
 
@@ -196,12 +196,6 @@ def fetch_all_td(api_key: str) -> Dict:
         quote = fetch_td_quote(symbol, api_key)
         if quote:
             results[name] = quote
-            
-            # Also get 5-day average for brent
-            if name == "brent":
-                ts = fetch_td_timeseries(symbol, api_key, 5)
-                if ts:
-                    results[name]["avg_5d"] = round(sum(ts) / len(ts), 2)
     
     return results
 
@@ -217,17 +211,15 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
     """
     macro = {}
     
-    # Brent
-    if "brent" in td_data:
-        b = td_data["brent"]
+    # Brent (from FRED DCOILBRENTEU)
+    if "brent" in fred_data:
         macro["brent"] = {
-            "price": b.get("price"),
-            "change_1d_pct": b.get("change_pct"),
-            "avg_5d": b.get("avg_5d", b.get("price")),
-            "datetime": b.get("datetime"),
+            "price": fred_data["brent"]["value"],
+            "date": fred_data["brent"]["date"],
+            "avg_5d": fred_data["brent"]["value"],  # FRED gives daily, approx
         }
     
-    # Gold
+    # Gold (from Twelve Data XAU/USD)
     if "gold" in td_data:
         g = td_data["gold"]
         macro["gold"] = {
@@ -236,7 +228,7 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
             "datetime": g.get("datetime"),
         }
     
-    # Silver
+    # Silver (from Twelve Data XAG/USD)
     if "silver" in td_data:
         s = td_data["silver"]
         macro["silver"] = {
@@ -244,11 +236,11 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
             "change_1d_pct": s.get("change_pct"),
         }
     
-    # DXY
-    if "dxy" in td_data:
-        macro["dxy"] = {"value": td_data["dxy"].get("price")}
+    # DXY (from FRED DTWEXBGS — trade-weighted USD index)
+    if "dxy" in fred_data:
+        macro["dxy"] = {"value": fred_data["dxy"]["value"]}
     
-    # S&P 500
+    # S&P 500 (from Twelve Data SPY)
     if "sp500" in td_data:
         sp = td_data["sp500"]
         macro["sp500"] = {
