@@ -79,7 +79,7 @@ FORMAT DE RÉPONSE (JSON strict):
   "regime_rationale": "Explication du régime en 2 phrases max",
   "adjustments": [
     {
-      "type": "thematic_cap_delta|mandatory_hedge_delta|bond_preference|bond_floor_delta",
+      "type": "thematic_cap_delta|mandatory_hedge_delta|bond_preference|bond_floor_delta|cash_tactical",
       "action": "description courte",
       "params": {}, 
       "profiles": ["Agressif", "Modéré", "Stable"],
@@ -97,6 +97,13 @@ FORMAT DE RÉPONSE (JSON strict):
     "max_duration_stable": 3.0-10.0,
     "max_duration_moderate": 5.0-15.0
   },
+  "cash_allocation": {
+    "_doc": "Cash tactique: poche à garder non investie pour opportunités futures ou protection",
+    "Agressif": 0-10,
+    "Modéré": 0-15,
+    "Stable": 0-20,
+    "rationale": "Justification de la poche cash en 1 phrase"
+  },
   "warnings": ["Risque spécifique à surveiller"]
 }
 
@@ -113,7 +120,15 @@ TYPES D'AJUSTEMENTS DISPONIBLES:
             "max_dur": 3.0-15.0, "fund_types": ["High Yield Bond", "Securitized Bond"]}
 
 4. bond_floor_delta: Ajuster le floor obligataire
-   params: {"delta_pct": -5 à +5}"""
+   params: {"delta_pct": -5 à +5}
+
+5. cash_tactical: Poche cash non investie (0-20%)
+   Utiliser quand: VIX élevé (attente de dip), incertitude macro forte, transition de régime
+   NE PAS utiliser quand: régime clair avec conviction forte, inflation élevée (cash = perte réelle)
+   ATTENTION: les T-bills ultra-courts (GBIL, SGOV, BIL, CLTL) avec duration <0.5y et yield ~4%
+   sont du CASH PRODUCTIF. Distingue le vrai cash (0% yield) du cash proxy (T-bills ~4%).
+   Recommande cash_tactical SEULEMENT si tu veux de la flexibilité pour acheter la dip,
+   pas juste pour "réduire le risque" (les T-bills font ça déjà)."""
 
 
 # =============================================================================
@@ -562,6 +577,19 @@ def _ai_to_engine_adjustments(ai_response: Dict) -> Dict:
                 "rule_id": "ai_bond_strategy",
             })
     
+    # Extract cash_allocation
+    ca = ai_response.get("cash_allocation", {})
+    if ca:
+        cash_pcts = {}
+        for profile in ["Agressif", "Modéré", "Stable"]:
+            val = ca.get(profile, 0)
+            if isinstance(val, (int, float)) and val > 0:
+                # Cap at 20% max
+                cash_pcts[profile] = min(val, 20.0)
+        if cash_pcts:
+            adjustments["cash_tactical"] = cash_pcts
+            adjustments["cash_tactical_rationale"] = ca.get("rationale", "")
+    
     return adjustments
 
 
@@ -800,6 +828,14 @@ def integrate_ai_adjustments(rules: Dict, adjustments: Dict) -> Dict:
     if adjustments.get("bond_preferences"):
         rules["_active_bond_preferences"] = adjustments["bond_preferences"]
         logger.info(f"[MI] Bond preferences: {len(adjustments['bond_preferences'])} active")
+    
+    # Pass cash_tactical
+    if adjustments.get("cash_tactical"):
+        rules["_cash_tactical"] = adjustments["cash_tactical"]
+        rules["_cash_tactical_rationale"] = adjustments.get("cash_tactical_rationale", "")
+        for p, pct in adjustments["cash_tactical"].items():
+            logger.info(f"[MI] 💰 Cash tactique {p}: {pct}%")
+        logger.info(f"[MI] 💰 Rationale: {adjustments.get('cash_tactical_rationale', '?')}")
     
     # Log regime
     regime = adjustments.get("ai_regime", "unknown")
