@@ -1,0 +1,166 @@
+{
+  "timestamp": "2026-03-25T13:08:57.911018",
+  "version": "1.0.0",
+  "model": "claude-opus-4-20250514",
+  "market_data_input": {
+    "brent_usd_avg5d": 102.09788,
+    "vix": 22.0,
+    "gold_price": 4563.07405,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 14.404087457201381,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "ig_spread_bps": 135.0
+  },
+  "ai_response": {
+    "regime": "neutral",
+    "regime_confidence": 2,
+    "regime_rationale": "Données insuffisantes pour diagnostic clair. Brent >$100 suggère pression inflationniste mais CPI 2.4% reste modéré. VIX 22 = stress modéré, IG spread 135bps élevé.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "energy_oil +3%",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Brent >$102 justifie surpondération energy mais manque de contexte géopolitique limite conviction"
+      },
+      {
+        "type": "bond_preference",
+        "action": "prefer_tips",
+        "params": {
+          "action": "prefer_tips"
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Pétrole élevé = risque inflation future, TIPS offrent protection sans données Fed"
+      },
+      {
+        "type": "bond_preference",
+        "action": "avoid securitized",
+        "params": {
+          "action": "avoid_fund_types",
+          "fund_types": [
+            "Securitized Bond",
+            "Bank Loan"
+          ]
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "JAAA/CLTL = 14% du Stable, produits complexes inadaptés si spreads s'écartent"
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Prudence: favoriser TIPS et duration courte sans visibilité Fed/inflation",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 6.0,
+      "max_duration_moderate": 8.0
+    },
+    "warnings": [
+      "Données critiques manquantes: Fed rate, yields, VIX trend empêchent diagnostic complet",
+      "IG spread 135bps élevé vs historique suggère stress crédit sous-jacent",
+      "Gold DD 14.4% sans prix spot = impossible d'évaluer support technique"
+    ]
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      }
+    },
+    "hedge_deltas": {},
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": null,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": null,
+        "fund_types": [
+          "Securitized Bond",
+          "Bank Loan"
+        ],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 6.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 8.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_neutral"
+    ],
+    "ai_regime": "neutral",
+    "ai_regime_confidence": 2,
+    "ai_warnings": [
+      "Données critiques manquantes: Fed rate, yields, VIX trend empêchent diagnostic complet",
+      "IG spread 135bps élevé vs historique suggère stress crédit sous-jacent",
+      "Gold DD 14.4% sans prix spot = impossible d'évaluer support technique"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Prudence: favoriser TIPS et duration courte sans visibilité Fed/inflation",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 6.0,
+      "max_duration_moderate": 8.0
+    }
+  },
+  "regime": "neutral",
+  "warnings": [
+    "Données critiques manquantes: Fed rate, yields, VIX trend empêchent diagnostic complet",
+    "IG spread 135bps élevé vs historique suggère stress crédit sous-jacent",
+    "Gold DD 14.4% sans prix spot = impossible d'évaluer support technique"
+  ]
+}
