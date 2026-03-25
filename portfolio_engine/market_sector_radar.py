@@ -1,14 +1,21 @@
 # portfolio_engine/market_sector_radar.py
 """
-Market/Sector Radar v1.6 (Beta Adjustment Option 2+)
+Market/Sector Radar v1.6.1 (Expert Fixes: Dead Zone + Sweet Max + Circuit Breaker)
 ==================================================================================
+
+v1.6.1 — Expert-validated corrections (3 fixes prioritaires)
+- P0: Dead zone [-1%, +1%] → neutral (micro-négatifs = bruit, pas signal)
+       Exception: M3 < -5% confirme vraie tendance → maintien avoided
+- P1: Sweet spot max dynamique par régime (risk-on:35, neutral:40, risk-off:45)
+       Energy à 36.08% capté directement au lieu de fallback
+- P3: Circuit breaker daily ±5% → tilt ×0.5 (protection stress intraday)
+- Dispersion sectorielle dans les stats (warning si std > 15%)
 
 v1.6 — Beta sectoriel dans le scoring (Expert-validated Option 2+)
 - Flags beta: high_beta (US only), defensive (US+EU) avec buffer zones
 - Tilts ajustés par régime: favored+HB ×0.50-1.0, avoided+def ×0.80-1.0
 - Floor neutral pour défensifs en risk-off (gate drawdown |YTD|/vol_3y < 0.8)
 - sector_risk_profile dans le JSON de sortie
-- Monitoring dispersion tilts post-ajustement
 
 v1.5 — Preferred ETF + January Mode + Fallback + 3M/6M Gates
 v1.4 — Gates 3M/6M, overheat_w52, m3_cooling_threshold
@@ -131,6 +138,18 @@ class RadarRules:
     tilt_avoided: float = -0.25
     tilt_max: float = 0.30
     smoothing_alpha: float = 0.3
+    # v1.6.1: Expert fixes
+    dead_zone_width: float = 1.0         # P0: YTD in [-1%, +1%] → neutral
+    dead_zone_m3_override: float = -5.0  # P0: unless M3 confirms downtrend
+    circuit_breaker_daily: float = 5.0   # P3: |daily| > 5% → tilt ×0.5
+
+
+# v1.6.1: Sweet spot max dynamic by regime (P1)
+SWEET_MAX_BY_REGIME = {
+    "risk-on": 35.0,   # standard — marché porteur, sélectivité forte
+    "neutral": 40.0,   # élargi — capte Energy à 36% directement
+    "risk-off": 45.0,  # très élargi — on cherche du positif, rare
+}
 
 
 # -------------------- Normalization --------------------
@@ -283,6 +302,7 @@ def _get_beta_region(entry_data: Dict[str, Any]) -> str:
     """Infer region from ETF entry data for beta config selection."""
     region = entry_data.get("raw", {}).get("region", "")
     if not region:
+        # Fallback: check symbol in PREFERRED tables
         sym = entry_data.get("symbol", "")
         for s_key, syms in PREFERRED_EU.items():
             if sym in syms:
@@ -301,24 +321,25 @@ def _compute_beta_tilt_factor(
 ) -> Tuple[float, Optional[str]]:
     """
     Compute tilt multiplier based on beta (Option 2+ with buffer zones).
-
+    
     v1.6: Expert-validated asymmetric logic:
     - High-beta: US only, buffer 1.2-1.4, regime-conditional
     - Defensive: US+EU, region-specific thresholds, regime-conditional
-
+    
     Returns (factor, flag_string_or_None)
     """
     if beta is None or not _is_number(beta):
         return 1.0, None
-
+    
     cfg = BETA_CONFIG.get(region, BETA_CONFIG["US"])
-
+    
     # === FAVORED + HIGH-BETA (US only) ===
     if classification == "favored" and cfg.get("high_beta_upper") is not None:
         hb_low = cfg["high_beta_lower"]
         hb_high = cfg["high_beta_upper"]
         if beta > hb_low:
             regime_mult = BETA_TILT_MULTIPLIERS["favored_high_beta"].get(regime, 0.75)
+            # Linear ramp: β=1.2 → 1.0, β=1.4 → regime_mult
             if beta >= hb_high:
                 factor = regime_mult
             else:
@@ -326,13 +347,14 @@ def _compute_beta_tilt_factor(
                 factor = 1.0 - t * (1.0 - regime_mult)
             if factor < 0.999:
                 return round(factor, 3), f"high_beta_adj({regime}:{factor:.2f})"
-
+    
     # === AVOIDED + DEFENSIVE (US + EU) ===
     if classification == "avoided" and cfg.get("defensive_upper") is not None:
         def_low = cfg["defensive_lower"]
         def_high = cfg["defensive_upper"]
         if beta < def_high:
             regime_mult = BETA_TILT_MULTIPLIERS["avoided_defensive"].get(regime, 0.80)
+            # Linear ramp: β=defensive_lower → regime_mult, β=defensive_upper → 1.0
             if beta <= def_low:
                 factor = regime_mult
             else:
@@ -340,7 +362,7 @@ def _compute_beta_tilt_factor(
                 factor = regime_mult + t * (1.0 - regime_mult)
             if factor < 0.999:
                 return round(factor, 3), f"defensive_adj({regime}:{factor:.2f})"
-
+    
     return 1.0, None
 
 
@@ -352,7 +374,7 @@ def _should_floor_neutral_defensive(
 ) -> bool:
     """
     Check if a defensive sector should be floored to neutral in risk-off.
-
+    
     v1.6: Only if β < 0.5 AND |YTD|/vol_3y < 0.8 AND regime == risk-off
     """
     if regime != "risk-off":
@@ -503,7 +525,7 @@ def load_sectors(data_dir: str) -> Dict[str, Dict[str, Any]]:
                 beta = _safe_num_opt(entry.get("beta") or entry.get("beta_3y"))
                 vol_3y = _safe_num_opt(entry.get("vol_3y") or entry.get("volatility_3y"))
                 beta_source = entry.get("beta_source")
-
+                
                 out[key] = {
                     "ytd": ytd, "daily": daily, "w52": w52, "m3": m3, "m6": m6,
                     "beta": beta, "vol_3y": vol_3y, "beta_source": beta_source,  # v1.6
@@ -563,16 +585,25 @@ def classify_v3(
     ytd: float, daily: float, w52: Optional[float],
     m3: Optional[float], m6: Optional[float],
     rules: RadarRules, effective_ytd_min: float = 10.0,
+    effective_ytd_max: float = 35.0,  # v1.6.1: P1 dynamic sweet max
 ) -> Tuple[str, str]:
+    # v1.6.1 P0: Dead zone — micro-negatives are noise, not signal
+    if -rules.dead_zone_width <= ytd <= rules.dead_zone_width:
+        if m3 is not None and m3 < rules.dead_zone_m3_override:
+            # M3 confirms real downtrend → proceed to normal classification
+            pass
+        else:
+            return "neutral", "dead_zone"
+
     if ytd < rules.underperform_ytd_max:
         cls, reason = "avoided", "underperform"
     elif ytd >= rules.overheat_ytd_min:
         cls, reason = "neutral", "overheat"
-    elif (effective_ytd_min <= ytd <= rules.sweet_ytd_max and daily >= rules.sweet_daily_min):
+    elif (effective_ytd_min <= ytd <= effective_ytd_max and daily >= rules.sweet_daily_min):
         cls, reason = "favored", "sweet_spot"
     else:
         cls, reason = "neutral", "out_of_range"
-
+    
     flags: List[str] = []
     is_overheat = w52 is not None and w52 >= rules.overheat_w52_min
     if is_overheat:
@@ -581,13 +612,13 @@ def classify_v3(
     if is_cooling:
         flags.append("cooling_m3")
     is_m6_weak = m6 is not None and m6 <= rules.m6_confirm_favored_min
-
+    
     if w52 is None:
         flags.append("w52_missing")
     else:
         if abs(ytd - w52) > rules.divergence_threshold:
             flags.append("divergent")
-
+    
     if cls == "favored":
         if w52 is not None and rules.confirm_favored_requires_w52_positive:
             if w52 < 0:
@@ -606,7 +637,7 @@ def classify_v3(
             return "neutral", reason + "|favored_blocked_overheat_cooling" + (f"|{flag_str}" if flag_str else "")
         elif is_overheat and not is_cooling:
             flags.append("overheat_warning")
-
+    
     if cls == "avoided" and rules.confirm_avoided_requires_w52_negative:
         if w52 is not None:
             if w52 < 0:
@@ -617,7 +648,7 @@ def classify_v3(
                     return "neutral", reason + "|avoided_rescued_w52_positive" + (f"|{flag_str}" if flag_str else "")
                 else:
                     flags.append("deep_negative_kept")
-
+    
     flag_str = "|".join(flags) if flags else ""
     return cls, reason + (f"|{flag_str}" if flag_str else "")
 
@@ -632,7 +663,9 @@ def pick_lists(
 ) -> Tuple[List[str], List[str], List[Dict[str, Any]]]:
     today = today or date.today()
     effective_ytd_min = sweet_ytd_min_dynamic(today, rules)
-
+    # v1.6.1 P1: Sweet spot max dynamic by regime
+    effective_ytd_max = SWEET_MAX_BY_REGIME.get(regime, rules.sweet_ytd_max)
+    
     favored: List[Tuple[str, float, float, Optional[float], Optional[float], Optional[float], str, float]] = []
     avoided: List[Tuple[str, float, float, Optional[float], Optional[float], Optional[float], str]] = []
     neutral: List[Tuple[str, float, float, Optional[float], Optional[float], Optional[float], str, float]] = []
@@ -646,10 +679,10 @@ def pick_lists(
         m6 = data.get("m6")
         beta = data.get("beta")       # v1.6
         vol_3y = data.get("vol_3y")   # v1.6
-
+        
         eff_mom = effective_momentum(today, ytd, m6, rules)
-        classification, reason = classify_v3(ytd, daily, w52, m3, m6, rules, effective_ytd_min)
-
+        classification, reason = classify_v3(ytd, daily, w52, m3, m6, rules, effective_ytd_min, effective_ytd_max)
+        
         # v1.6: Beta flags (informational, added to reason string)
         beta_flag = None
         beta_region = _get_beta_region(data)
@@ -663,13 +696,13 @@ def pick_lists(
             elif cfg.get("defensive_upper") is not None and beta < cfg["defensive_upper"]:
                 beta_flag = "defensive"
                 reason += "|defensive_asset"
-
+        
         # v1.6: Floor neutral for defensives in risk-off
         if classification == "avoided" and _should_floor_neutral_defensive(beta, vol_3y, ytd, regime):
             classification = "neutral"
             reason += "|floor_neutral_defensive_riskoff"
             beta_flag = (beta_flag or "") + "|floored"
-
+        
         diag_entry = {
             "key": key,
             "ytd": round(ytd, 2),
@@ -701,7 +734,7 @@ def pick_lists(
 
     favored_list = [x[0] for x in favored[:max_favored]]
     avoided_list = [x[0] for x in avoided[:max_avoided]]
-
+    
     # v1.5: Fallback si favored vide
     if not favored_list and rules.fallback_top_n > 0:
         logger.warning(f"⚠️ Aucun secteur favored, activation fallback top {rules.fallback_top_n}")
@@ -815,6 +848,17 @@ def generate_market_context_radar(
     effective_ytd_min = sweet_ytd_min_dynamic(today, rules)
     doy = today.timetuple().tm_yday
 
+    # v1.6.1 P1: Sweet spot max dynamic by regime
+    effective_ytd_max = SWEET_MAX_BY_REGIME.get(regime, rules.sweet_ytd_max)
+
+    # v1.6.1: Dispersion sectorielle (signal complémentaire)
+    sector_ytds = [_safe_num(d.get("ytd", 0), 0) for d in sectors.values()]
+    if sector_ytds:
+        mean_ytd = sum(sector_ytds) / len(sector_ytds)
+        dispersion_std = (sum((y - mean_ytd) ** 2 for y in sector_ytds) / len(sector_ytds)) ** 0.5
+    else:
+        mean_ytd, dispersion_std = 0.0, 0.0
+    
     momentum_stats = {
         "sectors_with_w52": sum(1 for d in sectors.values() if d.get("w52") is not None),
         "sectors_with_m3": sum(1 for d in sectors.values() if d.get("m3") is not None),
@@ -835,8 +879,14 @@ def generate_market_context_radar(
         "beta_high_beta_warnings": sum(1 for d in sector_diag if "high_beta_warning" in d.get("reason", "")),
         "beta_defensive_flags": sum(1 for d in sector_diag if "defensive_asset" in d.get("reason", "")),
         "beta_floor_neutral_count": sum(1 for d in sector_diag if "floor_neutral_defensive_riskoff" in d.get("reason", "")),
+        # v1.6.1: Expert fix stats
+        "dead_zone_activated": sum(1 for d in sector_diag if "dead_zone" in d.get("reason", "")),
+        "circuit_breaker_threshold": rules.circuit_breaker_daily,
+        "dispersion_std": round(dispersion_std, 2),
+        "dispersion_stressed": dispersion_std > 15.0,
+        "effective_ytd_max": effective_ytd_max,
     }
-
+    
     selection_stats = {
         "preferred": sum(1 for d in sector_diag if d.get("selection_method") == "preferred"),
         "medoid": sum(1 for d in sector_diag if d.get("selection_method") == "medoid"),
@@ -860,6 +910,7 @@ def generate_market_context_radar(
             if d.get("beta_region"):
                 profile["region"] = d["beta_region"]
             profile["classification"] = d.get("classification", "neutral")
+            profile["daily"] = d.get("daily", 0.0)  # v1.6.1 P3: for circuit breaker
             sector_risk_profile[key] = profile
 
     ctx: Dict[str, Any] = {
@@ -878,7 +929,7 @@ def generate_market_context_radar(
         "sector_risk_profile": sector_risk_profile,  # v1.6
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.6",
+            "model": "radar_deterministic_v1.6.1",
             "mode": "DATA_DRIVEN",
             "amf_compliant": True,
             "is_fallback": False,
@@ -947,7 +998,7 @@ def generate_market_context_radar(
         logger.warning(f"⚠️ Ancien contexte non-RADAR détecté (model={old_model}), smoothing désactivé")
         old_ctx = None
         ctx["_meta"]["smoothing_skipped_reason"] = f"old_context_not_radar (was: {old_model})"
-
+    
     ctx = maybe_smooth_context(old_ctx, ctx, rules)
 
     if save_to_file:
@@ -1025,7 +1076,7 @@ def _get_fallback_context(rules: RadarRules) -> Dict[str, Any]:
         "sector_risk_profile": {},
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "model": "radar_deterministic_v1.6",
+            "model": "radar_deterministic_v1.6.1",
             "mode": "FALLBACK",
             "amf_compliant": True,
             "is_fallback": True,
@@ -1042,7 +1093,7 @@ def apply_macro_tilts_radar(
 ) -> float:
     """
     Applique les tilts tactiques basés sur le market_context.
-
+    
     v1.6: Ajustement beta Option 2+ (buffer zones, regime-conditional)
     """
     tilts = market_context.get("macro_tilts", {})
@@ -1073,7 +1124,7 @@ def apply_macro_tilts_radar(
         beta = risk_profile.get("beta")
         vol_3y = risk_profile.get("vol_3y")
         beta_region = risk_profile.get("region", "US")
-
+        
         if beta is not None:
             factor, flag = _compute_beta_tilt_factor(
                 beta, vol_3y, beta_region, classification, regime, 0.0
@@ -1081,6 +1132,13 @@ def apply_macro_tilts_radar(
             if factor < 1.0:
                 sector_t = sector_t * factor
                 logger.debug(f"  📐 Beta adj {s}: {flag} → tilt={sector_t:.3f}")
+
+        # v1.6.1 P3: Circuit breaker — extreme daily move → reduce tilt
+        daily_move = abs(risk_profile.get("daily", 0.0))
+        cb_threshold = market_context.get("_meta", {}).get("rules", {}).get("circuit_breaker_daily", 5.0)
+        if daily_move > cb_threshold:
+            sector_t = sector_t * 0.5
+            logger.debug(f"  ⚡ Circuit breaker {s}: |daily|={daily_move:.1f}% > {cb_threshold}% → tilt halved to {sector_t:.3f}")
 
     # --- Tilt régional (inchangé) ---
     region_t = 0.0
@@ -1097,7 +1155,7 @@ def apply_macro_tilts_radar(
 
 if __name__ == "__main__":
     import argparse
-
+    
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
     ap = argparse.ArgumentParser(description="Génère market_context.json - v1.6 avec Beta Adjustment")
@@ -1111,8 +1169,8 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     print("=" * 70)
-    print("🎯 MARKET/SECTOR RADAR v1.6")
-    print("   Option 2+ Beta Adjustment + Buffer Zones + Regime-Conditional")
+    print("🎯 MARKET/SECTOR RADAR v1.6.1")
+    print("   Expert Fixes: Dead Zone + Sweet Max Dynamic + Circuit Breaker")
     print("=" * 70)
 
     rules = RadarRules(
