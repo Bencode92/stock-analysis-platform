@@ -19,6 +19,7 @@ jobs:
     env:
       API_CHAT: ${{ secrets.API_CHAT }}
       OPENAI_API_KEY: ${{ secrets.API_CHAT }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
       # v5.1.0: Audit collector (none | summary | full)
       DEBUG_AUDIT: summary
