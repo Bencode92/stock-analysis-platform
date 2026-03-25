@@ -1097,20 +1097,33 @@ def apply_allocation_rules(
         _removed_bonds = []
         
         # 1) Remove bonds matching avoid_fund_types
+        # Known CLO/securitized tickers (can't rely on fund_type tag alone)
+        _CLO_TICKERS = {"JAAA", "PAAA", "ICLO", "CLOX", "CLOZ", "AAA", "JBBB", "CLOI"}
+        
         if _AVOID_FT_LOWER:
             for tk in list(_bond_tickers.keys()):
-                _ft = meta.get(tk, {}).get("name", "").lower()
-                _fund_type_raw = ""
-                # Check fund_type in meta or in name
+                _name_lower = meta.get(tk, {}).get("name", "").lower()
+                _tk_upper = tk.upper()
+                _matched = False
+                
                 for _bad_ft in _AVOID_FT_LOWER:
-                    if _bad_ft in _ft or _bad_ft in tk.lower():
-                        _w = tickers.pop(tk, 0)
-                        if tk in meta:
-                            del meta[tk]
-                        _weight_to_redistribute += _w
-                        _removed_bonds.append(f"{tk} ({_w*100:.1f}%)")
-                        _bond_tickers.pop(tk, None)
+                    # Match on: name, ticker, OR known CLO tickers
+                    if _bad_ft in _name_lower or _bad_ft in _tk_upper.lower():
+                        _matched = True
                         break
+                    # "securitized bond" or "bank loan" → also catch CLO by keyword
+                    if ("securitized" in _bad_ft or "bank loan" in _bad_ft):
+                        if _tk_upper in _CLO_TICKERS or "clo" in _name_lower:
+                            _matched = True
+                            break
+                
+                if _matched:
+                    _w = tickers.pop(tk, 0)
+                    if tk in meta:
+                        del meta[tk]
+                    _weight_to_redistribute += _w
+                    _removed_bonds.append(f"{tk} ({_w*100:.1f}%)")
+                    _bond_tickers.pop(tk, None)
         
         # 2) Shorten duration: swap bonds with dur > max for short alternatives
         if _MAX_DURATION and not _removed_bonds:  # Don't double-swap
