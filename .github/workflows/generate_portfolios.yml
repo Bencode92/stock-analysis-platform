@@ -554,6 +554,7 @@ jobs:
                   data/selection_audit.json \
                   data/selection_explained.json \
                   data/selection_debug.json \
+                  data/macro_indicators.json \
                   data/market_intelligence_audit/* \
                   data/portfolio_history/* || true
 
@@ -587,6 +588,9 @@ jobs:
           fi
           if git check-ignore -q data/market_intelligence_audit 2>/dev/null; then
             git add -f data/market_intelligence_audit/*.json || true
+          fi
+          if git check-ignore -q data/macro_indicators.json 2>/dev/null; then
+            git add -f data/macro_indicators.json
           fi
           if git check-ignore -q data/portfolio_history 2>/dev/null; then
             git add -f data/portfolio_history/*.json || true
