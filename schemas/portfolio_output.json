@@ -139,8 +139,17 @@
           "minimum": 0,
           "maximum": 100,
           "description": "v4.15.0: Percentage of portfolio with tradable tickers"
+        },
+        "_cash_tactical": {
+          "type": "object",
+          "description": "v2.1: Cash tactique non investi (AI-driven)",
+          "additionalProperties": true,
+          "properties": {
+            "pct": { "type": "number", "minimum": 0, "maximum": 20 },
+            "label": { "type": "string" },
+            "rationale": { "type": "string" }
+          }
         }
-      }
     },
     "AllocationMap": {
       "type": "object",
