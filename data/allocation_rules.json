@@ -316,5 +316,41 @@
       "bond_transaction_cost_pct": 0.05,
       "crypto_transaction_cost_pct": 0.25
     }
+  },
+
+  "country_concentration": {
+    "_doc": "v2.2: Max ETF combiné par pays. Évite la fausse diversification (ex: FLKR+EWY = 11.7% Korea).",
+    "max_pct": 8.0,
+    "exceptions": {
+      "US": 100.0,
+      "CH": 15.0
+    },
+    "resolution": "keep_highest_weight",
+    "_country_mapping": {
+      "_doc": "ETF → pays principal. Ajouté quand un ETF a >80% d'expo sur un seul pays.",
+      "EWY": "KR", "FLKR": "KR",
+      "EWJ": "JP", "DXJ": "JP",
+      "EWZ": "BR", "EWG": "DE",
+      "EWT": "TW", "FXI": "CN", "MCHI": "CN",
+      "EWU": "GB", "EWQ": "FR", "EWI": "IT",
+      "EWA": "AU", "EWC": "CA", "INDA": "IN",
+      "EWH": "HK", "EWS": "SG", "EWM": "MY",
+      "THD": "TH", "EPHE": "PH", "VNM": "VN"
+    }
+  },
+
+  "crypto_regime_caps": {
+    "_doc": "v2.2: Cap crypto max par régime. Appliqué APRÈS MI, min(MI, hardcoded). Claude peut être plus restrictif, jamais plus permissif.",
+    "stagflation": {"Agressif": 4.0, "Modéré": 1.0, "Stable": 0.0},
+    "crisis":      {"Agressif": 2.0, "Modéré": 0.0, "Stable": 0.0},
+    "risk_off":    {"Agressif": 3.0, "Modéré": 1.0, "Stable": 0.0},
+    "goldilocks":  {"Agressif": 7.0, "Modéré": 3.0, "Stable": 0.0},
+    "neutral":     {"Agressif": 5.0, "Modéré": 2.0, "Stable": 0.0}
+  },
+
+  "gold_hedge_blacklist": {
+    "_doc": "v2.2: Produits qui ne comptent PAS comme gold hedge pur. GDE = gold futures + equity overlay.",
+    "tickers": ["GDE", "GDXJ", "GDX", "RING"],
+    "preferred_replacements": ["GLD", "IAU", "GLDM", "SGOL"]
   }
 }
