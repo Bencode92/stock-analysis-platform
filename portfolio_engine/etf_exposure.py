@@ -929,7 +929,7 @@ TICKER_TO_EXPOSURE = {
     "sgdj": "gold_miners",
     "sgdm": "gold_miners",
 
-    # === GOLD_PHYSICAL (32) ===
+    # === GOLD_PHYSICAL (31) ===
     "aaau": "gold_physical",
     "bar": "gold_physical",
     "bgld": "gold_physical",
@@ -941,7 +941,6 @@ TICKER_TO_EXPOSURE = {
     "dzz": "gold_physical",
     "fgdl": "gold_physical",
     "fgld": "gold_physical",
-    "gde": "gold_physical",
     "gld": "gold_physical",
     "gldb": "gold_physical",
     "gldm": "gold_physical",
@@ -962,6 +961,12 @@ TICKER_TO_EXPOSURE = {
     "usg": "gold_physical",
     "ygld": "gold_physical",
     "zkbgf": "gold_physical",
+
+    # === GOLD_LEVERAGED (1) ===
+    # GDE = WisdomTree Efficient Gold Plus = gold futures + S&P 500 equity overlay
+    # NOT pure gold. In equity -20% / gold flat scenario: GDE loses ~15-20%, GLD is flat.
+    # Must NOT be used as gold hedge. Separate category prevents misclassification.
+    "gde": "gold_leveraged",
 
     # === GROWTH (60) ===
     "aor": "allocation_balanced",
