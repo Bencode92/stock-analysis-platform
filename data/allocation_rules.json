@@ -352,5 +352,26 @@
     "_doc": "v2.2: Produits qui ne comptent PAS comme gold hedge pur. GDE = gold futures + equity overlay.",
     "tickers": ["GDE", "GDXJ", "GDX", "RING"],
     "preferred_replacements": ["GLD", "IAU", "GLDM", "SGOL"]
+  },
+
+  "profile_bond_blacklist": {
+    "_doc": "v2.2: Bonds interdits par profil. Politique d'investissement (pas tactique AI).",
+    "Stable": ["Securitized Bond", "Bank Loan", "High Yield Bond", "Emerging Markets Bond"],
+    "Modéré": ["Emerging Markets Bond"],
+    "Agressif": ["Emerging Markets Bond"]
+  },
+
+  "position_minimum_pct": {
+    "_doc": "v2.2: Position sous ce seuil = bruit. Éjectée et redistribuée. Évite les ERF 1.2% / IPN 0.7%.",
+    "Agressif": 2.0,
+    "Modéré": 2.0,
+    "Stable": 2.0
+  },
+
+  "position_max_per_profile": {
+    "_doc": "v2.2: Cap max par position individuelle (plus strict que le global 15%). Évite SCHY 9.6% dans Modéré.",
+    "Agressif": 12.0,
+    "Modéré": 9.0,
+    "Stable": 14.0
   }
 }
