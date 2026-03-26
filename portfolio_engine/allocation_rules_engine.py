@@ -1492,6 +1492,27 @@ def apply_allocation_rules(
         for k in _real_tickers:
             tickers[k] = tickers[k] * factor
     
+    # v2.2 FIX: Re-apply position caps AFTER renormalization
+    # Bug: caps applied → renorm scales everything up → caps violated again
+    # Fix: loop until no violations (max 3 passes to avoid infinite loop)
+    for _post_norm_pass in range(3):
+        _violations = {k: v for k, v in tickers.items() 
+                      if not k.startswith("_") and v > _POS_MAX + 0.002}
+        if not _violations:
+            break
+        for k, v in _violations.items():
+            _excess = v - _POS_MAX
+            tickers[k] = _POS_MAX
+            # Redistribute excess to positions under cap
+            _under_cap = [(tk2, w2) for tk2, w2 in tickers.items()
+                         if not tk2.startswith("_") and tk2 != k and w2 < _POS_MAX - 0.01]
+            if _under_cap:
+                _total_uc = sum(w2 for _, w2 in _under_cap)
+                if _total_uc > 0:
+                    for tk2, w2 in _under_cap:
+                        tickers[tk2] += _excess * (w2 / _total_uc)
+            all_logs.append(f"📉 Post-renorm cap: {k} {v*100:.1f}% → {_POS_MAX*100:.0f}% (pass {_post_norm_pass+1})")
+    
     # Step 7: Rebuild display
     # Clean ALL internal keys from tickers and meta (schema only allows real assets)
     _internal_keys = [k for k in tickers if k.startswith("_")]
