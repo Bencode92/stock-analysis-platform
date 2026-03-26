@@ -525,9 +525,12 @@ def apply_mandatory_hedges(
             continue
         
         # Check if any preferred ticker is already present
+        # v2.2: Skip blacklisted tickers (GDE etc.) — they don't count as real hedge
+        _hedge_blacklist_check = set(t.upper() for t in rules.get("gold_hedge_blacklist", {}).get("tickers", []))
         current_weight = 0
         for tk in preferred:
-            current_weight += tickers.get(tk, 0)
+            if tk.upper() not in _hedge_blacklist_check:
+                current_weight += tickers.get(tk, 0)
         
         if current_weight >= min_dec - 0.001:
             logs.append(f"✅ {hedge_name}: {current_weight*100:.1f}% >= min {min_pct}% — OK")
@@ -535,6 +538,14 @@ def apply_mandatory_hedges(
         
         # Need to inject
         inject_tk = preferred[0]
+        
+        # v2.2: Check gold_hedge_blacklist — skip leveraged/structured products
+        _hedge_blacklist = set(t.upper() for t in rules.get("gold_hedge_blacklist", {}).get("tickers", []))
+        if inject_tk.upper() in _hedge_blacklist:
+            _replacements = rules.get("gold_hedge_blacklist", {}).get("preferred_replacements", ["GLD"])
+            _old_inject = inject_tk
+            inject_tk = _replacements[0] if _replacements else "GLD"
+            logs.append(f"⚠️ {hedge_name}: {_old_inject} blacklisted (leveraged/structured) → using {inject_tk}")
         inject_amount = min_dec - current_weight
         
         # Find position to take from: smallest weight, not a hedge itself
@@ -953,6 +964,57 @@ def apply_allocation_rules(
     tickers, meta, logs = apply_mandatory_hedges(tickers, meta, classified, profile, rules)
     all_logs.extend(logs)
     
+    # Step 5a: COUNTRY CONCENTRATION CAP — max combined ETF weight per country
+    _COUNTRY_CONF = rules.get("country_concentration", {})
+    _COUNTRY_MAX = _COUNTRY_CONF.get("max_pct", 8.0) / 100.0
+    _COUNTRY_EXCEPTIONS = {k: v / 100.0 for k, v in _COUNTRY_CONF.get("exceptions", {"US": 100}).items()}
+    _COUNTRY_MAP = _COUNTRY_CONF.get("_country_mapping", {})
+    
+    if _COUNTRY_MAP and _COUNTRY_MAX < 1.0:
+        # Group ETFs by country
+        _country_groups = {}
+        for tk, w in tickers.items():
+            _cat = meta.get(tk, {}).get("category", "")
+            if _cat != "ETF":
+                continue
+            _country = _COUNTRY_MAP.get(tk.upper())
+            if _country:
+                _country_groups.setdefault(_country, []).append((tk, w))
+        
+        # Check each country
+        for _ctry, _positions in _country_groups.items():
+            _ctry_max = _COUNTRY_EXCEPTIONS.get(_ctry, _COUNTRY_MAX)
+            _ctry_total = sum(w for _, w in _positions)
+            
+            if _ctry_total > _ctry_max + 0.001 and len(_positions) > 1:
+                # Sort by weight descending, keep the best, remove the rest
+                _positions.sort(key=lambda x: -x[1])
+                _keep = _positions[0]
+                _excess_total = 0.0
+                
+                for _tk_drop, _w_drop in _positions[1:]:
+                    tickers.pop(_tk_drop, None)
+                    if _tk_drop in meta:
+                        del meta[_tk_drop]
+                    _excess_total += _w_drop
+                    all_logs.append(f"🌍 Country cap: {_tk_drop} removed ({_ctry} combined {_ctry_total*100:.1f}% > {_ctry_max*100:.0f}%)")
+                
+                # Cap the remaining one to country max
+                if tickers.get(_keep[0], 0) > _ctry_max:
+                    _over = tickers[_keep[0]] - _ctry_max
+                    tickers[_keep[0]] = _ctry_max
+                    _excess_total += _over
+                
+                # Redistribute excess pro-rata to non-country positions
+                if _excess_total > 0.001:
+                    _eligible = [(k, v) for k, v in tickers.items()
+                                if k != _keep[0] and meta.get(k, {}).get("category") in ("Actions", "ETF") and v > 0.01]
+                    _total_e = sum(v for _, v in _eligible)
+                    if _total_e > 0:
+                        for k, v in _eligible:
+                            tickers[k] += _excess_total * (v / _total_e)
+                    all_logs.append(f"♻️ Country cap: {_excess_total*100:.1f}% from {_ctry} redistributed to {len(_eligible)} positions")
+    
     # Step 5b: CRYPTO POSITION CAP — no single crypto > 3% (except BTC/ETH at 5%)
     _CRYPTO_CAP = rules.get("crypto_position_cap", {})
     _CRYPTO_DEFAULT_MAX = _CRYPTO_CAP.get("default_max_pct", 3.0) / 100.0
@@ -987,6 +1049,53 @@ def apply_allocation_rules(
         for _cc in _crypto_capped:
             all_logs.append(f"🪙 Crypto cap: {_cc}")
         all_logs.append(f"♻️ {_crypto_excess*100:.1f}% crypto excess redistributed to {len(_non_crypto)} positions")
+    
+    # Step 5c: CRYPTO REGIME CAP — total crypto capped by market regime
+    # min(MI recommendation, hardcoded cap) — Claude can be more restrictive, never more permissive
+    _CRYPTO_REGIME_CAPS = rules.get("crypto_regime_caps", {})
+    _AI_REGIME = rules.get("_active_bond_preferences", [{}])[0].get("rule_id", "").replace("ai_", "") if rules.get("_active_bond_preferences") else "neutral"
+    # Also check from MI adjustments
+    if not _AI_REGIME or _AI_REGIME == "neutral":
+        for _bp in rules.get("_active_bond_preferences", []):
+            _rid = _bp.get("rule_id", "")
+            if _rid.startswith("ai_") and _rid != "ai_bond_strategy":
+                _AI_REGIME = _rid.replace("ai_", "")
+                break
+    
+    _regime_caps = _CRYPTO_REGIME_CAPS.get(_AI_REGIME, _CRYPTO_REGIME_CAPS.get("neutral", {}))
+    _regime_crypto_max = _regime_caps.get(profile, 100.0) / 100.0  # Default: no cap
+    
+    # Also check MI crypto_allocation recommendation
+    _mi_crypto_max = rules.get("_crypto_allocation", {}).get(profile)
+    if _mi_crypto_max is not None:
+        _mi_crypto_max = _mi_crypto_max / 100.0
+        _regime_crypto_max = min(_regime_crypto_max, _mi_crypto_max)  # Take the most restrictive
+    
+    if _regime_crypto_max < 0.99:
+        _total_crypto = sum(w for tk, w in tickers.items() if meta.get(tk, {}).get("category") == "Crypto")
+        if _total_crypto > _regime_crypto_max + 0.001:
+            _crypto_to_cut = _total_crypto - _regime_crypto_max
+            _scale = _regime_crypto_max / _total_crypto if _total_crypto > 0 else 0
+            
+            _cut_details = []
+            for tk in list(tickers.keys()):
+                if meta.get(tk, {}).get("category") == "Crypto":
+                    _old_w = tickers[tk]
+                    tickers[tk] = _old_w * _scale
+                    _cut_details.append(f"{tk}: {_old_w*100:.1f}% → {tickers[tk]*100:.1f}%")
+            
+            # Redistribute to non-crypto
+            _non_crypto_rc = [(tk2, w2) for tk2, w2 in tickers.items()
+                            if meta.get(tk2, {}).get("category") != "Crypto" and w2 > 0.01]
+            _total_nc_rc = sum(w2 for _, w2 in _non_crypto_rc)
+            if _total_nc_rc > 0:
+                for tk2, w2 in _non_crypto_rc:
+                    tickers[tk2] += _crypto_to_cut * (w2 / _total_nc_rc)
+            
+            all_logs.append(f"🪙 Crypto regime cap ({_AI_REGIME}): {_total_crypto*100:.1f}% → {_regime_crypto_max*100:.1f}% max")
+            for _cd in _cut_details:
+                all_logs.append(f"  📉 {_cd}")
+            all_logs.append(f"♻️ {_crypto_to_cut*100:.1f}% crypto excess redistributed")
     
     # Step 6: Normalize weights to 100%
     total = sum(tickers.values())
