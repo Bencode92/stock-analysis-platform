@@ -1170,6 +1170,61 @@ def apply_allocation_rules(
                     else:
                         all_logs.append(f"⚠️ Bond floor: could not reach {_min_bonds*100:.0f}% — all fallbacks already present")
     
+    # Step 6b1: PROFILE BOND BLACKLIST — hardcoded policy rules (not AI-dependent)
+    # "Never CLO in Stable", "Never EM bonds with DXY>110" — these are investment policy, not tactics
+    _BOND_BLACKLIST = rules.get("profile_bond_blacklist", {}).get(profile, [])
+    if _BOND_BLACKLIST:
+        _bl_lower = [ft.lower() for ft in _BOND_BLACKLIST]
+        _CLO_TICKERS_BL = {"JAAA", "PAAA", "ICLO", "CLOX", "CLOZ", "AAA", "JBBB", "CLOI"}
+        _EM_TICKERS_BL = {"EMHC", "EMB", "VWOB", "PCY", "EMLC", "LEMB", "EMAG"}
+        _HY_TICKERS_BL = {"HYG", "JNK", "USHY", "HYLB", "PHYL", "ANGL", "SHYG"}
+        _bl_weight_freed = 0.0
+        _bl_removed = []
+        
+        for tk in list(tickers.keys()):
+            if meta.get(tk, {}).get("category") != "Obligations":
+                continue
+            _tk_upper = tk.upper()
+            _name_lower = meta.get(tk, {}).get("name", "").lower()
+            _matched_bl = False
+            
+            for _bl_ft in _bl_lower:
+                # Match by fund_type keyword in name
+                if _bl_ft in _name_lower:
+                    _matched_bl = True
+                    break
+                # Match by known ticker sets
+                if ("securitized" in _bl_ft or "bank loan" in _bl_ft):
+                    if _tk_upper in _CLO_TICKERS_BL or "clo" in _name_lower:
+                        _matched_bl = True
+                        break
+                if "emerging" in _bl_ft:
+                    if _tk_upper in _EM_TICKERS_BL or "emerging" in _name_lower:
+                        _matched_bl = True
+                        break
+                if "high yield" in _bl_ft:
+                    if _tk_upper in _HY_TICKERS_BL or "high yield" in _name_lower:
+                        _matched_bl = True
+                        break
+            
+            if _matched_bl:
+                _w = tickers.pop(tk, 0)
+                meta.pop(tk, None)
+                _bl_weight_freed += _w
+                _bl_removed.append(f"{tk} ({_w*100:.1f}%)")
+        
+        if _bl_removed:
+            # Redistribute to remaining bonds pro-rata
+            _remaining_bonds_bl = {k: v for k, v in tickers.items()
+                                  if meta.get(k, {}).get("category") == "Obligations" and v > 0.001}
+            if _remaining_bonds_bl:
+                _total_rb_bl = sum(_remaining_bonds_bl.values())
+                _POS_LIMIT_BL = 0.14
+                for k in _remaining_bonds_bl:
+                    _add = _bl_weight_freed * (_remaining_bonds_bl[k] / _total_rb_bl)
+                    tickers[k] = min(tickers[k] + _add, _POS_LIMIT_BL)
+            all_logs.append(f"🚫 Bond blacklist ({profile}): {', '.join(_bl_removed)} → policy violation, redistributed")
+
     # Step 6b2: BOND PREFERENCE — apply market-driven bond adjustments
     # This step swaps/reweights bonds based on active market rules (inflation → TIPS, stress → treasury, etc.)
     _BOND_PREFS = rules.get("_active_bond_preferences", [])
@@ -1368,9 +1423,14 @@ def apply_allocation_rules(
                 f"({_actual_cash*100:.1f}% du portefeuille) — {_rationale}"
             )
     
-    # Step 6c: POSITION CAP — no single position > 15% (AFTER bond floor)
-    # CRITICAL: redistribute within SAME asset class to preserve bond floor
-    _POS_MAX = rules.get("position_max", 0.15)
+    # Step 6c: POSITION CAP — profile-specific max (AFTER bond floor)
+    # v2.2: Per-profile cap (Modéré 9%, Agressif 12%, Stable 14%) with global fallback 15%
+    _POS_MAX_PROFILE = rules.get("position_max_per_profile", {})
+    _POS_MAX_GLOBAL = rules.get("position_max", 0.15)
+    _POS_MAX = _POS_MAX_PROFILE.get(profile, _POS_MAX_GLOBAL * 100) / 100.0
+    # Ensure it's a fraction not percentage
+    if _POS_MAX > 1.0:
+        _POS_MAX = _POS_MAX / 100.0
     for _cap_iter in range(5):
         _over = {k: v for k, v in tickers.items() if v > _POS_MAX + 0.001 and k != "_CASH"}
         if not _over:
@@ -1393,6 +1453,36 @@ def apply_allocation_rules(
                     for tk2, w2 in _same_cat:
                         add = _excess * (w2 / _total_sc)
                         tickers[tk2] = min(tickers[tk2] + add, _POS_MAX)
+    
+    # Step 6d: POSITION MINIMUM — eject positions below threshold (noise removal)
+    # ERF 1.2%, IPN 0.7% = noise. Eject and redistribute.
+    _POS_MIN_PCT = rules.get("position_minimum_pct", {}).get(profile, 0)
+    _POS_MIN = _POS_MIN_PCT / 100.0 if _POS_MIN_PCT > 0 else 0
+    
+    if _POS_MIN > 0:
+        _dust = {}
+        for tk, w in list(tickers.items()):
+            if tk.startswith("_"):
+                continue
+            if w < _POS_MIN and w > 0.001:
+                _dust[tk] = w
+        
+        if _dust:
+            _dust_total = sum(_dust.values())
+            for tk in _dust:
+                tickers.pop(tk, None)
+                meta.pop(tk, None)
+            
+            # Redistribute to remaining positions in same category, pro-rata
+            _remaining = {k: v for k, v in tickers.items() 
+                        if not k.startswith("_") and v > _POS_MIN}
+            _total_r = sum(_remaining.values())
+            if _total_r > 0:
+                for k in _remaining:
+                    tickers[k] += _dust_total * (_remaining[k] / _total_r)
+            
+            _dust_names = [f"{tk} ({w*100:.1f}%)" for tk, w in _dust.items()]
+            all_logs.append(f"🧹 Position min ({_POS_MIN_PCT}%): ejected {', '.join(_dust_names)} → {_dust_total*100:.1f}% redistributed")
     
     # Re-normalize after safety nets (exclude internal keys like _CASH)
     _real_tickers = {k: v for k, v in tickers.items() if not k.startswith("_")}
