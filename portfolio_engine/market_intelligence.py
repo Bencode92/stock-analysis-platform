@@ -104,6 +104,13 @@ FORMAT DE RÉPONSE (JSON strict):
     "Stable": 0-20,
     "rationale": "Justification de la poche cash en 1 phrase"
   },
+  "crypto_allocation": {
+    "_doc": "Cap crypto max par profil selon le régime. Crypto = risk asset, réduire en stress.",
+    "Agressif": 0-7,
+    "Modéré": 0-3,
+    "Stable": 0,
+    "rationale": "Justification du cap crypto en 1 phrase"
+  },
   "warnings": ["Risque spécifique à surveiller"]
 }
 
@@ -532,6 +539,17 @@ def _ai_to_engine_adjustments(ai_response: Dict) -> Dict:
             adjustments["cash_tactical"] = cash_pcts
             adjustments["cash_tactical_rationale"] = ca.get("rationale", "")
     
+    # Extract crypto_allocation — MI recommended caps per profile
+    cry = ai_response.get("crypto_allocation", {})
+    if cry:
+        crypto_caps = {}
+        for profile in ["Agressif", "Modéré", "Stable"]:
+            val = cry.get(profile, None)
+            if isinstance(val, (int, float)):
+                crypto_caps[profile] = val
+        if crypto_caps:
+            adjustments["crypto_allocation"] = crypto_caps
+    
     return adjustments
 
 
@@ -778,6 +796,12 @@ def integrate_ai_adjustments(rules: Dict, adjustments: Dict) -> Dict:
         for p, pct in adjustments["cash_tactical"].items():
             logger.info(f"[MI] 💰 Cash tactique {p}: {pct}%")
         logger.info(f"[MI] 💰 Rationale: {adjustments.get('cash_tactical_rationale', '?')}")
+    
+    # Pass crypto_allocation
+    if adjustments.get("crypto_allocation"):
+        rules["_crypto_allocation"] = adjustments["crypto_allocation"]
+        for p, pct in adjustments["crypto_allocation"].items():
+            logger.info(f"[MI] 🪙 Crypto cap {p}: {pct}%")
     
     # Log regime
     regime = adjustments.get("ai_regime", "unknown")
