@@ -149,24 +149,26 @@ def fetch_all_fred(api_key: str) -> Dict:
             logger.warning(f"[FRED] {name} ({series_id}): no data")
     
     # CPI: calculate YoY% from index (need 13 months of data)
+    # v2.3.1: single fetch instead of double (was hitting FRED rate limit)
     if "cpi" in results:
-        cpi_13m = fetch_fred_series("CPIAUCSL", api_key, n_obs=13)
-        if cpi_13m:
-            # Fetch full 13 obs to get 12-month-ago value
-            url = (
-                f"{FRED_BASE}?series_id=CPIAUCSL"
-                f"&sort_order=desc&limit=13"
-                f"&api_key={api_key}&file_type=json"
-            )
-            raw = _fetch_json(url)
-            if raw and "observations" in raw:
-                valid = [o for o in raw["observations"] if o.get("value", ".") != "."]
-                if len(valid) >= 13:
-                    latest_cpi = float(valid[0]["value"])
-                    year_ago_cpi = float(valid[12]["value"])
-                    cpi_yoy = round((latest_cpi / year_ago_cpi - 1) * 100, 2)
-                    results["cpi"]["yoy_pct"] = cpi_yoy
-                    logger.info(f"[FRED] CPI YoY: {cpi_yoy}% ({latest_cpi}/{year_ago_cpi})")
+        url = (
+            f"{FRED_BASE}?series_id=CPIAUCSL"
+            f"&sort_order=desc&limit=15"
+            f"&api_key={api_key}&file_type=json"
+        )
+        raw = _fetch_json(url)
+        if raw and "observations" in raw:
+            valid = [o for o in raw["observations"] if o.get("value", ".") != "."]
+            if len(valid) >= 13:
+                latest_cpi = float(valid[0]["value"])
+                year_ago_cpi = float(valid[12]["value"])
+                cpi_yoy = round((latest_cpi / year_ago_cpi - 1) * 100, 2)
+                results["cpi"]["yoy_pct"] = cpi_yoy
+                logger.info(f"[FRED] CPI YoY: {cpi_yoy}% ({latest_cpi}/{year_ago_cpi})")
+            else:
+                logger.warning(f"[FRED] CPI YoY: only {len(valid)}/13 valid obs — skipping")
+        else:
+            logger.warning("[FRED] CPI YoY: fetch failed")
     
     # PCE: calculate YoY% from index (same logic as CPI)
     if "pce" in results:
@@ -278,22 +280,54 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
     
     # Brent — v2.3: prefer Twelve Data (real-time) over FRED (J-2 lag)
     # FRED DCOILBRENTEU has 1-2 day publication lag. TD BZ is near real-time.
+    # v2.3.1: SANITY CHECK — BZ on Twelve Data can return wrong instrument
     if "brent" in td_data and td_data["brent"].get("price"):
         _td_brent = td_data["brent"]["price"]
         _fred_brent = fred_data.get("brent", {}).get("value")
-        macro["brent"] = {
-            "price": _td_brent,
-            "source": "twelve_data_BZ",
-            "date": td_data["brent"].get("datetime", "today"),
-            "avg_5d": _fred_brent or _td_brent,  # FRED for avg context
-            "_fred_price": _fred_brent,
-            "_fred_date": fred_data.get("brent", {}).get("date"),
-        }
-        if _fred_brent:
-            _lag = round(abs(_td_brent - _fred_brent), 2)
-            if _lag > 3:
-                logger.warning(f"[MACRO] Brent TD/FRED divergence: TD=${_td_brent} vs FRED=${_fred_brent} (lag ${_lag})")
-        logger.info(f"[MACRO] Brent: ${_td_brent} (Twelve Data real-time, FRED=${_fred_brent})")
+        
+        # Sanity check: Brent should be $30-$200. If TD is outside this range
+        # or diverges > 30% from FRED, fall back to FRED (J-2 but correct).
+        _td_sane = 30 <= _td_brent <= 200
+        _divergence_pct = abs(_td_brent - _fred_brent) / _fred_brent * 100 if _fred_brent and _fred_brent > 0 else 0
+        _divergence_ok = _divergence_pct < 30  # < 30% divergence acceptable
+        
+        if _td_sane and (_divergence_ok or not _fred_brent):
+            # TD price looks reasonable → use it
+            macro["brent"] = {
+                "price": _td_brent,
+                "source": "twelve_data_BZ",
+                "date": td_data["brent"].get("datetime", "today"),
+                "avg_5d": _fred_brent or _td_brent,
+                "_fred_price": _fred_brent,
+                "_fred_date": fred_data.get("brent", {}).get("date"),
+            }
+            if _fred_brent and _divergence_pct > 5:
+                logger.warning(f"[MACRO] Brent TD/FRED divergence: TD=${_td_brent} vs FRED=${_fred_brent} ({_divergence_pct:.0f}%)")
+            logger.info(f"[MACRO] Brent: ${_td_brent} (Twelve Data real-time, FRED=${_fred_brent})")
+        elif _fred_brent:
+            # TD price is INSANE → fall back to FRED
+            logger.error(
+                f"[MACRO] ❌ Brent TD REJECTED: ${_td_brent} (sane={_td_sane}, divergence={_divergence_pct:.0f}%) "
+                f"— falling back to FRED ${_fred_brent}"
+            )
+            macro["brent"] = {
+                "price": _fred_brent,
+                "source": "fred_DCOILBRENTEU_fallback",
+                "date": fred_data["brent"]["date"],
+                "avg_5d": _fred_brent,
+                "_td_rejected": _td_brent,
+                "_td_reject_reason": f"insane_price ({_td_brent}, divergence {_divergence_pct:.0f}%)",
+            }
+            logger.info(f"[MACRO] Brent: ${_fred_brent} (FRED fallback, TD ${_td_brent} rejected)")
+        else:
+            # Both suspect but TD is all we have
+            logger.warning(f"[MACRO] ⚠️ Brent TD=${_td_brent} (no FRED to validate, using with caution)")
+            macro["brent"] = {
+                "price": _td_brent,
+                "source": "twelve_data_BZ_unvalidated",
+                "date": td_data["brent"].get("datetime", "today"),
+                "avg_5d": _td_brent,
+            }
     elif "brent" in fred_data:
         macro["brent"] = {
             "price": fred_data["brent"]["value"],
@@ -525,9 +559,17 @@ def build_flat_market_data(macro: Dict) -> Dict:
     flat["fed_funds_rate_delta_6m"] = macro.get("fed_rate", {}).get("delta_6m", 0)
     
     # CPI YoY% (calculated from 13-month FRED data)
+    # v2.3.1: if CPI YoY fails (FRED rate limit or <13 obs), use PCE YoY as proxy
     _cpi_yoy = macro.get("cpi", {}).get("yoy_pct")
+    _pce_yoy = macro.get("pce", {}).get("yoy_pct")
     if _cpi_yoy:
         flat["cpi_yoy_pct"] = _cpi_yoy
+    elif _pce_yoy:
+        flat["cpi_yoy_pct"] = _pce_yoy
+        logger.warning(f"[MACRO] cpi_yoy_pct unavailable, using pce_yoy_pct={_pce_yoy}% as proxy")
+    else:
+        flat["cpi_yoy_pct"] = None
+        logger.warning("[MACRO] ⚠️ No inflation metric available (cpi_yoy_pct and pce_yoy_pct both missing)")
     flat["cpi_index"] = macro.get("cpi", {}).get("index_value")
     
     # Spreads
