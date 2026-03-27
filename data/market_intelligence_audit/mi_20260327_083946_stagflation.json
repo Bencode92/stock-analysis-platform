@@ -1,0 +1,271 @@
+{
+  "timestamp": "2026-03-27T08:39:46.701912",
+  "version": "1.0.0",
+  "model": "claude-opus-4-20250514",
+  "market_data_input": {
+    "date": "2026-03-27",
+    "brent_usd": 103.79,
+    "brent_usd_avg5d": 100.609366,
+    "gold_usd": 4434.02748,
+    "silver_usd": 69.06621,
+    "vix": 22.0,
+    "fed_funds_rate": 3.64,
+    "cpi_index": 327.46,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 317.0,
+    "us_10y_yield": 4.33,
+    "us_2y_yield": 3.84,
+    "yield_curve_2s10s": 49.0,
+    "breakeven_5y": 2.56,
+    "sp500_level": 645.090027,
+    "dxy": 120.2757,
+    "_stress_flags": [
+      "energy_shock"
+    ],
+    "gold_price": 4433.9908,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 16.825481117850007,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.6,
+    "favored_sectors": "energy",
+    "avoided_sectors": "communication-services, financials, consumer-discretionary",
+    "favored_regions": "brazil, taiwan, turkey",
+    "avoided_regions": "india, germany",
+    "key_trends": "Secteur leader: energy (+36.1% YTD) | Région leader: south-korea (+31.4% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: utilities (+30.9% sur 12 mois) | 6M leader: energy (+34.7% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, real-estate, consumer-discretionary | Régions en difficulté: germany, switzerland, italy | Concentration: peu de secteurs en zone favorable (rotation possible) | 6 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "healthcare(avoided,b=0.55,d=-0.13%), real-estate(neutral,b=0.52,d=-0.81%), utilities(neutral,b=0.36,d=1.08%), consumer-staples(neutral,b=0.26,d=0.53%), consumer-discretionary(avoided,b=1.11,d=-0.4%), information-technology(avoided,b=1.32,d=-1.09%), financials(avoided,b=0.94,d=0.05%), materials(neutral,b=0.84,d=1.89%), communication-services(avoided,b=1.12,d=-2.34%), energy(favored,b=0.75,d=2.03%), industrials(neutral,b=0.89,d=0.58%)"
+  },
+  "ai_response": {
+    "regime": "stagflation",
+    "regime_confidence": 4,
+    "regime_rationale": "Brent >$100 avec CPI 2.4% et Fed en pause à 3.64% signale un début de stagflation. DXY à 120 et courbe pentifiée confirment le stress macro.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Augmenter cap energy/oil",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 5,
+        "rationale": "Brent >$100 avec momentum energy fort (+36% YTD) justifie surpondération maximale"
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire cap tech/AI",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": -3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "Tech avoided par RADAR (-1.09% daily) et sensible aux taux élevés (10Y 4.33%)"
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Augmenter hedge gold",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold à $4434 reste hedge stagflation malgré DD 17% - DXY 120 extrême"
+      },
+      {
+        "type": "bond_preference",
+        "action": "Privilégier TIPS vs nominal",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 5.0
+        },
+        "profiles": [
+          "Stable",
+          "Modéré"
+        ],
+        "conviction": 5,
+        "rationale": "Breakeven 2.56% avec pétrole >$100 = risque inflation sous-évalué"
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Augmenter floor obligataire",
+        "params": {
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX 22 et spreads IG 135bps justifient plus de bonds défensifs"
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Constituer poche cash tactique",
+        "params": {},
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Cash 5-8% pour opportunités si correction tech/growth s'accélère"
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "TIPS courts (<5Y) privilégiés, éviter duration longue et crédit risqué",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    },
+    "cash_allocation": {
+      "_doc": "Cash tactique: poche à garder non investie pour opportunités futures ou protection",
+      "Agressif": 5,
+      "Modéré": 8,
+      "Stable": 3,
+      "rationale": "Cash modéré pour flexibilité sans trop pénaliser en environnement inflationniste"
+    },
+    "crypto_allocation": {
+      "_doc": "Cap crypto max par profil selon le régime. Crypto = risk asset, réduire en stress.",
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0,
+      "rationale": "Crypto réduit drastiquement - DXY 120 et taux réels positifs défavorables"
+    },
+    "warnings": [
+      "DXY à 120 niveau extrême - risque de crise EM/commodities",
+      "Courbe 2s10s à 49bps encore positive mais fragile",
+      "Silver/Gold ratio élevé ($69/$4434) signale spéculation excessive"
+    ]
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 5,
+        "Modéré": 5
+      },
+      "ai_infra": {
+        "Agressif": -3,
+        "Modéré": -3
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Modéré": 3,
+        "Stable": 3
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Stable",
+          "Modéré"
+        ],
+        "max_dur": 5.0,
+        "fund_types": [],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 7.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_stagflation"
+    ],
+    "bond_floor_deltas": {
+      "Stable": 5
+    },
+    "cash_tactical": {
+      "Agressif": 5,
+      "Modéré": 8,
+      "Stable": 3
+    },
+    "cash_tactical_rationale": "Cash modéré pour flexibilité sans trop pénaliser en environnement inflationniste",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0
+    },
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 4,
+    "ai_warnings": [
+      "DXY à 120 niveau extrême - risque de crise EM/commodities",
+      "Courbe 2s10s à 49bps encore positive mais fragile",
+      "Silver/Gold ratio élevé ($69/$4434) signale spéculation excessive"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "TIPS courts (<5Y) privilégiés, éviter duration longue et crédit risqué",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    }
+  },
+  "regime": "stagflation",
+  "warnings": [
+    "DXY à 120 niveau extrême - risque de crise EM/commodities",
+    "Courbe 2s10s à 49bps encore positive mais fragile",
+    "Silver/Gold ratio élevé ($69/$4434) signale spéculation excessive"
+  ]
+}
