@@ -5833,6 +5833,41 @@ def save_portfolios(portfolios: Dict, assets: list):
                 if _p_name in v1_data:
                     apply_allocation_rules(v1_data[_p_name], _p_name, _alloc_rules, _TICKER_EXP, _market_data)
             logger.info("✅ [ALLOC_RULES] Engine v2.1 applied to all profiles")
+            
+            # v2.3: Re-run risk_analysis AFTER engine so stress tests use final portfolio
+            # The pre-engine run (line ~3382) tested EMHC 5.62%, BTC 7.12%, XLE 12.33%
+            # Post-engine: EMHC ejected, BTC capped 2.2%, XLE 2.3%, SGOV injected
+            if CONFIG.get("enable_risk_analysis", False) and HAS_RISK_ANALYSIS:
+                logger.info("🔄 [risk_analysis] Re-running on POST-ENGINE portfolio (final positions)")
+                for _ra_profile in ["Agressif", "Modéré", "Stable"]:
+                    if _ra_profile not in v1_data:
+                        continue
+                    try:
+                        if fetch_and_enrich_risk_analysis is not None:
+                            _ra_enriched = fetch_and_enrich_risk_analysis(
+                                portfolio_result=v1_data[_ra_profile],
+                                profile_name=_ra_profile,
+                                lookback_years=5,
+                                use_cache=True,  # Use cached prices from first run
+                            )
+                        else:
+                            _ra_enriched = enrich_portfolio_with_risk_analysis(
+                                portfolio_result=v1_data[_ra_profile],
+                                profile_name=_ra_profile,
+                            )
+                        v1_data[_ra_profile]["risk_analysis"] = _ra_enriched.get("risk_analysis", {})
+                        
+                        # Log delta vs pre-engine
+                        _ra_stress = v1_data[_ra_profile].get("risk_analysis", {}).get("stress_tests", {})
+                        _ra_worst = _ra_stress.get("worst_case", {})
+                        _ra_loss = _ra_worst.get("expected_loss_pct", "?")
+                        _ra_n_pos = len(v1_data[_ra_profile].get("_tickers", {}))
+                        logger.info(
+                            f"   ✅ [{_ra_profile}] Post-engine risk: worst={_ra_loss}% "
+                            f"({_ra_worst.get('scenario', '?')}), {_ra_n_pos} positions"
+                        )
+                    except Exception as _ra_e:
+                        logger.warning(f"   ⚠️ [{_ra_profile}] Post-engine risk_analysis failed: {_ra_e}")
         else:
             logger.info("ℹ️ [ALLOC_RULES] No rules file found — skipping")
     except ImportError:
