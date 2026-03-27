@@ -112,7 +112,15 @@ FORMAT DE RÉPONSE (JSON strict):
     "Stable": 0,
     "rationale": "Justification du cap crypto en 1 phrase"
   },
-  "warnings": ["Risque spécifique à surveiller"]
+  "warnings": ["Risque spécifique à surveiller"],
+  "market_interpretation": {
+    "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+    "geopolitical_risk": "Description en 1 phrase du contexte géopolitique (déduit du Brent, energy_shock, VIX)",
+    "fed_stance": "hawkish_hold|dovish_hold|tightening|easing — déduit de fed_rate + CPI + yield curve",
+    "prob_hike_next_fomc_pct": 0-100,
+    "sentiment_estimate": "extreme_fear|fear|neutral|greed|extreme_greed — déduit de VIX + spreads + equity perf",
+    "dollar_assessment": "strong|neutral|weak — interprétation du Trade-Weighted USD avec bons seuils"
+  }
 }
 
 TYPES D'AJUSTEMENTS DISPONIBLES:
@@ -153,28 +161,24 @@ def _build_user_prompt(market_data: Dict, portfolio_summary: Dict = None) -> str
     
     prompt = f"""DONNÉES MARCHÉ AU {md.get('date', datetime.now().strftime('%Y-%m-%d'))}:
 
-PÉTROLE & GÉOPOLITIQUE:
+PÉTROLE & ÉNERGIE:
 - Brent: ${md.get('brent_usd', md.get('brent_usd_avg5d', 'N/A'))}/baril (avg 5j: ${md.get('brent_usd_avg5d', 'N/A')})
-- WTI: ${md.get('wti_usd', 'N/A')}/baril
-- Contexte: {md.get('geopolitical_context', 'Non spécifié')}
-- Strait of Hormuz: {md.get('hormuz_status', 'Non spécifié')}
+- XLE (Energy sector) daily change: {md.get('xle_perf_1d_pct', 'N/A')}%
 
 VOLATILITÉ & RISQUE:
 - VIX: {md.get('vix', 'N/A')} (seuil stress: >30, panique: >40)
-- VIX trend 1m: {md.get('vix_trend_1m', 'N/A')}
+- VIX trend: {md.get('vix_trend', 'N/A')}
 
 INFLATION & TAUX:
 - CPI YoY: {md.get('cpi_yoy_pct', 'N/A')}%
 - CPI Core MoM: {md.get('cpi_core_mom_pct', 'N/A')}%
-- PCE YoY: {md.get('pce_yoy_pct', 'N/A')}%
+- PCE YoY (Fed preferred): {md.get('pce_yoy_pct', 'N/A')}%
 - Fed Funds Rate: {md.get('fed_funds_rate', 'N/A')}%
 - Fed delta 6m (cuts(-)/hikes(+)): {md.get('fed_funds_rate_delta_6m', 'N/A')}
-- Fed dot plot signal: {md.get('fed_dot_plot_signal', 'N/A')}
 - US 10Y yield: {md.get('us_10y_yield', 'N/A')}%
 - US 2Y yield: {md.get('us_2y_yield', 'N/A')}%
 - Courbe 2s10s: {md.get('yield_curve_2s10s', 'N/A')}bps
 - Breakeven inflation 5Y: {md.get('breakeven_5y', 'N/A')}%
-- Probabilité hike prochain FOMC: {md.get('prob_hike_next_fomc', 'N/A')}%
 
 CRÉDIT & SPREADS:
 - IG spread OAS: {md.get('ig_spread_bps', 'N/A')}bps
@@ -187,20 +191,14 @@ OR & MÉTAUX:
 - Silver: ${md.get('silver_usd', 'N/A')}
 
 EQUITY:
-- S&P 500: {md.get('sp500_level', 'N/A')} (YTD: {md.get('sp500_ytd_pct', 'N/A')}%)
-- Nasdaq: YTD {md.get('nasdaq_ytd_pct', 'N/A')}%
-- XLU (Utilities): perf 1m {md.get('xlu_perf_1m_pct', 'N/A')}%
-- XLE (Energy): perf 1m {md.get('xle_perf_1m_pct', 'N/A')}%
+- S&P 500: {md.get('sp500_level', 'N/A')}
+- Nasdaq (QQQ) daily change: {md.get('nasdaq_change_1d_pct', 'N/A')}%
+- XLU (Utilities) daily change: {md.get('xlu_perf_1d_pct', 'N/A')}%
 
 DOLLAR & FX:
-- Trade-Weighted USD Index (FRED DTWEXBGS, scale ~110-130, NOT ICE DXY ~99): {md.get('trade_weighted_usd', md.get('dxy', 'N/A'))}
+- Trade-Weighted USD Index (FRED DTWEXBGS, scale ~110-130, NOT ICE DXY ~99): {md.get('trade_weighted_usd', 'N/A')}
 - EUR/USD: {md.get('eurusd', 'N/A')}
 - NOTE: DTWEXBGS à 120 ≈ DXY ICE à ~100. NE PAS interpréter comme "dollar extrêmement fort". Seuils: DTWEXBGS >125 = dollar fort, >130 = très fort, <115 = dollar faible.
-
-SENTIMENT:
-- AAII Bull/Bear: {md.get('aaii_bull_pct', 'N/A')}% bull / {md.get('aaii_bear_pct', 'N/A')}% bear
-- Put/Call ratio: {md.get('put_call_ratio', 'N/A')}
-- Fear & Greed Index: {md.get('fear_greed_index', 'N/A')}
 """
 
     # Add RADAR sector momentum context if available
@@ -826,36 +824,29 @@ if __name__ == "__main__":
         "date": "2026-03-25",
         "brent_usd": 101.0,
         "brent_usd_avg5d": 101.0,
-        "wti_usd": 91.0,
-        "geopolitical_context": "US-Iran Hormuz crisis, Trump negotiations ongoing, 5-day military pause",
-        "hormuz_status": "Partially closed, 5% normal flow",
         "vix": 27.0,
-        "vix_trend_1m": "Rising from 19 to 27",
-        "cpi_yoy_pct": 2.8,
-        "cpi_core_mom_pct": 0.4,
-        "pce_yoy_pct": 2.7,
-        "fed_funds_rate": 3.625,
+        "vix_trend": "Rising",
+        "cpi_yoy_pct": 2.4,
+        "cpi_core_mom_pct": 0.3,
+        "pce_yoy_pct": 2.5,
+        "fed_funds_rate": 3.64,
         "fed_funds_rate_delta_6m": 0.0,
-        "fed_dot_plot_signal": "1 cut 2026, hawkish hold",
-        "us_10y_yield": 4.39,
-        "us_2y_yield": 4.05,
-        "yield_curve_2s10s": 34,
-        "breakeven_5y": 2.65,
-        "prob_hike_next_fomc": 12.0,
-        "ig_spread_bps": 135,
-        "hy_spread_bps": 320,
-        "hy_spread_trend": "Widening slowly",
-        "gold_usd": 4451,
-        "gold_drawdown_from_ath_pct": 16.5,
-        "silver_usd": 32.5,
-        "sp500_level": 6507,
-        "sp500_ytd_pct": -1.5,
-        "nasdaq_ytd_pct": -3.0,
-        "xlu_perf_1m_pct": 10.3,
-        "xle_perf_1m_pct": 8.5,
-        "dxy": 99.5,
-        "eurusd": 1.085,
-        "fear_greed_index": 32,
+        "us_10y_yield": 4.34,
+        "us_2y_yield": 3.83,
+        "yield_curve_2s10s": 51,
+        "breakeven_5y": 2.55,
+        "ig_spread_bps": 111,
+        "hy_spread_bps": 319,
+        "hy_spread_trend": "Widening",
+        "gold_usd": 4563,
+        "gold_drawdown_from_ath_pct": 14.4,
+        "silver_usd": 72.9,
+        "sp500_level": 658,
+        "nasdaq_change_1d_pct": -0.5,
+        "xlu_perf_1d_pct": 1.1,
+        "xle_perf_1d_pct": 2.0,
+        "trade_weighted_usd": 120.28,
+        "eurusd": 1.08,
     }
     
     print("\n" + "=" * 60)
