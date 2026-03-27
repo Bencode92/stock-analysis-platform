@@ -185,6 +185,26 @@ def fetch_all_fred(api_key: str) -> Dict:
                 results["pce"]["yoy_pct"] = pce_yoy
                 logger.info(f"[FRED] PCE YoY: {pce_yoy}% ({latest_pce}/{year_ago_pce})")
     
+    # Fed Funds Rate: calculate 6-month delta (critical for fallback regime detection)
+    # DFF is daily → 6 months ≈ 130 business days. Fetch 150 for safety.
+    if "fed_rate" in results:
+        url = (
+            f"{FRED_BASE}?series_id=DFF"
+            f"&sort_order=desc&limit=150"
+            f"&api_key={api_key}&file_type=json"
+        )
+        raw = _fetch_json(url)
+        if raw and "observations" in raw:
+            valid = [o for o in raw["observations"] if o.get("value", ".") != "."]
+            if len(valid) >= 120:
+                current_rate = float(valid[0]["value"])
+                # ~130 business days ago ≈ 6 months
+                rate_6m_ago = float(valid[min(130, len(valid)-1)]["value"])
+                delta_6m = round(current_rate - rate_6m_ago, 3)
+                results["fed_rate"]["delta_6m"] = delta_6m
+                results["fed_rate"]["rate_6m_ago"] = rate_6m_ago
+                logger.info(f"[FRED] Fed rate delta 6m: {delta_6m} ({current_rate} vs {rate_6m_ago})")
+    
     return results
 
 
@@ -330,6 +350,7 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
         macro["fed_rate"] = {
             "value": fred_data["fed_rate"]["value"],
             "date": fred_data["fed_rate"]["date"],
+            "delta_6m": fred_data["fed_rate"].get("delta_6m", 0),
         }
     
     # CPI
@@ -499,7 +520,9 @@ def build_flat_market_data(macro: Dict) -> Dict:
     flat["vix"] = macro.get("vix", {}).get("value")
     
     # Fed rate
+    # Fed rate
     flat["fed_funds_rate"] = macro.get("fed_rate", {}).get("value")
+    flat["fed_funds_rate_delta_6m"] = macro.get("fed_rate", {}).get("delta_6m", 0)
     
     # CPI YoY% (calculated from 13-month FRED data)
     _cpi_yoy = macro.get("cpi", {}).get("yoy_pct")
