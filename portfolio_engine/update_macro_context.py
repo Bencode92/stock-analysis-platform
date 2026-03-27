@@ -47,20 +47,26 @@ FRED_SERIES = {
     "vix":       "VIXCLS",
     "fed_rate":  "DFF",
     "cpi":       "CPIAUCSL",
+    "cpi_core":  "CPILFESL",       # v2.2: CPI Less Food & Energy (core CPI for MoM)
+    "pce":       "PCEPI",          # v2.2: PCE Price Index (Fed's preferred inflation gauge)
     "ig_spread": "BAMLC0A4CBBB",
     "hy_spread": "BAMLH0A0HYM2",
     "us_10y":    "DGS10",
     "us_2y":     "DGS2",
     "breakeven_5y": "T5YIE",
-    "brent":     "DCOILBRENTEU",   # Brent crude (FRED, daily, gratuit)
-    "dxy":       "DTWEXBGS",       # Trade-weighted USD index (proxy DXY)
+    "brent":     "DCOILBRENTEU",
+    "trade_weighted_usd": "DTWEXBGS",
 }
 
 # Twelve Data symbols (only verified free-tier symbols)
 TD_SYMBOLS = {
     "gold":   "XAU/USD",
     "silver": "XAG/USD",
-    "sp500":  "SPY",       # SPY ETF comme proxy S&P 500 (SPX pas dispo free tier)
+    "sp500":  "SPY",
+    "eurusd": "EUR/USD",          # v2.2: EUR/USD for FX context
+    "nasdaq": "QQQ",              # v2.2: QQQ as Nasdaq proxy
+    "xlu":    "XLU",              # v2.2: Utilities sector perf
+    "xle":    "XLE",              # v2.2: Energy sector perf
 }
 
 
@@ -161,6 +167,23 @@ def fetch_all_fred(api_key: str) -> Dict:
                     results["cpi"]["yoy_pct"] = cpi_yoy
                     logger.info(f"[FRED] CPI YoY: {cpi_yoy}% ({latest_cpi}/{year_ago_cpi})")
     
+    # PCE: calculate YoY% from index (same logic as CPI)
+    if "pce" in results:
+        url = (
+            f"{FRED_BASE}?series_id=PCEPI"
+            f"&sort_order=desc&limit=13"
+            f"&api_key={api_key}&file_type=json"
+        )
+        raw = _fetch_json(url)
+        if raw and "observations" in raw:
+            valid = [o for o in raw["observations"] if o.get("value", ".") != "."]
+            if len(valid) >= 13:
+                latest_pce = float(valid[0]["value"])
+                year_ago_pce = float(valid[12]["value"])
+                pce_yoy = round((latest_pce / year_ago_pce - 1) * 100, 2)
+                results["pce"]["yoy_pct"] = pce_yoy
+                logger.info(f"[FRED] PCE YoY: {pce_yoy}% ({latest_pce}/{year_ago_pce})")
+    
     return results
 
 
@@ -257,9 +280,14 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
             "change_1d_pct": s.get("change_pct"),
         }
     
-    # DXY (from FRED DTWEXBGS — trade-weighted USD index)
-    if "dxy" in fred_data:
-        macro["dxy"] = {"value": fred_data["dxy"]["value"]}
+    # Trade-Weighted USD Index (FRED DTWEXBGS)
+    # ⚠️ This is NOT the ICE DXY (~99.6). DTWEXBGS scale is ~110-130.
+    # Labelled explicitly to avoid confusion in MI prompts.
+    if "trade_weighted_usd" in fred_data:
+        macro["trade_weighted_usd"] = {
+            "value": fred_data["trade_weighted_usd"]["value"],
+            "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130.",
+        }
     
     # S&P 500 (from Twelve Data SPY)
     if "sp500" in td_data:
@@ -337,6 +365,76 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
             "date": fred_data["breakeven_5y"]["date"],
         }
     
+    # v2.2: EUR/USD (from Twelve Data)
+    if "eurusd" in td_data:
+        macro["eurusd"] = {
+            "price": td_data["eurusd"].get("price"),
+            "change_1d_pct": td_data["eurusd"].get("change_pct"),
+        }
+    
+    # v2.2: Nasdaq proxy (from Twelve Data QQQ)
+    if "nasdaq" in td_data:
+        macro["nasdaq"] = {
+            "level": td_data["nasdaq"].get("price"),
+            "change_1d_pct": td_data["nasdaq"].get("change_pct"),
+        }
+    
+    # v2.2: XLU Utilities (from Twelve Data)
+    if "xlu" in td_data:
+        macro["xlu"] = {
+            "price": td_data["xlu"].get("price"),
+            "change_1d_pct": td_data["xlu"].get("change_pct"),
+        }
+    
+    # v2.2: XLE Energy (from Twelve Data)
+    if "xle" in td_data:
+        macro["xle"] = {
+            "price": td_data["xle"].get("price"),
+            "change_1d_pct": td_data["xle"].get("change_pct"),
+        }
+    
+    # v2.2: CPI Core (Less Food & Energy) — for MoM calculation
+    if "cpi_core" in fred_data:
+        _core = fred_data["cpi_core"]
+        _core_mom = None
+        if _core.get("prev_value") and _core["prev_value"] > 0:
+            _core_mom = round((_core["value"] / _core["prev_value"] - 1) * 100, 2)
+        macro["cpi_core"] = {
+            "index_value": _core["value"],
+            "mom_pct": _core_mom,
+            "date": _core["date"],
+        }
+    
+    # v2.2: PCE Price Index — Fed's preferred inflation gauge
+    if "pce" in fred_data:
+        _pce = fred_data["pce"]
+        _pce_yoy = _pce.get("yoy_pct")
+        macro["pce"] = {
+            "index_value": _pce["value"],
+            "yoy_pct": _pce_yoy,
+            "date": _pce["date"],
+        }
+    
+    # v2.2: VIX trend (derived from FRED VIX data — prev vs current)
+    if "vix" in fred_data:
+        _vix_curr = fred_data["vix"]["value"]
+        _vix_prev = fred_data["vix"].get("prev_value")
+        if _vix_prev and _vix_prev > 0:
+            _vix_delta = round(_vix_curr - _vix_prev, 1)
+            _vix_direction = "Rising" if _vix_delta > 1 else "Falling" if _vix_delta < -1 else "Stable"
+            macro["vix"]["trend"] = _vix_direction
+            macro["vix"]["delta"] = _vix_delta
+    
+    # v2.2: HY spread trend (derived from FRED HY spread — prev vs current)
+    if "hy_spread" in fred_data:
+        _hy_curr = fred_data["hy_spread"]["value"]
+        _hy_prev = fred_data["hy_spread"].get("prev_value")
+        if _hy_prev and _hy_prev > 0:
+            _hy_delta = round((_hy_curr - _hy_prev) * 100, 0)  # in bps
+            _hy_dir = "Widening" if _hy_delta > 5 else "Tightening" if _hy_delta < -5 else "Stable"
+            macro["hy_spread"]["trend"] = _hy_dir
+            macro["hy_spread"]["delta_bps"] = _hy_delta
+    
     # Stress flags (v1.6.2 — informatif)
     macro["_flags"] = []
     if macro.get("vix", {}).get("value", 0) > 30:
@@ -402,8 +500,36 @@ def build_flat_market_data(macro: Dict) -> Dict:
     # S&P 500
     flat["sp500_level"] = macro.get("sp500", {}).get("level")
     
-    # DXY
-    flat["dxy"] = macro.get("dxy", {}).get("value")
+    # Trade-Weighted USD (NOT ICE DXY)
+    flat["trade_weighted_usd"] = macro.get("trade_weighted_usd", {}).get("value")
+    
+    # v2.2: EUR/USD
+    flat["eurusd"] = macro.get("eurusd", {}).get("price")
+    
+    # v2.2: Nasdaq (QQQ proxy) — daily change as approx
+    _nasdaq = macro.get("nasdaq", {})
+    if _nasdaq.get("change_1d_pct"):
+        flat["nasdaq_change_1d_pct"] = _nasdaq["change_1d_pct"]
+    
+    # v2.2: Sector perf (XLU, XLE) — daily change
+    _xlu = macro.get("xlu", {})
+    if _xlu.get("change_1d_pct"):
+        flat["xlu_perf_1d_pct"] = _xlu["change_1d_pct"]
+    _xle = macro.get("xle", {})
+    if _xle.get("change_1d_pct"):
+        flat["xle_perf_1d_pct"] = _xle["change_1d_pct"]
+    
+    # v2.2: CPI Core MoM (from FRED CPILFESL)
+    flat["cpi_core_mom_pct"] = macro.get("cpi_core", {}).get("mom_pct")
+    
+    # v2.2: PCE YoY (from FRED PCEPI — Fed's preferred inflation gauge)
+    flat["pce_yoy_pct"] = macro.get("pce", {}).get("yoy_pct")
+    
+    # v2.2: VIX trend (derived from FRED prev vs current)
+    flat["vix_trend"] = macro.get("vix", {}).get("trend")
+    
+    # v2.2: HY spread trend (derived from FRED prev vs current)
+    flat["hy_spread_trend"] = macro.get("hy_spread", {}).get("trend")
     
     # Stress flags
     flat["_stress_flags"] = macro.get("_flags", [])
