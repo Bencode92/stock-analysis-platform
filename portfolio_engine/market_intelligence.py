@@ -850,7 +850,7 @@ def _detect_regime_fallback(md: Dict) -> str:
     hy_spread = md.get("hy_spread_bps", 300)
     ig_spread = md.get("ig_spread_bps", 100)
     brent = md.get("brent_usd", md.get("brent_usd_avg5d", 75))
-    cpi = md.get("cpi_yoy_pct", 2.0)
+    cpi = md.get("cpi_yoy_pct") or md.get("pce_yoy_pct") or 2.0
     fed_delta = md.get("fed_funds_rate_delta_6m", 0)
     
     # Crisis: VIX > 35 AND (HY > 500 OR IG > 200)
