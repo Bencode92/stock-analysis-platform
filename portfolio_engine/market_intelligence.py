@@ -789,20 +789,51 @@ def get_ai_market_adjustments(
     adjustments["active_rules"] = [f"fallback_{_fb_regime}"]
     
     # Apply basic regime-dependent adjustments
+    _ALL_PROFILES = ["Agressif", "Modéré", "Stable"]
+    _DEF_PROFILES = ["Modéré", "Stable"]
+    
     if _fb_regime == "crisis":
-        adjustments["bond_preferences"] = ["prefer_treasury_only", "shorten_duration"]
-        adjustments.setdefault("_cash_tactical", {})["Agressif"] = 10
-        adjustments.setdefault("_cash_tactical", {})["Modéré"] = 12
-        adjustments.setdefault("_cash_tactical", {})["Stable"] = 15
+        adjustments["bond_preferences"] = [
+            {"action": "prefer_treasury", "profiles": _ALL_PROFILES, "rule_id": "fallback_crisis"},
+            {"action": "shorten_duration", "profiles": _ALL_PROFILES, "max_dur": 2.0, "rule_id": "fallback_crisis"},
+            {"action": "avoid_fund_types", "profiles": _ALL_PROFILES, "fund_types": ["High Yield Bond", "Emerging Markets Bond", "Securitized Bond"], "rule_id": "fallback_crisis"},
+        ]
+        adjustments.setdefault("cash_tactical", {})["Agressif"] = 10
+        adjustments.setdefault("cash_tactical", {})["Modéré"] = 12
+        adjustments.setdefault("cash_tactical", {})["Stable"] = 15
+        adjustments["cash_tactical_rationale"] = f"Fallback crisis: max cash protection (VIX likely >35)"
     elif _fb_regime == "stagflation":
-        adjustments["bond_preferences"] = ["prefer_tips", "shorten_duration"]
-        adjustments.setdefault("_cash_tactical", {})["Agressif"] = 5
-        adjustments.setdefault("_cash_tactical", {})["Modéré"] = 7
+        adjustments["bond_preferences"] = [
+            {"action": "prefer_tips", "profiles": _DEF_PROFILES, "rule_id": "fallback_stagflation"},
+            {"action": "shorten_duration", "profiles": ["Stable"], "max_dur": 4.0, "rule_id": "fallback_stagflation"},
+        ]
+        adjustments.setdefault("cash_tactical", {})["Agressif"] = 5
+        adjustments.setdefault("cash_tactical", {})["Modéré"] = 7
+        adjustments["cash_tactical_rationale"] = f"Fallback stagflation: moderate cash (oil shock + inflation)"
     elif _fb_regime == "recession":
-        adjustments["bond_preferences"] = ["extend_duration", "prefer_treasury"]
-        adjustments.setdefault("_cash_tactical", {})["Agressif"] = 5
+        adjustments["bond_preferences"] = [
+            {"action": "extend_duration_ok", "profiles": _ALL_PROFILES, "rule_id": "fallback_recession"},
+            {"action": "prefer_treasury", "profiles": _DEF_PROFILES, "rule_id": "fallback_recession"},
+        ]
+        adjustments.setdefault("cash_tactical", {})["Agressif"] = 5
+        adjustments["cash_tactical_rationale"] = f"Fallback recession: defensive cash"
+    elif _fb_regime == "risk_off":
+        adjustments["bond_preferences"] = [
+            {"action": "prefer_treasury", "profiles": _DEF_PROFILES, "rule_id": "fallback_risk_off"},
+            {"action": "shorten_duration", "profiles": ["Stable"], "max_dur": 5.0, "rule_id": "fallback_risk_off"},
+        ]
+        adjustments.setdefault("cash_tactical", {})["Agressif"] = 5
+        adjustments.setdefault("cash_tactical", {})["Modéré"] = 7
+        adjustments["cash_tactical_rationale"] = f"Fallback risk_off: elevated cash"
     elif _fb_regime in ("goldilocks", "risk_on"):
         adjustments["bond_preferences"] = []
+        adjustments.setdefault("cash_tactical", {})["Agressif"] = 2
+        adjustments["cash_tactical_rationale"] = f"Fallback {_fb_regime}: minimal cash"
+    elif _fb_regime == "neutral":
+        adjustments["bond_preferences"] = []
+        adjustments.setdefault("cash_tactical", {})["Agressif"] = 3
+        adjustments.setdefault("cash_tactical", {})["Modéré"] = 4
+        adjustments["cash_tactical_rationale"] = f"Fallback neutral: moderate cash"
     
     _save_audit(market_data, None, adjustments)
     return adjustments
