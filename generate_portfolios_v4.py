@@ -6203,6 +6203,53 @@ def main():
             logger.info("📊 Audit debug exporté")
         except Exception as e:
             logger.error(f"❌ Erreur dump audit: {e}")
+    
+    # === 4.6 STRESS TEST ===
+    stress_results = None
+    try:
+        from stress_test import run_all_profiles as run_stress_all, save_stress_report, print_stress_summary
+        
+        logger.info("\n" + "=" * 60)
+        logger.info("🧪 STRESS TEST — 5 scénarios historiques")
+        logger.info("=" * 60)
+        
+        stress_results = run_stress_all(v1_data)
+        
+        if stress_results:
+            save_stress_report(stress_results)
+            
+            # Log summary
+            for _st_profile, _st_data in stress_results.items():
+                _st_worst = _st_data.get("worst_case", {})
+                _st_risk = _st_data.get("risk_assessment", {})
+                logger.info(
+                    f"  {_st_profile}: worst={_st_worst.get('drawdown_pct', '?'):.1f}% "
+                    f"({_st_worst.get('name', '?')}) — {_st_risk.get('level', '?')}"
+                )
+            
+            # Inject stress summary into portfolio data for frontend display
+            for _st_profile in ["Agressif", "Modéré", "Stable"]:
+                if _st_profile in stress_results and _st_profile in v1_data:
+                    _st = stress_results[_st_profile]
+                    v1_data[_st_profile]["_stress_test"] = {
+                        "worst_case": _st["worst_case"],
+                        "risk_level": _st["risk_assessment"]["level"],
+                        "scenarios": {
+                            k: {"drawdown_pct": v["portfolio_drawdown_pct"], "name": v["name"]}
+                            for k, v in _st["scenarios"].items()
+                        },
+                    }
+            
+            # Re-save portfolios with stress test results
+            with open(CONFIG["output_path"], "w", encoding="utf-8") as f:
+                json.dump(v1_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"✅ Portfolios re-saved with stress test data")
+        
+    except ImportError:
+        logger.info("ℹ️ [STRESS] stress_test.py not found — skipping")
+    except Exception as e:
+        logger.warning(f"⚠️ [STRESS] Error: {e} — portfolios unchanged")
+    
     # === 5. RÉSUMÉ FINAL ===
     logger.info("\n" + "=" * 60)
     logger.info("✨ Génération terminée avec succès!")
@@ -6215,6 +6262,8 @@ def main():
         logger.info(f"   • {CONFIG['backtest_output']} (backtest)")
         if backtest_results.get("debug_file"):
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
+    if stress_results:
+        logger.info(f"   • data/stress_test_report.json (stress test)")
     logger.info("")
     logger.info("Fonctionnalités v4.14.0 (Round 14 PARFAIT FINAL - 10/10):")
     logger.info(f"   • ✅ PROFILE_POLICY: {'ACTIVÉ' if HAS_PROFILE_POLICY else 'DÉSACTIVÉ'}")
