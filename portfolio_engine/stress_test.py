@@ -244,7 +244,7 @@ TICKER_TO_STRESS_CAT = {
     # Actions by sector (common tickers)
     "NVDA": "equity_tech", "MU": "equity_tech", "VRT": "equity_tech",
     "SOXX": "etf_semiconductor", "SMH": "etf_semiconductor",
-    "HAL": "equity_energy", "XLE": "etf_dividend",  # XLE = energy ETF but treat as equity energy
+    "HAL": "equity_energy", "XLE": "equity_energy",
     "XOM": "equity_energy", "CVX": "equity_energy", "DVN": "equity_energy",
     "HWM": "equity_defense", "GD": "equity_defense", "LMT": "equity_defense",
     "ERF": "equity_healthcare", "IPN": "equity_healthcare",
