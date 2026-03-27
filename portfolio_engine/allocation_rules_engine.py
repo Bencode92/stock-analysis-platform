@@ -1394,6 +1394,44 @@ def apply_allocation_rules(
                     all_logs.append(f"♻️ Bond pref: {', '.join(_removed_bonds)} → redistributed pro-rata to {len(_remaining_bonds)} bonds")
     
     # Step 6b3: TACTICAL CASH — reserve a % as uninvested cash (AI-driven)
+    # v2.3: BOND CONCENTRATION GUARD-RAIL — prevent single-bond risk
+    # If a profile has only 1 bond and it's > 8%, inject a treasury anchor (SGOV/BIL)
+    # Solves: PAAA 12.1% as only bond in Agressif (CLO AAA liquidity risk)
+    _bond_positions = {k: v for k, v in tickers.items()
+                       if meta.get(k, {}).get("category") == "Obligations" and not k.startswith("_")}
+    _total_bonds = sum(_bond_positions.values())
+    
+    if len(_bond_positions) == 1 and _total_bonds > 0.08:
+        _single_bond_tk = list(_bond_positions.keys())[0]
+        _single_bond_w = _bond_positions[_single_bond_tk]
+        
+        # Treasury anchors by preference (ultra-short, high liquidity)
+        _TREASURY_ANCHORS = ["SGOV", "BIL", "SHV", "VGSH", "SCHO", "CLTL"]
+        _anchor_tk = None
+        for _anc in _TREASURY_ANCHORS:
+            if _anc not in tickers:  # Don't inject if already in portfolio
+                _anchor_tk = _anc
+                break
+        
+        if _anchor_tk:
+            # Split: keep 60% in original, put 40% in treasury anchor
+            _anchor_weight = round(_single_bond_w * 0.40, 4)
+            _remaining = round(_single_bond_w * 0.60, 4)
+            
+            tickers[_single_bond_tk] = _remaining
+            tickers[_anchor_tk] = _anchor_weight
+            meta[_anchor_tk] = {
+                "weight": _anchor_weight,
+                "category": "Obligations",
+                "name": f"Treasury Anchor ({_anchor_tk})",
+                "asset_ids": [],
+            }
+            
+            all_logs.append(
+                f"🔀 Bond concentration fix: {_single_bond_tk} was sole bond at {_single_bond_w*100:.1f}% → "
+                f"split to {_single_bond_tk} {_remaining*100:.1f}% + {_anchor_tk} {_anchor_weight*100:.1f}% (treasury anchor)"
+            )
+    
     # Reduces ALL positions proportionally to free up cash pocket
     _CASH_PCT = rules.get("_cash_tactical", {}).get(profile, 0)
     if _CASH_PCT and _CASH_PCT > 0:
