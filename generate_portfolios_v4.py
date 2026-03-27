@@ -6248,7 +6248,12 @@ def main():
         logger.info("🧪 STRESS TEST — 5 scénarios historiques")
         logger.info("=" * 60)
         
-        stress_results = run_stress_all(v1_data)
+        # v2.3 FIX: Load v1_data from saved JSON (it's local to save_portfolios, not in main scope)
+        _stress_path = CONFIG["output_path"]
+        with open(_stress_path, "r", encoding="utf-8") as _sf:
+            _v1_for_stress = json.load(_sf)
+        
+        stress_results = run_stress_all(_v1_for_stress)
         
         if stress_results:
             save_stress_report(stress_results)
@@ -6264,9 +6269,9 @@ def main():
             
             # Inject stress summary into portfolio data for frontend display
             for _st_profile in ["Agressif", "Modéré", "Stable"]:
-                if _st_profile in stress_results and _st_profile in v1_data:
+                if _st_profile in stress_results and _st_profile in _v1_for_stress:
                     _st = stress_results[_st_profile]
-                    v1_data[_st_profile]["_stress_test"] = {
+                    _v1_for_stress[_st_profile]["_stress_test"] = {
                         "worst_case": _st["worst_case"],
                         "risk_level": _st["risk_assessment"]["level"],
                         "scenarios": {
@@ -6276,8 +6281,8 @@ def main():
                     }
             
             # Re-save portfolios with stress test results
-            with open(CONFIG["output_path"], "w", encoding="utf-8") as f:
-                json.dump(v1_data, f, ensure_ascii=False, indent=2)
+            with open(_stress_path, "w", encoding="utf-8") as _sf:
+                json.dump(_v1_for_stress, _sf, ensure_ascii=False, indent=2)
             logger.info(f"✅ Portfolios re-saved with stress test data")
         
     except ImportError:
