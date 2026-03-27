@@ -99,11 +99,12 @@ FORMAT DE RÉPONSE (JSON strict):
   },
   "cash_allocation": {
     "_doc": "Cash tactique: poche à garder non investie pour opportunités futures ou protection",
-    "Agressif": 0-10,
-    "Modéré": 0-15,
+    "Agressif": 2-10,
+    "Modéré": 3-15,
     "Stable": 0-20,
     "rationale": "Justification de la poche cash en 1 phrase"
   },
+  "_cash_guidance": "MINIMUM CASH: Agressif 2% si VIX>20 (option d'achat sur la vol), Modéré 3%, Stable 0% (T-bills = cash productif). Le cash est une POSITION, pas une absence de position.",
   "crypto_allocation": {
     "_doc": "Cap crypto max par profil selon le régime. Crypto = risk asset, réduire en stress.",
     "Agressif": 0-7,
@@ -192,8 +193,9 @@ EQUITY:
 - XLE (Energy): perf 1m {md.get('xle_perf_1m_pct', 'N/A')}%
 
 DOLLAR & FX:
-- DXY Dollar Index: {md.get('dxy', 'N/A')}
+- Trade-Weighted USD Index (FRED DTWEXBGS, scale ~110-130, NOT ICE DXY ~99): {md.get('trade_weighted_usd', md.get('dxy', 'N/A'))}
 - EUR/USD: {md.get('eurusd', 'N/A')}
+- NOTE: DTWEXBGS à 120 ≈ DXY ICE à ~100. NE PAS interpréter comme "dollar extrêmement fort". Seuils: DTWEXBGS >125 = dollar fort, >130 = très fort, <115 = dollar faible.
 
 SENTIMENT:
 - AAII Bull/Bear: {md.get('aaii_bull_pct', 'N/A')}% bull / {md.get('aaii_bear_pct', 'N/A')}% bear
@@ -641,8 +643,10 @@ def load_market_context(path: str = None) -> Dict:
                     flat["breakeven_5y"] = macro["breakeven_5y"].get("value")
                 if "sp500" in macro:
                     flat["sp500_level"] = macro["sp500"].get("level")
-                if "dxy" in macro:
-                    flat["dxy"] = macro["dxy"].get("value")
+                if "trade_weighted_usd" in macro:
+                    flat["trade_weighted_usd"] = macro["trade_weighted_usd"].get("value")
+                elif "dxy" in macro:
+                    flat["trade_weighted_usd"] = macro["dxy"].get("value")
                 if "silver" in macro:
                     flat["silver_usd"] = macro["silver"].get("price")
                 logger.info(f"[MI] Extracted {len(flat)} fields from macro_environment")
