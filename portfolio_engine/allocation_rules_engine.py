@@ -1053,14 +1053,24 @@ def apply_allocation_rules(
     # Step 5c: CRYPTO REGIME CAP — total crypto capped by market regime
     # min(MI recommendation, hardcoded cap) — Claude can be more restrictive, never more permissive
     _CRYPTO_REGIME_CAPS = rules.get("crypto_regime_caps", {})
-    _AI_REGIME = rules.get("_active_bond_preferences", [{}])[0].get("rule_id", "").replace("ai_", "") if rules.get("_active_bond_preferences") else "neutral"
-    # Also check from MI adjustments
-    if not _AI_REGIME or _AI_REGIME == "neutral":
+    
+    # v2.3: Read regime directly from MI (passed via integrate_ai_adjustments)
+    _AI_REGIME = rules.get("_ai_regime", "")
+    
+    # Fallback: try to extract from bond_preferences rule_id (backward compat)
+    if not _AI_REGIME or _AI_REGIME in ("unknown", ""):
         for _bp in rules.get("_active_bond_preferences", []):
             _rid = _bp.get("rule_id", "")
-            if _rid.startswith("ai_") and _rid != "ai_bond_strategy":
-                _AI_REGIME = _rid.replace("ai_", "")
+            # Handle both "ai_stagflation" and "fallback_crisis" formats
+            for _prefix in ("ai_", "fallback_"):
+                if _rid.startswith(_prefix):
+                    _AI_REGIME = _rid[len(_prefix):]
+                    break
+            if _AI_REGIME and _AI_REGIME not in ("unknown", "bond_strategy"):
                 break
+    
+    if not _AI_REGIME or _AI_REGIME in ("unknown", "bond_strategy"):
+        _AI_REGIME = "neutral"
     
     _regime_caps = _CRYPTO_REGIME_CAPS.get(_AI_REGIME, _CRYPTO_REGIME_CAPS.get("neutral", {}))
     _regime_crypto_max = _regime_caps.get(profile, 100.0) / 100.0  # Default: no cap
