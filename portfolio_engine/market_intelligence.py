@@ -941,8 +941,9 @@ def integrate_ai_adjustments(rules: Dict, adjustments: Dict) -> Dict:
         for p, pct in adjustments["crypto_allocation"].items():
             logger.info(f"[MI] 🪙 Crypto cap {p}: {pct}%")
     
-    # Log regime
+    # Pass regime to engine (used for crypto_regime_caps lookup)
     regime = adjustments.get("ai_regime", "unknown")
+    rules["_ai_regime"] = regime
     logger.info(f"[MI] Applied AI adjustments: regime={regime}")
     
     return rules
