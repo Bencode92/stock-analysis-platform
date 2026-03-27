@@ -61,7 +61,14 @@ Tu analyses le contexte macroéconomique et géopolitique pour ajuster dynamique
 
 TON RÔLE:
 - Penser en SECOND ORDRE: pas juste "pétrole monte" mais "pétrole monte → inflation → Fed hawkish → duration risk → raccourcir les bonds"
-- Identifier le RÉGIME DE MARCHÉ: risk-on, risk-off, stagflation, goldilocks, crise de liquidité
+- Identifier le RÉGIME DE MARCHÉ: goldilocks, risk_on, neutral, stagflation, risk_off, recession, crisis
+  → goldilocks: croissance + inflation maîtrisée + Fed dovish → tech/growth, duration longue OK
+  → risk_on: momentum haussier, VIX bas, spreads serrés → max equity, small caps OK
+  → neutral: pas de signal clair → diversification max, pas de paris directionnels
+  → stagflation: inflation + croissance faible → commodities, TIPS, duration courte, avoid tech
+  → risk_off: correction en cours, VIX montant → défensives, cash montant, reduce beta
+  → recession: croissance effondre, déflation → duration LONGUE (taux baissent), utilities, avoid cycliques
+  → crisis: panique systémique, VIX>40, spreads explosent → treasury only, gold max, cash 15%+
 - Être CONTRARIAN quand le consensus est trop fort (ex: tout le monde short → squeeze possible)
 - Quantifier ton NIVEAU DE CONVICTION (1-5) pour chaque ajustement
 
@@ -74,7 +81,7 @@ RÈGLES STRICTES:
 
 FORMAT DE RÉPONSE (JSON strict):
 {
-  "regime": "stagflation|risk_on|risk_off|goldilocks|crisis|neutral",
+  "regime": "stagflation|risk_on|risk_off|goldilocks|crisis|recession|neutral",
   "regime_confidence": 1-5,
   "regime_rationale": "Explication du régime en 2 phrases max",
   "adjustments": [
@@ -248,26 +255,60 @@ Réponds UNIQUEMENT en JSON valide."""
 # FEW-SHOT EXAMPLES (pour calibrer le raisonnement)
 # =============================================================================
 
-FEW_SHOT_EXAMPLE = """EXEMPLES DE RAISONNEMENT (2 régimes différents):
+FEW_SHOT_EXAMPLE = """EXEMPLES DE RAISONNEMENT (6 régimes — couvrent tous les scénarios):
 
-═══ EXEMPLE 1: GOLDILOCKS (données fictives) ═══
-INPUT: Brent $65, CPI 2.0%, Fed -50bps en 6m, VIX 14, IG spread 85bps, gold DD 5%
+═══ EXEMPLE 1: GOLDILOCKS (croissance + inflation maîtrisée) ═══
+INPUT: Brent $65, CPI 2.0%, Fed -50bps en 6m, VIX 14, IG 85bps, HY 250bps, gold DD 5%, 10Y 3.2%
 RAISONNEMENT: Pétrole bas + inflation target + Fed dovish = goldilocks.
 → Risk-on: tech/growth surpondéré, duration longue OK, IG credit acceptable
-→ Gold réduit (pas de stress), cash 0%, semi/AI caps relevés
-OUTPUT: regime=goldilocks, confidence=4, energy -3%, ai_infra +5%, extend_duration_ok, cash 0%
+→ Gold réduit (pas de stress), cash 0-2%, semi/AI caps relevés, crypto permissif
+→ Bonds: duration 7-10y acceptable, IG corporate OK, HY acceptable en Agressif
+OUTPUT: regime=goldilocks, confidence=4, energy -3%, ai_infra +5%, gold -2%, cash 0%, crypto Agressif 7%
 
-═══ EXEMPLE 2: CRISIS / RISK-OFF (données fictives) ═══  
-INPUT: Brent $120, CPI 5.2%, Fed +75bps en 6m, VIX 42, IG spread 280bps, gold DD 2%
-RAISONNEMENT: Pétrole spike → inflation galopante → Fed hawkish agressif → récession.
-VIX >40 + spreads >250bps = crise de liquidité. Flight to quality radical.
-→ Treasury only (avoid TOUT crédit), gold max, cash 15-20%, equity minimal
-→ Avoid: HY, CLO, EM, corporate IG même court
-OUTPUT: regime=crisis, confidence=5, gold +5%, cash 15% tous, bonds=treasury only, duration max 2y
+═══ EXEMPLE 2: CRISIS / LIQUIDITY CRUNCH (panique systémique) ═══
+INPUT: Brent $120, CPI 5.2%, Fed +75bps en 6m, VIX 42, IG 280bps, HY 650bps, gold DD 2%, 10Y 5.5%
+RAISONNEMENT: VIX >40 + HY spreads >600bps = crise de liquidité. Flight to quality radical.
+→ Treasury ONLY (avoid TOUT crédit y compris IG), gold max, cash 15-20%, equity minimal
+→ Avoid: HY, CLO, EM, corporate, small caps, crypto
+→ Bonds: treasury ultra-court uniquement (duration <2y), TIPS si inflation élevée
+OUTPUT: regime=crisis, confidence=5, gold +5%, cash 15% tous, bonds=treasury only, duration max 2y, crypto 0%
+
+═══ EXEMPLE 3: STAGFLATION (inflation + croissance faible) ═══
+INPUT: Brent $100, CPI 3.5%, Fed hold, VIX 28, IG 150bps, HY 380bps, gold DD 8%, 10Y 4.5%
+RAISONNEMENT: Pétrole élevé + inflation persistante + croissance ralentit = stagflation.
+→ Energy/commodities surpondéré, TIPS obligatoire, duration courte (<4y), gold renforcé
+→ Reduce: tech/growth (beta GDP élevé), EM (dollar fort), small caps
+→ Bonds: treasury court + TIPS, avoid HY (corrélé equity en crise), avoid EM bonds
+OUTPUT: regime=stagflation, confidence=4, energy +5%, tech -3%, gold +3%, TIPS preferred, duration 4y max, cash 5-8%
+
+═══ EXEMPLE 4: RISK_ON (momentum haussier fort) ═══
+INPUT: Brent $75, CPI 2.3%, Fed -25bps, VIX 13, IG 80bps, HY 230bps, gold DD 12%, SP500 YTD +15%
+RAISONNEMENT: VIX très bas + spreads serrés + momentum equity fort = risk-on pur.
+→ Max equity, tech/growth/semi surpondéré, small caps OK, EM attractif (dollar faible)
+→ Gold réduit (coût d'opportunité), cash minimal, duration flexible
+→ Bonds: mix IG + HY acceptable, duration 5-7y OK
+OUTPUT: regime=risk_on, confidence=4, tech +5%, gold -3%, cash 0%, crypto Agressif 7%, EM +3%
+
+═══ EXEMPLE 5: RISK_OFF / RECESSION (croissance en berne, pas d'inflation) ═══
+INPUT: Brent $50, CPI 1.2%, Fed -100bps en 6m, VIX 32, IG 200bps, HY 500bps, gold DD 5%, 10Y 2.5%
+RAISONNEMENT: Pétrole effondré + déflation + Fed en panique = récession.
+→ Défensives (utilities, staples, healthcare), dividendes, duration LONGUE (taux baissent)
+→ Gold comme hedge queue, cash modéré, avoid cycliques/energy/materials
+→ Bonds: duration LONGUE OK (10-20y), treasury + IG, HY à éviter (defaults montent)
+OUTPUT: regime=recession, confidence=4, utilities +5%, energy -5%, duration longue OK, gold +2%, cash 5-10%
+
+═══ EXEMPLE 6: NEUTRAL (pas de signal clair) ═══
+INPUT: Brent $80, CPI 2.5%, Fed hold, VIX 18, IG 120bps, HY 320bps, gold DD 8%, 10Y 4.0%
+RAISONNEMENT: Aucun extrême. Marché en range. Pas de conviction forte.
+→ Allocation proche des benchmarks, diversification maximale, pas de paris directionnels
+→ Cash modéré (option d'achat), duration intermédiaire (3-5y)
+→ Bonds: mix balanced, pas de surpondération sectorielle
+OUTPUT: regime=neutral, confidence=3, pas de delta >±2%, cash 3-5%, duration 3-5y
 
 IMPORTANT: Ces exemples illustrent le RAISONNEMENT, pas les données actuelles.
 Analyse les VRAIES données fournies ci-dessous sans te référer aux exemples.
-Le régime dépend des données, pas du template."""
+Le régime dépend des données, pas du template.
+CHAQUE régime implique une stratégie obligataire DIFFÉRENTE (duration, crédit, TIPS)."""
 
 
 # =============================================================================
@@ -729,19 +770,83 @@ def get_ai_market_adjustments(
         
         return adjustments
     
-    # === FALLBACK: use hardcoded rules ===
-    logger.warning("[MI] ⚠️ AI analysis failed — falling back to hardcoded rules")
+    # === FALLBACK: basic regime detection + hardcoded rules ===
+    logger.warning("[MI] ⚠️ AI analysis failed — falling back to rule-based regime detection")
+    
+    # v2.2: Basic regime detection from macro data (no AI needed)
+    _fb_regime = _detect_regime_fallback(market_data)
+    logger.info(f"[MI] Fallback regime detected: {_fb_regime}")
     
     if fallback_rules:
         from allocation_rules_engine import evaluate_market_rules
         adjustments = evaluate_market_rules(fallback_rules, market_data)
-        adjustments["ai_regime"] = "fallback"
-        adjustments["ai_warnings"] = ["AI analysis unavailable — using hardcoded rules"]
-        
-        _save_audit(market_data, None, adjustments)
-        return adjustments
+    else:
+        adjustments = {"thematic_cap_deltas": {}, "hedge_deltas": {}, "bond_preferences": []}
     
-    return {"thematic_cap_deltas": {}, "hedge_deltas": {}, "bond_preferences": [], "active_rules": ["fallback_empty"]}
+    adjustments["ai_regime"] = _fb_regime
+    adjustments["ai_regime_confidence"] = 2  # Low confidence for fallback
+    adjustments["ai_warnings"] = [f"AI unavailable — fallback regime: {_fb_regime}"]
+    adjustments["active_rules"] = [f"fallback_{_fb_regime}"]
+    
+    # Apply basic regime-dependent adjustments
+    if _fb_regime == "crisis":
+        adjustments["bond_preferences"] = ["prefer_treasury_only", "shorten_duration"]
+        adjustments.setdefault("_cash_tactical", {})["Agressif"] = 10
+        adjustments.setdefault("_cash_tactical", {})["Modéré"] = 12
+        adjustments.setdefault("_cash_tactical", {})["Stable"] = 15
+    elif _fb_regime == "stagflation":
+        adjustments["bond_preferences"] = ["prefer_tips", "shorten_duration"]
+        adjustments.setdefault("_cash_tactical", {})["Agressif"] = 5
+        adjustments.setdefault("_cash_tactical", {})["Modéré"] = 7
+    elif _fb_regime == "recession":
+        adjustments["bond_preferences"] = ["extend_duration", "prefer_treasury"]
+        adjustments.setdefault("_cash_tactical", {})["Agressif"] = 5
+    elif _fb_regime in ("goldilocks", "risk_on"):
+        adjustments["bond_preferences"] = []
+    
+    _save_audit(market_data, None, adjustments)
+    return adjustments
+
+
+def _detect_regime_fallback(md: Dict) -> str:
+    """
+    v2.2: Rule-based regime detection when Claude Opus is unavailable.
+    Uses simple thresholds on VIX, spreads, oil, CPI, Fed rate.
+    
+    Returns: regime string (crisis|stagflation|recession|risk_off|neutral|risk_on|goldilocks)
+    """
+    vix = md.get("vix", 18)
+    hy_spread = md.get("hy_spread_bps", 300)
+    ig_spread = md.get("ig_spread_bps", 100)
+    brent = md.get("brent_usd", md.get("brent_usd_avg5d", 75))
+    cpi = md.get("cpi_yoy_pct", 2.0)
+    fed_delta = md.get("fed_funds_rate_delta_6m", 0)
+    
+    # Crisis: VIX > 35 AND (HY > 500 OR IG > 200)
+    if vix > 35 and (hy_spread > 500 or ig_spread > 200):
+        return "crisis"
+    
+    # Stagflation: oil > $90 AND CPI > 2.5% AND Fed not cutting aggressively
+    if brent > 90 and cpi > 2.5 and fed_delta >= -0.5:
+        return "stagflation"
+    
+    # Recession: CPI < 1.5% AND Fed cutting aggressively (> -75bps)
+    if cpi < 1.5 and fed_delta < -0.75:
+        return "recession"
+    
+    # Risk-off: VIX > 25 OR HY > 400
+    if vix > 25 or hy_spread > 400:
+        return "risk_off"
+    
+    # Goldilocks: VIX < 15 AND CPI < 2.5% AND Fed ACTIVELY cutting (delta < -0.25)
+    if vix < 15 and cpi < 2.5 and fed_delta < -0.25:
+        return "goldilocks"
+    
+    # Risk-on: VIX < 18 AND spreads tight (less strict than goldilocks)
+    if vix < 18 and hy_spread < 300:
+        return "risk_on"
+    
+    return "neutral"
 
 
 # =============================================================================
