@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-03-27-12-24-28",
-    "git_sha": "c42614639",
-    "git_sha_full": "c426146392f22da7517395a60821028bda3a375e",
+    "run_id": "2026-03-27-13-49-31",
+    "git_sha": "e2e388fed",
+    "git_sha_full": "e2e388fed9783986cd2c0296c1ec4b636a1120a9",
     "config_hash": "6c942836",
     "universe_asof": "2026-03-27",
-    "timestamp_utc": "2026-03-27T12:24:28.272263+00:00",
+    "timestamp_utc": "2026-03-27T13:49:31.339604+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 207.77
+    "total_duration_sec": 245.28
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,12 +22,12 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3174,
-      "after": 3174,
+      "before": 3176,
+      "after": 3176,
       "rejected": 0,
       "equity": 1000,
       "etf": 1406,
-      "crypto": 335,
+      "crypto": 337,
       "bond": 433
     },
     "hard_filters_equity": {
@@ -151,23 +151,23 @@
       "top_k": [
         {
           "ticker": "BTC/USD",
-          "score": 83.08
+          "score": 82.73
         },
         {
           "ticker": "XLM/USD",
-          "score": 82.09
+          "score": 81.99
         },
         {
           "ticker": "TRX/USD",
           "score": 100.0
         },
         {
-          "ticker": "QNT/USD",
-          "score": 91.38
+          "ticker": "NFT/USD",
+          "score": 91.86
         },
         {
           "ticker": "PORTO/USD",
-          "score": 85.56
+          "score": 86.65
         }
       ]
     },
@@ -331,11 +331,11 @@
       "top_k": [
         {
           "ticker": "BNB/USD",
-          "score": 88.16
+          "score": 86.6
         },
         {
-          "ticker": "BTC/USD",
-          "score": 82.72
+          "ticker": "BCH/USD",
+          "score": 83.29
         },
         {
           "ticker": "TRX/USD",
@@ -343,7 +343,7 @@
         },
         {
           "ticker": "NFT/USD",
-          "score": 93.48
+          "score": 95.41
         }
       ]
     },
@@ -3100,138 +3100,108 @@
       "criteria": {
         "vol_max": 200
       },
-      "total": 335,
-      "passed": 332,
+      "total": 337,
+      "passed": 333,
       "top_20": [
-        {
-          "ticker": "TAO/USD",
-          "name": "Bittensor",
-          "vol": 99.9,
-          "perf_1d": -0.6,
-          "perf_7d": 24.3,
-          "perf_30d": 90.4,
-          "perf_ytd": 45.6,
-          "sharpe": 8.12
-        },
         {
           "ticker": "STG/USD",
           "name": "Stargate Finance",
-          "vol": 119.9,
-          "perf_1d": 19.8,
-          "perf_7d": 47.3,
-          "perf_30d": 88.4,
-          "perf_ytd": 142.5,
-          "sharpe": 7.78
+          "vol": 121.9,
+          "perf_1d": 20.9,
+          "perf_7d": 48.6,
+          "perf_30d": 90.1,
+          "perf_ytd": 144.6,
+          "sharpe": 7.76
+        },
+        {
+          "ticker": "TAO/USD",
+          "name": "Bittensor",
+          "vol": 102.6,
+          "perf_1d": -5.0,
+          "perf_7d": 18.9,
+          "perf_30d": 82.1,
+          "perf_ytd": 39.3,
+          "sharpe": 7.4
+        },
+        {
+          "ticker": "GRIN/USD",
+          "name": "Grin",
+          "vol": 51.3,
+          "perf_1d": 3.0,
+          "perf_7d": 2.9,
+          "perf_30d": 30.8,
+          "perf_ytd": 31.3,
+          "sharpe": 6.76
         },
         {
           "ticker": "LEOu/USD",
           "name": "UNUS SED LEO",
           "vol": 16.5,
-          "perf_1d": 0.3,
-          "perf_7d": 3.7,
-          "perf_30d": 8.3,
-          "perf_ytd": -0.4,
-          "sharpe": 6.32
-        },
-        {
-          "ticker": "GRIN/USD",
-          "name": "Grin",
-          "vol": 50.9,
-          "perf_1d": -0.2,
-          "perf_7d": -0.3,
-          "perf_30d": 26.8,
-          "perf_ytd": 27.3,
-          "sharpe": 6.06
+          "perf_1d": 0.1,
+          "perf_7d": 3.6,
+          "perf_30d": 8.2,
+          "perf_ytd": -0.5,
+          "sharpe": 6.23
         },
         {
           "ticker": "AKT/USD",
           "name": "Akash Network",
-          "vol": 112.7,
-          "perf_1d": 1.2,
-          "perf_7d": -5.9,
-          "perf_30d": 68.8,
-          "perf_ytd": 39.6,
-          "sharpe": 5.8
+          "vol": 115.2,
+          "perf_1d": -5.0,
+          "perf_7d": -11.7,
+          "perf_30d": 58.4,
+          "perf_ytd": 30.9,
+          "sharpe": 5.01
         },
         {
           "ticker": "TRX/USD",
           "name": "TRON",
-          "vol": 25.1,
-          "perf_1d": 1.6,
-          "perf_7d": 2.2,
-          "perf_30d": 11.9,
-          "perf_ytd": 10.2,
-          "sharpe": 5.07
+          "vol": 24.7,
+          "perf_1d": 0.3,
+          "perf_7d": 0.9,
+          "perf_30d": 10.5,
+          "perf_ytd": 8.8,
+          "sharpe": 4.51
         },
         {
           "ticker": "ZRO/USD",
           "name": "LayerZero",
-          "vol": 94.0,
-          "perf_1d": -0.6,
-          "perf_7d": 4.7,
-          "perf_30d": 31.7,
-          "perf_ytd": 66.4,
-          "sharpe": 4.83
-        },
-        {
-          "ticker": "FET/USD",
-          "name": "Fetch",
-          "vol": 122.1,
-          "perf_1d": -1.9,
-          "perf_7d": 5.0,
-          "perf_30d": 52.0,
-          "perf_ytd": 11.3,
-          "sharpe": 4.03
+          "vol": 95.9,
+          "perf_1d": -4.5,
+          "perf_7d": 0.5,
+          "perf_30d": 26.5,
+          "perf_ytd": 59.8,
+          "sharpe": 4.23
         },
         {
           "ticker": "LUMIA/USD",
           "name": "Lumia",
-          "vol": 51.0,
-          "perf_1d": -1.9,
-          "perf_7d": 3.8,
-          "perf_30d": 17.3,
-          "perf_ytd": -43.5,
-          "sharpe": 3.51
+          "vol": 50.5,
+          "perf_1d": -1.0,
+          "perf_7d": 4.8,
+          "perf_30d": 18.4,
+          "perf_ytd": -43.0,
+          "sharpe": 3.77
         },
         {
-          "ticker": "SFP/USD",
-          "name": "SafePal",
-          "vol": 43.2,
-          "perf_1d": -0.8,
-          "perf_7d": 2.8,
-          "perf_30d": 11.9,
-          "perf_ytd": -10.2,
-          "sharpe": 3.42
+          "ticker": "FET/USD",
+          "name": "Fetch",
+          "vol": 123.7,
+          "perf_1d": -5.2,
+          "perf_7d": 1.6,
+          "perf_30d": 47.0,
+          "perf_ytd": 7.6,
+          "sharpe": 3.66
         },
         {
           "ticker": "QSP/USD",
           "name": "Quantstamp",
-          "vol": 150.8,
-          "perf_1d": 4.2,
-          "perf_7d": 2.3,
-          "perf_30d": 7.2,
-          "perf_ytd": 100.1,
-          "sharpe": 3.25
-        },
-        {
-          "ticker": "KNC/USD",
-          "name": "Kyber Network Crystal v2",
-          "vol": 139.3,
-          "perf_1d": 34.9,
-          "perf_7d": 39.0,
-          "perf_30d": 35.9,
-          "perf_ytd": -21.0,
-          "sharpe": 3.18
-        },
-        {
-          "ticker": "RENDER/USD",
-          "name": "Render Token",
-          "vol": 79.6,
-          "perf_1d": 0.9,
-          "perf_7d": 4.1,
-          "perf_30d": 25.9,
-          "perf_ytd": 28.9,
-          "sharpe": 3.11
+          "vol": 150.6,
+          "perf_1d": 2.8,
+          "perf_7d": 0.9,
+          "perf_30d": 5.7,
+          "perf_ytd": 97.3,
+          "sharpe": 3.14
         },
         {
           "ticker": "AUDIO/EUR",
@@ -3244,64 +3214,94 @@
           "sharpe": 3.0
         },
         {
+          "ticker": "KNC/USD",
+          "name": "Kyber Network Crystal v2",
+          "vol": 105.3,
+          "perf_1d": 23.1,
+          "perf_7d": 26.9,
+          "perf_30d": 24.0,
+          "perf_ytd": -27.9,
+          "sharpe": 2.85
+        },
+        {
+          "ticker": "SFP/USD",
+          "name": "SafePal",
+          "vol": 45.6,
+          "perf_1d": -4.0,
+          "perf_7d": -0.5,
+          "perf_30d": 8.4,
+          "perf_ytd": -13.1,
+          "sharpe": 2.41
+        },
+        {
           "ticker": "DUSK/USD",
           "name": "Dusk Network",
-          "vol": 128.3,
-          "perf_1d": -3.8,
-          "perf_7d": 36.1,
-          "perf_30d": 35.6,
-          "perf_ytd": 128.7,
-          "sharpe": 2.91
+          "vol": 131.6,
+          "perf_1d": -8.6,
+          "perf_7d": 29.3,
+          "perf_30d": 28.8,
+          "perf_ytd": 117.2,
+          "sharpe": 2.39
         },
         {
-          "ticker": "QNT/USD",
-          "name": "Quant",
-          "vol": 59.2,
-          "perf_1d": -1.5,
-          "perf_7d": -8.0,
-          "perf_30d": 14.0,
-          "perf_ytd": -3.1,
-          "sharpe": 2.76
+          "ticker": "ANKR/USD",
+          "name": "Ankr",
+          "vol": 77.4,
+          "perf_1d": 7.0,
+          "perf_7d": -3.5,
+          "perf_30d": 18.4,
+          "perf_ytd": -23.0,
+          "sharpe": 2.24
         },
         {
-          "ticker": "DBC/USD",
-          "name": "DeepBrain Chain",
-          "vol": 161.3,
-          "perf_1d": -5.2,
-          "perf_7d": 5.1,
-          "perf_30d": 21.5,
-          "perf_ytd": 141.3,
-          "sharpe": 2.69
+          "ticker": "RENDER/USD",
+          "name": "Render Token",
+          "vol": 81.6,
+          "perf_1d": -4.4,
+          "perf_7d": -1.4,
+          "perf_30d": 19.3,
+          "perf_ytd": 22.1,
+          "sharpe": 2.24
         },
         {
           "ticker": "GST/USD",
           "name": "Green Satoshi Token (SOL)",
-          "vol": 109.6,
-          "perf_1d": 2.0,
-          "perf_7d": 3.0,
-          "perf_30d": 18.1,
-          "perf_ytd": 2.8,
-          "sharpe": 2.65
+          "vol": 109.9,
+          "perf_1d": -1.9,
+          "perf_7d": -1.0,
+          "perf_30d": 13.5,
+          "perf_ytd": -1.1,
+          "sharpe": 2.21
         },
         {
           "ticker": "CFX/USD",
           "name": "Conflux",
-          "vol": 74.1,
-          "perf_1d": 1.2,
-          "perf_7d": -8.1,
-          "perf_30d": 23.2,
-          "perf_ytd": -20.2,
-          "sharpe": 2.64
+          "vol": 74.4,
+          "perf_1d": -1.5,
+          "perf_7d": -10.5,
+          "perf_30d": 19.9,
+          "perf_ytd": -22.3,
+          "sharpe": 2.18
         },
         {
-          "ticker": "RSR/USD",
-          "name": "Reserve Rights",
-          "vol": 64.8,
-          "perf_1d": -2.1,
-          "perf_7d": 6.4,
-          "perf_30d": 17.0,
-          "perf_ytd": -34.6,
-          "sharpe": 2.63
+          "ticker": "DBC/USD",
+          "name": "DeepBrain Chain",
+          "vol": 165.7,
+          "perf_1d": -11.3,
+          "perf_7d": -1.7,
+          "perf_30d": 13.7,
+          "perf_ytd": 125.8,
+          "sharpe": 2.17
+        },
+        {
+          "ticker": "QNT/USD",
+          "name": "Quant",
+          "vol": 60.9,
+          "perf_1d": -4.1,
+          "perf_7d": -10.4,
+          "perf_30d": 11.0,
+          "perf_ytd": -5.6,
+          "sharpe": 2.16
         }
       ]
     },
@@ -3516,7 +3516,20 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 0.6,
+    "details": {
+      "1_initial.after": {
+        "current": 3176,
+        "previous": 3174,
+        "delta": 2,
+        "pct_change": 0.06
+      },
+      "1_initial.crypto": {
+        "current": 337,
+        "previous": 335,
+        "delta": 2,
+        "pct_change": 0.6
+      }
+    }
   }
 }
