@@ -63,10 +63,11 @@ TD_SYMBOLS = {
     "gold":   "XAU/USD",
     "silver": "XAG/USD",
     "sp500":  "SPY",
-    "eurusd": "EUR/USD",          # v2.2: EUR/USD for FX context
-    "nasdaq": "QQQ",              # v2.2: QQQ as Nasdaq proxy
-    "xlu":    "XLU",              # v2.2: Utilities sector perf
-    "xle":    "XLE",              # v2.2: Energy sector perf
+    "brent":  "BZ",                  # v2.3: Brent futures (real-time, replaces FRED J-2 lag)
+    "eurusd": "EUR/USD",             # v2.2: EUR/USD for FX context
+    "nasdaq": "QQQ",                 # v2.2: QQQ as Nasdaq proxy
+    "xlu":    "XLU",                 # v2.2: Utilities sector perf
+    "xle":    "XLE",                 # v2.2: Energy sector perf
 }
 
 
@@ -255,13 +256,32 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
     """
     macro = {}
     
-    # Brent (from FRED DCOILBRENTEU)
-    if "brent" in fred_data:
+    # Brent — v2.3: prefer Twelve Data (real-time) over FRED (J-2 lag)
+    # FRED DCOILBRENTEU has 1-2 day publication lag. TD BZ is near real-time.
+    if "brent" in td_data and td_data["brent"].get("price"):
+        _td_brent = td_data["brent"]["price"]
+        _fred_brent = fred_data.get("brent", {}).get("value")
+        macro["brent"] = {
+            "price": _td_brent,
+            "source": "twelve_data_BZ",
+            "date": td_data["brent"].get("datetime", "today"),
+            "avg_5d": _fred_brent or _td_brent,  # FRED for avg context
+            "_fred_price": _fred_brent,
+            "_fred_date": fred_data.get("brent", {}).get("date"),
+        }
+        if _fred_brent:
+            _lag = round(abs(_td_brent - _fred_brent), 2)
+            if _lag > 3:
+                logger.warning(f"[MACRO] Brent TD/FRED divergence: TD=${_td_brent} vs FRED=${_fred_brent} (lag ${_lag})")
+        logger.info(f"[MACRO] Brent: ${_td_brent} (Twelve Data real-time, FRED=${_fred_brent})")
+    elif "brent" in fred_data:
         macro["brent"] = {
             "price": fred_data["brent"]["value"],
+            "source": "fred_DCOILBRENTEU",
             "date": fred_data["brent"]["date"],
-            "avg_5d": fred_data["brent"]["value"],  # FRED gives daily, approx
+            "avg_5d": fred_data["brent"]["value"],
         }
+        logger.info(f"[MACRO] Brent: ${fred_data['brent']['value']} (FRED only, TD unavailable)")
     
     # Gold (from Twelve Data XAU/USD)
     if "gold" in td_data:
