@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-28T08:25:36.312393",
+  "timestamp": "2026-03-29T08:27:05.130368",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -9,9 +9,9 @@
     "etf_initial": 96,
     "etf_selected": 10,
     "etf_rejected_notable": 20,
-    "crypto_initial": 7,
+    "crypto_initial": 6,
     "crypto_selected": 2,
-    "crypto_rejected_notable": 5,
+    "crypto_rejected_notable": 4,
     "bonds_initial": 31,
     "bonds_selected": 7,
     "total_filters_applied": 4,
@@ -19,7 +19,7 @@
     "category_rankings_sizes": {
       "equity": 100,
       "etf": 96,
-      "crypto": 7,
+      "crypto": 6,
       "bond": 31
     },
     "preset_rankings_sizes": {
@@ -4423,76 +4423,64 @@
         "matched_preset": "crypto_preset_other",
         "profile_score": 100.0,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 24.7
+        "volatility": 24.9
       },
       {
         "rank": 2,
         "name": "NFT/USD",
         "ticker": "NFT/USD",
-        "sort_score": 95.25,
+        "sort_score": 95.16,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_other",
-        "profile_score": 95.25,
+        "profile_score": 95.16,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 30.0
       },
       {
         "rank": 3,
-        "name": "QNT/USD",
-        "ticker": "QNT/USD",
-        "sort_score": 91.91,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 91.91,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 60.9
-      },
-      {
-        "rank": 4,
         "name": "BCH/USD",
         "ticker": "BCH/USD",
-        "sort_score": 91.59,
+        "sort_score": 91.42,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_pow_legacy",
-        "profile_score": 91.59,
+        "profile_score": 91.42,
         "volatility": 40.4
       },
       {
-        "rank": 5,
+        "rank": 4,
         "name": "PORTO/USD",
         "ticker": "PORTO/USD",
-        "sort_score": 90.76,
+        "sort_score": 89.99,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_fan_token",
-        "profile_score": 90.76,
+        "profile_score": 89.99,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 50.8
+        "volatility": 50.9
       },
       {
-        "rank": 6,
+        "rank": 5,
         "name": "BNB/USD",
         "ticker": "BNB/USD",
-        "sort_score": 85.75,
+        "sort_score": 85.67,
         "sort_score_source": "_profile_score",
         "selected": false,
         "matched_preset": "crypto_preset_exchange",
-        "profile_score": 85.75,
+        "profile_score": 85.67,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 36.5
       },
       {
-        "rank": 7,
+        "rank": 6,
         "name": "BTC/USD",
         "ticker": "BTC/USD",
-        "sort_score": 82.17,
+        "sort_score": 81.49,
         "sort_score_source": "_profile_score",
         "selected": true,
         "matched_preset": "crypto_preset_blue_chip",
-        "profile_score": 82.17,
+        "profile_score": 81.49,
         "volatility": 50.9
       }
     ],
@@ -14638,24 +14626,24 @@
       "ticker": "BCH/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_pow_legacy",
-      "profile_score": 91.59,
+      "profile_score": 91.42,
       "volatility": 40.4,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 1,
-      "selection_reason": "Score profil élevé (91.59); Preset: crypto_preset_pow_legacy"
+      "selection_reason": "Score profil élevé (91.42); Preset: crypto_preset_pow_legacy"
     },
     {
       "name": "Unknown",
       "ticker": "BTC/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_blue_chip",
-      "profile_score": 82.17,
+      "profile_score": 81.49,
       "volatility": 50.9,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 2,
-      "selection_reason": "Score profil élevé (82.17); Preset: crypto_preset_blue_chip"
+      "selection_reason": "Score profil élevé (81.49); Preset: crypto_preset_blue_chip"
     }
   ],
   "crypto_rejected": [
@@ -14665,40 +14653,7 @@
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
       "profile_score": 100.0,
-      "volatility": 24.7,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "QNT/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 91.91,
-      "volatility": 60.9,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "PORTO/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_fan_token",
-      "profile_score": 90.76,
-      "volatility": 50.8,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "BNB/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_exchange",
-      "profile_score": 85.75,
-      "volatility": 36.5,
+      "volatility": 24.9,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -14708,8 +14663,30 @@
       "ticker": "NFT/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 95.25,
+      "profile_score": 95.16,
       "volatility": 30.0,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "PORTO/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_fan_token",
+      "profile_score": 89.99,
+      "volatility": 50.9,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "BNB/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_exchange",
+      "profile_score": 85.67,
+      "volatility": 36.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -14899,7 +14876,7 @@
   "radar_context": {
     "regime": "neutral",
     "confidence": 0.6,
-    "as_of": "2026-03-28",
+    "as_of": "2026-03-29",
     "favored_sectors": [
       "energy"
     ],
