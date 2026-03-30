@@ -1696,7 +1696,7 @@ async function enrichStock(stock) {
         freq,
         recentSplit,
         specialSharePct: specialShare,
-        profile: sectorProfile(stock.sector)
+        profile: scorer.detectProfile(stock.sector, stock.industry || profileData?.industry)
     });
 
     let dividend_yield_ttm = yield_ttm_calc;
