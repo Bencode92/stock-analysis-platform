@@ -1915,16 +1915,6 @@ async function enrichStock(stock) {
         console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
     }
     
-    // ✅ v4.0: Buffett Score v3.1 via stock-advance-filter.js (6 critères pass/fail)
-    const buffett = scorer.evaluateBuffettScore(stock);
-    const buffett_score = buffett.score;
-    const buffett_grade = buffett.grade;
-
-    if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null || stock.roic !== null)) {
-        const criteriaStr = buffett.criteria ? buffett.criteria.map(c => `${c.name}:${c.passed ? 'PASS' : 'FAIL'}`).join(' ') : 'N/A';
-        console.log(`[BUFFETT V3.1] ${stock.symbol}: ${buffett.passed}/${buffett.total} passed | ${criteriaStr} → ${buffett_score} ${buffett_grade}`);
-    }
-
     // ✅ v3.31: Sanity warnings — détection anomalies data quality AVANT return
     const sanity_warnings = [];
     {
@@ -1956,7 +1946,20 @@ async function enrichStock(stock) {
         console.warn(`[SANITY] ${stock.symbol}: ${sanity_warnings.join(' | ')}`);
     }
 
-    
+    // ✅ v4.0: Buffett Score v3.1 — calculé sur l'objet enrichi (pe_ratio + fcf_yield disponibles)
+    const buffett = scorer.evaluateBuffettScore({
+        ...stock,
+        pe_ratio: stats?.pe_ratio ?? null,
+        fcf_yield,
+    });
+    const buffett_score = buffett.score;
+    const buffett_grade = buffett.grade;
+
+    if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null || stock.roic !== null)) {
+        const criteriaStr = buffett.criteria ? buffett.criteria.map(c => `${c.name}:${c.passed ? 'PASS' : 'FAIL'}`).join(' ') : 'N/A';
+        console.log(`[BUFFETT V3.1] ${stock.symbol}: ${buffett.passed}/${buffett.total} passed | ${criteriaStr} → ${buffett_score} ${buffett_grade}`);
+    }
+
     return {
         ticker: stock.symbol,
         name: stock.name,
