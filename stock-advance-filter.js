@@ -1,18 +1,26 @@
 /**
  * stock-advance-filter.js
- * Module avancé de filtrage avec critères Buffett (P/E, EPS, ROE, D/E)
- * Version: 2.0.0
- * 
- * Ajouts v2.0:
- * - fetchStatistics() pour P/E, EPS, marges
- * - evaluateBuffettQuality() scoring qualité Buffett
- * - Intégration cache fondamentaux (ROE, D/E)
- * - _parseFloat() robuste pour API
- * 
- * Corrections v1.0:
- * - Cache amélioré avec clé précise (symbol + exchange + mic_code)
- * - Calcul TTM correct avec fenêtre de 12 mois
- * - Gestion des stock splits récents (< 18 mois)
+ * Module avancé de filtrage avec scoring Buffett v3.1 + Quality Score v2
+ * Version: 3.0.0
+ *
+ * v3.0 (mars 2026):
+ * - Buffett Score v3.1: 6 critères pass/fail (ROE consistent, ROIC moat, leverage, FCF yield, PE, moat expansion)
+ * - Quality Score v2: 5 dimensions (Quality, Safety, Value, Growth, Momentum) + global-adjusted peer scoring
+ * - 4 profils sectoriels: FIN, YIELD, TECH, DEFAULT
+ * - Payment network reclassification (V, MA, PYPL, AXP → DEFAULT)
+ * - FIN bias fixes: alpha 0.85, stability cap +3, coverage min 5, growth re-enabled, FCF penalty excluded
+ * - Momentum dimension: moat trajectory, capital allocation quality, margin resilience
+ * - computeQualityScores() batch method pour scoring peer-relatif
+ * - processStockBatch() pour traitement complet (Buffett + Quality)
+ * - evaluateBuffettQuality() conservé pour rétrocompatibilité (wrapper vers v3.1)
+ *
+ * v2.0 (conservé intégralement):
+ * - fetchStatistics() pour P/E, EPS, marges (tous les champs)
+ * - calculateTTM() avec gestion splits, adjustmentDetails, debug
+ * - selectDividendYield() avec debug complet
+ * - computePayoutRatio() avec logique REIT
+ * - exportToCSV()
+ * - Cache fondamentaux + statistics avec TTL
  */
 
 const axios = require('axios');
@@ -32,103 +40,112 @@ class StockAdvanceFilter {
       STATISTICS_CACHE_FILE: config.STATISTICS_CACHE_FILE || 'data/statistics_cache.json',
       CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000, // 7 jours
       RATE_LIMIT_MS: config.RATE_LIMIT_MS || 2500,
+      // v3.0: Quality Score config
+      QUALITY_ALPHA: config.QUALITY_ALPHA || 0.70,
+      QUALITY_MIN_PEER_SIZE: config.QUALITY_MIN_PEER_SIZE || 5,
       ...config
     };
-    
+
     this.successCache = new Map();
     this.splitAdjustmentCache = new Map();
     this.fundamentalsCache = null;
     this.statisticsCache = null;
     this.debugLogs = [];
-    
-    // ═══════════════════════════════════════════════════════════════════════
-    // SEUILS BUFFETT
-    // ═══════════════════════════════════════════════════════════════════════
+
+    // Legacy thresholds (kept for backward compatibility)
     this.BUFFETT_THRESHOLDS = {
-      // ROE (Return on Equity)
-      ROE_EXCELLENT: 20,    // > 20% = excellent
-      ROE_GOOD: 15,         // > 15% = bon
-      ROE_ACCEPTABLE: 10,   // > 10% = acceptable
-      
-      // D/E (Debt to Equity)
-      DE_LOW: 0.5,          // < 0.5 = faible endettement
-      DE_MODERATE: 1.0,     // < 1.0 = modéré
-      DE_HIGH: 2.0,         // < 2.0 = élevé
-      DE_DANGEROUS: 3.0,    // > 3.0 = dangereux
-      
-      // P/E (Price to Earnings)
-      PE_UNDERVALUED: 15,   // < 15 = sous-évalué
-      PE_FAIR: 25,          // < 25 = raisonnable
-      PE_OVERVALUED: 40,    // > 40 = surévalué
-      
-      // EPS (Earnings Per Share)
-      EPS_GROWTH_GOOD: 10,  // > 10% croissance = bon
-      EPS_GROWTH_EXCELLENT: 20, // > 20% = excellent
-      
-      // Marges
-      MARGIN_EXCELLENT: 20, // > 20% net margin = excellent
-      MARGIN_GOOD: 10,      // > 10% = bon
-      
-      // Score final
-      QUALITY_EXCELLENT: 80,
-      QUALITY_GOOD: 60,
-      QUALITY_ACCEPTABLE: 40
+      ROE_EXCELLENT: 20, ROE_GOOD: 15, ROE_ACCEPTABLE: 10,
+      DE_LOW: 0.5, DE_MODERATE: 1.0, DE_HIGH: 2.0, DE_DANGEROUS: 3.0,
+      PE_UNDERVALUED: 15, PE_FAIR: 25, PE_OVERVALUED: 40,
+      EPS_GROWTH_GOOD: 10, EPS_GROWTH_EXCELLENT: 20,
+      MARGIN_EXCELLENT: 20, MARGIN_GOOD: 10,
+      QUALITY_EXCELLENT: 80, QUALITY_GOOD: 60, QUALITY_ACCEPTABLE: 40
     };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
-  
-  /**
-   * Parse un float de manière robuste (gère %, null, undefined, objets)
-   */
+
   _parseFloat(value) {
-    if (value === null || value === undefined || value === '' || value === 'null') {
-      return null;
-    }
-    
-    // Si c'est un objet, essayer d'extraire une valeur
-    if (typeof value === 'object') {
-      value = value.value || value.raw || Object.values(value)[0];
-    }
-    
-    // Si c'est une string avec %, la convertir
-    if (typeof value === 'string') {
-      value = value.replace('%', '').trim();
-    }
-    
+    if (value === null || value === undefined || value === '' || value === 'null') return null;
+    if (typeof value === 'object') value = value.value || value.raw || Object.values(value)[0];
+    if (typeof value === 'string') value = value.replace('%', '').trim();
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
 
-  /**
-   * Convertit décimal en pourcentage si nécessaire (0.18 → 18)
-   */
   _toPercent(value) {
     const num = this._parseFloat(value);
     if (num === null) return null;
-    
-    // Si la valeur est entre -1 et 1, c'est probablement un décimal
-    if (num > -1 && num < 1) {
-      return num * 100;
-    }
-    return num;
+    return (num > -1 && num < 1) ? num * 100 : num;
+  }
+
+  // v3.0 helpers
+  _validNum(x) { return Number.isFinite(x); }
+  _clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  _safeAvg(xs) {
+    const v = (xs || []).filter(x => this._validNum(x));
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CACHE MANAGEMENT
+  // v3.0: SECTOR PROFILE DETECTION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Détecte le profil sectoriel pour pondération du scoring
+   * FIX6: Payment networks détectés AVANT le check FIN
+   * @returns {'FIN'|'YIELD'|'TECH'|'DEFAULT'}
+   */
+  detectProfile(sector, industry) {
+    const s = (sector || '').toLowerCase();
+    const i = (industry || '').toLowerCase();
+    // FIX6: Payment networks = tech platforms, pas banques
+    if (/payment|credit services|transaction process|financial data|financial exchange/i.test(i)) return 'DEFAULT';
+    if (/financ|bank|insurance/.test(s)) return 'FIN';
+    if (/utilit|reit|telecom|immobil|communication|electric/.test(s)) return 'YIELD';
+    // TECH: industry-based (précis) ou sector-based (fallback quand industry absente)
+    if (/software|semiconductor|internet|electronic|computer|digital/.test(i)) return 'TECH';
+    if (/technologie|technology|information tech/i.test(s)) {
+      // Si industry dispo et tech-specific → TECH
+      if (i && /software|semi|cloud|cyber|data|saas|platform/.test(i)) return 'TECH';
+      // Si pas d'industry → fallback TECH par secteur
+      if (!i) return 'TECH';
+    }
+    return 'DEFAULT';
+  }
+
+  /** Poids par profil: Q=Quality, S=Safety, V=Value, G=Growth, M=Momentum */
+  getProfileWeights(profile) {
+    switch (profile) {
+      case 'FIN':   return { q: 0.35, s: 0.25, v: 0.20, g: 0.10, m: 0.10 };
+      case 'YIELD': return { q: 0.25, s: 0.35, v: 0.30, g: 0.00, m: 0.10 };
+      case 'TECH':  return { q: 0.25, s: 0.10, v: 0.15, g: 0.30, m: 0.20 };
+      default:      return { q: 0.25, s: 0.25, v: 0.25, g: 0.10, m: 0.15 };
+    }
+  }
+
+  /** Alpha PGR par profil — FIX1: FIN = 0.85 */
+  getProfileAlpha(profile) {
+    const base = this.config.QUALITY_ALPHA;
+    switch (profile) {
+      case 'FIN':   return 0.85;
+      case 'YIELD': return Math.min(base + 0.15, 0.95);
+      default:      return base;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CACHE MANAGEMENT (v2.0 inchangé)
   // ═══════════════════════════════════════════════════════════════════════════
 
   async loadFundamentalsCache() {
     if (this.fundamentalsCache) return this.fundamentalsCache;
-    
     try {
       const txt = await fs.readFile(this.config.FUNDAMENTALS_CACHE_FILE, 'utf8');
       this.fundamentalsCache = JSON.parse(txt);
-      if (this.config.DEBUG) {
-        console.log(`📁 Cache fondamentaux chargé: ${Object.keys(this.fundamentalsCache.data || {}).length} stocks`);
-      }
+      if (this.config.DEBUG) console.log(`📁 Cache fondamentaux: ${Object.keys(this.fundamentalsCache.data || {}).length} stocks`);
       return this.fundamentalsCache;
     } catch {
       this.fundamentalsCache = { updated: null, data: {} };
@@ -138,13 +155,10 @@ class StockAdvanceFilter {
 
   async loadStatisticsCache() {
     if (this.statisticsCache) return this.statisticsCache;
-    
     try {
       const txt = await fs.readFile(this.config.STATISTICS_CACHE_FILE, 'utf8');
       this.statisticsCache = JSON.parse(txt);
-      if (this.config.DEBUG) {
-        console.log(`📁 Cache statistics chargé: ${Object.keys(this.statisticsCache.data || {}).length} stocks`);
-      }
+      if (this.config.DEBUG) console.log(`📁 Cache statistics: ${Object.keys(this.statisticsCache.data || {}).length} stocks`);
       return this.statisticsCache;
     } catch {
       this.statisticsCache = { updated: null, data: {} };
@@ -154,37 +168,24 @@ class StockAdvanceFilter {
 
   async saveStatisticsCache() {
     if (!this.statisticsCache) return;
-    
     this.statisticsCache.updated = new Date().toISOString();
     const dir = path.dirname(this.config.STATISTICS_CACHE_FILE);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(
-      this.config.STATISTICS_CACHE_FILE, 
-      JSON.stringify(this.statisticsCache, null, 2), 
-      'utf8'
-    );
+    await fs.writeFile(this.config.STATISTICS_CACHE_FILE, JSON.stringify(this.statisticsCache, null, 2), 'utf8');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // API FETCH
+  // API FETCH (v2.0 inchangé)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Fetch TwelveData avec gestion de cache améliorée
-   */
   async fetchTD(endpoint, trials, extraParams = {}) {
-    const makeKey = (t) => 
-      `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}`;
-
+    const makeKey = (t) => `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}`;
     const CACHE_REORDER_UNSAFE = ['dividends', 'time_series', 'splits'];
     const skipCacheReorder = CACHE_REORDER_UNSAFE.includes(endpoint);
 
     let cachedParams = this.successCache.get(makeKey(trials[0]));
     if (cachedParams && !skipCacheReorder) {
-      trials = [
-        cachedParams, 
-        ...trials.filter(t => makeKey(t) !== makeKey(cachedParams))
-      ];
+      trials = [cachedParams, ...trials.filter(t => makeKey(t) !== makeKey(cachedParams))];
     }
 
     for (const params of trials) {
@@ -193,67 +194,46 @@ class StockAdvanceFilter {
           params: { ...params, ...extraParams, apikey: this.config.API_KEY },
           timeout: 15000
         });
-        
         if (data && data.status !== 'error' && !data.code) {
           this.successCache.set(makeKey(params), params);
-          
-          if (this.config.DEBUG) {
-            console.log(`✅ [TD ${endpoint}] Success with:`, params.symbol);
-          }
-          
+          if (this.config.DEBUG) console.log(`✅ [TD ${endpoint}]`, params.symbol);
           return data;
         }
-        
-        if (this.config.DEBUG) {
-          console.warn(`⚠️ [TD FAIL ${endpoint}]`, params.symbol, data?.message || data?.code);
-        }
+        if (this.config.DEBUG) console.warn(`⚠️ [TD FAIL ${endpoint}]`, params.symbol, data?.message || data?.code);
       } catch (error) {
         if (this.config.DEBUG && error.response?.status !== 404) {
           console.warn(`❌ [TD ERROR ${endpoint}]`, params.symbol, error.message);
         }
       }
     }
-    
     return null;
   }
 
   /**
-   * Récupère les statistiques d'un stock (P/E, EPS, marges, etc.)
-   * Endpoint: /statistics (100 credits)
+   * Récupère les statistiques d'un stock (v2.0 — tous les champs conservés)
    */
   async fetchStatistics(symbol, options = {}) {
     await this.loadStatisticsCache();
-    
     const now = Date.now();
     const cached = this.statisticsCache.data[symbol];
-    
-    // Vérifier le cache
     if (cached && cached.fetched_at) {
       const cachedTime = new Date(cached.fetched_at).getTime();
       if (now - cachedTime < this.config.CACHE_TTL_MS) {
-        if (this.config.DEBUG) {
-          console.log(`📦 [CACHE HIT] ${symbol} statistics`);
-        }
+        if (this.config.DEBUG) console.log(`📦 [CACHE HIT] ${symbol} statistics`);
         return cached;
       }
     }
-    
-    // Fetch depuis l'API
+
     const data = await this.fetchTD('statistics', [
       { symbol, exchange: options.exchange },
       { symbol }
     ]);
-    
     if (!data || !data.statistics) {
-      if (this.config.DEBUG) {
-        console.warn(`⚠️ Pas de statistics pour ${symbol}`);
-      }
+      if (this.config.DEBUG) console.warn(`⚠️ Pas de statistics pour ${symbol}`);
       return null;
     }
-    
+
     const stats = data.statistics;
-    
-    // Parser les données avec conversion décimal → pourcentage
     const result = {
       symbol,
       // Valuation
@@ -263,551 +243,577 @@ class StockAdvanceFilter {
       price_to_book: this._parseFloat(stats.valuations_metrics?.price_to_book),
       price_to_sales: this._parseFloat(stats.valuations_metrics?.price_to_sales),
       enterprise_to_ebitda: this._parseFloat(stats.valuations_metrics?.enterprise_to_ebitda),
-      
       // EPS
       eps_ttm: this._parseFloat(stats.financials?.eps_ttm),
       eps_diluted_ttm: this._parseFloat(stats.financials?.eps_diluted_ttm),
-      
-      // Croissance (déjà en %)
+      // Croissance
       revenue_growth_yoy: this._toPercent(stats.financials?.revenue_growth_yoy),
       earnings_growth_yoy: this._toPercent(stats.financials?.earnings_growth_yoy),
       eps_growth_yoy: this._toPercent(stats.financials?.eps_growth_yoy),
-      
-      // Marges (convertir décimal → %)
+      // Marges
       gross_margin: this._toPercent(stats.financials?.gross_margin),
       operating_margin: this._toPercent(stats.financials?.operating_margin),
       profit_margin: this._toPercent(stats.financials?.profit_margin),
       net_margin: this._toPercent(stats.financials?.net_margin),
-      
-      // Rentabilité (convertir décimal → %)
+      // Rentabilité
       return_on_equity: this._toPercent(stats.financials?.return_on_equity_ttm),
       return_on_assets: this._toPercent(stats.financials?.return_on_assets_ttm),
-      
       // Endettement
       debt_to_equity: this._parseFloat(stats.financials?.debt_to_equity),
       current_ratio: this._parseFloat(stats.financials?.current_ratio),
       quick_ratio: this._parseFloat(stats.financials?.quick_ratio),
-      
       // Dividendes
       dividend_yield: this._toPercent(stats.dividends_and_splits?.dividend_yield),
       payout_ratio: this._toPercent(stats.dividends_and_splits?.payout_ratio),
-      
       // Autres
       beta: this._parseFloat(stats.stock_statistics?.beta),
       market_cap: this._parseFloat(stats.stock_statistics?.market_cap),
       shares_outstanding: this._parseFloat(stats.stock_statistics?.shares_outstanding),
-      
       fetched_at: new Date().toISOString(),
       source: 'twelve_data_statistics'
     };
-    
-    // Sauvegarder dans le cache
+
     this.statisticsCache.data[symbol] = result;
-    
     if (this.config.DEBUG) {
       console.log(`📊 [STATS] ${symbol}: P/E=${result.pe_ratio}, EPS=${result.eps_ttm}, ROE=${result.return_on_equity}%`);
     }
-    
     return result;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // BUFFETT QUALITY EVALUATION
+  // v3.0: BUFFETT SCORE v3.1 — Absolute Moat Gate (6 critères)
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Évalue la qualité Buffett d'un stock
-   * Retourne un score 0-100 avec détails par critère
-   * 
-   * @param {Object} stockData - Données du stock (incluant fondamentaux et statistics)
-   * @returns {Object} Score et détails
+   * 6 critères pass/fail indépendants du secteur
+   * Mesure: "Ce business a-t-il un moat absolu?"
+   * @param {Object} stock - Données enrichies
+   * @returns {{ score, grade, criteria[], passed, total, dataAvailable }}
+   */
+  evaluateBuffettScore(stock) {
+    const criteria = [];
+    let dataAvailable = 0;
+
+    // 1. ROE consistant: avg 3Y >= 15% ET CV < 30%
+    const roeAvg = this._parseFloat(stock.roe_avg_3y) ?? this._parseFloat(stock.roe);
+    const roeStd = this._parseFloat(stock.roe_std_3y);
+    if (this._validNum(roeAvg)) {
+      dataAvailable++;
+      const cv = this._validNum(roeStd) && Math.abs(roeAvg) > 0 ? roeStd / Math.abs(roeAvg) : 0;
+      criteria.push({ name: 'roe_consistent', passed: roeAvg >= 15 && cv < 0.30, value: roeAvg, detail: `${roeAvg.toFixed(1)}% cv=${(cv * 100).toFixed(0)}%` });
+    }
+
+    // 2. ROIC moat: avg 3Y >= 10%
+    const roicAvg = this._parseFloat(stock.roic_avg_3y) ?? this._parseFloat(stock.roic);
+    if (this._validNum(roicAvg)) {
+      dataAvailable++;
+      criteria.push({ name: 'roic_moat', passed: roicAvg >= 10, value: roicAvg, detail: `${roicAvg.toFixed(1)}%` });
+    }
+
+    // 3. Levier raisonnable: 0 <= D/E <= 1.5
+    const de = this._parseFloat(stock.de_ratio);
+    if (this._validNum(de)) {
+      dataAvailable++;
+      criteria.push({ name: 'leverage_safe', passed: de >= 0 && de <= 1.5, value: de, detail: `D/E=${de.toFixed(2)}` });
+    }
+
+    // 4. Génération de cash: FCF yield > 3%
+    const fcfy = this._parseFloat(stock.fcf_yield);
+    if (this._validNum(fcfy)) {
+      dataAvailable++;
+      criteria.push({ name: 'cash_generation', passed: fcfy > 3, value: fcfy, detail: `FCFy=${fcfy.toFixed(1)}%` });
+    }
+
+    // 5. Valorisation: 0 < PE <= 25
+    const pe = this._parseFloat(stock.pe_ratio);
+    if (this._validNum(pe)) {
+      dataAvailable++;
+      criteria.push({ name: 'valuation_ok', passed: pe > 0 && pe <= 25, value: pe, detail: `PE=${pe.toFixed(1)}` });
+    }
+
+    // 6. Moat en expansion: ROE ou ROIC année N > avg 3Y × 1.10
+    const roeN = this._parseFloat(stock.roe);
+    const roicN = this._parseFloat(stock.roic);
+    const roeA3 = this._parseFloat(stock.roe_avg_3y);
+    const roicA3 = this._parseFloat(stock.roic_avg_3y);
+    if (this._validNum(roeN) && this._validNum(roeA3) && roeA3 > 0) {
+      dataAvailable++;
+      const roeExp = roeN / roeA3 > 1.10;
+      const roicExp = this._validNum(roicN) && this._validNum(roicA3) && roicA3 > 0 ? roicN / roicA3 > 1.10 : false;
+      criteria.push({ name: 'moat_expansion', passed: roeExp || roicExp, value: roeN / roeA3, detail: `trend=${((roeN / roeA3 - 1) * 100).toFixed(0)}%` });
+    }
+
+    if (dataAvailable < 2) return { score: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
+    const passed = criteria.filter(c => c.passed).length;
+    let score = Math.round((passed / criteria.length) * 100);
+    if (dataAvailable < 3) score = Math.min(score, 60);
+    const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';
+    return { score, grade, criteria, passed, total: criteria.length, dataAvailable };
+  }
+
+  /**
+   * @deprecated Utiliser evaluateBuffettScore() — conservé pour rétrocompatibilité
    */
   evaluateBuffettQuality(stockData) {
-    const T = this.BUFFETT_THRESHOLDS;
-    const scores = {};
-    const flags = [];
-    const details = {};
-    
-    let totalPoints = 0;
-    let maxPoints = 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // 1. ROE (Return on Equity) - 25 points max
-    // ─────────────────────────────────────────────────────────────────────────
-    const roe = this._parseFloat(stockData.roe) ?? 
-                this._parseFloat(stockData.return_on_equity);
-    
-    maxPoints += 25;
-    if (roe !== null) {
-      if (roe >= T.ROE_EXCELLENT) {
-        scores.roe = 25;
-        flags.push('ROE_EXCELLENT');
-      } else if (roe >= T.ROE_GOOD) {
-        scores.roe = 20;
-        flags.push('ROE_GOOD');
-      } else if (roe >= T.ROE_ACCEPTABLE) {
-        scores.roe = 12;
-        flags.push('ROE_ACCEPTABLE');
-      } else if (roe > 0) {
-        scores.roe = 5;
-        flags.push('ROE_LOW');
-      } else {
-        scores.roe = 0;
-        flags.push('ROE_NEGATIVE');
-      }
-      details.roe = { value: roe, score: scores.roe, max: 25 };
-    } else {
-      scores.roe = 0;
-      details.roe = { value: null, score: 0, max: 25, missing: true };
-    }
-    totalPoints += scores.roe || 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // 2. D/E (Debt to Equity) - 20 points max
-    // ─────────────────────────────────────────────────────────────────────────
-    const de = this._parseFloat(stockData.de_ratio) ?? 
-               this._parseFloat(stockData.debt_to_equity);
-    
-    maxPoints += 20;
-    if (de !== null) {
-      if (de < 0) {
-        // Dette négative = equity négatif, problématique
-        scores.de = 0;
-        flags.push('EQUITY_NEGATIVE');
-      } else if (de <= T.DE_LOW) {
-        scores.de = 20;
-        flags.push('DEBT_LOW');
-      } else if (de <= T.DE_MODERATE) {
-        scores.de = 15;
-        flags.push('DEBT_MODERATE');
-      } else if (de <= T.DE_HIGH) {
-        scores.de = 8;
-        flags.push('DEBT_HIGH');
-      } else if (de <= T.DE_DANGEROUS) {
-        scores.de = 3;
-        flags.push('DEBT_VERY_HIGH');
-      } else {
-        scores.de = 0;
-        flags.push('DEBT_DANGEROUS');
-      }
-      details.de = { value: de, score: scores.de, max: 20 };
-    } else {
-      scores.de = 0;
-      details.de = { value: null, score: 0, max: 20, missing: true };
-    }
-    totalPoints += scores.de || 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // 3. P/E (Price to Earnings) - 20 points max
-    // ─────────────────────────────────────────────────────────────────────────
-    const pe = this._parseFloat(stockData.pe_ratio) ?? 
-               this._parseFloat(stockData.pe);
-    
-    maxPoints += 20;
-    if (pe !== null) {
-      if (pe < 0) {
-        // P/E négatif = pertes
-        scores.pe = 0;
-        flags.push('PE_NEGATIVE');
-      } else if (pe > 0 && pe <= T.PE_UNDERVALUED) {
-        scores.pe = 20;
-        flags.push('PE_UNDERVALUED');
-      } else if (pe <= T.PE_FAIR) {
-        scores.pe = 15;
-        flags.push('PE_FAIR');
-      } else if (pe <= T.PE_OVERVALUED) {
-        scores.pe = 8;
-        flags.push('PE_HIGH');
-      } else {
-        scores.pe = 2;
-        flags.push('PE_VERY_HIGH');
-      }
-      details.pe = { value: pe, score: scores.pe, max: 20 };
-    } else {
-      scores.pe = 0;
-      details.pe = { value: null, score: 0, max: 20, missing: true };
-    }
-    totalPoints += scores.pe || 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // 4. EPS (Earnings Per Share) - 15 points max
-    // ─────────────────────────────────────────────────────────────────────────
-    const eps = this._parseFloat(stockData.eps_ttm) ?? 
-                this._parseFloat(stockData.eps);
-    const epsGrowth = this._parseFloat(stockData.eps_growth_yoy);
-    
-    maxPoints += 15;
-    if (eps !== null) {
-      if (eps > 0) {
-        // EPS positif = profitable
-        if (epsGrowth !== null && epsGrowth >= T.EPS_GROWTH_EXCELLENT) {
-          scores.eps = 15;
-          flags.push('EPS_GROWTH_EXCELLENT');
-        } else if (epsGrowth !== null && epsGrowth >= T.EPS_GROWTH_GOOD) {
-          scores.eps = 12;
-          flags.push('EPS_GROWTH_GOOD');
-        } else if (epsGrowth !== null && epsGrowth > 0) {
-          scores.eps = 10;
-          flags.push('EPS_GROWING');
-        } else {
-          scores.eps = 7;
-          flags.push('EPS_POSITIVE');
-        }
-      } else {
-        scores.eps = 0;
-        flags.push('EPS_NEGATIVE');
-      }
-      details.eps = { 
-        value: eps, 
-        growth: epsGrowth, 
-        score: scores.eps, 
-        max: 15 
-      };
-    } else {
-      scores.eps = 0;
-      details.eps = { value: null, score: 0, max: 15, missing: true };
-    }
-    totalPoints += scores.eps || 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // 5. Marges (Profit Margin) - 10 points max
-    // ─────────────────────────────────────────────────────────────────────────
-    const margin = this._parseFloat(stockData.profit_margin) ?? 
-                   this._parseFloat(stockData.net_margin);
-    
-    maxPoints += 10;
-    if (margin !== null) {
-      if (margin >= T.MARGIN_EXCELLENT) {
-        scores.margin = 10;
-        flags.push('MARGIN_EXCELLENT');
-      } else if (margin >= T.MARGIN_GOOD) {
-        scores.margin = 7;
-        flags.push('MARGIN_GOOD');
-      } else if (margin > 0) {
-        scores.margin = 4;
-        flags.push('MARGIN_POSITIVE');
-      } else {
-        scores.margin = 0;
-        flags.push('MARGIN_NEGATIVE');
-      }
-      details.margin = { value: margin, score: scores.margin, max: 10 };
-    } else {
-      scores.margin = 0;
-      details.margin = { value: null, score: 0, max: 10, missing: true };
-    }
-    totalPoints += scores.margin || 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // 6. Current Ratio (Liquidité) - 10 points max
-    // ─────────────────────────────────────────────────────────────────────────
-    const currentRatio = this._parseFloat(stockData.current_ratio);
-    
-    maxPoints += 10;
-    if (currentRatio !== null) {
-      if (currentRatio >= 2.0) {
-        scores.liquidity = 10;
-        flags.push('LIQUIDITY_STRONG');
-      } else if (currentRatio >= 1.5) {
-        scores.liquidity = 8;
-        flags.push('LIQUIDITY_GOOD');
-      } else if (currentRatio >= 1.0) {
-        scores.liquidity = 5;
-        flags.push('LIQUIDITY_OK');
-      } else {
-        scores.liquidity = 2;
-        flags.push('LIQUIDITY_WEAK');
-      }
-      details.liquidity = { value: currentRatio, score: scores.liquidity, max: 10 };
-    } else {
-      scores.liquidity = 0;
-      details.liquidity = { value: null, score: 0, max: 10, missing: true };
-    }
-    totalPoints += scores.liquidity || 0;
-    
-    // ─────────────────────────────────────────────────────────────────────────
-    // CALCUL SCORE FINAL
-    // ─────────────────────────────────────────────────────────────────────────
-    
-    // Normaliser sur 100
-    const rawScore = totalPoints;
-    const normalizedScore = Math.round((totalPoints / maxPoints) * 100);
-    
-    // Déterminer le grade
-    let grade, gradeLabel;
-    if (normalizedScore >= T.QUALITY_EXCELLENT) {
-      grade = 'A';
-      gradeLabel = 'Excellent';
-    } else if (normalizedScore >= T.QUALITY_GOOD) {
-      grade = 'B';
-      gradeLabel = 'Bon';
-    } else if (normalizedScore >= T.QUALITY_ACCEPTABLE) {
-      grade = 'C';
-      gradeLabel = 'Acceptable';
-    } else {
-      grade = 'D';
-      gradeLabel = 'Faible';
-    }
-    
-    // Compter les données manquantes
-    const missingCount = Object.values(details).filter(d => d.missing).length;
-    const dataCompleteness = Math.round(((6 - missingCount) / 6) * 100);
-    
+    const result = this.evaluateBuffettScore(stockData);
     return {
-      symbol: stockData.symbol || stockData.Ticker,
-      score: normalizedScore,
-      rawScore: rawScore,
-      maxScore: maxPoints,
-      grade: grade,
-      gradeLabel: gradeLabel,
-      flags: flags,
-      scores: scores,
-      details: details,
-      dataCompleteness: dataCompleteness,
-      missingMetrics: missingCount,
-      
-      // Résumé rapide
+      symbol: stockData.symbol || stockData.ticker || stockData.Ticker,
+      score: result.score, rawScore: result.score, maxScore: 100,
+      grade: result.grade,
+      gradeLabel: result.grade === 'A' ? 'Excellent' : result.grade === 'B' ? 'Bon' : result.grade === 'C' ? 'Acceptable' : 'Faible',
+      flags: result.criteria.map(c => `${c.name}:${c.passed ? 'PASS' : 'FAIL'}`),
+      scores: {}, details: Object.fromEntries(result.criteria.map(c => [c.name, { value: c.value, passed: c.passed }])),
+      dataCompleteness: Math.round((result.dataAvailable / 6) * 100),
+      missingMetrics: 6 - result.dataAvailable,
+      criteria: result.criteria,
       summary: {
-        roe: roe !== null ? `${roe.toFixed(1)}%` : 'N/A',
-        de: de !== null ? de.toFixed(2) : 'N/A',
-        pe: pe !== null ? pe.toFixed(1) : 'N/A',
-        eps: eps !== null ? eps.toFixed(2) : 'N/A',
-        margin: margin !== null ? `${margin.toFixed(1)}%` : 'N/A'
+        roe: (() => { const v = this._parseFloat(stockData.roe_avg_3y ?? stockData.roe); return v != null ? v.toFixed(1) + '%' : 'N/A'; })(),
+        de: (() => { const v = this._parseFloat(stockData.de_ratio); return v != null ? v.toFixed(2) : 'N/A'; })(),
+        pe: (() => { const v = this._parseFloat(stockData.pe_ratio); return v != null ? v.toFixed(1) : 'N/A'; })(),
+        fcf_yield: (() => { const v = this._parseFloat(stockData.fcf_yield); return v != null ? v.toFixed(1) + '%' : 'N/A'; })(),
       }
     };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // DIVIDEND CALCULATION (existing code, kept intact)
+  // v3.0: QUALITY SCORE v2 — Global-Adjusted Peer Scoring (5 dimensions)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── Statistical helpers ──
+
+  _percentileRank(sorted, x) {
+    if (!sorted || sorted.length <= 1) return 50;
+    let lo = 0, hi = sorted.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] < x) lo = m + 1; else hi = m; }
+    const left = lo;
+    lo = 0; hi = sorted.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (sorted[m] <= x) lo = m + 1; else hi = m; }
+    return ((left + lo) / 2 / Math.max(sorted.length - 1, 1)) * 100;
+  }
+
+  _winsorize(sorted) {
+    if (!sorted || sorted.length < 5) return sorted || [];
+    const l = Math.floor((sorted.length - 1) * 0.05);
+    const h = Math.ceil((sorted.length - 1) * 0.95);
+    return sorted.map(v => this._clamp(v, sorted[l], sorted[h]));
+  }
+
+  _buildDist(stocks, field, filter) {
+    const fn = filter || (x => this._validNum(x));
+    const v = stocks.map(s => s[field]).filter(fn).sort((a, b) => a - b);
+    return v.length >= 5 ? this._winsorize(v) : v;
+  }
+
+  _scoreMetric(value, sorted, direction) {
+    if (!sorted || sorted.length < 5) return null;
+    if (!this._validNum(value)) return Math.min(this._percentileRank(sorted, sorted[Math.floor(sorted.length / 2)]), 40);
+    const clamped = this._clamp(value, sorted[0], sorted[sorted.length - 1]);
+    let p = this._percentileRank(sorted, clamped);
+    const k = Math.min(1, (sorted.length - 1) / 20);
+    p = 50 + (p - 50) * k;
+    return direction === 'low' ? 100 - p : p;
+  }
+
+  _scorePayoutSafety(value) {
+    if (!this._validNum(value)) return 35;
+    if (value <= 60) return 100;
+    if (value <= 90) return 100 - (value - 60) * 40 / 30;
+    if (value <= 120) return 60 - (value - 90) * 40 / 30;
+    return Math.max(0, 20 - (value - 120));
+  }
+
+  // ── Momentum signals ──
+
+  _calcMomentum(stock) {
+    const trajParts = [];
+    if (this._validNum(stock.roe) && this._validNum(stock.roe_avg_3y) && stock.roe_avg_3y !== 0)
+      trajParts.push(stock.roe / stock.roe_avg_3y);
+    if (this._validNum(stock.roic) && this._validNum(stock.roic_avg_3y) && stock.roic_avg_3y !== 0)
+      trajParts.push(stock.roic / stock.roic_avg_3y);
+    if (this._validNum(stock.net_margin) && this._validNum(stock.revenue_growth_3y))
+      trajParts.push(stock.revenue_growth_3y > 5 && stock.net_margin > 10 ? 1.1 : stock.revenue_growth_3y < -5 ? 0.9 : 1.0);
+    const moatTraj = trajParts.length >= 1 ? trajParts.reduce((a, b) => a + b, 0) / trajParts.length : null;
+
+    let capAlloc = null;
+    if (this._validNum(stock.revenue_growth_3y) && this._validNum(stock.fcf_yield)) {
+      const pay = this._validNum(stock.payout_ratio_scoring || stock.payout_ratio_ttm) ? (stock.payout_ratio_scoring || stock.payout_ratio_ttm) : 50;
+      capAlloc = this._clamp((stock.revenue_growth_3y * Math.max(0, 100 - pay) / 100 + stock.fcf_yield * 2) / 10, -2, 3);
+    }
+
+    let marginRes = null;
+    if (this._validNum(stock.net_margin) && this._validNum(stock.roe_std_3y) && this._validNum(stock.roe_avg_3y) && stock.roe_avg_3y > 0) {
+      const cv = stock.roe_std_3y / Math.abs(stock.roe_avg_3y);
+      marginRes = this._clamp(cv > 0.01 ? stock.net_margin / (cv * 100) : stock.net_margin, 0, 50);
+    }
+
+    return { moatTraj, capAlloc, marginRes };
+  }
+
+  // ── Main batch computation ──
+
+  /**
+   * Calcule le Quality Score v2 pour un batch de stocks
+   * DOIT être appelé sur l'univers complet (besoin des peer groups + distributions globales)
+   * Injecte les champs quality_* directement dans chaque objet stock
+   *
+   * @param {Object[]} allStocks - Tous les stocks enrichis
+   * @returns {Object[]} Mêmes stocks avec quality_* injectés
+   */
+  computeQualityScores(allStocks) {
+    const valid = allStocks.filter(s => !s.error && s.price);
+    if (!valid.length) return allStocks;
+
+    const minPeer = this.config.QUALITY_MIN_PEER_SIZE;
+    const GM = ['roe', 'roic', 'de_ratio', 'pe_ratio', 'fcf_yield', 'eps_growth_5y',
+      'roe_avg_3y', 'roic_avg_3y', 'net_margin', 'revenue_growth_3y'];
+
+    if (this.config.DEBUG) {
+      console.log(`\n${'═'.repeat(60)}`);
+      console.log(`🎯 QUALITY SCORING v3.42b — ${valid.length} stocks`);
+      console.log(`${'═'.repeat(60)}`);
+    }
+
+    // 1. Build peer groups
+    const bySR = new Map(), bySG = new Map();
+    for (const s of valid) {
+      const r = s.region || 'GLOBAL', sec = s.sector || 'Unknown';
+      const k1 = `${r}|${sec}`;
+      if (!bySR.has(k1)) bySR.set(k1, []);
+      bySR.get(k1).push(s);
+      const k2 = `ALL|${sec}`;
+      if (!bySG.has(k2)) bySG.set(k2, []);
+      bySG.get(k2).push(s);
+    }
+
+    // 2. Global distributions
+    const gd = {};
+    for (const m of GM) {
+      const f = m === 'de_ratio' ? (x => this._validNum(x) && x >= 0)
+        : m === 'pe_ratio' ? (x => this._validNum(x) && x > 0)
+        : (x => this._validNum(x));
+      gd[m] = this._buildDist(valid, m, f);
+    }
+
+    // 3. Momentum distributions
+    const momDists = { moatTraj: [], capAlloc: [], marginRes: [] };
+    const momMap = new Map();
+    for (const s of valid) {
+      const mom = this._calcMomentum(s);
+      momMap.set(`${s.ticker || s.symbol}|${s.region}`, mom);
+      if (this._validNum(mom.moatTraj)) momDists.moatTraj.push(mom.moatTraj);
+      if (this._validNum(mom.capAlloc)) momDists.capAlloc.push(mom.capAlloc);
+      if (this._validNum(mom.marginRes)) momDists.marginRes.push(mom.marginRes);
+    }
+    for (const k of Object.keys(momDists)) momDists[k].sort((a, b) => a - b);
+
+    // FIN dividend distribution
+    const finStocks = valid.filter(s => this.detectProfile(s.sector, s.industry) === 'FIN');
+    const finDivDist = this._buildDist(finStocks, 'dividend_yield', x => this._validNum(x) && x > 0);
+
+    // 4. PASS 1: Score each stock
+    const scoringMeta = new Map();
+    let scored = 0;
+
+    for (const s of valid) {
+      const r = s.region || 'GLOBAL', sec = s.sector || 'Unknown';
+      const prof = this.detectProfile(sec, s.industry);
+
+      // Find peers (cascade)
+      let peers, peerKey, peerLevel;
+      const k1 = `${r}|${sec}`;
+      if (bySR.has(k1) && bySR.get(k1).length >= minPeer) {
+        peers = bySR.get(k1); peerKey = k1; peerLevel = 'sector_region';
+      } else {
+        const k2 = `ALL|${sec}`;
+        if (bySG.has(k2) && bySG.get(k2).length >= minPeer) {
+          peers = bySG.get(k2); peerKey = k2; peerLevel = 'sector_global';
+        } else {
+          peers = valid; peerKey = 'GLOBAL|ALL'; peerLevel = 'global_all';
+        }
+      }
+
+      const di = {
+        roe: this._buildDist(peers, 'roe'), roic: this._buildDist(peers, 'roic'),
+        de: this._buildDist(peers, 'de_ratio', x => this._validNum(x) && x >= 0),
+        pe: this._buildDist(peers, 'pe_ratio', x => this._validNum(x) && x > 0),
+        fcf: this._buildDist(peers, 'fcf_yield'), gr: this._buildDist(peers, 'eps_growth_5y'),
+        ra: this._buildDist(peers, 'roe_avg_3y'), rc: this._buildDist(peers, 'roic_avg_3y'),
+        mg: this._buildDist(peers, 'net_margin'), rg: this._buildDist(peers, 'revenue_growth_3y'),
+      };
+
+      const mROE = this._scoreMetric(s.roe, di.roe, 'high');
+      const mROIC = prof === 'FIN' ? null : this._scoreMetric(s.roic, di.roic, 'high');
+      const mDE = prof === 'FIN' ? null : (this._validNum(s.de_ratio) && s.de_ratio < 0) ? 15 : this._scoreMetric(s.de_ratio, di.de, 'low');
+      const mPE = this._scoreMetric(this._validNum(s.pe_ratio) && s.pe_ratio > 0 ? s.pe_ratio : null, di.pe, 'low');
+      const mFCF = this._scoreMetric(s.fcf_yield, di.fcf, 'high');
+      const mG = this._scoreMetric(this._validNum(s.eps_growth_5y) ? this._clamp(s.eps_growth_5y, -80, 80) : null, di.gr, 'high');
+      const mRA = this._scoreMetric(s.roe_avg_3y, di.ra, 'high');
+      const mRC = prof === 'FIN' ? null : this._scoreMetric(s.roic_avg_3y, di.rc, 'high');
+      const mMg = this._scoreMetric(s.net_margin, di.mg, 'high');
+      const mRG = this._scoreMetric(s.revenue_growth_3y, di.rg, 'high');
+
+      // Quality (ROIC 0.6, ROE 0.4)
+      const qR = mRA != null ? mRA : mROE, qC = mRC != null ? mRC : mROIC;
+      let quality;
+      if (prof === 'FIN') quality = this._safeAvg([qR, mMg]);
+      else if (qR != null && qC != null) { const bl = qR * 0.4 + qC * 0.6; quality = mMg != null ? bl * 0.7 + mMg * 0.3 : bl; }
+      else quality = this._safeAvg([qR, qC, mMg]);
+
+      // Safety (FIN includes dividend_yield)
+      let safety;
+      if (prof === 'FIN') {
+        const divSc = this._scoreMetric(this._validNum(s.dividend_yield) && s.dividend_yield > 0 ? s.dividend_yield : null, finDivDist, 'high');
+        safety = this._safeAvg([this._scorePayoutSafety(s.payout_ratio_scoring || s.payout_ratio_ttm), divSc]);
+      } else {
+        safety = this._safeAvg([mDE, this._scorePayoutSafety(s.payout_ratio_scoring || s.payout_ratio_ttm)]);
+      }
+
+      const value = this._safeAvg([mPE, mFCF]);
+      const growth = this._safeAvg([mG, mRG]);
+
+      // Momentum
+      const tk = s.ticker || s.symbol;
+      const mom = momMap.get(`${tk}|${s.region}`) || {};
+      const momTrajPctl = this._validNum(mom.moatTraj) && momDists.moatTraj.length >= 5 ? this._percentileRank(momDists.moatTraj, mom.moatTraj) : null;
+      const momCapPctl = this._validNum(mom.capAlloc) && momDists.capAlloc.length >= 5 ? this._percentileRank(momDists.capAlloc, mom.capAlloc) : null;
+      const momResPctl = this._validNum(mom.marginRes) && momDists.marginRes.length >= 5 ? this._percentileRank(momDists.marginRes, mom.marginRes) : null;
+      const momentum = this._safeAvg([momTrajPctl, momCapPctl, momResPctl]);
+
+      // Weighted composite
+      const w = this.getProfileWeights(prof);
+      const parts = [];
+      if (quality != null) parts.push(['q', quality]);
+      if (safety != null) parts.push(['s', safety]);
+      if (value != null) parts.push(['v', value]);
+      if (growth != null && w.g > 0) parts.push(['g', growth]);
+      if (momentum != null && w.m > 0) parts.push(['m', momentum]);
+      let totalW = 0;
+      for (const [k] of parts) totalW += w[k] || 0;
+      let raw = null;
+      if (parts.length > 0 && totalW > 0) raw = parts.reduce((acc, [k, v]) => acc + v * (w[k] || 0), 0) / totalW;
+
+      // Penalties — NO CAP, FIX5: FCF excluded for FIN
+      let penalty = 0;
+      const penalties = [];
+      if (prof !== 'FIN' && this._validNum(s.roic) && s.roic <= 0) { penalty += 15; penalties.push('roic_negative'); }
+      if (prof !== 'FIN' && this._validNum(s.fcf_yield) && s.fcf_yield < 0) { penalty += 10; penalties.push('fcf_negative'); }
+      if (this._validNum(s.pe_ratio) && s.pe_ratio <= 0) { penalty += 5; penalties.push('pe_negative'); }
+      if (prof !== 'FIN' && this._validNum(s.de_ratio) && s.de_ratio < 0) { penalty += 8; penalties.push('equity_negative'); }
+      if (raw != null) raw = Math.max(0, raw - penalty);
+
+      // FIX2: Stability bonus capped +3 for FIN
+      let stabilityBonus = 0;
+      if (this._validNum(s.roe_std_3y) && this._validNum(s.roe_avg_3y) && s.roe_avg_3y > 0) {
+        const cv = s.roe_std_3y / Math.abs(s.roe_avg_3y);
+        if (prof === 'FIN') { if (cv < 0.15) stabilityBonus = 3; else if (cv < 0.30) stabilityBonus = 1; else if (cv > 0.80) stabilityBonus = -3; }
+        else { if (cv < 0.15) stabilityBonus = 8; else if (cv < 0.30) stabilityBonus = 4; else if (cv > 0.80) stabilityBonus = -5; }
+      }
+      if (raw != null) raw = this._clamp(raw + stabilityBonus, 0, 100);
+
+      // FIX3: Coverage minimum for FIN
+      if (prof === 'FIN') {
+        let realCount = 0;
+        if (this._validNum(s.roe) || this._validNum(s.roe_avg_3y)) realCount++;
+        if (this._validNum(s.net_margin)) realCount++;
+        if (this._validNum(s.pe_ratio)) realCount++;
+        if (this._validNum(s.fcf_yield)) realCount++;
+        if (this._validNum(s.payout_ratio_scoring || s.payout_ratio_ttm)) realCount++;
+        if (this._validNum(s.dividend_yield)) realCount++;
+        if (this._validNum(s.eps_growth_5y)) realCount++;
+        if (this._validNum(s.revenue_growth_3y)) realCount++;
+        if (realCount < 5 && raw != null) { raw = Math.min(raw, 60); penalties.push(`coverage_low(${realCount})`); }
+        else if (realCount < 6 && raw != null) { raw = Math.min(raw, 75); }
+      }
+
+      // Peer medians for PASS 2
+      const peerMedians = {};
+      for (const m of GM) {
+        const vals = peers.map(p => p[m]).filter(x => this._validNum(x));
+        if (vals.length >= 3) { vals.sort((a, b) => a - b); peerMedians[m] = vals[Math.floor(vals.length / 2)]; }
+      }
+
+      scoringMeta.set(`${tk}|${s.region}`, { raw, peerKey, peerLevel, peerSize: peers.length, peerMedians, prof, subscores: { quality, safety, value, growth, momentum }, penalties, stabilityBonus });
+      scored++;
+    }
+
+    // 5. PASS 2: Global adjustment
+    const peerGlobalRankCache = new Map();
+    const computePGR = (peerMedians) => {
+      const ranks = [];
+      for (const m of GM) {
+        if (peerMedians[m] != null && gd[m] && gd[m].length >= 5) {
+          let p = this._percentileRank(gd[m], peerMedians[m]);
+          if (m === 'de_ratio' || m === 'pe_ratio') p = 100 - p;
+          ranks.push(p);
+        }
+      }
+      return ranks.length >= 2 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : 50;
+    };
+
+    for (const s of valid) {
+      const tk = s.ticker || s.symbol;
+      const meta = scoringMeta.get(`${tk}|${s.region}`);
+      if (!meta) continue;
+
+      let pgr;
+      if (peerGlobalRankCache.has(meta.peerKey)) pgr = peerGlobalRankCache.get(meta.peerKey);
+      else { pgr = computePGR(meta.peerMedians); peerGlobalRankCache.set(meta.peerKey, pgr); }
+
+      const profAlpha = this.getProfileAlpha(meta.prof);
+      let adj = meta.raw;
+      if (adj != null) { adj = profAlpha * adj + (1 - profAlpha) * adj * (pgr / 50); adj = this._clamp(adj, 0, 100); }
+      const adjRounded = adj != null ? Math.round(adj) : null;
+      const grade = adjRounded == null ? null : adjRounded >= 75 ? 'A' : adjRounded >= 55 ? 'B' : adjRounded >= 35 ? 'C' : 'D';
+
+      // Inject
+      s.quality_score = adjRounded;
+      s.quality_grade = grade;
+      s.quality_raw_score = meta.raw != null ? Math.round(meta.raw) : null;
+      s.quality_subscores = {
+        quality: meta.subscores.quality != null ? Math.round(meta.subscores.quality) : null,
+        safety: meta.subscores.safety != null ? Math.round(meta.subscores.safety) : null,
+        value: meta.subscores.value != null ? Math.round(meta.subscores.value) : null,
+        growth: meta.subscores.growth != null ? Math.round(meta.subscores.growth) : null,
+        momentum: meta.subscores.momentum != null ? Math.round(meta.subscores.momentum) : null,
+      };
+      s.quality_peer = meta.peerKey;
+      s.quality_peer_size = meta.peerSize;
+      s.quality_peer_level = meta.peerLevel;
+      s.quality_peer_global_rank = Math.round(pgr);
+      s.quality_profile = meta.prof;
+      s.quality_penalties = meta.penalties;
+      s.quality_global_alpha = profAlpha;
+    }
+
+    if (this.config.DEBUG) {
+      const withScore = valid.filter(s => s.quality_score != null);
+      const grades = { A: 0, B: 0, C: 0, D: 0 };
+      withScore.forEach(s => { if (grades[s.quality_grade] !== undefined) grades[s.quality_grade]++; });
+      console.log(`📊 Scored: ${scored} | A:${grades.A} B:${grades.B} C:${grades.C} D:${grades.D}`);
+      console.log(`🌐 Peer groups: ${peerGlobalRankCache.size}`);
+      console.log('═'.repeat(60));
+    }
+
+    return allStocks;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DIVIDEND CALCULATION (v2.0 inchangé — TTM, splits, yield selection)
   // ═══════════════════════════════════════════════════════════════════════════
 
   calculateTTM(dividends, currentPrice, splitInfo = null, symbol = '') {
     const now = new Date();
     const twelveMonthsAgo = new Date(now);
     twelveMonthsAgo.setMonth(now.getMonth() - this.config.TTM_WINDOW_MONTHS);
-    
+
     const ttmDividends = dividends.filter(d => {
       const exDate = new Date(d.ex_date || d.payment_date);
       return exDate >= twelveMonthsAgo && exDate <= now;
     });
 
     if (this.config.DEBUG) {
-      const windowDebug = ttmDividends
-        .map(d => `${d.ex_date}:${d.amount}`)
-        .join(', ');
-      console.log(`📊 [TTM WINDOW ${symbol}]`, windowDebug, 
+      const windowDebug = ttmDividends.map(d => `${d.ex_date}:${d.amount}`).join(', ');
+      console.log(`📊 [TTM WINDOW ${symbol}]`, windowDebug,
         `| Count: ${ttmDividends.length}`,
         `| Window: ${twelveMonthsAgo.toISOString().split('T')[0]} to ${now.toISOString().split('T')[0]}`);
     }
 
     const recentSplit = this.detectRecentSplit(splitInfo);
-    
-    let ttmSum = 0;
-    let adjustedSum = 0;
-    let adjustmentDetails = [];
-    
+    let ttmSum = 0, adjustedSum = 0;
+    const adjustmentDetails = [];
+
     ttmDividends.forEach(dividend => {
       const amount = parseFloat(dividend.amount) || 0;
       const divDate = new Date(dividend.ex_date || dividend.payment_date);
-      
       let adjustedAmount = amount;
       if (recentSplit && divDate < recentSplit.date) {
         adjustedAmount = amount / recentSplit.ratio;
-        
-        adjustmentDetails.push({
-          date: dividend.ex_date,
-          original: amount,
-          adjusted: adjustedAmount,
-          reason: `Split ${recentSplit.description}`
-        });
-        
-        if (this.config.DEBUG) {
-          console.log(`🔄 Split adjustment: ${amount} → ${adjustedAmount.toFixed(4)}`);
-        }
+        adjustmentDetails.push({ date: dividend.ex_date, original: amount, adjusted: adjustedAmount, reason: `Split ${recentSplit.description}` });
+        if (this.config.DEBUG) console.log(`🔄 Split adjustment: ${amount} → ${adjustedAmount.toFixed(4)}`);
       }
-      
       ttmSum += amount;
       adjustedSum += adjustedAmount;
     });
 
     const yieldTTM = currentPrice > 0 ? (adjustedSum / currentPrice) * 100 : null;
-    
+
     if (this.config.DEBUG) {
-      console.log(`💰 [TTM CALC ${symbol}]`,
-        `Sum: ${ttmSum.toFixed(3)}`,
-        `Adjusted: ${adjustedSum.toFixed(3)}`,
-        `Price: ${currentPrice}`,
-        `Yield: ${yieldTTM?.toFixed(2)}%`);
+      console.log(`💰 [TTM CALC ${symbol}]`, `Sum: ${ttmSum.toFixed(3)}`, `Adjusted: ${adjustedSum.toFixed(3)}`, `Price: ${currentPrice}`, `Yield: ${yieldTTM?.toFixed(2)}%`);
     }
-    
+
     return {
-      ttmSum: ttmSum,
-      adjustedSum: adjustedSum,
-      dividendCount: ttmDividends.length,
-      yield: yieldTTM,
-      hasRecentSplit: !!recentSplit,
-      splitInfo: recentSplit,
-      source: 'calculated',
+      ttmSum, adjustedSum, dividendCount: ttmDividends.length, yield: yieldTTM,
+      hasRecentSplit: !!recentSplit, splitInfo: recentSplit, source: 'calculated',
       adjustments: adjustmentDetails,
-      debug: {
-        windowStart: twelveMonthsAgo.toISOString(),
-        windowEnd: now.toISOString(),
-        dividends: ttmDividends,
-        splitAdjusted: recentSplit !== null
-      }
+      debug: { windowStart: twelveMonthsAgo.toISOString(), windowEnd: now.toISOString(), dividends: ttmDividends, splitAdjusted: recentSplit !== null }
     };
   }
 
   detectRecentSplit(splitData) {
-    if (!splitData || !Array.isArray(splitData) || splitData.length === 0) {
-      return null;
-    }
-    
+    if (!splitData || !Array.isArray(splitData) || splitData.length === 0) return null;
     const monthsAgo = new Date();
     monthsAgo.setMonth(monthsAgo.getMonth() - this.config.SPLIT_DETECTION_MONTHS);
-    
-    const recentSplits = splitData.filter(split => {
-      const splitDate = new Date(split.split_date);
-      return splitDate >= monthsAgo;
-    });
-    
+    const recentSplits = splitData.filter(split => new Date(split.split_date) >= monthsAgo);
     if (recentSplits.length > 0) {
       const mostRecent = recentSplits[0];
       const toFactor = parseFloat(mostRecent.to_factor) || parseFloat(mostRecent.split_to) || 2;
       const fromFactor = parseFloat(mostRecent.from_factor) || parseFloat(mostRecent.split_from) || 1;
       const ratio = toFactor / fromFactor;
-      
-      if (this.config.DEBUG) {
-        console.log(`🔀 Recent split detected: ${fromFactor}:${toFactor} on ${mostRecent.split_date}`);
-      }
-      
-      return {
-        date: new Date(mostRecent.split_date),
-        ratio: ratio,
-        description: `${fromFactor}:${toFactor}`,
-        raw: mostRecent
-      };
+      if (this.config.DEBUG) console.log(`🔀 Recent split detected: ${fromFactor}:${toFactor} on ${mostRecent.split_date}`);
+      return { date: new Date(mostRecent.split_date), ratio, description: `${fromFactor}:${toFactor}`, raw: mostRecent };
     }
-    
     return null;
   }
 
   selectDividendYield(ttmCalc, apiData, forwardYield, symbol = '') {
-    let selectedYield = null;
-    let source = null;
-    let confidence = 'low';
-    let usedTtmSource = 'calc';
-    
-    const ttmValid = ttmCalc && 
-                     ttmCalc.dividendCount >= this.config.MIN_DIVIDENDS_FOR_TTM && 
-                     ttmCalc.yield > 0 && 
-                     ttmCalc.yield < this.config.MAX_REASONABLE_YIELD;
-    
+    let selectedYield = null, source = null, confidence = 'low', usedTtmSource = 'calc';
+    const ttmValid = ttmCalc && ttmCalc.dividendCount >= this.config.MIN_DIVIDENDS_FOR_TTM && ttmCalc.yield > 0 && ttmCalc.yield < this.config.MAX_REASONABLE_YIELD;
     const apiTrailing = apiData?.trailing ? parseFloat(apiData.trailing) : null;
     const apiForward = apiData?.forward ? parseFloat(apiData.forward) : null;
-    
+
     if (ttmCalc?.hasRecentSplit && ttmValid) {
-      selectedYield = ttmCalc.yield;
-      source = 'TTM (calc, split-adj)';
-      confidence = 'high';
-      usedTtmSource = 'calc_split_adj';
+      selectedYield = ttmCalc.yield; source = 'TTM (calc, split-adj)'; confidence = 'high'; usedTtmSource = 'calc_split_adj';
     } else if (ttmValid) {
-      selectedYield = ttmCalc.yield;
-      source = 'TTM (calculated)';
-      confidence = 'high';
-      usedTtmSource = 'calc';
+      selectedYield = ttmCalc.yield; source = 'TTM (calculated)'; confidence = 'high';
     } else if (apiTrailing && apiTrailing > 0 && apiTrailing < this.config.MAX_REASONABLE_YIELD) {
-      selectedYield = apiTrailing;
-      source = 'TTM (API)';
-      confidence = 'medium';
-      usedTtmSource = 'api';
-      
-      if (this.config.DEBUG) {
-        console.log(`⚠️ [${symbol}] TTM calc invalid (${ttmCalc?.dividendCount || 0} divs), using API: ${selectedYield.toFixed(2)}%`);
-      }
+      selectedYield = apiTrailing; source = 'TTM (API)'; confidence = 'medium'; usedTtmSource = 'api';
+      if (this.config.DEBUG) console.log(`⚠️ [${symbol}] TTM calc invalid (${ttmCalc?.dividendCount || 0} divs), using API: ${selectedYield.toFixed(2)}%`);
     } else if (apiForward && apiForward > 0) {
-      selectedYield = apiForward;
-      source = 'FWD (API)';
-      confidence = 'low';
+      selectedYield = apiForward; source = 'FWD (API)'; confidence = 'low';
     } else if (forwardYield && forwardYield > 0) {
-      selectedYield = parseFloat(forwardYield);
-      source = 'Forward (estimated)';
-      confidence = 'low';
+      selectedYield = parseFloat(forwardYield); source = 'Forward (estimated)'; confidence = 'low';
     }
-    
+
     if (ttmCalc?.hasRecentSplit && !ttmValid && apiTrailing) {
       source = 'TTM (API, post-split)';
-      if (this.config.DEBUG) {
-        console.log(`🔀 [${symbol}] Recent split but insufficient data, using API`);
-      }
+      if (this.config.DEBUG) console.log(`🔀 [${symbol}] Recent split but insufficient data, using API`);
     }
-    
+
     return {
-      value: selectedYield,
-      source: source,
-      confidence: confidence,
-      usedTtmSource: usedTtmSource,
-      debug: {
-        ttmValid: ttmValid,
-        ttmCount: ttmCalc?.dividendCount || 0,
-        ttmYield: ttmCalc?.yield,
-        apiTrailing: apiTrailing,
-        apiForward: apiForward,
-        hasRecentSplit: ttmCalc?.hasRecentSplit || false
-      }
+      value: selectedYield, source, confidence, usedTtmSource,
+      debug: { ttmValid, ttmCount: ttmCalc?.dividendCount || 0, ttmYield: ttmCalc?.yield, apiTrailing, apiForward, hasRecentSplit: ttmCalc?.hasRecentSplit || false }
     };
   }
 
   computePayoutRatio(dividendYield, eps, earningsYield, sector = '') {
-    if (!dividendYield || dividendYield <= 0) {
-      return { value: null, str: '-', class: '', confidence: 'none' };
-    }
-    
-    let payoutRatio = null;
-    let method = '';
-    
-    if (eps && eps > 0) {
-      payoutRatio = (dividendYield / earningsYield) * 100;
-      method = 'EPS';
-    } 
-    else if (earningsYield && earningsYield > 0) {
-      payoutRatio = (dividendYield / earningsYield) * 100;
-      method = 'Earnings Yield';
-    }
-    
-    if (!payoutRatio || payoutRatio < 0) {
-      return { value: null, str: '-', class: '', confidence: 'none' };
-    }
-    
-    const isREIT = sector?.toLowerCase().includes('reit') || 
-                   sector?.toLowerCase().includes('immobili') ||
-                   sector?.toLowerCase() === 'real estate';
-    
+    if (!dividendYield || dividendYield <= 0) return { value: null, str: '-', class: '', confidence: 'none' };
+    let payoutRatio = null, method = '';
+    if (eps && eps > 0) { payoutRatio = (dividendYield / earningsYield) * 100; method = 'EPS'; }
+    else if (earningsYield && earningsYield > 0) { payoutRatio = (dividendYield / earningsYield) * 100; method = 'Earnings Yield'; }
+    if (!payoutRatio || payoutRatio < 0) return { value: null, str: '-', class: '', confidence: 'none' };
+
+    const isREIT = sector?.toLowerCase().includes('reit') || sector?.toLowerCase().includes('immobili') || sector?.toLowerCase() === 'real estate';
     const maxRatio = isREIT ? 400 : 200;
     payoutRatio = Math.min(payoutRatio, maxRatio);
-    
-    let colorClass = '';
+
+    let colorClass;
     if (isREIT) {
-      colorClass = payoutRatio < 70 ? 'payout-ok-strong' :
-                   payoutRatio < 90 ? 'payout-ok' :
-                   payoutRatio < 110 ? 'payout-warn' :
-                   payoutRatio < 130 ? 'payout-high' :
-                   'payout-risk';
+      colorClass = payoutRatio < 70 ? 'payout-ok-strong' : payoutRatio < 90 ? 'payout-ok' : payoutRatio < 110 ? 'payout-warn' : payoutRatio < 130 ? 'payout-high' : 'payout-risk';
     } else {
-      colorClass = payoutRatio < 30 ? 'payout-ok-strong' :
-                   payoutRatio < 60 ? 'payout-ok' :
-                   payoutRatio < 80 ? 'payout-warn' :
-                   payoutRatio < 100 ? 'payout-high' :
-                   'payout-risk';
+      colorClass = payoutRatio < 30 ? 'payout-ok-strong' : payoutRatio < 60 ? 'payout-ok' : payoutRatio < 80 ? 'payout-warn' : payoutRatio < 100 ? 'payout-high' : 'payout-risk';
     }
-    
-    return {
-      value: payoutRatio,
-      str: `${payoutRatio.toFixed(1)}%`,
-      class: colorClass,
-      method: method,
-      isREIT: isREIT,
-      confidence: method === 'EPS' ? 'high' : 'medium'
-    };
+
+    return { value: payoutRatio, str: `${payoutRatio.toFixed(1)}%`, class: colorClass, method, isREIT, confidence: method === 'EPS' ? 'high' : 'medium' };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -815,262 +821,133 @@ class StockAdvanceFilter {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Traite un stock complet avec fondamentaux ET statistics
+   * Traite un stock individuel — Buffett Score + données fusionnées
+   * Note: Quality Score nécessite processStockBatch() ou computeQualityScores()
    */
   async processStock(stockData, options = {}) {
     const symbol = stockData.symbol || stockData.ticker || stockData.Ticker;
     const currentPrice = parseFloat(stockData.price || stockData.last || 0);
-    
-    if (this.config.DEBUG) {
-      console.log(`\n🔍 Processing ${symbol}...`);
-    }
-    
-    // Charger les caches
+    if (this.config.DEBUG) console.log(`\n🔍 Processing ${symbol}...`);
+
     await this.loadFundamentalsCache();
     await this.loadStatisticsCache();
-    
-    // Récupérer les fondamentaux depuis le cache (ROE, D/E)
     const fundamentals = this.fundamentalsCache.data[symbol] || {};
-    
-    // Récupérer les statistics (P/E, EPS, marges)
     let statistics = this.statisticsCache.data[symbol];
     if (!statistics && options.fetchMissing) {
-      statistics = await this.fetchStatistics(symbol, {
-        exchange: stockData.exchange
-      });
+      statistics = await this.fetchStatistics(symbol, { exchange: stockData.exchange });
       await new Promise(r => setTimeout(r, this.config.RATE_LIMIT_MS));
     }
     statistics = statistics || {};
-    
-    // Fusionner les données
+
     const mergedData = {
       ...stockData,
-      // Du cache fondamentaux
-      roe: fundamentals.roe,
-      de_ratio: fundamentals.de_ratio,
-      // Du cache statistics
-      pe_ratio: statistics.pe_ratio,
+      roe: fundamentals.roe ?? stockData.roe,
+      de_ratio: fundamentals.de_ratio ?? stockData.de_ratio,
+      pe_ratio: statistics.pe_ratio ?? stockData.pe_ratio,
       forward_pe: statistics.forward_pe,
-      eps_ttm: statistics.eps_ttm,
+      eps_ttm: statistics.eps_ttm ?? stockData.eps_ttm,
       eps_growth_yoy: statistics.eps_growth_yoy,
-      profit_margin: statistics.profit_margin,
+      profit_margin: statistics.profit_margin ?? stockData.net_margin,
       current_ratio: statistics.current_ratio,
       return_on_equity: statistics.return_on_equity,
-      debt_to_equity: statistics.debt_to_equity
+      debt_to_equity: statistics.debt_to_equity,
+      // fcf_yield: pré-calculé par stock-advanced-filter.js (enrichStock: fcf_ttm / market_cap)
+      // En standalone (sans pré-enrichissement), sera null → critère Buffett #4 ignoré,
+      // Quality Score dimension Value imputera à la médiane peer
+      fcf_yield: stockData.fcf_yield ?? null,
     };
-    
-    // Calculer le score Buffett
-    const buffettQuality = this.evaluateBuffettQuality(mergedData);
-    
-    // Traitement des dividendes si disponibles
+
+    // Buffett Score v3.1
+    const buffett = this.evaluateBuffettScore(mergedData);
+    const profile = this.detectProfile(mergedData.sector || mergedData.Secteur, mergedData.industry);
+
+    // Dividendes
     let dividends = stockData.dividends;
     let splits = stockData.splits;
-    
     if (!dividends && options.fetchMissing) {
-      const divData = await this.fetchTD('dividends', [
-        { symbol: symbol, exchange: stockData.exchange },
-        { symbol: symbol }
-      ]);
+      const divData = await this.fetchTD('dividends', [{ symbol, exchange: stockData.exchange }, { symbol }]);
       dividends = divData?.dividends || [];
     }
-    
     if (!splits && options.fetchMissing) {
-      const splitData = await this.fetchTD('splits', [
-        { symbol: symbol, exchange: stockData.exchange },
-        { symbol: symbol }
-      ]);
+      const splitData = await this.fetchTD('splits', [{ symbol, exchange: stockData.exchange }, { symbol }]);
       splits = splitData?.splits || [];
     }
-    
-    const ttmResult = this.calculateTTM(
-      dividends || [], 
-      currentPrice,
-      splits,
-      symbol
-    );
-    
-    const dividendInfo = this.selectDividendYield(
-      ttmResult,
-      stockData.dividend_api_data || statistics,
-      stockData.forward_yield,
-      symbol
-    );
-    
-    const payoutInfo = this.computePayoutRatio(
-      dividendInfo.value,
-      statistics.eps_ttm,
-      stockData.earnings_yield,
-      stockData.sector || stockData.Secteur
-    );
-    
+
+    const ttmResult = this.calculateTTM(dividends || [], currentPrice, splits, symbol);
+    const dividendInfo = this.selectDividendYield(ttmResult, stockData.dividend_api_data || statistics, stockData.forward_yield, symbol);
+    const payoutInfo = this.computePayoutRatio(dividendInfo.value, statistics.eps_ttm, stockData.earnings_yield, stockData.sector || stockData.Secteur);
+
     return {
-      ...stockData,
-      
-      // Fondamentaux Buffett
-      roe: fundamentals.roe,
-      de_ratio: fundamentals.de_ratio,
-      pe_ratio: statistics.pe_ratio,
-      eps_ttm: statistics.eps_ttm,
-      eps_growth_yoy: statistics.eps_growth_yoy,
-      profit_margin: statistics.profit_margin,
-      current_ratio: statistics.current_ratio,
-      
-      // Score qualité Buffett
-      buffett_score: buffettQuality.score,
-      buffett_grade: buffettQuality.grade,
-      buffett_flags: buffettQuality.flags,
-      buffett_details: buffettQuality,
-      
-      // Dividendes
-      dividend_yield_ttm: dividendInfo.value,
-      dividend_yield_source: dividendInfo.source,
-      dividend_confidence: dividendInfo.confidence,
-      total_dividends_ttm: ttmResult.adjustedSum,
-      dividend_count_ttm: ttmResult.dividendCount,
-      
-      // Payout
-      payout_ratio: payoutInfo.value,
-      payout_ratio_str: payoutInfo.str,
-      payout_ratio_class: payoutInfo.class,
-      
-      // Split
-      has_recent_split: ttmResult.hasRecentSplit,
-      split_info: ttmResult.splitInfo,
-      
-      // Debug
-      debug_buffett: this.config.DEBUG ? buffettQuality : null
+      ...stockData, ...mergedData,
+      buffett_score: buffett.score, buffett_grade: buffett.grade, buffett_criteria: buffett.criteria,
+      buffett_passed: buffett.passed, buffett_total: buffett.total, buffett_flags: buffett.criteria.map(c => `${c.name}:${c.passed ? 'PASS' : 'FAIL'}`),
+      quality_profile: profile,
+      dividend_yield_ttm: dividendInfo.value, dividend_yield_source: dividendInfo.source, dividend_confidence: dividendInfo.confidence,
+      total_dividends_ttm: ttmResult.adjustedSum, dividend_count_ttm: ttmResult.dividendCount,
+      payout_ratio: payoutInfo.value, payout_ratio_str: payoutInfo.str, payout_ratio_class: payoutInfo.class,
+      has_recent_split: ttmResult.hasRecentSplit, split_info: ttmResult.splitInfo,
+      debug_buffett: this.config.DEBUG ? buffett : null,
     };
   }
 
   /**
-   * Filtre les stocks selon critères Buffett
+   * Traite un batch complet — Buffett individuel + Quality Score batch
+   */
+  async processStockBatch(stocks, options = {}) {
+    const processed = [];
+    for (const stock of stocks) {
+      const result = await this.processStock(stock, options);
+      processed.push(result);
+    }
+    this.computeQualityScores(processed);
+    return processed;
+  }
+
+  /**
+   * Filtre les stocks (v2.0 + v3.0 critères)
    */
   filterStocks(stocks, criteria = {}) {
     let filtered = [...stocks];
-    
-    // Filtres Buffett
-    if (criteria.minBuffettScore) {
-      filtered = filtered.filter(s => 
-        s.buffett_score >= criteria.minBuffettScore
-      );
-    }
-    
-    if (criteria.minROE) {
-      filtered = filtered.filter(s => 
-        s.roe !== null && s.roe >= criteria.minROE
-      );
-    }
-    
-    if (criteria.maxDE) {
-      filtered = filtered.filter(s => 
-        s.de_ratio !== null && s.de_ratio <= criteria.maxDE
-      );
-    }
-    
-    if (criteria.maxPE) {
-      filtered = filtered.filter(s => 
-        s.pe_ratio !== null && s.pe_ratio > 0 && s.pe_ratio <= criteria.maxPE
-      );
-    }
-    
-    if (criteria.minEPS) {
-      filtered = filtered.filter(s => 
-        s.eps_ttm !== null && s.eps_ttm >= criteria.minEPS
-      );
-    }
-    
-    // Filtres dividendes (existants)
-    if (criteria.minYield) {
-      filtered = filtered.filter(s => 
-        s.dividend_yield_ttm >= criteria.minYield
-      );
-    }
-    
-    if (criteria.maxYield) {
-      filtered = filtered.filter(s => 
-        s.dividend_yield_ttm <= criteria.maxYield
-      );
-    }
-    
-    if (criteria.maxPayout) {
-      filtered = filtered.filter(s => 
-        s.payout_ratio && s.payout_ratio <= criteria.maxPayout
-      );
-    }
-    
+    if (criteria.minBuffettScore) filtered = filtered.filter(s => s.buffett_score >= criteria.minBuffettScore);
+    if (criteria.minQualityScore) filtered = filtered.filter(s => s.quality_score != null && s.quality_score >= criteria.minQualityScore);
+    if (criteria.minROE) filtered = filtered.filter(s => s.roe != null && s.roe >= criteria.minROE);
+    if (criteria.maxDE) filtered = filtered.filter(s => s.de_ratio != null && s.de_ratio <= criteria.maxDE);
+    if (criteria.maxPE) filtered = filtered.filter(s => s.pe_ratio != null && s.pe_ratio > 0 && s.pe_ratio <= criteria.maxPE);
+    if (criteria.minEPS) filtered = filtered.filter(s => s.eps_ttm != null && s.eps_ttm >= criteria.minEPS);
+    if (criteria.profiles) filtered = filtered.filter(s => criteria.profiles.includes(s.quality_profile));
+    if (criteria.minYield) filtered = filtered.filter(s => s.dividend_yield_ttm >= criteria.minYield);
+    if (criteria.maxYield) filtered = filtered.filter(s => s.dividend_yield_ttm <= criteria.maxYield);
+    if (criteria.maxPayout) filtered = filtered.filter(s => s.payout_ratio && s.payout_ratio <= criteria.maxPayout);
     if (criteria.minConfidence) {
-      const confidenceLevels = { 'low': 1, 'medium': 2, 'high': 3 };
-      const minLevel = confidenceLevels[criteria.minConfidence] || 1;
-      
-      filtered = filtered.filter(s => {
-        const level = confidenceLevels[s.dividend_confidence] || 0;
-        return level >= minLevel;
-      });
+      const levels = { 'low': 1, 'medium': 2, 'high': 3 };
+      const minLevel = levels[criteria.minConfidence] || 1;
+      filtered = filtered.filter(s => (levels[s.dividend_confidence] || 0) >= minLevel);
     }
-    
-    if (criteria.excludeRecentSplits) {
-      filtered = filtered.filter(s => !s.has_recent_split);
-    }
-    
-    // Tri
+    if (criteria.excludeRecentSplits) filtered = filtered.filter(s => !s.has_recent_split);
     if (criteria.sortBy) {
-      const sortField = criteria.sortBy;
-      const sortOrder = criteria.sortOrder || 'desc';
-      
-      filtered.sort((a, b) => {
-        const aVal = a[sortField] || 0;
-        const bVal = b[sortField] || 0;
-        return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
-      });
+      const field = criteria.sortBy, order = criteria.sortOrder || 'desc';
+      filtered.sort((a, b) => { const aV = a[field] || 0, bV = b[field] || 0; return order === 'desc' ? bV - aV : aV - bV; });
     }
-    
     return filtered;
   }
 
   /**
-   * Export CSV enrichi
+   * Export CSV enrichi (v2.0 + v3.0 champs)
    */
   exportToCSV(stocks) {
-    const headers = [
-      'Symbol',
-      'Name',
-      'Sector',
-      'Price',
-      'Buffett Score',
-      'Grade',
-      'ROE %',
-      'D/E',
-      'P/E',
-      'EPS',
-      'Margin %',
-      'Div Yield %',
-      'Source',
-      'Confidence'
-    ];
-    
+    const headers = ['Symbol', 'Name', 'Sector', 'Profile', 'Price', 'Buffett Score', 'Buffett Grade', 'Quality Score', 'Quality Grade', 'PGR', 'ROE %', 'D/E', 'P/E', 'EPS', 'FCF Yield %', 'Margin %', 'Div Yield %', 'Source', 'Confidence'];
     const rows = stocks.map(s => [
-      s.symbol || s.Ticker,
-      s.name || s.Stock,
-      s.sector || s.Secteur,
-      s.price || s.last,
-      s.buffett_score || '-',
-      s.buffett_grade || '-',
-      s.roe?.toFixed(1) || '-',
-      s.de_ratio?.toFixed(2) || '-',
-      s.pe_ratio?.toFixed(1) || '-',
-      s.eps_ttm?.toFixed(2) || '-',
-      s.profit_margin?.toFixed(1) || '-',
-      s.dividend_yield_ttm?.toFixed(2) || '-',
-      s.dividend_yield_source || '-',
-      s.dividend_confidence || '-'
+      s.symbol || s.ticker || s.Ticker, s.name || s.Stock, s.sector || s.Secteur,
+      s.quality_profile || '-', s.price || s.last,
+      s.buffett_score ?? '-', s.buffett_grade || '-',
+      s.quality_score ?? '-', s.quality_grade || '-',
+      s.quality_peer_global_rank ?? '-',
+      s.roe?.toFixed(1) || '-', s.de_ratio?.toFixed(2) || '-',
+      s.pe_ratio?.toFixed(1) || '-', s.eps_ttm?.toFixed(2) || '-',
+      s.fcf_yield?.toFixed(1) || '-', (s.profit_margin || s.net_margin)?.toFixed(1) || '-',
+      s.dividend_yield_ttm?.toFixed(2) || '-', s.dividend_yield_source || '-', s.dividend_confidence || '-'
     ]);
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.map(v => `"${v}"`).join(','))
-    ].join('\n');
-    
-    return csvContent;
+    return [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
   }
 
   clearCache() {
@@ -1079,23 +956,18 @@ class StockAdvanceFilter {
     this.fundamentalsCache = null;
     this.statisticsCache = null;
     this.debugLogs = [];
-    
-    if (this.config.DEBUG) {
-      console.log('✅ Caches cleared');
-    }
+    if (this.config.DEBUG) console.log('✅ Caches cleared');
   }
 }
 
-// Export
+// Exports
 if (typeof window !== 'undefined') {
   window.StockAdvanceFilter = StockAdvanceFilter;
 }
-
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = StockAdvanceFilter;
 }
-
 if (typeof window !== 'undefined' && window.AUTO_INIT_STOCK_FILTER) {
   window.stockFilter = new StockAdvanceFilter(window.STOCK_FILTER_CONFIG || {});
-  console.log('✅ StockAdvanceFilter v2.0 initialized');
+  console.log('✅ StockAdvanceFilter v3.0 initialized');
 }
