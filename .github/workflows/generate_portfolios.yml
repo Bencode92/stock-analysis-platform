@@ -1,5 +1,5 @@
 name: Génération des Portefeuilles v5.3.0 + Market Intelligence + Lombard Ranking + Backtest
-
+ 
 on:
   push:
     branches: [ main ]
@@ -9,10 +9,10 @@ on:
   schedule:
     - cron: "0 8 * * *"
   workflow_dispatch:
-
+ 
 permissions:
   contents: write
-
+ 
 jobs:
   generate-portfolios:
     runs-on: ubuntu-latest
@@ -24,24 +24,24 @@ jobs:
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
       # v5.1.0: Audit collector (none | summary | full)
       DEBUG_AUDIT: summary
-
+ 
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+ 
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
+ 
       - name: 📦 Installer les dépendances
         run: |
           python -m pip install --upgrade pip
           pip install pandas numpy scipy requests beautifulsoup4 lxml openai pyyaml jsonschema
-
+ 
       # ============= v4.9 RADAR: Deterministic Market Context =============
       - name: 🧹 Clean stale market_context (RADAR v4.9)
         run: |
@@ -51,15 +51,11 @@ jobs:
           echo "📊 Le contexte sera généré par market_sector_radar.py (data-driven)"
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
-          
+ 
       # ============= TURNOVER: Save previous portfolio =============
       - name: 📋 Save previous portfolio for turnover
         run: cp data/portfolios.json data/portfolios_previous.json || true
-
-      - name: 🚀 Exécuter le moteur v5.2.0
-        run: |
-          # v2.1: Update macro indicators...    
-
+ 
       - name: 🚀 Exécuter le moteur v5.2.0
         run: |
           # v2.1: Update macro indicators (Twelve Data + FRED) before portfolio generation
@@ -68,7 +64,7 @@ jobs:
           echo ""
           echo "🚀 Running portfolio engine..."
           python generate_portfolios_v4.py
-
+ 
       # ============= v4.5 NEW: Schema Validation =============
       - name: ✅ Valider le schéma JSON
         run: |
@@ -88,7 +84,7 @@ jobs:
           fi
           
           echo "✅ Validation du schéma réussie"
-
+ 
       - name: 🧾 Check outputs
         if: always()
         run: |
@@ -146,6 +142,13 @@ jobs:
             sha1sum data/portfolios.json || true
           else
             echo "❌ portfolios.json ABSENT"
+          fi
+          
+          # Turnover tracking
+          if [ -f data/portfolios_previous.json ]; then
+            echo "✅ portfolios_previous.json (Turnover tracking)"
+          else
+            echo "⚠️ portfolios_previous.json ABSENT (premier run?)"
           fi
           
           # Portfolios EU/US v2.2
@@ -308,7 +311,7 @@ jobs:
           echo "----"
           echo "== portfolio_history =="
           ls -lah data/portfolio_history || true
-
+ 
       - name: 📊 Backtest Summary
         if: always()
         run: |
@@ -586,15 +589,16 @@ jobs:
               print(f"| {rate}% | {rdata.get('count', 0)} | {s.get('avg_yield', 0):.1f}% | {s.get('avg_carry_net', 0):+.1f}% | {s.get('carry_positive_count', 0)} |")
           EOF
           fi
-
+ 
       - name: 💾 Commit & push
         if: always()
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (v5.3.0 avec lombard_ranking)
+          # Ajouter les artefacts générés (v5.3.0 + turnover tracking)
           git add data/portfolios.json \
+                  data/portfolios_previous.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
                   data/backtest_results_euus.json \
@@ -607,10 +611,13 @@ jobs:
                   data/lombard_ranking.json \
                   data/market_intelligence_audit/* \
                   data/portfolio_history/* || true
-
+ 
           # Si .gitignore les filtre, forcer l'ajout
           if git check-ignore -q data/portfolios.json 2>/dev/null; then
             git add -f data/portfolios.json
+          fi
+          if git check-ignore -q data/portfolios_previous.json 2>/dev/null; then
+            git add -f data/portfolios_previous.json
           fi
           if git check-ignore -q data/portfolios_euus.json 2>/dev/null; then
             git add -f data/portfolios_euus.json
@@ -648,11 +655,11 @@ jobs:
           if git check-ignore -q data/portfolio_history 2>/dev/null; then
             git add -f data/portfolio_history/*.json || true
           fi
-
+ 
           git commit -m "📊 Portefeuilles v5.3.0 + Market Intelligence 🧠 + Lombard Ranking 💰 + Backtest 90j ✓" || echo "rien à committer"
-
+ 
           git push || (git pull --rebase origin main && git push)
-
+ 
       - name: 🗂️ Archive market_context.json
         if: success()
         run: |
