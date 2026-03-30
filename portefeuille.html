@@ -3,282 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Portefeuilles Optimisés | Analyse AMF Conforme</title>
-    
-    <!-- SEO & Open Graph -->
-    <meta name="description" content="Portefeuilles d'investissement optimisés par IA. Analyse conforme AMF avec transparence complète sur la méthodologie et les risques.">
-    <meta property="og:title" content="TradePulse - Portefeuilles Optimisés">
-    <meta property="og:description" content="Découvrez nos portefeuilles modèles Agressif, Modéré et Stable générés par IA.">
-    
-    <!-- Fonts & Icons -->
+    <title>TradePulse — Portefeuilles Optimisés</title>
+    <meta name="description" content="Portefeuilles modèles optimisés par IA. Scoring Buffett v3.1, Quality Score v2, conformité AMF.">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Styles existants -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="pages-style.css">
     <link rel="stylesheet" href="search-style.css">
     <link rel="stylesheet" href="enhanced-ui.css">
     <link rel="stylesheet" href="portfolio-styles.css">
     <link rel="stylesheet" href="portfolio-history.css">
     <link rel="stylesheet" href="portfolio-history-comparison.css">
-    
-    <!-- NOUVEAU: Styles conformité AMF -->
-    <link rel="stylesheet" href="portfolio-amf-compliance.css">
-    
-    <!-- Chart.js pour les graphiques -->
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    
-    <!-- PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        /* Variables de couleur par profil */
         :root {
+            --font-main: 'DM Sans', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
             --aggressive-color: #FF7B00;
-            --aggressive-glow: 0 0 10px rgba(255, 123, 0, 0.6);
             --moderate-color: #00FF87;
-            --moderate-glow: 0 0 10px rgba(0, 255, 135, 0.6);
             --stable-color: #00B2FF;
-            --stable-glow: 0 0 10px rgba(0, 178, 255, 0.6);
+            --surface-0: rgba(255,255,255,0.02);
+            --surface-1: rgba(255,255,255,0.04);
+            --border-subtle: rgba(255,255,255,0.06);
+            --text-primary: rgba(255,255,255,0.92);
+            --text-secondary: rgba(255,255,255,0.55);
+            --text-muted: rgba(255,255,255,0.35);
         }
 
-        /* Sidebar */
+        body { font-family: var(--font-main); }
+
+        /* ── Sidebar ── */
         .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 80px;
-            height: 100vh;
-            background-color: rgba(1, 15, 26, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 0;
-            z-index: 101;
-            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            position: fixed; top: 0; left: 0; width: 72px; height: 100vh;
+            background: rgba(1,15,26,0.97); display: flex; flex-direction: column;
+            align-items: center; padding: 20px 0; z-index: 101;
+            border-right: 1px solid var(--border-subtle);
         }
-
         .sidebar-logo {
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: var(--accent-color);
-            margin-bottom: 40px;
-            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+            font-size: 1.3rem; font-weight: 900; color: var(--accent-color, #00FF87);
+            margin-bottom: 40px; letter-spacing: -1px;
         }
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
-        }
-
+        .sidebar-nav { display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         .nav-item {
-            margin-bottom: 20px;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.7);
-            transition: all 0.3s;
+            margin-bottom: 16px; width: 40px; height: 40px; display: flex;
+            justify-content: center; align-items: center; border-radius: 10px;
+            color: var(--text-secondary); transition: all 0.2s; font-size: 0.95rem;
         }
-
         .nav-item:hover, .nav-item.active {
-            background-color: rgba(0, 255, 135, 0.1);
-            color: var(--accent-color);
+            background: rgba(0,255,135,0.08); color: var(--accent-color, #00FF87);
         }
 
-        /* Container principal */
+        /* ── Portfolio container ── */
         .portfolio-container.colored-container {
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
-            border-width: 2px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            background: var(--surface-0);
+            padding: 2rem;
         }
 
-        /* Amélioration graphique */
-        .portfolio-chart-container {
-            background-color: rgba(255, 255, 255, 0.02);
-            border-radius: 12px;
-            padding: 1.5rem;
-            height: 280px;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Onglets personnalisés */
+        /* ── Tabs ── */
         .portfolio-toggles.portfolio-tabs {
-            padding: 0;
-            border-bottom: none;
-            justify-content: center;
-            margin-bottom: 2rem;
-            gap: 0.5rem;
+            padding: 0; border-bottom: none; justify-content: center;
+            margin-bottom: 2rem; gap: 0.5rem; display: flex;
         }
-
         .portfolio-toggles .portfolio-tab {
-            padding: 0.75rem 1.5rem;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            font-weight: 600;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: transparent;
-            color: rgba(255, 255, 255, 0.6);
-            cursor: pointer;
-            transition: all 0.3s ease;
+            padding: 0.7rem 1.5rem; font-size: 0.8rem; letter-spacing: 0.5px;
+            text-transform: uppercase; font-weight: 700; border-radius: 10px;
+            border: 1px solid var(--border-subtle); background: transparent;
+            color: var(--text-secondary); cursor: pointer; transition: all 0.25s;
+            font-family: var(--font-main);
         }
-
         .portfolio-tab[data-target="portfolio-agressif"].active {
-            background: rgba(255, 123, 0, 0.1);
-            border-color: var(--aggressive-color);
-            color: var(--aggressive-color);
-            box-shadow: var(--aggressive-glow);
+            background: rgba(255,123,0,0.08); border-color: var(--aggressive-color);
+            color: var(--aggressive-color); box-shadow: 0 0 20px rgba(255,123,0,0.15);
         }
-
         .portfolio-tab[data-target="portfolio-modere"].active {
-            background: rgba(0, 255, 135, 0.1);
-            border-color: var(--moderate-color);
-            color: var(--moderate-color);
-            box-shadow: var(--moderate-glow);
+            background: rgba(0,255,135,0.08); border-color: var(--moderate-color);
+            color: var(--moderate-color); box-shadow: 0 0 20px rgba(0,255,135,0.15);
         }
-
         .portfolio-tab[data-target="portfolio-stable"].active {
-            background: rgba(0, 178, 255, 0.1);
-            border-color: var(--stable-color);
-            color: var(--stable-color);
-            box-shadow: var(--stable-glow);
+            background: rgba(0,178,255,0.08); border-color: var(--stable-color);
+            color: var(--stable-color); box-shadow: 0 0 20px rgba(0,178,255,0.15);
         }
 
-        /* Info de mise à jour */
+        /* ── Update bar ── */
         .portfolio-update-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            gap: 0.75rem; padding: 0.6rem 1rem; background: var(--surface-1);
+            border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.78rem;
+            color: var(--text-muted); font-family: var(--font-mono);
         }
+        .portfolio-update-info i { color: var(--accent-color, #00FF87); font-size: 0.7rem; }
 
-        .portfolio-update-info i {
-            color: var(--accent-color);
-        }
-
-        /* AMF Banner en haut */
+        /* ── AMF banner ── */
         .amf-top-banner {
-            background: linear-gradient(90deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 87, 34, 0.1) 100%);
-            border: 1px solid rgba(255, 193, 7, 0.3);
-            border-radius: 8px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+            background: linear-gradient(135deg, rgba(255,193,7,0.06) 0%, rgba(255,87,34,0.04) 100%);
+            border: 1px solid rgba(255,193,7,0.15); border-radius: 12px;
+            padding: 1rem 1.5rem; margin-bottom: 2rem;
+            display: flex; align-items: flex-start; gap: 1rem;
         }
-
-        .amf-top-banner i {
-            color: #ffc107;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
+        .amf-top-banner i { color: #ffc107; font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
         .amf-top-banner p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.5;
+            margin: 0; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6;
         }
+        .amf-top-banner strong { color: #ffc107; }
+        .amf-top-banner a { color: #ffc107; text-decoration: none; font-weight: 600; }
+        .amf-top-banner a:hover { text-decoration: underline; }
 
-        .amf-top-banner strong {
-            color: #ffc107;
-        }
-
-        /* Loading spinner */
+        /* ── Loading ── */
         .portfolio-loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 3rem;
-            gap: 1rem;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 4rem; gap: 1rem;
         }
-
         .portfolio-loading::before {
-            content: "";
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top-color: var(--accent-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            content: ""; width: 36px; height: 36px;
+            border: 2px solid var(--border-subtle);
+            border-top-color: var(--accent-color, #00FF87);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
         }
-
         .portfolio-loading::after {
-            content: "Chargement des portefeuilles...";
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9rem;
+            content: "Chargement des portefeuilles…";
+            color: var(--text-muted); font-size: 0.85rem;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Error state */
         .portfolio-error {
-            display: none;
-            background: rgba(244, 67, 54, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            color: #f44336;
+            display: none; background: rgba(244,67,54,0.08);
+            border: 1px solid rgba(244,67,54,0.2); border-radius: 10px;
+            padding: 1.5rem; text-align: center; color: #f44336; font-size: 0.9rem;
         }
 
-        /* Responsive */
+        /* ── Methodology cards ── */
+        .method-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem; margin-top: 1.5rem;
+        }
+        .method-card {
+            background: var(--surface-0); border: 1px solid var(--border-subtle);
+            border-radius: 14px; padding: 1.5rem; transition: border-color 0.3s;
+        }
+        .method-card:hover { border-color: rgba(255,255,255,0.12); }
+        .method-card h3 {
+            margin: 0 0 1rem 0; font-size: 0.9rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .method-card ul {
+            list-style: none; padding: 0; margin: 0;
+            font-size: 0.84rem; line-height: 2; color: var(--text-secondary);
+        }
+        .method-card li::before {
+            content: "→"; margin-right: 8px; color: inherit; opacity: 0.4;
+        }
+
+        /* ── Disclaimer ── */
+        .legal-disclaimer {
+            margin-top: 2rem; padding: 1.5rem; border-radius: 14px;
+            background: rgba(255,193,7,0.04); border: 1px solid rgba(255,193,7,0.12);
+        }
+        .legal-disclaimer p {
+            margin: 0; font-size: 0.8rem; line-height: 1.8; color: var(--text-muted);
+        }
+        .legal-disclaimer strong { color: #ffc107; }
+
+        /* ── Responsive ── */
         @media (max-width: 768px) {
-            .sidebar {
-                width: 60px;
-            }
-            
-            .portfolio-toggles.portfolio-tabs {
-                flex-direction: column;
-            }
-            
-            .amf-top-banner {
-                flex-direction: column;
-                text-align: center;
-            }
+            .sidebar { width: 56px; }
+            .portfolio-toggles.portfolio-tabs { flex-direction: column; }
+            .amf-top-banner { flex-direction: column; text-align: center; }
+            .method-grid { grid-template-columns: 1fr; }
+            .portfolio-container.colored-container { padding: 1rem; }
         }
     </style>
 </head>
 
 <body class="page-portefeuille fade-in">
-    <!-- Sidebar Navigation -->
+    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
         <nav class="sidebar-nav">
-            <a href="actualites.html" class="nav-item" title="Actualités">
-                <i class="fas fa-newspaper"></i>
-            </a>
-            <a href="portefeuille.html" class="nav-item active" title="Portefeuilles">
-                <i class="fas fa-chart-pie"></i>
-            </a>
-            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
-                <i class="fas fa-tachometer-alt"></i>
-            </a>
-            <a href="marches.html" class="nav-item" title="Marchés">
-                <i class="fas fa-chart-line"></i>
-            </a>
-            <a href="alertes.html" class="nav-item" title="Alertes">
-                <i class="fas fa-bell"></i>
-            </a>
-            <a href="parametres.html" class="nav-item" title="Paramètres">
-                <i class="fas fa-cog"></i>
-            </a>
+            <a href="actualites.html" class="nav-item" title="Actualités"><i class="fas fa-newspaper"></i></a>
+            <a href="portefeuille.html" class="nav-item active" title="Portefeuilles"><i class="fas fa-chart-pie"></i></a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord"><i class="fas fa-tachometer-alt"></i></a>
+            <a href="marches.html" class="nav-item" title="Marchés"><i class="fas fa-chart-line"></i></a>
+            <a href="alertes.html" class="nav-item" title="Alertes"><i class="fas fa-bell"></i></a>
+            <a href="parametres.html" class="nav-item" title="Paramètres"><i class="fas fa-cog"></i></a>
         </nav>
     </aside>
 
@@ -303,32 +215,32 @@
             </div>
             <a href="recherche.html" class="question-button ripple">
                 <i class="fas fa-search"></i>
-                <span>Ma question</span>
+                <span>Recherche</span>
             </a>
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main -->
     <main class="page-content">
-        <!-- Title Section -->
+        <!-- Title -->
         <section class="page-title-section">
             <h1 class="page-title" id="portfolioTitle">PORTEFEUILLES OPTIMISÉS</h1>
             <p class="page-subtitle" id="currentDate"></p>
             <div class="portfolio-nav">
                 <a href="actualites.html" class="back-button ripple">
-                    <i class="fas fa-arrow-left"></i> RETOUR AUX ACTUALITÉS
+                    <i class="fas fa-arrow-left"></i> RETOUR
                 </a>
             </div>
         </section>
 
-        <!-- AMF Top Banner (visible immédiatement) -->
+        <!-- AMF Banner -->
         <section class="amf-banner-section">
             <div class="amf-top-banner">
                 <i class="fas fa-gavel"></i>
                 <p>
-                    <strong>Information réglementaire :</strong> Ces portefeuilles modèles sont générés par intelligence artificielle à titre informatif et éducatif. 
-                    Ils ne constituent pas un conseil en investissement personnalisé. Consultez un conseiller financier agréé avant toute décision d'investissement.
-                    <a href="#amf-details" style="color: #ffc107; text-decoration: underline;">En savoir plus ↓</a>
+                    <strong>Information réglementaire</strong> — Ces portefeuilles modèles sont générés par intelligence artificielle 
+                    à titre informatif et éducatif. Ils ne constituent pas un conseil en investissement personnalisé.
+                    <a href="#methodology">Méthodologie détaillée ↓</a>
                 </p>
             </div>
         </section>
@@ -336,33 +248,28 @@
         <!-- Portfolio Section -->
         <section class="portfolio-chart-section">
             <div class="portfolio-container colored-container">
-                <!-- Update Info -->
+                <!-- Update info -->
                 <div class="portfolio-update-info">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>Dernière mise à jour: <span id="portfolioUpdateTime">--</span></span>
-                    <span style="margin-left: 1rem; padding-left: 1rem; border-left: 1px solid rgba(255,255,255,0.2);">
-                        <i class="fas fa-code-branch"></i>
-                        Version: <span id="portfolioVersion">--</span>
-                    </span>
+                    <i class="fas fa-circle"></i>
+                    <span>Mise à jour <span id="portfolioUpdateTime">--</span></span>
+                    <span style="opacity:0.3;">|</span>
+                    <span>v<span id="portfolioVersion">--</span></span>
                 </div>
 
-                <!-- Portfolio Tabs -->
+                <!-- Tabs -->
                 <div class="portfolio-toggles portfolio-tabs">
                     <button class="portfolio-tab active" data-target="portfolio-agressif" data-original-type="Agressif">
-                        <span class="tab-icon"><i class="fas fa-rocket"></i></span>
-                        <span class="tab-text">Agressif</span>
+                        <i class="fas fa-rocket" style="margin-right:4px;"></i> Agressif
                     </button>
                     <button class="portfolio-tab" data-target="portfolio-modere" data-original-type="Modéré">
-                        <span class="tab-icon"><i class="fas fa-balance-scale"></i></span>
-                        <span class="tab-text">Modéré</span>
+                        <i class="fas fa-balance-scale" style="margin-right:4px;"></i> Modéré
                     </button>
                     <button class="portfolio-tab" data-target="portfolio-stable" data-original-type="Stable">
-                        <span class="tab-icon"><i class="fas fa-shield-alt"></i></span>
-                        <span class="tab-text">Stable</span>
+                        <i class="fas fa-shield-alt" style="margin-right:4px;"></i> Stable
                     </button>
                 </div>
 
-                <!-- Portfolio Content (dynamically loaded) -->
+                <!-- Dynamic content (rendered by portfolio-loader.js v3.0) -->
                 <div class="portfolio-content">
                     <div class="portfolio-loading"></div>
                     <div class="portfolio-error"></div>
@@ -370,77 +277,90 @@
             </div>
         </section>
 
-        <!-- AMF Detailed Section -->
-        <section class="amf-details-section" id="amf-details">
+        <!-- Methodology Section -->
+        <section id="methodology" style="margin-top:3rem;">
             <div class="section-header">
-                <h2><i class="fas fa-shield-alt"></i> Conformité & Transparence</h2>
-                <p class="section-description">Informations réglementaires et méthodologiques détaillées</p>
+                <h2><i class="fas fa-flask" style="margin-right:0.5rem;"></i>Méthodologie & Transparence</h2>
+                <p class="section-description">Architecture du moteur de sélection et d'optimisation</p>
             </div>
 
-            <div class="amf-details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                <!-- Méthodologie -->
-                <div class="amf-detail-card" style="background: rgba(33, 150, 243, 0.05); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: #2196f3; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-flask"></i> Méthodologie
+            <div class="method-grid">
+                <!-- Scoring -->
+                <div class="method-card" style="border-top:3px solid #2196f3;">
+                    <h3 style="color:#2196f3;">
+                        <i class="fas fa-star"></i> Scoring fondamental
                     </h3>
-                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; line-height: 1.8; color: rgba(255,255,255,0.8);">
-                        <li>• Optimisation Markowitz (mean-variance) via SLSQP</li>
-                        <li>• Fallback heuristique si contraintes incompatibles</li>
-                        <li>• Filtre qualité Buffett (ROE, D/E ratio)</li>
-                        <li>• Scoring tactique RADAR data-driven</li>
-                        <li>• Backtest 90 jours pour validation</li>
+                    <ul>
+                        <li><strong>Buffett Score v3.1</strong> — 6 critères pass/fail (ROE consistant, ROIC moat, levier, FCF yield, PE, expansion du moat)</li>
+                        <li><strong>Quality Score v2</strong> — 5 dimensions peer-relative (Quality, Safety, Value, Growth, Momentum)</li>
+                        <li>4 profils sectoriels : FIN, YIELD, TECH, DEFAULT</li>
+                        <li>Global-Adjusted Peer Scoring (PGR)</li>
+                        <li>Payment networks reclassifiés (V, MA → DEFAULT)</li>
                     </ul>
                 </div>
 
-                <!-- Risques -->
-                <div class="amf-detail-card" style="background: rgba(255, 87, 34, 0.05); border: 1px solid rgba(255, 87, 34, 0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: #ff5722; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <!-- Optimization -->
+                <div class="method-card" style="border-top:3px solid #4caf50;">
+                    <h3 style="color:#4caf50;">
+                        <i class="fas fa-calculator"></i> Optimisation
+                    </h3>
+                    <ul>
+                        <li>Markowitz mean-variance via SLSQP</li>
+                        <li>Fallback heuristique si contraintes incompatibles</li>
+                        <li>7 régimes de marché (RADAR déterministe)</li>
+                        <li>Contraintes réglementaires (max crypto, min diversification)</li>
+                        <li>Backtest 90 jours pour validation</li>
+                    </ul>
+                </div>
+
+                <!-- Risks -->
+                <div class="method-card" style="border-top:3px solid #ff5722;">
+                    <h3 style="color:#ff5722;">
                         <i class="fas fa-exclamation-triangle"></i> Risques principaux
                     </h3>
-                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; line-height: 1.8; color: rgba(255,255,255,0.8);">
-                        <li>• Risque de perte en capital</li>
-                        <li>• Risque de marché (volatilité)</li>
-                        <li>• Risque de change (actifs non-EUR)</li>
-                        <li>• Risque de liquidité</li>
-                        <li>• Risque spécifique crypto-actifs</li>
+                    <ul>
+                        <li>Perte en capital possible</li>
+                        <li>Risque de marché (volatilité, corrélations)</li>
+                        <li>Risque de change (actifs non-EUR)</li>
+                        <li>Risque de liquidité (small caps, crypto)</li>
+                        <li>Biais de survivorship (univers actuel)</li>
                     </ul>
                 </div>
 
-                <!-- Sources de données -->
-                <div class="amf-detail-card" style="background: rgba(76, 175, 80, 0.05); border: 1px solid rgba(76, 175, 80, 0.2); border-radius: 12px; padding: 1.5rem;">
-                    <h3 style="color: #4caf50; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-database"></i> Sources de données
+                <!-- Data Sources -->
+                <div class="method-card" style="border-top:3px solid #9c27b0;">
+                    <h3 style="color:#9c27b0;">
+                        <i class="fas fa-database"></i> Sources & limites
                     </h3>
-                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; line-height: 1.8; color: rgba(255,255,255,0.8);">
-                        <li>• Prix: Twelve Data API (temps réel)</li>
-                        <li>• Fondamentaux: données publiques</li>
-                        <li>• ETF/Bonds: fichiers certifiés</li>
-                        <li>• Commentaires: GPT-4o-mini (sanitisé)</li>
-                        <li>• Mise à jour quotidienne automatique</li>
+                    <ul>
+                        <li>Prix : Twelve Data API (J-1)</li>
+                        <li>Fondamentaux : CSV enrichis (ROE, ROIC, D/E, FCF, marges)</li>
+                        <li>Macro : FRED API + scraping</li>
+                        <li>Commentaires : GPT-4o-mini (sanitisé)</li>
+                        <li>Scoring non backtesté sur forward returns</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Disclaimer final -->
-            <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 12px;">
-                <p style="margin: 0; font-size: 0.85rem; line-height: 1.7; color: rgba(255,255,255,0.7);">
-                    <strong style="color: #ffc107;">Avertissement légal :</strong> 
-                    Les informations présentées sur cette page sont fournies à titre purement informatif et éducatif. 
+            <!-- Legal -->
+            <div class="legal-disclaimer">
+                <p>
+                    <strong>Avertissement légal</strong> — 
+                    Les informations présentées sont fournies à titre purement informatif et éducatif. 
                     Elles ne constituent en aucun cas un conseil en investissement, une recommandation personnalisée, 
-                    ou une incitation à acheter ou vendre des instruments financiers au sens de la réglementation applicable. 
+                    ou une incitation à acheter ou vendre des instruments financiers. 
                     Les performances passées ne préjugent pas des performances futures. 
                     Tout investissement comporte des risques, y compris le risque de perte en capital. 
-                    Avant toute décision d'investissement, nous vous recommandons de consulter un conseiller financier agréé 
-                    qui prendra en compte votre situation personnelle, vos objectifs et votre tolérance au risque.
+                    Consultez un conseiller financier agréé avant toute décision d'investissement.
                 </p>
             </div>
         </section>
 
-        <!-- Portfolio History Section (conservée) -->
-        <section class="portfolio-history-section">
+        <!-- Portfolio History -->
+        <section class="portfolio-history-section" style="margin-top:3rem;">
             <div class="section-header">
                 <h2>Historique des Portefeuilles</h2>
-                <p class="section-description">Consultez l'évolution des allocations au fil du temps</p>
+                <p class="section-description">Évolution des allocations au fil du temps</p>
             </div>
             <div class="portfolio-history-container">
                 <div class="portfolio-history-loading"></div>
@@ -451,73 +371,44 @@
     <!-- Footer -->
     <footer class="page-footer">
         <div class="data-source-info">
-            <p><i class="fas fa-info-circle"></i> Données de marché extraites via API certifiées</p>
-            <p><i class="fas fa-robot"></i> Analyse et optimisation par IA (compliance AMF appliquée)</p>
-            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span id="updateTime">--</span></p>
+            <p><i class="fas fa-info-circle"></i> Données de marché via API certifiées (Twelve Data, FRED)</p>
+            <p><i class="fas fa-robot"></i> Scoring Buffett v3.1 + Quality v2 | Optimisation Markowitz</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour : <span id="updateTime">--</span></p>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="ui-enhancements.js"></script>
-    
-    <!-- Loader AMF conforme -->
     <script src="portfolio-loader.js"></script>
-    
     <script src="portfolio-history.js"></script>
-
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mise à jour de l'heure du marché
-            function updateMarketTime() {
-                const now = new Date();
-                const hours = now.getHours();
-                const minutes = now.getMinutes();
-                const seconds = now.getSeconds();
-                
-                document.getElementById('marketTime').textContent = 
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                
-                // Déterminer si le marché est ouvert (heures Paris, simplifié)
-                const isWeekday = now.getDay() > 0 && now.getDay() < 6;
-                const isMarketHours = hours >= 9 && hours < 17.5;
-                const isOpen = isWeekday && isMarketHours;
-                
-                const indicator = document.getElementById('marketIndicator');
-                const statusText = document.getElementById('marketStatusText');
-                
-                if (isOpen) {
-                    indicator.className = 'market-indicator green';
-                    statusText.textContent = 'Marché ouvert';
-                } else {
-                    indicator.className = 'market-indicator red';
-                    statusText.textContent = 'Marché fermé';
-                }
-            }
-            
-            updateMarketTime();
-            setInterval(updateMarketTime, 1000);
-            
-            // Mise à jour de la date
-            const dateElement = document.getElementById('currentDate');
-            if (dateElement) {
-                const now = new Date();
-                dateElement.textContent = now.toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                }).toUpperCase();
-            }
-            
-            // Gestion du scroll smooth vers section AMF
-            document.querySelectorAll('a[href="#amf-details"]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    document.getElementById('amf-details').scrollIntoView({
-                        behavior: 'smooth'
-                    });
-                });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Market clock
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            document.getElementById('marketTime').textContent =
+                `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            const isWeekday = now.getDay() > 0 && now.getDay() < 6;
+            const isOpen = isWeekday && h >= 9 && h < 17;
+            document.getElementById('marketIndicator').className = `market-indicator ${isOpen ? 'green' : 'red'}`;
+            document.getElementById('marketStatusText').textContent = isOpen ? 'Marché ouvert' : 'Marché fermé';
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // Date
+        const d = document.getElementById('currentDate');
+        if (d) d.textContent = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }).toUpperCase();
+
+        // Smooth scroll to methodology
+        document.querySelectorAll('a[href="#methodology"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('methodology').scrollIntoView({ behavior:'smooth' });
             });
         });
+    });
     </script>
 </body>
 </html>
