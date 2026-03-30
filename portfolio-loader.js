@@ -1,643 +1,483 @@
 /**
- * Portfolio Loader v2.4 - AMF Compliant - FIXED NaN issue
- * Corrige le problème de NaN invalide dans le JSON Python
+ * Portfolio Loader v3.0 — Redesigned with Turnover Tracking
+ * - Aesthetic overhaul: editorial financial layout
+ * - Turnover: entries, exits, weight changes vs previous version
+ * - Position explanations: why each asset was selected
+ * - Market context: regime/macro interpretation
+ * - AMF compliance preserved
  */
 
-class PortfolioManagerAMF {
-    constructor() {
-        this.portfolios = null;
-        this.meta = null;
-        this.lastUpdate = null;
-        this.containerSelector = '.portfolio-container';
-        this.loadingSelector = '.portfolio-loading';
-        this.errorSelector = '.portfolio-error';
-        
-        this.AMF_CONFIG = {
-            maxCryptoWarningThreshold: 5,
-            qualityScoreWarningThreshold: 90,
-            showMethodologyDetails: true,
-            showRiskMetrics: true,
-            showConstraintViolations: true
-        };
+class PortfolioManagerV3 {
+  constructor() {
+    this.portfolios = null;
+    this.previousPortfolios = null;
+    this.meta = null;
+    this.previousMeta = null;
+    this.lastUpdate = null;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // DATA LOADING
+  // ═══════════════════════════════════════════════════════════════════
+
+  cleanJSON(text) {
+    return text.replace(/\bNaN\b/g, 'null').replace(/\bInfinity\b/g, 'null').replace(/\b-Infinity\b/g, 'null');
+  }
+
+  async fetchJSON(paths) {
+    const ts = Date.now();
+    for (const p of paths) {
+      try {
+        const r = await fetch(`${p}?_=${ts}`);
+        if (r.ok) {
+          const t = await r.text();
+          return JSON.parse(this.cleanJSON(t));
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  async loadPortfolios() {
+    const paths = [
+      'data/portfolios.json', './data/portfolios.json',
+      '/stock-analysis-platform/data/portfolios.json',
+      `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/portfolios.json`
+    ];
+    const prevPaths = [
+      'data/portfolios_previous.json', './data/portfolios_previous.json',
+      '/stock-analysis-platform/data/portfolios_previous.json',
+      `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/portfolios_previous.json`
+    ];
+
+    const data = await this.fetchJSON(paths);
+    if (!data) throw new Error('Impossible de charger portfolios.json');
+
+    this.meta = data._meta || { version: '?', generated_at: new Date().toISOString(), backtest_days: 90 };
+    this.portfolios = {};
+    for (const k of Object.keys(data)) { if (!k.startsWith('_')) this.portfolios[k] = data[k]; }
+    this.lastUpdate = this.meta.generated_at ? new Date(this.meta.generated_at) : new Date();
+
+    // Try loading previous version for turnover
+    const prev = await this.fetchJSON(prevPaths);
+    if (prev) {
+      this.previousMeta = prev._meta || {};
+      this.previousPortfolios = {};
+      for (const k of Object.keys(prev)) { if (!k.startsWith('_')) this.previousPortfolios[k] = prev[k]; }
+      console.log('📊 Previous portfolio loaded for turnover tracking');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // TURNOVER COMPUTATION
+  // ═══════════════════════════════════════════════════════════════════
+
+  computeTurnover(current, previous) {
+    if (!previous) return null;
+    const allAssets = new Map(); // name → { current, previous, category }
+    const categories = ['Actions', 'ETF', 'Obligations', 'Crypto'];
+
+    for (const cat of categories) {
+      const curr = current[cat] || {};
+      const prev = previous[cat] || {};
+      for (const [name, val] of Object.entries(curr)) {
+        const w = parseFloat(String(val).replace('%', '')) || 0;
+        if (w > 0) allAssets.set(name, { ...allAssets.get(name), current: w, category: cat });
+      }
+      for (const [name, val] of Object.entries(prev)) {
+        const w = parseFloat(String(val).replace('%', '')) || 0;
+        if (w > 0) {
+          const existing = allAssets.get(name) || { category: cat };
+          allAssets.set(name, { ...existing, previous: w, category: existing.category || cat });
+        }
+      }
     }
 
-    async init() {
-        try {
-            this.showLoading(true);
-            await this.loadPortfolios();
-            this.renderPortfolios();
-            this.setupInteractions();
-            this.showLoading(false);
-            console.log('✅ Portefeuilles AMF v2.4 chargés avec succès');
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'initialisation:', error);
-            this.showError(`Erreur de chargement: ${error.message}`);
-            this.showLoading(false);
-        }
+    const entries = [], exits = [], changes = [], unchanged = [];
+    for (const [name, data] of allAssets) {
+      const c = data.current || 0, p = data.previous || 0;
+      const delta = c - p;
+      if (p === 0 && c > 0) entries.push({ name, weight: c, category: data.category });
+      else if (c === 0 && p > 0) exits.push({ name, weight: p, category: data.category });
+      else if (Math.abs(delta) >= 0.5) changes.push({ name, current: c, previous: p, delta, category: data.category });
+      else unchanged.push({ name, weight: c, category: data.category });
     }
 
-    normalizeType(type) {
-        return type.toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
+    entries.sort((a, b) => b.weight - a.weight);
+    exits.sort((a, b) => b.weight - a.weight);
+    changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+    const totalTurnover = (entries.reduce((s, e) => s + e.weight, 0) +
+      exits.reduce((s, e) => s + e.weight, 0) +
+      changes.reduce((s, e) => s + Math.abs(e.delta), 0)) / 2;
+
+    return { entries, exits, changes, unchanged, totalTurnover: Math.round(totalTurnover * 10) / 10 };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // UI RENDERING
+  // ═══════════════════════════════════════════════════════════════════
+
+  normalizeType(t) { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+  getProfileConfig(type) {
+    const n = this.normalizeType(type);
+    if (n.includes('agressif')) return { color: '#FF7B00', bg: 'rgba(255,123,0,0.08)', icon: 'fa-rocket', label: 'Agressif', risk: 'Élevé', horizon: '5+ ans' };
+    if (n.includes('stable')) return { color: '#00B2FF', bg: 'rgba(0,178,255,0.08)', icon: 'fa-shield-alt', label: 'Stable', risk: 'Faible', horizon: '1-3 ans' };
+    return { color: '#00FF87', bg: 'rgba(0,255,135,0.08)', icon: 'fa-balance-scale', label: 'Modéré', risk: 'Modéré', horizon: '3-5 ans' };
+  }
+
+  getCatIcon(c) {
+    return { Actions: 'fa-chart-line', ETF: 'fa-layer-group', Obligations: 'fa-file-contract', Crypto: 'fa-coins' }[c] || 'fa-cube';
+  }
+
+  getCatColor(c) {
+    return { Actions: '#FF6B6B', ETF: '#4ECDC4', Obligations: '#45B7D1', Crypto: '#FFA07A' }[c] || '#888';
+  }
+
+  formatDate(d) {
+    if (!d) return 'N/A';
+    try { return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(d)); } catch { return 'N/A'; }
+  }
+
+  // ── Main render ──
+
+  async init() {
+    const container = document.querySelector('.portfolio-container');
+    if (!container) return;
+    try {
+      container.querySelector('.portfolio-loading').style.display = 'flex';
+      await this.loadPortfolios();
+      this.render(container);
+      container.querySelector('.portfolio-loading').style.display = 'none';
+    } catch (e) {
+      container.querySelector('.portfolio-loading').style.display = 'none';
+      const err = container.querySelector('.portfolio-error');
+      if (err) { err.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${e.message}`; err.style.display = 'block'; }
+    }
+  }
+
+  render(container) {
+    // Update header info
+    const vEl = document.getElementById('portfolioVersion');
+    if (vEl) vEl.textContent = this.meta.version || 'N/A';
+    const tEl = document.getElementById('portfolioUpdateTime');
+    if (tEl) tEl.textContent = this.formatDate(this.lastUpdate);
+    const uEl = document.getElementById('updateTime');
+    if (uEl) uEl.textContent = this.formatDate(this.lastUpdate);
+
+    const types = Object.keys(this.portfolios);
+    const content = document.createElement('div');
+    content.className = 'portfolio-content';
+
+    types.forEach((type, i) => {
+      const panel = document.createElement('div');
+      panel.className = `portfolio-panel ${i === 0 ? 'active' : ''}`;
+      panel.id = `portfolio-${this.normalizeType(type)}`;
+      panel.style.display = i === 0 ? 'block' : 'none';
+      panel.innerHTML = this.renderPortfolio(type, this.portfolios[type]);
+      content.appendChild(panel);
+    });
+
+    const old = container.querySelector('.portfolio-content');
+    if (old) old.remove();
+    container.appendChild(content);
+
+    // Charts
+    setTimeout(() => this.initCharts(), 150);
+
+    // Tab interactions
+    document.querySelectorAll('.portfolio-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.portfolio-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.portfolio-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+        tab.classList.add('active');
+        const target = document.getElementById(tab.dataset.target);
+        if (target) { target.classList.add('active'); target.style.display = 'block'; }
+        const title = document.getElementById('portfolioTitle');
+        if (title) title.textContent = `PORTEFEUILLE ${(tab.dataset.originalType || '').toUpperCase()}`;
+      });
+    });
+  }
+
+  // ── Single portfolio ──
+
+  renderPortfolio(type, portfolio) {
+    const cfg = this.getProfileConfig(type);
+    const opt = portfolio._optimization || {};
+    const constraints = portfolio._constraint_report || {};
+    const exposures = portfolio._exposures || {};
+    const limitations = portfolio._limitations || [];
+    const comment = portfolio.Commentaire || 'Portefeuille optimisé selon les conditions de marché actuelles.';
+    const prevPortfolio = this.previousPortfolios?.[type] || null;
+    const turnover = this.computeTurnover(portfolio, prevPortfolio);
+
+    let html = '';
+
+    // ── Header with risk profile ──
+    html += `
+    <div class="pf-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 style="color:${cfg.color};margin:0 0 0.5rem 0;font-size:1.8rem;font-weight:800;letter-spacing:-0.5px;">
+          <i class="fas ${cfg.icon}" style="margin-right:0.5rem;font-size:1.4rem;"></i>${type}
+        </h2>
+        <div style="display:flex;gap:1rem;font-size:0.8rem;color:rgba(255,255,255,0.5);">
+          <span><i class="fas fa-signal" style="margin-right:4px;"></i>Risque: <strong style="color:${cfg.color}">${cfg.risk}</strong></span>
+          <span><i class="fas fa-clock" style="margin-right:4px;"></i>Horizon: <strong>${cfg.horizon}</strong></span>
+          <span><i class="fas ${opt.is_heuristic ? 'fa-cogs' : 'fa-calculator'}" style="margin-right:4px;"></i>${opt.is_heuristic ? 'Heuristique' : 'Markowitz SLSQP'}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        ${this.renderBadge('Vol', `${(opt.vol_realized || 0).toFixed(1)}%`, cfg.color)}
+        ${constraints.quality_score ? this.renderBadge('Qualité', `${constraints.quality_score.toFixed(0)}%`, constraints.quality_score >= 85 ? '#4caf50' : '#ff9800') : ''}
+        ${exposures.concentration ? this.renderBadge('HHI', Math.round(exposures.concentration.hhi || 0), exposures.concentration.hhi < 1500 ? '#4caf50' : '#ff9800') : ''}
+      </div>
+    </div>`;
+
+    // ── Market context / Commentary ──
+    html += `
+    <div class="pf-context" style="position:relative;border-left:4px solid ${cfg.color};padding:1.25rem 1.5rem;background:${cfg.bg};margin-bottom:2rem;border-radius:0 12px 12px 0;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+        <i class="fas fa-globe" style="color:${cfg.color};"></i>
+        <span style="font-weight:700;font-size:0.9rem;color:${cfg.color};">Contexte & Stratégie</span>
+      </div>
+      <p style="margin:0;line-height:1.7;font-size:0.92rem;color:rgba(255,255,255,0.85);">${comment}</p>
+    </div>`;
+
+    // ── Chart + Allocation overview ──
+    const normalizedType = this.normalizeType(type);
+    html += `
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:2rem;margin-bottom:2rem;align-items:start;">
+      <div style="background:rgba(255,255,255,0.02);border-radius:12px;padding:1.25rem;height:260px;">
+        <canvas id="chart-${normalizedType}"></canvas>
+      </div>
+      <div>
+        <h3 style="margin:0 0 1rem 0;font-size:0.95rem;font-weight:700;color:rgba(255,255,255,0.7);">
+          <i class="fas fa-th-large" style="margin-right:6px;"></i>Répartition par classe
+        </h3>
+        ${this.renderAllocationBars(portfolio, cfg.color)}
+      </div>
+    </div>`;
+
+    // ── Turnover section ──
+    if (turnover && (turnover.entries.length || turnover.exits.length || turnover.changes.length)) {
+      html += this.renderTurnover(turnover, cfg);
     }
 
-    /**
-     * Nettoie le JSON généré par Python (remplace NaN par null)
-     * Python pandas/numpy génère NaN qui n'est pas valide en JSON standard
-     */
-    cleanPythonJSON(text) {
-        console.log('🧹 Nettoyage du JSON Python...');
-        // Remplacer tous les NaN par null (plus robuste)
-        let cleaned = text
-            .replace(/\bNaN\b/g, 'null')
-            .replace(/\bInfinity\b/g, 'null')
-            .replace(/\b-Infinity\b/g, 'null');
-        
-        // Log pour debug
-        const nanCount = (text.match(/\bNaN\b/g) || []).length;
-        console.log(`🔧 ${nanCount} NaN remplacés par null`);
-        
-        return cleaned;
-    }
+    // ── Positions detail by category ──
+    html += `<h3 style="margin:0 0 1.25rem 0;font-size:1rem;font-weight:700;color:rgba(255,255,255,0.8);">
+      <i class="fas fa-list-ul" style="margin-right:6px;"></i>Positions détaillées
+    </h3>`;
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;margin-bottom:2rem;">';
 
-    /**
-     * Charge les portefeuilles - VERSION ROBUSTE avec nettoyage NaN
-     */
-    async loadPortfolios() {
-        const timestamp = Date.now();
-        console.log('📂 Chargement des portefeuilles v2.4...');
-        
-        // URL directe vers raw.githubusercontent.com - TOUJOURS ACCESSIBLE
-        const rawUrl = `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/portfolios.json?_=${timestamp}`;
-        
-        // Chemins locaux à essayer d'abord
-        const localPaths = [
-            'data/portfolios.json',
-            './data/portfolios.json',
-            '/stock-analysis-platform/data/portfolios.json'
-        ];
-        
-        let data = null;
-        let loadedFrom = null;
-        let lastError = null;
-        
-        // 1. Essayer les chemins locaux d'abord
-        for (const path of localPaths) {
-            try {
-                console.log(`📂 Essai: ${path}`);
-                const response = await fetch(`${path}?_=${timestamp}`);
-                if (response.ok) {
-                    const text = await response.text();
-                    console.log(`📄 Reçu ${text.length} caractères`);
-                    const cleanedText = this.cleanPythonJSON(text);
-                    data = JSON.parse(cleanedText);
-                    loadedFrom = path;
-                    console.log(`✅ Chargé depuis: ${path}`);
-                    break;
-                } else {
-                    console.warn(`⚠️ HTTP ${response.status} pour ${path}`);
-                }
-            } catch (e) {
-                console.warn(`⚠️ Échec ${path}: ${e.message}`);
-                lastError = e.message;
-            }
-        }
-        
-        // 2. Fallback vers raw.githubusercontent.com
-        if (!data) {
-            try {
-                console.log(`📂 Fallback: raw.githubusercontent.com`);
-                const response = await fetch(rawUrl);
-                if (response.ok) {
-                    const text = await response.text();
-                    console.log(`📄 Reçu ${text.length} caractères depuis GitHub`);
-                    const cleanedText = this.cleanPythonJSON(text);
-                    data = JSON.parse(cleanedText);
-                    loadedFrom = 'raw.githubusercontent.com';
-                    console.log('✅ Chargé depuis raw.githubusercontent.com');
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-            } catch (e) {
-                console.error('❌ Échec du fallback:', e.message);
-                throw new Error(`Impossible de charger portfolios.json. Erreur: ${e.message}`);
-            }
-        }
-        
-        // 3. Parser les données
-        if (!data) {
-            throw new Error('Données vides');
-        }
-        
-        // Extraire _meta
-        this.meta = data._meta || {
-            version: 'unknown',
-            generated_at: new Date().toISOString(),
-            backtest_days: 90
-        };
-        
-        // Extraire les portefeuilles (clés sans underscore)
-        this.portfolios = {};
-        for (const key of Object.keys(data)) {
-            if (!key.startsWith('_')) {
-                this.portfolios[key] = data[key];
-            }
-        }
-        
-        console.log('📊 Portefeuilles trouvés:', Object.keys(this.portfolios));
-        console.log('📋 Meta:', this.meta);
-        
-        this.lastUpdate = this.meta.generated_at 
-            ? new Date(this.meta.generated_at) 
-            : new Date();
-        
-        // Mettre à jour l'affichage
-        const versionEl = document.getElementById('portfolioVersion');
-        if (versionEl) versionEl.textContent = this.meta.version || 'N/A';
-        
-        this.updateDisplayedDate();
-        
-        return this.portfolios;
-    }
+    for (const cat of ['Actions', 'ETF', 'Obligations', 'Crypto']) {
+      const assets = portfolio[cat];
+      if (!assets || !Object.keys(assets).length) continue;
+      const sorted = Object.entries(assets)
+        .map(([n, v]) => ({ name: n, weight: parseFloat(String(v).replace('%', '')) || 0 }))
+        .filter(a => a.weight > 0)
+        .sort((a, b) => b.weight - a.weight);
+      if (!sorted.length) continue;
 
-    updateDisplayedDate() {
-        const dateStr = this.formatDate(this.lastUpdate);
-        ['portfolioUpdateTime', 'updateTime'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = dateStr;
-        });
-    }
+      const prevCat = prevPortfolio?.[cat] || {};
+      const catColor = this.getCatColor(cat);
 
-    generateAMFComplianceBlock(portfolioType, portfolio) {
-        const optimization = portfolio._optimization || {};
-        const constraints = portfolio._constraint_report || {};
-        const limitations = portfolio._limitations || [];
-        const exposures = portfolio._exposures || {};
-        
-        const isHeuristic = optimization.is_heuristic === true;
-        const qualityScore = constraints.quality_score || 100;
-        const violations = constraints.summary?.violated || 0;
-        const cryptoExposure = this.calculateCryptoExposure(portfolio);
-        
-        let html = `<div class="amf-compliance-block" style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,193,7,0.05); border: 1px solid rgba(255,193,7,0.2); border-radius: 12px;">
-            <div class="amf-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: #ffc107;">
-                <i class="fas fa-shield-alt"></i>
-                <span style="font-weight: 600;">Information réglementaire (AMF)</span>
-            </div>
-            
-            <div class="amf-disclaimer primary" style="display: flex; gap: 0.75rem; padding: 1rem; background: rgba(255,152,0,0.1); border-radius: 8px; margin-bottom: 1rem;">
-                <i class="fas fa-exclamation-triangle" style="color: #ff9800; flex-shrink: 0;"></i>
-                <p style="margin: 0; font-size: 0.85rem; line-height: 1.5;"><strong>Avertissement :</strong> Ce portefeuille modèle est fourni à titre informatif et éducatif uniquement. 
-                Il ne constitue pas un conseil en investissement personnalisé. 
-                Les performances passées ne préjugent pas des performances futures.</p>
-            </div>`;
-        
-        // Warning crypto si > seuil
-        if (cryptoExposure > this.AMF_CONFIG.maxCryptoWarningThreshold) {
-            html += `
-            <div class="amf-warning crypto" style="display: flex; gap: 0.75rem; padding: 1rem; background: rgba(244,67,54,0.1); border-radius: 8px; margin-bottom: 1rem;">
-                <i class="fas fa-coins" style="color: #f44336; flex-shrink: 0;"></i>
-                <p style="margin: 0; font-size: 0.85rem;"><strong>Risque crypto-actifs (${cryptoExposure.toFixed(1)}%) :</strong> 
-                Les crypto-actifs présentent un risque de perte en capital très élevé.</p>
-            </div>`;
-        }
-        
-        // Méthodologie
-        if (this.AMF_CONFIG.showMethodologyDetails) {
-            const methodLabel = isHeuristic ? 'Allocation heuristique' : 'Optimisation Markowitz (SLSQP)';
-            const methodColor = isHeuristic ? '#9c27b0' : '#4caf50';
-            const methodIcon = isHeuristic ? 'fa-cogs' : 'fa-calculator';
-            
-            html += `
-            <div class="amf-methodology" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 1rem;">
-                <div class="method-header" style="display: flex; align-items: center; gap: 0.5rem; color: ${methodColor};">
-                    <i class="fas ${methodIcon}"></i>
-                    <span style="font-weight: 600;">Méthodologie : ${methodLabel}</span>
-                </div>`;
-            
-            if (isHeuristic && optimization.why_not_slsqp_details) {
-                html += `
-                <div class="method-explanation" style="margin-top: 0.75rem; font-size: 0.85rem; color: rgba(255,255,255,0.7);">
-                    <p style="margin: 0;">${optimization.why_not_slsqp_details}</p>
-                </div>`;
-            }
-            html += `</div>`;
-        }
-        
-        // Violations
-        if (this.AMF_CONFIG.showConstraintViolations && violations > 0) {
-            const violatedList = (constraints.constraints || []).filter(c => c.status === 'VIOLATED');
-            html += `
-            <div class="amf-warning violations" style="padding: 1rem; background: rgba(244,67,54,0.1); border-radius: 8px; margin-bottom: 1rem;">
-                <div class="warning-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                    <i class="fas fa-exclamation-circle" style="color: #f44336;"></i>
-                    <span style="font-weight: 600;">Contraintes non respectées (${violations})</span>
-                    <span style="margin-left: auto; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; background: ${qualityScore >= 85 ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)'}; color: ${qualityScore >= 85 ? '#4caf50' : '#f44336'};">
-                        Score: ${qualityScore.toFixed(1)}%
-                    </span>
-                </div>
-                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem;">
-                    ${violatedList.map(v => `
-                        <li style="margin-bottom: 0.25rem;"><strong>${v.name}</strong>: ${v.observed}% (limite: ${v.cap}%)</li>
-                    `).join('')}
-                </ul>
-            </div>`;
-        }
-        
-        // Limitations
-        if (limitations.length > 0) {
-            html += `
-            <div class="amf-limitations" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 1rem;">
-                <div class="limitations-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; color: #2196f3;">
-                    <i class="fas fa-info-circle"></i>
-                    <span style="font-weight: 600;">Limitations connues</span>
-                </div>
-                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem;">${limitations.map(l => `<li>${l}</li>`).join('')}</ul>
-            </div>`;
-        }
-        
-        // Métriques de risque
-        const conc = exposures.concentration;
-        if (this.AMF_CONFIG.showRiskMetrics && conc) {
-            html += `
-            <div class="amf-risk-metrics" style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 1rem;">
-                <div class="metrics-header" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: #00bcd4;">
-                    <i class="fas fa-chart-bar"></i>
-                    <span style="font-weight: 600;">Indicateurs de risque</span>
-                </div>
-                <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-                    <div class="metric" style="text-align: center;">
-                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">Volatilité</span>
-                        <span class="metric-value" style="font-size: 1.25rem; font-weight: 700;">${(optimization.vol_realized || 0).toFixed(1)}%</span>
-                    </div>
-                    <div class="metric" style="text-align: center;">
-                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">HHI</span>
-                        <span class="metric-value ${this.getHHIClass(conc.hhi)}" style="font-size: 1.25rem; font-weight: 700;">${Math.round(conc.hhi || 0)}</span>
-                    </div>
-                    <div class="metric" style="text-align: center;">
-                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">Positions</span>
-                        <span class="metric-value" style="font-size: 1.25rem; font-weight: 700;">${conc.n_positions || 0}</span>
-                    </div>
-                    <div class="metric" style="text-align: center;">
-                        <span class="metric-label" style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 0.25rem;">Top 5</span>
-                        <span class="metric-value" style="font-size: 1.25rem; font-weight: 700;">${conc.top_5_weight || 0}%</span>
-                    </div>
-                </div>
-                <p class="hhi-interpretation" style="margin: 1rem 0 0 0; text-align: center; font-size: 0.85rem;"><em>${this.getHHIInterpretation(conc.hhi || 0)}</em></p>
-            </div>`;
-        }
-        
-        // Footer
+      html += `
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;border-top:3px solid ${catColor};">
+        <h4 style="margin:0 0 1rem 0;color:${catColor};font-size:0.9rem;display:flex;align-items:center;gap:0.5rem;">
+          <i class="fas ${this.getCatIcon(cat)}"></i>${cat}
+          <span style="margin-left:auto;font-size:0.75rem;color:rgba(255,255,255,0.4);">${sorted.length} positions</span>
+        </h4>`;
+
+      for (const a of sorted) {
+        const prevW = parseFloat(String(prevCat[a.name] || 0).replace('%', '')) || 0;
+        const delta = prevW > 0 ? a.weight - prevW : null;
+        const isNew = prevW === 0;
+
         html += `
-            <div class="amf-footer" style="display: flex; justify-content: center; gap: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.4); padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                <span>Version ${this.meta.version || 'N/A'}</span>
-                <span>•</span>
-                <span>Généré le ${this.formatDate(this.lastUpdate)}</span>
-                <span>•</span>
-                <span>Backtest ${this.meta.backtest_days || 90} jours</span>
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <span style="font-size:0.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.name}</span>
+              ${isNew ? '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:rgba(76,175,80,0.2);color:#4caf50;font-weight:700;">NEW</span>' : ''}
             </div>
-        </div>`;
-        
-        return html;
-    }
-
-    calculateCryptoExposure(portfolio) {
-        const crypto = portfolio.Crypto || {};
-        return Object.values(crypto).reduce((sum, val) => {
-            const num = parseFloat(String(val).replace('%', ''));
-            return sum + (isNaN(num) ? 0 : num);
-        }, 0);
-    }
-
-    getScoreClass(score) {
-        if (score >= 95) return 'excellent';
-        if (score >= 85) return 'good';
-        if (score >= 70) return 'warning';
-        return 'critical';
-    }
-
-    getHHIClass(hhi) {
-        if (hhi < 1000) return 'well-diversified';
-        if (hhi < 1500) return 'diversified';
-        if (hhi < 2500) return 'concentrated';
-        return 'highly-concentrated';
-    }
-
-    getHHIInterpretation(hhi) {
-        if (hhi < 1000) return '✅ Bien diversifié';
-        if (hhi < 1500) return '🟢 Diversification acceptable';
-        if (hhi < 2500) return '🟡 Concentration modérée';
-        return '🔴 Forte concentration';
-    }
-
-    generatePortfolioContent(portfolioType, portfolio) {
-        const normalizedType = this.normalizeType(portfolioType);
-        const optimization = portfolio._optimization || {};
-        
-        const colors = {
-            agressif: '#FF7B00',
-            modere: '#00FF87',
-            stable: '#00B2FF'
-        };
-        const color = colors[normalizedType] || '#00FF87';
-        
-        let html = `
-        <div class="portfolio-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-            <h2 style="color: ${color}; margin: 0;">${portfolioType}</h2>
-            <div class="portfolio-badges" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <span class="badge" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; background: ${optimization.is_heuristic ? 'rgba(156, 39, 176, 0.2)' : 'rgba(76, 175, 80, 0.2)'}; color: ${optimization.is_heuristic ? '#9c27b0' : '#4caf50'};">
-                    <i class="fas ${optimization.is_heuristic ? 'fa-cogs' : 'fa-calculator'}"></i>
-                    ${optimization.is_heuristic ? 'Heuristique' : 'Optimisé'}
-                </span>
-                <span class="badge" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; background: rgba(33, 150, 243, 0.2); color: #2196f3;">
-                    <i class="fas fa-chart-line"></i>
-                    Vol: ${(optimization.vol_realized || 0).toFixed(1)}%
-                </span>
+            <div style="margin-top:4px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
+              <div style="width:${Math.min(a.weight * 2.5, 100)}%;height:100%;background:${catColor};border-radius:2px;"></div>
             </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <span style="font-size:0.95rem;font-weight:700;color:${catColor};">${a.weight}%</span>
+            ${delta !== null && Math.abs(delta) >= 0.5 ? `<div style="font-size:0.7rem;color:${delta > 0 ? '#4caf50' : '#f44336'};font-weight:600;">${delta > 0 ? '+' : ''}${delta.toFixed(1)}%</div>` : ''}
+          </div>
         </div>`;
-        
-        // Commentaire
-        const comment = portfolio.Commentaire || 'Portefeuille optimisé selon les conditions de marché.';
-        html += `
-        <div class="portfolio-commentary" style="border-left: 4px solid ${color}; padding: 1rem; background: rgba(255,255,255,0.03); margin-bottom: 1.5rem; border-radius: 0 8px 8px 0;">
-            <p style="margin: 0; line-height: 1.6; font-size: 0.9rem;">${comment}</p>
-        </div>`;
-        
-        // Graphique + Allocation
-        html += `
-        <div class="portfolio-overview" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-            <div class="portfolio-chart-container" style="height: 250px; background: rgba(255,255,255,0.02); border-radius: 8px; padding: 1rem;">
-                <canvas id="chart-${normalizedType}"></canvas>
-            </div>
-            <div class="portfolio-allocation">
-                <h3 style="margin-bottom: 1rem; font-size: 1rem;">Répartition par classe</h3>
-                ${this.generateAllocationBars(portfolio, color)}
-            </div>
-        </div>`;
-        
-        // Détails par catégorie
-        html += '<div class="portfolio-details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">';
-        
-        ['Actions', 'ETF', 'Obligations', 'Crypto'].forEach(category => {
-            const assets = portfolio[category];
-            if (!assets || Object.keys(assets).length === 0) return;
-            
-            const sorted = Object.entries(assets)
-                .map(([name, val]) => ({ name, value: parseFloat(String(val).replace('%', '')) }))
-                .filter(a => a.value > 0)
-                .sort((a, b) => b.value - a.value);
-            
-            if (sorted.length === 0) return;
-            
-            html += `
-            <div class="portfolio-category" style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px;">
-                <h3 style="color: ${color}; margin-bottom: 1rem; font-size: 1rem;">
-                    <i class="${this.getCategoryIcon(category)}"></i> ${category}
-                </h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                    ${sorted.map(a => `
-                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <td style="padding: 0.5rem 0; font-size: 0.85rem;">${a.name}</td>
-                            <td style="padding: 0.5rem 0; text-align: right; color: ${color}; font-weight: 600;">${a.value}%</td>
-                        </tr>
-                    `).join('')}
-                </table>
-            </div>`;
-        });
-        
-        html += '</div>';
-        
-        // Bloc AMF
-        html += this.generateAMFComplianceBlock(portfolioType, portfolio);
-        
-        // Boutons
-        html += `
-        <div class="portfolio-actions" style="display: flex; gap: 1rem; margin-top: 2rem;">
-            <button class="btn-download" data-portfolio="${portfolioType}" style="padding: 0.75rem 1.5rem; border: 2px solid ${color}; color: ${color}; background: transparent; border-radius: 8px; cursor: pointer;">
-                <i class="fas fa-download"></i> PDF
-            </button>
-            <button class="btn-share" data-portfolio="${portfolioType}" style="padding: 0.75rem 1.5rem; border: 2px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); background: transparent; border-radius: 8px; cursor: pointer;">
-                <i class="fas fa-share-alt"></i> Partager
-            </button>
-        </div>`;
-        
-        return html;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // ── Risk metrics ──
+    const conc = exposures.concentration;
+    if (conc) {
+      html += `
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-bottom:2rem;">
+        <h3 style="margin:0 0 1rem 0;font-size:0.95rem;font-weight:700;color:rgba(255,255,255,0.7);">
+          <i class="fas fa-chart-bar" style="margin-right:6px;color:#00bcd4;"></i>Indicateurs de risque
+        </h3>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+          ${this.renderMetric('Volatilité', `${(opt.vol_realized || 0).toFixed(1)}%`, cfg.color)}
+          ${this.renderMetric('HHI', Math.round(conc.hhi || 0), conc.hhi < 1500 ? '#4caf50' : '#ff9800')}
+          ${this.renderMetric('Positions', conc.n_positions || 0, '#2196f3')}
+          ${this.renderMetric('Top 5', `${conc.top_5_weight || 0}%`, '#9c27b0')}
+        </div>
+        <p style="margin:1rem 0 0 0;text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.5);">
+          <em>${conc.hhi < 1000 ? '✅ Bien diversifié' : conc.hhi < 1500 ? '🟢 Diversification acceptable' : conc.hhi < 2500 ? '🟡 Concentration modérée' : '🔴 Forte concentration'}</em>
+        </p>
+      </div>`;
     }
 
-    generateAllocationBars(portfolio, color) {
-        const categories = ['Actions', 'ETF', 'Obligations', 'Crypto'];
-        let html = '<div style="display: flex; flex-direction: column; gap: 0.75rem;">';
-        
-        categories.forEach(cat => {
-            const assets = portfolio[cat] || {};
-            const total = Object.values(assets).reduce((sum, v) => {
-                const num = parseFloat(String(v).replace('%', ''));
-                return sum + (isNaN(num) ? 0 : num);
-            }, 0);
-            
-            if (total === 0) return;
-            
-            html += `
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <span style="width: 80px; font-size: 0.85rem;">${cat}</span>
-                <div style="flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-                    <div style="width: ${total}%; height: 100%; background: ${color};"></div>
-                </div>
-                <span style="width: 40px; text-align: right; color: ${color}; font-weight: 600;">${Math.round(total)}%</span>
-            </div>`;
-        });
-        
-        html += '</div>';
-        return html;
+    // ── AMF disclaimer (compact) ──
+    html += `
+    <div style="padding:1.25rem;background:rgba(255,193,7,0.05);border:1px solid rgba(255,193,7,0.15);border-radius:12px;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+        <i class="fas fa-gavel" style="color:#ffc107;margin-top:2px;flex-shrink:0;"></i>
+        <div style="font-size:0.82rem;line-height:1.6;color:rgba(255,255,255,0.6);">
+          <strong style="color:#ffc107;">Avertissement AMF</strong> — Ce portefeuille modèle est fourni à titre informatif. 
+          Il ne constitue pas un conseil en investissement. Les performances passées ne préjugent pas des performances futures.
+          ${limitations.length ? '<br><strong>Limitations :</strong> ' + limitations.join(' • ') : ''}
+          <br><span style="color:rgba(255,255,255,0.4);">v${this.meta.version || '?'} • ${this.formatDate(this.lastUpdate)} • Backtest ${this.meta.backtest_days || 90}j</span>
+        </div>
+      </div>
+    </div>`;
+
+    return html;
+  }
+
+  // ── Turnover section ──
+
+  renderTurnover(turnover, cfg) {
+    let html = `
+    <div style="margin-bottom:2rem;border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;">
+      <div style="padding:1rem 1.25rem;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:rgba(255,255,255,0.8);">
+          <i class="fas fa-exchange-alt" style="margin-right:6px;color:${cfg.color};"></i>Turnover vs précédent
+        </h3>
+        <div style="display:flex;gap:0.75rem;font-size:0.8rem;">
+          ${this.renderMiniTag(`${turnover.entries.length} entrée${turnover.entries.length > 1 ? 's' : ''}`, '#4caf50')}
+          ${this.renderMiniTag(`${turnover.exits.length} sortie${turnover.exits.length > 1 ? 's' : ''}`, '#f44336')}
+          ${this.renderMiniTag(`${turnover.changes.length} ajust.`, '#ff9800')}
+          ${this.renderMiniTag(`Turnover: ${turnover.totalTurnover}%`, cfg.color)}
+        </div>
+      </div>
+      <div style="padding:1.25rem;">`;
+
+    if (turnover.entries.length) {
+      html += '<div style="margin-bottom:1rem;"><div style="font-size:0.75rem;font-weight:700;color:#4caf50;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">Entrées</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:0.5rem;">';
+      for (const e of turnover.entries) {
+        html += `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.2);border-radius:6px;font-size:0.82rem;">
+          <i class="fas fa-arrow-up" style="font-size:0.6rem;color:#4caf50;"></i>
+          <strong>${e.name}</strong> <span style="color:#4caf50;">${e.weight}%</span>
+        </span>`;
+      }
+      html += '</div></div>';
     }
 
-    getCategoryIcon(category) {
-        return {
-            'Actions': 'fas fa-chart-line',
-            'ETF': 'fas fa-layer-group',
-            'Obligations': 'fas fa-file-contract',
-            'Crypto': 'fas fa-coins'
-        }[category] || 'fas fa-cube';
+    if (turnover.exits.length) {
+      html += '<div style="margin-bottom:1rem;"><div style="font-size:0.75rem;font-weight:700;color:#f44336;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">Sorties</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:0.5rem;">';
+      for (const e of turnover.exits) {
+        html += `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.2);border-radius:6px;font-size:0.82rem;text-decoration:line-through;opacity:0.7;">
+          <i class="fas fa-arrow-down" style="font-size:0.6rem;color:#f44336;"></i>
+          ${e.name} <span style="color:#f44336;">${e.weight}%</span>
+        </span>`;
+      }
+      html += '</div></div>';
     }
 
-    showLoading(show) {
-        const el = document.querySelector(this.loadingSelector);
-        if (el) el.style.display = show ? 'flex' : 'none';
+    if (turnover.changes.length) {
+      html += '<div><div style="font-size:0.75rem;font-weight:700;color:#ff9800;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px;">Ajustements</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:0.5rem;">';
+      for (const c of turnover.changes) {
+        const col = c.delta > 0 ? '#4caf50' : '#f44336';
+        html += `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(255,152,0,0.08);border:1px solid rgba(255,152,0,0.15);border-radius:6px;font-size:0.82rem;">
+          ${c.name} ${c.previous}→${c.current}% <span style="color:${col};font-weight:700;">(${c.delta > 0 ? '+' : ''}${c.delta.toFixed(1)})</span>
+        </span>`;
+      }
+      html += '</div></div>';
     }
 
-    showError(message) {
-        const el = document.querySelector(this.errorSelector);
-        if (el) {
-            el.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
-            el.style.display = 'block';
+    html += '</div></div>';
+    return html;
+  }
+
+  // ── Helpers ──
+
+  renderBadge(label, value, color) {
+    return `<div style="padding:4px 10px;border-radius:8px;font-size:0.75rem;background:${color}15;border:1px solid ${color}30;color:${color};font-weight:600;white-space:nowrap;">
+      ${label}: ${value}
+    </div>`;
+  }
+
+  renderMiniTag(text, color) {
+    return `<span style="padding:2px 8px;border-radius:4px;background:${color}18;color:${color};font-weight:600;">${text}</span>`;
+  }
+
+  renderMetric(label, value, color) {
+    return `<div style="text-align:center;">
+      <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:4px;">${label}</div>
+      <div style="font-size:1.3rem;font-weight:800;color:${color};">${value}</div>
+    </div>`;
+  }
+
+  renderAllocationBars(portfolio, color) {
+    let html = '';
+    for (const cat of ['Actions', 'ETF', 'Obligations', 'Crypto']) {
+      const assets = portfolio[cat] || {};
+      const total = Object.values(assets).reduce((s, v) => s + (parseFloat(String(v).replace('%', '')) || 0), 0);
+      if (total <= 0) continue;
+      const catColor = this.getCatColor(cat);
+      html += `
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
+        <i class="fas ${this.getCatIcon(cat)}" style="width:16px;text-align:center;color:${catColor};font-size:0.8rem;"></i>
+        <span style="width:80px;font-size:0.85rem;">${cat}</span>
+        <div style="flex:1;height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;">
+          <div style="width:${total}%;height:100%;background:linear-gradient(90deg,${catColor},${catColor}88);border-radius:4px;transition:width 0.6s ease;"></div>
+        </div>
+        <span style="width:45px;text-align:right;color:${catColor};font-weight:700;font-size:0.9rem;">${Math.round(total)}%</span>
+      </div>`;
+    }
+    return html;
+  }
+
+  // ── Charts ──
+
+  initCharts() {
+    if (typeof Chart === 'undefined') return;
+    Object.keys(this.portfolios).forEach(type => {
+      const id = `chart-${this.normalizeType(type)}`;
+      const canvas = document.getElementById(id);
+      if (!canvas) return;
+      const portfolio = this.portfolios[type];
+      const data = [], labels = [], colors = [];
+      for (const cat of ['Actions', 'ETF', 'Obligations', 'Crypto']) {
+        const total = Object.values(portfolio[cat] || {}).reduce((s, v) => s + (parseFloat(String(v).replace('%', '')) || 0), 0);
+        if (total > 0) { data.push(total); labels.push(cat); colors.push(this.getCatColor(cat)); }
+      }
+      new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#0a1929' }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '65%',
+          plugins: { legend: { position: 'bottom', labels: { color: '#fff', font: { size: 10 }, padding: 12 } } }
         }
-        console.error('Portfolio Error:', message);
-    }
-
-    renderPortfolios() {
-        const container = document.querySelector(this.containerSelector);
-        if (!container || !this.portfolios) {
-            console.error('Container ou portfolios manquants');
-            return;
-        }
-        
-        console.log('🎨 Rendu des portefeuilles:', Object.keys(this.portfolios));
-        
-        const contentContainer = document.createElement('div');
-        contentContainer.className = 'portfolio-content';
-        
-        const portfolioTypes = Object.keys(this.portfolios);
-        
-        portfolioTypes.forEach((type, index) => {
-            const panel = document.createElement('div');
-            panel.className = `portfolio-panel ${index === 0 ? 'active' : ''}`;
-            panel.id = `portfolio-${this.normalizeType(type)}`;
-            panel.style.display = index === 0 ? 'block' : 'none';
-            panel.innerHTML = this.generatePortfolioContent(type, this.portfolios[type]);
-            contentContainer.appendChild(panel);
-        });
-        
-        // Supprimer l'ancien contenu
-        const existing = container.querySelector('.portfolio-content');
-        if (existing) existing.remove();
-        
-        // Cacher le loading et l'erreur
-        const loading = container.querySelector('.portfolio-loading');
-        if (loading) loading.style.display = 'none';
-        const error = container.querySelector('.portfolio-error');
-        if (error) error.style.display = 'none';
-        
-        // Ajouter le nouveau contenu
-        container.appendChild(contentContainer);
-        
-        // Initialiser les graphiques
-        setTimeout(() => this.initCharts(), 100);
-    }
-
-    initCharts() {
-        if (typeof Chart === 'undefined') {
-            console.warn('Chart.js non disponible');
-            return;
-        }
-        
-        Object.keys(this.portfolios).forEach(type => {
-            const normalizedType = this.normalizeType(type);
-            const canvas = document.getElementById(`chart-${normalizedType}`);
-            if (!canvas) {
-                console.warn(`Canvas chart-${normalizedType} non trouvé`);
-                return;
-            }
-            
-            const ctx = canvas.getContext('2d');
-            const portfolio = this.portfolios[type];
-            const data = [];
-            const labels = [];
-            const bgColors = [];
-            
-            const colorMap = {
-                'Actions': '#FF6B6B',
-                'ETF': '#4ECDC4',
-                'Obligations': '#45B7D1',
-                'Crypto': '#FFA07A'
-            };
-            
-            ['Actions', 'ETF', 'Obligations', 'Crypto'].forEach(cat => {
-                const assets = portfolio[cat] || {};
-                const total = Object.values(assets).reduce((sum, v) => {
-                    const num = parseFloat(String(v).replace('%', ''));
-                    return sum + (isNaN(num) ? 0 : num);
-                }, 0);
-                
-                if (total > 0) {
-                    data.push(total);
-                    labels.push(cat);
-                    bgColors.push(colorMap[cat]);
-                }
-            });
-            
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels,
-                    datasets: [{
-                        data,
-                        backgroundColor: bgColors,
-                        borderWidth: 2,
-                        borderColor: '#0a1929'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: { color: '#fff', font: { size: 11 } }
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    setupInteractions() {
-        // Gestion des onglets
-        document.querySelectorAll('.portfolio-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                // Désactiver tous les onglets et panels
-                document.querySelectorAll('.portfolio-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.portfolio-panel').forEach(p => {
-                    p.classList.remove('active');
-                    p.style.display = 'none';
-                });
-                
-                // Activer l'onglet cliqué
-                tab.classList.add('active');
-                const targetId = tab.dataset.target;
-                const panel = document.getElementById(targetId);
-                if (panel) {
-                    panel.classList.add('active');
-                    panel.style.display = 'block';
-                }
-                
-                // Mettre à jour le titre
-                const type = tab.dataset.originalType || targetId.replace('portfolio-', '');
-                const titleEl = document.getElementById('portfolioTitle');
-                if (titleEl) titleEl.textContent = `PORTEFEUILLE ${type.toUpperCase()}`;
-            });
-        });
-        
-        // Boutons téléchargement/partage
-        document.querySelectorAll('.btn-download').forEach(btn => {
-            btn.addEventListener('click', () => alert(`PDF ${btn.dataset.portfolio} - Fonctionnalité à venir`));
-        });
-        
-        document.querySelectorAll('.btn-share').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const url = `${window.location.href.split('?')[0]}?type=${this.normalizeType(btn.dataset.portfolio)}`;
-                navigator.clipboard.writeText(url).then(() => alert('Lien copié !'));
-            });
-        });
-    }
-
-    formatDate(date) {
-        if (!date) return 'N/A';
-        try {
-            return new Intl.DateTimeFormat('fr-FR', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            }).format(new Date(date));
-        } catch (e) {
-            return 'N/A';
-        }
-    }
+      });
+    });
+  }
 }
 
-// Initialisation au chargement de la page
+// ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 PortfolioManager AMF v2.4 - Initialisation');
-    window.portfolioManager = new PortfolioManagerAMF();
-    window.portfolioManager.init();
+  console.log('🚀 Portfolio Loader v3.0');
+  window.portfolioManager = new PortfolioManagerV3();
+  window.portfolioManager.init();
 });
