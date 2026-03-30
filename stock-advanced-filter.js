@@ -117,6 +117,8 @@ const path = require('path');
 const axios = require('axios');
 const csv = require('csv-parse/sync');
 const generateDiagnostic = require('./generate-diagnostic');
+const StockAdvanceFilter = require('./stock-advance-filter');
+const scorer = new StockAdvanceFilter({ DEBUG: process.env.DEBUG === '1' || process.env.DEBUG === 'true' });
 
 const OUT_DIR = process.env.OUT_DIR || 'data';
 const KEEP_ADR = process.env.KEEP_ADR === '1'; // v3.13: toggle pour garder ou non les ADR
@@ -1419,71 +1421,8 @@ function clampRegToTTM(reg, ttm, hasSpecial){
   return (ratio < 0.5 || ratio > 2.0) ? ttm : reg;
 }
 
-// ✅ v3.24: Score Buffett enrichi (ROE + D/E + ROIC)
-// ✅ v3.29: Buffett Score V2 — lissage linéaire, 3Y, coverage cap, profil FIN, bonus stabilité
-// Interpolation linéaire : score progresse proportionnellement entre x0 (0 pts) et x1 (max pts)
-function linScore(x, x0, x1, pts) {
-    if (!Number.isFinite(x)) return null;
-    if (x <= x0) return 0;
-    if (x >= x1) return pts;
-    return ((x - x0) / (x1 - x0)) * pts;
-}
-
-function calculateBuffettScore(stock) {
-    const isFin = SECTOR_PROFILE_MAP[(stock.sector || '').toLowerCase().trim()] === 'FIN'
-               || SECTOR_PROFILE_REGEX.some(r => r.profile === 'FIN' && r.re.test((stock.sector || '').toLowerCase()));
-
-    // ✅ v3.30: Buffett Score non applicable aux financières (banques, assureurs)
-    // ROIC et D/E n'ont pas de sens pour FIN, il ne resterait que ROE → score bancal
-    // Le Quality Score FIN est conçu pour ça → on laisse Buffett = null
-    if (isFin) return { score: null, grade: null, used: 0, detail: 'FIN_NOT_APPLICABLE', bonus: 0 };
-
-    // Préférer les moyennes 3Y (moins bruitées), fallback année N
-    const ROE  = Number.isFinite(stock.roe_avg_3y)  ? stock.roe_avg_3y  : stock.roe;
-    const ROIC = Number.isFinite(stock.roic_avg_3y) ? stock.roic_avg_3y : stock.roic;
-    const DE   = stock.de_ratio;
-
-    const parts = [];
-
-    // ROE: 5% → 0 pts, 20% → 25 pts (linéaire)
-    const sROE = linScore(ROE, 5, 20, 25);
-    if (sROE != null) parts.push({ name: 'roe', pts: sROE, max: 25 });
-
-    // ROIC: 3% → 0 pts, 20% → 25 pts (linéaire)
-    const sROIC = linScore(ROIC, 3, 20, 25);
-    if (sROIC != null) parts.push({ name: 'roic', pts: sROIC, max: 25 });
-
-    // D/E: 0 → 20 pts, 2.5 → 0 pts (linéaire inverse)
-    if (Number.isFinite(DE) && DE >= 0) {
-        const sDE = linScore(2.5 - Math.min(2.5, DE), 0, 2.5, 20);
-        if (sDE != null) parts.push({ name: 'de', pts: sDE, max: 20 });
-    }
-
-    const used = parts.length;
-    const max = parts.reduce((a, p) => a + p.max, 0);
-    const got = parts.reduce((a, p) => a + p.pts, 0);
-    if (!max) return { score: null, grade: null, used: 0, detail: null, bonus: 0 };
-
-    let score = Math.round((got / max) * 100);
-
-    // Coverage cap : évite les scores gonflés quand il manque des données
-    if (used < 2) score = Math.min(score, 60);
-    if (used < 3) score = Math.min(score, 80);
-
-    // Bonus stabilité ROE (coefficient de variation sur 3 ans)
-    let bonus = 0;
-    if (Number.isFinite(stock.roe_std_3y) && Number.isFinite(stock.roe_avg_3y) && stock.roe_avg_3y > 0) {
-        const cv = stock.roe_std_3y / Math.abs(stock.roe_avg_3y);
-        if (cv < 0.15) bonus = 5;        // très stable — moat
-        else if (cv < 0.25) bonus = 3;   // stable
-        else if (cv > 0.60) bonus = -5;  // très volatile
-    }
-    score = Math.max(0, Math.min(100, score + bonus));
-
-    const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';
-    const detail = parts.map(p => `${p.name}=${p.pts.toFixed(1)}/${p.max}`).join(' ');
-    return { score, grade, used, detail, bonus };
-}
+// ✅ v4.0: Buffett Score v3.1 et Quality Score v2 délégués à stock-advance-filter.js
+// (ancien calculateBuffettScore V2 et linScore supprimés — remplacés par scorer.evaluateBuffettScore)
 
 // ✅ v3.30: Sanitize forward dividend yield
 // Neutralise le bug provider qui annualise ×4 les dividendes annuels
@@ -1976,15 +1915,14 @@ async function enrichStock(stock) {
         console.log(`[DATA CTX] ${stock.symbol} -> ${symUsed} | ${usedEx} (${usedMic}) | ${usedCur} | ${usedTz || 'tz?'}`);
     }
     
-    // ✅ v3.29: Buffett Score V2 — lissage linéaire, 3Y, coverage cap, profil FIN, bonus stabilité
-    const buffett = calculateBuffettScore(stock);
+    // ✅ v4.0: Buffett Score v3.1 via stock-advance-filter.js (6 critères pass/fail)
+    const buffett = scorer.evaluateBuffettScore(stock);
     const buffett_score = buffett.score;
     const buffett_grade = buffett.grade;
-    
+
     if (CONFIG.DEBUG && (stock.roe !== null || stock.de_ratio !== null || stock.roic !== null)) {
-        const ROE_used = Number.isFinite(stock.roe_avg_3y) ? `${stock.roe_avg_3y}(3Y)` : `${stock.roe}(N)`;
-        const ROIC_used = Number.isFinite(stock.roic_avg_3y) ? `${stock.roic_avg_3y}(3Y)` : `${stock.roic}(N)`;
-        console.log(`[BUFFETT V2] ${stock.symbol}: ROE=${ROE_used}%, ROIC=${ROIC_used}%, D/E=${stock.de_ratio} | ${buffett.detail} | bonus=${buffett.bonus} → ${buffett_score} ${buffett_grade}`);
+        const criteriaStr = buffett.criteria ? buffett.criteria.map(c => `${c.name}:${c.passed ? 'PASS' : 'FAIL'}`).join(' ') : 'N/A';
+        console.log(`[BUFFETT V3.1] ${stock.symbol}: ${buffett.passed}/${buffett.total} passed | ${criteriaStr} → ${buffett_score} ${buffett_grade}`);
     }
 
     // ✅ v3.31: Sanity warnings — détection anomalies data quality AVANT return
@@ -2065,18 +2003,20 @@ async function enrichStock(stock) {
     revenue_growth_3y: stock.revenue_growth_3y,
     buffett_score,
     buffett_grade,
-        
-        // ✅ v3.27: Quality Score (rempli par computeQualityScores() après enrichissement)
-        quality_score: null,    // sera injecté post-enrichissement
+    buffett_criteria: buffett.criteria || [],
+
+        // ✅ v4.0: Quality Score v2 (rempli par scorer.computeQualityScores() après enrichissement)
+        quality_score: null,
         quality_grade: null,
         quality_coverage: null,
         quality_subscores: null,
-        quality_imputed_fields: [],
         quality_penalties: [],
         quality_peer: null,
         quality_peer_size: null,
-        quality_peer_level: null,  // ✅ v3.31d: cascade level audit trail
+        quality_peer_level: null,
+        quality_peer_global_rank: null,
         quality_profile: null,
+        quality_raw_score: null,
         region: null,           // injecté par main() avant scoring
         
         // ✅ v3.23: NOUVELLES MÉTRIQUES
@@ -2368,509 +2308,9 @@ function calculateDrawdowns(prices) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ✅ v3.27: QUALITY SCORE — Scoring relatif par peer group (secteur × région)
+// ✅ v4.0: Quality Score v2 délégué à stock-advance-filter.js (scorer.computeQualityScores)
+// Ancien computeQualityScores v3.31d et helpers supprimés
 // ═══════════════════════════════════════════════════════════════════════════
-
-function clampVal(x, a, b) { return Math.max(a, Math.min(b, x)); }
-
-// Percentile rank [0..100] — tie-aware via insertion bounds
-function percentileRank(sorted, x) {
-    if (!sorted || sorted.length <= 1) return 50;
-    // lower_bound
-    let lo = 0, hi = sorted.length;
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] < x) lo = mid + 1; else hi = mid; }
-    const left = lo;
-    // upper_bound
-    lo = 0; hi = sorted.length;
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (sorted[mid] <= x) lo = mid + 1; else hi = mid; }
-    const right = lo;
-    const rank = (left + right) / 2;
-    return (rank / (sorted.length - 1)) * 100;
-}
-
-// Winsorize: cap outliers at p05/p95
-function winsorize(sorted, pLow = 0.05, pHigh = 0.95) {
-    if (!sorted || sorted.length < 5) return sorted || [];
-    const loIdx = Math.floor((sorted.length - 1) * pLow);
-    const hiIdx = Math.ceil((sorted.length - 1) * pHigh);
-    const lo = sorted[loIdx], hi = sorted[hiIdx];
-    return sorted.map(v => clampVal(v, lo, hi));
-}
-
-// 3 profils sectoriels max — pas de micro-tuning
-// ✅ v3.28b: Mapping explicite secteurs → profils (FR + EN)
-// Table déclarative : plus maintenable que du regex pur
-const SECTOR_PROFILE_MAP = {
-    // FIN
-    'finance':                          'FIN',
-    'financial services':               'FIN',
-    'financials':                       'FIN',
-    // YIELD
-    'immobilier':                       'YIELD',
-    'real estate':                      'YIELD',
-    'services publics':                 'YIELD',
-    'utilities':                        'YIELD',
-    'la communication':                 'YIELD',
-    'communication services':           'YIELD',
-    'telecommunications':               'YIELD',
-};
-
-// Fallback regex pour les noms non listés
-const SECTOR_PROFILE_REGEX = [
-    { re: /bank|insurance|financ/,                        profile: 'FIN' },
-    { re: /utilit|reit|telecom|immobil|services publics|communication|electric/, profile: 'YIELD' },
-];
-
-function sectorProfile(sector = '') {
-    const s = (sector || '').toLowerCase().trim();
-    // 1) Exact match dans la table
-    if (SECTOR_PROFILE_MAP[s]) return SECTOR_PROFILE_MAP[s];
-    // 2) Fallback regex
-    for (const { re, profile } of SECTOR_PROFILE_REGEX) {
-        if (re.test(s)) return profile;
-    }
-    return 'DEFAULT';
-}
-
-function qualityGrade(score) {
-    if (score == null) return null;
-    if (score >= 75) return 'A';
-    if (score >= 55) return 'B';
-    if (score >= 35) return 'C';
-    return 'D';
-}
-
-const validNum = x => Number.isFinite(x);
-const safeAvg = (xs) => {
-    const v = (xs || []).filter(validNum);
-    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
-};
-
-// Build sorted+winsorized distribution from array of stocks for a given field
-function buildDist(stocks, field, filter = validNum) {
-    const vals = stocks.map(s => s[field]).filter(filter).sort((a, b) => a - b);
-    return vals.length >= 5 ? winsorize(vals) : vals;
-}
-
-// Score a single metric against its distribution
-// ✅ v3.30: Shrinkage — ramène le percentile vers 50 quand le peer group est petit
-// Évite les rankings instables (chaque rang vaut ~14 pts avec n=7)
-// n0=20 = taille à partir de laquelle on fait pleinement confiance au ranking
-function shrinkTo50(p, n, n0 = 20) {
-    const k = Math.min(1, Math.max(0, (n - 1) / n0));
-    return 50 + (p - 50) * k;
-}
-
-function scoreMetric(value, sorted, direction, opts = {}) {
-    if (!sorted || sorted.length < 5) {
-        return { sc: null, used: false, imputed: false };
-    }
-    if (!validNum(value)) {
-        // N/A → impute médiane but cap score
-        const med = sorted[Math.floor(sorted.length / 2)];
-        const p = percentileRank(sorted, med);
-        const capped = Math.min(p, opts.naCapPct ?? 40);
-        return { sc: capped, used: true, imputed: true };
-    }
-    // Clamp value to winsorized range
-    const clamped = clampVal(value, sorted[0], sorted[sorted.length - 1]);
-    let p = percentileRank(sorted, clamped);
-    // ✅ v3.30: Shrinkage vers 50 pour petits échantillons
-    p = shrinkTo50(p, sorted.length);
-    if (direction === 'low') p = 100 - p;
-    return { sc: p, used: true, imputed: false };
-}
-
-// Score payout as distance to sector target (non-monotone) — YIELD only
-function scorePayoutTarget(value, sorted, target) {
-    if (!sorted || sorted.length < 5) {
-        return { sc: null, used: false, imputed: false };
-    }
-    if (!validNum(value)) {
-        return { sc: 35, used: true, imputed: true }; // NA pénalisé
-    }
-    // Distance à la cible — plus proche = mieux
-    const distToTarget = Math.abs(value - target);
-    const dists = sorted.map(x => Math.abs(x - target)).sort((a, b) => a - b);
-    const p = 100 - percentileRank(dists, distToTarget);
-    return { sc: p, used: true, imputed: false };
-}
-
-// ✅ v3.30: Payout monotone (soutenabilité) — DEFAULT & FIN
-// Payout bas = safe (pas de pénalité pour buyback-heavy companies)
-// Payout élevé = risque de cut
-function scorePayoutSafety(value) {
-    if (!validNum(value)) return { sc: 35, used: true, imputed: true };
-    let sc;
-    if (value <= 60)       sc = 100;                               // ≤60% = safe
-    else if (value <= 90)  sc = 100 - (value - 60) * (40 / 30);   // 60→100, 90→60
-    else if (value <= 120) sc = 60  - (value - 90) * (40 / 30);   // 90→60, 120→20
-    else                   sc = Math.max(0, 20 - (value - 120));   // >120 → danger
-    return { sc: Math.max(0, Math.min(100, sc)), used: true, imputed: false };
-}
-
-/**
- * computeQualityScores — Scoring relatif par peer group
- * 
- * Appelé APRÈS enrichStock() sur tous les stocks (besoin de toutes les données)
- * Injecte: quality_score, quality_grade, quality_coverage, quality_subscores,
- *          quality_peer, quality_peer_size, quality_imputed_fields, quality_penalties
- */
-function computeQualityScores(allStocks) {
-    console.log('\n' + '═'.repeat(60));
-    console.log('🎯 QUALITY SCORING v3.31d — Peer group: industry → sector (cascade 5 niveaux)');
-    console.log('═'.repeat(60));
-
-    // ✅ v3.31d: Normalisation industry (anti-synonymes + fragmentation Twelve Data)
-    function normIndustry(s) {
-        if (!s) return null;
-        const cleaned = String(s).trim()
-            .replace(/&/g, 'and')
-            .replace(/['']/g, '')
-            .replace(/\s+/g, ' ');
-        // Retourne null si vide ou blacklisté
-        const key = normKey(cleaned);
-        if (!key || key === 'other' || key === 'unknown' || key === 'miscellaneous' || key === 'n_a') return null;
-        return cleaned; // garder la version lisible, normKey sert pour les clés
-    }
-
-    // ── 1. Build peer groups: 4 niveaux de granularité ──
-    const byIndustryRegion = new Map();  // REGION|industry_norm
-    const byIndustryGlobal = new Map();  // ALL|industry_norm (cross-région)
-    const bySectorRegion = new Map();    // REGION|sector
-    const bySectorGlobal = new Map();    // ALL|sector
-
-    let withIndustry = 0, withoutIndustry = 0;
-    for (const s of allStocks) {
-        if (s.error) continue;
-        const region = s.region || 'GLOBAL';
-        const sector = s.sector || 'Unknown';
-        const indNorm = normIndustry(s.industry);
-
-        if (indNorm) {
-            const indK = normKey(indNorm); // clé stable pour regroupement
-            const k1 = `${region}|${indK}`;
-            if (!byIndustryRegion.has(k1)) byIndustryRegion.set(k1, []);
-            byIndustryRegion.get(k1).push(s);
-
-            const k1g = `ALL|${indK}`;
-            if (!byIndustryGlobal.has(k1g)) byIndustryGlobal.set(k1g, []);
-            byIndustryGlobal.get(k1g).push(s);
-            withIndustry++;
-        } else {
-            withoutIndustry++;
-        }
-
-        const k2 = `${region}|${sector}`;
-        if (!bySectorRegion.has(k2)) bySectorRegion.set(k2, []);
-        bySectorRegion.get(k2).push(s);
-
-        const k2g = `ALL|${sector}`;
-        if (!bySectorGlobal.has(k2g)) bySectorGlobal.set(k2g, []);
-        bySectorGlobal.get(k2g).push(s);
-    }
-
-    // Log peer group stats
-    const ir = [...byIndustryRegion.values()], ig = [...byIndustryGlobal.values()];
-    console.log(`📊 Industry×Region: ${byIndustryRegion.size} groupes (${ir.filter(v=>v.length<5).length} < 5)`);
-    console.log(`📊 Industry×Global: ${byIndustryGlobal.size} groupes (${ig.filter(v=>v.length<5).length} < 5)`);
-    console.log(`📊 Sector×Region:   ${bySectorRegion.size} groupes`);
-    console.log(`📊 Coverage: ${withIndustry}/${withIndustry+withoutIndustry} stocks avec industry`);
-
-    // ── 2. Score each stock ──
-    let scored = 0, skipped = 0;
-    const levelCounts = {};
-
-    for (const s of allStocks) {
-        if (s.error) { skipped++; continue; }
-
-        const region = s.region || 'GLOBAL';
-        const sector = s.sector || 'Unknown';
-        const indNorm = normIndustry(s.industry);
-
-        // ✅ v3.31d: Cascade 5 niveaux — industry conservé le plus longtemps possible
-        let peers, peerKey, peerLevel;
-        const indK = indNorm ? normKey(indNorm) : null;
-
-        // 1) REGION|industry
-        if (!peers && indK) {
-            const k = `${region}|${indK}`;
-            const p = byIndustryRegion.get(k) || [];
-            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'industry_region'; }
-        }
-        // 2) ALL|industry (cross-région, conserve la comparabilité économique)
-        if (!peers && indK) {
-            const k = `ALL|${indK}`;
-            const p = byIndustryGlobal.get(k) || [];
-            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'industry_global'; }
-        }
-        // 3) REGION|sector
-        if (!peers) {
-            const k = `${region}|${sector}`;
-            const p = bySectorRegion.get(k) || [];
-            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'sector_region'; }
-        }
-        // 4) ALL|sector
-        if (!peers) {
-            const k = `ALL|${sector}`;
-            const p = bySectorGlobal.get(k) || [];
-            if (p.length >= 5) { peers = p; peerKey = k; peerLevel = 'sector_global'; }
-        }
-        // 5) GLOBAL|ALL
-        if (!peers) {
-            peers = allStocks.filter(x => !x.error);
-            peerKey = 'GLOBAL|ALL';
-            peerLevel = 'global_all';
-        }
-        levelCounts[peerLevel] = (levelCounts[peerLevel] || 0) + 1;
-
-        const profile = sectorProfile(s.sector);
-
-        // ── Build distributions ──
-        const dist = {
-            roe:     buildDist(peers, 'roe'),
-            roic:    buildDist(peers, 'roic'),
-            de:      buildDist(peers, 'de_ratio', x => validNum(x) && x >= 0),
-            pe:      buildDist(peers, 'pe_ratio', x => validNum(x) && x > 0),
-            fcf:     buildDist(peers, 'fcf_yield'),
-            growth:  buildDist(peers, 'eps_growth_5y'),
-            payout:  buildDist(peers, 'payout_ratio_scoring', x => validNum(x) && x >= 0),
-            // ✅ v3.27: Multi-year distributions
-            roe_avg: buildDist(peers, 'roe_avg_3y'),
-            roic_avg: buildDist(peers, 'roic_avg_3y'),
-            margin:  buildDist(peers, 'net_margin'),
-            revgrowth: buildDist(peers, 'revenue_growth_3y'),
-        };
-
-        // ── Handle suspicious zeros ──
-        // ROE=0 suspect seulement si on a des indices d'erreur (net_income manquant dans le contexte)
-        // ROIC=0 idem. On ne touche PAS aux vrais zéros.
-        const roe = s.roe;
-        const roic = s.roic;
-
-        // ── Score each metric ──
-        const mROE  = scoreMetric(roe, dist.roe, 'high');
-        // ✅ v3.29b: ROIC exclu pour FIN (comme D/E) — invested capital non pertinent pour banques
-        const mROIC = (profile === 'FIN')
-            ? { sc: null, used: false, imputed: false }
-            : scoreMetric(roic, dist.roic, 'high');
-        const mDE   = (profile === 'FIN')
-            ? { sc: null, used: false, imputed: false }  // D/E non pertinent pour banques
-            // ✅ v3.30 Fix 15: D/E négatif = equity négative (buybacks extrêmes) → pénalité
-            // IHG: de_ratio=-1.6 → clampé au min peer (0.01) → direction=low → score ~100 = FAUX
-            // Equity négative = levier structurel extrême, pas "ultra-safe"
-            : (validNum(s.de_ratio) && s.de_ratio < 0)
-                ? { sc: 15, used: true, imputed: false }  // Cap bas: pire que médiane
-                : scoreMetric(s.de_ratio, dist.de, 'low');
-        const mPE   = scoreMetric(
-            (validNum(s.pe_ratio) && s.pe_ratio > 0) ? s.pe_ratio : null,
-            dist.pe, 'low'
-        );
-        const mFCF  = scoreMetric(s.fcf_yield, dist.fcf, 'high');
-        // ✅ v3.30: Cap EPS growth à ±80% pour neutraliser spin-offs/one-offs (ROG -46%, SU -197%)
-        const epsGrowthCapped = validNum(s.eps_growth_5y)
-            ? clampVal(s.eps_growth_5y, -80, 80)
-            : s.eps_growth_5y;
-        const mG    = scoreMetric(epsGrowthCapped, dist.growth, 'high');
-
-        // ✅ v3.27: Multi-year metrics
-        const mROEAvg  = scoreMetric(s.roe_avg_3y, dist.roe_avg, 'high');
-        // ✅ v3.29b: ROIC avg exclu pour FIN (cohérent avec ROIC year N)
-        const mROICAvg = (profile === 'FIN')
-            ? { sc: null, used: false, imputed: false }
-            : scoreMetric(s.roic_avg_3y, dist.roic_avg, 'high');
-        const mMargin  = scoreMetric(s.net_margin, dist.margin, 'high');
-        const mRevGrowth = scoreMetric(s.revenue_growth_3y, dist.revgrowth, 'high');
-
-        // ✅ v3.27: Stability bonus — low std = consistent quality (moat indicator)
-        // Si roe_std_3y est dispo et faible, boost quality score
-        let stabilityBonus = 0;
-        if (validNum(s.roe_std_3y) && validNum(s.roe_avg_3y) && s.roe_avg_3y > 0) {
-            const cv = s.roe_std_3y / Math.abs(s.roe_avg_3y); // coefficient of variation
-            if (cv < 0.15) stabilityBonus = 8;       // très stable
-            else if (cv < 0.30) stabilityBonus = 4;  // stable
-            else if (cv > 0.80) stabilityBonus = -5;  // très volatile
-        }
-
-        // ✅ v3.30: Payout scoring — utilise payout_ratio_scoring (REG si spéciaux élevés)
-        const mPayout = (profile === 'YIELD')
-            ? scorePayoutTarget(s.payout_ratio_scoring, dist.payout, 70)
-            : scorePayoutSafety(s.payout_ratio_scoring);
-
-        // ── Track coverage & imputations ──
-        const imputed = [];
-        const used = [];
-
-        const track = (name, m) => {
-            if (m.used) { used.push(name); if (m.imputed) imputed.push(name); }
-        };
-        track('roe', mROE);
-        track('roic', mROIC);
-        track('de_ratio', mDE);
-        track('pe_ratio', mPE);
-        track('fcf_yield', mFCF);
-        track('eps_growth_5y', mG);
-        track('payout_ratio_ttm', mPayout);
-        // ✅ v3.27: Track multi-year metrics
-        track('roe_avg_3y', mROEAvg);
-        track('roic_avg_3y', mROICAvg);
-        track('net_margin', mMargin);
-        track('revenue_growth_3y', mRevGrowth);
-
-        // ── Dimension scores ──
-        // Quality: préférer les moyennes 3Y si disponibles, sinon année N
-        // ✅ v3.29b: ROIC exclu pour FIN — Quality FIN = avg(ROE, Margin)
-        const qualityROE  = mROEAvg.sc != null ? mROEAvg.sc : mROE.sc;
-        const qualityROIC = mROICAvg.sc != null ? mROICAvg.sc : mROIC.sc;
-        const quality = (profile === 'FIN')
-            ? safeAvg([qualityROE, mMargin.sc])
-            : safeAvg([qualityROE, qualityROIC, mMargin.sc]);
-
-        const safety  = (profile === 'FIN')
-            ? safeAvg([mPayout.sc])           // Banques: pas de D/E
-            : safeAvg([mDE.sc, mPayout.sc]);
-        const value   = safeAvg([mPE.sc, mFCF.sc]);
-        // Growth: combiner EPS growth 5Y et revenue growth 3Y
-        const growth  = safeAvg([mG.sc, mRevGrowth.sc]);
-
-        // ── Dimension weights (3 profils) ──
-        let w;
-        switch (profile) {
-            case 'FIN':
-                w = { quality: 0.45, safety: 0.30, value: 0.25, growth: 0.00 };
-                break;
-            case 'YIELD':
-                w = { quality: 0.25, safety: 0.35, value: 0.35, growth: 0.05 };
-                break;
-            default:
-                w = { quality: 0.30, safety: 0.25, value: 0.25, growth: 0.20 };
-        }
-
-        // ── Weighted composite ──
-        const parts = [];
-        if (quality != null) parts.push(['quality', quality]);
-        if (safety  != null) parts.push(['safety',  safety]);
-        if (value   != null) parts.push(['value',   value]);
-        if (growth  != null && w.growth > 0) parts.push(['growth', growth]);
-
-        let totalW = 0;
-        for (const [k] of parts) totalW += w[k] || 0;
-
-        let score = null;
-        if (parts.length > 0 && totalW > 0) {
-            score = parts.reduce((acc, [k, v]) => acc + v * (w[k] || 0), 0) / totalW;
-        }
-
-        // ── Gates absolus (pénalités additives plafonnées) ──
-        let penalty = 0;
-        const penalties = [];
-
-        // ✅ v3.30: ROIC penalty exclue pour FIN (ROIC non pertinent pour banques/assureurs)
-        if (profile !== 'FIN' && validNum(s.roic) && s.roic <= 0) {
-            penalty += 15; penalties.push('roic_negative');
-        }
-        if (validNum(s.payout_ratio_scoring) && s.payout_ratio_scoring > 120 && profile !== 'YIELD') {
-            penalty += 10; penalties.push('payout_unsustainable');
-        }
-        if (validNum(s.fcf_yield) && s.fcf_yield < 0) {
-            penalty += 10; penalties.push('fcf_negative');
-        }
-        if (validNum(s.pe_ratio) && s.pe_ratio <= 0) {
-            penalty += 5; penalties.push('pe_negative_or_loss');
-        }
-        // ✅ v3.30 Fix 15: Equity négative (D/E < 0) = levier structurel extrême
-        // IHG: buybacks → equity négative → de_ratio=-1.6 → Safety était 98 (FAUX)
-        // Score D/E déjà capé à 15 ci-dessus, on ajoute aussi une pénalité composite
-        if (profile !== 'FIN' && validNum(s.de_ratio) && s.de_ratio < 0) {
-            penalty += 8; penalties.push('equity_negative');
-        }
-
-        // Cap total penalty at 30 points
-        penalty = Math.min(penalty, 30);
-        if (score != null) score = Math.max(0, score - penalty);
-
-        // ── Coverage cap ──
-        // ✅ v3.29b: expectedFields = nb de métriques effectivement trackées (non exclues)
-        // FIN: 8 métriques (exclut ROIC, ROIC_avg, D/E = 3 exclues sur 11)
-        // DEFAULT/YIELD: 11 métriques
-        const expectedFields = (profile === 'FIN') ? 8 : 11;
-        // ✅ v3.29b: Distinguer coverage effective (imputations incluses) vs réelle
-        const realCount = used.filter(name => !imputed.includes(name)).length;
-        const coverageEffective = Math.round((used.length / expectedFields) * 100);
-        const coverageReal = Math.round((realCount / expectedFields) * 100);
-        // Capper sur la couverture RÉELLE (pas les imputations)
-        if (coverageReal < 60 && score != null) {
-            score = Math.min(score, 60); // Pas de grade A avec trop de trous réels
-        }
-
-        // ✅ v3.27: Stability bonus (moat indicator)
-        if (score != null && stabilityBonus !== 0) {
-            score = Math.max(0, Math.min(100, score + stabilityBonus));
-        }
-
-        // ── Inject into stock ──
-        s.quality_score = (score == null) ? null : Math.round(clampVal(score, 0, 100));
-        s.quality_grade = qualityGrade(s.quality_score);
-        s.quality_coverage = clampVal(coverageReal, 0, 100);  // ✅ v3.29b: basé sur real, pas effective
-        s.quality_imputed_fields = imputed.length ? [...new Set(imputed)] : [];
-        s.quality_penalties = penalties.length ? penalties : [];
-        s.quality_peer = peerKey;
-        s.quality_peer_size = peers.length;
-        s.quality_peer_level = peerLevel;  // ✅ v3.31d: audit trail cascade
-        s.quality_profile = profile;
-        s.quality_subscores = {
-            quality: quality != null ? Math.round(quality) : null,
-            safety:  safety  != null ? Math.round(safety)  : null,
-            value:   value   != null ? Math.round(value)   : null,
-            growth:  growth  != null ? Math.round(growth)  : null,
-        };
-
-        scored++;
-    }
-
-    // ── Stats ──
-    const withScore = allStocks.filter(s => s.quality_score != null);
-    const qA = withScore.filter(s => s.quality_grade === 'A').length;
-    const qB = withScore.filter(s => s.quality_grade === 'B').length;
-    const qC = withScore.filter(s => s.quality_grade === 'C').length;
-    const qD = withScore.filter(s => s.quality_grade === 'D').length;
-    const withPenalties = withScore.filter(s => s.quality_penalties.length > 0).length;
-    const withImputed = withScore.filter(s => s.quality_imputed_fields.length > 0).length;
-    const lowCoverage = withScore.filter(s => s.quality_coverage < 60).length;
-
-    console.log(`\n📊 Résultats Quality Score:`);
-    console.log(`  Scorés: ${scored} | Skippés: ${skipped}`);
-    console.log(`  Avec score: ${withScore.length}/${allStocks.length}`);
-    console.log(`  Avec pénalités: ${withPenalties} | Avec imputations: ${withImputed} | Coverage <60%: ${lowCoverage}`);
-    console.log(`\n🏆 Distribution Quality Grades:`);
-    console.log(`  A (≥75): ${qA} | B (≥55): ${qB} | C (≥35): ${qC} | D (<35): ${qD}`);
-
-    // Top 5 par profil
-    for (const pf of ['DEFAULT', 'FIN', 'YIELD']) {
-        const top = withScore
-            .filter(s => s.quality_profile === pf && s.quality_coverage >= 60)
-            .sort((a, b) => (b.quality_score || 0) - (a.quality_score || 0))
-            .slice(0, 5);
-        if (top.length) {
-            console.log(`\n  🔝 Top ${pf}:`);
-            top.forEach((s, i) => {
-                const sub = s.quality_subscores;
-                console.log(`    ${i + 1}. ${s.ticker.padEnd(8)} ${s.quality_score}/100 (${s.quality_grade}) ` +
-                    `Q=${sub.quality ?? '-'} S=${sub.safety ?? '-'} V=${sub.value ?? '-'} G=${sub.growth ?? '-'} ` +
-                    `[${s.quality_peer}, n=${s.quality_peer_size}]`);
-            });
-        }
-    }
-
-    // ✅ v3.31d: Log peer group cascade distribution
-    console.log(`\n📊 Peer Level Distribution:`);
-    for (const [level, count] of Object.entries(levelCounts).sort((a,b) => b[1] - a[1])) {
-        console.log(`  ${level.padEnd(20)} ${count}`);
-    }
-
-    console.log('═'.repeat(60));
-    return allStocks;
-}
 
 // ✅ v3.30: Export peer group details for transparency
 function exportPeerGroups(allStocks) {
@@ -2970,13 +2410,16 @@ function buildOverview(byRegion){
     revenue_growth_3y: s.revenue_growth_3y == null ? null : Number(s.revenue_growth_3y),
     buffett_score: s.buffett_score == null ? null : Number(s.buffett_score),
     buffett_grade: s.buffett_grade || null,
-    // ✅ v3.27: Quality Score
+    buffett_criteria: s.buffett_criteria || [],
+    // ✅ v4.0: Quality Score v2
     beta: s.beta == null ? null : Number(s.beta),
     quality_score: s.quality_score == null ? null : Number(s.quality_score),
     quality_grade: s.quality_grade || null,
     quality_coverage: s.quality_coverage == null ? null : Number(s.quality_coverage),
     quality_subscores: s.quality_subscores || null,
-    quality_profile: s.quality_profile || null
+    quality_profile: s.quality_profile || null,
+    quality_peer: s.quality_peer || null,
+    quality_peer_global_rank: s.quality_peer_global_rank == null ? null : Number(s.quality_peer_global_rank)
   });
 
   const sets = {
@@ -3244,7 +2687,20 @@ async function main() {
         // Fichier absent → pas d'overrides, c'est normal
     }
 
-    computeQualityScores(allForScoring);
+    // ✅ v4.0: Quality Score v2 + Buffett v3.1 via stock-advance-filter.js
+    scorer.computeQualityScores(allForScoring);
+
+    // Backward-compatible quality_coverage: count non-null key metrics per stock
+    const coverageMetrics = ['roe', 'roic', 'de_ratio', 'pe_ratio', 'fcf_yield', 'eps_growth_5y',
+        'roe_avg_3y', 'roic_avg_3y', 'net_margin', 'revenue_growth_3y', 'payout_ratio_ttm'];
+    for (const s of allForScoring) {
+        if (s.error || s.quality_score == null) continue;
+        const profile = s.quality_profile || 'DEFAULT';
+        const excluded = profile === 'FIN' ? ['roic', 'roic_avg_3y', 'de_ratio'] : [];
+        const expected = coverageMetrics.filter(m => !excluded.includes(m));
+        const filled = expected.filter(m => Number.isFinite(s[m])).length;
+        s.quality_coverage = Math.round((filled / expected.length) * 100);
+    }
     
     // ✅ v3.30: Export peer groups pour transparence du scoring
     const peerGroupsData = exportPeerGroups(allForScoring);

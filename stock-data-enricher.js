@@ -7,6 +7,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const csv = require('csv-parse/sync');
+const StockAdvanceFilter = require('./stock-advance-filter');
+const scorer = new StockAdvanceFilter({ DEBUG: process.env.DEBUG === '1' });
 
 const OUT_DIR = process.env.OUT_DIR || 'data';
 
@@ -50,56 +52,7 @@ async function loadFundamentalsCache() {
     }
 }
 
-/**
- * Calcul simplifié du score Buffett (0-45 points sur ROE + D/E)
- * Score normalisé ensuite sur 100
- */
-function calculateBuffettScore(roe, de_ratio) {
-    if (roe == null && de_ratio == null) return null;
-    
-    let score = 0;
-    let maxPossible = 0;
-    
-    // ROE (max 25 pts)
-    if (roe !== null) {
-        maxPossible += 25;
-        if (roe >= 20) score += 25;
-        else if (roe >= 15) score += 20;
-        else if (roe >= 10) score += 12;
-        else if (roe > 0) score += 5;
-        // ROE négatif = 0 points
-    }
-    
-    // D/E (max 20 pts)
-    if (de_ratio !== null) {
-        maxPossible += 20;
-        if (de_ratio < 0) {
-            // Equity négative = problème
-            score += 0;
-        } else if (de_ratio <= 0.5) {
-            score += 20;
-        } else if (de_ratio <= 1.0) {
-            score += 15;
-        } else if (de_ratio <= 2.0) {
-            score += 8;
-        } else if (de_ratio <= 3.0) {
-            score += 3;
-        }
-        // D/E > 3 = 0 points
-    }
-    
-    // Normaliser sur 100
-    if (maxPossible === 0) return null;
-    return Math.round((score / maxPossible) * 100);
-}
-
-function getBuffettGrade(score) {
-    if (score == null) return null;
-    if (score >= 80) return 'A';
-    if (score >= 60) return 'B';
-    if (score >= 40) return 'C';
-    return 'D';
-}
+// ✅ v4.0: Buffett Score v3.1 délégué à stock-advance-filter.js (scorer.evaluateBuffettScore)
 
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -349,9 +302,10 @@ async function enrichStock(stock) {
         const roe = cached.roe ?? stock.roe_csv ?? null;
         const de_ratio = cached.de_ratio ?? stock.de_ratio_csv ?? null;
         
-        // 5. Calculer score Buffett
-        const buffett_score = calculateBuffettScore(roe, de_ratio);
-        const buffett_grade = getBuffettGrade(buffett_score);
+        // 5. Calculer score Buffett v3.1 (6 critères pass/fail)
+        const buffettResult = scorer.evaluateBuffettScore({ ...stock, roe, de_ratio });
+        const buffett_score = buffettResult.score;
+        const buffett_grade = buffettResult.grade;
         
         // Compiler les données enrichies
         return {
@@ -401,8 +355,8 @@ async function enrichStock(stock) {
             ...stock,
             roe: roe,
             de_ratio: de_ratio,
-            buffett_score: calculateBuffettScore(roe, de_ratio),
-            buffett_grade: getBuffettGrade(calculateBuffettScore(roe, de_ratio)),
+            buffett_score: scorer.evaluateBuffettScore({ ...stock, roe, de_ratio }).score,
+            buffett_grade: scorer.evaluateBuffettScore({ ...stock, roe, de_ratio }).grade,
             error: error.message,
             enriched_at: new Date().toISOString()
         };
