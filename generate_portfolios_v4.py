@@ -6297,7 +6297,7 @@ def main():
     lombard_results = None
     if CONFIG.get("generate_lombard_ranking", False):
         try:
-            from lombard_ranking import generate_lombard_ranking
+            from portfolio_engine.lombard_ranking import generate_lombard_ranking
             
             # Charger config YAML si dispo
             _lombard_yaml = {}
