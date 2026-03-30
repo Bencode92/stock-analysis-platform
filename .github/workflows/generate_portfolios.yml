@@ -51,6 +51,14 @@ jobs:
           echo "📊 Le contexte sera généré par market_sector_radar.py (data-driven)"
           echo ""
           echo "ℹ️  OpenAI est utilisé UNIQUEMENT pour les commentaires (pas le scoring)"
+          
+      # ============= TURNOVER: Save previous portfolio =============
+      - name: 📋 Save previous portfolio for turnover
+        run: cp data/portfolios.json data/portfolios_previous.json || true
+
+      - name: 🚀 Exécuter le moteur v5.2.0
+        run: |
+          # v2.1: Update macro indicators...    
 
       - name: 🚀 Exécuter le moteur v5.2.0
         run: |
