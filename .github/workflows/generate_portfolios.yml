@@ -1,4 +1,4 @@
-name: Génération des Portefeuilles v5.2.0 + Market Intelligence + Audit Collector + Backtest
+name: Génération des Portefeuilles v5.3.0 + Market Intelligence + Lombard Ranking + Backtest
 
 on:
   push:
@@ -278,6 +278,25 @@ jobs:
             echo "⚠️ selection_debug.json ABSENT (DEBUG_AUDIT=none?)"
           fi
           
+          # v5.3.0: Lombard Ranking
+          if [ -f data/lombard_ranking.json ]; then
+            echo "✅ lombard_ranking.json (v5.3.0)"
+            python3 << 'EOF'
+          import json
+          with open("data/lombard_ranking.json") as f:
+              data = json.load(f)
+          meta = data.get("_meta", {})
+          print(f"   Universe: {meta.get('universe_size', 0)} stocks")
+          print(f"   Eligible: {meta.get('eligible_count', 0)} stocks")
+          rankings = data.get("rankings", {})
+          for rate, rdata in rankings.items():
+              summary = rdata.get("summary", {})
+              print(f"   Rate {rate}%: top {rdata.get('count', 0)} | yield={summary.get('avg_yield', 0):.1f}% | carry={summary.get('avg_carry_net', 0):+.1f}%")
+          EOF
+          else
+            echo "⚠️ lombard_ranking.json ABSENT"
+          fi
+          
           echo "----"
           echo "== portfolio_history =="
           ls -lah data/portfolio_history || true
@@ -285,7 +304,7 @@ jobs:
       - name: 📊 Backtest Summary
         if: always()
         run: |
-          echo "## 📊 Portfolio Engine v5.2.0 Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Portfolio Engine v5.3.0 Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Schema Validation Status
@@ -537,6 +556,28 @@ jobs:
               print(f"| {label} | {agg} | {mod} | {stb} |")
           EOF
           fi
+          
+          # v5.3.0: Lombard Ranking Summary
+          if [ -f data/lombard_ranking.json ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 💰 Lombard Ranking (v5.3.0)" >> $GITHUB_STEP_SUMMARY
+            python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          with open("data/lombard_ranking.json") as f:
+              data = json.load(f)
+          meta = data.get("_meta", {})
+          print(f"| Metric | Value |")
+          print(f"|--------|-------|")
+          print(f"| Universe | {meta.get('universe_size', 0)} stocks |")
+          print(f"| Eligible | {meta.get('eligible_count', 0)} stocks |")
+          print(f"")
+          print(f"| Lombard Rate | Top N | Avg Yield | Avg Carry | Carry+ |")
+          print(f"|-------------|-------|-----------|-----------|--------|")
+          for rate, rdata in data.get("rankings", {}).items():
+              s = rdata.get("summary", {})
+              print(f"| {rate}% | {rdata.get('count', 0)} | {s.get('avg_yield', 0):.1f}% | {s.get('avg_carry_net', 0):+.1f}% | {s.get('carry_positive_count', 0)} |")
+          EOF
+          fi
 
       - name: 💾 Commit & push
         if: always()
@@ -544,7 +585,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # Ajouter les artefacts générés (v5.2.0 avec market_intelligence_audit)
+          # Ajouter les artefacts générés (v5.3.0 avec lombard_ranking)
           git add data/portfolios.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
@@ -555,6 +596,7 @@ jobs:
                   data/selection_explained.json \
                   data/selection_debug.json \
                   data/macro_indicators.json \
+                  data/lombard_ranking.json \
                   data/market_intelligence_audit/* \
                   data/portfolio_history/* || true
 
@@ -592,11 +634,14 @@ jobs:
           if git check-ignore -q data/macro_indicators.json 2>/dev/null; then
             git add -f data/macro_indicators.json
           fi
+          if git check-ignore -q data/lombard_ranking.json 2>/dev/null; then
+            git add -f data/lombard_ranking.json
+          fi
           if git check-ignore -q data/portfolio_history 2>/dev/null; then
             git add -f data/portfolio_history/*.json || true
           fi
 
-          git commit -m "📊 Portefeuilles v5.2.0 + Market Intelligence 🧠 + RADAR + Backtest 90j ✓" || echo "rien à committer"
+          git commit -m "📊 Portefeuilles v5.3.0 + Market Intelligence 🧠 + Lombard Ranking 💰 + Backtest 90j ✓" || echo "rien à committer"
 
           git push || (git pull --rebase origin main && git push)
 
