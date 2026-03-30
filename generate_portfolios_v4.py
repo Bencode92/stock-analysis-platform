@@ -468,6 +468,9 @@ CONFIG = {
     "equity_scoring_mode": "preset",
     # === v5.2.0: Risk Analysis (post-optimization) ===
     "enable_risk_analysis": True,
+    # === v5.3.0: Lombard Ranking (yield/credit optimization) ===
+    "generate_lombard_ranking": True,
+    "lombard_output_path": "data/lombard_ranking.json",
 }
 
 # === v4.7 P2: DISCLAIMER BACKTEST ===
@@ -6290,6 +6293,46 @@ def main():
     except Exception as e:
         logger.warning(f"⚠️ [STRESS] Error: {e} — portfolios unchanged")
     
+    # === 4.7 LOMBARD RANKING ===
+    lombard_results = None
+    if CONFIG.get("generate_lombard_ranking", False):
+        try:
+            from lombard_ranking import generate_lombard_ranking
+            
+            # Charger config YAML si dispo
+            _lombard_yaml = {}
+            try:
+                _lomb_yc = load_yaml_config(CONFIG["config_path"])
+                _lombard_yaml = _lomb_yc.get("lombard", {})
+            except Exception:
+                pass
+            
+            _lombard_config = {
+                **CONFIG,
+                "lombard_output_path": _lombard_yaml.get("output_path", CONFIG.get("lombard_output_path", "data/lombard_ranking.json")),
+            }
+            
+            lombard_results = generate_lombard_ranking(
+                config=_lombard_config,
+                lombard_rates=_lombard_yaml.get("rates", [2.0, 2.5, 3.0, 3.5, 4.0]),
+                min_yield=_lombard_yaml.get("min_yield", 2.0),
+                min_quality=_lombard_yaml.get("min_quality", 0),
+                min_market_cap=_lombard_yaml.get("min_market_cap", 2e9),
+                max_positions=_lombard_yaml.get("max_positions", 30),
+            )
+            
+            if lombard_results and lombard_results.get("rankings"):
+                _n_rates = len(lombard_results["rankings"])
+                _n_eligible = lombard_results.get("_meta", {}).get("eligible_count", 0)
+                logger.info(f"✅ Lombard: {_n_rates} hypothèses de taux, {_n_eligible} stocks éligibles")
+            else:
+                logger.warning("⚠️ Lombard ranking vide (aucun stock éligible?)")
+                
+        except ImportError:
+            logger.info("ℹ️ [LOMBARD] lombard_ranking.py not found — skipping")
+        except Exception as e:
+            logger.warning(f"⚠️ [LOMBARD] Error: {e}")
+    
     # === 5. RÉSUMÉ FINAL ===
     logger.info("\n" + "=" * 60)
     logger.info("✨ Génération terminée avec succès!")
@@ -6304,6 +6347,8 @@ def main():
             logger.info(f"   • {backtest_results['debug_file']} (debug détaillé)")
     if stress_results:
         logger.info(f"   • data/stress_test_report.json (stress test)")
+    if lombard_results and lombard_results.get("rankings"):
+        logger.info(f"   • {CONFIG.get('lombard_output_path', 'data/lombard_ranking.json')} (Lombard Ranking)")
     logger.info("")
     logger.info("Fonctionnalités v4.14.0 (Round 14 PARFAIT FINAL - 10/10):")
     logger.info(f"   • ✅ PROFILE_POLICY: {'ACTIVÉ' if HAS_PROFILE_POLICY else 'DÉSACTIVÉ'}")
