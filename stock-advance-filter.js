@@ -299,8 +299,19 @@ class StockAdvanceFilter {
     const roeStd = this._parseFloat(stock.roe_std_3y);
     if (this._validNum(roeAvg)) {
       dataAvailable++;
-      const cv = this._validNum(roeStd) && Math.abs(roeAvg) > 0 ? roeStd / Math.abs(roeAvg) : 0;
-      criteria.push({ name: 'roe_consistent', passed: roeAvg >= 15 && cv < 0.30, value: roeAvg, detail: `${roeAvg.toFixed(1)}% cv=${(cv * 100).toFixed(0)}%` });
+      // FIX: si roe_std_3y est null, on ne peut pas confirmer la stabilité → cv=unknown
+      // On passe le critère ROE >= 15 mais sans confirmation de stabilité
+      const hasStdData = this._validNum(roeStd);
+      const cv = hasStdData && Math.abs(roeAvg) > 0 ? roeStd / Math.abs(roeAvg) : null;
+      const roeOk = roeAvg >= 15;
+      const cvOk = cv === null ? true : cv < 0.30;  // si cv inconnu, on ne pénalise pas mais on flag
+      criteria.push({
+        name: 'roe_consistent',
+        passed: roeOk && cvOk,
+        value: roeAvg,
+        detail: `${roeAvg.toFixed(1)}% cv=${cv !== null ? (cv * 100).toFixed(0) + '%' : '?'}`,
+        cv_unknown: !hasStdData
+      });
     }
 
     // 2. ROIC moat: avg 3Y >= 10%
@@ -346,7 +357,22 @@ class StockAdvanceFilter {
     if (dataAvailable < 2) return { score: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
     const passed = criteria.filter(c => c.passed).length;
     let score = Math.round((passed / criteria.length) * 100);
+
+    // Progressive coverage caps — prevents inflation when criteria are missing
+    // 6/6 evaluated = no cap (full data)
+    // 5/6 evaluated = cap 83 (can't get A if moat_expansion missing)
+    // 4/6 = cap 75 (grade B max)
+    // 3/6 = cap 60 (grade C max)
+    // 2/6 = cap 60
     if (dataAvailable < 3) score = Math.min(score, 60);
+    else if (dataAvailable < 4) score = Math.min(score, 60);
+    else if (dataAvailable < 5) score = Math.min(score, 75);
+    else if (dataAvailable < 6) score = Math.min(score, 83);
+
+    // Additional penalty if ROE consistency passed with unknown CV (no std data)
+    const cvUnknownPasses = criteria.filter(c => c.cv_unknown && c.passed).length;
+    if (cvUnknownPasses > 0 && score >= 80) score = Math.min(score, 83);
+
     const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';
     return { score, grade, criteria, passed, total: criteria.length, dataAvailable };
   }
