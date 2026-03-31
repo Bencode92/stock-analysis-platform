@@ -757,23 +757,25 @@ def select_crypto_core_satellite(
 
 # ============ PROFILE BUCKET TARGETS ============
 
+# v7.2.1: Bucket targets ajustés pour bonds reclassifiés
+# IG bonds = CORE (pas DEFENSIVE), cash_ultra_short = DEFENSIVE, HY = SATELLITE
 PROFILE_BUCKET_TARGETS: Dict[str, Dict[Role, Tuple[float, float]]] = {
     "Stable": {
-        Role.CORE: (0.20, 0.35),
-        Role.DEFENSIVE: (0.40, 0.65),   # v6.33 FIX: 5-15% → 40-65% (bonds=DEFENSIVE, min 35%)
-        Role.SATELLITE: (0.05, 0.20),   # v6.33 FIX: 35-60% → 5-20% (profil conservateur)
+        Role.CORE: (0.15, 0.40),        # v7.2.1: bonds IG comptent CORE maintenant
+        Role.DEFENSIVE: (0.50, 0.85),    # v7.2.1: cash + actions def (Stable = très défensif)
+        Role.SATELLITE: (0.00, 0.10),    # v7.2.1: 0% min — Stable n'a pas de satellite
         Role.LOTTERY: (0.00, 0.00),
     },
     "Modéré": {
-        Role.CORE: (0.35, 0.55),
-        Role.DEFENSIVE: (0.20, 0.30),
-        Role.SATELLITE: (0.15, 0.35),
+        Role.CORE: (0.50, 0.70),         # v7.2.1: bonds IG + TIPS = CORE
+        Role.DEFENSIVE: (0.10, 0.25),    # v7.2.1: seulement cash + actions def
+        Role.SATELLITE: (0.10, 0.25),    # v7.2.1: réduit de 15-35% → 10-25%
         Role.LOTTERY: (0.00, 0.02),
     },
     "Agressif": {
-        Role.CORE: (0.30, 0.45),
+        Role.CORE: (0.30, 0.50),         # v7.2.1: élargi haut (bonds IG = CORE)
         Role.DEFENSIVE: (0.05, 0.15),
-        Role.SATELLITE: (0.35, 0.60),
+        Role.SATELLITE: (0.35, 0.55),    # v7.2.1: ajusté pour cohérence
         Role.LOTTERY: (0.00, 0.05),
     },
 }
@@ -897,7 +899,8 @@ RELAX_PROFILE_LIMITS: Dict[str, Dict[str, float]] = {
 
 PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
-        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium", "quality_high_vol"},
+        # v7.2.1: ajouté "defensif" — filet de sécurité, naturellement sous-pondéré par scoring (div_yield=-0.05)
+        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium", "quality_high_vol", "defensif"},
         "min_buffett_score": 50,
          "min_quality_gate": 55,     # v4.15: OR gate — quality rescue pour secteurs à moat structurellement bas
         "hard_filters": {

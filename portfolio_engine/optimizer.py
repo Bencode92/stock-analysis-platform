@@ -189,7 +189,7 @@ except ImportError:
     # Les bonds IG (~18-22%) comptent maintenant comme CORE
     # defensive = seulement cash_ultra_short + actions defensives
     PROFILE_BUCKET_TARGETS = {
-        "Stable": {Role.CORE: (0.35, 0.55), Role.DEFENSIVE: (0.35, 0.55), Role.SATELLITE: (0.05, 0.15), Role.LOTTERY: (0.00, 0.00)},
+        "Stable": {Role.CORE: (0.15, 0.40), Role.DEFENSIVE: (0.50, 0.85), Role.SATELLITE: (0.00, 0.10), Role.LOTTERY: (0.00, 0.00)},
         "Modéré": {Role.CORE: (0.50, 0.70), Role.DEFENSIVE: (0.10, 0.25), Role.SATELLITE: (0.10, 0.25), Role.LOTTERY: (0.00, 0.02)},
         "Agressif": {Role.CORE: (0.35, 0.50), Role.DEFENSIVE: (0.05, 0.15), Role.SATELLITE: (0.35, 0.50), Role.LOTTERY: (0.00, 0.05)},
     }

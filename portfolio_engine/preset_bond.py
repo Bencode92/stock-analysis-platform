@@ -63,10 +63,11 @@ RATING_TO_SCORE = {
 }
 
 # Presets par profil (union) - v1.1.0: aligné avec preset_meta.py
+# v7.2.1: ajouté tips_inflation pour Modéré et Stable (TIPS = inflation hedge, Role.CORE)
 PROFILE_PRESETS = {
-    "Stable": ["cash_ultra_short", "defensif_oblig"],
-    "Modéré": ["defensif_oblig"],
-    "Agressif": ["high_yield", "ig_credit"],  # v1.3.0: mix HY/IG (expert: corr HY/SPX ~0.7 en crise)
+    "Stable": ["cash_ultra_short", "defensif_oblig", "tips_inflation"],
+    "Modéré": ["defensif_oblig", "tips_inflation"],
+    "Agressif": ["high_yield", "ig_credit"],
 }
 
 # Hard constraints par profil
@@ -452,12 +453,44 @@ def _preset_ig_credit(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
+def _preset_tips_inflation(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: TIPS / Inflation-Protected (v7.2.1)
+    Obligations indexées sur l'inflation — Role.CORE (hedge, pas protection).
+    """
+    mask = pd.Series(False, index=df.index)
+
+    tips_keywords = ["tips", "inflation-protected", "inflation linked",
+                     "real return", "inflation", "linker"]
+
+    # Via fund_type
+    if "fund_type" in df.columns:
+        ft_lower = df["fund_type"].fillna("").str.lower()
+        for kw in tips_keywords:
+            mask |= ft_lower.str.contains(kw, regex=False)
+
+    # Via name
+    if "name" in df.columns:
+        name_lower = df["name"].fillna("").str.lower()
+        for kw in tips_keywords:
+            mask |= name_lower.str.contains(kw, regex=False)
+
+    # Via objective
+    if "objective" in df.columns:
+        obj_lower = df["objective"].fillna("").str.lower()
+        for kw in tips_keywords:
+            mask |= obj_lower.str.contains(kw, regex=False)
+
+    return mask
+
+
 # Mapping preset name → function (v1.1.0: aligné avec preset_meta.py)
 PRESET_FUNCTIONS = {
     "cash_ultra_short": _preset_cash_ultra_short,
     "defensif_oblig": _preset_defensif_oblig,
     "high_yield": _preset_high_yield,
     "ig_credit": _preset_ig_credit,  # v1.3.0
+    "tips_inflation": _preset_tips_inflation,  # v7.2.1
 }
 
 
