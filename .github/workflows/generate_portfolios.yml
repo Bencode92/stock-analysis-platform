@@ -655,6 +655,9 @@ jobs:
           if git check-ignore -q data/portfolio_history 2>/dev/null; then
             git add -f data/portfolio_history/*.json || true
           fi
+          if [ -f data/correlation_diagnostics.json ]; then
+            git add -f data/correlation_diagnostics.json
+          fi
  
           git commit -m "📊 Portefeuilles v5.3.0 + Market Intelligence 🧠 + Lombard Ranking 💰 + Backtest 90j ✓" || echo "rien à committer"
  

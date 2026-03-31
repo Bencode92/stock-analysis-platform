@@ -5443,6 +5443,20 @@ def save_portfolios(portfolios: Dict, assets: list):
         # INTL DEVELOPED BROAD — same market cap weighted ex-US (corr > 0.95)
         # VEA=FTSE Developed, EFA=MSCI EAFE, SPDW=S&P Developed ex-US
         "intl_developed": ["VEA", "EFA", "IXUS", "IEFA", "IDEV", "SPDW"],
+        # v7.2.1: BOND ETF DEDUP — same duration/credit bucket (corr > 0.90)
+        "short_treasury": ["VGSH", "SCHO", "SPTS", "SHV"],
+        "tbill_cash": ["SGOV", "GBIL", "CLTL", "BIL"],
+        "tips_inflation": ["STIP", "TIP", "VTIP", "SCHP"],
+        "clo_aaa": ["PAAA", "JAAA"],
+        "ultra_short_bond": ["PULS", "MINT", "JPST", "NEAR"],
+        "intermediate_corp": ["VCIT", "IGIB", "SPIB"],
+        "short_corp": ["VCSH", "IGSB"],
+        "intermediate_treasury": ["IEF", "VGIT", "SCHR"],
+        "long_treasury": ["TLT", "EDV", "SPTL"],
+        "core_aggregate": ["BND", "AGG"],
+        "high_yield": ["HYG", "JNK", "SHYG", "USHY"],
+        # v7.2.1: US VALUE — add SPYV (was missing, same as VTV/IUSV)
+        "sp500_value": ["SPYV", "IUSV", "VOOV"],
     }
     # v5.4.1: _ETF_DEDUP_PREFER removed — broader gold/silver caps handled by allocation_rules_engine
     for _p_name in ["Agressif", "Modéré", "Stable"]:
@@ -6208,7 +6222,19 @@ def main():
             traceback.print_exc()
     
     save_portfolios(portfolios, assets)
-    
+
+    # v7.2.1: Correlation diagnostics JSON
+    try:
+        from portfolio_engine.correlation_diagnostics import generate_correlation_diagnostics
+        # Re-read saved portfolios (save_portfolios applies dedup + normalization)
+        import json as _json
+        with open(CONFIG.get("output_path", "data/portfolios.json")) as _f:
+            _saved = _json.load(_f)
+        generate_correlation_diagnostics(_saved, output_path="data/correlation_diagnostics.json")
+        logger.info("✅ Correlation diagnostics generated")
+    except Exception as _e:
+        logger.warning(f"⚠️ Correlation diagnostics failed: {_e}")
+
     # === 2. PORTEFEUILLES EU/US FOCUS ===
     if CONFIG.get("generate_euus_portfolios", False) and HAS_EUUS_PROFILES:
         logger.info("\n" + "=" * 60)
