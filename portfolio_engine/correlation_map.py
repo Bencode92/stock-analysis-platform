@@ -29,6 +29,12 @@ EXPOSURE_FAMILY = {
     "us_equity": "us_equity_large",
     "dow30": "us_equity_large",
 
+    # US Equity Style (value/growth sub-indices)
+    "sp500_value": "factor_value",
+    "sp500_growth": "factor_growth",
+    "dividend_growth": "factor_dividend",
+    "dividend_intl": "factor_dividend",
+
     # US Equity Small/Mid
     "russell2000": "us_equity_small",
     "us_small_cap": "us_equity_small",
@@ -260,9 +266,15 @@ FAMILY_CORRELATION = {
 
     # Factor vs bonds
     ("factor_dividend", "bonds_gov"): 0.15,
+    ("factor_dividend", "bonds_credit"): 0.20,
     ("factor_min_vol", "bonds_gov"): 0.20,
+    ("factor_min_vol", "bonds_credit"): 0.25,
     ("factor_value", "bonds_gov"): 0.10,
+    ("factor_value", "bonds_credit"): 0.15,
     ("factor_growth", "bonds_gov"): -0.02,
+    ("factor_growth", "bonds_credit"): 0.08,
+    ("factor_quality", "bonds_gov"): 0.05,
+    ("factor_quality", "bonds_credit"): 0.12,
 }
 
 # Default correlation for unmatched families (conservative)
