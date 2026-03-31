@@ -1,10 +1,10 @@
 {
   "_market_data_flat": {
     "date": "2026-03-31",
-    "brent_usd": 13.375,
-    "brent_usd_avg5d": 13.375,
-    "gold_usd": 4605.36559,
-    "silver_usd": 73.57685,
+    "brent_usd": 103.79,
+    "brent_usd_avg5d": 103.79,
+    "gold_usd": 4602.86425,
+    "silver_usd": 73.48836,
     "vix": 30.61,
     "fed_funds_rate": 3.64,
     "fed_funds_rate_delta_6m": -0.24,
@@ -16,38 +16,46 @@
     "us_2y_yield": 3.88,
     "yield_curve_2s10s": 56.0,
     "breakeven_5y": 2.57,
-    "sp500_level": 641.35,
-    "eurusd": 1.15223,
-    "nasdaq_change_1d_pct": 1.61567,
-    "xlu_perf_1d_pct": -0.96907271,
-    "xle_perf_1d_pct": 0.5810215,
+    "sp500_level": 639.43,
+    "trade_weighted_usd": 120.8851,
+    "eurusd": 1.1522,
+    "nasdaq_change_1d_pct": 1.36669,
+    "xlu_perf_1d_pct": -1.29573,
+    "xle_perf_1d_pct": 1.016787,
     "cpi_core_mom_pct": 0.22,
     "pce_yoy_pct": 2.83,
     "vix_trend": "Stable",
     "hy_spread_trend": "Stable",
     "_stress_flags": [
-      "volatility_stress"
+      "volatility_stress",
+      "energy_shock"
     ]
   },
   "macro_environment": {
     "brent": {
-      "price": 13.375,
-      "source": "twelve_data_BZ_unvalidated",
-      "date": "2026-03-31",
-      "avg_5d": 13.375
+      "price": 103.79,
+      "source": "fred_DCOILBRENTEU_fallback",
+      "date": "2026-03-23",
+      "avg_5d": 103.79,
+      "_td_rejected": 13.37,
+      "_td_reject_reason": "insane_price (13.37, divergence 87%)"
     },
     "gold": {
-      "price": 4605.36559,
-      "change_1d_pct": 2.037437,
+      "price": 4602.86425,
+      "change_1d_pct": 1.98202,
       "datetime": "2026-03-31"
     },
     "silver": {
-      "price": 73.57685,
-      "change_1d_pct": 4.86349
+      "price": 73.48836,
+      "change_1d_pct": 4.73737
+    },
+    "trade_weighted_usd": {
+      "value": 120.8851,
+      "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130."
     },
     "sp500": {
-      "level": 641.35,
-      "change_1d_pct": 1.48425
+      "level": 639.43,
+      "change_1d_pct": 1.18044
     },
     "vix": {
       "value": 30.61,
@@ -94,20 +102,20 @@
       "date": "2026-03-30"
     },
     "eurusd": {
-      "price": 1.15223,
-      "change_1d_pct": 0.55064926
+      "price": 1.1522,
+      "change_1d_pct": 0.54803128
     },
     "nasdaq": {
-      "level": 567.3,
-      "change_1d_pct": 1.61567
+      "level": 565.91,
+      "change_1d_pct": 1.36669
     },
     "xlu": {
-      "price": 45.475,
-      "change_1d_pct": -0.96907271
+      "price": 45.325,
+      "change_1d_pct": -1.29573
     },
     "xle": {
-      "price": 62.32,
-      "change_1d_pct": 0.5810215
+      "price": 62.59,
+      "change_1d_pct": 1.016787
     },
     "cpi_core": {
       "index_value": 333.512,
@@ -120,23 +128,25 @@
       "date": "2026-01-01"
     },
     "_flags": [
-      "volatility_stress"
+      "volatility_stress",
+      "energy_shock"
     ],
-    "_updated": "2026-03-31T14:12:17.556695",
+    "_updated": "2026-03-31T14:51:17.317437",
     "_sources": [
       "twelve_data",
       "fred"
     ]
   },
   "_meta": {
-    "updated": "2026-03-31T14:12:17.557281",
+    "updated": "2026-03-31T14:51:17.318204",
     "sources": [
       "twelve_data",
       "fred"
     ],
-    "fields": 26,
+    "fields": 27,
     "stress_flags": [
-      "volatility_stress"
+      "volatility_stress",
+      "energy_shock"
     ]
   }
 }
