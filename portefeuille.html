@@ -277,6 +277,19 @@
             </div>
         </section>
 
+        <!-- Correlation Diagnostics Section -->
+        <section id="correlation-section" style="margin-top:3rem;">
+            <div class="section-header">
+                <h2><i class="fas fa-project-diagram" style="margin-right:0.5rem;"></i>Matrice de Corrélation</h2>
+                <p class="section-description">Diversification réelle entre les actifs du portefeuille — données calibrées sur 251 jours</p>
+            </div>
+            <div id="correlation-container" style="opacity:0; transition: opacity 0.4s;">
+                <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Chargement des corrélations...
+                </div>
+            </div>
+        </section>
+
         <!-- Methodology Section -->
         <section id="methodology" style="margin-top:3rem;">
             <div class="section-header">
@@ -409,6 +422,237 @@
             });
         });
     });
+    </script>
+
+    <!-- Correlation Diagnostics Renderer -->
+    <script>
+    (async function loadCorrelationDiagnostics() {
+        const container = document.getElementById('correlation-container');
+        if (!container) return;
+
+        try {
+            const resp = await fetch('data/correlation_diagnostics.json');
+            if (!resp.ok) throw new Error('Not found');
+            const data = await resp.json();
+
+            const profiles = data.profiles || {};
+            const matrix = data.correlation_matrix || {};
+            const tickers = matrix.tickers || [];
+            const mat = matrix.matrix || [];
+            const meta = data._meta || {};
+
+            // Active profile tab
+            const activeTab = document.querySelector('.portfolio-tab.active');
+            const profileMap = {'portfolio-agressif':'Agressif','portfolio-modere':'Modéré','portfolio-stable':'Stable'};
+            let activeProfile = 'Agressif';
+            if (activeTab) activeProfile = profileMap[activeTab.dataset.target] || 'Agressif';
+
+            function render(profile) {
+                const info = profiles[profile];
+                if (!info) { container.innerHTML = '<p style="color:var(--text-muted)">Pas de données pour ce profil</p>'; return; }
+
+                const topPairs = info.most_correlated || [];
+                const bottomPairs = info.least_correlated || [];
+                const alerts = info.high_corr_high_weight || [];
+                const wavg = info.weighted_avg_correlation;
+
+                // Color for correlation value
+                function corrColor(v) {
+                    if (v > 0.7) return '#ff4444';
+                    if (v > 0.4) return '#ff9800';
+                    if (v > 0.1) return '#4caf50';
+                    if (v > -0.1) return '#78909c';
+                    return '#2196f3';
+                }
+                function corrBg(v) {
+                    if (v > 0.7) return 'rgba(255,68,68,0.08)';
+                    if (v > 0.4) return 'rgba(255,152,0,0.06)';
+                    return 'transparent';
+                }
+
+                // Badge for wavg
+                let wavgBadge = '';
+                if (wavg < 0.15) wavgBadge = '<span style="background:#1b5e20;color:#a5d6a7;padding:2px 8px;border-radius:6px;font-size:0.7rem;margin-left:8px;">Excellente diversification</span>';
+                else if (wavg < 0.25) wavgBadge = '<span style="background:#33691e;color:#c5e1a5;padding:2px 8px;border-radius:6px;font-size:0.7rem;margin-left:8px;">Bonne diversification</span>';
+                else wavgBadge = '<span style="background:#4e342e;color:#ffcc80;padding:2px 8px;border-radius:6px;font-size:0.7rem;margin-left:8px;">Diversification modérée</span>';
+
+                let html = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+                    <!-- Summary Card -->
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;">
+                        <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.5rem;">
+                            Corrélation moyenne pondérée ${wavgBadge}
+                        </div>
+                        <div style="font-size:2.2rem;font-weight:700;font-family:var(--font-mono);color:${corrColor(wavg)};">
+                            ${wavg.toFixed(3)}
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;">
+                            ${info.n_assets} actifs | Covariance: ${meta.covariance_method || '?'} | Cond#: ${meta.condition_number ? Math.round(meta.condition_number) : '?'}
+                        </div>
+                    </div>
+                    <!-- Alerts -->
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;">
+                        <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.5rem;">
+                            <i class="fas fa-exclamation-triangle" style="color:#ff9800;"></i> Risque de concentration
+                        </div>
+                        ${alerts.length === 0
+                            ? '<div style="color:#4caf50;font-size:0.85rem;margin-top:0.5rem;"><i class="fas fa-check-circle"></i> Aucune paire fortement corrélée à poids élevé</div>'
+                            : alerts.map(p => `<div style="font-size:0.8rem;padding:4px 0;color:var(--text-primary);">
+                                <span style="font-family:var(--font-mono);color:#ff9800;">${p.t1}/${p.t2}</span>
+                                corr=${p.corr.toFixed(2)} | ${p.combined_weight.toFixed(1)}% combiné
+                            </div>`).join('')
+                        }
+                    </div>
+                </div>
+
+                <!-- Top/Bottom pairs -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;">
+                        <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.8rem;">
+                            <i class="fas fa-link" style="color:#ff5252;"></i> Plus corrélés
+                        </div>
+                        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                            <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">
+                                <th style="text-align:left;padding:4px 0;">Paire</th>
+                                <th style="text-align:right;">Corr</th>
+                                <th style="text-align:right;">Poids</th>
+                            </tr></thead>
+                            <tbody>
+                            ${topPairs.slice(0, 8).map(p => `
+                                <tr style="background:${corrBg(p.corr)};">
+                                    <td style="padding:5px 0;font-family:var(--font-mono);color:var(--text-primary);">${p.t1} <span style="color:var(--text-muted);">×</span> ${p.t2}</td>
+                                    <td style="text-align:right;font-family:var(--font-mono);color:${corrColor(p.corr)};font-weight:600;">${p.corr >= 0 ? '+' : ''}${p.corr.toFixed(3)}</td>
+                                    <td style="text-align:right;color:var(--text-secondary);font-size:0.75rem;">${p.w1}% + ${p.w2}%</td>
+                                </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;">
+                        <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.8rem;">
+                            <i class="fas fa-unlink" style="color:#2196f3;"></i> Moins corrélés (meilleure diversification)
+                        </div>
+                        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                            <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">
+                                <th style="text-align:left;padding:4px 0;">Paire</th>
+                                <th style="text-align:right;">Corr</th>
+                                <th style="text-align:right;">Poids</th>
+                            </tr></thead>
+                            <tbody>
+                            ${bottomPairs.map(p => `
+                                <tr>
+                                    <td style="padding:5px 0;font-family:var(--font-mono);color:var(--text-primary);">${p.t1} <span style="color:var(--text-muted);">×</span> ${p.t2}</td>
+                                    <td style="text-align:right;font-family:var(--font-mono);color:${corrColor(p.corr)};font-weight:600;">${p.corr >= 0 ? '+' : ''}${p.corr.toFixed(3)}</td>
+                                    <td style="text-align:right;color:var(--text-secondary);font-size:0.75rem;">${p.w1}% + ${p.w2}%</td>
+                                </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+
+                // Mini heatmap (canvas) — only for assets in this profile
+                const pTickers = topPairs.concat(bottomPairs).flatMap(p => [p.t1, p.t2]);
+                const uniqueTickers = [...new Set(pTickers)].sort();
+                if (uniqueTickers.length >= 4 && tickers.length > 0) {
+                    const idxMap = {};
+                    tickers.forEach((t, i) => idxMap[t] = i);
+                    const ht = uniqueTickers.filter(t => t in idxMap);
+
+                    if (ht.length >= 4) {
+                        const cellSize = Math.min(36, Math.floor(600 / ht.length));
+                        const labelW = 50;
+                        const w = labelW + ht.length * cellSize;
+                        const h = labelW + ht.length * cellSize;
+
+                        html += `
+                        <div style="margin-top:1.5rem;background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;">
+                            <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.8rem;">
+                                <i class="fas fa-th" style="color:#9c27b0;"></i> Heatmap — actifs du profil
+                            </div>
+                            <div style="overflow-x:auto;">
+                                <canvas id="heatmap-${profile}" width="${w}" height="${h}" style="max-width:100%;"></canvas>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;font-size:0.7rem;color:var(--text-muted);">
+                                <span style="display:inline-block;width:12px;height:12px;background:#2196f3;border-radius:2px;"></span> &lt; 0
+                                <span style="display:inline-block;width:12px;height:12px;background:#455a64;border-radius:2px;"></span> ~0
+                                <span style="display:inline-block;width:12px;height:12px;background:#ff9800;border-radius:2px;"></span> &gt; 0.4
+                                <span style="display:inline-block;width:12px;height:12px;background:#ff4444;border-radius:2px;"></span> &gt; 0.7
+                            </div>
+                        </div>`;
+
+                        container.innerHTML = html;
+                        container.style.opacity = '1';
+
+                        // Draw heatmap
+                        const canvas = document.getElementById(`heatmap-${profile}`);
+                        if (canvas) {
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#0a1929';
+                            ctx.fillRect(0, 0, w, h);
+
+                            // Labels
+                            ctx.font = '10px JetBrains Mono, monospace';
+                            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                            ht.forEach((tk, i) => {
+                                ctx.save();
+                                ctx.translate(labelW + i * cellSize + cellSize/2, labelW - 4);
+                                ctx.rotate(-Math.PI / 4);
+                                ctx.fillText(tk, 0, 0);
+                                ctx.restore();
+                                ctx.fillText(tk, 2, labelW + i * cellSize + cellSize/2 + 4);
+                            });
+
+                            // Cells
+                            ht.forEach((t1, i) => {
+                                ht.forEach((t2, j) => {
+                                    const gi = idxMap[t1], gj = idxMap[t2];
+                                    const v = (gi !== undefined && gj !== undefined) ? mat[gi][gj] : 0;
+                                    let r, g, b;
+                                    if (v > 0.7) { r=255; g=68; b=68; }
+                                    else if (v > 0.4) { r=255; g=152; b=0; }
+                                    else if (v > 0.1) { r=76; g=175; b=80; }
+                                    else if (v > -0.1) { r=69; g=90; b=100; }
+                                    else { r=33; g=150; b=243; }
+                                    const alpha = Math.min(0.9, 0.3 + Math.abs(v) * 0.7);
+                                    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+                                    ctx.fillRect(labelW + j * cellSize, labelW + i * cellSize, cellSize - 1, cellSize - 1);
+
+                                    // Value text for larger cells
+                                    if (cellSize >= 28 && i !== j) {
+                                        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                                        ctx.font = '9px JetBrains Mono';
+                                        ctx.fillText(v.toFixed(2), labelW + j * cellSize + 2, labelW + i * cellSize + cellSize/2 + 3);
+                                    }
+                                });
+                            });
+                        }
+                        return;
+                    }
+                }
+
+                container.innerHTML = html;
+                container.style.opacity = '1';
+            }
+
+            render(activeProfile);
+
+            // Re-render on tab switch
+            document.querySelectorAll('.portfolio-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const p = profileMap[tab.dataset.target];
+                    if (p) render(p);
+                });
+            });
+
+        } catch (e) {
+            container.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:1rem;">
+                <i class="fas fa-info-circle"></i> Données de corrélation non disponibles
+            </p>`;
+            container.style.opacity = '1';
+        }
+    })();
     </script>
 </body>
 </html>
