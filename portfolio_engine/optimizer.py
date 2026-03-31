@@ -1874,6 +1874,14 @@ class HybridCovarianceEstimator:
                 else:
                     cov_shrunk = cov_shrunk_small
 
+                # v7.2.1 FIX B4: Backfill off-diagonal zéros depuis structurée
+                # Les assets sans returns_series ont des zéros dans cov_shrunk
+                # → corrélations diluées par le blend (0.85*0 + 0.15*corr = 15% du signal)
+                # Fix: remplacer les zéros par la valeur structurée AVANT le blend
+                _zero_mask = np.abs(cov_shrunk) < 1e-12
+                np.fill_diagonal(_zero_mask, False)  # ne pas toucher la diagonale
+                cov_shrunk[_zero_mask] = cov_structured[_zero_mask]
+
                 # Utiliser cov_shrunk au lieu de cov_empirical
                 cov_hybrid = (
                     self.empirical_weight * cov_shrunk +
@@ -1887,8 +1895,13 @@ class HybridCovarianceEstimator:
                 )
             else:
                 # Sans shrinkage (comportement original)
+                # v7.2.1 FIX B4: Backfill zéros (même fix que LW path)
+                _zero_mask = np.abs(cov_empirical) < 1e-12
+                np.fill_diagonal(_zero_mask, False)
+                cov_empirical[_zero_mask] = cov_structured[_zero_mask]
+
                 cov_hybrid = (
-                    self.empirical_weight * cov_empirical + 
+                    self.empirical_weight * cov_empirical +
                     (1 - self.empirical_weight) * cov_structured
                 )
                 diagnostics["method"] = "hybrid"
@@ -3924,6 +3937,8 @@ class PortfolioOptimizer:
                 "eigenvalue_min_raw": cov_diagnostics.get("eigenvalue_min_raw"),
                 "matrix_size": cov_diagnostics.get("matrix_size", n),
                 "is_well_conditioned": cov_diagnostics.get("is_well_conditioned", True),
+                "pca_applied": cov_diagnostics.get("pca_applied", False),
+                "pca_factors": cov_diagnostics.get("pca_factors"),
                 "thresholds": {
                     "condition_number_warning": CONDITION_NUMBER_WARNING_THRESHOLD,
                     "eigen_clipped_pct_warning": EIGEN_CLIPPED_PCT_WARNING_THRESHOLD,
