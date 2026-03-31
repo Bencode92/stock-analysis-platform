@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-31T11:57:17.621903",
+  "timestamp": "2026-03-31T13:07:32.691418",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -68,7 +68,7 @@
       "etf": {
         "coeur_global": {
           "total": 20,
-          "selected": 5
+          "selected": 4
         },
         "croissance_tech": {
           "total": 7,
@@ -80,7 +80,7 @@
         },
         "min_vol_global": {
           "total": 4,
-          "selected": 0
+          "selected": 1
         },
         "qualite_value": {
           "total": 4,
@@ -2897,10 +2897,11 @@
         "ticker": "VTV",
         "sort_score": 96.34,
         "sort_score_source": "composite_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "coeur_global",
         "composite_score": 96.34,
         "profile_score": 96.34,
+        "rejection_reason": "Score composite (96.340) insuffisant pour le quota",
         "sector": "Financial Services",
         "volatility": 12.3,
         "ytd": "1.13%",
@@ -2950,11 +2951,10 @@
         "ticker": "ACWV",
         "sort_score": 93.9,
         "sort_score_source": "composite_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "min_vol_global",
         "composite_score": 93.9,
         "profile_score": 93.9,
-        "rejection_reason": "Score composite (93.900) insuffisant pour le quota",
         "sector": "Technology",
         "volatility": 9.2,
         "ytd": "-0.83%",
@@ -8239,10 +8239,11 @@
           "ticker": "VTV",
           "sort_score": 96.34,
           "sort_score_source": "composite_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "coeur_global",
           "composite_score": 96.34,
           "profile_score": 96.34,
+          "rejection_reason": "Score composite (96.340) insuffisant pour le quota",
           "sector": "Financial Services",
           "volatility": 12.3,
           "ytd": "1.13%",
@@ -8862,11 +8863,10 @@
           "ticker": "ACWV",
           "sort_score": 93.9,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "min_vol_global",
           "composite_score": 93.9,
           "profile_score": 93.9,
-          "rejection_reason": "Score composite (93.900) insuffisant pour le quota",
           "sector": "Technology",
           "volatility": 9.2,
           "ytd": "-0.83%",
@@ -14142,18 +14142,18 @@
       "selection_reason": "Score profil élevé (100.00); Preset: coeur_global; Score composite élevé (100.00)"
     },
     {
-      "name": "Vanguard Value ETF",
-      "ticker": "VTV",
+      "name": "iShares MSCI Global Minimum Volatility ETF",
+      "ticker": "ACWV",
       "category": "etf",
-      "matched_preset": "coeur_global",
-      "composite_score": 96.34,
-      "profile_score": 96.34,
-      "volatility": 12.3,
-      "sector": "Financial Services",
+      "matched_preset": "min_vol_global",
+      "composite_score": 93.9,
+      "profile_score": 93.9,
+      "volatility": 9.2,
+      "sector": "Technology",
       "radar_tilt": "avoided",
       "selected": true,
       "ranking": 11,
-      "selection_reason": "Score profil élevé (96.34); Preset: coeur_global; Score composite élevé (96.34)"
+      "selection_reason": "Score profil élevé (93.90); Preset: min_vol_global; Score composite élevé (93.90)"
     }
   ],
   "etf_rejected": [
@@ -14353,6 +14353,19 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
+      "name": "Vanguard Value ETF",
+      "ticker": "VTV",
+      "category": "etf",
+      "matched_preset": "coeur_global",
+      "composite_score": 96.34,
+      "profile_score": 96.34,
+      "volatility": 12.3,
+      "sector": "Financial Services",
+      "radar_tilt": "avoided",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
       "name": "Vanguard Dividend Appreciation ETF",
       "ticker": "VIG",
       "category": "etf",
@@ -14360,19 +14373,6 @@
       "composite_score": 95.12,
       "profile_score": 95.12,
       "volatility": 12.2,
-      "sector": "Technology",
-      "radar_tilt": "avoided",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "iShares MSCI Global Minimum Volatility ETF",
-      "ticker": "ACWV",
-      "category": "etf",
-      "matched_preset": "min_vol_global",
-      "composite_score": 93.9,
-      "profile_score": 93.9,
-      "volatility": 9.2,
       "sector": "Technology",
       "radar_tilt": "avoided",
       "selected": false,
