@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-31T14:55:21.211841",
+  "timestamp": "2026-03-31T15:40:48.312056",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -7,7 +7,7 @@
     "equities_selected": 150,
     "equities_rejected_notable": 50,
     "etf_initial": 96,
-    "etf_selected": 11,
+    "etf_selected": 12,
     "etf_rejected_notable": 20,
     "crypto_initial": 6,
     "crypto_selected": 2,
@@ -34,7 +34,7 @@
         },
         "defensif": {
           "total": 20,
-          "selected": 1
+          "selected": 2
         },
         "low_volatility": {
           "total": 5,
@@ -96,7 +96,7 @@
         },
         "sector_defensive": {
           "total": 6,
-          "selected": 0
+          "selected": 1
         },
         "sector_healthcare": {
           "total": 2,
@@ -137,15 +137,15 @@
         },
         "preset_filter": {
           "before": 698,
-          "after": 423
+          "after": 448
         },
         "hard_filters": {
-          "before": 423,
+          "before": 448,
           "after": 354,
-          "rejected": 69,
+          "rejected": 94,
           "reasons": {
-            "vol<22.0": 13,
-            "roe_missing": 22,
+            "vol<22.0": 38,
+            "roe_missing": 23,
             "roe<0.0": 11,
             "coverage<60": 25,
             "vol_missing": 1
@@ -450,8 +450,8 @@
       "rejected_count": 639,
       "rejection_rate_pct": 65.7,
       "rejection_reasons": {
-        "vol<22.0": 13,
-        "roe_missing": 22,
+        "vol<22.0": 38,
+        "roe_missing": 23,
         "roe<0.0": 11,
         "coverage<60": 25,
         "vol_missing": 1
@@ -503,16 +503,16 @@
   ],
   "hard_filter_stats": {
     "Agressif": {
-      "before": 423,
+      "before": 448,
       "after": 354,
-      "rejected": 69,
+      "rejected": 94,
       "reasons": {
         "vol<22.0": {
-          "count": 13,
+          "count": 38,
           "explanation": "Volatilité trop faible (< 22.0%) - Profil trop défensif pour Agressif"
         },
         "roe_missing": {
-          "count": 22,
+          "count": 23,
           "explanation": "ROE manquant (donnée non disponible)"
         },
         "roe<0.0": {
@@ -1623,12 +1623,10 @@
         "ticker": "GGG",
         "sort_score": 0.6205,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "defensif",
         "profile_score": 0.6205,
         "buffett_score": 67.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Industries",
         "country": "Etats-Unis",
         "volatility": 21.8,
@@ -3076,11 +3074,10 @@
         "ticker": "SPLV",
         "sort_score": 89.02,
         "sort_score_source": "composite_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "sector_defensive",
         "composite_score": 89.02,
         "profile_score": 89.02,
-        "rejection_reason": "Score composite (89.020) insuffisant pour le quota",
         "sector": "Utilities",
         "volatility": 11.0,
         "ytd": "2.25%",
@@ -4527,6 +4524,18 @@
       },
       {
         "rank": 7,
+        "name": "Goldman Sachs Access Inflation-Protected Securities Fund",
+        "ticker": "GTIP",
+        "sort_score": 96.18,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 96.18,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 5.0,
+        "ytd": "-0.16%"
+      },
+      {
+        "rank": 8,
         "name": "Eldridge AAA CLO ETF",
         "ticker": "CLOX",
         "sort_score": 95.8,
@@ -4538,52 +4547,52 @@
         "ytd": "0.04%"
       },
       {
-        "rank": 8,
-        "name": "Vanguard Short-Term Treasury Fund",
-        "ticker": "VGSH",
-        "sort_score": 95.71,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "profile_score": 95.71,
-        "volatility": 2.0,
-        "ytd": "-0.64%"
-      },
-      {
         "rank": 9,
         "name": "Vanguard Short-Term Treasury Fund",
         "ticker": "VGSH",
-        "sort_score": 93.63,
+        "sort_score": 95.4,
         "sort_score_source": "_profile_score",
         "selected": true,
-        "profile_score": 93.63,
+        "profile_score": 95.4,
         "volatility": 2.0,
         "ytd": "-0.64%"
       },
       {
         "rank": 10,
-        "name": "Schwab Short-Term U.S. Treasury ETF",
-        "ticker": "SCHO",
-        "sort_score": 93.52,
+        "name": "Vanguard Short-Term Treasury Fund",
+        "ticker": "VGSH",
+        "sort_score": 93.67,
         "sort_score_source": "_profile_score",
         "selected": true,
-        "profile_score": 93.52,
+        "profile_score": 93.67,
+        "volatility": 2.0,
+        "ytd": "-0.64%"
+      },
+      {
+        "rank": 11,
+        "name": "Schwab Short-Term U.S. Treasury ETF",
+        "ticker": "SCHO",
+        "sort_score": 93.27,
+        "sort_score_source": "_profile_score",
+        "selected": true,
+        "profile_score": 93.27,
         "volatility": 2.1,
         "ytd": "-0.66%"
       },
       {
-        "rank": 11,
+        "rank": 12,
         "name": "Goldman Sachs Access Treasury 0-1 Year ETF",
         "ticker": "GBIL",
-        "sort_score": 93.42,
+        "sort_score": 92.96,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 93.42,
+        "profile_score": 92.96,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 1.5,
         "ytd": "0.14%"
       },
       {
-        "rank": 12,
+        "rank": 13,
         "name": "Simplify MBS ETF",
         "ticker": "MTBA",
         "sort_score": 92.79,
@@ -4595,51 +4604,39 @@
         "ytd": "-2.75%"
       },
       {
-        "rank": 13,
+        "rank": 14,
         "name": "WisdomTree Floating Rate Treasury Fund",
         "ticker": "USFR",
-        "sort_score": 92.68,
+        "sort_score": 92.48,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 92.68,
+        "profile_score": 92.48,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 1.4,
         "ytd": "-0.01%"
       },
       {
-        "rank": 14,
+        "rank": 15,
         "name": "iShares 0-5 Year TIPS Bond ETF",
         "ticker": "STIP",
-        "sort_score": 91.96,
+        "sort_score": 91.79,
         "sort_score_source": "_profile_score",
         "selected": true,
-        "profile_score": 91.96,
+        "profile_score": 91.79,
         "volatility": 2.4,
         "ytd": "0.68%"
       },
       {
-        "rank": 15,
+        "rank": 16,
         "name": "SPDR Portfolio Treasury ETF",
         "ticker": "SPTB",
-        "sort_score": 91.33,
+        "sort_score": 91.28,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 91.33,
+        "profile_score": 91.28,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 4.3,
         "ytd": "-1.17%"
-      },
-      {
-        "rank": 16,
-        "name": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
-        "ticker": "TDTT",
-        "sort_score": 90.91,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 90.91,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 3.2,
-        "ytd": "0.44%"
       },
       {
         "rank": 17,
@@ -4654,6 +4651,18 @@
       },
       {
         "rank": 18,
+        "name": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
+        "ticker": "TDTT",
+        "sort_score": 90.49,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 90.49,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 3.2,
+        "ytd": "0.44%"
+      },
+      {
+        "rank": 19,
         "name": "Virtus Seix Senior Loan ETF",
         "ticker": "SEIX",
         "sort_score": 90.39,
@@ -4663,18 +4672,6 @@
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 3.4,
         "ytd": "-1.26%"
-      },
-      {
-        "rank": 19,
-        "name": "Dimensional Inflation-Protected Securities ETF",
-        "ticker": "DFIP",
-        "sort_score": 89.8,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 89.8,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 5.4,
-        "ytd": "-0.18%"
       },
       {
         "rank": 20,
@@ -4690,6 +4687,18 @@
       },
       {
         "rank": 21,
+        "name": "Dimensional Inflation-Protected Securities ETF",
+        "ticker": "DFIP",
+        "sort_score": 89.63,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 89.63,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 5.4,
+        "ytd": "-0.18%"
+      },
+      {
+        "rank": 22,
         "name": "Nuveen AA-BBB CLO ETF",
         "ticker": "NCLO",
         "sort_score": 88.29,
@@ -4699,18 +4708,6 @@
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 4.5,
         "ytd": "-0.52%"
-      },
-      {
-        "rank": 22,
-        "name": "FlexShares iBoxx 5-Year Target Duration TIPS Index Fund",
-        "ticker": "TDTF",
-        "sort_score": 87.84,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 87.84,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 4.8,
-        "ytd": "0.1%"
       },
       {
         "rank": 23,
@@ -4740,10 +4737,10 @@
         "rank": 25,
         "name": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
         "ticker": "VTIP",
-        "sort_score": 83.74,
+        "sort_score": 84.6,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 83.74,
+        "profile_score": 84.6,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 2.8,
         "ytd": "0.68%"
@@ -4788,10 +4785,10 @@
         "rank": 29,
         "name": "iShares Government Money Market ETF",
         "ticker": "GMMF",
-        "sort_score": 79.8,
+        "sort_score": 80.39,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "profile_score": 79.8,
+        "profile_score": 80.39,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 1.1,
         "ytd": "0.23%"
@@ -4800,10 +4797,10 @@
         "rank": 30,
         "name": "Janus Henderson AAA CLO ETF",
         "ticker": "JAAA",
-        "sort_score": 78.99,
+        "sort_score": 79.96,
         "sort_score_source": "_profile_score",
         "selected": true,
-        "profile_score": 78.99,
+        "profile_score": 79.96,
         "volatility": 2.0,
         "ytd": "-0.11%"
       },
@@ -4811,10 +4808,10 @@
         "rank": 31,
         "name": "Vanguard Short-Term Bond ETF",
         "ticker": "BSV",
-        "sort_score": 78.04,
+        "sort_score": 77.97,
         "sort_score_source": "_profile_score",
         "selected": true,
-        "profile_score": 78.04,
+        "profile_score": 77.97,
         "volatility": 2.6,
         "ytd": "-0.91%"
       }
@@ -5653,12 +5650,10 @@
           "ticker": "GGG",
           "sort_score": 0.6205,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "defensif",
           "profile_score": 0.6205,
           "buffett_score": 67.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Industries",
           "country": "Etats-Unis",
           "volatility": 21.8,
@@ -9514,11 +9509,10 @@
           "ticker": "SPLV",
           "sort_score": 89.02,
           "sort_score_source": "composite_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "sector_defensive",
           "composite_score": 89.02,
           "profile_score": 89.02,
-          "rejection_reason": "Score composite (89.020) insuffisant pour le quota",
           "sector": "Utilities",
           "volatility": 11.0,
           "ytd": "2.25%",
@@ -14158,6 +14152,20 @@
       "selected": true,
       "ranking": 11,
       "selection_reason": "Score profil élevé (93.90); Preset: min_vol_global; Score composite élevé (93.90)"
+    },
+    {
+      "name": "Invesco S&P 500 Low Volatility ETF",
+      "ticker": "SPLV",
+      "category": "etf",
+      "matched_preset": "sector_defensive",
+      "composite_score": 89.02,
+      "profile_score": 89.02,
+      "volatility": 11.0,
+      "sector": "Utilities",
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 12,
+      "selection_reason": "Score profil élevé (89.02); Preset: sector_defensive; Score composite élevé (89.02)"
     }
   ],
   "etf_rejected": [
@@ -14409,15 +14417,15 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
     {
-      "name": "Invesco S&P 500 Low Volatility ETF",
-      "ticker": "SPLV",
+      "name": "iShares Core Dividend Growth ETF",
+      "ticker": "DGRO",
       "category": "etf",
-      "matched_preset": "sector_defensive",
-      "composite_score": 89.02,
-      "profile_score": 89.02,
-      "volatility": 11.0,
-      "sector": "Utilities",
-      "radar_tilt": "neutral",
+      "matched_preset": "coeur_global",
+      "composite_score": 86.59,
+      "profile_score": 86.59,
+      "volatility": 12.0,
+      "sector": "Financial Services",
+      "radar_tilt": "avoided",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
@@ -14532,34 +14540,34 @@
       "name": "Vanguard Short-Term Treasury Fund",
       "ticker": "VGSH",
       "category": "bond",
-      "profile_score": 95.71,
+      "profile_score": 95.4,
       "volatility": 2.0,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 4,
-      "selection_reason": "Score profil élevé (95.71)"
+      "selection_reason": "Score profil élevé (95.40)"
     },
     {
       "name": "Schwab Short-Term U.S. Treasury ETF",
       "ticker": "SCHO",
       "category": "bond",
-      "profile_score": 93.52,
+      "profile_score": 93.27,
       "volatility": 2.1,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 5,
-      "selection_reason": "Score profil élevé (93.52)"
+      "selection_reason": "Score profil élevé (93.27)"
     },
     {
       "name": "iShares 0-5 Year TIPS Bond ETF",
       "ticker": "STIP",
       "category": "bond",
-      "profile_score": 91.96,
+      "profile_score": 91.79,
       "volatility": 2.4,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 6,
-      "selection_reason": "Score profil élevé (91.96)"
+      "selection_reason": "Score profil élevé (91.79)"
     },
     {
       "name": "Invesco Treasury Collateral ETF",
@@ -14576,12 +14584,12 @@
       "name": "Vanguard Short-Term Bond ETF",
       "ticker": "BSV",
       "category": "bond",
-      "profile_score": 78.04,
+      "profile_score": 77.97,
       "volatility": 2.6,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 8,
-      "selection_reason": "Score profil élevé (78.04)"
+      "selection_reason": "Score profil élevé (77.97)"
     }
   ],
   "bonds_rejected": [
