@@ -861,7 +861,10 @@ def apply_buffett_filter(
         a["_buffett_penalty"] = compute_buffett_penalty(a, profile)
         a["_value_score"] = compute_value_score(a, profile)
         # v4.15: Ne pas écraser le score JS s'il existe déjà
-        if a.get("buffett_score") is None:
+        if a.get("buffett_score") is not None:
+            # v7.2.1 FIX: Propager buffett_score (JS) vers _buffett_score (pipeline)
+            a["_buffett_score"] = float(a["buffett_score"])
+        else:
             a["_buffett_score"] = compute_buffett_score(a, profile)
         a["_buffett_reject_reason"] = None
     # Étape 3: Hard filter si demandé
