@@ -1416,6 +1416,13 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
             qcov = get_metric_value(eq, "quality_coverage")
             if qcov is not None and qcov < filters["quality_coverage_min"]:
                 reasons.append(f"coverage<{filters['quality_coverage_min']}")
+
+        # v7.2.1: Reject stocks with NO fundamental data at all (3017, numeric tickers)
+        _has_qs = get_metric_value(eq, "quality_score") is not None
+        _has_bs = get_metric_value(eq, "buffett_score") is not None
+        _has_vol = get_metric_value(eq, "volatility_3y") is not None
+        if not _has_qs and not _has_bs and not _has_vol:
+            reasons.append("no_fundamental_data")
         
         if reasons:
             for r in reasons:
@@ -1541,7 +1548,14 @@ def apply_hard_filters_with_custom(
             qcov = get_metric_value(eq, "quality_coverage")
             if qcov is not None and qcov < custom_filters["quality_coverage_min"]:
                 reasons.append(f"coverage<{custom_filters['quality_coverage_min']}")
-        
+
+        # v7.2.1: Reject stocks with NO fundamental data at all
+        _has_qs = get_metric_value(eq, "quality_score") is not None
+        _has_bs = get_metric_value(eq, "buffett_score") is not None
+        _has_vol = get_metric_value(eq, "volatility_3y") is not None
+        if not _has_qs and not _has_bs and not _has_vol:
+            reasons.append("no_fundamental_data")
+
         if reasons:
             for r in reasons:
                 rejection_counts[r] = rejection_counts.get(r, 0) + 1

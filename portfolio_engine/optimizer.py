@@ -748,7 +748,7 @@ MIN_ETF_PER_SUPER_SECTOR = {
 # v6.11 ACTION 1: Maximum weight par obligation (force diversification)
 # v6.28 FIX B: Aligné avec max_single_position (15%) pour cohérence bounds SLSQP
 MAX_SINGLE_BOND_WEIGHT = {
-    "Stable": 15.0,   # v6.28 FIX: 25% → 15% (aligné avec max_single_position global)
+    "Stable": 12.0,   # v7.2.1: was 15% — bonds were 14.2% > max_single_position 13%
     "Modéré": 8.0,    # Max 8% par bond → au moins 2 bonds pour 15% total
     "Agressif": 5.0,  # Max 5% par bond → au moins 1 bond pour 5% total
 }
@@ -965,7 +965,7 @@ PROFILES = {
         max_turnover=25.0,
         turnover_penalty=0.10,
         score_scale=4.0,
-        bucket_penalty_lambda=2.0,
+        bucket_penalty_lambda=5.0,  # v7.2.1: was 2.0 — satellite was 6% vs target 15%
         max_any_category=65.0,
         max_single_position=10.0,  # FIX v2.4.0-O: 13→10% (SYY/EQNR ne dominent plus)
     ),
