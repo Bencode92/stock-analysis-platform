@@ -1853,13 +1853,30 @@ class HybridCovarianceEstimator:
             
             # P1-2: Appliquer shrinkage si activé ET returns disponibles
             if self.use_shrinkage and returns_matrix is not None:
-                cov_shrunk, shrinkage_intensity = self._apply_ledoit_wolf_shrinkage(returns_matrix)
+                cov_shrunk_small, shrinkage_intensity = self._apply_ledoit_wolf_shrinkage(returns_matrix)
                 diagnostics["shrinkage_applied"] = True
                 diagnostics["shrinkage_intensity"] = round(shrinkage_intensity, 4)
-                
+
+                # v7.2 FIX: Remap LW output (m×m) to full size (n×n)
+                # cov_shrunk_small has only columns/rows for assets with returns
+                if cov_shrunk_small.shape[0] < n:
+                    has_data = [a.returns_series is not None and len(a.returns_series) >= self.min_history_days
+                                for a in assets]
+                    cov_shrunk = np.zeros((n, n))
+                    data_indices = [i for i, h in enumerate(has_data) if h]
+                    for ii, gi in enumerate(data_indices):
+                        for jj, gj in enumerate(data_indices):
+                            cov_shrunk[gi, gj] = cov_shrunk_small[ii, jj]
+                    # Fill diagonal for missing assets from structured
+                    for i in range(n):
+                        if not has_data[i]:
+                            cov_shrunk[i, i] = cov_structured[i, i]
+                else:
+                    cov_shrunk = cov_shrunk_small
+
                 # Utiliser cov_shrunk au lieu de cov_empirical
                 cov_hybrid = (
-                    self.empirical_weight * cov_shrunk + 
+                    self.empirical_weight * cov_shrunk +
                     (1 - self.empirical_weight) * cov_structured
                 )
                 diagnostics["method"] = "hybrid_shrunk"

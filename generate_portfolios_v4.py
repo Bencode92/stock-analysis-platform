@@ -2507,7 +2507,16 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.info(f"   ✅ [P0-4] {profile}: Faisabilité OK (capacity: {feasibility.capacity})")
         else:
             logger.warning(f"   ⚠️ [P0-4] {profile}: Faisabilité LIMITÉE - {feasibility.reason}")
-        
+
+        # v7.2: Charger les prix pour covariance empirique (LW + EWMA + PCA)
+        try:
+            from portfolio_engine.price_loader import load_returns_for_assets
+            assets = load_returns_for_assets(assets, cache_path="data/price_cache.json")
+            _n_ret = sum(1 for a in assets if getattr(a, 'returns_series', None) is not None)
+            logger.info(f"   [{profile}] Returns loaded: {_n_ret}/{len(assets)} assets")
+        except Exception as _e:
+            logger.warning(f"   [{profile}] Price loading failed: {_e}, using structured only")
+
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
         
         # v4.14.0 FIX R12: Normaliser allocation en % si retournée en décimal (somme ~1)
@@ -3964,9 +3973,18 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
                 all_assets.append(a)
                 all_assets_ids.add(a_id)
         
+        # v7.2: Charger les prix pour covariance empirique (LW + EWMA + PCA)
+        try:
+            from portfolio_engine.price_loader import load_returns_for_assets
+            assets = load_returns_for_assets(assets, cache_path="data/price_cache.json")
+            _n_ret = sum(1 for a in assets if getattr(a, 'returns_series', None) is not None)
+            logger.info(f"   [{profile}] EU/US Returns loaded: {_n_ret}/{len(assets)} assets")
+        except Exception as _e:
+            logger.warning(f"   [{profile}] EU/US Price loading failed: {_e}, using structured only")
+
         try:
             allocation, diagnostics = optimizer.build_portfolio_euus(assets, profile)
-            
+
             # Normaliser allocation en % si retournée en décimal
             total_alloc = sum(allocation.values()) if allocation else 0.0
             if 0.5 < total_alloc < 1.5:
