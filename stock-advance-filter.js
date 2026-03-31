@@ -342,16 +342,20 @@ class StockAdvanceFilter {
       criteria.push({ name: 'valuation_ok', passed: pe > 0 && pe <= 25, value: pe, detail: `PE=${pe.toFixed(1)}` });
     }
 
-    // 6. Moat en expansion: ROE ou ROIC année N > avg 3Y × 1.10
+    // 6. Moat durabilité: ROE ou ROIC année N > avg 3Y × 0.90
+    // v7.2.1: seuil 1.10 → 0.90 — tolère normalisation cyclique (-10%)
+    // mais rejette les baisses structurelles > 10% (red flag)
+    // 190 stocks haute qualité (ITX, RACE, ISRG, ASML) étaient pénalisés
+    // pour des baisses de 1-10% = normalisation, pas perte de moat
     const roeN = this._parseFloat(stock.roe);
     const roicN = this._parseFloat(stock.roic);
     const roeA3 = this._parseFloat(stock.roe_avg_3y);
     const roicA3 = this._parseFloat(stock.roic_avg_3y);
     if (this._validNum(roeN) && this._validNum(roeA3) && roeA3 > 0) {
       dataAvailable++;
-      const roeExp = roeN / roeA3 > 1.10;
-      const roicExp = this._validNum(roicN) && this._validNum(roicA3) && roicA3 > 0 ? roicN / roicA3 > 1.10 : false;
-      criteria.push({ name: 'moat_expansion', passed: roeExp || roicExp, value: roeN / roeA3, detail: `trend=${((roeN / roeA3 - 1) * 100).toFixed(0)}%` });
+      const roeOk = roeN / roeA3 >= 0.90;
+      const roicOk = this._validNum(roicN) && this._validNum(roicA3) && roicA3 > 0 ? roicN / roicA3 >= 0.90 : false;
+      criteria.push({ name: 'moat_expansion', passed: roeOk || roicOk, value: roeN / roeA3, detail: `trend=${((roeN / roeA3 - 1) * 100).toFixed(0)}%` });
     }
 
     if (dataAvailable < 2) return { score: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
