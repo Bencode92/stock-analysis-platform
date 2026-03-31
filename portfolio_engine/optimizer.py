@@ -363,7 +363,7 @@ def _parse_role_string(role_str):
 BUFFETT_HARD_FILTER_MIN = 50.0  # Actions avec score < 50 sont rejetées
 
 # Covariance hybride: poids empirique vs structurée
-COVARIANCE_EMPIRICAL_WEIGHT = 0.60  # 60% empirique, 40% structurée
+COVARIANCE_EMPIRICAL_WEIGHT = 0.85  # 85% empirique, 15% structurée (v7.2 — ÉTAIT 0.60)
 
 # P1-6: Seuils d'alerte pour KPIs covariance
 # v6.17 FIX: Aligné sur CONDITION_NUMBER_TARGET pour éviter warning après shrink réussi
@@ -460,15 +460,29 @@ def diag_shrink_to_target(
     }
 
 
-# Corrélations structurées (utilisées quand pas de données empiriques)
-CORR_SAME_CORPORATE_GROUP = 0.90
-CORR_SAME_EXPOSURE = 0.85
-CORR_SAME_SECTOR = 0.45
-CORR_SAME_CATEGORY = 0.60
-CORR_SAME_BUCKET = 0.50
-CORR_EQUITY_BOND = -0.20
-CORR_CRYPTO_OTHER = 0.25
-CORR_DEFAULT = 0.15
+# ============================================================================
+# CORRÉLATIONS STRUCTURÉES — Recalibrées sur données réelles
+# Source: eigenvalue_analysis.py + covariance_benchmark.py
+# Data: 53 tickers, 251 jours, Twelve Data (Mars 2025)
+#
+# REGIME-DÉPENDANT: ces valeurs reflètent le régime 2024-2025
+# (taux élevés, corrélation equity-bond positive)
+# TODO v7: connecter au RADAR pour ajustement dynamique par régime
+# ============================================================================
+
+CORR_SAME_CORPORATE_GROUP = 0.90   # structurel, inchangé
+CORR_SAME_EXPOSURE = 0.92          # ETFs overlap type IUSV/SPYV: réalisé 0.99
+CORR_SAME_SECTOR = 0.37            # ÉTAIT 0.45, réalisé 0.37 (stock×stock same sector)
+CORR_SAME_CATEGORY_STOCK = 0.22    # stock×stock cross-sector, réalisé 0.22
+CORR_SAME_CATEGORY_ETF = 0.62      # ETF×ETF moyen, réalisé 0.62
+CORR_SAME_CATEGORY_BOND = 0.48     # Bond×Bond moyen, réalisé 0.48 — ÉTAIT 0.60
+CORR_SAME_BUCKET = 0.40            # ÉTAIT 0.50
+CORR_EQUITY_BOND = 0.05            # ÉTAIT -0.20, réalisé +0.05 (stock×bond)
+CORR_ETF_BOND = 0.13               # etf×bond, réalisé +0.13
+CORR_EQUITY_GOLD = 0.15            # stock×gold, réalisé +0.15
+CORR_GOLD_BOND = 0.04              # gold×bond, réalisé +0.04
+CORR_CRYPTO_OTHER = 0.25           # inchangé
+CORR_DEFAULT = 0.20                # ÉTAIT 0.15
 
 # ============= FUND TYPE CLASSIFICATION v6.20 =============
 
@@ -1042,6 +1056,8 @@ class Asset:
     buffett_score: Optional[float] = None
     ticker: Optional[str] = None      # v6.18.3: FIX ticker_coverage
     symbol: Optional[str] = None      # v6.18.3: alias pour compatibilité
+    correlation_group: Optional[str] = None  # v7.1: depuis preset_meta CORRELATION_BY_GROUP
+    exposure_family: Optional[str] = None    # v7.2: famille d'exposition (correlation_map.py)
 
 
 def _clean_float(value, default: float = 15.0, min_val: float = 0.1, max_val: float = 200.0) -> float:
@@ -1498,10 +1514,53 @@ class HybridCovarianceEstimator:
     ):
         self.empirical_weight = empirical_weight
         self.min_history_days = min_history_days
-        # v6.23 P0 FIX: Ledoit-Wolf désactivé explicitement (diag_shrink suffit)
-        # Si réactivé, corriger le mismatch de dimensions (cov_shrunk vs cov_structured)
-        self.use_shrinkage = False
-    
+        # v7.1: Ledoit-Wolf réactivé (PCA denoise + EWMA corrigent le mismatch)
+        self.use_shrinkage = use_shrinkage
+
+    def _ewma_covariance(self, returns: np.ndarray, halflife: int = 63) -> np.ndarray:
+        """Covariance avec pondération exponentielle (observations récentes pèsent plus)."""
+        n_obs, n_assets = returns.shape
+        decay = np.log(2) / halflife
+        weights = np.exp(-decay * np.arange(n_obs)[::-1])
+        w_sum = weights.sum()
+        if w_sum == 0 or not np.isfinite(w_sum):
+            # Fallback: pondération uniforme
+            weights = np.ones(n_obs) / n_obs
+        else:
+            weights /= w_sum
+
+        mean = np.average(returns, weights=weights, axis=0)
+        centered = returns - mean
+        cov = (centered * weights[:, None]).T @ centered
+        cov = np.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
+        return cov * 252  # annualisation
+
+    def _pca_denoise(self, cov: np.ndarray, n_assets: int, n_obs: int) -> Tuple[np.ndarray, int]:
+        """Filtre le bruit de la matrice de covariance par PCA (Marchenko-Pastur)."""
+        eigenvalues, eigenvectors = np.linalg.eigh(cov)
+        idx = np.argsort(eigenvalues)[::-1]
+        eigenvalues = eigenvalues[idx]
+        eigenvectors = eigenvectors[:, idx]
+
+        # Seuil Marchenko-Pastur
+        q = n_assets / max(n_obs, 1)
+        lambda_plus = (1 + np.sqrt(q)) ** 2
+        mean_eig = np.mean(eigenvalues)
+        threshold = lambda_plus * mean_eig
+
+        # Nombre de facteurs significatifs
+        n_factors = max(3, min(int(np.sum(eigenvalues > threshold)), 10))
+
+        # Reconstruire avec facteurs significatifs seulement
+        B = eigenvectors[:, :n_factors]
+        F = np.diag(eigenvalues[:n_factors])
+        cov_signal = B @ F @ B.T
+
+        # Résiduel diagonal (risque idiosyncratique)
+        residual = np.diag(np.maximum(np.diag(cov - cov_signal), 0))
+
+        return cov_signal + residual, n_factors
+
     def compute_empirical_covariance(
         self, 
         assets: List[Asset]
@@ -1554,7 +1613,8 @@ class HybridCovarianceEstimator:
                     logger.warning(f"  Outlier asset idx={idx}: daily_std={daily_std[idx]:.4f}")
                 returns = returns / 100.0
             
-            cov_emp = np.cov(returns, rowvar=False) * 252
+            # v7.1: EWMA covariance (halflife=63j ≈ 3 mois, pondère le récent)
+            cov_emp = self._ewma_covariance(returns, halflife=63)
             
             cov_full = np.zeros((n, n))
             emp_idx = 0
@@ -1572,40 +1632,150 @@ class HybridCovarianceEstimator:
             logger.warning(f"Covariance empirique échouée: {e}")
             return None, None
     
+    # ── Asset classification helpers for structured covariance ──
+
+    _GOLD_TICKERS = {"GLD", "IAU", "SGOL", "GLDM", "AAAU", "IAUM"}
+    _BOND_ETF_TICKERS = {
+        "BND", "AGG", "TLT", "IEF", "SHY", "VCIT", "VCSH",
+        "BIV", "BSV", "LQD", "HYG", "GVI", "GOVT", "TIPS",
+        "VGSH", "SCHO", "SPTS", "SHYG", "USHY", "IGSB",
+    }
+
+    @staticmethod
+    def _asset_ticker(asset: "Asset") -> str:
+        return (getattr(asset, 'ticker', '') or getattr(asset, 'symbol', '') or '').upper()
+
+    @classmethod
+    def _is_gold(cls, asset: "Asset") -> bool:
+        return cls._asset_ticker(asset) in cls._GOLD_TICKERS
+
+    @classmethod
+    def _is_bond_etf(cls, asset: "Asset") -> bool:
+        return cls._asset_ticker(asset) in cls._BOND_ETF_TICKERS
+
+    @classmethod
+    def _is_bond_like(cls, asset: "Asset") -> bool:
+        return asset.category == "Obligations" or cls._is_bond_etf(asset)
+
+    @classmethod
+    def _is_equity_like(cls, asset: "Asset") -> bool:
+        return asset.category in ("Actions", "ETF") and \
+               not cls._is_bond_etf(asset) and not cls._is_gold(asset)
+
     def compute_structured_covariance(self, assets: List[Asset]) -> np.ndarray:
-        """Calcule la covariance structurée (basée sur catégories/secteurs/exposure)."""
+        """
+        Calcule la covariance structurée — v7.2 cascade recalibrée.
+
+        Priorité: correlation_group > corporate_group > exposure > gold >
+                  bond×equity > same category > crypto > same role > default
+        """
         n = len(assets)
         cov = np.zeros((n, n))
-        
+
+        # v7.1: Pré-charger get_correlation si disponible
+        _get_corr = None
+        try:
+            from portfolio_engine.preset_meta import get_correlation as _get_corr
+        except ImportError:
+            pass
+
         for i, ai in enumerate(assets):
             for j, aj in enumerate(assets):
                 default_vol_i = DEFAULT_VOLS.get(ai.category, 15.0)
                 default_vol_j = DEFAULT_VOLS.get(aj.category, 15.0)
-                
+
                 vol_i = _clean_float(ai.vol_annual, default_vol_i, 1.0, 150.0) / 100
                 vol_j = _clean_float(aj.vol_annual, default_vol_j, 1.0, 150.0) / 100
-                
+
                 if i == j:
                     cov[i, j] = vol_i ** 2
-                else:
-                    if ai.corporate_group and aj.corporate_group and ai.corporate_group == aj.corporate_group:
-                        corr = CORR_SAME_CORPORATE_GROUP
-                    elif ai.exposure and aj.exposure and ai.exposure == aj.exposure:
-                        corr = CORR_SAME_EXPOSURE
-                    elif ai.category == aj.category:
-                        corr = CORR_SAME_SECTOR if ai.sector == aj.sector else CORR_SAME_CATEGORY
-                    elif (ai.category == "Obligations" and aj.category == "Actions") or \
-                         (ai.category == "Actions" and aj.category == "Obligations"):
-                        corr = CORR_EQUITY_BOND
-                    elif ai.category == "Crypto" or aj.category == "Crypto":
-                        corr = CORR_CRYPTO_OTHER
-                    elif ai.role and aj.role and ai.role == aj.role:
-                        corr = CORR_SAME_BUCKET
+                    continue
+
+                corr = None
+
+                # 0. correlation_group (preset_meta CORRELATION_BY_GROUP)
+                if _get_corr and ai.correlation_group and aj.correlation_group:
+                    corr = _get_corr(ai.correlation_group, aj.correlation_group)
+
+                if corr is not None:
+                    cov[i, j] = corr * vol_i * vol_j
+                    continue
+
+                # 1. Corporate group (Alphabet, Samsung, etc.)
+                if ai.corporate_group and ai.corporate_group == aj.corporate_group:
+                    corr = CORR_SAME_CORPORATE_GROUP
+
+                # 2. Même exposure (ETFs sur même underlying)
+                elif ai.exposure and ai.exposure == aj.exposure:
+                    corr = CORR_SAME_EXPOSURE
+
+                # 2b. Exposure-based correlation (fine-grained via correlation_map)
+                elif ai.exposure and aj.exposure:
+                    try:
+                        from portfolio_engine.correlation_map import get_exposure_correlation
+                        corr = get_exposure_correlation(ai.exposure, aj.exposure)
+                    except ImportError:
+                        corr = None
+                    if corr is not None:
+                        cov[i, j] = corr * vol_i * vol_j
+                        continue
+
+                # 2c. Exposure family correlation (stock sector × ETF exposure)
+                elif ai.exposure_family and aj.exposure_family:
+                    try:
+                        from portfolio_engine.correlation_map import get_family_correlation
+                        corr = get_family_correlation(ai.exposure_family, aj.exposure_family)
+                    except ImportError:
+                        corr = None
+                    if corr is not None:
+                        cov[i, j] = corr * vol_i * vol_j
+                        continue
+
+                # 3. Or × autre chose
+                elif self._is_gold(ai) or self._is_gold(aj):
+                    if self._is_gold(ai) and self._is_gold(aj):
+                        corr = 0.95  # GLD × IAU quasi-identiques
+                    elif self._is_bond_like(ai) or self._is_bond_like(aj):
+                        corr = CORR_GOLD_BOND
+                    elif self._is_equity_like(ai) or self._is_equity_like(aj):
+                        corr = CORR_EQUITY_GOLD
                     else:
                         corr = CORR_DEFAULT
-                    
-                    cov[i, j] = corr * vol_i * vol_j
-        
+
+                # 4. Bond × Equity (le fix le plus critique)
+                elif (self._is_bond_like(ai) and self._is_equity_like(aj)) or \
+                     (self._is_equity_like(ai) and self._is_bond_like(aj)):
+                    has_stock = ai.category == "Actions" or aj.category == "Actions"
+                    corr = CORR_EQUITY_BOND if has_stock else CORR_ETF_BOND
+
+                # 5. Même catégorie
+                elif ai.category == aj.category:
+                    if ai.category == "Actions":
+                        corr = CORR_SAME_SECTOR if (ai.sector and ai.sector == aj.sector) \
+                               else CORR_SAME_CATEGORY_STOCK
+                    elif ai.category == "Obligations":
+                        corr = CORR_SAME_CATEGORY_BOND
+                    elif ai.category == "ETF":
+                        corr = CORR_SAME_CATEGORY_ETF
+                    elif ai.category == "Crypto":
+                        corr = CORR_CRYPTO_OTHER
+                    else:
+                        corr = CORR_DEFAULT
+
+                # 6. Crypto × non-crypto
+                elif ai.category == "Crypto" or aj.category == "Crypto":
+                    corr = CORR_CRYPTO_OTHER
+
+                # 7. Même rôle (core/satellite/defensive)
+                elif ai.role and ai.role == aj.role:
+                    corr = CORR_SAME_BUCKET
+
+                # 8. Default
+                else:
+                    corr = CORR_DEFAULT
+
+                cov[i, j] = corr * vol_i * vol_j
+
         return cov
     
     def _apply_ledoit_wolf_shrinkage(
@@ -1712,6 +1882,22 @@ class HybridCovarianceEstimator:
         else:
             cov = cov_structured
         
+        # v7.1: PCA denoising sur la matrice hybride (avant ensure PD)
+        n_assets_pca = cov.shape[0]
+        n_obs_pca = 252  # fenêtre par défaut
+        if cov_empirical is not None:
+            # Utiliser la vraie longueur des returns si disponible
+            valid_lens = [len(a.returns_series) for a in assets
+                          if a.returns_series is not None and len(a.returns_series) >= self.min_history_days]
+            if valid_lens:
+                n_obs_pca = min(min(valid_lens), 252)
+        diagnostics["pca_applied"] = False
+        diagnostics["pca_factors"] = None
+        if n_assets_pca >= 10:
+            cov, n_factors_used = self._pca_denoise(cov, n_assets_pca, n_obs_pca)
+            diagnostics["pca_factors"] = n_factors_used
+            diagnostics["pca_applied"] = True
+
         # P1-6: Ensure positive definite ET collecter les KPIs
         cov, eigen_kpis = self._ensure_positive_definite_with_kpis(cov)
         
@@ -1766,8 +1952,20 @@ class HybridCovarianceEstimator:
                 f"(target < {CONDITION_NUMBER_TARGET})"
             )
         
+        # v7.1: Log résumé covariance
+        _cond_val = diagnostics.get('condition_number')
+        _cond_str = f"{_cond_val:.0f}" if isinstance(_cond_val, (int, float)) and np.isfinite(_cond_val) else "?"
+        logger.info(
+            f"📐 [COV] {len(assets)} assets | "
+            f"empirical={'yes' if cov_empirical is not None else 'no'} | "
+            f"shrinkage={'LW' if self.use_shrinkage else 'diag_only'} | "
+            f"correlation_groups={sum(1 for a in assets if a.correlation_group)}/{len(assets)} | "
+            f"pca={diagnostics.get('pca_factors', 'off')} | "
+            f"cond={_cond_str}"
+        )
+
         return cov, diagnostics
-    
+
     def _ensure_positive_definite_with_kpis(
         self, 
         cov: np.ndarray, 
@@ -5331,6 +5529,17 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 logger.info(f"[v4.2.1c] {item.get('symbol') or item.get('ticker')}: score={score_value}, source={score_source}, raw_profile={item.get('_profile_score')}")   
             # === FIN DEBUG ===
             
+            # v7.1: Résoudre correlation_group depuis source_data ou preset_meta
+            _corr_group = item.get("correlation_group") or item.get("_correlation_group")
+            if not _corr_group:
+                try:
+                    from portfolio_engine.preset_meta import PRESET_META
+                    _preset_name = item.get("_matched_preset")
+                    if _preset_name and _preset_name in PRESET_META:
+                        _corr_group = PRESET_META[_preset_name].correlation_group
+                except ImportError:
+                    pass
+
             asset = Asset(
                 id=str(raw_id),
                 name=item.get("name") or str(raw_id),
@@ -5346,7 +5555,33 @@ def convert_universe_to_assets(universe: Union[List[dict], Dict[str, List[dict]]
                 buffett_score=item.get("buffett_score") or item.get("_buffett_score"),
                 ticker=item.get("ticker") or item.get("symbol"),   # v6.18.3: FIX ticker_coverage
                 symbol=item.get("symbol") or item.get("ticker"),   # v6.18.3: alias
+                correlation_group=_corr_group,  # v7.1
             )
+
+            # v7.2: Résoudre exposure_family depuis etf_exposure + correlation_map
+            if cat_normalized in ("ETF", "Obligations"):
+                _tk = asset.ticker or asset.symbol or ""
+                try:
+                    from portfolio_engine.etf_exposure import detect_etf_exposure
+                    from portfolio_engine.correlation_map import get_family
+                    _exp = detect_etf_exposure(asset.name or "", _tk)
+                    if _exp:
+                        if not asset.exposure:
+                            asset.exposure = _exp
+                        _fam = get_family(_exp)
+                        if _fam:
+                            asset.exposure_family = _fam
+                except ImportError:
+                    pass
+            elif cat_normalized == "Actions":
+                try:
+                    from portfolio_engine.correlation_map import get_sector_family
+                    _fam = get_sector_family(asset.sector)
+                    if _fam:
+                        asset.exposure_family = _fam
+                except ImportError:
+                    pass
+
             assets.append(asset)
 
     elif isinstance(universe, dict):
