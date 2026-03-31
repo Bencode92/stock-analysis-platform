@@ -451,7 +451,9 @@ ETF_PRESETS: Dict[str, PresetConfig] = {
         exposures=["quality", "value", "large_cap"],
     ),
     "defensif_oblig": PresetConfig(
-        asset_class=AssetClass.BOND, role=Role.DEFENSIVE, risk=RiskLevel.LOW,
+        asset_class=AssetClass.BOND, role=Role.CORE, risk=RiskLevel.LOW,
+        # v7.2.1: DEFENSIVE→CORE — IG bonds = rendement + risque crédit modéré, pas du cash
+        # Libère le bucket defensive pour ne pas dépasser 30% avec bonds_min=22%
         max_weight_pct=20.0, max_bucket_pct=40.0, min_quality_score=0,
         correlation_group="bonds_ig",
         description="Investment grade bonds, duration moyenne",
@@ -475,7 +477,8 @@ ETF_PRESETS: Dict[str, PresetConfig] = {
         exposures=["bonds", "high_yield"],
     ),
     "inflation_shield": PresetConfig(
-        asset_class=AssetClass.ETF, role=Role.DEFENSIVE, risk=RiskLevel.MODERATE,
+        asset_class=AssetClass.ETF, role=Role.CORE, risk=RiskLevel.MODERATE,
+        # v7.2.1: DEFENSIVE→CORE — TIPS/commodities = inflation hedge, pas protection
         max_weight_pct=10.0, max_bucket_pct=15.0, min_quality_score=0,
         correlation_group="commodities",
         description="TIPS, commodities, real assets",

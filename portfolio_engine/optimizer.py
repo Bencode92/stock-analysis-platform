@@ -185,10 +185,13 @@ except ImportError:
         DEFENSIVE = "defensive"
         LOTTERY = "lottery"
     
+    # v7.2.1: Bucket targets ajustés pour bonds reclassifiés (IG=CORE, HY=SATELLITE)
+    # Les bonds IG (~18-22%) comptent maintenant comme CORE
+    # defensive = seulement cash_ultra_short + actions defensives
     PROFILE_BUCKET_TARGETS = {
-        "Stable": {Role.CORE: (0.25, 0.35), Role.DEFENSIVE: (0.50, 0.65), Role.SATELLITE: (0.05, 0.15), Role.LOTTERY: (0.00, 0.00)},       
-        "Modéré": {Role.CORE: (0.45, 0.55), Role.DEFENSIVE: (0.20, 0.30), Role.SATELLITE: (0.15, 0.25), Role.LOTTERY: (0.00, 0.02)},
-        "Agressif": {Role.CORE: (0.35, 0.45), Role.DEFENSIVE: (0.05, 0.15), Role.SATELLITE: (0.35, 0.50), Role.LOTTERY: (0.00, 0.05)},
+        "Stable": {Role.CORE: (0.35, 0.55), Role.DEFENSIVE: (0.35, 0.55), Role.SATELLITE: (0.05, 0.15), Role.LOTTERY: (0.00, 0.00)},
+        "Modéré": {Role.CORE: (0.50, 0.70), Role.DEFENSIVE: (0.10, 0.25), Role.SATELLITE: (0.10, 0.25), Role.LOTTERY: (0.00, 0.02)},
+        "Agressif": {Role.CORE: (0.35, 0.50), Role.DEFENSIVE: (0.05, 0.15), Role.SATELLITE: (0.35, 0.50), Role.LOTTERY: (0.00, 0.05)},
     }
     
     def get_corporate_group(name: str) -> Optional[str]:
@@ -1213,11 +1216,15 @@ def assign_preset_to_asset(asset: Asset) -> Tuple[Optional[str], Optional[Role]]
     sector = asset.sector.lower() if asset.sector else ""
     name_lower = asset.name.lower() if asset.name else ""
     
-    # === OBLIGATIONS / CASH === (P0 FIX: TOUJOURS DEFENSIVE)
+    # === OBLIGATIONS / CASH ===
+    # v7.2.1: Rôle basé sur le type de bond (pas tout DEFENSIVE)
     if category == "Obligations":
         if any(kw in name_lower for kw in ["ultra short", "money market", "1-3 month", "boxx", "bil"]):
             return "cash_ultra_short", Role.DEFENSIVE
-        return "defensif_oblig", Role.DEFENSIVE
+        if any(kw in name_lower for kw in ["high yield", "junk", "leveraged loan", "convertible"]):
+            return "high_yield", Role.SATELLITE
+        # IG bonds, TIPS, MBS, aggregate → CORE (rendement + risque modéré)
+        return "defensif_oblig", Role.CORE
     
     # === CRYPTO ===
     if category == "Crypto":
