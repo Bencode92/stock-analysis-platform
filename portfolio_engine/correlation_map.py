@@ -77,15 +77,27 @@ EXPOSURE_FAMILY = {
     "materials": "sector_materials",
     "communications": "sector_communications",
 
-    # Bonds
+    # Bonds — fine-grained (v7.2.1)
     "bonds_treasury": "bonds_gov",
+    "bonds_short_treasury": "bonds_short",   # VGSH, SCHO (1-3Y Treasury)
+    "bonds_tbill": "bonds_short",            # SGOV, GBIL, CLTL (0-1Y)
+    "bonds_intermediate_treasury": "bonds_gov",  # IEF, VGIT
+    "bonds_long_treasury": "bonds_gov",      # TLT, EDV
     "bonds_ig": "bonds_credit",
+    "bonds_intermediate_corp": "bonds_credit",  # VCIT, IGIB, SPIB
+    "bonds_short_corp": "bonds_credit",      # VCSH
     "bonds_hy": "bonds_credit",
     "bonds_muni": "bonds_gov",
     "bonds_mbs": "bonds_credit",
     "bonds_short": "bonds_short",
+    "bonds_intermediate": "bonds_credit",    # BIV, GVI (mixed govt+corp)
     "bonds_global": "bonds_credit",
-    "bonds_core": "bonds_credit",
+    "bonds_core": "bonds_credit",            # BND, AGG
+    "bonds_tips": "bonds_gov",               # STIP, TIP (inflation-linked)
+    "bonds_clo_aaa": "bonds_short",          # PAAA, JAAA (ultra-short credit)
+    "bonds_ultra_short": "bonds_short",      # PULS, MINT, JPST
+    "bonds_floating": "bonds_short",         # FLOT
+    "bonds_treasury_inverse": "bonds_gov",   # Fix regex false positive
 
     # Gold / Precious Metals
     "gold_physical": "gold",

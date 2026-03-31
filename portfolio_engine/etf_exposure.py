@@ -2177,7 +2177,7 @@ TICKER_TO_EXPOSURE = {
     "vlue": "value",
     "vmax": "value",
     "vmot": "value",
-    "vtv": "value",
+    "vtv": "sp500_value",  # v7.2.1: Vanguard Value = même index que SPYV/IUSV
     "wbat": "value",
     "wbif": "value",
     "wtv": "value",
@@ -2381,6 +2381,42 @@ TICKER_TO_EXPOSURE = {
     "ivol": "inflation_hedge",
     "hybi": "bonds_nontraditional",
     "fisr": "bonds_core", "usdx": "bonds_core",
+
+    # ── BOND ETFs PORTFOLIO (v7.2.1 — manquants, identifiés par audit) ──
+    # Short Treasury (1-3 Year) — même underlying Bloomberg US Treasury 1-3Y
+    "vgsh": "bonds_short_treasury", "scho": "bonds_short_treasury",
+    "spts": "bonds_short_treasury",
+    # Ultra-Short / T-Bills (0-1 Year)
+    "sgov": "bonds_tbill", "gbil": "bonds_tbill", "cltl": "bonds_tbill",
+    "bil": "bonds_tbill", "shv": "bonds_tbill",
+    # Short-Term Bond (broad, not just treasury)
+    "bsv": "bonds_short", "vcsh": "bonds_short_corp",
+    # TIPS (inflation-protected)
+    "stip": "bonds_tips", "tip": "bonds_tips", "vtip": "bonds_tips",
+    "schp": "bonds_tips",
+    # Intermediate-Term (govt + corp)
+    "biv": "bonds_intermediate", "gvi": "bonds_intermediate",
+    "vcit": "bonds_intermediate_corp", "igib": "bonds_intermediate_corp",
+    "spib": "bonds_intermediate_corp",
+    # AAA CLO (ultra-short credit)
+    "paaa": "bonds_clo_aaa", "jaaa": "bonds_clo_aaa",
+    # Ultra-Short Bond (misc)
+    "puls": "bonds_ultra_short", "mint": "bonds_ultra_short",
+    "jpst": "bonds_ultra_short", "near": "bonds_ultra_short",
+    "flot": "bonds_floating",
+    # Muni
+    "vteb": "bonds_muni", "mub": "bonds_muni",
+    # Core / Aggregate
+    "bnd": "bonds_core", "agg": "bonds_core",
+    # Long Treasury
+    "tlt": "bonds_long_treasury", "edv": "bonds_long_treasury",
+    "sptl": "bonds_long_treasury",
+    # Intermediate Treasury
+    "ief": "bonds_intermediate_treasury", "vgit": "bonds_intermediate_treasury",
+    "schr": "bonds_intermediate_treasury",
+    # High Yield
+    "hyg": "bonds_hy", "jnk": "bonds_hy", "shyg": "bonds_hy",
+    "ushy": "bonds_hy",
 
     # ── STRATEGIES (divers) ──
     "cta": "managed_futures", "dbmf": "managed_futures",
