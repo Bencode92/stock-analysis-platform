@@ -916,8 +916,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
             # Forward-looking (ABSENT du quality score!)
             "eps_growth_forecast_5y": 0.15, # ★ Seul facteur prédictif
             # Momentum (indépendant du quality score)
-            "perf_1y":             0.15,   # Momentum 1 an
-            "perf_3m":             0.10,   # Momentum court terme
+            # v7.2.1: perf_1y renforcé (+0.05), perf_3m réduit (-0.05) — 3m trop bruité
+            "perf_1y":             0.20,   # Momentum 1 an (était 0.15)
+            "perf_3m":             0.05,   # Momentum court terme (était 0.10)
             # Risque (indépendant)
             "volatility_3y":       0.05,   # Vol positive = upside potential
             "max_drawdown_3y":    -0.05,   # Drawdown pénalisé
@@ -960,8 +961,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "volatility_3y":      -0.10,   # Vol pénalisée
             "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
             # Momentum — RÉSIDUEL (10%)
-            "perf_1y":             0.05,   # Momentum léger
-            "perf_3m":             0.05,   # Momentum court
+            # v7.2.1: perf_1y renforcé (+0.02), perf_3m réduit (-0.02) — 3m trop bruité
+            "perf_1y":             0.07,   # Momentum 1 an (était 0.05)
+            "perf_3m":             0.03,   # Momentum court (était 0.05)
             # SUPPRIMÉS (déjà dans subscores):
             # roe, buffett_score, eps_growth_5y, fcf_yield, de_ratio
         },
@@ -994,9 +996,12 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "quality_value_sub":   0.10,   # Pas surpayer
             # Forward-looking
             "eps_growth_forecast_5y": 0.05, # Croissance minimale requise
-            # Income — DOMINANT (25%)
-            "dividend_yield":      0.20,   # ★ Rendement prioritaire
+            # Income — IMPORTANT (20%)
+            "dividend_yield":      0.15,   # Rendement (était 0.20, -0.05 pour perf_1y)
             "dividend_growth_3y":  0.05,   # Croissance du dividende
+            # Momentum — FILET DE SÉCURITÉ (5%)
+            # v7.2.1: ajouté perf_1y pour détecter les chutes prolongées
+            "perf_1y":             0.05,   # Momentum 1 an (évite de garder une action en chute)
             # Risque — TRÈS PÉNALISÉ (30%)
             "volatility_3y":      -0.20,   # ★★ Vol très pénalisée
             "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
