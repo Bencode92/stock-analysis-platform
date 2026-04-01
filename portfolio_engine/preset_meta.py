@@ -829,6 +829,8 @@ FIELD_MAPPING: Dict[str, List[str]] = {
     "quality_growth_sub": ["quality_subscores.growth"],     # EPS growth + revenue growth
     # v5.3.0: Forward-looking (ABSENT du quality score — seul facteur prédictif)
     "eps_growth_forecast_5y": ["eps_growth_forecast_5y"],
+    # v7.3: EPS Surprise — PEAD factor (Post-Earnings Announcement Drift)
+    "eps_surprise": ["eps_surprise_avg_2q", "eps_surprise_last"],
     # v5.3.1: Quality coverage (% of metrics available — used by hard filter)
     "quality_coverage": ["quality_coverage"],
 }
@@ -857,6 +859,8 @@ METRIC_RANGES: Dict[str, Tuple[float, float]] = {
     "quality_growth_sub": (0, 100),
     # v5.3.0: Forward-looking growth forecast
     "eps_growth_forecast_5y": (-10, 30),
+    # v7.3: EPS Surprise (PEAD) — typical range -10% to +20%
+    "eps_surprise": (-10, 20),
 }
 
 
@@ -920,11 +924,13 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "quality_value_sub":   0.05,   # P/E+FCF peer-relative
             "quality_growth_sub":  0.15,   # EPS+revenue growth peer-relative
             # Forward-looking (ABSENT du quality score!)
-            "eps_growth_forecast_5y": 0.15, # ★ Seul facteur prédictif
+            "eps_growth_forecast_5y": 0.10, # Prévision EPS 5 ans (était 0.15, -0.05 pour eps_surprise)
+            # v7.3: EPS Surprise — PEAD (orthogonal au momentum prix)
+            "eps_surprise":        0.08,   # ★ Avg surprise 2 derniers trimestres
             # Momentum (indépendant du quality score)
             # v7.2.1: perf_1y renforcé (+0.05), perf_3m réduit (-0.05) — 3m trop bruité
-            "perf_1y":             0.20,   # Momentum 1 an (était 0.15)
-            "perf_3m":             0.05,   # Momentum court terme (était 0.10)
+            "perf_1y":             0.17,   # Momentum 1 an (était 0.20, -0.03 pour eps_surprise)
+            "perf_3m":             0.05,   # Momentum court terme
             # Risque (indépendant)
             "volatility_3y":       0.05,   # Vol positive = upside potential
             "max_drawdown_3y":    -0.05,   # Drawdown pénalisé
@@ -960,15 +966,17 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "quality_value_sub":   0.10,   # P/E+FCF — pas surpayer
             "quality_growth_sub":  0.10,   # EPS+revenue — croissance passée
             # Forward-looking
-            "eps_growth_forecast_5y": 0.10, # ★ Croissance future attendue
+            "eps_growth_forecast_5y": 0.08, # Croissance future (était 0.10, -0.02 pour eps_surprise)
+            # v7.3: EPS Surprise — PEAD
+            "eps_surprise":        0.05,   # Avg surprise 2 derniers trimestres
             # Income
             "dividend_yield":      0.10,   # Rendement courant
             # Risque — PÈSE LOURD (20%)
             "volatility_3y":      -0.10,   # Vol pénalisée
             "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
             # Momentum — RÉSIDUEL (10%)
-            # v7.2.1: perf_1y renforcé (+0.02), perf_3m réduit (-0.02) — 3m trop bruité
-            "perf_1y":             0.07,   # Momentum 1 an (était 0.05)
+            # v7.2.1: perf_1y renforcé, perf_3m réduit — 3m trop bruité
+            "perf_1y":             0.04,   # Momentum 1 an (était 0.07, -0.03 pour eps_surprise)
             "perf_3m":             0.03,   # Momentum court (était 0.05)
             # SUPPRIMÉS (déjà dans subscores):
             # roe, buffett_score, eps_growth_5y, fcf_yield, de_ratio

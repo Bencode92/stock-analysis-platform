@@ -1184,6 +1184,69 @@ async function getGrowthEstimates(symbol, stock) {
     }
 }
 
+// ✅ v7.3: Fetch /earnings pour EPS Surprise (PEAD factor)
+async function getEarningsData(symbol, stock) {
+    try {
+        await pay(CONFIG.CREDITS.STATISTICS); // Same credit cost as statistics
+        const resolved = resolveSymbol(symbol, stock);
+        const trials = tdParamTrials(symbol, stock, resolved);
+
+        const data = await fetchTD('earnings', trials);
+        if (!data || data.status === 'error' || !data.earnings) {
+            return {};
+        }
+
+        // Filter quarters with actual data (exclude future estimates)
+        const actuals = (data.earnings || []).filter(e =>
+            e.eps_actual !== null && e.eps_actual !== undefined &&
+            e.eps_estimate !== null && e.eps_estimate !== undefined
+        );
+
+        if (actuals.length === 0) return {};
+
+        // Last 2 quarters surprise (most relevant for PEAD)
+        const last2 = actuals.slice(0, 2);
+        const surprises = last2
+            .map(e => e.surprise_prc)
+            .filter(s => s !== null && s !== undefined && Number.isFinite(s));
+
+        // Last 4 quarters for average
+        const last4 = actuals.slice(0, 4);
+        const surprises4 = last4
+            .map(e => e.surprise_prc)
+            .filter(s => s !== null && s !== undefined && Number.isFinite(s));
+
+        const avgSurprise2 = surprises.length > 0
+            ? surprises.reduce((a, b) => a + b, 0) / surprises.length : null;
+        const avgSurprise4 = surprises4.length > 0
+            ? surprises4.reduce((a, b) => a + b, 0) / surprises4.length : null;
+
+        // Consecutive beats (streak)
+        let beatStreak = 0;
+        for (const e of actuals) {
+            if (e.surprise_prc !== null && e.surprise_prc > 0) beatStreak++;
+            else break;
+        }
+
+        if (CONFIG.DEBUG && avgSurprise2 !== null) {
+            console.log(`[EARNINGS] ${symbol}: last2_surprise=${avgSurprise2.toFixed(1)}%, ` +
+                `avg4=${avgSurprise4?.toFixed(1) || 'N/A'}%, streak=${beatStreak}, quarters=${actuals.length}`);
+        }
+
+        return {
+            eps_surprise_last: surprises.length > 0 ? +surprises[0].toFixed(2) : null,
+            eps_surprise_avg_2q: avgSurprise2 !== null ? +avgSurprise2.toFixed(2) : null,
+            eps_surprise_avg_4q: avgSurprise4 !== null ? +avgSurprise4.toFixed(2) : null,
+            eps_beat_streak: beatStreak,
+            earnings_quarters_available: actuals.length,
+            earnings_last_date: actuals[0]?.date || null,
+        };
+    } catch (e) {
+        if (CONFIG.DEBUG) console.error('[EARNINGS EXC]', symbol, e.message);
+        return {};
+    }
+}
+
 // ✅ v3.31: Fetch /profile pour industry (peer groups granulaires)
 async function getProfileData(symbol, stock) {
     try {
@@ -1476,14 +1539,15 @@ async function enrichStock(stock) {
     // ✅ v3.23: Ajout de getGrowthEstimates dans le Promise.all
     const sym = resolved || stock.symbol;  // symbole final (évent. suffixé :MIC)
     const ctx = stock;                     // garde exchange + country d'origine
-    const [perf, quote, dividends, stats, mcDirect, growth, profileData] = await Promise.all([
+    const [perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData] = await Promise.all([
         getPerformanceData(sym, ctx),
         getQuoteData(sym, ctx),
         getDividendData(sym, ctx),
         getStatisticsData(sym, ctx),
         getMarketCapDirect(sym, ctx),
         getGrowthEstimates(sym, ctx),  // ✅ v3.23
-        getProfileData(sym, ctx)       // ✅ v3.31: industry pour peer groups
+        getProfileData(sym, ctx),      // ✅ v3.31: industry pour peer groups
+        getEarningsData(sym, ctx)      // ✅ v7.3: EPS Surprise (PEAD)
     ]);
     
     // Fallback prix & range depuis la série si quote indisponible
@@ -2028,7 +2092,14 @@ async function enrichStock(stock) {
         eps_growth_5y: growth?.eps_growth_5y ?? null,    // Croissance EPS 5 ans historique (%)
         eps_growth_forecast_5y: growth?.eps_growth_forecast_5y ?? null,  // Prévision EPS 5 ans (%)
         peg_ratio: growth?.peg_ratio ?? null,            // PEG Ratio
-        
+
+        // ✅ v7.3: EPS Surprise (PEAD — Post-Earnings Announcement Drift)
+        eps_surprise_last: earningsData?.eps_surprise_last ?? null,        // Dernière surprise (%)
+        eps_surprise_avg_2q: earningsData?.eps_surprise_avg_2q ?? null,    // Moyenne 2 derniers trimestres (%)
+        eps_surprise_avg_4q: earningsData?.eps_surprise_avg_4q ?? null,    // Moyenne 4 derniers trimestres (%)
+        eps_beat_streak: earningsData?.eps_beat_streak ?? null,            // Nombre de beats consécutifs
+        earnings_last_date: earningsData?.earnings_last_date ?? null,      // Date dernier earnings
+
         // Métriques de dividendes enrichies v3.20
         dividend_yield: dividendYield,
         dividend_yield_src,

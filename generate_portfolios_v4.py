@@ -1703,6 +1703,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 "fcf_yield": _safe_float(it.get("fcf_yield")),
                 "eps_growth_5y": _safe_float(it.get("eps_growth_5y")),
                 "eps_growth_forecast_5y": _safe_float(it.get("eps_growth_forecast_5y")),
+                # v7.3: EPS Surprise (PEAD)
+                "eps_surprise_avg_2q": _safe_float(it.get("eps_surprise_avg_2q")),
+                "eps_surprise_last": _safe_float(it.get("eps_surprise_last")),
+                "eps_beat_streak": _safe_float(it.get("eps_beat_streak")),
                 "revenue_growth_5y": _safe_float(it.get("revenue_growth_5y")),
                 "gross_margin": _safe_float(it.get("gross_margin")),
                 "operating_margin": _safe_float(it.get("operating_margin")),
