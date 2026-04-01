@@ -3641,7 +3641,7 @@ class PortfolioOptimizer:
                     vol_penalty = 8.0 * vol_diff ** 2
                 else:  # Au-dessus
                     # FIX v8.5: Agressif tolère plus de vol pour plus de score
-                    _vol_above_lambda = {"Agressif": 2.5, "Modéré": 3.0, "Stable": 8.0}.get(profile.name, 3.0)
+                    _vol_above_lambda = {"Agressif": 2.5, "Modéré": 10.0, "Stable": 8.0}.get(profile.name, 3.0)  # v7.2.1: Modéré 3→10 (Sharpe +3%, A/B tested)
                     vol_penalty = _vol_above_lambda * vol_diff ** 2
                 
                 # P0 PARTNER: Pénalité turnover (v6.23 P0 FIX: 0.5× cohérent avec contrainte)
