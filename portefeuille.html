@@ -294,8 +294,64 @@
         <section id="lombard-section" style="margin-top:3rem;">
             <div class="section-header">
                 <h2><i class="fas fa-university" style="margin-right:0.5rem;"></i>Stratégie Crédit Lombard</h2>
-                <p class="section-description">Optimisez votre rendement avec le crédit Lombard — actions éligibles classées par carry net</p>
+                <p class="section-description">Optimisez votre rendement avec le crédit Lombard — comparaison par enveloppe fiscale</p>
             </div>
+
+            <!-- Envelope selector -->
+            <div id="envelope-selector" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:2rem;">
+                <div class="envelope-card" data-env="cto" onclick="window._selectEnvelope('cto')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid #ff9800;background:rgba(255,152,0,0.08);transition:all 0.3s;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <i class="fas fa-briefcase" style="color:#ff9800;font-size:1.1rem;"></i>
+                        <span style="font-weight:700;font-size:1rem;color:#ffb74d;">Compte-Titres (CTO)</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);line-height:1.5;">
+                        Flat tax 30% sur dividendes et plus-values<br>
+                        <strong style="color:rgba(255,255,255,0.7);">Taux Lombard typique : 1.5% – 3.5%</strong><br>
+                        Accès à tous les marchés (US, EU, Asia)
+                    </div>
+                    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;">
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Actions US</span>
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">ETF monde</span>
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Obligations</span>
+                    </div>
+                </div>
+
+                <div class="envelope-card" data-env="pea" onclick="window._selectEnvelope('pea')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);transition:all 0.3s;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <i class="fas fa-shield-alt" style="color:#2196f3;font-size:1.1rem;"></i>
+                        <span style="font-weight:700;font-size:1rem;color:#64b5f6;">PEA</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);line-height:1.5;">
+                        Exonéré d'IR après 5 ans (PS 17.2% seulement)<br>
+                        <strong style="color:rgba(255,255,255,0.7);">Taux Lombard typique : 2.0% – 4.0%</strong><br>
+                        Plafond 150 000€ · Actions EU uniquement
+                    </div>
+                    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;">
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(33,150,243,0.15);color:#64b5f6;">Actions EU</span>
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(33,150,243,0.15);color:#64b5f6;">ETF EU</span>
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(244,67,54,0.12);color:#ef9a9a;">Pas US direct</span>
+                    </div>
+                </div>
+
+                <div class="envelope-card" data-env="av" onclick="window._selectEnvelope('av')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);transition:all 0.3s;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
+                        <i class="fas fa-piggy-bank" style="color:#4caf50;font-size:1.1rem;"></i>
+                        <span style="font-weight:700;font-size:1rem;color:#81c784;">Assurance Vie</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);line-height:1.5;">
+                        Abattement 4 600€/9 200€ après 8 ans · Succession avantageuse<br>
+                        <strong style="color:rgba(255,255,255,0.7);">Taux Lombard typique : 1.0% – 2.5%</strong><br>
+                        Fonds euros + UC (ETF, actions via mandat)
+                    </div>
+                    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;">
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Fonds euros</span>
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">UC/ETF</span>
+                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Succession</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lombard ranking table -->
             <div id="lombard-container" style="opacity:0; transition: opacity 0.4s;">
                 <div style="text-align:center; padding:2rem; color:var(--text-muted);">
                     <i class="fas fa-spinner fa-spin"></i> Chargement du classement Lombard...
@@ -443,6 +499,29 @@
         const container = document.getElementById('lombard-container');
         if (!container) return;
 
+        // Envelope configs
+        const ENVELOPES = {
+            cto: { name: 'Compte-Titres', taxDiv: 0.30, taxPV: 0.30, color: '#ff9800',
+                   defaultRate: 2.5, rateRange: [1.5, 3.5], eligible: 'all' },
+            pea: { name: 'PEA', taxDiv: 0.172, taxPV: 0.172, color: '#2196f3',
+                   defaultRate: 3.0, rateRange: [2.0, 4.0], eligible: 'eu_only' },
+            av:  { name: 'Assurance Vie', taxDiv: 0.247, taxPV: 0.247, color: '#4caf50',
+                   defaultRate: 1.5, rateRange: [1.0, 2.5], eligible: 'all' },
+        };
+        let activeEnvelope = 'cto';
+
+        window._selectEnvelope = function(env) {
+            activeEnvelope = env;
+            // Update card styling
+            document.querySelectorAll('.envelope-card').forEach(card => {
+                const isActive = card.dataset.env === env;
+                const envCfg = ENVELOPES[card.dataset.env];
+                card.style.borderColor = isActive ? envCfg.color : 'rgba(255,255,255,0.1)';
+                card.style.background = isActive ? `${envCfg.color}11` : 'rgba(255,255,255,0.02)';
+            });
+            render(ENVELOPES[env].defaultRate);
+        };
+
         try {
             const resp = await fetch('data/lombard_ranking.json');
             if (!resp.ok) throw new Error('Not found');
@@ -454,52 +533,71 @@
 
             if (!rates.length) throw new Error('No rates');
 
-            // Default to 2.5% rate
-            let activeRate = rates.includes(2.5) ? 2.5 : rates[0];
-
             function render(rate) {
-                const rd = rankings[rate] || rankings[String(rate)];
+                const env = ENVELOPES[activeEnvelope];
+                // Find closest available rate
+                const closestRate = rates.reduce((prev, curr) => Math.abs(curr - rate) < Math.abs(prev - rate) ? curr : prev);
+                const rd = rankings[closestRate] || rankings[String(closestRate)];
                 if (!rd) return;
                 const stocks = rd.stocks || [];
                 const summary = rd.summary || {};
 
-                // Rate selector
+                // Filter by envelope eligibility
+                const filteredStocks = env.eligible === 'eu_only'
+                    ? stocks.filter(s => ['EU-FR','EU-DE','EU-NL','EU-IT','EU-ES','EU-BE','EU-CH','EU','Europe','Royaume-Uni','UK'].some(r => (s.region||'').includes(r)))
+                    : stocks;
+
+                // Rate selector + envelope info
                 let html = `
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-                    <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">
-                        Taux Lombard
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <i class="fas fa-percentage" style="color:${env.color};"></i>
+                        <span style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Taux Lombard</span>
                     </div>
                     <div style="display:flex;gap:0.4rem;">
-                        ${rates.map(r => `
+                        ${rates.filter(r => r >= env.rateRange[0] && r <= env.rateRange[1]).map(r => `
                             <button onclick="window._renderLombard(${r})"
-                                    style="padding:0.4rem 1rem;border-radius:8px;border:1px solid ${r === rate ? '#ff9800' : 'rgba(255,255,255,0.1)'};
-                                           background:${r === rate ? 'rgba(255,152,0,0.15)' : 'transparent'};
-                                           color:${r === rate ? '#ffb74d' : 'rgba(255,255,255,0.5)'};
+                                    style="padding:0.4rem 1rem;border-radius:8px;border:1px solid ${r === closestRate ? env.color : 'rgba(255,255,255,0.1)'};
+                                           background:${r === closestRate ? env.color + '22' : 'transparent'};
+                                           color:${r === closestRate ? env.color : 'rgba(255,255,255,0.5)'};
                                            font-size:0.85rem;font-weight:700;cursor:pointer;font-family:var(--font-mono);
                                            transition:all 0.2s;">${r}%</button>
                         `).join('')}
                     </div>
-                    <span style="font-size:0.75rem;color:var(--text-muted);">${stocks.length} actions éligibles sur ${meta.universe_size || '?'}</span>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">
+                        ${filteredStocks.length} éligibles ${env.eligible === 'eu_only' ? '(EU uniquement)' : ''} · Fiscalité ${Math.round(env.taxDiv * 100)}%
+                    </span>
                 </div>`;
+
+                // Compute net yields for this envelope
+                const avgYieldBrut = summary.avg_yield || 0;
+                const avgYieldNet = avgYieldBrut * (1 - env.taxDiv);
+                const avgCarryNetFiscal = avgYieldNet - closestRate;
 
                 // Summary cards
                 html += `
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
                     <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Yield moyen</div>
-                        <div style="font-size:1.5rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">${(summary.avg_yield || 0).toFixed(1)}%</div>
+                        <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Yield brut</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">${avgYieldBrut.toFixed(1)}%</div>
                     </div>
                     <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Carry net moyen</div>
-                        <div style="font-size:1.5rem;font-weight:700;color:${(summary.avg_carry_net || 0) > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${(summary.avg_carry_net || 0) > 0 ? '+' : ''}${(summary.avg_carry_net || 0).toFixed(1)}%</div>
+                        <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Yield net ${env.name}</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">${avgYieldNet.toFixed(1)}%</div>
+                        <div style="font-size:0.6rem;color:var(--text-muted);">après ${Math.round(env.taxDiv*100)}% fiscalité</div>
                     </div>
                     <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">LTV estimé</div>
-                        <div style="font-size:1.5rem;font-weight:700;color:#2196f3;font-family:var(--font-mono);">${summary.avg_ltv || '?'}%</div>
+                        <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Carry net fiscal</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:${avgCarryNetFiscal > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${avgCarryNetFiscal > 0 ? '+' : ''}${avgCarryNetFiscal.toFixed(1)}%</div>
+                        <div style="font-size:0.6rem;color:var(--text-muted);">yield net − taux ${closestRate}%</div>
                     </div>
                     <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Qualité moyenne</div>
-                        <div style="font-size:1.5rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${summary.avg_quality_score || '?'}</div>
+                        <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">LTV estimé</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:#2196f3;font-family:var(--font-mono);">${summary.avg_ltv || '?'}%</div>
+                    </div>
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Qualité</div>
+                        <div style="font-size:1.4rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${summary.avg_quality_score || '?'}</div>
                     </div>
                 </div>`;
 
@@ -524,27 +622,30 @@
                             <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Ticker</th>
                             <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Nom</th>
                             <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Secteur</th>
-                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Yield</th>
-                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Carry net</th>
-                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Carry levé</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Yield brut</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Yield net</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Carry fiscal</th>
                             <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">LTV</th>
                             <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Score</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-                for (const s of stocks) {
-                    const carryColor = (s.carry_net || 0) > 0 ? '#4caf50' : '#f44336';
+                for (let idx = 0; idx < filteredStocks.length; idx++) {
+                    const s = filteredStocks[idx];
+                    const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
+                    const carryFiscal = yieldNet - closestRate;
+                    const carryColor = carryFiscal > 0 ? '#4caf50' : '#f44336';
                     const scoreColor = (s.lombard_score || 0) >= 70 ? '#4caf50' : (s.lombard_score || 0) >= 50 ? '#ff9800' : '#f44336';
                     html += `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                            <td style="padding:0.5rem 0.4rem;color:var(--text-muted);">${s.rank}</td>
-                            <td style="padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:#ffb74d;">${s.ticker}</td>
+                            <td style="padding:0.5rem 0.4rem;color:var(--text-muted);">${idx + 1}</td>
+                            <td style="padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:${env.color};">${s.ticker}</td>
                             <td style="padding:0.5rem 0.4rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name || ''}</td>
                             <td style="padding:0.5rem 0.4rem;color:var(--text-secondary);font-size:0.75rem;">${s.sector || ''}</td>
-                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;font-weight:600;">${(s.dividend_yield || 0).toFixed(1)}%</td>
-                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${carryColor};font-weight:700;">${(s.carry_net || 0) > 0 ? '+' : ''}${(s.carry_net || 0).toFixed(1)}%</td>
-                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${carryColor};">${(s.leveraged_carry || 0).toFixed(1)}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;">${(s.dividend_yield || 0).toFixed(1)}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${env.color};">${yieldNet.toFixed(1)}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${carryColor};font-weight:700;">${carryFiscal > 0 ? '+' : ''}${carryFiscal.toFixed(1)}%</td>
                             <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);">${s.ltv_estimated || '?'}%</td>
                             <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:${scoreColor};">${Math.round(s.lombard_score || 0)}</td>
                         </tr>`;
