@@ -267,6 +267,9 @@
                     <button class="portfolio-tab" data-target="portfolio-stable" data-original-type="Stable">
                         <i class="fas fa-shield-alt" style="margin-right:4px;"></i> Stable
                     </button>
+                    <button class="portfolio-tab" data-target="portfolio-lombard" data-original-type="Lombard">
+                        <i class="fas fa-university" style="margin-right:4px;"></i> Lombard
+                    </button>
                 </div>
 
                 <!-- Dynamic content (rendered by portfolio-loader.js v3.0) -->
@@ -274,6 +277,9 @@
                     <div class="portfolio-loading"></div>
                     <div class="portfolio-error"></div>
                 </div>
+
+                <!-- Lombard panel (shown when Lombard tab active) -->
+                <div id="lombard-panel" style="display:none;"></div>
             </div>
         </section>
 
@@ -290,13 +296,8 @@
             </div>
         </section>
 
-        <!-- Lombard Credit Section -->
-        <section id="lombard-section" style="margin-top:3rem;">
-            <div class="section-header">
-                <h2><i class="fas fa-university" style="margin-right:0.5rem;"></i>Stratégie Crédit Lombard</h2>
-                <p class="section-description">Optimisez votre rendement avec le crédit Lombard — comparaison par enveloppe fiscale</p>
-            </div>
-
+        <!-- Lombard section removed — now inside tab panel -->
+        <div id="lombard-section-hidden" style="display:none;">
             <!-- Envelope selector -->
             <div id="envelope-selector" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:2rem;">
                 <div class="envelope-card" data-env="cto" onclick="window._selectEnvelope('cto')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid #ff9800;background:rgba(255,152,0,0.08);transition:all 0.3s;">
@@ -357,7 +358,7 @@
                     <i class="fas fa-spinner fa-spin"></i> Chargement du classement Lombard...
                 </div>
             </div>
-        </section>
+        </div><!-- /lombard-section-hidden -->
 
         <!-- Methodology Section -->
         <section id="methodology" style="margin-top:3rem;">
@@ -496,8 +497,33 @@
     <!-- Lombard Ranking Renderer -->
     <script>
     (async function loadLombardRanking() {
+        // Move Lombard content from hidden section to tab panel
+        const panel = document.getElementById('lombard-panel');
+        const hiddenSection = document.getElementById('lombard-section-hidden');
+        if (panel && hiddenSection) {
+            panel.innerHTML = `
+                <div style="padding:2rem 0;">
+                    <h2 style="color:#ff9800;margin:0 0 0.5rem 0;font-size:1.8rem;font-weight:800;letter-spacing:-0.5px;">
+                        <i class="fas fa-university" style="margin-right:0.5rem;font-size:1.4rem;"></i>Crédit Lombard
+                    </h2>
+                    <p style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-bottom:2rem;">Optimisez votre rendement — comparaison par enveloppe fiscale</p>
+                </div>
+            ` + hiddenSection.innerHTML;
+            hiddenSection.remove();
+        }
+
         const container = document.getElementById('lombard-container');
         if (!container) return;
+
+        // Tab switching: show/hide Lombard vs portfolio content
+        document.querySelectorAll('.portfolio-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const isLombard = tab.dataset.target === 'portfolio-lombard';
+                const pfContent = document.querySelector('.portfolio-content');
+                if (pfContent) pfContent.style.display = isLombard ? 'none' : 'block';
+                if (panel) panel.style.display = isLombard ? 'block' : 'none';
+            });
+        });
 
         // Envelope configs
         const ENVELOPES = {
