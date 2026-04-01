@@ -3413,24 +3413,26 @@ class PortfolioOptimizer:
             allocation, candidates, profile, prev_weights
         )
 
-        # v7.2.1 P2: Cap post-redistribution — aucune position > max_single_position
+        # v7.3 FIX: Cap post-redistribution — cap TOUS les over-limit en une passe
+        # puis redistribuer vers les non-bonds (évite le ping-pong bond→bond)
         max_cap = profile.max_single_position
-        capped_any = True
-        for _cap_iter in range(3):
-            capped_any = False
-            for aid, w in list(allocation.items()):
-                if w > max_cap + 0.1:
-                    excess = w - max_cap
-                    allocation[aid] = max_cap
-                    # Redistribuer l'excès proportionnellement aux autres
-                    others = {k: v for k, v in allocation.items() if k != aid and v > 0.5}
-                    if others:
-                        total_others = sum(others.values())
-                        for ok in others:
-                            allocation[ok] += excess * (allocation[ok] / total_others)
-                    capped_any = True
-            if not capped_any:
-                break
+        bond_ids = set(aid for aid in allocation
+                       if any(c.id == aid and c.category == "Obligations" for c in candidates))
+
+        excess_total = 0.0
+        for aid, w in list(allocation.items()):
+            if w > max_cap + 0.1:
+                excess_total += w - max_cap
+                allocation[aid] = max_cap
+
+        if excess_total > 0:
+            # Redistribuer vers les non-bonds sous le cap
+            equity_ids = [aid for aid in allocation
+                          if aid not in bond_ids and allocation[aid] < max_cap - 0.5]
+            if equity_ids:
+                per_eq = excess_total / len(equity_ids)
+                for aid in equity_ids:
+                    allocation[aid] = min(max_cap, allocation[aid] + per_eq)
 
         return allocation
     
