@@ -290,6 +290,19 @@
             </div>
         </section>
 
+        <!-- Lombard Credit Section -->
+        <section id="lombard-section" style="margin-top:3rem;">
+            <div class="section-header">
+                <h2><i class="fas fa-university" style="margin-right:0.5rem;"></i>Stratégie Crédit Lombard</h2>
+                <p class="section-description">Optimisez votre rendement avec le crédit Lombard — actions éligibles classées par carry net</p>
+            </div>
+            <div id="lombard-container" style="opacity:0; transition: opacity 0.4s;">
+                <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Chargement du classement Lombard...
+                </div>
+            </div>
+        </section>
+
         <!-- Methodology Section -->
         <section id="methodology" style="margin-top:3rem;">
             <div class="section-header">
@@ -422,6 +435,137 @@
             });
         });
     });
+    </script>
+
+    <!-- Lombard Ranking Renderer -->
+    <script>
+    (async function loadLombardRanking() {
+        const container = document.getElementById('lombard-container');
+        if (!container) return;
+
+        try {
+            const resp = await fetch('data/lombard_ranking.json');
+            if (!resp.ok) throw new Error('Not found');
+            const data = await resp.json();
+
+            const rankings = data.rankings || {};
+            const meta = data._meta || {};
+            const rates = Object.keys(rankings).map(Number).sort();
+
+            if (!rates.length) throw new Error('No rates');
+
+            // Default to 2.5% rate
+            let activeRate = rates.includes(2.5) ? 2.5 : rates[0];
+
+            function render(rate) {
+                const rd = rankings[rate] || rankings[String(rate)];
+                if (!rd) return;
+                const stocks = rd.stocks || [];
+                const summary = rd.summary || {};
+
+                // Rate selector
+                let html = `
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+                    <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">
+                        Taux Lombard
+                    </div>
+                    <div style="display:flex;gap:0.4rem;">
+                        ${rates.map(r => `
+                            <button onclick="window._renderLombard(${r})"
+                                    style="padding:0.4rem 1rem;border-radius:8px;border:1px solid ${r === rate ? '#ff9800' : 'rgba(255,255,255,0.1)'};
+                                           background:${r === rate ? 'rgba(255,152,0,0.15)' : 'transparent'};
+                                           color:${r === rate ? '#ffb74d' : 'rgba(255,255,255,0.5)'};
+                                           font-size:0.85rem;font-weight:700;cursor:pointer;font-family:var(--font-mono);
+                                           transition:all 0.2s;">${r}%</button>
+                        `).join('')}
+                    </div>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">${stocks.length} actions éligibles sur ${meta.universe_size || '?'}</span>
+                </div>`;
+
+                // Summary cards
+                html += `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;">
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Yield moyen</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">${(summary.avg_yield || 0).toFixed(1)}%</div>
+                    </div>
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Carry net moyen</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:${(summary.avg_carry_net || 0) > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${(summary.avg_carry_net || 0) > 0 ? '+' : ''}${(summary.avg_carry_net || 0).toFixed(1)}%</div>
+                    </div>
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">LTV estimé</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:#2196f3;font-family:var(--font-mono);">${summary.avg_ltv || '?'}%</div>
+                    </div>
+                    <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.3rem;">Qualité moyenne</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${summary.avg_quality_score || '?'}</div>
+                    </div>
+                </div>`;
+
+                // Explanation
+                html += `
+                <div style="padding:1rem;background:rgba(255,152,0,0.05);border-left:3px solid #ff9800;border-radius:0 8px 8px 0;margin-bottom:1.5rem;">
+                    <p style="margin:0;font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.6;">
+                        <strong style="color:#ffb74d;">Principe :</strong> Le crédit Lombard permet d'emprunter contre votre portefeuille (LTV ~60%).
+                        Le <strong>carry net</strong> = yield du dividende − taux Lombard. Un carry positif signifie que les dividendes couvrent le coût du crédit.
+                        Le <strong>carry levé</strong> intègre l'effet de levier du Lombard sur le rendement total.
+                        <span style="color:#ff9800;">⚠ Risque de margin call si le portefeuille chute au-delà du drawdown estimé.</span>
+                    </p>
+                </div>`;
+
+                // Stock table
+                html += `
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                    <thead>
+                        <tr style="border-bottom:2px solid rgba(255,255,255,0.1);">
+                            <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">#</th>
+                            <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Ticker</th>
+                            <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Nom</th>
+                            <th style="text-align:left;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Secteur</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Yield</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Carry net</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Carry levé</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">LTV</th>
+                            <th style="text-align:right;padding:0.6rem 0.4rem;color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                for (const s of stocks) {
+                    const carryColor = (s.carry_net || 0) > 0 ? '#4caf50' : '#f44336';
+                    const scoreColor = (s.lombard_score || 0) >= 70 ? '#4caf50' : (s.lombard_score || 0) >= 50 ? '#ff9800' : '#f44336';
+                    html += `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                            <td style="padding:0.5rem 0.4rem;color:var(--text-muted);">${s.rank}</td>
+                            <td style="padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:#ffb74d;">${s.ticker}</td>
+                            <td style="padding:0.5rem 0.4rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name || ''}</td>
+                            <td style="padding:0.5rem 0.4rem;color:var(--text-secondary);font-size:0.75rem;">${s.sector || ''}</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;font-weight:600;">${(s.dividend_yield || 0).toFixed(1)}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${carryColor};font-weight:700;">${(s.carry_net || 0) > 0 ? '+' : ''}${(s.carry_net || 0).toFixed(1)}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${carryColor};">${(s.leveraged_carry || 0).toFixed(1)}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);">${s.ltv_estimated || '?'}%</td>
+                            <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:${scoreColor};">${Math.round(s.lombard_score || 0)}</td>
+                        </tr>`;
+                }
+
+                html += `</tbody></table></div>`;
+
+                container.innerHTML = html;
+                container.style.opacity = '1';
+            }
+
+            window._renderLombard = render;
+            render(activeRate);
+
+        } catch (e) {
+            container.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:1rem;">
+                <i class="fas fa-info-circle"></i> Données Lombard non disponibles
+            </p>`;
+            container.style.opacity = '1';
+        }
+    })();
     </script>
 
     <!-- Correlation Diagnostics Renderer -->
