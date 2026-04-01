@@ -3415,17 +3415,22 @@ class PortfolioOptimizer:
 
         # v7.3 FIX: Cap post-redistribution — cap TOUS les over-limit en une passe
         # puis redistribuer vers les non-bonds (évite le ping-pong bond→bond)
+        # Runs AFTER _post_process_allocation to be the absolute last step
         max_cap = profile.max_single_position
         bond_ids = set(aid for aid in allocation
                        if any(c.id == aid and c.category == "Obligations" for c in candidates))
 
-        excess_total = 0.0
-        for aid, w in list(allocation.items()):
-            if w > max_cap + 0.1:
-                excess_total += w - max_cap
-                allocation[aid] = max_cap
+        for _final_cap_iter in range(3):
+            excess_total = 0.0
+            for aid, w in list(allocation.items()):
+                if w > max_cap + 0.1:
+                    excess_total += w - max_cap
+                    allocation[aid] = max_cap
+                    logger.info(f"[CAP] {aid}: {w:.1f}% → {max_cap:.1f}% (excess {w - max_cap:.1f}%)")
 
-        if excess_total > 0:
+            if excess_total <= 0:
+                break
+
             # Redistribuer vers les non-bonds sous le cap
             equity_ids = [aid for aid in allocation
                           if aid not in bond_ids and allocation[aid] < max_cap - 0.5]
@@ -3433,6 +3438,23 @@ class PortfolioOptimizer:
                 per_eq = excess_total / len(equity_ids)
                 for aid in equity_ids:
                     allocation[aid] = min(max_cap, allocation[aid] + per_eq)
+            else:
+                # Pas d'equity sous le cap — redistribuer vers tous les non-bonds
+                non_bond = [aid for aid in allocation if aid not in bond_ids]
+                if non_bond:
+                    per_nb = excess_total / len(non_bond)
+                    for aid in non_bond:
+                        allocation[aid] += per_nb
+
+        # Final: normaliser à 100% sans dépasser max_cap
+        total = sum(allocation.values())
+        if abs(total - 100) > 0.5:
+            factor = 100.0 / total
+            for aid in allocation:
+                allocation[aid] *= factor
+                # Re-cap si la normalisation a poussé au-dessus
+                if allocation[aid] > max_cap + 0.1:
+                    allocation[aid] = max_cap
 
         return allocation
     
