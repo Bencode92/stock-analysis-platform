@@ -289,26 +289,81 @@ class PortfolioManagerV3 {
           <span style="margin-left:auto;font-size:0.75rem;color:rgba(255,255,255,0.4);">${sorted.length} positions</span>
         </h4>`;
 
+      // v7.3: Build asset details lookup from _asset_details
+      const assetDetails = (portfolio._asset_details || []).reduce((m, d) => {
+        if (d.ticker) m[d.ticker] = d;
+        if (d.name) m[d.name] = d;
+        return m;
+      }, {});
+
       for (const a of sorted) {
         const prevW = parseFloat(String(prevCat[a.name] || 0).replace('%', '')) || 0;
         const delta = prevW > 0 ? a.weight - prevW : null;
         const isNew = prevW === 0;
 
+        // v7.3: Find asset details for tooltip
+        const detail = assetDetails[a.name] || Object.values(assetDetails).find(d =>
+          a.name.includes(d.ticker) || (d.name && a.name.includes(d.name))
+        );
+        const ticker = detail?.ticker || a.name.match(/\(([A-Z]{1,5})\)/)?.[1] || '';
+        const rationale = detail?.rationale || '';
+        const role = detail?.role || '';
+        const riskNote = detail?.risk_note || '';
+        const metrics = detail?.metrics || {};
+        const sector = detail?.sector || '';
+        const country = detail?.country || '';
+        const contextLink = detail?.market_context_link || '';
+
+        // Build role badge
+        const roleBadge = role ? `<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:${
+          role === 'core' ? 'rgba(33,150,243,0.15);color:#64b5f6' :
+          role === 'satellite' ? 'rgba(255,152,0,0.15);color:#ffb74d' :
+          role === 'defensive' || role === 'income' ? 'rgba(76,175,80,0.15);color:#81c784' :
+          'rgba(255,255,255,0.08);color:rgba(255,255,255,0.5)'
+        };font-weight:600;text-transform:uppercase;">${role}</span>` : '';
+
+        // Build metrics chips
+        const chips = [];
+        if (metrics.roe) chips.push(`ROE ${metrics.roe.toFixed(0)}%`);
+        if (metrics.pe_ratio) chips.push(`P/E ${metrics.pe_ratio.toFixed(1)}`);
+        if (metrics.dividend_yield) chips.push(`Div ${metrics.dividend_yield.toFixed(1)}%`);
+        if (metrics.buffett_score) chips.push(`Buffett ${Math.round(metrics.buffett_score)}`);
+        if (metrics.volatility) chips.push(`Vol ${metrics.volatility.toFixed(0)}%`);
+
+        const hasDetail = rationale || chips.length > 0;
+        const detailId = `detail-${ticker || a.name.replace(/[^a-zA-Z0-9]/g, '')}`;
+
         html += `
-        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-              <span style="font-size:0.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.name}</span>
-              ${isNew ? '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:rgba(76,175,80,0.2);color:#4caf50;font-weight:700;">NEW</span>' : ''}
+        <div class="asset-row" style="padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);${hasDetail ? 'cursor:pointer;' : ''}"
+             ${hasDetail ? `onclick="document.getElementById('${detailId}').style.display = document.getElementById('${detailId}').style.display === 'none' ? 'block' : 'none'"` : ''}>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                ${ticker ? `<span style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:${catColor};font-weight:700;min-width:40px;">${ticker}</span>` : ''}
+                <span style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${a.name.replace(` (${ticker})`, '').replace(ticker, '').trim() || a.name}</span>
+                ${roleBadge}
+                ${isNew ? '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:rgba(76,175,80,0.2);color:#4caf50;font-weight:700;">NEW</span>' : ''}
+                ${hasDetail ? '<i class="fas fa-chevron-down" style="font-size:0.5rem;color:rgba(255,255,255,0.25);margin-left:auto;"></i>' : ''}
+              </div>
+              <div style="margin-top:4px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
+                <div style="width:${Math.min(a.weight * 2.5, 100)}%;height:100%;background:${catColor};border-radius:2px;"></div>
+              </div>
             </div>
-            <div style="margin-top:4px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
-              <div style="width:${Math.min(a.weight * 2.5, 100)}%;height:100%;background:${catColor};border-radius:2px;"></div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span style="font-size:0.95rem;font-weight:700;color:${catColor};">${a.weight}%</span>
+              ${delta !== null && Math.abs(delta) >= 0.5 ? `<div style="font-size:0.7rem;color:${delta > 0 ? '#4caf50' : '#f44336'};font-weight:600;">${delta > 0 ? '+' : ''}${delta.toFixed(1)}%</div>` : ''}
             </div>
           </div>
-          <div style="text-align:right;flex-shrink:0;">
-            <span style="font-size:0.95rem;font-weight:700;color:${catColor};">${a.weight}%</span>
-            ${delta !== null && Math.abs(delta) >= 0.5 ? `<div style="font-size:0.7rem;color:${delta > 0 ? '#4caf50' : '#f44336'};font-weight:600;">${delta > 0 ? '+' : ''}${delta.toFixed(1)}%</div>` : ''}
-          </div>
+          ${hasDetail ? `
+          <div id="${detailId}" style="display:none;margin-top:0.6rem;padding:0.8rem;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid ${catColor};">
+            ${rationale ? `<p style="font-size:0.78rem;color:rgba(255,255,255,0.7);margin:0 0 0.5rem 0;line-height:1.5;">${rationale}</p>` : ''}
+            ${riskNote ? `<p style="font-size:0.72rem;color:#ff9800;margin:0 0 0.5rem 0;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>${riskNote}</p>` : ''}
+            ${contextLink ? `<span style="font-size:0.65rem;padding:2px 8px;border-radius:6px;background:rgba(33,150,243,0.12);color:#64b5f6;"><i class="fas fa-chart-line" style="margin-right:3px;"></i>${contextLink}</span>` : ''}
+            ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;">
+              ${chips.map(c => `<span style="font-size:0.65rem;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);font-family:'JetBrains Mono',monospace;">${c}</span>`).join('')}
+            </div>` : ''}
+            ${sector || country ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.35);margin-top:0.4rem;">${[sector, country].filter(Boolean).join(' · ')}</div>` : ''}
+          </div>` : ''}
         </div>`;
       }
       html += '</div>';
