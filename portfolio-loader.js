@@ -265,6 +265,24 @@ class PortfolioManagerV3 {
     }
 
     // ── Positions detail by category ──
+    // v7.3: Investment amount calculator
+    const amountId = `invest-amount-${normalizedType}`;
+    html += `
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;">
+      <i class="fas fa-calculator" style="color:${cfg.color};font-size:1.1rem;"></i>
+      <label style="font-size:0.85rem;color:rgba(255,255,255,0.6);white-space:nowrap;">Montant à investir</label>
+      <div style="position:relative;flex:0 0 180px;">
+        <input id="${amountId}" type="number" placeholder="10 000" min="0" step="100"
+               style="width:100%;padding:0.5rem 2.5rem 0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
+                      background:rgba(255,255,255,0.05);color:#fff;font-size:0.95rem;font-family:'JetBrains Mono',monospace;
+                      outline:none;transition:border 0.2s;"
+               onfocus="this.style.borderColor='${cfg.color}'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+               oninput="window._updateAmounts && window._updateAmounts('${normalizedType}', this.value)">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.35);font-size:0.8rem;">EUR</span>
+      </div>
+      <span id="amount-hint-${normalizedType}" style="font-size:0.75rem;color:rgba(255,255,255,0.35);"></span>
+    </div>`;
+
     html += `<h3 style="margin:0 0 1.25rem 0;font-size:1rem;font-weight:700;color:rgba(255,255,255,0.8);">
       <i class="fas fa-list-ul" style="margin-right:6px;"></i>Positions détaillées
     </h3>`;
@@ -351,6 +369,7 @@ class PortfolioManagerV3 {
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <span style="font-size:0.95rem;font-weight:700;color:${catColor};">${a.weight}%</span>
+              <div class="amount-display" data-pf="${normalizedType}" data-weight="${a.weight}" style="font-size:0.75rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;display:none;"></div>
               ${delta !== null && Math.abs(delta) >= 0.5 ? `<div style="font-size:0.7rem;color:${delta > 0 ? '#4caf50' : '#f44336'};font-weight:600;">${delta > 0 ? '+' : ''}${delta.toFixed(1)}%</div>` : ''}
             </div>
           </div>
@@ -529,6 +548,33 @@ class PortfolioManagerV3 {
     });
   }
 }
+
+// ── v7.3: Investment amount calculator ──
+window._updateAmounts = function(pfType, rawValue) {
+  const amount = parseFloat(rawValue) || 0;
+  const displays = document.querySelectorAll(`.amount-display[data-pf="${pfType}"]`);
+  const hint = document.getElementById(`amount-hint-${pfType}`);
+
+  if (amount <= 0) {
+    displays.forEach(el => el.style.display = 'none');
+    if (hint) hint.textContent = '';
+    return;
+  }
+
+  const fmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  displays.forEach(el => {
+    const weight = parseFloat(el.dataset.weight) || 0;
+    const val = Math.round(amount * weight / 100);
+    el.textContent = fmt.format(val);
+    el.style.display = 'block';
+  });
+
+  if (hint) {
+    const n = displays.length;
+    hint.textContent = `${n} positions · ${fmt.format(amount)} répartis`;
+  }
+};
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
