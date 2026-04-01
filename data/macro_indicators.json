@@ -3,31 +3,30 @@
     "date": "2026-04-01",
     "brent_usd": 103.79,
     "brent_usd_avg5d": 103.79,
-    "gold_usd": 4737.89849,
-    "silver_usd": 75.14563,
-    "vix": 30.61,
+    "gold_usd": 4779.77101,
+    "silver_usd": 75.5844,
+    "vix": 25.25,
     "fed_funds_rate": 3.64,
     "fed_funds_rate_delta_6m": -0.24,
     "cpi_yoy_pct": 2.66,
     "cpi_index": 327.46,
-    "ig_spread_bps": 116.0,
-    "hy_spread_bps": 346.0,
+    "ig_spread_bps": 113.0,
+    "hy_spread_bps": 328.0,
     "us_10y_yield": 4.35,
     "us_2y_yield": 3.82,
     "yield_curve_2s10s": 53.0,
     "breakeven_5y": 2.54,
-    "sp500_level": 655.08,
+    "sp500_level": 656.73,
     "trade_weighted_usd": 120.8851,
-    "eurusd": 1.162,
-    "nasdaq_change_1d_pct": 0.97716612,
-    "xlu_perf_1d_pct": 1.3300318e-06,
-    "xle_perf_1d_pct": -1.42017,
+    "eurusd": 1.16098,
+    "nasdaq_change_1d_pct": 1.52032,
+    "xlu_perf_1d_pct": -0.02178991,
+    "xle_perf_1d_pct": -3.64838,
     "cpi_core_mom_pct": 0.22,
     "pce_yoy_pct": 2.83,
-    "vix_trend": "Stable",
-    "hy_spread_trend": "Stable",
+    "vix_trend": "Falling",
+    "hy_spread_trend": "Tightening",
     "_stress_flags": [
-      "volatility_stress",
       "energy_shock"
     ]
   },
@@ -37,32 +36,32 @@
       "source": "fred_DCOILBRENTEU_fallback",
       "date": "2026-03-23",
       "avg_5d": 103.79,
-      "_td_rejected": 13.665,
-      "_td_reject_reason": "insane_price (13.665, divergence 87%)"
+      "_td_rejected": 13.56,
+      "_td_reject_reason": "insane_price (13.56, divergence 87%)"
     },
     "gold": {
-      "price": 4737.89849,
-      "change_1d_pct": 1.15636,
+      "price": 4779.77101,
+      "change_1d_pct": 2.050356,
       "datetime": "2026-04-01"
     },
     "silver": {
-      "price": 75.14563,
-      "change_1d_pct": -0.16450233
+      "price": 75.5844,
+      "change_1d_pct": 0.41843005
     },
     "trade_weighted_usd": {
       "value": 120.8851,
       "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130."
     },
     "sp500": {
-      "level": 655.08,
-      "change_1d_pct": 0.72884537
+      "level": 656.73,
+      "change_1d_pct": 0.9825588
     },
     "vix": {
-      "value": 30.61,
-      "date": "2026-03-30",
-      "change": -0.44,
-      "trend": "Stable",
-      "delta": -0.4
+      "value": 25.25,
+      "date": "2026-03-31",
+      "change": -5.36,
+      "trend": "Falling",
+      "delta": -5.4
     },
     "fed_rate": {
       "value": 3.64,
@@ -75,16 +74,16 @@
       "date": "2026-02-01"
     },
     "ig_spread": {
-      "value_pct": 1.16,
-      "value_bps": 116.0,
-      "date": "2026-03-30"
+      "value_pct": 1.13,
+      "value_bps": 113.0,
+      "date": "2026-03-31"
     },
     "hy_spread": {
-      "value_pct": 3.46,
-      "value_bps": 346.0,
-      "date": "2026-03-30",
-      "trend": "Stable",
-      "delta_bps": 4.0
+      "value_pct": 3.28,
+      "value_bps": 328.0,
+      "date": "2026-03-31",
+      "trend": "Tightening",
+      "delta_bps": -18.0
     },
     "us_10y_yield": {
       "value": 4.35,
@@ -102,20 +101,20 @@
       "date": "2026-03-31"
     },
     "eurusd": {
-      "price": 1.162,
-      "change_1d_pct": 0.5251183
+      "price": 1.16098,
+      "change_1d_pct": 0.43687767
     },
     "nasdaq": {
-      "level": 582.82,
-      "change_1d_pct": 0.97716612
+      "level": 585.955,
+      "change_1d_pct": 1.52032
     },
     "xlu": {
-      "price": 45.89,
-      "change_1d_pct": 1.3300318e-06
+      "price": 45.88,
+      "change_1d_pct": -0.02178991
     },
     "xle": {
-      "price": 60.39,
-      "change_1d_pct": -1.42017
+      "price": 59.025,
+      "change_1d_pct": -3.64838
     },
     "cpi_core": {
       "index_value": 333.512,
@@ -128,24 +127,22 @@
       "date": "2026-01-01"
     },
     "_flags": [
-      "volatility_stress",
       "energy_shock"
     ],
-    "_updated": "2026-04-01T13:34:37.919664",
+    "_updated": "2026-04-01T15:36:53.745212",
     "_sources": [
       "twelve_data",
       "fred"
     ]
   },
   "_meta": {
-    "updated": "2026-04-01T13:34:37.920306",
+    "updated": "2026-04-01T15:36:53.745923",
     "sources": [
       "twelve_data",
       "fred"
     ],
     "fields": 27,
     "stress_flags": [
-      "volatility_stress",
       "energy_shock"
     ]
   }
