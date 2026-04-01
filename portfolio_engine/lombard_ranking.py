@@ -1,6 +1,6 @@
 """
 lombard_ranking.py — Classement Lombard rendement/qualité
-Version: 1.0.0
+Version: 2.0.0
 
 Lit les stocks_*.json, classe par score Lombard composite
 (yield × quality × LTV estimé), exporte data/lombard_ranking.json
@@ -88,16 +88,39 @@ def compute_lombard_score(stock: Dict, lombard_rate: float = 3.0) -> Optional[Di
     carry_net = dy - lombard_rate
     leveraged_carry = carry_net * (ltv / (1 - ltv)) if ltv < 1 else 0
     
-    # Score composite
+    # Score composite v2.0
     qs = _safe_float(stock.get("quality_score")) or 50
     vol = _safe_float(stock.get("volatility_3y")) or _safe_float(stock.get("vol")) or 20
-    
+    payout = _safe_float(stock.get("payout_ratio_ttm")) or _safe_float(stock.get("payout_ratio")) or 50
+    eps_surp = _safe_float(stock.get("eps_surprise_avg_2q"))
+
     carry_score = max(-30, min(40, carry_net * 15))
     quality_score = max(-15, min(25, (qs - 50) * 0.5))
     safety_score = max(-15, min(15, (25 - vol) * 1.0))
     ltv_score = max(-10, min(20, (ltv - 0.50) * 80))
-    
-    lombard_score = carry_score + quality_score + safety_score + ltv_score
+
+    # v2.0: Payout ratio — payout > 90% = dividende en danger
+    payout_score = 0
+    if payout < 50:
+        payout_score = 5   # Très soutenable
+    elif payout < 70:
+        payout_score = 2   # Soutenable
+    elif payout > 100:
+        payout_score = -10  # Danger de cut
+    elif payout > 90:
+        payout_score = -5   # Risqué
+
+    # v2.0: EPS Surprise — beats réguliers = dividende sécurisé
+    surprise_score = 0
+    if eps_surp is not None:
+        if eps_surp > 5:
+            surprise_score = 5   # Beats réguliers
+        elif eps_surp > 0:
+            surprise_score = 2   # Légers beats
+        elif eps_surp < -10:
+            surprise_score = -5  # Misses importants = risque cut
+
+    lombard_score = carry_score + quality_score + safety_score + ltv_score + payout_score + surprise_score
     
     # Margin call: drawdown avant que LTV effectif > 80%
     margin_call_dd = (1 - ltv / 0.80) * 100 if ltv < 0.80 else 0
@@ -139,7 +162,7 @@ def generate_lombard_ranking(
         Dict avec classements par taux et résumé
     """
     if lombard_rates is None:
-        lombard_rates = [2.0, 2.5, 3.0, 3.5, 4.0]
+        lombard_rates = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
     
     logger.info("=" * 60)
     logger.info("📊 LOMBARD RANKING — Classement rendement/crédit")
@@ -218,6 +241,8 @@ def generate_lombard_ranking(
                 "buffett_score": _safe_float(s.get("buffett_score")),
                 "buffett_grade": s.get("buffett_grade"),
                 "pe_ratio": _safe_float(s.get("pe_ratio")),
+                "payout_ratio": _safe_float(s.get("payout_ratio_ttm")) or _safe_float(s.get("payout_ratio")),
+                "eps_surprise_avg_2q": _safe_float(s.get("eps_surprise_avg_2q")),
                 "beta": _safe_float(s.get("beta")),
                 "volatility": _safe_float(s.get("volatility_3y")) or _safe_float(s.get("vol")),
                 "market_cap": _safe_float(s.get("market_cap")),
@@ -227,9 +252,11 @@ def generate_lombard_ranking(
         
         # Trier par lombard_score décroissant
         scored.sort(key=lambda x: x["lombard_score"], reverse=True)
-        
-        # Garder le top N
+
+        # Garder le top N et ajouter les rangs
         top = scored[:max_positions]
+        for i, s in enumerate(top):
+            s["rank"] = i + 1
         
         # Stats du classement
         if top:
@@ -262,7 +289,7 @@ def generate_lombard_ranking(
     output = {
         "_meta": {
             "generated_at": datetime.now().isoformat(),
-            "generator": "lombard_ranking.py v1.0",
+            "generator": "lombard_ranking.py v2.0",
             "universe_size": len(all_stocks),
             "eligible_count": len(eligible),
             "lombard_rates_tested": lombard_rates,
