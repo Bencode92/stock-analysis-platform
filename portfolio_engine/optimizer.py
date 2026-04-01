@@ -3412,7 +3412,26 @@ class PortfolioOptimizer:
         allocation = self._post_process_allocation(
             allocation, candidates, profile, prev_weights
         )
-        
+
+        # v7.2.1 P2: Cap post-redistribution — aucune position > max_single_position
+        max_cap = profile.max_single_position
+        capped_any = True
+        for _cap_iter in range(3):
+            capped_any = False
+            for aid, w in list(allocation.items()):
+                if w > max_cap + 0.1:
+                    excess = w - max_cap
+                    allocation[aid] = max_cap
+                    # Redistribuer l'excès proportionnellement aux autres
+                    others = {k: v for k, v in allocation.items() if k != aid and v > 0.5}
+                    if others:
+                        total_others = sum(others.values())
+                        for ok in others:
+                            allocation[ok] += excess * (allocation[ok] / total_others)
+                    capped_any = True
+            if not capped_any:
+                break
+
         return allocation
     
     def _adjust_for_vol_target(
