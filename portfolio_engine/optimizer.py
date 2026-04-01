@@ -4011,15 +4011,22 @@ class PortfolioOptimizer:
         # C'est le dernier garde-fou absolu avant le return
         # ═══════════════════════════════════════════════════════════════
         max_cap = profile.max_single_position
+        # Debug: log format pour identifier si % ou décimal
+        _max_alloc = max(allocation.values()) if allocation else 0
+        logger.info(f"[FINAL GUARD {profile.name}] max_cap={max_cap}, max_alloc={_max_alloc:.4f}, n={len(allocation)}")
+        # Si allocation est en décimal (0.14), convertir le cap
+        if _max_alloc < 1.5 and _max_alloc > 0:
+            max_cap = max_cap / 100.0  # 13.0 → 0.13
+            logger.info(f"[FINAL GUARD {profile.name}] Allocation en décimal, cap ajusté à {max_cap}")
         for _guard_iter in range(5):
-            over = [(aid, w) for aid, w in allocation.items() if w > max_cap + 0.1]
+            over = [(aid, w) for aid, w in allocation.items() if w > max_cap + 0.001]
             if not over:
                 break
             # Cap et redistribuer vers les plus petites positions
             for aid, w in over:
                 excess = w - max_cap
                 allocation[aid] = max_cap
-                logger.info(f"[FINAL GUARD {profile.name}] {aid}: {w:.1f}% → {max_cap:.1f}%")
+                logger.warning(f"[FINAL GUARD {profile.name}] {aid}: {w:.4f} → {max_cap:.4f} (excess {excess:.4f})")
                 # Redistribuer vers les positions les plus petites (pas les bonds déjà proches du cap)
                 recipients = sorted(
                     [(k, v) for k, v in allocation.items() if k != aid and v < max_cap - 1],
