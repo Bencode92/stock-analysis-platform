@@ -3413,49 +3413,7 @@ class PortfolioOptimizer:
             allocation, candidates, profile, prev_weights
         )
 
-        # v7.3 FIX: Cap post-redistribution — cap TOUS les over-limit en une passe
-        # puis redistribuer vers les non-bonds (évite le ping-pong bond→bond)
-        # Runs AFTER _post_process_allocation to be the absolute last step
-        max_cap = profile.max_single_position
-        bond_ids = set(aid for aid in allocation
-                       if any(c.id == aid and c.category == "Obligations" for c in candidates))
-
-        for _final_cap_iter in range(3):
-            excess_total = 0.0
-            for aid, w in list(allocation.items()):
-                if w > max_cap + 0.1:
-                    excess_total += w - max_cap
-                    allocation[aid] = max_cap
-                    logger.info(f"[CAP] {aid}: {w:.1f}% → {max_cap:.1f}% (excess {w - max_cap:.1f}%)")
-
-            if excess_total <= 0:
-                break
-
-            # Redistribuer vers les non-bonds sous le cap
-            equity_ids = [aid for aid in allocation
-                          if aid not in bond_ids and allocation[aid] < max_cap - 0.5]
-            if equity_ids:
-                per_eq = excess_total / len(equity_ids)
-                for aid in equity_ids:
-                    allocation[aid] = min(max_cap, allocation[aid] + per_eq)
-            else:
-                # Pas d'equity sous le cap — redistribuer vers tous les non-bonds
-                non_bond = [aid for aid in allocation if aid not in bond_ids]
-                if non_bond:
-                    per_nb = excess_total / len(non_bond)
-                    for aid in non_bond:
-                        allocation[aid] += per_nb
-
-        # Final: normaliser à 100% sans dépasser max_cap
-        total = sum(allocation.values())
-        if abs(total - 100) > 0.5:
-            factor = 100.0 / total
-            for aid in allocation:
-                allocation[aid] *= factor
-                # Re-cap si la normalisation a poussé au-dessus
-                if allocation[aid] > max_cap + 0.1:
-                    allocation[aid] = max_cap
-
+        # Cap déplacé dans optimize() comme FINAL GUARD (après tout post-processing)
         return allocation
     
     def _adjust_for_vol_target(
@@ -4046,7 +4004,37 @@ class PortfolioOptimizer:
                 )
             except Exception as e:
                 logger.warning(f"Constraint report generation failed: {e}")
-        
+
+        # ═══════════════════════════════════════════════════════════════
+        # v7.3 FINAL GUARD: Aucune position > max_single_position
+        # Exécuté APRÈS tout le post-processing (y compris _adjust_to_100)
+        # C'est le dernier garde-fou absolu avant le return
+        # ═══════════════════════════════════════════════════════════════
+        max_cap = profile.max_single_position
+        for _guard_iter in range(5):
+            over = [(aid, w) for aid, w in allocation.items() if w > max_cap + 0.1]
+            if not over:
+                break
+            # Cap et redistribuer vers les plus petites positions
+            for aid, w in over:
+                excess = w - max_cap
+                allocation[aid] = max_cap
+                logger.info(f"[FINAL GUARD {profile.name}] {aid}: {w:.1f}% → {max_cap:.1f}%")
+                # Redistribuer vers les positions les plus petites (pas les bonds déjà proches du cap)
+                recipients = sorted(
+                    [(k, v) for k, v in allocation.items() if k != aid and v < max_cap - 1],
+                    key=lambda x: x[1]
+                )
+                if recipients:
+                    per_r = excess / len(recipients)
+                    for rk, rv in recipients:
+                        allocation[rk] = min(max_cap, rv + per_r)
+            # Renormaliser à 100% sans dépasser le cap
+            total = sum(allocation.values())
+            if abs(total - 100) > 0.5:
+                smallest = min(allocation, key=allocation.get)
+                allocation[smallest] += 100 - total
+
         return allocation, diagnostics
     
     def _enforce_asset_count(
