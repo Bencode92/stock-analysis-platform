@@ -5914,6 +5914,33 @@ def save_portfolios(portfolios: Dict, assets: list):
     except Exception as e:
         logger.warning(f"⚠️ [ALLOC_RULES] Error: {e} — portfolios unchanged")
     
+    # v7.3 FINAL GUARD: Cap _tickers après tout le post-processing de save_portfolios
+    from portfolio_engine.optimizer import PROFILES as _PROFILES
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data:
+            continue
+        _t = v1_data[_p_name].get("_tickers", {})
+        if not _t:
+            continue
+        _max_cap = _PROFILES[_p_name].max_single_position / 100  # 0.13 pour Stable
+        _capped = False
+        for _tk, _w in list(_t.items()):
+            if _w > _max_cap + 0.001:
+                _excess = _w - _max_cap
+                _t[_tk] = _max_cap
+                # Redistribuer vers la plus petite position
+                _others = sorted([(k, v) for k, v in _t.items() if k != _tk], key=lambda x: x[1])
+                if _others:
+                    _t[_others[0][0]] += _excess
+                logger.info(f"[FINAL GUARD {_p_name}] {_tk}: {_w*100:.1f}% → {_max_cap*100:.1f}%")
+                _capped = True
+        if _capped:
+            # Renormaliser à 1.0
+            _total = sum(_t.values())
+            if abs(_total - 1.0) > 0.001:
+                for _tk in _t:
+                    _t[_tk] /= _total
+
     v1_path = CONFIG["output_path"]
     with open(v1_path, "w", encoding="utf-8") as f:
         json.dump(v1_data, f, ensure_ascii=False, indent=2)
