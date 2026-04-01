@@ -29,7 +29,7 @@ def estimate_ltv(stock: Dict) -> float:
     Estime le LTV (Loan-to-Value) qu'une banque accorderait.
     Basé sur: market cap, quality score, volatilité, beta.
     """
-    mcap = _safe_float(stock.get("market_cap", 0))
+    mcap = _safe_float(stock.get("market_cap")) or 0
     is_etf = "etf" in (stock.get("type", "") or "").lower()
     
     # Base LTV par taille
@@ -206,7 +206,7 @@ def generate_lombard_ranking(
         dy = _safe_float(s.get("dividend_yield"))
         if dy is None or dy < min_yield:
             continue
-        mcap = _safe_float(s.get("market_cap", 0))
+        mcap = _safe_float(s.get("market_cap")) or 0
         if mcap > 0 and mcap < min_market_cap:
             continue
         qs = _safe_float(s.get("quality_score"))
