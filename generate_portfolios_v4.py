@@ -6389,7 +6389,7 @@ def main():
             
             lombard_results = generate_lombard_ranking(
                 config=_lombard_config,
-                lombard_rates=_lombard_yaml.get("rates", [2.0, 2.5, 3.0, 3.5, 4.0]),
+                lombard_rates=_lombard_yaml.get("rates", [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]),
                 min_yield=_lombard_yaml.get("min_yield", 2.0),
                 min_quality=_lombard_yaml.get("min_quality", 0),
                 min_market_cap=_lombard_yaml.get("min_market_cap", 2e9),
