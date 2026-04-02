@@ -85,7 +85,9 @@ const LombardRenderer = {
     // Find closest available rate
     const targetRate = this.state.rate;
     const closestRate = rates.reduce((prev, curr) => Math.abs(curr - targetRate) < Math.abs(prev - targetRate) ? curr : prev);
-    const rd = this.state.rankings[closestRate] || this.state.rankings[String(closestRate)];
+    // Keys in JSON are strings like "2.0", "2.5" — need exact match
+    const rateKey = closestRate.toFixed(1);
+    const rd = this.state.rankings[rateKey] || this.state.rankings[String(closestRate)];
     if (!rd) { container.innerHTML = '<p style="color:var(--text-muted);">Pas de données pour ce taux</p>'; container.style.opacity = '1'; return; }
 
     const stocks = rd.stocks || [];
@@ -250,7 +252,8 @@ const LombardRenderer = {
     const ltv = (parseFloat(document.getElementById('lomb-ltv')?.value) || 60) / 100;
     const env = this.ENVELOPES[this.state.envelope];
     const rate = this.state.rate;
-    const rd = this.state.rankings?.[rate] || this.state.rankings?.[String(rate)];
+    const rk = typeof rate === 'number' ? rate.toFixed(1) : String(rate);
+    const rd = this.state.rankings?.[rk] || this.state.rankings?.[String(rate)];
     const avgYield = rd?.summary?.avg_yield || 5.0;
 
     const emprunt = capital * ltv;
