@@ -148,18 +148,17 @@ const LombardRenderer = {
     </div>`;
 
     // ═══════════════════════════════════════════════════
-    // SECTION 3: Simulateur unifié (sim + optimiseur)
+    // SECTION 3: Optimiseur
     // ═══════════════════════════════════════════════════
     html += `
     <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
-      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div style="display:flex;align-items:end;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem;">
         <div>
           <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;">Montant</label>
           <div style="position:relative;">
             <input id="lomb-capital" type="number" value="100000" min="10000" step="10000"
               style="width:120px;padding:0.5rem 2rem 0.5rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
-                background:rgba(255,255,255,0.05);color:#fff;font-size:0.9rem;font-family:var(--font-mono);"
-              oninput="LombardRenderer._updateSim()">
+                background:rgba(255,255,255,0.05);color:#fff;font-size:0.9rem;font-family:var(--font-mono);">
             <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:0.7rem;">€</span>
           </div>
         </div>
@@ -168,7 +167,7 @@ const LombardRenderer = {
           <div style="display:flex;align-items:center;gap:0.4rem;">
             <input id="lomb-ltv" type="range" min="20" max="70" value="${avgLTV}" step="5"
               style="width:100px;accent-color:${C};"
-              oninput="document.getElementById('lomb-ltv-val').textContent=this.value+'%'; LombardRenderer._updateSim()">
+              oninput="document.getElementById('lomb-ltv-val').textContent=this.value+'%'">
             <span id="lomb-ltv-val" style="font-size:0.8rem;color:${C};font-weight:700;font-family:var(--font-mono);">${avgLTV}%</span>
           </div>
         </div>
@@ -184,22 +183,14 @@ const LombardRenderer = {
             style="width:50px;padding:0.4rem;border-radius:6px;border:1px solid rgba(255,255,255,0.12);
               background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;">
         </div>
-        <div id="lomb-sim-result" style="display:flex;gap:1.2rem;flex-wrap:wrap;"></div>
-      </div>
-
-      <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:1rem;">
         <button onclick="LombardRenderer._runOptimizer()"
           style="padding:0.6rem 1.5rem;border-radius:8px;border:none;background:linear-gradient(135deg,${C},${C}dd);
             color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;"
           onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 15px ${C}44'"
           onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
-          <i class="fas fa-bolt" style="margin-right:0.3rem;"></i> Optimiser le portefeuille
+          <i class="fas fa-bolt" style="margin-right:0.3rem;"></i> Optimiser
         </button>
-        <span style="font-size:0.72rem;color:var(--text-muted);margin-left:0.8rem;">
-          Teste de <strong id="lomb-range-label">3 à 10</strong> actions pour maximiser le profit
-        </span>
       </div>
-
       <div id="lomb-opt-result"></div>
     </div>`;
 
@@ -259,7 +250,7 @@ const LombardRenderer = {
 
     container.innerHTML = html;
     container.style.opacity = '1';
-    setTimeout(() => this._updateSim(), 50);
+    // No auto-calculation — user clicks "Optimiser" button
   },
 
   // ── Portfolio Optimizer v2 ──
@@ -497,46 +488,7 @@ const LombardRenderer = {
       </div>`;
   },
 
-  // ── Simulator calculation (live) ──
-  _updateSim() {
-    const capital = parseFloat(document.getElementById('lomb-capital')?.value) || 100000;
-    const ltv = (parseFloat(document.getElementById('lomb-ltv')?.value) || 60) / 100;
-    const env = this.ENVELOPES[this.state.envelope];
-    const rate = this.state.rate;
-    const rk = rate.toFixed(1);
-    const rd = this.state.rankings?.[rk] || this.state.rankings?.[String(rate)];
-    const avgYield = rd?.summary?.avg_yield || 5.0;
-
-    const emprunt = capital * ltv;
-    const total = capital + emprunt;
-    const coutAnnuel = emprunt * rate / 100;
-    const revenuNet = total * avgYield / 100 * (1 - env.taxDiv);
-    const profit = revenuNet - coutAnnuel;
-    const rendement = (profit / capital) * 100;
-
-    const fmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    const el = document.getElementById('lomb-sim-result');
-    if (!el) return;
-
-    el.innerHTML = `
-      <div style="text-align:center;">
-        <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Emprunt</div>
-        <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">${fmt.format(emprunt)}</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Coût crédit/an</div>
-        <div style="font-size:1rem;font-weight:700;color:#f44336;font-family:var(--font-mono);">−${fmt.format(coutAnnuel)}</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Revenu net/an</div>
-        <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">+${fmt.format(revenuNet)}</div>
-      </div>
-      <div style="text-align:center;padding:0.3rem 0.8rem;background:${profit > 0 ? 'rgba(76,175,80,0.08)' : 'rgba(244,67,54,0.08)'};border-radius:8px;">
-        <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Profit net/an</div>
-        <div style="font-size:1.2rem;font-weight:800;color:${profit > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${profit > 0 ? '+' : ''}${fmt.format(profit)}</div>
-        <div style="font-size:0.6rem;color:${profit > 0 ? '#81c784' : '#ef9a9a'};">${rendement.toFixed(1)}% sur capital</div>
-      </div>`;
-  },
+  // (simulator removed — all results shown via optimizer)
 };
 
 // ── Auto-init when DOM ready ──
