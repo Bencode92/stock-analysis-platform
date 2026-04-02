@@ -559,8 +559,20 @@
 
                 // Filter by envelope eligibility
                 const filteredStocks = env.eligible === 'eu_only'
-                    ? stocks.filter(s => ['EU-FR','EU-DE','EU-NL','EU-IT','EU-ES','EU-BE','EU-CH','EU','Europe','Royaume-Uni','UK'].some(r => (s.region||'').includes(r)))
+                    ? stocks.filter(s => {
+                        const r = (s.region || '').toUpperCase();
+                        return r === 'EUROPE' || r === 'EU' || r.startsWith('EU-');
+                      })
                     : stocks;
+
+                // If PEA has no eligible stocks, show message
+                if (env.eligible === 'eu_only' && filteredStocks.length === 0) {
+                    container.innerHTML = `<p style="color:#ff9800;text-align:center;padding:2rem;">
+                        <i class="fas fa-exclamation-triangle"></i> Aucune action européenne éligible au PEA dans le classement Lombard actuel.
+                    </p>`;
+                    container.style.opacity = '1';
+                    return;
+                }
 
                 // Rate selector + custom input + envelope info
                 const availableRates = rates.length ? rates : [2.0, 2.5, 3.0, 3.5, 4.0];
