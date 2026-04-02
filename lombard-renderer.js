@@ -253,12 +253,47 @@ const LombardRenderer = {
     // No auto-calculation — user clicks "Optimiser" button
   },
 
-  // ── Portfolio Optimizer v2 ──
+  // ── Portfolio Optimizer v3 ──
   // Constraints
   MAX_WEIGHT: 0.15,       // 15% max per position
-  MIN_WEIGHT: 0.08,       // 8% min per position
+  MIN_WEIGHT: 0.05,       // 5% min per position (was 8%, expert rec: allow differentiation)
   MAX_SECTOR_PCT: 0.25,   // 25% max per sector
   MIN_MARGIN_CALL_DD: 20, // Exclude if margin call drawdown < 20%
+
+  // Sector correlation matrix (calibrated from covariance v7.2 benchmark)
+  // Used in vol_portfolio calculation instead of assuming corr=0
+  SECTOR_CORR: {
+    'Finance|Finance': 0.70,
+    'Finance|Immobilier': 0.55,
+    'Finance|Industries': 0.35,
+    'Finance|Énergie': 0.30,
+    'Finance|Biens de consommation de base': 0.25,
+    'Finance|Biens de consommation cycliques': 0.40,
+    'Finance|La communication': 0.35,
+    'Finance|Santé': 0.20,
+    'Immobilier|Immobilier': 0.65,
+    'Immobilier|Biens de consommation de base': 0.15,
+    'Immobilier|Énergie': 0.20,
+    'Industries|Industries': 0.55,
+    'Industries|Énergie': 0.45,
+    'Industries|Biens de consommation cycliques': 0.50,
+    'Énergie|Énergie': 0.65,
+    'Énergie|Biens de consommation de base': 0.10,
+    'Biens de consommation de base|Biens de consommation de base': 0.50,
+    'Biens de consommation de base|Santé': 0.40,
+    'Biens de consommation cycliques|Biens de consommation cycliques': 0.55,
+    'La communication|La communication': 0.50,
+    'La communication|Biens de consommation cycliques': 0.45,
+    'Santé|Santé': 0.50,
+  },
+  DEFAULT_CORR: 0.25,
+
+  _getSectorCorr(sec1, sec2) {
+    if (sec1 === sec2) return this.SECTOR_CORR[`${sec1}|${sec2}`] || 0.50;
+    const key1 = `${sec1}|${sec2}`;
+    const key2 = `${sec2}|${sec1}`;
+    return this.SECTOR_CORR[key1] || this.SECTOR_CORR[key2] || this.DEFAULT_CORR;
+  },
 
   _buildPortfolioForN(stocks, nPos, env, rate) {
     const maxPerSector = Math.max(1, Math.floor(nPos * this.MAX_SECTOR_PCT) || 1);
@@ -271,11 +306,12 @@ const LombardRenderer = {
       const quality = (s.quality_score || 50) / 100;
       const payout = s.payout_ratio || 50;
       const payoutAdj = Math.max(0.2, Math.min(1.0, 1.0 - Math.max(0, payout - 70) / 60));
-      // Composite: carry (40%) + quality (30%) + safety (30%)
+      // Composite: carry (35%) + quality (25%) + safety (40%)
+      // Safety weighted higher: Lombard risk is asymmetric (margin call = 100% loss)
       const safetyScore = Math.max(0, (35 - vol) / 35); // 0 at vol=35, 1 at vol=0
-      const compositeScore = 0.40 * Math.max(0, carryFiscal / 5) * payoutAdj
-                           + 0.30 * quality
-                           + 0.30 * safetyScore;
+      const compositeScore = 0.35 * Math.max(0, carryFiscal / 5) * payoutAdj
+                           + 0.25 * quality
+                           + 0.40 * safetyScore;
       return { ...s, yieldNet, carryFiscal, vol, compositeScore };
     }).sort((a, b) => b.compositeScore - a.compositeScore);
 
@@ -354,12 +390,20 @@ const LombardRenderer = {
     const total = capital + emprunt;
     const coutCredit = emprunt * rate / 100;
     let totalDivNet = 0;
-    let portVolSq = 0; // Sum of (weight² × vol²) — simplified portfolio variance (no correlation)
-    for (const s of portfolio) {
-      const montant = total * s.weight;
-      totalDivNet += montant * (s.dividend_yield || 0) / 100 * (1 - env.taxDiv);
-      const vol = (s.volatility || 20) / 100;
-      portVolSq += s.weight * s.weight * vol * vol;
+    // Portfolio variance with sector correlation matrix
+    // vol² = Σ_i Σ_j w_i × w_j × σ_i × σ_j × ρ(sector_i, sector_j)
+    let portVolSq = 0;
+    for (let i = 0; i < portfolio.length; i++) {
+      const si = portfolio[i];
+      const montant = total * si.weight;
+      totalDivNet += montant * (si.dividend_yield || 0) / 100 * (1 - env.taxDiv);
+      const volI = (si.volatility || 20) / 100;
+      for (let j = 0; j < portfolio.length; j++) {
+        const sj = portfolio[j];
+        const volJ = (sj.volatility || 20) / 100;
+        const corr = this._getSectorCorr(si.sector || 'Autre', sj.sector || 'Autre');
+        portVolSq += si.weight * sj.weight * volI * volJ * corr;
+      }
     }
     const profit = totalDivNet - coutCredit;
     const portVol = Math.sqrt(portVolSq);
