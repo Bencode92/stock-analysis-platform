@@ -296,9 +296,8 @@
             </div>
         </section>
 
-        <!-- Lombard section removed — now inside tab panel -->
+        <!-- Lombard envelope cards (hidden, moved to panel by JS) -->
         <div id="lombard-section-hidden" style="display:none;">
-            <!-- Envelope selector -->
             <div id="envelope-selector" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:2rem;">
                 <div class="envelope-card" data-env="cto" onclick="window._selectEnvelope('cto')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid #ff9800;background:rgba(255,152,0,0.08);transition:all 0.3s;">
                     <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
@@ -538,21 +537,9 @@
         };
         let activeEnvelope = 'cto';
 
-        window._selectEnvelope = function(env) {
-            activeEnvelope = env;
-            // Update card styling
-            document.querySelectorAll('.envelope-card').forEach(card => {
-                const isActive = card.dataset.env === env;
-                const envCfg = ENVELOPES[card.dataset.env];
-                card.style.borderColor = isActive ? envCfg.color : 'rgba(255,255,255,0.1)';
-                card.style.background = isActive ? `${envCfg.color}11` : 'rgba(255,255,255,0.02)';
-            });
-            render(ENVELOPES[env].defaultRate);
-        };
-
         try {
             const resp = await fetch('data/lombard_ranking.json');
-            if (!resp.ok) throw new Error('Not found');
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
             const data = await resp.json();
 
             const rankings = data.rankings || {};
@@ -761,11 +748,26 @@
             }
 
             window._renderLombard = render;
-            render(activeRate);
+
+            window._selectEnvelope = function(env) {
+                activeEnvelope = env;
+                document.querySelectorAll('.envelope-card').forEach(card => {
+                    const isActive = card.dataset.env === env;
+                    const envCfg = ENVELOPES[card.dataset.env];
+                    card.style.borderColor = isActive ? envCfg.color : 'rgba(255,255,255,0.1)';
+                    card.style.background = isActive ? `${envCfg.color}11` : 'rgba(255,255,255,0.02)';
+                });
+                render(ENVELOPES[env].defaultRate);
+            };
+
+            // Initial render with CTO default rate
+            const initRate = ENVELOPES[activeEnvelope].defaultRate;
+            render(initRate);
 
         } catch (e) {
+            console.error('[Lombard]', e);
             container.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:1rem;">
-                <i class="fas fa-info-circle"></i> Données Lombard non disponibles
+                <i class="fas fa-info-circle"></i> Données Lombard non disponibles (${e.message || e})
             </p>`;
             container.style.opacity = '1';
         }
