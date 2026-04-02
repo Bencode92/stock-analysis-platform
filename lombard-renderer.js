@@ -189,6 +189,59 @@ const LombardRenderer = {
       </div>
     </div>`;
 
+    // ── Portfolio Optimizer ──
+    html += `
+    <div style="background:linear-gradient(135deg, rgba(255,152,0,0.08), rgba(255,152,0,0.02));border:1px solid rgba(255,152,0,0.2);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
+      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#ffb74d;margin-bottom:1rem;font-weight:700;">
+        <i class="fas fa-magic" style="margin-right:0.4rem;"></i> Optimiseur Portefeuille Lombard
+      </div>
+      <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:1rem;">
+        <div>
+          <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Montant à investir</label>
+          <div style="position:relative;">
+            <input id="lomb-opt-capital" type="number" value="100000" min="10000" step="10000"
+              style="width:130px;padding:0.5rem 2.5rem 0.5rem 0.6rem;border-radius:8px;border:1px solid rgba(255,152,0,0.3);
+                background:rgba(255,255,255,0.05);color:#fff;font-size:0.9rem;font-family:var(--font-mono);"
+              oninput="clearTimeout(window._lo);window._lo=setTimeout(()=>LombardRenderer._renderOptimizer(),300)">
+            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:0.75rem;">€</span>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Nombre d'actions</label>
+          <div style="display:flex;gap:0.3rem;">
+            ${[3, 5, 8, 10].map(n => `
+              <button onclick="document.getElementById('lomb-opt-n').value=${n};LombardRenderer._renderOptimizer()"
+                style="padding:0.4rem 0.8rem;border-radius:8px;border:1px solid rgba(255,152,0,0.2);
+                  background:transparent;color:#ffb74d;font-size:0.85rem;font-weight:700;cursor:pointer;
+                  font-family:var(--font-mono);transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(255,152,0,0.15)'"
+                onmouseout="this.style.background='transparent'">${n}</button>
+            `).join('')}
+            <input id="lomb-opt-n" type="number" value="5" min="2" max="20" step="1"
+              style="width:50px;padding:0.4rem;border-radius:8px;border:1px solid rgba(255,152,0,0.3);
+                background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;"
+              oninput="clearTimeout(window._lo2);window._lo2=setTimeout(()=>LombardRenderer._renderOptimizer(),300)">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">LTV</label>
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <input id="lomb-opt-ltv" type="range" min="20" max="70" value="60" step="5"
+              style="width:100px;accent-color:#ff9800;"
+              oninput="document.getElementById('lomb-opt-ltv-val').textContent=this.value+'%';LombardRenderer._renderOptimizer()">
+            <span id="lomb-opt-ltv-val" style="font-size:0.8rem;color:#ff9800;font-weight:700;font-family:var(--font-mono);">60%</span>
+          </div>
+        </div>
+        <button onclick="LombardRenderer._renderOptimizer()"
+          style="padding:0.5rem 1.2rem;border-radius:8px;border:none;background:linear-gradient(135deg,#ff9800,#f57c00);
+            color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;"
+          onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <i class="fas fa-bolt"></i> Optimiser
+        </button>
+      </div>
+      <div id="lomb-opt-result"></div>
+    </div>`;
+
     // ── Explanation ──
     html += `
     <div style="padding:1rem;background:rgba(255,152,0,0.05);border-left:3px solid #ff9800;border-radius:0 8px 8px 0;margin-bottom:1.5rem;">
@@ -242,8 +295,149 @@ const LombardRenderer = {
     container.innerHTML = html;
     container.style.opacity = '1';
 
-    // Trigger simulator update
-    setTimeout(() => this._updateSim(), 50);
+    // Trigger simulator + optimizer update
+    setTimeout(() => { this._updateSim(); this._renderOptimizer(); }, 50);
+  },
+
+  // ── Portfolio Optimizer ──
+  _buildOptimalPortfolio() {
+    const env = this.ENVELOPES[this.state.envelope];
+    const rk = this.state.rate.toFixed(1);
+    const rd = this.state.rankings?.[rk];
+    if (!rd || !rd.stocks) return [];
+
+    const stocks = env.eligible === 'eu_only'
+      ? rd.stocks.filter(s => (s.region || '').toUpperCase() === 'EUROPE')
+      : rd.stocks;
+
+    const nPos = parseInt(document.getElementById('lomb-opt-n')?.value) || 5;
+    const maxPerSector = Math.max(1, Math.ceil(nPos * 0.5)); // Max 50% same sector
+
+    // Greedy selection: best carry fiscal, sector-diversified
+    const selected = [];
+    const sectorCount = {};
+    for (const s of stocks) {
+      if (selected.length >= nPos) break;
+      const sector = s.sector || 'Autre';
+      if ((sectorCount[sector] || 0) >= maxPerSector) continue;
+      const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
+      const carryFiscal = yieldNet - this.state.rate;
+      if (carryFiscal <= 0) continue; // Only positive carry
+      selected.push({ ...s, yieldNet, carryFiscal });
+      sectorCount[sector] = (sectorCount[sector] || 0) + 1;
+    }
+
+    // If not enough positive carry, fill with best remaining
+    if (selected.length < nPos) {
+      for (const s of stocks) {
+        if (selected.length >= nPos) break;
+        if (selected.find(x => x.ticker === s.ticker)) continue;
+        const sector = s.sector || 'Autre';
+        if ((sectorCount[sector] || 0) >= maxPerSector) continue;
+        const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
+        const carryFiscal = yieldNet - this.state.rate;
+        selected.push({ ...s, yieldNet, carryFiscal });
+        sectorCount[sector] = (sectorCount[sector] || 0) + 1;
+      }
+    }
+
+    // Weight by carry quality (higher carry = more weight), min 10% each
+    if (selected.length === 0) return [];
+    const minW = 0.10;
+    const flexPool = 1 - minW * selected.length;
+    const totalCarry = selected.reduce((s, x) => s + Math.max(0.1, x.carryFiscal + 2), 0);
+    return selected.map(s => {
+      const w = flexPool > 0
+        ? minW + flexPool * (Math.max(0.1, s.carryFiscal + 2) / totalCarry)
+        : 1 / selected.length;
+      return { ...s, weight: w };
+    });
+  },
+
+  _renderOptimizer() {
+    const env = this.ENVELOPES[this.state.envelope];
+    const capital = parseFloat(document.getElementById('lomb-opt-capital')?.value) || 100000;
+    const ltv = (parseFloat(document.getElementById('lomb-opt-ltv')?.value) || 60) / 100;
+    const portfolio = this._buildOptimalPortfolio();
+    const resultEl = document.getElementById('lomb-opt-result');
+    if (!resultEl) return;
+
+    if (portfolio.length === 0) {
+      resultEl.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">Aucune action éligible</p>';
+      return;
+    }
+
+    const emprunt = capital * ltv;
+    const total = capital + emprunt;
+    const coutCredit = emprunt * this.state.rate / 100;
+    const fmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    let totalDivNet = 0;
+    let weightedYield = 0;
+    let rows = '';
+
+    for (const s of portfolio) {
+      const montant = total * s.weight;
+      const divBrut = montant * (s.dividend_yield || 0) / 100;
+      const divNet = divBrut * (1 - env.taxDiv);
+      totalDivNet += divNet;
+      weightedYield += s.weight * (s.dividend_yield || 0);
+
+      rows += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+        <td style="padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:${env.color};">${s.ticker}</td>
+        <td style="padding:0.5rem 0.4rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.78rem;">${s.name || ''}</td>
+        <td style="padding:0.5rem 0.4rem;color:var(--text-secondary);font-size:0.72rem;">${s.sector || ''}</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;">${(s.weight * 100).toFixed(0)}%</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:var(--text-secondary);">${fmt.format(montant)}</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;">${(s.dividend_yield || 0).toFixed(1)}%</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${s.carryFiscal > 0 ? '#4caf50' : '#f44336'};font-weight:700;">${s.carryFiscal > 0 ? '+' : ''}${s.carryFiscal.toFixed(1)}%</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;">${fmt.format(divNet)}<span style="font-size:0.65rem;color:var(--text-muted);">/an</span></td>
+      </tr>`;
+    }
+
+    const profitNet = totalDivNet - coutCredit;
+    const rendCapital = (profitNet / capital) * 100;
+
+    resultEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.8rem;margin-bottom:1.2rem;">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Capital total</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#fff;font-family:var(--font-mono);">${fmt.format(total)}</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">${fmt.format(capital)} + ${fmt.format(emprunt)}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Yield moyen</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">${weightedYield.toFixed(1)}%</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Dividendes net/an</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">+${fmt.format(totalDivNet)}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Coût crédit/an</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#f44336;font-family:var(--font-mono);">−${fmt.format(coutCredit)}</div>
+        </div>
+        <div style="background:${profitNet > 0 ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)'};border-radius:8px;padding:0.8rem;text-align:center;">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Profit net/an</div>
+          <div style="font-size:1.3rem;font-weight:800;color:${profitNet > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${profitNet > 0 ? '+' : ''}${fmt.format(profitNet)}</div>
+          <div style="font-size:0.65rem;color:${profitNet > 0 ? '#81c784' : '#ef9a9a'};">${rendCapital.toFixed(1)}% sur capital propre</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead><tr style="border-bottom:2px solid rgba(255,255,255,0.1);">
+            <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Ticker</th>
+            <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Nom</th>
+            <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Secteur</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Poids</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Montant</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Yield</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Carry</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Div net</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   },
 
   // ── Simulator calculation ──
