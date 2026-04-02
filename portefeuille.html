@@ -515,12 +515,14 @@
         const container = document.getElementById('lombard-container');
         if (!container) return;
 
-        // Tab switching: show/hide Lombard vs portfolio content
+        // Tab switching: show/hide Lombard vs portfolio content + correlation
         document.querySelectorAll('.portfolio-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const isLombard = tab.dataset.target === 'portfolio-lombard';
                 const pfContent = document.querySelector('.portfolio-content');
+                const corrSection = document.getElementById('correlation-section');
                 if (pfContent) pfContent.style.display = isLombard ? 'none' : 'block';
+                if (corrSection) corrSection.style.display = isLombard ? 'none' : 'block';
                 if (panel) panel.style.display = isLombard ? 'block' : 'none';
             });
         });
@@ -573,15 +575,16 @@
                     ? stocks.filter(s => ['EU-FR','EU-DE','EU-NL','EU-IT','EU-ES','EU-BE','EU-CH','EU','Europe','Royaume-Uni','UK'].some(r => (s.region||'').includes(r)))
                     : stocks;
 
-                // Rate selector + envelope info
+                // Rate selector + custom input + envelope info
+                const availableRates = rates.length ? rates : [2.0, 2.5, 3.0, 3.5, 4.0];
                 let html = `
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
                     <div style="display:flex;align-items:center;gap:0.5rem;">
                         <i class="fas fa-percentage" style="color:${env.color};"></i>
                         <span style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Taux Lombard</span>
                     </div>
-                    <div style="display:flex;gap:0.4rem;">
-                        ${rates.filter(r => r >= env.rateRange[0] && r <= env.rateRange[1]).map(r => `
+                    <div style="display:flex;gap:0.4rem;align-items:center;">
+                        ${availableRates.map(r => `
                             <button onclick="window._renderLombard(${r})"
                                     style="padding:0.4rem 1rem;border-radius:8px;border:1px solid ${r === closestRate ? env.color : 'rgba(255,255,255,0.1)'};
                                            background:${r === closestRate ? env.color + '22' : 'transparent'};
@@ -589,6 +592,13 @@
                                            font-size:0.85rem;font-weight:700;cursor:pointer;font-family:var(--font-mono);
                                            transition:all 0.2s;">${r}%</button>
                         `).join('')}
+                        <span style="color:rgba(255,255,255,0.2);margin:0 0.3rem;">|</span>
+                        <input type="number" min="0.5" max="8" step="0.25" value="${closestRate}"
+                               style="width:65px;padding:0.4rem 0.5rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
+                                      background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;"
+                               onchange="window._renderLombard(parseFloat(this.value))"
+                               placeholder="Custom">
+                        <span style="font-size:0.7rem;color:var(--text-muted);">%</span>
                     </div>
                     <span style="font-size:0.75rem;color:var(--text-muted);">
                         ${filteredStocks.length} éligibles ${env.eligible === 'eu_only' ? '(EU uniquement)' : ''} · Fiscalité ${Math.round(env.taxDiv * 100)}%
@@ -626,6 +636,73 @@
                         <div style="font-size:1.4rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${summary.avg_quality_score || '?'}</div>
                     </div>
                 </div>`;
+
+                // Lombard simulator
+                html += `
+                <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
+                    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.8rem;">
+                        <i class="fas fa-calculator" style="color:${env.color};"></i> Simulateur Lombard
+                    </div>
+                    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:end;">
+                        <div>
+                            <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Portefeuille nanti</label>
+                            <div style="position:relative;">
+                                <input id="lomb-capital" type="number" value="100000" min="10000" step="10000"
+                                       style="width:130px;padding:0.5rem 2.5rem 0.5rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
+                                              background:rgba(255,255,255,0.05);color:#fff;font-size:0.9rem;font-family:var(--font-mono);"
+                                       oninput="window._updateLombSim()">
+                                <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:0.75rem;">EUR</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">LTV utilisé</label>
+                            <input id="lomb-ltv" type="range" min="20" max="70" value="${summary.avg_ltv || 60}" step="5"
+                                   style="width:120px;accent-color:${env.color};"
+                                   oninput="document.getElementById('lomb-ltv-val').textContent=this.value+'%'; window._updateLombSim()">
+                            <span id="lomb-ltv-val" style="font-size:0.8rem;color:${env.color};font-weight:700;margin-left:0.3rem;">${summary.avg_ltv || 60}%</span>
+                        </div>
+                        <div id="lomb-sim-result" style="display:flex;gap:1.5rem;">
+                        </div>
+                    </div>
+                </div>`;
+
+                // Simulator update function
+                window._updateLombSim = function() {
+                    const capital = parseFloat(document.getElementById('lomb-capital')?.value) || 100000;
+                    const ltv = (parseFloat(document.getElementById('lomb-ltv')?.value) || 60) / 100;
+                    const emprunt = capital * ltv;
+                    const total = capital + emprunt;
+                    const coutAnnuel = emprunt * closestRate / 100;
+                    const yieldBrut = summary.avg_yield || 4.5;
+                    const revenuBrut = total * yieldBrut / 100;
+                    const revenuNet = revenuBrut * (1 - env.taxDiv);
+                    const profit = revenuNet - coutAnnuel;
+                    const rendementSurCapital = (profit / capital) * 100;
+
+                    const fmt = new Intl.NumberFormat('fr-FR', {style:'currency', currency:'EUR', minimumFractionDigits:0, maximumFractionDigits:0});
+                    const el = document.getElementById('lomb-sim-result');
+                    if (!el) return;
+                    el.innerHTML = `
+                        <div style="text-align:center;">
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Emprunt</div>
+                            <div style="font-size:1.1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">${fmt.format(emprunt)}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Coût crédit/an</div>
+                            <div style="font-size:1.1rem;font-weight:700;color:#f44336;font-family:var(--font-mono);">-${fmt.format(coutAnnuel)}</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Revenu net/an</div>
+                            <div style="font-size:1.1rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">+${fmt.format(revenuNet)}</div>
+                        </div>
+                        <div style="text-align:center;padding:0.4rem 1rem;background:${profit > 0 ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)'};border-radius:8px;">
+                            <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Profit net/an</div>
+                            <div style="font-size:1.3rem;font-weight:800;color:${profit > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${profit > 0 ? '+' : ''}${fmt.format(profit)}</div>
+                            <div style="font-size:0.65rem;color:${profit > 0 ? '#81c784' : '#ef9a9a'};">${rendementSurCapital.toFixed(1)}% sur capital propre</div>
+                        </div>
+                    `;
+                };
+                setTimeout(() => window._updateLombSim && window._updateLombSim(), 100);
 
                 // Explanation
                 html += `
