@@ -756,21 +756,100 @@ def pick_lists(
     return favored_list, avoided_list, diag
 
 
-def compute_regime(sectors: Dict[str, Dict[str, Any]], rules: RadarRules) -> Tuple[str, float, str]:
+def _load_macro_signals(data_dir: str = "data") -> Dict[str, Any]:
+    """Load VIX + HY spread from macro_indicators.json for regime override."""
+    import os
+    path = os.path.join(data_dir, "macro_indicators.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        import json
+        with open(path, "r") as f:
+            mi = json.load(f)
+        macro = mi.get("macro_environment", {})
+        return {
+            "vix": _safe_num(macro.get("vix", {}).get("value") if isinstance(macro.get("vix"), dict) else macro.get("vix"), None),
+            "hy_spread_bps": _safe_num(macro.get("hy_spread", {}).get("value_bps") if isinstance(macro.get("hy_spread"), dict) else None, None),
+            "yield_2s10s": _safe_num(macro.get("yield_curve_2s10s", {}).get("value_bps") if isinstance(macro.get("yield_curve_2s10s"), dict) else None, None),
+        }
+    except Exception:
+        return {}
+
+
+def compute_regime(sectors: Dict[str, Dict[str, Any]], rules: RadarRules, data_dir: str = "data") -> Tuple[str, float, str]:
+    # ── Step 1: Sector-based regime (existing logic) ──
     if not sectors:
-        return "neutral", 0.5, "no sector data available"
-    total = len(sectors)
-    pos = sum(1 for d in sectors.values() if _safe_num(d.get("ytd", 0.0), 0.0) > 0)
-    neg = sum(1 for d in sectors.values() if _safe_num(d.get("ytd", 0.0), 0.0) < 0)
-    pos_ratio = pos / total if total else 0.0
-    neg_ratio = neg / total if total else 0.0
-    if pos_ratio >= rules.risk_on_threshold:
-        conf = min(0.95, 0.70 + 0.25 * pos_ratio)
-        return "risk-on", round(conf, 2), f"{pos}/{total} secteurs positifs ({pos_ratio:.0%})"
-    if neg_ratio >= rules.risk_off_threshold:
-        conf = min(0.95, 0.70 + 0.25 * neg_ratio)
-        return "risk-off", round(conf, 2), f"{neg}/{total} secteurs négatifs ({neg_ratio:.0%})"
-    return "neutral", 0.60, f"marché mixte: {pos} pos, {neg} neg / {total}"
+        sector_regime, sector_conf, sector_rationale = "neutral", 0.5, "no sector data available"
+    else:
+        total = len(sectors)
+        pos = sum(1 for d in sectors.values() if _safe_num(d.get("ytd", 0.0), 0.0) > 0)
+        neg = sum(1 for d in sectors.values() if _safe_num(d.get("ytd", 0.0), 0.0) < 0)
+        pos_ratio = pos / total if total else 0.0
+        neg_ratio = neg / total if total else 0.0
+        if pos_ratio >= rules.risk_on_threshold:
+            conf = min(0.95, 0.70 + 0.25 * pos_ratio)
+            sector_regime, sector_conf, sector_rationale = "risk-on", round(conf, 2), f"{pos}/{total} secteurs positifs ({pos_ratio:.0%})"
+        elif neg_ratio >= rules.risk_off_threshold:
+            conf = min(0.95, 0.70 + 0.25 * neg_ratio)
+            sector_regime, sector_conf, sector_rationale = "risk-off", round(conf, 2), f"{neg}/{total} secteurs négatifs ({neg_ratio:.0%})"
+        else:
+            sector_regime, sector_conf, sector_rationale = "neutral", 0.60, f"marché mixte: {pos} pos, {neg} neg / {total}"
+
+    # ── Step 2: Macro override (VIX + HY spread) ── v7.3
+    macro = _load_macro_signals(data_dir)
+    vix = macro.get("vix")
+    hy_spread = macro.get("hy_spread_bps")
+    curve_2s10s = macro.get("yield_2s10s")
+
+    macro_regime = "neutral"
+    macro_signals = []
+
+    if vix is not None:
+        if vix > 35:
+            macro_regime = "risk-off"
+            macro_signals.append(f"VIX={vix:.0f} (crisis >35)")
+        elif vix > 25:
+            macro_signals.append(f"VIX={vix:.0f} (elevated)")
+            if macro_regime != "risk-off":
+                macro_regime = "caution"
+        elif vix < 15:
+            macro_signals.append(f"VIX={vix:.0f} (low vol)")
+            if macro_regime == "neutral":
+                macro_regime = "risk-on"
+
+    if hy_spread is not None:
+        if hy_spread > 500:
+            macro_regime = "risk-off"
+            macro_signals.append(f"HY spread={hy_spread:.0f}bps (crisis >500)")
+        elif hy_spread > 350:
+            macro_signals.append(f"HY spread={hy_spread:.0f}bps (stress)")
+            if macro_regime not in ("risk-off",):
+                macro_regime = "caution"
+
+    if curve_2s10s is not None:
+        if curve_2s10s < 0:
+            macro_signals.append(f"2s10s={curve_2s10s:.0f}bps (inverted — recession signal)")
+            if macro_regime not in ("risk-off",):
+                macro_regime = "caution"
+
+    # ── Step 3: Combine — macro overrides sector if more negative ──
+    REGIME_SEVERITY = {"risk-on": 0, "neutral": 1, "caution": 2, "risk-off": 3}
+    sector_sev = REGIME_SEVERITY.get(sector_regime, 1)
+    macro_sev = REGIME_SEVERITY.get(macro_regime, 1)
+
+    if macro_sev > sector_sev:
+        # Macro override: more stress than sectors suggest
+        final_regime = macro_regime
+        final_conf = max(sector_conf, 0.70)
+        final_rationale = f"{sector_rationale} | MACRO OVERRIDE: {', '.join(macro_signals)}"
+        logger.info(f"[RADAR] Macro override: {sector_regime}→{macro_regime} ({', '.join(macro_signals)})")
+    else:
+        final_regime = sector_regime
+        final_conf = sector_conf
+        macro_note = f" | macro: {', '.join(macro_signals)}" if macro_signals else ""
+        final_rationale = sector_rationale + macro_note
+
+    return final_regime, final_conf, final_rationale
 
 
 # -------------------- Smoothing --------------------
@@ -835,7 +914,7 @@ def generate_market_context_radar(
         logger.warning("⚠️ Aucune donnée marché disponible, contexte neutre")
         return _get_fallback_context(rules)
 
-    regime, confidence, rationale = compute_regime(sectors, rules)
+    regime, confidence, rationale = compute_regime(sectors, rules, data_dir)
 
     # v1.6: Pass regime to pick_lists for floor neutral logic
     favored_sectors, avoided_sectors, sector_diag = pick_lists(
