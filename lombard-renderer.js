@@ -190,9 +190,10 @@ const LombardRenderer = {
     </div>`;
 
     // ── Portfolio Optimizer ──
+    const optLtv = Math.round((summary.avg_ltv || 60));
     html += `
-    <div style="background:linear-gradient(135deg, rgba(255,152,0,0.08), rgba(255,152,0,0.02));border:1px solid rgba(255,152,0,0.2);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
-      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#ffb74d;margin-bottom:1rem;font-weight:700;">
+    <div style="background:var(--surface-1);border:1px solid rgba(255,152,0,0.25);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;">
+      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#ff9800;margin-bottom:1rem;font-weight:700;">
         <i class="fas fa-magic" style="margin-right:0.4rem;"></i> Optimiseur Portefeuille Lombard
       </div>
       <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:end;margin-bottom:1rem;">
@@ -200,46 +201,31 @@ const LombardRenderer = {
           <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Montant à investir</label>
           <div style="position:relative;">
             <input id="lomb-opt-capital" type="number" value="100000" min="10000" step="10000"
-              style="width:130px;padding:0.5rem 2.5rem 0.5rem 0.6rem;border-radius:8px;border:1px solid rgba(255,152,0,0.3);
-                background:rgba(255,255,255,0.05);color:#fff;font-size:0.9rem;font-family:var(--font-mono);"
-              oninput="clearTimeout(window._lo);window._lo=setTimeout(()=>LombardRenderer._renderOptimizer(),300)">
+              style="width:130px;padding:0.5rem 2.5rem 0.5rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
+                background:rgba(255,255,255,0.05);color:#fff;font-size:0.9rem;font-family:var(--font-mono);">
             <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:0.75rem;">€</span>
-          </div>
-        </div>
-        <div>
-          <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Nombre d'actions</label>
-          <div style="display:flex;gap:0.3rem;">
-            ${[3, 5, 8, 10].map(n => `
-              <button onclick="document.getElementById('lomb-opt-n').value=${n};LombardRenderer._renderOptimizer()"
-                style="padding:0.4rem 0.8rem;border-radius:8px;border:1px solid rgba(255,152,0,0.2);
-                  background:transparent;color:#ffb74d;font-size:0.85rem;font-weight:700;cursor:pointer;
-                  font-family:var(--font-mono);transition:all 0.2s;"
-                onmouseover="this.style.background='rgba(255,152,0,0.15)'"
-                onmouseout="this.style.background='transparent'">${n}</button>
-            `).join('')}
-            <input id="lomb-opt-n" type="number" value="5" min="2" max="20" step="1"
-              style="width:50px;padding:0.4rem;border-radius:8px;border:1px solid rgba(255,152,0,0.3);
-                background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;"
-              oninput="clearTimeout(window._lo2);window._lo2=setTimeout(()=>LombardRenderer._renderOptimizer(),300)">
           </div>
         </div>
         <div>
           <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">LTV</label>
           <div style="display:flex;align-items:center;gap:0.4rem;">
-            <input id="lomb-opt-ltv" type="range" min="20" max="70" value="60" step="5"
+            <input id="lomb-opt-ltv" type="range" min="20" max="70" value="${optLtv}" step="5"
               style="width:100px;accent-color:#ff9800;"
-              oninput="document.getElementById('lomb-opt-ltv-val').textContent=this.value+'%';LombardRenderer._renderOptimizer()">
-            <span id="lomb-opt-ltv-val" style="font-size:0.8rem;color:#ff9800;font-weight:700;font-family:var(--font-mono);">60%</span>
+              oninput="document.getElementById('lomb-opt-ltv-val').textContent=this.value+'%'">
+            <span id="lomb-opt-ltv-val" style="font-size:0.8rem;color:#ff9800;font-weight:700;font-family:var(--font-mono);">${optLtv}%</span>
           </div>
         </div>
-        <button onclick="LombardRenderer._renderOptimizer()"
-          style="padding:0.5rem 1.2rem;border-radius:8px;border:none;background:linear-gradient(135deg,#ff9800,#f57c00);
-            color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;"
-          onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-          <i class="fas fa-bolt"></i> Optimiser
+        <button onclick="LombardRenderer._runOptimizer()"
+          style="padding:0.6rem 1.5rem;border-radius:8px;border:none;background:linear-gradient(135deg,#ff9800,#f57c00);
+            color:#000;font-weight:700;font-size:0.9rem;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;"
+          onmouseover="this.style.transform='scale(1.03)';this.style.boxShadow='0 4px 15px rgba(255,152,0,0.3)'"
+          onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
+          <i class="fas fa-bolt" style="margin-right:0.3rem;"></i> Trouver le meilleur portefeuille
         </button>
       </div>
-      <div id="lomb-opt-result"></div>
+      <div id="lomb-opt-result" style="color:var(--text-muted);font-size:0.82rem;padding:1rem 0;text-align:center;">
+        Cliquez sur le bouton pour trouver la combinaison optimale (nombre d'actions + allocation)
+      </div>
     </div>`;
 
     // ── Explanation ──
@@ -295,78 +281,94 @@ const LombardRenderer = {
     container.innerHTML = html;
     container.style.opacity = '1';
 
-    // Trigger simulator + optimizer update
-    setTimeout(() => { this._updateSim(); this._renderOptimizer(); }, 50);
+    // Trigger simulator update (optimizer waits for button click)
+    setTimeout(() => this._updateSim(), 50);
   },
 
   // ── Portfolio Optimizer ──
-  _buildOptimalPortfolio() {
+  _buildPortfolioForN(stocks, nPos, env, rate) {
+    const maxPerSector = Math.max(1, Math.ceil(nPos * 0.4)); // Max 40% same sector
+    const selected = [];
+    const sectorCount = {};
+
+    // Sort by carry fiscal descending
+    const ranked = stocks.map(s => {
+      const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
+      return { ...s, yieldNet, carryFiscal: yieldNet - rate };
+    }).sort((a, b) => b.carryFiscal - a.carryFiscal);
+
+    // Greedy: best carry, sector-diversified
+    for (const s of ranked) {
+      if (selected.length >= nPos) break;
+      const sector = s.sector || 'Autre';
+      if ((sectorCount[sector] || 0) >= maxPerSector) continue;
+      if (s.carryFiscal <= -1) continue; // Skip very negative carry
+      selected.push(s);
+      sectorCount[sector] = (sectorCount[sector] || 0) + 1;
+    }
+
+    if (selected.length < 2) return { portfolio: [], profit: -Infinity };
+
+    // Weight proportional to carry (higher = more weight)
+    const shifted = selected.map(s => Math.max(0.1, s.carryFiscal + 3));
+    const totalShift = shifted.reduce((a, b) => a + b, 0);
+    const portfolio = selected.map((s, i) => ({ ...s, weight: shifted[i] / totalShift }));
+    return { portfolio, n: selected.length };
+  },
+
+  _calcProfit(portfolio, capital, ltv, env, rate) {
+    const emprunt = capital * ltv;
+    const total = capital + emprunt;
+    const coutCredit = emprunt * rate / 100;
+    let totalDivNet = 0;
+    for (const s of portfolio) {
+      const montant = total * s.weight;
+      const divNet = montant * (s.dividend_yield || 0) / 100 * (1 - env.taxDiv);
+      totalDivNet += divNet;
+    }
+    return totalDivNet - coutCredit;
+  },
+
+  _runOptimizer() {
     const env = this.ENVELOPES[this.state.envelope];
     const rk = this.state.rate.toFixed(1);
     const rd = this.state.rankings?.[rk];
-    if (!rd || !rd.stocks) return [];
+    const resultEl = document.getElementById('lomb-opt-result');
+    if (!resultEl || !rd?.stocks) return;
+
+    const capital = parseFloat(document.getElementById('lomb-opt-capital')?.value) || 100000;
+    const ltv = (parseFloat(document.getElementById('lomb-opt-ltv')?.value) || 60) / 100;
 
     const stocks = env.eligible === 'eu_only'
       ? rd.stocks.filter(s => (s.region || '').toUpperCase() === 'EUROPE')
       : rd.stocks;
 
-    const nPos = parseInt(document.getElementById('lomb-opt-n')?.value) || 5;
-    const maxPerSector = Math.max(1, Math.ceil(nPos * 0.5)); // Max 50% same sector
-
-    // Greedy selection: best carry fiscal, sector-diversified
-    const selected = [];
-    const sectorCount = {};
-    for (const s of stocks) {
-      if (selected.length >= nPos) break;
-      const sector = s.sector || 'Autre';
-      if ((sectorCount[sector] || 0) >= maxPerSector) continue;
-      const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
-      const carryFiscal = yieldNet - this.state.rate;
-      if (carryFiscal <= 0) continue; // Only positive carry
-      selected.push({ ...s, yieldNet, carryFiscal });
-      sectorCount[sector] = (sectorCount[sector] || 0) + 1;
-    }
-
-    // If not enough positive carry, fill with best remaining
-    if (selected.length < nPos) {
-      for (const s of stocks) {
-        if (selected.length >= nPos) break;
-        if (selected.find(x => x.ticker === s.ticker)) continue;
-        const sector = s.sector || 'Autre';
-        if ((sectorCount[sector] || 0) >= maxPerSector) continue;
-        const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
-        const carryFiscal = yieldNet - this.state.rate;
-        selected.push({ ...s, yieldNet, carryFiscal });
-        sectorCount[sector] = (sectorCount[sector] || 0) + 1;
-      }
-    }
-
-    // Weight by carry quality (higher carry = more weight), min 10% each
-    if (selected.length === 0) return [];
-    const minW = 0.10;
-    const flexPool = 1 - minW * selected.length;
-    const totalCarry = selected.reduce((s, x) => s + Math.max(0.1, x.carryFiscal + 2), 0);
-    return selected.map(s => {
-      const w = flexPool > 0
-        ? minW + flexPool * (Math.max(0.1, s.carryFiscal + 2) / totalCarry)
-        : 1 / selected.length;
-      return { ...s, weight: w };
-    });
-  },
-
-  _renderOptimizer() {
-    const env = this.ENVELOPES[this.state.envelope];
-    const capital = parseFloat(document.getElementById('lomb-opt-capital')?.value) || 100000;
-    const ltv = (parseFloat(document.getElementById('lomb-opt-ltv')?.value) || 60) / 100;
-    const portfolio = this._buildOptimalPortfolio();
-    const resultEl = document.getElementById('lomb-opt-result');
-    if (!resultEl) return;
-
-    if (portfolio.length === 0) {
-      resultEl.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">Aucune action éligible</p>';
+    if (stocks.length === 0) {
+      resultEl.innerHTML = '<p style="color:#ff9800;text-align:center;padding:1rem;">Aucune action éligible pour cette enveloppe</p>';
       return;
     }
 
+    // Test all N from 2 to min(15, available stocks) — find max profit
+    const maxN = Math.min(15, stocks.length);
+    let bestProfit = -Infinity;
+    let bestResult = null;
+
+    for (let n = 2; n <= maxN; n++) {
+      const { portfolio } = this._buildPortfolioForN(stocks, n, env, this.state.rate);
+      if (portfolio.length < 2) continue;
+      const profit = this._calcProfit(portfolio, capital, ltv, env, this.state.rate);
+      if (profit > bestProfit) {
+        bestProfit = profit;
+        bestResult = { portfolio, n: portfolio.length, profit };
+      }
+    }
+
+    if (!bestResult || bestResult.portfolio.length === 0) {
+      resultEl.innerHTML = '<p style="color:#ff9800;text-align:center;padding:1rem;">Aucune combinaison rentable trouvée</p>';
+      return;
+    }
+
+    const portfolio = bestResult.portfolio;
     const emprunt = capital * ltv;
     const total = capital + emprunt;
     const coutCredit = emprunt * this.state.rate / 100;
@@ -383,49 +385,57 @@ const LombardRenderer = {
       totalDivNet += divNet;
       weightedYield += s.weight * (s.dividend_yield || 0);
 
+      const carryColor = s.carryFiscal > 0 ? '#4caf50' : '#f44336';
       rows += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-        <td style="padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:${env.color};">${s.ticker}</td>
+        <td style="padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:#ff9800;">${s.ticker}</td>
         <td style="padding:0.5rem 0.4rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.78rem;">${s.name || ''}</td>
-        <td style="padding:0.5rem 0.4rem;color:var(--text-secondary);font-size:0.72rem;">${s.sector || ''}</td>
-        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;">${(s.weight * 100).toFixed(0)}%</td>
-        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:var(--text-secondary);">${fmt.format(montant)}</td>
-        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;">${(s.dividend_yield || 0).toFixed(1)}%</td>
-        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${s.carryFiscal > 0 ? '#4caf50' : '#f44336'};font-weight:700;">${s.carryFiscal > 0 ? '+' : ''}${s.carryFiscal.toFixed(1)}%</td>
-        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:#4caf50;">${fmt.format(divNet)}<span style="font-size:0.65rem;color:var(--text-muted);">/an</span></td>
+        <td style="padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.72rem;">${s.sector || ''}</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);font-weight:700;color:#ff9800;">${(s.weight * 100).toFixed(0)}%</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);">${fmt.format(montant)}</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);">${(s.dividend_yield || 0).toFixed(1)}%</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);color:${carryColor};font-weight:700;">${s.carryFiscal > 0 ? '+' : ''}${s.carryFiscal.toFixed(1)}%</td>
+        <td style="text-align:right;padding:0.5rem 0.4rem;font-family:var(--font-mono);">${fmt.format(divNet)}<span style="font-size:0.65rem;color:var(--text-muted);">/an</span></td>
       </tr>`;
     }
 
     const profitNet = totalDivNet - coutCredit;
     const rendCapital = (profitNet / capital) * 100;
+    const profitColor = profitNet > 0 ? '#4caf50' : '#f44336';
 
     resultEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.8rem;margin-bottom:1.2rem;">
+      <div style="text-align:center;margin-bottom:1rem;padding:0.6rem;background:rgba(255,152,0,0.08);border-radius:8px;">
+        <span style="color:#ff9800;font-weight:700;font-size:0.85rem;">
+          <i class="fas fa-trophy" style="margin-right:0.3rem;"></i>
+          Portefeuille optimal : ${bestResult.n} actions · ${this.state.envelope.toUpperCase()} · taux ${this.state.rate}%
+        </span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.8rem;margin-bottom:1.2rem;">
         <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Capital total</div>
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Capital investi</div>
           <div style="font-size:1.1rem;font-weight:700;color:#fff;font-family:var(--font-mono);">${fmt.format(total)}</div>
-          <div style="font-size:0.6rem;color:var(--text-muted);">${fmt.format(capital)} + ${fmt.format(emprunt)}</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">dont ${fmt.format(emprunt)} emprunt</div>
         </div>
         <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Yield moyen</div>
-          <div style="font-size:1.1rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">${weightedYield.toFixed(1)}%</div>
+          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Yield moyen pondéré</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${weightedYield.toFixed(1)}%</div>
         </div>
         <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
           <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Dividendes net/an</div>
-          <div style="font-size:1.1rem;font-weight:700;color:#4caf50;font-family:var(--font-mono);">+${fmt.format(totalDivNet)}</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">+${fmt.format(totalDivNet)}</div>
         </div>
         <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.8rem;text-align:center;">
           <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Coût crédit/an</div>
           <div style="font-size:1.1rem;font-weight:700;color:#f44336;font-family:var(--font-mono);">−${fmt.format(coutCredit)}</div>
         </div>
-        <div style="background:${profitNet > 0 ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)'};border-radius:8px;padding:0.8rem;text-align:center;">
+        <div style="background:${profitNet > 0 ? 'rgba(76,175,80,0.08)' : 'rgba(244,67,54,0.08)'};border:1px solid ${profitColor}33;border-radius:8px;padding:0.8rem;text-align:center;">
           <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Profit net/an</div>
-          <div style="font-size:1.3rem;font-weight:800;color:${profitNet > 0 ? '#4caf50' : '#f44336'};font-family:var(--font-mono);">${profitNet > 0 ? '+' : ''}${fmt.format(profitNet)}</div>
-          <div style="font-size:0.65rem;color:${profitNet > 0 ? '#81c784' : '#ef9a9a'};">${rendCapital.toFixed(1)}% sur capital propre</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${profitColor};font-family:var(--font-mono);">${profitNet > 0 ? '+' : ''}${fmt.format(profitNet)}</div>
+          <div style="font-size:0.7rem;color:${profitColor};">${rendCapital.toFixed(1)}% sur capital propre</div>
         </div>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-          <thead><tr style="border-bottom:2px solid rgba(255,255,255,0.1);">
+          <thead><tr style="border-bottom:2px solid rgba(255,255,255,0.08);">
             <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Ticker</th>
             <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Nom</th>
             <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text-muted);font-size:0.65rem;text-transform:uppercase;">Secteur</th>
