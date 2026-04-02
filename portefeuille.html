@@ -535,7 +535,7 @@
             av:  { name: 'Assurance Vie', taxDiv: 0.247, taxPV: 0.247, color: '#4caf50',
                    defaultRate: 1.5, rateRange: [1.0, 2.5], eligible: 'all' },
         };
-        let activeEnvelope = 'cto';
+        window._lombState = { envelope: 'cto', rate: 2.5 };
 
         try {
             const resp = await fetch('data/lombard_ranking.json');
@@ -548,8 +548,11 @@
 
             if (!rates.length) throw new Error('No rates');
 
-            function render(rate, envOverride) {
-                const env = envOverride || ENVELOPES[activeEnvelope];
+            function render(rate, envKey) {
+                if (rate !== undefined) window._lombState.rate = rate;
+                if (envKey) window._lombState.envelope = envKey;
+                const env = ENVELOPES[window._lombState.envelope];
+                rate = window._lombState.rate;
                 // Find closest available rate
                 const closestRate = rates.reduce((prev, curr) => Math.abs(curr - rate) < Math.abs(prev - rate) ? curr : prev);
                 const rd = rankings[closestRate] || rankings[String(closestRate)];
@@ -759,24 +762,22 @@
                 container.style.opacity = '1';
             }
 
-            window._renderLombard = function(rate) {
-                render(rate, ENVELOPES[activeEnvelope]);
+            window._renderLombard = function(newRate) {
+                render(newRate);
             };
 
-            window._selectEnvelope = function(env) {
-                activeEnvelope = env;
+            window._selectEnvelope = function(envKey) {
                 document.querySelectorAll('.envelope-card').forEach(card => {
-                    const isActive = card.dataset.env === env;
+                    const isActive = card.dataset.env === envKey;
                     const envCfg = ENVELOPES[card.dataset.env];
                     card.style.borderColor = isActive ? envCfg.color : 'rgba(255,255,255,0.1)';
                     card.style.background = isActive ? `${envCfg.color}11` : 'rgba(255,255,255,0.02)';
                 });
-                render(ENVELOPES[env].defaultRate, ENVELOPES[env]);
+                render(ENVELOPES[envKey].defaultRate, envKey);
             };
 
-            // Initial render with CTO default rate
-            const initRate = ENVELOPES[activeEnvelope].defaultRate;
-            render(initRate, ENVELOPES[activeEnvelope]);
+            // Initial render
+            render(ENVELOPES['cto'].defaultRate, 'cto');
 
         } catch (e) {
             console.error('[Lombard]', e);
