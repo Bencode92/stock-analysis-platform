@@ -759,7 +759,9 @@
                 container.style.opacity = '1';
             }
 
-            window._renderLombard = render;
+            window._renderLombard = function(rate) {
+                render(rate, ENVELOPES[activeEnvelope]);
+            };
 
             window._selectEnvelope = function(env) {
                 activeEnvelope = env;
@@ -774,7 +776,7 @@
 
             // Initial render with CTO default rate
             const initRate = ENVELOPES[activeEnvelope].defaultRate;
-            render(initRate);
+            render(initRate, ENVELOPES[activeEnvelope]);
 
         } catch (e) {
             console.error('[Lombard]', e);
