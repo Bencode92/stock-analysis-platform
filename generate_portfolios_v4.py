@@ -2529,7 +2529,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             _wy = diag_yield.get('yield_metrics', {}).get('weighted_yield', '?')
             logger.info(f"   [{profile}] Rendement: {len(alloc_yield)} pos, yield={_wy}%")
         except Exception as _e:
-            logger.warning(f"   [{profile}] Flow rendement: {_e}")
+            logger.error(f"   [{profile}] Flow rendement FAILED: {_e}")
+            import traceback; traceback.print_exc()
             alloc_yield, diag_yield = {}, {}
 
         # v4.14.0 FIX R12: Normaliser allocation en % si retournée en décimal (somme ~1)
