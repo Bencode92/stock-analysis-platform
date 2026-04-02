@@ -298,60 +298,7 @@
 
         <!-- Lombard envelope cards (hidden, moved to panel by JS) -->
         <div id="lombard-section-hidden" style="display:none;">
-            <div id="envelope-selector" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:2rem;">
-                <div class="envelope-card" data-env="cto" onclick="LombardRenderer.setEnvelope('cto')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid #ff9800;background:rgba(255,152,0,0.08);transition:all 0.3s;">
-                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
-                        <i class="fas fa-briefcase" style="color:#ff9800;font-size:1.1rem;"></i>
-                        <span style="font-weight:700;font-size:1rem;color:#ffb74d;">Compte-Titres (CTO)</span>
-                    </div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);line-height:1.5;">
-                        Flat tax 30% sur dividendes et plus-values<br>
-                        <strong style="color:rgba(255,255,255,0.7);">Taux Lombard typique : 1.5% – 3.5%</strong><br>
-                        Accès à tous les marchés (US, EU, Asia)
-                    </div>
-                    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;">
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Actions US</span>
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">ETF monde</span>
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Obligations</span>
-                    </div>
-                </div>
-
-                <div class="envelope-card" data-env="pea" onclick="LombardRenderer.setEnvelope('pea')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);transition:all 0.3s;">
-                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
-                        <i class="fas fa-shield-alt" style="color:#2196f3;font-size:1.1rem;"></i>
-                        <span style="font-weight:700;font-size:1rem;color:#64b5f6;">PEA</span>
-                    </div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);line-height:1.5;">
-                        Exonéré d'IR après 5 ans (PS 17.2% seulement)<br>
-                        <strong style="color:rgba(255,255,255,0.7);">Taux Lombard typique : 2.0% – 4.0%</strong><br>
-                        Plafond 150 000€ · Actions EU uniquement
-                    </div>
-                    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;">
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(33,150,243,0.15);color:#64b5f6;">Actions EU</span>
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(33,150,243,0.15);color:#64b5f6;">ETF EU</span>
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(244,67,54,0.12);color:#ef9a9a;">Pas US direct</span>
-                    </div>
-                </div>
-
-                <div class="envelope-card" data-env="av" onclick="LombardRenderer.setEnvelope('av')" style="cursor:pointer;padding:1.2rem;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);transition:all 0.3s;">
-                    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
-                        <i class="fas fa-piggy-bank" style="color:#4caf50;font-size:1.1rem;"></i>
-                        <span style="font-weight:700;font-size:1rem;color:#81c784;">Assurance Vie</span>
-                    </div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);line-height:1.5;">
-                        Abattement 4 600€/9 200€ après 8 ans · Succession avantageuse<br>
-                        <strong style="color:rgba(255,255,255,0.7);">Taux Lombard typique : 1.0% – 2.5%</strong><br>
-                        Fonds euros + UC (ETF, actions via mandat)
-                    </div>
-                    <div style="margin-top:0.6rem;display:flex;gap:0.4rem;">
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Fonds euros</span>
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">UC/ETF</span>
-                        <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;">Succession</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Lombard ranking table -->
+            <!-- Lombard content (rendered by lombard-renderer.js) -->
             <div id="lombard-container" style="opacity:0; transition: opacity 0.4s;">
                 <div style="text-align:center; padding:2rem; color:var(--text-muted);">
                     <i class="fas fa-spinner fa-spin"></i> Chargement du classement Lombard...

@@ -146,12 +146,14 @@ class PortfolioManagerV3 {
     const container = document.querySelector('.portfolio-container');
     if (!container) return;
     try {
-      container.querySelector('.portfolio-loading').style.display = 'flex';
+      const _loading = container.querySelector('.portfolio-loading');
+      if (_loading) _loading.style.display = 'flex';
       await this.loadPortfolios();
       this.render(container);
-      container.querySelector('.portfolio-loading').style.display = 'none';
+      if (_loading) _loading.style.display = 'none';
     } catch (e) {
-      container.querySelector('.portfolio-loading').style.display = 'none';
+      const _pl = container.querySelector('.portfolio-loading');
+      if (_pl) _pl.style.display = 'none';
       const err = container.querySelector('.portfolio-error');
       if (err) { err.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${e.message}`; err.style.display = 'block'; }
     }
