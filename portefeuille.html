@@ -548,8 +548,8 @@
 
             if (!rates.length) throw new Error('No rates');
 
-            function render(rate) {
-                const env = ENVELOPES[activeEnvelope];
+            function render(rate, envOverride) {
+                const env = envOverride || ENVELOPES[activeEnvelope];
                 // Find closest available rate
                 const closestRate = rates.reduce((prev, curr) => Math.abs(curr - rate) < Math.abs(prev - rate) ? curr : prev);
                 const rd = rankings[closestRate] || rankings[String(closestRate)];
@@ -595,7 +595,7 @@
                         <input type="number" min="0.5" max="8" step="0.25" value="${closestRate}"
                                style="width:65px;padding:0.4rem 0.5rem;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
                                       background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;"
-                               onchange="window._renderLombard(parseFloat(this.value))"
+                               oninput="clearTimeout(window._lombDebounce); window._lombDebounce=setTimeout(()=>window._renderLombard(parseFloat(this.value)),300)"
                                placeholder="Custom">
                         <span style="font-size:0.7rem;color:var(--text-muted);">%</span>
                     </div>
@@ -769,7 +769,7 @@
                     card.style.borderColor = isActive ? envCfg.color : 'rgba(255,255,255,0.1)';
                     card.style.background = isActive ? `${envCfg.color}11` : 'rgba(255,255,255,0.02)';
                 });
-                render(ENVELOPES[env].defaultRate);
+                render(ENVELOPES[env].defaultRate, ENVELOPES[env]);
             };
 
             // Initial render with CTO default rate
