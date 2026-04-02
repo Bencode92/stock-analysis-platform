@@ -4139,7 +4139,12 @@ def add_commentary(
         if profile in portfolios and portfolios[profile].get("risk_analysis"):
             merged[profile]["risk_analysis"] = portfolios[profile]["risk_analysis"]
         if profile in portfolios and portfolios[profile].get("assets"):
-            merged[profile]["assets"] = portfolios[profile]["assets"]    
+            merged[profile]["assets"] = portfolios[profile]["assets"]
+        # v7.3: Préserver yield-driven allocation
+        if profile in portfolios and portfolios[profile].get("_tickers_rendement"):
+            merged[profile]["_tickers_rendement"] = portfolios[profile]["_tickers_rendement"]
+        if profile in portfolios and portfolios[profile].get("_yield_metrics"):
+            merged[profile]["_yield_metrics"] = portfolios[profile]["_yield_metrics"]
     for profile in merged:
         raw_comment = merged[profile].get("comment", "") or ""
         
@@ -5442,6 +5447,16 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
         },
     }
     
+    # v7.3: Propagate yield-driven allocation to v1 output
+    for profile in ["Agressif", "Modéré", "Stable"]:
+        if profile not in portfolios or profile not in result:
+            continue
+        src = portfolios[profile]
+        if src.get("_tickers_rendement"):
+            result[profile]["_tickers_rendement"] = src["_tickers_rendement"]
+        if src.get("_yield_metrics"):
+            result[profile]["_yield_metrics"] = src["_yield_metrics"]
+
     return result
 
 
