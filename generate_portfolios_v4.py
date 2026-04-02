@@ -2522,7 +2522,16 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   [{profile}] Price loading failed: {_e}, using structured only")
 
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
-        
+
+        # v7.3: Flow RENDEMENT — mêmes candidats, poids yield-driven
+        try:
+            alloc_yield, diag_yield = optimizer.build_portfolio_yield(assets, profile)
+            _wy = diag_yield.get('yield_metrics', {}).get('weighted_yield', '?')
+            logger.info(f"   [{profile}] Rendement: {len(alloc_yield)} pos, yield={_wy}%")
+        except Exception as _e:
+            logger.warning(f"   [{profile}] Flow rendement: {_e}")
+            alloc_yield, diag_yield = {}, {}
+
         # v4.14.0 FIX R12: Normaliser allocation en % si retournée en décimal (somme ~1)
         total_alloc = sum(allocation.values()) if allocation else 0.0
         if 0.5 < total_alloc < 1.5:  # allocation en décimal, pas en %
@@ -3394,6 +3403,20 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 logger.info(f"   [{profile}] ✅ _tickers_meta built: {len(tm)} tickers, sum={s:.4f}")
         except Exception as e:
             logger.warning(f"   [{profile}] Cannot build _tickers_meta: {e}")
+        # v7.3: Store yield allocation in portfolio
+        if alloc_yield:
+            try:
+                _tickers_rend = {}
+                for aid, weight in alloc_yield.items():
+                    # Resolve ticker from asset ID
+                    _a = next((a for a in all_assets if str(getattr(a, 'id', '')) == str(aid)), None)
+                    _tk = getattr(_a, 'ticker', None) or getattr(_a, 'symbol', None) or aid if _a else aid
+                    _tickers_rend[str(_tk)] = weight / 100.0
+                portfolios[profile]["_tickers_rendement"] = _tickers_rend
+                portfolios[profile]["_yield_metrics"] = diag_yield.get("yield_metrics", {})
+            except Exception as _e:
+                logger.warning(f"   [{profile}] yield tickers mapping: {_e}")
+
         # === v5.2.1: Risk Analysis avec VaR hybride 5 ans ===
         if CONFIG.get("enable_risk_analysis", False) and HAS_RISK_ANALYSIS:
             try:

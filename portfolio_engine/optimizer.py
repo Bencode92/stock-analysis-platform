@@ -3544,25 +3544,23 @@ class PortfolioOptimizer:
         
         return blended
     def optimize(
-        self, 
-        candidates: List[Asset], 
+        self,
+        candidates: List[Asset],
         profile: ProfileConstraints,
-        prev_weights: Optional[Dict[str, float]] = None  # P0 PARTNER: poids précédents
+        prev_weights: Optional[Dict[str, float]] = None,
+        scores_override: Optional[List[float]] = None,  # v7.3: yield-driven scoring
     ) -> Tuple[Dict[str, float], dict]:
         """
         Optimisation mean-variance avec covariance hybride.
-        
-        v6.21 P0 PARTNER: Ajout turnover control (prev_weights)
-        v6.18.2: FIX normalisation 100% dans _adjust_for_vol_target()
-        v6.15 P1-6: Diagnostics enrichis avec KPIs covariance.
-        v6.14 P0-2: Tie-breaker (score, id) pour tri déterministe partout.
-        v6.13: STABLE utilise le fallback heuristique (skip SLSQP).
-        
+
+        v7.3: scores_override permet de remplacer les scores par profil
+              par des scores yield-driven (flow rendement).
+
         Args:
             candidates: Liste des actifs candidats
             profile: Contraintes du profil
-            prev_weights: Poids précédents {asset_id: weight%} pour contrôle turnover
-                         Si None, pas de contrainte turnover (première allocation)
+            prev_weights: Poids précédents pour contrôle turnover
+            scores_override: Si fourni, remplace les scores calculés par profil
         """
         n = len(candidates)
         if n < profile.min_assets:
@@ -3581,10 +3579,15 @@ class PortfolioOptimizer:
             prev_weights_array = np.zeros(n)
             has_prev_weights = False
         
-        raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
-        # v7.0: score_scale par profil
-        _scale = getattr(profile, 'score_scale', self.score_scale)
-        scores = self._normalize_scores(raw_scores) * _scale
+        if scores_override is not None:
+            # v7.3: yield-driven scores (already scaled)
+            raw_scores = np.array(scores_override[:n], dtype=float)
+            scores = self._normalize_scores(raw_scores) * getattr(profile, 'score_scale', self.score_scale)
+        else:
+            raw_scores = np.array([_clean_float(a.score, 0.0, -100, 100) for a in candidates])
+            # v7.0: score_scale par profil
+            _scale = getattr(profile, 'score_scale', self.score_scale)
+            scores = self._normalize_scores(raw_scores) * _scale
         
         cov, cov_diagnostics = self.compute_covariance(candidates)
         # PR3: Initialiser heuristic_metadata (vide par défaut, rempli si Stable)
@@ -5467,6 +5470,86 @@ class PortfolioOptimizer:
             )
         
         return self.optimize(candidates, profile, prev_weights)
+
+    # v7.3: Yield-driven optimization configs
+    YIELD_CONFIGS = {
+        "Agressif": {"yield_weight": 0.60, "quality_weight": 0.25, "floor_min": 0.10},
+        "Modéré":   {"yield_weight": 0.55, "quality_weight": 0.30, "floor_min": 0.10},
+        "Stable":   {"yield_weight": 0.50, "quality_weight": 0.35, "floor_min": 0.10},
+    }
+
+    def build_portfolio_yield(
+        self,
+        universe: List[Asset],
+        profile_name: str,
+        yield_config: Optional[Dict] = None,
+    ) -> Tuple[Dict[str, float], dict]:
+        """
+        Flow RENDEMENT: mêmes candidats, objectif yield-driven.
+        Réutilise optimize() avec scores_override.
+        """
+        profile = PROFILES[profile_name]
+        candidates = self.select_candidates(universe, profile)
+
+        if len(candidates) < profile.min_assets:
+            raise ValueError(f"Univers insuffisant pour {profile_name} rendement")
+
+        cfg = yield_config or self.YIELD_CONFIGS.get(profile_name, {})
+        yw = cfg.get("yield_weight", 0.55)
+        qw = cfg.get("quality_weight", 0.30)
+        floor = cfg.get("floor_min", 0.10)
+
+        # Compute yield-driven scores
+        yield_scores = []
+        for asset in candidates:
+            # Dividend yield
+            dy = 0.0
+            if hasattr(asset, 'source_data') and asset.source_data:
+                dy = float(asset.source_data.get('dividend_yield') or
+                           asset.source_data.get('yield_ttm') or 0)
+            if dy <= 0 and asset.category == "Obligations":
+                dy = 3.0  # Default bond yield
+
+            # Payout (anti yield trap)
+            payout = 50.0
+            if hasattr(asset, 'source_data') and asset.source_data:
+                payout = float(asset.source_data.get('payout_ratio_ttm') or
+                               asset.source_data.get('payout_ratio') or 50)
+
+            # Yield score with payout adjustment
+            yield_raw = min(dy / 8.0, 1.0)
+            payout_adj = max(0.1, min(1.0, 1.0 - max(0, (payout - 70)) / 60.0))
+            yield_score = yield_raw * payout_adj
+
+            # Quality score (garde-fou)
+            quality = max(0, min(1, asset.score / 100.0))
+
+            # Combined with floor
+            combined = max(floor, yw * yield_score + qw * quality)
+            yield_scores.append(combined * 100)  # Scale to 0-100 for normalize
+
+        allocation, diagnostics = self.optimize(
+            candidates, profile, scores_override=yield_scores
+        )
+
+        diagnostics["flow"] = "rendement"
+        diagnostics["yield_config"] = cfg
+
+        # Compute weighted yield
+        weighted_yield = 0.0
+        for aid, weight in allocation.items():
+            asset = next((a for a in candidates if a.id == aid), None)
+            if asset and hasattr(asset, 'source_data') and asset.source_data:
+                dy = float(asset.source_data.get('dividend_yield') or
+                           asset.source_data.get('yield_ttm') or 0)
+                weighted_yield += weight * dy / 100
+
+        diagnostics["yield_metrics"] = {
+            "weighted_yield": round(weighted_yield, 2),
+            "n_positions": len(allocation),
+        }
+
+        return allocation, diagnostics
 
     def build_portfolio_euus(
         self, 
