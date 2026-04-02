@@ -262,44 +262,119 @@ const LombardRenderer = {
     setTimeout(() => this._updateSim(), 50);
   },
 
-  // ── Portfolio Optimizer ──
+  // ── Portfolio Optimizer v2 ──
+  // Constraints
+  MAX_WEIGHT: 0.15,       // 15% max per position
+  MIN_WEIGHT: 0.08,       // 8% min per position
+  MAX_SECTOR_PCT: 0.25,   // 25% max per sector
+  MIN_MARGIN_CALL_DD: 20, // Exclude if margin call drawdown < 20%
+
   _buildPortfolioForN(stocks, nPos, env, rate) {
-    const maxPerSector = Math.max(1, Math.ceil(nPos * 0.4));
+    const maxPerSector = Math.max(1, Math.floor(nPos * this.MAX_SECTOR_PCT) || 1);
+
+    // Enrich with fiscal carry + composite score for selection
+    const enriched = stocks.map(s => {
+      const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
+      const carryFiscal = yieldNet - rate;
+      const vol = s.volatility || 20;
+      const quality = (s.quality_score || 50) / 100;
+      const payout = s.payout_ratio || 50;
+      const payoutAdj = Math.max(0.2, Math.min(1.0, 1.0 - Math.max(0, payout - 70) / 60));
+      // Composite: carry (40%) + quality (30%) + safety (30%)
+      const safetyScore = Math.max(0, (35 - vol) / 35); // 0 at vol=35, 1 at vol=0
+      const compositeScore = 0.40 * Math.max(0, carryFiscal / 5) * payoutAdj
+                           + 0.30 * quality
+                           + 0.30 * safetyScore;
+      return { ...s, yieldNet, carryFiscal, vol, compositeScore };
+    }).sort((a, b) => b.compositeScore - a.compositeScore);
+
+    // Greedy selection with constraints
     const selected = [];
     const sectorCount = {};
-
-    const ranked = stocks.map(s => {
-      const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
-      return { ...s, yieldNet, carryFiscal: yieldNet - rate };
-    }).sort((a, b) => b.carryFiscal - a.carryFiscal);
-
-    for (const s of ranked) {
+    for (const s of enriched) {
       if (selected.length >= nPos) break;
+      // Hard constraints
+      if (s.carryFiscal <= 0) continue;  // No negative carry in Lombard
+      if ((s.margin_call_drawdown || 99) < this.MIN_MARGIN_CALL_DD) continue;
       const sector = s.sector || 'Autre';
       if ((sectorCount[sector] || 0) >= maxPerSector) continue;
-      if (s.carryFiscal <= -1) continue;
       selected.push(s);
       sectorCount[sector] = (sectorCount[sector] || 0) + 1;
     }
 
-    if (selected.length < 2) return { portfolio: [], profit: -Infinity };
+    if (selected.length < 2) return { portfolio: [], sharpe: -Infinity };
 
-    const shifted = selected.map(s => Math.max(0.1, s.carryFiscal + 3));
-    const totalShift = shifted.reduce((a, b) => a + b, 0);
-    const portfolio = selected.map((s, i) => ({ ...s, weight: shifted[i] / totalShift }));
+    // Weight by composite score, then clamp to [MIN_WEIGHT, MAX_WEIGHT]
+    const totalScore = selected.reduce((s, x) => s + x.compositeScore, 0);
+    let weights = selected.map(s => totalScore > 0 ? s.compositeScore / totalScore : 1 / selected.length);
+
+    // Iterative clamping (3 rounds)
+    for (let iter = 0; iter < 3; iter++) {
+      let excess = 0;
+      let nFree = 0;
+      weights = weights.map(w => {
+        if (w > this.MAX_WEIGHT) { excess += w - this.MAX_WEIGHT; return this.MAX_WEIGHT; }
+        if (w < this.MIN_WEIGHT) { excess += w - this.MIN_WEIGHT; return this.MIN_WEIGHT; }
+        nFree++;
+        return w;
+      });
+      if (Math.abs(excess) < 0.001 || nFree === 0) break;
+      // Redistribute excess to unclamped
+      const freeTotal = weights.reduce((s, w) => (w > this.MIN_WEIGHT && w < this.MAX_WEIGHT) ? s + w : s, 0);
+      if (freeTotal > 0) {
+        weights = weights.map(w => (w > this.MIN_WEIGHT && w < this.MAX_WEIGHT) ? w + excess * (w / freeTotal) : w);
+      }
+    }
+    // Normalize to 1.0
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    weights = weights.map(w => w / wSum);
+
+    // Enforce sector cap on weights
+    const sectorWeights = {};
+    for (let i = 0; i < selected.length; i++) {
+      const sec = selected[i].sector || 'Autre';
+      sectorWeights[sec] = (sectorWeights[sec] || 0) + weights[i];
+    }
+    for (const [sec, totalW] of Object.entries(sectorWeights)) {
+      if (totalW > this.MAX_SECTOR_PCT + 0.01) {
+        const ratio = this.MAX_SECTOR_PCT / totalW;
+        let freed = 0;
+        for (let i = 0; i < selected.length; i++) {
+          if ((selected[i].sector || 'Autre') === sec) {
+            const newW = weights[i] * ratio;
+            freed += weights[i] - newW;
+            weights[i] = newW;
+          }
+        }
+        // Redistribute to other sectors
+        const otherTotal = weights.reduce((s, w, i) => (selected[i].sector || 'Autre') !== sec ? s + w : s, 0);
+        if (otherTotal > 0) {
+          weights = weights.map((w, i) => (selected[i].sector || 'Autre') !== sec ? w + freed * (w / otherTotal) : w);
+        }
+      }
+    }
+
+    const portfolio = selected.map((s, i) => ({ ...s, weight: weights[i] }));
     return { portfolio, n: selected.length };
   },
 
-  _calcProfit(portfolio, capital, ltv, env, rate) {
+  _calcSharpe(portfolio, capital, ltv, env, rate) {
     const emprunt = capital * ltv;
     const total = capital + emprunt;
     const coutCredit = emprunt * rate / 100;
     let totalDivNet = 0;
+    let portVolSq = 0; // Sum of (weight² × vol²) — simplified portfolio variance (no correlation)
     for (const s of portfolio) {
       const montant = total * s.weight;
       totalDivNet += montant * (s.dividend_yield || 0) / 100 * (1 - env.taxDiv);
+      const vol = (s.volatility || 20) / 100;
+      portVolSq += s.weight * s.weight * vol * vol;
     }
-    return totalDivNet - coutCredit;
+    const profit = totalDivNet - coutCredit;
+    const portVol = Math.sqrt(portVolSq);
+    // Sharpe-like: profit / portfolio vol (higher = better risk-adjusted)
+    const sharpe = portVol > 0 ? profit / (portVol * capital) : -Infinity;
+    return { profit, sharpe, portVol: portVol * 100, totalDivNet };
   },
 
   _runOptimizer() {
@@ -317,27 +392,27 @@ const LombardRenderer = {
       : rd.stocks;
 
     if (stocks.length === 0) {
-      resultEl.innerHTML = '<p style="color:#ff9800;text-align:center;padding:1rem;">Aucune action éligible</p>';
+      resultEl.innerHTML = `<p style="color:${env.color};text-align:center;padding:1rem;">Aucune action éligible</p>`;
       return;
     }
 
     const minN = Math.max(2, parseInt(document.getElementById('lomb-opt-min')?.value) || 3);
     const maxN = Math.min(parseInt(document.getElementById('lomb-opt-max')?.value) || 10, stocks.length);
-    let bestProfit = -Infinity;
+    let bestSharpe = -Infinity;
     let bestResult = null;
 
     for (let n = minN; n <= maxN; n++) {
       const { portfolio } = this._buildPortfolioForN(stocks, n, env, this.state.rate);
       if (portfolio.length < 2) continue;
-      const profit = this._calcProfit(portfolio, capital, ltv, env, this.state.rate);
-      if (profit > bestProfit) {
-        bestProfit = profit;
-        bestResult = { portfolio, n: portfolio.length, profit };
+      const { profit, sharpe, portVol, totalDivNet } = this._calcSharpe(portfolio, capital, ltv, env, this.state.rate);
+      if (sharpe > bestSharpe) {
+        bestSharpe = sharpe;
+        bestResult = { portfolio, n: portfolio.length, profit, sharpe, portVol, totalDivNet };
       }
     }
 
     if (!bestResult || bestResult.portfolio.length === 0) {
-      resultEl.innerHTML = '<p style="color:#ff9800;text-align:center;padding:1rem;">Aucune combinaison rentable</p>';
+      resultEl.innerHTML = `<p style="color:${env.color};text-align:center;padding:1rem;">Aucune combinaison rentable</p>`;
       return;
     }
 
@@ -345,22 +420,25 @@ const LombardRenderer = {
     const emprunt = capital * ltv;
     const total = capital + emprunt;
     const coutCredit = emprunt * this.state.rate / 100;
+    const profitNet = bestResult.profit;
+    const portVol = bestResult.portVol;
     const fmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-    let totalDivNet = 0;
     let weightedYield = 0;
     let rows = '';
+    const sectorTotals = {};
 
     for (const s of portfolio) {
       const montant = total * s.weight;
       const divNet = montant * (s.dividend_yield || 0) / 100 * (1 - env.taxDiv);
-      totalDivNet += divNet;
       weightedYield += s.weight * (s.dividend_yield || 0);
+      const sec = s.sector || 'Autre';
+      sectorTotals[sec] = (sectorTotals[sec] || 0) + s.weight;
 
       rows += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
         <td style="padding:0.4rem;font-family:var(--font-mono);font-weight:700;color:${env.color};">${s.ticker}</td>
         <td style="padding:0.4rem;font-size:0.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name || ''}</td>
-        <td style="padding:0.4rem;color:var(--text-muted);font-size:0.72rem;">${s.sector || ''}</td>
+        <td style="padding:0.4rem;color:var(--text-muted);font-size:0.72rem;">${sec}</td>
         <td style="text-align:right;padding:0.4rem;font-family:var(--font-mono);font-weight:700;">${(s.weight * 100).toFixed(0)}%</td>
         <td style="text-align:right;padding:0.4rem;font-family:var(--font-mono);">${fmt.format(montant)}</td>
         <td style="text-align:right;padding:0.4rem;font-family:var(--font-mono);">${(s.dividend_yield || 0).toFixed(1)}%</td>
@@ -369,31 +447,35 @@ const LombardRenderer = {
       </tr>`;
     }
 
-    const profitNet = totalDivNet - coutCredit;
     const rendCapital = (profitNet / capital) * 100;
     const pColor = profitNet > 0 ? '#4caf50' : '#f44336';
+    const nSectors = Object.keys(sectorTotals).length;
 
     resultEl.innerHTML = `
       <div style="margin-top:1rem;padding:0.6rem;background:${env.color}11;border-radius:8px;text-align:center;margin-bottom:1rem;">
         <span style="color:${env.color};font-weight:700;font-size:0.85rem;">
-          Portefeuille optimal : ${bestResult.n} actions · ${env.abbr} · taux ${this.state.rate}%
+          Portefeuille optimal : ${bestResult.n} actions · ${nSectors} secteurs · ${env.abbr} · taux ${this.state.rate}%
         </span>
       </div>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-bottom:1rem;">
-        <div style="text-align:center;min-width:90px;">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Capital total</div>
+        <div style="text-align:center;min-width:80px;">
+          <div style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Capital total</div>
           <div style="font-size:1rem;font-weight:700;color:#fff;font-family:var(--font-mono);">${fmt.format(total)}</div>
         </div>
-        <div style="text-align:center;min-width:90px;">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Dividendes net</div>
-          <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">+${fmt.format(totalDivNet)}/an</div>
+        <div style="text-align:center;min-width:80px;">
+          <div style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Dividendes net</div>
+          <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">+${fmt.format(bestResult.totalDivNet)}/an</div>
         </div>
-        <div style="text-align:center;min-width:90px;">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Coût crédit</div>
+        <div style="text-align:center;min-width:80px;">
+          <div style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Coût crédit</div>
           <div style="font-size:1rem;font-weight:700;color:#f44336;font-family:var(--font-mono);">−${fmt.format(coutCredit)}/an</div>
         </div>
+        <div style="text-align:center;min-width:80px;">
+          <div style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Vol. portfolio</div>
+          <div style="font-size:1rem;font-weight:700;color:${portVol < 15 ? '#4caf50' : portVol < 25 ? '#ff9800' : '#f44336'};font-family:var(--font-mono);">${portVol.toFixed(1)}%</div>
+        </div>
         <div style="text-align:center;padding:0.4rem 1rem;background:${profitNet > 0 ? 'rgba(76,175,80,0.08)' : 'rgba(244,67,54,0.08)'};border-radius:8px;min-width:100px;">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Profit net</div>
+          <div style="font-size:0.55rem;text-transform:uppercase;color:var(--text-muted);">Profit net</div>
           <div style="font-size:1.3rem;font-weight:800;color:${pColor};font-family:var(--font-mono);">${profitNet > 0 ? '+' : ''}${fmt.format(profitNet)}/an</div>
           <div style="font-size:0.65rem;color:${pColor};">${rendCapital.toFixed(1)}% sur capital propre</div>
         </div>
