@@ -3407,15 +3407,18 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         if alloc_yield:
             try:
                 _tickers_rend = {}
+                # Build lookup from current profile's assets (not all_assets)
+                _asset_lookup = {str(getattr(a, 'id', '')): a for a in assets}
                 for aid, weight in alloc_yield.items():
-                    # Resolve ticker from asset ID
-                    _a = next((a for a in all_assets if str(getattr(a, 'id', '')) == str(aid)), None)
-                    _tk = getattr(_a, 'ticker', None) or getattr(_a, 'symbol', None) or aid if _a else aid
+                    _a = _asset_lookup.get(str(aid))
+                    _tk = (getattr(_a, 'ticker', None) or getattr(_a, 'symbol', None) or aid) if _a else aid
                     _tickers_rend[str(_tk)] = weight / 100.0
                 portfolios[profile]["_tickers_rendement"] = _tickers_rend
                 portfolios[profile]["_yield_metrics"] = diag_yield.get("yield_metrics", {})
+                logger.info(f"   [{profile}] _tickers_rendement: {len(_tickers_rend)} tickers stored")
             except Exception as _e:
                 logger.warning(f"   [{profile}] yield tickers mapping: {_e}")
+                import traceback; traceback.print_exc()
 
         # === v5.2.1: Risk Analysis avec VaR hybride 5 ans ===
         if CONFIG.get("enable_risk_analysis", False) and HAS_RISK_ANALYSIS:
