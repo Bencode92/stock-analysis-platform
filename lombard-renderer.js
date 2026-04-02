@@ -23,12 +23,10 @@ const LombardRenderer = {
 
   // ── Config ──
   ENVELOPES: {
-    cto: { name: 'Compte-Titres', taxDiv: 0.30, abbr: 'CTO', defaultRate: 2.5, eligible: 'all' },
-    pea: { name: 'PEA', taxDiv: 0.172, abbr: 'PEA', defaultRate: 3.0, eligible: 'eu_only' },
-    av:  { name: 'Assurance Vie', taxDiv: 0.247, abbr: 'AV', defaultRate: 2.0, eligible: 'all' },
+    cto: { name: 'Compte-Titres', taxDiv: 0.30, abbr: 'CTO', color: '#ff9800', defaultRate: 2.5, eligible: 'all' },
+    pea: { name: 'PEA', taxDiv: 0.172, abbr: 'PEA', color: '#2196f3', defaultRate: 3.0, eligible: 'eu_only' },
+    av:  { name: 'Assurance Vie', taxDiv: 0.247, abbr: 'AV', color: '#4caf50', defaultRate: 2.0, eligible: 'all' },
   },
-
-  C: '#ff9800', // Primary accent color
 
   // ── Init ──
   async init() {
@@ -95,6 +93,8 @@ const LombardRenderer = {
 
     let html = '';
 
+    const C = env.color; // Active envelope color
+
     // ═══════════════════════════════════════════════════
     // SECTION 1: Enveloppe + Taux (une seule ligne)
     // ═══════════════════════════════════════════════════
@@ -105,9 +105,9 @@ const LombardRenderer = {
         ${Object.entries(this.ENVELOPES).map(([key, cfg]) => {
           const active = key === this.state.envelope;
           return `<button onclick="LombardRenderer.setEnvelope('${key}')"
-            style="padding:0.5rem 1rem;border-radius:8px;border:1px solid ${active ? '#ff9800' : 'rgba(255,255,255,0.1)'};
-              background:${active ? 'rgba(255,152,0,0.15)' : 'transparent'};
-              color:${active ? '#ff9800' : 'rgba(255,255,255,0.5)'};
+            style="padding:0.5rem 1rem;border-radius:8px;border:1px solid ${active ? cfg.color : 'rgba(255,255,255,0.1)'};
+              background:${active ? cfg.color + '22' : 'transparent'};
+              color:${active ? cfg.color : 'rgba(255,255,255,0.5)'};
               font-size:0.82rem;font-weight:${active ? '700' : '500'};cursor:pointer;transition:all 0.2s;">${cfg.abbr}</button>`;
         }).join('')}
       </div>
@@ -115,9 +115,9 @@ const LombardRenderer = {
         ${rates.map(r => {
           const active = r === closestRate;
           return `<button onclick="LombardRenderer.setRate(${r})"
-            style="padding:0.4rem 0.8rem;border-radius:6px;border:1px solid ${active ? '#ff9800' : 'rgba(255,255,255,0.08)'};
-              background:${active ? 'rgba(255,152,0,0.15)' : 'transparent'};
-              color:${active ? '#ff9800' : 'rgba(255,255,255,0.4)'};
+            style="padding:0.4rem 0.8rem;border-radius:6px;border:1px solid ${active ? C : 'rgba(255,255,255,0.08)'};
+              background:${active ? C + '22' : 'transparent'};
+              color:${active ? C : 'rgba(255,255,255,0.4)'};
               font-size:0.8rem;font-weight:700;cursor:pointer;font-family:var(--font-mono);transition:all 0.2s;">${r}%</button>`;
         }).join('')}
       </div>
@@ -133,7 +133,7 @@ const LombardRenderer = {
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
       <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
         <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;">Yield net ${env.abbr}</div>
-        <div style="font-size:1.5rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${avgYieldNet.toFixed(1)}%</div>
+        <div style="font-size:1.5rem;font-weight:700;color:${C};font-family:var(--font-mono);">${avgYieldNet.toFixed(1)}%</div>
         <div style="font-size:0.6rem;color:var(--text-muted);">après ${Math.round(env.taxDiv*100)}% fiscalité</div>
       </div>
       <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
@@ -143,7 +143,7 @@ const LombardRenderer = {
       </div>
       <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;text-align:center;">
         <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;">LTV estimé</div>
-        <div style="font-size:1.5rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${avgLTV}%</div>
+        <div style="font-size:1.5rem;font-weight:700;color:${C};font-family:var(--font-mono);">${avgLTV}%</div>
       </div>
     </div>`;
 
@@ -167,24 +167,36 @@ const LombardRenderer = {
           <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;">LTV</label>
           <div style="display:flex;align-items:center;gap:0.4rem;">
             <input id="lomb-ltv" type="range" min="20" max="70" value="${avgLTV}" step="5"
-              style="width:100px;accent-color:#ff9800;"
+              style="width:100px;accent-color:${C};"
               oninput="document.getElementById('lomb-ltv-val').textContent=this.value+'%'; LombardRenderer._updateSim()">
-            <span id="lomb-ltv-val" style="font-size:0.8rem;color:#ff9800;font-weight:700;font-family:var(--font-mono);">${avgLTV}%</span>
+            <span id="lomb-ltv-val" style="font-size:0.8rem;color:${C};font-weight:700;font-family:var(--font-mono);">${avgLTV}%</span>
           </div>
+        </div>
+        <div>
+          <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;">Actions min</label>
+          <input id="lomb-opt-min" type="number" value="3" min="2" max="15" step="1"
+            style="width:50px;padding:0.4rem;border-radius:6px;border:1px solid rgba(255,255,255,0.12);
+              background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;">
+        </div>
+        <div>
+          <label style="font-size:0.65rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;">Actions max</label>
+          <input id="lomb-opt-max" type="number" value="10" min="2" max="20" step="1"
+            style="width:50px;padding:0.4rem;border-radius:6px;border:1px solid rgba(255,255,255,0.12);
+              background:rgba(255,255,255,0.05);color:#fff;font-size:0.85rem;font-family:var(--font-mono);text-align:center;">
         </div>
         <div id="lomb-sim-result" style="display:flex;gap:1.2rem;flex-wrap:wrap;"></div>
       </div>
 
       <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:1rem;">
         <button onclick="LombardRenderer._runOptimizer()"
-          style="padding:0.6rem 1.5rem;border-radius:8px;border:none;background:linear-gradient(135deg,#ff9800,#f57c00);
+          style="padding:0.6rem 1.5rem;border-radius:8px;border:none;background:linear-gradient(135deg,${C},${C}dd);
             color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;"
-          onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 15px rgba(255,152,0,0.3)'"
+          onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 15px ${C}44'"
           onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">
           <i class="fas fa-bolt" style="margin-right:0.3rem;"></i> Optimiser le portefeuille
         </button>
         <span style="font-size:0.72rem;color:var(--text-muted);margin-left:0.8rem;">
-          Trouve le meilleur nombre d'actions et allocation pour maximiser le profit
+          Teste de <strong id="lomb-range-label">3 à 10</strong> actions pour maximiser le profit
         </span>
       </div>
 
@@ -203,7 +215,7 @@ const LombardRenderer = {
         const carryColor = carryFiscal > 0 ? '#4caf50' : '#f44336';
         tableRows += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
           <td style="padding:0.4rem;color:var(--text-muted);font-size:0.75rem;">${i + 1}</td>
-          <td style="padding:0.4rem;font-family:var(--font-mono);font-weight:700;color:#ff9800;font-size:0.8rem;">${s.ticker}</td>
+          <td style="padding:0.4rem;font-family:var(--font-mono);font-weight:700;color:${C};font-size:0.8rem;">${s.ticker}</td>
           <td style="padding:0.4rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.78rem;">${s.name || ''}</td>
           <td style="padding:0.4rem;color:var(--text-muted);font-size:0.72rem;">${s.sector || ''}</td>
           <td style="text-align:right;padding:0.4rem;font-family:var(--font-mono);font-size:0.8rem;">${(s.dividend_yield || 0).toFixed(1)}%</td>
@@ -218,7 +230,7 @@ const LombardRenderer = {
         <summary style="cursor:pointer;padding:0.8rem 1rem;background:var(--surface-1);border:1px solid var(--border-subtle);
           border-radius:10px;font-size:0.82rem;color:var(--text-muted);font-weight:600;list-style:none;display:flex;align-items:center;gap:0.5rem;"
           onclick="this.querySelector('.chevron').classList.toggle('open')">
-          <i class="fas fa-chevron-right chevron" style="font-size:0.6rem;color:#ff9800;transition:transform 0.2s;"></i>
+          <i class="fas fa-chevron-right chevron" style="font-size:0.6rem;color:${C};transition:transform 0.2s;"></i>
           Voir les ${filtered.length} actions éligibles
         </summary>
         <div style="margin-top:0.5rem;overflow-x:auto;">
@@ -309,11 +321,12 @@ const LombardRenderer = {
       return;
     }
 
-    const maxN = Math.min(15, stocks.length);
+    const minN = Math.max(2, parseInt(document.getElementById('lomb-opt-min')?.value) || 3);
+    const maxN = Math.min(parseInt(document.getElementById('lomb-opt-max')?.value) || 10, stocks.length);
     let bestProfit = -Infinity;
     let bestResult = null;
 
-    for (let n = 2; n <= maxN; n++) {
+    for (let n = minN; n <= maxN; n++) {
       const { portfolio } = this._buildPortfolioForN(stocks, n, env, this.state.rate);
       if (portfolio.length < 2) continue;
       const profit = this._calcProfit(portfolio, capital, ltv, env, this.state.rate);
@@ -345,7 +358,7 @@ const LombardRenderer = {
       weightedYield += s.weight * (s.dividend_yield || 0);
 
       rows += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-        <td style="padding:0.4rem;font-family:var(--font-mono);font-weight:700;color:#ff9800;">${s.ticker}</td>
+        <td style="padding:0.4rem;font-family:var(--font-mono);font-weight:700;color:${env.color};">${s.ticker}</td>
         <td style="padding:0.4rem;font-size:0.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name || ''}</td>
         <td style="padding:0.4rem;color:var(--text-muted);font-size:0.72rem;">${s.sector || ''}</td>
         <td style="text-align:right;padding:0.4rem;font-family:var(--font-mono);font-weight:700;">${(s.weight * 100).toFixed(0)}%</td>
@@ -361,8 +374,8 @@ const LombardRenderer = {
     const pColor = profitNet > 0 ? '#4caf50' : '#f44336';
 
     resultEl.innerHTML = `
-      <div style="margin-top:1rem;padding:0.6rem;background:rgba(255,152,0,0.06);border-radius:8px;text-align:center;margin-bottom:1rem;">
-        <span style="color:#ff9800;font-weight:700;font-size:0.85rem;">
+      <div style="margin-top:1rem;padding:0.6rem;background:${env.color}11;border-radius:8px;text-align:center;margin-bottom:1rem;">
+        <span style="color:${env.color};font-weight:700;font-size:0.85rem;">
           Portefeuille optimal : ${bestResult.n} actions · ${env.abbr} · taux ${this.state.rate}%
         </span>
       </div>
@@ -373,7 +386,7 @@ const LombardRenderer = {
         </div>
         <div style="text-align:center;min-width:90px;">
           <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Dividendes net</div>
-          <div style="font-size:1rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">+${fmt.format(totalDivNet)}/an</div>
+          <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">+${fmt.format(totalDivNet)}/an</div>
         </div>
         <div style="text-align:center;min-width:90px;">
           <div style="font-size:0.6rem;text-transform:uppercase;color:var(--text-muted);">Coût crédit</div>
@@ -426,7 +439,7 @@ const LombardRenderer = {
     el.innerHTML = `
       <div style="text-align:center;">
         <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Emprunt</div>
-        <div style="font-size:1rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">${fmt.format(emprunt)}</div>
+        <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">${fmt.format(emprunt)}</div>
       </div>
       <div style="text-align:center;">
         <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Coût crédit/an</div>
@@ -434,7 +447,7 @@ const LombardRenderer = {
       </div>
       <div style="text-align:center;">
         <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Revenu net/an</div>
-        <div style="font-size:1rem;font-weight:700;color:#ff9800;font-family:var(--font-mono);">+${fmt.format(revenuNet)}</div>
+        <div style="font-size:1rem;font-weight:700;color:${env.color};font-family:var(--font-mono);">+${fmt.format(revenuNet)}</div>
       </div>
       <div style="text-align:center;padding:0.3rem 0.8rem;background:${profit > 0 ? 'rgba(76,175,80,0.08)' : 'rgba(244,67,54,0.08)'};border-radius:8px;">
         <div style="font-size:0.55rem;color:var(--text-muted);text-transform:uppercase;">Profit net/an</div>
