@@ -2962,30 +2962,45 @@ async function main() {
     const activeRegionsList = Object.entries(SELECTED_REGIONS).filter(([_, v]) => v).map(([k]) => k.toUpperCase());
 
     if (existingOverview?.sets && activeRegionsList.length < 3) {
-        // Partial run: merge only active base regions into existing
+        // Partial run: merge active base regions into existing
         console.log(`🔀 Merge mode: updating ${activeRegionsList.join(', ')} only`);
         for (const baseRegion of ['US', 'EUROPE', 'ASIA']) {
             if (activeRegionsList.includes(baseRegion)) {
-                // This region was processed — use fresh data
                 existingOverview.sets[baseRegion] = freshOverview.sets[baseRegion];
             }
-            // else: keep existing data for this region
         }
-        // Recompute combos from merged base regions
-        // We need raw stock arrays to recompute, but they may not all be available.
-        // Instead, just merge the combo sets that involve active regions.
-        const comboKeys = { GLOBAL: ['US','EUROPE','ASIA'], US_EUROPE: ['US','EUROPE'], US_ASIA: ['US','ASIA'], EUROPE_ASIA: ['EUROPE','ASIA'] };
-        for (const [comboKey, bases] of Object.entries(comboKeys)) {
-            if (bases.some(b => activeRegionsList.includes(b))) {
-                // At least one base was refreshed — recompute this combo from fresh overview
-                // (fresh overview has correct combos for processed regions, empty for others)
-                // Better: use fresh if ALL bases were processed, else keep existing
-                if (bases.every(b => activeRegionsList.includes(b))) {
-                    existingOverview.sets[comboKey] = freshOverview.sets[comboKey];
+
+        // Recompute ALL combos from merged base region stocks
+        // Load the base region stocks from existing JSON files (fresh for active, stale for others)
+        const mergedByRegion = {};
+        for (const baseRegion of ['US', 'EUROPE', 'ASIA']) {
+            if (activeRegionsList.includes(baseRegion) && byRegion[baseRegion]?.length) {
+                // Fresh data from current run
+                mergedByRegion[baseRegion] = byRegion[baseRegion];
+            } else {
+                // Load stale data from existing stocks JSON
+                const fileMap = { US: 'stocks_us.json', EUROPE: 'stocks_europe.json', ASIA: 'stocks_asia.json' };
+                try {
+                    const raw = await fs.readFile(path.join(OUT_DIR, fileMap[baseRegion]), 'utf-8');
+                    mergedByRegion[baseRegion] = JSON.parse(raw).stocks || [];
+                    console.log(`   📂 ${baseRegion}: ${mergedByRegion[baseRegion].length} stocks from existing ${fileMap[baseRegion]}`);
+                } catch {
+                    mergedByRegion[baseRegion] = [];
+                    console.log(`   ⚠️ ${baseRegion}: no existing data`);
                 }
-                // else: combo involves unprocessed regions — keep existing (stale but not empty)
             }
         }
+
+        // Rebuild combos with full stock arrays from all regions
+        const mergedOverview = buildOverview(mergedByRegion);
+        const comboKeys = ['GLOBAL', 'US_EUROPE', 'US_ASIA', 'EUROPE_ASIA'];
+        for (const comboKey of comboKeys) {
+            if (mergedOverview.sets[comboKey]) {
+                existingOverview.sets[comboKey] = mergedOverview.sets[comboKey];
+            }
+        }
+        console.log(`   ✅ Combos recalculées (GLOBAL, US_EUROPE, US_ASIA, EUROPE_ASIA)`);
+
         existingOverview.generated_at = new Date().toISOString();
         existingOverview.regions_processed = activeRegions;
         existingOverview.last_partial_update = activeRegionsList.join(', ');
