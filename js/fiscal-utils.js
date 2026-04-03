@@ -264,6 +264,6 @@ window.FiscalUtils = FiscalUtils;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé (v1.8 - Calcul progressif IS corrigé)");
+    console.log("Module FiscalUtils chargé (v2.0 - Barème IR 2026 + PASS 48060 + PFU 31,4%)");
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });

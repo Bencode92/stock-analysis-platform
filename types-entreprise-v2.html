@@ -1320,24 +1320,10 @@
         </button>
     </div>
     
-    <!-- Scripts avec ordre de chargement modifié et timestamps pour éviter les problèmes de cache -->
-    <script src="js/combined-recommendation.js?v=20260403_1"></script>
-    <script>
-    // Vérification que combined-recommendation.js est bien chargé
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("DOM chargé, vérification de legalStatuses");
-        if (!window.legalStatuses) {
-            console.warn("window.legalStatuses n'est pas disponible au chargement du DOM - attendons l'événement legalStatusesLoaded");
-        } else {
-            console.log("window.legalStatuses est disponible au chargement du DOM", Object.keys(window.legalStatuses).length);
-        }
-    });
-    </script>
     <!-- ========== DONNÉES DE BASE ========== -->
+    <!-- combined-recommendation.js inclut statuts-data + exclusion-filters -->
+<script src="js/combined-recommendation.js?v=20260403_2" defer></script>
 <script src="js/question-data.js?v=20260403_1" defer></script>
-<script src="js/statuts-data.js" defer></script>
-<script src="js/exclusion-filters.js" defer></script>
-<script src="js/combined-recommendation.js?v=20260403_1" defer></script>
 
 <!-- ========== COMPARATEUR (DOIT SE CHARGER AVANT LES PRESETS) ========== -->
 <script src="js/comparatif-status.js?v=20260403_1" defer></script>
