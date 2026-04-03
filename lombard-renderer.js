@@ -305,7 +305,10 @@ const LombardRenderer = {
       const vol = s.volatility || 20;
       const quality = (s.quality_score || 50) / 100;
       const payout = s.payout_ratio || 50;
-      const payoutAdj = Math.max(0.2, Math.min(1.0, 1.0 - Math.max(0, payout - 70) / 60));
+      // REITs are legally required to distribute ≥90% of income — high payout is normal
+      const isREIT = ((s.industry || '').toUpperCase().includes('REIT'));
+      const payoutThreshold = isREIT ? 100 : 70; // REITs: penalize only >100%, others: >70%
+      const payoutAdj = Math.max(0.2, Math.min(1.0, 1.0 - Math.max(0, payout - payoutThreshold) / 60));
       // Composite: carry (35%) + quality (25%) + safety (40%)
       // Safety weighted higher: Lombard risk is asymmetric (margin call = 100% loss)
       const safetyScore = Math.max(0, (35 - vol) / 35); // 0 at vol=35, 1 at vol=0

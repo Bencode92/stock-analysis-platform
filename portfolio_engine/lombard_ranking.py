@@ -99,16 +99,27 @@ def compute_lombard_score(stock: Dict, lombard_rate: float = 3.0) -> Optional[Di
     safety_score = max(-15, min(15, (25 - vol) * 1.0))
     ltv_score = max(-10, min(20, (ltv - 0.50) * 80))
 
-    # v2.0: Payout ratio — payout > 90% = dividende en danger
+    # v2.1: Payout ratio — REIT-aware (REITs must distribute ≥90%, high payout is structural)
+    industry = stock.get("industry", "") or ""
+    is_reit = "REIT" in industry.upper()
     payout_score = 0
-    if payout < 50:
-        payout_score = 5   # Très soutenable
-    elif payout < 70:
-        payout_score = 2   # Soutenable
-    elif payout > 100:
-        payout_score = -10  # Danger de cut
-    elif payout > 90:
-        payout_score = -5   # Risqué
+    if is_reit:
+        # REITs: only penalize if payout > 110% (distributes more than earnings)
+        if payout < 90:
+            payout_score = 5   # Below legal minimum → retaining earnings, very safe
+        elif payout <= 105:
+            payout_score = 2   # Normal REIT range
+        else:
+            payout_score = -5  # Distributing more than earnings
+    else:
+        if payout < 50:
+            payout_score = 5   # Très soutenable
+        elif payout < 70:
+            payout_score = 2   # Soutenable
+        elif payout > 100:
+            payout_score = -10  # Danger de cut
+        elif payout > 90:
+            payout_score = -5   # Risqué
 
     # v2.0: EPS Surprise — beats réguliers = dividende sécurisé
     surprise_score = 0
