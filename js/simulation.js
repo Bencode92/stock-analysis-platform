@@ -932,8 +932,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Respecte le mode de l'UI (pas de périodique si "Unique" sélectionné)
     const isPeriodicUI   = document.getElementById('periodic-investment')?.classList.contains('selected');
-    const frequency      = (document.getElementById('goal-frequency')?.value ||
-                            document.getElementById('investment-frequency')?.value || 'monthly');
+    // En mode périodique : utiliser la fréquence des paramètres principaux
+    // En mode unique : utiliser la fréquence de la section objectifs (exploration)
+    const frequency      = isPeriodicUI
+                            ? (document.getElementById('investment-frequency')?.value || 'monthly')
+                            : (document.getElementById('goal-frequency')?.value || 'monthly');
     const initialDeposit = parseFloat(document.getElementById('initial-investment-amount')?.value) || 0;
 
     const periodicInputEl = document.getElementById('periodic-investment-amount');
@@ -1005,11 +1008,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('goal-result').innerHTML = html;
   });
 
-  // Micro-UX Objectifs
-  document.getElementById('goal-mode')?.addEventListener('change', (e) => {
-    document.getElementById('goal-frequency-wrap').style.display =
-      (e.target.value === 'periodic-for-target') ? 'block' : 'none';
-  });
+  // Micro-UX Objectifs : fréquence visible uniquement en versement unique + mode "trouver versement"
+  function updateGoalFrequencyVisibility() {
+    const isPeriodicUI = document.getElementById('periodic-investment')?.classList.contains('selected');
+    const mode = document.getElementById('goal-mode')?.value || 'periodic-for-target';
+    const wrap = document.getElementById('goal-frequency-wrap');
+    if (wrap) {
+      // En versement périodique : on utilise la fréquence du haut → masquer
+      // En versement unique + mode durée : pas besoin de fréquence → masquer
+      // En versement unique + mode versement : l'utilisateur explore → afficher
+      wrap.style.display = (!isPeriodicUI && mode === 'periodic-for-target') ? 'block' : 'none';
+    }
+  }
+  document.getElementById('goal-mode')?.addEventListener('change', updateGoalFrequencyVisibility);
 
   // Scénarios
   document.getElementById('scenario-save')?.addEventListener('click', saveScenario);
@@ -1058,19 +1069,20 @@ document.addEventListener('DOMContentLoaded', function() {
     checkPlafondLimits(); // ← taper un montant périodique doit rafraîchir l’alerte
   });
   document.getElementById('periodic-investment')?.addEventListener('click', () => {
-    setTimeout(updatePeriodicUI, 0);
+    setTimeout(() => { updatePeriodicUI(); updateGoalFrequencyVisibility(); }, 0);
     checkPlafondLimits();
   });
   document.getElementById('unique-investment')?.addEventListener('click', () => {
-    setTimeout(updatePeriodicUI, 0);
+    setTimeout(() => { updatePeriodicUI(); updateGoalFrequencyVisibility(); }, 0);
     checkPlafondLimits();
   });
 
   // Table des scénarios
   renderScenarioTable();
 
-  // ✅ Alerte plafond initiale
+  // ✅ Alerte plafond initiale + visibilité fréquence objectifs
   checkPlafondLimits();
+  updateGoalFrequencyVisibility();
 });
 
 
