@@ -2020,13 +2020,41 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
         document.getElementById('insurance-delegated-cost').textContent = formatMontant(coutDelegue);
         document.getElementById('insurance-delegated-monthly').textContent = formatMontant(mensualiteDelegue) + '/mois';
 
+        // Couleurs conditionnelles : vert si économie, rouge si plus cher
+        const isPositive = economie > 0;
+        const costColor = isPositive ? 'text-green-400' : 'text-red-400';
+        const bankCostColor = isPositive ? 'text-red-400' : 'text-green-400';
+
+        // Couleur du coût délégué
+        const delegatedCostEl = document.getElementById('insurance-delegated-cost');
+        if (delegatedCostEl) {
+            delegatedCostEl.className = `text-xl font-bold ${costColor}`;
+        }
+        // Couleur du coût banque (inverse)
+        const bankCostEl = document.getElementById('insurance-bank-cost');
+        if (bankCostEl) {
+            bankCostEl.className = `text-xl font-bold ${bankCostColor}`;
+        }
+
         const savingsEl = document.getElementById('insurance-savings');
         const savingsPctEl = document.getElementById('insurance-savings-pct');
         if (savingsEl) {
-            savingsEl.querySelector('.text-green-400.font-bold').textContent = formatMontant(economie);
+            const boldEl = savingsEl.querySelector('.font-bold');
+            if (boldEl) {
+                boldEl.textContent = formatMontant(Math.abs(economie));
+                boldEl.className = `font-bold text-lg ${costColor}`;
+            }
+            const labelEl = savingsEl.querySelector('.text-sm');
+            if (labelEl) {
+                labelEl.textContent = isPositive ? " d'économie potentielle" : " plus cher que votre banque";
+            }
+            savingsEl.className = isPositive
+                ? 'text-center p-2 bg-green-900 bg-opacity-20 rounded-lg'
+                : 'text-center p-2 bg-red-900 bg-opacity-20 rounded-lg';
         }
         if (savingsPctEl) {
-            savingsPctEl.textContent = `(−${economiePct}%)`;
+            savingsPctEl.textContent = isPositive ? `(−${economiePct}%)` : `(+${Math.abs(economiePct)}%)`;
+            savingsPctEl.className = `text-sm font-semibold ml-1 ${costColor}`;
         }
 
         container.classList.remove('hidden');
