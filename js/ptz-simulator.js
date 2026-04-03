@@ -22,8 +22,10 @@ window.simulerPTZ = function() {
         const householdSize = householdSizeElem ? parseInt(householdSizeElem.value || '1') : 1;
         const totalCost = totalCostElem ? parseFloat(totalCostElem.value || '0') : 0;
         const cityName = citySearchElem ? citySearchElem.value : null;
-        
-        console.log("Valeurs récupérées:", {projectType, zone, income, householdSize, totalCost, cityName});
+        const housingTypeElem = document.getElementById('ptz-housing-type');
+        const housingType = housingTypeElem ? housingTypeElem.value : 'collectif';
+
+        console.log("Valeurs récupérées:", {projectType, zone, income, householdSize, totalCost, cityName, housingType});
         
         // Valider les entrées avec des messages spécifiques
         if (isNaN(income)) {
@@ -61,7 +63,7 @@ window.simulerPTZ = function() {
         
         // Créer l'instance du simulateur et calculer
         const simulator = new PTZSimulator({
-            projectType, zone, income, householdSize, totalCost, cityName
+            projectType, zone, income, householdSize, totalCost, cityName, housingType
         });
         
         const result = simulator.calculatePTZAmount();
@@ -95,7 +97,8 @@ class PTZSimulator {
         income,
         householdSize,
         totalCost,
-        cityName = null
+        cityName = null,
+        housingType = 'collectif'
     }) {
         this.projectType = projectType;
         this.zone = zone;
@@ -103,6 +106,7 @@ class PTZSimulator {
         this.householdSize = householdSize;
         this.totalCost = totalCost;
         this.cityName = cityName;
+        this.housingType = housingType;
         
         // Plafonds de revenus selon zone et nombre de personnes
         this.incomeLimits = {
@@ -112,27 +116,38 @@ class PTZSimulator {
             'C': [28500, 42750, 51300, 59850, 68400, 76950, 85500, 94050]
         };
         
-        // Coûts maximum pris en compte pour le calcul du PTZ
+        // Coûts maximum pris en compte pour le calcul du PTZ (décret n°2025-299, depuis 01/04/2025)
         this.maxCosts = {
-            'A': [120000, 168000, 210000, 252000, 294000],
-            'B1': [110000, 154000, 187000, 231000, 275000],
+            'A': [150000, 225000, 270000, 315000, 360000],
+            'B1': [135000, 202500, 243000, 283500, 324000],
             'B2': [110000, 165000, 198000, 231000, 264000],
             'C': [100000, 150000, 180000, 210000, 240000]
         };
         
-        // Pourcentages de financement selon la tranche de revenus (pour le neuf, depuis avril 2025)
-        this.financingRates = {
+        // Quotités de financement selon la tranche de revenus (décret n°2025-299, depuis 01/04/2025)
+        // Appartement neuf / ancien avec travaux
+        this.financingRatesCollectif = {
             'tranche1': 0.5, // 50%
             'tranche2': 0.4, // 40%
             'tranche3': 0.4, // 40%
             'tranche4': 0.2  // 20%
+        };
+        // Maison individuelle neuve (quotités réduites — objectif ZAN)
+        this.financingRatesMaison = {
+            'tranche1': 0.3, // 30%
+            'tranche2': 0.2, // 20%
+            'tranche3': 0.2, // 20%
+            'tranche4': 0.1  // 10%
         };
         
         // Coefficients pour déterminer la tranche de revenus
         this.coefficients = [1, 1.5, 1.8, 2.1, 2.4, 2.4, 2.4, 2.4];
         
         // Seuils de tranches selon les zones (revenu divisé par le coefficient familial)
+        // Chaque zone a ses propres seuils (décret n°2025-299)
         this.incomeBrackets = {
+            'A': [25000, 31000, 37000, 49000],
+            'B1': [21500, 26000, 30000, 34500],
             'B2': [18000, 22500, 27000, 31500],
             'C': [15000, 19500, 24000, 28500]
         };
@@ -169,8 +184,8 @@ class PTZSimulator {
         // Diviser le revenu par le coefficient
         const adjustedIncome = this.income / coefficient;
         
-        // Déterminer la tranche selon la zone
-        const thresholds = this.zone === 'C' ? this.incomeBrackets.C : this.incomeBrackets.B2;
+        // Déterminer la tranche selon la zone (chaque zone a ses propres seuils)
+        const thresholds = this.incomeBrackets[this.zone] || this.incomeBrackets.B2;
         
         if (adjustedIncome <= thresholds[0]) {
             return {
@@ -220,8 +235,12 @@ class PTZSimulator {
         // Limiter le coût pris en compte
         const consideredCost = Math.min(this.totalCost, maxCost);
         
-        // Déterminer le pourcentage de financement selon la tranche
-        const percentageFinancing = this.financingRates[incomeBracket.bracket];
+        // Déterminer le pourcentage de financement selon la tranche ET le type de logement
+        // Maison individuelle neuve : quotités réduites (30/20/20/10%)
+        // Appartement neuf / ancien avec travaux / social : quotités standard (50/40/40/20%)
+        const isMaisonNeuve = this.projectType === 'neuf' && (this.housingType === 'maison' || this.housingType === 'individual');
+        const rates = isMaisonNeuve ? this.financingRatesMaison : this.financingRatesCollectif;
+        const percentageFinancing = rates[incomeBracket.bracket];
         
         // Calculer le montant maximum du PTZ
         const ptzAmount = consideredCost * percentageFinancing;
@@ -245,31 +264,31 @@ class PTZSimulator {
     
     // Déterminer les périodes de remboursement selon la tranche de revenus
     getRepaymentPeriods(bracket) {
-        // Selon la réglementation PTZ 2025
+        // Selon la réglementation PTZ 2026 (décret n°2025-299, en vigueur depuis 01/04/2025)
         switch(bracket) {
             case 'tranche1':
                 return {
                     totalDuration: 25,   // 25 ans
-                    deferralPeriod: 15   // dont 15 ans de différé
+                    deferralPeriod: 10   // dont 10 ans de différé
                 };
             case 'tranche2':
                 return {
-                    totalDuration: 22,   // 22 ans
-                    deferralPeriod: 10   // dont 10 ans de différé
+                    totalDuration: 20,   // 20 ans
+                    deferralPeriod: 8    // dont 8 ans de différé
                 };
             case 'tranche3':
                 return {
-                    totalDuration: 20,   // 20 ans
-                    deferralPeriod: 5    // dont 5 ans de différé
+                    totalDuration: 15,   // 15 ans
+                    deferralPeriod: 2    // dont 2 ans de différé
                 };
             case 'tranche4':
                 return {
-                    totalDuration: 15,   // 15 ans
+                    totalDuration: 10,   // 10 ans
                     deferralPeriod: 0    // pas de différé
                 };
             default:
                 return {
-                    totalDuration: 20,
+                    totalDuration: 15,
                     deferralPeriod: 0
                 };
         }
@@ -1175,7 +1194,13 @@ function updateUIForProjectType() {
     projectTypeSelect.addEventListener('change', function() {
         const newProjectType = this.value;
         console.log("Type de projet changé:", newProjectType);
-        
+
+        // Afficher/masquer le sélecteur type de logement (maison/appart) selon le type de projet
+        const housingTypeWrap = document.getElementById('ptz-housing-type-wrap');
+        if (housingTypeWrap) {
+            housingTypeWrap.style.display = (newProjectType === 'neuf') ? 'block' : 'none';
+        }
+
         // Adapter l'interface en fonction du type de projet
         if (newProjectType === 'social') {
             // Pour les logements sociaux, mettre en évidence l'option
