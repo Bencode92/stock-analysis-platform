@@ -23,19 +23,8 @@ function closeAllDetails() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== NOUVEAU: Mise à jour automatique des labels =====
-    // Changer tous les en-têtes "Rendement" en "Dividende TTM"
-    const updateTableHeaders = () => {
-        document.querySelectorAll('.data-table thead th').forEach(th => {
-            const text = th.textContent.trim();
-            if (text === 'Rendement' || text === 'RENDEMENT') {
-                th.textContent = 'DIVIDENDE TTM';
-                th.setAttribute('data-original-label', text); // Pour réversibilité
-                th.title = 'Rendement des dividendes sur les 12 derniers mois';
-                th.style.cursor = 'help';
-            }
-        });
-    };
+    // v8.0: Headers set directly in HTML — no dynamic rename needed
+    const updateTableHeaders = () => {};
     
     // Observer pour gérer le contenu dynamique
     const headerObserver = new MutationObserver(() => {
@@ -1350,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (stocks.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="9" class="text-center py-4 text-gray-400">
+                            <td colspan="10" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune action disponible pour cette lettre
                             </td>
@@ -1380,7 +1369,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ytdClass = stock.ytd && stock.ytd.includes('-') ? 'negative' : 'positive';
                             const perf1yClass = stock.perf_1y && stock.perf_1y.includes('-') ? 'negative' : 'positive';
                             
-                            // MODIFIÉ v1.5: Utiliser dividend_yield_ttm au lieu de dividend_yield
+                            // v8.0: Quality + Value grades + PE replacing Vol 3Y + Volume
+                            const _qGrade = stock.quality_grade || '–';
+                            const _qScore = stock.quality_score != null ? Math.round(stock.quality_score) : null;
+                            const _vGrade = stock.buffett_grade || '–';
+                            const _vScore = stock.buffett_score != null ? Math.round(stock.buffett_score) : null;
+                            const _pe = stock.pe_ratio != null ? parseFloat(stock.pe_ratio).toFixed(1) : '–';
+                            const _gradeColor = (g) => g === 'A' ? '#4caf50' : g === 'B' ? '#2196f3' : g === 'C' ? '#ff9800' : g === 'D' ? '#f44336' : 'rgba(255,255,255,0.3)';
+                            const _gradeBg = (g) => g === 'A' ? 'rgba(76,175,80,0.15)' : g === 'B' ? 'rgba(33,150,243,0.15)' : g === 'C' ? 'rgba(255,152,0,0.15)' : g === 'D' ? 'rgba(244,67,54,0.15)' : 'rgba(255,255,255,0.05)';
+
                             row.innerHTML = `
                                 <td class="py-2 px-3">
                                     <div class="font-medium">${stock.name || '-'} ${stock.marketIcon}</div>
@@ -1394,12 +1391,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="text-right ${changeClass}">${stock.change || '-'}</td>
                                 <td class="text-right ${ytdClass}">${stock.ytd || '-'}</td>
                                 <td class="text-right ${perf1yClass}">${stock.perf_1y || '-'}</td>
-                                <td class="text-right">${stock.volatility_3y || '-'}</td>
+                                <td class="text-center" title="${_qScore != null ? 'Quality Score: ' + _qScore + '/100' : ''}">
+                                    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-weight:700;font-size:0.8rem;
+                                        background:${_gradeBg(_qGrade)};color:${_gradeColor(_qGrade)};">${_qGrade}</span>
+                                </td>
+                                <td class="text-center" title="${_vScore != null ? 'Value Score: ' + _vScore + '/100' : ''}">
+                                    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-weight:700;font-size:0.8rem;
+                                        background:${_gradeBg(_vGrade)};color:${_gradeColor(_vGrade)};">${_vGrade}</span>
+                                </td>
                                 <td class="text-right">${stock.dividend_yield_ttm || stock.dividend_yield || '-'}</td>
-                                <td class="text-right">${stock.volume || '-'}</td>
+                                <td class="text-right">${_pe}</td>
                                 <td class="text-center">
-                                  <button type="button" onclick="toggleDetailsRow(this)" 
-                                          class="action-button details-toggle" 
+                                  <button type="button" onclick="toggleDetailsRow(this)"
+                                          class="action-button details-toggle"
                                           aria-expanded="false" data-key="${stockKey}">
                                     <i class="fas fa-chevron-down" aria-hidden="true"></i>
                                   </button>
@@ -1410,8 +1414,37 @@ document.addEventListener('DOMContentLoaded', function() {
                             const detailsRow = document.createElement('tr');
                             detailsRow.className = 'details-row hidden';
                             detailsRow.setAttribute('data-for', stockKey);
+                            // v8.0: Enriched detail panel with Value Grade criteria + Quality subscores
+                            const _qs = stock.quality_subscores || {};
+                            const _bc = stock.buffett_criteria || [];
+                            const _subBar = (label, val) => {
+                                const v = val != null ? Math.round(val) : 0;
+                                return `<div style="display:flex;align-items:center;gap:6px;margin:2px 0;">
+                                    <span style="width:65px;font-size:0.65rem;opacity:0.6;">${label}</span>
+                                    <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+                                        <div style="width:${v}%;height:100%;background:${v >= 70 ? '#4caf50' : v >= 40 ? '#ff9800' : '#f44336'};border-radius:3px;"></div>
+                                    </div>
+                                    <span style="font-size:0.65rem;font-family:monospace;width:28px;text-align:right;opacity:0.7;">${v}%</span>
+                                </div>`;
+                            };
+                            const _checkIcon = (pass) => pass ? '<span style="color:#4caf50;">✓</span>' : '<span style="color:#f44336;">✗</span>';
+                            const _criteriaNames = {
+                                roe_consistent: 'ROE consistant',
+                                roic_moat: 'ROIC moat',
+                                leverage_safe: 'Levier safe',
+                                cash_generation: 'Cash generation',
+                                valuation_ok: 'Valorisation',
+                                moat_expansion: 'Moat expansion'
+                            };
+                            const _epsS = stock.eps_surprise_avg_2q != null ? parseFloat(stock.eps_surprise_avg_2q).toFixed(1) : null;
+                            const _epsBeat = stock.eps_beat_streak || 0;
+                            const _beta = stock.beta != null ? parseFloat(stock.beta).toFixed(2) : null;
+                            const _roe = stock.roe != null ? parseFloat(stock.roe).toFixed(1) : null;
+                            const _de = stock.de_ratio != null ? parseFloat(stock.de_ratio).toFixed(2) : null;
+                            const _fcfy = stock.fcf_yield != null ? parseFloat(stock.fcf_yield).toFixed(1) : null;
+
                             detailsRow.innerHTML = `
-                                <td colspan="9" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
+                                <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
                                     <div class="grid md:grid-cols-3 gap-6 p-4">
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
@@ -1421,30 +1454,43 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <div><span class="opacity-60">Source:</span> ${stock.data_exchange||'–'}</div>
                                                 <div><span class="opacity-60">Cap. Marché:</span> ${stock.market_cap||'–'}</div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Performances</div>
+                                            <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Performances</div>
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">1 mois:</span> <span class="${stock.perf_1m && stock.perf_1m.includes('-') ? 'negative' : 'positive'}">${stock.perf_1m||'–'}</span></div>
                                                 <div><span class="opacity-60">3 mois:</span> <span class="${stock.perf_3m && stock.perf_3m.includes('-') ? 'negative' : 'positive'}">${stock.perf_3m||'–'}</span></div>
                                                 <div><span class="opacity-60">1 an:</span> <span class="${perf1yClass}">${stock.perf_1y||'–'}</span></div>
-                                                <div><span class="opacity-60">3 ans:</span> <span class="${stock.perf_3y && stock.perf_3y.includes('-') ? 'negative' : 'positive'}">${stock.perf_3y||'–'}</span></div>
                                                 <div><span class="opacity-60">YTD:</span> <span class="${ytdClass}">${stock.ytd||'–'}</span></div>
                                             </div>
                                         </div>
                                         <div>
-                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Métriques</div>
+                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Quality Score ${_qScore != null ? `<span style="color:${_gradeColor(_qGrade)};font-weight:700;">${_qGrade} (${_qScore})</span>` : ''}</div>
+                                            ${_subBar('Quality', _qs.quality)}
+                                            ${_subBar('Safety', _qs.safety)}
+                                            ${_subBar('Value', _qs.value)}
+                                            ${_subBar('Growth', _qs.growth)}
+                                            ${_subBar('Momentum', _qs.momentum)}
+                                            <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Value Grade ${_vScore != null ? `<span style="color:${_gradeColor(_vGrade)};font-weight:700;">${_vGrade} (${_vScore})</span>` : ''}</div>
                                             <div class="space-y-1 text-sm">
+                                                ${_bc.length > 0 ? _bc.map(c => `<div>${_checkIcon(c.pass)} <span class="opacity-70">${_criteriaNames[c.name] || c.name}</span></div>`).join('') : '<div class="opacity-40">Données non disponibles</div>'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Fondamentaux</div>
+                                            <div class="space-y-1 text-sm">
+                                                <div><span class="opacity-60">PE Ratio:</span> ${_pe}</div>
+                                                <div><span class="opacity-60">ROE:</span> ${_roe != null ? _roe + '%' : '–'}</div>
+                                                <div><span class="opacity-60">D/E Ratio:</span> ${_de || '–'}</div>
+                                                <div><span class="opacity-60">FCF Yield:</span> ${_fcfy != null ? _fcfy + '%' : '–'}</div>
+                                                <div><span class="opacity-60">Div TTM:</span> ${stock.dividend_yield_ttm || stock.dividend_yield || '–'}</div>
+                                                <div><span class="opacity-60">Payout:</span> <span class="${stock.payout_class}">${stock.payout_ratio || '–'}</span></div>
+                                            </div>
+                                            <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Risque</div>
+                                            <div class="space-y-1 text-sm">
+                                                <div><span class="opacity-60">Beta:</span> ${_beta || '–'}</div>
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
-                                                <div><span class="opacity-60">Dividende TTM:</span> ${stock.dividend_yield_ttm || stock.dividend_yield || '–'}</div>
-                                                
-                                                <!-- 👉 MODIFIÉ: "Payout TTM" au lieu de "Payout" -->
-                                                <div><span class="opacity-60">Payout TTM:</span> <span class="${stock.payout_class}">
-                                                  ${stock.payout_ratio || '–'}
-                                                </span></div>
-                                                
+                                                <div><span class="opacity-60">Drawdown max 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
+                                                ${_epsS != null ? `<div><span class="opacity-60">EPS Surprise:</span> <span class="${parseFloat(_epsS) >= 0 ? 'positive' : 'negative'}">${_epsS}%</span>${_epsBeat > 1 ? ` <span style="font-size:0.7rem;opacity:0.5;">(${_epsBeat} beats)</span>` : ''}</div>` : ''}
                                                 <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
-                                                <div><span class="opacity-60">Max Drawdown 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
                                                 <div><span class="opacity-60">Volume:</span> ${stock.volume || '–'}</div>
                                             </div>
                                         </div>
