@@ -2262,8 +2262,11 @@ function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales, l
     const pctEnvies = revenuMensuel > 0 ? (envies / revenuMensuel) * 100 : 0;
     const pctEpargne = revenuMensuel > 0 ? (epargne / revenuMensuel) * 100 : 0;
 
-    // Écart moyen vs la norme 50/30/20
-    const ecart503020 = (Math.abs(pctBesoins - 50) + Math.abs(pctEnvies - 30) + Math.abs(pctEpargne - 20)) / 3;
+    // Écart moyen vs la norme 50/30/20 (directionnel : pénalise seulement les mauvais écarts)
+    const ecartBesoins = Math.max(0, pctBesoins - 50);  // mal si au dessus de 50%
+    const ecartEnvies = Math.max(0, pctEnvies - 30);    // mal si au dessus de 30%
+    const ecartEpargne = Math.max(0, 20 - pctEpargne);  // mal si en dessous de 20%
+    const ecart503020 = (ecartBesoins + ecartEnvies + ecartEpargne) / 3;
 
     // === SCORE 5 CRITÈRES ===
     const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
@@ -2328,12 +2331,27 @@ function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales, l
     const jaugeContainer = document.getElementById('budget-503020');
     if (!jaugeContainer) return;
 
-    const barHTML = (label, pct, norm, color, emoji) => {
+    // lowerIsBetter: true pour Besoins/Envies (dépenser moins = bien), false pour Épargne (épargner plus = bien)
+    const barHTML = (label, pct, norm, color, emoji, lowerIsBetter) => {
         const clamped = Math.min(pct, 100);
         const diff = pct - norm;
         const diffLabel = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
-        const diffColor = Math.abs(diff) <= 5 ? 'text-green-400' : Math.abs(diff) <= 10 ? 'text-yellow-400' : 'text-red-400';
-        const statusIcon = Math.abs(diff) <= 5 ? '✅' : Math.abs(diff) <= 10 ? '⚠️' : '❌';
+
+        // Logique directionnelle :
+        // Besoins/Envies : en dessous = bien, au dessus = mal
+        // Épargne : au dessus = bien, en dessous = mal
+        let isGood, isOk;
+        if (lowerIsBetter) {
+            isGood = diff <= 0;           // en dessous ou égal = bien
+            isOk = diff > 0 && diff <= 5; // légèrement au dessus = ok
+        } else {
+            isGood = diff >= 0;           // au dessus ou égal = bien
+            isOk = diff < 0 && diff >= -5; // légèrement en dessous = ok
+        }
+
+        const diffColor = isGood ? 'text-green-400' : isOk ? 'text-yellow-400' : 'text-red-400';
+        const statusIcon = isGood ? '✅' : isOk ? '⚠️' : '❌';
+
         return `
             <div class="mb-4">
                 <div class="flex justify-between items-center mb-2">
@@ -2361,9 +2379,9 @@ function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales, l
                 Écart moyen : ${ecart503020.toFixed(0)} pts
             </span>
         </div>
-        ${barHTML('Besoins', pctBesoins, 50, 'bg-blue-500', '🏠')}
-        ${barHTML('Envies', pctEnvies, 30, 'bg-yellow-500', '🎉')}
-        ${barHTML('Épargne', pctEpargne, 20, 'bg-green-500', '💰')}
+        ${barHTML('Besoins', pctBesoins, 50, 'bg-blue-500', '🏠', true)}
+        ${barHTML('Envies', pctEnvies, 30, 'bg-yellow-500', '🎉', true)}
+        ${barHTML('Épargne', pctEpargne, 20, 'bg-green-500', '💰', false)}
         <p class="text-xs text-gray-500 mt-2">Besoins = loyer + vie courante · Envies = loisirs + variables · Épargne = auto + libre</p>
     `;
     jaugeContainer.classList.remove('hidden');
