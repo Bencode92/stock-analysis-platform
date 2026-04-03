@@ -1525,6 +1525,17 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
             // Graphique mis à jour
             updateChart(result);
 
+            // Donut répartition coût + mois de basculement
+            updateCostDonut(result);
+            updatePivotMonth(result);
+
+            // Jauge économies cumulées
+            updateSavingsGauge(result);
+
+            // Taux d'endettement
+            const mensuGlobale = result.mensualiteBaseGlobale || mensualiteBasePTZ;
+            updateDebtRatio(mensuGlobale);
+
             // Comparaison assurance banque vs déléguée
             updateInsuranceComparison(result);
 
@@ -1989,6 +2000,165 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
         htmlContent += `</ul>`;
         savingsSummary.innerHTML = htmlContent;
     }
+
+    // ==========================================
+    // 📊 DONUT RÉPARTITION DU COÛT
+    // ==========================================
+    let costDonutChart;
+    function updateCostDonut(result) {
+        const section = document.getElementById('cost-breakdown-section');
+        const ctx = document.getElementById('cost-donut-chart')?.getContext('2d');
+        if (!section || !ctx || !result) return;
+
+        const capital = result.capitalInitial || 0;
+        const interets = result.totalInterets || 0;
+        const assurance = result.totalAssurance || 0;
+        const frais = result.totalFraisAffiches || 0;
+        const indemnites = result.indemnites || 0;
+
+        if (costDonutChart) costDonutChart.destroy();
+        costDonutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Capital', 'Intérêts', 'Assurance', 'Frais', 'Indemnités RA'],
+                datasets: [{
+                    data: [capital, interets, assurance, frais, indemnites],
+                    backgroundColor: ['#00d26e', '#ff4757', '#3b82f6', '#a855f7', '#f59e0b'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 }, padding: 8 } },
+                    tooltip: { callbacks: { label: (c) => `${c.label}: ${formatMontant(c.raw)}` } }
+                }
+            }
+        });
+
+        // Ratio au centre
+        const ratio = capital > 0 ? ((capital + interets + assurance + frais + indemnites) / capital).toFixed(3) : '0';
+        document.getElementById('donut-ratio').textContent = ratio;
+        section.classList.remove('hidden');
+    }
+
+    // ==========================================
+    // 🔄 MOIS DE BASCULEMENT
+    // ==========================================
+    function updatePivotMonth(result) {
+        const el = document.getElementById('pivot-month-text');
+        if (!el || !result.tableau || result.tableau.length === 0) return;
+
+        let pivotMonth = null;
+        for (const row of result.tableau) {
+            if (row.capital > row.interets) { pivotMonth = row.mois; break; }
+        }
+
+        if (pivotMonth) {
+            const years = Math.floor(pivotMonth / 12);
+            const months = pivotMonth % 12;
+            const timeLabel = years > 0 ? `${years} an${years > 1 ? 's' : ''} ${months > 0 ? months + ' mois' : ''}` : `${months} mois`;
+            el.innerHTML = `À partir du <span class="text-yellow-400 font-bold">mois ${pivotMonth}</span> (${timeLabel}), vous remboursez <span class="text-green-400 font-semibold">plus de capital que d'intérêts</span>.<br><span class="text-xs text-gray-400">Avant ce point, la majorité de votre mensualité va à la banque.</span>`;
+        } else {
+            el.innerHTML = `<span class="text-green-400">Dès le premier mois</span>, vous remboursez plus de capital que d'intérêts.`;
+        }
+    }
+
+    // ==========================================
+    // 💰 JAUGE ÉCONOMIES CUMULÉES
+    // ==========================================
+    function updateSavingsGauge(result) {
+        const gauge = document.getElementById('savings-gauge');
+        const content = document.getElementById('savings-gauge-content');
+        if (!gauge || !content) return;
+
+        const items = [];
+        // Économie renégociation
+        if (result.economieInteretsExact > 0) {
+            items.push({ label: 'Renégociation', amount: Math.round(result.economieInteretsExact), color: 'bg-blue-500' });
+        }
+        // Économie RA (gain temps × mensualité)
+        if (result.gainTemps > 0) {
+            const econRA = Math.round(result.gainTemps * (result.mensualiteInitiale + (result.assuranceInitiale || 0)));
+            items.push({ label: 'Remb. anticipé', amount: econRA, color: 'bg-green-500' });
+        }
+        // Économie assurance déléguée
+        const delegRate = parseFloat(document.getElementById('delegated-insurance-rate')?.value) || 0.10;
+        if (result.totalAssurance > 0 && delegRate < (result.assuranceMensuelle * 12 * 100)) {
+            let coutDeleg = 0;
+            for (const row of (result.tableau || [])) coutDeleg += (row.capitalRestant || 0) * (delegRate / 100 / 12);
+            const econAssurance = Math.round(result.totalAssurance - coutDeleg);
+            if (econAssurance > 0) items.push({ label: 'Assurance déléguée', amount: econAssurance, color: 'bg-purple-500' });
+        }
+
+        if (items.length === 0) { gauge.classList.add('hidden'); return; }
+
+        const total = items.reduce((s, i) => s + i.amount, 0);
+        const maxAmount = Math.max(...items.map(i => i.amount));
+
+        let html = items.map(i => `
+            <div class="mb-2">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-gray-300">${i.label}</span>
+                    <span class="text-white font-semibold">${formatMontant(i.amount)}</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div class="${i.color} rounded-full h-2 transition-all" style="width:${(i.amount / maxAmount * 100).toFixed(0)}%"></div>
+                </div>
+            </div>`).join('');
+
+        html += `<div class="mt-3 pt-2 border-t border-gray-600 flex justify-between items-center">
+            <span class="text-sm text-gray-300">Total économisé</span>
+            <span class="text-green-400 font-bold text-lg">${formatMontant(total)}</span>
+        </div>`;
+
+        content.innerHTML = html;
+        gauge.classList.remove('hidden');
+    }
+
+    // ==========================================
+    // 🛡️ TAUX D'ENDETTEMENT
+    // ==========================================
+    function updateDebtRatio(mensualiteTotale) {
+        const incomeInput = document.getElementById('debt-ratio-income');
+        const resultDiv = document.getElementById('debt-ratio-result');
+        const valueEl = document.getElementById('debt-ratio-value');
+        const fillEl = document.getElementById('debt-ratio-fill');
+        const labelEl = document.getElementById('debt-ratio-label');
+        if (!incomeInput || !resultDiv) return;
+
+        const income = parseFloat(incomeInput.value) || 0;
+        if (income <= 0) { resultDiv.classList.add('hidden'); return; }
+
+        const ratio = (mensualiteTotale / income) * 100;
+        const clamped = Math.min(ratio, 100);
+
+        valueEl.textContent = ratio.toFixed(1) + '%';
+        fillEl.style.width = clamped + '%';
+
+        if (ratio <= 33) {
+            fillEl.className = 'h-2 rounded-full bg-green-400 transition-all';
+            valueEl.className = 'text-lg font-bold text-green-400';
+            labelEl.textContent = 'Conforme HCSF (≤ 33%)';
+        } else if (ratio <= 35) {
+            fillEl.className = 'h-2 rounded-full bg-yellow-400 transition-all';
+            valueEl.className = 'text-lg font-bold text-yellow-400';
+            labelEl.textContent = 'Limite haute — dérogation possible';
+        } else {
+            fillEl.className = 'h-2 rounded-full bg-red-400 transition-all';
+            valueEl.className = 'text-lg font-bold text-red-400';
+            labelEl.textContent = '⚠️ Refus probable — au-dessus de 35%';
+        }
+        resultDiv.classList.remove('hidden');
+    }
+
+    // Listener revenu pour recalcul en temps réel
+    document.getElementById('debt-ratio-income')?.addEventListener('input', () => {
+        if (window.lastLoanResult) {
+            const mensu = window.lastLoanResult.mensualiteBaseGlobale || window.lastLoanResult.mensualiteInitiale + (window.lastLoanResult.assuranceInitiale || 0);
+            updateDebtRatio(mensu);
+        }
+    });
 
     // ==========================================
     // 💡 COMPARAISON ASSURANCE BANQUE vs DÉLÉGUÉE
