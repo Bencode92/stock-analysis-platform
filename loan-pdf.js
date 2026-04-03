@@ -272,6 +272,27 @@ function extractLoanDataFromDOM() {
   // ✅ CORRECTION: Calculer doublePeriod après la création de l'objet data
   data.doublePeriod = calcDoubleMonthlyPeriod(data);
 
+  // 🆕 v2.7.0: Nouvelles données pour le récap enrichi
+  // Taux d'endettement
+  const debtRatioIncome = parseFloat(document.getElementById('debt-ratio-income')?.value) || 0;
+  data.debtRatioIncome = debtRatioIncome;
+  data.debtRatio = debtRatioIncome > 0 ? ((data.monthly || 0) / debtRatioIncome * 100).toFixed(1) : null;
+
+  // Mois de basculement
+  data.pivotMonth = document.getElementById('pivot-month-text')?.textContent || '';
+
+  // Économies cumulées
+  const savingsContent = document.getElementById('savings-gauge-content')?.innerHTML || '';
+  data.savingsGaugeHtml = savingsContent;
+
+  // Assurance déléguée
+  const delegCost = document.getElementById('insurance-delegated-cost')?.textContent || '';
+  const bankCost = document.getElementById('insurance-bank-cost')?.textContent || '';
+  const savingsPct = document.getElementById('insurance-savings-pct')?.textContent || '';
+  data.insuranceBank = bankCost;
+  data.insuranceDelegated = delegCost;
+  data.insuranceSavingsPct = savingsPct;
+
   if (isDev) {
     if (ptzHtml.exists) console.log(`🔗 PTZ HTML récupéré via ${ptzHtml.source}`);
     if (data.comparisonHtml) console.log('🔧 Tableau Comparaison extrait et nettoyé v2.6.1');
@@ -394,6 +415,9 @@ async function buildLoanPDFTemplate(d){
   if (d.savings > 0) wrap.appendChild(buildSavingsBlock(d));
   if (d.events.length > 2) wrap.appendChild(buildTimeline(d));
   if (d.ptzEnabled) wrap.appendChild(buildPTZBlock(d));
+
+  // 🆕 v2.7.0: Bloc récap enrichi (endettement + basculement + économies + assurance)
+  wrap.appendChild(buildEnrichedRecapBlock(d));
   
   /* ----------------------------------------------------------------
      🆕 v2.6.3: PAGINATION INTELLIGENTE
@@ -840,12 +864,69 @@ export function createLoanExportButton(){
   btn.id='export-loan-pdf';
   btn.className='w-full mt-4 py-3 px-4 bg-green-500 hover:bg-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 transition-all duration-300 flex items-center justify-center opacity-50 cursor-not-allowed';
   btn.disabled=true;
-  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter en PDF v2.6.3';
+  btn.innerHTML='<i class="fas fa-file-pdf mr-2"></i>Exporter le récap PDF';
   btn.title='Calculez le prêt pour activer l\'export PDF';
   btn.addEventListener('click',()=>exportLoanToPDF());
   
   target.appendChild(btn);
   return btn;
+}
+
+// ──────────────────────────────
+// 🆕 v2.7.0: BLOC RÉCAP ENRICHI (endettement, basculement, économies, assurance)
+// ──────────────────────────────
+function buildEnrichedRecapBlock(d) {
+  const div = document.createElement('div');
+  div.className = 'analysis-block';
+
+  let html = `<h2 style="font-size:14px;color:var(--c-primary);margin-bottom:4mm;">📋 Récapitulatif enrichi</h2>`;
+
+  // Taux d'endettement
+  if (d.debtRatio) {
+    const ratio = parseFloat(d.debtRatio);
+    const color = ratio <= 33 ? '#059669' : ratio <= 35 ? '#d97706' : '#dc2626';
+    const label = ratio <= 33 ? 'Conforme HCSF (≤ 33%)' : ratio <= 35 ? 'Limite haute' : '⚠️ Au-dessus de 35%';
+    html += `
+      <div style="margin-bottom:4mm;padding:3mm;background:#f0fdf4;border-radius:2mm;border-left:3px solid ${color};">
+        <strong style="color:${color};">Taux d'endettement : ${d.debtRatio}%</strong>
+        <span style="color:#6b7280;font-size:11px;margin-left:2mm;">${label}</span>
+        <span style="color:#6b7280;font-size:11px;display:block;">Revenus : ${d.debtRatioIncome.toLocaleString('fr-FR')} €/mois · Mensualité : ${(d.monthly || 0).toLocaleString('fr-FR')} €</span>
+      </div>`;
+  }
+
+  // Point de basculement
+  if (d.pivotMonth) {
+    html += `
+      <div style="margin-bottom:4mm;padding:3mm;background:#fffbeb;border-radius:2mm;border-left:3px solid #d97706;">
+        <strong style="color:#d97706;">🔄 Point de basculement</strong>
+        <p style="font-size:11px;color:#374151;margin:1mm 0 0;">${d.pivotMonth}</p>
+      </div>`;
+  }
+
+  // Économies cumulées
+  if (d.savingsGaugeHtml) {
+    html += `
+      <div style="margin-bottom:4mm;padding:3mm;background:#f0fdf4;border-radius:2mm;border-left:3px solid #059669;">
+        <strong style="color:#059669;">💰 Économies totales</strong>
+        <div style="font-size:11px;color:#374151;margin-top:2mm;">${d.savingsGaugeHtml}</div>
+      </div>`;
+  }
+
+  // Comparaison assurance
+  if (d.insuranceBank && d.insuranceDelegated) {
+    html += `
+      <div style="margin-bottom:4mm;padding:3mm;background:#eff6ff;border-radius:2mm;border-left:3px solid #3b82f6;">
+        <strong style="color:#3b82f6;">💡 Assurance emprunteur</strong>
+        <div style="display:flex;justify-content:space-between;margin-top:2mm;font-size:12px;">
+          <span>Banque : <strong style="color:#dc2626;">${d.insuranceBank}</strong></span>
+          <span>Déléguée : <strong style="color:#059669;">${d.insuranceDelegated}</strong></span>
+          <span style="color:#059669;font-weight:bold;">${d.insuranceSavingsPct}</span>
+        </div>
+      </div>`;
+  }
+
+  div.innerHTML = html;
+  return div;
 }
 
 export function activateLoanExportButton(){
