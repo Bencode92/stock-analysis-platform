@@ -33,7 +33,7 @@ const PatrimoineSimulator = (function() {
     const ABATTEMENT_FRAIS_PRO = { taux: 0.10, plafond: 14171, plancher: 495 };
 
     const CHARGES_PAR_TYPE = {
-        salarie: 0.22, cadre: 0.25, fonctionnaire: 0.17, independant: 0.45, dividendes: 0.172,
+        salarie: 0.22, cadre: 0.25, fonctionnaire: 0.17, independant: 0.45, dividendes: 0.186, // LFSS 2026
         microEntrepreneur: { service: 0.22, commercial: 0.123, artisanal: 0.123 }
     };
 

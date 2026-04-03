@@ -63,8 +63,8 @@ function cotisationsEIFromCash(sim) {
   if (cash) return round2(Math.max(0, benef - cash));
   return round2(Number(sim.cotisationsSociales ?? 0));
 }
-// --- Dividendes TNS : split PS 17,2% / Cotisations TNS (>10%) ---
-const TAUX_PS = 0.172;
+// --- Dividendes TNS : split PS 18,6% / Cotisations TNS (>10%) --- LFSS 2026
+const TAUX_PS = 0.186;
 const TAUX_IR_PFU = 0.128;     // si PFU
 const TAUX_ABATT_DIV = 0.40;   // abattement 40% si barème
 const TAUX_TNS_DIV_FALLBACK = 0.40;// fallback ~40%
@@ -1152,7 +1152,7 @@ function chooseBestDividendMethod({ statutId, divBruts, tmi, baseSeuil10, tauxTN
   const pfu = (() => {
     if (isAssimile) {
       const irDiv = divBruts * 0.128;
-      const ps172 = divBruts * 0.172;
+      const ps172 = divBruts * TAUX_PS;
       return { methode:'PFU', irDiv, ps172, cotTNS:0, nets: divBruts - irDiv - ps172 };
     } else {
       const split = calcDivTNS({
@@ -1172,7 +1172,7 @@ function chooseBestDividendMethod({ statutId, divBruts, tmi, baseSeuil10, tauxTN
       // Assimilé : abattement 40% puis IR au TMI sur 60% (PS 17,2% sur 100%)
       const baseIR = divBruts * 0.60;
       const irDiv = baseIR * (tmi/100);
-      const ps172 = divBruts * 0.172;
+      const ps172 = divBruts * TAUX_PS;
       return { methode:'PROGRESSIF', irDiv, ps172, cotTNS:0, nets: divBruts - (irDiv + ps172) };
     } else {
       const split = calcDivTNS({
@@ -1889,7 +1889,7 @@ function runComparison() {
 
     // 6) Fiscalité dividendes : PFU 30% (12,8% IR + 17,2% PS). Pas de TNS en SCI-IS.
     const irDiv = round2(dividendesBrutsAssocie * 0.128);
-    const ps172 = round2(dividendesBrutsAssocie * 0.172);
+    const ps172 = round2(dividendesBrutsAssocie * TAUX_PS);
     const nets  = round2(dividendesBrutsAssocie - irDiv - ps172);
 
     // 7) Sortie “compatible” avec ton tableau récap
@@ -2176,7 +2176,7 @@ if (statutId === 'sciIS') {
       sim.dividendes            = dividendesBrutsAssocie;
       sim.methodeDividendes     = 'PFU';
       const ir  = round2(dividendesBrutsAssocie * 0.128);
-      const ps  = round2(dividendesBrutsAssocie * 0.172);
+      const ps  = round2(dividendesBrutsAssocie * TAUX_PS);
       sim.prelevementForfaitaire = ir + ps; // IR + PS
       sim.cotTNSDiv             = 0;        // jamais en SCI-IS
       sim.dividendesNets        = round2(dividendesBrutsAssocie - ir - ps);
@@ -2333,7 +2333,7 @@ if (divBruts > 0) {
   if (isAssimile) {
     // PFU standard sur 100% des dividendes (aucune cotisation TNS)
     const irDiv = divBruts * TAUX_IR_PFU; // 0.128
-    const ps172 = divBruts * TAUX_PS;     // 0.172
+    const ps172 = divBruts * TAUX_PS;     // 0.186 (LFSS 2026)
 
     split = {
       partPS: divBruts,    // PS sur 100%
@@ -3178,7 +3178,7 @@ ${abattement10 > 0 ? `
             </tr>
             <tr>
                 <td>Prélèvements sociaux (17,2%)</td>
-                <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
+                <td>${formatter.format(result.sim.dividendes * TAUX_PS)}</td>
             </tr>
             ` : `
             <tr>
@@ -3187,7 +3187,7 @@ ${abattement10 > 0 ? `
             </tr>
             <tr>
                 <td>Prélèvements sociaux (17,2%)</td>
-                <td>${formatter.format(result.sim.dividendes * 0.172)}</td>
+                <td>${formatter.format(result.sim.dividendes * TAUX_PS)}</td>
             </tr>
             `}
 <tr>
@@ -3529,7 +3529,7 @@ ${hasDividendes ? `
       <tr><td>IR 12,8%</td>
           <td>${formatter.format(split ? split.irDiv : (result.sim.dividendes || 0) * 0.128)}</td></tr>
       <tr><td>Prélèvements sociaux 17,2% (≤10%)</td>
-          <td>${formatter.format(split ? split.ps172 : (result.sim.dividendes || 0) * 0.172)}</td></tr>
+          <td>${formatter.format(split ? split.ps172 : (result.sim.dividendes || 0) * TAUX_PS)}</td></tr>
       ${split && split.cotTNS ? `<tr><td>Cotisations TNS (>10%)</td><td>${formatter.format(split.cotTNS)}</td></tr>` : ''}
     ` : `
       <tr><td>Abattement de 40%</td>
@@ -3539,7 +3539,7 @@ ${hasDividendes ? `
       <tr><td>IR (TMI)</td>
           <td>${formatter.format(split ? split.irDiv : (result.sim.dividendes || 0) * 0.60 * (tmiEffectif / 100))}</td></tr>
       <tr><td>Prélèvements sociaux 17,2% (≤10%)</td>
-          <td>${formatter.format(split ? split.ps172 : (result.sim.dividendes || 0) * 0.172)}</td></tr>
+          <td>${formatter.format(split ? split.ps172 : (result.sim.dividendes || 0) * TAUX_PS)}</td></tr>
       ${split && split.cotTNS ? `<tr><td>Cotisations TNS (>10%)</td><td>${formatter.format(split.cotTNS)}</td></tr>` : ''}
     `}
 

@@ -1,6 +1,6 @@
 /* -----------------------------------------------------------------------------
    Smartflow – Catalogue exhaustif d'enveloppes patrimoniales
-   Version « 12.0 » – révisée le 18 juin 2025
+   Version « 13.0 » – révisée le 3 avril 2026 (LFSS 2026)
    -----------------------------------------------------------------------------
    • Isolates all tax parameters in a configurable TAXES object
    • Corrects the surtaxe sur plus‑values immobilières to apply on net gain
@@ -12,14 +12,19 @@
    CONFIGURABLE TAX PARAMETERS
    -------------------------------------------------------------------- */
 export const TAXES = {
-  YEAR: 2025,
+  YEAR: 2026,
   // Prélèvement forfaitaire unique (flat‑tax) – Income‑tax share
   IR_PFU: 0.128,
-  // Prélèvements sociaux (CSG 9,2 % + CRDS 0,5 % + prélèv. solidarité 7,5 %)
-  PRL_SOC: 0.172,
-  // Dynamic getter keeps PFU_TOTAL in sync
+  // Prélèvements sociaux – LFSS 2026 : CSG 10,6 % + CRDS 0,5 % + solidarité 7,5 %
+  PRL_SOC: 0.186,
+  // PS taux maintenu pour AV, PEL, CEL, PEP, revenus fonciers, PV immobilières
+  PRL_SOC_EXCLU: 0.172,
+  // Dynamic getters
   get PFU_TOTAL() {
-    return this.IR_PFU + this.PRL_SOC;
+    return this.IR_PFU + this.PRL_SOC; // 31,4 %
+  },
+  get PFU_EXCLU() {
+    return this.IR_PFU + this.PRL_SOC_EXCLU; // 30,0 % (AV, PEL, CEL)
   },
   // Fraction de CSG déductible
   CSG_DEDUCTIBLE_RATE: 0.068,
@@ -38,9 +43,10 @@ export function updateTaxes(patch = {}) {
 }
 
 /* --------------------------------------------------------------------
-   CONSTANTES SOCIALES 2025
+   CONSTANTES SOCIALES 2026
    -------------------------------------------------------------------- */
-export const PASS_2025 = 47_100; // Plafond annuel de la Sécurité sociale
+export const PASS_2025 = 47_100; // Plafond annuel de la Sécurité sociale 2025
+export const PASS_2026 = 48_060; // Plafond annuel de la Sécurité sociale 2026
 
 /* --------------------------------------------------------------------
    OUTILS GÉNÉRIQUES
@@ -56,9 +62,9 @@ export const netAfterFlatTax = (gain, taux = TAXES.PFU_TOTAL) =>
  * @param {number} base – Base imposable après charges/abattements.
  * @param {number} tmi  – Taux marginal d'imposition (0.11, 0.30, 0.41, 0.45 …).
  */
-export function netAfterBareme(base, tmi) {
+export function netAfterBareme(base, tmi, prlSoc = TAXES.PRL_SOC) {
   const ir = base * tmi;
-  const ps = base * TAXES.PRL_SOC;
+  const ps = base * prlSoc;
   const csgSaving = base * TAXES.CSG_DEDUCTIBLE_RATE * tmi;
   return round2(base - ir - ps + csgSaving);
 }
@@ -117,8 +123,8 @@ export const enveloppes = [
     clockFrom: 'ouverture',
     seuil: 5,
     fiscalite: {
-      avant: 'PFU 30 % + clôture',
-      apres: 'Exonéré IR, 17,2 % PS',
+      avant: 'PFU 31,4 % + clôture (LFSS 2026)',
+      apres: 'Exonéré IR, 18,6 % PS (LFSS 2026, gains post-2018)',
       calcGainNet: ({ gain, duree }) =>
         duree >= 5 ? netAfterFlatTax(gain, TAXES.PRL_SOC) : netAfterFlatTax(gain),
     },
@@ -131,8 +137,8 @@ export const enveloppes = [
     clockFrom: 'ouverture',
     seuil: 5,
     fiscalite: {
-      avant: 'PFU 30 % + clôture',
-      apres: 'Exonéré IR, 17,2 % PS',
+      avant: 'PFU 31,4 % + clôture (LFSS 2026)',
+      apres: 'Exonéré IR, 18,6 % PS (LFSS 2026, gains post-2018)',
       calcGainNet: ({ gain, duree }) =>
         duree >= 5 ? netAfterFlatTax(gain, TAXES.PRL_SOC) : netAfterFlatTax(gain),
     },
@@ -146,7 +152,7 @@ export const enveloppes = [
     seuil: null,
     fiscalite: {
       texte:
-        'PFU 30 % ou option barème (report moins‑values 10 ans, CSG 6,8 % déductible année N+1)',
+        'PFU 31,4 % (LFSS 2026) ou option barème (report moins‑values 10 ans, CSG 6,8 % déductible année N+1)',
       /**
        * @param {number} gain
        * @param {number} tmi – taux marginal (default 30 %)
@@ -176,9 +182,9 @@ export const enveloppes = [
     clockFrom: 'versement',
     seuil: 8,
     fiscalite: {
-      avant: 'PFU 30 % (ou 35/15 % si < 4 ans pour anciens contrats)',
+      avant: 'PFU 30 % (ou 35/15 % si < 4 ans pour anciens contrats) — AV exclue de la hausse CSG 2026',
       apres:
-        '24,7 % (7,5 % IR + 17,2 % PS) sur prime ≤ 150 k€ ; 30 % au‑delà',
+        '24,7 % (7,5 % IR + 17,2 % PS) sur prime ≤ 150 k€ ; 30 % au‑delà — PS maintenus à 17,2 %',
       abattement: { solo: 4_600, couple: 9_200 },
       /**
        * @param {number} gain
@@ -196,15 +202,15 @@ export const enveloppes = [
           ? this.abattement.couple
           : this.abattement.solo;
         const taxable = Math.max(gain - abatt, 0);
-        if (duree < 8) return netAfterFlatTax(taxable) + Math.min(gain, abatt);
+        if (duree < 8) return netAfterFlatTax(taxable, TAXES.PFU_EXCLU) + Math.min(gain, abatt);
 
-        // Après 8 ans
+        // Après 8 ans — AV exclue LFSS 2026 : PS restent à 17,2 %
         const enveloppeRestante = Math.max(150_000 - primesVerseesAvantRachat, 0);
         const partLow = Math.min(taxable, enveloppeRestante);
         const partHigh = taxable - partLow;
         const netLow =
-          partLow * (1 - (TAXES.IR_AV_8Y + TAXES.PRL_SOC)); // 7,5 % + PS
-        const netHigh = partHigh * (1 - TAXES.PFU_TOTAL); // 30 %
+          partLow * (1 - (TAXES.IR_AV_8Y + TAXES.PRL_SOC_EXCLU)); // 7,5 % + 17,2 % PS
+        const netHigh = partHigh * (1 - TAXES.PFU_EXCLU); // 30 % (AV exclue)
         return round2(netLow + netHigh + Math.min(gain, abatt));
       },
     },
@@ -224,8 +230,8 @@ export const enveloppes = [
     },
     fiscalite: {
       texte:
-        "Déduction à l'entrée, PFU 30 % sur plus‑values à la sortie capital (pension imposée au barème)",
-      calcGainNet: ({ gain }) => netAfterFlatTax(gain),
+        "Déduction à l'entrée. Sortie capital : PFU 31,4 % (LFSS 2026). Sortie rente : PS 10,1 % (revenus de remplacement, non impactés)",
+      calcGainNet: ({ gain }) => netAfterFlatTax(gain), // sortie capital par défaut
     },
   },
 
@@ -277,15 +283,15 @@ export const enveloppes = [
     seuil: null,
     fiscalite: {
       texte:
-        "Plans > 2018 : PFU 30 % sur intérêts (années 1‑12). Plans ≤ 2017 : intérêts exonérés d'IR, soumis aux PS (17,2 %) chaque année. Au‑delà de 12 ans, barème + PS (CSG déductible intégrée).",
+        "Plans > 2018 : PFU 30 % sur intérêts (PEL exclu hausse CSG 2026). Plans ≤ 2017 : intérêts exonérés d'IR, soumis aux PS (17,2 %). Au‑delà de 12 ans, barème + PS 17,2 %.",
       /**
        * @param {number} gain – intérêts bruts
        * @param {number} duree – âge du plan
        * @param {number} tmi  – taux marginal, seulement utile après 12 ans
        */
       calcGainNet({ gain, duree, tmi = 0.3 }) {
-        if (duree < 12) return netAfterFlatTax(gain); // PFU 30 %
-        return netAfterBareme(gain, tmi);
+        if (duree < 12) return netAfterFlatTax(gain, TAXES.PFU_EXCLU); // PFU 30 % (exclu LFSS 2026)
+        return netAfterBareme(gain, tmi, TAXES.PRL_SOC_EXCLU);
       },
     },
   },
@@ -297,8 +303,8 @@ export const enveloppes = [
     clockFrom: null,
     seuil: null,
     fiscalite: {
-      texte: 'PFU 30 % chaque année',
-      calcGainNet: ({ gain }) => netAfterFlatTax(gain),
+      texte: 'PFU 30 % chaque année (CEL exclu hausse CSG 2026)',
+      calcGainNet: ({ gain }) => netAfterFlatTax(gain, TAXES.PFU_EXCLU),
     },
   },
 
@@ -328,9 +334,9 @@ export const enveloppes = [
     seuil: null,
     fiscalite: {
       loyers:
-        'Revenus fonciers – micro‑foncier 30 % ≤ 15 000 € ou réel + PS 17,2 % (CSG déductible intégrée)',
+        'Revenus fonciers – micro‑foncier 30 % ≤ 15 000 € ou réel + PS 17,2 % (exclus hausse CSG 2026)',
       plusValues:
-        'Régime des plus‑values immo (19 % IR + 17,2 % PS) avec abattements + surtaxe > 50 k€',
+        'Régime des PV immo (19 % IR + 17,2 % PS exclus hausse CSG 2026) avec abattements + surtaxe > 50 k€',
       /**
        * @param {number} gain
        * @param {'loyer'|'plusValue'} nature
@@ -349,9 +355,9 @@ export const enveloppes = [
       }) {
         if (nature === 'loyer') {
           const base = regimeMicro ? gain * 0.7 : gain * (1 - chargesPct);
-          return netAfterBareme(base, tmi);
+          return netAfterBareme(base, tmi, TAXES.PRL_SOC_EXCLU); // revenus fonciers exclus LFSS 2026
         }
-        // Plus‑value immobilière
+        // Plus‑value immobilière — PS 17,2 % (exclus LFSS 2026)
         const abattIR = abattImmoIR(duree);
         const abattPS = abattImmoPS(duree);
         const baseIR = gain * (1 - abattIR);
@@ -359,7 +365,7 @@ export const enveloppes = [
         const netImposable = baseIR; // seuil surtaxe : plus‑value nette IR
         const imposition =
           baseIR * TAXES.IR_SCPI_PV +
-          basePS * TAXES.PRL_SOC +
+          basePS * TAXES.PRL_SOC_EXCLU +
           surtaxePlusValue(netImposable);
         return round2(gain - imposition);
       },
@@ -394,8 +400,8 @@ export const enveloppes = [
     clockFrom: null,
     seuil: null,
     fiscalite: {
-      texte: 'PFU 30 % (SPPICAV) ou revenus fonciers',
-      calcGainNet: ({ gain }) => netAfterFlatTax(gain),
+      texte: 'PFU 31,4 % en direct (LFSS 2026) ; 30 % si logé en AV ; revenus fonciers 17,2 % PS',
+      calcGainNet: ({ gain }) => netAfterFlatTax(gain), // PFU 31,4 % par défaut (direct)
     },
   },
 
@@ -408,8 +414,8 @@ export const enveloppes = [
     clockFrom: 'versement',
     seuil: 5,
     fiscalite: {
-      avant: 'PFU 30 % + reprise de la réduction IR',
-      apres: 'Exonéré IR, 17,2 % PS',
+      avant: 'PFU 31,4 % + reprise de la réduction IR (LFSS 2026)',
+      apres: 'Exonéré IR, 18,6 % PS (LFSS 2026)',
       calcGainNet: ({ gain, duree }) =>
         duree >= 5 ? netAfterFlatTax(gain, TAXES.PRL_SOC) : netAfterFlatTax(gain),
     },
@@ -425,7 +431,7 @@ export const enveloppes = [
     seuil: null,
     fiscalite: {
       texte:
-        'PFU 30 % sur les cessions > 305 € (report moins‑values 10 ans) ou option barème si activité pro (CSG déductible intégrée)',
+        'PFU 31,4 % sur les cessions > 305 € (LFSS 2026, report moins‑values 10 ans) ou option barème si activité pro',
       /**
        * @param {number} gain
        * @param {number} montantCession
@@ -466,6 +472,7 @@ if (typeof describe === 'function') {
   describe('netAfterBareme()', () => {
     it('should factor in CSG deduction', () => {
       const net = netAfterBareme(1_000, 0.3);
+      // PRL_SOC = 0.186 (LFSS 2026)
       expect(net).toBeCloseTo(1_000 - 1_000 * 0.3 - 1_000 * TAXES.PRL_SOC + 1_000 * TAXES.CSG_DEDUCTIBLE_RATE * 0.3);
     });
   });

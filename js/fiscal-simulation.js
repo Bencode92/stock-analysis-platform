@@ -45,8 +45,8 @@ function calculerISProgressif(resultat) {
 }
 
 function choisirFiscaliteDividendesLocal(divBruts, tmiPct = 30) {
-    const pfu = divBruts * 0.30;
-    const prog = divBruts * 0.60 * (tmiPct/100) + divBruts * 0.172;
+    const pfu = divBruts * 0.314; // PFU 31,4% (LFSS 2026)
+    const prog = divBruts * 0.60 * (tmiPct/100) + divBruts * 0.186; // PS 18,6% (LFSS 2026)
     return (prog < pfu) ? { total: Math.round(prog), methode:'PROGRESSIF', economie: Math.round(pfu-prog) } : { total: Math.round(pfu), methode:'PFU', economie:0 };
 }
 

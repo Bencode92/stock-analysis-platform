@@ -164,15 +164,15 @@ class FiscalUtils {
             tmi = FiscalUtils.getTMI(revenuImposable);
         }
         
-        // Calcul PFU : 12,8% IR + 17,2% PS = 30%
+        // Calcul PFU : 12,8% IR + 18,6% PS = 31,4% (LFSS 2026)
         const impotPFU = Math.round(dividendes * 0.128);
-        const prevSocPFU = Math.round(dividendes * 0.172);
+        const prevSocPFU = Math.round(dividendes * 0.186);
         const totalPFU = impotPFU + prevSocPFU;
-        
-        // Calcul barème progressif : abattement 40% puis IR au TMI + 17,2% PS
+
+        // Calcul barème progressif : abattement 40% puis IR au TMI + 18,6% PS (LFSS 2026)
         const baseIR = dividendes * 0.60; // Après abattement de 40%
         const impotProgressif = Math.round(baseIR * (tmi / 100));
-        const prevSocProg = Math.round(dividendes * 0.172);
+        const prevSocProg = Math.round(dividendes * 0.186);
         const totalProgressif = impotProgressif + prevSocProg;
         
         // Retourner la méthode la plus avantageuse
