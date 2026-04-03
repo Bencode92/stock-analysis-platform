@@ -961,10 +961,12 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       const initialPart = initialDeposit > 0 ? ` (avec ${formatMoney(initialDeposit)} au départ)` : '';
 
-      // Convertir le versement dans la fréquence demandée vers annuel/mensuel/jour
+      // Convertir le versement dans la fréquence demandée vers toutes les unités
       const ppy = periodsPerYear(frequency);
       const annuel = periodic * ppy;
+      const trimestriel = annuel / 4;
       const mensuel = annuel / 12;
+      const hebdo = annuel / 52;
       const quotidien = annuel / 365;
 
       // Afficher l'horizon dans l'unité choisie par l'utilisateur
@@ -974,13 +976,16 @@ document.addEventListener('DOMContentLoaded', function() {
                          : horizonUnit === 'days'   ? `<b>${Math.round(horizonVal)} jours</b>`
                          : years >= 1 ? `<b>${years.toFixed(1).replace('.0', '')} an${years >= 2 ? 's' : ''}</b>` : `<b>${Math.round(years * 12)} mois</b>`;
 
+      // Badges : toujours an + la fréquence choisie (si pas an) + mois + semaine + jour
+      let badges = `<span class="bg-green-900 bg-opacity-30 text-green-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(annuel)} /an</span>`;
+      if (frequency === 'quarterly') badges += `<span class="bg-yellow-900 bg-opacity-30 text-yellow-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(trimestriel)} /trimestre</span>`;
+      badges += `<span class="bg-blue-900 bg-opacity-30 text-blue-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(mensuel)} /mois</span>`;
+      if (frequency === 'weekly') badges += `<span class="bg-cyan-900 bg-opacity-30 text-cyan-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(hebdo)} /semaine</span>`;
+      badges += `<span class="bg-purple-900 bg-opacity-30 text-purple-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(quotidien)} /jour</span>`;
+
       html = `Pour atteindre <b>${formatMoney(target)}</b> en ${horizonLabel} (net d'impôts)${initialPart}
               via ${results.enveloppe?.label} :<br>
-              <span class="inline-flex flex-wrap gap-3 mt-2">
-                <span class="bg-green-900 bg-opacity-30 text-green-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(annuel)} /an</span>
-                <span class="bg-blue-900 bg-opacity-30 text-blue-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(mensuel)} /mois</span>
-                <span class="bg-purple-900 bg-opacity-30 text-purple-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(quotidien)} /jour</span>
-              </span>`;
+              <span class="inline-flex flex-wrap gap-3 mt-2">${badges}</span>`;
     } else {
       const { years: y, results, unreachable, triedYears } = goalSeekYearsForTarget({
         target,
