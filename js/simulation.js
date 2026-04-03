@@ -946,9 +946,20 @@ document.addEventListener('DOMContentLoaded', function() {
         target, years, initialDeposit, annualReturn, vehicleId, fees, frequency
       });
       const initialPart = initialDeposit > 0 ? ` (avec ${formatMoney(initialDeposit)} au départ)` : '';
-      html = `Pour atteindre <b>${formatMoney(target)}</b> en ${years} ans (net d'impôts),
-              il faut environ <b>${formatMoney(periodic)}</b> par ${freqLabelFR(frequency)}${initialPart}
-              via ${results.enveloppe?.label}.`;
+
+      // Convertir le versement dans la fréquence demandée vers annuel/mensuel/jour
+      const ppy = periodsPerYear(frequency);
+      const annuel = periodic * ppy;
+      const mensuel = annuel / 12;
+      const quotidien = annuel / 365;
+
+      html = `Pour atteindre <b>${formatMoney(target)}</b> en <b>${years} ans</b> (net d'impôts)${initialPart}
+              via ${results.enveloppe?.label} :<br>
+              <span class="inline-flex flex-wrap gap-3 mt-2">
+                <span class="bg-green-900 bg-opacity-30 text-green-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(annuel)} /an</span>
+                <span class="bg-blue-900 bg-opacity-30 text-blue-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(mensuel)} /mois</span>
+                <span class="bg-purple-900 bg-opacity-30 text-purple-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(quotidien)} /jour</span>
+              </span>`;
     } else {
       const { years: y, results, unreachable, triedYears } = goalSeekYearsForTarget({
         target,
@@ -964,17 +975,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (unreachable) {
         const labelFreq = isPeriodicUI && periodicUI > 0 ? '/' + freqLabelFR(frequency) : '';
-        html = `Avec <b>${formatMoney(periodicUI)}</b>${labelFreq}, l'objectif <b>${formatMoney(target)}</b>
-                n'est pas atteignable en ${triedYears} ans. Augmentez le versement, la durée ou le rendement.`;
+        html = `<span class="text-red-400"><i class="fas fa-exclamation-triangle mr-1"></i>
+                Avec <b>${formatMoney(periodicUI)}</b>${labelFreq}, l'objectif <b>${formatMoney(target)}</b>
+                n'est pas atteignable en ${triedYears} ans.</span><br>Augmentez le versement, la durée ou le rendement.`;
       } else {
-        if (isPeriodicUI && periodicUI > 0) {
-          html = `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}${initialPart},
-                  il faut environ <b>${y.toFixed(1)} ans</b> pour atteindre <b>${formatMoney(target)}</b>
-                  (net via ${results.enveloppe?.label}).`;
-        } else {
-          html = `Sans versements périodiques${initialPart}, il faut environ <b>${y.toFixed(1)} ans</b>
-                  pour atteindre <b>${formatMoney(target)}</b> (net via ${results.enveloppe?.label}).`;
-        }
+        // Convertir années décimales en années + mois + jours
+        const totalMonths = Math.round(y * 12);
+        const dYears = Math.floor(totalMonths / 12);
+        const dMonths = totalMonths % 12;
+        const totalDays = Math.round(y * 365);
+        const dureeLabel = dYears > 0 && dMonths > 0
+          ? `<b>${dYears} an${dYears > 1 ? 's' : ''} et ${dMonths} mois</b>`
+          : dYears > 0 ? `<b>${dYears} an${dYears > 1 ? 's' : ''}</b>` : `<b>${dMonths} mois</b>`;
+
+        const versementInfo = isPeriodicUI && periodicUI > 0
+          ? `Avec <b>${formatMoney(periodicUI)}</b> par ${freqLabelFR(frequency)}${initialPart}`
+          : `Sans versements périodiques${initialPart}`;
+
+        html = `${versementInfo}, il faut :<br>
+                <span class="inline-flex flex-wrap gap-3 mt-2">
+                  <span class="bg-green-900 bg-opacity-30 text-green-300 px-3 py-1 rounded-lg font-semibold">${dureeLabel}</span>
+                  <span class="bg-blue-900 bg-opacity-30 text-blue-300 px-3 py-1 rounded-lg font-semibold">≈ ${totalMonths} mois</span>
+                  <span class="bg-purple-900 bg-opacity-30 text-purple-300 px-3 py-1 rounded-lg font-semibold">≈ ${totalDays} jours</span>
+                </span><br>
+                <span class="text-gray-400 text-xs mt-1">pour atteindre ${formatMoney(target)} net via ${results.enveloppe?.label}</span>`;
       }
     }
 
