@@ -241,6 +241,16 @@
             background: rgba(255, 107, 107, 0.2);
             color: #ff6b6b;
         }
+
+        .profile-badge.etudiant {
+            background: rgba(255, 200, 0, 0.2);
+            color: #ffc800;
+        }
+
+        .profile-badge.retraite {
+            background: rgba(180, 130, 255, 0.2);
+            color: #b482ff;
+        }
         
         /* Profile filter buttons */
         .profile-filter {
@@ -527,6 +537,14 @@
                         </div>
                     </button>
                     
+                    <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-yellow-400 transition-all" data-profile="etudiant">
+                        <i class="fas fa-graduation-cap text-xl mr-3 text-yellow-400"></i>
+                        <div class="text-left">
+                            <span class="font-semibold">Étudiant 18-25</span>
+                            <span class="text-xs block opacity-70">Premiers pas</span>
+                        </div>
+                    </button>
+
                     <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-blue-400 transition-all" data-profile="prudent">
                         <i class="fas fa-shield-alt text-xl mr-3 text-blue-400"></i>
                         <div class="text-left">
@@ -548,6 +566,14 @@
                         <div class="text-left">
                             <span class="font-semibold">Dynamique</span>
                             <span class="text-xs block opacity-70">Rendement & long terme</span>
+                        </div>
+                    </button>
+
+                    <button class="profile-filter flex items-center px-6 py-3 border border-gray-600 rounded-xl hover:border-purple-400 transition-all" data-profile="retraite">
+                        <i class="fas fa-umbrella-beach text-xl mr-3 text-purple-400"></i>
+                        <div class="text-left">
+                            <span class="font-semibold">Retraité 55+</span>
+                            <span class="text-xs block opacity-70">Revenus & transmission</span>
                         </div>
                     </button>
                 </div>
@@ -618,13 +644,13 @@
                                             <td class="px-3 py-2">Assurance‑vie (fonds&nbsp;€)</td>
                                             <td class="px-3 py-2">2‑8 ans</td>
                                             <td class="px-3 py-2">2‑3,5 % brut</td>
-                                            <td class="px-3 py-2">PFU 30 % < 8 ans ; 24,7 % ≥ 8 ans (≤150 k€)*</td>
+                                            <td class="px-3 py-2">PFU 30 % < 8 ans ; 24,7 % ≥ 8 ans (≤150 k€)* — PS maintenus à 17,2 %</td>
                                         </tr>
                                         <tr>
                                             <td class="px-3 py-2">PEA (ETF)</td>
                                             <td class="px-3 py-2">&gt; 5 ans</td>
                                             <td class="px-3 py-2">7‑9 % brut</td>
-                                            <td class="px-3 py-2">17,2 % PS après 5 ans</td>
+                                            <td class="px-3 py-2">18,6 % PS après 5 ans (LFSS 2026)</td>
                                         </tr>
                                         <tr>
                                             <td class="px-3 py-2">PER</td>
@@ -633,10 +659,10 @@
                                             <td class="px-3 py-2">Déduction à l'entrée</td>
                                         </tr>
                                         <tr>
-                                            <td class="px-3 py-2">CTO / SCPI</td>
+                                            <td class="px-3 py-2">CTO</td>
                                             <td class="px-3 py-2">&gt; 8 ans</td>
                                             <td class="px-3 py-2">8‑10 % brut*</td>
-                                            <td class="px-3 py-2">PFU 30 %</td>
+                                            <td class="px-3 py-2">PFU 31,4 % (LFSS 2026)</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -667,12 +693,12 @@
                                             <tr>
                                                 <td class="px-3 py-2 font-medium">Taux épargne</td>
                                                 <td class="px-3 py-2">2,0% brut <span class="text-green-400">(fixe)</span></td>
-                                                <td class="px-3 py-2">1,25% brut <span class="text-yellow-400">(variable)</span></td>
+                                                <td class="px-3 py-2">1,00% brut <span class="text-yellow-400">(variable, depuis 01/02/2026)</span></td>
                                             </tr>
                                             <tr>
                                                 <td class="px-3 py-2 font-medium">Taux prêt</td>
                                                 <td class="px-3 py-2">3,20% <span class="text-green-400">(verrouillé)</span></td>
-                                                <td class="px-3 py-2">3,00% <span class="text-yellow-400">(variable)</span></td>
+                                                <td class="px-3 py-2">2,50% <span class="text-yellow-400">(variable, depuis 01/02/2026)</span></td>
                                             </tr>
                                             <tr>
                                                 <td class="px-3 py-2 font-medium">Prêt max</td>
@@ -730,7 +756,7 @@
 
                     <div class="accordion-content">
                         <div class="space-y-6">
-                            <p>La <strong>fiscalité</strong> peut grignoter jusqu'à 30 % de tes gains. Voici comment la réduire&nbsp;:</p>
+                            <p>La <strong>fiscalité</strong> peut grignoter jusqu'à 31,4 % de tes gains (PFU 2026). Voici comment la réduire&nbsp;:</p>
 
                             <ul class="space-y-4 pl-6 list-disc text-sm leading-relaxed">
                                 <li class="pl-2">
@@ -763,13 +789,13 @@
                                     </thead>
                                     <tbody class="divide-y divide-blue-700/60">
                                         <tr>
-                                            <td class="px-3 py-2">PEA (17,2 % PS)</td>
-                                            <td class="px-3 py-2">16 190 €</td>
-                                            <td class="px-3 py-2 font-semibold text-green-300">+1 020 €</td>
+                                            <td class="px-3 py-2">PEA (18,6 % PS)</td>
+                                            <td class="px-3 py-2">15 119 €</td>
+                                            <td class="px-3 py-2 font-semibold text-green-300">+805 €</td>
                                         </tr>
                                         <tr>
-                                            <td class="px-3 py-2">CTO (PFU 30 %)</td>
-                                            <td class="px-3 py-2">15 170 €</td>
+                                            <td class="px-3 py-2">CTO (PFU 31,4 %)</td>
+                                            <td class="px-3 py-2">14 314 €</td>
                                             <td class="px-3 py-2">—</td>
                                         </tr>
                                     </tbody>
@@ -813,14 +839,17 @@
                           <ul class="space-y-2 text-sm">
                             <li>🔹 20 % : LEP (si éligible)</li>
                             <li>🔹 15 % : LDDS / Livret A</li>
-                            <li>🔹 5 % : Livret jeune</li> 
-                            <li>🔹 40 % : PEA‑Jeune (ETF World)</li>
+                            <li>🔹 5 % : Livret jeune</li>
+                            <li>🔹 35 % : PEA (ETF World)</li>
+                            <li>🔹 5 % : PEA‑PME / ETI</li>
+                            <li>🔹 5 % : PEAC (< 21 ans)</li>
                             <li>🔹 10 % : PEL / CEL</li>
-                            <li>🔹 5 % : Crypto "learning"</li>
-                            <li>🔹 3 % : PEA‑PME / ETI</li>
-                            <li>🔹 2 % : PER (non déduit)</li>
+                            <li>🔹 3 % : Crypto "learning"</li>
+                            <li>🔹 2 % : Or / ETF monétaire</li>
                           </ul>
-                          <div class="text-xs mt-4 text-gray-400">Objectif : Sécurité, diversification mondiale et souplesse maximale.</div>
+                          <div class="text-xs mt-3 p-2 bg-yellow-900 bg-opacity-30 rounded text-yellow-300"><i class="fas fa-exclamation-triangle mr-1"></i> PEA/Crypto uniquement si épargne de sécurité constituée (3 mois de dépenses).</div>
+                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-yellow-400">Risque :</span> perte temporaire possible -15 à -25% · Horizon min. 5 ans</div>
+                          <div class="text-xs mt-2 text-gray-400">Objectif : Apprendre, construire un capital avec horizon très long.</div>
                         </div>
 
                         <!-- Profil Prudent -->
@@ -839,7 +868,8 @@
                             <li>🔹 5 % : SCPI core</li>
                             <li>🔹 5 % : Or / ETF monétaire</li>
                           </ul>
-                          <div class="text-xs mt-4 text-gray-400">Objectif : Préserver le capital tout en battant légèrement l'inflation.</div>
+                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-blue-400">Risque :</span> perte temporaire possible -5 à -10% · Horizon min. 2 ans</div>
+                          <div class="text-xs mt-2 text-gray-400">Objectif : Préserver le capital tout en battant légèrement l'inflation.</div>
                         </div>
 
                         <!-- Profil Équilibré -->
@@ -860,7 +890,8 @@
                             <li>🔹 3 % : Crypto / Or</li>
                             <li>🔹 4 % : PEL / CEL</li>
                           </ul>
-                          <div class="text-xs mt-4 text-gray-400">Objectif : Croissance modérée avec volatilité maîtrisée.</div>
+                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-green-400">Risque :</span> perte temporaire possible -15 à -25% · Horizon min. 5 ans</div>
+                          <div class="text-xs mt-2 text-gray-400">Objectif : Croissance modérée avec volatilité maîtrisée.</div>
                         </div>
 
                         <!-- Profil Dynamique -->
@@ -882,7 +913,30 @@
                             <li>🔹 5 % : FCPI / FIP innovants</li>
                             <li>🔹 5 % : Participations / Angels</li>
                           </ul>
-                          <div class="text-xs mt-4 text-gray-400">Objectif : Performance maximale avec acceptation de volatilité.</div>
+                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-red-400">Risque :</span> perte temporaire possible -30 à -50% · Horizon min. 8 ans</div>
+                          <div class="text-xs mt-2 p-2 bg-red-900 bg-opacity-30 rounded text-red-300"><i class="fas fa-exclamation-triangle mr-1"></i> 15% d'actifs illiquides (SCPI 3-6 mois, FCPI/FIP 5-8 ans bloqués).</div>
+                          <div class="text-xs mt-2 text-gray-400">Objectif : Performance maximale avec acceptation de volatilité.</div>
+                        </div>
+
+                        <!-- Profil Retraité 55+ -->
+                        <div class="bg-purple-900 bg-opacity-20 rounded-lg p-5">
+                          <div class="flex items-center mb-4">
+                            <i class="fas fa-umbrella-beach text-purple-400 mr-2 text-xl"></i>
+                            <h4 class="font-semibold text-lg">Profil Retraité 55+</h4>
+                          </div>
+                          <ul class="space-y-2 text-sm">
+                            <li>🔹 20 % : Livrets (A/LDDS/LEP)</li>
+                            <li>🔹 25 % : Assurance-vie (80 % fonds € / 20 % UC)</li>
+                            <li>🔹 15 % : SCPI / OPCI (revenus réguliers)</li>
+                            <li>🔹 10 % : PER (sortie rente ou capital)</li>
+                            <li>🔹 10 % : PEA (ETF dividendes)</li>
+                            <li>🔹 5 % : PEL / CEL</li>
+                            <li>🔹 5 % : Or / ETF monétaire</li>
+                            <li>🔹 5 % : Obligations / fonds datés</li>
+                            <li>🔹 5 % : LDDS (transition écologique)</li>
+                          </ul>
+                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-purple-400">Risque :</span> perte temporaire possible -5 à -15% · Horizon min. 3 ans</div>
+                          <div class="text-xs mt-2 text-gray-400">Objectif : Revenus réguliers, préservation du capital et transmission (AV).</div>
                         </div>
                       </div>
                       
@@ -1121,7 +1175,7 @@
         // CONFIGURATION DES DONNÉES - MAJ 03/04/2026
         // ===========================================
         // Sources officielles :
-        // - CEL 1,25% : economie.gouv.fr (depuis 01/08/2025, inchangé)
+        // - CEL 1,00% : service-public.gouv.fr (= 2/3 Livret A, depuis 01/02/2026)
         // - PEL 2,0% : service-public.gouv.fr (ouverture >= 01/01/2026)
         // - Livret A 1,5% : service-public.gouv.fr (depuis 01/02/2026)
         // - LDDS 1,5% : identique au Livret A (depuis 01/02/2026)
@@ -1136,7 +1190,7 @@
                 subtitle: 'Plan d\'Épargne en Actions',
                 icon: 'fas fa-chart-line',
                 color: 'green',
-                profiles: ['equilibre', 'dynamique'],
+                profiles: ['etudiant', 'prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     horizon: '≥ 5 ans',
                     fiscalite: '0% IR après 5 ans',
@@ -1158,7 +1212,7 @@
                         icon: 'fas fa-exclamation-triangle',
                         iconClass: 'warning',
                         items: [
-                            'Retrait <span class="important-info">&lt; 5 ans</span> ⇒ PFU 30% + clôture',
+                            'Retrait <span class="important-info">&lt; 5 ans</span> ⇒ PFU 31,4% + clôture',
                             'Univers limité <span class="important-info">UE/EEE</span>',
                             'Volatilité actions',
                             'Capital non garanti'
@@ -1169,8 +1223,8 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">&gt; 5 ans</span> : 17,2% prélèv. sociaux, pas d\'IR',
-                            '<span class="important-info">&lt; 5 ans</span> : PFU 30% (12,8% IR + 17,2% PS)',
+                            '<span class="important-info">&gt; 5 ans</span> : 18,6% prélèv. sociaux, pas d\'IR (LFSS 2026)',
+                            '<span class="important-info">&lt; 5 ans</span> : PFU 31,4% (12,8% IR + 18,6% PS)',
                             'Dividendes non cotés exonérés jusqu\'à <span class="important-info">10%/an</span>',
                             'Compteur unique : 1er versement'
                         ]
@@ -1182,7 +1236,7 @@
     subtitle: 'Épargne réglementée 12–25 ans',
     icon: 'fas fa-piggy-bank',
     color: 'yellow',
-    profiles: ['prudent'],
+    profiles: ['etudiant'],
     summary: {
         horizon: 'très liquide',
         fiscalite: '0 % IR & PS',
@@ -1239,7 +1293,7 @@
                 subtitle: 'Épargne polyvalente',
                 icon: 'fas fa-umbrella',
                 color: 'blue',
-                profiles: ['prudent', 'equilibre'],
+                profiles: ['prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     horizon: '≥ 8 ans',
                     fiscalite: '7,5% après 8 ans',
@@ -1272,9 +1326,9 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">Après 8 ans</span> : 7,5 % + 17,2 % PS sur primes ≤ 150 000 €',
+                            '<span class="important-info">Après 8 ans</span> : 7,5 % + 17,2 % PS sur primes ≤ 150 000 € (abattement 4 600 €/an, 9 200 € couple)',
                             '<span class="important-info">Abattement annuel</span> sur les gains : <span class="important-info">4 600 €</span> (célibataire) ou <span class="important-info">9 200 €</span> (couple)',
-                            '<span class="important-info">Avant 8 ans</span> : PFU 12,8 % + 17,2 % PS',
+                            '<span class="important-info">Avant 8 ans</span> : PFU 12,8 % + 17,2 % PS — AV exclue de la hausse CSG 2026',
                             '<span class="important-info">Moins-values</span> imputables sur plus-values du même contrat'
                         ]
                     }
@@ -1285,10 +1339,10 @@
                 subtitle: 'Compte-titres ordinaire',
                 icon: 'fas fa-globe',
                 color: 'purple',
-                profiles: ['dynamique'],
+                profiles: ['equilibre', 'dynamique'],
                 summary: {
                     univers: 'Monde entier',
-                    fiscalite: 'PFU 30%',
+                    fiscalite: 'PFU 31,4%',
                     plafond: 'Illimité'
                 },
                 sections: [
@@ -1317,7 +1371,7 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            'Par défaut : flat tax <span class="important-info">30%</span> (12,8% IR + 17,2% PS)',
+                            'Par défaut : flat tax <span class="important-info">31,4%</span> (12,8% IR + 18,6% PS) — LFSS 2026',
                             'Option barème progressif si plus avantageux',
                             '<span class="important-info">Moins-values imputables</span> sur plus-values (report 10 ans)',
                             'Fiscalité classique sans avantage'
@@ -1330,7 +1384,7 @@
                 subtitle: 'Plan d\'Épargne Retraite',
                 icon: 'fas fa-piggy-bank',
                 color: 'green',
-                profiles: ['equilibre'],
+                profiles: ['prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     horizon: 'Retraite',
                     avantage: 'Déduction fiscale',
@@ -1363,9 +1417,9 @@
                         icon: 'fas fa-percentage',
                         items: [
                             '<span class="important-info">À l\'entrée</span> : vos versements réduisent votre revenu imposable (gain = TMI)',
-                            '<span class="important-info">Sortie en capital</span> : versements imposés, gains = <span class="important-info">flat-tax 30 %</span>',
+                            '<span class="important-info">Sortie en capital</span> : versements imposés, gains = <span class="important-info">flat-tax 31,4 %</span> (LFSS 2026)',
                             '<span class="important-info">Sortie en rente</span> : rente taxée comme pension (après abattement 10 %)',
-                            'Prélèvements sociaux <span class="important-info">17,2 %</span> sur les gains dans tous les cas'
+                            'Prélèvements sociaux <span class="important-info">18,6 %</span> sur les gains dans tous les cas (LFSS 2026)'
                         ]
                     },
                     {
@@ -1390,7 +1444,7 @@
                 subtitle: 'Société Civile de Placement Immobilier',
                 icon: 'fas fa-building',
                 color: 'blue',
-                profiles: ['equilibre'],
+                profiles: ['prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     rendement: '≈ 4% net',
                     ticket: 'Dès 200€',
@@ -1436,7 +1490,7 @@
                 subtitle: 'Épargne de précaution',
                 icon: 'fas fa-piggy-bank',
                 color: 'blue',
-                profiles: ['prudent'],
+                profiles: ['etudiant', 'prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     taux: '1,5%',
                     plafond: '22 950€',
@@ -1481,7 +1535,7 @@
                 subtitle: 'Livret de Développement Durable et Solidaire',
                 icon: 'fas fa-leaf',
                 color: 'green',
-                profiles: ['prudent'],
+                profiles: ['etudiant', 'prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     taux: '1,5%',
                     plafond: '12 000€',
@@ -1526,7 +1580,7 @@
                 subtitle: 'Livret d\'Épargne Populaire',
                 icon: 'fas fa-coins',
                 color: 'blue',
-                profiles: ['prudent'],
+                profiles: ['etudiant', 'prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     taux: '2,5%',
                     plafond: '10 000€',
@@ -1571,7 +1625,7 @@
                 subtitle: 'Actifs numériques',
                 icon: 'fab fa-bitcoin',
                 color: 'orange',
-                profiles: ['dynamique'],
+                profiles: ['etudiant', 'equilibre', 'dynamique'],
                 summary: {
                     potentiel: 'Très élevé',
                     risque: 'Très élevé',
@@ -1603,7 +1657,7 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            'Gains taxés lors de la <span class="important-info">conversion en €</span> / utilisation : <span class="important-info">PFU 30 %</span>',
+                            'Gains taxés lors de la <span class="important-info">conversion en €</span> / utilisation : <span class="important-info">PFU 31,4 %</span> (LFSS 2026)',
                             '<span class="important-info">Échanges crypto-à-crypto non imposés</span> (réforme 2022)',
                             '<span class="important-info">Moins-values</span> imputables sur plus-values de même nature, reportables 10 ans',
                             'Comptes sur plateformes étrangères : <span class="important-info">déclaration 3916-bis</span> annuelle'
@@ -1616,7 +1670,7 @@
                 subtitle: 'Plan d\'Épargne PME/ETI',
                 icon: 'fas fa-industry',
                 color: 'purple',
-                profiles: ['equilibre', 'dynamique'],
+                profiles: ['etudiant', 'equilibre', 'dynamique'],
                 summary: {
                     plafond: '225 000€',
                     univers: 'PME/ETI UE',
@@ -1650,8 +1704,8 @@
                         icon: 'fas fa-percentage',
                         items: [
                             '<span class="important-info">Même régime que le PEA</span> : plus-values & dividendes <span class="important-info">exonérés d\'IR après 5 ans</span>',
-                            '<span class="important-info">Prélèvements sociaux 17,2 %</span> sur les gains lors de tout retrait',
-                            '<span class="important-info">Retrait < 5 ans</span> : clôture automatique et taxation à la flat-tax <span class="important-info">30 %</span>',
+                            '<span class="important-info">Prélèvements sociaux 18,6 %</span> sur les gains lors de tout retrait (LFSS 2026)',
+                            '<span class="important-info">Retrait < 5 ans</span> : clôture automatique et taxation à la flat-tax <span class="important-info">31,4 %</span>',
                             'Retraits partiels possibles après 5 ans sans clôture'
                         ]
                     }
@@ -1662,7 +1716,7 @@
                 subtitle: 'Fonds innovation / proximité',
                 icon: 'fas fa-rocket',
                 color: 'red',
-                profiles: ['dynamique'],
+                profiles: ['equilibre', 'dynamique'],
                 summary: {
                     reduction: '25% FCPI, 30% FIP Corse/DOM',
                     blocage: '5-10 ans',
@@ -1698,7 +1752,7 @@
                         items: [
                             'Réduction IR l\'année du versement : <span class="important-info">25 % FCPI</span>, <span class="important-info">30 % FIP Corse/Outre-mer</span>',
                             'Plus-values <span class="important-info">exonérées d\'IR</span> à la sortie',
-                            '<span class="important-info">17,2 %</span> prélèvements sociaux dus sur les gains',
+                            '<span class="important-info">18,6 %</span> prélèvements sociaux dus sur les gains (LFSS 2026)',
                             'Perte de la réduction + imposition des gains si cession <span class="important-info">avant 5 ans</span>'
                         ]
                     }
@@ -1709,7 +1763,7 @@
                 subtitle: 'Plan épargne Avenir Climat',
                 icon: 'fas fa-seedling',
                 color: 'green',
-                profiles: ['equilibre'],
+                profiles: ['etudiant'],
                 summary: {
                     age: '< 21 ans',
                     plafond: '22 950€',
@@ -1758,7 +1812,7 @@
                 subtitle: 'Plan d\'Épargne Logement',
                 icon: 'fas fa-home',
                 color: 'blue',
-                profiles: ['prudent'],
+                profiles: ['etudiant', 'prudent', 'equilibre', 'retraite'],
                 summary: {
                     taux: '2,0% brut (≥2026)',
                     plafond: '61 200€',
@@ -1884,8 +1938,8 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">PFU 30%</span> (12,8% IR + 17,2% PS) prélevé chaque année',
-                            'Rendement net ≈ <span class="important-info">1,40%</span> (pour 2% brut)',
+                            '<span class="important-info">PFU 30%</span> (12,8% IR + 17,2% PS) prélevé chaque année — PEL exclu de la hausse CSG 2026',
+                            'Rendement net ≈ <span class="important-info">1,40%</span> (pour 2% brut) — <span class="text-yellow-400">⚠️ inférieur au Livret A (1,50% net défiscalisé)</span>',
                             'Prime d\'État supprimée (PEL ≥ 2018)',
                             '<a href="https://www.lafinancepourtous.com/pratique/placements/epargne-logement/le-plan-epargne-logement-pel-une-epargne-de-projet/le-pel-un-placement-ouvert-a-tous/" target="_blank" class="text-blue-400 underline text-xs">Source : La finance pour tous</a>'
                         ]
@@ -1900,9 +1954,9 @@
                 subtitle: 'Compte d\'Épargne Logement',
                 icon: 'fas fa-house-user',
                 color: 'blue',
-                profiles: ['prudent'],
+                profiles: ['etudiant', 'prudent', 'equilibre', 'retraite'],
                 summary: {
-                    taux: '1,25% brut (variable)',
+                    taux: '1,00% brut (variable, depuis 01/02/2026)',
                     plafond: '15 300€',
                     pret: 'Jusqu\'à 23 000€',
                     liquidite: 'Totale'
@@ -1921,7 +1975,7 @@
                         title: 'Paramètres clés',
                         icon: 'fas fa-sliders-h',
                         items: [
-                            '<span class="important-info">Taux épargne : 1,25% brut</span> (variable, depuis 01/08/2025)',
+                            '<span class="important-info">Taux épargne : 1,00% brut</span> (= 2/3 du Livret A, depuis 01/02/2026)',
                             '<span class="important-info">Plafond : 15 300 €</span> (hors intérêts capitalisés)',
                             '<span class="important-info">Liquidité : retraits possibles</span> (solde mini selon banque, souvent 300€)',
                             'Calcul des intérêts : par <span class="important-info">quinzaine</span> (1er/16)',
@@ -1934,7 +1988,7 @@
                         icon: 'fas fa-hand-holding-usd',
                         items: [
                             '<span class="important-info">Montant max : 23 000 €</span>',
-                            '<span class="important-info">Taux du prêt : 3,00%</span> (CEL ouverts ≥ 01/02/2025)',
+                            '<span class="important-info">Taux du prêt : 2,50%</span> (= taux épargne + 1,5 pt, depuis 01/02/2026)',
                             'Si CEL + PEL même banque : <span class="important-info">total prêts ≤ 92 000 €</span>',
                             '<a href="https://www.service-public.fr/particuliers/vosdroits/F16139" target="_blank" class="text-blue-400 underline text-xs">Source : Service-Public.fr</a>'
                         ]
@@ -1966,7 +2020,7 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">PFU 30%</span> sur les intérêts (12,8% IR + 17,2% PS)',
+                            '<span class="important-info">PFU 30%</span> sur les intérêts (12,8% IR + 17,2% PS) — CEL exclu de la hausse CSG 2026',
                             'Option barème progressif possible',
                             'Pas d\'avantage fiscal',
                             '<a href="https://www.service-public.fr/particuliers/vosdroits/F16136" target="_blank" class="text-blue-400 underline text-xs">Source : Service-Public.fr</a>'
@@ -1979,7 +2033,7 @@
                 subtitle: 'Organisme de Placement Collectif Immobilier',
                 icon: 'fas fa-city',
                 color: 'purple',
-                profiles: ['equilibre'],
+                profiles: ['prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
                     composition: '≥ 60% immo',
                     liquidite: 'Meilleure que SCPI',
@@ -2012,10 +2066,108 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">SPPICAV</span> : distributions & plus-values = <span class="important-info">PFU 30 %</span>',
+                            '<span class="important-info">SPPICAV</span> : distributions & plus-values = <span class="important-info">PFU 31,4 %</span> (LFSS 2026)',
                             '<span class="important-info">FPI</span> : loyers = <span class="important-info">revenus fonciers</span> ; plus-values immobilières (19 % IR + 17,2 % PS)',
-                            'Revenus financiers au PFU 30 %',
+                            'Revenus financiers au PFU 31,4 %',
                             'Part imposable à l\'<span class="important-info">IFI</span> pour la fraction immobilière'
+                        ]
+                    }
+                ]
+            },
+            // ==========================================
+            // OR / ETF MONÉTAIRE - AJOUTÉ 03/04/2026
+            // ==========================================
+            'or-monetaire': {
+                title: 'Or / ETF monétaire',
+                subtitle: 'Valeurs refuges et liquidité',
+                icon: 'fas fa-coins',
+                color: 'yellow',
+                profiles: ['etudiant', 'prudent', 'equilibre', 'dynamique', 'retraite'],
+                summary: {
+                    type: 'Protection',
+                    liquidite: 'Élevée',
+                    risque: 'Faible à modéré'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Or physique ou ETF (ETC)</span> : valeur refuge historique en période de crise',
+                            '<span class="important-info">Décorrélation</span> : l\'or protège contre l\'inflation et les crises géopolitiques',
+                            '<span class="important-info">ETF monétaires</span> : placement quasi sans risque, rendement proche des taux courts',
+                            '<span class="important-info">Très liquide</span> : revente immédiate sur les marchés'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Or : pas de rendement</span> — pas de dividende ni intérêt, seule la plus-value compte',
+                            '<span class="important-info">Volatilité modérée</span> : l\'or peut perdre 10-20% sur des périodes courtes',
+                            'ETF monétaire : rendement limité (≈ taux Ester, ~3% actuellement)',
+                            'Frais de stockage/assurance pour l\'or physique'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Or physique</span> : taxe forfaitaire 11,5% sur le prix de vente OU régime PV (36,2% avec abattement 5%/an dès 3 ans)',
+                            '<span class="important-info">ETF Or (ETC)</span> : PFU 31,4% sur les plus-values (LFSS 2026)',
+                            '<span class="important-info">ETF monétaires</span> : PFU 31,4% (via CTO) ou logeable en AV/PEA selon éligibilité',
+                            'Exonération totale de l\'or physique après 22 ans de détention'
+                        ]
+                    }
+                ]
+            },
+            // ==========================================
+            // OBLIGATIONS / FONDS DATÉS - AJOUTÉ 03/04/2026
+            // ==========================================
+            'obligations': {
+                title: 'Obligations / Fonds datés',
+                subtitle: 'Revenus fixes et prévisibles',
+                icon: 'fas fa-file-contract',
+                color: 'blue',
+                profiles: ['prudent', 'retraite'],
+                summary: {
+                    rendement: '3-5% brut',
+                    horizon: '2-7 ans',
+                    risque: 'Faible à modéré'
+                },
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Revenus réguliers</span> : coupons versés périodiquement (semestriels ou annuels)',
+                            '<span class="important-info">Fonds datés</span> : portefeuille d\'obligations avec une date d\'échéance fixe — visibilité sur le rendement',
+                            '<span class="important-info">Moins volatile</span> que les actions : drawdown limité si détention jusqu\'à maturité',
+                            '<span class="important-info">Diversification</span> : décorrélé des marchés actions en période de stress'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Risque de crédit</span> : défaut possible de l\'émetteur (surtout High Yield)',
+                            '<span class="important-info">Sensibilité aux taux</span> : si les taux montent, la valeur des obligations baisse',
+                            '<span class="important-info">Liquidité variable</span> : certains fonds datés ont des fenêtres de sortie limitées',
+                            'Rendement réel potentiellement faible si inflation élevée'
+                        ],
+                        risk: 'medium'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Via CTO</span> : coupons et plus-values au PFU 31,4% (LFSS 2026)',
+                            '<span class="important-info">Via Assurance-vie</span> : fiscalité AV (17,2% PS, avantage après 8 ans)',
+                            '<span class="important-info">Via PER</span> : déduction à l\'entrée, taxation à la sortie',
+                            'Privilégier les enveloppes fiscales (AV, PER) pour optimiser'
                         ]
                     }
                 ]
@@ -2166,9 +2318,11 @@
                 content += `<div class="mb-6">`;
                 placement.profiles.forEach(profile => {
                     const profileLabels = {
+                        'etudiant': 'Étudiant',
                         'prudent': 'Prudent',
-                        'equilibre': 'Équilibré', 
-                        'dynamique': 'Dynamique'
+                        'equilibre': 'Équilibré',
+                        'dynamique': 'Dynamique',
+                        'retraite': 'Retraité'
                     };
                     content += `<span class="profile-badge ${profile}">${profileLabels[profile]}</span>`;
                 });
@@ -2281,7 +2435,7 @@
                     
                     <div class="mt-4 flex flex-wrap gap-1">
                         ${placement.profiles.map(profile => {
-                            const labels = {'prudent': 'Prudent', 'equilibre': 'Équilibré', 'dynamique': 'Dynamique'};
+                            const labels = {'etudiant': 'Étudiant', 'prudent': 'Prudent', 'equilibre': 'Équilibré', 'dynamique': 'Dynamique', 'retraite': 'Retraité'};
                             return `<span class="profile-badge ${profile}">${labels[profile]}</span>`;
                         }).join('')}
                     </div>
