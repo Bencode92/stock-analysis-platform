@@ -21,11 +21,11 @@ const PatrimoineSimulator = (function() {
     }
 
     const TRANCHES_IMPOT = [
-        { min: 0, max: 11497, taux: 0 },
-        { min: 11497, max: 29315, taux: 0.11 },
-        { min: 29315, max: 83823, taux: 0.30 },
-        { min: 83823, max: 180294, taux: 0.41 },
-        { min: 180294, max: Infinity, taux: 0.45 }
+        { min: 0, max: 11600, taux: 0 },
+        { min: 11600, max: 29579, taux: 0.11 },
+        { min: 29579, max: 84577, taux: 0.30 },
+        { min: 84577, max: 181917, taux: 0.41 },
+        { min: 181917, max: Infinity, taux: 0.45 }
     ];
 
     const PLAFOND_QF_DEMI_PART = 1759;

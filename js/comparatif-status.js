@@ -102,10 +102,40 @@ window.initComparatifStatuts = function() {
       meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
     },
     'SNC': {
-      meta_payout: { peut_salaire: false, peut_dividendes: true, dividendes_cot_sociales: 'n/a', base_cotisations: 'bénéfice' },
-      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true },
-      meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false },
+      meta_payout: { peut_salaire: true, peut_dividendes: false, dividendes_cot_sociales: 'n/a (IR)', base_cotisations: 'bénéfice (quote-part)' },
+      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Bénéfice pris en compte' },
+      meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'SNC→SARL/SAS possible' },
       meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'faible' }
+    },
+    'SA': {
+      meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: 'non', base_cotisations: 'rémunération' },
+      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
+      meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'Cotation possible' },
+      meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
+    },
+    'SCI': {
+      meta_payout: { peut_salaire: false, peut_dividendes: true, dividendes_cot_sociales: 'non (IS) / n/a (IR)', base_cotisations: 'résultat fiscal' },
+      meta_are: { are_compatible_sans_salaire: false, are_baisse_si_salaire: false, are_commentaire_court: 'Non applicable' },
+      meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: true, migration_simple: 'Option IS irréversible' },
+      meta_dirigeant: { statut_dirigeant: 'non salarié', couverture_dirigeant: 'aucune' }
+    },
+    'SELARL': {
+      meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10%', base_cotisations: 'rémunération + div>10%' },
+      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
+      meta_evolution: { accueil_investisseurs: 'faible', entree_associes_facile: false, migration_simple: 'SELARL→SELAS possible' },
+      meta_dirigeant: { statut_dirigeant: 'TNS', couverture_dirigeant: 'moyenne' }
+    },
+    'SELAS': {
+      meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: 'non', base_cotisations: 'rémunération' },
+      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Dividendes non ARE' },
+      meta_evolution: { accueil_investisseurs: 'moyen', entree_associes_facile: true, migration_simple: 'Entrée associés encadrée' },
+      meta_dirigeant: { statut_dirigeant: 'assimilé salarié', couverture_dirigeant: 'élevée' }
+    },
+    'SCA': {
+      meta_payout: { peut_salaire: true, peut_dividendes: true, dividendes_cot_sociales: '>10% (commandité)', base_cotisations: 'rémunération + div>10%' },
+      meta_are: { are_compatible_sans_salaire: true, are_baisse_si_salaire: true, are_commentaire_court: 'Selon statut associé' },
+      meta_evolution: { accueil_investisseurs: 'élevé', entree_associes_facile: true, migration_simple: 'Structure complexe' },
+      meta_dirigeant: { statut_dirigeant: 'TNS (commandité) / assimilé salarié (commanditaire)', couverture_dirigeant: 'variable' }
     }
   };
 
@@ -219,25 +249,122 @@ window.initComparatifStatuts = function() {
   function renderDividendRule(statut) {
     const sn = (statut.shortName || '').toUpperCase();
     const fisc = (statut.fiscalite || '').toUpperCase();
-    
-    if (/SASU|SAS|SA|SELAS|SCA/.test(sn)) {
-      return `<span style="color:${TOKENS.semantic.success};font-weight:500">PFU, non cotisés</span>`;
+
+    if (/SASU|SAS|SA|SELAS/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.success};font-weight:500">PFU 31,4%, non cotisés</span>`;
+    }
+    if (/SCA/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">PFU 31,4%, >10% cotisés (commandité TNS)</span>`;
     }
     if (/EURL|SARL|SELARL/.test(sn) && /IS/.test(fisc)) {
-      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">PFU, >10% cotisés TNS</span>`;
+      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">PFU 31,4%, >10% cotisés TNS</span>`;
+    }
+    if (/SNC/.test(sn)) {
+      return `<span style="color:${TOKENS.text.muted}">— (IR, pas de dividendes)</span>`;
+    }
+    if (/SCI/.test(sn)) {
+      return /IS/.test(fisc)
+        ? `<span style="color:${TOKENS.semantic.success};font-weight:500">PFU 31,4%, non cotisés</span>`
+        : `<span style="color:${TOKENS.text.muted}">— (IR, revenus fonciers)</span>`;
     }
     if (/MICRO|EI/.test(sn)) {
-      return '<span style="color:'+TOKENS.text.muted+'">— (pas de dividendes)</span>';
+      return `<span style="color:${TOKENS.text.muted}">— (pas de dividendes)</span>`;
     }
     return '—';
   }
 
+  function renderChargesSynthese(statut) {
+    const sn = (statut.shortName || '').toUpperCase();
+    const tagCouverture = (level) => {
+      const colors = {
+        basique: `background:rgba(245,158,11,.15);color:${TOKENS.semantic.warning}`,
+        bonne: `background:rgba(16,185,129,.15);color:${TOKENS.semantic.success}`,
+        minimale: `background:rgba(255,123,123,.12);color:${TOKENS.semantic.danger}`
+      };
+      return `<span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:.7rem;font-weight:600;margin-top:3px;${colors[level]||colors.basique}">${level === 'bonne' ? 'Couverture élevée' : level === 'basique' ? 'Couverture basique' : 'Couverture minimale'}</span>`;
+    };
+
+    if (/MICRO/.test(sn)) {
+      return `<span><strong>12,3% à 25,6%</strong> du CA<br>
+        <small style="color:${TOKENS.text.muted}">Vente 12,3% · Services 21,2% · BNC 25,6%</small><br>
+        ${tagCouverture('basique')}
+        <small style="color:${TOKENS.text.muted}"> — IJ faibles, retraite SSI basique</small></span>`;
+    }
+    if (/\bEI\b/.test(sn) || /SNC/.test(sn)) {
+      return `<span><strong>~30%</strong> du bénéfice (TNS)<br>
+        <small style="color:${TOKENS.text.muted}">Cotisations SSI sur bénéfice réel</small><br>
+        ${tagCouverture('basique')}
+        <small style="color:${TOKENS.text.muted}"> — IJ faibles, retraite SSI basique</small></span>`;
+    }
+    if (/EURL|SARL|SELARL|SCA/.test(sn)) {
+      const isTNS = /TNS|gérant majoritaire/i.test(statut.regimeSocial || '');
+      if (isTNS) {
+        return `<span style="color:${TOKENS.semantic.success}"><strong>~30%</strong> de la rémunération (TNS)<br>
+          <small style="color:${TOKENS.text.muted}">+ cotisations sur dividendes >10% (capital+primes+CC)</small><br>
+          ${tagCouverture('basique')}
+          <small style="color:${TOKENS.text.muted}"> — IJ ~60€/j max, retraite SSI, carence 3j</small></span>`;
+      }
+      return `<span style="color:${TOKENS.semantic.warning}"><strong>~55-77%</strong> de la rémunération<br>
+        <small style="color:${TOKENS.text.muted}">Patronales ~55% + salariales ~22% — dividendes non cotisés</small><br>
+        ${tagCouverture('bonne')}
+        <small style="color:${TOKENS.text.muted}"> — IJ salarié, AGIRC-ARRCO, pas de carence</small></span>`;
+    }
+    if (/SASU|SAS|SA|SELAS/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.warning}"><strong>~55-77%</strong> de la rémunération<br>
+        <small style="color:${TOKENS.text.muted}">Patronales ~55% + salariales ~22% — dividendes non cotisés</small><br>
+        ${tagCouverture('bonne')}
+        <small style="color:${TOKENS.text.muted}"> — IJ comme salarié, AGIRC-ARRCO, 0j carence</small></span>`;
+    }
+    if (/SCI/.test(sn)) {
+      return `<span style="color:${TOKENS.text.muted}">PS 17,2% à 18,6%<br>
+        <small>Sur revenus fonciers ou dividendes (IS)</small><br>
+        ${tagCouverture('minimale')}
+        <small style="color:${TOKENS.text.muted}"> — Pas de couverture dirigeant</small></span>`;
+    }
+    return renderWithTooltip(statut.chargesSociales, 60);
+  }
+
+  function renderStatutDirigeant(statut) {
+    const dir = statut.statutDirigeant || statut.meta_dirigeant?.statut_dirigeant || '—';
+    if (/tns/i.test(dir)) {
+      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">TNS</span>`;
+    }
+    if (/assimil/i.test(dir)) {
+      return `<span style="color:${TOKENS.semantic.success};font-weight:500">Assimilé salarié</span>`;
+    }
+    return toHTML(dir);
+  }
+
   function renderARE(statut) {
     const areM = statut.meta_are || {};
-    if (areM.are_compatible_sans_salaire) {
-      return `<span style="color:${TOKENS.semantic.success};font-weight:500">OK sans salaire</span>`;
+    const sn = (statut.shortName || '').toUpperCase();
+    // SASU/SAS : dividendes ignorés par France Travail = meilleur cas ARE
+    if (/SASU|SAS|SA|SELAS/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.success};font-weight:600">Compatible — dividendes ignorés</span>`;
     }
-    return `<span style="color:${TOKENS.text.secondary}">Réduit si salaire</span>`;
+    // EURL/SARL IS : dividendes non pris en compte mais salaire réduit l'ARE
+    if (/EURL|SARL|SELARL/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.success}">Compatible — salaire réduit l'ARE</span>`;
+    }
+    // Micro/EI : bénéfice/CA pris en compte = réduit l'ARE
+    if (/MICRO/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">CA pris en compte → réduit l'ARE</span>`;
+    }
+    if (/\bEI\b/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.warning};font-weight:500">Bénéfice pris en compte → réduit l'ARE</span>`;
+    }
+    // SNC : quote-part du bénéfice
+    if (/SNC/.test(sn)) {
+      return `<span style="color:${TOKENS.semantic.warning}">Quote-part bénéfice prise en compte</span>`;
+    }
+    // SCI / SCA : non pertinent en général
+    if (/SCI|SCA/.test(sn)) {
+      return `<span style="color:${TOKENS.text.muted}">Non applicable</span>`;
+    }
+    if (areM.are_compatible_sans_salaire) {
+      return `<span style="color:${TOKENS.semantic.success}">Compatible</span>`;
+    }
+    return `<span style="color:${TOKENS.text.muted}">—</span>`;
   }
 
   function renderWithTooltip(text, maxLen=100) {
@@ -326,7 +453,7 @@ window.initComparatifStatuts = function() {
       a:'MICRO', b:'EI',
       chooseA: [
         "Tu veux la **simplicité maximale** (déclaratif, pas de compta complète)",
-        "Ton **CA** reste **sous les plafonds** (188 700 € ventes / 77 700 € services/BNC)",
+        "Ton **CA** reste **sous les plafonds** (203 100 € ventes / 83 600 € services/BNC)",
         "Tu as **peu de frais** ⇒ l'**abattement** suffit"
       ],
       chooseB: [
@@ -339,6 +466,42 @@ window.initComparatifStatuts = function() {
         "EI (réel/IS) : **compta complète** + **formalités** supplémentaires"
       ],
       oneLine: "Simplicité & peu de frais → **Micro** ; frais réels/TVA/aucun plafond → **EI**."
+    },
+    'MICRO|SASU': {
+      a:'MICRO', b:'SASU',
+      chooseA: [
+        "Tu veux **zéro formalité** et commencer immédiatement",
+        "Ton **CA reste sous les plafonds** (203 100 € ventes / 83 600 € services)",
+        "Tu as **peu de frais** ⇒ l'abattement forfaitaire est plus avantageux que le réel"
+      ],
+      chooseB: [
+        "Tu veux **verser des dividendes** (non cotisés) ou **préserver ton ARE**",
+        "Tu prévois des **investisseurs** ou l'**entrée d'associés**",
+        "Tu veux **déduire des frais réels** (véhicule, bureau, matériel…)"
+      ],
+      caveats: [
+        "Micro : **pas de TVA récupérable**, **pas de déduction** au réel, CA plafonné",
+        "SASU : **charges sociales élevées** (~55-77%) dès qu'il y a salaire, **compta complète**"
+      ],
+      oneLine: "Simplicité absolue & petit CA → **Micro** ; dividendes/ARE/croissance → **SASU**."
+    },
+    'EURL|SARL': {
+      a:'EURL', b:'SARL',
+      chooseA: [
+        "Tu es **seul** et veux garder le **contrôle total** sans assemblée formelle",
+        "Tu veux pouvoir **basculer facilement en SARL** si un associé arrive",
+        "Tu cherches un **cadre simplifié** (décisions de l'associé unique)"
+      ],
+      chooseB: [
+        "Vous êtes **au moins 2** associés dès le départ",
+        "Vous voulez un **cadre légal protecteur** avec **assemblées** et **gérance encadrée**",
+        "Vous prévoyez une **société familiale** (option IR illimitée pour SARL de famille)"
+      ],
+      caveats: [
+        "EURL : passage en SARL = simple **cession de parts**, pas de transformation",
+        "SARL : **2 à 100 associés**, agrément obligatoire pour cessions à des tiers"
+      ],
+      oneLine: "Solo avec option multi-associés → **EURL** ; plusieurs associés dès le départ → **SARL**."
     },
     'SASU|SARL': {
       a:'SASU', b:'SARL',
@@ -393,7 +556,7 @@ window.initComparatifStatuts = function() {
   function getThresholds2025() {
     const T = (window.recoEngine && window.recoEngine.thresholds2025) || window.thresholds2025 || {};
     const def = {
-      micro: { bic_sales:188700, bic_service:77700, bnc:77700, meuble_classe_ca:77700, meuble_non_classe_ca:15000 },
+      micro: { bic_sales:203100, bic_service:83600, bnc:83600, meuble_classe_ca:83600, meuble_non_classe_ca:15000 },
       tva_franchise_base: { ventes:85000, services:37500, tolerance_ventes:93500, tolerance_services:41250 }
     };
     return {
@@ -404,7 +567,7 @@ window.initComparatifStatuts = function() {
 
   function deriveObligations(shortName) {
     const T = getThresholds2025();
-    const tvaFr = `Franchise TVA 2025 : ventes ${fmtEuro(T.tva_franchise_base.ventes)} • services ${fmtEuro(T.tva_franchise_base.services)}`;
+    const tvaFr = `Franchise TVA : ventes ${fmtEuro(T.tva_franchise_base.ventes)} • services ${fmtEuro(T.tva_franchise_base.services)}`;
     const microPlaf = `Ventes ${fmtEuro(T.micro.bic_sales)} • Services ${fmtEuro(T.micro.bic_service)} • BNC ${fmtEuro(T.micro.bnc)}`;
 
     const SN = (shortName||'').toUpperCase();
@@ -415,9 +578,17 @@ window.initComparatifStatuts = function() {
         regimeTVA: tvaFr
       };
     }
-    if (SN==='EURL') return { obligationsCle: 'Compta engagement · AG<6 mois · TVA réel/franchise · Cotis TNS+div>10%' };
-    if (SN==='SASU') return { obligationsCle: 'Compta engagement · Paie/DSN si rémunération · TVA réel/franchise · Div non cotisés' };
-    return { obligationsCle: '' };
+    if (SN==='EURL') return { obligationsCle: 'Compta engagement · AG annuelle · TVA réel/franchise · Cotis TNS + div >10% cotisés' };
+    if (SN==='SASU') return { obligationsCle: 'Compta engagement · Paie/DSN si rémunération · TVA réel/franchise · Dividendes non cotisés' };
+    if (SN==='SARL') return { obligationsCle: 'Compta engagement · AG annuelle · TVA réel/franchise · Cotis TNS si gérant maj. + div >10%' };
+    if (SN==='SAS') return { obligationsCle: 'Compta engagement · Décisions collectives · TVA réel/franchise · Dividendes non cotisés' };
+    if (SN==='SA') return { obligationsCle: 'Compta engagement · CA + AG · CAC obligatoire · Capital min 37 000 €' };
+    if (SN==='SNC') return { obligationsCle: 'Compta engagement · IR sur quote-part · Responsabilité illimitée et solidaire' };
+    if (SN==='SCI') return { obligationsCle: 'Compta simplifiée (IR) ou engagement (IS) · AG annuelle · Revenus fonciers ou IS' };
+    if (SN==='SELARL') return { obligationsCle: 'Compta engagement · Ordre professionnel · Cotis TNS + div >10% cotisés' };
+    if (SN==='SELAS') return { obligationsCle: 'Compta engagement · Ordre professionnel · Assimilé salarié · Dividendes non cotisés' };
+    if (SN==='SCA') return { obligationsCle: 'Compta engagement · Capital min 37 000 € · Commandités TNS · Structure complexe' };
+    return { obligationsCle: '—' };
   }
 
   // ===================== INTENTS & SCORING =====================
@@ -454,18 +625,20 @@ window.initComparatifStatuts = function() {
     const derived=deriveObligations(statut.shortName||statut.name);
     const km=statut.key_metrics||{}; const shortName=(statut.shortName||'').toUpperCase();
     const fallback = META_FALLBACK[shortName] || {};
+    const metaDirigeant = statut.meta_dirigeant || fallback.meta_dirigeant || {};
     const enriched = {
       ...statut,
       fiscalite: normalizeFiscalite(statut.fiscalite || ''),
       regimeTVA: statut.regimeTVA || derived.regimeTVA,
       plafondCA: statut.plafondCA || derived.plafondCA || '—',
       obligationsCle: statut.obligationsCle || derived.obligationsCle || '—',
+      statutDirigeant: metaDirigeant.statut_dirigeant || '—',
       _pp_stars: Number.isFinite(km.patrimony_protection) ? km.patrimony_protection : null,
       _pp_text: toText(statut.protectionPatrimoine),
       meta_payout: statut.meta_payout || fallback.meta_payout || {},
       meta_are: statut.meta_are || fallback.meta_are || {},
       meta_evolution: statut.meta_evolution || fallback.meta_evolution || {},
-      meta_dirigeant: statut.meta_dirigeant || fallback.meta_dirigeant || {}
+      meta_dirigeant: metaDirigeant
     };
     if(Object.keys(answers).length>0){ const scoring=scoreStatut(enriched, answers); enriched._score=scoring.score; enriched._why=scoring.why; }
     enriched._caveat = computeCaveats(enriched);
@@ -496,22 +669,33 @@ window.initComparatifStatuts = function() {
         overflow-x:auto;
         font-family:'Inter',sans-serif;
         color:${TOKENS.text.primary};
-        font-size:18px;
-        line-height:1.7;
+        font-size:15px;
+        line-height:1.55;
       }
-      .comparatif-header{margin-bottom:${TOKENS.spacing.xl}px}
-      .comparatif-title{font-size:1.75rem;font-weight:700;margin-bottom:${TOKENS.spacing.sm}px;color:${TOKENS.accent};line-height:1.2}
+      .comparatif-header{margin-bottom:${TOKENS.spacing.md}px}
+      .comparatif-setup-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:${TOKENS.spacing.lg}px;
+        margin-bottom:${TOKENS.spacing.md}px;
+      }
+      @media(max-width:900px){
+        .comparatif-setup-grid{grid-template-columns:1fr}
+      }
+      .setup-left,.setup-right{min-width:0}
+      .quick-presets-row{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}
+      .comparatif-title{font-size:1.4rem;font-weight:700;margin-bottom:${TOKENS.spacing.xs}px;color:${TOKENS.accent};line-height:1.2}
       .comparatif-subtitle{
         color:${TOKENS.text.secondary};
-        margin-bottom:${TOKENS.spacing.xl}px;
-        font-size:1rem;
-        line-height:1.7;
+        margin-bottom:${TOKENS.spacing.lg}px;
+        font-size:.875rem;
+        line-height:1.5;
         max-width:75ch;
       }
 
-      .hero{margin-bottom:${TOKENS.spacing.xl}px;padding:${TOKENS.spacing.xl}px;background:linear-gradient(to right, rgba(0,255,135,.08), rgba(1,42,74,.35));border:1px solid rgba(0,255,135,.18);border-radius:${TOKENS.radius.xl}px}
-      .hero h1{margin:0 0 ${TOKENS.spacing.sm}px 0;font-size:1.875rem;color:${TOKENS.accent};line-height:1.2}
-      .hero-sub{color:${TOKENS.text.secondary};margin:0 0 ${TOKENS.spacing.lg}px 0;line-height:1.7}
+      .hero{display:none}
+      .hero h1{margin:0 0 ${TOKENS.spacing.sm}px 0;font-size:1.5rem;color:${TOKENS.accent};line-height:1.2}
+      .hero-sub{color:${TOKENS.text.secondary};margin:0 0 ${TOKENS.spacing.md}px 0;line-height:1.5;font-size:.875rem}
       .hero-ctas{display:flex;gap:${TOKENS.spacing.sm}px;flex-wrap:wrap}
       .btn{
         min-height:44px;
@@ -563,29 +747,29 @@ window.initComparatifStatuts = function() {
       .empty{padding:2rem;text-align:center;color:${TOKENS.text.secondary}}
       .empty .quick{margin-top:${TOKENS.spacing.md}px;display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;justify-content:center}
 
-      .section-label{font-size:0.9rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${TOKENS.text.secondary};margin-bottom:${TOKENS.spacing.md}px}
+      .section-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${TOKENS.text.muted};margin-bottom:${TOKENS.spacing.sm}px}
 
       .intent-toggles{
         display:flex;
         flex-wrap:wrap;
-        gap:${TOKENS.spacing.md}px;
-        margin-bottom:${TOKENS.spacing.lg}px;
-        padding:${TOKENS.spacing.lg}px;
+        gap:${TOKENS.spacing.sm}px;
+        margin-bottom:${TOKENS.spacing.md}px;
+        padding:${TOKENS.spacing.md}px;
         background:${TOKENS.surface.base};
-        border-radius:${TOKENS.radius.lg}px;
-        border:1px solid rgba(0,255,135,.15);
+        border-radius:${TOKENS.radius.md}px;
+        border:1px solid rgba(0,255,135,.1);
       }
       .intent-toggle{
         position:relative;
         display:flex;
         align-items:center;
-        gap:${TOKENS.spacing.sm}px;
-        min-height:44px;
-        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        gap:6px;
+        min-height:36px;
+        padding:6px ${TOKENS.spacing.md}px;
         background:${TOKENS.surface.raised};
-        border:1px solid rgba(0,255,135,.2);
+        border:1px solid rgba(0,255,135,.15);
         border-radius:999px;
-        font-size:.875rem;
+        font-size:.8rem;
         color:${TOKENS.text.secondary};
         cursor:pointer;
         transition:all .15s ease;
@@ -614,14 +798,14 @@ window.initComparatifStatuts = function() {
       }
       .intent-toggle:hover .tooltip, .intent-toggle:focus-visible .tooltip{opacity:1}
 
-      .personas{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.lg}px}
+      .personas{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.md}px}
       .persona-chip{
         position:relative;
-        min-height:44px;
-        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
-        border:1px solid rgba(255,255,255,.2);
+        min-height:34px;
+        padding:6px ${TOKENS.spacing.md}px;
+        border:1px solid rgba(255,255,255,.15);
         border-radius:${TOKENS.radius.md}px;
-        font-size:.8125rem;
+        font-size:.775rem;
         color:${TOKENS.text.primary};
         cursor:pointer;
         background:${TOKENS.surface.overlay};
@@ -645,14 +829,14 @@ window.initComparatifStatuts = function() {
       }
       .persona-chip:hover .baseline, .persona-chip:focus-visible .baseline{opacity:1}
 
-      .quick-presets{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.lg}px}
+      .quick-presets{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;margin-bottom:${TOKENS.spacing.md}px}
       .preset-btn{
-        min-height:44px;
-        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
+        min-height:34px;
+        padding:5px ${TOKENS.spacing.md}px;
         border:1px solid rgba(0,255,135,.35);
         background:rgba(0,255,135,.08);
         border-radius:999px;
-        font-size:.8125rem;
+        font-size:.775rem;
         color:${TOKENS.accent};
         cursor:pointer;
         transition:all .15s ease;
@@ -662,15 +846,15 @@ window.initComparatifStatuts = function() {
       .comparison-bar{
         display:flex;
         align-items:center;
-        padding:${TOKENS.spacing.lg}px;
+        padding:${TOKENS.spacing.md}px;
         background:${TOKENS.surface.base};
-        border-radius:${TOKENS.radius.lg}px;
-        margin-bottom:${TOKENS.spacing.lg}px;
+        border-radius:${TOKENS.radius.md}px;
+        margin-bottom:${TOKENS.spacing.md}px;
         flex-wrap:wrap;
-        gap:${TOKENS.spacing.md}px;
-        border:1px solid rgba(0,255,135,.15);
+        gap:${TOKENS.spacing.sm}px;
+        border:1px solid rgba(0,255,135,.12);
       }
-      .comparison-title{font-size:.875rem;font-weight:600;color:${TOKENS.text.secondary};margin-right:auto}
+      .comparison-title{font-size:.8rem;font-weight:600;color:${TOKENS.text.secondary};margin-right:auto}
       .comparison-items{display:flex;flex-wrap:wrap;gap:${TOKENS.spacing.sm}px;flex-grow:1}
       .comparison-item{
         display:flex;
@@ -696,9 +880,9 @@ window.initComparatifStatuts = function() {
       }
       .comparison-item .remove-btn:hover{color:${TOKENS.semantic.danger}}
       .status-dropdown{
-        width:200px;
-        min-height:44px;
-        padding:${TOKENS.spacing.md}px;
+        width:180px;
+        min-height:34px;
+        padding:6px ${TOKENS.spacing.md}px;
         background:${TOKENS.surface.raised};
         border:1px solid rgba(0,255,135,.25);
         border-radius:${TOKENS.radius.sm}px;
@@ -760,18 +944,18 @@ window.initComparatifStatuts = function() {
       .comparatif-filters{
         display:flex;
         flex-wrap:wrap;
-        gap:${TOKENS.spacing.lg}px;
-        margin-bottom:${TOKENS.spacing.xl}px;
+        gap:${TOKENS.spacing.md}px;
+        margin-bottom:${TOKENS.spacing.md}px;
         align-items:flex-end;
       }
-      .filter-group{flex:1;min-width:200px}
-      .filter-label{display:block;margin-bottom:${TOKENS.spacing.md}px;color:${TOKENS.text.secondary};font-size:.875rem;font-weight:500}
-      .criteria-buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:${TOKENS.spacing.sm}px}
+      .filter-group{flex:1;min-width:180px}
+      .filter-label{display:block;margin-bottom:${TOKENS.spacing.sm}px;color:${TOKENS.text.muted};font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+      .criteria-buttons{display:flex;flex-wrap:wrap;gap:6px}
       .criteria-button{
-        min-height:44px;
-        padding:${TOKENS.spacing.md}px;
+        min-height:34px;
+        padding:6px ${TOKENS.spacing.md}px;
         border-radius:${TOKENS.radius.sm}px;
-        font-size:.875rem;
+        font-size:.8rem;
         cursor:pointer;
         background:${TOKENS.surface.raised};
         border:1px solid rgba(0,255,135,.2);
@@ -784,8 +968,8 @@ window.initComparatifStatuts = function() {
 
       .search-input{
         width:100%;
-        min-height:44px;
-        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        min-height:34px;
+        padding:6px ${TOKENS.spacing.md}px;
         border-radius:${TOKENS.radius.sm}px;
         border:1px solid rgba(1,42,74,.8);
         background:${TOKENS.surface.raised};
@@ -815,24 +999,25 @@ window.initComparatifStatuts = function() {
       }
       .comparatif-table{width:100%;border-collapse:collapse;text-align:left}
       .comparatif-table th{
-        padding:${TOKENS.spacing.lg}px;
+        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.md}px;
         background:${TOKENS.surface.raised};
         font-weight:600;
         color:${TOKENS.accent};
-        font-size:.9rem;
+        font-size:.8rem;
         text-transform:none;
         letter-spacing:0;
-        border-bottom:1px solid rgba(1,42,74,.8);
+        border-bottom:2px solid rgba(0,255,135,.2);
         position:sticky;
         top:0;
         z-index:20;
+        white-space:nowrap;
       }
       .comparatif-table th:first-child{position:sticky;left:0;z-index:30;background:${TOKENS.surface.raised}}
       .comparatif-table td{
-        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.lg}px;
+        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
         border-bottom:1px solid rgba(1,42,74,.4);
-        font-size:.93rem;
-        line-height:1.7;
+        font-size:.82rem;
+        line-height:1.5;
         vertical-align:top;
       }
       .comparatif-table td:first-child{position:sticky;left:0;background:rgba(1,42,74,.3);z-index:10}
@@ -1033,66 +1218,67 @@ window.initComparatifStatuts = function() {
       <div class="comparatif-container">
         ${heroHTML}
         <div class="comparatif-header">
-          <h1 class="comparatif-title">Comparatif des formes juridiques 2025</h1>
+          <h1 class="comparatif-title">Comparatif des formes juridiques 2026</h1>
           <p class="comparatif-subtitle">
-            Ajoutez des statuts (ex. EURL vs SASU). On n'affiche que les différences clés et on vous suggère le meilleur choix selon vos objectifs (dividendes, ARE, associés, levée de fonds).
+            Comparez jusqu'à ${MAX_COMPARE === Infinity ? '∞' : MAX_COMPARE} statuts. Seules les différences sont affichées par défaut.
           </p>
 
-          <div class="section-label">Vos objectifs</div>
-          <div class="intent-toggles" role="group" aria-label="Vos objectifs">
-            <button type="button" class="intent-toggle" data-intent="veut_dividendes" aria-pressed="false" aria-describedby="tip-veut_dividendes">
-              <i class="fas fa-coins icon"></i>
-              <span>Dividendes</span>
-              <div class="tooltip" id="tip-veut_dividendes">Affiche les statuts où les dividendes sont possibles/optimisés</div>
-            </button>
-            <button type="button" class="intent-toggle" data-intent="en_chomage" aria-pressed="false" aria-describedby="tip-en_chomage">
-              <i class="fas fa-shield-alt icon"></i>
-              <span>Je perçois l'ARE</span>
-              <div class="tooltip" id="tip-en_chomage">Masque les choix qui réduisent fortement l'ARE si pas de salaire</div>
-            </button>
-            <button type="button" class="intent-toggle" data-intent="prevoit_associes" aria-pressed="false" aria-describedby="tip-prevoit_associes">
-              <i class="fas fa-users icon"></i>
-              <span>J'aurai des associés</span>
-              <div class="tooltip" id="tip-prevoit_associes">Privilégie les statuts permettant plusieurs associés</div>
-            </button>
-            <button type="button" class="intent-toggle" data-intent="levee_fonds" aria-pressed="false" aria-describedby="tip-levee_fonds">
-              <i class="fas fa-rocket icon"></i>
-              <span>Lever des fonds</span>
-              <div class="tooltip" id="tip-levee_fonds">Recommande SAS/SASU pour BSPCE et actions de préférence</div>
-            </button>
-          </div>
+          <div class="comparatif-setup-grid">
+            <div class="setup-left">
+              <div class="section-label">Filtrer par objectif</div>
+              <div class="intent-toggles" role="group" aria-label="Vos objectifs">
+                <button type="button" class="intent-toggle" data-intent="veut_dividendes" aria-pressed="false" aria-describedby="tip-veut_dividendes">
+                  <i class="fas fa-coins icon"></i><span>Dividendes</span>
+                  <div class="tooltip" id="tip-veut_dividendes">Statuts avec dividendes possibles/optimisés</div>
+                </button>
+                <button type="button" class="intent-toggle" data-intent="en_chomage" aria-pressed="false" aria-describedby="tip-en_chomage">
+                  <i class="fas fa-shield-alt icon"></i><span>ARE</span>
+                  <div class="tooltip" id="tip-en_chomage">Compatible avec l'allocation chômage</div>
+                </button>
+                <button type="button" class="intent-toggle" data-intent="prevoit_associes" aria-pressed="false" aria-describedby="tip-prevoit_associes">
+                  <i class="fas fa-users icon"></i><span>Associés</span>
+                  <div class="tooltip" id="tip-prevoit_associes">Statuts multi-associés</div>
+                </button>
+                <button type="button" class="intent-toggle" data-intent="levee_fonds" aria-pressed="false" aria-describedby="tip-levee_fonds">
+                  <i class="fas fa-rocket icon"></i><span>Levée</span>
+                  <div class="tooltip" id="tip-levee_fonds">SAS/SASU pour BSPCE et actions de préférence</div>
+                </button>
+              </div>
 
-          <div class="section-label">Cas typiques (1 clic)</div>
-          <div class="personas" id="personas"></div>
+              <div class="section-label">Comparaisons rapides</div>
+              <div class="quick-presets-row">
+                <div class="quick-presets" id="quick-presets"></div>
+                <div class="personas" id="personas"></div>
+              </div>
+            </div>
 
-          <div class="section-label">Comparaisons populaires</div>
-          <div class="quick-presets" id="quick-presets"></div>
+            <div class="setup-right">
+              <div class="section-label">Statuts à comparer</div>
+              <div class="comparison-bar">
+                <select id="status-dropdown" class="status-dropdown" aria-label="Ajouter un statut">
+                  <option value="">Ajouter un statut…</option>
+                </select>
+                <div class="comparison-items" id="comparison-items"></div>
+                <div id="diff-badge-container"></div>
+                <button type="button" id="share-link" class="preset-btn" aria-label="Copier le lien de comparaison"><i class="fas fa-share-alt" style="margin-right:4px"></i>Partager</button>
+              </div>
 
-          <div class="comparison-bar">
-            <span class="comparison-title">Statuts à comparer (jusqu'à ${MAX_COMPARE === Infinity ? '∞' : MAX_COMPARE})</span>
-            <select id="status-dropdown" class="status-dropdown" aria-label="Ajouter un statut">
-              <option value="">Ajouter un statut…</option>
-            </select>
-            <div class="comparison-items" id="comparison-items"></div>
-            <div id="diff-badge-container"></div>
-            <button type="button" id="share-link" class="preset-btn" aria-label="Copier le résumé de cette comparaison">Partager</button>
+              <div class="section-label">Colonnes</div>
+              <div class="comparatif-filters">
+                <div class="filter-group">
+                  <div class="criteria-buttons" id="criteria-buttons"></div>
+                </div>
+                <div class="filter-group" style="max-width:220px;">
+                  <input type="text" id="search-input" class="search-input" placeholder="Rechercher…" aria-label="Rechercher un statut">
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="impact-recommendations" aria-live="polite"></div>
           <div id="smart-comparison" aria-live="polite"></div>
           <div id="persona-advice" aria-live="polite"></div>
           <div id="suggestion-bar" aria-live="polite"></div>
-
-          <div class="comparatif-filters">
-            <div class="filter-group">
-              <label class="filter-label">Colonnes à afficher</label>
-              <div class="criteria-buttons" id="criteria-buttons"></div>
-            </div>
-            <div class="filter-group" style="max-width:300px;">
-              <label class="filter-label">Rechercher</label>
-              <input type="text" id="search-input" class="search-input" placeholder="Rechercher un statut…" aria-label="Rechercher un statut">
-            </div>
-          </div>
 
           <div class="table-header-bar">
             <div class="column-count" id="column-count"></div>
@@ -1115,10 +1301,10 @@ window.initComparatifStatuts = function() {
             <div class="notes-item"><span class="notes-term">IS</span> Impôt sur les Sociétés</div>
             <div class="notes-item"><span class="notes-term">TNS</span> Travailleur Non Salarié</div>
             <div class="notes-item"><span class="notes-term">CA</span> Chiffre d'Affaires</div>
-            <div class="notes-item"><span class="notes-term">PFU</span> Prélèvement Forfaitaire Unique (30%)</div>
+            <div class="notes-item"><span class="notes-term">PFU</span> Prélèvement Forfaitaire Unique (31,4% depuis 2026)</div>
             <div class="notes-item"><span class="notes-term">ARE</span> Allocation Retour à l'Emploi</div>
           </div>
-          <p class="notes-disclaimer">Informations 2025. Consultez un expert-comptable pour votre cas précis.</p>
+          <p class="notes-disclaimer">Informations 2026. Consultez un expert-comptable pour votre cas précis.</p>
         </div>
       </div>
     `;
@@ -1367,7 +1553,7 @@ window.initComparatifStatuts = function() {
 
     function renderQuickPresets(){
       const host=$('#quick-presets'); if(!host) return;
-      const presets=[ ['EURL','SASU'], ['SAS','SARL'], ['MICRO','EI'], ['SASU','SARL'] ];
+      const presets=[ ['EURL','SASU'], ['MICRO','SASU'], ['SAS','SARL'], ['MICRO','EI'], ['EURL','SARL'], ['SASU','SARL'] ];
       host.innerHTML = presets.map(p=>`<button type="button" class="preset-btn" data-preset="${p.join(',')}" aria-label="Comparer ${p[0]} et ${p[1]}">${p[0]} ↔ ${p[1]}</button>`).join('');
       host.querySelectorAll('.preset-btn').forEach(b=>b.addEventListener('click',()=>{
         const [a,bis]=b.getAttribute('data-preset').split(',');
@@ -1380,9 +1566,10 @@ window.initComparatifStatuts = function() {
       const host=$('#personas'); if(!host) return;
       const personas=[
         { id:'freelance-are', label:'Freelance au chômage (ARE)', baseline:'éviter salaire, dividendes OK en SASU', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:true,veut_dividendes:true,eviter_salaire:true,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
-        { id:'consultant-solo', label:'Consultant solo', baseline:'un associé, dividendes si possible', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:false,veut_dividendes:true,eviter_salaire:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
+        { id:'consultant-solo', label:'Consultant solo', baseline:'micro vs société, optimisation charges', apply:()=>{ intentAnswers={...intentAnswers,en_chomage:false,veut_dividendes:true,eviter_salaire:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['MICRO','EURL','SASU']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
         { id:'startup-fundraise', label:'Startup (lever des fonds)', baseline:'BSPCE, actions de préférence (SAS)', apply:()=>{ intentAnswers={...intentAnswers,levee_fonds:'oui',prevoit_associes:'oui',en_chomage:false}; compareStatuts=['SASU','SAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
-        { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['EURL','MICRO']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }}
+        { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['MICRO','EURL']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
+        { id:'liberal-reglemente', label:'Profession libérale réglementée', baseline:'SELARL vs SELAS, ordre professionnel', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:true,en_chomage:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['SELARL','SELAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }}
       ];
       host.innerHTML = personas.map(p=>`<button type="button" class="persona-chip" data-id="${p.id}" aria-label="${p.label}" tabindex="0">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
       host.querySelectorAll('.persona-chip').forEach(el=>{
@@ -1492,14 +1679,22 @@ window.initComparatifStatuts = function() {
 
       const PAIRS = [
         ['EURL','SASU','EURL|SASU'],
+        ['MICRO','SASU','MICRO|SASU'],
         ['SAS','SARL','SAS|SARL'],
         ['MICRO','EI','MICRO|EI'],
+        ['EURL','SARL','EURL|SARL'],
         ['SASU','SARL','SASU|SARL'],
       ];
 
       let rendered = false;
       for(const [a,b,key] of PAIRS){
         if(has(a) && has(b)){ host.innerHTML += renderDecision(key); rendered = true; }
+      }
+
+      // Panneau chiffré si la comparaison implique TNS vs assimilé salarié
+      if((has('EURL') && has('SASU')) || (has('MICRO') && has('SASU')) || (has('SARL') && has('SAS'))){
+        host.innerHTML += renderCostComparisonPanel(60000);
+        setTimeout(()=> initBudgetSlider(), 50);
       }
 
       if(!rendered && compareStatuts.length>=2){
@@ -1509,6 +1704,128 @@ window.initComparatifStatuts = function() {
             <div>Vous comparez <strong>${compareStatuts.map(s=>escapeHTML(s)).join(' vs ')}</strong>. Les colonnes affichées ci-dessous sont limitées aux différences pour gagner du temps.</div>
           </div>`;
       }
+    }
+
+    function renderCostComparisonPanel(){
+      const has = x => compareStatuts.includes(x);
+      const tnsLabel = has('EURL') ? 'EURL (TNS)' : has('SARL') ? 'SARL (TNS)' : 'Micro';
+      const asLabel  = has('SASU') ? 'SASU' : 'SAS';
+      const isMicro  = !has('EURL') && !has('SARL') && has('MICRO');
+
+      // Calcul pour budget 60 000 €/an
+      const budget = 60000;
+      // TNS
+      const tnsRate = isMicro ? 0.22 : 0.30;
+      const tnsCot = Math.round(budget * tnsRate);
+      const tnsNet = budget - tnsCot;
+      const tnsNetMois = Math.round(tnsNet / 12);
+      // Assimilé salarié
+      const asBrut = Math.round(budget / 1.55);
+      const asCotPatron = Math.round(asBrut * 0.55);
+      const asCotSalarie = Math.round(asBrut * 0.22);
+      const asNet = asBrut - asCotSalarie;
+      const asNetMois = Math.round(asNet / 12);
+      const ecartMois = tnsNetMois - asNetMois;
+
+      return `
+      <div class="advice-card" id="cost-comparison-panel" style="border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.05)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div class="title" style="color:#A78BFA;margin:0"><i class="fas fa-calculator"></i> Exemple chiffré — même budget de <span id="budget-display">${fmtEuro(budget)}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;min-width:200px;flex:1;max-width:300px">
+            <small style="color:${TOKENS.text.muted};white-space:nowrap">20k</small>
+            <input type="range" id="budget-slider" min="20000" max="150000" step="5000" value="${budget}" style="flex:1;accent-color:#A78BFA;height:6px;cursor:pointer">
+            <small style="color:${TOKENS.text.muted};white-space:nowrap">150k</small>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0">
+          <div style="padding:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px">
+            <div style="font-weight:700;color:${TOKENS.semantic.success};margin-bottom:8px;font-size:.9rem">${escapeHTML(tnsLabel)}</div>
+            <table style="width:100%;font-size:.82rem;line-height:1.6">
+              <tr><td style="color:${TOKENS.text.secondary}">Budget entreprise</td><td style="text-align:right;font-weight:600">${fmtEuro(budget)}</td></tr>
+              <tr><td style="color:${TOKENS.text.secondary}">Cotisations (~${Math.round(tnsRate*100)}%)</td><td style="text-align:right;color:${TOKENS.semantic.danger}">-${fmtEuro(tnsCot)}</td></tr>
+              <tr style="border-top:1px solid rgba(255,255,255,.1)"><td style="font-weight:700">Net en poche/an</td><td style="text-align:right;font-weight:700;color:${TOKENS.semantic.success}">${fmtEuro(tnsNet)}</td></tr>
+              <tr><td style="font-weight:600">Net/mois</td><td style="text-align:right;font-weight:700;font-size:.95rem;color:${TOKENS.semantic.success}">${fmtEuro(tnsNetMois)}</td></tr>
+            </table>
+          </div>
+
+          <div style="padding:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px">
+            <div style="font-weight:700;color:${TOKENS.semantic.warning};margin-bottom:8px;font-size:.9rem">${escapeHTML(asLabel)} (assimilé salarié)</div>
+            <table style="width:100%;font-size:.82rem;line-height:1.6">
+              <tr><td style="color:${TOKENS.text.secondary}">Budget entreprise</td><td style="text-align:right;font-weight:600">${fmtEuro(budget)}</td></tr>
+              <tr><td style="color:${TOKENS.text.secondary}">Charges patron. (~55%)</td><td style="text-align:right;color:${TOKENS.semantic.danger}">-${fmtEuro(asCotPatron)}</td></tr>
+              <tr><td style="color:${TOKENS.text.secondary}">Charges salar. (~22%)</td><td style="text-align:right;color:${TOKENS.semantic.danger}">-${fmtEuro(asCotSalarie)}</td></tr>
+              <tr style="border-top:1px solid rgba(255,255,255,.1)"><td style="font-weight:700">Net en poche/an</td><td style="text-align:right;font-weight:700;color:${TOKENS.semantic.warning}">${fmtEuro(asNet)}</td></tr>
+              <tr><td style="font-weight:600">Net/mois</td><td style="text-align:right;font-weight:700;font-size:.95rem;color:${TOKENS.semantic.warning}">${fmtEuro(asNetMois)}</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div style="text-align:center;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:12px">
+          <span style="font-size:.85rem;color:${TOKENS.text.secondary}">Écart net : </span>
+          <strong style="color:${TOKENS.accent};font-size:1.1rem">+${fmtEuro(ecartMois)}/mois</strong>
+          <span style="font-size:.85rem;color:${TOKENS.text.secondary}"> en ${escapeHTML(tnsLabel)}</span>
+        </div>
+
+        <div style="font-weight:700;color:${TOKENS.text.primary};margin-bottom:8px;font-size:.85rem"><i class="fas fa-balance-scale" style="margin-right:6px;color:#A78BFA"></i>Mais le surcoût ${escapeHTML(asLabel)} achète :</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.78rem">
+          <div style="padding:8px;background:rgba(1,42,74,.4);border-radius:6px;text-align:center">
+            <div style="font-size:1.3rem;margin-bottom:4px">🏥</div>
+            <div style="font-weight:600;color:${TOKENS.text.primary}">Maladie</div>
+            <div style="color:${TOKENS.semantic.success};font-weight:600">0j de carence</div>
+            <div style="color:${TOKENS.text.muted};font-size:.72rem">${escapeHTML(tnsLabel)} : 3j de carence</div>
+          </div>
+          <div style="padding:8px;background:rgba(1,42,74,.4);border-radius:6px;text-align:center">
+            <div style="font-size:1.3rem;margin-bottom:4px">👴</div>
+            <div style="font-weight:600;color:${TOKENS.text.primary}">Retraite</div>
+            <div style="color:${TOKENS.semantic.success};font-weight:600">AGIRC-ARRCO</div>
+            <div style="color:${TOKENS.text.muted};font-size:.72rem">${escapeHTML(tnsLabel)} : retraite SSI basique</div>
+          </div>
+          <div style="padding:8px;background:rgba(1,42,74,.4);border-radius:6px;text-align:center">
+            <div style="font-size:1.3rem;margin-bottom:4px">🛡️</div>
+            <div style="font-weight:600;color:${TOKENS.text.primary}">Prévoyance</div>
+            <div style="color:${TOKENS.semantic.success};font-weight:600">Régime général</div>
+            <div style="color:${TOKENS.text.muted};font-size:.72rem">${escapeHTML(tnsLabel)} : basique SSI</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem">
+          <div style="padding:8px;background:rgba(1,42,74,.4);border-radius:6px">
+            <div style="font-weight:600;color:${TOKENS.text.primary};margin-bottom:4px">📊 Retraite estimée (après 42 ans de cotisation)</div>
+            <div><span style="color:${TOKENS.semantic.success};font-weight:600">${escapeHTML(tnsLabel)} :</span> ~${fmtEuro(Math.round(770 * budget / 60000))}/mois <small style="color:${TOKENS.text.muted}">(base + SSI complémentaire faible)</small></div>
+            <div><span style="color:${TOKENS.semantic.warning};font-weight:600">${escapeHTML(asLabel)} :</span> ~${fmtEuro(Math.round(1420 * budget / 60000))}/mois <small style="color:${TOKENS.text.muted}">(base + AGIRC-ARRCO)</small></div>
+            <div style="color:${TOKENS.accent};font-weight:600;margin-top:4px">→ +${fmtEuro(Math.round(650 * budget / 60000))}/mois de retraite en ${escapeHTML(asLabel)}</div>
+          </div>
+          <div style="padding:8px;background:rgba(1,42,74,.4);border-radius:6px">
+            <div style="font-weight:600;color:${TOKENS.text.primary};margin-bottom:4px">💡 Alternative courante</div>
+            <div style="color:${TOKENS.text.secondary};line-height:1.5">${escapeHTML(tnsLabel)} + <strong>contrat Madelin</strong> (~300 €/mois) = couverture comparable à ${escapeHTML(asLabel)} mais <strong style="color:${TOKENS.accent}">~200 €/mois moins cher</strong> + fiscalement déductible.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;font-size:.72rem;color:${TOKENS.text.muted};font-style:italic">
+          <i class="fas fa-info-circle" style="margin-right:4px"></i>
+          Simulation indicative pour un budget rémunération de ${fmtEuro(budget)}/an. Ni l'un ni l'autre ne donne droit à l'assurance chômage. Consultez un expert-comptable pour votre situation.
+        </div>
+      </div>`;
+    }
+
+    function initBudgetSlider(){
+      const slider = document.getElementById('budget-slider');
+      if(!slider) return;
+      const handler = debounce(()=>{
+        const val = parseInt(slider.value);
+        const panel = document.getElementById('cost-comparison-panel');
+        if(!panel) return;
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderCostComparisonPanel(val);
+        const newPanel = tmp.firstElementChild;
+        panel.replaceWith(newPanel);
+        // Re-attach to the new slider
+        const newSlider = newPanel.querySelector('#budget-slider');
+        if(newSlider){ newSlider.value = val; initBudgetSlider(); }
+      }, 80);
+      slider.addEventListener('input', handler);
     }
 
     function renderPersonaAdvice(){
@@ -1523,6 +1840,19 @@ window.initComparatifStatuts = function() {
               <li><strong>EURL:</strong> dividendes >10% soumis aux cotisations TNS; fiscalement possible, mais socialement moins optimisé si l'objectif est l'ARE.</li>
             </ul>
             <div class="arbitrage">Astuce: vous pouvez démarrer en SASU, puis basculer vers SAS lors de l'arrivée d'associés.</div>
+          </div>`;
+        return;
+      }
+      if(!intentAnswers.en_chomage && intentAnswers.veut_dividendes && !intentAnswers.eviter_salaire && has('MICRO') && (has('EURL')||has('SASU'))){
+        host.innerHTML = `
+          <div class="advice-card">
+            <div class="title"><i class="fas fa-compass"></i> Cas type — Consultant solo : Micro vs Société</div>
+            <ul style="padding-left:18px;margin:0">
+              <li><strong>Micro :</strong> zéro formalité, cotisations sur le CA (12,3–25,6%). Idéal si peu de frais et CA sous les plafonds.</li>
+              <li><strong>EURL (IS) :</strong> cotisations TNS (~30%) sur la rémunération + dividendes possibles (>10% cotisés). Permet la déduction des frais réels.</li>
+              <li><strong>SASU :</strong> dividendes non cotisés (PFU 31,4%) mais charges salariales élevées (~55-77%) si salaire. Idéal si vous voulez capitaliser en société.</li>
+            </ul>
+            <div class="arbitrage">Règle simple : CA < 40 000 € avec peu de frais → Micro. CA > 40 000 € avec frais réels → EURL ou SASU selon priorité (charges basses vs dividendes).</div>
           </div>`;
         return;
       }
@@ -1556,38 +1886,41 @@ window.initComparatifStatuts = function() {
 
     function getColumnsForCriterion(criterion){
       switch(criterion){
-        case 'basic': return [ 
-          {key:'name',label:'Statut'}, 
-          {key:'associes',label:"Nb d'associés"}, 
-          {key:'capital',label:'Capital'}, 
-          {key:'responsabilite',label:'Resp.'} 
+        case 'basic': return [
+          {key:'name',label:'Statut'},
+          {key:'associes',label:'Associés'},
+          {key:'capital',label:'Capital'},
+          {key:'responsabilite',label:'Responsabilité'},
+          {key:'activite',label:'Activités'}
         ];
-        case 'fiscal': return [ 
-          {key:'name',label:'Statut'}, 
-          {key:'fiscalite',label:'Régime fiscal'}, 
-          {key:'dividendes',label:'Dividendes'}, 
-          {key:'regimeTVA',label:'Régime TVA'} 
+        case 'fiscal': return [
+          {key:'name',label:'Statut'},
+          {key:'fiscalite',label:'Régime fiscal'},
+          {key:'fiscaliteOption',label:'Option IR/IS'},
+          {key:'dividendes',label:'Dividendes'},
+          {key:'regimeTVA',label:'TVA'}
         ];
-        case 'social': return [ 
-          {key:'name',label:'Statut'}, 
-          {key:'regimeSocial',label:'Régime social'}, 
-          {key:'are',label:'ARE'},
-          {key:'chargesSociales',label:'Charges sociales'} 
+        case 'social': return [
+          {key:'name',label:'Statut'},
+          {key:'statutDirigeant',label:'Dirigeant'},
+          {key:'chargesSociales',label:'Charges & couverture'},
+          {key:'are',label:'ARE'}
         ];
-        case 'creation': return [ 
-          {key:'name',label:'Statut'}, 
-          {key:'formalites',label:'Formalités'}, 
-          {key:'plafondCA',label:'Plafond CA'}, 
-          {key:'obligationsCle',label:'Obligations clés'} 
+        case 'creation': return [
+          {key:'name',label:'Statut'},
+          {key:'formalites',label:'Formalités'},
+          {key:'plafondCA',label:'Plafond CA'},
+          {key:'obligationsCle',label:'Obligations'}
         ];
-        default: return [ 
-          {key:'name',label:'Statut'}, 
-          {key:'associes',label:"Nb d'associés"}, 
-          {key:'capital',label:'Capital'}, 
-          {key:'responsabilite',label:'Resp.'}, 
-          {key:'fiscalite',label:'Régime fiscal'}, 
-          {key:'regimeSocial',label:'Régime social'}, 
-          {key:'plafondCA',label:'Plafond CA'} 
+        default: return [
+          {key:'name',label:'Statut'},
+          {key:'associes',label:'Associés'},
+          {key:'capital',label:'Capital'},
+          {key:'responsabilite',label:'Responsabilité'},
+          {key:'fiscalite',label:'Fiscalité'},
+          {key:'dividendes',label:'Dividendes'},
+          {key:'regimeSocial',label:'Social'},
+          {key:'are',label:'ARE'}
         ];
       }
     }
@@ -1774,8 +2107,12 @@ window.initComparatifStatuts = function() {
             row+=`<td class="${diffClass}">${renderDividendRule(st)}</td>`;
           } else if(col.key==='are'){
             row+=`<td class="${diffClass}">${renderARE(st)}</td>`;
+          } else if(col.key==='chargesSociales'){
+            row+=`<td class="${diffClass}">${renderChargesSynthese(st)}</td>`;
+          } else if(col.key==='statutDirigeant'){
+            row+=`<td class="${diffClass}">${renderStatutDirigeant(st)}</td>`;
           } else if(col.key==='fiscaliteOption'){
-            row+=`<td class="${diffClass}">${renderWithTooltip(st[col.key], 100)}</td>`;
+            row+=`<td class="${diffClass}">${renderWithTooltip(st[col.key], 80)}</td>`;
           } else {
             row+=`<td class="${diffClass}">${toHTML(st[col.key])}</td>`;
           }

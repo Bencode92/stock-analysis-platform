@@ -33,11 +33,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 entreeAssocies: 'Non',
                 profilOptimal: 'Entrepreneur solo',
                 avantages: 'Simplicité, coût réduit',
-                inconvenients: 'Plafond CA (188 700 € vente ou 77 700 € services), abattement forfaitaire au lieu de déduction réelle',
+                inconvenients: 'Plafond CA (203 100 € vente ou 83 600 € services), abattement forfaitaire au lieu de déduction réelle',
                 casConseille: 'Début d\'activité, test',
                 casDeconseille: 'Développement ambitieux',
                 transmission: 'Non',
-                plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
+                plafondCA: '203 100 € (vente/hébergement) ou 83 600 € (services/libérales)',
                 icone: 'fa-rocket'
             },
             {
@@ -707,14 +707,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Chiffre d'affaires et marge
             const seuils = {
-                'bic-vente': 188700,
-                'bic-service': 77700,
-                'bnc': 77700,
-                'artisanale': 188700,
+                'bic-vente': 203100,
+                'bic-service': 83600,
+                'bnc': 83600,
+                'artisanale': 203100,
                 'agricole': 95000
             };
             
-            const seuil = seuils[userResponses.typeActivite] || 77700;
+            const seuil = seuils[userResponses.typeActivite] || 83600;
             
             if (userResponses.chiffreAffaires < seuil * 0.7 && forme.id === 'micro-entreprise') {
                 scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;

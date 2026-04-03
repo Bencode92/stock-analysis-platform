@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.8 - Correction du calcul progressif de l'IS
+// Version 2.0 - Mise à jour barème 2026 (revenus 2025), PASS 2026, PFU 31,4%
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -10,10 +10,10 @@ class FiscalUtils {
         if (revenuImposable <= 0) return 0;
         
         const tranches = [
-            { max: 11497, taux: 0   },  // Mise à jour barème 2025
-            { max: 29315, taux: 0.11},
-            { max: 83823, taux: 0.30},
-            { max: 180294, taux: 0.41},
+            { max: 11600, taux: 0   },  // Barème 2026 (revenus 2025, +0,9%)
+            { max: 29579, taux: 0.11},
+            { max: 84577, taux: 0.30},
+            { max: 181917, taux: 0.41},
             { max: Infinity, taux: 0.45}
         ];
         
@@ -28,13 +28,13 @@ class FiscalUtils {
         return Math.round(impot);
     }
     
-    // NOUVEAU: Détermine la tranche marginale d'imposition (barème 2025)
+    // Détermine la tranche marginale d'imposition (barème 2026, revenus 2025)
     static getTMI(revenuImposable) {
         const BAREME = [
-            { max: 11497,  taux: 0  },
-            { max: 29315,  taux: 11 },
-            { max: 83823,  taux: 30 },
-            { max: 180294, taux: 41 },
+            { max: 11600,  taux: 0  },
+            { max: 29579,  taux: 11 },
+            { max: 84577,  taux: 30 },
+            { max: 181917, taux: 41 },
             { max: Infinity, taux: 45 }
         ];
         for (const tr of BAREME) {
@@ -110,8 +110,8 @@ class FiscalUtils {
         // Garde-fou: pas de cotisations négatives
         if (dividendes <= 0) return 0;
         
-        // Calcul précis avec les tranches 2025
-        const PASS = 47100;
+        // Calcul précis avec le PASS 2026
+        const PASS = 48060;
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
         const partA = Math.min(base, PASS) * 0.28;
         const partB = Math.max(0, base - PASS) * 0.1775;
@@ -145,7 +145,7 @@ class FiscalUtils {
         // Garde-fou: pas de PFU négatif
         if (dividendes <= 0) return 0;
         
-        return Math.round(dividendes * 0.30);
+        return Math.round(dividendes * 0.314); // PFU 31,4% (LFSS 2026 : 12,8% IR + 18,6% PS)
     }
     
     // MODIFIÉ: Choix optimal entre PFU et barème progressif pour dividendes

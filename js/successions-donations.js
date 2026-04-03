@@ -2235,7 +2235,7 @@ const SD = (() => {
                 <div style="margin-top:16px;">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Régime fiscal actuel <span class="info-tip" data-tip="Nu : revenus fonciers (micro-foncier si < 15k€/an, ou réel). Meublé : BIC (micro-BIC si < 77 700€/an, ou réel avec amortissements)."><i class="fas fa-info-circle"></i></span></label>
+                            <label class="form-label">Régime fiscal actuel <span class="info-tip" data-tip="Nu : revenus fonciers (micro-foncier si < 15k€/an, ou réel). Meublé : BIC (micro-BIC si < 83 600€/an, ou réel avec amortissements)."><i class="fas fa-info-circle"></i></span></label>
                             <select id="regime-fiscal-${id}" onchange="SD.updateImmo(${id},'regimeFiscal',this.value); SD.refreshImmoUI(${id})">
                                 <option value="foncier_micro">Micro-foncier (abattement 30%)</option>
                                 <option value="foncier_reel" selected>Foncier réel (déduction charges)</option>

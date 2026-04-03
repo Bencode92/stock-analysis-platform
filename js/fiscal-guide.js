@@ -17,7 +17,7 @@ function renderISReduceBadge() {
 // Rendez-la visible même en <script type="module">
 if (typeof window !== 'undefined') window.renderISReduceBadge = renderISReduceBadge;
 // --- Helpers VFL (versement libératoire) — GLOBAL ---
-const VFL_RFR_LIMIT_PER_PART_2025 = 28797; // € / part, RFR N-2
+const VFL_RFR_LIMIT_PER_PART_2025 = 29315; // € / part, RFR N-2 (revalorisé 2026)
 const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l’année suivante";
 
 function isEligibleVFL({ rfrN2 = null, nbParts = 1 } = {}) {
@@ -94,8 +94,8 @@ function calcDivTNS({divBruts=0, baseSeuil10=0, methode='PFU', tmi=11, tauxTNS=T
 // --- Abattement 10% T&S 2025 (plancher / plafond) ---
 const CSG_NOND_TAUX = 0.029;
 const ABATT_TS_TAUX = 0.10;
-const ABATT_TS_MIN  = 504;
-const ABATT_TS_MAX  = 14426;
+const ABATT_TS_MIN  = 509;   // Plancher 2026 (revenus 2025)
+const ABATT_TS_MAX  = 14555; // Plafond 2026 (revenus 2025)
 
 /**
  * Base IR TNS = (net social + CSG/CRDS non déductible) - abattement 10% (min/max).
@@ -119,7 +119,7 @@ function getNbParts() {
 }
 // --- ACRE (micro) ---
 // --- ACRE 2026 (réforme janv. 2026 - urssaf.fr, service-public.gouv.fr) ---
-const MICRO_SOC_TAUX = { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.246 };
+const MICRO_SOC_TAUX = { BIC_VENTE: 0.123, BIC_SERVICE: 0.212, BNC: 0.256 }; // BNC SSI 25,6% 2026 (CIPAV: 23,2%)
 const ACRE_REMISE_MAX = 0.25;  // 25% max (réforme 2026, était 50% avant)
 const ACRE_MOIS   = 12;
 const PASS_2026 = 48060;
@@ -2550,7 +2550,7 @@ modeRow.innerHTML = `
   <td colspan="8" class="px-4 py-2 font-medium text-pink-300">
     <i class="fas fa-calculator mr-2"></i> 
     Calculs fiscaux précis : IR progressif par tranches + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
-    <span class="ml-2 text-xs text-gray-400">(Conforme au barème 2025)</span>
+    <span class="ml-2 text-xs text-gray-400">(Conforme au barème 2026, revenus 2025)</span>
     ${useAvgChargeRate ? '<span class="ml-3"><i class="fas fa-receipt mr-1"></i>Frais réels activés</span>' : ''}
     ${versementLiberatoire ? '<span class="ml-3"><i class="fas fa-percentage mr-1"></i>VFL micro-entreprise</span>' : ''}
     ${acreEnabled ? '<span class="ml-3"><i class="fas fa-leaf mr-1"></i>ACRE micro</span>' : ''}
@@ -2667,14 +2667,14 @@ function updateCustomStatusDisabling() {
     }
   });
 }
-// 1) Montant d'IR 2025 (progressif) – avec quotient familial
+// 1) Montant d'IR 2026 (progressif, revenus 2025) – avec quotient familial
 function impotsIR2025(baseImposable, nbParts = 1) {
   const T = [
-    { min: 0,      max: 11497,  taux: 0.00 },
-    { min: 11497,  max: 29315,  taux: 0.11 },
-    { min: 29315,  max: 83823,  taux: 0.30 },
-    { min: 83823,  max: 180294, taux: 0.41 },
-    { min: 180294, max: Infinity, taux: 0.45 },
+    { min: 0,      max: 11600,  taux: 0.00 },
+    { min: 11600,  max: 29579,  taux: 0.11 },
+    { min: 29579,  max: 84577,  taux: 0.30 },
+    { min: 84577,  max: 181917, taux: 0.41 },
+    { min: 181917, max: Infinity, taux: 0.45 },
   ];
   const parts = Math.max(1, nbParts);
   const qf = Math.max(0, baseImposable) / parts; // revenu par part
@@ -2686,13 +2686,13 @@ function impotsIR2025(baseImposable, nbParts = 1) {
   }
   return Math.round(impotsPart * parts);
 }
-// Barème IR 2025 - Fonction utilitaire pour calculer le TMI effectif
+// Barème IR 2026 (revenus 2025) - Fonction utilitaire pour calculer le TMI effectif
 function getTMI(revenu, nbParts = 1) {
   const part = Math.max(0, revenu) / Math.max(1, nbParts);
-  if (part <= 11497)   return 0;
-  if (part <= 29315)   return 11;
-  if (part <= 83823)   return 30;
-  if (part <= 180294)  return 41;
+  if (part <= 11600)   return 0;
+  if (part <= 29579)   return 11;
+  if (part <= 84577)   return 30;
+  if (part <= 181917)  return 41;
   return 45;
 }
 // --- PATCH seuil dividendes TNS (inclut primes + CCA + quote-part) ---
@@ -4346,9 +4346,9 @@ function getStatutFiscalInfo(statutId) {
     'MICRO': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
       <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
-      <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services), 24.6% (BNC)</p>
+      <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services), 25.6% (BNC SSI) / 23.2% (BNC CIPAV)</p>
       <p class="mb-2"><strong>Versement libératoire :</strong> 1% (vente), 1,7% (services), 2,2% (BNC) sur CA</p>
-      <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente) / 77 700€ (services)</p>
+      <p class="mb-2"><strong>Plafonds 2026 :</strong> 203 100€ (vente) / 83 600€ (services/BNC)</p>
     `,
     'EI': `
       <p class="mb-2"><strong>Régime fiscal :</strong> IR, imposition sur le bénéfice</p>

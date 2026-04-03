@@ -458,7 +458,7 @@ function initUIEvents() {
                                             <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
                                             <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
                                             <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services) du CA</p>
-                                            <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente), 77 700€ (services)</p>
+                                            <p class="mb-2"><strong>Plafonds 2026 :</strong> 203 100€ (vente), 83 600€ (services)</p>
                                             <p class="mb-2"><strong>Option versement libératoire :</strong> Possible si revenu fiscal N-2 < plafond</p>
                                         </div>
                                     </div>

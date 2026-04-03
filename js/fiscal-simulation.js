@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 3.12 - Tranches IR 2025 corrigées (11497/29315/83823/180294)
+// Version 4.0 - Tranches IR 2026 (revenus 2025) : 11600/29579/84577/181917 + plafonds micro 2026
 
 // Constantes pour les taux de charges sociales
 const TAUX_CHARGES = {
@@ -50,22 +50,22 @@ function choisirFiscaliteDividendesLocal(divBruts, tmiPct = 30) {
     return (prog < pfu) ? { total: Math.round(prog), methode:'PROGRESSIF', economie: Math.round(pfu-prog) } : { total: Math.round(pfu), methode:'PFU', economie:0 };
 }
 
-// CORRIGÉ v3.12 : Tranches IR 2025 (revenus 2024)
+// Tranches IR 2026 (revenus 2025, +0,9%)
 function calculerTMI(revenuImposable) {
-    if (revenuImposable <= 11497) return 0;
-    if (revenuImposable <= 29315) return 11;
-    if (revenuImposable <= 83823) return 30;
-    if (revenuImposable <= 180294) return 41;
+    if (revenuImposable <= 11600) return 0;
+    if (revenuImposable <= 29579) return 11;
+    if (revenuImposable <= 84577) return 30;
+    if (revenuImposable <= 181917) return 41;
     return 45;
 }
 
-// CORRIGÉ v3.12 : Tranches IR 2025 (revenus 2024)
+// Tranches IR 2026 (revenus 2025, +0,9%)
 function calculateProgressiveIRFallback(revenuImposable) {
     const tranches = [
-        { max: 11497, taux: 0 },
-        { max: 29315, taux: 0.11 },
-        { max: 83823, taux: 0.30 },
-        { max: 180294, taux: 0.41 },
+        { max: 11600, taux: 0 },
+        { max: 29579, taux: 0.11 },
+        { max: 84577, taux: 0.30 },
+        { max: 181917, taux: 0.41 },
         { max: Infinity, taux: 0.45 }
     ];
     let impot = 0, resteImposable = revenuImposable;
@@ -118,9 +118,9 @@ class SimulationsFiscales {
     static simulerMicroEntreprise(params) {
         const np = this.normalizeAssociatesParams(params, 'micro');
         const { ca, typeMicro = 'BIC', versementLiberatoire = false, tauxMarge = 1.0, depensesPro = null } = np;
-        const plafonds = { 'BIC_VENTE': 188700, 'BIC_SERVICE': 77700, 'BNC': 77700 };
+        const plafonds = { 'BIC_VENTE': 203100, 'BIC_SERVICE': 83600, 'BNC': 83600 }; // Plafonds 2026-2028
         const abattements = { 'BIC_VENTE': 0.71, 'BIC_SERVICE': 0.50, 'BNC': 0.34 };
-        const tauxCotisations = { 'BIC_VENTE': 0.123, 'BIC_SERVICE': 0.212, 'BNC': 0.246 };
+        const tauxCotisations = { 'BIC_VENTE': 0.123, 'BIC_SERVICE': 0.212, 'BNC': 0.256 }; // BNC SSI 25,6% (CIPAV: 23,2%)
         const tauxVFL = { 'BIC_VENTE': 0.01, 'BIC_SERVICE': 0.017, 'BNC': 0.022 };
         let typeEffectif;
         if (typeMicro === 'BIC_VENTE' || typeMicro === 'vente') typeEffectif = 'BIC_VENTE';
@@ -347,8 +347,8 @@ window.STATUTS_ASSOCIATES_CONFIG = STATUTS_ASSOCIATES_CONFIG;
 window.calculateProgressiveIRFallback = calculateProgressiveIRFallback;
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé (v3.12 - Tranches IR 2025 corrigées: 11497/29315/83823/180294)");
+    console.log("Module SimulationsFiscales chargé (v4.0 - Barème IR 2026 + plafonds micro 2026 + cotisations BNC 25,6%)");
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady', {
-        detail: { version: '3.12', features: ['tranchesIR2025Corrigees', 'normalizeAssociatesParams', 'calculerDividendesIS', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable'] }
+        detail: { version: '4.0', features: ['tranchesIR2026', 'normalizeAssociatesParams', 'calculerDividendesIS', 'optimisationFiscaleDividendes', 'calculTMIAutomatique', 'CSGNonDeductible', 'calculerSalaireBrut', 'calculerISProgressif', 'cashVsBaseImposable'] }
     }));
 });

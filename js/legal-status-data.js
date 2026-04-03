@@ -60,11 +60,11 @@ const legalStatuses = {
             "Comptabilité ultra-simplifiée (livre des recettes)",
             "Charges calculées uniquement sur le CA réalisé",
             "Système déclaratif simplifié en ligne",
-            "Exonération de TVA jusqu'aux seuils (2025)",
+            "Exonération de TVA jusqu'aux seuils (2026)",
             "Régime fiscal forfaitaire avantageux si faibles charges"
         ],
         disadvantages: [
-            "Plafonds de chiffre d'affaires limités (BIC vente: 188 700€, BIC service/BNC: 77 700€ en 2025)",
+            "Plafonds de chiffre d'affaires limités (BIC vente: 203 100€, BIC service/BNC: 83 600€ en 2026)",
             "Responsabilité personnelle illimitée",
             "Déductions fiscales limitées (abattement forfaitaire)",
             "Crédibilité parfois limitée auprès des partenaires",
@@ -79,7 +79,7 @@ const legalStatuses = {
         casConseille: 'Début d\\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
-        plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
+        plafondCA: '203 100 € (vente/hébergement) ou 83 600 € (services/libérales)',
         key_metrics: {
             patrimony_protection: 1,
             administrative_simplicity: 5,
@@ -768,13 +768,13 @@ const legalStatuses = {
 window.legalStatuses = legalStatuses;
 console.log("window.legalStatuses a été défini avec succès, contient", Object.keys(legalStatuses).length, "statuts juridiques");
 
-// Barèmes 2025 pour les régimes fiscaux et sociaux
+// Barèmes 2026 pour les régimes fiscaux et sociaux
 const scales2025 = {
-    // Seuils micro-entreprise 2025
+    // Seuils micro-entreprise 2026
     micro: {
-        bic_sales: 188700,
-        bic_service: 77700,
-        bnc: 77700,
+        bic_sales: 203100,
+        bic_service: 83600,
+        bnc: 83600,
         vat_franchise_bic_sales: 94300,
         vat_franchise_bic_service: 36800,
         vat_franchise_bnc: 36800

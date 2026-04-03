@@ -24,7 +24,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui (séparation pro/perso ; exceptions : fraude, dettes fiscales/sociales, renonciation, caution personnelle)',
   chargesSociales: 'Simplifiées, calculées sur le CA',
   fiscal: "Pas de dividendes ; IR sur recettes après abattement : 71 % (ventes/restauration/hébergement*), 50 % (services BIC), 34 % (BNC). *Exception meublés de tourisme 2025 : 50 % (classé) / 30 % (non classé).",
-  regimeTVA: "Franchise en base (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option possible pour être assujetti.",
+  regimeTVA: "Franchise en base (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option possible pour être assujetti.",
   publicationComptes: 'Non',
   formalites: 'Très simplifiées',
   activite: 'La plupart des activités commerciales, artisanales et certaines libérales (hors exclusions spécifiques)',
@@ -41,7 +41,7 @@ const legalStatuses = {
     "Option possible pour le versement libératoire de l'IR (sous conditions de RFR)"
   ],
   disadvantages: [
-    "Plafonds de chiffre d'affaires limités (ventes/hébergement : 188 700 € ; services/BNC : 77 700 € ; meublé non classé : 15 000 € en 2025)",
+    "Plafonds de chiffre d'affaires limités (ventes/hébergement : 203 100 € ; services/BNC : 83 600 € ; meublé non classé : 15 000 € en 2026)",
     "Protection non totale en cas d'exception (fraude, dettes fiscales/sociales, renonciation, caution personnelle)",
     "Déductions fiscales limitées (abattement forfaitaire)",
     "Crédibilité parfois limitée auprès des partenaires",
@@ -56,7 +56,7 @@ const legalStatuses = {
   casConseille: 'Début d\'activité, test',
   casDeconseille: 'Développement ambitieux',
   transmission: 'Non',
-  plafondCA: "188 700 € (ventes/hébergement) • 77 700 € (services/BNC) • 77 700 € (meublé classé, 2025) • 15 000 € (meublé non classé, 2025)",
+  plafondCA: "203 100 € (ventes/hébergement) • 83 600 € (services/BNC) • 83 600 € (meublé classé, 2026) • 15 000 € (meublé non classé, 2026)",
   key_metrics: {
     patrimony_protection: 4,
     administrative_simplicity: 5,
@@ -85,7 +85,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui (séparation pro/perso depuis 2022, avec exceptions légales)',
   chargesSociales: 'Sur bénéfices (cotisations minimales si revenu nul/faible)',
   fiscal: "IR par défaut. En cas d'option IS : rémunération + dividendes possibles",
-  regimeTVA: "Assujettie selon l'activité ; franchise en base possible (2025 : 85 000/37 500 € ; tolérance 93 500/41 250 €). Option possible pour être à la TVA même sous seuils",
+  regimeTVA: "Assujettie selon l'activité ; franchise en base possible (85 000/37 500 € ; tolérance 93 500/41 250 €). Option possible pour être à la TVA même sous seuils",
   publicationComptes: 'Non',
   formalites: 'Très simplifiées (démarches en ligne via le guichet unique)',
   activite: 'La plupart des activités commerciales, artisanales, libérales (et agricoles sous régimes dédiés)',
@@ -145,7 +145,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui',
   chargesSociales: "À l'IR : cotisations sur le bénéfice. À l'IS : cotisations sur la rémunération + sur la part de dividendes dépassant 10 % (capital libéré + primes d'émission + compte courant)",
   fiscal: "Dividendes possibles ; à l'IS, la part > 10 % est assujettie aux cotisations TNS",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000/37 500 € ; tolérance 93 500/41 250 €). Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000/37 500 € ; tolérance 93 500/41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Oui (AG d'approbation sous 6 mois après clôture ; dépôt au greffe dans le mois suivant l'approbation — 2 mois si dépôt en ligne)",
   formalites: 'Modérées',
   activite: "Toutes, hors activités réglementées spécifiques (les professions réglementées privilégient souvent les SEL)",
@@ -204,7 +204,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui',
   chargesSociales: "Sur la rémunération du président. Les dividendes ne supportent pas de cotisations sociales (imposés comme revenus de capitaux mobiliers), sauf requalification en cas d'abus",
   fiscal: "Dividendes possibles (imposition RCM / PFU par défaut, option barème possible)",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Oui (approbation dans les 6 mois de la clôture ; dépôt au greffe dans le mois suivant l'approbation)",
   formalites: 'Modérées',
   activite: 'La plupart des activités (hors interdictions/spécifiques réglementées)',
@@ -265,7 +265,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui',
   chargesSociales: "Sur rémunération du gérant (TNS ou assimilé). Si gérant majoritaire (TNS) et SARL à l'IS : cotisations aussi sur la part de dividendes dépassant 10 % (capital libéré + primes d’émission + compte courant associé)",
   fiscal: "Dividendes possibles ; traitement fiscal selon IS/IR",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Le seuil unique 25 000 € prévu par LF 2025 est suspendu en 2025. Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). La réforme du seuil unique 25 000 € (LF 2025) a été définitivement abandonnée. Option TVA possible sous seuils",
   publicationComptes: 'Oui',
   formalites: 'Standard',
   activite: 'Commerciales, artisanales, industrielles ; pour professions libérales réglementées : en pratique SELARL',
@@ -327,7 +327,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui',
   chargesSociales: "Sur la rémunération du dirigeant. Dividendes non soumis aux cotisations sociales (imposés comme revenus de capitaux mobiliers), sauf requalification en cas d’abus",
   fiscal: "Dividendes possibles (PFU par défaut / option barème). À l’IR, les bénéfices sont imposés chez les associés",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Oui (approbation dans les 6 mois après clôture ; dépôt au greffe dans le mois suivant l’approbation — 2 mois si dépôt en ligne)",
   formalites: 'Standard',
   activite: "La plupart des activités (hors activités interdites ou réglementées nécessitant une forme dédiée)",
@@ -390,7 +390,7 @@ const legalStatuses = {
   protectionPatrimoine: "Oui",
   chargesSociales: "Sur la rémunération des dirigeants ; pas de cotisations sociales sur les dividendes (imposés en RCM, sauf requalification en cas d’abus)",
   fiscal: "Dividendes possibles (PFU par défaut ou option barème)",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Oui",
   formalites: "Complexes",
   activite: "La plupart des activités commerciales/industrielles (hors réglementations spécifiques)",
@@ -449,7 +449,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Non',
   chargesSociales: "À l’IR : cotisations TNS sur la part de bénéfices (même non distribués). À l’IS : cotisations sur la rémunération des associés TNS ; gérant non associé : sur salaire",
   fiscal: 'Oui, selon IR/IS (transparence à l’IR ; IS sur option)',
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Non par défaut (obligatoire si tous les associés sont des sociétés à responsabilité limitée)",
   formalites: 'Standard (statuts, immatriculation, comptabilité commerciale)',
   activite: 'Activités commerciales (souvent commerces de proximité). Professions libérales réglementées : structures dédiées (SCP/SEL)',
@@ -567,7 +567,7 @@ const legalStatuses = {
   protectionPatrimoine: 'Oui',
   chargesSociales: "Sur la rémunération (TNS ou assimilé). À l’IS, pour un gérant majoritaire TNS, la part de dividendes qui excède 10 % (capital libéré + primes + compte courant) est assujettie aux cotisations TNS",
   fiscal: "Dividendes possibles (imposition RCM : PFU par défaut ou barème sur option)",
-  regimeTVA: "La SEL est assujettie selon l’activité ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 € ; seuils spécifiques pour avocats). Actes médicaux souvent exonérés. L’associé ne facture pas de TVA sur ses rémunérations techniques à la SEL",
+  regimeTVA: "La SEL est assujettie selon l’activité ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 € ; seuils spécifiques pour avocats). Actes médicaux souvent exonérés. L’associé ne facture pas de TVA sur ses rémunérations techniques à la SEL",
   publicationComptes: 'Oui',
   formalites: "Standard : statuts conformes aux règles ordinales, annonce légale, dépôt au greffe, tenue d’AG annuelle",
   activite: "Exercice en commun d’une profession libérale réglementée",
@@ -626,7 +626,7 @@ const legalStatuses = {
   protectionPatrimoine: "Oui",
   chargesSociales: "Sur la rémunération du président ; dividendes non assujettis aux cotisations sociales (sauf requalification en cas d’abus)",
   fiscal: "Dividendes possibles (PFU par défaut ou option barème). La rémunération liée aux actes professionnels d’associés peut relever des BNC selon les règles fiscales applicables.",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Oui (approbation des comptes classiquement sous 6 mois après clôture ; dépôt au greffe dans le mois suivant l’approbation, 2 mois si dépôt en ligne)",
   formalites: "Standard SAS + formalités auprès de l’ordre professionnel (inscription, agréments)",
   activite: "Exercice en commun d’une profession libérale réglementée",
@@ -684,7 +684,7 @@ const legalStatuses = {
   protectionPatrimoine: "Partielle (commandités non protégés ; commanditaires protégés)",
   chargesSociales: "Sur la rémunération du/des gérants ; pas de cotisations sur dividendes",
   fiscal: "Oui (dividendes possibles selon résultat et réserves)",
-  regimeTVA: "Assujettie ; franchise en base possible (2025 : 85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option possible pour être à la TVA sous seuils",
+  regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option possible pour être à la TVA sous seuils",
   publicationComptes: "Oui (approbation dans les 6 mois de la clôture ; dépôt au greffe dans le mois suivant l’approbation)",
   formalites: "Complexes (statuts détaillés, gérance + conseil de surveillance, commissaires aux comptes, rapport de gestion, dépôt des comptes)",
   activite: "Groupes familiaux, holdings, projets souhaitant séparer gestion et capital",
@@ -2738,16 +2738,16 @@ class RecommendationEngine {
     this.incompatibles = []; // [{ statusId, code, explanation, alternatives }]
     this.auditTrail = { exclusions: [], weightingRules: [], scores: {} };
 
- // === SEUILS & RÉFÉRENTIELS — 2025 ===
+ // === SEUILS & RÉFÉRENTIELS — 2026 ===
 this.thresholds2025 = {
   micro: {
-    // Micro-BIC/BNC (LF 2025)
-    bic_sales: 188_700,        // ventes / hébergement
-    bic_service: 77_700,       // prestations de services BIC
-    bnc: 77_700,               // BNC
+    // Micro-BIC/BNC (plafonds 2026-2028)
+    bic_sales: 203_100,        // ventes / hébergement
+    bic_service: 83_600,       // prestations de services BIC
+    bnc: 83_600,               // BNC
 
-    // Exception meublés de tourisme 2025 (abattements & plafonds spécifiques)
-    meuble_classe_ca: 77_700,  // classé
+    // Exception meublés de tourisme 2026 (abattements & plafonds spécifiques)
+    meuble_classe_ca: 83_600,  // classé
     meuble_non_classe_ca: 15_000 // non classé
   },
 
@@ -3334,8 +3334,8 @@ applySpecificFilters() {
   // Référentiels + fallbacks
   const TH = this.thresholds2025 || {};
   const MICRO = (TH.micro || {
-    bic_sales: 188_700, bic_service: 77_700, bnc: 77_700,
-    meuble_classe_ca: 77_700, meuble_non_classe_ca: 15_000
+    bic_sales: 203_100, bic_service: 83_600, bnc: 83_600,
+    meuble_classe_ca: 83_600, meuble_non_classe_ca: 15_000
   });
 
   // Helper micro (utilise le helper externe s’il existe, sinon fallback local)
@@ -3347,7 +3347,7 @@ applySpecificFilters() {
     // Fallback : calcule selon l’activité
     if (isImmo && ['meuble', 'meublé'].includes(String(A.real_estate_model || '').toLowerCase())) {
       return isYes(A.furnished_tourism_classed)
-        ? MICRO.meuble_classe_ca       // 77 700 €
+        ? MICRO.meuble_classe_ca       // 83 600 €
         : MICRO.meuble_non_classe_ca;  // 15 000 €
     }
     const nature = String(
@@ -3355,12 +3355,12 @@ applySpecificFilters() {
     ).toLowerCase();
 
     if (['ventes', 'hébergement', 'hebergement', 'bic_sales'].includes(nature)) {
-      return MICRO.bic_sales;     // 188 700 €
+      return MICRO.bic_sales;     // 203 100 €
     }
     if (nature === 'bnc') {
-      return MICRO.bnc;           // 77 700 €
+      return MICRO.bnc;           // 83 600 €
     }
-    return MICRO.bic_service;     // 77 700 €
+    return MICRO.bic_service;     // 83 600 €
   })();
   
   /* ------------------------------------------------------------------
@@ -4935,15 +4935,15 @@ getStrengths(statusId) {
       // fallback local cohérent avec applySpecificFilters()
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
+          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 83600
           : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
-      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
-      return this.thresholds2025?.micro?.bic_service ?? 77700;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 203100;
+      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 83600;
+      return this.thresholds2025?.micro?.bic_service ?? 83600;
     } catch {
-      return 77700;
+      return 83600;
     }
   })();
 
@@ -5103,15 +5103,15 @@ getWeaknesses(statusId) {
       }
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
+          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 83600
           : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
-      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
-      return this.thresholds2025?.micro?.bic_service ?? 77700;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 203100;
+      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 83600;
+      return this.thresholds2025?.micro?.bic_service ?? 83600;
     } catch {
-      return 77700;
+      return 83600;
     }
   })();
 
@@ -5710,15 +5710,15 @@ if (A && A.projected_revenue != null) {
         const M = T.micro || {};
         if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
           return (A.furnished_tourism_classed === 'yes')
-            ? (M.meuble_classe_ca != null ? M.meuble_classe_ca : 77700)
+            ? (M.meuble_classe_ca != null ? M.meuble_classe_ca : 83600)
             : (M.meuble_non_classe_ca != null ? M.meuble_non_classe_ca : 15000);
         }
         const n = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-        if (['ventes','hébergement','hebergement','bic_sales'].indexOf(n) !== -1) return (M.bic_sales != null ? M.bic_sales : 188700);
-        if (n === 'bnc') return (M.bnc != null ? M.bnc : 77700);
-        return (M.bic_service != null ? M.bic_service : 77700);
+        if (['ventes','hébergement','hebergement','bic_sales'].indexOf(n) !== -1) return (M.bic_sales != null ? M.bic_sales : 203100);
+        if (n === 'bnc') return (M.bnc != null ? M.bnc : 83600);
+        return (M.bic_service != null ? M.bic_service : 83600);
       } catch (e) {
-        return 77700;
+        return 83600;
       }
     }).call(this);
 
@@ -5785,10 +5785,10 @@ getStatusExplanations(statusId, answers) {
   const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
   const projectedRevenue = Number(A.projected_revenue || 0);
 
-  // Plafonds micro & TVA (fallbacks 2025 si non configurés)
+  // Plafonds micro & TVA (fallbacks 2026 si non configurés)
   const MICRO_SERVICES = (micro.bic_service != null ? micro.bic_service
-                        : (micro.bnc != null ? micro.bnc : 77700));
-  const MICRO_VENTES   = (micro.bic_sales != null ? micro.bic_sales : 188700);
+                        : (micro.bnc != null ? micro.bnc : 83600));
+  const MICRO_VENTES   = (micro.bic_sales != null ? micro.bic_sales : 203100);
 
   const TVA_SERVICES       = (tvab.services != null ? tvab.services : 37500);
   const TVA_VENTES         = (tvab.ventes != null ? tvab.ventes : 85000);
