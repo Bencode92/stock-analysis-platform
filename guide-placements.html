@@ -311,14 +311,12 @@
         }
         
         .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease;
+            display: none;
             padding: 0 15px;
         }
-        
+
         .accordion-content.active {
-            max-height: 5000px;
+            display: block;
             padding: 15px;
         }
         
@@ -592,7 +590,7 @@
                 </h3>
                 
                 <!-- Accordéon 1 optimisé -->
-                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl">
                     <div class="accordion-header flex items-center">
                         <i class="fas fa-list-ol text-green-400 mr-3"></i>
                         <span class="font-semibold">1. Par où commencer ? L'ordre idéal des placements</span>
@@ -748,7 +746,7 @@
                 </div>
                 
                 <!-- Accordéon 2 optimisé -->
-                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl">
                     <div class="accordion-header flex items-center">
                         <i class="fas fa-percentage text-green-400 mr-3"></i>
                         <span class="font-semibold">2. Comment optimiser sa fiscalité ?</span>
@@ -815,7 +813,7 @@
                 </div>
                 
                 <!-- Accordéon 3 : Répartition de l'épargne (CONSERVÉ TEL QUEL) -->
-                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl">
                   <!-- Header -->
                   <div class="accordion-header flex items-center">
                     <i class="fas fa-balance-scale text-green-400 mr-3"></i>
@@ -828,7 +826,7 @@
                       <p>La diversification est essentielle pour optimiser le couple rendement/risque :</p>
 
                       <!-- Grille des profils -->
-                      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+                      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
 
                         <!-- Profil Étudiant 18-25 -->
                         <div class="bg-yellow-900 bg-opacity-20 rounded-lg p-5">
@@ -949,7 +947,7 @@
                 </div>
 
                 <!-- Accordéon 4 amélioré -->
-                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl">
                     <!-- En‑tête -->
                     <div class="accordion-header flex items-center">
                         <i class="fas fa-rocket text-green-400 mr-3"></i>
