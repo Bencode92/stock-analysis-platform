@@ -1255,6 +1255,10 @@
              margin-bottom: 24px;
              backdrop-filter: blur(10px);
          }
+         .chevron-icon.rotated { transform: rotate(180deg); }
+         .grade-filter-btn.active { background: currentColor !important; color: #000 !important; }
+         .data-table thead th { cursor: pointer; user-select: none; }
+         .data-table thead th:hover { color: #00FF87; }
          
          .az-scope {
              display: flex;
@@ -1585,18 +1589,87 @@
                              <button class="market-btn" data-scope="ASIA">🌏 Asie</button>
                          </div>
                          
-                         <!-- Filtres additionnels -->
-                         <div class="flex gap-4">
+                         <!-- Filtres basiques -->
+                         <div class="flex gap-4 flex-wrap items-center">
                              <select id="az-country-filter" class="filter-select">
                                  <option value="">Tous pays</option>
                              </select>
-                             
+
                              <select id="az-sector-filter" class="filter-select">
                                  <option value="">Tous secteurs</option>
                              </select>
-                             
+
+                             <button id="az-advanced-toggle" onclick="document.getElementById('az-advanced-filters').classList.toggle('hidden');this.querySelector('.chevron-icon').classList.toggle('rotated')"
+                                 style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.6);font-size:0.78rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                 <i class="fas fa-sliders-h" style="font-size:0.7rem;"></i> Filtres avancés
+                                 <span id="az-advanced-count" style="display:none;background:#00FF87;color:#000;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;"></span>
+                                 <i class="fas fa-chevron-down chevron-icon" style="font-size:0.55rem;transition:transform 0.2s;"></i>
+                             </button>
+
                              <div class="ml-auto text-sm text-gray-400">
                                  <span id="az-filtered-count">0</span> actions filtrées
+                             </div>
+                         </div>
+
+                         <!-- Filtres avancés (collapsible) -->
+                         <div id="az-advanced-filters" class="hidden" style="margin-top:12px;padding:12px 16px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;">
+                             <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:end;">
+                                 <div>
+                                     <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">Quality</div>
+                                     <div style="display:flex;gap:4px;" id="filter-quality">
+                                         <button class="grade-filter-btn" data-grade="A" onclick="toggleGradeFilter(this,'quality')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(76,175,80,0.3);background:transparent;color:#4caf50;font-weight:700;font-size:0.8rem;cursor:pointer;">A</button>
+                                         <button class="grade-filter-btn" data-grade="B" onclick="toggleGradeFilter(this,'quality')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(33,150,243,0.3);background:transparent;color:#2196f3;font-weight:700;font-size:0.8rem;cursor:pointer;">B</button>
+                                         <button class="grade-filter-btn" data-grade="C" onclick="toggleGradeFilter(this,'quality')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(255,152,0,0.3);background:transparent;color:#ff9800;font-weight:700;font-size:0.8rem;cursor:pointer;">C</button>
+                                         <button class="grade-filter-btn" data-grade="D" onclick="toggleGradeFilter(this,'quality')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(244,67,54,0.3);background:transparent;color:#f44336;font-weight:700;font-size:0.8rem;cursor:pointer;">D</button>
+                                     </div>
+                                 </div>
+                                 <div>
+                                     <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">Value</div>
+                                     <div style="display:flex;gap:4px;" id="filter-value">
+                                         <button class="grade-filter-btn" data-grade="A" onclick="toggleGradeFilter(this,'value')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(76,175,80,0.3);background:transparent;color:#4caf50;font-weight:700;font-size:0.8rem;cursor:pointer;">A</button>
+                                         <button class="grade-filter-btn" data-grade="B" onclick="toggleGradeFilter(this,'value')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(33,150,243,0.3);background:transparent;color:#2196f3;font-weight:700;font-size:0.8rem;cursor:pointer;">B</button>
+                                         <button class="grade-filter-btn" data-grade="C" onclick="toggleGradeFilter(this,'value')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(255,152,0,0.3);background:transparent;color:#ff9800;font-weight:700;font-size:0.8rem;cursor:pointer;">C</button>
+                                         <button class="grade-filter-btn" data-grade="D" onclick="toggleGradeFilter(this,'value')" style="width:30px;height:28px;border-radius:6px;border:1px solid rgba(244,67,54,0.3);background:transparent;color:#f44336;font-weight:700;font-size:0.8rem;cursor:pointer;">D</button>
+                                     </div>
+                                 </div>
+                                 <div>
+                                     <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">Div min</div>
+                                     <select id="filter-div-min" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                         <option value="">Tous</option>
+                                         <option value="1">≥ 1%</option>
+                                         <option value="2">≥ 2%</option>
+                                         <option value="4">≥ 4%</option>
+                                         <option value="6">≥ 6%</option>
+                                     </select>
+                                 </div>
+                                 <div>
+                                     <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">PE max</div>
+                                     <select id="filter-pe-max" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                         <option value="">Tous</option>
+                                         <option value="15">≤ 15</option>
+                                         <option value="25">≤ 25</option>
+                                         <option value="40">≤ 40</option>
+                                     </select>
+                                 </div>
+                                 <div>
+                                     <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">Beta</div>
+                                     <select id="filter-beta" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                         <option value="">Tous</option>
+                                         <option value="low">≤ 0.8 (défensif)</option>
+                                         <option value="mid">0.8 - 1.2</option>
+                                         <option value="high">> 1.2 (agressif)</option>
+                                     </select>
+                                 </div>
+                                 <div>
+                                     <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">EPS</div>
+                                     <select id="filter-eps" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                         <option value="">Tous</option>
+                                         <option value="beats">Beats only</option>
+                                     </select>
+                                 </div>
+                                 <button onclick="resetAdvancedFilters()" style="padding:4px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:0.75rem;cursor:pointer;align-self:end;">
+                                     <i class="fas fa-undo" style="margin-right:4px;font-size:0.6rem;"></i>Reset
+                                 </button>
                              </div>
                          </div>
                      </div>

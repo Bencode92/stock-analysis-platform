@@ -12,6 +12,82 @@
  * v1.5: Affichage des valeurs dividend_yield_ttm et payout_ratio_ttm depuis les JSON
  */
 
+// ===== v8.0: Advanced filters state =====
+const _advFilters = { quality: new Set(), value: new Set(), divMin: null, peMax: null, beta: null, eps: null };
+
+function toggleGradeFilter(btn, type) {
+    const grade = btn.dataset.grade;
+    const set = _advFilters[type];
+    if (set.has(grade)) { set.delete(grade); btn.classList.remove('active'); }
+    else { set.add(grade); btn.classList.add('active'); }
+    applyAdvancedFilters();
+}
+
+function applyAdvancedFilters() {
+    _advFilters.divMin = parseFloat(document.getElementById('filter-div-min')?.value) || null;
+    _advFilters.peMax = parseFloat(document.getElementById('filter-pe-max')?.value) || null;
+    _advFilters.beta = document.getElementById('filter-beta')?.value || null;
+    _advFilters.eps = document.getElementById('filter-eps')?.value || null;
+
+    // Update count badge
+    let count = _advFilters.quality.size + _advFilters.value.size
+        + (_advFilters.divMin ? 1 : 0) + (_advFilters.peMax ? 1 : 0)
+        + (_advFilters.beta ? 1 : 0) + (_advFilters.eps ? 1 : 0);
+    const badge = document.getElementById('az-advanced-count');
+    if (badge) { badge.style.display = count > 0 ? 'inline' : 'none'; badge.textContent = count; }
+
+    // Trigger the existing filter pipeline
+    if (typeof filterAZStocks === 'function') filterAZStocks();
+    else document.dispatchEvent(new Event('az-refilter'));
+}
+
+function resetAdvancedFilters() {
+    _advFilters.quality.clear(); _advFilters.value.clear();
+    _advFilters.divMin = null; _advFilters.peMax = null; _advFilters.beta = null; _advFilters.eps = null;
+    document.querySelectorAll('.grade-filter-btn').forEach(b => b.classList.remove('active'));
+    ['filter-div-min','filter-pe-max','filter-beta','filter-eps'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const badge = document.getElementById('az-advanced-count');
+    if (badge) badge.style.display = 'none';
+    applyAdvancedFilters();
+}
+
+function _passAdvancedFilter(stock) {
+    // Quality grade filter
+    if (_advFilters.quality.size > 0 && !_advFilters.quality.has(stock.quality_grade)) return false;
+    // Value grade filter
+    if (_advFilters.value.size > 0 && !_advFilters.value.has(stock.buffett_grade)) return false;
+    // Dividend minimum
+    if (_advFilters.divMin != null) {
+        const div = parseFloat(String(stock.dividend_yield_ttm || stock.dividend_yield || '0').replace(',','.').replace('%','').replace('+',''));
+        if (isNaN(div) || div < _advFilters.divMin) return false;
+    }
+    // PE maximum
+    if (_advFilters.peMax != null) {
+        const pe = stock.pe_ratio != null ? parseFloat(stock.pe_ratio) : null;
+        if (pe == null || pe > _advFilters.peMax) return false;
+    }
+    // Beta range
+    if (_advFilters.beta) {
+        const beta = stock.beta != null ? parseFloat(stock.beta) : null;
+        if (beta == null) return false;
+        if (_advFilters.beta === 'low' && beta > 0.8) return false;
+        if (_advFilters.beta === 'mid' && (beta < 0.8 || beta > 1.2)) return false;
+        if (_advFilters.beta === 'high' && beta <= 1.2) return false;
+    }
+    // EPS beats only
+    if (_advFilters.eps === 'beats') {
+        const surp = stock.eps_surprise_avg_2q != null ? parseFloat(stock.eps_surprise_avg_2q) : null;
+        if (surp == null || surp <= 0) return false;
+    }
+    return true;
+}
+
+// ===== v8.0: Column sorting state =====
+let _sortCol = null;  // null = alphabetical, or column index
+let _sortAsc = true;
+
 // NOUVEAU: Fonction globale pour fermer tous les détails
 function closeAllDetails() {
   document.querySelectorAll('tr.details-row').forEach(r => r.classList.add('hidden'));
@@ -353,9 +429,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Filtre pays
                 if (azCountryFilter && stock.country !== azCountryFilter) show = false;
                 
-                // Filtre secteur  
+                // Filtre secteur
                 if (azSectorFilter && stock.sector !== azSectorFilter) show = false;
-                
+
+                // v8.0: Advanced filters
+                if (show && !_passAdvancedFilter(stock)) show = false;
+
                 if (show) {
                     filteredIndices[letter].push(stock);
                     totalVisible++;
@@ -1311,8 +1390,23 @@ document.addEventListener('DOMContentLoaded', function() {
      * Affiche les données d'actions dans l'interface
      */
     function renderStocksData() {
-        // Mise à jour des headers à chaque rendu
-        setTimeout(updateTableHeaders, 50);
+        // v8.0: Wire column header sorting after render
+        setTimeout(() => {
+            updateTableHeaders();
+            const colMap = {'QUALITY':'quality','VALUE':'value','DIV TTM':'div','PE':'pe','VAR %':'var','YTD %':'ytd','1 ANS %':'1y'};
+            document.querySelectorAll('.data-table thead th').forEach(th => {
+                const key = colMap[th.textContent.trim()];
+                if (!key) return;
+                th.onclick = () => {
+                    if (_sortCol === key) { _sortAsc = !_sortAsc; }
+                    else { _sortCol = key; _sortAsc = false; } // Default descending
+                    // Update header arrows
+                    document.querySelectorAll('.data-table thead th .sort-arrow').forEach(a => a.remove());
+                    th.insertAdjacentHTML('beforeend', `<span class="sort-arrow" style="margin-left:4px;font-size:0.6rem;">${_sortAsc ? '▲' : '▼'}</span>`);
+                    renderStocksData();
+                };
+            });
+        }, 60);
         
         try {
             // Mettre à jour l'horodatage
@@ -1365,9 +1459,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Dédupliquer les stocks par nom plutôt que par tous les attributs
                         const uniqueStocks = dedupStocksByName(stocks);
                         
-                        // Trier les actions par nom
+                        // v8.0: Sort by selected column or alphabetical
+                        const _getNumeric = (s, col) => {
+                            if (col === 'quality') return s.quality_score ?? -1;
+                            if (col === 'value') return s.buffett_score ?? -1;
+                            if (col === 'pe') return s.pe_ratio != null ? parseFloat(s.pe_ratio) : 9999;
+                            if (col === 'div') {
+                                const v = parseFloat(String(s.dividend_yield_ttm||s.dividend_yield||'0').replace(',','.').replace('%','').replace('+',''));
+                                return isNaN(v) ? -1 : v;
+                            }
+                            if (col === 'var') return parseFloat(String(s.change||'0').replace(',','.').replace('%','').replace('+','')) || 0;
+                            if (col === 'ytd') return parseFloat(String(s.ytd||'0').replace(',','.').replace('%','').replace('+','')) || 0;
+                            if (col === '1y') return parseFloat(String(s.perf_1y||'0').replace(',','.').replace('%','').replace('+','')) || 0;
+                            return 0;
+                        };
                         const sortedStocks = [...uniqueStocks].sort((a, b) => {
-                            return (a.name || "").localeCompare(b.name || "");
+                            if (!_sortCol) return (a.name || "").localeCompare(b.name || "");
+                            const va = _getNumeric(a, _sortCol), vb = _getNumeric(b, _sortCol);
+                            return _sortAsc ? va - vb : vb - va;
                         });
                         
                         // Remplir avec les données
