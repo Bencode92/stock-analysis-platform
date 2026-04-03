@@ -924,11 +924,22 @@ document.addEventListener('DOMContentLoaded', function() {
   // 🔁 (REMPLACE L’ANCIEN) — Handler "Objectifs > Calculer"
   document.getElementById('goal-run')?.addEventListener('click', () => {
     const target       = Math.max(1, parseFloat(document.getElementById('goal-target')?.value) || 0);
-    const years        = parseFloat(document.getElementById('duration-slider')?.value || 10);
     const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7) / 100;
     const vehicleId    = document.getElementById('investment-vehicle')?.value || 'pea';
     const fees         = readFeeParams();
     const mode         = document.getElementById('goal-mode')?.value || 'periodic-for-target';
+
+    // Horizon cible : utiliser le champ horizon si mode "trouver versement", sinon le slider
+    let years;
+    if (mode === 'periodic-for-target') {
+      const horizonVal  = parseFloat(document.getElementById('goal-horizon-value')?.value) || 10;
+      const horizonUnit = document.getElementById('goal-horizon-unit')?.value || 'years';
+      years = horizonUnit === 'months' ? horizonVal / 12
+            : horizonUnit === 'days'   ? horizonVal / 365
+            : horizonVal;
+    } else {
+      years = parseFloat(document.getElementById('duration-slider')?.value || 10);
+    }
 
     // Respecte le mode de l'UI (pas de périodique si "Unique" sélectionné)
     const isPeriodicUI   = document.getElementById('periodic-investment')?.classList.contains('selected');
@@ -956,7 +967,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const mensuel = annuel / 12;
       const quotidien = annuel / 365;
 
-      html = `Pour atteindre <b>${formatMoney(target)}</b> en <b>${years} ans</b> (net d'impôts)${initialPart}
+      // Afficher l'horizon dans l'unité choisie par l'utilisateur
+      const horizonUnit = document.getElementById('goal-horizon-unit')?.value || 'years';
+      const horizonVal  = parseFloat(document.getElementById('goal-horizon-value')?.value) || years;
+      const horizonLabel = horizonUnit === 'months' ? `<b>${Math.round(horizonVal)} mois</b>`
+                         : horizonUnit === 'days'   ? `<b>${Math.round(horizonVal)} jours</b>`
+                         : years >= 1 ? `<b>${years.toFixed(1).replace('.0', '')} an${years >= 2 ? 's' : ''}</b>` : `<b>${Math.round(years * 12)} mois</b>`;
+
+      html = `Pour atteindre <b>${formatMoney(target)}</b> en ${horizonLabel} (net d'impôts)${initialPart}
               via ${results.enveloppe?.label} :<br>
               <span class="inline-flex flex-wrap gap-3 mt-2">
                 <span class="bg-green-900 bg-opacity-30 text-green-300 px-3 py-1 rounded-lg font-semibold">≈ ${formatMoney(annuel)} /an</span>
@@ -1008,19 +1026,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('goal-result').innerHTML = html;
   });
 
-  // Micro-UX Objectifs : fréquence visible uniquement en versement unique + mode "trouver versement"
-  function updateGoalFrequencyVisibility() {
+  // Micro-UX Objectifs : visibilité fréquence + horizon selon contexte
+  function updateGoalFieldsVisibility() {
     const isPeriodicUI = document.getElementById('periodic-investment')?.classList.contains('selected');
     const mode = document.getElementById('goal-mode')?.value || 'periodic-for-target';
-    const wrap = document.getElementById('goal-frequency-wrap');
-    if (wrap) {
-      // En versement périodique : on utilise la fréquence du haut → masquer
-      // En versement unique + mode durée : pas besoin de fréquence → masquer
-      // En versement unique + mode versement : l'utilisateur explore → afficher
-      wrap.style.display = (!isPeriodicUI && mode === 'periodic-for-target') ? 'block' : 'none';
+    const freqWrap = document.getElementById('goal-frequency-wrap');
+    const horizonWrap = document.getElementById('goal-horizon-wrap');
+
+    if (freqWrap) {
+      // Fréquence : visible uniquement en versement unique + mode "trouver versement"
+      freqWrap.style.display = (!isPeriodicUI && mode === 'periodic-for-target') ? 'block' : 'none';
+    }
+    if (horizonWrap) {
+      // Horizon cible : visible uniquement en mode "trouver versement" (unique ou périodique)
+      horizonWrap.style.display = (mode === 'periodic-for-target') ? 'block' : 'none';
     }
   }
-  document.getElementById('goal-mode')?.addEventListener('change', updateGoalFrequencyVisibility);
+  document.getElementById('goal-mode')?.addEventListener('change', updateGoalFieldsVisibility);
 
   // Scénarios
   document.getElementById('scenario-save')?.addEventListener('click', saveScenario);
@@ -1069,11 +1091,11 @@ document.addEventListener('DOMContentLoaded', function() {
     checkPlafondLimits(); // ← taper un montant périodique doit rafraîchir l’alerte
   });
   document.getElementById('periodic-investment')?.addEventListener('click', () => {
-    setTimeout(() => { updatePeriodicUI(); updateGoalFrequencyVisibility(); }, 0);
+    setTimeout(() => { updatePeriodicUI(); updateGoalFieldsVisibility(); }, 0);
     checkPlafondLimits();
   });
   document.getElementById('unique-investment')?.addEventListener('click', () => {
-    setTimeout(() => { updatePeriodicUI(); updateGoalFrequencyVisibility(); }, 0);
+    setTimeout(() => { updatePeriodicUI(); updateGoalFieldsVisibility(); }, 0);
     checkPlafondLimits();
   });
 
@@ -1082,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ✅ Alerte plafond initiale + visibilité fréquence objectifs
   checkPlafondLimits();
-  updateGoalFrequencyVisibility();
+  updateGoalFieldsVisibility();
 });
 
 

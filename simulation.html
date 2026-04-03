@@ -544,6 +544,19 @@
                                     <option value="annually">Annuel</option>
                                   </select>
                                 </div>
+
+                                <div id="goal-horizon-wrap" class="">
+                                  <label class="block text-xs text-gray-400 mb-1">Horizon cible</label>
+                                  <div class="flex gap-2">
+                                    <input id="goal-horizon-value" type="number" min="1" value="10"
+                                           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-24">
+                                    <select id="goal-horizon-unit" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-1">
+                                      <option value="years" selected>Années</option>
+                                      <option value="months">Mois</option>
+                                      <option value="days">Jours</option>
+                                    </select>
+                                  </div>
+                                </div>
                               </div>
 
                               <button id="goal-run"
