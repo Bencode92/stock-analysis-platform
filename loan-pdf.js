@@ -456,8 +456,8 @@ function buildStyles(){
       --c-primary: #059669;
       --c-secondary: #2563eb;
       --c-accent: #f59e0b;
-      --c-bg: #f8fafc;
-      --c-surface: #ffffff;
+      --c-bg: #e2e8f0;
+      --c-surface: #f1f5f9;
       --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
       --shadow-md: 0 4px 14px rgba(0,0,0,0.06);
     }
@@ -668,13 +668,16 @@ function buildKPIBlockCards(d){
           <h3>${val}</h3>
       </div>`;
 
-  wrap.innerHTML =
-      card('Mensualité après renégociation', fmt(d.mensRenego)) +
-      card('Mensualité totale après démarrage PTZ', fmt(d.mensTotalPTZ)) +
-      card('TAEG', d.taeg.toFixed(2) + ' %') +
-      card('Intérêts', fmt(d.totalInterest)) +
-      card('Frais', fmt(d.totalFees)) +
-      card('Coût global (tout compris)', fmt(d.coutGlobal || d.totalCost));
+  // N'afficher que les KPIs pertinents (masquer renego/PTZ si pas utilisés)
+  let cards = '';
+  if (d.mensRenego > 0) cards += card('Mensualité après renégociation', fmt(d.mensRenego));
+  if (d.mensTotalPTZ > 0) cards += card('Mensualité totale après démarrage PTZ', fmt(d.mensTotalPTZ));
+  cards += card('TAEG', d.taeg.toFixed(2) + ' %');
+  cards += card('Intérêts', fmt(d.totalInterest));
+  cards += card('Frais', fmt(d.totalFees));
+  cards += card('Coût global (tout compris)', fmt(d.coutGlobal || d.totalCost));
+  if (d.debtRatio) cards += card('Taux d\'endettement', d.debtRatio + ' %');
+  wrap.innerHTML = cards;
 
   return wrap;
 }
