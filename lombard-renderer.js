@@ -312,8 +312,15 @@ const LombardRenderer = {
       const compositeScore = 0.35 * Math.max(0, carryFiscal / 5) * payoutAdj
                            + 0.25 * quality
                            + 0.40 * safetyScore;
-      return { ...s, yieldNet, carryFiscal, vol, compositeScore };
-    }).sort((a, b) => b.compositeScore - a.compositeScore);
+      // v3.1: backend lombard_score as tiebreaker — avoids edge cases where
+      // stock ranked 30th by backend (barely eligible) gets top composite
+      const backendScore = (s.lombard_score || 0) / 100; // normalize to 0-1
+      return { ...s, yieldNet, carryFiscal, vol, payoutAdj, compositeScore, backendScore };
+    }).sort((a, b) => {
+      const diff = b.compositeScore - a.compositeScore;
+      if (Math.abs(diff) < 0.005) return b.backendScore - a.backendScore; // tiebreaker
+      return diff;
+    });
 
     // Greedy selection with constraints
     const selected = [];
@@ -331,9 +338,11 @@ const LombardRenderer = {
 
     if (selected.length < 2) return { portfolio: [], sharpe: -Infinity };
 
-    // Weight by composite score, then clamp to [MIN_WEIGHT, MAX_WEIGHT]
-    const totalScore = selected.reduce((s, x) => s + x.compositeScore, 0);
-    let weights = selected.map(s => totalScore > 0 ? s.compositeScore / totalScore : 1 / selected.length);
+    // Weight by composite × payoutAdj — payout risk reduces weight, not just selection
+    // A stock with payout 95% (payoutAdj=0.58) gets 42% less weight than payout 40% (payoutAdj=1.0)
+    const adjusted = selected.map(s => s.compositeScore * s.payoutAdj);
+    const totalAdj = adjusted.reduce((a, b) => a + b, 0);
+    let weights = adjusted.map(a => totalAdj > 0 ? a / totalAdj : 1 / selected.length);
 
     // Iterative clamping (3 rounds)
     for (let iter = 0; iter < 3; iter++) {
