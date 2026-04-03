@@ -1706,14 +1706,12 @@ window.initComparatifStatuts = function() {
       }
     }
 
-    function renderCostComparisonPanel(){
+    function renderCostComparisonPanel(budget){
+      budget = budget || 60000;
       const has = x => compareStatuts.includes(x);
       const tnsLabel = has('EURL') ? 'EURL (TNS)' : has('SARL') ? 'SARL (TNS)' : 'Micro';
       const asLabel  = has('SASU') ? 'SASU' : 'SAS';
       const isMicro  = !has('EURL') && !has('SARL') && has('MICRO');
-
-      // Calcul pour budget 60 000 €/an
-      const budget = 60000;
       // TNS
       const tnsRate = isMicro ? 0.22 : 0.30;
       const tnsCot = Math.round(budget * tnsRate);
@@ -1811,21 +1809,29 @@ window.initComparatifStatuts = function() {
     }
 
     function initBudgetSlider(){
-      const slider = document.getElementById('budget-slider');
+      const panel = document.getElementById('cost-comparison-panel');
+      if(!panel) return;
+      const slider = panel.querySelector('#budget-slider');
+      const display = panel.querySelector('#budget-display');
       if(!slider) return;
-      const handler = debounce(()=>{
+
+      // Live update label while dragging
+      slider.addEventListener('input', function(){
+        if(display) display.textContent = parseInt(slider.value).toLocaleString('fr-FR') + ' €';
+      });
+
+      // Full recalculate on release
+      slider.addEventListener('change', function(){
         const val = parseInt(slider.value);
-        const panel = document.getElementById('cost-comparison-panel');
-        if(!panel) return;
+        if(!val || val < 10000) return;
         const tmp = document.createElement('div');
         tmp.innerHTML = renderCostComparisonPanel(val);
         const newPanel = tmp.firstElementChild;
         panel.replaceWith(newPanel);
-        // Re-attach to the new slider
         const newSlider = newPanel.querySelector('#budget-slider');
-        if(newSlider){ newSlider.value = val; initBudgetSlider(); }
-      }, 80);
-      slider.addEventListener('input', handler);
+        if(newSlider) newSlider.value = val;
+        initBudgetSlider();
+      });
     }
 
     function renderPersonaAdvice(){
