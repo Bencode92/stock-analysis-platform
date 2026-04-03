@@ -679,7 +679,8 @@ class LoanSimulator {
             mensualiteApresRenego: extra.mensualiteApresRenego,
             economieMensualiteRenego: extra.mensualiteAvantRenego && extra.mensualiteApresRenego ? 
                 extra.mensualiteAvantRenego - extra.mensualiteApresRenego : 0,
-            economieInteretsExact: extra.baseInterets ? extra.baseInterets - totalInterets : 0
+            economieInteretsExact: extra.baseInterets ? extra.baseInterets - totalInterets : 0,
+            assuranceMensuelle: this.assuranceMensuelle
         };
     }
 
@@ -1519,7 +1520,10 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
             
             // Graphique mis à jour
             updateChart(result);
-            
+
+            // Comparaison assurance banque vs déléguée
+            updateInsuranceComparison(result);
+
             // Résumé des économies
             updateSavingsSummary(result, modeRemboursement);
             
@@ -1982,9 +1986,60 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
         savingsSummary.innerHTML = htmlContent;
     }
 
+    // ==========================================
+    // 💡 COMPARAISON ASSURANCE BANQUE vs DÉLÉGUÉE
+    // ==========================================
+    function updateInsuranceComparison(result) {
+        const container = document.getElementById('insurance-comparison');
+        if (!container || !result || !result.tableau || result.tableau.length === 0) return;
+
+        const tauxBanqueAnnuel = result.assuranceMensuelle ? result.assuranceMensuelle * 12 * 100 : 0;
+        const tauxDelegueInput = document.getElementById('delegated-insurance-rate');
+        const tauxDelegueAnnuel = tauxDelegueInput ? parseFloat(tauxDelegueInput.value) || 0.10 : 0.10;
+        const tauxDelegueMensuel = tauxDelegueAnnuel / 100 / 12;
+
+        // Coût banque = déjà calculé
+        const coutBanque = result.totalAssurance || 0;
+
+        // Coût délégué : toujours sur CRD (capital restant dû)
+        let coutDelegue = 0;
+        for (const row of result.tableau) {
+            coutDelegue += (row.capitalRestant || 0) * tauxDelegueMensuel;
+        }
+        coutDelegue = Math.round(coutDelegue);
+
+        const economie = Math.round(coutBanque - coutDelegue);
+        const economiePct = coutBanque > 0 ? Math.round((economie / coutBanque) * 100) : 0;
+        const mensualiteBanque = Math.round(coutBanque / result.tableau.length);
+        const mensualiteDelegue = Math.round(coutDelegue / result.tableau.length);
+
+        // Mise à jour de l'affichage
+        document.getElementById('insurance-bank-rate').textContent = tauxBanqueAnnuel.toFixed(2) + '%';
+        document.getElementById('insurance-bank-cost').textContent = formatMontant(coutBanque);
+        document.getElementById('insurance-bank-monthly').textContent = formatMontant(mensualiteBanque) + '/mois';
+        document.getElementById('insurance-delegated-cost').textContent = formatMontant(coutDelegue);
+        document.getElementById('insurance-delegated-monthly').textContent = formatMontant(mensualiteDelegue) + '/mois';
+
+        const savingsEl = document.getElementById('insurance-savings');
+        const savingsPctEl = document.getElementById('insurance-savings-pct');
+        if (savingsEl) {
+            savingsEl.querySelector('.text-green-400.font-bold').textContent = formatMontant(economie);
+        }
+        if (savingsPctEl) {
+            savingsPctEl.textContent = `(−${economiePct}%)`;
+        }
+
+        container.classList.remove('hidden');
+    }
+
+    // Listener recalcul en temps réel quand on modifie le taux délégué
+    document.getElementById('delegated-insurance-rate')?.addEventListener('input', () => {
+        if (window.lastLoanResult) updateInsuranceComparison(window.lastLoanResult);
+    });
+
     // Graphique d'amortissement
     let loanChart;
-    
+
     function updateChart(result) {
         const ctx = document.getElementById('loan-chart')?.getContext('2d');
         if (!ctx) return;
