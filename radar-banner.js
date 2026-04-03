@@ -134,59 +134,76 @@ const RadarBanner = {
   // ═══════════════════════════════════════════════
   // 2. BADGES SIGNAL+/SIGNAL− on cards
   // ═══════════════════════════════════════════════
+  // Determine badge type from classification + reason
+  // Returns: 'favored' | 'avoided' | 'warning' | null
+  _getBadgeType(classification, reason) {
+    if (classification === 'favored') return 'favored';
+    if (classification === 'avoided') return 'avoided';
+    // Warning: rescued from avoided BUT still cooling or divergent
+    if (reason && reason.includes('avoided_rescued_w52_positive')) {
+      if (reason.includes('cooling_m3') || reason.includes('divergent')) {
+        return 'warning';
+      }
+    }
+    // Also flag cooling sectors even if neutral
+    if (reason && reason.includes('cooling_m3') && reason.includes('underperform')) {
+      return 'warning';
+    }
+    return null;
+  },
+
   _applyBadges() {
     const d = this.data;
     const srp = d.sector_risk_profile || {};
-    const tilts = d.macro_tilts || {};
+    const rrp = d.region_risk_profile || {};
 
-    // Sector badges
+    // Sector badges (from sector_risk_profile with reason)
     for (const [sectorKey, profile] of Object.entries(srp)) {
-      const cls = profile.classification;
-      if (cls === 'neutral') continue;
+      const badge = this._getBadgeType(profile.classification, profile.reason);
+      if (!badge) continue;
 
       const dataAttr = this.SECTOR_MAP[sectorKey];
       if (!dataAttr) continue;
 
-      // Find all matching sector cards (could be in multiple regions)
       const cards = document.querySelectorAll(`.sector-col[data-sector="${dataAttr}"], .market-index-col[data-sector="${dataAttr}"]`);
-      cards.forEach(card => this._addBadgeToCard(card, cls, profile, '.sector-name'));
+      cards.forEach(card => this._addBadgeToCard(card, badge, profile, '.sector-name'));
     }
 
-    // Market/region badges
-    const favoredRegions = new Set(tilts.favored_regions || []);
-    const avoidedRegions = new Set(tilts.avoided_regions || []);
+    // Market/region badges (from region_risk_profile with reason)
+    for (const [regionKey, profile] of Object.entries(rrp)) {
+      const badge = this._getBadgeType(profile.classification, profile.reason);
+      if (!badge) continue;
 
-    for (const [regionKey, dataAttr] of Object.entries(this.MARKET_MAP)) {
-      let cls = 'neutral';
-      if (favoredRegions.has(regionKey)) cls = 'favored';
-      if (avoidedRegions.has(regionKey)) cls = 'avoided';
-      if (cls === 'neutral') continue;
+      const dataAttr = this.MARKET_MAP[regionKey];
+      if (!dataAttr) continue;
 
       const cards = document.querySelectorAll(`.market-index-col[data-index="${dataAttr}"]`);
-      cards.forEach(card => this._addBadgeToCard(card, cls, null, '.market-index-name'));
+      cards.forEach(card => this._addBadgeToCard(card, badge, profile, '.market-index-name'));
     }
   },
 
-  _addBadgeToCard(card, classification, profile, nameSelector) {
+  _addBadgeToCard(card, badgeType, profile, nameSelector) {
     const nameEl = card.querySelector(nameSelector);
     if (!nameEl) return;
-
-    // Don't add twice
     if (card.querySelector('.radar-badge')) return;
 
-    const isFavored = classification === 'favored';
-    const color = isFavored ? '#4caf50' : '#f44336';
-    const label = isFavored ? 'SIGNAL +' : 'SIGNAL −';
+    const configs = {
+      favored: { color: '#4caf50', label: 'SIGNAL +' },
+      avoided: { color: '#f44336', label: 'SIGNAL −' },
+      warning: { color: '#ff9800', label: 'SIGNAL ↓' },
+    };
+    const cfg = configs[badgeType];
+    if (!cfg) return;
 
     const badge = document.createElement('span');
     badge.className = 'radar-badge';
-    badge.style.cssText = `display:inline-block;font-size:0.55rem;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:700;letter-spacing:0.5px;background:${color}22;color:${color};vertical-align:middle;`;
-    badge.textContent = label;
+    badge.style.cssText = `display:inline-block;font-size:0.55rem;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:700;letter-spacing:0.5px;background:${cfg.color}22;color:${cfg.color};vertical-align:middle;`;
+    badge.textContent = cfg.label;
 
-    // Add risk flag tooltip if available
-    if (profile?.risk_flag) {
-      badge.title = this.REASON_FR[profile.risk_flag] || profile.risk_flag;
-    }
+    // Tooltip from reason
+    const reason = profile?.reason || '';
+    const tooltipParts = reason.split('|').filter(Boolean).map(r => this.REASON_FR[r] || r).slice(0, 3);
+    if (tooltipParts.length) badge.title = tooltipParts.join(' · ');
 
     nameEl.appendChild(badge);
   },

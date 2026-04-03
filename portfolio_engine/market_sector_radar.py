@@ -990,7 +990,28 @@ def generate_market_context_radar(
                 profile["region"] = d["beta_region"]
             profile["classification"] = d.get("classification", "neutral")
             profile["daily"] = d.get("daily", 0.0)  # v1.6.1 P3: for circuit breaker
+            profile["reason"] = d.get("reason", "")  # v1.7: for frontend signal badges
             sector_risk_profile[key] = profile
+
+    # v1.7: Build region_risk_profile (same structure as sector, for frontend badges)
+    region_risk_profile = {}
+    for d in region_diag:
+        key = d.get("key")
+        if not key:
+            continue
+        profile = {
+            "classification": d.get("classification", "neutral"),
+            "reason": d.get("reason", ""),
+            "ytd": d.get("ytd"),
+            "w52": d.get("w52"),
+            "m3": d.get("m3"),
+            "daily": d.get("daily", 0.0),
+        }
+        if d.get("beta") is not None:
+            profile["beta"] = d["beta"]
+        if d.get("beta_flag"):
+            profile["risk_flag"] = d["beta_flag"]
+        region_risk_profile[key] = profile
 
     ctx: Dict[str, Any] = {
         "market_regime": regime,
@@ -1006,6 +1027,7 @@ def generate_market_context_radar(
         "key_trends": _extract_trends(sectors, markets, rules),
         "risks": _extract_risks(sectors, markets, rules),
         "sector_risk_profile": sector_risk_profile,  # v1.6
+        "region_risk_profile": region_risk_profile,  # v1.7
         "_meta": {
             "generated_at": datetime.now().isoformat(),
             "model": "radar_deterministic_v1.6.1",
