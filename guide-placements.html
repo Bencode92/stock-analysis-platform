@@ -489,7 +489,7 @@
             <!-- En-tête de page -->
             <div class="page-header text-center mb-12">
                 <h1 class="section-title text-4xl font-bold">GUIDE DES PLACEMENTS</h1>
-                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">1 JANVIER 2026</p>
+                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">3 AVRIL 2026</p>
             </div>
 
             <!-- Introduction -->
@@ -611,7 +611,7 @@
                                         <tr>
                                             <td class="px-3 py-2">Livret A / LDDS</td>
                                             <td class="px-3 py-2">Disponible</td>
-                                            <td class="px-3 py-2">1,7&nbsp;% net</td>
+                                            <td class="px-3 py-2">1,5&nbsp;% net</td>
                                             <td class="px-3 py-2">Exonéré</td>
                                         </tr>
                                         <tr>
@@ -1079,11 +1079,11 @@
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-sync-alt text-green-400 mr-2"></i>
-                    Taux réglementés susceptibles de changer au 01/02/2026
+                    Taux réglementés en vigueur depuis le 01/02/2026 — prochaine révision : 01/08/2026
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Données valables au : <span class="text-green-400 font-medium ml-1 update-time">01/01/2026</span>
+                    Données valables au : <span class="text-green-400 font-medium ml-1 update-time">03/04/2026</span>
                 </p>
             </div>
         </footer>
@@ -1118,17 +1118,18 @@
     <!-- Scripts -->
     <script>
         // ===========================================
-        // CONFIGURATION DES DONNÉES - MAJ 01/01/2026
+        // CONFIGURATION DES DONNÉES - MAJ 03/04/2026
         // ===========================================
         // Sources officielles :
-        // - CEL 1,25% : economie.gouv.fr (depuis 01/08/2025)
+        // - CEL 1,25% : economie.gouv.fr (depuis 01/08/2025, inchangé)
         // - PEL 2,0% : service-public.gouv.fr (ouverture >= 01/01/2026)
-        // - Livret A 1,7% : service-public.gouv.fr (période 01/08/2025-31/01/2026)
-        // - LEP 2,7% : service-public.gouv.fr (période 01/08/2025-31/01/2026)
-        
-        const DATA_ASOF = '01/01/2026'; // Date de validité des données affichées
-        
-        // Données complètes des placements - MISES À JOUR JANVIER 2026
+        // - Livret A 1,5% : service-public.gouv.fr (depuis 01/02/2026)
+        // - LDDS 1,5% : identique au Livret A (depuis 01/02/2026)
+        // - LEP 2,5% : service-public.gouv.fr (depuis 01/02/2026)
+
+        const DATA_ASOF = '03/04/2026'; // Date de validité des données affichées
+
+        // Données complètes des placements - MISES À JOUR AVRIL 2026
         const placementsData = {
             'pea': {
                 title: 'PEA',
@@ -1437,7 +1438,7 @@
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '1,7%',
+                    taux: '1,5%',
                     plafond: '22 950€',
                     garantie: 'État'
                 },
@@ -1449,7 +1450,7 @@
                             '<span class="important-info">Capital 100 % garanti</span> par l\'État (Caisse des dépôts)',
                             '<span class="important-info">Liquidité totale</span> : retraits et versements libres (mini 10 €)',
                             '<span class="important-info">Simplicité</span> : ouverture dans toute banque, aucun frais',
-                            'Taux : <span class="important-info">1,7 %</span> (période 01/08/2025 → 31/01/2026)'
+                            'Taux : <span class="important-info">1,5 %</span> (depuis le 01/02/2026)'
                         ]
                     },
                     {
@@ -1459,7 +1460,7 @@
                         items: [
                             '<span class="important-info">Rendement souvent &lt; inflation</span> : pouvoir d\'achat érodé sur le long terme',
                             'Plafond relativement bas pour des projets importants (<span class="important-info">22 950 €</span>)',
-                            '<span class="important-info">Taux révisable</span> : prochaine révision au 01/02/2026'
+                            '<span class="important-info">Taux révisable</span> : prochaine révision au 01/08/2026'
                         ],
                         risk: 'low'
                     },
@@ -1482,7 +1483,7 @@
                 color: 'green',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '1,7%',
+                    taux: '1,5%',
                     plafond: '12 000€',
                     type: 'Épargne solidaire'
                 },
@@ -1491,7 +1492,7 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux réglementé : <span class="important-info">1,7 %</span> brut/an (identique au Livret A)',
+                            'Taux réglementé : <span class="important-info">1,5 %</span> brut/an (identique au Livret A, depuis 01/02/2026)',
                             '<span class="important-info">Épargne réglementée garantie par l\'État</span> (indemnisée par le FGDR si nécessaire)',
                             '<span class="important-info">Liquidité totale</span> : dépôts/retraits libres',
                             '<span class="important-info">Épargne solidaire</span> : finance la transition écologique & sociale'
@@ -1527,7 +1528,7 @@
                 color: 'blue',
                 profiles: ['prudent'],
                 summary: {
-                    taux: '2,7%',
+                    taux: '2,5%',
                     plafond: '10 000€',
                     condition: 'Revenus modestes'
                 },
@@ -1536,7 +1537,7 @@
                         title: 'Points forts',
                         icon: 'fas fa-check-circle',
                         items: [
-                            'Taux réglementé : <span class="important-info">2,7 %</span> (période 01/08/2025 → 31/01/2026)',
+                            'Taux réglementé : <span class="important-info">2,5 %</span> (depuis le 01/02/2026)',
                             '<span class="important-info">Capital garanti</span> : épargne couverte jusqu\'à 100 000 € par le FGDR + garantie État',
                             '<span class="important-info">Liquidité totale</span> : dépôts et retraits gratuits à tout moment',
                             '<span class="important-info">Réservé aux revenus modestes</span> : taux bonifié pour les ménages éligibles'
@@ -1750,7 +1751,7 @@
                 ]
             },
             // ==========================================
-            // PEL - CORRIGÉ AU 01/01/2026
+            // PEL - CORRIGÉ AU 03/04/2026
             // ==========================================
             'pel': {
                 title: 'PEL',
@@ -1892,7 +1893,7 @@
                 ]
             },
             // ==========================================
-            // CEL - CORRIGÉ AU 01/01/2026
+            // CEL - CORRIGÉ AU 03/04/2026 (taux inchangé)
             // ==========================================
 'cel': {
                 title: 'CEL',
@@ -2328,7 +2329,7 @@
             const dateElement = document.getElementById('currentDate');
             if (dateElement) {
                 // Afficher la date de validité des données, pas la date du jour
-                dateElement.textContent = '1 JANVIER 2026';
+                dateElement.textContent = '3 AVRIL 2026';
             }
             
             // FIX: Afficher la date de validité des données, pas l'heure de chargement
