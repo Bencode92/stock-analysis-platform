@@ -33,6 +33,13 @@
  */
 
 // ==========================================
+// 📄 IMPORT PDF EXPORT
+// ==========================================
+import { activateLoanExportButton, createLoanExportButton } from '../loan-pdf.js';
+window.activateLoanExportButton = activateLoanExportButton;
+window.createLoanExportButton = createLoanExportButton;
+
+// ==========================================
 // 🔧 CONSTANTES ET UTILITAIRES FINANCIERS
 // ==========================================
 
