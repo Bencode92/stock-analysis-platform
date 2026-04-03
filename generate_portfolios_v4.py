@@ -6259,36 +6259,40 @@ def main():
     portfolios = apply_compliance(portfolios)
     
     # === v4.11.0: Génération des justifications LLM par actif ===
+    # v7.4: Claude Sonnet via proxy en priorité, OpenAI en fallback
     if CONFIG.get("generate_asset_rationales", False) and ASSET_RATIONALE_AVAILABLE:
         logger.info("\n" + "=" * 60)
-        logger.info("📝 GÉNÉRATION JUSTIFICATIONS LLM PAR ACTIF")
+        logger.info("📝 GÉNÉRATION JUSTIFICATIONS LLM PAR ACTIF (Claude Sonnet → OpenAI fallback)")
         logger.info("=" * 60)
-        
+
         try:
+            # OpenAI client optionnel (fallback only)
+            openai_client = None
             api_key = os.environ.get("API_CHAT") or os.environ.get("OPENAI_API_KEY")
             if api_key:
-                from openai import OpenAI
-                client = OpenAI(api_key=api_key)
-                
-                # Charger le contexte marché RADAR
-                market_context = load_market_context_radar(CONFIG.get("market_data_dir", "data"))
-                
-                # Générer les justifications
-                rationales = generate_asset_rationales_sync(
-                    portfolios=portfolios,
-                    assets=assets,
-                    market_context=market_context,
-                    openai_client=client,
-                    model=CONFIG["llm_model"],
-                )
-                
-                # Fusionner dans les portfolios
-                for profile in ["Agressif", "Modéré", "Stable"]:
-                    if profile in rationales and rationales[profile]:
-                        portfolios[profile]["_asset_details"] = rationales[profile]
-                        logger.info(f"✅ {profile}: {len(rationales[profile])} justifications ajoutées")
-            else:
-                logger.warning("⚠️ Pas de clé API, justifications LLM ignorées")
+                try:
+                    from openai import OpenAI
+                    openai_client = OpenAI(api_key=api_key)
+                except ImportError:
+                    logger.info("   OpenAI SDK not installed, Claude-only mode")
+
+            # Charger le contexte marché RADAR
+            market_context = load_market_context_radar(CONFIG.get("market_data_dir", "data"))
+
+            # Générer les justifications (Claude priority → OpenAI fallback → deterministic)
+            rationales = generate_asset_rationales_sync(
+                portfolios=portfolios,
+                assets=assets,
+                market_context=market_context,
+                openai_client=openai_client,
+                model=CONFIG.get("llm_model", "gpt-4o-mini"),
+            )
+
+            # Fusionner dans les portfolios
+            for profile in ["Agressif", "Modéré", "Stable"]:
+                if profile in rationales and rationales[profile]:
+                    portfolios[profile]["_asset_details"] = rationales[profile]
+                    logger.info(f"✅ {profile}: {len(rationales[profile])} justifications ajoutées")
         except Exception as e:
             logger.error(f"❌ Erreur génération justifications: {e}")
             import traceback

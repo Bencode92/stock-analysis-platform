@@ -11,6 +11,8 @@ V1.0: Génère des explications détaillées pour chaque position via GPT.
 import os
 import json
 import logging
+import urllib.request
+import urllib.error
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
@@ -180,21 +182,79 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte avant ou après:
     return prompt
 
 
-def generate_asset_rationales_sync(
-    portfolios: Dict[str, Dict],
-    assets: List,
-    market_context: Dict,
-    openai_client,
-    model: str = "gpt-4o-mini"
-) -> Dict[str, List[Dict]]:
-    """
-    Génère les justifications LLM pour tous les actifs de chaque profil.
-    
-    Returns:
-        Dict mapping profile -> list of asset details with rationales
-    """
-    
-    # Construire le lookup des assets
+CLAUDE_PROXY_URL = "https://studyforge-proxy.benoit-comas.workers.dev/"
+CLAUDE_MODEL = "claude-sonnet-4-20250514"
+
+SYSTEM_PROMPT_RATIONALE = (
+    "Tu es un analyste financier expert senior. Tu génères des justifications claires, "
+    "pédagogiques et factuelles pour les choix d'investissement d'un portefeuille modèle. "
+    "Réponds UNIQUEMENT en JSON valide, sans texte avant ou après le JSON."
+)
+
+
+def _call_claude_proxy(system_prompt: str, user_prompt: str, max_tokens: int = 4000) -> Optional[str]:
+    """Appelle Claude Sonnet via le proxy Cloudflare (stdlib only, no requests dependency)."""
+    try:
+        payload = json.dumps({
+            "model": CLAUDE_MODEL,
+            "max_tokens": max_tokens,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}],
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            CLAUDE_PROXY_URL,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "RadePulse-Portfolio/1.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            if resp.status != 200:
+                logger.warning(f"Claude proxy HTTP {resp.status}")
+                return None
+            data = json.loads(resp.read().decode("utf-8"))
+
+        # Anthropic response format: {"content": [{"type": "text", "text": "..."}]}
+        content = data.get("content", [])
+        if content and isinstance(content, list):
+            return content[0].get("text", "")
+        return None
+    except urllib.error.HTTPError as e:
+        logger.warning(f"Claude proxy HTTP error {e.code}: {e.read().decode()[:200]}")
+        return None
+    except Exception as e:
+        logger.warning(f"Claude proxy error: {e}")
+        return None
+
+
+def _parse_llm_json(response_text: str) -> Optional[dict]:
+    """Parse JSON from LLM response, handling markdown code blocks."""
+    text = response_text.strip()
+    # Remove markdown code block wrappers
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:])
+        if text.endswith("```"):
+            text = text[:-3].strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Try to find JSON in the response
+        import re
+        match = re.search(r'\{[\s\S]*\}', text)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+    return None
+
+
+def _build_asset_lookup(assets: List) -> Dict:
+    """Construit le lookup des assets par ID."""
     asset_lookup = {}
     for a in assets:
         aid = getattr(a, 'id', None) or (a.get('id') if isinstance(a, dict) else None)
@@ -211,108 +271,128 @@ def generate_asset_rationales_sync(
                 "ticker": ticker or symbol or name,
                 "asset_obj": a
             }
-    
+    return asset_lookup
+
+
+def _enrich_details(asset_details: List[Dict], assets_data: List[Dict]) -> List[Dict]:
+    """Enrichit les détails LLM avec les données originales."""
+    for detail in asset_details:
+        for asset_data in assets_data:
+            if asset_data["ticker"] == detail.get("ticker") or asset_data["name"] == detail.get("name"):
+                detail["weight_pct"] = asset_data["weight_pct"]
+                detail["category"] = asset_data["category"]
+                detail["sector"] = asset_data["sector"]
+                detail["country"] = asset_data["country"]
+                detail["metrics"] = {
+                    "roe": asset_data.get("roe"),
+                    "pe_ratio": asset_data.get("pe_ratio"),
+                    "dividend_yield": asset_data.get("dividend_yield"),
+                    "ytd": asset_data.get("ytd"),
+                    "volatility": asset_data.get("volatility"),
+                    "buffett_score": asset_data.get("buffett_score"),
+                }
+                break
+    return asset_details
+
+
+def generate_asset_rationales_sync(
+    portfolios: Dict[str, Dict],
+    assets: List,
+    market_context: Dict,
+    openai_client=None,
+    model: str = "gpt-4o-mini"
+) -> Dict[str, List[Dict]]:
+    """
+    Génère les justifications LLM pour tous les actifs de chaque profil.
+
+    Essaie Claude Sonnet via proxy Cloudflare en priorité.
+    Fallback sur OpenAI si Claude échoue.
+    Fallback déterministe si les deux échouent.
+    """
+    asset_lookup = _build_asset_lookup(assets)
     results = {}
-    
+
     for profile in ["Agressif", "Modéré", "Stable"]:
         if profile not in portfolios:
             continue
-            
+
         portfolio_data = portfolios[profile]
         allocation = portfolio_data.get("allocation", {})
         diagnostics = portfolio_data.get("diagnostics", {})
         portfolio_vol = diagnostics.get("portfolio_vol")
-        
+
         if not allocation:
             logger.warning(f"Pas d'allocation pour {profile}")
             results[profile] = []
             continue
-        
+
         # Extraire les données de chaque actif
         assets_data = []
         for asset_id, weight in allocation.items():
-            # Trouver l'asset correspondant
             asset_obj = None
             for a in assets:
                 a_id = getattr(a, 'id', None) or (a.get('id') if isinstance(a, dict) else None)
                 if str(a_id) == str(asset_id):
                     asset_obj = a
                     break
-            
-            asset_data = extract_asset_data(
-                asset_obj or {},
-                asset_id,
-                weight,
-                asset_lookup
-            )
-            assets_data.append(asset_data)
-        
-        # Construire le prompt
+            assets_data.append(extract_asset_data(asset_obj or {}, asset_id, weight, asset_lookup))
+
         prompt = build_rationale_prompt(
             assets_data=assets_data,
             profile=profile,
             market_context=market_context,
             portfolio_vol=portfolio_vol
         )
-        
-        logger.info(f"🤖 Génération des justifications LLM pour {profile} ({len(assets_data)} actifs)...")
-        
+
+        logger.info(f"🤖 Génération justifications pour {profile} ({len(assets_data)} actifs)...")
+
+        # ── Priority 1: Claude Sonnet via proxy ──
+        asset_details = None
         try:
-            response = openai_client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Tu es un analyste financier expert. Tu génères des justifications claires et pédagogiques pour les choix d'investissement. Réponds UNIQUEMENT en JSON valide."
-                    },
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=4000
-            )
-            
-            response_text = response.choices[0].message.content.strip()
-            
-            # Nettoyer le JSON (enlever les backticks markdown si présents)
-            if response_text.startswith("```"):
-                lines = response_text.split("\n")
-                response_text = "\n".join(lines[1:-1])
-            
-            # Parser le JSON
-            parsed = json.loads(response_text)
-            asset_details = parsed.get("asset_details", [])
-            
-            # Enrichir avec les données originales
-            for detail in asset_details:
-                # Trouver les données correspondantes
-                for asset_data in assets_data:
-                    if asset_data["ticker"] == detail.get("ticker") or asset_data["name"] == detail.get("name"):
-                        detail["weight_pct"] = asset_data["weight_pct"]
-                        detail["category"] = asset_data["category"]
-                        detail["sector"] = asset_data["sector"]
-                        detail["country"] = asset_data["country"]
-                        detail["metrics"] = {
-                            "roe": asset_data.get("roe"),
-                            "pe_ratio": asset_data.get("pe_ratio"),
-                            "dividend_yield": asset_data.get("dividend_yield"),
-                            "ytd": asset_data.get("ytd"),
-                            "volatility": asset_data.get("volatility"),
-                            "buffett_score": asset_data.get("buffett_score"),
-                        }
-                        break
-            
-            results[profile] = asset_details
-            logger.info(f"✅ {profile}: {len(asset_details)} justifications générées")
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"❌ Erreur parsing JSON pour {profile}: {e}")
-            logger.error(f"   Réponse brute: {response_text[:500]}...")
-            results[profile] = generate_fallback_rationales(assets_data, profile, market_context)
-            
+            claude_response = _call_claude_proxy(SYSTEM_PROMPT_RATIONALE, prompt)
+            if claude_response:
+                parsed = _parse_llm_json(claude_response)
+                if parsed:
+                    asset_details = parsed.get("asset_details", [])
+                    if asset_details:
+                        asset_details = _enrich_details(asset_details, assets_data)
+                        results[profile] = asset_details
+                        logger.info(f"✅ {profile}: {len(asset_details)} justifications via Claude Sonnet")
+                        continue
+                    else:
+                        logger.warning(f"⚠️ {profile}: Claude response JSON valid but no asset_details")
+                else:
+                    logger.warning(f"⚠️ {profile}: Claude response JSON parse failed")
         except Exception as e:
-            logger.error(f"❌ Erreur LLM pour {profile}: {e}")
-            results[profile] = generate_fallback_rationales(assets_data, profile, market_context)
-    
+            logger.warning(f"⚠️ {profile}: Claude failed: {e}")
+
+        # ── Priority 2: OpenAI fallback ──
+        if openai_client and asset_details is None:
+            try:
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT_RATIONALE},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=4000
+                )
+                response_text = response.choices[0].message.content.strip()
+                parsed = _parse_llm_json(response_text)
+                if parsed:
+                    asset_details = parsed.get("asset_details", [])
+                    asset_details = _enrich_details(asset_details, assets_data)
+                    results[profile] = asset_details
+                    logger.info(f"✅ {profile}: {len(asset_details)} justifications via OpenAI")
+                    continue
+            except Exception as e:
+                logger.error(f"❌ OpenAI failed for {profile}: {e}")
+
+        # ── Priority 3: Deterministic fallback ──
+        logger.warning(f"⚠️ {profile}: LLM unavailable, using deterministic fallback")
+        results[profile] = generate_fallback_rationales(assets_data, profile, market_context)
+
     return results
 
 
