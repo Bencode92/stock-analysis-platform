@@ -1256,7 +1256,10 @@
              backdrop-filter: blur(10px);
          }
          .chevron-icon.rotated { transform: rotate(180deg); }
-         .grade-filter-btn.active { background: currentColor !important; color: #000 !important; }
+         .grade-filter-btn.active[data-grade="A"] { background: #4caf50 !important; color: #000 !important; }
+         .grade-filter-btn.active[data-grade="B"] { background: #2196f3 !important; color: #000 !important; }
+         .grade-filter-btn.active[data-grade="C"] { background: #ff9800 !important; color: #000 !important; }
+         .grade-filter-btn.active[data-grade="D"] { background: #f44336 !important; color: #000 !important; }
          .data-table thead th { cursor: pointer; user-select: none; }
          .data-table thead th:hover { color: #00FF87; }
          
@@ -1634,7 +1637,7 @@
                                  </div>
                                  <div>
                                      <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">Div min</div>
-                                     <select id="filter-div-min" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                     <select id="filter-div-min" onchange="" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
                                          <option value="">Tous</option>
                                          <option value="1">≥ 1%</option>
                                          <option value="2">≥ 2%</option>
@@ -1644,7 +1647,7 @@
                                  </div>
                                  <div>
                                      <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">PE max</div>
-                                     <select id="filter-pe-max" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                     <select id="filter-pe-max" onchange="" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
                                          <option value="">Tous</option>
                                          <option value="15">≤ 15</option>
                                          <option value="25">≤ 25</option>
@@ -1653,7 +1656,7 @@
                                  </div>
                                  <div>
                                      <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">Beta</div>
-                                     <select id="filter-beta" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                     <select id="filter-beta" onchange="" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
                                          <option value="">Tous</option>
                                          <option value="low">≤ 0.8 (défensif)</option>
                                          <option value="mid">0.8 - 1.2</option>
@@ -1662,12 +1665,15 @@
                                  </div>
                                  <div>
                                      <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px;">EPS</div>
-                                     <select id="filter-eps" onchange="applyAdvancedFilters()" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
+                                     <select id="filter-eps" onchange="" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.8rem;">
                                          <option value="">Tous</option>
                                          <option value="beats">Beats only</option>
                                      </select>
                                  </div>
-                                 <button onclick="resetAdvancedFilters()" style="padding:4px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:0.75rem;cursor:pointer;align-self:end;">
+                                 <button onclick="applyAdvancedFilters()" style="padding:6px 16px;border-radius:6px;border:none;background:#00FF87;color:#000;font-size:0.8rem;font-weight:700;cursor:pointer;align-self:end;">
+                                     <i class="fas fa-search" style="margin-right:4px;font-size:0.65rem;"></i>Rechercher
+                                 </button>
+                                 <button onclick="resetAdvancedFilters()" style="padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);font-size:0.75rem;cursor:pointer;align-self:end;">
                                      <i class="fas fa-undo" style="margin-right:4px;font-size:0.6rem;"></i>Reset
                                  </button>
                              </div>

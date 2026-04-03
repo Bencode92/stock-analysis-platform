@@ -20,7 +20,7 @@ function toggleGradeFilter(btn, type) {
     const set = _advFilters[type];
     if (set.has(grade)) { set.delete(grade); btn.classList.remove('active'); }
     else { set.add(grade); btn.classList.add('active'); }
-    applyAdvancedFilters();
+    // Don't auto-apply — wait for "Rechercher" button click
 }
 
 function applyAdvancedFilters() {
