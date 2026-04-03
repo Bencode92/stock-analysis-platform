@@ -242,6 +242,37 @@
       max: true,
       tooltip: 'Total des dividendes versés sur 12 mois (réguliers + spéciaux)'
     },
+    // v8.0: Proprietary scores
+    quality_score: {
+      label: 'Quality',
+      unit: '',
+      get: s => {
+        const v = s.quality_score ?? s.qualityScore;
+        return v != null ? parseFloat(v) : null;
+      },
+      max: true,
+      tooltip: 'Score qualité peer-relative (0-100)'
+    },
+    buffett_score: {
+      label: 'Value Grade',
+      unit: '',
+      get: s => {
+        const v = s.buffett_score ?? s.buffettScore;
+        return v != null ? parseFloat(v) : null;
+      },
+      max: true,
+      tooltip: 'Score value fondamental (0-100, 6 critères)'
+    },
+    eps_surprise: {
+      label: 'EPS Surprise',
+      unit: '%',
+      get: s => {
+        const v = s.eps_surprise_avg_2q ?? s.epsSurpriseAvg2q;
+        return v != null ? parseFloat(v) : null;
+      },
+      max: true,
+      tooltip: 'Surprise bénéfices moyenne 2 derniers trimestres'
+    },
     // Payout ratio v3.4 - TTM unifié
     payout_ratio: {
       label: 'Payout (TTM)',
@@ -1139,6 +1170,19 @@
           <input id="m-payout_ratio" type="checkbox" aria-label="Payout ratio TTM">
           <span>Payout (TTM) ↓ <i id="payout-info" class="fas fa-info-circle info-icon"></i></span>
         </label>
+        <!-- v8.0: Scores propriétaires -->
+        <label class="mc-pill" title="Score qualité peer-relative (0-100) — rentabilité, bilan, croissance, momentum, valorisation" style="border-color:rgba(76,175,80,0.3);">
+          <input id="m-quality_score" type="checkbox" aria-label="Quality Score">
+          <i class="fas fa-award text-xs mr-1" style="color:#4caf50;"></i>Quality ↑
+        </label>
+        <label class="mc-pill" title="Score value fondamental (0-100) — 6 critères : ROE, ROIC, levier, cashflow, valorisation, moat" style="border-color:rgba(33,150,243,0.3);">
+          <input id="m-buffett_score" type="checkbox" aria-label="Value Grade">
+          <i class="fas fa-gem text-xs mr-1" style="color:#2196f3;"></i>Value ↑
+        </label>
+        <label class="mc-pill" title="Surprise bénéfices moyenne 2 derniers trimestres — beats positifs = tendance haussière" style="border-color:rgba(255,152,0,0.3);">
+          <input id="m-eps_surprise" type="checkbox" aria-label="EPS Surprise">
+          <i class="fas fa-bolt text-xs mr-1" style="color:#ff9800;"></i>EPS Surprise ↑
+        </label>
       `;
     }
     
@@ -1999,7 +2043,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('defensif'),
     coverage_target: [60, 120],
-    metrics: ['volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y','perf_3y'], // ✅ OK
+    metrics: ['quality_score','volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y'], // v8.0: +quality
     filters: { regions: ['EUROPE','US'], countries: [], sectors: ['Santé','Biens de consommation de base','Services publics'] },
     criteria: [
       { metric: 'dividend_yield_reg', operator:'>=', value:2.5, optimal:2.5, range:[2.0,3.0], label:'Dividende ≥ 2.5%' },
@@ -2024,7 +2068,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('rendement'),
     coverage_target: [80,150],
-    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'], // ✅ OK
+    metrics: ['dividend_yield_reg','quality_score','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'], // v8.0: +quality
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Immobilier','Energie','Services publics'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.5, optimal:4.2, range:[3.5,5.0], label:'Dividende ≥ 3.5%' },
@@ -2075,7 +2119,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('croissance'),
     coverage_target: [70,140],
-    metrics: ['perf_3y','perf_1y','perf_3m','ytd','max_drawdown_3y','volatility_3y'], // ✅ CORRIGÉ (supprimé payout, ordre fixé)
+    metrics: ['perf_3y','perf_1y','eps_surprise','quality_score','max_drawdown_3y','volatility_3y'], // v8.0: +eps+quality
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication','Biens de consommation cycliques'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:25, optimal:35, range:[25,70], label:'Perf 3Y ≥ 25%' },
@@ -2100,7 +2144,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('value_dividend'),
     coverage_target: [80,150],
-    metrics: ['dividend_yield_reg','dividend_yield_ttm','payout_ratio','max_drawdown_3y','volatility_3y','perf_3y'], // ✅ CORRIGÉ (ordre fixé)
+    metrics: ['buffett_score','dividend_yield_reg','quality_score','payout_ratio','max_drawdown_3y','volatility_3y'], // v8.0: +value+quality
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Energie','Services publics','Industrie','Matériaux'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.0, optimal:3.8, range:[3.0,5.0], label:'Dividende ≥ 3.0%' },
@@ -2126,7 +2170,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('quality_premium'),
     coverage_target: [70,125],
-    metrics: ['perf_3y','volatility_3y','max_drawdown_3y','perf_1y','dividend_yield_reg'], // ✅ CORRIGÉ (ordre fixé)
+    metrics: ['quality_score','buffett_score','perf_3y','dividend_yield_reg','volatility_3y','max_drawdown_3y'], // v8.0: quality+value first
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','Biens de consommation de base','Industrie','Biens de consommation cycliques','La communication'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:35, optimal:50, range:[35,85], label:'Perf 3Y ≥ 35%' },
@@ -2150,7 +2194,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('momentum_trend'),
     coverage_target: [60,100],
-    metrics: ['perf_1y','perf_3m','perf_1m','ytd','max_drawdown_3y','volatility_3y'], // ✅ OK
+    metrics: ['perf_1y','perf_3m','eps_surprise','perf_1m','ytd','max_drawdown_3y'], // v8.0: +eps
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:[] },
     criteria: [
       { metric:'perf_1y', operator:'>=', value:10, optimal:15, range:[10,20], label:'Perf 1Y ≥ 10%' },
