@@ -2947,11 +2947,54 @@ async function main() {
         console.log(`📁 ${filepath}`);
     }
     
-    // --------- TOPS OVERVIEW ----------
-    const overview = buildOverview(byRegion);
-    overview.regions_processed = activeRegions;  // ✅ v3.21: Ajoute les régions traitées
+    // --------- TOPS OVERVIEW (merge mode v8.0) ----------
+    // Read existing tops_overview.json and merge only the active regions.
+    // This prevents wiping US/EUROPE data when only ASIA is processed.
     const topsPath = path.join(OUT_DIR, 'tops_overview.json');
-    await fs.writeFile(topsPath, JSON.stringify(overview, null, 2));
+    let existingOverview = null;
+    try {
+        const existing = await fs.readFile(topsPath, 'utf-8');
+        existingOverview = JSON.parse(existing);
+        console.log(`📂 tops_overview.json existant chargé (régions précédentes: ${existingOverview.regions_processed || '?'})`);
+    } catch { /* first run or file missing */ }
+
+    const freshOverview = buildOverview(byRegion);
+    const activeRegionsList = Object.entries(SELECTED_REGIONS).filter(([_, v]) => v).map(([k]) => k.toUpperCase());
+
+    if (existingOverview?.sets && activeRegionsList.length < 3) {
+        // Partial run: merge only active base regions into existing
+        console.log(`🔀 Merge mode: updating ${activeRegionsList.join(', ')} only`);
+        for (const baseRegion of ['US', 'EUROPE', 'ASIA']) {
+            if (activeRegionsList.includes(baseRegion)) {
+                // This region was processed — use fresh data
+                existingOverview.sets[baseRegion] = freshOverview.sets[baseRegion];
+            }
+            // else: keep existing data for this region
+        }
+        // Recompute combos from merged base regions
+        // We need raw stock arrays to recompute, but they may not all be available.
+        // Instead, just merge the combo sets that involve active regions.
+        const comboKeys = { GLOBAL: ['US','EUROPE','ASIA'], US_EUROPE: ['US','EUROPE'], US_ASIA: ['US','ASIA'], EUROPE_ASIA: ['EUROPE','ASIA'] };
+        for (const [comboKey, bases] of Object.entries(comboKeys)) {
+            if (bases.some(b => activeRegionsList.includes(b))) {
+                // At least one base was refreshed — recompute this combo from fresh overview
+                // (fresh overview has correct combos for processed regions, empty for others)
+                // Better: use fresh if ALL bases were processed, else keep existing
+                if (bases.every(b => activeRegionsList.includes(b))) {
+                    existingOverview.sets[comboKey] = freshOverview.sets[comboKey];
+                }
+                // else: combo involves unprocessed regions — keep existing (stale but not empty)
+            }
+        }
+        existingOverview.generated_at = new Date().toISOString();
+        existingOverview.regions_processed = activeRegions;
+        existingOverview.last_partial_update = activeRegionsList.join(', ');
+        await fs.writeFile(topsPath, JSON.stringify(existingOverview, null, 2));
+    } else {
+        // Full run or first run: write fresh
+        freshOverview.regions_processed = activeRegions;
+        await fs.writeFile(topsPath, JSON.stringify(freshOverview, null, 2));
+    }
     console.log(`🏁 ${topsPath}`);
     
     // Statistiques sur les payout ratios
