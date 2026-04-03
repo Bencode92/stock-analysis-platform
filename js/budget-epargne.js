@@ -1617,8 +1617,11 @@ budgetResultsCol.innerHTML = `
         <p class="text-emerald-400 text-2xl font-bold mb-1" id="simulation-epargne-totale">400,00 €</p>
         <p class="text-gray-400 text-sm">Épargne totale</p>
     </div>
-</div>
-        
+    </div>
+
+    <!-- Jauge 50/30/20 (remplie dynamiquement) -->
+    <div id="budget-503020" class="mb-6 p-4 bg-blue-800 bg-opacity-30 rounded-lg hidden"></div>
+
         <div class="chart-container mb-6">
             <canvas id="budget-chart"></canvas>
         </div>
@@ -2322,45 +2325,48 @@ function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales, l
     }
 
     // === JAUGE 50/30/20 ===
-    let jaugeContainer = document.getElementById('budget-503020');
-    if (!jaugeContainer) {
-        // Créer le conteneur au premier appel
-        jaugeContainer = document.createElement('div');
-        jaugeContainer.id = 'budget-503020';
-        jaugeContainer.className = 'mt-4 p-3 bg-blue-900 bg-opacity-20 rounded-lg';
-        // Insérer après la barre de score
-        barreElement.parentElement?.parentElement?.after(jaugeContainer);
-    }
+    const jaugeContainer = document.getElementById('budget-503020');
+    if (!jaugeContainer) return;
 
-    const barHTML = (label, pct, norm, color) => {
+    const barHTML = (label, pct, norm, color, emoji) => {
         const clamped = Math.min(pct, 100);
         const diff = pct - norm;
         const diffLabel = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
         const diffColor = Math.abs(diff) <= 5 ? 'text-green-400' : Math.abs(diff) <= 10 ? 'text-yellow-400' : 'text-red-400';
+        const statusIcon = Math.abs(diff) <= 5 ? '✅' : Math.abs(diff) <= 10 ? '⚠️' : '❌';
         return `
-            <div class="mb-2">
-                <div class="flex justify-between text-xs mb-1">
-                    <span>${label}</span>
-                    <span><span class="font-semibold">${pct.toFixed(0)}%</span> <span class="${diffColor}">(${diffLabel} vs ${norm}%)</span></span>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-gray-200">${emoji} ${label}</span>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-white">${pct.toFixed(0)}%</span>
+                        <span class="text-sm ${diffColor} ml-2">${statusIcon} ${diffLabel} vs ${norm}%</span>
+                    </div>
                 </div>
-                <div class="w-full bg-gray-700 rounded-full h-2 relative">
-                    <div class="${color} rounded-full h-2 transition-all" style="width: ${clamped}%"></div>
-                    <div class="absolute top-0 h-2 border-r-2 border-white border-opacity-50" style="left: ${norm}%"></div>
+                <div class="w-full bg-gray-700 rounded-full h-3 relative">
+                    <div class="${color} rounded-full h-3 transition-all" style="width: ${clamped}%"></div>
+                    <div class="absolute top-0 h-3 border-r-2 border-white border-opacity-60" style="left: ${norm}%"></div>
                 </div>
             </div>`;
     };
 
+    const ecartColor = ecart503020 < 5 ? 'text-green-400 bg-green-900' : ecart503020 < 10 ? 'text-yellow-400 bg-yellow-900' : 'text-red-400 bg-red-900';
+
     jaugeContainer.innerHTML = `
-        <h6 class="text-xs font-semibold text-gray-400 mb-2 flex items-center">
-            <i class="fas fa-chart-pie mr-1"></i> Règle 50/30/20
-            <span class="ml-auto text-xs ${ecart503020 < 5 ? 'text-green-400' : ecart503020 < 10 ? 'text-yellow-400' : 'text-red-400'}">
-                Écart moy. : ${ecart503020.toFixed(0)} pts
+        <div class="flex justify-between items-center mb-4">
+            <h6 class="text-sm font-semibold text-white flex items-center">
+                <i class="fas fa-chart-pie text-blue-400 mr-2"></i> Règle 50 / 30 / 20
+            </h6>
+            <span class="text-xs font-semibold px-2 py-1 rounded ${ecartColor} bg-opacity-30">
+                Écart moyen : ${ecart503020.toFixed(0)} pts
             </span>
-        </h6>
-        ${barHTML('Besoins (loyer + vie courante)', pctBesoins, 50, 'bg-blue-500')}
-        ${barHTML('Envies (loisirs + variables)', pctEnvies, 30, 'bg-yellow-500')}
-        ${barHTML('Épargne (auto + libre)', pctEpargne, 20, 'bg-green-500')}
+        </div>
+        ${barHTML('Besoins', pctBesoins, 50, 'bg-blue-500', '🏠')}
+        ${barHTML('Envies', pctEnvies, 30, 'bg-yellow-500', '🎉')}
+        ${barHTML('Épargne', pctEpargne, 20, 'bg-green-500', '💰')}
+        <p class="text-xs text-gray-500 mt-2">Besoins = loyer + vie courante · Envies = loisirs + variables · Épargne = auto + libre</p>
     `;
+    jaugeContainer.classList.remove('hidden');
 }
 
 /**
