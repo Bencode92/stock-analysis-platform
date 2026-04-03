@@ -159,10 +159,12 @@ class PTZManager {
         flows[0] = FLUX_ENTREE * this.montant;
         
         // Mensualités PTZ (capital seulement, pas d'intérêts)
-        const mensualitePTZ = this.montant / this.dureeMois;
-        
+        // dureeMois = durée TOTALE du PTZ, remboursement effectif = dureeMois - differeMois
+        const dureeRemboursement = this.dureeMois - this.differeMois;
+        const mensualitePTZ = dureeRemboursement > 0 ? this.montant / dureeRemboursement : 0;
+
         // 🆕 v2.3.0: Prise en compte du différé
-        for (let mois = this.differeMois + 1; mois <= Math.min(this.dureeMois + this.differeMois, dureeTotale); mois++) {
+        for (let mois = this.differeMois + 1; mois <= Math.min(this.dureeMois, dureeTotale); mois++) {
             flows[mois] = FLUX_SORTIE * mensualitePTZ;
         }
         
@@ -175,7 +177,8 @@ class PTZManager {
     getCapitalRestantAt(mois) {
         if (!this.enabled || this.montant <= 0) return 0;
         
-        const mensualitePTZ = this.montant / this.dureeMois;
+        const dureeRemboursement = this.dureeMois - this.differeMois;
+        const mensualitePTZ = dureeRemboursement > 0 ? this.montant / dureeRemboursement : 0;
         const moisEffectifsPayes = Math.max(0, mois - this.differeMois);
         const capitalRembourse = Math.min(mensualitePTZ * moisEffectifsPayes, this.montant);
         
@@ -988,7 +991,7 @@ function ajoutePTZ(mensu, mois, ptz) {
     const debut = ptz.differeMois + 1;     // ex. 1
     const fin = ptz.differeMois + ptz.dureeMois; // ex. 240
     return (mois >= debut && mois <= fin) 
-        ? mensu + ptz.montant / ptz.dureeMois 
+        ? mensu + ptz.montant / (ptz.dureeMois - (ptz.differeMois || 0)) 
         : mensu;
 }
 
@@ -1460,7 +1463,8 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
 
             // ➊  Toujours calculer la part PTZ
             const debutPTZ = ptzParams?.enabled ? ptzParams.differeMois + 1 : Infinity;
-            const mensuPTZ = ptzParams?.enabled ? ptzParams.montant / ptzParams.dureeMois : 0;
+            // Mensualité PTZ = montant / durée de remboursement effective (hors différé)
+            const mensuPTZ = ptzParams?.enabled ? ptzParams.montant / (ptzParams.dureeMois - (ptzParams.differeMois || 0)) : 0;
 
             /* ➋  Mensualité "base" (crédit + assurance + PTZ, même si différé) */
             const mensualiteBasePTZ = mensualiteBase + mensuPTZ;
@@ -1618,7 +1622,7 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
         // 2) Si le PTZ est activé et a un montant > 0
         if (ptz && ptz.enabled && ptz.montant > 0 && cardCombined && valueComb) {
             const debutPTZ  = ptz.differeMois + 1;
-            const mensuPTZ  = ptz.montant / ptz.dureeMois;
+            const mensuPTZ  = ptz.montant / (ptz.dureeMois - (ptz.differeMois || 0));
             const mensuTotal = mensuCredit + mensuPTZ;
 
             if (moisCourant >= debutPTZ) {
@@ -1683,7 +1687,7 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
                     trPtz.innerHTML = `
                          <td colspan="2" class="px-3 py-2 text-amber-300">PTZ restant</td>
                          <td class="px-3 py-2 text-right text-amber-300">${formatMontant(ptzRemaining)}</td>
-                         <td colspan="3" class="px-3 py-2 text-gray-400">PTZ continue jusqu'à M${ptzParams.dureeMois + ptzParams.differeMois}</td>`;
+                         <td colspan="3" class="px-3 py-2 text-gray-400">PTZ continue jusqu'à M${ptzParams.dureeMois}</td>`;
                     tableBody.appendChild(trPtz);
                 }
             }
@@ -1706,7 +1710,7 @@ const mensualiteBase = result.tableau?.[0]?.mensualiteGlobale || (result.mensual
     function buildPtzSummaryHtml(ptz, loanYears, montantTotal, result) {
     if (!ptz || !ptz.enabled) return '';
     
-    const mensualitePTZ = ptz.montant / ptz.dureeMois;
+    const mensualitePTZ = ptz.montant / (ptz.dureeMois - (ptz.differeMois || 0));
     const pourcentage = ((ptz.montant / montantTotal) * 100).toFixed(1);
     const finPTZ = Math.floor(ptz.dureeMois / 12);
     
@@ -2419,7 +2423,7 @@ function equivalentRepaymentClosedForm(crd, tauxRef, dureeRestante, mensualiteCi
     const ptzMensuel = (ptz?.enabled && ptz.montant > 0 && 
                         moisEffet >= ptz.differeMois + 1 && 
                         moisEffet <= ptz.differeMois + ptz.dureeMois)
-        ? ptz.montant / ptz.dureeMois : 0;
+        ? ptz.montant / (ptz.dureeMois - (ptz.differeMois || 0)) : 0;
     const constantes = fraisTenueMensuel + assuranceFixe + ptzMensuel;
     const k = assuranceSurCI ? 0 : assuranceMensuelle;
     if (mensualiteCible <= constantes) return { R: null, capitalCible: null, reason: 'Non atteignable' };
@@ -2468,7 +2472,7 @@ function generateSensitivityTable() {
     const MrefCredit = mensualiteCreditSensi(capitalRestantAvant, tauxRef, dureeRestante);
     const assuranceRef = assuranceSurCI ? capitalInitial * assuranceMensuelle : capitalRestantAvant * assuranceMensuelle;
     const ptzMensuelRef = (ptz?.enabled && ptz.montant > 0 && moisEffet >= ptz.differeMois + 1 && moisEffet <= ptz.differeMois + ptz.dureeMois)
-        ? ptz.montant / ptz.dureeMois : 0;
+        ? ptz.montant / (ptz.dureeMois - (ptz.differeMois || 0)) : 0;
     const Mref = MrefCredit + assuranceRef + fraisTenueMensuel + ptzMensuelRef;
     
     for (let i = 0; i < 11; i++) {
