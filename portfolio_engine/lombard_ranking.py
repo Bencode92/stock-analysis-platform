@@ -85,7 +85,11 @@ def compute_lombard_score(stock: Dict, lombard_rate: float = 3.0) -> Optional[Di
         return None
     
     ltv = estimate_ltv(stock)
-    carry_net = dy - lombard_rate
+    # v2.1: Yield cap at 8% for scoring — yields >8% often signal
+    # a crashing stock or one-time special dividend (yield trap)
+    dy_capped = min(dy, 8.0)
+    carry_net = dy - lombard_rate  # actual carry uses real yield
+    carry_for_score = dy_capped - lombard_rate  # scoring uses capped yield
     leveraged_carry = carry_net * (ltv / (1 - ltv)) if ltv < 1 else 0
     
     # Score composite v2.0
@@ -94,7 +98,7 @@ def compute_lombard_score(stock: Dict, lombard_rate: float = 3.0) -> Optional[Di
     payout = _safe_float(stock.get("payout_ratio_ttm")) or _safe_float(stock.get("payout_ratio")) or 50
     eps_surp = _safe_float(stock.get("eps_surprise_avg_2q"))
 
-    carry_score = max(-30, min(40, carry_net * 15))
+    carry_score = max(-30, min(40, carry_for_score * 15))
     quality_score = max(-15, min(25, (qs - 50) * 0.5))
     safety_score = max(-15, min(15, (25 - vol) * 1.0))
     ltv_score = max(-10, min(20, (ltv - 0.50) * 80))

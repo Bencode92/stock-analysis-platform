@@ -300,25 +300,40 @@ const LombardRenderer = {
 
     // Enrich with fiscal carry + composite score for selection
     const enriched = stocks.map(s => {
-      const yieldNet = (s.dividend_yield || 0) * (1 - env.taxDiv);
+      const dy = s.dividend_yield || 0;
+      const yieldNet = dy * (1 - env.taxDiv);
       const carryFiscal = yieldNet - rate;
       const vol = s.volatility || 20;
       const quality = (s.quality_score || 50) / 100;
       const payout = s.payout_ratio || 50;
-      // REITs are legally required to distribute ≥90% of income — high payout is normal
-      const isREIT = ((s.industry || '').toUpperCase().includes('REIT'));
-      const payoutThreshold = isREIT ? 100 : 70; // REITs: penalize only >100%, others: >70%
+      const industry = (s.industry || '').toUpperCase();
+      const region = (s.region || '').toUpperCase();
+
+      // ── REIT-aware payout ──
+      // REITs legally must distribute ≥90% — high payout is structural, not a red flag
+      const isREIT = industry.includes('REIT');
+      const payoutThreshold = isREIT ? 100 : 70;
       const payoutAdj = Math.max(0.2, Math.min(1.0, 1.0 - Math.max(0, payout - payoutThreshold) / 60));
-      // Composite: carry (35%) + quality (25%) + safety (40%)
-      // Safety weighted higher: Lombard risk is asymmetric (margin call = 100% loss)
-      const safetyScore = Math.max(0, (35 - vol) / 35); // 0 at vol=35, 1 at vol=0
-      const compositeScore = 0.35 * Math.max(0, carryFiscal / 5) * payoutAdj
+
+      // ── Yield cap ── yields >8% are suspicious (stock crashing or special dividend)
+      // Cap the yield used in carry calculation to avoid yield traps
+      const yieldCapped = Math.min(dy, 8.0);
+      const carryForScore = yieldCapped * (1 - env.taxDiv) - rate;
+
+      // ── FX risk ── GBP stocks (UK listed in EU) have currency risk on dividends
+      // ~5% haircut on composite for non-EUR European stocks
+      const isGBP = region === 'EUROPE' && ['IMB','RKT','RIO','REL','BATS','ADM','GLEN','BP.','SHEL','GSK','AZN','ULVR','HSBA','VOD'].includes(s.ticker);
+      const fxAdj = isGBP ? 0.95 : 1.0;
+
+      // ── Composite: carry (35%) + quality (25%) + safety (40%) ──
+      const safetyScore = Math.max(0, (35 - vol) / 35);
+      const compositeScore = (0.35 * Math.max(0, carryForScore / 5) * payoutAdj
                            + 0.25 * quality
-                           + 0.40 * safetyScore;
-      // v3.1: backend lombard_score as tiebreaker — avoids edge cases where
-      // stock ranked 30th by backend (barely eligible) gets top composite
-      const backendScore = (s.lombard_score || 0) / 100; // normalize to 0-1
-      return { ...s, yieldNet, carryFiscal, vol, payoutAdj, compositeScore, backendScore };
+                           + 0.40 * safetyScore) * fxAdj;
+
+      // v3.1: backend lombard_score as tiebreaker
+      const backendScore = (s.lombard_score || 0) / 100;
+      return { ...s, yieldNet, carryFiscal, vol, payoutAdj, compositeScore, backendScore, isREIT, isGBP };
     }).sort((a, b) => {
       const diff = b.compositeScore - a.compositeScore;
       if (Math.abs(diff) < 0.005) return b.backendScore - a.backendScore; // tiebreaker
