@@ -36,9 +36,8 @@ function applyAdvancedFilters() {
     const badge = document.getElementById('az-advanced-count');
     if (badge) { badge.style.display = count > 0 ? 'inline' : 'none'; badge.textContent = count; }
 
-    // Trigger the existing filter pipeline
-    if (typeof filterAZStocks === 'function') filterAZStocks();
-    else document.dispatchEvent(new Event('az-refilter'));
+    // Trigger the existing filter pipeline (exposed on window from DOMContentLoaded scope)
+    if (window.filterAZStocks) window.filterAZStocks();
 }
 
 function resetAdvancedFilters() {
@@ -406,6 +405,8 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Filtrer les stocks A→Z
      */
+    // v8.0: Exposed on window so global applyAdvancedFilters() can call it
+    window.filterAZStocks = filterAZStocks;
     function filterAZStocks() {
         if (!stocksDataUnfiltered) return;
         
