@@ -136,6 +136,22 @@ const EXPENSE_CATEGORIES = {
                 defaultQuantity: 1,
                 unit: 'fois/mois',
                 description: 'Forfaits téléphoniques et internet'
+            },
+            {
+                id: 'mutuelle',
+                name: 'Mutuelle / Santé',
+                defaultAmount: 50,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Complémentaire santé et frais médicaux'
+            },
+            {
+                id: 'assurances',
+                name: 'Assurances (habitation, auto...)',
+                defaultAmount: 60,
+                defaultQuantity: 1,
+                unit: 'fois/mois',
+                description: 'Assurance habitation, auto, responsabilité civile'
             }
         ]
     },
@@ -603,24 +619,52 @@ const ScoreDetails = {
         const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input')?.value) || 0;
         const loyer = toNumber(document.getElementById('simulation-budget-loyer').value);
         const tauxEpargne = parseFloat(document.getElementById('simulation-taux-epargne')?.textContent?.replace('%', '')) || 0;
-        
+        const investAuto = toNumber(document.getElementById('simulation-budget-invest')?.value);
+        const loisirs = updateCategoryTotal ? updateCategoryTotal('loisirs') : 0;
+
         const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
-        
-        // Calculer les points
+        const ratioLoisirs = revenuMensuel > 0 ? (loisirs / revenuMensuel) * 100 : 0;
+
+        // Calculer les points — 5 critères
         let scoreBreakdown = [
             { label: 'Score de base', points: 3, reason: 'Point de départ standard' }
         ];
 
+        // 1. Taux d'épargne
         if (tauxEpargne < 5) {
             scoreBreakdown.push({ label: 'Taux d\'épargne faible', points: -1, reason: `${tauxEpargne.toFixed(1)}% < 5%` });
         } else if (tauxEpargne >= 20) {
             scoreBreakdown.push({ label: 'Excellent taux d\'épargne', points: 1, reason: `${tauxEpargne.toFixed(1)}% ≥ 20%` });
         }
 
+        // 2. Ratio logement
         if (ratioLogement > 33) {
             scoreBreakdown.push({ label: 'Logement trop cher', points: -1, reason: `${ratioLogement.toFixed(1)}% > 33%` });
         } else if (ratioLogement <= 25) {
             scoreBreakdown.push({ label: 'Logement bien maîtrisé', points: 1, reason: `${ratioLogement.toFixed(1)}% ≤ 25%` });
+        }
+
+        // 3. Ratio loisirs
+        if (ratioLoisirs <= 15) {
+            scoreBreakdown.push({ label: 'Loisirs maîtrisés', points: 1, reason: `${ratioLoisirs.toFixed(1)}% ≤ 15%` });
+        } else if (ratioLoisirs > 30) {
+            scoreBreakdown.push({ label: 'Loisirs excessifs', points: -1, reason: `${ratioLoisirs.toFixed(1)}% > 30%` });
+        }
+
+        // 4. Épargne automatique
+        if (investAuto > 0) {
+            scoreBreakdown.push({ label: 'Épargne automatique active', points: 1, reason: `${investAuto.toLocaleString('fr-FR')} €/mois programmé` });
+        }
+
+        // 5. Règle 50/30/20 (calculée ici aussi)
+        const vieCourante = updateCategoryTotal ? updateCategoryTotal('vie-courante') : 0;
+        const pctBesoins = revenuMensuel > 0 ? ((loyer + vieCourante) / revenuMensuel) * 100 : 0;
+        const pctEpargne = tauxEpargne;
+        const ecart = (Math.abs(pctBesoins - 50) + Math.abs(ratioLoisirs + (revenuMensuel > 0 ? (updateDetailedExpensesTotal() / revenuMensuel * 100) : 0) - 30) + Math.abs(pctEpargne - 20)) / 3;
+        if (ecart < 5) {
+            scoreBreakdown.push({ label: 'Proche de la règle 50/30/20', points: 1, reason: `Écart moyen ${ecart.toFixed(0)} pts` });
+        } else if (ecart > 15) {
+            scoreBreakdown.push({ label: 'Loin de la règle 50/30/20', points: -1, reason: `Écart moyen ${ecart.toFixed(0)} pts` });
         }
 
         const totalScore = scoreBreakdown.reduce((sum, item) => sum + item.points, 0);
@@ -1475,7 +1519,7 @@ function generateBudgetInterface(container) {
                     <i class="fas fa-info-circle"></i>
                 </span>
             </label>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
                 <div>
                     <input type="number" id="objectif-epargne" placeholder="Ex: 5000" value="5000" min="0" class="bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm">
                     <p class="text-xs text-gray-400 mt-1">Montant cible (€)</p>
@@ -1489,6 +1533,10 @@ function generateBudgetInterface(container) {
                         <option value="autre">Autre projet</option>
                     </select>
                     <p class="text-xs text-gray-400 mt-1">Type d'objectif</p>
+                </div>
+                <div>
+                    <input type="number" id="objectif-taux" placeholder="1.5" value="1.5" min="0" max="15" step="0.1" class="bg-blue-900 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full text-sm">
+                    <p class="text-xs text-gray-400 mt-1">Taux placement (%/an)</p>
                 </div>
             </div>
             <div id="temps-objectif" class="mt-3 text-center p-2 bg-blue-900 bg-opacity-20 rounded text-sm hidden">
@@ -1865,7 +1913,8 @@ function initBudgetListeners() {
     // === CHAMPS CRITIQUES (réactivité maximale) ===
     const criticalInputs = [
         'objectif-epargne',           // Objectif d'épargne
-        'objectif-type'               // Type d'objectif
+        'objectif-type',              // Type d'objectif
+        'objectif-taux'               // Taux de placement
     ];
     
     criticalInputs.forEach(id => {
@@ -2110,9 +2159,9 @@ function analyserBudget() {
     // Mise à jour du temps pour atteindre l'objectif d'épargne (épargne totale)
     updateObjectiveTime(epargneAuto + epargneLibre);
     
-    // Mettre à jour le score budget
-    updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales);
-    
+    // Mettre à jour le score budget (enrichi 5 critères + 50/30/20)
+    updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales, extra, epargneAuto, quotidien, totalDepensesVariables, epargneTotale);
+
     // Mettre à jour les recommandations
     updateRecommendations(epargneLibre, tauxEpargne, epargneAuto);
 }
@@ -2123,15 +2172,28 @@ function analyserBudget() {
 function updateObjectiveTime(epargneMensuelle) {
     const objectifMontant = parseFloat(document.getElementById('objectif-epargne').value) || 0;
     const objectifType = document.getElementById('objectif-type').value;
+    const tauxAnnuel = parseFloat(document.getElementById('objectif-taux')?.value) || 0;
     const tempsObjectifElement = document.getElementById('temps-objectif');
-    
+
     if (!tempsObjectifElement || objectifMontant <= 0 || epargneMensuelle <= 0) {
         if (tempsObjectifElement) tempsObjectifElement.classList.add('hidden');
         return;
     }
-    
-    // Calculer le nombre de mois nécessaires
-    const moisNecessaires = Math.ceil(objectifMontant / epargneMensuelle);
+
+    // Calculer le nombre de mois nécessaires AVEC intérêts composés
+    let moisNecessaires;
+    const moisSansInteret = Math.ceil(objectifMontant / epargneMensuelle);
+
+    if (tauxAnnuel > 0) {
+        // Formule FV annuité : FV = PMT × ((1+r)^n - 1) / r
+        // On résout pour n : n = ln(1 + objectif × r / PMT) / ln(1 + r)
+        const rMensuel = Math.pow(1 + tauxAnnuel / 100, 1/12) - 1;
+        moisNecessaires = Math.ceil(Math.log(1 + objectifMontant * rMensuel / epargneMensuelle) / Math.log(1 + rMensuel));
+    } else {
+        moisNecessaires = moisSansInteret;
+    }
+
+    const moisGagnes = moisSansInteret - moisNecessaires;
     
     // Formatage en années et mois si nécessaire
     let tempsFormate = '';
@@ -2153,14 +2215,20 @@ function updateObjectiveTime(epargneMensuelle) {
         default: icone = 'fas fa-bullseye';
     }
     
+    // Info gain de temps grâce aux intérêts
+    const gainInfo = (tauxAnnuel > 0 && moisGagnes > 0)
+        ? `<div class="text-xs text-green-400 mt-1"><i class="fas fa-chart-line mr-1"></i>Grâce au placement à ${tauxAnnuel}%/an, vous gagnez <strong>${moisGagnes} mois</strong> vs épargne sans intérêts</div>`
+        : '';
+
     // Mettre à jour l'affichage
     tempsObjectifElement.innerHTML = `
         <div class="flex items-center">
             <i class="${icone} text-blue-400 mr-2"></i>
-            <span>À ce rythme, vous atteindrez votre objectif de 
-            <strong class="text-blue-400">${objectifMontant.toLocaleString('fr-FR')} €</strong> 
+            <span>À ce rythme, vous atteindrez votre objectif de
+            <strong class="text-blue-400">${objectifMontant.toLocaleString('fr-FR')} €</strong>
             en <strong class="text-blue-400">${tempsFormate}</strong></span>
         </div>
+        ${gainInfo}
     `;
     
     tempsObjectifElement.classList.remove('hidden');
@@ -2173,71 +2241,126 @@ function updateObjectiveTime(epargneMensuelle) {
  * @param {number} revenuMensuel - Revenu mensuel
  * @param {number} depensesTotales - Total des dépenses
  */
-function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales) {
-    let score = 3; // Score de base moyen
-    let description = 'Budget équilibré';
+function updateBudgetScore(tauxEpargne, loyer, revenuMensuel, depensesTotales, loisirs, epargneAuto, vieCourante, depensesVariables, epargneTotale) {
+    let score = 3; // Score de base
     const scoreElement = document.getElementById('budget-score');
     const descriptionElement = document.getElementById('budget-score-description');
     const barreElement = document.getElementById('budget-score-bar');
     const cercleElement = document.querySelector('.budget-score-circle');
-    
+
     if (!scoreElement || !descriptionElement || !barreElement || !cercleElement) return;
-    
-    // Évaluer le taux d'épargne
-    if (tauxEpargne < 5) {
-        score--;
-        description = 'Budget très tendu';
-    } else if (tauxEpargne >= 20) {
-        score++;
-        description = 'Budget optimisé';
-    }
-    
-    // Évaluer le ratio logement
+
+    // === RÈGLE 50/30/20 ===
+    const besoins = loyer + vieCourante; // Charges fixes + vie courante
+    const envies = loisirs + depensesVariables; // Loisirs + variables
+    const epargne = epargneTotale; // Auto + libre
+
+    const pctBesoins = revenuMensuel > 0 ? (besoins / revenuMensuel) * 100 : 0;
+    const pctEnvies = revenuMensuel > 0 ? (envies / revenuMensuel) * 100 : 0;
+    const pctEpargne = revenuMensuel > 0 ? (epargne / revenuMensuel) * 100 : 0;
+
+    // Écart moyen vs la norme 50/30/20
+    const ecart503020 = (Math.abs(pctBesoins - 50) + Math.abs(pctEnvies - 30) + Math.abs(pctEpargne - 20)) / 3;
+
+    // === SCORE 5 CRITÈRES ===
     const ratioLogement = revenuMensuel > 0 ? (loyer / revenuMensuel) * 100 : 0;
-    if (ratioLogement > 33) {
-        score--;
-    } else if (ratioLogement <= 25) {
-        score++;
-    }
-    
-    // Vérifier si les dépenses dépassent les revenus
+    const ratioLoisirs = revenuMensuel > 0 ? (loisirs / revenuMensuel) * 100 : 0;
+
+    // 1. Taux d'épargne
+    if (tauxEpargne < 5) score--;
+    else if (tauxEpargne >= 20) score++;
+
+    // 2. Ratio logement
+    if (ratioLogement > 33) score--;
+    else if (ratioLogement <= 25) score++;
+
+    // 3. Ratio loisirs
+    if (ratioLoisirs <= 15) score++;
+    else if (ratioLoisirs > 30) score--;
+
+    // 4. Épargne automatique active
+    if (epargneAuto > 0) score++;
+
+    // 5. Respect de la règle 50/30/20
+    if (ecart503020 < 5) score++;
+    else if (ecart503020 > 15) score--;
+
+    // Override si déficitaire ou excellent
     if (depensesTotales > revenuMensuel) {
         score = 1;
-        description = 'Budget déficitaire';
-    } else if (tauxEpargne >= 30) {
-        score = 5;
-        description = 'Budget excellent';
     }
-    
-    // Limiter le score entre 1 et 5
+
     score = Math.max(1, Math.min(5, score));
-    
-    // Mettre à jour l'affichage
+
+    // Description
+    const descriptions = {
+        1: 'Budget déficitaire',
+        2: 'Budget tendu',
+        3: 'Budget équilibré',
+        4: 'Budget optimisé',
+        5: 'Budget excellent'
+    };
+
+    // Mettre à jour l'affichage du score
     scoreElement.textContent = score;
-    descriptionElement.textContent = description;
-    
-    // Mettre à jour la barre de progression (score sur 5 -> pourcentage)
-    const pourcentage = (score / 5) * 100;
-    barreElement.style.width = `${pourcentage}%`;
-    
-    // Mettre à jour la couleur selon le score
+    descriptionElement.textContent = descriptions[score];
+
+    // Barre de progression
+    barreElement.style.width = `${(score / 5) * 100}%`;
+
+    // Couleurs
     cercleElement.classList.remove('bg-red-900', 'bg-orange-900', 'bg-blue-900', 'bg-green-900');
     barreElement.classList.remove('bg-red-400', 'bg-orange-400', 'bg-blue-400', 'bg-green-400');
     scoreElement.classList.remove('text-red-400', 'text-orange-400', 'text-blue-400', 'text-green-400');
-    
+
     if (score <= 2) {
-        cercleElement.classList.add('bg-red-900');
-        barreElement.classList.add('bg-red-400');
-        scoreElement.classList.add('text-red-400');
+        cercleElement.classList.add('bg-red-900'); barreElement.classList.add('bg-red-400'); scoreElement.classList.add('text-red-400');
     } else if (score === 3) {
-        cercleElement.classList.add('bg-blue-900');
-        barreElement.classList.add('bg-blue-400');
-        scoreElement.classList.add('text-blue-400');
+        cercleElement.classList.add('bg-blue-900'); barreElement.classList.add('bg-blue-400'); scoreElement.classList.add('text-blue-400');
     } else {
-        cercleElement.classList.add('bg-green-900');
-        barreElement.classList.add('bg-green-400');
-        scoreElement.classList.add('text-green-400');
+        cercleElement.classList.add('bg-green-900'); barreElement.classList.add('bg-green-400'); scoreElement.classList.add('text-green-400');
     }
+
+    // === JAUGE 50/30/20 ===
+    let jaugeContainer = document.getElementById('budget-503020');
+    if (!jaugeContainer) {
+        // Créer le conteneur au premier appel
+        jaugeContainer = document.createElement('div');
+        jaugeContainer.id = 'budget-503020';
+        jaugeContainer.className = 'mt-4 p-3 bg-blue-900 bg-opacity-20 rounded-lg';
+        // Insérer après la barre de score
+        barreElement.parentElement?.parentElement?.after(jaugeContainer);
+    }
+
+    const barHTML = (label, pct, norm, color) => {
+        const clamped = Math.min(pct, 100);
+        const diff = pct - norm;
+        const diffLabel = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
+        const diffColor = Math.abs(diff) <= 5 ? 'text-green-400' : Math.abs(diff) <= 10 ? 'text-yellow-400' : 'text-red-400';
+        return `
+            <div class="mb-2">
+                <div class="flex justify-between text-xs mb-1">
+                    <span>${label}</span>
+                    <span><span class="font-semibold">${pct.toFixed(0)}%</span> <span class="${diffColor}">(${diffLabel} vs ${norm}%)</span></span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2 relative">
+                    <div class="${color} rounded-full h-2 transition-all" style="width: ${clamped}%"></div>
+                    <div class="absolute top-0 h-2 border-r-2 border-white border-opacity-50" style="left: ${norm}%"></div>
+                </div>
+            </div>`;
+    };
+
+    jaugeContainer.innerHTML = `
+        <h6 class="text-xs font-semibold text-gray-400 mb-2 flex items-center">
+            <i class="fas fa-chart-pie mr-1"></i> Règle 50/30/20
+            <span class="ml-auto text-xs ${ecart503020 < 5 ? 'text-green-400' : ecart503020 < 10 ? 'text-yellow-400' : 'text-red-400'}">
+                Écart moy. : ${ecart503020.toFixed(0)} pts
+            </span>
+        </h6>
+        ${barHTML('Besoins (loyer + vie courante)', pctBesoins, 50, 'bg-blue-500')}
+        ${barHTML('Envies (loisirs + variables)', pctEnvies, 30, 'bg-yellow-500')}
+        ${barHTML('Épargne (auto + libre)', pctEpargne, 20, 'bg-green-500')}
+    `;
 }
 
 /**
@@ -2312,8 +2435,20 @@ window.budgetChart.update();
  */
 function updateEvolutionChart(epargneMensuelle) {
     if (!window.evolutionChart) return;
-    
-    const dataPoints = Array.from({ length: 12 }, (_, i) => (i + 1) * epargneMensuelle);
+
+    // Taux de placement pour la projection (lié à l'objectif)
+    const tauxAnnuel = parseFloat(document.getElementById('objectif-taux')?.value) || 0;
+    const rMensuel = tauxAnnuel > 0 ? Math.pow(1 + tauxAnnuel / 100, 1/12) - 1 : 0;
+
+    // Projection exponentielle : FV = PMT × ((1+r)^n - 1) / r
+    const dataPoints = Array.from({ length: 12 }, (_, i) => {
+        const n = i + 1;
+        if (rMensuel > 0) {
+            return Math.round(epargneMensuelle * ((Math.pow(1 + rMensuel, n) - 1) / rMensuel));
+        }
+        return n * epargneMensuelle; // fallback linéaire si taux = 0
+    });
+
     window.evolutionChart.data.datasets[0].data = dataPoints;
     window.evolutionChart.update();
 }
