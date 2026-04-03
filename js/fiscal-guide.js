@@ -18,7 +18,7 @@ function renderISReduceBadge() {
 if (typeof window !== 'undefined') window.renderISReduceBadge = renderISReduceBadge;
 // --- Helpers VFL (versement libératoire) — GLOBAL ---
 const VFL_RFR_LIMIT_PER_PART_2025 = 29315; // € / part, RFR N-2 (revalorisé 2026)
-const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l’année suivante";
+const VFL_DEADLINE_TXT = "Option avant le 31/12 pour l'année suivante";
 
 function isEligibleVFL({ rfrN2 = null, nbParts = 1 } = {}) {
   if (rfrN2 == null) return null;
@@ -40,7 +40,7 @@ const round2 = v => Math.round(v * 100) / 100;
 
 /**
  * Ferme l'équation: brut + cotisations = resultatAvantRem
- * en travaillant en centimes et en absorbant l’écart final (±1€) dans les cotisations.
+ * en travaillant en centimes et en absorbant l'écart final (±1€) dans les cotisations.
  */
 function closeEquation(brut, cotisations, resultatAvantRem, tol = 1) {
   const b = round2(brut);
@@ -146,9 +146,13 @@ function microTauxCotisations(typeMicro='BIC_SERVICE', { acre=false, mois=12, re
 document.addEventListener('DOMContentLoaded', function () {
   // --- Initialisation requise par les écouteurs (onglet + présence du simulateur) ---
   let __fiscalSimInitDone = false;
+  let __fiscalSimDomRef = null; // track du DOM pour détecter si recréé
   function initFiscalSimulator() {
-    if (__fiscalSimInitDone) return;      // évite les ré-inits si on reclique l’onglet
+    const currentDom = document.getElementById('fiscal-simulator');
+    // Si le DOM a été recréé (tab switch), on force la réinit
+    if (__fiscalSimInitDone && currentDom === __fiscalSimDomRef) return;
     __fiscalSimInitDone = true;
+    __fiscalSimDomRef = currentDom;
     try {
       setupSimulator();                    // ta vraie initialisation
     } catch (e) {
@@ -156,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
       __fiscalSimInitDone = false;        // si échec, permettre une nouvelle tentative
     }
   }
-  // (utile si d’autres scripts veulent l’appeler)
+  // (utile si d'autres scripts veulent l'appeler)
   if (typeof window !== 'undefined') window.initFiscalSimulator = initFiscalSimulator;
 
   // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -303,7 +307,7 @@ function addCustomStyles() {
   #fiscal-simulator .form-layout-areas-3 > .field-base10{
     grid-column: 1 / -1 !important; /* plein largeur */
   }
-  /* un peu plus d’air pour les 3 champs internes */
+  /* un peu plus d'air pour les 3 champs internes */
   #base10-inline .grid{
     grid-template-columns: repeat(3, minmax(240px,1fr));
     gap: 1.25rem;
@@ -326,7 +330,7 @@ function addCustomStyles() {
   max-width: 220px;
 }
 
-/* ---- Correctifs d’inputs ---- */
+/* ---- Correctifs d'inputs ---- */
 .part-detenu-wrap{ position:relative; width:100%; display:inline-block; }
 .part-detenu-wrap .suffix-pct{
   position:absolute; right:.65rem; top:50%; transform:translateY(-50%);
@@ -448,7 +452,7 @@ function addCustomStyles() {
     padding:.75rem .75rem;
     font-size:.95rem;
   }
-  /* l’input “Part détenue” a un suffixe % => on garde de la place à droite */
+  /* l'input “Part détenue” a un suffixe % => on garde de la place à droite */
   .field-part .part-detenu-wrap input{
     padding-right:2.25rem;
   }
@@ -467,7 +471,7 @@ function addCustomStyles() {
   margin:0;
 }
 
-/* 4) Sécurité mobile pour l’espacement */
+/* 4) Sécurité mobile pour l'espacement */
 @media (max-width:767.98px){
   .field-associes label,
   .field-part label{ margin-bottom:.4rem; }
@@ -480,7 +484,7 @@ addCustomStyles();
 
 // ---------- Insertion Base 10% + amélioration "Part détenue (%)" ----------
 
-// util: remonter jusqu’à l’enfant direct de la grille
+// util: remonter jusqu'à l'enfant direct de la grille
 function gridItem(el, grid) {
   let cur = el;
   while (cur && cur.parentElement !== grid) cur = cur.parentElement;
@@ -507,7 +511,7 @@ function placeBase10UnderNbAssocies(){
   const fields = [elCA, elMarge, elSalaire, elNb, elPart].filter(Boolean);
   if (fields.length < 5) return;
 
-  // util : remonter jusqu’à l’enfant direct de formGrid
+  // util : remonter jusqu'à l'enfant direct de formGrid
   const gridItem = (el, grid) => { let cur = el; while (cur && cur.parentElement !== grid) cur = cur.parentElement; return cur; };
 
   // enfants directs
@@ -694,7 +698,7 @@ function placeBase10UnderNbAssocies(){
   document.getElementById('sim-status-filter')?.addEventListener('change',toggleBase10Visibility);
   document.getElementById('sarl-gerant-minoritaire')?.addEventListener('change',toggleBase10Visibility);
 
-  // 🔗 Attache robuste sur l’onglet “Guide fiscal” (ordre indépendant)
+  // 🔗 Attache robuste sur l'onglet “Guide fiscal” (ordre indépendant)
   const guideTab = Array.from(document.querySelectorAll('.tab-item'))
     .find(el => el.textContent?.includes('Guide fiscal'));
   guideTab?.addEventListener('click', initFiscalSimulator);
@@ -711,11 +715,11 @@ function getPctDividendes(){
     const v = parseFloat(el.value);
     return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 20;
   }
-  // défaut si pas d’input dédié :
+  // défaut si pas d'input dédié :
   return Math.max(0, 100 - getPctSalaire() - 10); // garde ~10% pour IS/réserve
 }
 
-  /** Réserve légale : prélève 5% du bénéfice (après IS) jusqu’à atteindre 10% du capital. */
+  /** Réserve légale : prélève 5% du bénéfice (après IS) jusqu'à atteindre 10% du capital. */
 function calcReserveLegale({ resultatApresIS, capitalLibere=0, reserveExistante=0, appliquer=true }) {
   if (!appliquer) return { reserve: 0, reste: round2(Math.max(0, resultatApresIS||0)) };
   const cap = Number(capitalLibere)||0;
@@ -752,7 +756,7 @@ function setupSimulator() {
     if (el) el.addEventListener('change', runComparison);
   });
 
-  // Rafraîchir l’état des cases "Personnalisé" quand le nb d’associés change
+  // Rafraîchir l'état des cases "Personnalisé" quand le nb d'associés change
   const nbAssociesEl = document.getElementById('sim-nb-associes');
   if (nbAssociesEl) nbAssociesEl.addEventListener('change', updateCustomStatusDisabling);
 
@@ -878,7 +882,7 @@ function updateSimulatorInterface() {
       <span class="info-tooltip mt-1">
         <i class="fas fa-question-circle text-gray-400"></i>
         <span class="tooltiptext">
-          Met de côté 5% du bénéfice (après IS) jusqu’à atteindre 10% du capital. 
+          Met de côté 5% du bénéfice (après IS) jusqu'à atteindre 10% du capital. 
           Les dividendes sont ensuite limités au montant réellement distribuable.
         </span>
       </span>
@@ -1112,12 +1116,12 @@ function getSelectedStatuses(filter) {
 function computeTargets(R, pctSalaire, pctDiv){
   const sum = Math.max(1, pctSalaire + pctDiv); // évite /0
   const shareRem = pctSalaire / sum;
-  const blocRemTarget = R * shareRem;          // ce qu’on veut pour (brut + cotisations)
+  const blocRemTarget = R * shareRem;          // ce qu'on veut pour (brut + cotisations)
   const profitPreIS   = Math.max(0, R - blocRemTarget);
   return { blocRemTarget, profitPreIS };
 }
 
-// Estime brut/cotisations à partir d’un taux observé (fallback si absent)
+// Estime brut/cotisations à partir d'un taux observé (fallback si absent)
 function splitBrutFromBloc(blocTarget, {observedRate=null, fallback=0.40}){
   const tx = (observedRate!=null && isFinite(observedRate) && observedRate>=0) ? observedRate : fallback;
   const brut = blocTarget / (1 + tx);
@@ -1142,7 +1146,7 @@ function getObservedRate(statutId, sim){
 // ====== FiscalUtils : Optimiseur de ratio salaire/dividendes (drop-in) ======
 window.FiscalUtils = window.FiscalUtils || {};
 
-// Choisit automatiquement PFU vs Barème pour LES dividendes d’un TNS/assimilé
+// Choisit automatiquement PFU vs Barème pour LES dividendes d'un TNS/assimilé
 // Retourne { methode: 'PFU'|'PROGRESSIF', irDiv, ps172, cotTNS, nets, economie }
 // - baseSeuil10 : base servant au seuil des 10% (déjà proratisée quote-part)
 function chooseBestDividendMethod({ statutId, divBruts, tmi, baseSeuil10, tauxTNSDivFallback = 0.40 }) {
@@ -1192,7 +1196,7 @@ function chooseBestDividendMethod({ statutId, divBruts, tmi, baseSeuil10, tauxTN
   return { ...best, economie: Math.max(0, best.nets - alt.nets) };
 }
 
-// Optimise r ∈ [ratioMin, ratioMax] pour maximiser le net en poche de l’associé
+// Optimise r ∈ [ratioMin, ratioMax] pour maximiser le net en poche de l'associé
 // simulateFn(params) : ta fonction moteur par statut (ex: p => SimulationsFiscales.simulerSASU(p))
 window.FiscalUtils.optimiserRatioRemuneration = function optimiserRatioRemuneration(
   params,
@@ -1231,7 +1235,7 @@ window.FiscalUtils.optimiserRatioRemuneration = function optimiserRatioRemunerat
       return { r, sim, score: sim.revenuNetTotal };
     }
 
-    // Bloc rémunération cible + déduction d’un brut via taux observé/fallback
+    // Bloc rémunération cible + déduction d'un brut via taux observé/fallback
     const { blocRemTarget, profitPreIS } = computeTargets(R, r*100, Math.max(0, 100 - r*100));
     const observed = getObservedRate(statutId, sim);
     const fallback = ['sasu','sas','sa','selas'].includes(statutId) ? 0.80 : 0.42;
@@ -1355,7 +1359,7 @@ window.FiscalUtils.optimiserRatioRemuneration = function optimiserRatioRemunerat
     return { resultat: sim, ratioOptimise: ratioMin, methodeDividendes: sim?.methodeDividendes, economieMethode: sim?.economieMethode||0 };
   }
 
-  // Tag infos d’optimisation dans la simulation retournée
+  // Tag infos d'optimisation dans la simulation retournée
   best.sim.ratioOptimise = round2(best.r);
   best.sim.methodeDividendes = best.methodeDividendes ?? best.sim.methodeDividendes;
   best.sim.economieMethode   = best.economieMethode   ?? best.sim.economieMethode;
@@ -1844,7 +1848,7 @@ function runComparison() {
     // 1) Entrées “douces”
     const revenusLocatifs = Number(params.ca) || 0;
 
-    // Marge depuis l’UI (#sim-marge), défaut 30% si absent
+    // Marge depuis l'UI (#sim-marge), défaut 30% si absent
     const uiMarge = parseFloat(document.getElementById('sim-marge')?.value);
     const tauxMarge = Number.isFinite(uiMarge)
       ? Math.max(0, Math.min(1, uiMarge / 100))
@@ -1879,7 +1883,7 @@ function runComparison() {
     const pctDistribution = 1;
     const dividendesSociete = round2(resultatApresIS * pctDistribution);
 
-    // 5) Quote-part de l’associé simulé (0–1)
+    // 5) Quote-part de l'associé simulé (0–1)
     const partAssocieDec = Math.max(
       0,
       Math.min(1, params.partAssocie || (params.partAssociePct || 100) / 100)
@@ -1922,7 +1926,7 @@ function runComparison() {
       salaireNet: 0,
       revenuNetSalaire: 0,
 
-      // Paramètres d’associé
+      // Paramètres d'associé
       nbAssocies: params.nbAssocies,
       partAssocie: partAssocieDec,
       partAssociePct: params.partAssociePct,
@@ -2056,7 +2060,7 @@ for (const statutId of selectedStatuses) {
       // --- C. Fixer le bloc rémunération selon % et NE PAS aplatir le reliquat ---
      if (sim && sim.compatible) {
 
- // ⛔️ SCI à l’IS : pas de rémunération, 100% dividendes
+ // ⛔️ SCI à l'IS : pas de rémunération, 100% dividendes
 if (statutId === 'sciIS') {
   // A) Neutraliser toute rémunération
   sim.remuneration = 0;
@@ -2129,7 +2133,7 @@ if (statutId === 'sciIS') {
        }
       // --- fin C ---
 
-      // ----- Calcul IS par tranches pour les statuts à l’IS (après C) -----
+      // ----- Calcul IS par tranches pour les statuts à l'IS (après C) -----
 {
  const isStatutIS = ['eurlIS','sarl','selarl','sca','sasu','sas','sa','selas','sciIS'].includes(statutId);
 
@@ -2140,7 +2144,7 @@ if (statutId === 'sciIS') {
     // Éligible 15 % ?
     const elig15  = !!params.is15Eligible;
 
-    // IS progressif (15 % si éligible jusqu’à 42 500 €, puis 25 %)
+    // IS progressif (15 % si éligible jusqu'à 42 500 €, puis 25 %)
     const isBreak = calcISProgressif(benefIS, elig15);
     sim.is        = isBreak.is;
     sim._isDetail = { elig15, ...isBreak };
@@ -2195,7 +2199,7 @@ if (statutId === 'sciIS') {
       const targetDivSociete  = round2(R * (pctDiv / sumPct));
       const dividendesSociete = Math.min(targetDivSociete, distribuableSociete);
 
-      // Quote-part de l’associé simulé
+      // Quote-part de l'associé simulé
       sim.dividendes = round2(dividendesSociete * (sim.partAssocie || 1));
     }
     }
@@ -2298,7 +2302,7 @@ if (statutId === 'sciIS') {
   impots = sim.impotRevenu;
   net = sim.revenuNetApresImpot;
    } else if (statutId === 'sciIS') {
-  // SCI à l’IS : pas de rémunération, tout en dividendes
+  // SCI à l'IS : pas de rémunération, tout en dividendes
   brut    = 0;
   charges = 0;
   // impôts = IS + PFU (IR 12,8 + PS 17,2) déjà cumulés
@@ -2723,8 +2727,8 @@ function formatBaseSeuilDivTNSTooltip(base) {
       <i class="fas fa-question-circle text-gray-400"></i>
       <span class="tooltiptext">
         Seuil des 10% calculé sur :
-        <br>capital libéré + primes d’émission + sommes en compte courant (× quote-part).
-        <br><small>Si inconnu : application d’un taux TNS prudent (fallback).</small>
+        <br>capital libéré + primes d'émission + sommes en compte courant (× quote-part).
+        <br><small>Si inconnu : application d'un taux TNS prudent (fallback).</small>
       </span>
     </span>`;
 }
@@ -2738,7 +2742,7 @@ function getMargePct(sim){
   return denom > 0 ? (numer / denom) * 100 : 0;
 }
 
-// % de quote-part de l’associé affiché
+// % de quote-part de l'associé affiché
 function getQuotePartPct(sim){
   if (sim?.partAssociePct != null) return Number(sim.partAssociePct);
   if (sim?.partAssocie != null)    return Number(sim.partAssocie) * 100;
@@ -4036,13 +4040,13 @@ detailContent = `
 
   <div class="mt-4 p-4 bg-gray-800 bg-opacity-50 rounded-lg text-xs text-gray-300">
     <p><i class="fas fa-info-circle text-blue-400 mr-2"></i>
-    À l’IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l’associé (PFU 30% par défaut). Aucune cotisation TNS n’est due sur les dividendes.</p>
+    À l'IS, la SCI est <strong>opaque</strong> : IS au niveau société, puis imposition des dividendes chez l'associé (PFU 30% par défaut). Aucune cotisation TNS n'est due sur les dividendes.</p>
   </div>
 `;
 
-// 🔒 Récap "taux utilisés" : ne pas l’injecter pour SCI-IS
+// 🔒 Récap "taux utilisés" : ne pas l'injecter pour SCI-IS
 if (statutId !== 'sciIS') {
-  // Si tu as une fonction centralisée d’injection :
+  // Si tu as une fonction centralisée d'injection :
   detailContent += renderRecapTauxUtilises(result.sim || {});
 }
 
@@ -4120,7 +4124,7 @@ detailContent += `
 
       ${(['eurlIS','sasu','sarl','sas','sa','selarl','selas','sca'].includes(statutId)) ? `
         <li><i class="fas fa-percentage text-green-400 mr-2"></i>
-          <strong>IS :</strong> ${renderISReduceBadge()} jusqu’à <strong>42 500 €</strong>, puis 25%
+          <strong>IS :</strong> ${renderISReduceBadge()} jusqu'à <strong>42 500 €</strong>, puis 25%
         </li>
         <li><i class="fas fa-percentage text-green-400 mr-2"></i>
           <strong>PFU sur dividendes :</strong> 30% (17,2% PS + 12,8% IR)
@@ -4145,7 +4149,7 @@ detailContent += `
             <strong>Versement libératoire :</strong> ${
               (result.sim.typeMicro || 'BIC_SERVICE') === 'BIC_VENTE' ? '1%' :
               (result.sim.typeMicro || 'BIC_SERVICE') === 'BNC' ? '2,2%' : '1,7%'
-            } du CA (remplace l’IR progressif)
+            } du CA (remplace l'IR progressif)
           </li>
         ` : ''}
       ` : ''}
