@@ -6258,14 +6258,36 @@ def main():
     portfolios = add_commentary(portfolios, assets, brief_data)
     portfolios = apply_compliance(portfolios)
     
-    # === v4.11.0: Génération des justifications LLM par actif ===
-    # v7.4: Claude Sonnet via proxy en priorité, OpenAI en fallback
+    save_portfolios(portfolios, assets)
+
+    # === v7.4: Génération des justifications LLM APRÈS save_portfolios ===
+    # Rationales must be generated on the FINAL tickers (post-dedup, post-cap, post-round)
+    # Otherwise tickers mismatch: rationale for EMHC but portfolio has SLV after dedup
     if CONFIG.get("generate_asset_rationales", False) and ASSET_RATIONALE_AVAILABLE:
         logger.info("\n" + "=" * 60)
-        logger.info("📝 GÉNÉRATION JUSTIFICATIONS LLM PAR ACTIF (Claude Sonnet → OpenAI fallback)")
+        logger.info("📝 GÉNÉRATION JUSTIFICATIONS LLM PAR ACTIF (Claude Sonnet → fallback)")
         logger.info("=" * 60)
 
         try:
+            import json as _json
+            output_path = CONFIG.get("output_path", "data/portfolios.json")
+            with open(output_path) as _f:
+                saved_portfolios = _json.load(_f)
+
+            # Build fake portfolios dict with allocation from final _tickers
+            portfolios_for_rationale = {}
+            for profile in ["Agressif", "Modéré", "Stable"]:
+                if profile not in saved_portfolios:
+                    continue
+                _tickers = saved_portfolios[profile].get("_tickers", {})
+                # Convert decimal weights to percentage for the rationale prompt
+                allocation = {tk: w * 100 for tk, w in _tickers.items() if w > 0}
+                portfolios_for_rationale[profile] = {
+                    "allocation": allocation,
+                    "diagnostics": portfolios.get(profile, {}).get("diagnostics", {}),
+                    "assets": portfolios.get(profile, {}).get("assets", []),
+                }
+
             # OpenAI client optionnel (fallback only)
             openai_client = None
             api_key = os.environ.get("API_CHAT") or os.environ.get("OPENAI_API_KEY")
@@ -6276,29 +6298,30 @@ def main():
                 except ImportError:
                     logger.info("   OpenAI SDK not installed, Claude-only mode")
 
-            # Charger le contexte marché RADAR
             market_context = load_market_context_radar(CONFIG.get("market_data_dir", "data"))
 
-            # Générer les justifications (Claude priority → OpenAI fallback → deterministic)
             rationales = generate_asset_rationales_sync(
-                portfolios=portfolios,
+                portfolios=portfolios_for_rationale,
                 assets=assets,
                 market_context=market_context,
                 openai_client=openai_client,
                 model=CONFIG.get("llm_model", "gpt-4o-mini"),
             )
 
-            # Fusionner dans les portfolios
+            # Inject rationales back into the saved JSON
             for profile in ["Agressif", "Modéré", "Stable"]:
                 if profile in rationales and rationales[profile]:
-                    portfolios[profile]["_asset_details"] = rationales[profile]
+                    saved_portfolios[profile]["_asset_details"] = rationales[profile]
                     logger.info(f"✅ {profile}: {len(rationales[profile])} justifications ajoutées")
+
+            with open(output_path, "w", encoding="utf-8") as _f:
+                _json.dump(saved_portfolios, _f, ensure_ascii=False, indent=2)
+            logger.info(f"✅ Justifications injectées dans {output_path}")
+
         except Exception as e:
             logger.error(f"❌ Erreur génération justifications: {e}")
             import traceback
             traceback.print_exc()
-    
-    save_portfolios(portfolios, assets)
 
     # v7.2.1: Correlation diagnostics JSON
     try:
