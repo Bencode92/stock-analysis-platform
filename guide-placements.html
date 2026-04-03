@@ -641,7 +641,7 @@
                                         <tr>
                                             <td class="px-3 py-2">Assurance‑vie (fonds&nbsp;€)</td>
                                             <td class="px-3 py-2">2‑8 ans</td>
-                                            <td class="px-3 py-2">2‑3,5 % brut</td>
+                                            <td class="px-3 py-2">2,5‑3,5 % brut (moy. 2,65 % en 2025)</td>
                                             <td class="px-3 py-2">PFU 30 % < 8 ans ; 24,7 % ≥ 8 ans (≤150 k€)* — PS maintenus à 17,2 %</td>
                                         </tr>
                                         <tr>
@@ -799,7 +799,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <p class="text-[10px] text-gray-500">Hypothèses : placement initial 10 000 €, rendement 5 %/an capitalisé, fiscalité appliquée en fin de période.</p>
+                            <p class="text-[10px] text-gray-500">Hypothèses : placement initial 10 000 €, rendement 5 %/an capitalisé, liquidation unique en fin de période. En CTO, les dividendes sont fiscalisés chaque année, ce qui creuse davantage l'écart en pratique. PEA : plafond 150 k€, univers UE.</p>
 
                             <!-- CTA simulateur -->
                             <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
@@ -846,7 +846,7 @@
                             <li>🔹 2 % : Or / ETF monétaire</li>
                           </ul>
                           <div class="text-xs mt-3 p-2 bg-yellow-900 bg-opacity-30 rounded text-yellow-300"><i class="fas fa-exclamation-triangle mr-1"></i> PEA/Crypto uniquement si épargne de sécurité constituée (3 mois de dépenses).</div>
-                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-yellow-400">Risque :</span> perte temporaire possible -15 à -25% · Horizon min. 5 ans</div>
+                          <div class="text-xs mt-2 p-2 bg-gray-800 rounded"><span class="text-yellow-400">Risque :</span> perte temporaire possible -25 à -35% · Horizon min. 5 ans</div>
                           <div class="text-xs mt-2 text-gray-400">Objectif : Apprendre, construire un capital avec horizon très long.</div>
                         </div>
 
@@ -938,9 +938,14 @@
                         </div>
                       </div>
                       
-                      <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400 mt-6">
+                      <div class="bg-red-900 bg-opacity-15 rounded-lg p-4 border-l-4 border-red-400 mt-6">
+                        <p class="font-medium"><i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Corrélation en crise :</p>
+                        <p class="text-sm">En période de crise, la diversification apparente entre actions, SCPI et crypto s'effondre : ces actifs peuvent baisser simultanément (corrélation > 0,7). Seuls les <strong>livrets, fonds euros et l'or</strong> constituent de vrais amortisseurs.</p>
+                      </div>
+
+                      <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400 mt-4">
                         <p class="font-medium"><i class="fas fa-info-circle text-green-400 mr-2"></i> À savoir :</p>
-                        <p>Ces répartitions sont des guides et doivent être adaptées à ton âge, tes revenus, et tes projets. Plus ton horizon d'investissement est long, plus tu peux te permettre une allocation dynamique.</p>
+                        <p class="text-sm">Ces répartitions sont des guides et doivent être adaptées à ton âge, tes revenus, et tes projets. Plus ton horizon d'investissement est long, plus tu peux te permettre une allocation dynamique.</p>
                       </div>
                     </div>
                   </div>
@@ -1221,7 +1226,7 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">&gt; 5 ans</span> : 18,6% prélèv. sociaux, pas d\'IR (LFSS 2026)',
+                            '<span class="important-info">&gt; 5 ans</span> : 18,6% prélèv. sociaux, pas d\'IR (LFSS 2026, gains post-2018)',
                             '<span class="important-info">&lt; 5 ans</span> : PFU 31,4% (12,8% IR + 18,6% PS)',
                             'Dividendes non cotés exonérés jusqu\'à <span class="important-info">10%/an</span>',
                             'Compteur unique : 1er versement'
@@ -1415,9 +1420,9 @@
                         icon: 'fas fa-percentage',
                         items: [
                             '<span class="important-info">À l\'entrée</span> : vos versements réduisent votre revenu imposable (gain = TMI)',
-                            '<span class="important-info">Sortie en capital</span> : versements imposés, gains = <span class="important-info">flat-tax 31,4 %</span> (LFSS 2026)',
-                            '<span class="important-info">Sortie en rente</span> : rente taxée comme pension (après abattement 10 %)',
-                            'Prélèvements sociaux <span class="important-info">18,6 %</span> sur les gains dans tous les cas (LFSS 2026)'
+                            '<span class="important-info">Sortie en capital</span> : versements imposés, gains = <span class="important-info">flat-tax 31,4 %</span> (18,6 % PS — LFSS 2026)',
+                            '<span class="important-info">Sortie en rente</span> : rente taxée comme pension (abattement 10 %) — PS à <span class="important-info">10,1 %</span> (revenus de remplacement, non impactés par LFSS 2026)',
+                            '<span class="text-yellow-400">⚠️ Distinguer</span> : capital → PS 18,6 % | rente → PS 10,1 %'
                         ]
                     },
                     {
@@ -1444,7 +1449,7 @@
                 color: 'blue',
                 profiles: ['prudent', 'equilibre', 'dynamique', 'retraite'],
                 summary: {
-                    rendement: '≈ 4% net',
+                    rendement: '≈ 4,9% distribution (2025)',
                     ticket: 'Dès 200€',
                     type: 'Revenus passifs'
                 },
@@ -1937,7 +1942,7 @@
                         icon: 'fas fa-percentage',
                         items: [
                             '<span class="important-info">PFU 30%</span> (12,8% IR + 17,2% PS) prélevé chaque année — PEL exclu de la hausse CSG 2026',
-                            'Rendement net ≈ <span class="important-info">1,40%</span> (pour 2% brut) — <span class="text-yellow-400">⚠️ inférieur au Livret A (1,50% net défiscalisé)</span>',
+                            'Rendement net ≈ <span class="important-info">1,40%</span> (pour 2% brut) — <span class="text-yellow-400">⚠️ inférieur au Livret A (1,50% net). Intérêt principal : verrouiller un taux de prêt fixe à 3,20% en cas de remontée future des taux</span>',
                             'Prime d\'État supprimée (PEL ≥ 2018)',
                             '<a href="https://www.lafinancepourtous.com/pratique/placements/epargne-logement/le-plan-epargne-logement-pel-une-epargne-de-projet/le-pel-un-placement-ouvert-a-tous/" target="_blank" class="text-blue-400 underline text-xs">Source : La finance pour tous</a>'
                         ]
@@ -2064,7 +2069,7 @@
                         title: 'Fiscalité',
                         icon: 'fas fa-percentage',
                         items: [
-                            '<span class="important-info">SPPICAV</span> : distributions & plus-values = <span class="important-info">PFU 31,4 %</span> (LFSS 2026)',
+                            '<span class="important-info">SPPICAV en direct</span> : distributions & plus-values = <span class="important-info">PFU 31,4 %</span> (LFSS 2026) — <span class="text-yellow-400">si logé en AV : PS 17,2 % (fiscalité AV)</span>',
                             '<span class="important-info">FPI</span> : loyers = <span class="important-info">revenus fonciers</span> ; plus-values immobilières (19 % IR + 17,2 % PS)',
                             'Revenus financiers au PFU 31,4 %',
                             'Part imposable à l\'<span class="important-info">IFI</span> pour la fraction immobilière'
