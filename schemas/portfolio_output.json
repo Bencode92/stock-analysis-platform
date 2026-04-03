@@ -149,6 +149,19 @@
             "label": { "type": "string" },
             "rationale": { "type": "string" }
           }
+        },
+        "_tickers_rendement": {
+          "$ref": "#/definitions/TickerWeights",
+          "description": "v7.3: Yield-driven allocation (same stocks, weights redistributed for max dividend)"
+        },
+        "_yield_metrics": {
+          "type": ["object", "null"],
+          "description": "v7.3: Yield optimization metrics",
+          "additionalProperties": true,
+          "properties": {
+            "weighted_yield": { "type": "number" },
+            "n_positions": { "type": "integer" }
+          }
         }
       }
     },
