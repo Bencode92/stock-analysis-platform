@@ -595,7 +595,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // === Payout intégré ===
             payout_ratio: payout.str,          // "xx,x %"
             payout_ratio_num: payout.num,      // nombre
-            payout_class: payout.cls           // classe couleur
+            payout_class: payout.cls,          // classe couleur
+            // === v8.0: Enriched scores & fundamentals ===
+            quality_score: r.quality_score ?? null,
+            quality_grade: r.quality_grade || null,
+            quality_subscores: r.quality_subscores || null,
+            quality_profile: r.quality_profile || null,
+            buffett_score: r.buffett_score ?? null,
+            buffett_grade: r.buffett_grade || null,
+            buffett_criteria: r.buffett_criteria || null,
+            pe_ratio: r.pe_ratio ?? null,
+            roe: r.roe ?? null,
+            de_ratio: r.de_ratio ?? null,
+            fcf_yield: r.fcf_yield ?? null,
+            beta: r.beta ?? r.beta_capm ?? null,
+            eps_surprise_avg_2q: r.eps_surprise_avg_2q ?? null,
+            eps_beat_streak: r.eps_beat_streak ?? null,
+            industry: r.industry || null,
         };
     }
     
