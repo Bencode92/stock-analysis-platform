@@ -814,7 +814,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-04-03T08:43:50.219712+00:00",
+      "timestamp": "2026-04-03T14:04:30.672909+00:00",
       "profile": "Agressif",
       "data_limits": {
         "data_window": "1_year_daily",
@@ -838,7 +838,7 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-04-03T08:43:50.222548+00:00"
+          "timestamp": "2026-04-03T14:04:30.676290+00:00"
         },
         "summary": {
           "n_scenarios": 5,
@@ -903,7 +903,7 @@
               "Severe volatility increase: +17.1%",
               "Severe VaR deterioration: -35.2%"
             ],
-            "timestamp": "2026-04-03T08:43:50.220479+00:00"
+            "timestamp": "2026-04-03T14:04:30.673924+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -948,7 +948,7 @@
               "Severe volatility increase: +48.7%",
               "Severe VaR deterioration: -93.1%"
             ],
-            "timestamp": "2026-04-03T08:43:50.221070+00:00"
+            "timestamp": "2026-04-03T14:04:30.674524+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -993,7 +993,7 @@
               "Severe volatility increase: +28.4%",
               "Severe VaR deterioration: -62.5%"
             ],
-            "timestamp": "2026-04-03T08:43:50.221545+00:00"
+            "timestamp": "2026-04-03T14:04:30.675070+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -1038,7 +1038,7 @@
               "Severe volatility increase: +22.2%",
               "Severe VaR deterioration: -47.5%"
             ],
-            "timestamp": "2026-04-03T08:43:50.222000+00:00"
+            "timestamp": "2026-04-03T14:04:30.675632+00:00"
           },
           {
             "scenario": "market_crash",
@@ -1083,7 +1083,7 @@
               "Severe volatility increase: +90.7%",
               "Severe VaR deterioration: -186.2%"
             ],
-            "timestamp": "2026-04-03T08:43:50.222409+00:00"
+            "timestamp": "2026-04-03T14:04:30.676151+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -1221,10 +1221,10 @@
             "BTC/USD"
           ],
           "extra_in_allocation": [
-            "SLV",
-            "XBI",
             "SGOV",
-            "GLD"
+            "SLV",
+            "GLD",
+            "XBI"
           ],
           "duplicates_in_allocation": []
         }
@@ -1271,7 +1271,7 @@
         {
           "level": "info",
           "type": "data_quality",
-          "message": "Tickers en trop dans allocation: SLV, XBI, SGOV",
+          "message": "Tickers en trop dans allocation: SGOV, SLV, GLD",
           "recommendation": "Ces tickers ne sont pas dans l'historique et sont exclus du calcul VaR"
         }
       ],
@@ -1319,7 +1319,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-04-03T08:43:50.218219Z",
+        "fetch_timestamp": "2026-04-03T14:04:30.671443Z",
         "resolutions_used": {
           "INCY": {
             "mic": "XNGS",
@@ -1533,16 +1533,16 @@
     "_cash_tactical": {
       "pct": 4.9,
       "label": "Cash Tactique (non investi): 4.9%",
-      "rationale": "Cash élevé justifié par transition de régime et VIX >20 créant des opportunités"
+      "rationale": "Cash modéré pour profiter des dislocations sectorielles (tech/financials oversold)"
     },
     "_asset_details": [
       {
         "name": "FLKR",
         "ticker": "FLKR",
-        "rationale": "ETF technologique défensif offrant une exposition aux valeurs de croissance avec un profil de volatilité modéré. Sa sélection permet de maintenir une exposition tech tout en réduisant les risques sectoriels identifiés par le RADAR. Complète l'allocation technologique du portefeuille avec une approche plus prudente.",
+        "rationale": "ETF thématique axé sur l'innovation technologique et la disruption digitale, offrant une exposition diversifiée aux entreprises transformatrices. Position satellite pour capturer les mégatendances de long terme malgré la sous-pondération actuelle du secteur technologique. Allocation mesurée de 5.9% pour limiter l'exposition aux secteurs évités tout en maintenant le potentiel de croissance.",
         "role": "satellite",
-        "risk_note": "Exposition au secteur technologique en difficulté selon le RADAR",
-        "market_context_link": "Contrebalance la sous-pondération recommandée en information-technology",
+        "risk_note": "Volatilité élevée des valeurs technologiques innovantes",
+        "market_context_link": "Exposition indirecte aux secteurs évités (information-technology) mais justifiée par le profil agressif",
         "weight_pct": 5.9,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1559,10 +1559,10 @@
       {
         "name": "INCY",
         "ticker": "INCY",
-        "rationale": "Position biotech spécialisée offrant un potentiel de croissance élevé adapté au profil agressif. Bénéficie de catalyseurs pipeline et de valorisations attractives post-correction sectorielle. Apporte une diversification sectorielle hors des segments en difficulté identifiés par le RADAR.",
+        "rationale": "Incyte Corporation, biotech leader dans l'oncologie et l'immunologie, bénéficie d'un pipeline robuste et de revenus récurrents. Position satellite de 3.0% pour diversifier vers la santé, secteur défensif en période d'incertitude. Valorisation attractive après correction et catalyseurs réglementaires potentiels à venir.",
         "role": "satellite",
-        "risk_note": "Volatilité élevée et risques réglementaires biotech",
-        "market_context_link": null,
+        "risk_note": "Risque réglementaire et échecs cliniques potentiels",
+        "market_context_link": "null",
         "weight_pct": 3.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1579,10 +1579,10 @@
       {
         "name": "REMX",
         "ticker": "REMX",
-        "rationale": "ETF terres rares bénéficiant de la transition énergétique et des tensions géopolitiques sur les ressources critiques. Offre une exposition thématique forte aux métaux stratégiques avec un potentiel de revalorisation important. Position spéculative alignée sur le profil agressif recherchant la performance maximale.",
+        "rationale": "ETF Rare Earth & Strategic Metals exposant aux terres rares essentielles pour la transition énergétique et technologique. Allocation importante de 9.3% pour capitaliser sur les tensions géopolitiques et la demande croissante en métaux stratégiques. Bénéficie indirectement du momentum du secteur énergétique via les technologies vertes.",
         "role": "satellite",
-        "risk_note": "Forte volatilité et dépendance aux cycles commodités",
-        "market_context_link": "Bénéficie indirectement de la force du secteur energy",
+        "risk_note": "Forte volatilité et dépendance géopolitique (Chine)",
+        "market_context_link": "Lien avec le secteur energy favorisé via la transition énergétique",
         "weight_pct": 9.3,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1599,10 +1599,10 @@
       {
         "name": "VRT",
         "ticker": "VRT",
-        "rationale": "Valeur immobilière technologique (REIT) offrant rendement et croissance dans un secteur défensif. Profite de la demande structurelle en infrastructure digitale et data centers. Apporte de la diversification sectorielle avec un profil risque-rendement équilibré.",
+        "rationale": "Vertiv Holdings, spécialiste des infrastructures critiques digitales et centres de données, bénéficie de la croissance de l'IA et du cloud. Position de 4.6% pour exposer le portefeuille aux picks-and-shovels de la révolution digitale. Profite de la demande structurelle en infrastructure IT malgré la prudence sectorielle.",
         "role": "satellite",
-        "risk_note": "Sensibilité aux taux d'intérêt et cycles immobiliers",
-        "market_context_link": null,
+        "risk_note": "Sensibilité aux taux d'intérêt et concurrence accrue",
+        "market_context_link": "Exposition au secteur information-technology évité mais via un angle infrastructure défensif",
         "weight_pct": 4.6,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1619,10 +1619,10 @@
       {
         "name": "PAAA",
         "ticker": "PAAA",
-        "rationale": "ETF aéronautique et défense bénéficiant du cycle de reprise post-COVID et des tensions géopolitiques. Secteur en consolidation avec barrières à l'entrée élevées et carnets de commandes solides. Position cyclique offensive adaptée au profil agressif.",
-        "role": "satellite",
-        "risk_note": "Cyclicité économique et dépendance budgets gouvernementaux",
-        "market_context_link": null,
+        "rationale": "PowerShares Aerospace & Defense ETF exposant au complexe militaro-industriel et à l'aéronautique civile en reprise. Allocation significative de 8.9% pour bénéficier des tensions géopolitiques et du renouvellement des flottes aériennes. Secteur défensif avec visibilité sur les carnets de commandes et soutien gouvernemental.",
+        "role": "core",
+        "risk_note": "Cycles longs et dépendance aux budgets gouvernementaux",
+        "market_context_link": "null",
         "weight_pct": 8.9,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1639,10 +1639,10 @@
       {
         "name": "NVDA",
         "ticker": "NVDA",
-        "rationale": "Leader incontournable de l'IA et des semi-conducteurs haute performance malgré les headwinds sectoriels. Bénéficie d'un avantage concurrentiel durable et d'une demande structurelle en compute GPU. Position concentrée justifiée par la qualité exceptionnelle et le potentiel long terme.",
-        "role": "core",
-        "risk_note": "Volatilité élevée et dépendance au cycle des semi-conducteurs",
-        "market_context_link": "Exposition contraire à la recommandation d'éviter information-technology",
+        "rationale": "NVIDIA, leader absolu des semi-conducteurs IA avec position monopolistique sur les GPU haut de gamme. Position mesurée de 3.3% malgré la sous-pondération tech pour ne pas rater l'accélération de l'IA générative. Fondamentaux exceptionnels mais valorisation exigeante nécessitant une allocation prudente.",
+        "role": "satellite",
+        "risk_note": "Valorisation élevée et risque de correction brutale",
+        "market_context_link": "Exposition au secteur information-technology évité mais position stratégique sur l'IA",
         "weight_pct": 3.3,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1659,10 +1659,10 @@
       {
         "name": "BKR",
         "ticker": "BKR",
-        "rationale": "Services pétroliers bénéficiant de la reprise des investissements upstream et de la forte performance du secteur energy. Leader technologique dans les services de forage avec exposition directe au cycle énergétique. Position parfaitement alignée sur les secteurs favorisés par le RADAR.",
+        "rationale": "Baker Hughes, leader des services pétroliers avec diversification vers les technologies énergétiques vertes. Allocation de 6.7% pour bénéficier directement du momentum exceptionnel du secteur énergétique (+37.6% YTD). Exposition équilibrée entre énergies fossiles et transition énergétique avec cash-flows solides.",
         "role": "core",
-        "risk_note": "Cyclicité énergétique et volatilité des prix du pétrole",
-        "market_context_link": "Directement aligné sur le secteur energy surpondéré (+37.6% YTD)",
+        "risk_note": "Volatilité des prix pétroliers et risques ESG",
+        "market_context_link": "Exposition directe au secteur energy surpondéré (+15%)",
         "weight_pct": 6.7,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1679,10 +1679,10 @@
       {
         "name": "MU",
         "ticker": "MU",
-        "rationale": "Leader mémoires semi-conducteurs en phase de reprise cyclique avec exposition à l'IA et au cloud computing. Valorisation attractive après correction sectorielle, positionnement stratégique sur la demande data center. Potentiel de rebound significatif adapté au profil agressif.",
+        "rationale": "Micron Technology, leader des mémoires DRAM et NAND, bénéficie de la demande IA et de la reprise du cycle des semi-conducteurs. Position de 6.7% pour capitaliser sur la consolidation sectorielle et l'amélioration des marges. Valorisation attractive en bas de cycle avec catalyseurs techniques à venir.",
         "role": "satellite",
-        "risk_note": "Forte cyclicité des semi-conducteurs et volatilité des prix mémoires",
-        "market_context_link": "Contrebalance l'évitement du secteur information-technology",
+        "risk_note": "Cyclicité extrême et concurrence asiatique",
+        "market_context_link": "Exposition au secteur information-technology évité mais sur un segment en reprise",
         "weight_pct": 6.7,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1699,10 +1699,10 @@
       {
         "name": "GOOGL",
         "ticker": "GOOGL",
-        "rationale": "Géant technologique défensif avec modèle économique résilient et leadership en recherche/publicité digitale. Valorisation attractive relative aux pairs FANMAG, exposition IA avec Bard/Gemini. Position core tech malgré les headwinds sectoriels identifiés.",
+        "rationale": "Alphabet, géant technologique avec monopole sur la recherche et leadership en cloud/IA, offre qualité et croissance. Allocation de 5.3% malgré la sous-pondération des valeurs tech pour maintenir l'exposition aux mégatendances digitales. Valorisation raisonnable et cash-flows exceptionnels soutiennent la position.",
         "role": "core",
-        "risk_note": "Pression réglementaire et concurrence IA intensifiée",
-        "market_context_link": "Exposition contraire aux secteurs évités (communication-services, information-technology)",
+        "risk_note": "Risques réglementaires antitrust croissants",
+        "market_context_link": "Double exposition aux secteurs évités (information-technology et communication-services)",
         "weight_pct": 5.3,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1719,10 +1719,10 @@
       {
         "name": "SOXX",
         "ticker": "SOXX",
-        "rationale": "ETF semi-conducteurs offrant une exposition diversifiée au secteur malgré les difficultés court terme identifiées. Positionnement sur la reprise cyclique attendue et les mégatrends IA/électrification. Allocation tactique contrarian adaptée à l'horizon long terme.",
+        "rationale": "ETF semi-conducteurs offrant une exposition diversifiée au secteur en consolidation avec reprise cyclique attendue. Position de 6.6% pour bénéficier de la demande IA, automobile électrique et IoT malgré la prudence sectorielle. Momentum technique positif après correction significative.",
         "role": "satellite",
-        "risk_note": "Cyclicité sectorielle et volatilité géopolitique (Chine/Taiwan)",
-        "market_context_link": "Position contraire à l'évitement du secteur information-technology",
+        "risk_note": "Cyclicité sectorielle et tensions commerciales USA-Chine",
+        "market_context_link": "Exposition au secteur information-technology évité mais positionnement cyclique opportuniste",
         "weight_pct": 6.6,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1739,10 +1739,10 @@
       {
         "name": "XLE",
         "ticker": "XLE",
-        "rationale": "ETF energy parfaitement aligné sur le secteur leader identifié par le RADAR (+37.6% YTD, +32.5% sur 12M). Bénéficie de valorisations attractives, cashflows solides et politiques de retour aux actionnaires. Position core dans le secteur le plus performant du marché.",
+        "rationale": "Energy Select Sector SPDR, exposition pure au secteur énergétique leader (+37.6% YTD) avec les majors pétrolières américaines. Allocation importante de 8.6% alignée sur la surpondération sectorielle (+15%) recommandée par le RADAR. Bénéficie des tensions géopolitiques, dividendes attractifs et valorisations modérées.",
         "role": "core",
-        "risk_note": "Volatilité des prix énergétiques et risques ESG long terme",
-        "market_context_link": "Parfaitement aligné sur le secteur energy, leader absolu du RADAR",
+        "risk_note": "Volatilité des commodités et transition énergétique long terme",
+        "market_context_link": "Exposition directe au secteur energy surpondéré, leader YTD et 52W",
         "weight_pct": 8.6,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1759,10 +1759,10 @@
       {
         "name": "SLVP",
         "ticker": "SLVP",
-        "rationale": "ETF argent avec prime physique offrant une exposition pure au métal précieux. Bénéficie de la demande industrielle (solaire, électronique) et du rôle de hedge inflation. Complète l'allocation métaux précieux avec un profil plus volatil que l'or.",
+        "rationale": "ETF argent physique iShares avec exposition pure au métal précieux industriel bénéficiant de la demande photovoltaïque et électronique. Position de 4.6% comme hedge inflation et diversification face aux actifs financiers. Momentum technique favorable et ratios or/argent attractifs historiquement.",
         "role": "hedge",
-        "risk_note": "Volatilité supérieure à l'or et dépendance demande industrielle",
-        "market_context_link": null,
+        "risk_note": "Volatilité extrême et manipulation des marchés des métaux",
+        "market_context_link": "null",
         "weight_pct": 4.6,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1779,10 +1779,10 @@
       {
         "name": "SLV",
         "ticker": "SLV",
-        "rationale": "ETF argent physique core offrant protection inflation et diversification face à l'instabilité géopolitique. L'argent surperforme historiquement l'or dans les phases de reprise économique. Position défensive avec potentiel de revalorisation dans un portefeuille agressif.",
+        "rationale": "iShares Silver Trust, exposition directe à l'argent physique comme réserve de valeur et hedge géopolitique. Allocation de 7.0% pour diversifier les couvertures et bénéficier de la demande industrielle croissante (énergies vertes, 5G). Complément naturel à l'allocation or avec potentiel de surperformance cyclique.",
         "role": "hedge",
-        "risk_note": "Volatilité élevée et corrélation avec cycles industriels",
-        "market_context_link": null,
+        "risk_note": "Volatilité supérieure à l'or et corrélations variables",
+        "market_context_link": "null",
         "weight_pct": 7.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1799,10 +1799,10 @@
       {
         "name": "GLD",
         "ticker": "GLD",
-        "rationale": "Or physique servant de hedge portfolio face aux risques géopolitiques et à l'instabilité monétaire. Asset refuge classique offrant décorrélation avec les actions dans les phases de stress. Allocation défensive équilibrant la nature agressive du portefeuille.",
+        "rationale": "SPDR Gold Trust, allocation or la plus importante (10.3%) comme ancre de stabilité et hedge géopolitique/inflation. Protection essentielle dans un contexte d'incertitudes mondiales croissantes et de débasement monétaire. Rôle de diversification pure avec corrélations faibles aux actions et obligation de détention pour profil agressif.",
         "role": "hedge",
-        "risk_note": "Pas de rendement courant et sensibilité au dollar fort",
-        "market_context_link": "Protection face aux risques sectoriels et géographiques identifiés",
+        "risk_note": "Rendement nul et sous-performance en cas d'amélioration économique",
+        "market_context_link": "null",
         "weight_pct": 10.3,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1819,10 +1819,10 @@
       {
         "name": "XBI",
         "ticker": "XBI",
-        "rationale": "ETF biotech offrant exposition aux innovations thérapeutiques avec potentiel de disruption majeure. Secteur en consolidation post-correction avec valorisations attractives et catalyseurs pipeline. Position spéculative haute conviction adaptée au profil agressif recherchant l'alpha.",
+        "rationale": "SPDR S&P Biotech ETF exposant aux biotechs innovantes avec pipeline de traitements révolutionnaires. Position satellite de 3.4% pour capturer l'innovation médicale et les catalyseurs réglementaires à venir. Valorisations attractives après plusieurs années de correction avec potentiel de rebond cyclique.",
         "role": "satellite",
-        "risk_note": "Volatilité extrême et risques réglementaires/cliniques élevés",
-        "market_context_link": null,
+        "risk_note": "Risque binaire des essais cliniques et régulation FDA",
+        "market_context_link": "null",
         "weight_pct": 3.4,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1839,10 +1839,10 @@
       {
         "name": "SGOV",
         "ticker": "SGOV",
-        "rationale": "Trésor américain court terme offrant liquidité et préservation de capital dans un portefeuille agressif. Fournit un coussin de sécurité et des opportunités de rebalancing tactique. Allocation cash stratégique maintenant de la flexibilité pour saisir les dislocations de marché.",
+        "rationale": "iShares 0-3 Month Treasury Bond ETF offrant liquidité et sécurité avec rendement des taux courts américains. Allocation défensive de 5.9% pour préserver le capital et maintenir de la poudre sèche en cas d'opportunités. Rôle de stabilisation essentiel même dans un profil agressif pour gérer la volatilité globale.",
         "role": "hedge",
-        "risk_note": "Rendement réel négatif en cas d'inflation élevée",
-        "market_context_link": "Position défensive face au régime de marché neutral identifié",
+        "risk_note": "Risque de réinvestissement si baisse des taux Fed",
+        "market_context_link": "null",
         "weight_pct": 5.9,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -1883,21 +1883,21 @@
     },
     "Crypto": {},
     "_tickers": {
-      "VGSH": 0.09159398770111789,
+      "VGSH": 0.09159049234226932,
       "STIP": 0.09,
-      "SCHY": 0.06070533255668195,
-      "RIO": 0.07391856752953889,
-      "SCHD": 0.06354617550388239,
-      "HDV": 0.07807107336195376,
-      "VSS": 0.07678946887447984,
-      "EOG": 0.06269181951226656,
-      "JNJ": 0.05970140904149405,
-      "CF": 0.04897447737432985,
-      "AGS": 0.05340018697808055,
-      "ITX": 0.05040977650730804,
-      "VICI": 0.07842672095722945,
-      "GLD": 0.08104774287566971,
-      "XLV": 0.03072326122596719
+      "SCHY": 0.06069689199448532,
+      "RIO": 0.07390828977896177,
+      "SCHD": 0.06353733994654158,
+      "HDV": 0.07806021824062065,
+      "VSS": 0.07677879194939297,
+      "EOG": 0.06268310274588826,
+      "JNJ": 0.05969310806635696,
+      "CF": 0.04896766788816256,
+      "AGS": 0.05339276213448745,
+      "ITX": 0.05040276745495614,
+      "VICI": 0.07841581638611127,
+      "GLD": 0.08115376165498492,
+      "XLV": 0.030718989416781084
     },
     "_tickers_meta": {
       "VGSH": {
@@ -2639,7 +2639,7 @@
     "_limitations": [],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-04-03T08:44:05.318206+00:00",
+      "timestamp": "2026-04-03T14:04:46.741157+00:00",
       "profile": "Modéré",
       "data_limits": {
         "data_window": "5_years_daily",
@@ -2663,7 +2663,7 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-04-03T08:44:05.321069+00:00"
+          "timestamp": "2026-04-03T14:04:46.744552+00:00"
         },
         "summary": {
           "n_scenarios": 5,
@@ -2727,7 +2727,7 @@
             "warnings": [
               "Severe VaR deterioration: -21.0%"
             ],
-            "timestamp": "2026-04-03T08:44:05.319161+00:00"
+            "timestamp": "2026-04-03T14:04:46.742163+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -2772,7 +2772,7 @@
               "Severe volatility increase: +23.9%",
               "Severe VaR deterioration: -51.8%"
             ],
-            "timestamp": "2026-04-03T08:44:05.319612+00:00"
+            "timestamp": "2026-04-03T14:04:46.742764+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -2818,7 +2818,7 @@
               "Severe VaR deterioration: -39.2%",
               "Sharpe ratio collapse: -0.55"
             ],
-            "timestamp": "2026-04-03T08:44:05.320069+00:00"
+            "timestamp": "2026-04-03T14:04:46.743291+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -2863,7 +2863,7 @@
               "Severe volatility increase: +11.0%",
               "Severe VaR deterioration: -27.2%"
             ],
-            "timestamp": "2026-04-03T08:44:05.320491+00:00"
+            "timestamp": "2026-04-03T14:04:46.743859+00:00"
           },
           {
             "scenario": "market_crash",
@@ -2908,7 +2908,7 @@
               "Severe volatility increase: +45.2%",
               "Severe VaR deterioration: -110.3%"
             ],
-            "timestamp": "2026-04-03T08:44:05.320929+00:00"
+            "timestamp": "2026-04-03T14:04:46.744410+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -3112,7 +3112,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-04-03T08:44:05.316657Z",
+        "fetch_timestamp": "2026-04-03T14:04:46.739808Z",
         "resolutions_used": {
           "RIO": {
             "mic": "XLON",
@@ -3333,18 +3333,18 @@
       "n_positions": 16
     },
     "_cash_tactical": {
-      "pct": 8.1,
-      "label": "Cash Tactique (non investi): 8.1%",
-      "rationale": "Cash élevé justifié par transition de régime et VIX >20 créant des opportunités"
+      "pct": 7.1,
+      "label": "Cash Tactique (non investi): 7.1%",
+      "rationale": "Cash modéré pour profiter des dislocations sectorielles (tech/financials oversold)"
     },
     "_asset_details": [
       {
         "name": "VGSH",
         "ticker": "VGSH",
-        "rationale": "ETF obligataire court terme offrant une protection contre la volatilité des marchés actions dans un régime neutre. Fournit de la liquidité et un rendement stable avec une duration faible, idéal pour préserver le capital à court terme. Allocation de 9.2% cohérente avec le profil modéré recherchant un équilibre risque-rendement.",
+        "rationale": "ETF obligataire court terme qui offre une protection contre la volatilité des taux d'intérêt grâce à sa duration réduite (1-3 ans). Cet actif sert d'ancrage défensif au portefeuille, particulièrement adapté au régime de marché neutre actuel. Sa faible corrélation avec les actions en fait un excellent diversificateur pour un profil modéré.",
         "role": "hedge",
-        "risk_note": "Risque de taux d'intérêt et rendement réel faible en période d'inflation",
-        "market_context_link": null,
+        "risk_note": "Risque de taux d'intérêt limité mais rendement potentiellement faible en cas de baisse des taux",
+        "market_context_link": "Positionnement défensif adapté au régime de marché neutre avec de nombreux secteurs en difficulté",
         "weight_pct": 9.2,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3361,10 +3361,10 @@
       {
         "name": "STIP",
         "ticker": "STIP",
-        "rationale": "ETF d'obligations indexées sur l'inflation (TIPS) protégeant le pouvoir d'achat dans un environnement inflationniste. Complément défensif à VGSH avec une protection contre l'érosion monétaire. Allocation de 9.0% appropriée pour diversifier les risques obligataires.",
+        "rationale": "ETF d'obligations indexées sur l'inflation (TIPS) qui protège le portefeuille contre l'érosion du pouvoir d'achat. Cette protection inflation est cruciale dans un contexte où l'énergie, secteur inflationniste, surperforme fortement (+37.6% YTD). L'actif joue un rôle de stabilisateur macroéconomique pour l'horizon moyen terme.",
         "role": "hedge",
-        "risk_note": "Volatilité en cas de désinflation rapide et sensibilité aux taux réels",
-        "market_context_link": null,
+        "risk_note": "Sensibilité aux variations des anticipations d'inflation et performance limitée en déflation",
+        "market_context_link": "Protection contre l'inflation liée à la surperformance du secteur énergétique (+37.6% YTD)",
         "weight_pct": 9.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3381,10 +3381,10 @@
       {
         "name": "SCHY",
         "ticker": "SCHY",
-        "rationale": "ETF actions internationales à hauts dividendes offrant une diversification géographique et un revenu régulier. Permet d'accéder aux marchés développés hors États-Unis dans un contexte où certaines régions comme l'Allemagne sont évitées. Position satellite de 6.1% pour diversifier les sources de revenus.",
-        "role": "income",
-        "risk_note": "Risque de change et exposition aux régions en difficulté comme l'Europe",
-        "market_context_link": "Complète l'évitement de l'Allemagne par une exposition sélective internationale",
+        "rationale": "ETF diversifié de dividendes internationaux qui apporte une exposition géographique large hors États-Unis. Cet actif complète la diversification internationale du portefeuille tout en générant des revenus réguliers, essentiel pour un profil modéré. Sa sélection qualitative de titres à dividendes offre une certaine résilience.",
+        "role": "diversification",
+        "risk_note": "Exposition au risque de change et à la volatilité des marchés internationaux",
+        "market_context_link": "Diversification nécessaire face aux régions en difficulté (Allemagne, Suisse, Italie)",
         "weight_pct": 6.1,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3401,10 +3401,10 @@
       {
         "name": "RIO",
         "ticker": "RIO",
-        "rationale": "Rio Tinto, géant minier exposé aux matières premières et métaux, bénéficie indirectement du momentum du secteur energy. Position individuelle de 7.4% offrant une exposition aux commodités et dividendes attractifs. Profite de la demande en métaux pour la transition énergétique.",
+        "rationale": "Rio Tinto, géant minier diversifié, bénéficie indirectement de la surperformance du secteur énergétique et des matières premières. Cette exposition cyclique s'aligne sur les tendances favorables aux ressources naturelles. L'action offre également un dividende attractif et une exposition géographique diversifiée (Australie, Royaume-Uni).",
         "role": "satellite",
-        "risk_note": "Volatilité des prix des commodités et cycles économiques",
-        "market_context_link": "Exposition indirecte au momentum positif du secteur energy via les commodités",
+        "risk_note": "Cyclicité élevée liée aux prix des matières premières et risques géopolitiques miniers",
+        "market_context_link": "Bénéficie indirectement de la dynamique favorable du secteur énergétique (+37.6% YTD)",
         "weight_pct": 7.4,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3421,9 +3421,9 @@
       {
         "name": "SCHD",
         "ticker": "SCHD",
-        "rationale": "ETF américain de dividendes de qualité, sélectionnant des entreprises avec historique de distribution stable. Core holding de 6.4% offrant croissance des dividendes et qualité fondamentale. Stratégie défensive appropriée dans un régime de marché neutre.",
+        "rationale": "ETF de dividendes US de haute qualité qui sélectionne des entreprises avec des bilans solides et des historiques de dividendes durables. Cet actif core génère des revenus réguliers tout en offrant une protection relative lors des phases de volatilité. Sa méthodologie qualitative évite les pièges à dividendes.",
         "role": "core",
-        "risk_note": "Concentration géographique US et sensibilité aux taux d'intérêt",
+        "risk_note": "Biais sectoriel potentiel vers les valeurs traditionnelles et sensibilité aux taux d'intérêt",
         "market_context_link": null,
         "weight_pct": 6.4,
         "category": "ETF",
@@ -3441,9 +3441,9 @@
       {
         "name": "HDV",
         "ticker": "HDV",
-        "rationale": "ETF à hauts dividendes ciblant les entreprises américaines les plus généreuses en rendement. Complète SCHD avec focus sur le rendement immédiat plutôt que la croissance. Allocation de 7.8% pour maximiser les revenus dans un profil modéré.",
+        "rationale": "ETF focalisé sur les plus hauts dividendes américains, complétant SCHD avec une approche plus agressive sur le rendement. Cet actif income répond aux besoins de génération de revenus du profil modéré. Sa concentration sur les titres les plus rémunérateurs offre un rendement attractif dans un contexte de volatilité.",
         "role": "income",
-        "risk_note": "Piège à valeur et concentration sur secteurs matures",
+        "risk_note": "Risque de concentration sectorielle et de piège à dividendes (sociétés en difficulté avec dividendes non durables)",
         "market_context_link": null,
         "weight_pct": 7.8,
         "category": "ETF",
@@ -3461,10 +3461,10 @@
       {
         "name": "VSS",
         "ticker": "VSS",
-        "rationale": "ETF small-cap internationales offrant une exposition aux petites entreprises hors États-Unis pour diversification. Position de 7.7% captant le potentiel de croissance des marchés émergents et développés. Complément aux large-cap du portefeuille.",
+        "rationale": "ETF de petites capitalisations internationales qui apporte une diversification par taille de capitalisation hors États-Unis. Ces small caps offrent un potentiel de croissance supérieur à long terme, adapté à l'horizon 3-7 ans. L'actif diversifie géographiquement tout en capturant la prime de risque des petites valeurs.",
         "role": "diversification",
-        "risk_note": "Volatilité élevée des small-caps et risques géopolitiques",
-        "market_context_link": null,
+        "risk_note": "Volatilité élevée des small caps et exposition significative au risque de change",
+        "market_context_link": "Diversification internationale nécessaire face aux régions développées en difficulté",
         "weight_pct": 7.7,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3481,10 +3481,10 @@
       {
         "name": "EOG",
         "ticker": "EOG",
-        "rationale": "EOG Resources, producteur de pétrole et gaz de schiste, bénéficie directement du momentum exceptionnel du secteur energy (+37.6% YTD). Position individuelle de 6.3% capitalisant sur le secteur leader avec une entreprise de qualité. Profite de la surpondération recommandée sur l'energy.",
+        "rationale": "EOG Resources, producteur de pétrole et gaz de schiste américain, s'aligne parfaitement sur la surperformance du secteur énergétique (+37.6% YTD). Cette exposition directe au secteur leader du marché capitalise sur le momentum favorable. L'entreprise bénéficie d'une position technologique avancée dans le shale oil.",
         "role": "satellite",
-        "risk_note": "Volatilité des prix énergétiques et risques réglementaires",
-        "market_context_link": "Exposition directe au secteur energy favorisé (+37.6% YTD, leader 52W à +32.5%)",
+        "risk_note": "Volatilité élevée liée aux prix du pétrole et risques réglementaires environnementaux",
+        "market_context_link": "Exposition directe au secteur énergétique surpondéré (+37.6% YTD, +32.5% sur 12 mois)",
         "weight_pct": 6.3,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3501,9 +3501,9 @@
       {
         "name": "JNJ",
         "ticker": "JNJ",
-        "rationale": "Johnson & Johnson, conglomérat santé défensif avec dividendes croissants depuis des décennies. Position core de 6.0% offrant stabilité et croissance régulière dans un marché neutre. Qualité fondamentale exceptionnelle et résilience cyclique.",
+        "rationale": "Johnson & Johnson représente la stabilité défensive dans le secteur de la santé, offrant une diversification sectorielle qualitative. Cette blue-chip pharmaceutique génère des cash-flows récurrents et verse des dividendes croissants depuis des décennies. Son profil défensif équilibre les positions plus cycliques du portefeuille.",
         "role": "core",
-        "risk_note": "Litiges juridiques et pression réglementaire sur les prix",
+        "risk_note": "Risques réglementaires pharmaceutiques et litige potentiels (talc, opioïdes)",
         "market_context_link": null,
         "weight_pct": 6.0,
         "category": "ETF",
@@ -3521,10 +3521,10 @@
       {
         "name": "CF",
         "ticker": "CF",
-        "rationale": "CF Industries, producteur d'engrais azotés, bénéficie des tensions géopolitiques et de la demande alimentaire mondiale. Position de 4.9% sur un secteur essentiel avec barrières à l'entrée élevées. Exposition aux commodités agricoles complémentaire à RIO.",
+        "rationale": "CF Industries, leader des engrais azotés, bénéficie de la tendance favorable aux matières premières et de la sécurité alimentaire mondiale. Cette exposition aux intrants agricoles offre une diversification sectorielle unique et capitalise sur les besoins structurels en fertilisants. L'action présente un potentiel de revalorisation cyclique.",
         "role": "satellite",
-        "risk_note": "Cyclicité agricole et volatilité des prix des intrants",
-        "market_context_link": null,
+        "risk_note": "Cyclicité extrême liée aux prix agricoles et risques géopolitiques (sanctions, conflits)",
+        "market_context_link": "Bénéficie indirectement du momentum des matières premières et du secteur énergétique",
         "weight_pct": 4.9,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3541,9 +3541,9 @@
       {
         "name": "AGS",
         "ticker": "AGS",
-        "rationale": "PlayAGS, spécialiste des équipements de jeux, profite de la reprise du secteur loisirs post-COVID. Position spéculative de 5.3% sur un secteur en consolidation avec potentiel de croissance. Diversification sectorielle vers les biens de consommation discrétionnaire.",
+        "rationale": "PlayAGS, spécialisé dans les équipements de jeux, offre une exposition au secteur du divertissement et des loisirs. Cette small cap américaine bénéficie de la reprise post-COVID du secteur des casinos et de l'innovation technologique dans le gaming. L'actif apporte une diversification sectorielle spécialisée.",
         "role": "satellite",
-        "risk_note": "Sensibilité économique et risques réglementaires sur les jeux",
+        "risk_note": "Volatilité élevée des small caps et sensibilité aux cycles économiques du secteur des loisirs",
         "market_context_link": null,
         "weight_pct": 5.3,
         "category": "ETF",
@@ -3561,10 +3561,10 @@
       {
         "name": "ITX",
         "ticker": "ITX",
-        "rationale": "Inditex (Zara), leader mondial de la fast-fashion avec modèle d'intégration verticale unique. Position de 5.0% sur une entreprise européenne de qualité malgré les difficultés régionales. Exposition à la consommation mondiale et innovation retail.",
-        "role": "satellite",
-        "risk_note": "Pression sur les marges et sensibilité à la consommation",
-        "market_context_link": "Exposition européenne malgré les difficultés régionales identifiées",
+        "rationale": "Inditex (Zara), géant espagnol de la mode, offre une exposition européenne de qualité dans un secteur de consommation résilient. L'entreprise bénéficie d'un modèle intégré unique et d'une adaptation rapide aux tendances. Cette position internationale diversifie géographiquement le portefeuille.",
+        "role": "diversification",
+        "risk_note": "Exposition au risque de change EUR/USD et sensibilité aux cycles de consommation",
+        "market_context_link": "Diversification européenne malgré les difficultés régionales (Allemagne, Italie en difficulté)",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3581,9 +3581,9 @@
       {
         "name": "VICI",
         "ticker": "VICI",
-        "rationale": "VICI Properties, REIT spécialisé dans l'immobilier de casinos avec revenus locatifs stables. Position de 7.8% offrant diversification immobilière et rendement attractif. Modèle résistant avec locataires de qualité et baux long terme.",
+        "rationale": "VICI Properties, REIT spécialisé dans l'immobilier de casinos, offre une exposition immobilière défensive avec des revenus locatifs récurrents. Cette diversification alternative génère des dividendes attractifs tout en offrant une protection contre l'inflation. Le modèle triple-net lease assure une stabilité des revenus.",
         "role": "income",
-        "risk_note": "Sensibilité aux taux d'intérêt et concentration sectorielle",
+        "risk_note": "Sensibilité aux taux d'intérêt des REITs et risques spécifiques au secteur du gaming",
         "market_context_link": null,
         "weight_pct": 7.8,
         "category": "ETF",
@@ -3601,10 +3601,10 @@
       {
         "name": "GLD",
         "ticker": "GLD",
-        "rationale": "ETF or physique servant de couverture contre l'instabilité géopolitique et l'inflation. Allocation défensive de 8.1% appropriée dans un régime neutre avec risques identifiés. Protection du pouvoir d'achat et diversification des classes d'actifs.",
+        "rationale": "ETF or physique qui sert de couverture contre l'inflation et de valeur refuge en période d'incertitude. Cette allocation tactique protège le portefeuille contre les risques géopolitiques et la dépréciation monétaire. L'or joue son rôle traditionnel de diversificateur en période de tensions macroéconomiques.",
         "role": "hedge",
-        "risk_note": "Volatilité en fonction du dollar et absence de rendement",
-        "market_context_link": null,
+        "risk_note": "Absence de rendement et volatilité liée aux anticipations d'inflation et aux taux réels",
+        "market_context_link": "Protection contre l'instabilité d'un marché mixte (5 pos, 6 neg sur 11 secteurs)",
         "weight_pct": 8.1,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3621,10 +3621,10 @@
       {
         "name": "XLV",
         "ticker": "XLV",
-        "rationale": "ETF secteur santé américain offrant exposition aux biotechs et pharmaceutiques. Position satellite de 3.1% sur un secteur défensif avec croissance structurelle. Complément à JNJ avec diversification sur l'ensemble du secteur santé.",
-        "role": "satellite",
-        "risk_note": "Risques réglementaires et échecs cliniques des biotechs",
-        "market_context_link": null,
+        "rationale": "ETF du secteur de la santé américain qui offre une exposition défensive à un secteur structurellement porteur. Malgré sa faible pondération, cet actif apporte une diversification sectorielle qualitative et bénéficie des tendances démographiques à long terme. Le secteur healthcare reste résilient aux cycles économiques.",
+        "role": "core",
+        "risk_note": "Risques réglementaires pharmaceutiques et politiques de santé publique",
+        "market_context_link": "Diversification sectorielle face à la concentration sur l'énergie et aux secteurs en difficulté (tech, finance, telecom)",
         "weight_pct": 3.1,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -3666,21 +3666,21 @@
     },
     "Crypto": {},
     "_tickers": {
-      "BSV": 0.10262840474112102,
-      "ACWV": 0.04667762538085544,
-      "SPLV": 0.04667762538085544,
-      "CLTL": 0.10755210631790646,
-      "VICI": 0.04487241334955163,
-      "JNJ": 0.04487241334955163,
-      "PG": 0.04487241334955163,
-      "SCHP": 0.04487241334955163,
-      "EOG": 0.04487241334955163,
-      "SPYV": 0.042735631761477745,
-      "GD": 0.03794629371924317,
-      "ULVR": 0.037669985755268094,
+      "BSV": 0.10262840474112106,
+      "ACWV": 0.046677625380855445,
+      "SPLV": 0.046677625380855445,
+      "CLTL": 0.10755210631790649,
+      "VICI": 0.044872413349551644,
+      "JNJ": 0.044872413349551644,
+      "PG": 0.044872413349551644,
+      "SCHP": 0.044872413349551644,
+      "EOG": 0.044872413349551644,
+      "SPYV": 0.04273563176147775,
+      "GD": 0.037946293719243185,
+      "ULVR": 0.03766998575526811,
       "VGSH": 0.13,
-      "XLV": 0.04414646608397667,
-      "GLD": 0.049603794111537806,
+      "XLV": 0.04414646608397674,
+      "GLD": 0.04960379411153781,
       "STIP": 0.13
     },
     "_tickers_meta": {
@@ -4443,7 +4443,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-04-03T08:44:18.788108+00:00",
+      "timestamp": "2026-04-03T14:05:01.858339+00:00",
       "profile": "Stable",
       "data_limits": {
         "data_window": "5_years_daily",
@@ -4467,7 +4467,7 @@
         "stress_test_pack": {
           "version": "1.1.1",
           "n_scenarios": 5,
-          "timestamp": "2026-04-03T08:44:18.790845+00:00"
+          "timestamp": "2026-04-03T14:05:01.860861+00:00"
         },
         "summary": {
           "n_scenarios": 5,
@@ -4531,7 +4531,7 @@
             "warnings": [
               "Severe VaR deterioration: -17.6%"
             ],
-            "timestamp": "2026-04-03T08:44:18.789057+00:00"
+            "timestamp": "2026-04-03T14:05:01.859080+00:00"
           },
           {
             "scenario": "volatility_shock",
@@ -4576,7 +4576,7 @@
               "Severe volatility increase: +19.2%",
               "Severe VaR deterioration: -42.3%"
             ],
-            "timestamp": "2026-04-03T08:44:18.789493+00:00"
+            "timestamp": "2026-04-03T14:05:01.859525+00:00"
           },
           {
             "scenario": "liquidity_crisis",
@@ -4622,7 +4622,7 @@
               "Severe VaR deterioration: -32.4%",
               "Sharpe ratio collapse: -0.55"
             ],
-            "timestamp": "2026-04-03T08:44:18.789943+00:00"
+            "timestamp": "2026-04-03T14:05:01.859922+00:00"
           },
           {
             "scenario": "rate_shock",
@@ -4666,7 +4666,7 @@
             "warnings": [
               "Severe VaR deterioration: -24.1%"
             ],
-            "timestamp": "2026-04-03T08:44:18.790316+00:00"
+            "timestamp": "2026-04-03T14:05:01.860329+00:00"
           },
           {
             "scenario": "market_crash",
@@ -4711,7 +4711,7 @@
               "Severe volatility increase: +36.9%",
               "Severe VaR deterioration: -90.9%"
             ],
-            "timestamp": "2026-04-03T08:44:18.790712+00:00"
+            "timestamp": "2026-04-03T14:05:01.860715+00:00"
           }
         ],
         "source": "stress_testing.py",
@@ -4925,7 +4925,7 @@
           "confidence_high": 1000,
           "confidence_medium": 252
         },
-        "fetch_timestamp": "2026-04-03T08:44:18.786635Z",
+        "fetch_timestamp": "2026-04-03T14:05:01.856873Z",
         "resolutions_used": {
           "VICI": {
             "mic": "XNYS",
@@ -5142,17 +5142,17 @@
       "n_positions": 14
     },
     "_cash_tactical": {
-      "pct": 9.7,
-      "label": "Cash Tactique (non investi): 9.7%",
-      "rationale": "Cash élevé justifié par transition de régime et VIX >20 créant des opportunités"
+      "pct": 2.9,
+      "label": "Cash Tactique (non investi): 2.9%",
+      "rationale": "Cash modéré pour profiter des dislocations sectorielles (tech/financials oversold)"
     },
     "_asset_details": [
       {
         "name": "BSV",
         "ticker": "BSV",
-        "rationale": "ETF obligataire court terme offrant une stabilité élevée et une protection contre la volatilité des taux d'intérêt. Sa duration courte limite l'exposition au risque de taux tout en générant des revenus réguliers, parfaitement aligné avec le profil stable de l'investisseur. Constitue l'ancre défensive principale du portefeuille avec une volatilité très faible.",
+        "rationale": "ETF d'obligations courtes (1-5 ans) offrant stabilité et protection contre la volatilité des taux. Génère des revenus réguliers avec une durée limitée, idéal pour préserver le capital dans un environnement incertain. Allocation importante (10,3%) reflète la priorité donnée à la stabilité pour ce profil conservateur.",
         "role": "core",
-        "risk_note": "Risque de taux résiduel et rendement potentiellement limé en environnement de baisse des taux",
+        "risk_note": "Risque de taux d'intérêt et pouvoir d'achat en cas d'inflation persistante",
         "market_context_link": null,
         "weight_pct": 10.3,
         "category": "ETF",
@@ -5170,10 +5170,10 @@
       {
         "name": "ACWV",
         "ticker": "ACWV",
-        "rationale": "ETF actions mondiales à faible volatilité sélectionnant les titres les moins volatils du marché global. Offre une exposition equity diversifiée tout en respectant l'objectif de faible volatilité du profil stable. Permet de capturer les performances actions avec un risque maîtrisé grâce à sa méthodologie de construction basée sur la volatilité historique.",
+        "rationale": "ETF actions mondiales à faible volatilité sélectionnant des titres défensifs. Permet une exposition aux marchés actions tout en respectant l'objectif de volatilité réduite du profil stable. Diversification géographique large pour réduire les risques spécifiques.",
         "role": "core",
-        "risk_note": "Concentration potentielle sur certains secteurs défensifs et sous-performance en marchés haussiers dynamiques",
-        "market_context_link": "Évite naturellement les secteurs évités comme la technologie et les services de communication grâce à sa sélection low-vol",
+        "risk_note": "Sous-performance en marchés haussiers et biais défensif pouvant limiter les gains",
+        "market_context_link": "Évite l'exposition aux secteurs technologiques et financiers actuellement défavorisés",
         "weight_pct": 4.7,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5190,9 +5190,9 @@
       {
         "name": "SPLV",
         "ticker": "SPLV",
-        "rationale": "ETF S&P 500 à faible volatilité offrant une exposition au marché américain avec un profil de risque réduit. Complète ACWV avec un focus spécifique sur les États-Unis, marché traditionnellement plus stable. Sa méthodologie smart-beta permet de maintenir une diversification sectorielle tout en privilégiant la stabilité des cours.",
+        "rationale": "ETF S&P 500 faible volatilité concentré sur les valeurs américaines les plus stables. Complète ACWV avec un focus sur le marché domestique américain historiquement résilient. Stratégie smart beta alignée sur l'objectif de préservation du capital.",
         "role": "core",
-        "risk_note": "Biais home country et exposition concentrée sur le marché américain",
+        "risk_note": "Concentration géographique sur les États-Unis et potentielle sous-performance cyclique",
         "market_context_link": null,
         "weight_pct": 4.7,
         "category": "ETF",
@@ -5210,10 +5210,10 @@
       {
         "name": "CLTL",
         "ticker": "CLTL",
-        "rationale": "ETF thématique ciblant les tendances long terme comme la transition énergétique et la digitalisation. Apporte une dimension de croissance structurelle au portefeuille tout en maintenant une approche diversifiée. Son poids significatif (10.8%) reflète la conviction sur les mégatendances qui transforment l'économie mondiale.",
-        "role": "satellite",
-        "risk_note": "Volatilité élevée des secteurs technologiques et sensibilité aux cycles d'investissement",
-        "market_context_link": "Exposition partielle aux secteurs évités (technologie) mais justifiée par l'approche thématique long terme",
+        "rationale": "ETF obligataire offrant une exposition diversifiée aux marchés de crédit. Poids significatif (10,8%) indique un rôle de génération de revenus réguliers. Complète la partie obligataire gouvernementale avec du crédit pour optimiser le rendement.",
+        "role": "income",
+        "risk_note": "Risque de crédit et d'élargissement des spreads en cas de détérioration économique",
+        "market_context_link": null,
         "weight_pct": 10.8,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5230,9 +5230,9 @@
       {
         "name": "VICI",
         "ticker": "VICI",
-        "rationale": "REIT spécialisé dans l'immobilier de loisirs et de divertissement, générant des revenus locatifs réguliers et prévisibles. Offre une diversification sectorielle unique avec des cash-flows défensifs grâce à des baux long terme. Sa structure REIT garantit une distribution attractive des revenus aux actionnaires.",
+        "rationale": "REIT spécialisé dans l'immobilier de loisirs/casinos offrant des dividendes attractifs. Apporte une diversification sectorielle défensive avec des revenus récurrents. Exposition à un secteur peu corrélé aux cycles économiques traditionnels.",
         "role": "income",
-        "risk_note": "Sensibilité aux cycles économiques du secteur des loisirs et risque réglementaire",
+        "risk_note": "Sensibilité aux changements réglementaires et aux tendances de consommation discrétionnaire",
         "market_context_link": null,
         "weight_pct": 4.5,
         "category": "ETF",
@@ -5250,10 +5250,10 @@
       {
         "name": "JNJ",
         "ticker": "JNJ",
-        "rationale": "Position individuelle sur Johnson & Johnson, leader pharmaceutique et santé offrant stabilité et croissance défensive. Ses revenus récurrents et sa position dominante dans des marchés peu cycliques en font un pilier de stabilité. Le dividende aristocrate assure des revenus réguliers croissants sur le long terme.",
+        "rationale": "Valeur défensive par excellence dans la santé avec dividendes croissants depuis des décennies. Profite de la démographie vieillissante et offre une stabilité dans tous les environnements économiques. Exposition au secteur de la santé historiquement résilient.",
         "role": "core",
-        "risk_note": "Risques réglementaires secteur pharma et exposition aux contentieux juridiques",
-        "market_context_link": null,
+        "risk_note": "Risques réglementaires et juridiques liés aux produits pharmaceutiques",
+        "market_context_link": "Bénéficie indirectement de l'évitement du secteur technologique plus volatil",
         "weight_pct": 4.5,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5270,9 +5270,9 @@
       {
         "name": "PG",
         "ticker": "PG",
-        "rationale": "Position sur Procter & Gamble, référence des biens de consommation défensifs avec des marques iconiques. Offre une stabilité exceptionnelle grâce à la récurrence de la demande et des marges solides. Son profil défensif et sa politique de dividende croissant s'alignent parfaitement avec le profil stable recherché.",
+        "rationale": "Leader des biens de consommation courante avec un modèle défensif et des marques premium. Génère des flux de trésorerie stables et prévisibles même en récession. Dividende aristocrate offrant croissance régulière des revenus.",
         "role": "core",
-        "risk_note": "Sensibilité aux variations de change et pression concurrentielle sur les marges",
+        "risk_note": "Pression sur les marges en cas d'inflation des matières premières",
         "market_context_link": null,
         "weight_pct": 4.5,
         "category": "ETF",
@@ -5290,9 +5290,9 @@
       {
         "name": "SCHP",
         "ticker": "SCHP",
-        "rationale": "ETF obligations indexées sur l'inflation (TIPS) offrant une protection contre l'érosion du pouvoir d'achat. Complète la composante obligataire en apportant une couverture spécifique contre le risque inflationniste. Sa corrélation faible avec les autres obligations traditionnelles améliore la diversification du portefeuille.",
+        "rationale": "ETF d'obligations indexées sur l'inflation (TIPS) protégeant le pouvoir d'achat. Couverture essentielle contre le risque inflationniste dans un environnement de politique monétaire accommodante. Diversifie les risques obligataires traditionnels.",
         "role": "hedge",
-        "risk_note": "Performance limitée en environnement déflationniste et sensibilité aux taux réels",
+        "risk_note": "Performance négative en cas de déflation ou de baisse rapide des anticipations d'inflation",
         "market_context_link": null,
         "weight_pct": 4.5,
         "category": "ETF",
@@ -5310,10 +5310,10 @@
       {
         "name": "EOG",
         "ticker": "EOG",
-        "rationale": "Position sur EOG Resources, producteur de pétrole et gaz de schiste américain bénéficiant directement du momentum favorable du secteur énergétique. Capture la surperformance du secteur leader (+37.6% YTD) tout en maintenant un profil financier solide. Sa technologie de forage horizontal lui confère un avantage concurrentiel durable.",
+        "rationale": "Producteur de pétrole et gaz de schiste américain bénéficiant directement du momentum positif du secteur énergétique. Exposition tactique au secteur leader (+37,6% YTD) avec un acteur de qualité. Génère des flux importants dans l'environnement actuel des prix énergétiques.",
         "role": "satellite",
-        "risk_note": "Volatilité des prix des commodités et risques opérationnels du secteur énergétique",
-        "market_context_link": "Exposition directe au secteur énergie, identifié comme favorisé et leader de performance avec +37.6% YTD",
+        "risk_note": "Volatilité des prix des matières premières et risques environnementaux/réglementaires",
+        "market_context_link": "Aligné sur le secteur energy surpondéré (+15%) et leader sur tous les horizons temporels",
         "weight_pct": 4.5,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5330,10 +5330,10 @@
       {
         "name": "SPYV",
         "ticker": "SPYV",
-        "rationale": "ETF S&P 500 Value privilégiant les titres décotés avec des fondamentaux solides et des dividendes attractifs. Apporte un biais value au portefeuille, historiquement plus défensif et générateur de revenus réguliers. Sa méthodologie de sélection basée sur les ratios de valorisation offre une protection relative en cas de correction.",
+        "rationale": "ETF value S&P 500 ciblant les actions décotées avec des fondamentaux solides. Complète l'allocation low-vol avec une approche factorielle différente. Style value historiquement moins volatil que growth sur le long terme.",
         "role": "core",
-        "risk_note": "Sous-performance potentielle en marchés portés par la croissance et concentration sectorielle",
-        "market_context_link": null,
+        "risk_note": "Potentielle sous-performance prolongée du style value face aux valeurs de croissance",
+        "market_context_link": "Évite naturellement les valorisations élevées du secteur technologique défavorisé",
         "weight_pct": 4.3,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5350,9 +5350,9 @@
       {
         "name": "GD",
         "ticker": "GD",
-        "rationale": "Position sur General Dynamics, leader de l'aérospatiale et défense offrant stabilité grâce aux contrats gouvernementaux long terme. Ses revenus prévisibles et sa position oligopolistique en font un actif défensif de qualité. Le secteur défense bénéficie d'un contexte géopolitique favorable soutenant les budgets militaires.",
-        "role": "core",
-        "risk_note": "Dépendance aux budgets gouvernementaux et cycles politiques de la défense",
+        "rationale": "Contracteur de défense offrant visibilité des revenus grâce aux contrats gouvernementaux long-terme. Secteur défensif peu cyclique avec des barrières à l'entrée élevées. Exposition au complexe militaro-industriel dans un contexte géopolitique tendu.",
+        "role": "satellite",
+        "risk_note": "Dépendance aux budgets de défense gouvernementaux et cycles d'acquisition",
         "market_context_link": null,
         "weight_pct": 3.8,
         "category": "ETF",
@@ -5370,9 +5370,9 @@
       {
         "name": "ULVR",
         "ticker": "ULVR",
-        "rationale": "Position sur Unilever, géant anglo-néerlandais des biens de consommation avec des marques mondiales fortes. Offre une diversification géographique importante et une exposition aux marchés émergents à forte croissance. Ses marges défensives et sa politique de dividende stable en font un pilier de revenus réguliers.",
-        "role": "core",
-        "risk_note": "Exposition aux devises émergentes et pression concurrentielle sur certains segments",
+        "rationale": "Géant anglo-néerlandais des biens de consommation avec exposition aux marchés émergents. Marques premium défensives et croissance démographique favorable dans les pays en développement. Diversification géographique hors États-Unis.",
+        "role": "satellite",
+        "risk_note": "Exposition aux devises émergentes et risques géopolitiques des marchés en développement",
         "market_context_link": null,
         "weight_pct": 3.8,
         "category": "ETF",
@@ -5390,9 +5390,9 @@
       {
         "name": "VGSH",
         "ticker": "VGSH",
-        "rationale": "ETF obligations gouvernementales américaines court terme (1-3 ans) offrant liquidité élevée et préservation du capital. Constitue la réserve de liquidité du portefeuille avec un risque de crédit quasi-nul et une duration très courte. Son poids important (13%) reflète l'importance de la stabilité dans ce profil d'investissement.",
+        "rationale": "ETF d'obligations gouvernementales américaines courtes (1-3 ans) maximisant la sécurité et la liquidité. Allocation majeure (13%) servant d'ancre défensive au portefeuille. Duration très courte limitant le risque de taux.",
         "role": "core",
-        "risk_note": "Rendement potentiellement faible et sensibilité aux politiques monétaires",
+        "risk_note": "Rendement réel négatif en cas d'inflation supérieure au taux nominal",
         "market_context_link": null,
         "weight_pct": 13.0,
         "category": "ETF",
@@ -5410,10 +5410,10 @@
       {
         "name": "XLV",
         "ticker": "XLV",
-        "rationale": "ETF sectoriel santé américain offrant une exposition défensive à un secteur peu cyclique avec une demande structurellement croissante. Bénéficie du vieillissement démographique et de l'innovation pharmaceutique continue. Sa résilience historique en fait un pilier de stabilité du portefeuille actions.",
-        "role": "core",
-        "risk_note": "Risques réglementaires et cycles d'approbation des nouveaux médicaments",
-        "market_context_link": null,
+        "rationale": "ETF sectoriel santé américain bénéficiant des tendances démographiques long-terme. Secteur défensif traditionnellement moins volatil que le marché global. Complète l'exposition JNJ avec une diversification intra-sectorielle.",
+        "role": "satellite",
+        "risk_note": "Risques réglementaires sur les prix des médicaments et réformes de santé",
+        "market_context_link": "Évite l'exposition aux secteurs technologiques et financiers actuellement sous pression",
         "weight_pct": 4.4,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5430,9 +5430,9 @@
       {
         "name": "GLD",
         "ticker": "GLD",
-        "rationale": "ETF or physique servant de couverture contre l'instabilité géopolitique et monétaire, particulièrement pertinent dans le contexte actuel. Offre une diversification d'actifs non corrélés aux marchés traditionnels et une protection en cas de stress systémique. Sa liquidité élevée permet une gestion flexible de cette allocation defensive.",
+        "rationale": "ETF or physique servant de couverture contre l'instabilité financière et l'inflation. Diversification d'actifs non corrélés aux actions et obligations. Allocation tactique (5%) dans un contexte d'incertitudes géopolitiques croissantes.",
         "role": "hedge",
-        "risk_note": "Absence de revenus et volatilité liée aux anticipations d'inflation et de taux",
+        "risk_note": "Absence de rendement et volatilité liée aux anticipations d'inflation et au dollar",
         "market_context_link": null,
         "weight_pct": 5.0,
         "category": "ETF",
@@ -5450,9 +5450,9 @@
       {
         "name": "STIP",
         "ticker": "STIP",
-        "rationale": "ETF TIPS court terme combinant protection inflation et faible duration pour minimiser le risque de taux. Complète parfaitement SCHP avec un profil de risque encore plus conservateur adapté au profil stable. Son poids significatif (13%) témoigne de l'importance accordée à la préservation du pouvoir d'achat.",
-        "role": "hedge",
-        "risk_note": "Performance limitée en environnement de faible inflation et coût de portage",
+        "rationale": "ETF TIPS courtes combinant protection inflation et duration réduite. Allocation importante (13%) reflétant la double priorité: préservation du capital et couverture inflationniste. Complète parfaitement VGSH en ajoutant la protection pouvoir d'achat.",
+        "role": "core",
+        "risk_note": "Sous-performance en cas de désinflation rapide ou de hausse brutale des taux réels",
         "market_context_link": null,
         "weight_pct": 13.0,
         "category": "ETF",
@@ -5470,7 +5470,7 @@
     ]
   },
   "_meta": {
-    "generated_at": "2026-04-03T08:42:50.407654",
+    "generated_at": "2026-04-03T14:03:27.843850",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 50,
