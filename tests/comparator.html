@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>TradePulse · Comparator tests</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; background: #0a1020; color: #e6f0ff; padding: 2rem; max-width: 900px; margin: auto; }
+    h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+    .summary { padding: 1rem; border-radius: .5rem; margin-bottom: 1rem; font-weight: 600; }
+    .summary.ok { background: rgba(0,255,135,.15); border: 1px solid #00ff87; color: #00ff87; }
+    .summary.ko { background: rgba(255,107,107,.15); border: 1px solid #ff6b6b; color: #ff6b6b; }
+    .case { padding: .5rem .75rem; border-left: 3px solid #444; margin-bottom: .35rem; font-family: ui-monospace, monospace; font-size: .82rem; }
+    .case.pass { border-left-color: #00ff87; }
+    .case.fail { border-left-color: #ff6b6b; background: rgba(255,107,107,.06); }
+    .case .name { font-weight: 600; }
+    .case .err { color: #ff8888; margin-top: .25rem; }
+    .group { margin-top: 1.25rem; }
+    .group-h { font-weight: 700; opacity: .7; text-transform: uppercase; font-size: .7rem; letter-spacing: .08em; margin-bottom: .35rem; }
+  </style>
+</head>
+<body>
+  <h1>Sector Comparator — golden tests</h1>
+  <div id="summary" class="summary">Loading…</div>
+  <div id="results"></div>
+
+  <!-- Charge la lib (qui essaie d'auto-init mais ne trouvera aucun container, donc safe) -->
+  <script src="../js/sector-comparator.js"></script>
+  <script>
+  (function () {
+    const SC = window.SectorComparator;
+    if (!SC) {
+      document.getElementById('summary').textContent = 'FAIL: window.SectorComparator non exposé';
+      document.getElementById('summary').className = 'summary ko';
+      return;
+    }
+
+    // ----- mini test runner (zero dep) -----
+    const groups = {};
+    let pass = 0, fail = 0;
+    function group(name, fn) {
+      groups[name] = [];
+      const t = (label, assertion) => {
+        try {
+          const res = assertion();
+          if (res === false) throw new Error('assertion returned false');
+          groups[name].push({ label, ok: true });
+          pass++;
+        } catch (e) {
+          groups[name].push({ label, ok: false, err: e.message });
+          fail++;
+        }
+      };
+      fn(t);
+    }
+    const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const closeTo = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
+
+    // ===========================================================
+    // normalizeName
+    // ===========================================================
+    group('normalizeName', t => {
+      t('strip "Inc"', () => SC.normalizeName('Apple Inc.') === 'apple');
+      t('strip "Corp"', () => SC.normalizeName('NVIDIA Corp') === 'nvidia');
+      t('strip "Holdings PLC"', () => SC.normalizeName('HSBC Holdings plc') === 'hsbc');
+      t('strip "S.A."', () => SC.normalizeName("L'Oréal S.A.") === 'l oréal');
+      t('handle &', () => SC.normalizeName('AT&T Inc') === 'at and t');
+      t('lowercase', () => SC.normalizeName('SAMSUNG ELECTRONICS') === 'samsung electronics');
+      t('null safe', () => SC.normalizeName(null) === '');
+      t('empty safe', () => SC.normalizeName('') === '');
+    });
+
+    // ===========================================================
+    // stripSuffix
+    // ===========================================================
+    group('stripSuffix', t => {
+      t('AAPL.O → AAPL', () => SC.stripSuffix('AAPL.O') === 'AAPL');
+      t('BHP.AX → BHP', () => SC.stripSuffix('BHP.AX') === 'BHP');
+      t('AAPL → AAPL', () => SC.stripSuffix('AAPL') === 'AAPL');
+      t('lowercase upper', () => SC.stripSuffix('aapl.o') === 'AAPL');
+      t('null safe', () => SC.stripSuffix(null) === '');
+    });
+
+    // ===========================================================
+    // canonRegion
+    // ===========================================================
+    group('canonRegion', t => {
+      t('US', () => SC.canonRegion('US') === 'us');
+      t('Etats-Unis', () => SC.canonRegion('Etats-Unis') === 'us');
+      t('États-Unis', () => SC.canonRegion('États-Unis') === 'us');
+      t('north-america', () => SC.canonRegion('north-america') === 'us');
+      t('Europe', () => SC.canonRegion('Europe') === 'europe');
+      t('Asie', () => SC.canonRegion('Asie') === 'asia');
+      t('Asia', () => SC.canonRegion('Asia') === 'asia');
+      t('Japan', () => SC.canonRegion('Japan') === 'asia');
+      t('Hong Kong', () => SC.canonRegion('Hong Kong') === 'asia');
+      t('empty', () => SC.canonRegion('') === '');
+      t('null', () => SC.canonRegion(null) === '');
+    });
+
+    // ===========================================================
+    // weightedAvg — la critique #2 d'OpenAI : renormalisation
+    // ===========================================================
+    group('weightedAvg', t => {
+      const mk = (w, v) => ({ holding: { weight: w }, stock: { v } });
+      const get = r => r.stock.v;
+
+      t('empty → null', () => SC.weightedAvg([], get) === null);
+
+      t('all matched: standard weighted average', () => {
+        const rows = [mk(0.5, 10), mk(0.5, 20)];
+        return closeTo(SC.weightedAvg(rows, get), 15);
+      });
+
+      // Critique #2 OpenAI : "si la somme est faite sur le total brut tu sous-pondères"
+      // → vérifie que sur des poids partiels, on divise bien par Σwᵢ et pas par 1.0
+      t('partial weights: divides by Σw, not by 1.0', () => {
+        const rows = [mk(0.3, 10), mk(0.2, 20)];
+        // Si bug: 10*0.3 + 20*0.2 = 7, divisé par 1 → 7
+        // Correct: 7 / 0.5 = 14
+        return closeTo(SC.weightedAvg(rows, get), 14);
+      });
+
+      t('single null value is skipped from both sum and weight', () => {
+        const rows = [mk(0.4, 10), mk(0.6, null)];
+        // null doit être exclu : avg = 10*0.4 / 0.4 = 10
+        return closeTo(SC.weightedAvg(rows, get), 10);
+      });
+
+      t('zero weight is skipped', () => {
+        const rows = [mk(0, 10), mk(1, 20)];
+        return closeTo(SC.weightedAvg(rows, get), 20);
+      });
+
+      t('NaN value is skipped', () => {
+        const rows = [mk(0.5, NaN), mk(0.5, 10)];
+        return closeTo(SC.weightedAvg(rows, get), 10);
+      });
+
+      t('all values null → null', () => {
+        const rows = [mk(0.5, null), mk(0.5, null)];
+        return SC.weightedAvg(rows, get) === null;
+      });
+    });
+
+    // ===========================================================
+    // median
+    // ===========================================================
+    group('median', t => {
+      const get = r => r.v;
+      t('odd count', () => SC.median([{v:1},{v:3},{v:2}], get) === 2);
+      t('even count', () => SC.median([{v:1},{v:2},{v:3},{v:4}], get) === 2.5);
+      t('skips null', () => SC.median([{v:null},{v:10},{v:20}], get) === 15);
+      t('empty → null', () => SC.median([], get) === null);
+      t('all null → null', () => SC.median([{v:null},{v:null}], get) === null);
+    });
+
+    // ===========================================================
+    // buildStockIndex + matchStock + pickByRegion
+    // ===========================================================
+    group('buildStockIndex / matchStock / pickByRegion', t => {
+      // 2 stocks "BHP" — un US, un AU (cas réel multi-listing)
+      const us = { stocks: [
+        { ticker: 'AAPL', name: 'Apple Inc.', region: 'US' },
+        { ticker: 'BHP',  name: 'BHP Group',  region: 'US' },
+      ]};
+      const eu = { stocks: [
+        { ticker: 'BP',   name: 'BP plc',     region: 'Europe' },
+      ]};
+      const asia = { stocks: [
+        { ticker: 'BHP',  name: 'BHP Group Limited', region: 'Asia' },
+      ]};
+
+      const idx = SC.buildStockIndex([us, eu, asia]);
+      SC._setShared({ stockIndex: idx, holdings: {} });
+
+      t('index built non-empty', () => idx.size > 0);
+      t('AAPL stored as array', () => Array.isArray(idx.get('T:AAPL')));
+
+      t('match by exact ticker (no collision)', () => {
+        const m = SC.matchStock({ symbol: 'AAPL', name: 'Apple Inc.' });
+        return m && m.ticker === 'AAPL';
+      });
+
+      t('collision: BHP without hint → first arrived (US)', () => {
+        const m = SC.matchStock({ symbol: 'BHP', name: 'BHP' });
+        return m && m.region === 'US';
+      });
+
+      t('collision: BHP with Asia hint → Asia version', () => {
+        const m = SC.matchStock({ symbol: 'BHP', name: 'BHP' }, 'Asie');
+        return m && m.region === 'Asia';
+      });
+
+      t('collision: BHP with Europe hint → fallback to first (no Europe BHP)', () => {
+        const m = SC.matchStock({ symbol: 'BHP', name: 'BHP' }, 'Europe');
+        return m && (m.region === 'US' || m.region === 'Asia');
+      });
+
+      t('strip suffix match: BHP.AX → BHP', () => {
+        const m = SC.matchStock({ symbol: 'BHP.AX', name: '' }, 'Asie');
+        return m && m.region === 'Asia';
+      });
+
+      t('match by name fallback', () => {
+        const m = SC.matchStock({ symbol: 'XXX_unknown', name: 'Apple Inc.' });
+        return m && m.ticker === 'AAPL';
+      });
+
+      t('no match → null', () => {
+        const m = SC.matchStock({ symbol: 'ZZZ', name: 'Unknown Co' });
+        return m === null;
+      });
+
+      SC._resetShared();
+    });
+
+    // ===========================================================
+    // compareAggregates — winner logic + tie zone
+    // ===========================================================
+    group('compareAggregates (winner + tie zone)', t => {
+      const aggL = {
+        perf_ytd: 10, perf_1y: 20, perf_3y: 50,
+        quality: 80, buffett: 70,
+        roe: 25, roic: 18, net_margin: 15, fcf_yield: 5,
+        beta: 1.1, coverage: 9, total: 10,
+      };
+      const aggR = {
+        perf_ytd: 5, perf_1y: 20.3, perf_3y: 49.5,  // perf_1y dans la tie zone (0.3 < 0.5)
+        quality: 78.5, buffett: 65,                  // quality diff = 1.5 < 2 → tie
+        roe: 22, roic: 18.2, net_margin: 14.4, fcf_yield: 4.7,
+        beta: 0.9, coverage: 7, total: 10,
+      };
+      const cmp = SC.compareAggregates(aggL, aggR);
+
+      t('perf_ytd: L wins (10 vs 5)', () => cmp.left.perf_ytd === 'win' && cmp.right.perf_ytd === 'lose');
+      t('perf_1y: tie (gap 0.3 < eps 0.5)', () => cmp.left.perf_1y === 'tie' && cmp.right.perf_1y === 'tie');
+      t('perf_3y: L wins (gap 0.5 = eps 1.0 → tie)', () => cmp.left.perf_3y === 'tie');
+      t('quality: tie (gap 1.5 < eps 2)', () => cmp.left.quality === 'tie');
+      t('buffett: L wins (gap 5 > eps 2)', () => cmp.left.buffett === 'win');
+      t('roe: L wins', () => cmp.left.roe === 'win');
+      t('roic: tie (gap 0.2 < eps 0.5)', () => cmp.left.roic === 'tie');
+      t('net_margin: L wins (gap 0.6 > eps 0.5)', () => cmp.left.net_margin === 'win');
+      t('fcf_yield: L wins (gap 0.3 < eps 0.5 → tie)', () => cmp.left.fcf_yield === 'tie');
+      t('beta: neutral (dir 0)', () => cmp.left.beta === 'neutral');
+      t('coverage: neutral (dir 0)', () => cmp.left.coverage === 'neutral');
+      t('leftWins counted correctly', () => cmp.leftWins === 4); // ytd, buffett, roe, net_margin
+      t('rightWins counted correctly', () => cmp.rightWins === 0);
+      t('ties counted', () => cmp.ties >= 4);
+    });
+
+    group('compareAggregates: missing values → neutral', t => {
+      const aggL = { perf_ytd: 10 };
+      const aggR = { perf_ytd: null };
+      const cmp = SC.compareAggregates(aggL, aggR);
+      t('null → neutral', () => cmp.left.perf_ytd === 'neutral' && cmp.right.perf_ytd === 'neutral');
+      t('no win attributed', () => cmp.leftWins === 0 && cmp.rightWins === 0);
+    });
+
+    // ===========================================================
+    // disambiguateLabels
+    // ===========================================================
+    group('disambiguateLabels', t => {
+      const items = [
+        { family: 'États-Unis', shortLabel: 'Etats-Unis', label: 'Etats-Unis — iShares Core S&P 500 ETF', symbol: 'IVV' },
+        { family: 'États-Unis', shortLabel: 'Etats-Unis', label: 'Etats-Unis — Invesco QQQ NASDAQ-100', symbol: 'QQQ' },
+        { family: 'États-Unis', shortLabel: 'Etats-Unis', label: 'Etats-Unis — iShares Russell 2000 ETF', symbol: 'IWM' },
+        { family: 'Europe', shortLabel: 'France', label: 'France — iShares MSCI France ETF', symbol: 'EWQ' },
+      ];
+      SC.disambiguateLabels(items);
+      t('IVV gets S&P 500 tag', () => /S&P/.test(items[0].shortLabel));
+      t('QQQ gets NASDAQ tag', () => /NASDAQ/.test(items[1].shortLabel));
+      t('IWM gets Russell tag', () => /Russell/.test(items[2].shortLabel));
+      t('France stays untouched (no collision)', () => items[3].shortLabel === 'France');
+    });
+
+    // ===========================================================
+    // flattenSectors
+    // ===========================================================
+    group('flattenSectors', t => {
+      const raw = {
+        sectors: {
+          tech: [
+            { symbol: 'XLK', display_fr: 'S&P 500 — Technologie', sector_fr: 'Technologie', region: 'US', indexFamily: 'S&P 500' },
+            { symbol: 'EXV3', display_fr: 'STOXX 600 — Technologie', sector_fr: 'Technologie', region: 'Europe', indexFamily: 'STOXX Europe 600' },
+          ],
+        },
+      };
+      const out = SC.flattenSectors(raw);
+      t('two items', () => out.length === 2);
+      t('shortLabel from sector_fr', () => out.every(it => it.shortLabel === 'Technologie'));
+      t('regionKey set', () => out[0].regionKey && out[1].regionKey);
+      t('family from indexFamily', () => out.find(i => i.symbol === 'XLK').family === 'S&P 500');
+    });
+
+    // ===========================================================
+    // flattenMarkets
+    // ===========================================================
+    group('flattenMarkets', t => {
+      const raw = {
+        indices: {
+          europe: [
+            { symbol: 'EWG', country: 'Allemagne', index_name: 'iShares MSCI Germany ETF' },
+          ],
+          'north-america': [
+            { symbol: 'IVV', country: 'Etats-Unis', index_name: 'iShares Core S&P 500 ETF' },
+          ],
+          asia: [
+            { symbol: 'EWJ', country: 'Japon', index_name: 'iShares MSCI Japan ETF' },
+          ],
+        },
+      };
+      const out = SC.flattenMarkets(raw);
+      t('three items', () => out.length === 3);
+      t('regionKey preserved', () => out.find(i => i.symbol === 'EWG').regionKey === 'europe');
+      t('family translated', () => out.find(i => i.symbol === 'IVV').family === 'Amérique du Nord');
+      t('asia mapped', () => out.find(i => i.symbol === 'EWJ').family === 'Asie');
+      t('shortLabel = country', () => out.find(i => i.symbol === 'EWJ').shortLabel === 'Japon');
+    });
+
+    // ===========================================================
+    // RENDER
+    // ===========================================================
+    const sumEl = document.getElementById('summary');
+    const resEl = document.getElementById('results');
+    sumEl.className = 'summary ' + (fail === 0 ? 'ok' : 'ko');
+    sumEl.textContent = `${pass} passed · ${fail} failed (${pass + fail} total)`;
+    Object.entries(groups).forEach(([name, cases]) => {
+      const g = document.createElement('div');
+      g.className = 'group';
+      g.innerHTML = `<div class="group-h">${name}</div>` +
+        cases.map(c => `<div class="case ${c.ok ? 'pass' : 'fail'}"><span class="name">${c.ok ? '✓' : '✗'} ${c.label}</span>${c.err ? `<div class="err">${c.err}</div>` : ''}</div>`).join('');
+      resEl.appendChild(g);
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -737,4 +737,26 @@
   } else {
     init();
   }
+
+  // Exposition des fonctions pures pour les tests (tests/comparator.html)
+  // Aucune dépendance au DOM, aucun side effect.
+  window.SectorComparator = {
+    normalizeName,
+    stripSuffix,
+    canonRegion,
+    weightedAvg,
+    median,
+    buildStockIndex,
+    matchStock,
+    pickByRegion,
+    compareAggregates,
+    disambiguateLabels,
+    flattenSectors,
+    flattenMarkets,
+    AGG_METRICS,
+    MIN_COVERAGE,
+    // hooks pour injecter un état partagé en test (sans toucher au runtime)
+    _setShared(state) { Object.assign(shared, state); },
+    _resetShared() { shared.holdings = null; shared.stockIndex = null; shared.loading = null; },
+  };
 })();
