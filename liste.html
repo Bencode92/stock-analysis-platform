@@ -1617,6 +1617,13 @@
                                  <span id="watchlist-count" style="background:rgba(255,215,0,0.2);color:#ffd700;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;">0</span>
                              </button>
 
+                             <!-- v8.4: Auto-Comparator button -->
+                             <button onclick="AutoComparator.openPanel()"
+                                 style="padding:6px 14px;border-radius:8px;border:1px solid rgba(0,255,135,0.3);background:rgba(0,255,135,0.05);color:#00FF87;font-size:0.78rem;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600;"
+                                 title="Comparaison automatique multi-critères">
+                                 <i class="fas fa-magic" style="font-size:0.7rem;"></i> Comparaison auto
+                             </button>
+
                              <!-- v8.1: Saved searches dropdown -->
                              <div style="position:relative;">
                                  <button onclick="document.getElementById('saved-searches-panel').classList.toggle('hidden')"

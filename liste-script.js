@@ -12,6 +12,241 @@
  * v1.5: Affichage des valeurs dividend_yield_ttm et payout_ratio_ttm depuis les JSON
  */
 
+// ===== v8.4: Auto Comparator (multi-criteria scoring) =====
+const AutoComparator = {
+    // Metrics used for scoring (label, getter, higherIsBetter)
+    METRICS: [
+        { key: 'quality_score', get: s => s.quality_score, hib: true },
+        { key: 'buffett_score', get: s => s.buffett_score, hib: true },
+        { key: 'change', get: s => parseFloat(String(s.change||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'ytd', get: s => parseFloat(String(s.ytd||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'perf_1y', get: s => parseFloat(String(s.perf_1y||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'perf_3y', get: s => parseFloat(String(s.perf_3y||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'pe_ratio', get: s => s.pe_ratio, hib: false },
+        { key: 'roe', get: s => s.roe, hib: true },
+        { key: 'de_ratio', get: s => s.de_ratio, hib: false },
+        { key: 'fcf_yield', get: s => s.fcf_yield, hib: true },
+        { key: 'dividend_yield', get: s => parseFloat(String(s.dividend_yield_ttm||s.dividend_yield||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'volatility_3y', get: s => parseFloat(String(s.volatility_3y||'').replace(',','.').replace('%','').replace('+','')), hib: false },
+        { key: 'max_drawdown_3y', get: s => parseFloat(String(s.max_drawdown_3y||'').replace(',','.').replace('%','').replace('+','')), hib: false },
+    ],
+
+    // Get all stocks from current loaded data (across all letters)
+    getAllStocks() {
+        const stocks = [];
+        const data = window.stocksDataUnfiltered || window.stocksData;
+        if (!data?.indices) return stocks;
+        Object.values(data.indices).forEach(letterStocks => {
+            (letterStocks || []).forEach(s => stocks.push(s));
+        });
+        return stocks;
+    },
+
+    getUniqueValues(stocks, field) {
+        const set = new Set();
+        stocks.forEach(s => {
+            const v = s[field];
+            if (v) set.add(v);
+        });
+        return [...set].sort();
+    },
+
+    // Compute percentile score for each stock based on the pool
+    computeScores(pool) {
+        const scores = pool.map(() => ({ totalPct: 0, validMetrics: 0 }));
+
+        this.METRICS.forEach(metric => {
+            const values = pool.map(s => {
+                const v = metric.get(s);
+                return (v != null && !isNaN(parseFloat(v))) ? parseFloat(v) : null;
+            });
+            const valid = values.map((v, i) => ({ v, i })).filter(x => x.v != null);
+            if (valid.length < 2) return; // Skip metric if not enough data
+
+            // Sort by value
+            valid.sort((a, b) => metric.hib ? a.v - b.v : b.v - a.v);
+            // Assign percentile (0 = worst, 100 = best)
+            valid.forEach((x, rank) => {
+                const pct = (rank / (valid.length - 1)) * 100;
+                scores[x.i].totalPct += pct;
+                scores[x.i].validMetrics++;
+            });
+        });
+
+        return scores.map(s => s.validMetrics > 0 ? Math.round(s.totalPct / s.validMetrics) : 0);
+    },
+
+    runAutoCompare() {
+        const region = document.getElementById('auto-region')?.value || '';
+        const sector = document.getElementById('auto-sector')?.value || '';
+        const industry = document.getElementById('auto-industry')?.value || '';
+        const country = document.getElementById('auto-country')?.value || '';
+        const topN = parseInt(document.getElementById('auto-top-n')?.value) || 5;
+
+        const all = this.getAllStocks();
+        let pool = all.filter(s => {
+            if (region && s.region !== region) return false;
+            if (sector && s.sector !== sector) return false;
+            if (industry && s.industry !== industry) return false;
+            if (country && s.country !== country) return false;
+            return true;
+        });
+
+        const resultDiv = document.getElementById('auto-result-info');
+        if (pool.length === 0) {
+            if (resultDiv) resultDiv.innerHTML = '<span style="color:#f44336;">Aucune action ne correspond</span>';
+            return;
+        }
+        if (pool.length < 2) {
+            if (resultDiv) resultDiv.innerHTML = '<span style="color:#ff9800;">Au moins 2 actions requises</span>';
+            return;
+        }
+
+        // Compute scores
+        const scores = this.computeScores(pool);
+        const ranked = pool.map((s, i) => ({ stock: s, score: scores[i] }))
+                           .sort((a, b) => b.score - a.score)
+                           .slice(0, Math.min(topN, 5)); // max 5 for the comparator
+
+        // Show preview
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);margin-bottom:6px;">
+                    ${pool.length} actions analysées · Top ${ranked.length} :
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    ${ranked.map(r => `<span style="padding:4px 10px;border-radius:12px;background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.3);color:#00FF87;font-size:0.75rem;font-weight:700;">${r.stock.ticker} <span style="opacity:0.6;font-weight:500;">${r.score}/100</span></span>`).join('')}
+                </div>
+            `;
+        }
+
+        // Load top into the main comparator
+        StockComparator.selected.clear();
+        ranked.forEach(r => StockComparator.selected.set(r.stock.ticker, r.stock));
+        StockComparator.renderBar();
+
+        // Open the comparison modal
+        setTimeout(() => StockComparator.openModal(), 200);
+    },
+
+    openPanel() {
+        // Remove existing panel if any
+        document.getElementById('auto-compare-panel')?.remove();
+
+        const all = this.getAllStocks();
+        const regions = ['US', 'EUROPE', 'ASIA'];
+        const sectors = this.getUniqueValues(all, 'sector');
+        const industries = this.getUniqueValues(all, 'industry');
+        const countries = this.getUniqueValues(all, 'country');
+
+        const panel = document.createElement('div');
+        panel.id = 'auto-compare-panel';
+        panel.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+            background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);
+            display:flex;align-items:center;justify-content:center;padding:20px;`;
+        panel.addEventListener('click', (e) => { if (e.target === panel) panel.remove(); });
+
+        panel.innerHTML = `
+            <div style="background:#0a1929;border:1px solid rgba(0,255,135,0.3);border-radius:14px;
+                max-width:560px;width:100%;padding:24px;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
+                    <div>
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;display:flex;align-items:center;">
+                            <i class="fas fa-magic" style="color:#00FF87;margin-right:8px;"></i>
+                            Comparaison automatique
+                        </h2>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.72rem;margin:4px 0 0 0;">
+                            Sélectionnez vos critères. L'algo analyse ${all.length} actions et trouve les meilleures sur 13 métriques.
+                        </p>
+                    </div>
+                    <button onclick="document.getElementById('auto-compare-panel').remove()"
+                        style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.2rem;padding:0 8px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:0.65rem;color:rgba(255,255,255,0.5);text-transform:uppercase;display:block;margin-bottom:4px;">Région</label>
+                        <select id="auto-region" onchange="AutoComparator.updateCount()" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;">
+                            <option value="">Toutes</option>
+                            ${regions.map(r => `<option value="${r}">${r}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:rgba(255,255,255,0.5);text-transform:uppercase;display:block;margin-bottom:4px;">Pays</label>
+                        <select id="auto-country" onchange="AutoComparator.updateCount()" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;">
+                            <option value="">Tous</option>
+                            ${countries.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:rgba(255,255,255,0.5);text-transform:uppercase;display:block;margin-bottom:4px;">Secteur</label>
+                        <select id="auto-sector" onchange="AutoComparator.updateCount()" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;">
+                            <option value="">Tous</option>
+                            ${sectors.map(s => `<option value="${s}">${s}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:rgba(255,255,255,0.5);text-transform:uppercase;display:block;margin-bottom:4px;">Industrie</label>
+                        <select id="auto-industry" onchange="AutoComparator.updateCount()" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;">
+                            <option value="">Toutes</option>
+                            ${industries.map(i => `<option value="${i}">${i}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:0.65rem;color:rgba(255,255,255,0.5);text-transform:uppercase;display:block;margin-bottom:4px;">Top à comparer</label>
+                    <select id="auto-top-n" style="padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:0.82rem;width:100px;">
+                        <option value="3">Top 3</option>
+                        <option value="5" selected>Top 5</option>
+                    </select>
+                </div>
+
+                <div id="auto-result-info" style="padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:16px;min-height:60px;">
+                    <span style="color:rgba(255,255,255,0.4);font-size:0.75rem;">Sélectionnez des critères puis cliquez "Analyser"</span>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button onclick="document.getElementById('auto-compare-panel').remove()"
+                        style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);font-size:0.82rem;cursor:pointer;">
+                        Annuler
+                    </button>
+                    <button onclick="AutoComparator.runAutoCompare()"
+                        style="padding:8px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#00FF87,#00d672);color:#000;font-size:0.85rem;font-weight:700;cursor:pointer;">
+                        <i class="fas fa-bolt" style="margin-right:4px;"></i>Analyser & Comparer
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(panel);
+    },
+
+    updateCount() {
+        const region = document.getElementById('auto-region')?.value || '';
+        const sector = document.getElementById('auto-sector')?.value || '';
+        const industry = document.getElementById('auto-industry')?.value || '';
+        const country = document.getElementById('auto-country')?.value || '';
+
+        const all = this.getAllStocks();
+        const pool = all.filter(s => {
+            if (region && s.region !== region) return false;
+            if (sector && s.sector !== sector) return false;
+            if (industry && s.industry !== industry) return false;
+            if (country && s.country !== country) return false;
+            return true;
+        });
+
+        const resultDiv = document.getElementById('auto-result-info');
+        if (resultDiv) {
+            const color = pool.length >= 2 ? '#00FF87' : pool.length === 1 ? '#ff9800' : '#f44336';
+            resultDiv.innerHTML = `<div style="font-size:0.85rem;color:${color};font-weight:600;">${pool.length} action${pool.length > 1 ? 's' : ''} correspond${pool.length > 1 ? 'ent' : ''} aux critères</div><div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:4px;">Cliquez "Analyser" pour calculer les scores et lancer la comparaison.</div>`;
+        }
+    }
+};
+
 // ===== v8.3: Stock Comparator =====
 const StockComparator = {
     MAX: 5,
@@ -984,6 +1219,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
         window.stocksData = stocksData; // v8.1: expose for CSV export
+        window.stocksDataUnfiltered = stocksDataUnfiltered; // v8.4: expose for AutoComparator
         
         // Mettre à jour le compteur
         const countElement = document.getElementById('az-filtered-count');
