@@ -1005,7 +1005,12 @@
                             <tr>
                               <td class="px-3 py-2 font-medium">Fiscalité sortie</td>
                               <td class="px-3 py-2">Capital exonéré IR<br><span class="text-xs text-gray-400">PS 18,6 % (LFSS 2026)</span></td>
-                              <td class="px-3 py-2">PFU 31,4% (versements déduits)<br>ou rente imposée<br>ou 18,6% PS (épargne salariale)</td>
+                              <td class="px-3 py-2">
+                                <span class="text-xs text-gray-400">3 cas distincts :</span><br>
+                                <span class="text-xs">📗 Épargne salariale → exonéré IR + 18,6% PS</span><br>
+                                <span class="text-xs">📘 Versements déduits → barème IR + PFU 31,4%</span><br>
+                                <span class="text-xs">💰 Rente → pension (abat. 10%) + PS 10,1%</span>
+                              </td>
                               <td class="px-3 py-2">Variable</td>
                             </tr>
                             <tr>
@@ -1144,8 +1149,22 @@
                           </div>
                           <div class="flex items-start gap-2">
                             <span class="text-green-400 font-bold mt-0.5">✅</span>
-                            <span><strong class="text-white">Versements volontaires perso</strong> : <strong class="text-green-300">déductibles</strong> (comme un PER individuel) → économie d'impôt = versement × TMI</span>
+                            <span><strong class="text-white">Versements volontaires perso</strong> : <strong class="text-green-300">déductibles si tu coches l'option</strong> à l'entrée → économie d'impôt = versement × TMI</span>
                           </div>
+                        </div>
+
+                        <div class="bg-orange-900 bg-opacity-20 rounded-lg p-3 mb-3 border-l-4 border-orange-400">
+                          <p class="text-xs font-semibold text-orange-300 mb-1">⚠️ Option déductibilité PERCOL : un choix engageant et réversible par versement</p>
+                          <p class="text-xs text-gray-300">
+                            Pour chaque versement volontaire perso, tu peux <strong class="text-white">cocher ou non</strong> l'option "déductibilité à l'entrée". Ce choix est <strong class="text-yellow-300">engageant pour ce versement</strong> et impacte la fiscalité de sortie :
+                          </p>
+                          <ul class="text-xs text-gray-300 mt-2 space-y-1">
+                            <li>🔹 <strong class="text-white">Si tu déduis à l'entrée</strong> (option choisie) : tu économises ton TMI maintenant, MAIS à la sortie en capital, le versement sera <strong class="text-red-300">imposé au barème IR</strong> + gains au PFU 31,4%</li>
+                            <li>🔹 <strong class="text-white">Si tu ne déduis pas</strong> (option refusée) : pas d'économie d'impôt à l'entrée, mais à la sortie en capital, le versement est <strong class="text-green-300">exonéré d'IR</strong> + gains à 18,6% PS</li>
+                          </ul>
+                          <p class="text-xs text-gray-400 mt-2 italic">
+                            💡 Règle classique du PER : tu gagnes maintenant <strong>OU</strong> tu gagnes plus tard, pas les deux. Le choix dépend de ta TMI actuelle vs ta TMI estimée à la retraite.
+                          </p>
                         </div>
 
                         <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 mt-3">
@@ -1176,16 +1195,26 @@
                                 <td class="text-right text-cyan-300 font-semibold">0 €</td>
                               </tr>
                               <tr>
-                                <td class="py-1.5">PERCOL — versement perso volontaire</td>
+                                <td class="py-1.5">PERCOL — perso <strong class="text-green-300">avec option déduction</strong></td>
                                 <td class="text-right">1 000 €</td>
                                 <td class="text-right text-gray-500">—</td>
                                 <td class="text-right">1 000 €</td>
                                 <td class="text-right">700 € <span class="text-[10px] text-gray-500">(éco. 300€ IR)</span></td>
                               </tr>
+                              <tr>
+                                <td class="py-1.5">PERCOL — perso <strong class="text-blue-300">sans option déduction</strong></td>
+                                <td class="text-right">1 000 €</td>
+                                <td class="text-right text-gray-500">—</td>
+                                <td class="text-right">1 000 €</td>
+                                <td class="text-right">1 000 € <span class="text-[10px] text-gray-500">(pas d'éco)</span></td>
+                              </tr>
                             </tbody>
                           </table>
                           <p class="text-[11px] text-gray-500 mt-2 italic">
                             💡 La CSG/CRDS de 9,7% (dont 6,8% déductible IR N+1) est prélevée à l'entrée sur l'abondement employeur. Sur 1 000 € bruts d'abondement, tu touches ~903 € net sur le plan. L'avantage économique reste massif : 903 € "gratuits" sans rien sortir de ta poche.
+                          </p>
+                          <p class="text-[11px] text-orange-300 mt-1 italic">
+                            ⚠️ <strong>Versements perso avec déduction</strong> : économie IR à l'entrée (700€ coût) MAIS imposition au barème IR à la sortie en capital. <strong>Versements perso sans déduction</strong> : pas d'économie à l'entrée mais sortie capital exonérée d'IR. Le choix se fait à chaque versement.
                           </p>
                         </div>
 
@@ -2572,6 +2601,7 @@
                             '⚠️ <span class="important-info">Surendettement</span>',
                             '💼 <span class="important-info">Expiration des droits au chômage</span>',
                             '🤝 <span class="important-info">Activité de proche aidant</span> (extension récente)',
+                            '<span class="text-gray-400">🆘 Violences conjugales : confirmé pour le PEE depuis 2020. Pour le PERCOL, vérifier l\'accord d\'entreprise et la fiche Service Public F31622 (extension non explicitement documentée à ce jour).</span>',
                             '<span class="text-yellow-300">⚠️ Note : la rupture du contrat de travail N\'EST PAS un cas de déblocage du PERCOL (uniquement du PEE)</span>'
                         ]
                     },
