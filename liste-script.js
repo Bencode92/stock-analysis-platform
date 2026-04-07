@@ -201,9 +201,86 @@ function applyAdvancedFilters() {
     const badge = document.getElementById('az-advanced-count');
     if (badge) { badge.style.display = count > 0 ? 'inline' : 'none'; badge.textContent = count; }
 
+    // v8.2: Update active filter chips
+    renderActiveFilterChips();
+
     // Trigger the existing filter pipeline (exposed on window from DOMContentLoaded scope)
     if (window.filterAZStocks) window.filterAZStocks();
 }
+
+function renderActiveFilterChips() {
+    const container = document.getElementById('active-filter-chips');
+    if (!container) return;
+
+    const chips = [];
+    const colorMap = { A: '#4caf50', B: '#2196f3', C: '#ff9800', D: '#f44336' };
+
+    // Quality grades
+    [..._advFilters.quality].sort().forEach(g => {
+        chips.push({ label: `Quality ${g}`, color: colorMap[g], type: 'quality', grade: g });
+    });
+    // Value grades
+    [..._advFilters.value].sort().forEach(g => {
+        chips.push({ label: `Value ${g}`, color: colorMap[g], type: 'value', grade: g });
+    });
+    // Other filters
+    if (_advFilters.divMin) chips.push({ label: `Div ≥ ${_advFilters.divMin}%`, color: '#00FF87', type: 'divMin' });
+    if (_advFilters.peMax) chips.push({ label: `PE ≤ ${_advFilters.peMax}`, color: '#00FF87', type: 'peMax' });
+    if (_advFilters.beta) {
+        const betaLabels = { low: 'Beta défensif', mid: 'Beta neutre', high: 'Beta agressif' };
+        chips.push({ label: betaLabels[_advFilters.beta] || `Beta ${_advFilters.beta}`, color: '#00FF87', type: 'beta' });
+    }
+    if (_advFilters.eps) chips.push({ label: 'EPS Beats only', color: '#00FF87', type: 'eps' });
+
+    if (chips.length === 0) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    container.style.display = 'flex';
+    container.innerHTML = `
+        <span style="font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;align-self:center;">Filtres actifs:</span>
+        ${chips.map(c => `
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:14px;
+                background:${c.color}22;border:1px solid ${c.color}55;color:${c.color};font-size:0.72rem;font-weight:600;">
+                ${c.label}
+                <button onclick="removeFilterChip('${c.type}','${c.grade || ''}')"
+                    style="background:none;border:none;color:${c.color};cursor:pointer;padding:0;font-size:0.7rem;line-height:1;opacity:0.7;"
+                    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </span>
+        `).join('')}
+        <button onclick="resetAdvancedFilters()"
+            style="margin-left:auto;padding:3px 10px;border-radius:12px;border:1px solid rgba(244,67,54,0.3);background:transparent;color:#f44336;font-size:0.65rem;cursor:pointer;align-self:center;">
+            <i class="fas fa-times" style="margin-right:4px;"></i>Effacer tout
+        </button>
+    `;
+}
+
+window.removeFilterChip = function(type, grade) {
+    if (type === 'quality' && grade) {
+        _advFilters.quality.delete(grade);
+        document.querySelector(`#filter-quality .grade-filter-btn[data-grade="${grade}"]`)?.classList.remove('active');
+    } else if (type === 'value' && grade) {
+        _advFilters.value.delete(grade);
+        document.querySelector(`#filter-value .grade-filter-btn[data-grade="${grade}"]`)?.classList.remove('active');
+    } else if (type === 'divMin') {
+        _advFilters.divMin = null;
+        const el = document.getElementById('filter-div-min'); if (el) el.value = '';
+    } else if (type === 'peMax') {
+        _advFilters.peMax = null;
+        const el = document.getElementById('filter-pe-max'); if (el) el.value = '';
+    } else if (type === 'beta') {
+        _advFilters.beta = null;
+        const el = document.getElementById('filter-beta'); if (el) el.value = '';
+    } else if (type === 'eps') {
+        _advFilters.eps = null;
+        const el = document.getElementById('filter-eps'); if (el) el.value = '';
+    }
+    applyAdvancedFilters();
+};
 
 function resetAdvancedFilters() {
     _advFilters.quality.clear(); _advFilters.value.clear();
@@ -214,7 +291,7 @@ function resetAdvancedFilters() {
     });
     const badge = document.getElementById('az-advanced-count');
     if (badge) badge.style.display = 'none';
-    applyAdvancedFilters();
+    applyAdvancedFilters(); // will call renderActiveFilterChips
 }
 
 function _passAdvancedFilter(stock) {
