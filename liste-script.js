@@ -14,21 +14,17 @@
 
 // ===== v8.4: Auto Comparator (multi-criteria scoring) =====
 const AutoComparator = {
-    // Metrics used for scoring (label, getter, higherIsBetter)
+    // v8.6: Reduced to 7 weighted metrics — no double-counting
+    // Quality + Buffett scores already aggregate ROE, PE, D/E, FCF, payout, etc.
+    // We keep only orthogonal signals (perf, risk, dividend) alongside the composites.
     METRICS: [
-        { key: 'quality_score', get: s => s.quality_score, hib: true },
-        { key: 'buffett_score', get: s => s.buffett_score, hib: true },
-        { key: 'change', get: s => parseFloat(String(s.change||'').replace(',','.').replace('%','').replace('+','')), hib: true },
-        { key: 'ytd', get: s => parseFloat(String(s.ytd||'').replace(',','.').replace('%','').replace('+','')), hib: true },
-        { key: 'perf_1y', get: s => parseFloat(String(s.perf_1y||'').replace(',','.').replace('%','').replace('+','')), hib: true },
-        { key: 'perf_3y', get: s => parseFloat(String(s.perf_3y||'').replace(',','.').replace('%','').replace('+','')), hib: true },
-        { key: 'pe_ratio', get: s => s.pe_ratio, hib: false },
-        { key: 'roe', get: s => s.roe, hib: true },
-        { key: 'de_ratio', get: s => s.de_ratio, hib: false },
-        { key: 'fcf_yield', get: s => s.fcf_yield, hib: true },
-        { key: 'dividend_yield', get: s => parseFloat(String(s.dividend_yield_ttm||s.dividend_yield||'').replace(',','.').replace('%','').replace('+','')), hib: true },
-        { key: 'volatility_3y', get: s => parseFloat(String(s.volatility_3y||'').replace(',','.').replace('%','').replace('+','')), hib: false },
-        { key: 'max_drawdown_3y', get: s => parseFloat(String(s.max_drawdown_3y||'').replace(',','.').replace('%','').replace('+','')), hib: false },
+        { key: 'quality_score',    weight: 0.25, get: s => s.quality_score, hib: true },
+        { key: 'buffett_score',    weight: 0.20, get: s => s.buffett_score, hib: true },
+        { key: 'perf_3y',          weight: 0.15, get: s => parseFloat(String(s.perf_3y||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'perf_1y',          weight: 0.10, get: s => parseFloat(String(s.perf_1y||'').replace(',','.').replace('%','').replace('+','')), hib: true },
+        { key: 'volatility_3y',    weight: 0.12, get: s => parseFloat(String(s.volatility_3y||'').replace(',','.').replace('%','').replace('+','')), hib: false },
+        { key: 'max_drawdown_3y',  weight: 0.13, get: s => parseFloat(String(s.max_drawdown_3y||'').replace(',','.').replace('%','').replace('+','')), hib: false },
+        { key: 'dividend_yield',   weight: 0.05, get: s => parseFloat(String(s.dividend_yield_ttm||s.dividend_yield||'').replace(',','.').replace('%','').replace('+','')), hib: true },
     ],
 
     // Get all stocks from current loaded data (across all letters)
@@ -60,9 +56,12 @@ const AutoComparator = {
         return [...set].sort();
     },
 
-    // Compute percentile score for each stock based on the pool
+    // v8.6: Weighted percentile score (no double-counting)
+    // For each metric, compute the percentile rank in the pool, then weight by metric.weight.
+    // Final score = Σ(percentile_i × weight_i) / Σ(weight_i_used)
+    // Skipped metrics don't penalize the stock — weights renormalize over valid metrics.
     computeScores(pool) {
-        const scores = pool.map(() => ({ totalPct: 0, validMetrics: 0 }));
+        const scores = pool.map(() => ({ weightedSum: 0, totalWeight: 0 }));
 
         this.METRICS.forEach(metric => {
             const values = pool.map(s => {
@@ -72,17 +71,17 @@ const AutoComparator = {
             const valid = values.map((v, i) => ({ v, i })).filter(x => x.v != null);
             if (valid.length < 2) return; // Skip metric if not enough data
 
-            // Sort by value
+            // Sort by value (worst first)
             valid.sort((a, b) => metric.hib ? a.v - b.v : b.v - a.v);
             // Assign percentile (0 = worst, 100 = best)
             valid.forEach((x, rank) => {
                 const pct = (rank / (valid.length - 1)) * 100;
-                scores[x.i].totalPct += pct;
-                scores[x.i].validMetrics++;
+                scores[x.i].weightedSum += pct * metric.weight;
+                scores[x.i].totalWeight += metric.weight;
             });
         });
 
-        return scores.map(s => s.validMetrics > 0 ? Math.round(s.totalPct / s.validMetrics) : 0);
+        return scores.map(s => s.totalWeight > 0 ? Math.round(s.weightedSum / s.totalWeight) : 0);
     },
 
     runAutoCompare() {
@@ -182,7 +181,7 @@ const AutoComparator = {
                             Comparaison automatique
                         </h2>
                         <p style="color:rgba(255,255,255,0.5);font-size:0.72rem;margin:4px 0 0 0;">
-                            Sélectionnez vos critères. L'algo analyse ${all.length} actions et trouve les meilleures sur 13 métriques.
+                            ${all.length} actions analysées sur 7 métriques pondérées (Quality 25%, Value 20%, Perf 25%, Risque 25%, Div 5%).
                         </p>
                     </div>
                     <button onclick="document.getElementById('auto-compare-panel').remove()"
