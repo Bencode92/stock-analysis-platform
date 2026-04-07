@@ -409,6 +409,17 @@
     const rows = buildRows(sector.symbol);
     const wins = comparison[`${side}Wins`];
     const so = sector.sectorObj || {};
+    // top_weight peut être stocké en pourcentage (35.2) ou en fraction (0.352)
+    const etfData = shared.holdings?.etfs?.[sector.symbol];
+    let topWeightPct = null;
+    if (etfData && etfData.top_weight != null) {
+      topWeightPct = etfData.top_weight > 1 ? etfData.top_weight : etfData.top_weight * 100;
+    }
+    const lowCoverage = topWeightPct != null && topWeightPct < 40;
+    const warningBanner = lowCoverage ? `
+      <div class="sc-warning" title="Le top 10 ne représente qu'une petite fraction de l'ETF — les agrégats ci-dessous ne reflètent pas le portefeuille complet">
+        ⚠ Top 10 = ${topWeightPct.toFixed(1)}% du portefeuille — agrégats peu représentatifs
+      </div>` : '';
     // Perf ETF réelle (sectors.json/markets.json) — à comparer avec la perf top-10 pondérée
     const realPerf = `
       <div class="sc-panel-realperf" title="Perfs réelles de l'ETF (toutes positions, pas seulement top-10). À comparer aux agrégats top-10 ci-dessous pour mesurer le biais de représentativité.">
@@ -421,7 +432,8 @@
       <div class="sc-panel">
         <div class="sc-panel-head">
           <div class="sc-panel-title">${sector.label}</div>
-          <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}</div>
+          <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}${topWeightPct != null ? ` • Top 10 = ${topWeightPct.toFixed(1)}%` : ''}</div>
+          ${warningBanner}
           ${realPerf}
           <div class="sc-panel-score">
             <span class="sc-score-num">${wins}</span>
@@ -529,6 +541,7 @@
       .sc-banner { text-align: center; font-size: 1rem; margin-bottom: 1rem; padding: .85rem; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: .6rem; }
       .sc-banner-winner { color: #00ff87; font-weight: 700; font-size: 1.1rem; }
       .sc-banner-tie { color: #ffd166; font-weight: 700; font-size: 1.1rem; }
+      .sc-warning { margin-top: .55rem; padding: .55rem .75rem; background: rgba(255,209,102,.12); border: 1px solid rgba(255,209,102,.45); border-radius: .45rem; color: #ffd166; font-size: .78rem; font-weight: 600; }
       .sc-panel-realperf { margin-top: .55rem; display: flex; flex-wrap: wrap; gap: .85rem; align-items: baseline; padding: .5rem .65rem; background: rgba(255,255,255,.025); border-radius: .4rem; font-size: .75rem; }
       .sc-rp-label { opacity: .55; text-transform: uppercase; letter-spacing: .04em; font-size: .65rem; font-weight: 600; }
       .sc-rp-item { opacity: .85; font-variant-numeric: tabular-nums; }
