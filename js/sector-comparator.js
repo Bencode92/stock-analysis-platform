@@ -57,9 +57,15 @@
       (groups[cat] || []).forEach(s => {
         if (!s || !s.symbol) return;
         const label = s.display_fr || s.indexName || s.name || s.symbol;
+        // shortLabel = la partie après "—" (ex: "Technologie") sinon sector_fr
+        const shortLabel = s.sector_fr
+          || (label.includes('—') ? label.split('—').pop().trim() : label);
+        const family = s.indexFamily || s.indexName || (s.region === 'Europe' ? 'Europe' : 'US');
         out.push({
           key: `${cat}::${s.symbol}`,
           label,
+          shortLabel,
+          family,
           region: s.region || '',
           symbol: s.symbol,
           category: cat,
@@ -349,13 +355,15 @@
       .sc-region-tabs { display: flex; justify-content: center; gap: .4rem; margin-bottom: .85rem; }
       .sc-rtab { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: inherit; padding: .35rem .9rem; border-radius: 999px; font-size: .78rem; cursor: pointer; }
       .sc-rtab.is-active { background: rgba(0,255,135,.18); border-color: rgba(0,255,135,.5); color: #00ff87; }
-      .sc-chips { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: 1rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
-      .sc-chip { position: relative; display: inline-flex; align-items: center; gap: .5rem; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); color: inherit; border-radius: .55rem; padding: .5rem .85rem; font-size: .8rem; cursor: pointer; transition: all .15s; text-align: left; }
-      .sc-chip:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
-      .sc-chip.is-selected { background: rgba(0,255,135,.14); border-color: #00ff87; box-shadow: 0 0 0 1px #00ff87 inset; }
-      .sc-chip-num { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #00ff87; color: #001; font-weight: 700; font-size: .7rem; }
+      .sc-chips { display: flex; flex-direction: column; gap: .9rem; margin: 0 auto 1rem; max-width: 1100px; }
+      .sc-family { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); border-radius: .65rem; padding: .65rem .85rem .75rem; }
+      .sc-family-head { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; opacity: .55; font-weight: 600; margin-bottom: .55rem; }
+      .sc-family-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+      .sc-chip { position: relative; display: inline-flex; align-items: center; gap: .4rem; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: inherit; border-radius: .45rem; padding: .42rem .75rem; font-size: .78rem; cursor: pointer; transition: all .12s; text-align: left; }
+      .sc-chip:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); transform: translateY(-1px); }
+      .sc-chip.is-selected { background: rgba(0,255,135,.18); border-color: #00ff87; box-shadow: 0 0 0 1px #00ff87 inset; }
+      .sc-chip-num { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #00ff87; color: #001; font-weight: 800; font-size: .65rem; }
       .sc-chip-label { font-weight: 600; }
-      .sc-chip-region { font-size: .65rem; opacity: .55; padding: 1px 6px; background: rgba(255,255,255,.06); border-radius: 4px; }
       .sc-actions { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
       .sc-btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,.15); color: inherit; padding: .35rem .8rem; border-radius: .4rem; font-size: .75rem; cursor: pointer; opacity: .7; }
       .sc-btn-ghost:hover { opacity: 1; }
@@ -412,15 +420,27 @@
 
   function renderChips(container, regionFilter, selected) {
     const list = state.sectors.filter(s => regionFilter === 'all' || (s.region || '').toLowerCase() === regionFilter);
-    container.innerHTML = list.map(s => {
-      const isSel = selected.includes(s.key);
-      const order = isSel ? selected.indexOf(s.key) + 1 : '';
-      return `<button type="button" class="sc-chip ${isSel ? 'is-selected' : ''}" data-key="${s.key}">
-        ${isSel ? `<span class="sc-chip-num">${order}</span>` : ''}
-        <span class="sc-chip-label">${s.label}</span>
-        <span class="sc-chip-region">${s.region || '—'}</span>
-      </button>`;
-    }).join('');
+    // Groupe par famille d'indice
+    const families = new Map();
+    list.forEach(s => {
+      if (!families.has(s.family)) families.set(s.family, []);
+      families.get(s.family).push(s);
+    });
+
+    container.innerHTML = [...families.entries()].map(([family, sectors]) => `
+      <div class="sc-family">
+        <div class="sc-family-head">${family}</div>
+        <div class="sc-family-chips">
+          ${sectors.map(s => {
+            const isSel = selected.includes(s.key);
+            const order = isSel ? selected.indexOf(s.key) + 1 : '';
+            return `<button type="button" class="sc-chip ${isSel ? 'is-selected' : ''}" data-key="${s.key}" title="${s.label}">
+              ${isSel ? `<span class="sc-chip-num">${order}</span>` : ''}
+              <span class="sc-chip-label">${s.shortLabel}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`).join('');
   }
 
   async function init() {
