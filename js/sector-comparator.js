@@ -229,37 +229,70 @@
     }).join('');
   }
 
-  function renderAggregates(agg) {
-    const cell = (label, val, tone) => `
-      <div class="sc-agg-cell">
-        <div class="sc-agg-label">${label}</div>
-        <div class="sc-agg-val ${tone || ''}">${val}</div>
-      </div>`;
+  // Liste ordonnée des métriques agrégées + sens (1 = higher wins, -1 = lower wins, 0 = neutre)
+  const AGG_METRICS = [
+    { key: 'perf_ytd',  label: 'Perf YTD (pondérée)',  dir: 1,  fmt: v => fmtPct(v) },
+    { key: 'perf_1y',   label: 'Perf 1Y (pondérée)',   dir: 1,  fmt: v => fmtPct(v) },
+    { key: 'perf_3y',   label: 'Perf 3Y (pondérée)',   dir: 1,  fmt: v => fmtPct(v) },
+    { key: 'quality',   label: 'Quality (pondéré)',    dir: 1,  fmt: v => fmtScore(v) },
+    { key: 'buffett',   label: 'Buffett (pondéré)',    dir: 1,  fmt: v => fmtScore(v) },
+    { key: 'roe',       label: 'ROE médian',           dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'roic',      label: 'ROIC médian',          dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'net_margin',label: 'Net margin médiane',   dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'fcf_yield', label: 'FCF yield médian',     dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'vol_3y',    label: 'Vol 3Y (pondérée)',    dir: -1, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'max_dd_3y', label: 'Max DD 3Y (pondéré)',  dir: 1,  fmt: v => fmtPct(v) }, // moins négatif = mieux
+    { key: 'coverage',  label: 'Couverture stocks',    dir: 0,  fmt: (_, agg) => `${agg.coverage}/${agg.total}` },
+  ];
+
+  function compareAggregates(aggL, aggR) {
+    const result = { left: {}, right: {}, leftWins: 0, rightWins: 0 };
+    AGG_METRICS.forEach(m => {
+      if (m.dir === 0) { result.left[m.key] = result.right[m.key] = 'neutral'; return; }
+      const vL = aggL[m.key], vR = aggR[m.key];
+      if (vL == null || vR == null || !Number.isFinite(vL) || !Number.isFinite(vR)) {
+        result.left[m.key] = result.right[m.key] = 'neutral';
+        return;
+      }
+      if (vL === vR) {
+        result.left[m.key] = result.right[m.key] = 'tie';
+        return;
+      }
+      const leftBetter = (m.dir === 1 ? vL > vR : vL < vR);
+      result.left[m.key]  = leftBetter ? 'win' : 'lose';
+      result.right[m.key] = leftBetter ? 'lose' : 'win';
+      if (leftBetter) result.leftWins++; else result.rightWins++;
+    });
+    return result;
+  }
+
+  function renderAggregates(agg, comparison, side) {
     return `
       <div class="sc-agg-grid">
-        ${cell('Perf YTD (pondérée)', fmtPct(agg.perf_ytd), cls(agg.perf_ytd))}
-        ${cell('Perf 1Y (pondérée)', fmtPct(agg.perf_1y), cls(agg.perf_1y))}
-        ${cell('Perf 3Y (pondérée)', fmtPct(agg.perf_3y), cls(agg.perf_3y))}
-        ${cell('Quality (pondéré)', fmtScore(agg.quality))}
-        ${cell('Buffett (pondéré)', fmtScore(agg.buffett))}
-        ${cell('ROE médian', agg.roe == null ? '—' : agg.roe.toFixed(1) + '%')}
-        ${cell('ROIC médian', agg.roic == null ? '—' : agg.roic.toFixed(1) + '%')}
-        ${cell('Net margin médiane', agg.net_margin == null ? '—' : agg.net_margin.toFixed(1) + '%')}
-        ${cell('FCF yield médian', agg.fcf_yield == null ? '—' : agg.fcf_yield.toFixed(1) + '%')}
-        ${cell('Vol 3Y (pondérée)', agg.vol_3y == null ? '—' : agg.vol_3y.toFixed(1) + '%')}
-        ${cell('Max DD 3Y (pondéré)', fmtPct(agg.max_dd_3y), cls(agg.max_dd_3y))}
-        ${cell('Couverture stocks', `${agg.coverage}/${agg.total}`)}
+        ${AGG_METRICS.map(m => {
+          const tone = comparison[side][m.key]; // 'win' | 'lose' | 'tie' | 'neutral'
+          const val = m.fmt(agg[m.key], agg);
+          return `
+            <div class="sc-agg-cell sc-${tone}">
+              <div class="sc-agg-label">${m.label}</div>
+              <div class="sc-agg-val">${val}</div>
+            </div>`;
+        }).join('')}
       </div>`;
   }
 
-  function renderPanel(side, sector) {
+  function renderPanel(side, sector, agg, comparison) {
     const rows = buildRows(sector.symbol);
-    const agg = computeAggregates(rows);
+    const wins = comparison[`${side}Wins`];
     return `
       <div class="sc-panel">
         <div class="sc-panel-head">
           <div class="sc-panel-title">${sector.label}</div>
           <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}</div>
+          <div class="sc-panel-score">
+            <span class="sc-score-num">${wins}</span>
+            <span class="sc-score-lbl">victoire${wins > 1 ? 's' : ''} sur ${comparison.leftWins + comparison.rightWins} critères</span>
+          </div>
         </div>
         <div class="sc-table-wrap">
           <table class="sc-table">
@@ -274,21 +307,34 @@
             <tbody>${renderRows(rows)}</tbody>
           </table>
         </div>
-        ${renderAggregates(agg)}
+        ${renderAggregates(agg, comparison, side)}
       </div>`;
   }
 
   function renderComparison(rootEl, leftKey, rightKey) {
-    const left = state.sectors.find(s => s.key === leftKey);
+    const left  = state.sectors.find(s => s.key === leftKey);
     const right = state.sectors.find(s => s.key === rightKey);
     if (!left || !right) {
       rootEl.innerHTML = '<div class="opacity-60 py-6 text-center">Sélectionne deux secteurs.</div>';
       return;
     }
+    const rowsL = buildRows(left.symbol);
+    const rowsR = buildRows(right.symbol);
+    const aggL = computeAggregates(rowsL);
+    const aggR = computeAggregates(rowsR);
+    const cmp = compareAggregates(aggL, aggR);
+
+    const winnerLabel = cmp.leftWins === cmp.rightWins
+      ? '<span class="sc-banner-tie">Égalité</span>'
+      : cmp.leftWins > cmp.rightWins
+        ? `<span class="sc-banner-winner">🏆 ${left.label}</span> l'emporte ${cmp.leftWins}–${cmp.rightWins}`
+        : `<span class="sc-banner-winner">🏆 ${right.label}</span> l'emporte ${cmp.rightWins}–${cmp.leftWins}`;
+
     rootEl.innerHTML = `
+      <div class="sc-banner">${winnerLabel}</div>
       <div class="sc-grid">
-        ${renderPanel('left', left)}
-        ${renderPanel('right', right)}
+        ${renderPanel('left',  left,  aggL, cmp)}
+        ${renderPanel('right', right, aggR, cmp)}
       </div>`;
   }
 
@@ -297,7 +343,7 @@
   function injectStyles() {
     if (document.getElementById('sc-styles')) return;
     const css = `
-      #sector-comparator { margin: 2.5rem auto; max-width: 1400px; }
+      #sector-comparator { margin: 2.5rem 0; width: 100%; }
       #sector-comparator .section-title { text-align: center; }
       .sc-hint { text-align: center; opacity: .75; font-size: .9rem; margin-bottom: 1rem; }
       .sc-region-tabs { display: flex; justify-content: center; gap: .4rem; margin-bottom: .85rem; }
@@ -341,10 +387,21 @@
       .sc-grade { font-size: .62rem; padding: 1px 5px; border-radius: 4px; background: rgba(0,255,135,.18); color: #00ff87; margin-left: 3px; vertical-align: middle; }
       .positive { color: #00ff87; }
       .negative { color: #ff6b6b; }
+      .sc-banner { text-align: center; font-size: 1rem; margin-bottom: 1rem; padding: .85rem; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: .6rem; }
+      .sc-banner-winner { color: #00ff87; font-weight: 700; font-size: 1.1rem; }
+      .sc-banner-tie { color: #ffd166; font-weight: 700; font-size: 1.1rem; }
+      .sc-panel-score { margin-top: .5rem; display: flex; align-items: baseline; gap: .35rem; }
+      .sc-score-num { font-size: 1.6rem; font-weight: 800; color: #00ff87; line-height: 1; font-variant-numeric: tabular-nums; }
+      .sc-score-lbl { font-size: .72rem; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
       .sc-agg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .45rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.08); }
       @media (max-width: 700px) { .sc-agg-grid { grid-template-columns: repeat(2, 1fr); } }
-      .sc-agg-cell { background: rgba(255,255,255,.04); border-radius: .5rem; padding: .55rem .6rem; }
-      .sc-agg-label { font-size: .6rem; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
+      .sc-agg-cell { background: rgba(255,255,255,.04); border-radius: .5rem; padding: .55rem .6rem; border: 1px solid transparent; transition: all .2s; }
+      .sc-agg-cell.sc-win  { background: rgba(0,255,135,.18); border-color: rgba(0,255,135,.5); }
+      .sc-agg-cell.sc-lose { background: rgba(255,107,107,.15); border-color: rgba(255,107,107,.4); }
+      .sc-agg-cell.sc-tie  { background: rgba(255,209,102,.12); border-color: rgba(255,209,102,.35); }
+      .sc-agg-cell.sc-win .sc-agg-val  { color: #00ff87; }
+      .sc-agg-cell.sc-lose .sc-agg-val { color: #ff8888; }
+      .sc-agg-label { font-size: .6rem; opacity: .65; text-transform: uppercase; letter-spacing: .04em; }
       .sc-agg-val { font-size: 1.02rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 3px; }
     `;
     const tag = document.createElement('style');
