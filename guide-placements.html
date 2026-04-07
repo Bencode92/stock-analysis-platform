@@ -1047,19 +1047,53 @@
                           Estime ce que tu peux gagner grâce à l'abondement de ton employeur.
                         </p>
 
+                        <!-- 📚 Encart pédagogique : comment ça marche -->
+                        <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 mb-4 border border-slate-700">
+                          <h6 class="text-sm font-semibold text-cyan-300 mb-2 flex items-center">
+                            <i class="fas fa-book-open mr-2"></i> Comment ça marche : 2 plafonds qui s'appliquent EN MÊME TEMPS
+                          </h6>
+                          <p class="text-xs text-gray-400 mb-3">
+                            <strong class="text-white">Le PASS</strong> (Plafond Annuel de la Sécurité Sociale) = <strong class="text-cyan-300">48 060 € en 2026</strong>. C'est la base de calcul des plafonds légaux.
+                          </p>
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div class="bg-blue-900 bg-opacity-30 rounded p-3">
+                              <p class="font-semibold text-cyan-300 mb-1">📏 Plafond #1 — Taux maximum</p>
+                              <p class="text-gray-300">L'employeur ne peut pas abonder plus de <strong class="text-white">300% de ton versement</strong> (limite légale).</p>
+                              <p class="text-gray-400 mt-1">Ex : tu verses 100 € → max 300 € d'abondement</p>
+                            </div>
+                            <div class="bg-blue-900 bg-opacity-30 rounded p-3">
+                              <p class="font-semibold text-cyan-300 mb-1">💰 Plafond #2 — Montant annuel</p>
+                              <p class="text-gray-300"><strong class="text-white">PEE</strong> : 8% du PASS = <strong class="text-cyan-300">3 845 €/an</strong></p>
+                              <p class="text-gray-300"><strong class="text-white">PERCOL</strong> : 16% du PASS = <strong class="text-cyan-300">7 690 €/an</strong></p>
+                            </div>
+                          </div>
+                          <p class="text-xs text-yellow-300 mt-2">
+                            ⚖️ <strong>Règle</strong> : c'est le plus restrictif des deux qui s'applique.
+                          </p>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                           <div>
-                            <label class="block text-xs text-gray-400 mb-1">Mon versement (€/mois)</label>
+                            <label class="block text-xs text-gray-400 mb-1">
+                              Mon versement (€/mois)
+                              <span class="text-cyan-400 cursor-help" title="Ton versement personnel mensuel sur le PEE ou PERCOL. C'est sur cette base que l'employeur calcule l'abondement.">ⓘ</span>
+                            </label>
                             <input id="abondement-versement" type="number" min="0" value="200" step="10"
                                    class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                           </div>
                           <div>
-                            <label class="block text-xs text-gray-400 mb-1">Taux abondement employeur (%)</label>
+                            <label class="block text-xs text-gray-400 mb-1">
+                              Taux abondement employeur (%)
+                              <span class="text-cyan-400 cursor-help" title="Pourcentage de ton versement que l'employeur ajoute. Limite légale : 300% (l'employeur ne peut pas abonder plus de 3× ton versement). Le taux réel dépend de l'accord de ton entreprise.">ⓘ</span>
+                            </label>
                             <input id="abondement-taux" type="number" min="0" max="300" value="100" step="10"
                                    class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                           </div>
                           <div>
-                            <label class="block text-xs text-gray-400 mb-1">Plafond annuel employeur (€)</label>
+                            <label class="block text-xs text-gray-400 mb-1">
+                              Plafond annuel employeur (€)
+                              <span class="text-cyan-400 cursor-help" title="Montant maximum que l'employeur peut verser sur l'année. PEE = 8% du PASS, PERCOL = 16% du PASS. Si tu as les deux, les plafonds se cumulent.">ⓘ</span>
+                            </label>
                             <select id="abondement-plafond" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                               <option value="3845">PEE — 8% PASS (3 845 €)</option>
                               <option value="7690">PERCOL — 16% PASS (7 690 €)</option>
@@ -1091,6 +1125,13 @@
                               <p id="abond-gain" class="text-lg font-bold text-yellow-400">+0 %</p>
                             </div>
                           </div>
+
+                          <!-- 📐 Détail du calcul (méthode pas à pas) -->
+                          <div id="abond-detail" class="bg-slate-900 bg-opacity-50 rounded-lg p-3 mb-3 border-l-4 border-cyan-400">
+                            <p class="text-xs font-semibold text-cyan-300 mb-2">📐 Méthode de calcul (pas à pas)</p>
+                            <div id="abond-detail-content" class="text-xs text-gray-300 space-y-1 font-mono"></div>
+                          </div>
+
                           <p id="abond-message" class="text-sm text-center text-gray-300"></p>
                         </div>
                       </div>
@@ -3025,6 +3066,7 @@
                     const versementMensuel = parseFloat(document.getElementById('abondement-versement').value) || 0;
                     const tauxAbondement = parseFloat(document.getElementById('abondement-taux').value) || 0;
                     const plafondAnnuel = parseFloat(document.getElementById('abondement-plafond').value) || 0;
+                    const plafondLabel = document.getElementById('abondement-plafond').selectedOptions[0]?.text || '';
 
                     const versementAnnuel = versementMensuel * 12;
                     // Abondement théorique
@@ -3040,6 +3082,21 @@
                     document.getElementById('abond-employeur').textContent = '+' + fmt(abondementEffectif) + ' €';
                     document.getElementById('abond-total').textContent = fmt(totalVerse) + ' €';
                     document.getElementById('abond-gain').textContent = '+' + Math.round(gainPct) + ' %';
+
+                    // 📐 Détail du calcul pas à pas
+                    const detailEl = document.getElementById('abond-detail-content');
+                    if (detailEl) {
+                        const isPlafonne = abondementTheorique > plafondAnnuel;
+                        let detail = `
+                            <div><span class="text-gray-500">①</span> Versement annuel = ${fmt(versementMensuel)} €/mois × 12 = <strong class="text-white">${fmt(versementAnnuel)} €</strong></div>
+                            <div><span class="text-gray-500">②</span> Abondement théorique = ${fmt(versementAnnuel)} € × ${tauxAbondement}% = <strong class="text-white">${fmt(abondementTheorique)} €</strong></div>
+                            <div><span class="text-gray-500">③</span> Plafond annuel ${plafondLabel.split('—')[0].trim()} = <strong class="text-white">${fmt(plafondAnnuel)} €</strong></div>
+                            <div><span class="text-gray-500">④</span> Abondement appliqué = min(${fmt(abondementTheorique)} ; ${fmt(plafondAnnuel)}) = <strong class="${isPlafonne ? 'text-yellow-300' : 'text-green-400'}">${fmt(abondementEffectif)} €</strong> ${isPlafonne ? '⚠️ plafonné' : '✅'}</div>
+                            <div><span class="text-gray-500">⑤</span> Total versé sur le plan = ${fmt(versementAnnuel)} + ${fmt(abondementEffectif)} = <strong class="text-green-400">${fmt(totalVerse)} €</strong></div>
+                            <div><span class="text-gray-500">⑥</span> Gain immédiat = ${fmt(abondementEffectif)} / ${fmt(versementAnnuel)} = <strong class="text-yellow-400">+${Math.round(gainPct)}%</strong></div>
+                        `;
+                        detailEl.innerHTML = detail;
+                    }
 
                     let message = '';
                     if (versementAnnuel === 0) {
