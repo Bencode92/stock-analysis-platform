@@ -364,8 +364,9 @@
     { key: 'roic',      label: 'ROIC médian',          dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
     { key: 'net_margin',label: 'Net margin médiane',   dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
     { key: 'fcf_yield', label: 'FCF yield médian',     dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'vol_3y',    label: 'Vol 3Y (pondérée)',    dir: -1, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'max_dd_3y', label: 'Max DD 3Y (pondéré)',  dir: 1,  fmt: v => fmtPct(v) }, // moins négatif = mieux
+    // Beta est linéaire en pondération (β_p = Σ wᵢβᵢ), donc mathématiquement exact.
+    // Vol et Max DD pondérés ne sont PAS exacts (ignorent les corrélations) — retirés.
+    { key: 'beta',      label: 'Beta (pondéré)',       dir: 0,  fmt: v => v == null ? '—' : v.toFixed(2) },
     { key: 'coverage',  label: 'Couverture stocks',    dir: 0,  fmt: (_, agg) => `${agg.coverage}/${agg.total}` },
   ];
 
