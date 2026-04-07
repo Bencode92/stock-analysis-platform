@@ -277,17 +277,22 @@ function runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafo
     if (revenuNetImposable != null && revenuNetImposable > 0) {
         // Mode direct : utilisateur fournit le net imposable (ex: depuis l'avis d'impôt)
         nib = revenuNetImposable;
-        // Reverse-engineer revenuProNet pour le calcul du plafond PER
-        // abattement = min(rpn * 0.10, 14171) selon barème 2026
-        // - si rpn ≤ 141 710 : nib = rpn × 0,9 → rpn = nib / 0,9
-        // - si rpn > 141 710 : nib = rpn - 14 171 → rpn = nib + 14 171
-        const rpnEstime = nib / 0.9;
-        if (rpnEstime > 141710) {
-            rpn = nib + 14171;
+        const isTNS = (statut === 'independant');
+        if (isTNS) {
+            // TNS : pas d'abattement 10% → revenu pro net = net imposable directement
+            rpn = nib;
+            ab = 0;
         } else {
-            rpn = rpnEstime;
+            // Salarié : reverse-engineer revenuProNet pour le calcul du plafond PER
+            // abattement = min(rpn × 0,10, 14 171) — barème 2026
+            const rpnEstime = nib / 0.9;
+            if (rpnEstime > 141710) {
+                rpn = nib + 14171;
+            } else {
+                rpn = rpnEstime;
+            }
+            ab = rpn - nib;
         }
-        ab = rpn - nib;
     } else {
         const tc = PatrimoineSimulator.getTauxCharges(statut);
         rpn = revenuBrut * (1 - tc);
@@ -320,15 +325,20 @@ function afficherSynthesePER() {
     const statutTmp = statutSelect?.value || 'salarie';
 
     // Si net imposable, convertir en brut équivalent pour réutiliser la logique existante
-    // brut = (nib + abattement) / (1 - charges)
-    // avec abattement = min(rpn × 0,1, 14171) où rpn = brut × (1 - charges)
     let brut;
     if (revenuMode === 'net') {
         const tc = PatrimoineSimulator.getTauxCharges(statutTmp);
         const nib = montantSaisi;
-        // Estimation rpn (revenu pro net) à partir du nib
-        const rpnEstime = nib / 0.9;
-        const rpn = rpnEstime > 141710 ? nib + 14171 : rpnEstime;
+        const isTNS = (statutTmp === 'independant');
+        let rpn;
+        if (isTNS) {
+            // TNS : pas d'abattement 10% → rpn = nib directement
+            rpn = nib;
+        } else {
+            // Salarié : abattement 10% plafonné à 14 171€ (barème 2026)
+            const rpnEstime = nib / 0.9;
+            rpn = rpnEstime > 141710 ? nib + 14171 : rpnEstime;
+        }
         brut = rpn / (1 - tc);
     } else {
         brut = montantSaisi;
