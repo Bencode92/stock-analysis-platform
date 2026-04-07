@@ -12,6 +12,193 @@
  * v1.5: Affichage des valeurs dividend_yield_ttm et payout_ratio_ttm depuis les JSON
  */
 
+// ===== v8.1: Watchlist + Saved Searches + CSV Export =====
+const StockUserPrefs = {
+    LS_WATCHLIST: 'tp_watchlist_v1',
+    LS_SAVED_SEARCHES: 'tp_saved_searches_v1',
+
+    // ── Watchlist ──
+    getWatchlist() {
+        try { return JSON.parse(localStorage.getItem(this.LS_WATCHLIST) || '[]'); }
+        catch { return []; }
+    },
+    isInWatchlist(ticker) { return this.getWatchlist().includes(ticker); },
+    toggleWatchlist(ticker) {
+        const list = this.getWatchlist();
+        const idx = list.indexOf(ticker);
+        if (idx >= 0) list.splice(idx, 1);
+        else list.push(ticker);
+        localStorage.setItem(this.LS_WATCHLIST, JSON.stringify(list));
+        this.updateWatchlistCount();
+        return idx < 0; // true if added
+    },
+    updateWatchlistCount() {
+        const el = document.getElementById('watchlist-count');
+        if (el) el.textContent = this.getWatchlist().length;
+    },
+
+    // ── Saved Searches ──
+    getSavedSearches() {
+        try { return JSON.parse(localStorage.getItem(this.LS_SAVED_SEARCHES) || '[]'); }
+        catch { return []; }
+    },
+    saveSearch(name) {
+        if (!name || !name.trim()) return;
+        const searches = this.getSavedSearches();
+        const config = {
+            name: name.trim(),
+            quality: [..._advFilters.quality],
+            value: [..._advFilters.value],
+            divMin: _advFilters.divMin,
+            peMax: _advFilters.peMax,
+            beta: _advFilters.beta,
+            eps: _advFilters.eps,
+            timestamp: Date.now()
+        };
+        // Remove existing with same name
+        const idx = searches.findIndex(s => s.name === config.name);
+        if (idx >= 0) searches.splice(idx, 1);
+        searches.unshift(config);
+        // Keep max 10
+        if (searches.length > 10) searches.pop();
+        localStorage.setItem(this.LS_SAVED_SEARCHES, JSON.stringify(searches));
+        this.refreshSavedSearchesUI();
+    },
+    deleteSearch(name) {
+        const searches = this.getSavedSearches().filter(s => s.name !== name);
+        localStorage.setItem(this.LS_SAVED_SEARCHES, JSON.stringify(searches));
+        this.refreshSavedSearchesUI();
+    },
+    loadSearch(name) {
+        const search = this.getSavedSearches().find(s => s.name === name);
+        if (!search) return;
+        // Reset first
+        _advFilters.quality = new Set(search.quality || []);
+        _advFilters.value = new Set(search.value || []);
+        _advFilters.divMin = search.divMin;
+        _advFilters.peMax = search.peMax;
+        _advFilters.beta = search.beta;
+        _advFilters.eps = search.eps;
+        // Update UI
+        document.querySelectorAll('.grade-filter-btn').forEach(b => {
+            const grade = b.dataset.grade;
+            const onclick = b.getAttribute('onclick') || '';
+            const type = onclick.includes("'quality'") ? 'quality' : 'value';
+            b.classList.toggle('active', _advFilters[type].has(grade));
+        });
+        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+        setVal('filter-div-min', _advFilters.divMin);
+        setVal('filter-pe-max', _advFilters.peMax);
+        setVal('filter-beta', _advFilters.beta);
+        setVal('filter-eps', _advFilters.eps);
+        // Open advanced filters panel if hidden
+        document.getElementById('az-advanced-filters')?.classList.remove('hidden');
+        applyAdvancedFilters();
+    },
+    refreshSavedSearchesUI() {
+        const container = document.getElementById('saved-searches-list');
+        if (!container) return;
+        const searches = this.getSavedSearches();
+        if (searches.length === 0) {
+            container.innerHTML = '<div style="font-size:0.7rem;opacity:0.4;padding:8px;">Aucune recherche sauvegardée</div>';
+            return;
+        }
+        container.innerHTML = searches.map(s => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer;font-size:0.78rem;"
+                onmouseover="this.style.background='rgba(0,255,135,0.08)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                <span onclick="StockUserPrefs.loadSearch('${s.name.replace(/'/g, "\\'")}')" style="flex:1;color:#fff;">
+                    <i class="fas fa-bookmark" style="color:#00FF87;margin-right:6px;font-size:0.65rem;"></i>${s.name}
+                </span>
+                <button onclick="event.stopPropagation();StockUserPrefs.deleteSearch('${s.name.replace(/'/g, "\\'")}')"
+                    style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:2px 6px;font-size:0.7rem;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+    },
+
+    // ── CSV Export ──
+    exportFilteredCSV() {
+        if (!window.stocksData?.indices) { alert('Aucune donnée à exporter'); return; }
+        const rows = [];
+        const headers = ['Ticker','Nom','Région','Pays','Secteur','Prix','Var %','YTD %','1an %','Quality','Value','PE','Div TTM','Beta','ROE','D/E','FCF Yield','EPS Surprise'];
+        rows.push(headers.join(';'));
+        Object.values(window.stocksData.indices).forEach(letterStocks => {
+            (letterStocks || []).forEach(s => {
+                const row = [
+                    s.ticker || '',
+                    `"${(s.name || '').replace(/"/g, '""')}"`,
+                    s.region || '',
+                    s.country || '',
+                    s.sector || '',
+                    s.last || '',
+                    s.change || '',
+                    s.ytd || '',
+                    s.perf_1y || '',
+                    s.quality_grade || '',
+                    s.buffett_grade || '',
+                    s.pe_ratio != null ? parseFloat(s.pe_ratio).toFixed(1) : '',
+                    s.dividend_yield_ttm || s.dividend_yield || '',
+                    s.beta != null ? parseFloat(s.beta).toFixed(2) : '',
+                    s.roe != null ? parseFloat(s.roe).toFixed(1) : '',
+                    s.de_ratio != null ? parseFloat(s.de_ratio).toFixed(2) : '',
+                    s.fcf_yield != null ? parseFloat(s.fcf_yield).toFixed(1) : '',
+                    s.eps_surprise_avg_2q != null ? parseFloat(s.eps_surprise_avg_2q).toFixed(1) : ''
+                ];
+                rows.push(row.join(';'));
+            });
+        });
+        const csv = '\uFEFF' + rows.join('\n'); // BOM for Excel UTF-8
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tradepulse_actions_${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    },
+
+    // ── Show only watchlist toggle ──
+    showWatchlistOnly: false,
+    toggleWatchlistView() {
+        this.showWatchlistOnly = !this.showWatchlistOnly;
+        const btn = document.getElementById('watchlist-toggle-btn');
+        if (btn) {
+            btn.classList.toggle('active');
+            btn.style.background = this.showWatchlistOnly ? 'rgba(255,215,0,0.15)' : 'transparent';
+            btn.style.borderColor = this.showWatchlistOnly ? '#ffd700' : 'rgba(255,255,255,0.1)';
+            btn.style.color = this.showWatchlistOnly ? '#ffd700' : 'rgba(255,255,255,0.6)';
+        }
+        if (window.filterAZStocks) window.filterAZStocks();
+    },
+
+    init() {
+        this.updateWatchlistCount();
+        this.refreshSavedSearchesUI();
+    }
+};
+
+// Global helpers for inline onclick
+window.toggleStarFor = function(ticker, btn) {
+    const added = StockUserPrefs.toggleWatchlist(ticker);
+    const icon = btn.querySelector('i');
+    if (added) {
+        icon.className = 'fas fa-star';
+        btn.style.color = '#ffd700';
+    } else {
+        icon.className = 'far fa-star';
+        btn.style.color = 'rgba(255,255,255,0.3)';
+    }
+};
+
+window.promptSaveSearch = function() {
+    const name = prompt('Nom de la recherche :');
+    if (name) StockUserPrefs.saveSearch(name);
+};
+
 // ===== v8.0: Advanced filters state =====
 const _advFilters = { quality: new Set(), value: new Set(), divMin: null, peMax: null, beta: null, eps: null };
 
@@ -98,6 +285,9 @@ function closeAllDetails() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // v8.1: Init user prefs (watchlist + saved searches)
+    StockUserPrefs.init();
+
     // v8.0: Headers set directly in HTML — no dynamic rename needed
     const updateTableHeaders = () => {};
     
@@ -436,6 +626,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // v8.0: Advanced filters
                 if (show && !_passAdvancedFilter(stock)) show = false;
 
+                // v8.1: Watchlist-only filter
+                if (show && StockUserPrefs.showWatchlistOnly && !StockUserPrefs.isInWatchlist(stock.ticker)) show = false;
+
                 if (show) {
                     filteredIndices[letter].push(stock);
                     totalVisible++;
@@ -452,6 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 count: totalVisible
             }
         };
+        window.stocksData = stocksData; // v8.1: expose for CSV export
         
         // Mettre à jour le compteur
         const countElement = document.getElementById('az-filtered-count');
@@ -1504,9 +1698,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _gradeColor = (g) => g === 'A' ? '#4caf50' : g === 'B' ? '#2196f3' : g === 'C' ? '#ff9800' : g === 'D' ? '#f44336' : 'rgba(255,255,255,0.3)';
                             const _gradeBg = (g) => g === 'A' ? 'rgba(76,175,80,0.15)' : g === 'B' ? 'rgba(33,150,243,0.15)' : g === 'C' ? 'rgba(255,152,0,0.15)' : g === 'D' ? 'rgba(244,67,54,0.15)' : 'rgba(255,255,255,0.05)';
 
+                            // v8.1: Star button (watchlist)
+                            const _starred = StockUserPrefs.isInWatchlist(stock.ticker);
+                            const _starHTML = `<button onclick="event.stopPropagation();toggleStarFor('${stock.ticker}',this)"
+                                style="background:none;border:none;cursor:pointer;padding:0 6px 0 0;color:${_starred ? '#ffd700' : 'rgba(255,255,255,0.25)'};font-size:0.75rem;"
+                                title="${_starred ? 'Retirer des favoris' : 'Ajouter aux favoris'}">
+                                <i class="${_starred ? 'fas' : 'far'} fa-star"></i>
+                            </button>`;
+
                             row.innerHTML = `
                                 <td class="py-2 px-3">
-                                    <div class="font-medium">${stock.name || '-'} ${stock.marketIcon}</div>
+                                    <div class="font-medium" style="display:flex;align-items:center;">${_starHTML}<span>${stock.name || '-'}</span> ${stock.marketIcon}</div>
                                     <div class="text-xs opacity-70 mt-1">
                                         <span class="px-2 py-0.5 rounded border border-white/10 mr-1 ${stock.regionBadgeClass}">${stock.region || 'GLOBAL'}</span>
                                         ${stock.country || ''}

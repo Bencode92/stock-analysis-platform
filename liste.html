@@ -1609,6 +1609,37 @@
                                  <i class="fas fa-chevron-down chevron-icon" style="font-size:0.55rem;transition:transform 0.2s;"></i>
                              </button>
 
+                             <!-- v8.1: Watchlist toggle -->
+                             <button id="watchlist-toggle-btn" onclick="StockUserPrefs.toggleWatchlistView()"
+                                 style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.6);font-size:0.78rem;cursor:pointer;display:flex;align-items:center;gap:6px;"
+                                 title="Afficher uniquement mes favoris">
+                                 <i class="fas fa-star" style="font-size:0.7rem;"></i> Favoris
+                                 <span id="watchlist-count" style="background:rgba(255,215,0,0.2);color:#ffd700;padding:1px 6px;border-radius:10px;font-size:0.65rem;font-weight:700;">0</span>
+                             </button>
+
+                             <!-- v8.1: Saved searches dropdown -->
+                             <div style="position:relative;">
+                                 <button onclick="document.getElementById('saved-searches-panel').classList.toggle('hidden')"
+                                     style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.6);font-size:0.78rem;cursor:pointer;display:flex;align-items:center;gap:6px;"
+                                     title="Recherches sauvegardées">
+                                     <i class="fas fa-bookmark" style="font-size:0.7rem;"></i> Recherches
+                                 </button>
+                                 <div id="saved-searches-panel" class="hidden" style="position:absolute;top:38px;left:0;z-index:100;width:280px;padding:10px;background:#0a1929;border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+                                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                         <span style="font-size:0.7rem;color:rgba(255,255,255,0.5);text-transform:uppercase;">Mes recherches</span>
+                                         <button onclick="promptSaveSearch()" style="padding:3px 8px;border-radius:5px;border:none;background:#00FF87;color:#000;font-size:0.65rem;font-weight:700;cursor:pointer;">+ Sauvegarder</button>
+                                     </div>
+                                     <div id="saved-searches-list"></div>
+                                 </div>
+                             </div>
+
+                             <!-- v8.1: CSV Export -->
+                             <button onclick="StockUserPrefs.exportFilteredCSV()"
+                                 style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.6);font-size:0.78rem;cursor:pointer;display:flex;align-items:center;gap:6px;"
+                                 title="Exporter les actions filtrées en CSV">
+                                 <i class="fas fa-file-csv" style="font-size:0.7rem;"></i> Export
+                             </button>
+
                              <div class="ml-auto text-sm text-gray-400">
                                  <span id="az-filtered-count">0</span> actions filtrées
                              </div>
