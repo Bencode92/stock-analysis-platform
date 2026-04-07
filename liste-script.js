@@ -35,10 +35,19 @@ const AutoComparator = {
     getAllStocks() {
         const stocks = [];
         const data = window.stocksDataUnfiltered || window.stocksData;
-        if (!data?.indices) return stocks;
+        console.log('[AutoComp] getAllStocks data:', data ? 'found' : 'NULL', 'indices keys:', data?.indices ? Object.keys(data.indices).length : 0);
+        if (!data?.indices) {
+            // Fallback: pull from window._stockMap which is populated during table render
+            if (window._stockMap) {
+                console.log('[AutoComp] Fallback to _stockMap:', Object.keys(window._stockMap).length);
+                return Object.values(window._stockMap);
+            }
+            return stocks;
+        }
         Object.values(data.indices).forEach(letterStocks => {
             (letterStocks || []).forEach(s => stocks.push(s));
         });
+        console.log('[AutoComp] Total stocks:', stocks.length);
         return stocks;
     },
 
@@ -1592,9 +1601,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     stats // Ajout des statistiques
                 }
             };
-            
+
             // Copier vers stocksData pour l'affichage initial
             stocksData = { ...stocksDataUnfiltered };
+            // v8.4: expose globally for AutoComparator
+            window.stocksDataUnfiltered = stocksDataUnfiltered;
+            window.stocksData = stocksData;
             
             console.log(`✅ Section A→Z: ${stats.total} actions globales chargées`);
             
