@@ -14,7 +14,7 @@
 
 // ===== v8.3: Stock Comparator =====
 const StockComparator = {
-    MAX: 4,
+    MAX: 5,
     selected: new Map(), // ticker → stock object
 
     isSelected(ticker) { return this.selected.has(ticker); },
@@ -161,6 +161,10 @@ const StockComparator = {
             </tr>
         `;
 
+        // Track win/loss counts per stock
+        const wins = new Array(stocks.length).fill(0);
+        const losses = new Array(stocks.length).fill(0);
+
         const dataRows = rows.map(r => {
             if (r.section) {
                 return `<tr><td colspan="${stocks.length + 1}" style="padding:12px 14px 6px 14px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#00FF87;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);">${r.section}</td></tr>`;
@@ -174,6 +178,8 @@ const StockComparator = {
                 if (max !== min) {
                     bestIdx = values.indexOf(r.higherIsBetter ? max : min);
                     worstIdx = values.indexOf(r.higherIsBetter ? min : max);
+                    if (bestIdx >= 0) wins[bestIdx]++;
+                    if (worstIdx >= 0) losses[worstIdx]++;
                 }
             }
             const cells = stocks.map((s, i) => {
@@ -185,6 +191,27 @@ const StockComparator = {
             }).join('');
             return `<tr><td style="padding:10px 14px;color:rgba(255,255,255,0.6);font-size:0.78rem;">${r.label}</td>${cells}</tr>`;
         }).join('');
+
+        // Determine overall winner (most wins - losses)
+        const netScores = wins.map((w, i) => w - losses[i]);
+        const maxNet = Math.max(...netScores);
+        const winnerIdx = netScores.indexOf(maxNet);
+
+        // Score row at bottom
+        const scoreCells = stocks.map((s, i) => {
+            const isWinner = i === winnerIdx && netScores.filter(n => n === maxNet).length === 1;
+            const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.2),rgba(0,255,135,0.05))' : 'rgba(255,255,255,0.02)';
+            return `<td style="padding:14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.06)'};">
+                ${isWinner ? '<div style="font-size:1.3rem;margin-bottom:4px;">🏆</div>' : ''}
+                <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;color:${isWinner ? '#00FF87' : '#fff'};">
+                    ${wins[i]} ✓ / ${losses[i]} ✗
+                </div>
+                <div style="font-size:0.7rem;color:${isWinner ? '#00FF87' : 'rgba(255,255,255,0.5)'};margin-top:2px;font-weight:${isWinner ? '700' : '500'};">
+                    ${isWinner ? 'GAGNANT' : `Score net ${netScores[i] >= 0 ? '+' : ''}${netScores[i]}`}
+                </div>
+            </td>`;
+        }).join('');
+        const scoreRow = `<tr><td style="padding:14px;color:#00FF87;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-top:2px solid rgba(0,255,135,0.3);">Score global</td>${scoreCells}</tr>`;
 
         const modal = document.createElement('div');
         modal.id = 'comparator-modal';
@@ -217,7 +244,7 @@ const StockComparator = {
                 <div style="padding:0 24px 24px 24px;overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;">
                         <thead>${headerRow}</thead>
-                        <tbody>${dataRows}</tbody>
+                        <tbody>${dataRows}${scoreRow}</tbody>
                     </table>
                 </div>
             </div>
