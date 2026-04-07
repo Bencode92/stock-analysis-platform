@@ -12,6 +12,221 @@
  * v1.5: Affichage des valeurs dividend_yield_ttm et payout_ratio_ttm depuis les JSON
  */
 
+// ===== v8.3: Stock Comparator =====
+const StockComparator = {
+    MAX: 4,
+    selected: new Map(), // ticker → stock object
+
+    isSelected(ticker) { return this.selected.has(ticker); },
+
+    toggle(stock) {
+        if (this.selected.has(stock.ticker)) {
+            this.selected.delete(stock.ticker);
+        } else {
+            if (this.selected.size >= this.MAX) {
+                alert(`Maximum ${this.MAX} actions à comparer`);
+                return false;
+            }
+            this.selected.set(stock.ticker, stock);
+        }
+        this.renderBar();
+        return true;
+    },
+
+    clear() {
+        this.selected.clear();
+        this.renderBar();
+        // Uncheck all checkboxes
+        document.querySelectorAll('.compare-checkbox').forEach(cb => cb.checked = false);
+    },
+
+    remove(ticker) {
+        this.selected.delete(ticker);
+        const cb = document.querySelector(`.compare-checkbox[data-ticker="${ticker}"]`);
+        if (cb) cb.checked = false;
+        this.renderBar();
+    },
+
+    renderBar() {
+        let bar = document.getElementById('comparator-bar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'comparator-bar';
+            bar.style.cssText = `position:fixed;bottom:0;left:0;right:0;z-index:9998;
+                background:rgba(10,25,41,0.97);backdrop-filter:blur(12px);
+                border-top:2px solid #00FF87;padding:14px 24px;
+                display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+                box-shadow:0 -8px 24px rgba(0,0,0,0.4);transition:transform 0.3s;`;
+            document.body.appendChild(bar);
+        }
+
+        if (this.selected.size === 0) {
+            bar.style.transform = 'translateY(100%)';
+            return;
+        }
+
+        bar.style.transform = 'translateY(0)';
+        const items = [...this.selected.values()];
+        bar.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-balance-scale" style="color:#00FF87;font-size:1rem;"></i>
+                <span style="color:#fff;font-weight:700;font-size:0.85rem;">Comparateur ${this.selected.size}/${this.MAX}</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1;">
+                ${items.map(s => `
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:14px;
+                        background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.3);color:#fff;font-size:0.78rem;">
+                        <strong style="color:#00FF87;">${s.ticker}</strong>
+                        <span style="opacity:0.7;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</span>
+                        <button onclick="StockComparator.remove('${s.ticker}')"
+                            style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;padding:0;font-size:0.7rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                `).join('')}
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="StockComparator.clear()"
+                    style="padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);
+                        background:transparent;color:rgba(255,255,255,0.5);font-size:0.78rem;cursor:pointer;">
+                    <i class="fas fa-trash" style="margin-right:4px;"></i>Vider
+                </button>
+                <button onclick="StockComparator.openModal()" ${this.selected.size < 2 ? 'disabled' : ''}
+                    style="padding:8px 18px;border-radius:8px;border:none;
+                        background:${this.selected.size >= 2 ? 'linear-gradient(135deg,#00FF87,#00d672)' : 'rgba(0,255,135,0.2)'};
+                        color:#000;font-weight:700;font-size:0.85rem;cursor:${this.selected.size >= 2 ? 'pointer' : 'not-allowed'};
+                        opacity:${this.selected.size >= 2 ? '1' : '0.5'};">
+                    <i class="fas fa-bolt" style="margin-right:4px;"></i>Comparer
+                </button>
+            </div>
+        `;
+    },
+
+    openModal() {
+        if (this.selected.size < 2) return;
+        const stocks = [...this.selected.values()];
+
+        // Helper: parse percentage strings like "+12.34 %" → 12.34
+        const parsePct = (v) => {
+            if (v == null) return null;
+            const s = String(v).replace(',','.').replace('%','').replace('+','').trim();
+            const n = parseFloat(s);
+            return isNaN(n) ? null : n;
+        };
+        const parseNum = (v) => {
+            if (v == null) return null;
+            const n = parseFloat(v);
+            return isNaN(n) ? null : n;
+        };
+
+        // Define rows: { label, getValue, format, higherIsBetter }
+        const rows = [
+            { section: 'SCORES' },
+            { label: 'Quality', get: s => parseNum(s.quality_score), format: (v, s) => `${s?.quality_grade || '–'} <span style="opacity:0.5;">(${v != null ? Math.round(v) : '–'})</span>`, higherIsBetter: true },
+            { label: 'Value', get: s => parseNum(s.buffett_score), format: (v, s) => `${s?.buffett_grade || '–'} <span style="opacity:0.5;">(${v != null ? Math.round(v) : '–'})</span>`, higherIsBetter: true },
+
+            { section: 'PERFORMANCE' },
+            { label: 'Var % jour', get: s => parsePct(s.change), format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '–', higherIsBetter: true },
+            { label: 'YTD', get: s => parsePct(s.ytd), format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '–', higherIsBetter: true },
+            { label: '1 an', get: s => parsePct(s.perf_1y), format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '–', higherIsBetter: true },
+            { label: '3 ans', get: s => parsePct(s.perf_3y), format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '–', higherIsBetter: true },
+
+            { section: 'FONDAMENTAUX' },
+            { label: 'PE Ratio', get: s => parseNum(s.pe_ratio), format: v => v != null ? v.toFixed(1) : '–', higherIsBetter: false },
+            { label: 'ROE', get: s => parseNum(s.roe), format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: true },
+            { label: 'D/E Ratio', get: s => parseNum(s.de_ratio), format: v => v != null ? v.toFixed(2) : '–', higherIsBetter: false },
+            { label: 'FCF Yield', get: s => parseNum(s.fcf_yield), format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: true },
+            { label: 'Beta', get: s => parseNum(s.beta), format: v => v != null ? v.toFixed(2) : '–', neutral: true },
+
+            { section: 'DIVIDENDE' },
+            { label: 'Div TTM', get: s => parsePct(s.dividend_yield_ttm || s.dividend_yield), format: v => v != null ? v.toFixed(2) + '%' : '–', higherIsBetter: true },
+            { label: 'Payout', get: s => parsePct(s.payout_ratio), format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: false },
+
+            { section: 'RISQUE' },
+            { label: 'Volatilité 3Y', get: s => parsePct(s.volatility_3y), format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: false },
+            { label: 'Drawdown max 3Y', get: s => parsePct(s.max_drawdown_3y), format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: false },
+        ];
+
+        // Build modal HTML
+        const headerRow = `
+            <tr>
+                <th style="padding:14px;text-align:left;background:rgba(255,255,255,0.04);min-width:140px;"></th>
+                ${stocks.map(s => `
+                    <th style="padding:14px;text-align:center;background:rgba(0,255,135,0.05);border-left:1px solid rgba(255,255,255,0.06);min-width:160px;">
+                        <div style="color:#00FF87;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;">${s.ticker}</div>
+                        <div style="color:#fff;font-size:0.78rem;font-weight:500;margin-top:4px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name || ''}</div>
+                        <div style="color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:2px;">${s.region || ''} · ${s.sector || ''}</div>
+                    </th>
+                `).join('')}
+            </tr>
+        `;
+
+        const dataRows = rows.map(r => {
+            if (r.section) {
+                return `<tr><td colspan="${stocks.length + 1}" style="padding:12px 14px 6px 14px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#00FF87;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);">${r.section}</td></tr>`;
+            }
+            // Compute values
+            const values = stocks.map(s => r.get(s));
+            const valid = values.filter(v => v != null);
+            let bestIdx = -1, worstIdx = -1;
+            if (valid.length >= 2 && !r.neutral) {
+                const max = Math.max(...valid), min = Math.min(...valid);
+                if (max !== min) {
+                    bestIdx = values.indexOf(r.higherIsBetter ? max : min);
+                    worstIdx = values.indexOf(r.higherIsBetter ? min : max);
+                }
+            }
+            const cells = stocks.map((s, i) => {
+                const v = values[i];
+                let bg = '', color = '#fff', weight = '500';
+                if (i === bestIdx) { bg = 'rgba(76,175,80,0.15)'; color = '#4caf50'; weight = '700'; }
+                else if (i === worstIdx) { bg = 'rgba(244,67,54,0.1)'; color = '#f44336'; weight = '600'; }
+                return `<td style="padding:10px 14px;text-align:center;background:${bg};color:${color};font-weight:${weight};font-family:'JetBrains Mono',monospace;font-size:0.85rem;border-left:1px solid rgba(255,255,255,0.06);">${r.format(v, s)}</td>`;
+            }).join('');
+            return `<tr><td style="padding:10px 14px;color:rgba(255,255,255,0.6);font-size:0.78rem;">${r.label}</td>${cells}</tr>`;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'comparator-modal';
+        modal.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;
+            background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);
+            display:flex;align-items:center;justify-content:center;padding:20px;`;
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        modal.innerHTML = `
+            <div style="background:#0a1929;border:1px solid rgba(0,255,135,0.3);border-radius:16px;
+                max-width:1200px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
+                <div style="position:sticky;top:0;background:#0a1929;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);
+                    display:flex;align-items:center;justify-content:space-between;z-index:1;">
+                    <div>
+                        <h2 style="color:#fff;font-size:1.2rem;font-weight:700;margin:0;">
+                            <i class="fas fa-balance-scale" style="color:#00FF87;margin-right:8px;"></i>
+                            Comparateur d'actions
+                        </h2>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:4px 0 0 0;">
+                            Vert = meilleure valeur · Rouge = pire valeur
+                        </p>
+                    </div>
+                    <button onclick="document.getElementById('comparator-modal').remove()"
+                        style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.4rem;padding:4px 12px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="padding:0 24px 24px 24px;overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>${headerRow}</thead>
+                        <tbody>${dataRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+};
+
 // ===== v8.1: Watchlist + Saved Searches + CSV Export =====
 const StockUserPrefs = {
     LS_WATCHLIST: 'tp_watchlist_v1',
@@ -193,6 +408,18 @@ window.toggleStarFor = function(ticker, btn) {
 window.promptSaveSearch = function() {
     const name = prompt('Nom de la recherche :');
     if (name) StockUserPrefs.saveSearch(name);
+};
+
+// v8.3: Comparator helpers
+window.escapeHtmlAttr = function(s) {
+    return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+};
+
+window.toggleCompareFor = function(checkbox, ticker) {
+    const stock = (window._stockMap || {})[ticker];
+    if (!stock) return;
+    const ok = StockComparator.toggle(stock);
+    if (!ok) checkbox.checked = false;
 };
 
 // ===== v8.0: Advanced filters state =====
@@ -1779,9 +2006,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="${_starred ? 'fas' : 'far'} fa-star"></i>
                             </button>`;
 
+                            // v8.3: Compare checkbox — store stock in global map for retrieval
+                            window._stockMap = window._stockMap || {};
+                            window._stockMap[stock.ticker] = stock;
+                            const _checked = StockComparator.isSelected(stock.ticker);
+                            const _checkboxHTML = `<input type="checkbox" class="compare-checkbox"
+                                data-ticker="${stock.ticker}"
+                                ${_checked ? 'checked' : ''}
+                                onclick="event.stopPropagation();toggleCompareFor(this,'${stock.ticker}')"
+                                title="Ajouter au comparateur"
+                                style="margin-right:8px;cursor:pointer;accent-color:#00FF87;">`;
+
                             row.innerHTML = `
                                 <td class="py-2 px-3">
-                                    <div class="font-medium" style="display:flex;align-items:center;">${_starHTML}<span>${stock.name || '-'}</span> ${stock.marketIcon}</div>
+                                    <div class="font-medium" style="display:flex;align-items:center;">${_checkboxHTML}${_starHTML}<span>${stock.name || '-'}</span> ${stock.marketIcon}</div>
                                     <div class="text-xs opacity-70 mt-1">
                                         <span class="px-2 py-0.5 rounded border border-white/10 mr-1 ${stock.regionBadgeClass}">${stock.region || 'GLOBAL'}</span>
                                         ${stock.country || ''}
