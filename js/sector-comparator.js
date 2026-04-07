@@ -189,6 +189,18 @@
   const fmtScore = v => v == null ? '—' : Math.round(v).toString();
   const cls = v => v == null ? '' : (v >= 0 ? 'positive' : 'negative');
 
+  // Heatmap cell background — green for high/positive, red for low/negative.
+  // `min`/`max` define the value range mapped to full color intensity.
+  function heat(v, min, max) {
+    if (v == null || !Number.isFinite(v)) return '';
+    const mid = (min + max) / 2;
+    const half = (max - min) / 2 || 1;
+    const t = Math.max(-1, Math.min(1, (v - mid) / half));
+    const a = Math.abs(t) * 0.32;
+    const rgb = t >= 0 ? '0,255,135' : '255,107,107';
+    return `background:rgba(${rgb},${a.toFixed(3)})`;
+  }
+
   function renderRows(rows) {
     if (!rows.length) {
       return `<tr><td colspan="9" class="text-center py-4 opacity-60">Aucun holding disponible</td></tr>`;
@@ -198,21 +210,21 @@
       const name = (r.holding.name || s.name || '—');
       const tic = r.holding.symbol || s.ticker || '';
       const w = r.holding.weight != null ? (r.holding.weight * 100).toFixed(2) + '%' : '—';
-      const flag = r.stock ? '' : '<span title="Pas de match dans stocks_*.json" style="opacity:.5">·</span>';
+      const flag = r.stock ? '' : '<span title="Pas de match" style="opacity:.4">∅</span>';
       return `
         <tr>
           <td class="sc-rank">${r.rank}</td>
-          <td>
-            <div class="sc-name">${name} ${flag}</div>
+          <td class="sc-name-cell">
+            <div class="sc-name" title="${name}">${name} ${flag}</div>
             <div class="sc-tic">${tic}${s.country ? ' • ' + s.country : ''}</div>
           </td>
           <td class="sc-w">${w}</td>
-          <td class="${cls(s.perf_ytd)}">${fmtPct(s.perf_ytd)}</td>
-          <td class="${cls(s.perf_1y)}">${fmtPct(s.perf_1y)}</td>
-          <td>${fmtScore(s.quality_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
-          <td>${fmtScore(s.buffett_score)}</td>
-          <td>${fmtNum(s.roe)}${s.roe != null ? '%' : ''}</td>
-          <td>${fmtNum(s.roic)}${s.roic != null ? '%' : ''}</td>
+          <td class="sc-heat ${cls(s.perf_ytd)}" style="${heat(s.perf_ytd, -20, 20)}">${fmtPct(s.perf_ytd)}</td>
+          <td class="sc-heat ${cls(s.perf_1y)}" style="${heat(s.perf_1y, -20, 40)}">${fmtPct(s.perf_1y)}</td>
+          <td class="sc-heat" style="${heat(s.quality_score, 30, 85)}">${fmtScore(s.quality_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
+          <td class="sc-heat" style="${heat(s.buffett_score, 20, 80)}">${fmtScore(s.buffett_score)}</td>
+          <td class="sc-heat" style="${heat(s.roe, 0, 30)}">${fmtNum(s.roe)}${s.roe != null ? '%' : ''}</td>
+          <td class="sc-heat" style="${heat(s.roic, 0, 25)}">${fmtNum(s.roic)}${s.roic != null ? '%' : ''}</td>
         </tr>`;
     }).join('');
   }
@@ -285,33 +297,44 @@
   function injectStyles() {
     if (document.getElementById('sc-styles')) return;
     const css = `
-      #sector-comparator { margin: 2rem 0; }
-      .sc-controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1rem; }
-      .sc-controls select { background: rgba(255,255,255,.06); color: inherit; border: 1px solid rgba(255,255,255,.15); border-radius: .5rem; padding: .5rem .75rem; min-width: 240px; }
-      .sc-controls button { background: var(--accent-color, #00ff87); color: #001; font-weight: 600; border: 0; border-radius: .5rem; padding: .55rem 1rem; cursor: pointer; }
+      #sector-comparator { margin: 2.5rem auto; max-width: 1400px; }
+      #sector-comparator .section-title { text-align: center; }
+      .sc-controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: center; margin-bottom: 1.25rem; }
+      .sc-controls select { background: rgba(255,255,255,.06); color: inherit; border: 1px solid rgba(255,255,255,.15); border-radius: .5rem; padding: .55rem .85rem; min-width: 280px; font-size: .9rem; }
+      .sc-controls button { background: var(--accent-color, #00ff87); color: #001; font-weight: 700; border: 0; border-radius: .5rem; padding: .6rem 1.2rem; cursor: pointer; }
       .sc-controls button:hover { filter: brightness(1.1); }
-      .sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-      @media (max-width: 900px) { .sc-grid { grid-template-columns: 1fr; } }
-      .sc-panel { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: .75rem; padding: 1rem; }
-      .sc-panel-head { margin-bottom: .75rem; }
-      .sc-panel-title { font-weight: 600; font-size: 1.05rem; }
-      .sc-panel-sub { font-size: .8rem; opacity: .65; }
+      .sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+      @media (max-width: 1000px) { .sc-grid { grid-template-columns: 1fr; } }
+      .sc-panel { background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.09); border-radius: .9rem; padding: 1.1rem 1.1rem 1rem; }
+      .sc-panel-head { margin-bottom: .9rem; padding-bottom: .75rem; border-bottom: 1px solid rgba(255,255,255,.07); }
+      .sc-panel-title { font-weight: 700; font-size: 1.1rem; letter-spacing: .01em; }
+      .sc-panel-sub { font-size: .78rem; opacity: .55; margin-top: 2px; }
       .sc-table-wrap { overflow-x: auto; }
-      .sc-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-      .sc-table th, .sc-table td { text-align: right; padding: .4rem .5rem; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
-      .sc-table th { font-weight: 500; opacity: .7; font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; }
-      .sc-table th:nth-child(2), .sc-table td:nth-child(2) { text-align: left; white-space: normal; }
-      .sc-rank { opacity: .5; }
-      .sc-name { font-weight: 500; }
-      .sc-tic { font-size: .7rem; opacity: .55; }
-      .sc-w { font-variant-numeric: tabular-nums; }
-      .sc-grade { font-size: .65rem; padding: 1px 5px; border-radius: 4px; background: rgba(0,255,135,.15); color: #00ff87; margin-left: 2px; }
+      .sc-table { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-size: .85rem; table-layout: fixed; }
+      .sc-table th, .sc-table td { text-align: right; padding: .5rem .45rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .sc-table th { font-weight: 500; opacity: .55; font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; padding-bottom: .45rem; }
+      .sc-table tbody tr { background: rgba(255,255,255,.015); }
+      .sc-table tbody tr:hover { background: rgba(255,255,255,.05); }
+      .sc-table tbody td:first-child { border-radius: .35rem 0 0 .35rem; }
+      .sc-table tbody td:last-child  { border-radius: 0 .35rem .35rem 0; }
+      .sc-table th:nth-child(1), .sc-table td:nth-child(1) { width: 26px; text-align: center; }
+      .sc-table th:nth-child(2), .sc-table td:nth-child(2) { text-align: left; width: auto; }
+      .sc-table th:nth-child(3), .sc-table td:nth-child(3) { width: 56px; }
+      .sc-table th:nth-child(n+4), .sc-table td:nth-child(n+4) { width: 64px; }
+      .sc-rank { opacity: .35; font-weight: 600; }
+      .sc-name-cell { overflow: hidden; }
+      .sc-name { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+      .sc-tic { font-size: .68rem; opacity: .5; margin-top: 1px; }
+      .sc-w { color: #fff; opacity: .85; font-weight: 600; }
+      .sc-heat { border-radius: .3rem; font-weight: 600; }
+      .sc-grade { font-size: .62rem; padding: 1px 5px; border-radius: 4px; background: rgba(0,255,135,.18); color: #00ff87; margin-left: 3px; vertical-align: middle; }
       .positive { color: #00ff87; }
       .negative { color: #ff6b6b; }
-      .sc-agg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .85rem; padding-top: .85rem; border-top: 1px solid rgba(255,255,255,.08); }
-      .sc-agg-cell { background: rgba(255,255,255,.03); border-radius: .4rem; padding: .45rem .55rem; }
-      .sc-agg-label { font-size: .65rem; opacity: .6; text-transform: uppercase; letter-spacing: .03em; }
-      .sc-agg-val { font-size: .95rem; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+      .sc-agg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .45rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.08); }
+      @media (max-width: 700px) { .sc-agg-grid { grid-template-columns: repeat(2, 1fr); } }
+      .sc-agg-cell { background: rgba(255,255,255,.04); border-radius: .5rem; padding: .55rem .6rem; }
+      .sc-agg-label { font-size: .6rem; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
+      .sc-agg-val { font-size: 1.02rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 3px; }
     `;
     const tag = document.createElement('style');
     tag.id = 'sc-styles';
