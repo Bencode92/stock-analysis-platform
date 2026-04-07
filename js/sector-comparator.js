@@ -374,24 +374,20 @@
       .sc-panel-head { margin-bottom: .9rem; padding-bottom: .75rem; border-bottom: 1px solid rgba(255,255,255,.07); }
       .sc-panel-title { font-weight: 700; font-size: 1.1rem; letter-spacing: .01em; }
       .sc-panel-sub { font-size: .78rem; opacity: .55; margin-top: 2px; }
-      .sc-table-wrap { overflow-x: auto; }
-      .sc-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: .9rem; table-layout: fixed; }
-      .sc-table th, .sc-table td { text-align: right; padding: .7rem .5rem; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
-      .sc-table th { font-weight: 600; opacity: .5; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; padding: .4rem .5rem .6rem; border-bottom: 1px solid rgba(255,255,255,.07); }
+      .sc-table-wrap { overflow: hidden; }
+      .sc-table { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-size: .8rem; table-layout: auto; }
+      .sc-table th, .sc-table td { text-align: right; padding: .55rem .4rem; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
+      .sc-table th { font-weight: 600; opacity: .5; font-size: .65rem; text-transform: uppercase; letter-spacing: .06em; padding: .35rem .4rem .5rem; border-bottom: 1px solid rgba(255,255,255,.07); }
       .sc-table tbody tr { background: rgba(255,255,255,.02); transition: background .12s; }
       .sc-table tbody tr:hover { background: rgba(255,255,255,.06); }
       .sc-table tbody td:first-child { border-radius: .4rem 0 0 .4rem; }
       .sc-table tbody td:last-child  { border-radius: 0 .4rem .4rem 0; }
-      .sc-table th:nth-child(1), .sc-table td:nth-child(1) { width: 30px; text-align: center; }
-      .sc-table th:nth-child(2), .sc-table td:nth-child(2) { text-align: left; width: auto; padding-left: .25rem; }
-      .sc-table th:nth-child(3), .sc-table td:nth-child(3) { width: 60px; }
-      .sc-table th:nth-child(n+4), .sc-table td:nth-child(n+4) { width: 60px; }
-      /* la colonne quality est un peu plus large pour laisser place au grade */
-      .sc-table th:nth-child(6), .sc-table td:nth-child(6) { width: 78px; }
-      .sc-rank { opacity: .3; font-weight: 700; font-size: .85rem; }
+      .sc-table th:nth-child(1), .sc-table td:nth-child(1) { width: 24px; text-align: center; padding-left: .5rem; }
+      .sc-table th:nth-child(2), .sc-table td:nth-child(2) { text-align: left; padding-left: .25rem; max-width: 0; width: 100%; }
+      .sc-rank { opacity: .3; font-weight: 700; font-size: .8rem; }
       .sc-name-cell { overflow: hidden; }
-      .sc-name { font-weight: 600; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; line-height: 1.25; }
-      .sc-tic { font-size: .7rem; opacity: .45; margin-top: 2px; letter-spacing: .02em; }
+      .sc-name { font-weight: 600; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; line-height: 1.25; }
+      .sc-tic { font-size: .66rem; opacity: .45; margin-top: 2px; letter-spacing: .02em; }
       .sc-w { color: #fff; opacity: .9; font-weight: 700; }
       .sc-num { opacity: .82; font-weight: 500; }
       .sc-heat { border-radius: .35rem; font-weight: 700; }
