@@ -201,31 +201,24 @@ const StockComparator = {
             return Math.round((w / total) * 100);
         });
 
-        // Rank by score (medals)
-        const indexed = scores100.map((s, i) => ({ score: s, idx: i }));
-        indexed.sort((a, b) => b.score - a.score);
-        const medals = {};
-        if (indexed.length >= 1 && indexed[0].score > (indexed[1]?.score ?? -1)) medals[indexed[0].idx] = '🥇';
-        if (indexed.length >= 2 && indexed[1].score > (indexed[2]?.score ?? -1) && indexed[1].score < indexed[0].score) medals[indexed[1].idx] = '🥈';
-        if (indexed.length >= 3 && indexed[2].score < indexed[1].score) medals[indexed[2].idx] = '🥉';
+        // Find unique winner (highest score, no tie)
+        const maxScore = Math.max(...scores100);
+        const winnersCount = scores100.filter(s => s === maxScore).length;
+        const winnerIdx = winnersCount === 1 ? scores100.indexOf(maxScore) : -1;
 
         // Score row at bottom
         const scoreCells = stocks.map((s, i) => {
             const score = scores100[i];
-            const medal = medals[i] || '';
-            const isFirst = medal === '🥇';
+            const isWinner = i === winnerIdx;
             const scoreColor = score >= 70 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
-            const bg = isFirst ? 'linear-gradient(135deg,rgba(0,255,135,0.18),rgba(0,255,135,0.04))' : 'rgba(255,255,255,0.02)';
-            return `<td style="padding:18px 14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isFirst ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
+            const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.2),rgba(0,255,135,0.05))' : 'rgba(255,255,255,0.02)';
+            return `<td style="padding:18px 14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
-                    ${medal ? `<div style="font-size:1.6rem;line-height:1;">${medal}</div>` : '<div style="height:1.6rem;"></div>'}
                     <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;">
-                        <span style="font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:800;color:${scoreColor};line-height:1;">${score}</span>
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:800;color:${isWinner ? '#00FF87' : scoreColor};line-height:1;">${score}</span>
                         <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">/100</span>
                     </div>
-                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.45);font-family:'JetBrains Mono',monospace;">
-                        ${wins[i]} gagne · ${losses[i]} perd
-                    </div>
+                    ${isWinner ? '<div style="font-size:0.7rem;color:#00FF87;font-weight:700;letter-spacing:1px;">GAGNANT</div>' : `<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">${wins[i]} gagne · ${losses[i]} perd</div>`}
                 </div>
             </td>`;
         }).join('');
