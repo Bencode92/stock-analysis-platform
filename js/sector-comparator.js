@@ -294,7 +294,7 @@
       perf_ytd: weightedAvg(matched, r => r.stock.perf_ytd),
       perf_1y: weightedAvg(matched, r => r.stock.perf_1y),
       perf_3y: weightedAvg(matched, r => r.stock.perf_3y),
-      quality: weightedAvg(matched, r => r.stock.quality_score),
+      quality: weightedAvg(matched, r => r.stock.quality_raw_score),
       buffett: weightedAvg(matched, r => r.stock.buffett_score),
       roe: median(matched, r => r.stock.roe),
       roic: median(matched, r => r.stock.roic),
@@ -345,7 +345,7 @@
           <td class="sc-w">${w}</td>
           <td class="sc-heat ${cls(s.perf_ytd)}" style="${heat(s.perf_ytd, -20, 20)}">${fmtPct(s.perf_ytd)}</td>
           <td class="sc-heat ${cls(s.perf_1y)}" style="${heat(s.perf_1y, -20, 40)}">${fmtPct(s.perf_1y)}</td>
-          <td class="sc-heat sc-q" style="${heat(s.quality_score, 30, 85)}">${fmtScore(s.quality_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
+          <td class="sc-heat sc-q" style="${heat(s.quality_raw_score, 30, 85)}">${fmtScore(s.quality_raw_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
           <td class="sc-num">${fmtScore(s.buffett_score)}</td>
           <td class="sc-num">${fmtNum(s.roe)}${s.roe != null ? '%' : ''}</td>
           <td class="sc-num">${fmtNum(s.roic)}${s.roic != null ? '%' : ''}</td>
@@ -358,7 +358,7 @@
     { key: 'perf_ytd',  label: 'Perf YTD (pondérée)',  dir: 1,  fmt: v => fmtPct(v) },
     { key: 'perf_1y',   label: 'Perf 1Y (pondérée)',   dir: 1,  fmt: v => fmtPct(v) },
     { key: 'perf_3y',   label: 'Perf 3Y (pondérée)',   dir: 1,  fmt: v => fmtPct(v) },
-    { key: 'quality',   label: 'Quality (pondéré)',    dir: 1,  fmt: v => fmtScore(v) },
+    { key: 'quality',   label: 'Quality raw (pondéré)', dir: 1,  fmt: v => fmtScore(v) },
     { key: 'buffett',   label: 'Buffett (pondéré)',    dir: 1,  fmt: v => fmtScore(v) },
     { key: 'roe',       label: 'ROE médian',           dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
     { key: 'roic',      label: 'ROIC médian',          dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
@@ -424,7 +424,7 @@
               <tr>
                 <th>#</th><th>Société</th><th>Poids</th>
                 <th>YTD</th><th>1Y</th>
-                <th>Quality</th><th>Buffett</th>
+                <th title="Score qualité brut, non peer-normalisé">Quality*</th><th>Buffett</th>
                 <th>ROE</th><th>ROIC</th>
               </tr>
             </thead>
