@@ -272,11 +272,28 @@ function buildPlanVersementHTML(repMax, plRep, plN, tmiAvant, vMax, ecoMax, ANNE
     return '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">\uD83D\uDCCB Votre plan de versement</h3><p class="text-xs text-slate-500 mb-4">Les plafonds les plus anciens sont utilis\u00E9s en premier (FIFO)</p><div class="space-y-2">' + rows + '</div><div class="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center"><span class="text-sm text-slate-400">Total</span><span class="text-lg font-black text-emerald-400">' + formatMontant(vMax) + ' \u20AC \u2192 \u00E9co. ' + formatMontant(ecoMax) + ' \u20AC</span></div></div>';
 }
 
-function runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement }) {
-    const tc = PatrimoineSimulator.getTauxCharges(statut);
-    const rpn = revenuBrut * (1 - tc);
-    const ab = PatrimoineSimulator.calculerAbattementFraisPro(rpn, statut);
-    const nib = rpn - ab;
+function runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement }) {
+    let rpn, ab, nib;
+    if (revenuNetImposable != null && revenuNetImposable > 0) {
+        // Mode direct : utilisateur fournit le net imposable (ex: depuis l'avis d'impôt)
+        nib = revenuNetImposable;
+        // Reverse-engineer revenuProNet pour le calcul du plafond PER
+        // abattement = min(rpn * 0.10, 14171) selon barème 2026
+        // - si rpn ≤ 141 710 : nib = rpn × 0,9 → rpn = nib / 0,9
+        // - si rpn > 141 710 : nib = rpn - 14 171 → rpn = nib + 14 171
+        const rpnEstime = nib / 0.9;
+        if (rpnEstime > 141710) {
+            rpn = nib + 14171;
+        } else {
+            rpn = rpnEstime;
+        }
+        ab = rpn - nib;
+    } else {
+        const tc = PatrimoineSimulator.getTauxCharges(statut);
+        rpn = revenuBrut * (1 - tc);
+        ab = PatrimoineSimulator.calculerAbattementFraisPro(rpn, statut);
+        nib = rpn - ab;
+    }
     const { plafondN, plafondsParAnnee:ppa, totalDisponible:td, totalReports:tr } = PatrimoineSimulator.calculerPlafondsPER(rpn, plafondsReportables, statut);
     const { utilisation:u, perDeductible:pd, perNonDeductible:pnd, plafondsRestants:pr } = PatrimoineSimulator.allouerVersementPER(perVersement, ppa);
     const nisp = nib, niap = nib - pd;
@@ -295,9 +312,29 @@ function afficherSynthesePER() {
     const resultatElement = document.getElementById('resultat-synthese');
     const alerteN3 = document.getElementById('alerte-n3');
     if (!brutInput || !resultatElement) return;
-    const brut = parseFloat(brutInput.value.replace(/\s/g, '').replace(',', '.'));
-    if (!brut || brut <= 0) { resultatElement.innerHTML = '<div class="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-200"><p><strong>Erreur :</strong> saisir un salaire brut valide.</p></div>'; return; }
-    const statut = statutSelect?.value || 'salarie';
+    const montantSaisi = parseFloat(brutInput.value.replace(/\s/g, '').replace(',', '.'));
+    if (!montantSaisi || montantSaisi <= 0) { resultatElement.innerHTML = '<div class="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-200"><p><strong>Erreur :</strong> saisir un revenu valide.</p></div>'; return; }
+
+    // Mode de saisie : brut ou net imposable
+    const revenuMode = document.querySelector('input[name="revenu-mode"]:checked')?.value || 'brut';
+    const statutTmp = statutSelect?.value || 'salarie';
+
+    // Si net imposable, convertir en brut équivalent pour réutiliser la logique existante
+    // brut = (nib + abattement) / (1 - charges)
+    // avec abattement = min(rpn × 0,1, 14171) où rpn = brut × (1 - charges)
+    let brut;
+    if (revenuMode === 'net') {
+        const tc = PatrimoineSimulator.getTauxCharges(statutTmp);
+        const nib = montantSaisi;
+        // Estimation rpn (revenu pro net) à partir du nib
+        const rpnEstime = nib / 0.9;
+        const rpn = rpnEstime > 141710 ? nib + 14171 : rpnEstime;
+        brut = rpn / (1 - tc);
+    } else {
+        brut = montantSaisi;
+    }
+
+    const statut = statutTmp;
     const nbParts = parseFloat(situationSelect?.value || '1');
     const isTNS = (statut === 'independant');
     const statutLabels = {salarie:'Salari\u00E9',cadre:'Cadre',fonctionnaire:'Fonctionnaire',independant:'TNS'};
@@ -353,9 +390,9 @@ function afficherSynthesePER() {
 // ==========================================
 // 🎯 CALCUL INVERSÉ : VERSEMENT PER POUR ATTEINDRE UN IMPÔT CIBLE
 // ==========================================
-function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsReportables, impotCible }) {
+function calculerVersementPourCible({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, impotCible }) {
     // Borne haute = revenu imposable max (ne sert à rien d'aller au-delà)
-    const scenInitial = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: 0 });
+    const scenInitial = runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement: 0 });
     const impotInitial = scenInitial.impotSansPER;
     const tdMax = scenInitial.plafondTotal; // plafond PER total disponible
 
@@ -383,7 +420,7 @@ function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsRepor
 
     for (let i = 0; i < 40; i++) {
         const mid = (lo + hi) / 2;
-        const scen = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: mid });
+        const scen = runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement: mid });
         scenFinal = scen;
         const diff = scen.impotAvecPER - impotCible;
 
@@ -406,7 +443,7 @@ function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsRepor
     let utilisationPlafonds = scenFinal.utilisation;
 
     if (plafondDepasse) {
-        const scenMax = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: tdMax });
+        const scenMax = runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement: tdMax });
         versementApplique = tdMax;
         impotResultant = scenMax.impotAvecPER;
         economieRealisee = impotInitial - impotResultant;
@@ -414,7 +451,7 @@ function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsRepor
         utilisationPlafonds = scenMax.utilisation;
     } else {
         // Recalcul exact pour récupérer la répartition FIFO précise
-        const scenExact = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: versementCalcule });
+        const scenExact = runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement: versementCalcule });
         utilisationPlafonds = scenExact.utilisation;
     }
 
@@ -444,12 +481,17 @@ function afficherCibleImpot() {
     const resultEl = document.getElementById('resultat-cible-impot');
     if (!brutInput || !cibleInput || !resultEl) return;
 
-    const brut = parseFloat(brutInput.value.replace(/\s/g, '').replace(',', '.'));
-    if (!brut || brut <= 0) {
+    const montantSaisi = parseFloat(brutInput.value.replace(/\s/g, '').replace(',', '.'));
+    if (!montantSaisi || montantSaisi <= 0) {
         resultEl.classList.remove('hidden');
-        resultEl.innerHTML = '<div class="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-200"><strong>Erreur :</strong> renseignez d\'abord votre salaire brut annuel ci-dessus.</div>';
+        resultEl.innerHTML = '<div class="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-200"><strong>Erreur :</strong> renseignez d\'abord votre revenu ci-dessus.</div>';
         return;
     }
+
+    // Mode de saisie revenu : brut (défaut) ou net imposable
+    const revenuMode = document.querySelector('input[name="revenu-mode"]:checked')?.value || 'brut';
+    const revenuBrut = revenuMode === 'brut' ? montantSaisi : null;
+    const revenuNetImposable = revenuMode === 'net' ? montantSaisi : null;
 
     const valeurSaisie = parseFloat(cibleInput.value) || 0;
     const mode = document.querySelector('input[name="cible-mode"]:checked')?.value || 'economiser';
@@ -462,19 +504,17 @@ function afficherCibleImpot() {
     };
 
     // Calcul de l'impôt initial pour convertir "économiser X" en "atteindre Y"
-    const scenInit = runScenarioPER({ revenuBrut: brut, statut, nbParts, plafondsReportables, perVersement: 0 });
+    const scenInit = runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement: 0 });
     const impotInitial = scenInit.impotSansPER;
 
     let impotCible;
     if (mode === 'economiser') {
-        // Économiser X € → atteindre (impotInitial - X)
         impotCible = Math.max(0, impotInitial - valeurSaisie);
     } else {
-        // Atteindre X € directement
         impotCible = valeurSaisie;
     }
 
-    const r = calculerVersementPourCible({ revenuBrut: brut, statut, nbParts, plafondsReportables, impotCible });
+    const r = calculerVersementPourCible({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, impotCible });
     r.mode = mode;
     r.valeurSaisie = valeurSaisie;
 
@@ -652,6 +692,25 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 labelEl.textContent = "Impôt annuel cible (€)";
                 inputEl.placeholder = 'Ex : 0';
+            }
+        });
+    });
+
+    // Mise à jour dynamique du label revenu (brut vs net imposable)
+    document.querySelectorAll('input[name="revenu-mode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const labelEl = document.getElementById('revenu-label');
+            const helpEl = document.getElementById('revenu-help');
+            const inputEl = document.getElementById('salaire-brut-simple');
+            if (!labelEl || !inputEl) return;
+            if (radio.value === 'net') {
+                labelEl.textContent = 'Revenu net imposable annuel';
+                if (helpEl) helpEl.textContent = "Ligne 'Revenu net imposable' de votre avis d'impôt";
+                inputEl.placeholder = 'Ex : 38 000';
+            } else {
+                labelEl.textContent = 'Salaire brut annuel';
+                if (helpEl) helpEl.textContent = 'Brut avant prélèvements sociaux et impôt';
+                inputEl.placeholder = 'Ex : 50 000';
             }
         });
     });

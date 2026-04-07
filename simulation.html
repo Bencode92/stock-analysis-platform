@@ -746,11 +746,32 @@
 
       <!-- VOTRE SITUATION -->
       <div class="space-y-4">
+        <!-- Mode de saisie revenu -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Mode de saisie</label>
+          <div class="flex flex-col md:flex-row gap-2">
+            <label class="flex items-start gap-2 cursor-pointer flex-1 bg-slate-800/40 rounded-lg p-3 border border-slate-700 hover:border-emerald-500 transition">
+              <input type="radio" name="revenu-mode" value="brut" checked class="mt-0.5 accent-emerald-500">
+              <div>
+                <div class="text-sm font-semibold text-white">💼 Salaire brut annuel</div>
+                <div class="text-[11px] text-slate-400">Charges sociales + abattement 10% calculés automatiquement</div>
+              </div>
+            </label>
+            <label class="flex items-start gap-2 cursor-pointer flex-1 bg-slate-800/40 rounded-lg p-3 border border-slate-700 hover:border-emerald-500 transition">
+              <input type="radio" name="revenu-mode" value="net" class="mt-0.5 accent-emerald-500">
+              <div>
+                <div class="text-sm font-semibold text-white">📄 Revenu net imposable</div>
+                <div class="text-[11px] text-slate-400">Directement de votre avis d'impôt (plus précis)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="grid md:grid-cols-2 gap-4">
-          <!-- Salaire brut -->
+          <!-- Salaire brut OU revenu net imposable -->
           <div>
             <label for="salaire-brut-simple" class="block text-sm font-medium text-slate-300 mb-1">
-              Salaire brut annuel
+              <span id="revenu-label">Salaire brut annuel</span>
             </label>
             <div class="relative">
               <input
@@ -763,6 +784,7 @@
               />
               <span class="absolute inset-y-0 right-3 flex items-center text-slate-400 text-sm">€</span>
             </div>
+            <p id="revenu-help" class="text-[11px] text-slate-500 mt-1">Brut avant prélèvements sociaux et impôt</p>
           </div>
 
           <!-- Situation familiale -->
