@@ -124,7 +124,7 @@
       const etf = shared.holdings?.etfs?.[it.symbol];
       const holdings = (etf?.holdings || []).slice(0, 10);
       let matched = 0;
-      holdings.forEach(h => { if (matchStock(h)) matched++; });
+      holdings.forEach(h => { if (matchStock(h, it.region)) matched++; });
       it.coverage = matched;
       it.totalHoldings = holdings.length;
       it.disabled = matched < MIN_COVERAGE;
@@ -213,9 +213,34 @@
     return String(sym).split('.')[0].toUpperCase();
   }
 
+  // Normalise une région ETF/holding vers une clé canonique : 'us' | 'europe' | 'asia' | ''
+  function canonRegion(r) {
+    if (!r) return '';
+    const s = String(r).toLowerCase();
+    if (s.includes('us') || s.includes('etat') || s.includes('états') || s.includes('north')) return 'us';
+    if (s.includes('eur')) return 'europe';
+    if (s.includes('asi') || s.includes('jap') || s.includes('chin') || s.includes('kor') || s.includes('hong') || s.includes('taiw')) return 'asia';
+    return '';
+  }
+
+  // Index multi-candidats : Map<key, Stock[]>. On garde TOUS les candidats
+  // pour pouvoir prioriser par région au moment du match.
   function buildStockIndex(stockSets) {
     const idx = new Map();
-    const add = (k, v) => { if (k && !idx.has(k)) idx.set(k, v); };
+    let collisions = 0;
+    const add = (k, v) => {
+      if (!k) return;
+      if (!idx.has(k)) {
+        idx.set(k, [v]);
+      } else {
+        const arr = idx.get(k);
+        // évite d'ajouter le même stock deux fois
+        if (!arr.includes(v)) {
+          arr.push(v);
+          collisions++;
+        }
+      }
+    };
 
     stockSets.forEach(set => {
       (set?.stocks || []).forEach(stk => {
@@ -231,10 +256,26 @@
         if (n2) add(`N:${n2}`, stk);
       });
     });
+
+    if (collisions > 0) {
+      console.info(`[comparator] stock index built — ${idx.size} keys, ${collisions} collisions (multi-listing tickers)`);
+    }
     return idx;
   }
 
-  function matchStock(holding) {
+  // Pick le meilleur candidat parmi les stocks indexés sous la même clé,
+  // en privilégiant celui dont la région matche la région de l'ETF.
+  function pickByRegion(candidates, regionHint) {
+    if (!candidates || !candidates.length) return null;
+    if (candidates.length === 1) return candidates[0];
+    if (!regionHint) return candidates[0];
+    const target = canonRegion(regionHint);
+    if (!target) return candidates[0];
+    const match = candidates.find(stk => canonRegion(stk.region) === target);
+    return match || candidates[0];
+  }
+
+  function matchStock(holding, regionHint) {
     if (!shared.stockIndex) return null;
     const tries = [];
     if (holding.symbol) {
@@ -244,8 +285,8 @@
     const n = normalizeName(holding.name);
     if (n) tries.push(`N:${n}`);
     for (const k of tries) {
-      const s = shared.stockIndex.get(k);
-      if (s) return s;
+      const candidates = shared.stockIndex.get(k);
+      if (candidates) return pickByRegion(candidates, regionHint);
     }
     return null;
   }
@@ -260,9 +301,9 @@
       .slice(0, 10);
   }
 
-  function buildRows(symbol) {
+  function buildRows(symbol, regionHint) {
     return getHoldings(symbol).map((h, idx) => {
-      const stock = matchStock(h);
+      const stock = matchStock(h, regionHint);
       return { rank: idx + 1, holding: h, stock };
     });
   }
@@ -410,7 +451,7 @@
   }
 
   function renderPanel(side, sector, agg, comparison) {
-    const rows = buildRows(sector.symbol);
+    const rows = buildRows(sector.symbol, sector.region);
     const wins = comparison[`${side}Wins`];
     const so = sector.sectorObj || {};
     // top_weight peut être stocké en pourcentage (35.2) ou en fraction (0.352)
@@ -468,8 +509,8 @@
       rootEl.innerHTML = '<div class="opacity-60 py-6 text-center">Sélectionne deux secteurs.</div>';
       return;
     }
-    const rowsL = buildRows(left.symbol);
-    const rowsR = buildRows(right.symbol);
+    const rowsL = buildRows(left.symbol, left.region);
+    const rowsR = buildRows(right.symbol, right.region);
     const aggL = computeAggregates(rowsL);
     const aggR = computeAggregates(rowsR);
     const cmp = compareAggregates(aggL, aggR);
