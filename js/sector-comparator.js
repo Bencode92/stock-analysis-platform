@@ -355,23 +355,24 @@
 
   // Liste ordonnée des métriques agrégées + sens (1 = higher wins, -1 = lower wins, 0 = neutre)
   const AGG_METRICS = [
-    { key: 'perf_ytd',  label: 'Perf YTD (pondérée)',  dir: 1,  fmt: v => fmtPct(v) },
-    { key: 'perf_1y',   label: 'Perf 1Y (pondérée)',   dir: 1,  fmt: v => fmtPct(v) },
-    { key: 'perf_3y',   label: 'Perf 3Y (pondérée)',   dir: 1,  fmt: v => fmtPct(v) },
-    { key: 'quality',   label: 'Quality raw (pondéré)', dir: 1,  fmt: v => fmtScore(v) },
-    { key: 'buffett',   label: 'Buffett (pondéré)',    dir: 1,  fmt: v => fmtScore(v) },
-    { key: 'roe',       label: 'ROE médian',           dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'roic',      label: 'ROIC médian',          dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'net_margin',label: 'Net margin médiane',   dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'fcf_yield', label: 'FCF yield médian',     dir: 1,  fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    // eps = tie zone : si |L − R| < eps on déclare égalité (anti-bruit statistique)
+    { key: 'perf_ytd',  label: 'Perf YTD (pondérée)',  dir: 1, eps: 0.5, fmt: v => fmtPct(v) },
+    { key: 'perf_1y',   label: 'Perf 1Y (pondérée)',   dir: 1, eps: 0.5, fmt: v => fmtPct(v) },
+    { key: 'perf_3y',   label: 'Perf 3Y (pondérée)',   dir: 1, eps: 1.0, fmt: v => fmtPct(v) },
+    { key: 'quality',   label: 'Quality raw (pondéré)', dir: 1, eps: 2,   fmt: v => fmtScore(v) },
+    { key: 'buffett',   label: 'Buffett (pondéré)',    dir: 1, eps: 2,   fmt: v => fmtScore(v) },
+    { key: 'roe',       label: 'ROE médian',           dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'roic',      label: 'ROIC médian',          dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'net_margin',label: 'Net margin médiane',   dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'fcf_yield', label: 'FCF yield médian',     dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
     // Beta est linéaire en pondération (β_p = Σ wᵢβᵢ), donc mathématiquement exact.
     // Vol et Max DD pondérés ne sont PAS exacts (ignorent les corrélations) — retirés.
-    { key: 'beta',      label: 'Beta (pondéré)',       dir: 0,  fmt: v => v == null ? '—' : v.toFixed(2) },
-    { key: 'coverage',  label: 'Couverture stocks',    dir: 0,  fmt: (_, agg) => `${agg.coverage}/${agg.total}` },
+    { key: 'beta',      label: 'Beta (pondéré)',       dir: 0,           fmt: v => v == null ? '—' : v.toFixed(2) },
+    { key: 'coverage',  label: 'Couverture stocks',    dir: 0,           fmt: (_, agg) => `${agg.coverage}/${agg.total}` },
   ];
 
   function compareAggregates(aggL, aggR) {
-    const result = { left: {}, right: {}, leftWins: 0, rightWins: 0 };
+    const result = { left: {}, right: {}, leftWins: 0, rightWins: 0, ties: 0 };
     AGG_METRICS.forEach(m => {
       if (m.dir === 0) { result.left[m.key] = result.right[m.key] = 'neutral'; return; }
       const vL = aggL[m.key], vR = aggR[m.key];
@@ -379,8 +380,10 @@
         result.left[m.key] = result.right[m.key] = 'neutral';
         return;
       }
-      if (vL === vR) {
+      // Tie zone : écart inférieur à epsilon → égalité (pas de victoire attribuée)
+      if (Math.abs(vL - vR) < (m.eps || 0)) {
         result.left[m.key] = result.right[m.key] = 'tie';
+        result.ties++;
         return;
       }
       const leftBetter = (m.dir === 1 ? vL > vR : vL < vR);
