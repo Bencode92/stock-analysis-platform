@@ -1174,6 +1174,66 @@
                         </div>
                       </div>
 
+                      <!-- ⚠️ PERCOL ≠ PER individuel -->
+                      <div class="bg-red-900 bg-opacity-15 rounded-lg p-5 border-l-4 border-red-400">
+                        <h5 class="text-lg font-semibold text-white mb-3 flex items-center">
+                          <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> ⚠️ PERCOL ≠ PER individuel : le piège fréquent
+                          <span class="ml-2 text-xs px-2 py-0.5 bg-red-800 bg-opacity-50 rounded text-red-200">À ne pas confondre</span>
+                        </h5>
+                        <p class="text-sm text-gray-300 mb-3">
+                          Beaucoup de salariés pensent que <strong class="text-yellow-300">l'abondement PERCOL est déductible de l'impôt</strong> comme un PER individuel. <strong class="text-red-400">C'est faux.</strong>
+                        </p>
+
+                        <div class="space-y-2 text-sm mb-3">
+                          <div class="flex items-start gap-2">
+                            <span class="text-red-400 font-bold mt-0.5">❌</span>
+                            <span><strong class="text-white">Versements employeur</strong> (abondement, intéressement, participation) : <strong class="text-red-300">NON déductibles</strong> — déjà exonérés d'IR à l'entrée. L'avantage est pris à la source, pas sur ta déclaration.</span>
+                          </div>
+                          <div class="flex items-start gap-2">
+                            <span class="text-green-400 font-bold mt-0.5">✅</span>
+                            <span><strong class="text-white">Versements volontaires perso</strong> : <strong class="text-green-300">déductibles</strong> (comme un PER individuel) → économie d'impôt = versement × TMI</span>
+                          </div>
+                        </div>
+
+                        <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 mt-3">
+                          <p class="text-xs text-gray-400 mb-2">📊 Exemple concret à TMI 30% pour 1 000 € :</p>
+                          <table class="text-xs w-full">
+                            <thead>
+                              <tr class="text-gray-400">
+                                <th class="text-left py-1">Type</th>
+                                <th class="text-right py-1">Versé</th>
+                                <th class="text-right py-1">Économie IR</th>
+                                <th class="text-right py-1">Coût net</th>
+                              </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-700">
+                              <tr>
+                                <td class="py-1.5">PER individuel</td>
+                                <td class="text-right">1 000 €</td>
+                                <td class="text-right text-green-400">300 €</td>
+                                <td class="text-right">700 €</td>
+                              </tr>
+                              <tr>
+                                <td class="py-1.5">PERCOL — abondement employeur</td>
+                                <td class="text-right">1 000 €</td>
+                                <td class="text-right text-gray-500">— (déjà exonéré)</td>
+                                <td class="text-right text-cyan-300 font-semibold">0 €</td>
+                              </tr>
+                              <tr>
+                                <td class="py-1.5">PERCOL — versement perso volontaire</td>
+                                <td class="text-right">1 000 €</td>
+                                <td class="text-right text-green-400">300 €</td>
+                                <td class="text-right">700 €</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <p class="text-xs text-yellow-300 mt-3">
+                          💡 <strong>À retenir</strong> : l'abondement PERCOL n'apparaît PAS comme une déduction sur ta déclaration d'impôt. C'est un avantage déjà pris à la source. <strong>Ne le compte pas deux fois.</strong>
+                        </p>
+                      </div>
+
                       <!-- Note CET -->
                       <div class="bg-yellow-900 bg-opacity-15 rounded-lg p-4 border-l-4 border-yellow-400">
                         <p class="font-medium mb-2"><i class="fas fa-clock text-yellow-400 mr-2"></i> Le CET, double levier</p>
@@ -2547,6 +2607,21 @@
                             '<span class="important-info">Sortie capital</span> : versements imposés au barème + gains au PFU 31,4% (LFSS 2026)',
                             '<span class="important-info">Sortie rente</span> : rente imposée (abattement 10%) + PS 10,1%',
                             '<span class="important-info">Forfait social employeur</span> : 16% (vs 20% PEE) — incitation fiscale pour les employeurs'
+                        ]
+                    },
+                    {
+                        title: '⚠️ Piège fréquent : PERCOL ≠ PER individuel',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info text-yellow-300">Beaucoup pensent que l\'abondement PERCOL est déductible de l\'impôt → C\'EST FAUX.</span>',
+                            '<span class="important-info">Versements employeur</span> (abondement, intéressement, participation) : <span class="text-red-400">NON déductibles</span> — déjà exonérés d\'IR à l\'entrée, donc pas besoin de déduction',
+                            '<span class="important-info">Versements volontaires perso</span> : <span class="text-green-400">déductibles</span> (comme un PER individuel) → économie d\'impôt = versement × TMI',
+                            '<span class="important-info text-yellow-300">Comparaison concrète à TMI 30%</span> :',
+                            '🔹 <strong>PER individuel</strong> : tu verses 1 000 € de ton compte → tu déduis 1 000 € → tu économises 300 € d\'IR. Coût net : 700 €.',
+                            '🔹 <strong>PERCOL abondement employeur</strong> : tu reçois 1 000 € "offerts" → pas de déduction, mais aussi pas un centime sorti de ta poche. Coût net : 0 €.',
+                            '🔹 <strong>PERCOL volontaire perso</strong> : tu verses 1 000 € → identique au PER individuel (déductible).',
+                            '<span class="important-info">À retenir</span> : l\'abondement PERCOL n\'apparaît PAS comme une déduction sur ta déclaration d\'impôt. C\'est un avantage déjà pris à la source. Ne le compte pas deux fois.'
                         ]
                     }
                 ]
