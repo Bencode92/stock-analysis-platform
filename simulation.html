@@ -311,6 +311,7 @@
                     <div class="simulation-tab" data-target="budget-planner">Budget & Épargne</div>
                     <div class="simulation-tab" data-target="loan-simulator">Gestion de dette</div>
                     <div class="simulation-tab" data-target="ptz-simulator">Simulateur PTZ</div>
+                    <div class="simulation-tab" data-target="abondement-simulator">Abondement PEE/PERCOL</div>
                 </div>
                 
                 <div id="investment-simulator" class="simulation-content">
@@ -1977,6 +1978,192 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ═══════════════════════════════════════════════════════════════
+                     ONGLET : SIMULATEUR D'ABONDEMENT PEE / PERCOL
+                     ═══════════════════════════════════════════════════════════════ -->
+                <div id="abondement-simulator" class="simulation-content" style="display: none;">
+                    <div class="mt-8">
+                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                            <h4 class="text-2xl font-semibold mb-2 flex items-center">
+                                <i class="fas fa-briefcase text-cyan-400 mr-3"></i>
+                                Simulateur d'abondement PEE / PERCOL
+                            </h4>
+                            <p class="text-sm text-gray-300 mb-6">
+                                Estime ce que tu peux gagner grâce à l'abondement de ton employeur sur ton plan d'épargne salariale.
+                                L'abondement employeur peut multiplier ton versement <strong class="text-cyan-300">jusqu'à par 4</strong>.
+                            </p>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- ═══ COLONNE GAUCHE : PARAMÈTRES ═══ -->
+                                <div>
+                                    <!-- 📚 Encart pédagogique -->
+                                    <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 mb-4 border border-slate-700">
+                                        <h6 class="text-sm font-semibold text-cyan-300 mb-2 flex items-center">
+                                            <i class="fas fa-book-open mr-2"></i> Comment ça marche : 2 plafonds qui s'appliquent EN MÊME TEMPS
+                                        </h6>
+                                        <p class="text-xs text-gray-400 mb-3">
+                                            <strong class="text-white">Le PASS</strong> (Plafond Annuel de la Sécurité Sociale) = <strong class="text-cyan-300">48 060 € en 2026</strong>. C'est la base de calcul des plafonds légaux.
+                                        </p>
+                                        <div class="grid grid-cols-1 gap-3 text-xs">
+                                            <div class="bg-blue-900 bg-opacity-30 rounded p-3">
+                                                <p class="font-semibold text-cyan-300 mb-1">📏 Plafond #1 — Taux maximum</p>
+                                                <p class="text-gray-300">L'employeur ne peut pas abonder plus de <strong class="text-white">300% de ton versement</strong> (limite légale).</p>
+                                                <p class="text-gray-400 mt-1">Ex : tu verses 100 € → max 300 € d'abondement</p>
+                                            </div>
+                                            <div class="bg-blue-900 bg-opacity-30 rounded p-3">
+                                                <p class="font-semibold text-cyan-300 mb-1">💰 Plafond #2 — Montant annuel</p>
+                                                <p class="text-gray-300"><strong class="text-white">PEE</strong> : 8% du PASS = <strong class="text-cyan-300">3 845 €/an</strong></p>
+                                                <p class="text-gray-300"><strong class="text-white">PERCOL</strong> : 16% du PASS = <strong class="text-cyan-300">7 690 €/an</strong></p>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-yellow-300 mt-2">
+                                            ⚖️ <strong>Règle</strong> : c'est le plus restrictif des deux qui s'applique.
+                                        </p>
+
+                                        <!-- Note participation -->
+                                        <div class="mt-3 pt-3 border-t border-slate-700">
+                                            <p class="text-xs font-semibold text-orange-300 mb-2">
+                                                ⚠️ Participation, intéressement, PPV : versables sur PEE/PERCOL → déclenche l'abondement
+                                            </p>
+                                            <p class="text-xs text-gray-400">
+                                                Ces sommes <strong class="text-white">peuvent être placées</strong> sur ton PEE et/ou PERCOL au lieu d'être prises en cash. Une fois placées, l'employeur peut les <strong class="text-cyan-300">abonder comme n'importe quel autre versement</strong>. Avantages : exonération IR + abondement + capital qui grossit.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Inputs principaux -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1">
+                                                Mon versement (€/mois)
+                                                <span class="text-cyan-400 cursor-help" title="Ton versement personnel mensuel sur le PEE ou PERCOL.">ⓘ</span>
+                                            </label>
+                                            <input id="abondement-versement" type="number" min="0" value="200" step="10"
+                                                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1">
+                                                Taux abondement employeur (%)
+                                                <span class="text-cyan-400 cursor-help" title="Limite légale 300%. Le taux dépend de l'accord de ton entreprise.">ⓘ</span>
+                                            </label>
+                                            <input id="abondement-taux" type="number" min="0" max="300" value="100" step="10"
+                                                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="block text-xs text-gray-400 mb-1">
+                                            Plafond annuel employeur
+                                            <span class="text-cyan-400 cursor-help" title="PEE = 8% PASS, PERCOL = 16% PASS, cumulés si tu as les deux.">ⓘ</span>
+                                        </label>
+                                        <select id="abondement-plafond" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                            <option value="3845">PEE — 8% PASS (3 845 €)</option>
+                                            <option value="7690">PERCOL — 16% PASS (7 690 €)</option>
+                                            <option value="11535">PEE + PERCOL cumulés (11 535 €)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Projection long terme -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1">
+                                                Durée d'investissement (années)
+                                                <span class="text-cyan-400 cursor-help" title="Plus la durée est longue, plus les intérêts composés sont puissants.">ⓘ</span>
+                                            </label>
+                                            <input id="abondement-duree" type="number" min="1" max="50" value="10" step="1"
+                                                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1">
+                                                Rendement annuel estimé (%)
+                                                <span class="text-cyan-400 cursor-help" title="Monétaire 2-3%, diversifié 4-5%, ETF actions 7-8%.">ⓘ</span>
+                                            </label>
+                                            <input id="abondement-rendement" type="number" min="0" max="15" value="5" step="0.5"
+                                                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        </div>
+                                    </div>
+
+                                    <button id="abondement-calc-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition">
+                                        <i class="fas fa-magic mr-2"></i>Calculer le gain
+                                    </button>
+                                </div>
+
+                                <!-- ═══ COLONNE DROITE : RÉSULTATS ═══ -->
+                                <div>
+                                    <div id="abondement-result" class="p-4 bg-cyan-900 bg-opacity-20 rounded-lg border border-cyan-700/40">
+                                        <!-- KPIs -->
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center mb-3">
+                                            <div class="bg-blue-900 bg-opacity-30 rounded-lg p-2">
+                                                <p class="text-xs text-gray-400">Versement annuel</p>
+                                                <p id="abond-annuel" class="text-lg font-bold text-white">0 €</p>
+                                            </div>
+                                            <div class="bg-cyan-900 bg-opacity-30 rounded-lg p-2">
+                                                <p class="text-xs text-gray-400">Abondement employeur</p>
+                                                <p id="abond-employeur" class="text-lg font-bold text-cyan-300">+0 €</p>
+                                            </div>
+                                            <div class="bg-green-900 bg-opacity-30 rounded-lg p-2">
+                                                <p class="text-xs text-gray-400">Total versé sur le plan</p>
+                                                <p id="abond-total" class="text-lg font-bold text-green-400">0 €</p>
+                                            </div>
+                                            <div class="bg-yellow-900 bg-opacity-30 rounded-lg p-2">
+                                                <p class="text-xs text-gray-400">Gain immédiat</p>
+                                                <p id="abond-gain" class="text-lg font-bold text-yellow-400">+0 %</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Versement minimum -->
+                                        <div id="abond-min" class="bg-yellow-900 bg-opacity-15 rounded-lg p-3 mb-3 border-l-4 border-yellow-400">
+                                            <p class="text-sm font-semibold text-yellow-300 mb-1 flex items-center">
+                                                <i class="fas fa-bullseye mr-2"></i> Versement minimum pour saturer l'abondement
+                                            </p>
+                                            <p id="abond-min-text" class="text-sm text-gray-300"></p>
+                                        </div>
+
+                                        <!-- Détail calcul -->
+                                        <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 mb-3 border-l-4 border-cyan-400">
+                                            <p class="text-xs font-semibold text-cyan-300 mb-2">📐 Méthode de calcul annuel (pas à pas)</p>
+                                            <div id="abond-detail-content" class="text-xs text-gray-300 space-y-1 font-mono"></div>
+                                        </div>
+
+                                        <!-- Projection long terme -->
+                                        <div class="bg-gradient-to-br from-purple-900 to-blue-900 bg-opacity-30 rounded-lg p-4 mb-3 border border-purple-700/40">
+                                            <p class="text-sm font-semibold text-purple-300 mb-3 flex items-center">
+                                                <i class="fas fa-chart-line mr-2"></i> Projection long terme avec intérêts composés
+                                                <span id="abond-projection-duree" class="ml-auto text-xs text-gray-400"></span>
+                                            </p>
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 text-center border border-slate-700">
+                                                    <p class="text-xs text-gray-400 mb-1">🔵 Sans abondement</p>
+                                                    <p class="text-[10px] text-gray-500 mb-2">Tu verses seul</p>
+                                                    <p id="abond-fv-sans" class="text-xl font-bold text-blue-300">0 €</p>
+                                                    <p id="abond-fv-sans-detail" class="text-[10px] text-gray-500 mt-1"></p>
+                                                </div>
+                                                <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 text-center border border-cyan-700">
+                                                    <p class="text-xs text-gray-400 mb-1">🟢 Avec abondement</p>
+                                                    <p class="text-[10px] text-gray-500 mb-2">Versement + employeur</p>
+                                                    <p id="abond-fv-avec" class="text-xl font-bold text-green-400">0 €</p>
+                                                    <p id="abond-fv-avec-detail" class="text-[10px] text-gray-500 mt-1"></p>
+                                                </div>
+                                                <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 text-center border border-yellow-700">
+                                                    <p class="text-xs text-gray-400 mb-1">⭐ Gain abondement</p>
+                                                    <p class="text-[10px] text-gray-500 mb-2">Différence</p>
+                                                    <p id="abond-fv-diff" class="text-xl font-bold text-yellow-400">+0 €</p>
+                                                    <p id="abond-fv-diff-pct" class="text-[10px] text-yellow-300 mt-1"></p>
+                                                </div>
+                                            </div>
+                                            <p class="text-[11px] text-gray-500 mt-3 italic">
+                                                📊 Capitalisation annuelle (versements en début d'année). Hors fiscalité de sortie (PS 17,2%).
+                                            </p>
+                                        </div>
+
+                                        <p id="abond-message" class="text-sm text-center text-gray-300"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Bannière de guide des placements -->
@@ -2037,6 +2224,113 @@
         // Toggle theme (placeholder)
         document.querySelector('.theme-toggle-btn')?.addEventListener('click', function() {
             console.log('Theme toggle clicked');
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // SIMULATEUR D'ABONDEMENT PEE/PERCOL
+        // ═══════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            const abondementBtn = document.getElementById('abondement-calc-btn');
+            if (!abondementBtn) return;
+
+            const calculerAbondement = () => {
+                const versementMensuel = parseFloat(document.getElementById('abondement-versement').value) || 0;
+                const tauxAbondement = parseFloat(document.getElementById('abondement-taux').value) || 0;
+                const plafondAnnuel = parseFloat(document.getElementById('abondement-plafond').value) || 0;
+                const plafondLabel = document.getElementById('abondement-plafond').selectedOptions[0]?.text || '';
+                const dureeAns = parseFloat(document.getElementById('abondement-duree')?.value) || 10;
+                const rendementAnnuel = parseFloat(document.getElementById('abondement-rendement')?.value) || 0;
+
+                const versementAnnuel = versementMensuel * 12;
+                const abondementTheorique = versementAnnuel * (tauxAbondement / 100);
+                const abondementEffectif = Math.min(abondementTheorique, plafondAnnuel);
+                const totalVerse = versementAnnuel + abondementEffectif;
+                const gainPct = versementAnnuel > 0 ? (abondementEffectif / versementAnnuel * 100) : 0;
+
+                const fmt = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n));
+
+                document.getElementById('abond-annuel').textContent = fmt(versementAnnuel) + ' €';
+                document.getElementById('abond-employeur').textContent = '+' + fmt(abondementEffectif) + ' €';
+                document.getElementById('abond-total').textContent = fmt(totalVerse) + ' €';
+                document.getElementById('abond-gain').textContent = '+' + Math.round(gainPct) + ' %';
+
+                // Versement minimum
+                const minTextEl = document.getElementById('abond-min-text');
+                if (minTextEl) {
+                    if (tauxAbondement <= 0) {
+                        minTextEl.innerHTML = '⚠️ Renseigne un taux d\'abondement pour calculer le versement minimum nécessaire.';
+                    } else {
+                        const versementMinAnnuel = plafondAnnuel / (tauxAbondement / 100);
+                        const versementMinMensuel = versementMinAnnuel / 12;
+                        const dejaSature = versementAnnuel >= versementMinAnnuel;
+                        if (dejaSature) {
+                            minTextEl.innerHTML = `✅ <strong class="text-green-400">Tu satures déjà le plafond</strong> avec ${fmt(versementMensuel)} €/mois.<br>Le minimum pour atteindre l'abondement max était <strong class="text-white">${fmt(versementMinMensuel)} €/mois</strong> (${fmt(versementMinAnnuel)} €/an). <span class="text-yellow-300">💡 Au-delà, l'employeur n'abondera plus.</span>`;
+                        } else {
+                            const ecart = versementMinMensuel - versementMensuel;
+                            minTextEl.innerHTML = `Pour toucher l'abondement maximum de <strong class="text-cyan-300">${fmt(plafondAnnuel)} €/an</strong>, tu dois verser au minimum <strong class="text-white">${fmt(versementMinMensuel)} €/mois</strong> (${fmt(versementMinAnnuel)} €/an).<br>💡 Avec ton versement actuel (${fmt(versementMensuel)} €/mois), il manque <strong class="text-yellow-300">${fmt(ecart)} €/mois</strong>.`;
+                        }
+                    }
+                }
+
+                // Détail calcul
+                const detailEl = document.getElementById('abond-detail-content');
+                if (detailEl) {
+                    const isPlafonne = abondementTheorique > plafondAnnuel;
+                    detailEl.innerHTML = `
+                        <div><span class="text-gray-500">①</span> Versement annuel = ${fmt(versementMensuel)} €/mois × 12 = <strong class="text-white">${fmt(versementAnnuel)} €</strong></div>
+                        <div><span class="text-gray-500">②</span> Abondement théorique = ${fmt(versementAnnuel)} € × ${tauxAbondement}% = <strong class="text-white">${fmt(abondementTheorique)} €</strong></div>
+                        <div><span class="text-gray-500">③</span> Plafond annuel ${plafondLabel.split('—')[0].trim()} = <strong class="text-white">${fmt(plafondAnnuel)} €</strong></div>
+                        <div><span class="text-gray-500">④</span> Abondement appliqué = min(${fmt(abondementTheorique)} ; ${fmt(plafondAnnuel)}) = <strong class="${isPlafonne ? 'text-yellow-300' : 'text-green-400'}">${fmt(abondementEffectif)} €</strong> ${isPlafonne ? '⚠️ plafonné' : '✅'}</div>
+                        <div><span class="text-gray-500">⑤</span> Total versé = ${fmt(versementAnnuel)} + ${fmt(abondementEffectif)} = <strong class="text-green-400">${fmt(totalVerse)} €</strong></div>
+                        <div><span class="text-gray-500">⑥</span> Gain immédiat = ${fmt(abondementEffectif)} / ${fmt(versementAnnuel)} = <strong class="text-yellow-400">+${Math.round(gainPct)}%</strong></div>
+                    `;
+                }
+
+                // Projection long terme avec intérêts composés
+                const r = rendementAnnuel / 100;
+                const n = dureeAns;
+                const fvAnnuity = (pmt) => {
+                    if (pmt <= 0 || n <= 0) return 0;
+                    if (r === 0) return pmt * n;
+                    return pmt * (Math.pow(1 + r, n) - 1) / r * (1 + r);
+                };
+                const fvSans = fvAnnuity(versementAnnuel);
+                const fvAvec = fvAnnuity(totalVerse);
+                const fvDiff = fvAvec - fvSans;
+                const fvDiffPct = fvSans > 0 ? (fvDiff / fvSans * 100) : 0;
+                const totalVerseSans = versementAnnuel * n;
+                const totalVerseAvec = totalVerse * n;
+
+                document.getElementById('abond-projection-duree').textContent = `Sur ${n} an${n > 1 ? 's' : ''} à ${rendementAnnuel}%/an`;
+                document.getElementById('abond-fv-sans').textContent = fmt(fvSans) + ' €';
+                document.getElementById('abond-fv-sans-detail').textContent = `Versé : ${fmt(totalVerseSans)} € · Intérêts : ${fmt(fvSans - totalVerseSans)} €`;
+                document.getElementById('abond-fv-avec').textContent = fmt(fvAvec) + ' €';
+                document.getElementById('abond-fv-avec-detail').textContent = `Versé : ${fmt(totalVerseAvec)} € · Intérêts : ${fmt(fvAvec - totalVerseAvec)} €`;
+                document.getElementById('abond-fv-diff').textContent = '+' + fmt(fvDiff) + ' €';
+                document.getElementById('abond-fv-diff-pct').textContent = `+${Math.round(fvDiffPct)}% vs sans abondement`;
+
+                // Message contextuel
+                let message = '';
+                if (versementAnnuel === 0) {
+                    message = '⚠️ Renseigne un versement mensuel pour voir l\'effet de l\'abondement.';
+                } else if (abondementTheorique > plafondAnnuel) {
+                    const surplus = abondementTheorique - plafondAnnuel;
+                    message = `⚠️ Tu dépasses le plafond annuel d'abondement de <strong class="text-yellow-300">${fmt(surplus)} €</strong>. L'employeur ne suivra pas au-delà de ${fmt(plafondAnnuel)} €.`;
+                } else if (gainPct >= 100) {
+                    message = `🚀 Excellent ! Pour chaque euro versé, tu reçois <strong class="text-green-400">${(1 + gainPct/100).toFixed(1)} €</strong> sur ton plan. C'est <strong class="text-cyan-300">de l'argent gratuit</strong>.`;
+                } else if (gainPct > 0) {
+                    message = `✅ Bonne nouvelle : pour chaque euro versé, tu reçois <strong class="text-green-400">${(1 + gainPct/100).toFixed(2)} €</strong> sur ton plan grâce à l'abondement employeur.`;
+                } else {
+                    message = '⚠️ Aucun abondement détecté.';
+                }
+                document.getElementById('abond-message').innerHTML = message;
+            };
+
+            abondementBtn.addEventListener('click', calculerAbondement);
+            ['abondement-versement', 'abondement-taux', 'abondement-plafond', 'abondement-duree', 'abondement-rendement'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', calculerAbondement);
+            });
+            calculerAbondement();
         });
     </script>
 </body>
