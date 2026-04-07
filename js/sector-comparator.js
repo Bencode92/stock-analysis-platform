@@ -227,10 +227,10 @@
           <td class="sc-w">${w}</td>
           <td class="sc-heat ${cls(s.perf_ytd)}" style="${heat(s.perf_ytd, -20, 20)}">${fmtPct(s.perf_ytd)}</td>
           <td class="sc-heat ${cls(s.perf_1y)}" style="${heat(s.perf_1y, -20, 40)}">${fmtPct(s.perf_1y)}</td>
-          <td class="sc-heat" style="${heat(s.quality_score, 30, 85)}">${fmtScore(s.quality_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
-          <td class="sc-heat" style="${heat(s.buffett_score, 20, 80)}">${fmtScore(s.buffett_score)}</td>
-          <td class="sc-heat" style="${heat(s.roe, 0, 30)}">${fmtNum(s.roe)}${s.roe != null ? '%' : ''}</td>
-          <td class="sc-heat" style="${heat(s.roic, 0, 25)}">${fmtNum(s.roic)}${s.roic != null ? '%' : ''}</td>
+          <td class="sc-heat sc-q" style="${heat(s.quality_score, 30, 85)}">${fmtScore(s.quality_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
+          <td class="sc-num">${fmtScore(s.buffett_score)}</td>
+          <td class="sc-num">${fmtNum(s.roe)}${s.roe != null ? '%' : ''}</td>
+          <td class="sc-num">${fmtNum(s.roic)}${s.roic != null ? '%' : ''}</td>
         </tr>`;
     }).join('');
   }
@@ -375,24 +375,28 @@
       .sc-panel-title { font-weight: 700; font-size: 1.1rem; letter-spacing: .01em; }
       .sc-panel-sub { font-size: .78rem; opacity: .55; margin-top: 2px; }
       .sc-table-wrap { overflow-x: auto; }
-      .sc-table { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-size: .85rem; table-layout: fixed; }
-      .sc-table th, .sc-table td { text-align: right; padding: .5rem .45rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
-      .sc-table th { font-weight: 500; opacity: .55; font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; padding-bottom: .45rem; }
-      .sc-table tbody tr { background: rgba(255,255,255,.015); }
-      .sc-table tbody tr:hover { background: rgba(255,255,255,.05); }
-      .sc-table tbody td:first-child { border-radius: .35rem 0 0 .35rem; }
-      .sc-table tbody td:last-child  { border-radius: 0 .35rem .35rem 0; }
-      .sc-table th:nth-child(1), .sc-table td:nth-child(1) { width: 26px; text-align: center; }
-      .sc-table th:nth-child(2), .sc-table td:nth-child(2) { text-align: left; width: auto; }
-      .sc-table th:nth-child(3), .sc-table td:nth-child(3) { width: 56px; }
-      .sc-table th:nth-child(n+4), .sc-table td:nth-child(n+4) { width: 64px; }
-      .sc-rank { opacity: .35; font-weight: 600; }
+      .sc-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: .9rem; table-layout: fixed; }
+      .sc-table th, .sc-table td { text-align: right; padding: .7rem .5rem; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
+      .sc-table th { font-weight: 600; opacity: .5; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; padding: .4rem .5rem .6rem; border-bottom: 1px solid rgba(255,255,255,.07); }
+      .sc-table tbody tr { background: rgba(255,255,255,.02); transition: background .12s; }
+      .sc-table tbody tr:hover { background: rgba(255,255,255,.06); }
+      .sc-table tbody td:first-child { border-radius: .4rem 0 0 .4rem; }
+      .sc-table tbody td:last-child  { border-radius: 0 .4rem .4rem 0; }
+      .sc-table th:nth-child(1), .sc-table td:nth-child(1) { width: 30px; text-align: center; }
+      .sc-table th:nth-child(2), .sc-table td:nth-child(2) { text-align: left; width: auto; padding-left: .25rem; }
+      .sc-table th:nth-child(3), .sc-table td:nth-child(3) { width: 60px; }
+      .sc-table th:nth-child(n+4), .sc-table td:nth-child(n+4) { width: 60px; }
+      /* la colonne quality est un peu plus large pour laisser place au grade */
+      .sc-table th:nth-child(6), .sc-table td:nth-child(6) { width: 78px; }
+      .sc-rank { opacity: .3; font-weight: 700; font-size: .85rem; }
       .sc-name-cell { overflow: hidden; }
-      .sc-name { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-      .sc-tic { font-size: .68rem; opacity: .5; margin-top: 1px; }
-      .sc-w { color: #fff; opacity: .85; font-weight: 600; }
-      .sc-heat { border-radius: .3rem; font-weight: 600; }
-      .sc-grade { font-size: .62rem; padding: 1px 5px; border-radius: 4px; background: rgba(0,255,135,.18); color: #00ff87; margin-left: 3px; vertical-align: middle; }
+      .sc-name { font-weight: 600; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; line-height: 1.25; }
+      .sc-tic { font-size: .7rem; opacity: .45; margin-top: 2px; letter-spacing: .02em; }
+      .sc-w { color: #fff; opacity: .9; font-weight: 700; }
+      .sc-num { opacity: .82; font-weight: 500; }
+      .sc-heat { border-radius: .35rem; font-weight: 700; }
+      .sc-q { font-weight: 700; }
+      .sc-grade { display: inline-block; font-size: .62rem; padding: 1px 5px; border-radius: 4px; background: rgba(0,255,135,.22); color: #00ff87; margin-left: 4px; vertical-align: middle; font-weight: 800; }
       .positive { color: #00ff87; }
       .negative { color: #ff6b6b; }
       .sc-banner { text-align: center; font-size: 1rem; margin-bottom: 1rem; padding: .85rem; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: .6rem; }
