@@ -408,11 +408,21 @@
   function renderPanel(side, sector, agg, comparison) {
     const rows = buildRows(sector.symbol);
     const wins = comparison[`${side}Wins`];
+    const so = sector.sectorObj || {};
+    // Perf ETF réelle (sectors.json/markets.json) — à comparer avec la perf top-10 pondérée
+    const realPerf = `
+      <div class="sc-panel-realperf" title="Perfs réelles de l'ETF (toutes positions, pas seulement top-10). À comparer aux agrégats top-10 ci-dessous pour mesurer le biais de représentativité.">
+        <span class="sc-rp-label">ETF réel :</span>
+        <span class="sc-rp-item">YTD <b class="${cls(so.ytd_num)}">${fmtPct(so.ytd_num)}</b></span>
+        <span class="sc-rp-item">3M <b class="${cls(so.m3_num)}">${fmtPct(so.m3_num)}</b></span>
+        <span class="sc-rp-item">52W <b class="${cls(so.w52_num)}">${fmtPct(so.w52_num)}</b></span>
+      </div>`;
     return `
       <div class="sc-panel">
         <div class="sc-panel-head">
           <div class="sc-panel-title">${sector.label}</div>
           <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}</div>
+          ${realPerf}
           <div class="sc-panel-score">
             <span class="sc-score-num">${wins}</span>
             <span class="sc-score-lbl">victoire${wins > 1 ? 's' : ''} sur ${comparison.leftWins + comparison.rightWins} critères</span>
@@ -519,6 +529,10 @@
       .sc-banner { text-align: center; font-size: 1rem; margin-bottom: 1rem; padding: .85rem; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: .6rem; }
       .sc-banner-winner { color: #00ff87; font-weight: 700; font-size: 1.1rem; }
       .sc-banner-tie { color: #ffd166; font-weight: 700; font-size: 1.1rem; }
+      .sc-panel-realperf { margin-top: .55rem; display: flex; flex-wrap: wrap; gap: .85rem; align-items: baseline; padding: .5rem .65rem; background: rgba(255,255,255,.025); border-radius: .4rem; font-size: .75rem; }
+      .sc-rp-label { opacity: .55; text-transform: uppercase; letter-spacing: .04em; font-size: .65rem; font-weight: 600; }
+      .sc-rp-item { opacity: .85; font-variant-numeric: tabular-nums; }
+      .sc-rp-item b { font-weight: 700; margin-left: .25rem; }
       .sc-panel-score { margin-top: .5rem; display: flex; align-items: baseline; gap: .35rem; }
       .sc-score-num { font-size: 1.6rem; font-weight: 800; color: #00ff87; line-height: 1; font-variant-numeric: tabular-nums; }
       .sc-score-lbl { font-size: .72rem; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
