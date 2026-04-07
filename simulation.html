@@ -889,24 +889,46 @@
       <div class="mt-6 border-t border-slate-700 pt-5">
         <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
           <span class="text-purple-400">🎯</span>
-          Calcul inversé : combien verser pour atteindre un impôt cible ?
+          Calcul inversé : combien verser pour réduire votre impôt ?
         </h3>
         <p class="text-xs text-slate-400 mb-3">
-          Vous savez combien d'impôt vous voulez payer ? Ce simulateur calcule le versement PER nécessaire (en tenant compte de votre situation, plafonds et changements de tranche).
+          Ce simulateur calcule le versement PER nécessaire (en tenant compte de votre situation, plafonds et changements de tranche).
         </p>
+
+        <!-- Mode de calcul -->
+        <div class="mb-3">
+          <label class="block text-xs font-medium text-slate-300 mb-2">Mode de calcul :</label>
+          <div class="flex flex-col md:flex-row gap-2">
+            <label class="flex items-start gap-2 cursor-pointer flex-1 bg-slate-800/40 rounded-lg p-3 border border-slate-700 hover:border-purple-500 transition">
+              <input type="radio" name="cible-mode" value="economiser" checked class="mt-0.5 accent-purple-500">
+              <div>
+                <div class="text-sm font-semibold text-white">💰 Économiser X € d'impôt</div>
+                <div class="text-[11px] text-slate-400">Pour annuler un reste à payer après prélèvement à la source</div>
+              </div>
+            </label>
+            <label class="flex items-start gap-2 cursor-pointer flex-1 bg-slate-800/40 rounded-lg p-3 border border-slate-700 hover:border-purple-500 transition">
+              <input type="radio" name="cible-mode" value="atteindre" class="mt-0.5 accent-purple-500">
+              <div>
+                <div class="text-sm font-semibold text-white">🎯 Atteindre X € d'impôt total</div>
+                <div class="text-[11px] text-slate-400">Pour cibler un montant d'impôt annuel précis</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="grid md:grid-cols-3 gap-3 items-end">
           <div>
             <label for="cible-impot" class="block text-xs font-medium text-slate-300 mb-1">
-              Impôt cible (€/an)
+              <span id="cible-impot-label">Économie d'impôt souhaitée (€)</span>
             </label>
             <input
               id="cible-impot"
               type="number"
               min="0"
               step="100"
-              value="0"
+              value="681"
               class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Ex : 0"
+              placeholder="Ex : 681"
             />
           </div>
           <div class="md:col-span-2">

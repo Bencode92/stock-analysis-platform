@@ -451,7 +451,8 @@ function afficherCibleImpot() {
         return;
     }
 
-    const impotCible = parseFloat(cibleInput.value) || 0;
+    const valeurSaisie = parseFloat(cibleInput.value) || 0;
+    const mode = document.querySelector('input[name="cible-mode"]:checked')?.value || 'economiser';
     const statut = statutSelect?.value || 'salarie';
     const nbParts = parseFloat(situationSelect?.value || '1');
     const plafondsReportables = {
@@ -460,7 +461,22 @@ function afficherCibleImpot() {
         n1: parseFloat(n1Input?.value?.replace(/\s/g, '') || '0') || 0
     };
 
+    // Calcul de l'impôt initial pour convertir "économiser X" en "atteindre Y"
+    const scenInit = runScenarioPER({ revenuBrut: brut, statut, nbParts, plafondsReportables, perVersement: 0 });
+    const impotInitial = scenInit.impotSansPER;
+
+    let impotCible;
+    if (mode === 'economiser') {
+        // Économiser X € → atteindre (impotInitial - X)
+        impotCible = Math.max(0, impotInitial - valeurSaisie);
+    } else {
+        // Atteindre X € directement
+        impotCible = valeurSaisie;
+    }
+
     const r = calculerVersementPourCible({ revenuBrut: brut, statut, nbParts, plafondsReportables, impotCible });
+    r.mode = mode;
+    r.valeurSaisie = valeurSaisie;
 
     // Helper : génère le plan de versement FIFO
     const buildPlanFIFO = (utilisation, totalVerse) => {
@@ -517,9 +533,12 @@ function afficherCibleImpot() {
             </div>`;
     } else if (r.atteignable) {
         // Dans le plafond ✅
+        const introText = r.mode === 'economiser'
+            ? `Pour économiser <strong class="text-white">${formatMontant(r.valeurSaisie)} €</strong> d'impôt :`
+            : `Pour atteindre <strong class="text-white">${formatMontant(impotCible)} €</strong> d'impôt :`;
         html = `
             <div class="bg-gradient-to-br from-purple-900/30 to-emerald-900/20 border border-purple-700/40 rounded-2xl p-5 md:p-6">
-                <p class="text-xs text-slate-400 mb-1">Pour atteindre <strong class="text-white">${formatMontant(impotCible)} €</strong> d'impôt :</p>
+                <p class="text-xs text-slate-400 mb-1">${introText}</p>
                 <p class="text-4xl md:text-5xl font-black text-purple-400 tracking-tight">${formatMontant(r.versementNecessaire)} €</p>
                 <p class="text-xs text-slate-400 mt-1">à verser sur votre PER</p>
 
@@ -546,11 +565,14 @@ function afficherCibleImpot() {
             </div>`;
     } else {
         // Dépasse le plafond ⚠️
+        const introText = r.mode === 'economiser'
+            ? `Pour économiser <strong class="text-white">${formatMontant(r.valeurSaisie)} €</strong> d'impôt`
+            : `Pour atteindre <strong class="text-white">${formatMontant(impotCible)} €</strong> d'impôt`;
         html = `
             <div class="bg-gradient-to-br from-amber-900/30 to-slate-900/60 border border-amber-700/40 rounded-2xl p-5 md:p-6">
                 <p class="text-sm text-amber-300 font-semibold mb-2">⚠️ Cible non atteignable avec votre plafond actuel</p>
                 <p class="text-xs text-slate-300 mb-4">
-                    Pour atteindre <strong class="text-white">${formatMontant(impotCible)} €</strong> d'impôt, il faudrait verser
+                    ${introText}, il faudrait verser
                     <strong class="text-amber-400">${formatMontant(r.versementNecessaire)} €</strong> mais votre plafond PER total
                     n'est que de <strong class="text-amber-400">${formatMontant(r.plafondMax)} €</strong>.
                 </p>
@@ -617,4 +639,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tgl && blc) tgl.addEventListener('click', () => { blc.classList.toggle('hidden'); });
     const btnCible = document.getElementById('btn-cible-impot');
     if (btnCible) btnCible.addEventListener('click', afficherCibleImpot);
+
+    // Mise à jour dynamique du label selon le mode
+    document.querySelectorAll('input[name="cible-mode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const labelEl = document.getElementById('cible-impot-label');
+            const inputEl = document.getElementById('cible-impot');
+            if (!labelEl || !inputEl) return;
+            if (radio.value === 'economiser') {
+                labelEl.textContent = "Économie d'impôt souhaitée (€)";
+                inputEl.placeholder = 'Ex : 681';
+            } else {
+                labelEl.textContent = "Impôt annuel cible (€)";
+                inputEl.placeholder = 'Ex : 0';
+            }
+        });
+    });
 });
