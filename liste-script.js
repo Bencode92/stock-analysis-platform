@@ -237,18 +237,18 @@ const StockComparator = {
             <div style="background:#0a1929;border:1px solid rgba(0,255,135,0.3);border-radius:16px;
                 max-width:1200px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
                 <div style="position:sticky;top:0;background:#0a1929;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);
-                    display:flex;align-items:center;justify-content:space-between;z-index:1;">
-                    <div>
-                        <h2 style="color:#fff;font-size:1.2rem;font-weight:700;margin:0;">
+                    display:flex;align-items:flex-start;justify-content:space-between;z-index:1;">
+                    <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                        <h2 style="color:#fff;font-size:1.2rem;font-weight:700;margin:0;line-height:1.2;display:flex;align-items:center;">
                             <i class="fas fa-balance-scale" style="color:#00FF87;margin-right:8px;"></i>
                             Comparateur d'actions
                         </h2>
-                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:4px 0 0 0;">
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:6px 0 0 0;">
                             Vert = meilleure valeur · Rouge = pire valeur
                         </p>
                     </div>
                     <button onclick="document.getElementById('comparator-modal').remove()"
-                        style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.4rem;padding:4px 12px;">
+                        style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.4rem;padding:4px 12px;align-self:flex-start;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
