@@ -403,6 +403,7 @@ function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsRepor
     let impotResultant = scenFinal.impotAvecPER;
     let economieRealisee = impotInitial - impotResultant;
     let tmiApres = scenFinal.tmiApres;
+    let utilisationPlafonds = scenFinal.utilisation;
 
     if (plafondDepasse) {
         const scenMax = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: tdMax });
@@ -410,6 +411,11 @@ function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsRepor
         impotResultant = scenMax.impotAvecPER;
         economieRealisee = impotInitial - impotResultant;
         tmiApres = scenMax.tmiApres;
+        utilisationPlafonds = scenMax.utilisation;
+    } else {
+        // Recalcul exact pour récupérer la répartition FIFO précise
+        const scenExact = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: versementCalcule });
+        utilisationPlafonds = scenExact.utilisation;
     }
 
     return {
@@ -422,7 +428,8 @@ function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsRepor
         plafondDepasse,
         economieRealisee,
         tmiApres,
-        tmiAvant: scenInitial.tmiAvant
+        tmiAvant: scenInitial.tmiAvant,
+        utilisation: utilisationPlafonds || { n3: 0, n2: 0, n1: 0, n: 0 }
     };
 }
 
@@ -454,6 +461,50 @@ function afficherCibleImpot() {
     };
 
     const r = calculerVersementPourCible({ revenuBrut: brut, statut, nbParts, plafondsReportables, impotCible });
+
+    // Helper : génère le plan de versement FIFO
+    const buildPlanFIFO = (utilisation, totalVerse) => {
+        const u = utilisation || { n3: 0, n2: 0, n1: 0, n: 0 };
+        const ordre = [
+            { key: 'n3', label: 'Plafond N-3', priorite: '🚨 Priorité 1', urgent: true, description: 'Périme bientôt — à utiliser en premier' },
+            { key: 'n2', label: 'Plafond N-2', priorite: '⏳ Priorité 2', urgent: false, description: 'Reportable encore 2 ans' },
+            { key: 'n1', label: 'Plafond N-1', priorite: '📅 Priorité 3', urgent: false, description: 'Reportable encore 3 ans' },
+            { key: 'n',  label: 'Plafond N (année courante)', priorite: '🆕 Priorité 4', urgent: false, description: 'Plafond de cette année' }
+        ];
+        const lignes = ordre.filter(o => (u[o.key] || 0) > 0);
+        if (lignes.length === 0) return '';
+
+        let rows = '';
+        lignes.forEach((o, i) => {
+            const montant = u[o.key];
+            const bg = o.urgent ? 'bg-amber-900/20 border-amber-700/40' : (i === 0 ? 'bg-purple-900/15 border-purple-700/30' : 'bg-slate-800/40 border-slate-700/40');
+            const labelColor = o.urgent ? 'text-amber-300' : 'text-purple-300';
+            rows += `
+                <div class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 border ${bg}">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold ${labelColor} bg-slate-900/60 px-1.5 py-0.5 rounded">${o.priorite}</span>
+                            <span class="text-sm font-semibold text-white">${o.label}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">${o.description}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-base font-bold text-white">${formatMontant(montant)} €</p>
+                    </div>
+                </div>`;
+        });
+
+        return `
+            <div class="mt-4 bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
+                <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    📋 Plan de versement (ordre FIFO)
+                </h4>
+                <div class="space-y-2">${rows}</div>
+                <p class="text-[11px] text-slate-500 mt-3">
+                    💡 Les plafonds les plus anciens sont utilisés en premier pour éviter qu'ils ne périment.
+                </p>
+            </div>`;
+    };
 
     let html = '';
 
@@ -491,6 +542,7 @@ function afficherCibleImpot() {
                     Plafond PER disponible : <strong class="text-slate-200">${formatMontant(r.plafondMax)} €</strong>
                     · TMI : <strong class="text-orange-400">${r.tmiAvant}%</strong> → <strong class="text-emerald-400">${r.tmiApres}%</strong>
                 </div>
+                ${buildPlanFIFO(r.utilisation, r.versementNecessaire)}
             </div>`;
     } else {
         // Dépasse le plafond ⚠️
@@ -525,6 +577,7 @@ function afficherCibleImpot() {
                         · Reste après PER : <strong class="text-orange-300">${formatMontant(r.impotResultant)} €</strong> d'impôt
                     </p>
                 </div>
+                ${buildPlanFIFO(r.utilisation, r.versementApplique)}
             </div>`;
     }
 
