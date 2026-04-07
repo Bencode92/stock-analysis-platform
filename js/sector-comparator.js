@@ -1,10 +1,13 @@
 /**
- * Sector Comparator
- * ------------------
- * Compare deux secteurs côte à côte : top 10 holdings (rangés par poids ETF)
- * enrichis avec les données perf + quality issues de stocks_us/europe/asia.json.
+ * TradePulse Comparator (sectors + markets)
+ * ------------------------------------------
+ * Compare deux secteurs OU deux marchés côte à côte : top 10 holdings (rangés
+ * par poids ETF) enrichis avec les données perf + quality issues de
+ * stocks_us/europe/asia.json.
  *
- * Auto-init si #sector-comparator est présent dans la page.
+ * Auto-init :
+ *   - #sector-comparator → source "sectors" (data/sectors.json)
+ *   - #market-comparator → source "markets" (data/markets.json)
  */
 (function () {
   'use strict';
@@ -15,11 +18,44 @@
     'data/stocks_asia.json',
   ];
 
+  // Caches partagés (chargés une seule fois quel que soit le nombre d'instances)
+  const shared = {
+    holdings: null,
+    stockIndex: null,
+    loading: null,
+  };
+
+  // état par instance (un comparateur de secteurs OU de marchés)
+  // state.items est rempli au démarrage de chaque instance
   const state = {
-    sectors: null,         // [{ key, label, region, symbol, sectorObj }]
-    holdings: null,        // etf_holdings.json
-    stockIndex: null,      // Map: lookup key -> stock
-    loading: null,         // promise of full bootstrap
+    items: null,
+  };
+
+  // ---------- Sources ----------
+  const SOURCES = {
+    sectors: {
+      file: 'data/sectors.json',
+      noun: 'secteur',
+      title: 'Comparateur de secteurs',
+      regions: [
+        { key: 'all', label: 'Tous' },
+        { key: 'europe', label: 'Europe' },
+        { key: 'us', label: 'US' },
+      ],
+      flatten: flattenSectors,
+    },
+    markets: {
+      file: 'data/markets.json',
+      noun: 'marché',
+      title: 'Comparateur de marchés',
+      regions: [
+        { key: 'all', label: 'Tous' },
+        { key: 'europe', label: 'Europe' },
+        { key: 'us', label: 'US' },
+        { key: 'asia', label: 'Asie' },
+      ],
+      flatten: flattenMarkets,
+    },
   };
 
   // ---------- Loaders ----------
@@ -30,24 +66,56 @@
     return r.json();
   }
 
-  async function bootstrap() {
-    if (state.loading) return state.loading;
-    state.loading = (async () => {
-      const [sectorsRaw, holdingsRaw, ...stockSets] = await Promise.all([
-        fetchJSON('data/sectors.json'),
+  // Chargement des ressources partagées (etf_holdings + stocks)
+  async function bootstrapShared() {
+    if (shared.loading) return shared.loading;
+    shared.loading = (async () => {
+      const [holdingsRaw, ...stockSets] = await Promise.all([
         fetchJSON('data/etf_holdings.json'),
         ...STOCK_FILES.map(f => fetchJSON(f).catch(e => {
           console.warn('[comparator]', f, e);
           return null;
         })),
       ]);
-
-      state.holdings = holdingsRaw;
-      state.sectors = flattenSectors(sectorsRaw);
-      state.stockIndex = buildStockIndex(stockSets.filter(Boolean));
-      return state;
+      shared.holdings = holdingsRaw;
+      shared.stockIndex = buildStockIndex(stockSets.filter(Boolean));
+      return shared;
     })();
-    return state.loading;
+    return shared.loading;
+  }
+
+  async function bootstrap(source) {
+    await bootstrapShared();
+    const raw = await fetchJSON(source.file);
+    state.items = source.flatten(raw);
+  }
+
+  function flattenMarkets(raw) {
+    const out = [];
+    const groups = raw?.indices || {};
+    Object.keys(groups).forEach(region => {
+      (groups[region] || []).forEach(m => {
+        if (!m || !m.symbol) return;
+        const country = m.country || '';
+        const indexName = m.index_name || m.indexName || m.name || m.symbol;
+        const label = country ? `${country} — ${indexName}` : indexName;
+        const shortLabel = country || indexName;
+        const familyMap = { europe: 'Europe', us: 'États-Unis', asia: 'Asie' };
+        const family = familyMap[region] || region;
+        out.push({
+          key: `${region}::${m.symbol}`,
+          label,
+          shortLabel,
+          family,
+          region: family,
+          symbol: m.symbol,
+          category: region,
+          sectorObj: m,
+        });
+      });
+    });
+    out.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+    return out;
   }
 
   function flattenSectors(sectorsRaw) {
@@ -117,7 +185,7 @@
   }
 
   function matchStock(holding) {
-    if (!state.stockIndex) return null;
+    if (!shared.stockIndex) return null;
     const tries = [];
     if (holding.symbol) {
       tries.push(`T:${holding.symbol.toUpperCase()}`);
@@ -126,7 +194,7 @@
     const n = normalizeName(holding.name);
     if (n) tries.push(`N:${n}`);
     for (const k of tries) {
-      const s = state.stockIndex.get(k);
+      const s = shared.stockIndex.get(k);
       if (s) return s;
     }
     return null;
@@ -135,7 +203,7 @@
   // ---------- Compute ----------
 
   function getHoldings(symbol) {
-    const e = state.holdings?.etfs?.[symbol];
+    const e = shared.holdings?.etfs?.[symbol];
     if (!e || !Array.isArray(e.holdings)) return [];
     return [...e.holdings]
       .sort((a, b) => (b.weight || 0) - (a.weight || 0))
@@ -318,8 +386,8 @@
   }
 
   function renderComparison(rootEl, leftKey, rightKey) {
-    const left  = state.sectors.find(s => s.key === leftKey);
-    const right = state.sectors.find(s => s.key === rightKey);
+    const left  = state.items.find(s => s.key === leftKey);
+    const right = state.items.find(s => s.key === rightKey);
     if (!left || !right) {
       rootEl.innerHTML = '<div class="opacity-60 py-6 text-center">Sélectionne deux secteurs.</div>';
       return;
@@ -419,7 +487,7 @@
   }
 
   function renderChips(container, regionFilter, selected) {
-    const list = state.sectors.filter(s => regionFilter === 'all' || (s.region || '').toLowerCase() === regionFilter);
+    const list = state.items.filter(s => regionFilter === 'all' || (s.region || '').toLowerCase() === regionFilter);
     // Groupe par famille d'indice
     const families = new Map();
     list.forEach(s => {
@@ -443,17 +511,19 @@
       </div>`).join('');
   }
 
-  async function init() {
-    const root = document.getElementById('sector-comparator');
+  async function initInstance(containerId, sourceKey) {
+    const root = document.getElementById(containerId);
     if (!root) return;
+    const source = SOURCES[sourceKey];
+    if (!source) return;
     injectStyles();
+    const noun = source.noun;
+    const nounPlural = noun + 's';
     root.innerHTML = `
-      <h2 class="section-title">Comparateur de secteurs</h2>
-      <div class="sc-hint" id="sc-hint">Sélectionne <strong>2 secteurs</strong> pour les comparer</div>
+      <h2 class="section-title">${source.title}</h2>
+      <div class="sc-hint" id="sc-hint">Sélectionne <strong>2 ${nounPlural}</strong> pour les comparer</div>
       <div class="sc-region-tabs">
-        <button type="button" class="sc-rtab is-active" data-region="all">Tous</button>
-        <button type="button" class="sc-rtab" data-region="europe">Europe</button>
-        <button type="button" class="sc-rtab" data-region="us">US</button>
+        ${source.regions.map((r, i) => `<button type="button" class="sc-rtab ${i === 0 ? 'is-active' : ''}" data-region="${r.key}">${r.label}</button>`).join('')}
       </div>
       <div id="sc-chips" class="sc-chips"></div>
       <div class="sc-actions">
@@ -465,13 +535,13 @@
     const status = root.querySelector('#sc-status');
     status.textContent = 'Chargement…';
     try {
-      await bootstrap();
+      await bootstrap(source);
     } catch (e) {
       status.textContent = 'Erreur de chargement';
-      console.error('[sector-comparator]', e);
+      console.error('[comparator]', e);
       return;
     }
-    status.textContent = `${state.sectors.length} secteurs disponibles`;
+    status.textContent = `${state.items.length} ${nounPlural} disponibles`;
 
     let regionFilter = 'all';
     let selected = []; // array of keys, max 2
@@ -482,9 +552,9 @@
     const refresh = () => {
       renderChips(chipsEl, regionFilter, selected);
       hintEl.innerHTML = selected.length === 0
-        ? 'Sélectionne <strong>2 secteurs</strong> pour les comparer'
+        ? `Sélectionne <strong>2 ${nounPlural}</strong> pour les comparer`
         : selected.length === 1
-          ? 'Sélectionne <strong>1 secteur</strong> de plus…'
+          ? `Sélectionne <strong>1 ${noun}</strong> de plus…`
           : '<span style="color:#00ff87">Comparaison active — clique sur une carte pour la remplacer</span>';
       if (selected.length === 2) {
         renderComparison(resultEl, selected[0], selected[1]);
@@ -503,7 +573,6 @@
       } else if (selected.length < 2) {
         selected.push(key);
       } else {
-        // remplace le plus ancien
         selected.shift();
         selected.push(key);
       }
@@ -525,6 +594,11 @@
     });
 
     refresh();
+  }
+
+  function init() {
+    if (document.getElementById('sector-comparator')) initInstance('sector-comparator', 'sectors');
+    if (document.getElementById('market-comparator')) initInstance('market-comparator', 'markets');
   }
 
   if (document.readyState === 'loading') {
