@@ -18,6 +18,9 @@
     'data/stocks_asia.json',
   ];
 
+  // Seuil minimum de holdings matchés sous lequel un item est désactivé
+  const MIN_COVERAGE = 4;
+
   // Caches partagés (chargés une seule fois quel que soit le nombre d'instances)
   const shared = {
     holdings: null,
@@ -51,8 +54,10 @@
       regions: [
         { key: 'all', label: 'Tous' },
         { key: 'europe', label: 'Europe' },
-        { key: 'us', label: 'US' },
+        { key: 'north-america', label: 'Amérique du Nord' },
         { key: 'asia', label: 'Asie' },
+        { key: 'latin-america', label: 'Amérique latine' },
+        { key: 'other', label: 'Autres' },
       ],
       flatten: flattenMarkets,
     },
@@ -88,11 +93,55 @@
     await bootstrapShared();
     const raw = await fetchJSON(source.file);
     state.items = source.flatten(raw);
+    disambiguateLabels(state.items);
+    computeCoverage(state.items);
+  }
+
+  // Si plusieurs items partagent le même shortLabel dans la même famille,
+  // on suffixe par symbole pour différencier (ex: "Etats-Unis (IVV)").
+  function disambiguateLabels(items) {
+    const groups = new Map();
+    items.forEach(it => {
+      const k = `${it.family}::${it.shortLabel}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(it);
+    });
+    groups.forEach(arr => {
+      if (arr.length > 1) {
+        arr.forEach(it => {
+          // tente d'extraire un nom d'indice court depuis le label long
+          const m = it.label.match(/(S&P\s*\d+|NASDAQ[^\s—]*|Russell\s*\d+|MSCI\s+\w+|FTSE\s*\d*|DAX|CAC\s*\d+|Nikkei\s*\d*|Hang\s*Seng|Dow\s*Jones)/i);
+          const tag = m ? m[1].replace(/\s+/g, ' ') : it.symbol;
+          it.shortLabel = `${it.shortLabel} (${tag})`;
+        });
+      }
+    });
+  }
+
+  // Calcule la couverture stock (nb de holdings matchés) de chaque item
+  function computeCoverage(items) {
+    items.forEach(it => {
+      const etf = shared.holdings?.etfs?.[it.symbol];
+      const holdings = (etf?.holdings || []).slice(0, 10);
+      let matched = 0;
+      holdings.forEach(h => { if (matchStock(h)) matched++; });
+      it.coverage = matched;
+      it.totalHoldings = holdings.length;
+      it.disabled = matched < MIN_COVERAGE;
+    });
   }
 
   function flattenMarkets(raw) {
     const out = [];
     const groups = raw?.indices || {};
+    const familyMap = {
+      europe: 'Europe',
+      'north-america': 'Amérique du Nord',
+      us: 'États-Unis',
+      asia: 'Asie',
+      'latin-america': 'Amérique latine',
+      other: 'Autres',
+    };
     Object.keys(groups).forEach(region => {
       (groups[region] || []).forEach(m => {
         if (!m || !m.symbol) return;
@@ -100,7 +149,6 @@
         const indexName = m.index_name || m.indexName || m.name || m.symbol;
         const label = country ? `${country} — ${indexName}` : indexName;
         const shortLabel = country || indexName;
-        const familyMap = { europe: 'Europe', us: 'États-Unis', asia: 'Asie' };
         const family = familyMap[region] || region;
         out.push({
           key: `${region}::${m.symbol}`,
@@ -108,6 +156,7 @@
           shortLabel,
           family,
           region: family,
+          regionKey: region,
           symbol: m.symbol,
           category: region,
           sectorObj: m,
@@ -135,6 +184,7 @@
           shortLabel,
           family,
           region: s.region || '',
+          regionKey: (s.region || '').toLowerCase(),
           symbol: s.symbol,
           category: cat,
           sectorObj: s,
@@ -430,8 +480,11 @@
       .sc-chip { position: relative; display: inline-flex; align-items: center; gap: .4rem; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: inherit; border-radius: .45rem; padding: .42rem .75rem; font-size: .78rem; cursor: pointer; transition: all .12s; text-align: left; }
       .sc-chip:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); transform: translateY(-1px); }
       .sc-chip.is-selected { background: rgba(0,255,135,.18); border-color: #00ff87; box-shadow: 0 0 0 1px #00ff87 inset; }
+      .sc-chip.is-disabled { opacity: .35; cursor: not-allowed; text-decoration: line-through; }
+      .sc-chip.is-disabled:hover { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); transform: none; }
       .sc-chip-num { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #00ff87; color: #001; font-weight: 800; font-size: .65rem; }
       .sc-chip-label { font-weight: 600; }
+      .sc-chip-cov { font-size: .62rem; opacity: .55; padding: 1px 5px; background: rgba(255,255,255,.06); border-radius: 4px; font-variant-numeric: tabular-nums; }
       .sc-actions { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
       .sc-btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,.15); color: inherit; padding: .35rem .8rem; border-radius: .4rem; font-size: .75rem; cursor: pointer; opacity: .7; }
       .sc-btn-ghost:hover { opacity: 1; }
@@ -487,7 +540,7 @@
   }
 
   function renderChips(container, regionFilter, selected) {
-    const list = state.items.filter(s => regionFilter === 'all' || (s.region || '').toLowerCase() === regionFilter);
+    const list = state.items.filter(s => regionFilter === 'all' || s.regionKey === regionFilter);
     // Groupe par famille d'indice
     const families = new Map();
     list.forEach(s => {
@@ -502,9 +555,15 @@
           ${sectors.map(s => {
             const isSel = selected.includes(s.key);
             const order = isSel ? selected.indexOf(s.key) + 1 : '';
-            return `<button type="button" class="sc-chip ${isSel ? 'is-selected' : ''}" data-key="${s.key}" title="${s.label}">
+            const dis = s.disabled ? 'is-disabled' : '';
+            const cov = `${s.coverage}/${s.totalHoldings || 10}`;
+            const titleTxt = s.disabled
+              ? `${s.label} — données insuffisantes (${cov} holdings matchés, min ${MIN_COVERAGE})`
+              : `${s.label} — ${cov} holdings`;
+            return `<button type="button" class="sc-chip ${isSel ? 'is-selected' : ''} ${dis}" data-key="${s.key}" title="${titleTxt}" ${s.disabled ? 'aria-disabled="true"' : ''}>
               ${isSel ? `<span class="sc-chip-num">${order}</span>` : ''}
               <span class="sc-chip-label">${s.shortLabel}</span>
+              <span class="sc-chip-cov">${cov}</span>
             </button>`;
           }).join('')}
         </div>
@@ -565,7 +624,7 @@
 
     chipsEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.sc-chip');
-      if (!btn) return;
+      if (!btn || btn.classList.contains('is-disabled')) return;
       const key = btn.dataset.key;
       const i = selected.indexOf(key);
       if (i >= 0) {
