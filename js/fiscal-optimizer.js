@@ -350,6 +350,192 @@ function afficherSynthesePER() {
     resultatElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// ==========================================
+// 🎯 CALCUL INVERSÉ : VERSEMENT PER POUR ATTEINDRE UN IMPÔT CIBLE
+// ==========================================
+function calculerVersementPourCible({ revenuBrut, statut, nbParts, plafondsReportables, impotCible }) {
+    // Borne haute = revenu imposable max (ne sert à rien d'aller au-delà)
+    const scenInitial = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: 0 });
+    const impotInitial = scenInitial.impotSansPER;
+    const tdMax = scenInitial.plafondTotal; // plafond PER total disponible
+
+    // Si l'impôt cible est déjà ≥ impôt actuel, aucun versement nécessaire
+    if (impotCible >= impotInitial) {
+        return {
+            atteignable: true,
+            versementNecessaire: 0,
+            versementApplique: 0,
+            impotResultant: impotInitial,
+            impotInitial,
+            plafondMax: tdMax,
+            plafondDepasse: false,
+            economieRealisee: 0,
+            tmiApres: scenInitial.tmiAvant,
+            message: "Votre impôt actuel est déjà inférieur ou égal à votre cible."
+        };
+    }
+
+    // Dichotomie sur le versement PER pour atteindre l'impôt cible
+    let lo = 0;
+    let hi = scenInitial.netImposableSansPER; // borne haute théorique = revenu imposable
+    let versementCalcule = 0;
+    let scenFinal = scenInitial;
+
+    for (let i = 0; i < 40; i++) {
+        const mid = (lo + hi) / 2;
+        const scen = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: mid });
+        scenFinal = scen;
+        const diff = scen.impotAvecPER - impotCible;
+
+        if (Math.abs(diff) < 1) {
+            versementCalcule = mid;
+            break;
+        }
+        if (diff > 0) lo = mid; else hi = mid;
+        versementCalcule = mid;
+    }
+
+    versementCalcule = Math.round(versementCalcule);
+    const plafondDepasse = versementCalcule > tdMax;
+
+    // Si dépasse le plafond, on calcule le scénario réel avec le plafond max
+    let versementApplique = versementCalcule;
+    let impotResultant = scenFinal.impotAvecPER;
+    let economieRealisee = impotInitial - impotResultant;
+    let tmiApres = scenFinal.tmiApres;
+
+    if (plafondDepasse) {
+        const scenMax = runScenarioPER({ revenuBrut, statut, nbParts, plafondsReportables, perVersement: tdMax });
+        versementApplique = tdMax;
+        impotResultant = scenMax.impotAvecPER;
+        economieRealisee = impotInitial - impotResultant;
+        tmiApres = scenMax.tmiApres;
+    }
+
+    return {
+        atteignable: !plafondDepasse,
+        versementNecessaire: versementCalcule,
+        versementApplique,
+        impotResultant,
+        impotInitial,
+        plafondMax: tdMax,
+        plafondDepasse,
+        economieRealisee,
+        tmiApres,
+        tmiAvant: scenInitial.tmiAvant
+    };
+}
+
+function afficherCibleImpot() {
+    const brutInput = document.getElementById('salaire-brut-simple');
+    const cibleInput = document.getElementById('cible-impot');
+    const statutSelect = document.getElementById('statut-simple');
+    const situationSelect = document.getElementById('situation-familiale');
+    const n3Input = document.getElementById('plafond-n3-simple');
+    const n2Input = document.getElementById('plafond-n2-simple');
+    const n1Input = document.getElementById('plafond-n1-simple');
+    const resultEl = document.getElementById('resultat-cible-impot');
+    if (!brutInput || !cibleInput || !resultEl) return;
+
+    const brut = parseFloat(brutInput.value.replace(/\s/g, '').replace(',', '.'));
+    if (!brut || brut <= 0) {
+        resultEl.classList.remove('hidden');
+        resultEl.innerHTML = '<div class="bg-red-900/30 border border-red-700 rounded-xl p-4 text-sm text-red-200"><strong>Erreur :</strong> renseignez d\'abord votre salaire brut annuel ci-dessus.</div>';
+        return;
+    }
+
+    const impotCible = parseFloat(cibleInput.value) || 0;
+    const statut = statutSelect?.value || 'salarie';
+    const nbParts = parseFloat(situationSelect?.value || '1');
+    const plafondsReportables = {
+        n3: parseFloat(n3Input?.value?.replace(/\s/g, '') || '0') || 0,
+        n2: parseFloat(n2Input?.value?.replace(/\s/g, '') || '0') || 0,
+        n1: parseFloat(n1Input?.value?.replace(/\s/g, '') || '0') || 0
+    };
+
+    const r = calculerVersementPourCible({ revenuBrut: brut, statut, nbParts, plafondsReportables, impotCible });
+
+    let html = '';
+
+    if (r.versementNecessaire === 0 && r.impotInitial <= impotCible) {
+        html = `
+            <div class="bg-emerald-900/20 border border-emerald-700/40 rounded-2xl p-5">
+                <p class="text-sm text-emerald-300 font-semibold">✅ Aucun versement nécessaire</p>
+                <p class="text-xs text-slate-300 mt-2">${r.message}</p>
+                <p class="text-xs text-slate-400 mt-2">Impôt actuel : <strong class="text-white">${formatMontant(r.impotInitial)} €</strong></p>
+            </div>`;
+    } else if (r.atteignable) {
+        // Dans le plafond ✅
+        html = `
+            <div class="bg-gradient-to-br from-purple-900/30 to-emerald-900/20 border border-purple-700/40 rounded-2xl p-5 md:p-6">
+                <p class="text-xs text-slate-400 mb-1">Pour atteindre <strong class="text-white">${formatMontant(impotCible)} €</strong> d'impôt :</p>
+                <p class="text-4xl md:text-5xl font-black text-purple-400 tracking-tight">${formatMontant(r.versementNecessaire)} €</p>
+                <p class="text-xs text-slate-400 mt-1">à verser sur votre PER</p>
+
+                <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    <div class="bg-slate-900/60 rounded-lg p-3">
+                        <p class="text-slate-500">Impôt avant</p>
+                        <p class="text-base font-bold text-orange-400">${formatMontant(r.impotInitial)} €</p>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-lg p-3">
+                        <p class="text-slate-500">Impôt après</p>
+                        <p class="text-base font-bold text-emerald-400">${formatMontant(r.impotResultant)} €</p>
+                    </div>
+                    <div class="bg-slate-900/60 rounded-lg p-3">
+                        <p class="text-slate-500">Économie</p>
+                        <p class="text-base font-bold text-emerald-400">${formatMontant(r.economieRealisee)} €</p>
+                    </div>
+                </div>
+
+                <div class="mt-3 text-xs text-slate-400">
+                    Plafond PER disponible : <strong class="text-slate-200">${formatMontant(r.plafondMax)} €</strong>
+                    · TMI : <strong class="text-orange-400">${r.tmiAvant}%</strong> → <strong class="text-emerald-400">${r.tmiApres}%</strong>
+                </div>
+            </div>`;
+    } else {
+        // Dépasse le plafond ⚠️
+        html = `
+            <div class="bg-gradient-to-br from-amber-900/30 to-slate-900/60 border border-amber-700/40 rounded-2xl p-5 md:p-6">
+                <p class="text-sm text-amber-300 font-semibold mb-2">⚠️ Cible non atteignable avec votre plafond actuel</p>
+                <p class="text-xs text-slate-300 mb-4">
+                    Pour atteindre <strong class="text-white">${formatMontant(impotCible)} €</strong> d'impôt, il faudrait verser
+                    <strong class="text-amber-400">${formatMontant(r.versementNecessaire)} €</strong> mais votre plafond PER total
+                    n'est que de <strong class="text-amber-400">${formatMontant(r.plafondMax)} €</strong>.
+                </p>
+
+                <div class="bg-slate-900/60 rounded-xl p-4 border border-purple-700/30">
+                    <p class="text-xs text-slate-400 mb-1">Maximum possible avec votre plafond :</p>
+                    <p class="text-3xl font-black text-purple-400">${formatMontant(r.versementApplique)} €</p>
+                    <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                        <div class="bg-slate-900/80 rounded-lg p-3">
+                            <p class="text-slate-500">Impôt avant</p>
+                            <p class="text-base font-bold text-orange-400">${formatMontant(r.impotInitial)} €</p>
+                        </div>
+                        <div class="bg-slate-900/80 rounded-lg p-3">
+                            <p class="text-slate-500">Impôt après</p>
+                            <p class="text-base font-bold text-emerald-400">${formatMontant(r.impotResultant)} €</p>
+                        </div>
+                        <div class="bg-slate-900/80 rounded-lg p-3">
+                            <p class="text-slate-500">Économie max</p>
+                            <p class="text-base font-bold text-emerald-400">${formatMontant(r.economieRealisee)} €</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-3">
+                        TMI : <strong class="text-orange-400">${r.tmiAvant}%</strong> → <strong class="text-emerald-400">${r.tmiApres}%</strong>
+                        · Reste après PER : <strong class="text-orange-300">${formatMontant(r.impotResultant)} €</strong> d'impôt
+                    </p>
+                </div>
+            </div>`;
+    }
+
+    resultEl.classList.remove('hidden');
+    resultEl.innerHTML = html;
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+window.calculerVersementPourCible = calculerVersementPourCible;
+window.afficherCibleImpot = afficherCibleImpot;
+
 function calculerFiscalite() {
     const brut = parseFloat(document.getElementById("brut-annuel")?.value);
     if (!brut) return;
@@ -376,4 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tgl = document.getElementById('btn-toggle-avance');
     const blc = document.getElementById('bloc-avance-per');
     if (tgl && blc) tgl.addEventListener('click', () => { blc.classList.toggle('hidden'); });
+    const btnCible = document.getElementById('btn-cible-impot');
+    if (btnCible) btnCible.addEventListener('click', afficherCibleImpot);
 });

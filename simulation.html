@@ -884,6 +884,43 @@
           🔍 Analyser mon potentiel d'économie
         </button>
       </div>
+
+      <!-- ═════════ CALCUL INVERSÉ : COMBIEN VERSER POUR UN IMPÔT CIBLE ═════════ -->
+      <div class="mt-6 border-t border-slate-700 pt-5">
+        <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+          <span class="text-purple-400">🎯</span>
+          Calcul inversé : combien verser pour atteindre un impôt cible ?
+        </h3>
+        <p class="text-xs text-slate-400 mb-3">
+          Vous savez combien d'impôt vous voulez payer ? Ce simulateur calcule le versement PER nécessaire (en tenant compte de votre situation, plafonds et changements de tranche).
+        </p>
+        <div class="grid md:grid-cols-3 gap-3 items-end">
+          <div>
+            <label for="cible-impot" class="block text-xs font-medium text-slate-300 mb-1">
+              Impôt cible (€/an)
+            </label>
+            <input
+              id="cible-impot"
+              type="number"
+              min="0"
+              step="100"
+              value="0"
+              class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="Ex : 0"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <button
+              id="btn-cible-impot"
+              type="button"
+              class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+            >
+              🎯 Calculer le versement nécessaire
+            </button>
+          </div>
+        </div>
+        <div id="resultat-cible-impot" class="mt-4 hidden"></div>
+      </div>
     </div>
 
     <!-- ZONE RÉSULTATS -->
