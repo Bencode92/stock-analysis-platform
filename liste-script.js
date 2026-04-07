@@ -192,26 +192,44 @@ const StockComparator = {
             return `<tr><td style="padding:10px 14px;color:rgba(255,255,255,0.6);font-size:0.78rem;">${r.label}</td>${cells}</tr>`;
         }).join('');
 
-        // Determine overall winner (most wins - losses)
-        const netScores = wins.map((w, i) => w - losses[i]);
-        const maxNet = Math.max(...netScores);
-        const winnerIdx = netScores.indexOf(maxNet);
+        // Compute global score on 100: ((wins - losses) / total_criteria + 1) / 2 * 100
+        // Or simpler: (wins / (wins+losses)) * 100, with neutral when no participation
+        const totalCriteria = wins.map((w, i) => w + losses[i]);
+        const scores100 = wins.map((w, i) => {
+            const total = totalCriteria[i];
+            if (total === 0) return 50; // No data → neutral
+            return Math.round((w / total) * 100);
+        });
+
+        // Rank by score (medals)
+        const indexed = scores100.map((s, i) => ({ score: s, idx: i }));
+        indexed.sort((a, b) => b.score - a.score);
+        const medals = {};
+        if (indexed.length >= 1 && indexed[0].score > (indexed[1]?.score ?? -1)) medals[indexed[0].idx] = '🥇';
+        if (indexed.length >= 2 && indexed[1].score > (indexed[2]?.score ?? -1) && indexed[1].score < indexed[0].score) medals[indexed[1].idx] = '🥈';
+        if (indexed.length >= 3 && indexed[2].score < indexed[1].score) medals[indexed[2].idx] = '🥉';
 
         // Score row at bottom
         const scoreCells = stocks.map((s, i) => {
-            const isWinner = i === winnerIdx && netScores.filter(n => n === maxNet).length === 1;
-            const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.2),rgba(0,255,135,0.05))' : 'rgba(255,255,255,0.02)';
-            return `<td style="padding:14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.06)'};">
-                ${isWinner ? '<div style="font-size:1.3rem;margin-bottom:4px;">🏆</div>' : ''}
-                <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;color:${isWinner ? '#00FF87' : '#fff'};">
-                    ${wins[i]} ✓ / ${losses[i]} ✗
-                </div>
-                <div style="font-size:0.7rem;color:${isWinner ? '#00FF87' : 'rgba(255,255,255,0.5)'};margin-top:2px;font-weight:${isWinner ? '700' : '500'};">
-                    ${isWinner ? 'GAGNANT' : `Score net ${netScores[i] >= 0 ? '+' : ''}${netScores[i]}`}
+            const score = scores100[i];
+            const medal = medals[i] || '';
+            const isFirst = medal === '🥇';
+            const scoreColor = score >= 70 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
+            const bg = isFirst ? 'linear-gradient(135deg,rgba(0,255,135,0.18),rgba(0,255,135,0.04))' : 'rgba(255,255,255,0.02)';
+            return `<td style="padding:18px 14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isFirst ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+                    ${medal ? `<div style="font-size:1.6rem;line-height:1;">${medal}</div>` : '<div style="height:1.6rem;"></div>'}
+                    <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;">
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:800;color:${scoreColor};line-height:1;">${score}</span>
+                        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">/100</span>
+                    </div>
+                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.45);font-family:'JetBrains Mono',monospace;">
+                        ${wins[i]} gagne · ${losses[i]} perd
+                    </div>
                 </div>
             </td>`;
         }).join('');
-        const scoreRow = `<tr><td style="padding:14px;color:#00FF87;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-top:2px solid rgba(0,255,135,0.3);">Score global</td>${scoreCells}</tr>`;
+        const scoreRow = `<tr><td style="padding:18px 14px;color:#00FF87;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-top:2px solid rgba(0,255,135,0.3);vertical-align:middle;">Score global</td>${scoreCells}</tr>`;
 
         const modal = document.createElement('div');
         modal.id = 'comparator-modal';
