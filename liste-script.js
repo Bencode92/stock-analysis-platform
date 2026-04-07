@@ -103,8 +103,8 @@ const StockUserPrefs = {
             container.innerHTML = '<div style="font-size:0.7rem;opacity:0.4;padding:8px;">Aucune recherche sauvegardée</div>';
             return;
         }
-        container.innerHTML = searches.map(s => {
-            const escapedName = s.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        container.innerHTML = '';
+        searches.forEach(s => {
             // Build a summary of the saved filters
             const parts = [];
             if (s.quality?.length) parts.push('Q:' + s.quality.join(''));
@@ -114,27 +114,45 @@ const StockUserPrefs = {
             if (s.beta) parts.push('β:' + s.beta);
             if (s.eps) parts.push('EPS+');
             const summary = parts.join(' · ') || 'Aucun filtre';
-            return `
-            <div style="display:flex;align-items:stretch;border-radius:6px;background:rgba(255,255,255,0.03);margin-bottom:6px;font-size:0.78rem;overflow:hidden;">
-                <div onclick="StockUserPrefs.loadSearch('${escapedName}');document.getElementById('saved-searches-panel').classList.add('hidden')"
-                    style="flex:1;padding:8px 10px;cursor:pointer;color:#fff;"
-                    onmouseover="this.style.background='rgba(0,255,135,0.1)'"
-                    onmouseout="this.style.background='transparent'">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <i class="fas fa-bookmark" style="color:#00FF87;font-size:0.65rem;"></i>
-                        <span style="font-weight:600;">${s.name}</span>
-                    </div>
-                    <div style="font-size:0.65rem;opacity:0.5;margin-top:2px;margin-left:14px;">${summary}</div>
+
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:stretch;border-radius:6px;background:rgba(255,255,255,0.03);margin-bottom:6px;font-size:0.78rem;overflow:hidden;';
+
+            const loadBtn = document.createElement('div');
+            loadBtn.style.cssText = 'flex:1;padding:8px 10px;cursor:pointer;color:#fff;';
+            loadBtn.innerHTML = `
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-bookmark" style="color:#00FF87;font-size:0.65rem;"></i>
+                    <span style="font-weight:600;">${s.name}</span>
                 </div>
-                <button onclick="event.stopPropagation();StockUserPrefs.deleteSearch('${escapedName}')"
-                    style="background:rgba(244,67,54,0.05);border:none;color:#f44336;cursor:pointer;padding:0 12px;font-size:0.85rem;border-left:1px solid rgba(255,255,255,0.06);"
-                    onmouseover="this.style.background='rgba(244,67,54,0.2)'"
-                    onmouseout="this.style.background='rgba(244,67,54,0.05)'"
-                    title="Supprimer cette recherche">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;}).join('');
+                <div style="font-size:0.65rem;opacity:0.5;margin-top:2px;margin-left:14px;">${summary}</div>
+            `;
+            loadBtn.onmouseover = () => loadBtn.style.background = 'rgba(0,255,135,0.1)';
+            loadBtn.onmouseout = () => loadBtn.style.background = 'transparent';
+            loadBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                StockUserPrefs.loadSearch(s.name);
+                // Close panel after a short delay
+                setTimeout(() => {
+                    document.getElementById('saved-searches-panel')?.classList.add('hidden');
+                }, 100);
+            });
+
+            const delBtn = document.createElement('button');
+            delBtn.style.cssText = 'background:rgba(244,67,54,0.05);border:none;color:#f44336;cursor:pointer;padding:0 12px;font-size:0.85rem;border-left:1px solid rgba(255,255,255,0.06);';
+            delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            delBtn.title = 'Supprimer cette recherche';
+            delBtn.onmouseover = () => delBtn.style.background = 'rgba(244,67,54,0.2)';
+            delBtn.onmouseout = () => delBtn.style.background = 'rgba(244,67,54,0.05)';
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                StockUserPrefs.deleteSearch(s.name);
+            });
+
+            row.appendChild(loadBtn);
+            row.appendChild(delBtn);
+            container.appendChild(row);
+        });
     },
 
     // CSV export removed (API license restriction)
