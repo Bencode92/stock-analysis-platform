@@ -132,10 +132,27 @@ const AutoComparator = {
         // Load top into the main comparator
         StockComparator.selected.clear();
         ranked.forEach(r => StockComparator.selected.set(r.stock.ticker, r.stock));
+
+        // v8.5: pass external scores + pool size to modal
+        StockComparator.externalScores = {};
+        ranked.forEach(r => { StockComparator.externalScores[r.stock.ticker] = r.score; });
+        StockComparator.poolSize = pool.length;
+        StockComparator.poolLabel = this._buildPoolLabel({ region, sector, industry, country });
+
         StockComparator.renderBar();
 
-        // Open the comparison modal
+        // Close the auto panel and open the comparison modal
+        document.getElementById('auto-compare-panel')?.remove();
         setTimeout(() => StockComparator.openModal(), 200);
+    },
+
+    _buildPoolLabel({ region, sector, industry, country }) {
+        const parts = [];
+        if (region) parts.push(region);
+        if (country) parts.push(country);
+        if (sector) parts.push(sector);
+        if (industry) parts.push(industry);
+        return parts.length ? parts.join(' · ') : 'Toutes actions';
     },
 
     openPanel() {
@@ -273,19 +290,29 @@ const StockComparator = {
             }
             this.selected.set(stock.ticker, stock);
         }
+        // Manual interaction → switch to head-to-head mode
+        this.externalScores = null;
+        this.poolSize = null;
+        this.poolLabel = null;
         this.renderBar();
         return true;
     },
 
     clear() {
         this.selected.clear();
+        this.externalScores = null;
+        this.poolSize = null;
+        this.poolLabel = null;
         this.renderBar();
-        // Uncheck all checkboxes
         document.querySelectorAll('.compare-checkbox').forEach(cb => cb.checked = false);
     },
 
     remove(ticker) {
         this.selected.delete(ticker);
+        // Manual removal → switch back to head-to-head mode
+        this.externalScores = null;
+        this.poolSize = null;
+        this.poolLabel = null;
         const cb = document.querySelector(`.compare-checkbox[data-ticker="${ticker}"]`);
         if (cb) cb.checked = false;
         this.renderBar();
@@ -436,14 +463,23 @@ const StockComparator = {
             return `<tr><td style="padding:10px 14px;color:rgba(255,255,255,0.6);font-size:0.78rem;">${r.label}</td>${cells}</tr>`;
         }).join('');
 
-        // Compute global score on 100: ((wins - losses) / total_criteria + 1) / 2 * 100
-        // Or simpler: (wins / (wins+losses)) * 100, with neutral when no participation
-        const totalCriteria = wins.map((w, i) => w + losses[i]);
-        const scores100 = wins.map((w, i) => {
-            const total = totalCriteria[i];
-            if (total === 0) return 50; // No data → neutral
-            return Math.round((w / total) * 100);
-        });
+        // v8.5: Two scoring modes
+        // - AUTO mode: use externalScores (percentile rank in pool of N stocks)
+        // - MANUAL mode: head-to-head (wins - losses + total) / (2 * total) * 100
+        const isAutoMode = !!this.externalScores && Object.keys(this.externalScores).length > 0;
+        const TOTAL_METRICS = rows.filter(r => !r.section).length;
+
+        let scores100;
+        if (isAutoMode) {
+            // Pool-based percentile from AutoComparator
+            scores100 = stocks.map(s => this.externalScores[s.ticker] ?? 50);
+        } else {
+            // Head-to-head: net score with full weight on losses
+            scores100 = wins.map((w, i) => {
+                const net = w - losses[i]; // [-TOTAL_METRICS, +TOTAL_METRICS]
+                return Math.round(((net + TOTAL_METRICS) / (2 * TOTAL_METRICS)) * 100);
+            });
+        }
 
         // Find unique winner (highest score, no tie)
         const maxScore = Math.max(...scores100);
@@ -456,17 +492,26 @@ const StockComparator = {
             const isWinner = i === winnerIdx;
             const scoreColor = score >= 70 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
             const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.2),rgba(0,255,135,0.05))' : 'rgba(255,255,255,0.02)';
+            const subtitle = isAutoMode
+                ? `<div style="font-size:0.6rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">rang ${i + 1} / ${this.poolSize || stocks.length}</div>`
+                : `<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">${wins[i]} gagne · ${losses[i]} perd</div>`;
             return `<td style="padding:18px 14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
                     <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;">
                         <span style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:800;color:${isWinner ? '#00FF87' : scoreColor};line-height:1;">${score}</span>
                         <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">/100</span>
                     </div>
-                    ${isWinner ? '<div style="font-size:0.7rem;color:#00FF87;font-weight:700;letter-spacing:1px;">GAGNANT</div>' : `<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">${wins[i]} gagne · ${losses[i]} perd</div>`}
+                    ${isWinner ? '<div style="font-size:0.7rem;color:#00FF87;font-weight:700;letter-spacing:1px;">GAGNANT</div>' : subtitle}
                 </div>
             </td>`;
         }).join('');
-        const scoreRow = `<tr><td style="padding:18px 14px;color:#00FF87;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-top:2px solid rgba(0,255,135,0.3);vertical-align:middle;">Score global</td>${scoreCells}</tr>`;
+
+        const scoreLabel = isAutoMode
+            ? `Score sur ${this.poolSize || '?'} actions`
+            : 'Score head-to-head';
+        const scoreRow = `<tr><td style="padding:18px 14px;color:#00FF87;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-top:2px solid rgba(0,255,135,0.3);vertical-align:middle;">
+            Score global<div style="font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:none;letter-spacing:0;font-weight:400;margin-top:2px;">${scoreLabel}</div>
+        </td>${scoreCells}</tr>`;
 
         const modal = document.createElement('div');
         modal.id = 'comparator-modal';
@@ -488,7 +533,7 @@ const StockComparator = {
                             Comparateur d'actions
                         </h2>
                         <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:6px 0 0 0;">
-                            Vert = meilleure valeur · Rouge = pire valeur
+                            ${isAutoMode ? `Top ${stocks.length} sur ${this.poolSize} actions${this.poolLabel ? ' · ' + this.poolLabel : ''} · score percentile` : 'Comparaison head-to-head'} · Vert = meilleur · Rouge = pire
                         </p>
                     </div>
                     <button onclick="document.getElementById('comparator-modal').remove()"
