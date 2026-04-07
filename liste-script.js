@@ -103,63 +103,41 @@ const StockUserPrefs = {
             container.innerHTML = '<div style="font-size:0.7rem;opacity:0.4;padding:8px;">Aucune recherche sauvegardée</div>';
             return;
         }
-        container.innerHTML = searches.map(s => `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer;font-size:0.78rem;"
-                onmouseover="this.style.background='rgba(0,255,135,0.08)'"
-                onmouseout="this.style.background='rgba(255,255,255,0.03)'">
-                <span onclick="StockUserPrefs.loadSearch('${s.name.replace(/'/g, "\\'")}')" style="flex:1;color:#fff;">
-                    <i class="fas fa-bookmark" style="color:#00FF87;margin-right:6px;font-size:0.65rem;"></i>${s.name}
-                </span>
-                <button onclick="event.stopPropagation();StockUserPrefs.deleteSearch('${s.name.replace(/'/g, "\\'")}')"
-                    style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:2px 6px;font-size:0.7rem;">
-                    <i class="fas fa-times"></i>
+        container.innerHTML = searches.map(s => {
+            const escapedName = s.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            // Build a summary of the saved filters
+            const parts = [];
+            if (s.quality?.length) parts.push('Q:' + s.quality.join(''));
+            if (s.value?.length) parts.push('V:' + s.value.join(''));
+            if (s.divMin) parts.push('Div≥' + s.divMin + '%');
+            if (s.peMax) parts.push('PE≤' + s.peMax);
+            if (s.beta) parts.push('β:' + s.beta);
+            if (s.eps) parts.push('EPS+');
+            const summary = parts.join(' · ') || 'Aucun filtre';
+            return `
+            <div style="display:flex;align-items:stretch;border-radius:6px;background:rgba(255,255,255,0.03);margin-bottom:6px;font-size:0.78rem;overflow:hidden;">
+                <div onclick="StockUserPrefs.loadSearch('${escapedName}');document.getElementById('saved-searches-panel').classList.add('hidden')"
+                    style="flex:1;padding:8px 10px;cursor:pointer;color:#fff;"
+                    onmouseover="this.style.background='rgba(0,255,135,0.1)'"
+                    onmouseout="this.style.background='transparent'">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-bookmark" style="color:#00FF87;font-size:0.65rem;"></i>
+                        <span style="font-weight:600;">${s.name}</span>
+                    </div>
+                    <div style="font-size:0.65rem;opacity:0.5;margin-top:2px;margin-left:14px;">${summary}</div>
+                </div>
+                <button onclick="event.stopPropagation();StockUserPrefs.deleteSearch('${escapedName}')"
+                    style="background:rgba(244,67,54,0.05);border:none;color:#f44336;cursor:pointer;padding:0 12px;font-size:0.85rem;border-left:1px solid rgba(255,255,255,0.06);"
+                    onmouseover="this.style.background='rgba(244,67,54,0.2)'"
+                    onmouseout="this.style.background='rgba(244,67,54,0.05)'"
+                    title="Supprimer cette recherche">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
-        `).join('');
+        `;}).join('');
     },
 
-    // ── CSV Export ──
-    exportFilteredCSV() {
-        if (!window.stocksData?.indices) { alert('Aucune donnée à exporter'); return; }
-        const rows = [];
-        const headers = ['Ticker','Nom','Région','Pays','Secteur','Prix','Var %','YTD %','1an %','Quality','Value','PE','Div TTM','Beta','ROE','D/E','FCF Yield','EPS Surprise'];
-        rows.push(headers.join(';'));
-        Object.values(window.stocksData.indices).forEach(letterStocks => {
-            (letterStocks || []).forEach(s => {
-                const row = [
-                    s.ticker || '',
-                    `"${(s.name || '').replace(/"/g, '""')}"`,
-                    s.region || '',
-                    s.country || '',
-                    s.sector || '',
-                    s.last || '',
-                    s.change || '',
-                    s.ytd || '',
-                    s.perf_1y || '',
-                    s.quality_grade || '',
-                    s.buffett_grade || '',
-                    s.pe_ratio != null ? parseFloat(s.pe_ratio).toFixed(1) : '',
-                    s.dividend_yield_ttm || s.dividend_yield || '',
-                    s.beta != null ? parseFloat(s.beta).toFixed(2) : '',
-                    s.roe != null ? parseFloat(s.roe).toFixed(1) : '',
-                    s.de_ratio != null ? parseFloat(s.de_ratio).toFixed(2) : '',
-                    s.fcf_yield != null ? parseFloat(s.fcf_yield).toFixed(1) : '',
-                    s.eps_surprise_avg_2q != null ? parseFloat(s.eps_surprise_avg_2q).toFixed(1) : ''
-                ];
-                rows.push(row.join(';'));
-            });
-        });
-        const csv = '\uFEFF' + rows.join('\n'); // BOM for Excel UTF-8
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tradepulse_actions_${new Date().toISOString().slice(0,10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    },
+    // CSV export removed (API license restriction)
 
     // ── Show only watchlist toggle ──
     showWatchlistOnly: false,
