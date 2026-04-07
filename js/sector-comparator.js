@@ -299,10 +299,21 @@
     const css = `
       #sector-comparator { margin: 2.5rem auto; max-width: 1400px; }
       #sector-comparator .section-title { text-align: center; }
-      .sc-controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: center; margin-bottom: 1.25rem; }
-      .sc-controls select { background: rgba(255,255,255,.06); color: inherit; border: 1px solid rgba(255,255,255,.15); border-radius: .5rem; padding: .55rem .85rem; min-width: 280px; font-size: .9rem; }
-      .sc-controls button { background: var(--accent-color, #00ff87); color: #001; font-weight: 700; border: 0; border-radius: .5rem; padding: .6rem 1.2rem; cursor: pointer; }
-      .sc-controls button:hover { filter: brightness(1.1); }
+      .sc-hint { text-align: center; opacity: .75; font-size: .9rem; margin-bottom: 1rem; }
+      .sc-region-tabs { display: flex; justify-content: center; gap: .4rem; margin-bottom: .85rem; }
+      .sc-rtab { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: inherit; padding: .35rem .9rem; border-radius: 999px; font-size: .78rem; cursor: pointer; }
+      .sc-rtab.is-active { background: rgba(0,255,135,.18); border-color: rgba(0,255,135,.5); color: #00ff87; }
+      .sc-chips { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: 1rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+      .sc-chip { position: relative; display: inline-flex; align-items: center; gap: .5rem; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); color: inherit; border-radius: .55rem; padding: .5rem .85rem; font-size: .8rem; cursor: pointer; transition: all .15s; text-align: left; }
+      .sc-chip:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+      .sc-chip.is-selected { background: rgba(0,255,135,.14); border-color: #00ff87; box-shadow: 0 0 0 1px #00ff87 inset; }
+      .sc-chip-num { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #00ff87; color: #001; font-weight: 700; font-size: .7rem; }
+      .sc-chip-label { font-weight: 600; }
+      .sc-chip-region { font-size: .65rem; opacity: .55; padding: 1px 6px; background: rgba(255,255,255,.06); border-radius: 4px; }
+      .sc-actions { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+      .sc-btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,.15); color: inherit; padding: .35rem .8rem; border-radius: .4rem; font-size: .75rem; cursor: pointer; opacity: .7; }
+      .sc-btn-ghost:hover { opacity: 1; }
+      .sc-status { font-size: .72rem; opacity: .45; }
       .sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
       @media (max-width: 1000px) { .sc-grid { grid-template-columns: 1fr; } }
       .sc-panel { background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.09); border-radius: .9rem; padding: 1.1rem 1.1rem 1rem; }
@@ -342,10 +353,17 @@
     document.head.appendChild(tag);
   }
 
-  function buildSelect(el, defaultIdx) {
-    el.innerHTML = state.sectors
-      .map((s, i) => `<option value="${s.key}" ${i === defaultIdx ? 'selected' : ''}>${s.label} (${s.region || '—'})</option>`)
-      .join('');
+  function renderChips(container, regionFilter, selected) {
+    const list = state.sectors.filter(s => regionFilter === 'all' || (s.region || '').toLowerCase() === regionFilter);
+    container.innerHTML = list.map(s => {
+      const isSel = selected.includes(s.key);
+      const order = isSel ? selected.indexOf(s.key) + 1 : '';
+      return `<button type="button" class="sc-chip ${isSel ? 'is-selected' : ''}" data-key="${s.key}">
+        ${isSel ? `<span class="sc-chip-num">${order}</span>` : ''}
+        <span class="sc-chip-label">${s.label}</span>
+        <span class="sc-chip-region">${s.region || '—'}</span>
+      </button>`;
+    }).join('');
   }
 
   async function init() {
@@ -354,12 +372,16 @@
     injectStyles();
     root.innerHTML = `
       <h2 class="section-title">Comparateur de secteurs</h2>
-      <div class="sc-controls">
-        <select id="sc-left"></select>
-        <span>vs</span>
-        <select id="sc-right"></select>
-        <button id="sc-run" type="button">Comparer</button>
-        <span id="sc-status" class="opacity-60 text-sm"></span>
+      <div class="sc-hint" id="sc-hint">Sélectionne <strong>2 secteurs</strong> pour les comparer</div>
+      <div class="sc-region-tabs">
+        <button type="button" class="sc-rtab is-active" data-region="all">Tous</button>
+        <button type="button" class="sc-rtab" data-region="europe">Europe</button>
+        <button type="button" class="sc-rtab" data-region="us">US</button>
+      </div>
+      <div id="sc-chips" class="sc-chips"></div>
+      <div class="sc-actions">
+        <button type="button" id="sc-clear" class="sc-btn-ghost">Réinitialiser</button>
+        <span id="sc-status" class="sc-status"></span>
       </div>
       <div id="sc-result"></div>`;
 
@@ -372,19 +394,60 @@
       console.error('[sector-comparator]', e);
       return;
     }
-    status.textContent = `${state.sectors.length} secteurs · ${state.stockIndex.size} clés stocks`;
+    status.textContent = `${state.sectors.length} secteurs disponibles`;
 
-    const leftSel = root.querySelector('#sc-left');
-    const rightSel = root.querySelector('#sc-right');
-    buildSelect(leftSel, 0);
-    buildSelect(rightSel, Math.min(1, state.sectors.length - 1));
+    let regionFilter = 'all';
+    let selected = []; // array of keys, max 2
+    const chipsEl = root.querySelector('#sc-chips');
+    const resultEl = root.querySelector('#sc-result');
+    const hintEl = root.querySelector('#sc-hint');
 
-    const result = root.querySelector('#sc-result');
-    const run = () => renderComparison(result, leftSel.value, rightSel.value);
-    root.querySelector('#sc-run').addEventListener('click', run);
-    leftSel.addEventListener('change', run);
-    rightSel.addEventListener('change', run);
-    run();
+    const refresh = () => {
+      renderChips(chipsEl, regionFilter, selected);
+      hintEl.innerHTML = selected.length === 0
+        ? 'Sélectionne <strong>2 secteurs</strong> pour les comparer'
+        : selected.length === 1
+          ? 'Sélectionne <strong>1 secteur</strong> de plus…'
+          : '<span style="color:#00ff87">Comparaison active — clique sur une carte pour la remplacer</span>';
+      if (selected.length === 2) {
+        renderComparison(resultEl, selected[0], selected[1]);
+      } else {
+        resultEl.innerHTML = '';
+      }
+    };
+
+    chipsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sc-chip');
+      if (!btn) return;
+      const key = btn.dataset.key;
+      const i = selected.indexOf(key);
+      if (i >= 0) {
+        selected.splice(i, 1);
+      } else if (selected.length < 2) {
+        selected.push(key);
+      } else {
+        // remplace le plus ancien
+        selected.shift();
+        selected.push(key);
+      }
+      refresh();
+    });
+
+    root.querySelectorAll('.sc-rtab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        root.querySelectorAll('.sc-rtab').forEach(t => t.classList.remove('is-active'));
+        tab.classList.add('is-active');
+        regionFilter = tab.dataset.region;
+        refresh();
+      });
+    });
+
+    root.querySelector('#sc-clear').addEventListener('click', () => {
+      selected = [];
+      refresh();
+    });
+
+    refresh();
   }
 
   if (document.readyState === 'loading') {
