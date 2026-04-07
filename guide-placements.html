@@ -1072,7 +1072,7 @@
                           </p>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                           <div>
                             <label class="block text-xs text-gray-400 mb-1">
                               Mon versement (€/mois)
@@ -1102,6 +1102,26 @@
                           </div>
                         </div>
 
+                        <!-- Projection long terme : durée + taux -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                          <div>
+                            <label class="block text-xs text-gray-400 mb-1">
+                              Durée d'investissement (années)
+                              <span class="text-cyan-400 cursor-help" title="Combien d'années tu prévois de capitaliser. Plus la durée est longue, plus l'effet des intérêts composés est puissant.">ⓘ</span>
+                            </label>
+                            <input id="abondement-duree" type="number" min="1" max="50" value="10" step="1"
+                                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                          </div>
+                          <div>
+                            <label class="block text-xs text-gray-400 mb-1">
+                              Rendement annuel estimé (%)
+                              <span class="text-cyan-400 cursor-help" title="Performance moyenne du fonds choisi. Fonds monétaire ≈ 2-3%, fonds diversifié ≈ 4-5%, ETF actions ≈ 7-8%.">ⓘ</span>
+                            </label>
+                            <input id="abondement-rendement" type="number" min="0" max="15" value="5" step="0.5"
+                                   class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                          </div>
+                        </div>
+
                         <button id="abondement-calc-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition mb-3">
                           <i class="fas fa-magic mr-2"></i>Calculer le gain immédiat
                         </button>
@@ -1128,8 +1148,42 @@
 
                           <!-- 📐 Détail du calcul (méthode pas à pas) -->
                           <div id="abond-detail" class="bg-slate-900 bg-opacity-50 rounded-lg p-3 mb-3 border-l-4 border-cyan-400">
-                            <p class="text-xs font-semibold text-cyan-300 mb-2">📐 Méthode de calcul (pas à pas)</p>
+                            <p class="text-xs font-semibold text-cyan-300 mb-2">📐 Méthode de calcul annuel (pas à pas)</p>
                             <div id="abond-detail-content" class="text-xs text-gray-300 space-y-1 font-mono"></div>
+                          </div>
+
+                          <!-- 📈 Projection long terme avec intérêts composés -->
+                          <div class="bg-gradient-to-br from-purple-900 to-blue-900 bg-opacity-30 rounded-lg p-4 mb-3 border border-purple-700/40">
+                            <p class="text-sm font-semibold text-purple-300 mb-3 flex items-center">
+                              <i class="fas fa-chart-line mr-2"></i> Projection long terme avec intérêts composés
+                              <span id="abond-projection-duree" class="ml-auto text-xs text-gray-400"></span>
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <!-- Sans abondement -->
+                              <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 text-center border border-slate-700">
+                                <p class="text-xs text-gray-400 mb-1">🔵 Sans abondement</p>
+                                <p class="text-[10px] text-gray-500 mb-2">Tu verses seul (sans aide employeur)</p>
+                                <p id="abond-fv-sans" class="text-xl font-bold text-blue-300">0 €</p>
+                                <p id="abond-fv-sans-detail" class="text-[10px] text-gray-500 mt-1"></p>
+                              </div>
+                              <!-- Avec abondement -->
+                              <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 text-center border border-cyan-700">
+                                <p class="text-xs text-gray-400 mb-1">🟢 Avec abondement employeur</p>
+                                <p class="text-[10px] text-gray-500 mb-2">Tu verses + employeur abonde</p>
+                                <p id="abond-fv-avec" class="text-xl font-bold text-green-400">0 €</p>
+                                <p id="abond-fv-avec-detail" class="text-[10px] text-gray-500 mt-1"></p>
+                              </div>
+                              <!-- Différence -->
+                              <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 text-center border border-yellow-700">
+                                <p class="text-xs text-gray-400 mb-1">⭐ Gain de l'abondement</p>
+                                <p class="text-[10px] text-gray-500 mb-2">Différence sur la durée</p>
+                                <p id="abond-fv-diff" class="text-xl font-bold text-yellow-400">+0 €</p>
+                                <p id="abond-fv-diff-pct" class="text-[10px] text-yellow-300 mt-1"></p>
+                              </div>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-3 italic">
+                              📊 Calcul : capitalisation annuelle (versements en début d'année). Hypothèse de rendement constant. Hors fiscalité de sortie (PS 17,2% sur les gains uniquement).
+                            </p>
                           </div>
 
                           <p id="abond-message" class="text-sm text-center text-gray-300"></p>
@@ -3067,6 +3121,8 @@
                     const tauxAbondement = parseFloat(document.getElementById('abondement-taux').value) || 0;
                     const plafondAnnuel = parseFloat(document.getElementById('abondement-plafond').value) || 0;
                     const plafondLabel = document.getElementById('abondement-plafond').selectedOptions[0]?.text || '';
+                    const dureeAns = parseFloat(document.getElementById('abondement-duree')?.value) || 10;
+                    const rendementAnnuel = parseFloat(document.getElementById('abondement-rendement')?.value) || 0;
 
                     const versementAnnuel = versementMensuel * 12;
                     // Abondement théorique
@@ -3098,6 +3154,31 @@
                         detailEl.innerHTML = detail;
                     }
 
+                    // 📈 Projection long terme avec intérêts composés
+                    // FV d'une annuité = PMT × [((1+r)^n - 1) / r] (versements en début de période)
+                    const r = rendementAnnuel / 100;
+                    const n = dureeAns;
+                    const fvAnnuity = (pmt) => {
+                        if (pmt <= 0 || n <= 0) return 0;
+                        if (r === 0) return pmt * n;
+                        return pmt * (Math.pow(1 + r, n) - 1) / r * (1 + r);
+                    };
+
+                    const fvSans = fvAnnuity(versementAnnuel);
+                    const fvAvec = fvAnnuity(totalVerse);
+                    const fvDiff = fvAvec - fvSans;
+                    const fvDiffPct = fvSans > 0 ? (fvDiff / fvSans * 100) : 0;
+                    const totalVerseSans = versementAnnuel * n;
+                    const totalVerseAvec = totalVerse * n;
+
+                    document.getElementById('abond-projection-duree').textContent = `Sur ${n} an${n > 1 ? 's' : ''} à ${rendementAnnuel}%/an`;
+                    document.getElementById('abond-fv-sans').textContent = fmt(fvSans) + ' €';
+                    document.getElementById('abond-fv-sans-detail').textContent = `Versé : ${fmt(totalVerseSans)} € · Intérêts : ${fmt(fvSans - totalVerseSans)} €`;
+                    document.getElementById('abond-fv-avec').textContent = fmt(fvAvec) + ' €';
+                    document.getElementById('abond-fv-avec-detail').textContent = `Versé : ${fmt(totalVerseAvec)} € · Intérêts : ${fmt(fvAvec - totalVerseAvec)} €`;
+                    document.getElementById('abond-fv-diff').textContent = '+' + fmt(fvDiff) + ' €';
+                    document.getElementById('abond-fv-diff-pct').textContent = `+${Math.round(fvDiffPct)}% vs sans abondement`;
+
                     let message = '';
                     if (versementAnnuel === 0) {
                         message = '⚠️ Renseigne un versement mensuel pour voir l\'effet de l\'abondement.';
@@ -3117,7 +3198,7 @@
 
                 abondementBtn.addEventListener('click', calculerAbondement);
                 // Recalcul auto sur changement
-                ['abondement-versement', 'abondement-taux', 'abondement-plafond'].forEach(id => {
+                ['abondement-versement', 'abondement-taux', 'abondement-plafond', 'abondement-duree', 'abondement-rendement'].forEach(id => {
                     document.getElementById(id)?.addEventListener('input', calculerAbondement);
                 });
                 // Calcul initial
