@@ -1997,11 +1997,15 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <!-- ═══ COLONNE GAUCHE : PARAMÈTRES ═══ -->
                                 <div>
-                                    <!-- 📚 Encart pédagogique -->
-                                    <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 mb-4 border border-slate-700">
-                                        <h6 class="text-sm font-semibold text-cyan-300 mb-2 flex items-center">
-                                            <i class="fas fa-book-open mr-2"></i> Comment ça marche : 2 plafonds qui s'appliquent EN MÊME TEMPS
-                                        </h6>
+                                    <!-- 📚 Encart pédagogique pliable -->
+                                    <div class="bg-slate-900 bg-opacity-50 rounded-lg mb-4 border border-slate-700 overflow-hidden">
+                                        <button id="abond-help-toggle" type="button" class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-800/40 transition">
+                                            <h6 class="text-sm font-semibold text-cyan-300 flex items-center">
+                                                <i class="fas fa-book-open mr-2"></i> Comment ça marche : 2 plafonds qui s'appliquent EN MÊME TEMPS
+                                            </h6>
+                                            <i id="abond-help-chevron" class="fas fa-chevron-down text-cyan-400 transition-transform"></i>
+                                        </button>
+                                        <div id="abond-help-content" class="hidden p-4 pt-0">
                                         <p class="text-xs text-gray-400 mb-3">
                                             <strong class="text-white">Le PASS</strong> (Plafond Annuel de la Sécurité Sociale) = <strong class="text-cyan-300">48 060 € en 2026</strong>. C'est la base de calcul des plafonds légaux.
                                         </p>
@@ -2030,6 +2034,7 @@
                                                 Ces sommes <strong class="text-white">peuvent être placées</strong> sur ton PEE et/ou PERCOL au lieu d'être prises en cash. Une fois placées, l'employeur peut les <strong class="text-cyan-300">abonder comme n'importe quel autre versement</strong>. Avantages : exonération IR + abondement + capital qui grossit.
                                             </p>
                                         </div>
+                                        </div><!-- /abond-help-content -->
                                     </div>
 
                                     <!-- Inputs principaux -->
@@ -2084,9 +2089,86 @@
                                         </div>
                                     </div>
 
-                                    <button id="abondement-calc-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition">
+                                    <button id="abondement-calc-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition mb-4">
                                         <i class="fas fa-magic mr-2"></i>Calculer le gain
                                     </button>
+
+                                    <!-- ═══════ BLOC MODE RATTRAPAGE ═══════ -->
+                                    <div class="bg-purple-900 bg-opacity-20 rounded-lg border border-purple-700/40 overflow-hidden">
+                                        <button id="rattrapage-toggle" type="button" class="w-full flex items-center justify-between p-4 text-left hover:bg-purple-800/30 transition">
+                                            <h6 class="text-sm font-semibold text-purple-300 flex items-center">
+                                                <i class="fas fa-bullseye mr-2"></i> 🎯 Stratégie de rattrapage en cours d'année
+                                            </h6>
+                                            <i id="rattrapage-chevron" class="fas fa-chevron-down text-purple-400 transition-transform"></i>
+                                        </button>
+                                        <div id="rattrapage-content" class="hidden p-4 pt-0">
+                                            <p class="text-xs text-gray-400 mb-3">
+                                                Tu as déjà commencé l'année et tu veux savoir combien il te reste à verser pour saturer l'abondement avant décembre ? Renseigne ce que tu as déjà versé et le mois actuel.
+                                            </p>
+
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Mois actuel</label>
+                                                    <select id="ratt-mois" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                                        <option value="1">Janvier</option>
+                                                        <option value="2">Février</option>
+                                                        <option value="3">Mars</option>
+                                                        <option value="4" selected>Avril</option>
+                                                        <option value="5">Mai</option>
+                                                        <option value="6">Juin</option>
+                                                        <option value="7">Juillet</option>
+                                                        <option value="8">Août</option>
+                                                        <option value="9">Septembre</option>
+                                                        <option value="10">Octobre</option>
+                                                        <option value="11">Novembre</option>
+                                                        <option value="12">Décembre</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Plafond visé</label>
+                                                    <select id="ratt-plafond" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                                        <option value="3845">PEE seul (3 845 €)</option>
+                                                        <option value="7690">PERCOL seul (7 690 €)</option>
+                                                        <option value="11535" selected>PEE + PERCOL (11 535 €)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Déjà versé sur PEE (€)</label>
+                                                    <input id="ratt-deja-pee" type="number" min="0" value="0" step="50"
+                                                           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Déjà versé sur PERCOL (€)</label>
+                                                    <input id="ratt-deja-percol" type="number" min="0" value="0" step="50"
+                                                           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                                </div>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Taux abondement PEE (%)</label>
+                                                    <input id="ratt-taux-pee" type="number" min="0" max="300" value="100" step="10"
+                                                           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Taux abondement PERCOL (%)</label>
+                                                    <input id="ratt-taux-percol" type="number" min="0" max="300" value="100" step="10"
+                                                           class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                                </div>
+                                            </div>
+
+                                            <button id="ratt-calc-btn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 px-4 rounded-lg transition">
+                                                <i class="fas fa-calculator mr-2"></i>Calculer mes mensualités jusqu'à décembre
+                                            </button>
+
+                                            <div id="ratt-result" class="hidden mt-3 p-3 bg-slate-900 bg-opacity-50 rounded-lg border-l-4 border-purple-400">
+                                                <div id="ratt-result-content" class="text-sm text-gray-300"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- ═══ COLONNE DROITE : RÉSULTATS ═══ -->
@@ -2331,6 +2413,124 @@
                 document.getElementById(id)?.addEventListener('input', calculerAbondement);
             });
             calculerAbondement();
+
+            // ═══════ Toggle encart "Comment ça marche" ═══════
+            const helpToggle = document.getElementById('abond-help-toggle');
+            const helpContent = document.getElementById('abond-help-content');
+            const helpChevron = document.getElementById('abond-help-chevron');
+            if (helpToggle && helpContent) {
+                helpToggle.addEventListener('click', () => {
+                    const isOpen = !helpContent.classList.contains('hidden');
+                    helpContent.classList.toggle('hidden');
+                    if (helpChevron) helpChevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+            }
+
+            // ═══════ Toggle bloc rattrapage ═══════
+            const rattToggle = document.getElementById('rattrapage-toggle');
+            const rattContent = document.getElementById('rattrapage-content');
+            const rattChevron = document.getElementById('rattrapage-chevron');
+            if (rattToggle && rattContent) {
+                rattToggle.addEventListener('click', () => {
+                    const isOpen = !rattContent.classList.contains('hidden');
+                    rattContent.classList.toggle('hidden');
+                    if (rattChevron) rattChevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+            }
+
+            // Pré-remplir le mois actuel
+            const moisSelect = document.getElementById('ratt-mois');
+            if (moisSelect) {
+                const moisActuel = new Date().getMonth() + 1; // 1-12
+                moisSelect.value = String(moisActuel);
+            }
+
+            // ═══════ Calcul rattrapage ═══════
+            const rattBtn = document.getElementById('ratt-calc-btn');
+            if (rattBtn) {
+                const PLAFOND_PEE = 3845;
+                const PLAFOND_PERCOL = 7690;
+
+                const calculerRattrapage = () => {
+                    const moisActuel = parseInt(document.getElementById('ratt-mois').value) || 1;
+                    const plafondVise = parseFloat(document.getElementById('ratt-plafond').value) || 0;
+                    const dejaPEE = parseFloat(document.getElementById('ratt-deja-pee').value) || 0;
+                    const dejaPERCOL = parseFloat(document.getElementById('ratt-deja-percol').value) || 0;
+                    const tauxPEE = parseFloat(document.getElementById('ratt-taux-pee').value) || 0;
+                    const tauxPERCOL = parseFloat(document.getElementById('ratt-taux-percol').value) || 0;
+
+                    const moisRestants = 13 - moisActuel; // Avril (4) → 9 mois (avril à décembre inclus)
+                    const fmt = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n));
+
+                    // Détecter si PEE et/ou PERCOL sont concernés selon le plafond visé
+                    const includePEE = plafondVise === PLAFOND_PEE || plafondVise === (PLAFOND_PEE + PLAFOND_PERCOL);
+                    const includePERCOL = plafondVise === PLAFOND_PERCOL || plafondVise === (PLAFOND_PEE + PLAFOND_PERCOL);
+
+                    // Versement perso annuel pour saturer chaque plafond
+                    const versPerSatPEE = includePEE && tauxPEE > 0 ? PLAFOND_PEE / (tauxPEE / 100) : 0;
+                    const versPerSatPERCOL = includePERCOL && tauxPERCOL > 0 ? PLAFOND_PERCOL / (tauxPERCOL / 100) : 0;
+
+                    // Reste à verser
+                    const restePEE = Math.max(0, versPerSatPEE - dejaPEE);
+                    const restePERCOL = Math.max(0, versPerSatPERCOL - dejaPERCOL);
+
+                    // Mensualités
+                    const mensPEE = moisRestants > 0 ? restePEE / moisRestants : 0;
+                    const mensPERCOL = moisRestants > 0 ? restePERCOL / moisRestants : 0;
+                    const mensTotal = mensPEE + mensPERCOL;
+
+                    let html = '';
+                    const moisLabel = document.getElementById('ratt-mois').selectedOptions[0]?.text || '';
+
+                    if (restePEE === 0 && restePERCOL === 0 && (includePEE || includePERCOL)) {
+                        html = `<p class="text-green-400 font-semibold mb-2">✅ Tu satures déjà tous les plafonds visés !</p>
+                                <p class="text-xs text-gray-400">Plus besoin de verser pour déclencher l'abondement maximum cette année.</p>`;
+                    } else if (moisRestants <= 0) {
+                        html = `<p class="text-red-400 font-semibold">⚠️ Année terminée — impossible de rattraper.</p>`;
+                    } else {
+                        html = `<p class="text-purple-300 font-semibold mb-3">🎯 Stratégie de versement de ${moisLabel} à décembre (${moisRestants} mois)</p>`;
+
+                        if (includePEE) {
+                            const peeStatus = restePEE === 0 ? '<span class="text-green-400">✅ Plafond déjà saturé</span>' : `<strong class="text-white">${fmt(mensPEE)} €/mois</strong> pendant ${moisRestants} mois`;
+                            html += `<div class="bg-blue-900 bg-opacity-30 rounded p-3 mb-2">
+                                <p class="text-xs text-gray-400 mb-1">📘 PEE (taux abondement ${tauxPEE}%)</p>
+                                <p class="text-sm">${peeStatus}</p>
+                                <p class="text-[11px] text-gray-500 mt-1">Versement annuel pour saturer : ${fmt(versPerSatPEE)} € · Déjà versé : ${fmt(dejaPEE)} € · Reste : ${fmt(restePEE)} €</p>
+                            </div>`;
+                        }
+
+                        if (includePERCOL) {
+                            const percolStatus = restePERCOL === 0 ? '<span class="text-green-400">✅ Plafond déjà saturé</span>' : `<strong class="text-white">${fmt(mensPERCOL)} €/mois</strong> pendant ${moisRestants} mois`;
+                            html += `<div class="bg-green-900 bg-opacity-30 rounded p-3 mb-2">
+                                <p class="text-xs text-gray-400 mb-1">📗 PERCOL (taux abondement ${tauxPERCOL}%)</p>
+                                <p class="text-sm">${percolStatus}</p>
+                                <p class="text-[11px] text-gray-500 mt-1">Versement annuel pour saturer : ${fmt(versPerSatPERCOL)} € · Déjà versé : ${fmt(dejaPERCOL)} € · Reste : ${fmt(restePERCOL)} €</p>
+                            </div>`;
+                        }
+
+                        if (mensTotal > 0) {
+                            html += `<div class="bg-purple-900 bg-opacity-40 rounded p-3 mt-3 text-center">
+                                <p class="text-xs text-purple-200 mb-1">Total mensuel à verser</p>
+                                <p class="text-2xl font-bold text-purple-300">${fmt(mensTotal)} €/mois</p>
+                                <p class="text-[11px] text-gray-400 mt-1">Soit ${fmt(mensTotal * moisRestants)} € au total d'ici décembre</p>
+                            </div>`;
+
+                            // Abondement total débloqué
+                            const abondTotalPEE = includePEE && tauxPEE > 0 ? Math.min(versPerSatPEE * (tauxPEE / 100), PLAFOND_PEE) : 0;
+                            const abondTotalPERCOL = includePERCOL && tauxPERCOL > 0 ? Math.min(versPerSatPERCOL * (tauxPERCOL / 100), PLAFOND_PERCOL) : 0;
+                            html += `<p class="text-xs text-green-400 mt-2 text-center">💰 Tu débloqueras ${fmt(abondTotalPEE + abondTotalPERCOL)} € d'abondement employeur sur l'année</p>`;
+                        }
+                    }
+
+                    document.getElementById('ratt-result-content').innerHTML = html;
+                    document.getElementById('ratt-result').classList.remove('hidden');
+                };
+
+                rattBtn.addEventListener('click', calculerRattrapage);
+                ['ratt-mois', 'ratt-plafond', 'ratt-deja-pee', 'ratt-deja-percol', 'ratt-taux-pee', 'ratt-taux-percol'].forEach(id => {
+                    document.getElementById(id)?.addEventListener('input', calculerRattrapage);
+                });
+            }
         });
     </script>
 </body>
