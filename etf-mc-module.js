@@ -177,7 +177,7 @@
       mode:'balanced',
       baseFilter:'all',
       selectedMetrics:['return_ytd','ter','aum','return_1y'],
-      filters:{sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true}, // Pas de countries
+      filters:{sectors:new Set(),fundTypes:new Set(),exposures:new Set(),excludeLeveraged:true}, // Pas de countries
       customFilters:[],
       data:[],
       catalogs:{sectors:[],fundTypes:[],counts:{sectors:new Map(),fundTypes:new Map()}}, // Pas de countries
@@ -209,7 +209,18 @@
         const y=num(e.yield_ttm), ter=num(e.total_expense_ratio);
         if(!Number.isFinite(y)||!Number.isFinite(ter)) return NaN;
         return (y-ter)*100;
-      }}
+      }},
+      // ── Agrégats holdings (calculés depuis stocks_us/europe/asia.json) ──
+      // Disponibles uniquement si etf-comparator.js a précompute __agg.
+      holdings_perf_ytd: {label:'Hold YTD', unit:'%', max:true,  get:e=>num(e.__agg?.perf_ytd)},
+      holdings_perf_1y:  {label:'Hold 1Y',  unit:'%', max:true,  get:e=>num(e.__agg?.perf_1y)},
+      holdings_perf_3y:  {label:'Hold 3Y',  unit:'%', max:true,  get:e=>num(e.__agg?.perf_3y)},
+      holdings_quality:  {label:'Quality',  unit:'',  max:true,  get:e=>num(e.__agg?.quality)},
+      holdings_buffett:  {label:'Buffett',  unit:'',  max:true,  get:e=>num(e.__agg?.buffett)},
+      holdings_revenue:  {label:'Rev gr.',  unit:'%', max:true,  get:e=>num(e.__agg?.revenue_growth)},
+      holdings_fcf:      {label:'FCF yield',unit:'%', max:true,  get:e=>num(e.__agg?.fcf_yield)},
+      holdings_div:      {label:'Hold div', unit:'%', max:true,  get:e=>num(e.__agg?.div_yield)},
+      holdings_beta:     {label:'Hold β',   unit:'',  max:false, get:e=>num(e.__agg?.beta)},
     };
 
 // ==== PRESETS ETF v2.0 - 10 stratégies avec métriques UI uniquement ====
@@ -463,6 +474,134 @@ const PRESETS_ETF = {
       { metric:"return_ytd", direction:"desc" },
       { metric:"return_1y", direction:"desc" }
     ]
+  },
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Presets exploitant `exposure` (etf_exposure.py) + agrégats holdings
+  // ──────────────────────────────────────────────────────────────────────
+  sp500_quality: {
+    label: "💎 S&P 500 qualité",
+    icon: "💎",
+    description: "Trackers S&P 500 classés par qualité fondamentale des holdings + TER",
+    mode: "balanced",
+    baseFilter: "equity",
+    excludeLeveraged: true,
+    ucits: false,
+    metrics: ["holdings_quality","holdings_buffett","ter","aum","return_1y"],
+    sectors: [],
+    fundTypes: [],
+    exposures: ["sp500"],
+    customFilters: [
+      { metric:"aum", operator:">=", value:500 },
+      { metric:"ter", operator:"<=", value:0.30 }
+    ],
+    priorities: [
+      { metric:"holdings_quality", direction:"desc" },
+      { metric:"holdings_buffett", direction:"desc" },
+      { metric:"ter",              direction:"asc"  },
+      { metric:"aum",              direction:"desc" },
+      { metric:"return_1y",        direction:"desc" }
+    ]
+  },
+
+  emerging_perf: {
+    label: "🌏 Émergents perf",
+    icon: "🌏",
+    description: "Marchés émergents triés par perf 1Y des holdings + perf ETF",
+    mode: "balanced",
+    baseFilter: "equity",
+    excludeLeveraged: true,
+    ucits: false,
+    metrics: ["holdings_perf_1y","return_1y","ter","aum","volatility"],
+    sectors: [],
+    fundTypes: [],
+    exposures: ["emerging_markets","china","india","brazil","mexico","south_africa","frontier","latin_america","vietnam","indonesia","thailand"],
+    customFilters: [
+      { metric:"aum", operator:">=", value:200 },
+      { metric:"ter", operator:"<=", value:0.80 }
+    ],
+    priorities: [
+      { metric:"holdings_perf_1y", direction:"desc" },
+      { metric:"return_1y",        direction:"desc" },
+      { metric:"aum",              direction:"desc" },
+      { metric:"ter",              direction:"asc"  },
+      { metric:"volatility",       direction:"asc"  }
+    ]
+  },
+
+  europe_quality_dividend: {
+    label: "🇪🇺 Europe quality dividend",
+    icon: "🇪🇺",
+    description: "ETF Europe : qualité holdings + yield dividende, coût bas",
+    mode: "balanced",
+    baseFilter: "equity",
+    excludeLeveraged: true,
+    ucits: false,
+    metrics: ["holdings_quality","holdings_div","dividend_yield","ter","return_1y"],
+    sectors: [],
+    fundTypes: [],
+    exposures: ["europe","eurozone","ftse100","uk","germany","france","switzerland"],
+    customFilters: [
+      { metric:"aum",            operator:">=", value:300 },
+      { metric:"ter",            operator:"<=", value:0.40 },
+      { metric:"dividend_yield", operator:">=", value:2.0 }
+    ],
+    priorities: [
+      { metric:"holdings_quality", direction:"desc" },
+      { metric:"dividend_yield",   direction:"desc" },
+      { metric:"holdings_div",     direction:"desc" },
+      { metric:"ter",              direction:"asc"  },
+      { metric:"return_1y",        direction:"desc" }
+    ]
+  },
+
+  metals_low_cost: {
+    label: "🥇 Métaux & or low-cost",
+    icon: "🥇",
+    description: "Or, argent, mineurs : meilleurs en TER et liquidité",
+    mode: "balanced",
+    baseFilter: "all",
+    excludeLeveraged: true,
+    ucits: false,
+    metrics: ["ter","aum","return_1y","volatility","return_ytd"],
+    sectors: [],
+    fundTypes: [],
+    exposures: ["gold_physical","gold_miners","silver_physical","silver_miners","copper","uranium","platinum","palladium","metals_mining"],
+    customFilters: [
+      { metric:"aum", operator:">=", value:200 }
+    ],
+    priorities: [
+      { metric:"ter",        direction:"asc"  },
+      { metric:"aum",        direction:"desc" },
+      { metric:"return_1y",  direction:"desc" },
+      { metric:"return_ytd", direction:"desc" },
+      { metric:"volatility", direction:"asc"  }
+    ]
+  },
+
+  us_tech_fundamental: {
+    label: "💻 US Tech fondamentaux",
+    icon: "💻",
+    description: "Tech US : qualité Buffett + croissance revenus + perf ETF",
+    mode: "balanced",
+    baseFilter: "equity",
+    excludeLeveraged: true,
+    ucits: false,
+    metrics: ["holdings_buffett","holdings_revenue","holdings_quality","return_1y","ter"],
+    sectors: ["Technology"],
+    fundTypes: [],
+    exposures: ["tech","semiconductors","software","ai","cloud","cybersecurity","robotics","fintech"],
+    customFilters: [
+      { metric:"aum", operator:">=", value:300 },
+      { metric:"ter", operator:"<=", value:0.65 }
+    ],
+    priorities: [
+      { metric:"holdings_buffett",  direction:"desc" },
+      { metric:"holdings_revenue",  direction:"desc" },
+      { metric:"holdings_quality",  direction:"desc" },
+      { metric:"return_1y",         direction:"desc" },
+      { metric:"ter",               direction:"asc"  }
+    ]
   }
 };
 
@@ -553,7 +692,10 @@ const PRESETS_ETF = {
       
       // 6. Filtres types de fonds
       state.filters.fundTypes = new Set(preset.fundTypes);
-      
+
+      // 6 bis. Filtre exposures (etf_exposure.py — catégorisation curated)
+      state.filters.exposures = new Set(preset.exposures || []);
+
       // 7. Filtres personnalisés
       state.customFilters = [...preset.customFilters]; // copie
       
@@ -1168,6 +1310,8 @@ const PRESETS_ETF = {
         // if(state.filters.countries.size && !e.__countries.some(c=>state.filters.countries.has(c))) { mask[i]=0; continue; }
         if(state.filters.sectors.size && !e.__sectors.some(s=>state.filters.sectors.has(s))) { mask[i]=0; continue; }
         if(state.filters.fundTypes.size && !state.filters.fundTypes.has(str(e.fund_type).trim())) { mask[i]=0; continue; }
+        // Filtre exposures (whitelist sur la colonne `exposure` de etf_exposure.py)
+        if(state.filters.exposures.size && !state.filters.exposures.has(str(e.exposure).trim())) { mask[i]=0; continue; }
       }
       masks.facets=mask; return mask;
     }
@@ -1368,8 +1512,40 @@ const PRESETS_ETF = {
       summary.innerHTML=`<strong>${mode}${typeLabel}${presetLabel}</strong> • ${metrics}${tags.length?' • '+tags.join(' '):''} • ${filtered}/${total} ETFs`;
     }
 
+    // ==== HOLDINGS AGG PREFETCH ====
+    // Cache : ticker (UPPER) → { perf_ytd, perf_1y, perf_3y, quality, buffett, ... }
+    // Rempli une fois au boot via window.ETFComparator (qui charge stocks_us/europe/asia.json).
+    // Ensuite compute() peut lire __agg de manière synchrone.
+    const _aggCache = new Map();
+    let _aggPrefetched = false;
+    async function prefetchHoldingsAggs(){
+      if (_aggPrefetched) return;
+      _aggPrefetched = true;
+      try {
+        const EC = window.ETFComparator;
+        if (!EC || !EC.loadStockIndex || !EC.matchHolding || !EC.computeHoldingsAggs || !EC.getHoldings) {
+          return;  // pas de comparator dispo, on tourne sans agrégats
+        }
+        await EC.loadStockIndex();
+        const all = (window.ETFData?.getData && window.ETFData.getData()) || [];
+        all.forEach(e => {
+          const tkr = String(getTicker(e) || '').toUpperCase();
+          if (!tkr) return;
+          const matched = EC.getHoldings(e).map(h => ({ h, stock: EC.matchHolding(h) }));
+          _aggCache.set(tkr, EC.computeHoldingsAggs(matched));
+        });
+        // Re-trigger compute pour que le score utilise les nouvelles métriques
+        scheduleCompute();
+      } catch (err) {
+        console.warn('[etf-mc] holdings agg prefetch failed', err);
+      }
+    }
+
     // ==== COMPUTE PIPELINE ====
     let computeTimer; const scheduleCompute=()=>{ clearTimeout(computeTimer); computeTimer=setTimeout(compute,120); };
+
+    // Lance le prefetch dès que possible (en parallèle du premier compute)
+    setTimeout(prefetchHoldingsAggs, 50);
 
     function compute(){
       const raw=window.ETFData.getData()||[];
@@ -1406,15 +1582,20 @@ const PRESETS_ETF = {
           __singleStock = h.single;
         }
         
+        // Agrégats holdings (depuis cache rempli au boot par prefetchHoldingsAggs)
+        const __ticker = getTicker(e);
+        const __agg = _aggCache.get(String(__ticker || '').toUpperCase()) || null;
+
         return {
           ...e,
-          __ticker: getTicker(e),  // NEW: enrichir avec ticker
+          __ticker,                // NEW: enrichir avec ticker
           __name:   getName(e),    // NEW: enrichir avec nom
           __kind: classify(e),
           __lev: __levFlag,
           __singleStock,
           __countries: [...new Set(countries)],
-          __sectors: [...new Set(sectors)]
+          __sectors: [...new Set(sectors)],
+          __agg                   // NEW: agrégats holdings (peut être null)
         };
       });
 
@@ -1475,7 +1656,7 @@ const PRESETS_ETF = {
       state.mode='balanced';
       state.baseFilter='all';
       state.selectedMetrics=['return_ytd','ter','aum','return_1y'];
-      state.filters={sectors:new Set(),fundTypes:new Set(),excludeLeveraged:true}; // MODIFIÉ : pas de countries
+      state.filters={sectors:new Set(),fundTypes:new Set(),exposures:new Set(),excludeLeveraged:true}; // MODIFIÉ : pas de countries
       state.customFilters=[];
       state.activePreset = null;
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));

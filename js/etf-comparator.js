@@ -562,6 +562,11 @@
     },
   };
 
+  // Helpers exposés pour réutilisation par etf-mc-module.js (zéro duplication)
+  ETFComparator.loadStockIndex = loadStockIndex;
+  ETFComparator.matchHolding = matchHolding;
+  ETFComparator.computeHoldingsAggs = computeHoldingsAggs;
+  ETFComparator.getHoldings = getHoldings;
   window.ETFComparator = ETFComparator;
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => ETFComparator.init());
