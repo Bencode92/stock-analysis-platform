@@ -72,6 +72,31 @@ EXPOSURE_TO_GEO: dict[str, str] = {
     "multi_country": "world",
 }
 
+COUNTRY_TO_REGION: dict[str, str] = {
+    # US
+    "united states": "us", "usa": "us", "u.s.": "us", "u.s.a.": "us",
+    # Europe développée
+    "france": "europe", "germany": "europe", "united kingdom": "europe",
+    "great britain": "europe", "switzerland": "europe", "netherlands": "europe",
+    "italy": "europe", "spain": "europe", "sweden": "europe", "belgium": "europe",
+    "ireland": "europe", "norway": "europe", "denmark": "europe", "finland": "europe",
+    "austria": "europe", "portugal": "europe", "luxembourg": "europe",
+    "iceland": "europe", "greece": "europe",
+    # Asie développée
+    "japan": "asia", "hong kong": "asia", "singapore": "asia",
+    "south korea": "asia", "korea": "asia", "taiwan": "asia",
+    "australia": "asia", "new zealand": "asia",
+    # Émergents
+    "china": "emerging", "india": "emerging", "indonesia": "emerging",
+    "thailand": "emerging", "malaysia": "emerging", "philippines": "emerging",
+    "vietnam": "emerging", "pakistan": "emerging", "brazil": "emerging",
+    "mexico": "emerging", "chile": "emerging", "colombia": "emerging",
+    "peru": "emerging", "argentina": "emerging", "turkey": "emerging",
+    "south africa": "emerging", "russia": "emerging", "egypt": "emerging",
+    "saudi arabia": "emerging", "uae": "emerging", "qatar": "emerging",
+    "poland": "emerging", "hungary": "emerging", "czech republic": "emerging",
+}
+
 EXPOSURE_TO_SECTOR: dict[str, str] = {
     # === Tech ===
     "tech": "tech", "technology": "tech", "semiconductors": "tech",
@@ -111,6 +136,19 @@ EXPOSURE_TO_SECTOR: dict[str, str] = {
     "metals_mining": "metals", "materials": "metals",
 }
 
+# Mapping sector_top du provider (Morningstar/GICS) → pill
+_SECTOR_TOP_TO_PILL: dict[str, str] = {
+    "technology": "tech",
+    "healthcare": "health", "health care": "health",
+    "financial services": "finance", "financials": "finance", "financial": "finance",
+    "energy": "energy",
+    "real estate": "reits",
+    "consumer cyclical": "consumer", "consumer defensive": "consumer",
+    "consumer discretionary": "consumer", "consumer staples": "consumer",
+    "industrials": "industrial", "industrial": "industrial",
+    "basic materials": "metals", "materials": "metals",
+}
+
 
 def enrich() -> None:
     if not CSV_PATH.exists():
@@ -136,8 +174,20 @@ def enrich() -> None:
         fund_type = row.get("fund_type") or ""
         exposure = detect_etf_exposure(name, ticker, fund_type) or ""
         row["exposure"] = exposure
-        row["geo_bucket"] = EXPOSURE_TO_GEO.get(exposure, "")
-        row["sector_bucket_pill"] = EXPOSURE_TO_SECTOR.get(exposure, "")
+
+        # Geo bucket : 1) etf_exposure  2) fallback country_top du provider
+        geo = EXPOSURE_TO_GEO.get(exposure, "")
+        if not geo:
+            ctop = (row.get("country_top") or "").strip().lower()
+            geo = COUNTRY_TO_REGION.get(ctop, "")
+        row["geo_bucket"] = geo
+
+        # Sector bucket : 1) etf_exposure  2) fallback sector_top du provider
+        sec = EXPOSURE_TO_SECTOR.get(exposure, "")
+        if not sec:
+            stop = (row.get("sector_top") or "").strip().lower()
+            sec = _SECTOR_TOP_TO_PILL.get(stop, "")
+        row["sector_bucket_pill"] = sec
         if exposure:
             n_exposure += 1
         if row["geo_bucket"]:
