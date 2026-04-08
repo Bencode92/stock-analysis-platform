@@ -1414,7 +1414,8 @@
         const clr  = $('#etf-az-clear');
         if (info && cnt) { info.classList.toggle('hidden', !q); cnt.textContent = filtered.length; }
         if (clr) clr.style.opacity = q ? '1' : '0';
-        if (q){
+        const pillFilterActive = (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all');
+        if (q || pillFilterActive){
           const allBtn = $$('#etf-az-tabs .region-tab').find(b => b.dataset.letter === 'all');
           if (allBtn){
             $$('#etf-az-tabs .region-tab').forEach(t => t.classList.remove('active'));
