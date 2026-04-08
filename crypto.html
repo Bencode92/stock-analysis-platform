@@ -1467,40 +1467,54 @@
                      </div>
 
                      <!-- Filtres pilules -->
-                     <div class="glassmorphism rounded-lg p-4 mb-4">
-                       <div class="flex flex-wrap gap-x-6 gap-y-3 items-center">
-                         <div class="flex items-center gap-2">
-                           <span class="text-xs opacity-60 mr-1">Sharpe min</span>
-                           <div class="flex flex-wrap gap-1" data-filter-group="sharpe">
+                     <div class="glassmorphism rounded-lg p-4 mb-4 crypto-filter-bar">
+                       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <fieldset>
+                           <legend class="text-[11px] uppercase tracking-wider opacity-50 mb-2">Sharpe min</legend>
+                           <div class="flex flex-wrap gap-1">
                              <label class="mc-pill"><input type="radio" name="ft-sharpe" value="" checked> tous</label>
                              <label class="mc-pill"><input type="radio" name="ft-sharpe" value="0"> ≥0</label>
                              <label class="mc-pill"><input type="radio" name="ft-sharpe" value="1"> ≥1</label>
                              <label class="mc-pill"><input type="radio" name="ft-sharpe" value="1.5"> ≥1.5</label>
                            </div>
-                         </div>
-                         <div class="flex items-center gap-2">
-                           <span class="text-xs opacity-60 mr-1">Vol 30j max</span>
-                           <div class="flex flex-wrap gap-1" data-filter-group="vol">
+                         </fieldset>
+                         <fieldset>
+                           <legend class="text-[11px] uppercase tracking-wider opacity-50 mb-2">Vol 30j max</legend>
+                           <div class="flex flex-wrap gap-1">
                              <label class="mc-pill"><input type="radio" name="ft-vol" value="" checked> tous</label>
                              <label class="mc-pill"><input type="radio" name="ft-vol" value="50"> ≤50%</label>
                              <label class="mc-pill"><input type="radio" name="ft-vol" value="100"> ≤100%</label>
                              <label class="mc-pill"><input type="radio" name="ft-vol" value="200"> ≤200%</label>
                            </div>
-                         </div>
-                         <div class="flex items-center gap-2">
-                           <span class="text-xs opacity-60 mr-1">DD 90j max</span>
-                           <div class="flex flex-wrap gap-1" data-filter-group="dd">
+                         </fieldset>
+                         <fieldset>
+                           <legend class="text-[11px] uppercase tracking-wider opacity-50 mb-2">Drawdown 90j max</legend>
+                           <div class="flex flex-wrap gap-1">
                              <label class="mc-pill"><input type="radio" name="ft-dd" value="" checked> tous</label>
                              <label class="mc-pill"><input type="radio" name="ft-dd" value="20"> ≥-20%</label>
                              <label class="mc-pill"><input type="radio" name="ft-dd" value="40"> ≥-40%</label>
                              <label class="mc-pill"><input type="radio" name="ft-dd" value="60"> ≥-60%</label>
                            </div>
-                         </div>
+                         </fieldset>
+                       </div>
+                       <div class="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-white/10">
+                         <span class="text-[11px] uppercase tracking-wider opacity-50 mr-2">Qualité</span>
                          <label class="mc-pill"><input type="checkbox" id="ft-tier1"> Tier-1 only</label>
                          <label class="mc-pill"><input type="checkbox" id="ft-noblack" checked> Exclure blacklist</label>
                          <button id="ft-reset" class="action-button text-xs ml-auto"><i class="fas fa-undo mr-1"></i>Reset</button>
                        </div>
                      </div>
+                     <style>
+                       .crypto-filter-bar fieldset { border: 0; padding: 0; margin: 0; }
+                       .crypto-filter-bar .mc-pill { font-size: .8rem; padding: 4px 9px; }
+                       .crypto-filter-bar .mc-pill input[type="radio"],
+                       .crypto-filter-bar .mc-pill input[type="checkbox"] { width: 12px; height: 12px; }
+                       #crypto-dense-table th { cursor: pointer; user-select: none; font-size: .72rem; letter-spacing: .04em; }
+                       #crypto-dense-table th[data-sort]::after { content: ' ⇅'; opacity: .3; font-size: .7em; }
+                       #crypto-dense-table th.sorted-asc::after  { content: ' ↑'; opacity: 1; color: var(--accent-color); }
+                       #crypto-dense-table th.sorted-desc::after { content: ' ↓'; opacity: 1; color: var(--accent-color); }
+                       #crypto-dense-table tbody tr:hover { background: rgba(0,255,135,0.04); }
+                     </style>
 
                      <!-- Conteneur tableau -->
                      <div class="glassmorphism rounded-lg overflow-hidden">
