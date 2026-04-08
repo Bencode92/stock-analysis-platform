@@ -1020,6 +1020,12 @@
                       <button class="pill" data-sectorpill="metals" aria-selected="false">Métaux</button>
                     </div>
 
+                    <!-- Sous-pills géo (apparaît quand une région est sélectionnée) -->
+                    <div id="etf-geo-fine" class="pills mb-3" role="tablist" aria-label="Pays" style="display:none;"></div>
+
+                    <!-- Sous-pills secteur (apparaît quand un secteur est sélectionné) -->
+                    <div id="etf-sector-fine" class="pills mb-3" role="tablist" aria-label="Sous-secteur" style="display:none;"></div>
+
                     <!-- Filtres Stratégie / Style -->
                     <div class="pills mb-3" role="tablist" aria-label="Stratégie">
                       <button class="pill active" data-strategy="all" aria-selected="true">Tous</button>
@@ -1248,6 +1254,81 @@
         return e.sector_bucket_pill === key;
       }
 
+      // ── Drill-down géo : pour chaque région, les expositions pays fines ──
+      const GEO_SUB_PILLS = {
+        europe:   [
+          {key:'france',         label:'France'},
+          {key:'germany',        label:'Allemagne'},
+          {key:'united_kingdom', label:'UK'},
+          {key:'italy',          label:'Italie'},
+          {key:'spain',          label:'Espagne'},
+          {key:'switzerland',    label:'Suisse'},
+          {key:'netherlands',    label:'Pays-Bas'},
+        ],
+        asia: [
+          {key:'japan',     label:'Japon'},
+          {key:'south_korea', label:'Corée'},
+          {key:'taiwan',    label:'Taïwan'},
+          {key:'hong_kong', label:'Hong Kong'},
+          {key:'australia', label:'Australie'},
+        ],
+        emerging: [
+          {key:'china',        label:'Chine'},
+          {key:'india',        label:'Inde'},
+          {key:'brazil',       label:'Brésil'},
+          {key:'mexico',       label:'Mexique'},
+          {key:'south_korea',  label:'Corée'},
+          {key:'taiwan',       label:'Taïwan'},
+          {key:'turkey',       label:'Turquie'},
+          {key:'south_africa', label:'Afrique du Sud'},
+          {key:'vietnam',      label:'Vietnam'},
+          {key:'indonesia',    label:'Indonésie'},
+          {key:'thailand',     label:'Thaïlande'},
+        ],
+      };
+
+      // ── Drill-down secteur : sous-thèmes par secteur principal ──
+      const SECTOR_SUB_PILLS = {
+        tech: [
+          {key:'semiconductor', label:'Semi-conducteurs'},
+          {key:'cybersecurity', label:'Cybersécurité'},
+          {key:'robotics',      label:'Robotique'},
+          {key:'fintech',       label:'Fintech'},
+          {key:'ai',            label:'AI'},
+          {key:'cloud',         label:'Cloud'},
+          {key:'software',      label:'Software'},
+        ],
+        health: [
+          {key:'biotech',         label:'Biotech'},
+          {key:'pharma',          label:'Pharma'},
+          {key:'medical_devices', label:'Med devices'},
+          {key:'genomics',        label:'Genomics'},
+        ],
+        energy: [
+          {key:'oil_gas',          label:'Oil & Gas'},
+          {key:'clean_energy',     label:'Clean energy'},
+          {key:'solar',            label:'Solaire'},
+          {key:'wind',             label:'Éolien'},
+          {key:'renewable_energy', label:'Renouvelables'},
+          {key:'uranium',          label:'Uranium'},
+        ],
+        metals: [
+          {key:'gold_physical',  label:'Or physique'},
+          {key:'gold_miners',    label:'Mineurs or'},
+          {key:'silver_physical',label:'Argent'},
+          {key:'silver_miners',  label:'Mineurs argent'},
+          {key:'copper',         label:'Cuivre'},
+          {key:'platinum',       label:'Platine'},
+          {key:'palladium',      label:'Palladium'},
+          {key:'uranium',        label:'Uranium'},
+        ],
+      };
+
+      function matchesFineExposure(e, key){
+        if (!key || key === 'all') return true;
+        return e.exposure === key;
+      }
+
       // Mapping clé pill → liste d'expositions (etf_exposure.py)
       // Couvre toutes les catégories non-géo / non-secteur de etf_exposure.py
       const STRATEGY_TO_EXPOSURES = {
@@ -1275,6 +1356,7 @@
       let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
       let fFundType = '', fSector = '';
       let fGeo = 'all', fSectorPill = 'all', fStrategy = 'all';
+      let fGeoFine = 'all', fSectorFine = 'all'; // drill-down (exposure exact)
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
@@ -1397,6 +1479,8 @@
           if (!matchesGeoPill(e, fGeo)) return false;
           if (!matchesSectorPill(e, fSectorPill)) return false;
           if (!matchesStrategyPill(e, fStrategy)) return false;
+          if (!matchesFineExposure(e, fGeoFine)) return false;
+          if (!matchesFineExposure(e, fSectorFine)) return false;
           return true;
         });
       }
@@ -1439,7 +1523,7 @@
         const clr  = $('#etf-az-clear');
         if (info && cnt) { info.classList.toggle('hidden', !q); cnt.textContent = filtered.length; }
         if (clr) clr.style.opacity = q ? '1' : '0';
-        const pillFilterActive = (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all') || (fStrategy && fStrategy !== 'all');
+        const pillFilterActive = (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all') || (fStrategy && fStrategy !== 'all') || (fGeoFine && fGeoFine !== 'all') || (fSectorFine && fSectorFine !== 'all');
         if (q || pillFilterActive){
           const allBtn = $$('#etf-az-tabs .region-tab').find(b => b.dataset.letter === 'all');
           if (allBtn){
@@ -1551,6 +1635,62 @@
         $('#etf-az-container')?.classList.remove('hidden');
       }
 
+      // ---------- Drill-down sub-pills (rendu dynamique) ----------
+      function renderGeoSubPills(){
+        const box = $('#etf-geo-fine');
+        if (!box) return;
+        const list = GEO_SUB_PILLS[fGeo];
+        if (!list){
+          box.innerHTML = '';
+          box.style.display = 'none';
+          if (fGeoFine !== 'all'){ fGeoFine = 'all'; }
+          return;
+        }
+        // Si la valeur fine n'est plus dans la liste, on reset
+        if (fGeoFine !== 'all' && !list.some(x => x.key === fGeoFine)){
+          fGeoFine = 'all';
+        }
+        box.style.display = '';
+        box.innerHTML = `
+          <button class="pill ${fGeoFine==='all'?'active':''}" data-geofine="all">Tous</button>
+          ${list.map(o => `<button class="pill ${fGeoFine===o.key?'active':''}" data-geofine="${o.key}">${o.label}</button>`).join('')}
+        `;
+        box.querySelectorAll('button[data-geofine]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            fGeoFine = btn.dataset.geofine;
+            renderGeoSubPills();
+            render();
+          });
+        });
+      }
+
+      function renderSectorSubPills(){
+        const box = $('#etf-sector-fine');
+        if (!box) return;
+        const list = SECTOR_SUB_PILLS[fSectorPill];
+        if (!list){
+          box.innerHTML = '';
+          box.style.display = 'none';
+          if (fSectorFine !== 'all'){ fSectorFine = 'all'; }
+          return;
+        }
+        if (fSectorFine !== 'all' && !list.some(x => x.key === fSectorFine)){
+          fSectorFine = 'all';
+        }
+        box.style.display = '';
+        box.innerHTML = `
+          <button class="pill ${fSectorFine==='all'?'active':''}" data-sectorfine="all">Tous</button>
+          ${list.map(o => `<button class="pill ${fSectorFine===o.key?'active':''}" data-sectorfine="${o.key}">${o.label}</button>`).join('')}
+        `;
+        box.querySelectorAll('button[data-sectorfine]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            fSectorFine = btn.dataset.sectorfine;
+            renderSectorSubPills();
+            render();
+          });
+        });
+      }
+
       // ---------- Interactions ----------
       function wireControls(){
         // portée
@@ -1573,10 +1713,12 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fGeo = btn.dataset.geo;
+            fGeoFine = 'all'; // reset drill-down quand on change de région
             // reset dropdowns Type/Secteur pour éviter AND incohérent
             fFundType = ''; fSector = '';
             const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
             const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
+            renderGeoSubPills();
             render();
           });
         });
@@ -1590,9 +1732,11 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fSectorPill = btn.dataset.sectorpill;
+            fSectorFine = 'all'; // reset drill-down quand on change de secteur
             fFundType = ''; fSector = '';
             const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
             const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
+            renderSectorSubPills();
             render();
           });
         });
