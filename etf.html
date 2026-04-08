@@ -1033,6 +1033,9 @@
                       <button class="pill" data-strategy="value" aria-selected="false">Value</button>
                       <button class="pill" data-strategy="growth" aria-selected="false">Growth</button>
                       <button class="pill" data-strategy="quality" aria-selected="false">Quality</button>
+                      <button class="pill" data-strategy="buffer" aria-selected="false">Buffer</button>
+                      <button class="pill" data-strategy="largecap" aria-selected="false">Large Cap</button>
+                      <button class="pill" data-strategy="midcap" aria-selected="false">Mid Cap</button>
                       <button class="pill" data-strategy="smallcap" aria-selected="false">Small Cap</button>
                       <button class="pill" data-strategy="esg" aria-selected="false">ESG</button>
                       <button class="pill" data-strategy="crypto" aria-selected="false">Crypto</button>
@@ -1288,15 +1291,15 @@
       };
 
       // ── Drill-down secteur : sous-thèmes par secteur principal ──
+      // Toutes les clés sont vérifiées contre les exposures réellement
+      // présentes dans data/combined_etfs.csv (etf_exposure.py).
       const SECTOR_SUB_PILLS = {
         tech: [
-          {key:'semiconductor', label:'Semi-conducteurs'},
-          {key:'cybersecurity', label:'Cybersécurité'},
-          {key:'robotics',      label:'Robotique'},
-          {key:'fintech',       label:'Fintech'},
-          {key:'ai',            label:'AI'},
-          {key:'cloud',         label:'Cloud'},
-          {key:'software',      label:'Software'},
+          {key:'semiconductor',   label:'Semi-conducteurs'},
+          {key:'cybersecurity',   label:'Cybersécurité'},
+          {key:'robotics',        label:'Robotique'},
+          {key:'cloud_computing', label:'Cloud computing'},
+          {key:'fintech',         label:'Fintech'},
         ],
         health: [
           {key:'biotech',         label:'Biotech'},
@@ -1305,11 +1308,8 @@
           {key:'genomics',        label:'Genomics'},
         ],
         energy: [
-          {key:'oil_gas',          label:'Oil & Gas'},
           {key:'clean_energy',     label:'Clean energy'},
           {key:'solar',            label:'Solaire'},
-          {key:'wind',             label:'Éolien'},
-          {key:'renewable_energy', label:'Renouvelables'},
           {key:'uranium',          label:'Uranium'},
         ],
         metals: [
@@ -1331,16 +1331,21 @@
 
       // Mapping clé pill → liste d'expositions (etf_exposure.py)
       // Couvre toutes les catégories non-géo / non-secteur de etf_exposure.py
+      // Toutes les valeurs sont vérifiées contre data/combined_etfs.csv
+      // (clés mortes retirées, expositions réelles uniquement).
       const STRATEGY_TO_EXPOSURES = {
         dividend:  ['dividend','derivative_income','derivative_income_index','covered_call','preferred_stock'],
-        value:     ['value','sp500_value','us_value'],
-        growth:    ['growth','us_growth','sp500_growth'],
-        quality:   ['quality','sp500_quality','min_vol','multifactor','momentum'],
+        value:     ['value','sp500_value'],
+        growth:    ['growth','sp500_growth'],
+        quality:   ['quality','min_vol','multifactor','momentum'],
+        buffer:    ['buffer','hedged_equity'],
+        smallcap:  ['small_cap','us_small_cap','russell2000'],
+        midcap:    ['mid_cap'],
+        largecap:  ['large_cap'],
         leveraged: ['leveraged_2x_bull','leveraged_3x_bull','leveraged_single_stock'],
-        inverse:   ['inverse','leveraged_2x_bear','leveraged_3x_bear'],
+        inverse:   ['inverse','leveraged_2x_bear','leveraged_3x_bear','gold_miners_inverse'],
         esg:       ['esg'],
         crypto:    ['btc_etf','eth_etf','crypto_equity'],
-        smallcap:  ['small_cap','us_small_cap','us_microcap','sp600_smallcap','russell2000'],
       };
       // Index inverse : exposure → strategy key
       const EXPOSURE_TO_STRATEGY = {};
