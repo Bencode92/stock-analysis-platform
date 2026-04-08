@@ -1080,8 +1080,10 @@ function ensureEl(parent, id, html) {
         const raw = toNum(state.data[i][METRICS[m].col]);
         if (!Number.isFinite(raw)) return '';
         const dir = isMax(m);
-        // MODIFIÉ: Utilise fmtDD pour le drawdown
-        const val = (m === 'dd90') ? fmtDD(raw) : fmtPct(raw);
+        // MODIFIÉ: Utilise fmtDD pour le drawdown, ratio brut pour Sharpe
+        const val = (m === 'dd90')   ? fmtDD(raw)
+                  : (METRICS[m].unit === '') ? raw.toFixed(2)
+                  : fmtPct(raw);
         const cls = !dir
           ? (raw < 20 ? 'text-green-400' : raw > 40 ? 'text-red-400' : 'text-yellow-400')
           : (raw >= 0 ? 'text-green-400' : 'text-red-400');
