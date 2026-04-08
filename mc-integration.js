@@ -539,9 +539,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <fieldset role="radiogroup" aria-label="Mode de tri">
         <legend class="text-xs opacity-60 mb-2">Mode de tri</legend>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
           <label class="mc-pill"><input type="radio" name="mc-mode" value="balanced" checked> Équilibre auto</label>
           <label class="mc-pill"><input type="radio" name="mc-mode" value="lexico"> Priorités</label>
+          <label class="mc-pill"><input type="radio" name="mc-mode" value="weighted"> ⚖ Pondéré</label>
+        </div>
+        <!-- v9.0: Mode Pondéré — sliders -->
+        <div id="mc-weighted" class="mt-3 hidden" style="padding:12px;background:rgba(0,255,135,0.04);border:1px solid rgba(0,255,135,0.2);border-radius:8px;">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-xs opacity-80 font-semibold">⚖ Pondération des métriques</div>
+            <button id="mc-weighted-reset" type="button" style="font-size:0.65rem;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;">
+              <i class="fas fa-undo"></i> Reset
+            </button>
+          </div>
+          <div id="mc-weighted-sliders" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <div class="mt-2 text-xs opacity-50" style="display:flex;justify-content:space-between;">
+            <span>Total : <strong id="mc-weighted-total" style="color:#00FF87;">0%</strong></span>
+            <span style="font-style:italic;">Renormalisé auto à 100%</span>
+          </div>
+          <div class="mt-2 text-xs opacity-40" style="font-style:italic;">
+            ℹ️ Quality et Value contiennent déjà ROE, PE, FCF. Évitez de les combiner avec ces ratios individuels.
+          </div>
         </div>
         <!-- Le conteneur de priorités sera ajouté dynamiquement ici par JS -->
       </fieldset>
