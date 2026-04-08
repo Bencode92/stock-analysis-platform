@@ -1074,7 +1074,10 @@ function ensureEl(parent, id, html) {
       const price = fmtPrice(toNum(r.last_close), r.currency_quote);
 
       const cols = state.selected.map(m => {
-        const raw = state.cache[m]?.raw[i];
+        // v6.37 FIX: lit la valeur brute du CSV (state.cache.raw est winsorisé
+        // pour le scoring → un outlier comme ONT/+24.95% serait affiché clampé
+        // au plafond p99.5 et confondu avec d'autres tokens en haut de la queue).
+        const raw = toNum(state.data[i][METRICS[m].col]);
         if (!Number.isFinite(raw)) return '';
         const dir = isMax(m);
         // MODIFIÉ: Utilise fmtDD pour le drawdown
