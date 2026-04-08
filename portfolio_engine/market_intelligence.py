@@ -189,9 +189,11 @@ INFLATION & TAUX:
 - Breakeven inflation 5Y: {md.get('breakeven_5y', 'N/A')}%
 
 CRÉDIT & SPREADS:
-- IG spread OAS: {md.get('ig_spread_bps', 'N/A')}bps
-- HY spread OAS: {md.get('hy_spread_bps', 'N/A')}bps
+- IG spread OAS (FRED, J-1/J-2 lag): {md.get('ig_spread_bps', 'N/A')}bps
+- HY spread OAS (FRED, J-1/J-2 lag): {md.get('hy_spread_bps', 'N/A')}bps
 - HY spread trend: {md.get('hy_spread_trend', 'N/A')}
+- HYG ETF live change today: {md.get('hyg_change_1d_pct', 'N/A')}% (Yahoo real-time — baisse HYG = spreads HY s'écartent)
+- LQD ETF live change today: {md.get('lqd_change_1d_pct', 'N/A')}% (Yahoo real-time — baisse LQD = spreads IG s'écartent)
 
 OR & MÉTAUX:
 - Gold XAU/USD: ${md.get('gold_usd', 'N/A')}
@@ -199,7 +201,8 @@ OR & MÉTAUX:
 - Silver: ${md.get('silver_usd', 'N/A')}
 
 EQUITY:
-- S&P 500: {md.get('sp500_level', 'N/A')}
+- S&P 500 index level (Yahoo ^GSPC real-time): {md.get('sp500_level', 'N/A')}
+- S&P 500 daily change: {md.get('sp500_change_1d_pct', 'N/A')}%
 - Nasdaq (QQQ) daily change: {md.get('nasdaq_change_1d_pct', 'N/A')}%
 - XLU (Utilities) daily change: {md.get('xlu_perf_1d_pct', 'N/A')}%
 

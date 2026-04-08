@@ -94,6 +94,43 @@ def _fetch_json(url: str, timeout: int = 15) -> Optional[Dict]:
 
 
 # =============================================================================
+# YAHOO FINANCE — Real-time market data (no API key required)
+# =============================================================================
+
+def fetch_yahoo_quote(symbol: str, label: str = None) -> Optional[Dict]:
+    """
+    Generic Yahoo Finance quote fetcher.
+    Returns: {"price": float, "change_pct": float, "date": "YYYY-MM-DD HH:MM"} or None.
+
+    Used for real-time data not available via FRED (which has J-1 to J-9 lag).
+    Symbols: ^GSPC (S&P500 index), ^VIX (live VIX), HYG (HY proxy), LQD (IG proxy), etc.
+    """
+    import urllib.parse
+    from datetime import datetime as _dt
+    sym_enc = urllib.parse.quote(symbol, safe='')
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range=5d"
+    data = _fetch_json(url)
+    if not data:
+        logger.warning(f"[YAHOO] {label or symbol}: fetch failed")
+        return None
+    try:
+        result = data.get("chart", {}).get("result", [{}])[0]
+        meta = result.get("meta", {})
+        price = meta.get("regularMarketPrice")
+        prev = meta.get("chartPreviousClose") or meta.get("previousClose")
+        if price is None:
+            return None
+        change_pct = ((price - prev) / prev * 100) if prev else None
+        ts = meta.get("regularMarketTime")
+        date_str = _dt.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else _dt.now().strftime("%Y-%m-%d %H:%M")
+        logger.info(f"[YAHOO] {label or symbol}: {price} ({date_str} UTC, Δ={change_pct:.2f}% vs prev close)" if change_pct is not None else f"[YAHOO] {label or symbol}: {price} ({date_str} UTC)")
+        return {"price": float(price), "change_pct": change_pct, "date": date_str}
+    except Exception as e:
+        logger.error(f"[YAHOO] {label or symbol} parse error: {e}")
+        return None
+
+
+# =============================================================================
 # YAHOO FINANCE — Brent Crude Real-Time (no API key required)
 # =============================================================================
 
@@ -436,20 +473,65 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
             "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130.",
         }
     
-    # S&P 500 (from Twelve Data SPY)
-    if "sp500" in td_data:
+    # === S&P 500 — v2.4: Yahoo ^GSPC (vrai index) en priorité ===
+    # Avant: TD SPY donnait le prix de l'ETF (~$675), enregistré comme "level"
+    #        → trompeur dans le prompt MI (S&P réel est ~6774).
+    yahoo_sp = fetch_yahoo_quote("^GSPC", "S&P 500 index")
+    if yahoo_sp:
+        macro["sp500"] = {
+            "level": yahoo_sp["price"],
+            "change_1d_pct": yahoo_sp["change_pct"],
+            "source": "yahoo_^GSPC",
+            "date": yahoo_sp["date"],
+        }
+    elif "sp500" in td_data:
         sp = td_data["sp500"]
         macro["sp500"] = {
             "level": sp.get("price"),
             "change_1d_pct": sp.get("change_pct"),
+            "source": "twelve_data_SPY_etf_proxy",
+            "_warning": "SPY ETF price, NOT S&P index level",
         }
-    
-    # VIX
-    if "vix" in fred_data:
+
+    # === VIX — v2.4: Yahoo ^VIX live + FRED J-1 en complément ===
+    yahoo_vix = fetch_yahoo_quote("^VIX", "VIX live")
+    if yahoo_vix:
+        macro["vix"] = {
+            "value": yahoo_vix["price"],
+            "date": yahoo_vix["date"],
+            "change": yahoo_vix["change_pct"],
+            "source": "yahoo_^VIX",
+            "_fred_value": fred_data.get("vix", {}).get("value"),
+            "_fred_date": fred_data.get("vix", {}).get("date"),
+        }
+    elif "vix" in fred_data:
         macro["vix"] = {
             "value": fred_data["vix"]["value"],
             "date": fred_data["vix"]["date"],
             "change": fred_data["vix"].get("change"),
+            "source": "fred_VIXCLS",
+        }
+
+    # === Credit proxies — v2.4: HYG/LQD live (signal direction temps réel) ===
+    # Les spreads FRED ont J-1/J-2 lag → en jour de stress, ils ratent le mouvement.
+    # HYG (iShares HY) et LQD (iShares IG) bougent en miroir des spreads en intraday.
+    yahoo_hyg = fetch_yahoo_quote("HYG", "HY proxy")
+    if yahoo_hyg:
+        macro["hyg_live"] = {
+            "price": yahoo_hyg["price"],
+            "change_1d_pct": yahoo_hyg["change_pct"],
+            "date": yahoo_hyg["date"],
+            "source": "yahoo_HYG",
+            "_doc": "HYG ETF live. Baisse = spreads HY s'écartent.",
+        }
+    yahoo_lqd = fetch_yahoo_quote("LQD", "IG proxy")
+    if yahoo_lqd:
+        macro["lqd_live"] = {
+            "price": yahoo_lqd["price"],
+            "change_1d_pct": yahoo_lqd["change_pct"],
+            "date": yahoo_lqd["date"],
+            "source": "yahoo_LQD",
+            "_doc": "LQD ETF live. Baisse = spreads IG s'écartent.",
         }
     
     # Fed rate
@@ -655,8 +737,13 @@ def build_flat_market_data(macro: Dict) -> Dict:
     flat["yield_curve_2s10s"] = macro.get("yield_curve_2s10s", {}).get("value_bps")
     flat["breakeven_5y"] = macro.get("breakeven_5y", {}).get("value")
     
-    # S&P 500
+    # S&P 500 (v2.4: ^GSPC index level, plus daily change)
     flat["sp500_level"] = macro.get("sp500", {}).get("level")
+    flat["sp500_change_1d_pct"] = macro.get("sp500", {}).get("change_1d_pct")
+
+    # v2.4: Credit live proxies (HYG/LQD ETFs — real-time signal vs FRED J-1/J-2 spreads)
+    flat["hyg_change_1d_pct"] = macro.get("hyg_live", {}).get("change_1d_pct")
+    flat["lqd_change_1d_pct"] = macro.get("lqd_live", {}).get("change_1d_pct")
     
     # Trade-Weighted USD (NOT ICE DXY)
     flat["trade_weighted_usd"] = macro.get("trade_weighted_usd", {}).get("value")
