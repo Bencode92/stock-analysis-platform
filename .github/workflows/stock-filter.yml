@@ -214,6 +214,15 @@ jobs:
           echo "🌍 REGIONS=$REGIONS"
           node stock-advanced-filter.js
 
+      - name: 📊 Track Top 10 history (stability score)
+        run: |
+          if [ -f scripts/track_top10_history.py ]; then
+            echo "📊 Updating Top 10 history..."
+            python3 scripts/track_top10_history.py || echo "⚠️  History tracker failed (non-blocking)"
+          else
+            echo "ℹ️  track_top10_history.py not found, skip"
+          fi
+
       - name: 📋 Verify generated files
         run: |
           echo "📂 Files in data/:"

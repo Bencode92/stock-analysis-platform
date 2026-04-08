@@ -1545,24 +1545,87 @@
                     sectorAdjusted[i] = 1;
                 } else {
                     rankPct[i] = globalRanks ? (globalRanks.get(i) ?? 0.5) : 0.5;
-                    // sectorAdjusted[i] stays 0 → flag fallback
                 }
+            }
+
+            // ===== v9.1: SECTOR-NEUTRAL Z-SCORES (winsorized at ±3σ) =====
+            const zScoreArr = new Float64Array(n);
+
+            const computeSectorZ = (indices) => {
+                const vals = indices.map(i => raw[i]).filter(Number.isFinite);
+                if (vals.length < 3) return null;
+                let sum = 0;
+                for (const v of vals) sum += v;
+                const mean = sum / vals.length;
+                let varSum = 0;
+                for (const v of vals) varSum += (v - mean) ** 2;
+                const std = Math.sqrt(varSum / vals.length);
+                if (std < 1e-9) return null;
+                const upper = mean + 3 * std;
+                const lower = mean - 3 * std;
+                const winsorizedVals = vals.map(v => Math.min(upper, Math.max(lower, v)));
+                let sumW = 0;
+                for (const v of winsorizedVals) sumW += v;
+                const meanW = sumW / winsorizedVals.length;
+                let varSumW = 0;
+                for (const v of winsorizedVals) varSumW += (v - meanW) ** 2;
+                const stdW = Math.sqrt(varSumW / winsorizedVals.length) || 1;
+                const zMap = new Map();
+                for (const idx of indices) {
+                    const v = raw[idx];
+                    if (!Number.isFinite(v)) continue;
+                    const wv = Math.min(upper, Math.max(lower, v));
+                    zMap.set(idx, (wv - meanW) / stdW);
+                }
+                return zMap;
+            };
+
+            const sectorZs = new Map();
+            sectorGroups.forEach((indices, sec) => {
+                if (!eligibleSectors.has(sec)) return;
+                const zMap = computeSectorZ(indices);
+                if (zMap) sectorZs.set(sec, zMap);
+            });
+            const globalZs = computeSectorZ(allValidIdx);
+
+            // Map z [-3, +3] → score [0, 100], higher z = better
+            const zToScore = (z, hib) => {
+                if (!Number.isFinite(z)) return 50;
+                const adjusted = hib ? z : -z;
+                return Math.max(0, Math.min(100, 50 + (adjusted / 3) * 50));
+            };
+
+            const isHib = !!METRICS[m].max;
+            for (let i = 0; i < n; i++) {
+                if (!Number.isFinite(raw[i])) {
+                    zScoreArr[i] = NaN;
+                    continue;
+                }
+                const sec = state.data[i].sector || '__UNKNOWN__';
+                let z = 0;
+                if (eligibleSectors.has(sec) && sectorZs.has(sec) && sectorZs.get(sec).has(i)) {
+                    z = sectorZs.get(sec).get(i);
+                } else if (globalZs && globalZs.has(i)) {
+                    z = globalZs.get(i);
+                }
+                zScoreArr[i] = zToScore(z, isHib);
             }
 
             // Utiliser sorted winsorisé dans le cache
             cache[m] = {
               raw,
               sorted: Float64Array.from(sortedW),
-              rankPct,
+              rankPct,           // v9.0: percentile rank (used by balanced + lexico)
+              zScore: zScoreArr, // v9.1: winsorized z-score (used by weighted)
               iqr,
-              sectorAdjusted // v9.0: per-stock flag
+              sectorAdjusted
             };
           } else {
-            // Pas de données valides
             cache[m] = {
               raw,
               sorted: new Float64Array(),
               rankPct: new Float64Array(n),
+              zScore: new Float64Array(n),
               iqr: 1,
               sectorAdjusted: new Uint8Array(n)
             };
@@ -1626,15 +1689,16 @@
     return out.slice(0, TOP_N).map(e => ({ s: state.data[e.idx], score: e.score }));
   }
 
-  // ===== v9.0: WEIGHTED SCORING =====
-  // True multi-factor scoring: each metric has its own weight.
-  // score = Σ(percentile_i × weight_i) / Σ(weight_i_used)
-  // Missing metrics don't penalize (weights renormalize over valid only)
+  // ===== v9.0/9.1: WEIGHTED SCORING =====
+  // True multi-factor scoring with sector-neutral winsorized z-scores.
+  // v9.0: Used percentiles (rank-based, lossy)
+  // v9.1: Uses zScore (continuous, preserves real magnitude)
+  // score = Σ(zScore_i × weight_i) / Σ(weight_i_used)
+  // zScore is already direction-adjusted (higher = better) and on [0, 100] scale.
   function rankWeighted(indices, weightsObj) {
     const out = [];
     const weights = weightsObj || state.weights || {};
 
-    // If no weights defined, fall back to equal weighting on selectedMetrics
     const metricsToUse = Object.keys(weights).length > 0
         ? Object.keys(weights)
         : state.selectedMetrics;
@@ -1645,11 +1709,11 @@
 
       for (const m of metricsToUse) {
         if (!cache[m]) continue;
-        const pct = cache[m].rankPct[i];
-        if (Number.isFinite(pct)) {
-          const adjustedPct = METRICS[m].max ? pct : (1 - pct);
+        // v9.1: use zScore (already direction-adjusted)
+        const score = cache[m].zScore ? cache[m].zScore[i] : null;
+        if (Number.isFinite(score)) {
           const w = weights[m] != null ? weights[m] : (1 / metricsToUse.length);
-          weightedSum += adjustedPct * w;
+          weightedSum += score * w;
           totalWeight += w;
         }
       }
@@ -1747,10 +1811,69 @@
   }
 
   // RENDU v3.4 - Coloration améliorée pour payout
+  // ===== v9.1: STABILITY SCORE =====
+  // Loads top10_history.json and computes how many days each ticker
+  // has been in the current profile's Top 10 over the last 30 days.
+  let _stabilityHistory = null;
+  let _stabilityProfile = null;
+
+  async function loadStabilityHistory() {
+    if (_stabilityHistory !== null) return _stabilityHistory;
+    try {
+      const resp = await fetch('data/top10_history.json?' + Date.now());
+      if (!resp.ok) { _stabilityHistory = {}; return _stabilityHistory; }
+      _stabilityHistory = await resp.json();
+      console.log('📊 Top10 history loaded:', Object.keys(_stabilityHistory).length, 'days');
+    } catch (e) {
+      console.warn('📊 No top10_history.json available:', e.message);
+      _stabilityHistory = {};
+    }
+    return _stabilityHistory;
+  }
+
+  function getStabilityDays(ticker) {
+    if (!_stabilityHistory || !_stabilityProfile) return null;
+    const dates = Object.keys(_stabilityHistory).sort();
+    if (dates.length === 0) return null;
+    const last30 = dates.slice(-30);
+    let count = 0;
+    for (const date of last30) {
+      const profileTops = _stabilityHistory[date]?.[_stabilityProfile];
+      if (profileTops && profileTops.includes(ticker)) count++;
+    }
+    return { days: count, total: last30.length };
+  }
+
+  function getStabilityBadge(stab) {
+    if (!stab || stab.total < 3) return '';
+    const { days, total } = stab;
+    let icon, color, label;
+    if (days >= total * 0.8) {
+      icon = '⭐⭐⭐'; color = '#4caf50'; label = 'Très stable';
+    } else if (days >= total * 0.5) {
+      icon = '⭐⭐'; color = '#2196f3'; label = 'Stable';
+    } else if (days >= total * 0.15) {
+      icon = '⭐'; color = '#ff9800'; label = 'Volatile';
+    } else if (days <= 2) {
+      icon = '🆕'; color = '#00FF87'; label = 'Nouveau';
+    } else {
+      icon = '⭐'; color = '#ff9800'; label = 'Volatile';
+    }
+    return `<span title="${label} : présent ${days}/${total} jours dans le Top 10"
+      style="display:inline-block;font-size:0.65rem;padding:2px 6px;border-radius:8px;
+      background:${color}22;color:${color};font-weight:600;margin-left:6px;">${icon} ${days}j</span>`;
+  }
+
+  // Init: load history once at startup
+  loadStabilityHistory();
+
   function render(entries){
     results.innerHTML='';
     results.className = 'space-y-2';
-    
+
+    // v9.1: Update current profile for stability lookup
+    _stabilityProfile = state.currentPresetId || null;
+
     const top = entries.slice(0,10);
     
     top.forEach((e,i)=>{
@@ -1854,12 +1977,15 @@
       if (Number.isFinite(reg) && Number.isFinite(ttm) && ttm - reg >= 0.5) {
         specialBadge = '<span class="ml-2 px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full">incl. spé</span>';
       }
-      
+
+      // v9.1: Stability badge
+      const stabilityBadge = getStabilityBadge(getStabilityDays(tkr));
+
       card.innerHTML=`
         <div class="rank text-2xl font-bold">#${i+1}</div>
         <div class="flex-1">
-          <div class="font-semibold flex items-center gap-2">
-            ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>${specialBadge}
+          <div class="font-semibold flex items-center gap-2 flex-wrap">
+            ${tkr} <span class="text-sm opacity-60">${regionIcon}</span>${specialBadge}${stabilityBadge}
           </div>
           <div class="text-xs opacity-60" title="${e.s.name||''}">${e.s.name||'—'}</div>
           <div class="text-xs opacity-40">${e.s.sector||''} • ${e.s.country||''}</div>
@@ -2495,6 +2621,7 @@ const PRESETS = {
 
     // 1. Enregistrer le preset actuel
     state.currentPreset = preset.label;
+    state.currentPresetId = presetKey; // v9.1: for stability lookup
 
     // v9.0: Si le preset a des poids, basculer en mode 'weighted'
     if (preset.weights && Object.keys(preset.weights).length > 0) {
