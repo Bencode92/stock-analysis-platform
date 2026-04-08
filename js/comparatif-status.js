@@ -812,6 +812,10 @@ window.initComparatifStatuts = function() {
         transition:all .15s ease;
       }
       .persona-chip:hover{border-color:${TOKENS.accent};background:rgba(1,42,74,.8)}
+      .persona-chip.active{border-color:${TOKENS.accent};background:rgba(0,255,135,.15);box-shadow:0 0 0 2px rgba(0,255,135,.35),0 0 18px rgba(0,255,135,.25);color:${TOKENS.accent}}
+      .persona-chip.active .baseline{opacity:1;color:${TOKENS.text.secondary}}
+      .persona-chip.active::after{content:"✓";position:absolute;top:6px;right:8px;color:${TOKENS.accent};font-weight:700;font-size:.85rem}
+      .persona-chip{position:relative}
       .persona-chip .baseline{
         position:absolute;
         bottom:calc(100% + 6px);
@@ -1579,15 +1583,34 @@ window.initComparatifStatuts = function() {
         { id:'artisan-tns', label:'Artisan budget serré (TNS)', baseline:'charges basses, comptabilité simple', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:false,en_chomage:false,prevoit_associes:'non'}; compareStatuts=['MICRO','EURL']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }},
         { id:'liberal-reglemente', label:'Profession libérale réglementée', baseline:'SELARL vs SELAS, ordre professionnel', apply:()=>{ intentAnswers={...intentAnswers,veut_dividendes:true,en_chomage:false,prevoit_associes:'non',levee_fonds:'non'}; compareStatuts=['SELARL','SELAS']; syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA(); }}
       ];
-      host.innerHTML = personas.map(p=>`<button type="button" class="persona-chip" data-id="${p.id}" aria-label="${p.label}" tabindex="0">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
+      host.innerHTML = personas.map(p=>`<button type="button" class="persona-chip" data-id="${p.id}" aria-pressed="false" aria-label="${p.label}" tabindex="0">${p.label}<div class="baseline">${p.baseline}</div></button>`).join('');
+      let activePersonaId = null;
+      const resetPersona = ()=>{
+        intentAnswers={veut_dividendes:false,en_chomage:false,prevoit_associes:'non',levee_fonds:'non',eviter_salaire:false};
+        compareStatuts=[];
+        syncIntentUI(); updateComparisonBar(); updateTable(); renderPersonaAdvice(); persistStateToURL(); updateMobileCTA();
+      };
+      const handlePersona = (el, p)=>{
+        const isActive = el.classList.contains('active');
+        host.querySelectorAll('.persona-chip').forEach(c=>{ c.classList.remove('active'); c.setAttribute('aria-pressed','false'); });
+        if(isActive){
+          activePersonaId = null;
+          resetPersona();
+        } else {
+          activePersonaId = p.id;
+          el.classList.add('active');
+          el.setAttribute('aria-pressed','true');
+          p.apply();
+        }
+      };
       host.querySelectorAll('.persona-chip').forEach(el=>{
-        const p=personas.find(x=>x.id===el.getAttribute('data-id')); 
+        const p=personas.find(x=>x.id===el.getAttribute('data-id'));
         if(p) {
-          el.addEventListener('click',p.apply);
+          el.addEventListener('click',()=>handlePersona(el,p));
           el.addEventListener('keydown', (e)=>{
             if(e.key==='Enter' || e.key===' '){
               e.preventDefault();
-              p.apply();
+              handlePersona(el,p);
             }
           });
         }
