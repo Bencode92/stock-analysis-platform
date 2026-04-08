@@ -110,6 +110,51 @@
     })();
     return stockShared.loading;
   }
+  // Moyenne pondérée par poids du holding
+  function _weightedAvg(rows, getter) {
+    let sum = 0, w = 0;
+    rows.forEach(r => {
+      if (!r.stock) return;
+      const v = getter(r.stock);
+      const wt = Number(r.h.w) || 0;
+      if (v != null && Number.isFinite(v) && wt > 0) {
+        sum += v * wt; w += wt;
+      }
+    });
+    return w > 0 ? sum / w : null;
+  }
+  function _median(rows, getter) {
+    const vals = rows.map(r => r.stock ? getter(r.stock) : null)
+      .filter(v => v != null && Number.isFinite(v))
+      .sort((a, b) => a - b);
+    if (!vals.length) return null;
+    const m = Math.floor(vals.length / 2);
+    return vals.length % 2 ? vals[m] : (vals[m - 1] + vals[m]) / 2;
+  }
+
+  // Agrégats holdings : moyenne pondérée des perfs/quality + médianes
+  // pour les métriques fondamentales (revenue/fcf). Calé sur la même liste
+  // de métriques que sector-comparator.js.
+  function computeHoldingsAggs(matchedRows) {
+    const matched = matchedRows.filter(r => r.stock);
+    const totalW = matchedRows.reduce((s, r) => s + (Number(r.h.w) || 0), 0);
+    const matchedW = matched.reduce((s, r) => s + (Number(r.h.w) || 0), 0);
+    return {
+      coverage: matched.length,
+      total: matchedRows.length,
+      weightCovered: totalW > 0 ? matchedW / totalW : 0,
+      perf_ytd:       _weightedAvg(matchedRows, s => s.perf_ytd),
+      perf_1y:        _weightedAvg(matchedRows, s => s.perf_1y),
+      perf_3y:        _weightedAvg(matchedRows, s => s.perf_3y),
+      quality:        _weightedAvg(matchedRows, s => s.quality_raw_score),
+      buffett:        _weightedAvg(matchedRows, s => s.buffett_score),
+      revenue_growth: _median(matchedRows, s => s.revenue_growth_3y),
+      fcf_yield:      _median(matchedRows, s => s.fcf_yield),
+      div_yield:      _weightedAvg(matchedRows, s => s.dividend_yield),
+      beta:           _weightedAvg(matchedRows, s => s.beta),
+    };
+  }
+
   function matchHolding(h) {
     const idx = stockShared.index;
     if (!idx) return null;
@@ -223,9 +268,13 @@
         loadStockIndex().then(() => this.openModal());
         return;
       }
-      const etfs = [...this.selected.values()];
+      // On clone et on attache les agrégats holdings à chaque ETF
+      const etfs = [...this.selected.values()].map(e => {
+        const matched = getHoldings(e).map(h => ({ h, stock: matchHolding(h) }));
+        return { ...e, _matched: matched, _agg: computeHoldingsAggs(matched) };
+      });
 
-      // Lignes comparées (UNIQUEMENT métriques intrinsèques de l'ETF)
+      // Lignes comparées : métriques ETF intrinsèques + agrégats holdings
       const rows = [
         { section: 'IDENTITÉ' },
         { label: 'Géo',     get: e => e.geo_bucket || '–', neutral: true },
@@ -259,6 +308,38 @@
         { section: 'RENDEMENT' },
         { label: 'Yield TTM', get: e => num(e.yield_ttm ?? e.dividend_yield),
           format: v => fmtRatioPct(v), higherIsBetter: true },
+
+        // ── Agrégats calculés depuis les holdings matchés (top 10) ─────────
+        { section: 'AGRÉGATS HOLDINGS (pondérés)' },
+        { label: 'Perf YTD pondérée', get: e => e._agg?.perf_ytd,
+          format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–',
+          higherIsBetter: true },
+        { label: 'Perf 1Y pondérée', get: e => e._agg?.perf_1y,
+          format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–',
+          higherIsBetter: true },
+        { label: 'Perf 3Y pondérée', get: e => e._agg?.perf_3y,
+          format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–',
+          higherIsBetter: true },
+        { label: 'Quality raw (pondéré)', get: e => e._agg?.quality,
+          format: v => v != null ? Math.round(v).toString() : '–',
+          higherIsBetter: true },
+        { label: 'Buffett (pondéré)', get: e => e._agg?.buffett,
+          format: v => v != null ? Math.round(v).toString() : '–',
+          higherIsBetter: true },
+        { label: 'Revenue growth 3Y (méd)', get: e => e._agg?.revenue_growth,
+          format: v => v != null ? v.toFixed(1) + '%' : '–',
+          higherIsBetter: true },
+        { label: 'FCF yield (méd)', get: e => e._agg?.fcf_yield,
+          format: v => v != null ? v.toFixed(1) + '%' : '–',
+          higherIsBetter: true },
+        { label: 'Div yield (pondéré)', get: e => e._agg?.div_yield,
+          format: v => v != null ? v.toFixed(2) + '%' : '–',
+          higherIsBetter: true },
+        { label: 'Beta (pondéré)', get: e => e._agg?.beta,
+          format: v => v != null ? v.toFixed(2) : '–',
+          neutral: true },
+        { label: 'Couverture stocks', get: e => e._agg ? `${e._agg.coverage}/${e._agg.total}` : '–',
+          neutral: true },
       ];
 
       // Header
@@ -312,10 +393,8 @@
       const holdingsHeaderRow = `
         <tr><td colspan="${etfs.length + 1}" style="padding:18px 14px 6px 14px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#00FF87;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);">TOP 10 HOLDINGS</td></tr>
       `;
-      // Enrichit chaque holding avec sa stock matchée + perfs
-      const allHoldings = etfs.map(e => getHoldings(e).map(h => ({
-        h, stock: matchHolding(h),
-      })));
+      // Réutilise les holdings matchés déjà calculés pour les agrégats
+      const allHoldings = etfs.map(e => e._matched || []);
       const maxHoldings = Math.max(0, ...allHoldings.map(h => h.length));
       // Couverture = nb holdings matchés / total, par ETF
       const coverages = allHoldings.map(hs => {
