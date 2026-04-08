@@ -1218,33 +1218,110 @@
         return e.sector || e.sector_name || '';
       }
 
-      // ---------- Patterns Géo / Secteur (filtrage par pills) ----------
-      const GEO_PATTERNS = {
-        us:       /\b(us|usa|u\.s\.|s&p|sp\s?500|nasdaq|russell|dow|america|american)\b/i,
-        europe:   /\b(europe|european|euro|eurozone|emu|stoxx|dax|cac|smi|aex|ibex|footsie|ftse\s?100|united\s?kingdom|britain|british|\buk\b|german|france|french|swiss|switzerland|italy|italian|spain|spanish|netherlands|dutch|nordic|sweden|norway|finland|ireland|irish|belgium|austria)\b/i,
-        asia:     /\b(asia|japan|china|korea|taiwan|india|pacific|nikkei|hang\s?seng|topix)\b/i,
-        emerging: /\b(emerging|em\b|frontier|brazil|mexico|turkey|latin)\b/i,
-        world:    /\b(world|global|msci\s?world|acwi|developed|all[-\s]?country)\b/i,
+      // ---------- Filtrage Géo / Secteur basé sur les champs provider ----------
+      // country_top / country_top5 / sector_top / sector_top5 sont déjà extraits
+      // par le pipeline daily-metrics — bien plus fiable que des regex sur le nom.
+
+      const COUNTRY_TO_REGION = {
+        // US
+        'united states':'us','usa':'us','u.s.':'us','u.s.a.':'us',
+        // Europe développée
+        'france':'europe','germany':'europe','united kingdom':'europe','great britain':'europe',
+        'switzerland':'europe','netherlands':'europe','italy':'europe','spain':'europe',
+        'sweden':'europe','belgium':'europe','ireland':'europe','norway':'europe',
+        'denmark':'europe','finland':'europe','austria':'europe','portugal':'europe',
+        'luxembourg':'europe','iceland':'europe','greece':'europe',
+        // Asie développée
+        'japan':'asia','hong kong':'asia','singapore':'asia','south korea':'asia',
+        'korea':'asia','taiwan':'asia','australia':'asia','new zealand':'asia',
+        // Émergents
+        'china':'emerging','india':'emerging','indonesia':'emerging','thailand':'emerging',
+        'malaysia':'emerging','philippines':'emerging','vietnam':'emerging','pakistan':'emerging',
+        'brazil':'emerging','mexico':'emerging','chile':'emerging','colombia':'emerging',
+        'peru':'emerging','argentina':'emerging','turkey':'emerging','south africa':'emerging',
+        'russia':'emerging','egypt':'emerging','saudi arabia':'emerging','uae':'emerging',
+        'qatar':'emerging','poland':'emerging','hungary':'emerging','czech republic':'emerging',
       };
-      const SECTOR_PATTERNS = {
-        tech:       /\b(tech|technology|semiconductor|software|internet|cyber|ai\b|cloud|digital)\b/i,
-        health:     /\b(health|biotech|pharma|medical|life\s?science)\b/i,
-        finance:    /\b(financ|bank|insur)\b/i,
-        energy:     /\b(energy|oil|gas|petroleum)\b/i,
-        reits:      /\b(reit|real\s?estate|property)\b/i,
-        consumer:   /\b(consumer|retail|staples|discretionary)\b/i,
-        industrial: /\b(industr|aerospace|defense|transport)\b/i,
-        metals:     /\b(gold|silver|copper|uranium|mining|miner|metal|platinum)\b/i,
+
+      // Mapping secteur (Morningstar/GICS) → clé de pill
+      const SECTOR_TO_KEY = {
+        'technology':'tech',
+        'healthcare':'health','health care':'health',
+        'financial services':'finance','financials':'finance','financial':'finance',
+        'energy':'energy',
+        'real estate':'reits',
+        'consumer cyclical':'consumer','consumer defensive':'consumer',
+        'consumer discretionary':'consumer','consumer staples':'consumer',
+        'industrials':'industrial','industrial':'industrial',
+        'basic materials':'metals','materials':'metals',
       };
+
+      // Fallback regex sur le nom pour les ETF où country_top/sector_top sont vides
+      // (or, large indices broad-market…)
+      const NAME_FALLBACK_GEO = {
+        us:       /\b(s&p\s?500|sp\s?500|nasdaq|russell|dow\s?jones)\b/i,
+        europe:   /\b(stoxx|dax|cac|smi|ibex|aex|ftse\s?(100|250)|euro\s?stoxx|msci\s?europe|eurozone)\b/i,
+        asia:     /\b(nikkei|topix|hang\s?seng|kospi|asia\s?pacific|msci\s?japan)\b/i,
+        emerging: /\b(emerging|em\b|frontier|msci\s?em|latin\s?america)\b/i,
+        world:    /\b(world|global|acwi|all[-\s]?country|developed\s?markets|msci\s?world)\b/i,
+      };
+      const NAME_FALLBACK_SECTOR = {
+        metals: /\b(gold|silver|copper|uranium|platinum|palladium|mining|miner|precious\s?metal)\b/i,
+        tech:   /\b(semiconductor|software|cybersecurity|cloud|ai\b|robotics|fintech)\b/i,
+        health: /\b(biotech|pharma|medical|genomics)\b/i,
+        energy: /\b(oil|gas|petroleum|renewable|solar|wind\s?energy|clean\s?energy)\b/i,
+        reits:  /\b(reit|real\s?estate)\b/i,
+      };
+
+      function getCountriesList(e){
+        const out = [];
+        if (e.country_top) out.push(String(e.country_top).toLowerCase().trim());
+        if (e.country_top5){
+          try {
+            const arr = typeof e.country_top5 === 'string' ? JSON.parse(e.country_top5) : e.country_top5;
+            if (Array.isArray(arr)) arr.forEach(x => { if (x && x.c) out.push(String(x.c).toLowerCase().trim()); });
+          } catch(_){}
+        }
+        return out;
+      }
+      function getSectorsList(e){
+        const out = [];
+        if (e.sector_top) out.push(String(e.sector_top).toLowerCase().trim());
+        if (e.sector_top5){
+          try {
+            const arr = typeof e.sector_top5 === 'string' ? JSON.parse(e.sector_top5) : e.sector_top5;
+            if (Array.isArray(arr)) arr.forEach(x => { if (x && x.s) out.push(String(x.s).toLowerCase().trim()); });
+          } catch(_){}
+        }
+        return out;
+      }
+
       function matchesGeoPill(e, key){
         if (!key || key === 'all') return true;
-        const hay = `${getName(e)||''} ${getCountry(e)||''} ${getSectorMain(e)||''} ${getFundType(e)||''}`;
-        return GEO_PATTERNS[key]?.test(hay);
+        const countries = getCountriesList(e);
+        for (const c of countries){
+          if (COUNTRY_TO_REGION[c] === key) return true;
+        }
+        if (key === 'world'){
+          if (countries.length >= 3) return true;
+          if (NAME_FALLBACK_GEO.world.test(String(getName(e)||''))) return true;
+        }
+        // Fallback nom uniquement si on n'a aucune info pays
+        if (countries.length === 0){
+          return NAME_FALLBACK_GEO[key]?.test(String(getName(e)||'')) || false;
+        }
+        return false;
       }
+
       function matchesSectorPill(e, key){
         if (!key || key === 'all') return true;
-        const hay = `${getName(e)||''} ${getSectorMain(e)||''} ${getFundType(e)||''}`;
-        return SECTOR_PATTERNS[key]?.test(hay);
+        const sectors = getSectorsList(e);
+        for (const s of sectors){
+          if (SECTOR_TO_KEY[s] === key) return true;
+        }
+        // Fallback nom (or, biotech, semis…) — toujours appliqué car certains
+        // ETF thématiques n'ont pas sector_top renseigné
+        return NAME_FALLBACK_SECTOR[key]?.test(String(getName(e)||'')) || false;
       }
 
       // ---------- État ----------
