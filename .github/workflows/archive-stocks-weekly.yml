@@ -1,0 +1,43 @@
+name: Archive stocks data (weekly)
+
+on:
+  schedule:
+    # Vendredi 22h UTC = apres cloture US
+    - cron: '0 22 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: archive-stocks
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dated archive folder
+        run: |
+          DATE=$(date -u +'%Y-%m-%d')
+          mkdir -p "data/history/$DATE"
+          cp data/stocks_us.json     "data/history/$DATE/" || echo "stocks_us.json missing"
+          cp data/stocks_europe.json "data/history/$DATE/" || echo "stocks_europe.json missing"
+          cp data/stocks_asia.json   "data/history/$DATE/" || echo "stocks_asia.json missing"
+          cp data/tops_overview.json "data/history/$DATE/" || echo "tops_overview.json missing"
+          cp data/global_top_performers.json "data/history/$DATE/" || echo "global_top_performers.json missing"
+          ls -lh "data/history/$DATE"
+
+      - name: Commit archive
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/history/
+          if git diff --staged --quiet; then
+            echo "Nothing to archive"
+          else
+            git commit -m "archive: weekly snapshot $(date -u +'%Y-%m-%d')"
+            git push
+          fi
