@@ -326,6 +326,29 @@
             color: #9ca3af;
             line-height: 1.55;
         }
+        .use-case-example {
+            margin-top: 14px;
+            padding: 14px 16px;
+            background: rgba(0, 255, 135, 0.08);
+            border: 1px dashed rgba(0, 255, 135, 0.45);
+            border-radius: 10px;
+            text-align: center;
+        }
+        .use-case-example-label {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #00FF87;
+            margin-bottom: 6px;
+        }
+        .use-case-example-body {
+            font-size: 0.85rem;
+            color: #e5e7eb;
+            line-height: 1.6;
+        }
+        .use-case-example-body strong { color: #00FF87; }
 
         /* Important info highlight */
         .important-info {
@@ -1554,6 +1577,7 @@
                     { emoji: '💼', title: 'Jeune actif (10 ans devant soi)', desc: 'Investit 100–300 €/mois en ETF Monde éligibles PEA pour faire fructifier son épargne sans impôt sur le revenu.' },
                     { emoji: '🏖️', title: 'Préparer un projet à 5–10 ans', desc: 'Voyage, apport immobilier, retraite anticipée : profite des plus-values nettes d\'IR après 5 ans.' }
                 ],
+                useCasesExample: 'Tu verses <strong>200 €/mois</strong> sur un ETF Monde éligible PEA pendant <strong>20 ans</strong> (rendement net 6 %/an). À l\'arrivée : ~<strong>92 000 €</strong> dont ~44 000 € de gains. <strong>0 € d\'impôt sur le revenu</strong> à la sortie (vs ~5 600 € de PFU sur un CTO).',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1606,6 +1630,7 @@
         { emoji: '🎒', title: 'Premier projet d\'étudiant', desc: 'Permis, voyage, premier ordi : épargne disponible à tout moment, sans risque, sans frais.' },
         { emoji: '🏦', title: 'Apprendre à épargner', desc: 'Outil pédagogique pour comprendre les intérêts capitalisés avant d\'ouvrir un Livret A ou un PEA.' }
     ],
+    useCasesExample: 'Tu déposes <strong>1 600 €</strong> (le plafond) à <strong>3 %/an</strong> pendant 5 ans → ~<strong>254 € de gains</strong> totalement nets d\'impôt. Soit <strong>1 854 €</strong> à 18 ans, prêts à basculer sur un Livret A ou un PEA.',
     sections: [
         {
             title: 'Points forts',
@@ -1668,6 +1693,7 @@
                     { emoji: '👴', title: 'Compléter sa retraite', desc: 'Rachats partiels programmés après 8 ans avec abattement annuel de 4 600 € (9 200 € en couple).' },
                     { emoji: '🛡️', title: 'Épargne de sécurité long terme', desc: 'Fonds € à capital garanti pour mettre à l\'abri une partie de son patrimoine sans le bloquer.' }
                 ],
+                useCasesExample: 'Tu verses <strong>50 000 €</strong> à 30 ans, mix 50 % fonds €/50 % UC à <strong>3,5 %/an</strong> moyens. À 50 ans : ~<strong>99 500 €</strong>. Tu rachètes 8 000 € : <strong>0 € d\'IR</strong> grâce à l\'abattement annuel de 4 600 € (9 200 € en couple), uniquement 17,2 % de PS sur la part de gains.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1719,6 +1745,7 @@
                     { emoji: '💰', title: 'Plafond PEA atteint', desc: 'Continuer à investir en bourse au-delà des 150 k€ du PEA, sans limite de versement.' },
                     { emoji: '🪙', title: 'Diversifier hors actions', desc: 'Accéder aux obligations, ETF thématiques, matières premières ou cryptos via un seul compte.' }
                 ],
+                useCasesExample: 'Tu places <strong>10 000 €</strong> en actions US à <strong>7 %/an</strong> pendant 10 ans → ~<strong>19 670 €</strong> brut. Après PFU 31,4 % sur les 9 670 € de gains : ~<strong>16 630 € net</strong>. Pour la même somme en PEA, tu garderais ~18 100 € (mais sans accès aux US).',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1769,6 +1796,7 @@
                     { emoji: '👴', title: 'Préparer sa retraite', desc: 'Capital ou rente disponibles à la retraite, avec option de sortie en capital à 100 %.' },
                     { emoji: '🏠', title: 'Achat de résidence principale', desc: 'Cas de déblocage anticipé autorisé : utiliser le PER pour son apport au moment de l\'achat.' }
                 ],
+                useCasesExample: 'TMI <strong>30 %</strong>, tu verses <strong>5 000 €</strong> sur ton PER → tu récupères <strong>1 500 € d\'impôt</strong> dès l\'année suivante. Coût réel du versement : seulement <strong>3 500 €</strong>. À TMI 41 %, l\'économie monte à 2 050 €.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1834,6 +1862,7 @@
                     { emoji: '💵', title: 'Revenus complémentaires réguliers', desc: 'Toucher des loyers trimestriels (~4–5 %/an) sans acheter un bien entier.' },
                     { emoji: '📦', title: 'Démarrer petit', desc: 'Entrée possible dès quelques centaines d\'euros, contrairement à l\'achat d\'un appartement.' }
                 ],
+                useCasesExample: 'Tu achètes pour <strong>20 000 €</strong> de parts de SCPI à <strong>4,5 %/an</strong> de rendement → <strong>~900 €/an</strong> de loyers (~75 €/mois) versés sans avoir à gérer de locataires. Sur 20 ans, ~18 000 € de loyers cumulés + revalorisation potentielle des parts.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1885,6 +1914,7 @@
                     { emoji: '🎯', title: 'Projet à court terme', desc: 'Cadeau, vacances, achat de l\'année : zéro risque, zéro impôt, retrait quand on veut.' },
                     { emoji: '🚪', title: '1ʳᵉ étape avant d\'investir', desc: 'À ouvrir en premier, avant tout placement risqué (PEA, AV en UC, crypto…).' }
                 ],
+                useCasesExample: 'Tu places <strong>10 000 €</strong> à <strong>1,5 %/an</strong> → <strong>150 €/an</strong> totalement nets d\'impôt. Capital garanti par l\'État, virement vers ton compte courant en 24 h. Plafond : 22 950 €.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1935,6 +1965,7 @@
                     { emoji: '🌱', title: 'Soutenir l\'économie verte', desc: 'L\'épargne finance la transition écologique et l\'économie sociale et solidaire.' },
                     { emoji: '💳', title: 'Couplé à une carte bancaire', desc: 'Certaines banques permettent un débit direct sur le LDDS pour gérer ses paiements quotidiens.' }
                 ],
+                useCasesExample: 'Livret A déjà au plafond ? Tu places <strong>12 000 €</strong> (plafond LDDS) à <strong>1,5 %/an</strong> → <strong>180 €/an</strong> de plus, totalement nets. Cumulé au Livret A, tu peux mettre ~35 000 € à l\'abri sans aucun impôt.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -1985,6 +2016,7 @@
                     { emoji: '🛒', title: 'Protéger son pouvoir d\'achat', desc: 'Taux indexé sur l\'inflation : épargne préservée même quand les prix montent.' },
                     { emoji: '👵', title: 'Retraités à petite pension', desc: 'Souvent éligibles : un complément de revenu sans impôt ni paperasse.' }
                 ],
+                useCasesExample: 'Tu remplis le LEP au plafond <strong>10 000 €</strong> à <strong>2,5 %/an</strong> → <strong>250 €/an</strong> nets, soit <strong>~100 € de plus</strong> qu\'un Livret A pour la même somme. Sur 5 ans : ~1 314 € de gains, zéro impôt.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2035,6 +2067,7 @@
                     { emoji: '🌐', title: 'Diversification non corrélée', desc: 'Exposition à un actif différent des actions et obligations classiques.' },
                     { emoji: '🚫', title: 'À éviter si…', desc: 'Pas d\'épargne de précaution, dettes en cours, ou besoin de l\'argent à court terme.' }
                 ],
+                useCasesExample: 'Tu mets <strong>500 €</strong> (≈ 1 % d\'un patrimoine de 50 k€) en Bitcoin. <strong>Scénario haussier</strong> : ×3 → 1 500 € (+1 000 €). <strong>Scénario baissier</strong> : ÷2 → 250 € (–250 €). À ne mettre que ce que tu acceptes de perdre intégralement.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2085,6 +2118,7 @@
                     { emoji: '🇫🇷', title: 'Soutenir les PME françaises', desc: 'Financer des entreprises de taille intermédiaire et PME européennes via des fonds dédiés.' },
                     { emoji: '🎯', title: 'Diversifier hors grandes capi', desc: 'Compléter un ETF World par une exposition aux petites et moyennes capitalisations.' }
                 ],
+                useCasesExample: 'PEA classique plein à 150 k€ ? Tu ouvres un PEA-PME et verses <strong>50 000 €</strong> sur des fonds small/mid caps européens à <strong>6 %/an</strong> sur 10 ans → ~<strong>89 500 €</strong>, soit ~39 500 € de gains <strong>0 € d\'IR</strong> après 5 ans.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2136,6 +2170,7 @@
                     { emoji: '🔬', title: 'Soutenir l\'innovation française', desc: 'Financer des start-ups et PME innovantes, en acceptant le risque de perte en capital.' },
                     { emoji: '⏳', title: 'Argent dont on n\'a pas besoin', desc: 'Blocage 5–10 ans, liquidité quasi nulle : à n\'utiliser qu\'avec une petite part de son patrimoine.' }
                 ],
+                useCasesExample: 'Tu verses <strong>10 000 €</strong> dans un FCPI. Réduction d\'IR immédiate de <strong>18 %</strong> = <strong>1 800 €</strong> récupérés l\'année suivante. Argent bloqué ~8 ans, valeur de sortie incertaine (peut être 7 000 € comme 13 000 €).',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2188,6 +2223,7 @@
                     { emoji: '🌱', title: 'Investir dans la transition', desc: 'Univers d\'ETF orientés climat, énergies propres et entreprises bas-carbone éligibles.' },
                     { emoji: '🎁', title: 'Épargne pour les études', desc: 'Capital prêt à débloquer pour les études supérieures ou le premier logement de l\'enfant.' }
                 ],
+                useCasesExample: 'Tu verses <strong>100 €/mois</strong> sur le PEAC de ton enfant de sa naissance à ses 18 ans (rendement net ~5 %/an) → ~<strong>34 900 €</strong> dont ~13 300 € de gains, <strong>totalement nets d\'impôt</strong>. De quoi financer ses études ou son premier appartement.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2243,6 +2279,7 @@
                     { emoji: '🏦', title: 'Droit à un prêt épargne logement', desc: 'Après 4 ans, accès à un prêt immobilier à taux préférentiel encadré.' },
                     { emoji: '📅', title: 'Versements programmés', desc: 'Discipline d\'épargne avec un minimum de 540 €/an automatique.' }
                 ],
+                useCasesExample: 'Tu verses <strong>270 €/mois</strong> pendant <strong>4 ans</strong> sur ton PEL à <strong>1,75 %/an</strong> → ~<strong>13 450 €</strong> capitalisés + droit à un <strong>prêt immobilier</strong> jusqu\'à 92 000 € à taux préférentiel. Idéal pour préparer un apport sur projet identifié.',
                 sections: [
                     {
                         title: 'Rôle',
@@ -2390,6 +2427,7 @@
                     { emoji: '💧', title: 'Souplesse maximale', desc: 'Argent dispo à tout moment, sans pénalité, contrairement au PEL.' },
                     { emoji: '🏠', title: 'Mini-projet immobilier', desc: 'Travaux, garage, place de parking : utilisable pour de petits projets logement.' }
                 ],
+                useCasesExample: 'Tu places <strong>5 000 €</strong> sur le CEL à <strong>1,25 %/an</strong> → <strong>~63 €/an</strong> bruts. Plafond 15 300 €. L\'intérêt n\'est pas le rendement mais la <strong>souplesse</strong> + le cumul avec un PEL pour booster ses droits à prêt.',
                 sections: [
                     {
                         title: 'Rôle',
@@ -2473,6 +2511,7 @@
                     { emoji: '📊', title: 'Mix immobilier + financier', desc: 'Au moins 60 % d\'immobilier complété par des actions et obligations pour amortir les chocs.' },
                     { emoji: '🛏️', title: 'Investisseur passif', desc: 'Aucune gestion à faire, idéal pour qui veut un placement « set and forget ».' }
                 ],
+                useCasesExample: 'Tu places <strong>10 000 €</strong> sur un OPCI à <strong>3,5 %/an</strong> moyens → ~<strong>350 €/an</strong>, avec une volatilité plus faible qu\'une action et une liquidité bien meilleure qu\'une SCPI (rachat possible en quelques jours).',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2527,6 +2566,7 @@
                     { emoji: '💤', title: 'Garer son cash en attendant', desc: 'ETF monétaire pour rémunérer son cash à ~3 % en attendant d\'investir, sans risque significatif.' },
                     { emoji: '⚖️', title: 'Stabiliser un portefeuille', desc: '5–10 % en or pour amortir la volatilité d\'un portefeuille majoritairement en actions.' }
                 ],
+                useCasesExample: 'Tu places <strong>5 000 €</strong> en or physique en 2015 (~32 €/g). En 2025, le gramme vaut ~<strong>78 €</strong> → ton or vaut ~<strong>12 200 €</strong> (×2,4 sur 10 ans), sans aucun coupon mais avec une vraie protection en cas de crise.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2581,6 +2621,7 @@
                     { emoji: '💵', title: 'Revenus réguliers (coupons)', desc: 'Toucher des intérêts versés périodiquement, utile pour compléter ses revenus.' },
                     { emoji: '🪜', title: 'Échelonner les échéances', desc: 'Construire une « échelle » d\'obligations pour lisser le risque de taux.' }
                 ],
+                useCasesExample: 'Tu achètes <strong>10 000 €</strong> d\'obligations d\'État ou d\'ETF obligataire à <strong>3,5 %/an</strong> → <strong>350 €/an</strong> de coupons (≈ 29 €/mois). Sur 10 ans, ~3 500 € de revenus + capital remboursé à l\'échéance.',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2635,6 +2676,7 @@
                     { emoji: '💼', title: 'Placer participation / intéressement', desc: 'Loger ses primes dans le PEE pour les exonérer d\'impôt sur le revenu (hors PS).' },
                     { emoji: '🔓', title: 'Cas de déblocage anticipé', desc: 'Mariage, naissance du 3ᵉ enfant, achat RP, divorce… : sortie possible avant 5 ans.' }
                 ],
+                useCasesExample: 'Tu verses <strong>1 000 €</strong> sur ton PEE. L\'employeur abonde à <strong>100 %</strong> → <strong>2 000 €</strong> investis pour 1 000 € sortis de ta poche. C\'est <strong>+100 % de rendement immédiat</strong>, exonéré d\'IR (PS 9,7 % seulement).',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2729,6 +2771,7 @@
                     { emoji: '🧾', title: 'Économiser de l\'impôt', desc: 'Versements volontaires déductibles du revenu imposable, comme un PER individuel.' },
                     { emoji: '🏠', title: 'Achat de résidence principale', desc: 'Cas de déblocage anticipé autorisé pour financer son apport.' }
                 ],
+                useCasesExample: 'Tu verses <strong>3 000 €</strong> volontaires sur ton PERCOL, employeur abonde de <strong>1 500 €</strong>. TMI 30 % → tu récupères <strong>900 € d\'IR</strong>. Coût réel net : <strong>2 100 €</strong> pour <strong>4 500 €</strong> investis (×2,1 immédiat).',
                 sections: [
                     {
                         title: 'Points forts',
@@ -2818,6 +2861,7 @@
                     { emoji: '💰', title: 'Convertir des jours en épargne', desc: 'Transférer ses jours de CET vers le PEE/PERCOL pour les transformer en capital.' },
                     { emoji: '👶', title: 'Préparer un congé parental', desc: 'Maintenir un revenu pendant un congé parental ou une période à temps partiel.' }
                 ],
+                useCasesExample: 'Tu stockes <strong>20 jours</strong> de congés non pris, valorisés à <strong>200 €/jour</strong> bruts → <strong>4 000 €</strong> sur ton CET. Tu peux les transférer vers ton PEE/PERCOL pour bénéficier de l\'exonération d\'IR ou financer un congé sabbatique de plusieurs semaines.',
                 sections: [
                     {
                         title: 'À quoi ça sert ?',
@@ -3048,7 +3092,16 @@
                             </div>
                         `;
                     });
-                    content += `</div></div></div>`;
+                    content += `</div>`;
+                    if (placement.useCasesExample) {
+                        content += `
+                            <div class="use-case-example">
+                                <div class="use-case-example-label">💡 Exemple chiffré</div>
+                                <div class="use-case-example-body">${placement.useCasesExample}</div>
+                            </div>
+                        `;
+                    }
+                    content += `</div></div>`;
                 }
 
                 // Sections
