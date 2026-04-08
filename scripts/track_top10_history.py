@@ -25,63 +25,27 @@ from collections import defaultdict
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 HISTORY_FILE = os.path.join(DATA_DIR, 'top10_history.json')
+PROFILES_CONFIG = os.path.join(DATA_DIR, 'profiles_config.json')
 HISTORY_DAYS_KEEP = 90  # Buffer for stability calc on 30 days
 
 
 # ============================================================================
-# Profile definitions (must match mc-module.js PRESETS exactly)
+# v9.2: Profiles loaded from data/profiles_config.json (single source of truth)
+# Shared with mc-module.js (frontend) — eliminates desync risk.
 # ============================================================================
-PROFILES = {
-    'defensif': {
-        'weights': {
-            'quality_score': 0.25, 'volatility_3y': 0.20, 'max_drawdown_3y': 0.20,
-            'dividend_yield_reg': 0.15, 'payout_ratio': 0.10, 'perf_3y': 0.10,
-        }
-    },
-    'rendement': {
-        'weights': {
-            'dividend_yield_reg': 0.30, 'payout_ratio': 0.20, 'quality_score': 0.15,
-            'max_drawdown_3y': 0.15, 'volatility_3y': 0.10, 'perf_1y': 0.10,
-        }
-    },
-    'agressif': {
-        'weights': {
-            'ytd': 0.25, 'perf_1y': 0.20, 'perf_3y': 0.20,
-            'eps_surprise': 0.20, 'max_drawdown_3y': 0.10, 'volatility_3y': 0.05,
-        }
-    },
-    'croissance': {
-        'weights': {
-            'perf_3y': 0.25, 'quality_score': 0.20, 'eps_surprise': 0.20,
-            'perf_1y': 0.15, 'volatility_3y': 0.10, 'max_drawdown_3y': 0.10,
-        }
-    },
-    'value_dividend': {
-        'weights': {
-            'buffett_score': 0.30, 'quality_score': 0.25, 'dividend_yield_reg': 0.15,
-            'perf_3y': 0.15, 'max_drawdown_3y': 0.10, 'payout_ratio': 0.05,
-        }
-    },
-    'quality_premium': {
-        'weights': {
-            'quality_score': 0.25, 'buffett_score': 0.20, 'perf_3y': 0.15,
-            'max_drawdown_3y': 0.15, 'volatility_3y': 0.10, 'eps_surprise': 0.10,
-            'dividend_yield_reg': 0.05,
-        }
-    },
-    'momentum_trend': {
-        'weights': {
-            'perf_1y': 0.25, 'perf_3m': 0.20, 'perf_1m': 0.15,
-            'eps_surprise': 0.15, 'quality_score': 0.15, 'max_drawdown_3y': 0.10,
-        }
-    },
-    'low_volatility': {
-        'weights': {
-            'volatility_3y': 0.30, 'max_drawdown_3y': 0.25, 'quality_score': 0.20,
-            'dividend_yield_reg': 0.15, 'perf_3y': 0.10,
-        }
-    },
-}
+def load_profiles():
+    """Load profiles from JSON config. Returns (version, profiles_dict)."""
+    if not os.path.exists(PROFILES_CONFIG):
+        raise FileNotFoundError(
+            f"❌ {PROFILES_CONFIG} not found. "
+            f"Profiles config is required (v9.2+)."
+        )
+    with open(PROFILES_CONFIG) as f:
+        config = json.load(f)
+    version = config.get('version', 'unknown')
+    profiles = config.get('profiles', {})
+    print(f"📋 Loaded profiles config v{version} ({len(profiles)} profiles)")
+    return version, profiles
 
 # Direction: True = higher is better, False = lower is better
 DIRECTION = {
@@ -217,6 +181,13 @@ def compute_top10(stocks, weights):
 # Main
 # ============================================================================
 def main():
+    # v9.2: Load profiles from JSON config (single source of truth)
+    try:
+        version, profiles = load_profiles()
+    except Exception as e:
+        print(f"❌ Failed to load profiles config: {e}")
+        return 1
+
     # Load all stocks
     all_stocks = []
     for region_file, region in [('stocks_us.json', 'US'),
@@ -248,10 +219,15 @@ def main():
 
     # Compute Top 10 for each profile
     today = datetime.utcnow().strftime('%Y-%m-%d')
-    today_tops = {}
-    for profile_id, config in PROFILES.items():
-        top10 = compute_top10(all_stocks, config['weights'])
-        today_tops[profile_id] = top10
+    today_snapshot = {
+        '_profile_version': version,  # v9.2: version stamp on each snapshot
+    }
+    for profile_id, config in profiles.items():
+        weights = config.get('weights', {})
+        if not weights:
+            continue
+        top10 = compute_top10(all_stocks, weights)
+        today_snapshot[profile_id] = top10
         print(f"   {profile_id:18s} → {' '.join(top10[:5])}...")
 
     # Load existing history
@@ -263,8 +239,8 @@ def main():
         except Exception as e:
             print(f"⚠️  Could not load existing history: {e}, starting fresh")
 
-    # Add today's snapshot
-    history[today] = today_tops
+    # Add today's snapshot (overwrites if same day)
+    history[today] = today_snapshot
 
     # Prune old entries (keep last HISTORY_DAYS_KEEP days)
     cutoff = (datetime.utcnow() - timedelta(days=HISTORY_DAYS_KEEP)).strftime('%Y-%m-%d')
@@ -275,7 +251,13 @@ def main():
     with open(HISTORY_FILE, 'w') as f:
         json.dump(history, f, indent=2)
 
-    print(f"✅ History saved: {len(history)} days, file: {HISTORY_FILE}")
+    # Count snapshots matching current version
+    matching_version = sum(
+        1 for snap in history.values()
+        if isinstance(snap, dict) and snap.get('_profile_version') == version
+    )
+    print(f"✅ History saved: {len(history)} days total, {matching_version} match v{version}")
+    print(f"   File: {HISTORY_FILE}")
     return 0
 
 

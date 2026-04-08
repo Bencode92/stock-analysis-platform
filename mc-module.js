@@ -1811,9 +1811,45 @@
   }
 
   // RENDU v3.4 - Coloration améliorée pour payout
+  // ===== v9.2: PROFILES CONFIG (single source of truth) =====
+  // Loads data/profiles_config.json which is shared with track_top10_history.py.
+  // This eliminates the desync risk between frontend weights and backend tracker.
+  let _profilesVersion = null;
+  let _profilesConfig = null;
+
+  async function loadProfilesConfig() {
+    if (_profilesConfig !== null) return _profilesConfig;
+    try {
+      const resp = await fetch('data/profiles_config.json?' + Date.now());
+      if (!resp.ok) {
+        console.warn('📋 profiles_config.json not found, using hardcoded PRESETS');
+        _profilesConfig = {};
+        return _profilesConfig;
+      }
+      const config = await resp.json();
+      _profilesVersion = config.version || 'unknown';
+      _profilesConfig = config.profiles || {};
+
+      // Override hardcoded PRESETS weights with the JSON values (single source of truth)
+      let overridden = 0;
+      Object.keys(_profilesConfig).forEach(key => {
+        if (PRESETS[key] && _profilesConfig[key].weights) {
+          PRESETS[key].weights = { ..._profilesConfig[key].weights };
+          overridden++;
+        }
+      });
+      console.log(`📋 Profiles config v${_profilesVersion} loaded (${overridden}/${Object.keys(_profilesConfig).length} presets synced)`);
+    } catch (e) {
+      console.warn('📋 Failed to load profiles_config.json:', e.message);
+      _profilesConfig = {};
+    }
+    return _profilesConfig;
+  }
+
   // ===== v9.1: STABILITY SCORE =====
   // Loads top10_history.json and computes how many days each ticker
   // has been in the current profile's Top 10 over the last 30 days.
+  // v9.2: Filters snapshots by _profile_version (ignores stale data after profile changes)
   let _stabilityHistory = null;
   let _stabilityProfile = null;
 
@@ -1835,7 +1871,18 @@
     if (!_stabilityHistory || !_stabilityProfile) return null;
     const dates = Object.keys(_stabilityHistory).sort();
     if (dates.length === 0) return null;
-    const last30 = dates.slice(-30);
+
+    // v9.2: Filter to snapshots matching current profile version
+    const validDates = _profilesVersion
+      ? dates.filter(d => {
+          const snap = _stabilityHistory[d];
+          return snap && snap._profile_version === _profilesVersion;
+        })
+      : dates;
+
+    if (validDates.length === 0) return null;
+
+    const last30 = validDates.slice(-30);
     let count = 0;
     for (const date of last30) {
       const profileTops = _stabilityHistory[date]?.[_stabilityProfile];
@@ -1864,8 +1911,11 @@
       background:${color}22;color:${color};font-weight:600;margin-left:6px;">${icon} ${days}j</span>`;
   }
 
-  // Init: load history once at startup
-  loadStabilityHistory();
+  // v9.2: Init — load profiles config FIRST (sync PRESETS), then history
+  (async () => {
+    await loadProfilesConfig();
+    await loadStabilityHistory();
+  })();
 
   function render(entries){
     results.innerHTML='';

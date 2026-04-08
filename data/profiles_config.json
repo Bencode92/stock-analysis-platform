@@ -1,0 +1,111 @@
+{
+  "version": "9.2.0",
+  "updated_at": "2026-04-08",
+  "description": "Source unique de vérité pour les 8 profils du Top 10 multi-critères. Lu par mc-module.js (frontend) et track_top10_history.py (backend). Toute modification doit incrémenter le champ 'version' pour invalider l'historique de stabilité.",
+  "profiles": {
+    "defensif": {
+      "label": "🛡️ Défensif",
+      "shortLabel": "Défensif",
+      "description": "Préservation du capital, faible volatilité, qualité fondamentale",
+      "weights": {
+        "quality_score": 0.25,
+        "volatility_3y": 0.20,
+        "max_drawdown_3y": 0.20,
+        "dividend_yield_reg": 0.15,
+        "payout_ratio": 0.10,
+        "perf_3y": 0.10
+      }
+    },
+    "rendement": {
+      "label": "💰 Rendement",
+      "shortLabel": "Rendement",
+      "description": "Hauts dividendes soutenables avec garde-fou Quality (anti yield-trap)",
+      "weights": {
+        "dividend_yield_reg": 0.30,
+        "payout_ratio": 0.20,
+        "quality_score": 0.15,
+        "max_drawdown_3y": 0.15,
+        "volatility_3y": 0.10,
+        "perf_1y": 0.10
+      }
+    },
+    "agressif": {
+      "label": "🚀 Agressif",
+      "shortLabel": "Agressif",
+      "description": "Multi-horizons performance + EPS surprise, accepte la volatilité",
+      "weights": {
+        "ytd": 0.25,
+        "perf_1y": 0.20,
+        "perf_3y": 0.20,
+        "eps_surprise": 0.20,
+        "max_drawdown_3y": 0.10,
+        "volatility_3y": 0.05
+      }
+    },
+    "croissance": {
+      "label": "📈 Croissance",
+      "shortLabel": "Croissance",
+      "description": "Earnings durables + qualité (GARP / Lynch-style)",
+      "weights": {
+        "perf_3y": 0.25,
+        "quality_score": 0.20,
+        "eps_surprise": 0.20,
+        "perf_1y": 0.15,
+        "volatility_3y": 0.10,
+        "max_drawdown_3y": 0.10
+      }
+    },
+    "value_dividend": {
+      "label": "💎 Value",
+      "shortLabel": "Value",
+      "description": "Décote fondamentale + qualité (style Buffett/Graham)",
+      "weights": {
+        "buffett_score": 0.30,
+        "quality_score": 0.25,
+        "dividend_yield_reg": 0.15,
+        "perf_3y": 0.15,
+        "max_drawdown_3y": 0.10,
+        "payout_ratio": 0.05
+      }
+    },
+    "quality_premium": {
+      "label": "⭐ Premium",
+      "shortLabel": "Premium",
+      "description": "Multi-factor best-of (Quality + Value + EPS execution)",
+      "weights": {
+        "quality_score": 0.25,
+        "buffett_score": 0.20,
+        "perf_3y": 0.15,
+        "max_drawdown_3y": 0.15,
+        "volatility_3y": 0.10,
+        "eps_surprise": 0.10,
+        "dividend_yield_reg": 0.05
+      }
+    },
+    "momentum_trend": {
+      "label": "📊 Momentum",
+      "shortLabel": "Momentum",
+      "description": "Quality Momentum (AQR/Asness validé empiriquement)",
+      "weights": {
+        "perf_1y": 0.25,
+        "perf_3m": 0.20,
+        "perf_1m": 0.15,
+        "eps_surprise": 0.15,
+        "quality_score": 0.15,
+        "max_drawdown_3y": 0.10
+      }
+    },
+    "low_volatility": {
+      "label": "🧊 Low Vol",
+      "shortLabel": "Low Vol",
+      "description": "Stabilité maximale (pension funds, allocation défensive)",
+      "weights": {
+        "volatility_3y": 0.30,
+        "max_drawdown_3y": 0.25,
+        "quality_score": 0.20,
+        "dividend_yield_reg": 0.15,
+        "perf_3y": 0.10
+      }
+    }
+  }
+}
