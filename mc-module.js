@@ -1895,27 +1895,64 @@
       const profileTops = _stabilityHistory[date]?.[_stabilityProfile];
       if (profileTops && profileTops.includes(ticker)) count++;
     }
-    return { days: count, total: last30.length };
+
+    // v9.4: Directional trend on last 5 days (binary signal)
+    // ↗ = present in all 5 last days (consolidating)
+    // ↘ = present in 0 of 5 last days (exiting)
+    let trend = null;
+    if (last30.length >= 5) {
+      const last5 = last30.slice(-5);
+      const last5Count = last5.filter(d =>
+        _stabilityHistory[d]?.[_stabilityProfile]?.includes(ticker)
+      ).length;
+      if (last5Count === 5) trend = 'up';
+      else if (last5Count === 0) trend = 'down';
+    }
+
+    return { days: count, total: last30.length, trend };
   }
 
   function getStabilityBadge(stab) {
-    if (!stab || stab.total < 3) return '';
-    const { days, total } = stab;
+    if (!stab) return '';
+
+    // v9.4: "Historique en construction" message for first ~7 days
+    // Avoids showing meaningless badges when sample is too small
+    if (stab.total < 7) {
+      return `<span title="Historique en construction (${stab.total}/30 jours)"
+        style="display:inline-block;font-size:0.6rem;padding:2px 6px;border-radius:8px;
+        background:rgba(33,150,243,0.15);color:#64b5f6;font-weight:500;margin-left:6px;
+        font-style:italic;">📊 ${stab.total}/30j</span>`;
+    }
+
+    const { days, total, trend } = stab;
     let icon, color, label;
-    if (days >= total * 0.8) {
+
+    // v9.4: Stricter threshold "Très stable" — 85% instead of 80%
+    // (expert recommendation: 80% allows 6 absences, too lax for "very stable")
+    if (days >= total * 0.85) {
       icon = '⭐⭐⭐'; color = '#4caf50'; label = 'Très stable';
     } else if (days >= total * 0.5) {
       icon = '⭐⭐'; color = '#2196f3'; label = 'Stable';
-    } else if (days >= total * 0.15) {
-      icon = '⭐'; color = '#ff9800'; label = 'Volatile';
     } else if (days <= 2) {
       icon = '🆕'; color = '#00FF87'; label = 'Nouveau';
     } else {
       icon = '⭐'; color = '#ff9800'; label = 'Volatile';
     }
-    return `<span title="${label} : présent ${days}/${total} jours dans le Top 10"
+
+    // v9.4: Directional arrow (binary signal on last 5 days)
+    let arrow = '';
+    let arrowTitle = '';
+    if (trend === 'up') {
+      arrow = ' ↗';
+      arrowTitle = ' · en consolidation (5/5 derniers jours)';
+    } else if (trend === 'down') {
+      arrow = ' ↘';
+      arrowTitle = ' · en sortie (0/5 derniers jours)';
+    }
+
+    return `<span title="${label} : présent ${days}/${total} jours dans le Top 10${arrowTitle}"
       style="display:inline-block;font-size:0.65rem;padding:2px 6px;border-radius:8px;
-      background:${color}22;color:${color};font-weight:600;margin-left:6px;">${icon} ${days}j</span>`;
+      background:${color}22;color:${color};font-weight:600;margin-left:6px;">${icon} ${days}j${arrow}</span>`;
   }
 
   // v9.2: Init — load profiles config FIRST (sync PRESETS), then history
