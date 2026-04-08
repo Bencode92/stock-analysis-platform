@@ -1097,6 +1097,7 @@
 
     <!-- Script ETF amélioré -->
     <script src="etf-script.js"></script>
+    <script src="js/etf-comparator.js"></script>
     
     <!-- Scripts MC adaptés pour ETF -->
     <link rel="stylesheet" href="mc-styles.css">
@@ -1537,8 +1538,16 @@
             const row = document.createElement('tr');
             row.innerHTML = `
               <td class="py-2 px-3">
-                <div class="font-medium">${tickerHTML}</div>
-                <div class="text-xs opacity-70 mt-1">${nameHTML}</div>
+                <div class="flex items-start gap-2">
+                  <input type="checkbox" class="etf-compare-checkbox mt-1"
+                    data-ticker="${getTicker(etf)}"
+                    title="Ajouter au comparateur"
+                    style="accent-color:#00FF87;cursor:pointer;flex-shrink:0;" />
+                  <div>
+                    <div class="font-medium">${tickerHTML}</div>
+                    <div class="text-xs opacity-70 mt-1">${nameHTML}</div>
+                  </div>
+                </div>
               </td>
               <td class="text-right"><span class="ter-badge">${fmtRatioPct(etf.total_expense_ratio ?? etf.ter)}</span></td>
               <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
