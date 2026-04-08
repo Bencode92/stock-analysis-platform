@@ -94,7 +94,8 @@
     const raw = await fetchJSON(source.file);
     state.items = source.flatten(raw);
     disambiguateLabels(state.items);
-    computeCoverage(state.items);
+    computeAllItemAggs(state.items);   // remplace computeCoverage : calcule aussi item.agg
+    computeCompositeScores(state.items); // ajoute item.compositeScore (percentile rank)
   }
 
   // Si plusieurs items partagent le même shortLabel dans la même famille,
@@ -337,14 +338,82 @@
       perf_3y: weightedAvg(matched, r => r.stock.perf_3y),
       quality: weightedAvg(matched, r => r.stock.quality_raw_score),
       buffett: weightedAvg(matched, r => r.stock.buffett_score),
+      // Croissance et yield (signaux orthogonaux à quality)
+      revenue_growth: median(matched, r => r.stock.revenue_growth_3y),
+      eps_growth: median(matched, r => r.stock.eps_growth_5y),
+      div_yield: weightedAvg(matched, r => r.stock.dividend_yield),
+      fcf_yield: median(matched, r => r.stock.fcf_yield),
+      // Conservés pour la table détaillée (non scorés, non comptés dans le composite)
       roe: median(matched, r => r.stock.roe),
       roic: median(matched, r => r.stock.roic),
       net_margin: median(matched, r => r.stock.net_margin),
-      fcf_yield: median(matched, r => r.stock.fcf_yield),
-      vol_3y: weightedAvg(matched, r => r.stock.volatility_3y),
-      max_dd_3y: weightedAvg(matched, r => r.stock.max_drawdown_3y),
+      // Beta : descriptif uniquement
       beta: weightedAvg(matched, r => r.stock.beta),
     };
+  }
+
+  // ============================================================
+  // Score composite percentile (style liste.html / AutoComparator)
+  // ============================================================
+  // Pondérations Σ = 1.00. Pas de double-counting :
+  // - quality_raw + buffett sont des composites (incluent ROE/PE/D&E/FCF déjà)
+  // - On garde uniquement des signaux orthogonaux à côté
+  // - hib = "higher is better"
+  const SECTOR_METRICS = [
+    { key: 'perf_1y',        weight: 0.20, hib: true,  label: 'Perf 1Y' },
+    { key: 'perf_3y',        weight: 0.15, hib: true,  label: 'Perf 3Y' },
+    { key: 'quality',        weight: 0.25, hib: true,  label: 'Quality' },
+    { key: 'buffett',        weight: 0.20, hib: true,  label: 'Buffett' },
+    { key: 'revenue_growth', weight: 0.10, hib: true,  label: 'Revenue growth 3Y' },
+    { key: 'fcf_yield',      weight: 0.06, hib: true,  label: 'FCF yield' },
+    { key: 'div_yield',      weight: 0.04, hib: true,  label: 'Dividend yield' },
+  ];
+
+  // Pré-calcule les agrégats de chaque item au bootstrap (top 10 → agg).
+  // Stocke item.agg pour réutilisation par renderPanel et computeCompositeScores.
+  function computeAllItemAggs(items) {
+    items.forEach(it => {
+      const rows = buildRows(it.symbol, it.region);
+      it.agg = computeAggregates(rows);
+      it.coverage = it.agg.coverage;
+      it.totalHoldings = it.agg.total;
+      it.disabled = it.coverage < MIN_COVERAGE;
+    });
+  }
+
+  // Score percentile pondéré dans l'univers des items enabled.
+  // Identique à liste.html#computeScores : skip si <2 valeurs valides,
+  // renormalise les poids sur les métriques effectivement utilisées.
+  function computeCompositeScores(items) {
+    const enabled = items.filter(i => !i.disabled);
+    if (enabled.length < 2) {
+      enabled.forEach(it => { it.compositeScore = null; });
+      return;
+    }
+    const acc = enabled.map(() => ({ sum: 0, w: 0, used: 0 }));
+
+    SECTOR_METRICS.forEach(metric => {
+      const valid = enabled
+        .map((it, i) => ({ v: it.agg ? it.agg[metric.key] : null, i }))
+        .filter(x => x.v != null && Number.isFinite(x.v));
+      if (valid.length < 2) return; // skip métrique : ne pénalise pas
+      // tri du pire au meilleur selon hib
+      valid.sort((a, b) => metric.hib ? a.v - b.v : b.v - a.v);
+      // assignation de percentile 0-100
+      valid.forEach((x, rank) => {
+        const pct = (rank / (valid.length - 1)) * 100;
+        acc[x.i].sum += pct * metric.weight;
+        acc[x.i].w   += metric.weight;
+        acc[x.i].used++;
+      });
+    });
+
+    enabled.forEach((it, i) => {
+      it.compositeScore = acc[i].w > 0 ? Math.round(acc[i].sum / acc[i].w) : null;
+      it.compositeMetricsUsed = acc[i].used;
+    });
+    // Items disabled : pas de score
+    items.filter(i => i.disabled).forEach(it => { it.compositeScore = null; });
   }
 
   // ---------- Render ----------
@@ -480,6 +549,13 @@
           <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}${topWeightPct != null ? ` • Top 10 = ${topWeightPct.toFixed(1)}%` : ''}</div>
           ${warningBanner}
           ${realPerf}
+          <div class="sc-panel-composite">
+            <div class="sc-cs-num" style="${heat(sector.compositeScore, 30, 80)}">${sector.compositeScore != null ? sector.compositeScore : '—'}</div>
+            <div class="sc-cs-lbl">
+              <div class="sc-cs-title">Score composite</div>
+              <div class="sc-cs-sub">percentile dans l'univers · ${sector.compositeMetricsUsed || 0}/${SECTOR_METRICS.length} métriques</div>
+            </div>
+          </div>
           <div class="sc-panel-score">
             <span class="sc-score-num">${wins}</span>
             <span class="sc-score-lbl">victoire${wins > 1 ? 's' : ''} sur ${comparison.leftWins + comparison.rightWins} critères</span>
@@ -591,6 +667,11 @@
       .sc-rp-label { opacity: .55; text-transform: uppercase; letter-spacing: .04em; font-size: .65rem; font-weight: 600; }
       .sc-rp-item { opacity: .85; font-variant-numeric: tabular-nums; }
       .sc-rp-item b { font-weight: 700; margin-left: .25rem; }
+      .sc-panel-composite { margin-top: .65rem; display: flex; align-items: center; gap: .85rem; padding: .65rem .85rem; background: rgba(0,255,135,.04); border: 1px solid rgba(0,255,135,.18); border-radius: .5rem; }
+      .sc-cs-num { font-size: 2rem; font-weight: 800; line-height: 1; padding: .25rem .65rem; border-radius: .4rem; font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; color: #fff; }
+      .sc-cs-lbl { display: flex; flex-direction: column; gap: 1px; }
+      .sc-cs-title { font-size: .78rem; font-weight: 700; opacity: .9; }
+      .sc-cs-sub { font-size: .65rem; opacity: .55; }
       .sc-panel-score { margin-top: .5rem; display: flex; align-items: baseline; gap: .35rem; }
       .sc-score-num { font-size: 1.6rem; font-weight: 800; color: #00ff87; line-height: 1; font-variant-numeric: tabular-nums; }
       .sc-score-lbl { font-size: .72rem; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
