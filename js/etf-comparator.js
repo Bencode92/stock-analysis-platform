@@ -409,13 +409,17 @@
             <div style="font-size:0.55rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;margin-top:1px;">${sortedWins[i]} W · ${sortedLosses[i]} L</div>
           </div>`;
       }).join('');
+      // Wrapper avec le MÊME padding horizontal que le tableau pour aligner
+      // les colonnes du score avec les colonnes du tableau dessous.
       const stickyScoreBar = `
-        <div style="position:sticky;top:0;z-index:5;background:#0a1929;border-bottom:1px solid rgba(0,255,135,0.2);display:flex;align-items:stretch;">
-          <div style="min-width:170px;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;">
-            <div style="color:#00FF87;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;line-height:1.1;">Score global</div>
-            <div style="color:rgba(255,255,255,0.4);font-size:0.55rem;margin-top:2px;line-height:1.2;">${TOTAL} métriques</div>
+        <div style="position:sticky;top:0;z-index:5;background:#0a1929;border-bottom:1px solid rgba(0,255,135,0.2);padding:0 20px;">
+          <div style="display:flex;align-items:stretch;">
+            <div style="min-width:170px;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
+              <div style="color:#00FF87;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;line-height:1.1;">Score global</div>
+              <div style="color:rgba(255,255,255,0.4);font-size:0.55rem;margin-top:2px;line-height:1.2;">${TOTAL} métriques</div>
+            </div>
+            ${stickyScoreCells}
           </div>
-          ${stickyScoreCells}
         </div>
       `;
 
