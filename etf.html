@@ -1617,6 +1617,10 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fGeo = btn.dataset.geo;
+            // reset dropdowns Type/Secteur pour éviter AND incohérent
+            fFundType = ''; fSector = '';
+            const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
+            const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
             render();
           });
         });
@@ -1630,6 +1634,9 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fSectorPill = btn.dataset.sectorpill;
+            fFundType = ''; fSector = '';
+            const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
+            const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
             render();
           });
         });
