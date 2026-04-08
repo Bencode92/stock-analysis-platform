@@ -997,6 +997,29 @@
                       <button class="pill" data-scope="BONDS" aria-selected="false"><i class="fas fa-certificate"></i> Bonds</button>
                     </div>
 
+                    <!-- Filtres Géographie -->
+                    <div class="pills mb-3" role="tablist" aria-label="Géographie">
+                      <button class="pill active" data-geo="all" aria-selected="true">Tous</button>
+                      <button class="pill" data-geo="us" aria-selected="false">US</button>
+                      <button class="pill" data-geo="europe" aria-selected="false">Europe</button>
+                      <button class="pill" data-geo="asia" aria-selected="false">Asie</button>
+                      <button class="pill" data-geo="emerging" aria-selected="false">Émergents</button>
+                      <button class="pill" data-geo="world" aria-selected="false">Monde</button>
+                    </div>
+
+                    <!-- Filtres Secteur -->
+                    <div class="pills mb-3" role="tablist" aria-label="Secteur">
+                      <button class="pill active" data-sectorpill="all" aria-selected="true">Tous</button>
+                      <button class="pill" data-sectorpill="tech" aria-selected="false">Tech</button>
+                      <button class="pill" data-sectorpill="health" aria-selected="false">Santé</button>
+                      <button class="pill" data-sectorpill="finance" aria-selected="false">Finance</button>
+                      <button class="pill" data-sectorpill="energy" aria-selected="false">Énergie</button>
+                      <button class="pill" data-sectorpill="reits" aria-selected="false">REITs</button>
+                      <button class="pill" data-sectorpill="consumer" aria-selected="false">Conso</button>
+                      <button class="pill" data-sectorpill="industrial" aria-selected="false">Indus</button>
+                      <button class="pill" data-sectorpill="metals" aria-selected="false">Métaux</button>
+                    </div>
+
                     <!-- Sous-filtres -->
                     <div class="grid md:grid-cols-2 gap-3">
                       <div class="flex items-center gap-2">
@@ -1195,9 +1218,39 @@
         return e.sector || e.sector_name || '';
       }
 
+      // ---------- Patterns Géo / Secteur (filtrage par pills) ----------
+      const GEO_PATTERNS = {
+        us:       /\b(us|usa|u\.s\.|s&p|sp\s?500|nasdaq|russell|dow|america|american)\b/i,
+        europe:   /\b(europe|euro|stoxx|dax|cac|ftse|eurozone|emu|swiss|uk\b|german)\b/i,
+        asia:     /\b(asia|japan|china|korea|taiwan|india|pacific|nikkei|hang\s?seng|topix)\b/i,
+        emerging: /\b(emerging|em\b|frontier|brazil|mexico|turkey|latin)\b/i,
+        world:    /\b(world|global|msci\s?world|acwi|developed|all[-\s]?country)\b/i,
+      };
+      const SECTOR_PATTERNS = {
+        tech:       /\b(tech|technology|semiconductor|software|internet|cyber|ai\b|cloud|digital)\b/i,
+        health:     /\b(health|biotech|pharma|medical|life\s?science)\b/i,
+        finance:    /\b(financ|bank|insur)\b/i,
+        energy:     /\b(energy|oil|gas|petroleum)\b/i,
+        reits:      /\b(reit|real\s?estate|property)\b/i,
+        consumer:   /\b(consumer|retail|staples|discretionary)\b/i,
+        industrial: /\b(industr|aerospace|defense|transport)\b/i,
+        metals:     /\b(gold|silver|copper|uranium|mining|miner|metal|platinum)\b/i,
+      };
+      function matchesGeoPill(e, key){
+        if (!key || key === 'all') return true;
+        const hay = `${getName(e)||''} ${getCountry(e)||''} ${getSectorMain(e)||''} ${getFundType(e)||''}`;
+        return GEO_PATTERNS[key]?.test(hay);
+      }
+      function matchesSectorPill(e, key){
+        if (!key || key === 'all') return true;
+        const hay = `${getName(e)||''} ${getSectorMain(e)||''} ${getFundType(e)||''}`;
+        return SECTOR_PATTERNS[key]?.test(hay);
+      }
+
       // ---------- État ----------
       let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
       let fFundType = '', fSector = '';
+      let fGeo = 'all', fSectorPill = 'all';
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
@@ -1317,6 +1370,8 @@
         return list.filter(e => {
           if (fFundType) { const t=(getFundType(e)||'').toLowerCase(); if (t!==fFundType.toLowerCase()) return false; }
           if (fSector)   { const s=(getSectorMain(e)||'').toLowerCase(); if (s!==fSector.toLowerCase()) return false; }
+          if (!matchesGeoPill(e, fGeo)) return false;
+          if (!matchesSectorPill(e, fSectorPill)) return false;
           return true;
         });
       }
@@ -1465,12 +1520,38 @@
       // ---------- Interactions ----------
       function wireControls(){
         // portée
-        $$('#etf-az-controls .pill').forEach(btn => {
+        $$('#etf-az-controls .pill[data-scope]').forEach(btn => {
           btn.addEventListener('click', ()=>{
-            $$('#etf-az-controls .pill').forEach(b=>b.setAttribute('aria-selected','false'));
+            $$('#etf-az-controls .pill[data-scope]').forEach(b=>b.setAttribute('aria-selected','false'));
             btn.setAttribute('aria-selected','true');
             scope = btn.dataset.scope;
             populateDropdowns(takeScope(dataAll));
+            render();
+          });
+        });
+        // pills géographie
+        $$('#etf-az-controls .pill[data-geo]').forEach(btn => {
+          btn.addEventListener('click', ()=>{
+            $$('#etf-az-controls .pill[data-geo]').forEach(b=>{
+              b.classList.remove('active');
+              b.setAttribute('aria-selected','false');
+            });
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected','true');
+            fGeo = btn.dataset.geo;
+            render();
+          });
+        });
+        // pills secteur
+        $$('#etf-az-controls .pill[data-sectorpill]').forEach(btn => {
+          btn.addEventListener('click', ()=>{
+            $$('#etf-az-controls .pill[data-sectorpill]').forEach(b=>{
+              b.classList.remove('active');
+              b.setAttribute('aria-selected','false');
+            });
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected','true');
+            fSectorPill = btn.dataset.sectorpill;
             render();
           });
         });
