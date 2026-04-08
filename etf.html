@@ -748,6 +748,39 @@
         .clear-btn:hover{color:var(--accent-color)}
         /* surlignage des hits */
         .search-highlight{background:var(--accent-subtle);border-radius:4px;padding:0 2px}
+      /* ── Sous-pills (drill-down) — visuellement subordonnées ────────── */
+      .pills.sub-pills {
+        position: relative;
+        margin-left: 26px;
+        padding: 6px 10px 6px 20px;
+        background: linear-gradient(90deg, rgba(0,255,135,0.05), rgba(0,255,135,0.01) 60%);
+        border-left: 2px solid rgba(0,255,135,0.45);
+        border-radius: 0 8px 8px 0;
+        animation: subPillsIn .25s ease-out;
+      }
+      .pills.sub-pills::before {
+        content: "↳";
+        position: absolute;
+        left: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(0,255,135,0.55);
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+      .pills.sub-pills .pill {
+        font-size: 0.78rem;
+        padding: 5px 11px;
+        opacity: 0.92;
+      }
+      .pills.sub-pills .pill.active {
+        background: rgba(0,255,135,0.18);
+        border-color: rgba(0,255,135,0.55);
+      }
+      @keyframes subPillsIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
     </style>
 </head>
 <body class="dark">
@@ -1021,10 +1054,10 @@
                     </div>
 
                     <!-- Sous-pills géo (apparaît quand une région est sélectionnée) -->
-                    <div id="etf-geo-fine" class="pills mb-3" role="tablist" aria-label="Pays" style="display:none;"></div>
+                    <div id="etf-geo-fine" class="pills sub-pills mb-3" role="tablist" aria-label="Pays" style="display:none;"></div>
 
                     <!-- Sous-pills secteur (apparaît quand un secteur est sélectionné) -->
-                    <div id="etf-sector-fine" class="pills mb-3" role="tablist" aria-label="Sous-secteur" style="display:none;"></div>
+                    <div id="etf-sector-fine" class="pills sub-pills mb-3" role="tablist" aria-label="Sous-secteur" style="display:none;"></div>
 
                     <!-- Filtres Stratégie / Style -->
                     <div class="pills mb-3" role="tablist" aria-label="Stratégie">
@@ -1497,21 +1530,31 @@
         if (info && cnt) { info.classList.toggle('hidden', !q); cnt.textContent = filtered.length; }
         if (clr) clr.style.opacity = q ? '1' : '0';
         const pillFilterActive = (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all') || (fStrategy && fStrategy !== 'all') || (fGeoFine && fGeoFine !== 'all') || (fSectorFine && fSectorFine !== 'all');
-        if (q || pillFilterActive){
+        const filterActive = !!q || pillFilterActive;
+        if (filterActive){
           const allBtn = $$('#etf-az-tabs .region-tab').find(b => b.dataset.letter === 'all');
           if (allBtn){
             $$('#etf-az-tabs .region-tab').forEach(t => t.classList.remove('active'));
             allBtn.classList.add('active');
           }
-          $$('#etf-az-container .etf-letter').forEach(div => div.classList.remove('hidden'));
         }
-        
+
         if (lastUpdate) $('#etf-az-lastupdate').textContent = new Date(lastUpdate).toLocaleString('fr-FR');
 
         'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l => {
           const body = $(`#etf-az-body-${l}`); if (!body) return;
           body.innerHTML = '';
           const list = indexAZ[l] || [];
+
+          // Cache le bloc de la lettre s'il est vide ET qu'un filtre est actif
+          // (sinon on aurait 25 "Aucun ETF…" empilés sous la 1 ou 2 lettres
+          // qui ont un résultat)
+          const letterBlock = body.closest('.etf-letter');
+          if (filterActive && !list.length){
+            if (letterBlock) letterBlock.classList.add('hidden');
+            return;
+          }
+          if (filterActive && letterBlock) letterBlock.classList.remove('hidden');
 
           if (!list.length){
             const tr = document.createElement('tr');
