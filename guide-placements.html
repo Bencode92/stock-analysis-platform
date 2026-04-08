@@ -272,53 +272,59 @@
             margin-bottom: 8px;
         }
         .use-cases-title {
-            font-size: 0.95rem;
+            font-size: 1rem;
             font-weight: 700;
             color: #00FF87;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
             margin-bottom: 4px;
+            text-align: center;
         }
         .use-cases-subtitle {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: #9ca3af;
-            margin-bottom: 14px;
+            margin-bottom: 18px;
+            text-align: center;
         }
         .use-cases-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
+            gap: 12px;
         }
         .use-case-card {
             display: flex;
-            gap: 12px;
-            padding: 12px 14px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 10px;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 8px;
+            padding: 16px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 255, 135, 0.15);
+            border-radius: 12px;
             transition: all 0.2s ease;
         }
         .use-case-card:hover {
-            background: rgba(0, 255, 135, 0.05);
-            border-color: rgba(0, 255, 135, 0.25);
+            background: rgba(0, 255, 135, 0.07);
+            border-color: rgba(0, 255, 135, 0.4);
+            transform: translateY(-1px);
         }
         .use-case-emoji {
-            font-size: 1.6rem;
+            font-size: 2rem;
             line-height: 1;
-            flex-shrink: 0;
         }
-        .use-case-body { flex: 1; min-width: 0; }
+        .use-case-body { width: 100%; }
         .use-case-title {
-            font-weight: 600;
-            color: #e5e7eb;
-            font-size: 0.88rem;
-            margin-bottom: 2px;
+            font-weight: 700;
+            color: #f3f4f6;
+            font-size: 0.92rem;
+            margin-bottom: 4px;
         }
         .use-case-desc {
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             color: #9ca3af;
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
         /* Important info highlight */
