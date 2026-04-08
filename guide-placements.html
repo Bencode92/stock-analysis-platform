@@ -1738,6 +1738,71 @@
                     }
                 ]
             },
+            'contrat-capitalisation': {
+                title: 'Contrat de capitalisation',
+                subtitle: 'Le « cousin » de l\'assurance-vie',
+                icon: 'fas fa-file-contract',
+                color: 'blue',
+                profiles: ['prudent', 'equilibre', 'dynamique', 'retraite'],
+                summary: {
+                    horizon: '≥ 8 ans',
+                    fiscalite: 'Identique AV',
+                    transmission: 'Donation possible',
+                    ifi: 'Valeur nominale'
+                },
+                useCases: [
+                    { emoji: '🎁', title: 'Donner de son vivant', desc: 'Contrairement à l\'AV, le contrat peut être donné ou démembré sans perdre l\'antériorité fiscale ni les plus-values.' },
+                    { emoji: '🏛️', title: 'Optimiser l\'IFI', desc: 'Déclaré à sa valeur nominale (montant versé), pas à sa valeur de marché : les plus-values latentes échappent à l\'IFI.' },
+                    { emoji: '🏢', title: 'Personne morale (SCI, holding)', desc: 'Seul placement type AV accessible aux sociétés à l\'IS pour faire fructifier leur trésorerie.' },
+                    { emoji: '👨‍👩‍👧', title: 'Transmission organisée', desc: 'Permet une donation aux enfants/petits-enfants (avec abattements 100 k€ ou 31 865 €) tout en conservant l\'antériorité fiscale.' }
+                ],
+                useCasesExample: '<strong>Cas transmission 🎁</strong><br>Tu as <strong>200 000 €</strong> sur un contrat de capitalisation ouvert il y a 12 ans. Tu donnes le contrat en pleine propriété à ton enfant : il bénéficie de <strong>l\'abattement de 100 000 €</strong> (donation parent → enfant tous les 15 ans) → droits de donation calculés sur 100 000 € seulement.<br>→ Avantage clé : <strong>l\'enfant hérite de l\'antériorité fiscale</strong> (le contrat est toujours « > 8 ans »), donc rachats à fiscalité réduite immédiatement.<br><br><strong>Cas IFI 🏛️</strong><br>Tu as versé <strong>500 000 €</strong> il y a 15 ans, le contrat vaut aujourd\'hui <strong>900 000 €</strong>. Pour l\'IFI sur la part immobilière (SCPI logées dedans), seule la <strong>valeur nominale (500 000 €)</strong> est retenue, soit <strong>400 000 € de plus-values latentes hors IFI</strong>.',
+                sections: [
+                    {
+                        title: 'Points forts',
+                        icon: 'fas fa-check-circle',
+                        items: [
+                            '<span class="important-info">Fiscalité identique à l\'AV</span> : 7,5 % + PS après 8 ans, abattement 4 600 € / 9 200 €',
+                            '<span class="important-info">Donation possible</span> du vivant (pleine propriété ou démembrement) — impossible en AV',
+                            '<span class="important-info">Conservation de l\'antériorité fiscale</span> en cas de donation : le donataire récupère un contrat « > 8 ans »',
+                            '<span class="important-info">IFI à la valeur nominale</span> : seules les sommes versées comptent, pas les plus-values',
+                            '<span class="important-info">Accessible aux personnes morales</span> (sociétés à l\'IS, associations, holdings)',
+                            'Univers d\'investissement large : fonds €, UC, SCPI, ETF…'
+                        ]
+                    },
+                    {
+                        title: 'Risques et limites',
+                        icon: 'fas fa-exclamation-triangle',
+                        iconClass: 'warning',
+                        items: [
+                            '<span class="important-info">Pas d\'avantage successoral</span> : entre dans la succession (vs 152 500 €/bénéficiaire en AV)',
+                            'Frais souvent <span class="important-info">légèrement supérieurs</span> à l\'AV',
+                            'Moins distribué que l\'AV : <span class="important-info">offre plus restreinte</span>, comparer les contrats',
+                            'Société à l\'IS : imposition annuelle forfaitaire à l\'IS sur une base théorique (105 % du TME)'
+                        ],
+                        risk: 'low'
+                    },
+                    {
+                        title: 'Fiscalité',
+                        icon: 'fas fa-percentage',
+                        items: [
+                            '<span class="important-info">Personne physique</span> : strictement la même fiscalité que l\'AV (PFU avant 8 ans, 7,5 % + abattement après 8 ans)',
+                            '<span class="important-info">Donation</span> : droits selon barème classique (abattement 100 k€ enfant / 31 865 € petit-enfant), antériorité conservée',
+                            '<span class="important-info">IFI</span> : assiette = montant nominal versé, pas la valeur de marché',
+                            '<span class="important-info">Société à l\'IS</span> : taxation annuelle forfaitaire (105 % × TME × 0,3 × IS) puis régularisation au rachat'
+                        ]
+                    },
+                    {
+                        title: 'AV ou contrat de capi ?',
+                        icon: 'fas fa-info-circle',
+                        items: [
+                            '<span class="important-info">Choisis l\'AV</span> si l\'objectif principal est la <strong>transmission au décès</strong> (abattement 152 500 €/bénéficiaire)',
+                            '<span class="important-info">Choisis le contrat de capi</span> si tu veux <strong>donner de ton vivant</strong>, optimiser l\'<strong>IFI</strong>, ou loger la trésorerie d\'une <strong>société</strong>',
+                            '<span class="important-info">Les deux sont complémentaires</span> : beaucoup de patrimoines aisés combinent AV (transmission décès) + contrat de capi (donation vivant + IFI)'
+                        ]
+                    }
+                ]
+            },
             'cto': {
                 title: 'CTO',
                 subtitle: 'Compte-titres ordinaire',
