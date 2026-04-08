@@ -12,7 +12,7 @@
     <style>
         /* Variables personnalisées TradePulse */
         :root {
-            --drawer-width: 520px;
+            --drawer-width: 680px;
             --transition-drawer: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
@@ -74,31 +74,40 @@
         
         .drawer {
             position: fixed;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
+            top: 50%;
+            left: 50%;
+            width: calc(100% - 32px);
             max-width: var(--drawer-width);
+            max-height: 90vh;
             background: rgba(1, 22, 39, 0.98);
             backdrop-filter: blur(20px);
-            border-left: 1px solid rgba(0, 255, 135, 0.2);
-            transform: translateX(100%);
-            transition: var(--transition-drawer);
+            border: 1px solid rgba(0, 255, 135, 0.25);
+            border-radius: 16px;
+            transform: translate(-50%, -50%) scale(0.96);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
             z-index: 1001;
             overflow-y: auto;
             overflow-x: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 255, 135, 0.1);
         }
-        
+
         .drawer.active {
-            transform: translateX(0);
-            box-shadow: -20px 0 40px rgba(0, 0, 0, 0.3);
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
         }
-        
+
         /* Mobile fullscreen */
         @media (max-width: 640px) {
             .drawer {
+                width: 100%;
                 max-width: 100%;
-                border-left: none;
+                max-height: 100vh;
+                height: 100vh;
+                border-radius: 0;
+                border: none;
             }
         }
         
