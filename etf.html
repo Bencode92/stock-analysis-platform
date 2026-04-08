@@ -1043,24 +1043,6 @@
                       <button class="pill" data-strategy="inverse" aria-selected="false">Inverse</button>
                     </div>
 
-                    <!-- Sous-filtres -->
-                    <div class="grid md:grid-cols-2 gap-3">
-                      <div class="flex items-center gap-2">
-                        <label class="text-xs opacity-70 min-w-[110px]">Type de fonds</label>
-                        <select id="etf-az-fundtype" class="mini-select flex-1"
-                          style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
-                          <option value="">Tous</option>
-                        </select>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <label class="text-xs opacity-70 min-w-[110px]">Secteur</label>
-                        <select id="etf-az-sector" class="mini-select flex-1"
-                          style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 200, 255, 0.3); background: rgba(0, 255, 255, 0.05); font-size: .9rem; color: #fff;">
-                          <option value="">Tous</option>
-                        </select>
-                      </div>
-                    </div>
-
                     <!-- Barre de recherche (ETF A→Z) -->
                     <div class="search-container mt-3">
                       <div class="search-wrapper relative">
@@ -1359,7 +1341,6 @@
 
       // ---------- État ----------
       let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
-      let fFundType = '', fSector = '';
       let fGeo = 'all', fSectorPill = 'all', fStrategy = 'all';
       let fGeoFine = 'all', fSectorFine = 'all'; // drill-down (exposure exact)
       let dataAll = [];
@@ -1479,8 +1460,6 @@
       }
       function applySubfilters(list){
         return list.filter(e => {
-          if (fFundType) { const t=(getFundType(e)||'').toLowerCase(); if (t!==fFundType.toLowerCase()) return false; }
-          if (fSector)   { const s=(getSectorMain(e)||'').toLowerCase(); if (s!==fSector.toLowerCase()) return false; }
           if (!matchesGeoPill(e, fGeo)) return false;
           if (!matchesSectorPill(e, fSectorPill)) return false;
           if (!matchesStrategyPill(e, fStrategy)) return false;
@@ -1501,17 +1480,6 @@
         // Trier par ticker avec helper
         Object.keys(map).forEach(l => map[l].sort((a,b)=> String(getTicker(a)).localeCompare(String(getTicker(b)))));
         return map;
-      }
-
-      function populateDropdowns(list){
-        const fundtypes = uniqSorted(list.map(getFundType));
-        const sectors   = uniqSorted(list.map(getSectorMain));
-        const fSel = $('#etf-az-fundtype');
-        const sSel = $('#etf-az-sector');
-        if (fSel) fSel.innerHTML = `<option value="">Tous</option>` + fundtypes.map(v=>`<option value="${v}">${v}</option>`).join('');
-        if (sSel) sSel.innerHTML = `<option value="">Tous</option>` + sectors.map(v=>`<option value="${v}">${v}</option>`).join('');
-        if (fFundType && fundtypes.includes(fFundType)) fSel.value = fFundType; else fFundType = '';
-        if (fSector && sectors.includes(fSector)) sSel.value = fSector; else fSector = '';
       }
 
       // ---------- Render ----------
@@ -1704,7 +1672,6 @@
             $$('#etf-az-controls .pill[data-scope]').forEach(b=>b.setAttribute('aria-selected','false'));
             btn.setAttribute('aria-selected','true');
             scope = btn.dataset.scope;
-            populateDropdowns(takeScope(dataAll));
             render();
           });
         });
@@ -1718,11 +1685,7 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fGeo = btn.dataset.geo;
-            fGeoFine = 'all'; // reset drill-down quand on change de région
-            // reset dropdowns Type/Secteur pour éviter AND incohérent
-            fFundType = ''; fSector = '';
-            const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
-            const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
+            fGeoFine = 'all';
             renderGeoSubPills();
             render();
           });
@@ -1737,10 +1700,7 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fSectorPill = btn.dataset.sectorpill;
-            fSectorFine = 'all'; // reset drill-down quand on change de secteur
-            fFundType = ''; fSector = '';
-            const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
-            const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
+            fSectorFine = 'all';
             renderSectorSubPills();
             render();
           });
@@ -1755,16 +1715,11 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fStrategy = btn.dataset.strategy;
-            fFundType = ''; fSector = '';
-            const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
-            const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
             render();
           });
         });
-        // sous-filtres
-        $('#etf-az-fundtype')?.addEventListener('change', e=>{ fFundType = e.target.value || ''; render(); });
-        $('#etf-az-sector')?.addEventListener('change',  e=>{ fSector   = e.target.value || ''; render(); });
-        
+
+
         // recherche
         const searchInput = $('#etf-az-search');
         const clearBtn    = $('#etf-az-clear');
@@ -1802,7 +1757,6 @@
           if (!dataAll.length) throw new Error('Données vides');
 
           lastUpdate = Date.now();
-          populateDropdowns(takeScope(dataAll));
           render();
         } catch(err){
           console.error(err);
