@@ -628,6 +628,8 @@
       .sc-chips { display: flex; flex-direction: column; gap: .9rem; margin: 0 auto 1rem; max-width: 1100px; }
       .sc-family { background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); border-radius: .65rem; padding: .65rem .85rem .75rem; }
       .sc-family-head { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; opacity: .55; font-weight: 600; margin-bottom: .55rem; }
+      .sc-family-hint { text-transform: none; letter-spacing: 0; opacity: .55; font-weight: 400; }
+      .sc-chip-score { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; padding: 1px 6px; border-radius: 4px; font-size: .68rem; font-variant-numeric: tabular-nums; }
       .sc-family-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
       .sc-chip { position: relative; display: inline-flex; align-items: center; gap: .4rem; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: inherit; border-radius: .45rem; padding: .42rem .75rem; font-size: .78rem; cursor: pointer; transition: all .12s; text-align: left; }
       .sc-chip:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); transform: translateY(-1px); }
@@ -704,6 +706,16 @@
     document.head.appendChild(tag);
   }
 
+  // Couleur de badge selon le score composite (vert haut, rouge bas)
+  function scoreBadgeStyle(score) {
+    if (score == null) return 'background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)';
+    // 0..100 → red..green
+    const t = score / 100;
+    const r = Math.round(255 * (1 - t));
+    const g = Math.round(255 * t * 0.85 + 40);
+    return `background:rgba(${r},${g},80,.22);color:rgb(${r + 30},${g + 40},120);font-weight:800`;
+  }
+
   function renderChips(container, regionFilter, selected) {
     const list = state.items.filter(s => regionFilter === 'all' || s.regionKey === regionFilter);
     // Groupe par famille d'indice
@@ -713,20 +725,35 @@
       families.get(s.family).push(s);
     });
 
+    // Tri intra-famille : par score composite décroissant, items disabled à la fin
+    families.forEach(arr => {
+      arr.sort((a, b) => {
+        if (a.disabled !== b.disabled) return a.disabled ? 1 : -1;
+        const sa = a.compositeScore == null ? -1 : a.compositeScore;
+        const sb = b.compositeScore == null ? -1 : b.compositeScore;
+        return sb - sa;
+      });
+    });
+
     container.innerHTML = [...families.entries()].map(([family, sectors]) => `
       <div class="sc-family">
-        <div class="sc-family-head">${family}</div>
+        <div class="sc-family-head">${family} <span class="sc-family-hint">— triés par score composite</span></div>
         <div class="sc-family-chips">
           ${sectors.map(s => {
             const isSel = selected.includes(s.key);
             const order = isSel ? selected.indexOf(s.key) + 1 : '';
             const dis = s.disabled ? 'is-disabled' : '';
             const cov = `${s.coverage}/${s.totalHoldings || 10}`;
+            const score = s.compositeScore;
             const titleTxt = s.disabled
               ? `${s.label} — données insuffisantes (${cov} holdings matchés, min ${MIN_COVERAGE})`
-              : `${s.label} — ${cov} holdings`;
+              : `${s.label} — score ${score != null ? score + '/100' : 'n/a'} · ${cov} holdings`;
+            const scoreBadge = !s.disabled && score != null
+              ? `<span class="sc-chip-score" style="${scoreBadgeStyle(score)}">${score}</span>`
+              : '';
             return `<button type="button" class="sc-chip ${isSel ? 'is-selected' : ''} ${dis}" data-key="${s.key}" title="${titleTxt}" ${s.disabled ? 'aria-disabled="true"' : ''}>
               ${isSel ? `<span class="sc-chip-num">${order}</span>` : ''}
+              ${scoreBadge}
               <span class="sc-chip-label">${s.shortLabel}</span>
               <span class="sc-chip-cov">${cov}</span>
             </button>`;
