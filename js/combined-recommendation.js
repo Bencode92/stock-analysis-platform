@@ -790,14 +790,16 @@ window.normalizeAnswers = normalizeAnswers;
 // Barèmes et filtres (corrigés)
 const exclusionFilters = [
   // Professions avec ordre (avocats, médecins, EC, etc.)
-  // -> On N'EXCLUT PLUS la MICRO globalement ; on écarte surtout la SNC.
+  // -> En exercice individuel : EI/MICRO autorisés
+  // -> En exercice en société : SEL obligatoire (SELARL/SELAS), donc on
+  //    exclut les sociétés commerciales standards (SARL/SAS/SA/SCA/SNC + EURL/SASU)
   {
     id: "professional_order",
     condition: (answers) =>
       isYes(answers.professional_order) || isYes(answers.regulated_profession),
-    excluded_statuses: ["SNC"],
+    excluded_statuses: ["SNC", "SARL", "SAS", "SA", "SCA", "EURL", "SASU"],
     tolerance_message:
-      "Si vous exercez à titre individuel, EI/Micro peuvent rester possibles selon l’ordre. En exercice en société, privilégiez les SEL (SELARL/SELAS)."
+      "Pour une profession réglementée avec ordre, l'exercice en société impose une SEL (SELARL/SELAS). EI/Micro restent possibles en exercice individuel."
   },
 
   // Solo : on masque les formes nécessitant ≥ 2 associés
@@ -1769,6 +1771,47 @@ apply: (statusId, score, answers, metrics) => {
   criteria: 'social_charges'
 },
 
+// ── RÈGLES PETIT CA — MICRO/EI favorisés, sociétés IS pénalisées ──
+// (ajouté 2026-04-08 : les règles existantes regardaient income_objective_year1
+// mensuel et ignoraient revenue_projection annuel — bug calibrage du test "Artisan 35k")
+{
+  id: 'micro_low_revenue_bonus_admin',
+  description: 'CA annuel modeste (<50 k€) : MICRO/EI favorisés (charges fixes société sans intérêt)',
+  condition: (a) => {
+    const ca = parseFloat(a.revenue_projection || 0);
+    return ca > 0 && ca < 50000;
+  },
+  apply: (statusId, score) => {
+    if (statusId === 'MICRO') return score + 2;
+    if (statusId === 'EI')    return score + 1.5;
+    return score;
+  },
+  criteria: 'administrative_simplicity'
+},
+{
+  id: 'small_revenue_society_malus',
+  description: 'CA annuel modeste : société IS désavantagée (~1 500€/an de charges fixes)',
+  condition: (a) => {
+    const ca = parseFloat(a.revenue_projection || 0);
+    return ca > 0 && ca < 50000;
+  },
+  apply: (statusId, score) => {
+    if (['SASU','SAS','SARL','EURL'].includes(statusId)) return score - 1.5;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+{
+  id: 'micro_low_revenue_taxation_bonus',
+  description: 'CA annuel modeste : abattement forfaitaire micro très avantageux',
+  condition: (a) => {
+    const ca = parseFloat(a.revenue_projection || 0);
+    return ca > 0 && ca < 50000;
+  },
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 1 : score),
+  criteria: 'taxation_optimization'
+},
+
 // ── RÈGLES IS_OPTION (option à l'IS pour EURL/EI) — ajouté 2026-04-08 ──
 // Logique : EURL est par défaut à l'IR mais peut opter à l'IS (irrévocable
 // après 5 ans). Pour TMI élevée ou réinvestissement, l'option IS rapproche
@@ -2183,8 +2226,33 @@ apply: (statusId, score, answers, metrics) => {
   id: 'family_transmission_sarl_bonus',
   description: 'Transmission familiale : bonus SARL',
   condition: (a) => isYes(a.family_transmission),
-  apply: (statusId, score) => (statusId === 'SARL' ? score + 0.5 : score),
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 1.5 : score),
   criteria: 'transmission'
+},
+// Bonus SARL famille fort quand family_project + simple governance + transmission
+// (cas-type "SARL famille" : option IR illimitée, parts sociales, control total)
+{
+  id: 'sarl_famille_full_combo_bonus',
+  description: 'SARL famille : combo familial + gouvernance simple + contrôle essentiel',
+  condition: (a) =>
+    isYes(a.family_project) &&
+    a.governance_complexity === 'simple' &&
+    String(a.control_preservation || '').toLowerCase() === 'essential',
+  apply: (statusId, score) => {
+    if (statusId === 'SARL') return score + 2;
+    if (statusId === 'SAS')  return score - 1; // SAS sur-dimensionnée pour ce besoin
+    return score;
+  },
+  criteria: 'governance_flexibility'
+},
+{
+  id: 'sarl_famille_control_bonus',
+  description: 'SARL famille : préservation du contrôle (parts nominatives, agrément légal)',
+  condition: (a) =>
+    isYes(a.family_project) &&
+    String(a.control_preservation || '').toLowerCase() === 'essential',
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 1 : score),
+  criteria: 'patrimony_protection'
 },
 
 {
