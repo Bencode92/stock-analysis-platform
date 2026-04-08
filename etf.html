@@ -1020,6 +1020,20 @@
                       <button class="pill" data-sectorpill="metals" aria-selected="false">Métaux</button>
                     </div>
 
+                    <!-- Filtres Stratégie / Style -->
+                    <div class="pills mb-3" role="tablist" aria-label="Stratégie">
+                      <button class="pill active" data-strategy="all" aria-selected="true">Tous</button>
+                      <button class="pill" data-strategy="dividend" aria-selected="false">Dividende</button>
+                      <button class="pill" data-strategy="value" aria-selected="false">Value</button>
+                      <button class="pill" data-strategy="growth" aria-selected="false">Growth</button>
+                      <button class="pill" data-strategy="quality" aria-selected="false">Quality</button>
+                      <button class="pill" data-strategy="smallcap" aria-selected="false">Small Cap</button>
+                      <button class="pill" data-strategy="esg" aria-selected="false">ESG</button>
+                      <button class="pill" data-strategy="crypto" aria-selected="false">Crypto</button>
+                      <button class="pill" data-strategy="leveraged" aria-selected="false">Levier</button>
+                      <button class="pill" data-strategy="inverse" aria-selected="false">Inverse</button>
+                    </div>
+
                     <!-- Sous-filtres -->
                     <div class="grid md:grid-cols-2 gap-3">
                       <div class="flex items-center gap-2">
@@ -1220,125 +1234,47 @@
         return e.sector || e.sector_name || '';
       }
 
-      // ---------- Filtrage Géo / Secteur basé sur les champs provider ----------
-      // country_top / country_top5 / sector_top / sector_top5 sont déjà extraits
-      // par le pipeline daily-metrics — bien plus fiable que des regex sur le nom.
-
-      const COUNTRY_TO_REGION = {
-        // US
-        'united states':'us','usa':'us','u.s.':'us','u.s.a.':'us',
-        // Europe développée
-        'france':'europe','germany':'europe','united kingdom':'europe','great britain':'europe',
-        'switzerland':'europe','netherlands':'europe','italy':'europe','spain':'europe',
-        'sweden':'europe','belgium':'europe','ireland':'europe','norway':'europe',
-        'denmark':'europe','finland':'europe','austria':'europe','portugal':'europe',
-        'luxembourg':'europe','iceland':'europe','greece':'europe',
-        // Asie développée
-        'japan':'asia','hong kong':'asia','singapore':'asia','south korea':'asia',
-        'korea':'asia','taiwan':'asia','australia':'asia','new zealand':'asia',
-        // Émergents
-        'china':'emerging','india':'emerging','indonesia':'emerging','thailand':'emerging',
-        'malaysia':'emerging','philippines':'emerging','vietnam':'emerging','pakistan':'emerging',
-        'brazil':'emerging','mexico':'emerging','chile':'emerging','colombia':'emerging',
-        'peru':'emerging','argentina':'emerging','turkey':'emerging','south africa':'emerging',
-        'russia':'emerging','egypt':'emerging','saudi arabia':'emerging','uae':'emerging',
-        'qatar':'emerging','poland':'emerging','hungary':'emerging','czech republic':'emerging',
-      };
-
-      // Mapping secteur (Morningstar/GICS) → clé de pill
-      const SECTOR_TO_KEY = {
-        'technology':'tech',
-        'healthcare':'health','health care':'health',
-        'financial services':'finance','financials':'finance','financial':'finance',
-        'energy':'energy',
-        'real estate':'reits',
-        'consumer cyclical':'consumer','consumer defensive':'consumer',
-        'consumer discretionary':'consumer','consumer staples':'consumer',
-        'industrials':'industrial','industrial':'industrial',
-        'basic materials':'metals','materials':'metals',
-      };
-
-      // Fallback regex sur le nom pour les ETF où country_top/sector_top sont vides
-      // (or, large indices broad-market…)
-      const NAME_FALLBACK_GEO = {
-        us:       /\b(s&p\s?500|sp\s?500|nasdaq|russell|dow\s?jones)\b/i,
-        europe:   /\b(stoxx|dax|cac|smi|ibex|aex|ftse\s?(100|250)|euro\s?stoxx|msci\s?europe|eurozone)\b/i,
-        asia:     /\b(nikkei|topix|hang\s?seng|kospi|asia\s?pacific|msci\s?japan)\b/i,
-        emerging: /\b(emerging|em\b|frontier|msci\s?em|latin\s?america)\b/i,
-        world:    /\b(world|global|acwi|all[-\s]?country|developed\s?markets|msci\s?world)\b/i,
-      };
-      const NAME_FALLBACK_SECTOR = {
-        metals: /\b(gold|silver|copper|uranium|platinum|palladium|mining|miner|precious\s?metal)\b/i,
-        tech:   /\b(semiconductor|software|cybersecurity|cloud|ai\b|robotics|fintech)\b/i,
-        health: /\b(biotech|pharma|medical|genomics)\b/i,
-        energy: /\b(oil|gas|petroleum|renewable|solar|wind\s?energy|clean\s?energy)\b/i,
-        reits:  /\b(reit|real\s?estate)\b/i,
-      };
-
-      // Pour la géo, on n'utilise QUE le pays dominant (country_top).
-      // country_top5 sert uniquement à détecter les ETF "monde" (≥3 pays).
-      function getDominantCountry(e){
-        return e.country_top ? String(e.country_top).toLowerCase().trim() : '';
-      }
-      function countDistinctCountries(e){
-        const set = new Set();
-        if (e.country_top) set.add(String(e.country_top).toLowerCase().trim());
-        if (e.country_top5){
-          try {
-            const arr = typeof e.country_top5 === 'string' ? JSON.parse(e.country_top5) : e.country_top5;
-            if (Array.isArray(arr)) arr.forEach(x => { if (x && x.c) set.add(String(x.c).toLowerCase().trim()); });
-          } catch(_){}
-        }
-        return set.size;
-      }
-      // Pour le secteur, on n'utilise QUE le secteur dominant (sector_top).
-      // sector_top5 contient des poids minoritaires (2-3%) qui pollueraient
-      // tout : ex. un ETF tech avec 2% de data-center REITs serait classé REITs.
-      function getDominantSector(e){
-        return e.sector_top ? String(e.sector_top).toLowerCase().trim() : '';
-      }
+      // ---------- Filtrage Géo / Secteur / Stratégie ----------
+      // 100% data-driven : on lit directement les colonnes calculées par
+      // scripts/enrich_etf_exposure.py (geo_bucket, sector_bucket_pill, exposure).
+      // Plus aucun fallback regex côté JS — la source de vérité est Python.
 
       function matchesGeoPill(e, key){
         if (!key || key === 'all') return true;
-        // 1. Priorité absolue : geo_bucket calculé par etf_exposure.py
-        if (e.geo_bucket){
-          return e.geo_bucket === key;
-        }
-        // 2. Fallback sur country_top du provider
-        const dom = getDominantCountry(e);
-        if (key === 'world'){
-          if (countDistinctCountries(e) >= 3) return true;
-          if (NAME_FALLBACK_GEO.world.test(String(getName(e)||''))) return true;
-          return false;
-        }
-        if (dom && COUNTRY_TO_REGION[dom] === key) return true;
-        // 3. Fallback nom uniquement si rien d'autre
-        if (!dom){
-          return NAME_FALLBACK_GEO[key]?.test(String(getName(e)||'')) || false;
-        }
-        return false;
+        return e.geo_bucket === key;
       }
-
       function matchesSectorPill(e, key){
         if (!key || key === 'all') return true;
-        // 1. Priorité absolue : sector_bucket_pill calculé par etf_exposure.py
-        if (e.sector_bucket_pill){
-          return e.sector_bucket_pill === key;
-        }
-        // 2. Fallback sur sector_top du provider
-        const dom = getDominantSector(e);
-        if (dom && SECTOR_TO_KEY[dom] === key) return true;
-        // 3. Fallback nom uniquement si sector_top est vide
-        if (!dom){
-          return NAME_FALLBACK_SECTOR[key]?.test(String(getName(e)||'')) || false;
-        }
-        return false;
+        return e.sector_bucket_pill === key;
+      }
+
+      // Mapping clé pill → liste d'expositions (etf_exposure.py)
+      // Couvre toutes les catégories non-géo / non-secteur de etf_exposure.py
+      const STRATEGY_TO_EXPOSURES = {
+        dividend:  ['dividend','derivative_income','derivative_income_index','covered_call','preferred_stock'],
+        value:     ['value','sp500_value','us_value'],
+        growth:    ['growth','us_growth','sp500_growth'],
+        quality:   ['quality','sp500_quality','min_vol','multifactor','momentum'],
+        leveraged: ['leveraged_2x_bull','leveraged_3x_bull','leveraged_single_stock'],
+        inverse:   ['inverse','leveraged_2x_bear','leveraged_3x_bear'],
+        esg:       ['esg'],
+        crypto:    ['btc_etf','eth_etf','crypto_equity'],
+        smallcap:  ['small_cap','us_small_cap','us_microcap','sp600_smallcap','russell2000'],
+      };
+      // Index inverse : exposure → strategy key
+      const EXPOSURE_TO_STRATEGY = {};
+      Object.entries(STRATEGY_TO_EXPOSURES).forEach(([key, list]) => {
+        list.forEach(exp => { EXPOSURE_TO_STRATEGY[exp] = key; });
+      });
+      function matchesStrategyPill(e, key){
+        if (!key || key === 'all') return true;
+        return EXPOSURE_TO_STRATEGY[e.exposure] === key;
       }
 
       // ---------- État ----------
       let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
       let fFundType = '', fSector = '';
-      let fGeo = 'all', fSectorPill = 'all';
+      let fGeo = 'all', fSectorPill = 'all', fStrategy = 'all';
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
@@ -1460,6 +1396,7 @@
           if (fSector)   { const s=(getSectorMain(e)||'').toLowerCase(); if (s!==fSector.toLowerCase()) return false; }
           if (!matchesGeoPill(e, fGeo)) return false;
           if (!matchesSectorPill(e, fSectorPill)) return false;
+          if (!matchesStrategyPill(e, fStrategy)) return false;
           return true;
         });
       }
@@ -1502,7 +1439,7 @@
         const clr  = $('#etf-az-clear');
         if (info && cnt) { info.classList.toggle('hidden', !q); cnt.textContent = filtered.length; }
         if (clr) clr.style.opacity = q ? '1' : '0';
-        const pillFilterActive = (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all');
+        const pillFilterActive = (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all') || (fStrategy && fStrategy !== 'all');
         if (q || pillFilterActive){
           const allBtn = $$('#etf-az-tabs .region-tab').find(b => b.dataset.letter === 'all');
           if (allBtn){
@@ -1653,6 +1590,22 @@
             btn.classList.add('active');
             btn.setAttribute('aria-selected','true');
             fSectorPill = btn.dataset.sectorpill;
+            fFundType = ''; fSector = '';
+            const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
+            const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
+            render();
+          });
+        });
+        // pills stratégie
+        $$('#etf-az-controls .pill[data-strategy]').forEach(btn => {
+          btn.addEventListener('click', ()=>{
+            $$('#etf-az-controls .pill[data-strategy]').forEach(b=>{
+              b.classList.remove('active');
+              b.setAttribute('aria-selected','false');
+            });
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected','true');
+            fStrategy = btn.dataset.strategy;
             fFundType = ''; fSector = '';
             const fSel = $('#etf-az-fundtype'); if (fSel) fSel.value = '';
             const sSel = $('#etf-az-sector');   if (sSel) sSel.value = '';
