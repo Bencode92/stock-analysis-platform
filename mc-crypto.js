@@ -1301,8 +1301,12 @@ function ensureEl(parent, id, html) {
       const cb = $(elId);
       if (!cb) return;
       cb.checked = !!state.qcFilters[key];
+      const pill = cb.closest('.mc-pill');
+      const syncPill = () => pill && pill.classList.toggle('is-checked', cb.checked);
+      syncPill();
       cb.addEventListener('change', () => {
         state.qcFilters[key] = cb.checked;
+        syncPill();
         refresh(false);
       });
     });
