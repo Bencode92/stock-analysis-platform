@@ -2000,109 +2000,126 @@
   };
 
 // ====== PROFILS DE TRI (priorités) — à déclarer une fois ======
+// ===== v9.0: SORT_PROFILES refondus =====
+// Différenciation claire entre les 8 profils.
+// Defensif vs Rendement : 2 philosophies distinctes (capital vs cash flow).
+// Quality / EPS Surprise / Buffett ajoutés là où c'est pertinent.
 const SORT_PROFILES = {
-  // Screenshot: Div.REG ↑, Div.TTM ↑, Payout ↓, MaxDD ↓, Vol ↓, Perf1Y ↑
+  // 💰 RENDEMENT — Hauts dividendes soutenables, anti yield-trap
+  // Priorité ABSOLUE au yield, garde-fou Quality + Payout
   rendement: {
     mode: 'priorities',
     smartTolerance: true,
     rules: { minDividendIfSelected: 1 },
     priorities: [
-      { metric: 'dividend_yield_reg', direction: 'desc' },
-      { metric: 'dividend_yield_ttm', direction: 'desc' },
-      { metric: 'payout_ratio',       direction: 'asc'  },
-      { metric: 'max_drawdown_3y',    direction: 'asc'  },
-      { metric: 'volatility_3y',      direction: 'asc'  },
-      { metric: 'perf_1y',            direction: 'desc' }
+      { metric: 'dividend_yield_reg', direction: 'desc' },  // 1. Yield (raison d'être)
+      { metric: 'payout_ratio',       direction: 'asc'  },  // 2. Soutenabilité
+      { metric: 'quality_score',      direction: 'desc' },  // 3. Garde-fou anti yield-trap
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },  // 4. Limiter les pertes
+      { metric: 'volatility_3y',      direction: 'asc'  },  // 5. Stabilité
+      { metric: 'perf_1y',            direction: 'desc' }   // 6. Tendance positive
     ]
   },
 
- defensif: {
-  mode: 'priorities',
-  smartTolerance: true,
-  priorities: [
-    { metric: 'volatility_3y',      direction: 'asc'  },  // 1. Stabilité
-    { metric: 'max_drawdown_3y',    direction: 'asc'  },  // 2. Protection capital
-    { metric: 'dividend_yield_reg', direction: 'desc' },  // 3. Rendement (chercher ≥2.5%)
-    { metric: 'payout_ratio',       direction: 'asc'  },  // 4. Soutenabilité (vérifier ≤75%)
-    { metric: 'perf_1y',            direction: 'desc' },  // 5. Performance court terme
-    { metric: 'perf_3y',            direction: 'desc' }   // 6. Performance long terme
-  ]
-},
+  // 🛡️ DÉFENSIF — Préservation capital, philosophie distincte du rendement
+  // Priorité ABSOLUE à la stabilité (vol + drawdown), Quality essentiel
+  defensif: {
+    mode: 'priorities',
+    smartTolerance: true,
+    priorities: [
+      { metric: 'quality_score',      direction: 'desc' },  // 1. Qualité avant tout
+      { metric: 'volatility_3y',      direction: 'asc'  },  // 2. Stabilité
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },  // 3. Protection capital
+      { metric: 'perf_3y',            direction: 'desc' },  // 4. Track record long terme
+      { metric: 'dividend_yield_reg', direction: 'desc' },  // 5. Revenus (bonus)
+      { metric: 'payout_ratio',       direction: 'asc'  }   // 6. Anti-cut
+    ]
+  },
 
+  // 🚀 AGRESSIF — Momentum fort + filtre Quality (anti pump-and-dump)
   agressif: {
     mode: 'priorities',
     smartTolerance: true,
     priorities: [
-      { metric: 'perf_3m',         direction: 'desc' },
-      { metric: 'perf_1m',         direction: 'desc' },
-      { metric: 'ytd',             direction: 'desc' },
-      { metric: 'perf_1y',         direction: 'desc' },
-      { metric: 'max_drawdown_3y', direction: 'asc'  },
-      { metric: 'volatility_3y',   direction: 'asc'  }
+      { metric: 'perf_1y',         direction: 'desc' },     // 1. Tendance moyen terme
+      { metric: 'perf_3m',         direction: 'desc' },     // 2. Tendance court terme
+      { metric: 'eps_surprise',    direction: 'desc' },     // 3. Catalyseur fondamental
+      { metric: 'quality_score',   direction: 'desc' },     // 4. Filtre anti-pump
+      { metric: 'ytd',             direction: 'desc' },     // 5. Année en cours
+      { metric: 'max_drawdown_3y', direction: 'asc'  }      // 6. Garde-fou risque
     ]
   },
 
+  // 📈 CROISSANCE — Earnings durables + qualité (GARP, Lynch-style)
   croissance: {
     mode: 'priorities',
     smartTolerance: true,
     priorities: [
-      { metric: 'perf_3y',         direction: 'desc' },
-      { metric: 'perf_1y',         direction: 'desc' },
-      { metric: 'perf_3m',         direction: 'desc' },
-      { metric: 'ytd',             direction: 'desc' },
-      { metric: 'max_drawdown_3y', direction: 'asc'  },
-      { metric: 'volatility_3y',   direction: 'asc'  }
+      { metric: 'perf_3y',         direction: 'desc' },     // 1. Track record long terme
+      { metric: 'eps_surprise',    direction: 'desc' },     // 2. Beats récurrents
+      { metric: 'quality_score',   direction: 'desc' },     // 3. Qualité fondamentale
+      { metric: 'perf_1y',         direction: 'desc' },     // 4. Tendance récente
+      { metric: 'max_drawdown_3y', direction: 'asc'  },     // 5. Risque acceptable
+      { metric: 'volatility_3y',   direction: 'asc'  }      // 6. Stabilité relative
     ]
   },
 
+  // 💎 VALUE — Décote fondamentale + qualité (style Buffett/Graham)
   value_dividend: {
     mode: 'priorities',
     smartTolerance: true,
     rules: { minDividendIfSelected: 1 },
     priorities: [
-      { metric: 'dividend_yield_reg', direction: 'desc' },
-      { metric: 'dividend_yield_ttm', direction: 'desc' },
-      { metric: 'payout_ratio',       direction: 'asc'  },
-      { metric: 'max_drawdown_3y',    direction: 'asc'  },
-      { metric: 'volatility_3y',      direction: 'asc'  },
-      { metric: 'perf_3y',            direction: 'desc' }
+      { metric: 'buffett_score',      direction: 'desc' },  // 1. Score value composite
+      { metric: 'quality_score',      direction: 'desc' },  // 2. Qualité (anti value trap)
+      { metric: 'dividend_yield_reg', direction: 'desc' },  // 3. Dividende (income value)
+      { metric: 'payout_ratio',       direction: 'asc'  },  // 4. Soutenabilité dividende
+      { metric: 'perf_3y',            direction: 'desc' },  // 5. Track record
+      { metric: 'max_drawdown_3y',    direction: 'asc'  }   // 6. Risque contrôlé
     ]
   },
 
+  // ⭐ PREMIUM — Multi-factor best-of (Quality + Value)
+  // Pondérations OpenAI : Quality 25 + Value 20 + EPS 5 = 50% scores composites
   quality_premium: {
     mode: 'priorities',
     smartTolerance: true,
     priorities: [
-      { metric: 'perf_3y',         direction: 'desc' },
-      { metric: 'volatility_3y',   direction: 'asc'  },
-      { metric: 'max_drawdown_3y', direction: 'asc'  },
-      { metric: 'perf_1y',         direction: 'desc' },
-      { metric: 'dividend_yield_reg', direction: 'desc' }
+      { metric: 'quality_score',   direction: 'desc' },     // 1. Score qualité (#1)
+      { metric: 'buffett_score',   direction: 'desc' },     // 2. Score value (#2)
+      { metric: 'eps_surprise',    direction: 'desc' },     // 3. Exécution managériale
+      { metric: 'perf_3y',         direction: 'desc' },     // 4. Performance long terme
+      { metric: 'max_drawdown_3y', direction: 'asc'  },     // 5. Risque tail
+      { metric: 'volatility_3y',   direction: 'asc'  }      // 6. Stabilité
     ]
   },
 
+  // 📊 MOMENTUM — Tendance pure + filtre Quality (Quality Momentum, AQR/Asness)
+  // Validé empiriquement : Momentum × Quality > Momentum pur de 100-200 bps/an
   momentum_trend: {
     mode: 'priorities',
     smartTolerance: true,
     priorities: [
-      { metric: 'perf_1y',         direction: 'desc' },
-      { metric: 'perf_3m',         direction: 'desc' },
-      { metric: 'perf_1m',         direction: 'desc' },
-      { metric: 'ytd',             direction: 'desc' },
-      { metric: 'max_drawdown_3y', direction: 'asc'  },
-      { metric: 'volatility_3y',   direction: 'asc'  }
+      { metric: 'perf_1y',         direction: 'desc' },     // 1. Force relative 12M
+      { metric: 'perf_3m',         direction: 'desc' },     // 2. Accélération récente
+      { metric: 'perf_1m',         direction: 'desc' },     // 3. Continuité court terme
+      { metric: 'eps_surprise',    direction: 'desc' },     // 4. Catalyseur (PEAD)
+      { metric: 'quality_score',   direction: 'desc' },     // 5. Anti-pump filter
+      { metric: 'max_drawdown_3y', direction: 'asc'  }      // 6. Garde-fou
     ]
   },
 
+  // 🧊 LOW VOL — Stabilité maximale (pension funds)
   low_volatility: {
     mode: 'priorities',
     smartTolerance: true,
     priorities: [
-      { metric: 'volatility_3y',      direction: 'asc'  },
-      { metric: 'max_drawdown_3y',    direction: 'asc'  },
-      { metric: 'payout_ratio',       direction: 'asc'  },
-      { metric: 'dividend_yield_reg', direction: 'desc' },
-      { metric: 'perf_1y',            direction: 'desc' }
+      { metric: 'volatility_3y',      direction: 'asc'  },  // 1. Vol minimale (#1 absolu)
+      { metric: 'max_drawdown_3y',    direction: 'asc'  },  // 2. Drawdown minimal
+      { metric: 'quality_score',      direction: 'desc' },  // 3. Qualité fondamentale
+      { metric: 'dividend_yield_reg', direction: 'desc' },  // 4. Revenus stables
+      { metric: 'payout_ratio',       direction: 'asc'  },  // 5. Anti-cut
+      { metric: 'perf_3y',            direction: 'desc' }   // 6. Track record
     ]
   },
 
@@ -2135,8 +2152,8 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('defensif'),
     coverage_target: [60, 120],
-    metrics: ['quality_score','volatility_3y','max_drawdown_3y','dividend_yield_reg','payout_ratio','perf_1y'], // v8.0: +quality
-    filters: { regions: ['EUROPE','US'], countries: [], sectors: ['Santé','Biens de consommation de base','Services publics'] },
+    metrics: ['quality_score','volatility_3y','max_drawdown_3y','perf_3y','dividend_yield_reg','payout_ratio'], // v9.0: Quality #1, perf 3y au lieu de 1y
+    filters: { regions: ['EUROPE','US'], countries: [], sectors: [] }, // v9.0: pas de filtre sectoriel restrictif (sector neutrality fait le job)
     criteria: [
       { metric: 'dividend_yield_reg', operator:'>=', value:2.5, optimal:2.5, range:[2.0,3.0], label:'Dividende ≥ 2.5%' },
       { metric: 'volatility_3y',      operator:'<=', value:26,  optimal:24,  range:[22,26],   label:'Volatilité ≤ 26%' },
@@ -2160,8 +2177,8 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('rendement'),
     coverage_target: [80,150],
-    metrics: ['dividend_yield_reg','quality_score','payout_ratio','max_drawdown_3y','volatility_3y','perf_1y'], // v8.0: +quality
-    filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Immobilier','Energie','Services publics'] },
+    metrics: ['dividend_yield_reg','payout_ratio','quality_score','max_drawdown_3y','volatility_3y','perf_1y'], // v9.0: Yield #1, payout #2 (anti-trap), Quality #3 garde-fou
+    filters: { regions:['EUROPE','US'], countries:[], sectors:[] }, // v9.0: ouvert (sector neutrality évite le biais Finance)
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.5, optimal:4.2, range:[3.5,5.0], label:'Dividende ≥ 3.5%' },
       { metric:'dividend_yield_ttm', operator:'<=', value:10.0, optimal:8.0, range:[8.0,10.0], label:'Div TTM ≤ 8–10% (anti piège)' },
@@ -2185,7 +2202,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('agressif'),
     coverage_target: [60,100],
-    metrics: ['perf_3m','perf_1m','ytd','perf_1y','max_drawdown_3y','volatility_3y'], // ✅ OK
+    metrics: ['perf_1y','perf_3m','eps_surprise','quality_score','ytd','max_drawdown_3y'], // v9.0: momentum 12M + EPS catalyst + Quality anti-pump
     filters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     criteria: [
       { metric:'ytd',             operator:'>=', value:10, optimal:20, range:[10,30], label:'YTD ≥ 10%' },
@@ -2211,7 +2228,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('croissance'),
     coverage_target: [70,140],
-    metrics: ['perf_3y','perf_1y','eps_surprise','quality_score','max_drawdown_3y','volatility_3y'], // v8.0: +eps+quality
+    metrics: ['perf_3y','eps_surprise','quality_score','perf_1y','max_drawdown_3y','volatility_3y'], // v9.0: track record + EPS catalyst + qualité fondamentale
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication','Biens de consommation cycliques'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:25, optimal:35, range:[25,70], label:'Perf 3Y ≥ 25%' },
@@ -2236,7 +2253,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('value_dividend'),
     coverage_target: [80,150],
-    metrics: ['buffett_score','dividend_yield_reg','quality_score','payout_ratio','max_drawdown_3y','volatility_3y'], // v8.0: +value+quality
+    metrics: ['buffett_score','quality_score','dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y'], // v9.0: Value composite #1, Quality #2 anti value-trap
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Energie','Services publics','Industrie','Matériaux'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.0, optimal:3.8, range:[3.0,5.0], label:'Dividende ≥ 3.0%' },
@@ -2262,7 +2279,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('quality_premium'),
     coverage_target: [70,125],
-    metrics: ['quality_score','buffett_score','perf_3y','dividend_yield_reg','volatility_3y','max_drawdown_3y'], // v8.0: quality+value first
+    metrics: ['quality_score','buffett_score','eps_surprise','perf_3y','max_drawdown_3y','volatility_3y'], // v9.0: scores composites first + EPS exécution + risque
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','Biens de consommation de base','Industrie','Biens de consommation cycliques','La communication'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:35, optimal:50, range:[35,85], label:'Perf 3Y ≥ 35%' },
@@ -2286,7 +2303,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('momentum_trend'),
     coverage_target: [60,100],
-    metrics: ['perf_1y','perf_3m','eps_surprise','perf_1m','ytd','max_drawdown_3y'], // v8.0: +eps
+    metrics: ['perf_1y','perf_3m','perf_1m','eps_surprise','quality_score','max_drawdown_3y'], // v9.0: Quality Momentum (AQR/Asness validé empiriquement)
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:[] },
     criteria: [
       { metric:'perf_1y', operator:'>=', value:10, optimal:15, range:[10,20], label:'Perf 1Y ≥ 10%' },
@@ -2310,7 +2327,7 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('low_volatility'),
     coverage_target: [60,120],
-    metrics: ['volatility_3y','max_drawdown_3y','payout_ratio','dividend_yield_reg','perf_1y'], // ✅ CORRIGÉ (supprimé dividend_yield_ttm)
+    metrics: ['volatility_3y','max_drawdown_3y','quality_score','dividend_yield_reg','payout_ratio','perf_3y'], // v9.0: Quality + perf 3y au lieu de 1y
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:1.5, optimal:2.0, range:[1.5,3.0], label:'Dividende ≥ 1.5%' },
