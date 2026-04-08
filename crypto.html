@@ -1378,6 +1378,17 @@
                            <label class="mc-pill"><input type="checkbox" id="m-vol_30d"> Vol 30j (ann.) ↓</label>
                            <label class="mc-pill"><input type="checkbox" id="m-atr14"> ATR14% ↓</label>
                            <label class="mc-pill"><input type="checkbox" id="m-dd90"> Drawdown 90j ↓</label>
+                           <label class="mc-pill"><input type="checkbox" id="m-sharpe"> Sharpe ↑</label>
+                         </div>
+                       </fieldset>
+
+                       <fieldset>
+                         <legend class="text-sm opacity-70 mb-2">Qualité des données</legend>
+                         <div class="flex flex-wrap gap-2">
+                           <label class="mc-pill"><input type="checkbox" id="qc-tier1"> Tier-1 only</label>
+                           <label class="mc-pill"><input type="checkbox" id="qc-history1y"> ≥ 1 an d'historique</label>
+                           <label class="mc-pill"><input type="checkbox" id="qc-suspect"> Masquer suspects</label>
+                           <label class="mc-pill"><input type="checkbox" id="qc-blacklist" checked> Exclure blacklist</label>
                          </div>
                        </fieldset>
 
@@ -1408,6 +1419,7 @@
                              <option value="vol_30d">Vol 30j (ann.)</option>
                              <option value="atr14">ATR14%</option>
                              <option value="dd90">Drawdown 90j</option>
+                             <option value="sharpe">Sharpe</option>
                            </select>
                            <select id="cf-op" class="mini-select" style="width:58px;">
                              <option value="&gt;=">&ge;</option><option value="&gt;">&gt;</option>

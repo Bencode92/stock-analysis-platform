@@ -16,6 +16,7 @@
     vol_30d: {label:'Vol 30j (ann.)',col:'vol_30d_annual_pct',unit:'%', max:false},
     atr14:   {label:'ATR14%',        col:'atr14_pct',         unit:'%', max:false},
     dd90:    {label:'Drawdown 90j',  col:'drawdown_90d_pct',  unit:'%', max:false},
+    sharpe:  {label:'Sharpe',        col:'sharpe_ratio',      unit:'',  max:true},
   };
 
   // === CRYPTO PRESETS - VERSION QUANTILES ===========================
@@ -172,7 +173,7 @@
   // --- Tolérance (v4.5 - Priorités intelligentes)
   const GAP_FLOOR = {        // planchers de gaps (en points de %)
     ret_1d: 0.5, ret_7d: 0.4, ret_30d: 0.35, ret_90d: 0.30, ret_1y: 0.25,
-    vol_7d: 0.20, vol_30d: 0.20, atr14: 0.15, dd90: 0.25
+    vol_7d: 0.20, vol_30d: 0.20, atr14: 0.15, dd90: 0.25, sharpe: 0.10
   };
   const TOL_PRESET = { c: 0.6, kappa: 1.5 };
   const MIN_TOL_P = 0.012;    // plancher 1.2 pp sur diff. de percentiles
@@ -180,7 +181,11 @@
   const ALLOW_MISSING = 1;    // tolère 1 critère manquant
 
   // --- Stablecoins à exclure
-  const STABLES = new Set(['USDT','USDC','DAI','TUSD','FDUSD','PYUSD','EURT','EURS','USDE','BUSD','UST']);
+  const STABLES = new Set(['USDT','USDC','DAI','TUSD','FDUSD','PYUSD','EURT','EURS','USDE','BUSD','UST',
+    'FRAX','LUSD','GUSD','USDP','SUSD','MIM','DOLA','CUSD','OUSD','HUSD']);
+  // --- Blacklist réputationnelle / réglementaire (alignée sur preset_crypto.py v2.0.2)
+  const BLACKLIST = new Set(['TRX','MORPHO','SHIB','DOGE','PEPE','FLOKI','BONK','WIF',
+    'OFFICIAL TRUMP','OFFICIALTRUMP','PUDGY PENGUINS','PUDGYPENGUINS']);
 
   const state = {
     data: [],
@@ -190,7 +195,13 @@
     cache: {},                       // {metric:{raw,rankPct,sorted,iqr}}
     pref: {},                        // préférences direction (optionnel pour ↑↓)
     activePreset: null,              // Preset actif
-    customFilter: null               // Filtre custom du preset
+    customFilter: null,              // Filtre custom du preset
+    qcFilters: {                     // v6.36 - Quality controls (Option C)
+      tier1Only:   false,            // n'autorise que tier1_listed=true
+      history1y:   false,            // exige enough_history_1y=true
+      hideSuspect: false,            // exclut ret_1y_suspect=true
+      hideBlacklist: true,           // exclut la blacklist réputationnelle (par défaut ON)
+    }
   };
 
   // Expose pour debug console
@@ -199,6 +210,13 @@
   // ---- Utils
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  // v6.36 - parse boolean depuis CSV ("true"/"1"/"yes"/true)
+  const truthy = (x) => {
+    if (x === true || x === 1) return true;
+    if (x == null || x === '') return false;
+    const s = String(x).trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes' || s === 'y';
+  };
   const toNum = (x) => {
     if (x == null || x === '') return NaN;
     if (typeof x === 'number') return x;
@@ -893,15 +911,28 @@ function ensureEl(parent, id, html) {
   }
 
   // === v4.5 - Pool avec exclusion stablecoins et tolérance missing ===
+  // === v6.36 - QC toggles (tier1, history, suspect) + blacklist réputationnelle ===
   function poolIndices() {
     const kept = [];
     const req = state.selected;
-    
+    const qc = state.qcFilters || {};
+
     for (let i = 0; i < state.data.length; i++) {
+      const row = state.data[i];
       // Exclusion des stablecoins
-      const tk = String(state.data[i].token || '').toUpperCase();
+      const tk = String(row.token || '').toUpperCase();
       if (STABLES.has(tk)) continue;
-      
+
+      // v6.36: blacklist réputationnelle (toggle, ON par défaut)
+      if (qc.hideBlacklist && BLACKLIST.has(tk)) continue;
+
+      // v6.36: QC tier1
+      if (qc.tier1Only && !truthy(row.tier1_listed)) continue;
+      // v6.36: ≥1 an d'historique
+      if (qc.history1y && !truthy(row.enough_history_1y)) continue;
+      // v6.36: masquer les ret_1y suspects
+      if (qc.hideSuspect && truthy(row.ret_1y_suspect)) continue;
+
       // Filtres personnalisés
       if (!passCustomFilters(i)) continue;
       
@@ -1259,6 +1290,22 @@ function ensureEl(parent, id, html) {
     ensureMetricCheckboxes(rootMcEl);
     ensureFilterControls(rootMcEl);
     ensureActionButtons(rootMcEl);
+
+    // === v6.36 - Câblage des toggles QC ===
+    [
+      ['qc-tier1',     'tier1Only'],
+      ['qc-history1y', 'history1y'],
+      ['qc-suspect',   'hideSuspect'],
+      ['qc-blacklist', 'hideBlacklist'],
+    ].forEach(([elId, key]) => {
+      const cb = $(elId);
+      if (!cb) return;
+      cb.checked = !!state.qcFilters[key];
+      cb.addEventListener('change', () => {
+        state.qcFilters[key] = cb.checked;
+        refresh(false);
+      });
+    });
 
     // ==== MODIFIÉ : checkboxes métriques avec MAJ immédiate de la liste
     Object.keys(METRICS).forEach(id=>{

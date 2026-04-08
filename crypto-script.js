@@ -50,15 +50,32 @@ document.addEventListener('DOMContentLoaded', function () {
     hide('indices-container');
 
     try {
-      const url = 'data/filtered/Crypto_filtered_volatility.csv';
+      // v6.35: tente d'abord le JSON enrichi par preset_crypto (scores+rôles+catégories),
+      // fallback sur le CSV brut si absent.
       const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
-      const res = await fetch(`${url}${cacheBuster}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const profile = (window.CRYPTO_PROFILE || 'agressif').toLowerCase();
+      const scoredUrl = `data/filtered/Crypto_scored_${profile}.json`;
+      const csvUrl = 'data/filtered/Crypto_filtered_volatility.csv';
 
-      const text = await res.text();
-      const rows = csvToObjects(text);
+      let rows = null;
+      let usedSource = 'csv';
+      try {
+        const jr = await fetch(`${scoredUrl}${cacheBuster}`);
+        if (jr.ok) {
+          rows = await jr.json();
+          usedSource = 'scored-json';
+        }
+      } catch (_jsonErr) { /* fall through to CSV */ }
 
-      // Adapter/typer avec tous les champs (ajout des exchanges)
+      if (!rows) {
+        const res = await fetch(`${csvUrl}${cacheBuster}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        rows = csvToObjects(text);
+      }
+      cryptoData.meta.source = usedSource;
+
+      // Adapter/typer avec tous les champs (ajout des exchanges + scoring preset_crypto)
       const coins = rows.map(r => ({
         name: r.currency_base || r.symbol || '',
         symbol: r.symbol || '',
@@ -68,10 +85,17 @@ document.addEventListener('DOMContentLoaded', function () {
         ret7d:  toNum(r.ret_7d_pct),
         ret30d: toNum(r.ret_30d_pct),
         ret90d: toNum(r.ret_90d_pct),
+        ret1y:  toNum(r.ret_1y_pct),
         vol7:   toNum(r.vol_7d_annual_pct),
         vol30:  toNum(r.vol_30d_annual_pct),
         atr14:  toNum(r.atr14_pct),
         dd90:   toNum(r.drawdown_90d_pct),
+        sharpe: toNum(r.sharpe_ratio),
+        // v6.35: champs enrichis par preset_crypto (présents si scored-json)
+        score:    toNum(r._profile_score),
+        role:     r._role || '',
+        category: r._crypto_category || '',
+        tier1: r.tier1_listed,
         exchange_used: r.exchange_used || r.exchanges_used || r.exchange_normalized || '',
         last_datetime: r.last_datetime || null
       })).filter(c => c.name);
