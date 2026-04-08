@@ -2653,7 +2653,7 @@ return score + (isRE ? 1 : 0.5);
   // --- 2) MEUBLÉ (LMNP/LMP) -------------------------------------------------
   {
     id: 'immobilier_meuble_pref_sarlfam_ei',
-    description: 'Location meublée : + SARL famille / EURL / EI ; - SCI ; -- SASU/SAS (IS double imposition + cotisations dirigeant)',
+    description: 'Location meublée : + SARL famille / EURL / EI ; - SCI ; -- SASU/SAS',
     condition: (a) => IS_IMMO(a) && a.real_estate_model === 'meuble',
     apply: (statusId, score, a) => {
       if (statusId === 'SCI')  return score - 2;
@@ -2661,13 +2661,33 @@ return score + (isRE ? 1 : 0.5);
       if (statusId === 'EURL') return score + 1.5;     // EURL-IR LMNP : très bon
       if (statusId === 'EI')   return score + 1.5;     // EI réel BIC : très bon
       if (statusId === 'MICRO') return score + (a?._meuble_small_activity ? 0.75 : 0.5);
-      // SASU/SAS : malus fort en location meublée patrimoniale
-      // (LMNP-IS = double imposition + charges dirigeant sans intérêt patrimonial)
-      if (statusId === 'SASU') return score - 1.5;
-      if (statusId === 'SAS')  return score - 1.5;
+      if (statusId === 'SASU') return score - 2;
+      if (statusId === 'SAS')  return score - 2;
       return score;
     },
     criteria: 'taxation_optimization'
+  },
+  // Malus complémentaires SASU/SAS sur autres critères pour refléter
+  // l'incompatibilité fiscale du LMNP avec une société à l'IS
+  {
+    id: 'immobilier_meuble_sasu_sas_credibility_malus',
+    description: 'Location meublée : SASU/SAS perdent les avantages LMNP (amortissement, déficit reportable)',
+    condition: (a) => IS_IMMO(a) && a.real_estate_model === 'meuble',
+    apply: (statusId, score) => {
+      if (['SASU','SAS'].includes(statusId)) return score - 2;
+      return score;
+    },
+    criteria: 'credibility'
+  },
+  {
+    id: 'immobilier_meuble_sasu_sas_admin_malus',
+    description: 'Location meublée via société IS : surcoût administratif (compta IS) sans gain fiscal',
+    condition: (a) => IS_IMMO(a) && a.real_estate_model === 'meuble',
+    apply: (statusId, score) => {
+      if (['SASU','SAS'].includes(statusId)) return score - 1.5;
+      return score;
+    },
+    criteria: 'administrative_simplicity'
   },
 
   // --- 3) PARA-HÔTELIER -----------------------------------------------------
