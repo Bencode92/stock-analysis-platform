@@ -1769,6 +1769,37 @@ apply: (statusId, score, answers, metrics) => {
   criteria: 'social_charges'
 },
 
+// ── RÈGLES IS_OPTION (option à l'IS pour EURL/EI) — ajouté 2026-04-08 ──
+// Logique : EURL est par défaut à l'IR mais peut opter à l'IS (irrévocable
+// après 5 ans). Pour TMI élevée ou réinvestissement, l'option IS rapproche
+// EURL de SASU côté optimisation fiscale.
+{
+  id: 'is_option_eurl_high_tmi_bonus',
+  description: 'EURL/EI option IS : avantageux si TMI haute (cap des bénéfices à 25%)',
+  condition: (a) => isYes(a.is_option) && ['bracket_30','bracket_41','bracket_45'].includes(a.tax_bracket),
+  apply: (statusId, score) => {
+    if (['EURL','EI'].includes(statusId)) return score + 1.5;
+    return score;
+  },
+  criteria: 'taxation_optimization'
+},
+{
+  id: 'is_option_eurl_reinvestment_bonus',
+  description: 'EURL option IS : permet réinvestissement à 15% (sous 42 500 € de bénéfice)',
+  condition: (a) => isYes(a.is_option) && a.remuneration_preference !== 'salary',
+  apply: (statusId, score) => (['EURL','EI'].includes(statusId) ? score + 0.75 : score),
+  criteria: 'taxation_optimization'
+},
+{
+  id: 'is_option_eurl_loses_micro_simplicity',
+  description: 'EURL option IS : perte de la simplicité IR, malus admin',
+  condition: (a) => isYes(a.is_option),
+  apply: (statusId, score) => (['EURL','EI'].includes(statusId) ? score - 0.25 : score),
+  criteria: 'administrative_simplicity'
+},
+// Cohérence : si l'utilisateur dit explicitement NE PAS vouloir l'option IS,
+// pas de bonus IS pour EURL/EI mais pas de malus non plus (état par défaut).
+
 {
   id: 'low_income_micro_bonus',
   description: 'Faibles revenus favorables pour micro',
@@ -3104,6 +3135,24 @@ if (norm.team_structure === 'investors' &&
 
   // Unifie ARE / chômage (accepte 'yes'/'no'/true/false/'oui'/'non')
   norm.unemployment_benefits = toYN(norm.unemployment_benefits ?? norm.en_chomage);
+
+  // Mappe real_estate_activity (wizard) → real_estate_model (moteur)
+  // Le wizard collecte real_estate_activity ∈ {location_nue, lmnp_lmp,
+  // marchand_biens, promotion, agence_gestion}, alors que les règles
+  // utilisent real_estate_model ∈ {patrimonial_nue, meuble, marchand,
+  // promotion, lotissement, para_hotel, bureaux_nus}.
+  if (!norm.real_estate_model && norm.real_estate_activity) {
+    const REA_MAP = {
+      location_nue: 'patrimonial_nue',
+      lmnp_lmp:     'meuble',
+      marchand_biens:'marchand',
+      promotion:    'promotion',
+      agence_gestion:'agence_gestion'
+    };
+    norm.real_estate_model = REA_MAP[norm.real_estate_activity] || norm.real_estate_activity;
+  }
+  // Flag LMP (statut professionnel meublé) à partir du sous-régime
+  if (norm.real_estate_rental_regime === 'lmp') norm.lmp_status = 'yes';
 
   // Unifie les flags liés à la cotation / appel public à l’épargne
   norm.public_listing  = toYN(norm.public_listing);
