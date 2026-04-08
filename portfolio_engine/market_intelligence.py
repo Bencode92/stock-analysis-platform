@@ -45,8 +45,8 @@ VERSION = "1.0.0"
 # Le pipeline GitHub Actions a ANTHROPIC_API_KEY dans ses secrets
 API_URL = os.environ.get("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
 PROXY_URL = "https://studyforge-proxy.benoit-comas.workers.dev/v1/messages"
-MODEL = "claude-opus-4-20250514"
-MAX_TOKENS = 2000
+MODEL = "claude-opus-4-6"
+MAX_TOKENS = 4000
 TEMPERATURE = 0  # Déterminisme maximum
 
 # Répertoire pour l'audit trail
@@ -78,6 +78,7 @@ RÈGLES STRICTES:
 - Ne recommande PAS d'ajustements si le marché est neutre — "no action" est une position valide
 - Les delta sont en POINTS DE POURCENTAGE (ex: +3 = augmenter de 3pp)
 - Maximum 8 ajustements par appel (focus sur l'essentiel)
+- Conviction <2 sera IGNORÉE par le moteur. Si tu n'es pas sûr à ≥2/5, n'inclus PAS l'ajustement.
 
 FORMAT DE RÉPONSE (JSON strict):
 {
@@ -351,19 +352,30 @@ def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Di
         }
         logger.info("[MI] No API key found — using proxy")
     
+    import time
+    data = None
+    last_err = None
+    for attempt in range(3):
+        try:
+            logger.info(f"[MI] Calling {url} (attempt {attempt+1}/3, model={MODEL})")
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.URLError as e:
+            last_err = e
+            logger.warning(f"[MI] Attempt {attempt+1}/3 failed: {e}")
+            if attempt < 2:
+                time.sleep(2 ** attempt)  # 1s, 2s
     try:
-        logger.info(f"[MI] Calling {url} (model={MODEL})")
-        
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="POST"
-        )
-        
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        
+        if data is None:
+            raise last_err if last_err else urllib.error.URLError("All retries exhausted")
+
         # Extract text content
         text = ""
         for block in data.get("content", []):
@@ -385,7 +397,27 @@ def _call_claude_api(system: str, user: str, api_key: str = None) -> Optional[Di
         text = text.strip()
         
         result = json.loads(text)
-        
+
+        # === VALIDATION STRICTE (v1.1) ===
+        VALID_REGIMES = {"goldilocks","risk_on","neutral","stagflation","risk_off","recession","crisis"}
+        if not isinstance(result, dict):
+            logger.error("[MI] AI response is not a dict — rejecting")
+            return None
+        if result.get("regime") not in VALID_REGIMES:
+            logger.error(f"[MI] Invalid regime returned: {result.get('regime')!r} — rejecting")
+            return None
+        if not isinstance(result.get("adjustments", []), list):
+            logger.error("[MI] adjustments field is not a list — rejecting")
+            return None
+        # Clamp conviction values
+        for adj in result.get("adjustments", []):
+            c = adj.get("conviction", 3)
+            if not isinstance(c, (int, float)) or not (1 <= c <= 5):
+                logger.warning(f"[MI] Invalid conviction {c!r}, defaulting to 3")
+                adj["conviction"] = 3
+            else:
+                adj["conviction"] = max(1, min(5, int(c)))
+
         # Log usage
         usage = data.get("usage", {})
         logger.info(
@@ -462,15 +494,17 @@ def _ai_to_engine_adjustments(ai_response: Dict) -> Dict:
             theme = params.get("theme")
             delta = params.get("delta_pct", 0)
             if theme and delta:
+                delta = max(-5, min(5, delta))  # v1.1: borne sécurité ±5pp
                 for p in profiles:
                     adjustments["thematic_cap_deltas"].setdefault(theme, {})
                     adjustments["thematic_cap_deltas"][theme][p] = \
                         adjustments["thematic_cap_deltas"][theme].get(p, 0) + delta
-        
+
         elif adj_type == "mandatory_hedge_delta":
             hedge = params.get("hedge")
             delta = params.get("delta_pct", 0)
             if hedge and delta:
+                delta = max(-3, min(3, delta))  # v1.1: borne sécurité ±3pp
                 for p in profiles:
                     adjustments["hedge_deltas"].setdefault(hedge, {})
                     adjustments["hedge_deltas"][hedge][p] = \
@@ -587,7 +621,7 @@ def _ai_to_engine_adjustments(ai_response: Dict) -> Dict:
         for profile in ["Agressif", "Modéré", "Stable"]:
             val = cry.get(profile, None)
             if isinstance(val, (int, float)):
-                crypto_caps[profile] = val
+                crypto_caps[profile] = max(0, min(val, 10))  # v1.1: borne sécurité 0-10%
         if crypto_caps:
             adjustments["crypto_allocation"] = crypto_caps
     
@@ -613,6 +647,9 @@ def _save_audit(market_data: Dict, ai_response: Dict, adjustments: Dict):
             "ai_response": ai_response,
             "adjustments_output": adjustments,
             "regime": regime,
+            "regime_rationale": ai_response.get("regime_rationale") if ai_response else None,
+            "market_interpretation": ai_response.get("market_interpretation") if ai_response else None,
+            "bond_strategy_full": ai_response.get("bond_strategy") if ai_response else None,
             "warnings": ai_response.get("warnings", []) if ai_response else [],
         }
         
