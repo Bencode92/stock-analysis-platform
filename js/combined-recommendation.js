@@ -2653,14 +2653,18 @@ return score + (isRE ? 1 : 0.5);
   // --- 2) MEUBLÉ (LMNP/LMP) -------------------------------------------------
   {
     id: 'immobilier_meuble_pref_sarlfam_ei',
-    description: 'Location meublée : + SARL (famille, IR) / EI / EURL, - SCI',
+    description: 'Location meublée : + SARL famille / EURL / EI ; - SCI ; -- SASU/SAS (IS double imposition + cotisations dirigeant)',
     condition: (a) => IS_IMMO(a) && a.real_estate_model === 'meuble',
     apply: (statusId, score, a) => {
       if (statusId === 'SCI')  return score - 2;
-      if (statusId === 'SARL') return score + 1.25;
-      if (statusId === 'EURL') return score + 0.75;
-      if (statusId === 'EI')   return score + 0.75;
-      if (statusId === 'MICRO') return score + (a?._meuble_small_activity ? 0.5 : 0.25);
+      if (statusId === 'SARL') return score + 2;       // SARL famille IR : optimal
+      if (statusId === 'EURL') return score + 1.5;     // EURL-IR LMNP : très bon
+      if (statusId === 'EI')   return score + 1.5;     // EI réel BIC : très bon
+      if (statusId === 'MICRO') return score + (a?._meuble_small_activity ? 0.75 : 0.5);
+      // SASU/SAS : malus fort en location meublée patrimoniale
+      // (LMNP-IS = double imposition + charges dirigeant sans intérêt patrimonial)
+      if (statusId === 'SASU') return score - 1.5;
+      if (statusId === 'SAS')  return score - 1.5;
       return score;
     },
     criteria: 'taxation_optimization'
