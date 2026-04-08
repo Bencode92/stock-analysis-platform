@@ -1283,7 +1283,7 @@
     presetsDiv.id = 'mc-presets';
     presetsDiv.innerHTML = `
       <div class="text-xs uppercase tracking-wider opacity-70 mb-2 flex items-center gap-2">
-        <i class="fas fa-magic"></i> Stratégies prédéfinies
+        <i class="fas fa-magic"></i> Profils prédéfinis
       </div>
       <div class="presets-grid">
         ${Object.entries(PRESETS).map(([key, preset]) => `
@@ -2502,6 +2502,15 @@ const PRESETS = {
         api.setMode('weighted');
         // Charger les métriques dans selectedMetrics aussi (pour l'UI checkboxes)
         api.setMetrics(Object.keys(preset.weights));
+        // Update weighted panel UI
+        const weightedPanel = document.getElementById('mc-weighted');
+        if (weightedPanel) {
+            weightedPanel.classList.remove('hidden');
+            renderWeightedSliders();
+        }
+        // Tick the right radio button
+        const radio = root.querySelector('input[name="mc-mode"][value="weighted"]');
+        if (radio) radio.checked = true;
     } else {
         // 2. Mode legacy (lexico ou balanced)
         state.weights = {};
@@ -2541,20 +2550,96 @@ const PRESETS = {
     setTimeout(() => toast.remove(), 2000);
   }
 
+  // ===== v9.0: Weighted mode UI helpers =====
+  function renderWeightedSliders() {
+    const container = document.getElementById('mc-weighted-sliders');
+    if (!container) return;
+    const weights = state.weights || {};
+    const metrics = Object.keys(weights).length > 0 ? Object.keys(weights) : state.selectedMetrics;
+    if (metrics.length === 0) {
+      container.innerHTML = '<div style="font-size:0.7rem;opacity:0.5;padding:8px;">Sélectionnez des métriques ou un preset pour activer les sliders</div>';
+      updateWeightedTotal();
+      return;
+    }
+    container.innerHTML = metrics.map(m => {
+      const meta = METRICS[m];
+      if (!meta) return '';
+      const w = weights[m] != null ? Math.round(weights[m] * 100) : Math.round(100 / metrics.length);
+      const arrow = meta.max ? '↑' : '↓';
+      return `
+        <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;">
+          <span style="min-width:90px;color:rgba(255,255,255,0.7);">${meta.label} ${arrow}</span>
+          <input type="range" min="0" max="50" step="5" value="${w}" data-metric="${m}"
+            class="weighted-slider" style="flex:1;accent-color:#00FF87;cursor:pointer;">
+          <span class="weighted-pct" data-metric="${m}" style="min-width:36px;text-align:right;color:#00FF87;font-weight:600;font-family:monospace;">${w}%</span>
+        </div>
+      `;
+    }).join('');
+    // Wire slider events
+    container.querySelectorAll('.weighted-slider').forEach(sl => {
+      sl.addEventListener('input', () => {
+        const m = sl.dataset.metric;
+        const v = parseInt(sl.value, 10) / 100;
+        state.weights[m] = v;
+        const pctEl = container.querySelector(`.weighted-pct[data-metric="${m}"]`);
+        if (pctEl) pctEl.textContent = sl.value + '%';
+        updateWeightedTotal();
+      });
+      sl.addEventListener('change', () => scheduleCompute());
+    });
+    updateWeightedTotal();
+  }
+
+  function updateWeightedTotal() {
+    const totalEl = document.getElementById('mc-weighted-total');
+    if (!totalEl) return;
+    const total = Object.values(state.weights || {}).reduce((a, b) => a + b, 0);
+    totalEl.textContent = Math.round(total * 100) + '%';
+    totalEl.style.color = total > 0 ? '#00FF87' : 'rgba(255,255,255,0.4)';
+  }
+
   // Event listeners
   modeRadios.forEach(r=>r.addEventListener('change',()=>{
     state.mode = modeRadios.find(x=>x.checked)?.value || 'balanced';
-    
+
     const balancedExp = document.getElementById('balanced-explanation');
     const priorityExp = document.getElementById('priority-explanation');
     if (balancedExp && priorityExp) {
       balancedExp.classList.toggle('hidden', state.mode !== 'balanced');
       priorityExp.classList.toggle('hidden', state.mode !== 'lexico');
     }
-    
+
+    // v9.0: Show/hide weighted panel
+    const weightedPanel = document.getElementById('mc-weighted');
+    if (weightedPanel) {
+      weightedPanel.classList.toggle('hidden', state.mode !== 'weighted');
+      if (state.mode === 'weighted') {
+        // If no weights yet, initialize from selectedMetrics with equal weights
+        if (Object.keys(state.weights || {}).length === 0 && state.selectedMetrics.length > 0) {
+          const eq = 1 / state.selectedMetrics.length;
+          state.weights = {};
+          state.selectedMetrics.forEach(m => { state.weights[m] = eq; });
+        }
+        renderWeightedSliders();
+      }
+    }
+
     updatePriorityDisplay();
     scheduleCompute();
   }));
+
+  // Reset weighted button
+  const weightedResetBtn = document.getElementById('mc-weighted-reset');
+  if (weightedResetBtn) {
+    weightedResetBtn.addEventListener('click', () => {
+      const metrics = Object.keys(state.weights || {});
+      if (metrics.length === 0) return;
+      const eq = 1 / metrics.length;
+      metrics.forEach(m => { state.weights[m] = eq; });
+      renderWeightedSliders();
+      scheduleCompute();
+    });
+  }
   
   if (applyBtn) {
     applyBtn.addEventListener('click', () => {
