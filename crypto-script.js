@@ -10,7 +10,8 @@
 document.addEventListener('DOMContentLoaded', function () {
   // --- État global
   let cryptoData = {
-    indices: {},      // { a: [coins...], ... }
+    indices: {},      // legacy (alphabet) — conservé vide
+    allCoins: [],     // v6.38: liste plate pour le tableau dense
     top_performers: { // tops 24h et 90j seulement
       daily: { best: [], worst: [] },
       qtr:   { best: [], worst: [] }
@@ -18,15 +19,33 @@ document.addEventListener('DOMContentLoaded', function () {
     meta: { timestamp: null, count: 0, isStale: false, source: "CSV filtré avec volatilité" }
   };
 
+  // v6.38 — état du tableau dense
+  const tableState = {
+    sortKey: 'ret90d',
+    sortDir: 'desc',     // 'asc' | 'desc'
+    filters: {
+      sharpeMin: null,   // number | null
+      volMax:    null,
+      ddMax:     null,   // number positif → on filtre dd >= -ddMax
+      tier1Only: false,
+      noBlack:   true,
+      search:    '',
+    },
+  };
+
+  const BLACKLIST = new Set(['TRX','MORPHO','SHIB','DOGE','PEPE','FLOKI','BONK','WIF',
+    'OFFICIAL TRUMP','OFFICIALTRUMP','PUDGY PENGUINS','PUDGYPENGUINS']);
+  const STABLES = new Set(['USDT','USDC','DAI','TUSD','FDUSD','PYUSD','EURT','EURS','USDE','BUSD','UST',
+    'FRAX','LUSD','GUSD','USDP','SUSD','MIM','DOLA','CUSD','OUSD','HUSD']);
+
   let isLoading = false;
   const AUTO_REFRESH_INTERVAL = 2 * 60 * 60 * 1000; // 2h
   let autoRefreshTimer = null;
   let nextRefreshTime = null;
 
   // --- Boot
-  createAlphabetSections();
-  initAlphabetTabs();
-  initDefaultTab(); // Ajout: Active la lettre "A" par défaut
+  // v6.38: l'alphabet est remplacé par un tableau dense — fonctions désactivées
+  initDenseTableUI();
   initSearchFunctionality();
   updateMarketTime();
   setInterval(updateMarketTime, 1000);
@@ -105,8 +124,8 @@ document.addEventListener('DOMContentLoaded', function () {
       cryptoData.meta.timestamp = maxDate(coins.map(c => c.last_datetime));
       cryptoData.meta.isStale = isStale(cryptoData.meta.timestamp, 60 * 60 * 1000); // 1h
 
-      // Par lettre
-      cryptoData.indices = organizeByLetter(coins);
+      // v6.38 : conserve la liste plate pour le tableau dense
+      cryptoData.allCoins = coins;
 
       // Tops (24h / 90j seulement)
       cryptoData.top_performers = {
@@ -192,10 +211,9 @@ document.addEventListener('DOMContentLoaded', function () {
     return v === 0 ? '0.00%' : `-${Math.abs(v).toFixed(2)}%`;
   }
 
-  // --------- Rendu principal ---------
+  // --------- v6.38 : Tableau dense (remplace l'alphabet) ---------
   function renderCryptoData() {
     try {
-      // Titre / timestamp
       const ts = cryptoData.meta.timestamp ? new Date(cryptoData.meta.timestamp) : new Date();
       let formatted = ts.toLocaleString('fr-FR', {
         day: '2-digit', month: 'long', year: 'numeric',
@@ -205,51 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
       byId('last-update-time').textContent = formatted;
       byId('crypto-count').textContent = cryptoData.meta.count ?? 0;
 
-      // Tables par lettre
-      const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-      alphabet.forEach(letter => {
-        const body = byId(`${letter}-indices-body`);
-        if (!body) return;
-        body.innerHTML = '';
-
-        const items = (cryptoData.indices[letter] || []).slice().sort((a, b) =>
-          (a.name || '').localeCompare(b.name || '')
-        );
-
-        if (!items.length) {
-          body.innerHTML = `
-            <tr>
-              <td colspan="10" class="text-center py-4 text-gray-400">
-                <i class="fas fa-info-circle mr-2"></i>
-                Aucune cryptomonnaie disponible pour cette lettre
-              </td>
-            </tr>`;
-          return;
-        }
-
-        items.forEach(c => {
-          const td1dCls = valClass(c.ret1d);
-          const td7dCls = valClass(c.ret7d);
-          const td30dCls = valClass(c.ret30d);
-          const td90dCls = valClass(c.ret90d);
-          const ddCls = getDrawdownClass(c.dd90);
-
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td class="font-medium">${esc(c.name)}</td>
-            <td>${esc(c.symbol)}</td>
-            <td>${formatPrice(c.price, c.quote)}</td>
-            <td class="${td1dCls}">${formatPct(c.ret1d)}</td>
-            <td class="${td7dCls}">${formatPct(c.ret7d)}</td>
-            <td class="${td30dCls}">${formatPct(c.ret30d)}</td>
-            <td class="${td90dCls}">${formatPct(c.ret90d)}</td>
-            <td class="${ddCls}" title="Perte maximale sur 90 jours">${formatDD(c.dd90)}</td>
-            <td class="neutral">${formatPct(c.vol30)}</td>
-            <td class="text-sm opacity-80">${formatExchanges(c)}</td>
-          `;
-          body.appendChild(row);
-        });
-      });
+      renderDenseTable();
 
       hide('indices-loading');
       hide('indices-error');
@@ -259,6 +233,132 @@ document.addEventListener('DOMContentLoaded', function () {
       hide('indices-loading');
       show('indices-error');
     }
+  }
+
+  function passesFilters(c) {
+    const f = tableState.filters;
+    const tk = String(c.symbol || c.name || '').toUpperCase();
+    if (STABLES.has(tk)) return false;
+    if (f.noBlack && BLACKLIST.has(tk)) return false;
+    if (f.tier1Only && !truthy(c.tier1)) return false;
+    if (f.sharpeMin != null && (!Number.isFinite(c.sharpe) || c.sharpe < f.sharpeMin)) return false;
+    if (f.volMax    != null && (!Number.isFinite(c.vol30)  || c.vol30  > f.volMax))    return false;
+    // dd90 est négatif dans le CSV ; ddMax=20 → on garde dd >= -20
+    if (f.ddMax     != null && (!Number.isFinite(c.dd90)   || c.dd90   < -f.ddMax))    return false;
+    if (f.search) {
+      const q = f.search;
+      if (!String(c.name||'').toLowerCase().includes(q) &&
+          !String(c.symbol||'').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }
+
+  function truthy(x) {
+    if (x === true || x === 1) return true;
+    if (x == null || x === '') return false;
+    const s = String(x).trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes' || s === 'y';
+  }
+
+  function renderDenseTable() {
+    const body = byId('crypto-dense-body');
+    const countEl = byId('crypto-dense-count');
+    if (!body) return;
+
+    const rows = (cryptoData.allCoins || []).filter(passesFilters);
+
+    // tri
+    const k = tableState.sortKey;
+    const dir = tableState.sortDir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      const va = a[k], vb = b[k];
+      if (k === 'name') return dir * String(va||'').localeCompare(String(vb||''));
+      if (k === 'tier1') return dir * ((truthy(vb) ? 1 : 0) - (truthy(va) ? 1 : 0));
+      const na = Number.isFinite(va) ? va : -Infinity;
+      const nb = Number.isFinite(vb) ? vb : -Infinity;
+      return dir * (na - nb);
+    });
+
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="12" class="text-center py-6 text-gray-400">
+        <i class="fas fa-filter mr-2"></i>Aucune crypto ne passe les filtres</td></tr>`;
+      countEl.textContent = `0 / ${cryptoData.allCoins.length} cryptos`;
+      return;
+    }
+
+    body.innerHTML = rows.map(c => `
+      <tr>
+        <td class="font-medium">${esc(c.name)} <span class="opacity-50 text-xs">${esc(c.symbol)}</span></td>
+        <td>${formatPrice(c.price, c.quote)}</td>
+        <td class="${valClass(c.ret1d)}">${formatPct(c.ret1d)}</td>
+        <td class="${valClass(c.ret7d)}">${formatPct(c.ret7d)}</td>
+        <td class="${valClass(c.ret30d)}">${formatPct(c.ret30d)}</td>
+        <td class="${valClass(c.ret90d)}">${formatPct(c.ret90d)}</td>
+        <td class="${valClass(c.ret1y)}">${formatPct(c.ret1y)}</td>
+        <td class="${Number.isFinite(c.sharpe) && c.sharpe>=1 ? 'positive' : (c.sharpe<0 ? 'negative':'neutral')}">${Number.isFinite(c.sharpe) ? c.sharpe.toFixed(2) : '-'}</td>
+        <td class="neutral">${formatPct(c.vol30)}</td>
+        <td class="${getDrawdownClass(c.dd90)}" title="Perte maximale sur 90 jours">${formatDD(c.dd90)}</td>
+        <td>${truthy(c.tier1) ? '<span class="text-green-400">●</span>' : '<span class="opacity-30">○</span>'}</td>
+        <td class="text-sm opacity-80">${formatExchanges(c)}</td>
+      </tr>
+    `).join('');
+
+    countEl.textContent = `${rows.length} / ${cryptoData.allCoins.length} cryptos`;
+
+    // marquage visuel de la colonne triée
+    document.querySelectorAll('#crypto-dense-table thead th').forEach(th => {
+      th.classList.remove('sorted-asc','sorted-desc');
+      if (th.dataset.sort === k) {
+        th.classList.add(tableState.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+      }
+    });
+  }
+
+  function initDenseTableUI() {
+    // tri par clic en-tête
+    document.addEventListener('click', (e) => {
+      const th = e.target.closest('#crypto-dense-table thead th[data-sort]');
+      if (!th) return;
+      const k = th.dataset.sort;
+      if (tableState.sortKey === k) {
+        tableState.sortDir = tableState.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        tableState.sortKey = k;
+        tableState.sortDir = (k === 'name') ? 'asc' : 'desc';
+      }
+      renderDenseTable();
+    });
+
+    // filtres pilules
+    const wireRadio = (name, key, cast=parseFloat) => {
+      document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+        r.addEventListener('change', () => {
+          tableState.filters[key] = r.value === '' ? null : cast(r.value);
+          renderDenseTable();
+        });
+      });
+    };
+    wireRadio('ft-sharpe', 'sharpeMin');
+    wireRadio('ft-vol',    'volMax');
+    wireRadio('ft-dd',     'ddMax');
+
+    byId('ft-tier1')?.addEventListener('change', e => {
+      tableState.filters.tier1Only = e.target.checked;
+      renderDenseTable();
+    });
+    byId('ft-noblack')?.addEventListener('change', e => {
+      tableState.filters.noBlack = e.target.checked;
+      renderDenseTable();
+    });
+    byId('ft-reset')?.addEventListener('click', () => {
+      tableState.filters = { sharpeMin:null, volMax:null, ddMax:null, tier1Only:false, noBlack:true, search:'' };
+      document.querySelectorAll('input[name^="ft-"]').forEach(r => {
+        if (r.type === 'radio')    r.checked = (r.value === '');
+        if (r.type === 'checkbox') r.checked = (r.id === 'ft-noblack');
+      });
+      const s = byId('crypto-search'); if (s) s.value = '';
+      renderDenseTable();
+    });
   }
 
   // --------- Top 10 cartes ---------
@@ -312,36 +412,38 @@ document.addEventListener('DOMContentLoaded', function () {
     container.appendChild(wrap);
   }
 
-  // --------- Recherche ---------
+  // --------- Recherche (v6.38 : pilote le tableau dense) ---------
   function initSearchFunctionality() {
     const searchInput = byId('crypto-search');
     const clearButton = byId('clear-search');
     const searchInfo = byId('search-info');
     const searchCount = byId('search-count');
-    const tabs = document.querySelectorAll('.region-tab');
     if (!searchInput || !clearButton) return;
 
-    searchInput.addEventListener('input', function () {
-      const q = this.value.trim().toLowerCase();
+    const apply = () => {
+      const q = searchInput.value.trim().toLowerCase();
       clearButton.style.opacity = q ? '1' : '0';
-      if (!q) return clear();
-      perform(q);
-    });
-
-    clearButton.addEventListener('click', () => {
-      searchInput.value = ''; clear();
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && searchInput.value.trim()) {
-        searchInput.value = ''; clear();
+      tableState.filters.search = q;
+      renderDenseTable();
+      // compteur visible
+      const visible = (cryptoData.allCoins || []).filter(passesFilters).length;
+      if (q) {
+        searchCount.textContent = visible;
+        searchInfo.classList.remove('hidden');
+      } else {
+        searchInfo.classList.add('hidden');
       }
+    };
+
+    searchInput.addEventListener('input', apply);
+    clearButton.addEventListener('click', () => { searchInput.value = ''; apply(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && searchInput.value.trim()) { searchInput.value = ''; apply(); }
     });
+    return;
 
-    tabs.forEach(t => t.addEventListener('click', () => {
-      if (searchInput.value.trim()) { searchInput.value = ''; clear(); }
-    }));
-
+    // ---- code legacy alphabet ci-dessous, jamais atteint ----
+    // eslint-disable-next-line no-unreachable
     function perform(term) {
       let total = 0;
       const abc = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -637,7 +739,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { name: "Solana",   symbol: "SOL", quote: "US Dollar", price: 146.75,   ret1d: 5.3,  ret7d: 7.5,  ret30d: 22.0, ret90d: 120.1, vol7: 95.3, vol30: 98.7, atr14: 5.8, dd90: 35.2, exchange_used: "Binance|OKX|Bybit" },
       { name: "Cardano",  symbol: "ADA", quote: "US Dollar", price: 0.65,     ret1d: -1.2, ret7d: -2.5, ret30d: 5.0,  ret90d: -12.5, vol7: 82.1, vol30: 85.6, atr14: 4.5, dd90: 42.1, exchange_used: "Kraken" },
     ];
-    cryptoData.indices = organizeByLetter(demo);
+    cryptoData.allCoins = demo;
     cryptoData.meta = { timestamp: new Date().toISOString(), count: demo.length, isStale: false, source: 'demo avec volatilité' };
     cryptoData.top_performers = {
       daily: { best: topN(demo, c => c.ret1d, 10, 'desc'), worst: topN(demo, c => c.ret1d, 10, 'asc') },

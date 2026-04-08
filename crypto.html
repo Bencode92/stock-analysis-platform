@@ -1448,14 +1448,14 @@
                    </div>
                  </section>
                  
-                 <!-- Onglets alphabétiques -->
+                 <!-- ===== Tableau dense crypto (remplace alphabet) ===== -->
                  <div class="mb-8">
-                     <h2 class="section-title mb-6">Cryptomonnaies par lettre</h2>
-                     
+                     <h2 class="section-title mb-6">Comparatif crypto</h2>
+
                      <!-- Barre de recherche -->
                      <div class="search-container mb-4">
                          <div class="search-wrapper relative">
-                             <input type="text" id="crypto-search" placeholder="Rechercher une crypto..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
+                             <input type="text" id="crypto-search" placeholder="Rechercher une crypto (nom ou ticker)..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
                              <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-opacity-70"></i>
                              <button id="clear-search" class="clear-btn absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 transition-opacity duration-200">
                                  <i class="fas fa-times"></i>
@@ -1465,43 +1465,49 @@
                              <span id="search-count">0</span> résultats trouvés
                          </div>
                      </div>
-                     
-                     <div class="region-tabs mb-6">
-                         <div class="region-tab all-results" data-region="all">TOUS</div>
-                         <div class="region-tab active" data-region="a">A</div>
-                         <div class="region-tab" data-region="b">B</div>
-                         <div class="region-tab" data-region="c">C</div>
-                         <div class="region-tab" data-region="d">D</div>
-                         <div class="region-tab" data-region="e">E</div>
-                         <div class="region-tab" data-region="f">F</div>
-                         <div class="region-tab" data-region="g">G</div>
-                         <div class="region-tab" data-region="h">H</div>
-                         <div class="region-tab" data-region="i">I</div>
-                         <div class="region-tab" data-region="j">J</div>
-                         <div class="region-tab" data-region="k">K</div>
-                         <div class="region-tab" data-region="l">L</div>
-                         <div class="region-tab" data-region="m">M</div>
-                         <div class="region-tab" data-region="n">N</div>
-                         <div class="region-tab" data-region="o">O</div>
-                         <div class="region-tab" data-region="p">P</div>
-                         <div class="region-tab" data-region="q">Q</div>
-                         <div class="region-tab" data-region="r">R</div>
-                         <div class="region-tab" data-region="s">S</div>
-                         <div class="region-tab" data-region="t">T</div>
-                         <div class="region-tab" data-region="u">U</div>
-                         <div class="region-tab" data-region="v">V</div>
-                         <div class="region-tab" data-region="w">W</div>
-                         <div class="region-tab" data-region="x">X</div>
-                         <div class="region-tab" data-region="y">Y</div>
-                         <div class="region-tab" data-region="z">Z</div>
+
+                     <!-- Filtres pilules -->
+                     <div class="glassmorphism rounded-lg p-4 mb-4">
+                       <div class="flex flex-wrap gap-x-6 gap-y-3 items-center">
+                         <div class="flex items-center gap-2">
+                           <span class="text-xs opacity-60 mr-1">Sharpe min</span>
+                           <div class="flex flex-wrap gap-1" data-filter-group="sharpe">
+                             <label class="mc-pill"><input type="radio" name="ft-sharpe" value="" checked> tous</label>
+                             <label class="mc-pill"><input type="radio" name="ft-sharpe" value="0"> ≥0</label>
+                             <label class="mc-pill"><input type="radio" name="ft-sharpe" value="1"> ≥1</label>
+                             <label class="mc-pill"><input type="radio" name="ft-sharpe" value="1.5"> ≥1.5</label>
+                           </div>
+                         </div>
+                         <div class="flex items-center gap-2">
+                           <span class="text-xs opacity-60 mr-1">Vol 30j max</span>
+                           <div class="flex flex-wrap gap-1" data-filter-group="vol">
+                             <label class="mc-pill"><input type="radio" name="ft-vol" value="" checked> tous</label>
+                             <label class="mc-pill"><input type="radio" name="ft-vol" value="50"> ≤50%</label>
+                             <label class="mc-pill"><input type="radio" name="ft-vol" value="100"> ≤100%</label>
+                             <label class="mc-pill"><input type="radio" name="ft-vol" value="200"> ≤200%</label>
+                           </div>
+                         </div>
+                         <div class="flex items-center gap-2">
+                           <span class="text-xs opacity-60 mr-1">DD 90j max</span>
+                           <div class="flex flex-wrap gap-1" data-filter-group="dd">
+                             <label class="mc-pill"><input type="radio" name="ft-dd" value="" checked> tous</label>
+                             <label class="mc-pill"><input type="radio" name="ft-dd" value="20"> ≥-20%</label>
+                             <label class="mc-pill"><input type="radio" name="ft-dd" value="40"> ≥-40%</label>
+                             <label class="mc-pill"><input type="radio" name="ft-dd" value="60"> ≥-60%</label>
+                           </div>
+                         </div>
+                         <label class="mc-pill"><input type="checkbox" id="ft-tier1"> Tier-1 only</label>
+                         <label class="mc-pill"><input type="checkbox" id="ft-noblack" checked> Exclure blacklist</label>
+                         <button id="ft-reset" class="action-button text-xs ml-auto"><i class="fas fa-undo mr-1"></i>Reset</button>
+                       </div>
                      </div>
-                     
-                     <!-- Conteneur pour le tableau des cryptomonnaies -->
+
+                     <!-- Conteneur tableau -->
                      <div class="glassmorphism rounded-lg overflow-hidden">
                          <div id="indices-loading" class="py-16 flex justify-center">
                              <div class="loader"></div>
                          </div>
-                         
+
                          <div id="indices-error" class="py-16 text-center hidden">
                              <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
                              <p class="text-lg">Impossible de charger les données des cryptomonnaies.</p>
@@ -1510,9 +1516,30 @@
                                  Réessayer
                              </button>
                          </div>
-                         
+
                          <div id="indices-container" class="hidden">
-                             <!-- Les sections pour chaque lettre seront générées dynamiquement par le JS -->
+                             <div class="overflow-x-auto">
+                               <table class="data-table" id="crypto-dense-table">
+                                 <thead>
+                                   <tr>
+                                     <th data-sort="name">LIBELLÉ</th>
+                                     <th data-sort="price">DERNIER</th>
+                                     <th data-sort="ret1d">VAR 24h</th>
+                                     <th data-sort="ret7d">7j</th>
+                                     <th data-sort="ret30d">30j</th>
+                                     <th data-sort="ret90d" class="sorted-desc">90j</th>
+                                     <th data-sort="ret1y">1 AN</th>
+                                     <th data-sort="sharpe">SHARPE</th>
+                                     <th data-sort="vol30">VOL 30j</th>
+                                     <th data-sort="dd90">DD 90j</th>
+                                     <th data-sort="tier1">TIER-1</th>
+                                     <th>EXCHANGE</th>
+                                   </tr>
+                                 </thead>
+                                 <tbody id="crypto-dense-body"></tbody>
+                               </table>
+                             </div>
+                             <div class="text-xs opacity-60 px-4 py-2" id="crypto-dense-count"></div>
                          </div>
                      </div>
                  </div>
