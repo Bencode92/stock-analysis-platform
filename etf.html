@@ -1298,15 +1298,19 @@
 
       function matchesGeoPill(e, key){
         if (!key || key === 'all') return true;
+        // 1. Priorité absolue : geo_bucket calculé par etf_exposure.py
+        if (e.geo_bucket){
+          return e.geo_bucket === key;
+        }
+        // 2. Fallback sur country_top du provider
         const dom = getDominantCountry(e);
         if (key === 'world'){
-          // ETF mondial : ≥3 pays distincts dans le top5, OU nom évocateur
           if (countDistinctCountries(e) >= 3) return true;
           if (NAME_FALLBACK_GEO.world.test(String(getName(e)||''))) return true;
           return false;
         }
         if (dom && COUNTRY_TO_REGION[dom] === key) return true;
-        // Fallback nom uniquement si country_top est vide
+        // 3. Fallback nom uniquement si rien d'autre
         if (!dom){
           return NAME_FALLBACK_GEO[key]?.test(String(getName(e)||'')) || false;
         }
@@ -1315,10 +1319,14 @@
 
       function matchesSectorPill(e, key){
         if (!key || key === 'all') return true;
+        // 1. Priorité absolue : sector_bucket_pill calculé par etf_exposure.py
+        if (e.sector_bucket_pill){
+          return e.sector_bucket_pill === key;
+        }
+        // 2. Fallback sur sector_top du provider
         const dom = getDominantSector(e);
         if (dom && SECTOR_TO_KEY[dom] === key) return true;
-        // Fallback nom uniquement si sector_top est vide (ETF thématiques
-        // sans secteur renseigné : or, uranium, semis pure-play…)
+        // 3. Fallback nom uniquement si sector_top est vide
         if (!dom){
           return NAME_FALLBACK_SECTOR[key]?.test(String(getName(e)||'')) || false;
         }

@@ -113,6 +113,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit || npm install axios csv-parse
 
@@ -127,6 +132,13 @@ jobs:
           
           mkdir -p logs
           node etf-bond-daily-metrics.js 2>&1 | tee logs/daily-$(date +%Y%m%d)-$SESSION.log
+
+      - name: 🏷️ Enrich ETF exposure (etf_exposure.py)
+        run: |
+          echo "══════════════════════════════════════════════════════════════"
+          echo "🏷️ Enrichissement combined_etfs.csv (geo_bucket + sector_bucket_pill)"
+          echo "══════════════════════════════════════════════════════════════"
+          python3 scripts/enrich_etf_exposure.py 2>&1 | tee -a logs/daily-$(date +%Y%m%d)-$SESSION.log
 
       - name: 📋 Validate output
         run: |
