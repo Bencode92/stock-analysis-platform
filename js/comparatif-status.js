@@ -997,36 +997,44 @@ window.initComparatifStatuts = function() {
         background:rgba(1,42,74,.25);
         box-shadow:0 4px 16px rgba(0,0,0,.15);
       }
-      .comparatif-table{width:100%;border-collapse:collapse;text-align:left}
+      .comparatif-table{width:100%;border-collapse:separate;border-spacing:0;text-align:left}
       .comparatif-table th{
-        padding:${TOKENS.spacing.md}px ${TOKENS.spacing.md}px;
-        background:${TOKENS.surface.raised};
-        font-weight:600;
+        padding:${TOKENS.spacing.lg}px ${TOKENS.spacing.md}px;
+        background:linear-gradient(180deg, rgba(0,255,135,.08), ${TOKENS.surface.raised});
+        font-weight:700;
         color:${TOKENS.accent};
-        font-size:.8rem;
-        text-transform:none;
-        letter-spacing:0;
-        border-bottom:2px solid rgba(0,255,135,.2);
+        font-size:.78rem;
+        text-transform:uppercase;
+        letter-spacing:.5px;
+        border-bottom:2px solid rgba(0,255,135,.35);
+        border-right:1px solid rgba(0,255,135,.08);
         position:sticky;
         top:0;
         z-index:20;
         white-space:nowrap;
       }
-      .comparatif-table th:first-child{position:sticky;left:0;z-index:30;background:${TOKENS.surface.raised}}
+      .comparatif-table th:last-child{border-right:none}
+      .comparatif-table th:first-child{position:sticky;left:0;z-index:30;background:${TOKENS.surface.raised};border-right:2px solid rgba(0,255,135,.25)}
       .comparatif-table td{
-        padding:${TOKENS.spacing.sm}px ${TOKENS.spacing.md}px;
-        border-bottom:1px solid rgba(1,42,74,.4);
-        font-size:.82rem;
-        line-height:1.5;
+        padding:${TOKENS.spacing.lg}px ${TOKENS.spacing.md}px;
+        border-bottom:1px solid rgba(0,255,135,.08);
+        border-right:1px solid rgba(255,255,255,.04);
+        font-size:.875rem;
+        line-height:1.55;
         vertical-align:top;
       }
-      .comparatif-table td:first-child{position:sticky;left:0;background:rgba(1,42,74,.3);z-index:10}
+      .comparatif-table td:last-child{border-right:none}
+      .comparatif-table td:first-child{position:sticky;left:0;background:#0a2540;z-index:10;border-right:2px solid rgba(0,255,135,.18)}
       .comparatif-table tr:last-child td{border-bottom:none}
-      .comparatif-table tr:nth-child(odd) td{background:rgba(1,42,74,.12)}
-      .comparatif-table tr:nth-child(odd) td:first-child{background:rgba(1,42,74,.25)}
-      .comparatif-table tr:hover td{background:rgba(0,255,135,.03)}
-      .comparatif-table tr:hover td:first-child{background:rgba(0,255,135,.06)}
-      .comparatif-table .diff-col{background:rgba(0,255,135,.04)}
+      .comparatif-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.025)}
+      .comparatif-table tbody tr:nth-child(even) td:first-child{background:#0c2a47}
+      .comparatif-table tbody tr{cursor:pointer;transition:background .15s ease}
+      .comparatif-table tbody tr:hover td{background:rgba(0,255,135,.07)}
+      .comparatif-table tbody tr:hover td:first-child{background:rgba(0,255,135,.12)}
+      .comparatif-table tbody tr.is-selected td{background:rgba(0,255,135,.13);box-shadow:inset 0 1px 0 rgba(0,255,135,.35),inset 0 -1px 0 rgba(0,255,135,.35)}
+      .comparatif-table tbody tr.is-selected td:first-child{background:rgba(0,255,135,.18);border-left:3px solid ${TOKENS.accent};padding-left:calc(${TOKENS.spacing.md}px - 3px)}
+      .comparatif-table .diff-col{background:rgba(255,184,0,.09) !important;box-shadow:inset 2px 0 0 rgba(255,184,0,.35),inset -2px 0 0 rgba(255,184,0,.35)}
+      .comparatif-table tbody tr:hover .diff-col{background:rgba(255,184,0,.15) !important}
 
       .statut-cell{display:flex;align-items:flex-start;gap:${TOKENS.spacing.md}px}
       .statut-icon{
@@ -1131,7 +1139,7 @@ window.initComparatifStatuts = function() {
         .comparatif-filters{flex-direction:column}
         .criteria-buttons{grid-template-columns:repeat(2,1fr)}
         .statut-icon{width:2rem;height:2rem;font-size:.875rem}
-        .comparatif-table th,.comparatif-table td{padding:${TOKENS.spacing.md}px ${TOKENS.spacing.sm}px;font-size:.8125rem}
+        .comparatif-table th,.comparatif-table td{padding:${TOKENS.spacing.md}px ${TOKENS.spacing.sm}px;font-size:.8125rem;line-height:1.5}
         .comparatif-table th:first-child,.comparatif-table td:first-child{position:static}
         .notes-list{grid-template-columns:1fr}
         .decision-grid{grid-template-columns:1fr}
@@ -2100,7 +2108,8 @@ window.initComparatifStatuts = function() {
       }
 
       body.innerHTML = rowsData.map((st,i)=>{
-        let row=`<tr style="animation-delay:${i*0.04}s;" data-statut="${escapeHTML(st.shortName)}">`;
+        const selCls = compareStatuts.includes(st.shortName) ? ' class="is-selected"' : '';
+        let row=`<tr${selCls} style="animation-delay:${i*0.04}s;" data-statut="${escapeHTML(st.shortName)}">`;
         columns.forEach((col,idx)=>{
           const diffClass = idx>0 && applyDiff?' diff-col':'';
           if(col.key==='name'){
