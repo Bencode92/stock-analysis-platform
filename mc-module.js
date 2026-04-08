@@ -492,17 +492,47 @@
     return mask;
   }
 
+  // ===== v9.0: LIQUIDITY MASK =====
+  // Filter out illiquid stocks using ADV/MarketCap ratio
+  // Russell methodology: 5 bps minimum (= 0.05% of market cap traded daily)
+  // Single rule auto-adapts to all regions and market caps
+  const LIQUIDITY_MIN_BPS = 5; // 5 basis points = 0.0005
+  function buildLiquidityMask() {
+    const n = state.data.length;
+    const mask = new Uint8Array(n);
+    let filtered = 0;
+    for (let i = 0; i < n; i++) {
+      const s = state.data[i];
+      const vol = parseFloat(s.volume);
+      const price = parseFloat(s.price);
+      const cap = parseFloat(s.market_cap);
+      if (!Number.isFinite(vol) || !Number.isFinite(price) || !Number.isFinite(cap) || cap <= 0) {
+        // Missing data → keep (don't penalize for missing)
+        mask[i] = 1;
+        continue;
+      }
+      const adv = vol * price;
+      const ratioBps = (adv / cap) * 10000;
+      mask[i] = ratioBps >= LIQUIDITY_MIN_BPS ? 1 : 0;
+      if (!mask[i]) filtered++;
+    }
+    masks.liquidity = mask;
+    console.log(`💧 Liquidity filter: ${filtered}/${n} stocks excluded (ADV/cap < ${LIQUIDITY_MIN_BPS} bps)`);
+    return mask;
+  }
+
   function buildFinalMask() {
     const n = state.data.length;
     const out = new Uint8Array(n);
-    
+
     if (!masks.geo) buildGeoMask();
     if (!masks.custom) buildCustomMask();
-    
+    if (!masks.liquidity) buildLiquidityMask();
+
     for (let i = 0; i < n; i++) {
-      out[i] = (masks.geo[i] & masks.custom[i]) ? 1 : 0;
+      out[i] = (masks.geo[i] & masks.custom[i] & masks.liquidity[i]) ? 1 : 0;
     }
-    
+
     masks.final = out;
     return out;
   }
