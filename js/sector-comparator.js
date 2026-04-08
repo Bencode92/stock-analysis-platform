@@ -18,8 +18,13 @@
     'data/stocks_asia.json',
   ];
 
-  // Seuil minimum de holdings matchés sous lequel un item est désactivé
-  const MIN_COVERAGE = 4;
+  // Seuils de couverture
+  // - MIN_COVERAGE : nombre minimum de holdings matchés (sinon item désactivé)
+  // - MIN_WEIGHT_COVERED : fraction de poids du top-10 effectivement matchée
+  //   (un item peut avoir 7/10 stocks matchés mais ne couvrir que 30% du poids
+  //    si le mega-cap n'a pas matché → on doit aussi le filtrer)
+  const MIN_COVERAGE = 7;
+  const MIN_WEIGHT_COVERED = 0.70;
 
   // Caches partagés (chargés une seule fois quel que soit le nombre d'instances)
   const shared = {
@@ -330,9 +335,15 @@
 
   function computeAggregates(rows) {
     const matched = rows.filter(r => r.stock);
+    // Poids couvert : Σ wᵢ des holdings matchés vs Σ wᵢ du top-10
+    const totalW = rows.reduce((s, r) => s + (r.holding.weight || 0), 0);
+    const matchedW = matched.reduce((s, r) => s + (r.holding.weight || 0), 0);
+    const weightCovered = totalW > 0 ? matchedW / totalW : 0;
     return {
       coverage: matched.length,
       total: rows.length,
+      weightCovered,                  // ∈ [0, 1] — fraction du poids du top-10 effectivement matchée
+      matchedWeight: matchedW,        // somme absolue des poids matchés (pour debug)
       perf_ytd: weightedAvg(matched, r => r.stock.perf_ytd),
       perf_1y: weightedAvg(matched, r => r.stock.perf_1y),
       perf_3y: weightedAvg(matched, r => r.stock.perf_3y),
@@ -377,7 +388,9 @@
       it.agg = computeAggregates(rows);
       it.coverage = it.agg.coverage;
       it.totalHoldings = it.agg.total;
-      it.disabled = it.coverage < MIN_COVERAGE;
+      it.weightCovered = it.agg.weightCovered;
+      // Désactivé si trop peu de stocks matchés OU si le poids couvert est trop faible
+      it.disabled = it.coverage < MIN_COVERAGE || it.weightCovered < MIN_WEIGHT_COVERED;
     });
   }
 
@@ -540,9 +553,13 @@
       topWeightPct = etfData.top_weight > 1 ? etfData.top_weight : etfData.top_weight * 100;
     }
     const lowCoverage = topWeightPct != null && topWeightPct < 40;
-    const warningBanner = lowCoverage ? `
-      <div class="sc-warning" title="Le top 10 ne représente qu'une petite fraction de l'ETF — les agrégats ci-dessous ne reflètent pas le portefeuille complet">
-        ⚠ Top 10 = ${topWeightPct.toFixed(1)}% du portefeuille — agrégats peu représentatifs
+    // Poids des holdings effectivement matchés (= weightCovered × top_weight de l'ETF)
+    const wcPct = sector.weightCovered != null ? sector.weightCovered * 100 : null;
+    const matchedShareOfETF = (wcPct != null && topWeightPct != null) ? (wcPct / 100) * topWeightPct : null;
+    const lowMatchedWeight = wcPct != null && wcPct < 70;
+    const warningBanner = (lowCoverage || lowMatchedWeight) ? `
+      <div class="sc-warning" title="Représentativité faible — agrégats à interpréter avec prudence">
+        ⚠ ${lowCoverage ? `Top 10 = ${topWeightPct.toFixed(1)}% du portefeuille` : ''}${lowCoverage && lowMatchedWeight ? ' · ' : ''}${lowMatchedWeight ? `Stocks matchés = ${wcPct.toFixed(0)}% du top-10${matchedShareOfETF != null ? ` (≈ ${matchedShareOfETF.toFixed(0)}% de l'ETF)` : ''}` : ''}
       </div>` : '';
     // Perf ETF réelle (sectors.json/markets.json) — à comparer avec la perf top-10 pondérée
     const realPerf = `
@@ -556,7 +573,7 @@
       <div class="sc-panel">
         <div class="sc-panel-head">
           <div class="sc-panel-title">${sector.label}</div>
-          <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}${topWeightPct != null ? ` • Top 10 = ${topWeightPct.toFixed(1)}%` : ''}</div>
+          <div class="sc-panel-sub">${sector.region} • ETF ${sector.symbol}${topWeightPct != null ? ` • Top 10 = ${topWeightPct.toFixed(1)}%` : ''}${wcPct != null ? ` • Matchés = ${wcPct.toFixed(0)}% du top-10` : ''}</div>
           ${warningBanner}
           ${realPerf}
           <div class="sc-panel-composite">
@@ -600,11 +617,21 @@
     const aggR = computeAggregates(rowsR);
     const cmp = compareAggregates(aggL, aggR);
 
-    const winnerLabel = cmp.leftWins === cmp.rightWins
-      ? '<span class="sc-banner-tie">Égalité</span>'
-      : cmp.leftWins > cmp.rightWins
-        ? `<span class="sc-banner-winner">🏆 ${left.label}</span> l'emporte ${cmp.leftWins}–${cmp.rightWins}`
-        : `<span class="sc-banner-winner">🏆 ${right.label}</span> l'emporte ${cmp.rightWins}–${cmp.leftWins}`;
+    // Le winner est déclaré par le SCORE COMPOSITE (rang dans l'univers complet),
+    // pas par les victoires métrique-par-métrique (qui ne comparent que les 2 sélectionnés
+    // et peuvent diverger du composite quand un secteur a une forte dispersion).
+    const sL = left.compositeScore, sR = right.compositeScore;
+    const scoreDelta = (sL != null && sR != null) ? Math.abs(sL - sR) : null;
+    let winnerLabel;
+    if (sL == null || sR == null) {
+      winnerLabel = '<span class="sc-banner-tie">Score composite indisponible</span>';
+    } else if (scoreDelta < 2) {
+      winnerLabel = `<span class="sc-banner-tie">Égalité</span> sur le score composite (${sL} vs ${sR})`;
+    } else if (sL > sR) {
+      winnerLabel = `<span class="sc-banner-winner">🏆 ${left.label}</span> l'emporte sur le score composite — <b>${sL}</b> vs ${sR}`;
+    } else {
+      winnerLabel = `<span class="sc-banner-winner">🏆 ${right.label}</span> l'emporte sur le score composite — <b>${sR}</b> vs ${sL}`;
+    }
 
     rootEl.innerHTML = `
       <div class="sc-banner">${winnerLabel}</div>
@@ -745,9 +772,10 @@
             const dis = s.disabled ? 'is-disabled' : '';
             const cov = `${s.coverage}/${s.totalHoldings || 10}`;
             const score = s.compositeScore;
+            const wcTxt = s.weightCovered != null ? ` · ${(s.weightCovered * 100).toFixed(0)}% du poids` : '';
             const titleTxt = s.disabled
-              ? `${s.label} — données insuffisantes (${cov} holdings matchés, min ${MIN_COVERAGE})`
-              : `${s.label} — score ${score != null ? score + '/100' : 'n/a'} · ${cov} holdings`;
+              ? `${s.label} — données insuffisantes (${cov} holdings${wcTxt}, min ${MIN_COVERAGE} et ${MIN_WEIGHT_COVERED * 100}% du poids)`
+              : `${s.label} — score ${score != null ? score + '/100' : 'n/a'} · ${cov} holdings${wcTxt}`;
             const scoreBadge = !s.disabled && score != null
               ? `<span class="sc-chip-score" style="${scoreBadgeStyle(score)}">${score}</span>`
               : '';
