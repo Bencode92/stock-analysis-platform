@@ -52,6 +52,82 @@
     return [];
   }
 
+  // -- Stock universe (chargé une seule fois) --------------------------------
+  // Réutilise window.SectorComparator.buildStockIndex / normalizeName /
+  // stripSuffix si dispo, sinon fallback local minimal.
+  const STOCK_FILES = [
+    'data/stocks_us.json',
+    'data/stocks_europe.json',
+    'data/stocks_asia.json',
+  ];
+  const stockShared = { index: null, loading: null };
+
+  function _normalizeName(s) {
+    if (window.SectorComparator?.normalizeName) return window.SectorComparator.normalizeName(s);
+    return String(s || '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[.,'’()\-]/g, ' ')
+      .replace(/\b(the|corp|corporation|inc|incorporated|company|co|ltd|limited|plc|sa|ag|nv|se|ab|holdings?|group|trust|class\s*[abc])\b/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function _stripSuffix(t) {
+    if (window.SectorComparator?.stripSuffix) return window.SectorComparator.stripSuffix(t);
+    return String(t || '').split('.')[0].toUpperCase();
+  }
+  function _buildIndex(stockSets) {
+    if (window.SectorComparator?.buildStockIndex) {
+      return window.SectorComparator.buildStockIndex(stockSets);
+    }
+    const idx = new Map();
+    const add = (k, v) => {
+      if (!k) return;
+      if (!idx.has(k)) idx.set(k, [v]);
+      else if (!idx.get(k).includes(v)) idx.get(k).push(v);
+    };
+    stockSets.forEach(set => (set?.stocks || []).forEach(stk => {
+      add(`T:${(stk.ticker || '').toUpperCase()}`, stk);
+      add(`T:${_stripSuffix(stk.ticker)}`, stk);
+      const n = _normalizeName(stk.name);
+      if (n) add(`N:${n}`, stk);
+    }));
+    return idx;
+  }
+  async function loadStockIndex() {
+    if (stockShared.index) return stockShared.index;
+    if (stockShared.loading) return stockShared.loading;
+    stockShared.loading = (async () => {
+      try {
+        const sets = await Promise.all(
+          STOCK_FILES.map(f => fetch(f).then(r => r.ok ? r.json() : null).catch(() => null))
+        );
+        stockShared.index = _buildIndex(sets.filter(Boolean));
+      } catch (err) {
+        console.warn('[etf-comparator] stock index load failed', err);
+        stockShared.index = new Map();
+      }
+      return stockShared.index;
+    })();
+    return stockShared.loading;
+  }
+  function matchHolding(h) {
+    const idx = stockShared.index;
+    if (!idx) return null;
+    const tries = [];
+    const t = h.t || h.symbol || '';
+    if (t) {
+      tries.push(`T:${t.toUpperCase()}`);
+      tries.push(`T:${_stripSuffix(t)}`);
+    }
+    const n = _normalizeName(h.n || h.name);
+    if (n) tries.push(`N:${n}`);
+    for (const k of tries) {
+      const cands = idx.get(k);
+      if (cands && cands.length) return cands[0];
+    }
+    return null;
+  }
+
   // -- ETFComparator ---------------------------------------------------------
   const ETFComparator = {
     MAX: MAX_SELECT,
@@ -142,6 +218,11 @@
     // -- Modal ---------------------------------------------------------------
     openModal() {
       if (this.selected.size < 2) return;
+      // Si l'index actions n'est pas encore prêt, on attend puis on rappelle.
+      if (!stockShared.index) {
+        loadStockIndex().then(() => this.openModal());
+        return;
+      }
       const etfs = [...this.selected.values()];
 
       // Lignes comparées (UNIQUEMENT métriques intrinsèques de l'ETF)
@@ -231,22 +312,58 @@
       const holdingsHeaderRow = `
         <tr><td colspan="${etfs.length + 1}" style="padding:18px 14px 6px 14px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#00FF87;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);">TOP 10 HOLDINGS</td></tr>
       `;
-      const allHoldings = etfs.map(e => getHoldings(e));
+      // Enrichit chaque holding avec sa stock matchée + perfs
+      const allHoldings = etfs.map(e => getHoldings(e).map(h => ({
+        h, stock: matchHolding(h),
+      })));
       const maxHoldings = Math.max(0, ...allHoldings.map(h => h.length));
+      // Couverture = nb holdings matchés / total, par ETF
+      const coverages = allHoldings.map(hs => {
+        const total = hs.length;
+        const matched = hs.filter(x => x.stock).length;
+        return { matched, total };
+      });
       const holdingsRows = [];
       for (let i = 0; i < maxHoldings; i++) {
         const cells = allHoldings.map(hs => {
-          const h = hs[i];
-          if (!h) return `<td style="padding:6px 14px;text-align:center;color:rgba(255,255,255,0.2);font-size:0.78rem;border-left:1px solid rgba(255,255,255,0.06);">–</td>`;
+          const item = hs[i];
+          if (!item) return `<td style="padding:8px 12px;text-align:center;color:rgba(255,255,255,0.2);font-size:0.78rem;border-left:1px solid rgba(255,255,255,0.06);">–</td>`;
+          const { h, stock } = item;
           const ticker = h.t || '';
           const name = h.n || '';
           const w = h.w != null ? Number(h.w).toFixed(1) + '%' : '';
-          return `<td style="padding:6px 14px;text-align:left;color:#fff;font-size:0.75rem;border-left:1px solid rgba(255,255,255,0.06);font-family:'JetBrains Mono',monospace;">
-            <span style="color:#00FF87;font-weight:700;">${ticker || name}</span>
-            ${w ? `<span style="color:rgba(255,255,255,0.5);float:right;">${w}</span>` : ''}
+          // Perf YTD du stock matché
+          const ytd = stock?.perf_ytd;
+          const y1  = stock?.perf_1y;
+          const ytdColor = ytd == null ? 'rgba(255,255,255,0.4)' : (ytd >= 0 ? '#4caf50' : '#f44336');
+          const y1Color  = y1  == null ? 'rgba(255,255,255,0.4)' : (y1  >= 0 ? '#4caf50' : '#f44336');
+          const ytdTxt = ytd != null ? (ytd >= 0 ? '+' : '') + ytd.toFixed(1) + '%' : '–';
+          const y1Txt  = y1  != null ? (y1  >= 0 ? '+' : '') + y1.toFixed(1)  + '%' : '–';
+          const matchDot = stock
+            ? '<span title="Stock matché" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#00FF87;margin-right:6px;"></span>'
+            : '<span title="Non matché dans l\'univers actions" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);margin-right:6px;"></span>';
+          return `<td style="padding:8px 12px;text-align:left;color:#fff;font-size:0.75rem;border-left:1px solid rgba(255,255,255,0.06);font-family:'JetBrains Mono',monospace;vertical-align:top;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+              <span style="color:#00FF87;font-weight:700;">${matchDot}${ticker || (name ? name.slice(0, 14) : '–')}</span>
+              <span style="color:rgba(255,255,255,0.5);">${w}</span>
+            </div>
+            ${stock ? `
+              <div style="display:flex;justify-content:space-between;font-size:0.65rem;margin-top:3px;opacity:0.85;">
+                <span style="color:${ytdColor};">YTD ${ytdTxt}</span>
+                <span style="color:${y1Color};">1Y ${y1Txt}</span>
+              </div>` : ''}
           </td>`;
         }).join('');
-        holdingsRows.push(`<tr><td style="padding:6px 14px;color:rgba(255,255,255,0.4);font-size:0.7rem;">#${i + 1}</td>${cells}</tr>`);
+        holdingsRows.push(`<tr><td style="padding:8px 12px;color:rgba(255,255,255,0.4);font-size:0.7rem;vertical-align:top;">#${i + 1}</td>${cells}</tr>`);
+      }
+      // Ligne de couverture (combien de holdings ont été matchés à l'univers actions)
+      if (maxHoldings > 0) {
+        const covCells = coverages.map(c => {
+          const ratio = c.total ? c.matched / c.total : 0;
+          const color = ratio >= 0.7 ? '#4caf50' : ratio >= 0.4 ? '#ff9800' : '#f44336';
+          return `<td style="padding:6px 12px;text-align:center;color:${color};font-size:0.7rem;font-family:'JetBrains Mono',monospace;border-left:1px solid rgba(255,255,255,0.06);">${c.matched}/${c.total} matchés</td>`;
+        }).join('');
+        holdingsRows.push(`<tr><td style="padding:6px 12px;color:rgba(255,255,255,0.35);font-size:0.65rem;font-style:italic;">couverture</td>${covCells}</tr>`);
       }
       const holdingsBlock = maxHoldings > 0
         ? holdingsHeaderRow + holdingsRows.join('')
@@ -340,6 +457,8 @@
       });
       const target = document.getElementById('etf-az-container');
       if (target) obs.observe(target, { childList: true, subtree: true });
+      // Précharge l'index actions en arrière-plan dès le boot
+      loadStockIndex();
     },
   };
 
