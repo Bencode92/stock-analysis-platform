@@ -437,7 +437,7 @@
 
   function renderRows(rows) {
     if (!rows.length) {
-      return `<tr><td colspan="9" class="text-center py-4 opacity-60">Aucun holding disponible</td></tr>`;
+      return `<tr><td colspan="7" class="text-center py-4 opacity-60">Aucun holding disponible</td></tr>`;
     }
     return rows.map(r => {
       const s = r.stock || {};
@@ -457,8 +457,6 @@
           <td class="sc-heat ${cls(s.perf_1y)}" style="${heat(s.perf_1y, -20, 40)}">${fmtPct(s.perf_1y)}</td>
           <td class="sc-heat sc-q" style="${heat(s.quality_raw_score, 30, 85)}">${fmtScore(s.quality_raw_score)}${s.quality_grade ? ` <span class="sc-grade">${s.quality_grade}</span>` : ''}</td>
           <td class="sc-num">${fmtScore(s.buffett_score)}</td>
-          <td class="sc-num">${fmtNum(s.roe)}${s.roe != null ? '%' : ''}</td>
-          <td class="sc-num">${fmtNum(s.roic)}${s.roic != null ? '%' : ''}</td>
         </tr>`;
     }).join('');
   }
@@ -466,19 +464,27 @@
   // Liste ordonnée des métriques agrégées + sens (1 = higher wins, -1 = lower wins, 0 = neutre)
   const AGG_METRICS = [
     // eps = tie zone : si |L − R| < eps on déclare égalité (anti-bruit statistique)
-    { key: 'perf_ytd',  label: 'Perf YTD (pondérée)',  dir: 1, eps: 0.5, fmt: v => fmtPct(v) },
-    { key: 'perf_1y',   label: 'Perf 1Y (pondérée)',   dir: 1, eps: 0.5, fmt: v => fmtPct(v) },
-    { key: 'perf_3y',   label: 'Perf 3Y (pondérée)',   dir: 1, eps: 1.0, fmt: v => fmtPct(v) },
-    { key: 'quality',   label: 'Quality raw (pondéré)', dir: 1, eps: 2,   fmt: v => fmtScore(v) },
-    { key: 'buffett',   label: 'Buffett (pondéré)',    dir: 1, eps: 2,   fmt: v => fmtScore(v) },
-    { key: 'roe',       label: 'ROE médian',           dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'roic',      label: 'ROIC médian',          dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'net_margin',label: 'Net margin médiane',   dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    { key: 'fcf_yield', label: 'FCF yield médian',     dir: 1, eps: 0.5, fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
-    // Beta est linéaire en pondération (β_p = Σ wᵢβᵢ), donc mathématiquement exact.
+    // group : utilisé pour l'affichage en sections thématiques
+    // Métriques retirées (ROE/ROIC/net_margin) car déjà incluses dans quality_raw → double counting
+    { key: 'perf_ytd',       label: 'Perf YTD (pondérée)', dir: 1, eps: 0.5, group: 'perf', fmt: v => fmtPct(v) },
+    { key: 'perf_1y',        label: 'Perf 1Y (pondérée)',  dir: 1, eps: 0.5, group: 'perf', fmt: v => fmtPct(v) },
+    { key: 'perf_3y',        label: 'Perf 3Y (pondérée)',  dir: 1, eps: 1.0, group: 'perf', fmt: v => fmtPct(v) },
+    { key: 'quality',        label: 'Quality raw (pondéré)', dir: 1, eps: 2,   group: 'quality', fmt: v => fmtScore(v) },
+    { key: 'buffett',        label: 'Buffett (pondéré)',   dir: 1, eps: 2,   group: 'quality', fmt: v => fmtScore(v) },
+    { key: 'revenue_growth', label: 'Revenue growth 3Y',   dir: 1, eps: 0.5, group: 'quality', fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'fcf_yield',      label: 'FCF yield médian',    dir: 1, eps: 0.5, group: 'yield',   fmt: v => v == null ? '—' : v.toFixed(1) + '%' },
+    { key: 'div_yield',      label: 'Dividend yield',      dir: 1, eps: 0.3, group: 'yield',   fmt: v => v == null ? '—' : v.toFixed(2) + '%' },
+    // Beta est linéaire en pondération (β_p = Σ wᵢβᵢ), exact mathématiquement.
     // Vol et Max DD pondérés ne sont PAS exacts (ignorent les corrélations) — retirés.
-    { key: 'beta',      label: 'Beta (pondéré)',       dir: 0,           fmt: v => v == null ? '—' : v.toFixed(2) },
-    { key: 'coverage',  label: 'Couverture stocks',    dir: 0,           fmt: (_, agg) => `${agg.coverage}/${agg.total}` },
+    { key: 'beta',           label: 'Beta (pondéré)',      dir: 0,           group: 'risk',    fmt: v => v == null ? '—' : v.toFixed(2) },
+    { key: 'coverage',       label: 'Couverture stocks',   dir: 0,           group: 'risk',    fmt: (_, agg) => `${agg.coverage}/${agg.total}` },
+  ];
+
+  const AGG_GROUPS = [
+    { key: 'perf',    label: 'Performance' },
+    { key: 'quality', label: 'Qualité & Croissance' },
+    { key: 'yield',   label: 'Yield' },
+    { key: 'risk',    label: 'Risque & Couverture' },
   ];
 
   function compareAggregates(aggL, aggR) {
@@ -505,18 +511,22 @@
   }
 
   function renderAggregates(agg, comparison, side) {
-    return `
-      <div class="sc-agg-grid">
-        ${AGG_METRICS.map(m => {
-          const tone = comparison[side][m.key]; // 'win' | 'lose' | 'tie' | 'neutral'
-          const val = m.fmt(agg[m.key], agg);
-          return `
-            <div class="sc-agg-cell sc-${tone}">
-              <div class="sc-agg-label">${m.label}</div>
-              <div class="sc-agg-val">${val}</div>
-            </div>`;
-        }).join('')}
-      </div>`;
+    return AGG_GROUPS.map(g => {
+      const cells = AGG_METRICS.filter(m => m.group === g.key).map(m => {
+        const tone = comparison[side][m.key];
+        const val = m.fmt(agg[m.key], agg);
+        return `
+          <div class="sc-agg-cell sc-${tone}">
+            <div class="sc-agg-label">${m.label}</div>
+            <div class="sc-agg-val">${val}</div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="sc-agg-section">
+          <div class="sc-agg-section-h">${g.label}</div>
+          <div class="sc-agg-grid">${cells}</div>
+        </div>`;
+    }).join('');
   }
 
   function renderPanel(side, sector, agg, comparison) {
@@ -567,8 +577,7 @@
               <tr>
                 <th>#</th><th>Société</th><th>Poids</th>
                 <th>YTD</th><th>1Y</th>
-                <th title="Score qualité brut, non peer-normalisé">Quality*</th><th>Buffett</th>
-                <th>ROE</th><th>ROIC</th>
+                <th title="Score qualité brut, non peer-normalisé. Inclut déjà ROE/PE/D&E/FCF.">Quality*</th><th>Buffett</th>
               </tr>
             </thead>
             <tbody>${renderRows(rows)}</tbody>
@@ -675,7 +684,10 @@
       .sc-panel-score { margin-top: .5rem; display: flex; align-items: baseline; gap: .35rem; }
       .sc-score-num { font-size: 1.6rem; font-weight: 800; color: #00ff87; line-height: 1; font-variant-numeric: tabular-nums; }
       .sc-score-lbl { font-size: .72rem; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
-      .sc-agg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .45rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.08); }
+      .sc-agg-section { margin-top: 1rem; }
+      .sc-agg-section:first-of-type { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.08); }
+      .sc-agg-section-h { font-size: .62rem; font-weight: 700; opacity: .5; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .4rem; }
+      .sc-agg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .45rem; }
       @media (max-width: 700px) { .sc-agg-grid { grid-template-columns: repeat(2, 1fr); } }
       .sc-agg-cell { background: rgba(255,255,255,.04); border-radius: .5rem; padding: .55rem .6rem; border: 1px solid transparent; transition: all .2s; }
       .sc-agg-cell.sc-win  { background: rgba(0,255,135,.18); border-color: rgba(0,255,135,.5); }
