@@ -63,7 +63,8 @@ TD_SYMBOLS = {
     "gold":   "XAU/USD",
     "silver": "XAG/USD",
     "sp500":  "SPY",
-    "brent":  "BZ",                  # v2.3: Brent futures (real-time, replaces FRED J-2 lag)
+    # "brent": removed from TD — TD's "BZ" returns a NASDAQ ADR, not Brent futures.
+    # Brent is now fetched from Yahoo Finance BZ=F (real-time, no API key). See fetch_yahoo_brent().
     "eurusd": "EUR/USD",             # v2.2: EUR/USD for FX context
     "nasdaq": "QQQ",                 # v2.2: QQQ as Nasdaq proxy
     "xlu":    "XLU",                 # v2.2: Utilities sector perf
@@ -89,6 +90,60 @@ def _fetch_json(url: str, timeout: int = 15) -> Optional[Dict]:
         return None
     except Exception as e:
         logger.warning(f"[MACRO] Unexpected error fetching {url[:80]}... → {e}")
+        return None
+
+
+# =============================================================================
+# YAHOO FINANCE — Brent Crude Real-Time (no API key required)
+# =============================================================================
+
+def fetch_yahoo_brent() -> Optional[Dict]:
+    """
+    Fetch real-time Brent futures from Yahoo Finance (BZ=F).
+    No API key required. Updates ~15min delayed (effectively real-time for daily decisions).
+
+    Returns:
+        {"price": float, "date": "YYYY-MM-DD", "avg_5d": float, "source": "yahoo_BZ=F"}
+        or None on failure.
+    """
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/BZ=F?interval=1d&range=10d"
+    data = _fetch_json(url)
+    if not data:
+        logger.warning("[YAHOO] Brent fetch failed")
+        return None
+
+    try:
+        result = data.get("chart", {}).get("result", [{}])[0]
+        meta = result.get("meta", {})
+        price = meta.get("regularMarketPrice")
+        if price is None:
+            logger.warning("[YAHOO] Brent: no regularMarketPrice in response")
+            return None
+
+        # Sanity check: Brent should be in $30-$200 range
+        if not (30 <= price <= 200):
+            logger.error(f"[YAHOO] Brent price out of sanity range: ${price}")
+            return None
+
+        # Compute 5d average from historical closes
+        closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        valid_closes = [c for c in closes if c is not None and 30 <= c <= 200]
+        avg_5d = sum(valid_closes[-5:]) / len(valid_closes[-5:]) if len(valid_closes) >= 1 else price
+
+        # Date from regularMarketTime (epoch seconds)
+        from datetime import datetime as _dt
+        ts = meta.get("regularMarketTime")
+        date_str = _dt.utcfromtimestamp(ts).strftime("%Y-%m-%d") if ts else _dt.now().strftime("%Y-%m-%d")
+
+        logger.info(f"[YAHOO] Brent BZ=F: ${price} ({date_str}), avg_5d=${avg_5d:.2f}")
+        return {
+            "price": float(price),
+            "date": date_str,
+            "avg_5d": float(avg_5d),
+            "source": "yahoo_BZ=F",
+        }
+    except Exception as e:
+        logger.error(f"[YAHOO] Brent parse error: {e}")
         return None
 
 
@@ -278,10 +333,28 @@ def build_macro_environment(fred_data: Dict, td_data: Dict) -> Dict:
     """
     macro = {}
     
-    # Brent — v2.3: prefer Twelve Data (real-time) over FRED (J-2 lag)
-    # FRED DCOILBRENTEU has 1-2 day publication lag. TD BZ is near real-time.
-    # v2.3.1: SANITY CHECK — BZ on Twelve Data can return wrong instrument
-    if "brent" in td_data and td_data["brent"].get("price"):
+    # === BRENT — v2.4: Yahoo Finance BZ=F as PRIMARY source ===
+    # Why: TD's "BZ" symbol resolves to a NASDAQ ADR ($13, wrong).
+    #      FRED DCOILBRENTEU has J-9 publication lag (verified 2026-04-08).
+    #      Yahoo BZ=F is real Brent futures, real-time, no API key needed.
+    # Fallback chain: Yahoo → FRED (stale) → TD (last resort, may be wrong)
+    yahoo_brent = fetch_yahoo_brent()
+    if yahoo_brent:
+        macro["brent"] = {
+            "price": yahoo_brent["price"],
+            "source": yahoo_brent["source"],
+            "date": yahoo_brent["date"],
+            "avg_5d": yahoo_brent["avg_5d"],
+            "_fred_price": fred_data.get("brent", {}).get("value"),
+            "_fred_date": fred_data.get("brent", {}).get("date"),
+        }
+        _fb = fred_data.get("brent", {}).get("value")
+        if _fb:
+            _div = abs(yahoo_brent["price"] - _fb) / _fb * 100
+            if _div > 5:
+                logger.warning(f"[MACRO] Brent Yahoo/FRED divergence: Yahoo=${yahoo_brent['price']} vs FRED=${_fb} ({_div:.0f}%) — using Yahoo (real-time)")
+        logger.info(f"[MACRO] ✅ Brent: ${yahoo_brent['price']} (Yahoo BZ=F real-time)")
+    elif "brent" in td_data and td_data["brent"].get("price"):
         _td_brent = td_data["brent"]["price"]
         _fred_brent = fred_data.get("brent", {}).get("value")
         
