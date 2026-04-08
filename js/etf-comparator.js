@@ -345,12 +345,12 @@
       // Header
       const headerRow = `
         <tr>
-          <th style="padding:14px;text-align:left;background:rgba(255,255,255,0.04);min-width:140px;"></th>
+          <th style="padding:10px 12px;text-align:left;background:rgba(255,255,255,0.03);min-width:160px;border-bottom:1px solid rgba(0,255,135,0.15);"></th>
           ${etfs.map(e => `
-            <th style="padding:14px;text-align:center;background:rgba(0,255,135,0.05);border-left:1px solid rgba(255,255,255,0.06);min-width:170px;">
-              <div style="color:#00FF87;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;">${e.ticker || e.symbol}</div>
-              <div style="color:#fff;font-size:0.78rem;font-weight:500;margin-top:4px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name || ''}</div>
-              <div style="color:rgba(255,255,255,0.4);font-size:0.65rem;margin-top:2px;">${(e.geo_bucket || '–').toUpperCase()} · ${(e.sector_bucket_pill || '–').toUpperCase()}</div>
+            <th style="padding:10px 12px;text-align:center;background:rgba(0,255,135,0.04);border-left:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(0,255,135,0.15);min-width:180px;">
+              <div style="color:#00FF87;font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:700;line-height:1.1;">${e.ticker || e.symbol}</div>
+              <div style="color:#fff;font-size:0.72rem;font-weight:500;margin-top:3px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;">${e.name || ''}</div>
+              <div style="color:rgba(255,255,255,0.35);font-size:0.6rem;margin-top:2px;letter-spacing:0.4px;">${(e.geo_bucket || '–').toUpperCase()} · ${(e.sector_bucket_pill || '–').toUpperCase()}</div>
             </th>
           `).join('')}
         </tr>
@@ -362,7 +362,7 @@
 
       const dataRows = rows.map(r => {
         if (r.section) {
-          return `<tr><td colspan="${etfs.length + 1}" style="padding:12px 14px 6px 14px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#00FF87;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);">${r.section}</td></tr>`;
+          return `<tr><td colspan="${etfs.length + 1}" style="padding:10px 12px 4px 12px;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;color:#00FF87;font-weight:700;border-top:1px solid rgba(0,255,135,0.12);">${r.section}</td></tr>`;
         }
         const values = etfs.map(e => r.get(e));
         const valid = values.filter(v => v != null && v !== '–');
@@ -381,17 +381,17 @@
         const cells = etfs.map((e, i) => {
           const v = values[i];
           let bg = '', color = '#fff', weight = '500';
-          if (i === bestIdx)  { bg = 'rgba(76,175,80,0.15)';  color = '#4caf50'; weight = '700'; }
+          if (i === bestIdx)  { bg = 'rgba(76,175,80,0.14)';  color = '#4caf50'; weight = '700'; }
           else if (i === worstIdx) { bg = 'rgba(244,67,54,0.10)'; color = '#f44336'; weight = '600'; }
           const rendered = r.format ? r.format(v) : (v ?? '–');
-          return `<td style="padding:10px 14px;text-align:center;background:${bg};color:${color};font-weight:${weight};font-family:'JetBrains Mono',monospace;font-size:0.85rem;border-left:1px solid rgba(255,255,255,0.06);">${rendered}</td>`;
+          return `<td style="padding:5px 12px;text-align:center;background:${bg};color:${color};font-weight:${weight};font-family:'JetBrains Mono',monospace;font-size:0.78rem;border-left:1px solid rgba(255,255,255,0.05);line-height:1.3;">${rendered}</td>`;
         }).join('');
-        return `<tr><td style="padding:10px 14px;color:rgba(255,255,255,0.6);font-size:0.78rem;">${r.label}</td>${cells}</tr>`;
+        return `<tr><td style="padding:5px 12px;color:rgba(255,255,255,0.55);font-size:0.72rem;line-height:1.3;">${r.label}</td>${cells}</tr>`;
       }).join('');
 
       // -- Top holdings (neutre, pas de couleur) -----------------------------
       const holdingsHeaderRow = `
-        <tr><td colspan="${etfs.length + 1}" style="padding:18px 14px 6px 14px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#00FF87;font-weight:700;border-top:1px solid rgba(255,255,255,0.06);">TOP 10 HOLDINGS</td></tr>
+        <tr><td colspan="${etfs.length + 1}" style="padding:10px 12px 4px 12px;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;color:#00FF87;font-weight:700;border-top:1px solid rgba(0,255,135,0.12);">Top 10 holdings (détail)</td></tr>
       `;
       // Réutilise les holdings matchés déjà calculés pour les agrégats
       const allHoldings = etfs.map(e => e._matched || []);
@@ -406,43 +406,43 @@
       for (let i = 0; i < maxHoldings; i++) {
         const cells = allHoldings.map(hs => {
           const item = hs[i];
-          if (!item) return `<td style="padding:8px 12px;text-align:center;color:rgba(255,255,255,0.2);font-size:0.78rem;border-left:1px solid rgba(255,255,255,0.06);">–</td>`;
+          if (!item) return `<td style="padding:3px 12px;text-align:center;color:rgba(255,255,255,0.18);font-size:0.72rem;border-left:1px solid rgba(255,255,255,0.05);">–</td>`;
           const { h, stock } = item;
           const ticker = h.t || '';
           const name = h.n || '';
           const w = h.w != null ? Number(h.w).toFixed(1) + '%' : '';
-          // Perf YTD du stock matché
           const ytd = stock?.perf_ytd;
           const y1  = stock?.perf_1y;
-          const ytdColor = ytd == null ? 'rgba(255,255,255,0.4)' : (ytd >= 0 ? '#4caf50' : '#f44336');
-          const y1Color  = y1  == null ? 'rgba(255,255,255,0.4)' : (y1  >= 0 ? '#4caf50' : '#f44336');
-          const ytdTxt = ytd != null ? (ytd >= 0 ? '+' : '') + ytd.toFixed(1) + '%' : '–';
-          const y1Txt  = y1  != null ? (y1  >= 0 ? '+' : '') + y1.toFixed(1)  + '%' : '–';
+          const ytdColor = ytd == null ? 'rgba(255,255,255,0.3)' : (ytd >= 0 ? '#4caf50' : '#f44336');
+          const y1Color  = y1  == null ? 'rgba(255,255,255,0.3)' : (y1  >= 0 ? '#4caf50' : '#f44336');
+          const ytdTxt = ytd != null ? (ytd >= 0 ? '+' : '') + ytd.toFixed(1) : '–';
+          const y1Txt  = y1  != null ? (y1  >= 0 ? '+' : '') + y1.toFixed(1)  : '–';
           const matchDot = stock
-            ? '<span title="Stock matché" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#00FF87;margin-right:6px;"></span>'
-            : '<span title="Non matché dans l\'univers actions" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);margin-right:6px;"></span>';
-          return `<td style="padding:8px 12px;text-align:left;color:#fff;font-size:0.75rem;border-left:1px solid rgba(255,255,255,0.06);font-family:'JetBrains Mono',monospace;vertical-align:top;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
-              <span style="color:#00FF87;font-weight:700;">${matchDot}${ticker || (name ? name.slice(0, 14) : '–')}</span>
-              <span style="color:rgba(255,255,255,0.5);">${w}</span>
+            ? '<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#00FF87;flex-shrink:0;"></span>'
+            : '<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;"></span>';
+          // Une seule ligne : dot · ticker · weight · YTD · 1Y
+          return `<td style="padding:4px 12px;color:#fff;font-size:0.7rem;border-left:1px solid rgba(255,255,255,0.05);font-family:'JetBrains Mono',monospace;line-height:1.3;">
+            <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:8px;">
+              ${matchDot}
+              <span style="color:#00FF87;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ticker || (name ? name.slice(0, 12) : '–')}</span>
+              <span style="color:rgba(255,255,255,0.45);font-size:0.65rem;">${w}</span>
+              <span style="color:${ytdColor};font-size:0.65rem;min-width:42px;text-align:right;">${ytdTxt}</span>
+              <span style="color:${y1Color};font-size:0.65rem;min-width:42px;text-align:right;">${y1Txt}</span>
             </div>
-            ${stock ? `
-              <div style="display:flex;justify-content:space-between;font-size:0.65rem;margin-top:3px;opacity:0.85;">
-                <span style="color:${ytdColor};">YTD ${ytdTxt}</span>
-                <span style="color:${y1Color};">1Y ${y1Txt}</span>
-              </div>` : ''}
           </td>`;
         }).join('');
-        holdingsRows.push(`<tr><td style="padding:8px 12px;color:rgba(255,255,255,0.4);font-size:0.7rem;vertical-align:top;">#${i + 1}</td>${cells}</tr>`);
+        holdingsRows.push(`<tr><td style="padding:4px 12px;color:rgba(255,255,255,0.35);font-size:0.65rem;line-height:1.3;">#${i + 1}</td>${cells}</tr>`);
       }
-      // Ligne de couverture (combien de holdings ont été matchés à l'univers actions)
+      // Mini en-tête colonnes pour les holdings (poids · YTD · 1Y)
       if (maxHoldings > 0) {
-        const covCells = coverages.map(c => {
-          const ratio = c.total ? c.matched / c.total : 0;
-          const color = ratio >= 0.7 ? '#4caf50' : ratio >= 0.4 ? '#ff9800' : '#f44336';
-          return `<td style="padding:6px 12px;text-align:center;color:${color};font-size:0.7rem;font-family:'JetBrains Mono',monospace;border-left:1px solid rgba(255,255,255,0.06);">${c.matched}/${c.total} matchés</td>`;
-        }).join('');
-        holdingsRows.push(`<tr><td style="padding:6px 12px;color:rgba(255,255,255,0.35);font-size:0.65rem;font-style:italic;">couverture</td>${covCells}</tr>`);
+        const subHeaderCells = etfs.map(() =>
+          `<td style="padding:2px 12px;border-left:1px solid rgba(255,255,255,0.05);">
+            <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:8px;font-size:0.55rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.6px;">
+              <span style="width:5px;"></span><span></span><span>poids</span><span style="min-width:42px;text-align:right;">YTD</span><span style="min-width:42px;text-align:right;">1Y</span>
+            </div>
+          </td>`
+        ).join('');
+        holdingsRows.unshift(`<tr><td></td>${subHeaderCells}</tr>`);
       }
       const holdingsBlock = maxHoldings > 0
         ? holdingsHeaderRow + holdingsRows.join('')
@@ -462,21 +462,21 @@
         const score = scores100[i];
         const isWinner = i === winnerIdx;
         const scoreColor = score >= 70 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
-        const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.2),rgba(0,255,135,0.05))' : 'rgba(255,255,255,0.02)';
-        return `<td style="padding:18px 14px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.06);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
-            <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:800;color:${isWinner ? '#00FF87' : scoreColor};line-height:1;">${score}</span>
-              <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">/100</span>
+        const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.18),rgba(0,255,135,0.04))' : 'rgba(255,255,255,0.02)';
+        return `<td style="padding:12px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.05);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;line-height:1;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:800;color:${isWinner ? '#00FF87' : scoreColor};">${score}</span>
+              <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);">/100</span>
             </div>
             ${isWinner
-              ? '<div style="font-size:0.7rem;color:#00FF87;font-weight:700;letter-spacing:1px;">GAGNANT</div>'
-              : `<div style="font-size:0.65rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">${wins[i]} gagne · ${losses[i]} perd</div>`}
+              ? '<div style="font-size:0.6rem;color:#00FF87;font-weight:700;letter-spacing:1.2px;">GAGNANT</div>'
+              : `<div style="font-size:0.6rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">${wins[i]} W · ${losses[i]} L</div>`}
           </div>
         </td>`;
       }).join('');
-      const scoreRow = `<tr><td style="padding:18px 14px;color:#00FF87;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-top:2px solid rgba(0,255,135,0.3);vertical-align:middle;">
-        Score global<div style="font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:none;letter-spacing:0;font-weight:400;margin-top:2px;">Head-to-head sur ${TOTAL} métriques ETF</div>
+      const scoreRow = `<tr><td style="padding:12px;color:#00FF87;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;border-top:2px solid rgba(0,255,135,0.3);vertical-align:middle;line-height:1.2;">
+        Score global<div style="font-size:0.55rem;color:rgba(255,255,255,0.4);text-transform:none;letter-spacing:0;font-weight:400;margin-top:2px;">${TOTAL} métriques · head-to-head</div>
       </td>${scoreCells}</tr>`;
 
       // -- Modal --------------------------------------------------------------
@@ -487,25 +487,25 @@
         display:flex;align-items:center;justify-content:center;padding:20px;`;
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
       modal.innerHTML = `
-        <div style="background:#0a1929;border:1px solid rgba(0,255,135,0.3);border-radius:16px;
-          max-width:1300px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
-          <div style="position:sticky;top:0;background:#0a1929;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);
-            display:flex;align-items:flex-start;justify-content:space-between;z-index:1;">
-            <div>
-              <h2 style="color:#fff;font-size:1.2rem;font-weight:700;margin:0;display:flex;align-items:center;">
-                <i class="fas fa-balance-scale" style="color:#00FF87;margin-right:8px;"></i>
-                Comparateur d'ETF
-              </h2>
-              <p style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin:6px 0 0 0;">
-                Vert = meilleur · Rouge = pire · Holdings neutres · Score sur métriques intrinsèques
-              </p>
+        <div style="background:#0a1929;border:1px solid rgba(0,255,135,0.3);border-radius:14px;
+          max-width:1500px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
+          <div style="position:sticky;top:0;background:#0a1929;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);
+            display:flex;align-items:center;justify-content:space-between;z-index:1;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fas fa-balance-scale" style="color:#00FF87;font-size:1.1rem;"></i>
+              <div>
+                <h2 style="color:#fff;font-size:1.05rem;font-weight:700;margin:0;line-height:1.1;">Comparateur d'ETF</h2>
+                <p style="color:rgba(255,255,255,0.45);font-size:0.65rem;margin:3px 0 0 0;line-height:1.2;">
+                  Vert = meilleur · Rouge = pire · Score head-to-head sur ${TOTAL} métriques (intrinsèques + holdings pondérés)
+                </p>
+              </div>
             </div>
             <button onclick="document.getElementById('etf-comparator-modal').remove()"
-              style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.4rem;padding:4px 12px;">
+              style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.2rem;padding:4px 10px;">
               <i class="fas fa-times"></i>
             </button>
           </div>
-          <div style="padding:0 24px 24px 24px;overflow-x:auto;">
+          <div style="padding:0 20px 20px 20px;overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
               <thead>${headerRow}</thead>
               <tbody>${dataRows}${holdingsBlock}${scoreRow}</tbody>
