@@ -1273,41 +1273,41 @@
         reits:  /\b(reit|real\s?estate)\b/i,
       };
 
-      function getCountriesList(e){
-        const out = [];
-        if (e.country_top) out.push(String(e.country_top).toLowerCase().trim());
+      // Pour la géo, on n'utilise QUE le pays dominant (country_top).
+      // country_top5 sert uniquement à détecter les ETF "monde" (≥3 pays).
+      function getDominantCountry(e){
+        return e.country_top ? String(e.country_top).toLowerCase().trim() : '';
+      }
+      function countDistinctCountries(e){
+        const set = new Set();
+        if (e.country_top) set.add(String(e.country_top).toLowerCase().trim());
         if (e.country_top5){
           try {
             const arr = typeof e.country_top5 === 'string' ? JSON.parse(e.country_top5) : e.country_top5;
-            if (Array.isArray(arr)) arr.forEach(x => { if (x && x.c) out.push(String(x.c).toLowerCase().trim()); });
+            if (Array.isArray(arr)) arr.forEach(x => { if (x && x.c) set.add(String(x.c).toLowerCase().trim()); });
           } catch(_){}
         }
-        return out;
+        return set.size;
       }
-      function getSectorsList(e){
-        const out = [];
-        if (e.sector_top) out.push(String(e.sector_top).toLowerCase().trim());
-        if (e.sector_top5){
-          try {
-            const arr = typeof e.sector_top5 === 'string' ? JSON.parse(e.sector_top5) : e.sector_top5;
-            if (Array.isArray(arr)) arr.forEach(x => { if (x && x.s) out.push(String(x.s).toLowerCase().trim()); });
-          } catch(_){}
-        }
-        return out;
+      // Pour le secteur, on n'utilise QUE le secteur dominant (sector_top).
+      // sector_top5 contient des poids minoritaires (2-3%) qui pollueraient
+      // tout : ex. un ETF tech avec 2% de data-center REITs serait classé REITs.
+      function getDominantSector(e){
+        return e.sector_top ? String(e.sector_top).toLowerCase().trim() : '';
       }
 
       function matchesGeoPill(e, key){
         if (!key || key === 'all') return true;
-        const countries = getCountriesList(e);
-        for (const c of countries){
-          if (COUNTRY_TO_REGION[c] === key) return true;
-        }
+        const dom = getDominantCountry(e);
         if (key === 'world'){
-          if (countries.length >= 3) return true;
+          // ETF mondial : ≥3 pays distincts dans le top5, OU nom évocateur
+          if (countDistinctCountries(e) >= 3) return true;
           if (NAME_FALLBACK_GEO.world.test(String(getName(e)||''))) return true;
+          return false;
         }
-        // Fallback nom uniquement si on n'a aucune info pays
-        if (countries.length === 0){
+        if (dom && COUNTRY_TO_REGION[dom] === key) return true;
+        // Fallback nom uniquement si country_top est vide
+        if (!dom){
           return NAME_FALLBACK_GEO[key]?.test(String(getName(e)||'')) || false;
         }
         return false;
@@ -1315,13 +1315,14 @@
 
       function matchesSectorPill(e, key){
         if (!key || key === 'all') return true;
-        const sectors = getSectorsList(e);
-        for (const s of sectors){
-          if (SECTOR_TO_KEY[s] === key) return true;
+        const dom = getDominantSector(e);
+        if (dom && SECTOR_TO_KEY[dom] === key) return true;
+        // Fallback nom uniquement si sector_top est vide (ETF thématiques
+        // sans secteur renseigné : or, uranium, semis pure-play…)
+        if (!dom){
+          return NAME_FALLBACK_SECTOR[key]?.test(String(getName(e)||'')) || false;
         }
-        // Fallback nom (or, biotech, semis…) — toujours appliqué car certains
-        // ETF thématiques n'ont pas sector_top renseigné
-        return NAME_FALLBACK_SECTOR[key]?.test(String(getName(e)||'')) || false;
+        return false;
       }
 
       // ---------- État ----------
