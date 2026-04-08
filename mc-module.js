@@ -323,11 +323,12 @@
   let regionUI, countryUI, sectorUI;
 
   // état et données - v3.6: utilisation de Sets pour multi-sélection
-  const state={ 
-    mode:'balanced', 
-    data:[], 
+  const state={
+    mode:'balanced',
+    data:[],
     loading:false,
     selectedMetrics: ['ytd', 'dividend_yield_reg'], // REG par défaut
+    weights: {}, // v9.0: weighted scoring weights {metric: 0.25, ...}
     customFilters: [],
     geoFilters: {
       regions: new Set(),   // vide = tous
@@ -1599,11 +1600,11 @@
   function rankBalanced(indices) {
     const M = state.selectedMetrics;
     const out = [];
-    
+
     for (const i of indices) {
       let sum = 0;
       let k = 0;
-      
+
       for (const m of M) {
         const pct = cache[m].rankPct[i];
         if (Number.isFinite(pct)) {
@@ -1612,7 +1613,7 @@
           k++;
         }
       }
-      
+
       if (k > 0) {
         out.push({
           idx: i,
@@ -1620,7 +1621,47 @@
         });
       }
     }
-    
+
+    out.sort((a, b) => b.score - a.score);
+    return out.slice(0, TOP_N).map(e => ({ s: state.data[e.idx], score: e.score }));
+  }
+
+  // ===== v9.0: WEIGHTED SCORING =====
+  // True multi-factor scoring: each metric has its own weight.
+  // score = Σ(percentile_i × weight_i) / Σ(weight_i_used)
+  // Missing metrics don't penalize (weights renormalize over valid only)
+  function rankWeighted(indices, weightsObj) {
+    const out = [];
+    const weights = weightsObj || state.weights || {};
+
+    // If no weights defined, fall back to equal weighting on selectedMetrics
+    const metricsToUse = Object.keys(weights).length > 0
+        ? Object.keys(weights)
+        : state.selectedMetrics;
+
+    for (const i of indices) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+
+      for (const m of metricsToUse) {
+        if (!cache[m]) continue;
+        const pct = cache[m].rankPct[i];
+        if (Number.isFinite(pct)) {
+          const adjustedPct = METRICS[m].max ? pct : (1 - pct);
+          const w = weights[m] != null ? weights[m] : (1 / metricsToUse.length);
+          weightedSum += adjustedPct * w;
+          totalWeight += w;
+        }
+      }
+
+      if (totalWeight > 0) {
+        out.push({
+          idx: i,
+          score: weightedSum / totalWeight
+        });
+      }
+    }
+
     out.sort((a, b) => b.score - a.score);
     return out.slice(0, TOP_N).map(e => ({ s: state.data[e.idx], score: e.score }));
   }
@@ -1921,9 +1962,13 @@
     // Calcul optimisé
     console.time('Ranking');
     let out;
-    if (state.mode === 'balanced') {
+    if (state.mode === 'weighted') {
+      // v9.0: True multi-factor weighted scoring
+      out = rankWeighted(pool, state.weights);
+    } else if (state.mode === 'balanced') {
       out = rankBalanced(pool);
     } else {
+      // 'lexico' or 'priorities' mode
       out = topNByLexico(pool, state.selectedMetrics);
     }
     console.timeEnd('Ranking');
@@ -2152,8 +2197,17 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('defensif'),
     coverage_target: [60, 120],
-    metrics: ['quality_score','volatility_3y','max_drawdown_3y','perf_3y','dividend_yield_reg','payout_ratio'], // v9.0: Quality #1, perf 3y au lieu de 1y
-    filters: { regions: ['EUROPE','US'], countries: [], sectors: [] }, // v9.0: pas de filtre sectoriel restrictif (sector neutrality fait le job)
+    metrics: ['quality_score','volatility_3y','max_drawdown_3y','perf_3y','dividend_yield_reg','payout_ratio'],
+    // v9.0: Pondérations OpenAI — focus stabilité + qualité
+    weights: {
+      quality_score:    0.25,
+      volatility_3y:    0.20,
+      max_drawdown_3y:  0.20,
+      dividend_yield_reg: 0.15,
+      payout_ratio:     0.10,
+      perf_3y:          0.10
+    },
+    filters: { regions: ['EUROPE','US'], countries: [], sectors: [] },
     criteria: [
       { metric: 'dividend_yield_reg', operator:'>=', value:2.5, optimal:2.5, range:[2.0,3.0], label:'Dividende ≥ 2.5%' },
       { metric: 'volatility_3y',      operator:'<=', value:26,  optimal:24,  range:[22,26],   label:'Volatilité ≤ 26%' },
@@ -2177,8 +2231,17 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('rendement'),
     coverage_target: [80,150],
-    metrics: ['dividend_yield_reg','payout_ratio','quality_score','max_drawdown_3y','volatility_3y','perf_1y'], // v9.0: Yield #1, payout #2 (anti-trap), Quality #3 garde-fou
-    filters: { regions:['EUROPE','US'], countries:[], sectors:[] }, // v9.0: ouvert (sector neutrality évite le biais Finance)
+    metrics: ['dividend_yield_reg','payout_ratio','quality_score','max_drawdown_3y','volatility_3y','perf_1y'],
+    // v9.0: Yield max + soutenabilité + garde-fou Quality
+    weights: {
+      dividend_yield_reg: 0.30,
+      payout_ratio:       0.20,
+      quality_score:      0.15,
+      max_drawdown_3y:    0.15,
+      volatility_3y:      0.10,
+      perf_1y:            0.10
+    },
+    filters: { regions:['EUROPE','US'], countries:[], sectors:[] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.5, optimal:4.2, range:[3.5,5.0], label:'Dividende ≥ 3.5%' },
       { metric:'dividend_yield_ttm', operator:'<=', value:10.0, optimal:8.0, range:[8.0,10.0], label:'Div TTM ≤ 8–10% (anti piège)' },
@@ -2202,7 +2265,17 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('agressif'),
     coverage_target: [60,100],
-    metrics: ['perf_1y','perf_3m','eps_surprise','quality_score','ytd','max_drawdown_3y'], // v9.0: momentum 12M + EPS catalyst + Quality anti-pump
+    metrics: ['ytd','perf_1y','perf_3y','eps_surprise','volatility_3y','max_drawdown_3y'],
+    // v9.0.1: Différencié de momentum — focus YTD + 1Y + 3Y (multi-horizons), accepte vol
+    // PAS de Quality (vraiment risk-on, accepte les pump justifiés par les earnings)
+    weights: {
+      ytd:             0.25,
+      perf_1y:         0.20,
+      perf_3y:         0.20,
+      eps_surprise:    0.20,
+      max_drawdown_3y: 0.10,
+      volatility_3y:   0.05
+    },
     filters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     criteria: [
       { metric:'ytd',             operator:'>=', value:10, optimal:20, range:[10,30], label:'YTD ≥ 10%' },
@@ -2228,7 +2301,16 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('croissance'),
     coverage_target: [70,140],
-    metrics: ['perf_3y','eps_surprise','quality_score','perf_1y','max_drawdown_3y','volatility_3y'], // v9.0: track record + EPS catalyst + qualité fondamentale
+    metrics: ['perf_3y','eps_surprise','quality_score','perf_1y','max_drawdown_3y','volatility_3y'],
+    // v9.0: Earnings durables + qualité (GARP)
+    weights: {
+      perf_3y:         0.25,
+      quality_score:   0.20,
+      eps_surprise:    0.20,
+      perf_1y:         0.15,
+      volatility_3y:   0.10,
+      max_drawdown_3y: 0.10
+    },
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication','Biens de consommation cycliques'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:25, optimal:35, range:[25,70], label:'Perf 3Y ≥ 25%' },
@@ -2253,7 +2335,16 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('value_dividend'),
     coverage_target: [80,150],
-    metrics: ['buffett_score','quality_score','dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y'], // v9.0: Value composite #1, Quality #2 anti value-trap
+    metrics: ['buffett_score','quality_score','dividend_yield_reg','payout_ratio','perf_3y','max_drawdown_3y'],
+    // v9.0: Value composite + Quality (anti value-trap) + dividende
+    weights: {
+      buffett_score:      0.30,
+      quality_score:      0.25,
+      dividend_yield_reg: 0.15,
+      perf_3y:            0.15,
+      max_drawdown_3y:    0.10,
+      payout_ratio:       0.05
+    },
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Finance','Energie','Services publics','Industrie','Matériaux'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:3.0, optimal:3.8, range:[3.0,5.0], label:'Dividende ≥ 3.0%' },
@@ -2279,7 +2370,17 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('quality_premium'),
     coverage_target: [70,125],
-    metrics: ['quality_score','buffett_score','eps_surprise','perf_3y','max_drawdown_3y','volatility_3y'], // v9.0: scores composites first + EPS exécution + risque
+    metrics: ['quality_score','buffett_score','eps_surprise','perf_3y','max_drawdown_3y','volatility_3y'],
+    // v9.0: Multi-factor best-of (corrections OpenAI: 25/20 + EPS 10%)
+    weights: {
+      quality_score:   0.25,
+      buffett_score:   0.20,
+      perf_3y:         0.15,
+      max_drawdown_3y: 0.15,
+      volatility_3y:   0.10,
+      eps_surprise:    0.10,
+      dividend_yield_reg: 0.05
+    },
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','Biens de consommation de base','Industrie','Biens de consommation cycliques','La communication'] },
     criteria: [
       { metric:'perf_3y',         operator:'>=', value:35, optimal:50, range:[35,85], label:'Perf 3Y ≥ 35%' },
@@ -2303,7 +2404,16 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('momentum_trend'),
     coverage_target: [60,100],
-    metrics: ['perf_1y','perf_3m','perf_1m','eps_surprise','quality_score','max_drawdown_3y'], // v9.0: Quality Momentum (AQR/Asness validé empiriquement)
+    metrics: ['perf_1y','perf_3m','perf_1m','eps_surprise','quality_score','max_drawdown_3y'],
+    // v9.0: Quality Momentum (AQR/Asness empiriquement validé)
+    weights: {
+      perf_1y:         0.25,
+      perf_3m:         0.20,
+      perf_1m:         0.15,
+      eps_surprise:    0.15,
+      quality_score:   0.15,
+      max_drawdown_3y: 0.10
+    },
     filters: { regions:['US','EUROPE','ASIA'], countries:[], sectors:[] },
     criteria: [
       { metric:'perf_1y', operator:'>=', value:10, optimal:15, range:[10,20], label:'Perf 1Y ≥ 10%' },
@@ -2327,7 +2437,15 @@ const PRESETS = {
     mode: 'lexico',
     sort: useSort('low_volatility'),
     coverage_target: [60,120],
-    metrics: ['volatility_3y','max_drawdown_3y','quality_score','dividend_yield_reg','payout_ratio','perf_3y'], // v9.0: Quality + perf 3y au lieu de 1y
+    metrics: ['volatility_3y','max_drawdown_3y','quality_score','dividend_yield_reg','payout_ratio','perf_3y'],
+    // v9.0: Stabilité maximale (pension funds)
+    weights: {
+      volatility_3y:      0.30,
+      max_drawdown_3y:    0.25,
+      quality_score:      0.20,
+      dividend_yield_reg: 0.15,
+      perf_3y:            0.10
+    },
     filters: { regions:['EUROPE','US'], countries:[], sectors:['Santé','Biens de consommation de base','Services publics'] },
     criteria: [
       { metric:'dividend_yield_reg', operator:'>=', value:1.5, optimal:2.0, range:[1.5,3.0], label:'Dividende ≥ 1.5%' },
@@ -2372,17 +2490,25 @@ const PRESETS = {
   function applyPreset(presetKey) {
     const preset = PRESETS[presetKey];
     if (!preset) return;
-    
+
     console.log(`🎯 Application du preset: ${preset.label}`);
-    
+
     // 1. Enregistrer le preset actuel
     state.currentPreset = preset.label;
-    
-    // 2. Mode
-    api.setMode(preset.mode);
-    
-    // 3. Métriques et ordre
-    api.setMetrics(preset.metrics);
+
+    // v9.0: Si le preset a des poids, basculer en mode 'weighted'
+    if (preset.weights && Object.keys(preset.weights).length > 0) {
+        state.weights = { ...preset.weights };
+        api.setMode('weighted');
+        // Charger les métriques dans selectedMetrics aussi (pour l'UI checkboxes)
+        api.setMetrics(Object.keys(preset.weights));
+    } else {
+        // 2. Mode legacy (lexico ou balanced)
+        state.weights = {};
+        api.setMode(preset.mode);
+        // 3. Métriques et ordre
+        api.setMetrics(preset.metrics);
+    }
     
     // 4. Filtres géographiques
     api.setGeoFilters({
