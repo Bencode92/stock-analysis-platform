@@ -2738,17 +2738,21 @@ class RecommendationEngine {
     this.incompatibles = []; // [{ statusId, code, explanation, alternatives }]
     this.auditTrail = { exclusions: [], weightingRules: [], scores: {} };
 
- // === SEUILS & RÉFÉRENTIELS — 2026 ===
+ // === SEUILS & RÉFÉRENTIELS ===
+// ⚠️ Dernière mise à jour : 2026-04-08
+// Source : seuils 2023-2025 en vigueur (revalorisation triennale 2026-2028 non encore publiée au JO)
+this.thresholdsYear = 2026;
+this.thresholdsLastUpdated = '2026-04-08';
 this.thresholds2025 = {
   micro: {
-    // Micro-BIC/BNC (plafonds 2026-2028)
-    bic_sales: 203_100,        // ventes / hébergement
-    bic_service: 83_600,       // prestations de services BIC
-    bnc: 83_600,               // BNC
+    // Micro-BIC/BNC — plafonds 2023-2025 (en vigueur tant que 2026-2028 non publiés)
+    bic_sales: 188_700,        // ventes de marchandises / hébergement
+    bic_service: 77_700,       // prestations de services BIC
+    bnc: 77_700,               // BNC
 
-    // Exception meublés de tourisme 2026 (abattements & plafonds spécifiques)
-    meuble_classe_ca: 83_600,  // classé
-    meuble_non_classe_ca: 15_000 // non classé
+    // Meublés de tourisme (LF 2024)
+    meuble_classe_ca: 77_700,  // classé : aligné sur seuil services depuis LF 2024
+    meuble_non_classe_ca: 15_000 // non classé : abaissé à 15 k€ par LF 2024
   },
 
   // IS réduit 15 % sous conditions (CA < 10 M€, plafond de bénéfice)
@@ -3334,8 +3338,8 @@ applySpecificFilters() {
   // Référentiels + fallbacks
   const TH = this.thresholds2025 || {};
   const MICRO = (TH.micro || {
-    bic_sales: 203_100, bic_service: 83_600, bnc: 83_600,
-    meuble_classe_ca: 83_600, meuble_non_classe_ca: 15_000
+    bic_sales: 188_700, bic_service: 77_700, bnc: 77_700,
+    meuble_classe_ca: 77_700, meuble_non_classe_ca: 15_000
   });
 
   // Helper micro (utilise le helper externe s’il existe, sinon fallback local)
@@ -4935,15 +4939,15 @@ getStrengths(statusId) {
       // fallback local cohérent avec applySpecificFilters()
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 83600
+          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
           : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 203100;
-      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 83600;
-      return this.thresholds2025?.micro?.bic_service ?? 83600;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
+      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
+      return this.thresholds2025?.micro?.bic_service ?? 77700;
     } catch {
-      return 83600;
+      return 77700;
     }
   })();
 
@@ -4957,7 +4961,7 @@ getStrengths(statusId) {
       strengths.push("Simplicité administrative maximale (comptabilité ultra-légère, déclaratif en ligne).");
     }
     if (Number.isFinite(revenue) && revenue <= microCeiling) {
-      strengths.push(`Adapté à votre CA prévisionnel : sous le plafond micro 2025 (${fmt(microCeiling)} €).`);
+      strengths.push(`Adapté à votre CA prévisionnel : sous le plafond micro en vigueur (${fmt(microCeiling)} €).`);
     }
     if (['non_taxable','bracket_11'].includes(taxBracket)) {
       strengths.push("Versement libératoire potentiellement avantageux avec TMI faible.");
@@ -5103,15 +5107,15 @@ getWeaknesses(statusId) {
       }
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 83600
+          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
           : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 203100;
-      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 83600;
-      return this.thresholds2025?.micro?.bic_service ?? 83600;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
+      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
+      return this.thresholds2025?.micro?.bic_service ?? 77700;
     } catch {
-      return 83600;
+      return 77700;
     }
   })();
 
@@ -5710,15 +5714,15 @@ if (A && A.projected_revenue != null) {
         const M = T.micro || {};
         if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
           return (A.furnished_tourism_classed === 'yes')
-            ? (M.meuble_classe_ca != null ? M.meuble_classe_ca : 83600)
+            ? (M.meuble_classe_ca != null ? M.meuble_classe_ca : 77700)
             : (M.meuble_non_classe_ca != null ? M.meuble_non_classe_ca : 15000);
         }
         const n = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-        if (['ventes','hébergement','hebergement','bic_sales'].indexOf(n) !== -1) return (M.bic_sales != null ? M.bic_sales : 203100);
-        if (n === 'bnc') return (M.bnc != null ? M.bnc : 83600);
-        return (M.bic_service != null ? M.bic_service : 83600);
+        if (['ventes','hébergement','hebergement','bic_sales'].indexOf(n) !== -1) return (M.bic_sales != null ? M.bic_sales : 188700);
+        if (n === 'bnc') return (M.bnc != null ? M.bnc : 77700);
+        return (M.bic_service != null ? M.bic_service : 77700);
       } catch (e) {
-        return 83600;
+        return 77700;
       }
     }).call(this);
 
@@ -5787,8 +5791,8 @@ getStatusExplanations(statusId, answers) {
 
   // Plafonds micro & TVA (fallbacks 2026 si non configurés)
   const MICRO_SERVICES = (micro.bic_service != null ? micro.bic_service
-                        : (micro.bnc != null ? micro.bnc : 83600));
-  const MICRO_VENTES   = (micro.bic_sales != null ? micro.bic_sales : 203100);
+                        : (micro.bnc != null ? micro.bnc : 77700));
+  const MICRO_VENTES   = (micro.bic_sales != null ? micro.bic_sales : 188700);
 
   const TVA_SERVICES       = (tvab.services != null ? tvab.services : 37500);
   const TVA_VENTES         = (tvab.ventes != null ? tvab.ventes : 85000);
@@ -5856,7 +5860,7 @@ getStatusExplanations(statusId, answers) {
     if (Number.isFinite(projectedRevenue) && Number.isFinite(microThreshold)) {
       out.push({
         title: "Cohérence avec votre niveau de CA",
-        explanation: `Votre CA prévisionnel (${fmtEUR(projectedRevenue)}) se situe sous le plafond micro applicable (${fmtEUR(microThreshold)} — 2025).`
+        explanation: `Votre CA prévisionnel (${fmtEUR(projectedRevenue)}) se situe sous le plafond micro applicable (${fmtEUR(microThreshold)}).`
       });
     }
     if (tmiLabel && (tmiLabel === 'non imposable' || tmiLabel === '11%')) {
