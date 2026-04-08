@@ -1101,13 +1101,25 @@
                       </div>
                     </div>
 
-                    <!-- petite barre d'infos -->
-                    <div class="text-xs opacity-60 mt-3">
-                      <span>⚡ <span id="etf-az-count">0</span> lignes affichées</span>
-                      <span class="mx-2">•</span>
-                      <span>Maj: <span id="etf-az-lastupdate">—</span></span>
-                      <span class="mx-2">•</span>
-                      <span>💡 Astuce: tapez un nom de pays pour filtrer par origine</span>
+                    <!-- petite barre d'infos + CTA auto-comparateur -->
+                    <div class="mt-3 flex items-center flex-wrap gap-3">
+                      <div class="text-xs opacity-60">
+                        <span>⚡ <span id="etf-az-count">0</span> lignes affichées</span>
+                        <span class="mx-2">•</span>
+                        <span>Maj: <span id="etf-az-lastupdate">—</span></span>
+                        <span class="mx-2">•</span>
+                        <span>💡 Astuce: tapez un nom de pays pour filtrer par origine</span>
+                      </div>
+                      <button id="etf-az-auto-compare"
+                        style="display:none;margin-left:auto;padding:7px 14px;border-radius:8px;border:none;
+                          background:linear-gradient(135deg,#00FF87,#00d672);color:#0a1929;font-weight:700;
+                          font-size:0.78rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,255,135,0.35);
+                          transition:transform .15s, box-shadow .15s;"
+                        onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(0,255,135,0.5)';"
+                        onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(0,255,135,0.35)';">
+                        <i class="fas fa-bolt mr-1"></i>
+                        Comparer le top <span id="etf-az-auto-compare-n">5</span>
+                      </button>
                     </div>
                   </div>
 
@@ -1523,6 +1535,20 @@
         indexAZ = indexByLetter(filtered);
 
         $('#etf-az-count').textContent = filtered.length;
+        // Auto-comparateur : visible quand un filtre actif réduit à 2-15 ETF
+        const autoBtn = $('#etf-az-auto-compare');
+        const autoN   = $('#etf-az-auto-compare-n');
+        if (autoBtn){
+          const filterActiveForAuto = !!q || (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all') || (fStrategy && fStrategy !== 'all') || (fGeoFine && fGeoFine !== 'all') || (fSectorFine && fSectorFine !== 'all');
+          if (filterActiveForAuto && filtered.length >= 2 && filtered.length <= 15){
+            const n = Math.min(5, filtered.length);
+            if (autoN) autoN.textContent = n;
+            autoBtn.style.display = '';
+            autoBtn.dataset.filteredCount = filtered.length;
+          } else {
+            autoBtn.style.display = 'none';
+          }
+        }
         // Info recherche + bouton clear + forcer l'onglet TOUS quand on tape
         const info = $('#etf-az-search-info');
         const cnt  = $('#etf-az-search-count');
@@ -1748,6 +1774,34 @@
             render();
           });
         });
+        // bouton auto-comparateur (top 5 du pool filtré)
+        $('#etf-az-auto-compare')?.addEventListener('click', () => {
+          if (!window.ETFComparator) return;
+          // Recalcule la liste filtrée actuelle
+          const scoped   = takeScope(dataAll);
+          const searched = applyTextSearch(scoped);
+          const filtered = applySubfilters(searched);
+          if (!filtered.length) return;
+          // Tri : AUM décroissant (le plus liquide d'abord)
+          const top = [...filtered]
+            .sort((a, b) => Number(b.aum_usd ?? b.aum ?? 0) - Number(a.aum_usd ?? a.aum ?? 0))
+            .slice(0, Math.min(5, filtered.length));
+          // Reset du comparateur et chargement du top
+          window.ETFComparator.clear();
+          top.forEach(e => {
+            const tkr = getTicker(e);
+            window.ETFComparator.toggle(tkr, e);
+          });
+          // Cocher visuellement les checkboxes correspondantes
+          setTimeout(() => {
+            top.forEach(e => {
+              const cb = document.querySelector(`.etf-compare-checkbox[data-ticker="${getTicker(e)}"]`);
+              if (cb) cb.checked = true;
+            });
+            window.ETFComparator.openModal();
+          }, 50);
+        });
+
         // pills stratégie
         $$('#etf-az-controls .pill[data-strategy]').forEach(btn => {
           btn.addEventListener('click', ()=>{
