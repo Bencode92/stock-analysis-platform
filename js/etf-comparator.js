@@ -268,140 +268,189 @@
         loadStockIndex().then(() => this.openModal());
         return;
       }
-      // On clone et on attache les agrégats holdings à chaque ETF
-      const etfs = [...this.selected.values()].map(e => {
+      // ── 1. Préparer les ETF avec holdings matchés + agrégats ─────────────
+      let etfs = [...this.selected.values()].map(e => {
         const matched = getHoldings(e).map(h => ({ h, stock: matchHolding(h) }));
         return { ...e, _matched: matched, _agg: computeHoldingsAggs(matched) };
       });
 
-      // Lignes comparées : métriques ETF intrinsèques + agrégats holdings
+      // ── 2. Définir les lignes (ordre logique : holdings en premier) ──────
       const rows = [
+        // Section AGRÉGATS HOLDINGS — la vraie info, mise en premier
+        { section: 'AGRÉGATS HOLDINGS (PONDÉRÉS)', emphasis: true },
+        { label: 'Perf YTD pondérée',     get: e => e._agg?.perf_ytd,       format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–', higherIsBetter: true },
+        { label: 'Perf 1Y pondérée',      get: e => e._agg?.perf_1y,        format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–', higherIsBetter: true },
+        { label: 'Perf 3Y pondérée',      get: e => e._agg?.perf_3y,        format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–', higherIsBetter: true },
+        { label: 'Quality raw (pondéré)', get: e => e._agg?.quality,        format: v => v != null ? Math.round(v).toString() : '–', higherIsBetter: true },
+        { label: 'Buffett (pondéré)',     get: e => e._agg?.buffett,        format: v => v != null ? Math.round(v).toString() : '–', higherIsBetter: true },
+        { label: 'Revenue growth 3Y',     get: e => e._agg?.revenue_growth, format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: true },
+        { label: 'FCF yield (méd)',       get: e => e._agg?.fcf_yield,      format: v => v != null ? v.toFixed(1) + '%' : '–', higherIsBetter: true },
+        { label: 'Div yield (pondéré)',   get: e => e._agg?.div_yield,      format: v => v != null ? v.toFixed(2) + '%' : '–', higherIsBetter: true },
+        { label: 'Beta (pondéré)',        get: e => e._agg?.beta,           format: v => v != null ? v.toFixed(2) : '–', neutral: true },
+
+        // Section ETF — données intrinsèques
+        { section: 'ETF — COÛT, PERFORMANCE, RISQUE' },
+        { label: 'TER',          get: e => num(e.total_expense_ratio ?? e.ter), format: v => fmtRatioPct(v), higherIsBetter: false },
+        { label: 'AUM',          get: e => num(e.aum_usd ?? e.aum),              format: v => fmtAUM(v),       higherIsBetter: true  },
+        { label: 'YTD',          get: e => num(e.ytd_return_pct ?? e.return_ytd), format: v => fmtPct(v),       higherIsBetter: true  },
+        { label: '1 an',         get: e => num(e.one_year_return_pct ?? e.return_1y), format: v => fmtPct(v),  higherIsBetter: true  },
+        { label: '3 mois',       get: e => num(e.perf_3m_pct),                   format: v => fmtPct(v),       higherIsBetter: true  },
+        { label: '1 mois',       get: e => num(e.perf_1m_pct),                   format: v => fmtPct(v),       higherIsBetter: true  },
+        { label: 'Var jour',     get: e => num(e.daily_change_pct ?? e.return_1d), format: v => fmtPct(v),     higherIsBetter: true  },
+        { label: 'Volatilité 3Y', get: e => num(e.vol_3y_pct ?? e.volatility),    format: v => v != null ? v.toFixed(2) + '%' : '–', higherIsBetter: false },
+        { label: 'Yield TTM',    get: e => num(e.yield_ttm ?? e.dividend_yield),  format: v => fmtRatioPct(v), higherIsBetter: true },
+        { label: 'Beta',         get: e => num(e.beta),                          format: v => v != null ? v.toFixed(2) : '–', neutral: true },
+
+        // Section identité (info)
         { section: 'IDENTITÉ' },
         { label: 'Géo',     get: e => e.geo_bucket || '–', neutral: true },
         { label: 'Secteur', get: e => e.sector_bucket_pill || '–', neutral: true },
         { label: 'Type',    get: e => e.fund_type || e.etf_type || '–', neutral: true },
-
-        { section: 'COÛT & TAILLE' },
-        { label: 'TER', get: e => num(e.total_expense_ratio ?? e.ter),
-          format: v => fmtRatioPct(v), higherIsBetter: false },
-        { label: 'AUM', get: e => num(e.aum_usd ?? e.aum),
-          format: v => fmtAUM(v), higherIsBetter: true },
-
-        { section: 'PERFORMANCE' },
-        { label: 'Var jour', get: e => num(e.daily_change_pct ?? e.return_1d),
-          format: v => fmtPct(v), higherIsBetter: true },
-        { label: 'YTD', get: e => num(e.ytd_return_pct ?? e.return_ytd),
-          format: v => fmtPct(v), higherIsBetter: true },
-        { label: '1 an', get: e => num(e.one_year_return_pct ?? e.return_1y),
-          format: v => fmtPct(v), higherIsBetter: true },
-        { label: '3 mois', get: e => num(e.perf_3m_pct),
-          format: v => fmtPct(v), higherIsBetter: true },
-        { label: '1 mois', get: e => num(e.perf_1m_pct),
-          format: v => fmtPct(v), higherIsBetter: true },
-
-        { section: 'RISQUE' },
-        { label: 'Volatilité 3Y', get: e => num(e.vol_3y_pct ?? e.volatility),
-          format: v => v != null ? v.toFixed(2) + '%' : '–', higherIsBetter: false },
-        { label: 'Beta', get: e => num(e.beta),
-          format: v => v != null ? v.toFixed(2) : '–', neutral: true },
-
-        { section: 'RENDEMENT' },
-        { label: 'Yield TTM', get: e => num(e.yield_ttm ?? e.dividend_yield),
-          format: v => fmtRatioPct(v), higherIsBetter: true },
-
-        // ── Agrégats calculés depuis les holdings matchés (top 10) ─────────
-        { section: 'AGRÉGATS HOLDINGS (pondérés)' },
-        { label: 'Perf YTD pondérée', get: e => e._agg?.perf_ytd,
-          format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–',
-          higherIsBetter: true },
-        { label: 'Perf 1Y pondérée', get: e => e._agg?.perf_1y,
-          format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–',
-          higherIsBetter: true },
-        { label: 'Perf 3Y pondérée', get: e => e._agg?.perf_3y,
-          format: v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '–',
-          higherIsBetter: true },
-        { label: 'Quality raw (pondéré)', get: e => e._agg?.quality,
-          format: v => v != null ? Math.round(v).toString() : '–',
-          higherIsBetter: true },
-        { label: 'Buffett (pondéré)', get: e => e._agg?.buffett,
-          format: v => v != null ? Math.round(v).toString() : '–',
-          higherIsBetter: true },
-        { label: 'Revenue growth 3Y (méd)', get: e => e._agg?.revenue_growth,
-          format: v => v != null ? v.toFixed(1) + '%' : '–',
-          higherIsBetter: true },
-        { label: 'FCF yield (méd)', get: e => e._agg?.fcf_yield,
-          format: v => v != null ? v.toFixed(1) + '%' : '–',
-          higherIsBetter: true },
-        { label: 'Div yield (pondéré)', get: e => e._agg?.div_yield,
-          format: v => v != null ? v.toFixed(2) + '%' : '–',
-          higherIsBetter: true },
-        { label: 'Beta (pondéré)', get: e => e._agg?.beta,
-          format: v => v != null ? v.toFixed(2) : '–',
-          neutral: true },
-        { label: 'Couverture stocks', get: e => e._agg ? `${e._agg.coverage}/${e._agg.total}` : '–',
-          neutral: true },
       ];
 
-      // Header
+      // ── 3. Précompute : valeurs, min/max, best/worst, wins/losses ────────
+      // On stocke aussi sur chaque row pour réutilisation au rendu post-tri.
+      const N = etfs.length;
+      const wins   = new Array(N).fill(0);
+      const losses = new Array(N).fill(0);
+
+      rows.forEach(r => {
+        if (r.section) return;
+        r._values = etfs.map(e => r.get(e));
+        if (r.neutral) { r._best = -1; r._worst = -1; r._min = null; r._max = null; return; }
+        const nums = r._values.map(v => typeof v === 'number' && Number.isFinite(v) ? v : null);
+        const valid = nums.filter(v => v != null);
+        if (valid.length < 2) { r._best = -1; r._worst = -1; r._min = null; r._max = null; return; }
+        const max = Math.max(...valid);
+        const min = Math.min(...valid);
+        r._min = min; r._max = max;
+        if (max === min) { r._best = -1; r._worst = -1; return; }
+        r._best  = nums.indexOf(r.higherIsBetter ? max : min);
+        r._worst = nums.indexOf(r.higherIsBetter ? min : max);
+        if (r._best  >= 0) wins[r._best]++;
+        if (r._worst >= 0) losses[r._worst]++;
+      });
+
+      const TOTAL = rows.filter(r => !r.section && !r.neutral).length;
+      const scores100 = wins.map((w, i) => {
+        const net = w - losses[i];
+        return Math.round(((net + TOTAL) / (2 * TOTAL)) * 100);
+      });
+
+      // ── 4. Tri des colonnes par score décroissant (gagnant à gauche) ─────
+      const order = etfs.map((_, i) => i)
+        .sort((a, b) => scores100[b] - scores100[a]);
+      const permute = arr => order.map(i => arr[i]);
+      etfs = permute(etfs);
+      const sortedScores = permute(scores100);
+      const sortedWins   = permute(wins);
+      const sortedLosses = permute(losses);
+      // Permute aussi les valeurs et indices best/worst dans chaque row
+      const newIdx = new Array(N);
+      order.forEach((oldI, newI) => { newIdx[oldI] = newI; });
+      rows.forEach(r => {
+        if (r.section) return;
+        r._values = permute(r._values);
+        if (r._best  >= 0) r._best  = newIdx[r._best];
+        if (r._worst >= 0) r._worst = newIdx[r._worst];
+      });
+
+      const maxScore = sortedScores[0];
+      const winnersCount = sortedScores.filter(s => s === maxScore).length;
+      const winnerSortedIdx = winnersCount === 1 ? 0 : -1; // gagnant unique = 1ère colonne triée
+
+      // ── 5. Heatmap continue (gradient) sur les valeurs numériques ─────────
+      // t ∈ [-1, +1] : -1 = pire, +1 = meilleur. Couleur d'opacité ∝ |t|.
+      function heatStyle(v, r) {
+        if (v == null || !Number.isFinite(v) || r._min == null || r._max == null) return '';
+        if (r._max === r._min) return '';
+        const mid = (r._min + r._max) / 2;
+        const half = (r._max - r._min) / 2;
+        let t = (v - mid) / half; // -1..+1
+        if (!r.higherIsBetter) t = -t;
+        t = Math.max(-1, Math.min(1, t));
+        const a = Math.abs(t) * 0.45; // intensité max 0.45
+        const rgb = t >= 0 ? '76,175,80' : '244,67,54';
+        return `background:rgba(${rgb},${a.toFixed(3)});`;
+      }
+
+      // ── 6. Header (avec position dans le ranking) ─────────────────────────
       const headerRow = `
         <tr>
-          <th style="padding:10px 12px;text-align:left;background:rgba(255,255,255,0.03);min-width:160px;border-bottom:1px solid rgba(0,255,135,0.15);"></th>
-          ${etfs.map(e => `
-            <th style="padding:10px 12px;text-align:center;background:rgba(0,255,135,0.04);border-left:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(0,255,135,0.15);min-width:180px;">
-              <div style="color:#00FF87;font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:700;line-height:1.1;">${e.ticker || e.symbol}</div>
-              <div style="color:#fff;font-size:0.72rem;font-weight:500;margin-top:3px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;">${e.name || ''}</div>
-              <div style="color:rgba(255,255,255,0.35);font-size:0.6rem;margin-top:2px;letter-spacing:0.4px;">${(e.geo_bucket || '–').toUpperCase()} · ${(e.sector_bucket_pill || '–').toUpperCase()}</div>
-            </th>
-          `).join('')}
+          <th style="padding:10px 12px;text-align:left;background:rgba(255,255,255,0.03);min-width:170px;border-bottom:1px solid rgba(0,255,135,0.2);"></th>
+          ${etfs.map((e, i) => {
+            const isWinner = i === winnerSortedIdx;
+            return `
+            <th style="padding:10px 12px;text-align:center;background:${isWinner ? 'linear-gradient(180deg,rgba(0,255,135,0.12),rgba(0,255,135,0.02))' : 'rgba(0,255,135,0.03)'};border-left:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(0,255,135,0.2);min-width:200px;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                <span style="font-size:0.6rem;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;">#${i + 1}</span>
+                <span style="color:#00FF87;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;line-height:1.1;">${e.ticker || e.symbol}</span>
+                ${isWinner ? '<i class="fas fa-trophy" style="color:#FFD700;font-size:0.7rem;"></i>' : ''}
+              </div>
+              <div style="color:#fff;font-size:0.7rem;font-weight:500;margin-top:3px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;" title="${e.name || ''}">${e.name || ''}</div>
+              <div style="color:rgba(255,255,255,0.35);font-size:0.58rem;margin-top:2px;letter-spacing:0.4px;">${(e.geo_bucket || '–').toUpperCase()} · ${(e.sector_bucket_pill || '–').toUpperCase()}</div>
+            </th>`;
+          }).join('')}
         </tr>
       `;
 
-      // Score tracking
-      const wins = new Array(etfs.length).fill(0);
-      const losses = new Array(etfs.length).fill(0);
+      // ── 7. SCORE STICKY (en haut, juste sous le header de la modal) ──────
+      const stickyScoreCells = etfs.map((e, i) => {
+        const score = sortedScores[i];
+        const isWinner = i === winnerSortedIdx;
+        const scoreColor = score >= 70 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
+        return `
+          <div style="flex:1;min-width:180px;text-align:center;padding:8px 6px;background:${isWinner ? 'linear-gradient(180deg,rgba(0,255,135,0.18),rgba(0,255,135,0.04))' : 'rgba(255,255,255,0.02)'};border-left:1px solid rgba(255,255,255,0.05);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.08)'};">
+            <div style="font-size:0.55rem;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;letter-spacing:0.6px;">#${i + 1} · ${e.ticker || e.symbol}</div>
+            <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;line-height:1;margin-top:2px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:800;color:${isWinner ? '#00FF87' : scoreColor};">${score}</span>
+              <span style="font-size:0.65rem;color:rgba(255,255,255,0.4);">/100</span>
+            </div>
+            <div style="font-size:0.55rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;margin-top:1px;">${sortedWins[i]} W · ${sortedLosses[i]} L</div>
+          </div>`;
+      }).join('');
+      const stickyScoreBar = `
+        <div style="position:sticky;top:0;z-index:5;background:#0a1929;border-bottom:1px solid rgba(0,255,135,0.2);display:flex;align-items:stretch;">
+          <div style="min-width:170px;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;">
+            <div style="color:#00FF87;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;line-height:1.1;">Score global</div>
+            <div style="color:rgba(255,255,255,0.4);font-size:0.55rem;margin-top:2px;line-height:1.2;">${TOTAL} métriques</div>
+          </div>
+          ${stickyScoreCells}
+        </div>
+      `;
 
+      // ── 8. Body : sections + lignes (avec heatmap) ────────────────────────
       const dataRows = rows.map(r => {
         if (r.section) {
-          return `<tr><td colspan="${etfs.length + 1}" style="padding:10px 12px 4px 12px;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;color:#00FF87;font-weight:700;border-top:1px solid rgba(0,255,135,0.12);">${r.section}</td></tr>`;
-        }
-        const values = etfs.map(e => r.get(e));
-        const valid = values.filter(v => v != null && v !== '–');
-        let bestIdx = -1, worstIdx = -1;
-        if (typeof valid[0] === 'number' && valid.length >= 2 && !r.neutral) {
-          const nums = values.map(v => typeof v === 'number' ? v : null);
-          const max = Math.max(...nums.filter(v => v != null));
-          const min = Math.min(...nums.filter(v => v != null));
-          if (max !== min) {
-            bestIdx  = nums.indexOf(r.higherIsBetter ? max : min);
-            worstIdx = nums.indexOf(r.higherIsBetter ? min : max);
-            if (bestIdx >= 0)  wins[bestIdx]++;
-            if (worstIdx >= 0) losses[worstIdx]++;
-          }
+          const emphasis = r.emphasis ? 'color:#00FF87;background:rgba(0,255,135,0.04);' : 'color:#00FF87;';
+          return `<tr><td colspan="${N + 1}" style="padding:10px 12px 4px 12px;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;border-top:1px solid rgba(0,255,135,0.12);${emphasis}">${r.section}</td></tr>`;
         }
         const cells = etfs.map((e, i) => {
-          const v = values[i];
-          let bg = '', color = '#fff', weight = '500';
-          if (i === bestIdx)  { bg = 'rgba(76,175,80,0.14)';  color = '#4caf50'; weight = '700'; }
-          else if (i === worstIdx) { bg = 'rgba(244,67,54,0.10)'; color = '#f44336'; weight = '600'; }
+          const v = r._values[i];
+          const isBest  = i === r._best;
+          const isWorst = i === r._worst;
+          let bg = '';
+          let color = '#fff';
+          let weight = '500';
+          if (r.neutral) {
+            bg = ''; color = 'rgba(255,255,255,0.85)';
+          } else if (typeof v === 'number') {
+            bg = heatStyle(v, r);
+            if (isBest)  { color = '#4caf50'; weight = '700'; }
+            else if (isWorst) { color = '#f44336'; weight = '600'; }
+          }
           const rendered = r.format ? r.format(v) : (v ?? '–');
-          return `<td style="padding:5px 12px;text-align:center;background:${bg};color:${color};font-weight:${weight};font-family:'JetBrains Mono',monospace;font-size:0.78rem;border-left:1px solid rgba(255,255,255,0.05);line-height:1.3;">${rendered}</td>`;
+          return `<td style="padding:5px 12px;text-align:center;${bg}color:${color};font-weight:${weight};font-family:'JetBrains Mono',monospace;font-size:0.78rem;border-left:1px solid rgba(255,255,255,0.05);line-height:1.3;">${rendered}</td>`;
         }).join('');
         return `<tr><td style="padding:5px 12px;color:rgba(255,255,255,0.55);font-size:0.72rem;line-height:1.3;">${r.label}</td>${cells}</tr>`;
       }).join('');
 
-      // -- Top holdings (neutre, pas de couleur) -----------------------------
+      // ── 9. Top 10 holdings détaillés (déjà triés via etfs déjà permutés) ─
       const holdingsHeaderRow = `
-        <tr><td colspan="${etfs.length + 1}" style="padding:10px 12px 4px 12px;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;color:#00FF87;font-weight:700;border-top:1px solid rgba(0,255,135,0.12);">Top 10 holdings (détail)</td></tr>
+        <tr><td colspan="${N + 1}" style="padding:10px 12px 4px 12px;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;color:#00FF87;font-weight:700;border-top:1px solid rgba(0,255,135,0.12);">Top 10 holdings (détail)</td></tr>
       `;
-      // Réutilise les holdings matchés déjà calculés pour les agrégats
       const allHoldings = etfs.map(e => e._matched || []);
       const maxHoldings = Math.max(0, ...allHoldings.map(h => h.length));
-      // Couverture = nb holdings matchés / total, par ETF
-      const coverages = allHoldings.map(hs => {
-        const total = hs.length;
-        const matched = hs.filter(x => x.stock).length;
-        return { matched, total };
-      });
       const holdingsRows = [];
       for (let i = 0; i < maxHoldings; i++) {
         const cells = allHoldings.map(hs => {
@@ -409,7 +458,7 @@
           if (!item) return `<td style="padding:3px 12px;text-align:center;color:rgba(255,255,255,0.18);font-size:0.72rem;border-left:1px solid rgba(255,255,255,0.05);">–</td>`;
           const { h, stock } = item;
           const ticker = h.t || '';
-          const name = h.n || '';
+          const fullName = h.n || stock?.name || '';
           const w = h.w != null ? Number(h.w).toFixed(1) + '%' : '';
           const ytd = stock?.perf_ytd;
           const y1  = stock?.perf_1y;
@@ -420,11 +469,10 @@
           const matchDot = stock
             ? '<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#00FF87;flex-shrink:0;"></span>'
             : '<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;"></span>';
-          // Une seule ligne : dot · ticker · weight · YTD · 1Y
-          return `<td style="padding:4px 12px;color:#fff;font-size:0.7rem;border-left:1px solid rgba(255,255,255,0.05);font-family:'JetBrains Mono',monospace;line-height:1.3;">
+          return `<td style="padding:4px 12px;color:#fff;font-size:0.7rem;border-left:1px solid rgba(255,255,255,0.05);font-family:'JetBrains Mono',monospace;line-height:1.3;" title="${fullName.replace(/"/g, '&quot;')}">
             <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:8px;">
               ${matchDot}
-              <span style="color:#00FF87;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ticker || (name ? name.slice(0, 12) : '–')}</span>
+              <span style="color:#00FF87;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ticker || (fullName ? fullName.slice(0, 12) : '–')}</span>
               <span style="color:rgba(255,255,255,0.45);font-size:0.65rem;">${w}</span>
               <span style="color:${ytdColor};font-size:0.65rem;min-width:42px;text-align:right;">${ytdTxt}</span>
               <span style="color:${y1Color};font-size:0.65rem;min-width:42px;text-align:right;">${y1Txt}</span>
@@ -433,7 +481,6 @@
         }).join('');
         holdingsRows.push(`<tr><td style="padding:4px 12px;color:rgba(255,255,255,0.35);font-size:0.65rem;line-height:1.3;">#${i + 1}</td>${cells}</tr>`);
       }
-      // Mini en-tête colonnes pour les holdings (poids · YTD · 1Y)
       if (maxHoldings > 0) {
         const subHeaderCells = etfs.map(() =>
           `<td style="padding:2px 12px;border-left:1px solid rgba(255,255,255,0.05);">
@@ -446,40 +493,9 @@
       }
       const holdingsBlock = maxHoldings > 0
         ? holdingsHeaderRow + holdingsRows.join('')
-        : `<tr><td colspan="${etfs.length + 1}" style="padding:14px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.78rem;">Holdings non disponibles</td></tr>`;
+        : `<tr><td colspan="${N + 1}" style="padding:14px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.78rem;">Holdings non disponibles</td></tr>`;
 
-      // -- Score head-to-head -------------------------------------------------
-      const TOTAL = rows.filter(r => !r.section && !r.neutral).length;
-      const scores100 = wins.map((w, i) => {
-        const net = w - losses[i];
-        return Math.round(((net + TOTAL) / (2 * TOTAL)) * 100);
-      });
-      const maxScore = Math.max(...scores100);
-      const winnersCount = scores100.filter(s => s === maxScore).length;
-      const winnerIdx = winnersCount === 1 ? scores100.indexOf(maxScore) : -1;
-
-      const scoreCells = etfs.map((e, i) => {
-        const score = scores100[i];
-        const isWinner = i === winnerIdx;
-        const scoreColor = score >= 70 ? '#4caf50' : score >= 50 ? '#ff9800' : '#f44336';
-        const bg = isWinner ? 'linear-gradient(135deg,rgba(0,255,135,0.18),rgba(0,255,135,0.04))' : 'rgba(255,255,255,0.02)';
-        return `<td style="padding:12px;text-align:center;background:${bg};border-left:1px solid rgba(255,255,255,0.05);border-top:2px solid ${isWinner ? '#00FF87' : 'rgba(255,255,255,0.08)'};vertical-align:middle;">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-            <div style="display:flex;align-items:baseline;gap:2px;justify-content:center;line-height:1;">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:800;color:${isWinner ? '#00FF87' : scoreColor};">${score}</span>
-              <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);">/100</span>
-            </div>
-            ${isWinner
-              ? '<div style="font-size:0.6rem;color:#00FF87;font-weight:700;letter-spacing:1.2px;">GAGNANT</div>'
-              : `<div style="font-size:0.6rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;">${wins[i]} W · ${losses[i]} L</div>`}
-          </div>
-        </td>`;
-      }).join('');
-      const scoreRow = `<tr><td style="padding:12px;color:#00FF87;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;border-top:2px solid rgba(0,255,135,0.3);vertical-align:middle;line-height:1.2;">
-        Score global<div style="font-size:0.55rem;color:rgba(255,255,255,0.4);text-transform:none;letter-spacing:0;font-weight:400;margin-top:2px;">${TOTAL} métriques · head-to-head</div>
-      </td>${scoreCells}</tr>`;
-
-      // -- Modal --------------------------------------------------------------
+      // ── 10. Modal ─────────────────────────────────────────────────────────
       const modal = document.createElement('div');
       modal.id = 'etf-comparator-modal';
       modal.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;
@@ -489,14 +505,14 @@
       modal.innerHTML = `
         <div style="background:#0a1929;border:1px solid rgba(0,255,135,0.3);border-radius:14px;
           max-width:1500px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
-          <div style="position:sticky;top:0;background:#0a1929;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);
-            display:flex;align-items:center;justify-content:space-between;z-index:1;">
+          <div style="position:sticky;top:0;background:#0a1929;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.06);
+            display:flex;align-items:center;justify-content:space-between;z-index:10;">
             <div style="display:flex;align-items:center;gap:10px;">
               <i class="fas fa-balance-scale" style="color:#00FF87;font-size:1.1rem;"></i>
               <div>
                 <h2 style="color:#fff;font-size:1.05rem;font-weight:700;margin:0;line-height:1.1;">Comparateur d'ETF</h2>
-                <p style="color:rgba(255,255,255,0.45);font-size:0.65rem;margin:3px 0 0 0;line-height:1.2;">
-                  Vert = meilleur · Rouge = pire · Score head-to-head sur ${TOTAL} métriques (intrinsèques + holdings pondérés)
+                <p style="color:rgba(255,255,255,0.45);font-size:0.62rem;margin:3px 0 0 0;line-height:1.2;">
+                  Triés par score décroissant · Heatmap proportionnelle · ${TOTAL} métriques head-to-head
                 </p>
               </div>
             </div>
@@ -505,10 +521,11 @@
               <i class="fas fa-times"></i>
             </button>
           </div>
+          ${stickyScoreBar}
           <div style="padding:0 20px 20px 20px;overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
               <thead>${headerRow}</thead>
-              <tbody>${dataRows}${holdingsBlock}${scoreRow}</tbody>
+              <tbody>${dataRows}${holdingsBlock}</tbody>
             </table>
           </div>
         </div>
