@@ -1726,6 +1726,49 @@ apply: (statusId, score, answers, metrics) => {
   apply: (statusId, score) => (statusId === 'SELAS' ? score + 1 : score),
   criteria: 'social_charges'
 },
+
+// ── RÈGLES ARE / Allocation chômage (ajouté 2026-04-08) ──
+// Logique : un demandeur d'emploi qui crée son entreprise conserve son ARE
+// tant qu'il ne se verse pas de rémunération imposée. SASU/SAS/SELAS/SA
+// permettent de ne percevoir QUE des dividendes (non comptés comme revenu
+// d'activité par France Travail) → ARE préservée. À l'inverse, EURL/SARL
+// gérant majoritaire = TNS = cotisations minimales SSI dues même sans
+// rémunération → réduction voire perte d'ARE.
+{
+  id: 'are_assimile_dividends_bonus',
+  description: 'ARE + assimilé salarié : permet de vivre des dividendes sans toucher à l\'ARE',
+  condition: (a) => isYes(a.unemployment_benefits),
+  apply: (statusId, score) => {
+    if (['SASU', 'SAS', 'SELAS', 'SA'].includes(statusId)) return score + 1.5;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+{
+  id: 'are_tns_minima_malus',
+  description: 'ARE + TNS : cotisations minimales SSI réduisent l\'ARE',
+  condition: (a) => isYes(a.unemployment_benefits),
+  apply: (statusId, score, a) => {
+    // EURL gérant unique = TNS systématique
+    if (statusId === 'EURL') return score - 1;
+    // SARL/SELARL : malus seulement si gérant majoritaire (TNS)
+    const cap = parseFloat(a?.capital_percentage ?? 0);
+    if (['SARL', 'SELARL'].includes(statusId) && cap >= 50) return score - 0.75;
+    // EI : pas TNS minima identique, malus léger
+    if (statusId === 'EI') return score - 0.25;
+    return score;
+  },
+  criteria: 'social_charges'
+},
+{
+  id: 'are_micro_partial_compatibility',
+  description: 'ARE + micro-entreprise : ARE partiellement maintenue (calcul mensuel)',
+  condition: (a) => isYes(a.unemployment_benefits),
+  // MICRO reste compatible ARE mais avec recalcul mensuel selon CA → neutre, légère pénalité
+  apply: (statusId, score) => (statusId === 'MICRO' ? score - 0.25 : score),
+  criteria: 'social_charges'
+},
+
 {
   id: 'low_income_micro_bonus',
   description: 'Faibles revenus favorables pour micro',
@@ -3058,6 +3101,9 @@ if (norm.team_structure === 'investors' &&
   norm.investors = toYN(
     norm.investors ?? (norm.team_structure === 'investors' ? 'yes' : 'no')
   );
+
+  // Unifie ARE / chômage (accepte 'yes'/'no'/true/false/'oui'/'non')
+  norm.unemployment_benefits = toYN(norm.unemployment_benefits ?? norm.en_chomage);
 
   // Unifie les flags liés à la cotation / appel public à l’épargne
   norm.public_listing  = toYN(norm.public_listing);
