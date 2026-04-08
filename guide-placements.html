@@ -263,6 +263,64 @@
             border-color: #00FF87;
         }
         
+        /* Use cases ("Pour qui ? À quoi ça sert ?") - friendly cards for non-financial users */
+        .use-cases-block {
+            background: linear-gradient(135deg, rgba(0, 255, 135, 0.08), rgba(0, 117, 255, 0.06));
+            border: 1px solid rgba(0, 255, 135, 0.25);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 8px;
+        }
+        .use-cases-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #00FF87;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .use-cases-subtitle {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-bottom: 14px;
+        }
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        .use-case-card {
+            display: flex;
+            gap: 12px;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+        .use-case-card:hover {
+            background: rgba(0, 255, 135, 0.05);
+            border-color: rgba(0, 255, 135, 0.25);
+        }
+        .use-case-emoji {
+            font-size: 1.6rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .use-case-body { flex: 1; min-width: 0; }
+        .use-case-title {
+            font-weight: 600;
+            color: #e5e7eb;
+            font-size: 0.88rem;
+            margin-bottom: 2px;
+        }
+        .use-case-desc {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            line-height: 1.5;
+        }
+
         /* Important info highlight */
         .important-info {
             font-weight: 700;
@@ -1485,6 +1543,11 @@
                     fiscalite: '0% IR après 5 ans',
                     plafond: '150 000€'
                 },
+                useCases: [
+                    { emoji: '🎓', title: 'Étudiant qui démarre', desc: 'Verse 50 € pour ouvrir le PEA et lancer le compteur des 5 ans, même sans investir tout de suite.' },
+                    { emoji: '💼', title: 'Jeune actif (10 ans devant soi)', desc: 'Investit 100–300 €/mois en ETF Monde éligibles PEA pour faire fructifier son épargne sans impôt sur le revenu.' },
+                    { emoji: '🏖️', title: 'Préparer un projet à 5–10 ans', desc: 'Voyage, apport immobilier, retraite anticipée : profite des plus-values nettes d\'IR après 5 ans.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1532,6 +1595,11 @@
         plafond: '1 600 € (hors intérêts)',
         ouverture: 'dès 12 ans (avec représentant légal)'
     },
+    useCases: [
+        { emoji: '🧒', title: 'Argent de poche d\'un ado', desc: 'Permet à un 12–17 ans de faire travailler son épargne avec un taux toujours ≥ Livret A et 0 % d\'impôt.' },
+        { emoji: '🎒', title: 'Premier projet d\'étudiant', desc: 'Permis, voyage, premier ordi : épargne disponible à tout moment, sans risque, sans frais.' },
+        { emoji: '🏦', title: 'Apprendre à épargner', desc: 'Outil pédagogique pour comprendre les intérêts capitalisés avant d\'ouvrir un Livret A ou un PEA.' }
+    ],
     sections: [
         {
             title: 'Points forts',
@@ -1588,6 +1656,12 @@
                     fiscalite: '7,5% après 8 ans',
                     liquidite: 'Totale'
                 },
+                useCases: [
+                    { emoji: '👶', title: 'Préparer la transmission', desc: 'Désigner ses enfants comme bénéficiaires : jusqu\'à 152 500 €/bénéficiaire transmis hors succession.' },
+                    { emoji: '🏡', title: 'Apport immobilier dans 8 ans+', desc: 'Mix fonds € sécurisé + unités de compte pour faire grandir son apport tout en gardant la main.' },
+                    { emoji: '👴', title: 'Compléter sa retraite', desc: 'Rachats partiels programmés après 8 ans avec abattement annuel de 4 600 € (9 200 € en couple).' },
+                    { emoji: '🛡️', title: 'Épargne de sécurité long terme', desc: 'Fonds € à capital garanti pour mettre à l\'abri une partie de son patrimoine sans le bloquer.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1634,6 +1708,11 @@
                     fiscalite: 'PFU 31,4%',
                     plafond: 'Illimité'
                 },
+                useCases: [
+                    { emoji: '🌎', title: 'Investir aux États-Unis', desc: 'Acheter des actions US (Apple, Microsoft…) ou des ETF World non éligibles PEA.' },
+                    { emoji: '💰', title: 'Plafond PEA atteint', desc: 'Continuer à investir en bourse au-delà des 150 k€ du PEA, sans limite de versement.' },
+                    { emoji: '🪙', title: 'Diversifier hors actions', desc: 'Accéder aux obligations, ETF thématiques, matières premières ou cryptos via un seul compte.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1679,6 +1758,11 @@
                     avantage: 'Déduction fiscale',
                     plafond: '≈ 35 000€/an'
                 },
+                useCases: [
+                    { emoji: '💸', title: 'TMI 30 % ou 41 %', desc: 'Cadre fortement imposé : chaque 1 000 € versés économise 300 à 410 € d\'impôt l\'année suivante.' },
+                    { emoji: '👴', title: 'Préparer sa retraite', desc: 'Capital ou rente disponibles à la retraite, avec option de sortie en capital à 100 %.' },
+                    { emoji: '🏠', title: 'Achat de résidence principale', desc: 'Cas de déblocage anticipé autorisé : utiliser le PER pour son apport au moment de l\'achat.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1739,6 +1823,11 @@
                     ticket: 'Dès 200€',
                     type: 'Revenus passifs'
                 },
+                useCases: [
+                    { emoji: '🏢', title: 'Immobilier sans gestion', desc: 'Devenir « propriétaire » de bureaux, commerces ou logements sans s\'occuper des locataires ni des travaux.' },
+                    { emoji: '💵', title: 'Revenus complémentaires réguliers', desc: 'Toucher des loyers trimestriels (~4–5 %/an) sans acheter un bien entier.' },
+                    { emoji: '📦', title: 'Démarrer petit', desc: 'Entrée possible dès quelques centaines d\'euros, contrairement à l\'achat d\'un appartement.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1785,6 +1874,11 @@
                     plafond: '22 950€',
                     garantie: 'État'
                 },
+                useCases: [
+                    { emoji: '🛟', title: 'Épargne de précaution', desc: 'L\'incontournable pour mettre 3 mois de dépenses à l\'abri, dispo en 24 h en cas de coup dur.' },
+                    { emoji: '🎯', title: 'Projet à court terme', desc: 'Cadeau, vacances, achat de l\'année : zéro risque, zéro impôt, retrait quand on veut.' },
+                    { emoji: '🚪', title: '1ʳᵉ étape avant d\'investir', desc: 'À ouvrir en premier, avant tout placement risqué (PEA, AV en UC, crypto…).' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1830,6 +1924,11 @@
                     plafond: '12 000€',
                     type: 'Épargne solidaire'
                 },
+                useCases: [
+                    { emoji: '➕', title: 'Compléter son Livret A', desc: 'Même taux et même fiscalité : permet de doubler quasiment le plafond sans risque.' },
+                    { emoji: '🌱', title: 'Soutenir l\'économie verte', desc: 'L\'épargne finance la transition écologique et l\'économie sociale et solidaire.' },
+                    { emoji: '💳', title: 'Couplé à une carte bancaire', desc: 'Certaines banques permettent un débit direct sur le LDDS pour gérer ses paiements quotidiens.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1875,6 +1974,11 @@
                     plafond: '10 000€',
                     condition: 'Revenus modestes'
                 },
+                useCases: [
+                    { emoji: '🥇', title: 'Meilleur livret garanti de France', desc: 'Si tu y as droit (RFR < seuil), c\'est le placement sans risque le plus rémunérateur — à ouvrir en priorité.' },
+                    { emoji: '🛒', title: 'Protéger son pouvoir d\'achat', desc: 'Taux indexé sur l\'inflation : épargne préservée même quand les prix montent.' },
+                    { emoji: '👵', title: 'Retraités à petite pension', desc: 'Souvent éligibles : un complément de revenu sans impôt ni paperasse.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1920,6 +2024,11 @@
                     risque: 'Très élevé',
                     marche: '24h/24'
                 },
+                useCases: [
+                    { emoji: '🎲', title: 'Petite poche spéculative', desc: 'Investir 1–5 % de son patrimoine en Bitcoin / Ethereum, en acceptant la possibilité de tout perdre.' },
+                    { emoji: '🌐', title: 'Diversification non corrélée', desc: 'Exposition à un actif différent des actions et obligations classiques.' },
+                    { emoji: '🚫', title: 'À éviter si…', desc: 'Pas d\'épargne de précaution, dettes en cours, ou besoin de l\'argent à court terme.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -1965,6 +2074,11 @@
                     univers: 'PME/ETI UE',
                     fiscalite: 'Comme PEA'
                 },
+                useCases: [
+                    { emoji: '📈', title: 'PEA classique presque plein', desc: 'Ajoute 75 k€ de capacité d\'investissement avec la même fiscalité que le PEA.' },
+                    { emoji: '🇫🇷', title: 'Soutenir les PME françaises', desc: 'Financer des entreprises de taille intermédiaire et PME européennes via des fonds dédiés.' },
+                    { emoji: '🎯', title: 'Diversifier hors grandes capi', desc: 'Compléter un ETF World par une exposition aux petites et moyennes capitalisations.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2011,6 +2125,11 @@
                     blocage: '5-10 ans',
                     risque: 'Très élevé'
                 },
+                useCases: [
+                    { emoji: '🧾', title: 'Réduire son IR', desc: 'Cadre fortement imposé qui veut récupérer 18–25 % du montant versé en réduction d\'impôt.' },
+                    { emoji: '🔬', title: 'Soutenir l\'innovation française', desc: 'Financer des start-ups et PME innovantes, en acceptant le risque de perte en capital.' },
+                    { emoji: '⏳', title: 'Argent dont on n\'a pas besoin', desc: 'Blocage 5–10 ans, liquidité quasi nulle : à n\'utiliser qu\'avec une petite part de son patrimoine.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2058,6 +2177,11 @@
                     plafond: '22 950€',
                     type: 'Transition écologique'
                 },
+                useCases: [
+                    { emoji: '👶', title: 'Enfant ou ado (< 21 ans)', desc: 'Démarrer un PEA dédié à son enfant pour faire grandir un capital sur 10–20 ans, sans impôt à la sortie.' },
+                    { emoji: '🌱', title: 'Investir dans la transition', desc: 'Univers d\'ETF orientés climat, énergies propres et entreprises bas-carbone éligibles.' },
+                    { emoji: '🎁', title: 'Épargne pour les études', desc: 'Capital prêt à débloquer pour les études supérieures ou le premier logement de l\'enfant.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2108,6 +2232,11 @@
                     pret: 'Jusqu\'à 92 000€',
                     blocage: '4 ans mini utile'
                 },
+                useCases: [
+                    { emoji: '🔑', title: 'Projet d\'achat immobilier', desc: 'Constituer un apport sur 4–10 ans avec un taux garanti à l\'ouverture.' },
+                    { emoji: '🏦', title: 'Droit à un prêt épargne logement', desc: 'Après 4 ans, accès à un prêt immobilier à taux préférentiel encadré.' },
+                    { emoji: '📅', title: 'Versements programmés', desc: 'Discipline d\'épargne avec un minimum de 540 €/an automatique.' }
+                ],
                 sections: [
                     {
                         title: 'Rôle',
@@ -2250,6 +2379,11 @@
                     pret: 'Jusqu\'à 23 000€',
                     liquidite: 'Totale'
                 },
+                useCases: [
+                    { emoji: '🤝', title: 'Compagnon du PEL', desc: 'Cumul possible avec un PEL pour augmenter les droits à prêt épargne logement.' },
+                    { emoji: '💧', title: 'Souplesse maximale', desc: 'Argent dispo à tout moment, sans pénalité, contrairement au PEL.' },
+                    { emoji: '🏠', title: 'Mini-projet immobilier', desc: 'Travaux, garage, place de parking : utilisable pour de petits projets logement.' }
+                ],
                 sections: [
                     {
                         title: 'Rôle',
@@ -2328,6 +2462,11 @@
                     liquidite: 'Meilleure que SCPI',
                     risque: 'Modéré'
                 },
+                useCases: [
+                    { emoji: '🏬', title: 'Immobilier plus liquide', desc: 'Alternative aux SCPI quand on veut pouvoir récupérer son argent plus facilement.' },
+                    { emoji: '📊', title: 'Mix immobilier + financier', desc: 'Au moins 60 % d\'immobilier complété par des actions et obligations pour amortir les chocs.' },
+                    { emoji: '🛏️', title: 'Investisseur passif', desc: 'Aucune gestion à faire, idéal pour qui veut un placement « set and forget ».' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2377,6 +2516,11 @@
                     liquidite: 'Élevée',
                     risque: 'Faible à modéré'
                 },
+                useCases: [
+                    { emoji: '🛡️', title: 'Se protéger des crises', desc: 'L\'or sert de « parachute » en cas de forte inflation ou de tensions géopolitiques.' },
+                    { emoji: '💤', title: 'Garer son cash en attendant', desc: 'ETF monétaire pour rémunérer son cash à ~3 % en attendant d\'investir, sans risque significatif.' },
+                    { emoji: '⚖️', title: 'Stabiliser un portefeuille', desc: '5–10 % en or pour amortir la volatilité d\'un portefeuille majoritairement en actions.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2426,6 +2570,11 @@
                     horizon: '2-7 ans',
                     risque: 'Faible à modéré'
                 },
+                useCases: [
+                    { emoji: '🧓', title: 'Profil prudent / pré-retraite', desc: 'Sécuriser une partie de son capital avec des revenus plus prévisibles que les actions.' },
+                    { emoji: '💵', title: 'Revenus réguliers (coupons)', desc: 'Toucher des intérêts versés périodiquement, utile pour compléter ses revenus.' },
+                    { emoji: '🪜', title: 'Échelonner les échéances', desc: 'Construire une « échelle » d\'obligations pour lisser le risque de taux.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2475,6 +2624,11 @@
                     abondement: 'jusqu\'à +300%',
                     fiscalite: 'Exonéré IR'
                 },
+                useCases: [
+                    { emoji: '🎁', title: 'Capter l\'abondement employeur', desc: 'Verser pour déclencher l\'abondement : c\'est une « augmentation » nette d\'impôt.' },
+                    { emoji: '💼', title: 'Placer participation / intéressement', desc: 'Loger ses primes dans le PEE pour les exonérer d\'impôt sur le revenu (hors PS).' },
+                    { emoji: '🔓', title: 'Cas de déblocage anticipé', desc: 'Mariage, naissance du 3ᵉ enfant, achat RP, divorce… : sortie possible avant 5 ans.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2564,6 +2718,11 @@
                     abondement: 'jusqu\'à +300%',
                     plafond: '16% PASS (~7 690€)'
                 },
+                useCases: [
+                    { emoji: '👴', title: 'Préparer sa retraite avec son entreprise', desc: 'Profiter de l\'abondement et de la gestion pilotée pour faire grossir un capital retraite.' },
+                    { emoji: '🧾', title: 'Économiser de l\'impôt', desc: 'Versements volontaires déductibles du revenu imposable, comme un PER individuel.' },
+                    { emoji: '🏠', title: 'Achat de résidence principale', desc: 'Cas de déblocage anticipé autorisé pour financer son apport.' }
+                ],
                 sections: [
                     {
                         title: 'Points forts',
@@ -2648,6 +2807,11 @@
                     usage: 'Congés ou épargne',
                     avantage: 'Transfert PEE/PERCOL'
                 },
+                useCases: [
+                    { emoji: '🏖️', title: 'Financer un congé sabbatique', desc: 'Stocker des jours non pris pour partir 6 ou 12 mois en gardant un revenu.' },
+                    { emoji: '💰', title: 'Convertir des jours en épargne', desc: 'Transférer ses jours de CET vers le PEE/PERCOL pour les transformer en capital.' },
+                    { emoji: '👶', title: 'Préparer un congé parental', desc: 'Maintenir un revenu pendant un congé parental ou une période à temps partiel.' }
+                ],
                 sections: [
                     {
                         title: 'À quoi ça sert ?',
@@ -2857,7 +3021,30 @@
                     content += `<span class="profile-badge ${profile}">${profileLabels[profile]}</span>`;
                 });
                 content += `</div></div>`;
-                
+
+                // Use cases ("Pour qui ? Concrètement, ça sert à quoi ?")
+                if (placement.useCases && placement.useCases.length) {
+                    content += `
+                        <div class="drawer-section">
+                            <div class="use-cases-block">
+                                <div class="use-cases-title"><i class="fas fa-lightbulb"></i> Concrètement, c'est pour qui ?</div>
+                                <div class="use-cases-subtitle">Quelques situations typiques où ce placement est pertinent.</div>
+                                <div class="use-cases-grid">
+                    `;
+                    placement.useCases.forEach(uc => {
+                        content += `
+                            <div class="use-case-card">
+                                <div class="use-case-emoji">${uc.emoji}</div>
+                                <div class="use-case-body">
+                                    <div class="use-case-title">${uc.title}</div>
+                                    <div class="use-case-desc">${uc.desc}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    content += `</div></div></div>`;
+                }
+
                 // Sections
                 placement.sections.forEach(section => {
                     content += `
