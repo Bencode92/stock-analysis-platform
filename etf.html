@@ -1349,6 +1349,19 @@
           {key:'palladium',      label:'Palladium'},
           {key:'uranium',        label:'Uranium'},
         ],
+        consumer: [
+          {key:'consumer_discretionary', label:'Discrétionnaire'},
+          {key:'consumer_staples',       label:'Staples'},
+          {key:'retail',                 label:'Retail'},
+        ],
+        industrial: [
+          {key:'industrials',        label:'Industrials'},
+          {key:'infrastructure',     label:'Infrastructure'},
+          {key:'aerospace_defense',  label:'Aerospace & Défense'},
+          {key:'transportation',     label:'Transport'},
+        ],
+        // Finance et REITs n'ont pas de drill-down : etf_exposure.py ne les
+        // sous-classe pas (financial et reits sont des catégories monolithiques).
       };
 
       function matchesFineExposure(e, key){
@@ -1540,7 +1553,9 @@
         const autoN   = $('#etf-az-auto-compare-n');
         if (autoBtn){
           const filterActiveForAuto = !!q || (fGeo && fGeo !== 'all') || (fSectorPill && fSectorPill !== 'all') || (fStrategy && fStrategy !== 'all') || (fGeoFine && fGeoFine !== 'all') || (fSectorFine && fSectorFine !== 'all');
-          if (filterActiveForAuto && filtered.length >= 2 && filtered.length <= 15){
+          // Visible dès qu'un filtre est actif et qu'il reste ≥2 ETF
+          // (le top 5 est calculé par AUM décroissant — marche pour 4 comme pour 400)
+          if (filterActiveForAuto && filtered.length >= 2){
             const n = Math.min(5, filtered.length);
             if (autoN) autoN.textContent = n;
             autoBtn.style.display = '';
