@@ -341,11 +341,11 @@ class RecommendationEngine {
         };
         
         // Paramètres des seuils pour 2026
-        this.thresholds2025 = {
+        this.thresholds = {
             micro: {
-                bic_sales: 203100,
-                bic_service: 83600,
-                bnc: 83600
+                bic_sales: 188700,
+                bic_service: 77700,
+                bnc: 77700
             },
             is_reduced_rate_limit: 42500
         };
@@ -515,13 +515,13 @@ class RecommendationEngine {
         // 3. CA > seuils micro → Micro exclue
         if (this.answers.projected_revenue) {
             const revenue = parseFloat(this.answers.projected_revenue);
-            let microThreshold = this.thresholds2025.micro.bic_service; // Par défaut
+            let microThreshold = this.thresholds.micro.bic_service; // Par défaut
             
             // Déterminer le seuil applicable selon l'activité
             if (this.answers.activity_type === 'bic_sales') {
-                microThreshold = this.thresholds2025.micro.bic_sales;
+                microThreshold = this.thresholds.micro.bic_sales;
             } else if (this.answers.activity_type === 'bnc') {
-                microThreshold = this.thresholds2025.micro.bnc;
+                microThreshold = this.thresholds.micro.bnc;
             }
             
             if (revenue > microThreshold) {
@@ -860,7 +860,7 @@ class RecommendationEngine {
             
             strategies.push({
                 title: "Surveillance des seuils",
-                description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds2025.micro.bic_sales}€/vente, ${this.thresholds2025.micro.bic_service}€/services).`,
+                description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds.micro.bic_sales}€/vente, ${this.thresholds.micro.bic_service}€/services).`,
                 icon: "fa-chart-line"
             });
         } 
@@ -1090,7 +1090,7 @@ class RecommendationEngine {
             weaknesses.push("Coûts de gestion potentiellement élevés par rapport au chiffre d'affaires");
         }
         
-        if (statusId === 'MICRO' && this.answers.projected_revenue > 0.7 * this.thresholds2025.micro.bic_service) {
+        if (statusId === 'MICRO' && this.answers.projected_revenue > 0.7 * this.thresholds.micro.bic_service) {
             weaknesses.push("Risque de dépassement des seuils du régime micro-entrepreneur");
         }
         

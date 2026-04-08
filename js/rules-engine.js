@@ -11,8 +11,8 @@ class RulesEngine {
     return {
       // Seuils légaux 2026
       microEntrepriseSeuils: {
-        vente: 203100,
-        service: 83600
+        vente: 188700,
+        service: 77700
       },
       isTaux: {
         reduit: { seuil: 42500, taux: 0.15 },

@@ -2743,7 +2743,7 @@ class RecommendationEngine {
 // Source : seuils 2023-2025 en vigueur (revalorisation triennale 2026-2028 non encore publiée au JO)
 this.thresholdsYear = 2026;
 this.thresholdsLastUpdated = '2026-04-08';
-this.thresholds2025 = {
+this.thresholds = {
   micro: {
     // Micro-BIC/BNC — plafonds 2023-2025 (en vigueur tant que 2026-2028 non publiés)
     bic_sales: 188_700,        // ventes de marchandises / hébergement
@@ -2780,7 +2780,7 @@ this.thresholds2025 = {
 };
 
     // Alias rétrocompatibilité si ton code lit encore la clé initiale
-    this.thresholds2025.is_reduced_rate_limit = this.thresholds2025.is_reduced_rate.profit_cap;
+    this.thresholds.is_reduced_rate_limit = this.thresholds.is_reduced_rate.profit_cap;
 
     // Cache mémo
     this.memoizedResults = {};
@@ -3336,7 +3336,7 @@ applySpecificFilters() {
   const isImmo = IS_IMMO_LOCAL(A);
 
   // Référentiels + fallbacks
-  const TH = this.thresholds2025 || {};
+  const TH = this.thresholds || {};
   const MICRO = (TH.micro || {
     bic_sales: 188_700, bic_service: 77_700, bnc: 77_700,
     meuble_classe_ca: 77_700, meuble_non_classe_ca: 15_000
@@ -4370,14 +4370,14 @@ explainRecommendation(statusId, opts = {}) {
 /**
  * Génère des stratégies contextualisées par statut (MAJ 30/09/2025)
  * - Cohérente avec les IDs de statuts fournis (MICRO, EI, EURL, SASU, SARL, SAS, SA, SNC, SCI, SELARL, SELAS, SCA)
- * - Utilise this.thresholds2025 (micro, TVA, IS réduit)
+ * - Utilise this.thresholds (micro, TVA, IS réduit)
  */
 generateContextualStrategies(statusId) {
   const status = this.filteredStatuses?.[statusId] || window.legalStatuses?.[statusId];
   if (!status) return [];
 
   const A = this.answers || {};
-  const T = this.thresholds2025 || {};
+  const T = this.thresholds || {};
   const priorities = Array.isArray(A.priorities) ? A.priorities : [];
   const isLowTMI  = ['non_taxable','bracket_11'].includes(A.tax_bracket);
   const isHighTMI = ['bracket_41','bracket_45'].includes(A.tax_bracket);
@@ -4909,7 +4909,7 @@ getTopRecommendations(count = 3) {
  * Obtenir les forces d'un statut juridique pour le profil (MAJ 30/09/2025)
  * - Renvoie un tableau de 1..3 phrases (strings)
  * - Utilise les priorités, le régime social, le CA prévisionnel, la TMI, etc.
- * - Cohérent avec thresholds2025 et les formes disponibles
+ * - Cohérent avec thresholds et les formes disponibles
  */
 getStrengths(statusId) {
   const strengths = [];
@@ -4930,7 +4930,7 @@ getStrengths(statusId) {
   const taxBracket         = String(A.tax_bracket || '').toLowerCase(); // 'non_taxable','bracket_11','bracket_30','bracket_41','bracket_45', etc.
 
   // ====== Seuils (micro + IS réduit) ======
-  const isReduced = (this.thresholds2025 && this.thresholds2025.is_reduced_rate) || { profit_cap: 42500, turnover_cap: 10_000_000 };
+  const isReduced = (this.thresholds && this.thresholds.is_reduced_rate) || { profit_cap: 42500, turnover_cap: 10_000_000 };
   const microCeiling = (() => {
     try {
       if (typeof this._getMicroCeilingForAnswers === 'function') {
@@ -4939,13 +4939,13 @@ getStrengths(statusId) {
       // fallback local cohérent avec applySpecificFilters()
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
-          : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
+          ? this.thresholds?.micro?.meuble_classe_ca ?? 77700
+          : this.thresholds?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
-      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
-      return this.thresholds2025?.micro?.bic_service ?? 77700;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds?.micro?.bic_sales   ?? 188700;
+      if (nature === 'bnc')                                                return this.thresholds?.micro?.bnc         ?? 77700;
+      return this.thresholds?.micro?.bic_service ?? 77700;
     } catch {
       return 77700;
     }
@@ -5107,13 +5107,13 @@ getWeaknesses(statusId) {
       }
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds2025?.micro?.meuble_classe_ca ?? 77700
-          : this.thresholds2025?.micro?.meuble_non_classe_ca ?? 15000;
+          ? this.thresholds?.micro?.meuble_classe_ca ?? 77700
+          : this.thresholds?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds2025?.micro?.bic_sales   ?? 188700;
-      if (nature === 'bnc')                                                return this.thresholds2025?.micro?.bnc         ?? 77700;
-      return this.thresholds2025?.micro?.bic_service ?? 77700;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds?.micro?.bic_sales   ?? 188700;
+      if (nature === 'bnc')                                                return this.thresholds?.micro?.bnc         ?? 77700;
+      return this.thresholds?.micro?.bic_service ?? 77700;
     } catch {
       return 77700;
     }
@@ -5710,7 +5710,7 @@ if (A && A.projected_revenue != null) {
           const v = this._getMicroCeilingForAnswers(A);
           if (Number.isFinite(v)) return v;
         }
-        const T = this.thresholds2025 || {};
+        const T = this.thresholds || {};
         const M = T.micro || {};
         if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
           return (A.furnished_tourism_classed === 'yes')
@@ -5770,7 +5770,7 @@ getStatusExplanations(statusId, answers) {
   const out = [];
 
   // ── Seuils & helpers sûrs (sans optional chaining) ──────────────
-  const t2025 = this.thresholds2025 || {};
+  const t2025 = this.thresholds || {};
   const micro = t2025.micro || {};
   const tvab  = t2025.tva_franchise_base || {};
   const isr   = t2025.is_reduced_rate || {};
