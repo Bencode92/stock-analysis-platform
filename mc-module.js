@@ -1548,28 +1548,35 @@
                 }
             }
 
-            // ===== v9.1: SECTOR-NEUTRAL Z-SCORES (winsorized at ±3σ) =====
+            // ===== v9.2: SECTOR-NEUTRAL Z-SCORES (winsorized at percentile 1/99) =====
+            // v9.1 used ±3σ which assumes a normal distribution.
+            // Most metrics (div yield, PE, vol) are skewed/log-normal, so ±3σ
+            // is biased on one side. v9.2 uses percentile-based winsorization
+            // (MSCI ESG / Robeco / AQR standard) — distribution-agnostic.
             const zScoreArr = new Float64Array(n);
 
             const computeSectorZ = (indices) => {
                 const vals = indices.map(i => raw[i]).filter(Number.isFinite);
                 if (vals.length < 3) return null;
-                let sum = 0;
-                for (const v of vals) sum += v;
-                const mean = sum / vals.length;
-                let varSum = 0;
-                for (const v of vals) varSum += (v - mean) ** 2;
-                const std = Math.sqrt(varSum / vals.length);
-                if (std < 1e-9) return null;
-                const upper = mean + 3 * std;
-                const lower = mean - 3 * std;
+
+                // Step 1: percentile-based winsorization (1% / 99%)
+                const sortedVals = [...vals].sort((a, b) => a - b);
+                const p01Idx = Math.floor(sortedVals.length * 0.01);
+                const p99Idx = Math.floor(sortedVals.length * 0.99);
+                const lower = sortedVals[p01Idx];
+                const upper = sortedVals[Math.min(p99Idx, sortedVals.length - 1)];
                 const winsorizedVals = vals.map(v => Math.min(upper, Math.max(lower, v)));
+
+                // Step 2: mean + std on winsorized values
                 let sumW = 0;
                 for (const v of winsorizedVals) sumW += v;
                 const meanW = sumW / winsorizedVals.length;
                 let varSumW = 0;
                 for (const v of winsorizedVals) varSumW += (v - meanW) ** 2;
-                const stdW = Math.sqrt(varSumW / winsorizedVals.length) || 1;
+                const stdW = Math.sqrt(varSumW / winsorizedVals.length);
+                if (stdW < 1e-9) return null;
+
+                // Step 3: z-score per stock (using winsorized value)
                 const zMap = new Map();
                 for (const idx of indices) {
                     const v = raw[idx];
