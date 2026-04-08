@@ -1415,29 +1415,65 @@
       // Construire le cache si on a des données
       if (state.data.length > 0) {
         const n = state.data.length;
-        
+
+        // ===== v9.0: SECTOR NEUTRALITY =====
+        // Build sector index: sector_name → array of stock indices
+        // Cascade: sector (L1) with min 15 → fallback to global with flag
+        const SECTOR_MIN = 15;
+        const sectorGroups = new Map(); // sector → [indices]
+        for (let i = 0; i < n; i++) {
+            const sec = state.data[i].sector || '__UNKNOWN__';
+            if (!sectorGroups.has(sec)) sectorGroups.set(sec, []);
+            sectorGroups.get(sec).push(i);
+        }
+        // Stocks in eligible sectors (≥ SECTOR_MIN) get sector-relative rank
+        // Others fall back to global rank (with flag)
+        const eligibleSectors = new Set();
+        sectorGroups.forEach((arr, sec) => { if (arr.length >= SECTOR_MIN) eligibleSectors.add(sec); });
+        console.log(`🌐 Sector neutrality: ${eligibleSectors.size}/${sectorGroups.size} sectors eligible (≥${SECTOR_MIN} stocks)`);
+
+        // Helper: compute hazen percentiles for a subset of indices on a raw array
+        const computeRanks = (rawArr, indices) => {
+            if (indices.length < 2) return null;
+            const sorted = [...indices].sort((a, b) => rawArr[a] - rawArr[b]);
+            const ranks = new Map(); // idx → percentile
+            let k = 0;
+            while (k < sorted.length) {
+                let j = k + 1;
+                while (j < sorted.length && Math.abs(rawArr[sorted[j]] - rawArr[sorted[k]]) < 1e-12) j++;
+                const r = (k + j - 1) / 2;
+                const hazen = (r + 0.5) / sorted.length;
+                for (let t = k; t < j; t++) ranks.set(sorted[t], hazen);
+                k = j;
+            }
+            return ranks;
+        };
+
+        // Sector flag array (true = sector-adjusted, false = global fallback)
+        const sectorAdjusted = new Uint8Array(n);
+
         for (const m of Object.keys(METRICS)) {
           const raw = new Float64Array(n);
           for (let i = 0; i < n; i++) {
             raw[i] = state.data[i].metrics[m];
           }
-          
-          // Winsorization doux
+
+          // Winsorization doux (global, conservé)
           const sorted = Array.from(raw)
             .filter(Number.isFinite)
             .sort((a, b) => a - b);
-          
+
           if (sorted.length) {
             const q = (p) => sorted[Math.floor(p * (sorted.length - 1))];
             const lo = q(0.005);
             const hi = q(0.995);
-            
+
             for (let i = 0; i < n; i++) {
               if (Number.isFinite(raw[i])) {
                 raw[i] = Math.min(hi, Math.max(lo, raw[i]));
               }
             }
-            
+
             // Recalculer sorted après winsorisation
             const sortedW = Array.from(raw)
               .filter(Number.isFinite)
@@ -1446,31 +1482,49 @@
             const q1 = qW(0.25);
             const q3 = qW(0.75);
             const iqr = Math.max(1e-9, q3 - q1);
-            
-            // Calcul des rangs/percentiles avec gestion des égalités
-            const idx = Array.from({length: n}, (_, i) => i)
-              .filter(i => Number.isFinite(raw[i]));
-            idx.sort((i, j) => raw[i] - raw[j]);
-            
+
+            // ===== v9.0: SECTOR-RELATIVE PERCENTILES =====
             const rankPct = new Float64Array(n);
-            let k = 0;
-            while (k < idx.length) {
-              let j = k + 1;
-              while (j < idx.length && Math.abs(raw[idx[j]] - raw[idx[k]]) < 1e-12) j++;
-              const r = (k + j - 1) / 2;
-              const hazen = (r + 0.5) / idx.length;
-              for (let t = k; t < j; t++) {
-                rankPct[idx[t]] = hazen;
-              }
-              k = j;
+
+            // Step 1: rank within each eligible sector
+            const sectorRanks = new Map(); // sector → Map(idx → pct)
+            sectorGroups.forEach((indices, sec) => {
+                if (!eligibleSectors.has(sec)) return;
+                // Filter to only valid (finite) values
+                const validIdx = indices.filter(i => Number.isFinite(raw[i]));
+                if (validIdx.length < 2) return;
+                const ranks = computeRanks(raw, validIdx);
+                sectorRanks.set(sec, ranks);
+            });
+
+            // Step 2: global fallback for non-eligible sectors
+            const allValidIdx = [];
+            for (let i = 0; i < n; i++) if (Number.isFinite(raw[i])) allValidIdx.push(i);
+            const globalRanks = computeRanks(raw, allValidIdx);
+
+            // Step 3: assign each stock its rank
+            for (let i = 0; i < n; i++) {
+                if (!Number.isFinite(raw[i])) {
+                    rankPct[i] = NaN;
+                    continue;
+                }
+                const sec = state.data[i].sector || '__UNKNOWN__';
+                if (eligibleSectors.has(sec) && sectorRanks.has(sec) && sectorRanks.get(sec).has(i)) {
+                    rankPct[i] = sectorRanks.get(sec).get(i);
+                    sectorAdjusted[i] = 1;
+                } else {
+                    rankPct[i] = globalRanks ? (globalRanks.get(i) ?? 0.5) : 0.5;
+                    // sectorAdjusted[i] stays 0 → flag fallback
+                }
             }
-            
+
             // Utiliser sorted winsorisé dans le cache
             cache[m] = {
               raw,
-              sorted: Float64Array.from(sortedW), // Sorted après winsorisation
+              sorted: Float64Array.from(sortedW),
               rankPct,
-              iqr // IQR recalculé après winsorisation
+              iqr,
+              sectorAdjusted // v9.0: per-stock flag
             };
           } else {
             // Pas de données valides
@@ -1478,12 +1532,20 @@
               raw,
               sorted: new Float64Array(),
               rankPct: new Float64Array(n),
-              iqr: 1
+              iqr: 1,
+              sectorAdjusted: new Uint8Array(n)
             };
           }
         }
-        
-        console.log('✅ Cache initialisé pour', Object.keys(cache).length, 'métriques');
+
+        // Store sector eligibility info on state for diagnostics
+        state.sectorEligibility = {
+            eligible: [...eligibleSectors],
+            total: sectorGroups.size,
+            min: SECTOR_MIN
+        };
+
+        console.log('✅ Cache initialisé pour', Object.keys(cache).length, 'métriques (sector-neutral)');
       }
       
       console.log(`✅ MC: ${allStocks.length} actions chargées`);
