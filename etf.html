@@ -1076,6 +1076,14 @@
                       <button class="pill" data-strategy="inverse" aria-selected="false">Inverse</button>
                     </div>
 
+                    <!-- Pill Favoris -->
+                    <div class="pills mb-3" role="tablist" aria-label="Favoris">
+                      <button class="pill" id="etf-az-fav-pill" data-fav="toggle" aria-selected="false"
+                        style="border-color:rgba(255,215,0,0.3);">
+                        <i class="far fa-star" style="color:#FFD700;margin-right:4px;"></i>Favoris (<span id="etf-az-fav-count">0</span>)
+                      </button>
+                    </div>
+
                     <!-- Barre de recherche (ETF A→Z) -->
                     <div class="search-container mt-3">
                       <div class="search-wrapper relative">
@@ -1134,6 +1142,30 @@
                       <p class="text-lg">Impossible de charger les données pour l'affichage A→Z.</p>
                     </div>
                     <div id="etf-az-container" class="hidden"></div>
+                    <!-- Container flat (tri global, pas de groupement par lettre) -->
+                    <div id="etf-flat-container" class="hidden">
+                      <div class="overflow-x-auto">
+                        <table class="data-table">
+                          <thead>
+                            <tr>
+                              <th class="sortable" data-sort="ticker" style="cursor:pointer;">TICKER / NOM <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="ter" style="cursor:pointer;">TER <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="aum" style="cursor:pointer;">AUM <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th>DERNIER</th>
+                              <th class="sortable" data-sort="var" style="cursor:pointer;">VAR % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="ytd" style="cursor:pointer;">YTD % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="1y" style="cursor:pointer;">1 AN % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="vol" style="cursor:pointer;">VOLATILITÉ <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="yield" style="cursor:pointer;">RENDEMENT <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="score" style="cursor:pointer;">SCORE <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th class="sortable" data-sort="exposure" style="cursor:pointer;">EXPO <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody id="etf-flat-body"></tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </section>
                 
@@ -1487,6 +1519,7 @@
                     <th class="sortable" data-sort="1y" style="cursor:pointer;">1 AN % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th class="sortable" data-sort="vol" style="cursor:pointer;">VOLATILITÉ <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th class="sortable" data-sort="yield" style="cursor:pointer;">RENDEMENT <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="score" style="cursor:pointer;">SCORE <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th class="sortable" data-sort="exposure" style="cursor:pointer;">EXPO <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th></th>
                   </tr>
@@ -1546,6 +1579,7 @@
         '1y':     e => Number(e.one_year_return_pct ?? e.return_1y ?? 0),
         vol:      e => Number(e.vol_3y_pct ?? e.volatility ?? 0),
         yield:    e => Number(e.yield_ttm ?? e.dividend_yield ?? 0),
+        score:    e => Number(e.__score ?? -1),
         exposure: e => String(e.exposure || 'zzz'),
       };
 
@@ -1573,14 +1607,151 @@
         return map;
       }
 
+      // ---------- Favoris (localStorage) ----------
+      const LS_FAV_KEY = 'tp_etf_favorites_v1';
+      function getFavorites(){
+        try { return new Set(JSON.parse(localStorage.getItem(LS_FAV_KEY) || '[]')); } catch { return new Set(); }
+      }
+      function saveFavorites(set){
+        localStorage.setItem(LS_FAV_KEY, JSON.stringify([...set]));
+      }
+      let favorites = getFavorites();
+      window.toggleETFFavorite = function(ticker){
+        if (favorites.has(ticker)) favorites.delete(ticker);
+        else favorites.add(ticker);
+        saveFavorites(favorites);
+        render();
+      };
+      let fFavOnly = false; // pill favoris
+
+      // ---------- Score composite (percentile rank dans le pool filtré) ----------
+      // Pondérations : TER 30%, AUM 20%, Perf1Y 25%, Vol 15%, Yield 10%
+      const SCORE_WEIGHTS = [
+        { key: 'ter',   get: e => Number(e.total_expense_ratio ?? e.ter ?? 999),   hib: false, w: 0.30 },
+        { key: 'aum',   get: e => Number(e.aum_usd ?? e.aum ?? 0),                 hib: true,  w: 0.20 },
+        { key: 'perf',  get: e => Number(e.one_year_return_pct ?? e.return_1y ?? 0), hib: true,  w: 0.25 },
+        { key: 'vol',   get: e => Number(e.vol_3y_pct ?? e.volatility ?? 0),         hib: false, w: 0.15 },
+        { key: 'yield', get: e => Number(e.yield_ttm ?? e.dividend_yield ?? 0),      hib: true,  w: 0.10 },
+      ];
+      function computeScores(list){
+        if (list.length < 2) { list.forEach(e => e.__score = null); return; }
+        const scores = list.map(() => ({ sum: 0, tw: 0 }));
+        SCORE_WEIGHTS.forEach(m => {
+          const vals = list.map((e, i) => ({ v: m.get(e), i }))
+            .filter(x => Number.isFinite(x.v));
+          if (vals.length < 2) return;
+          vals.sort((a, b) => m.hib ? a.v - b.v : b.v - a.v);
+          vals.forEach((x, rank) => {
+            const pct = (rank / (vals.length - 1)) * 100;
+            scores[x.i].sum += pct * m.w;
+            scores[x.i].tw  += m.w;
+          });
+        });
+        list.forEach((e, i) => {
+          e.__score = scores[i].tw > 0 ? Math.round(scores[i].sum / scores[i].tw) : null;
+        });
+      }
+      function scoreColor(s){
+        if (s == null) return 'rgba(255,255,255,0.3)';
+        if (s >= 75) return '#4caf50';
+        if (s >= 50) return '#ff9800';
+        return '#f44336';
+      }
+      function scoreBadge(s){
+        if (s == null) return '<span style="opacity:.3">–</span>';
+        return `<span style="display:inline-block;padding:2px 6px;border-radius:5px;font-size:0.7rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:#fff;background:${scoreColor(s)};min-width:28px;text-align:center;">${s}</span>`;
+      }
+
+      // ---------- Rendu d'une ligne ETF (réutilisable) ----------
+      function renderETFRow(etf, body){
+        const chCls  = clsPct(etf.return_1d);
+        const ytdCls = clsPct(etf.return_ytd);
+        const y1Cls  = clsPct(etf.return_1y);
+        const tickerHTML = highlight(getTicker(etf));
+        const nameHTML   = highlight(getName(etf));
+        const tkr = getTicker(etf);
+        const isFav = favorites.has(tkr);
+
+        const yieldVal = Number(etf.yield_ttm ?? etf.dividend_yield ?? 0);
+        const isSynthYield = yieldVal > 0.15 && ['derivative_income','derivative_income_index','covered_call','leveraged_single_stock'].includes(etf.exposure);
+        const yieldHTML = isSynthYield
+          ? `<span title="Yield synthétique — Perf 1Y: ${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}" style="color:#ff9800;">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</span><span style="display:inline-block;font-size:0.55rem;padding:1px 4px;border-radius:4px;background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);color:#ff9800;margin-left:3px;cursor:help;" title="Rendement provenant d'options/dérivés, pas de dividendes classiques.">⚠ synth.</span>`
+          : fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield);
+
+        const row = document.createElement('tr');
+        row.className = 'etf-row-hoverable';
+        row.innerHTML = `
+          <td class="py-2 px-3">
+            <div class="flex items-start gap-2">
+              <input type="checkbox" class="etf-compare-checkbox mt-1"
+                data-ticker="${tkr}" title="Comparateur"
+                style="accent-color:#00FF87;cursor:pointer;flex-shrink:0;" />
+              <button onclick="toggleETFFavorite('${tkr}')" title="${isFav?'Retirer des favoris':'Ajouter aux favoris'}"
+                style="background:none;border:none;cursor:pointer;padding:0;margin-top:2px;font-size:0.85rem;flex-shrink:0;">
+                ${isFav ? '<i class="fas fa-star" style="color:#FFD700;"></i>' : '<i class="far fa-star" style="color:rgba(255,255,255,0.25);"></i>'}
+              </button>
+              <div class="etf-ticker-cell" data-ticker-hover="${tkr}">
+                <div class="font-medium">${tickerHTML}</div>
+                <div class="text-xs opacity-70 mt-1">${nameHTML}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-right"><span class="ter-badge">${fmtRatioPct(etf.total_expense_ratio ?? etf.ter)}</span></td>
+          <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
+          <td class="text-right">${fmtNum(etf.last_close ?? etf.price,2)}€</td>
+          <td class="text-right ${chCls}">${fmtPct(etf.daily_change_pct ?? etf.return_1d)}</td>
+          <td class="text-right ${ytdCls}">${fmtPct(etf.ytd_return_pct ?? etf.return_ytd)}</td>
+          <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
+          <td class="text-right">${fmtPct(etf.vol_3y_pct ?? etf.volatility, 2, false)}</td>
+          <td class="text-right">${yieldHTML}</td>
+          <td class="text-center">${scoreBadge(etf.__score)}</td>
+          <td class="text-center"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium" style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);color:rgba(255,255,255,0.75);font-family:'JetBrains Mono',monospace;font-size:0.6rem;white-space:nowrap;">${etf.exposure || '–'}</span></td>
+          <td class="text-center">
+            <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </td>
+        `;
+
+        const sectors = toSectors(etf);
+        const holdings = toHoldings(etf);
+        const topSector = sectors[0] ? `${sectors[0].s}${sectors[0].w!=null ? ' — '+fmtNum(sectors[0].w)+'%' : ''}` : (etf.sector_top || '—');
+        const sectorsHTML = sectors.length
+          ? sectors.map(x => `<span class="inline-block px-2 py-1 rounded bg-white/5 border border-white/10 mr-1 mb-1 text-xs">${x.s}${x.w!=null?` <span class="opacity-60">(${fmtNum(x.w)}%)</span>`:''}</span>`).join('')
+          : '<span class="opacity-60">—</span>';
+        const holdingsHTML = holdings.length
+          ? holdings.map(h => `<span class="inline-block px-2 py-1 rounded bg-white/5 border border-white/10 mr-1 mb-1 text-xs"><strong>${h.t || '—'}</strong>${h.n?` — ${h.n}`:''}${h.w!=null?` <span class="opacity-60">(${fmtNum(h.w)}%)</span>`:''}</span>`).join('')
+          : '<span class="opacity-60">—</span>';
+        const details = document.createElement('tr');
+        details.className = 'details-row hidden';
+        details.innerHTML = `
+          <td colspan="13">
+            <div class="grid md:grid-cols-3 gap-6 p-4 text-sm">
+              <div><div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Objectif du fonds</div><p class="leading-relaxed">${etf.objective || '—'}</p></div>
+              <div><div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Secteurs</div><div class="mb-2"><span class="opacity-60">Top secteur:</span> <strong>${topSector}</strong></div><div class="flex flex-wrap">${sectorsHTML}</div></div>
+              <div><div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Top holdings</div><div class="flex flex-wrap">${holdingsHTML}</div></div>
+            </div>
+          </td>
+        `;
+        body.appendChild(row);
+        body.appendChild(details);
+      }
+
       // ---------- Render ----------
       function render(){
         const scoped   = takeScope(dataAll);
-        const searched = applyTextSearch(scoped);   // recherche texte
-        const filtered = applySubfilters(searched); // puis sous-filtres
+        const searched = applyTextSearch(scoped);
+        let filtered = applySubfilters(searched);
+        // Filtre favoris
+        if (fFavOnly) filtered = filtered.filter(e => favorites.has(getTicker(e)));
+        // Calcule les scores du pool
+        computeScores(filtered);
         indexAZ = indexByLetter(filtered);
 
         $('#etf-az-count').textContent = filtered.length;
+        // Mise à jour compteur favoris
+        const favCnt = $('#etf-az-fav-count');
+        if (favCnt) favCnt.textContent = favorites.size;
         // Auto-comparateur : visible quand un filtre actif réduit à 2-15 ETF
         const autoBtn = $('#etf-az-auto-compare');
         const autoN   = $('#etf-az-auto-compare-n');
@@ -1615,125 +1786,59 @@
 
         if (lastUpdate) $('#etf-az-lastupdate').textContent = new Date(lastUpdate).toLocaleString('fr-FR');
 
-        'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l => {
-          const body = $(`#etf-az-body-${l}`); if (!body) return;
-          body.innerHTML = '';
-          const list = indexAZ[l] || [];
+        // ── MODE FLAT (tri global) vs MODE LETTRE ─────────────────────────
+        const useFlatMode = !!sortKey;
+        const flatContainer = $('#etf-flat-container');
+        const azContainer   = $('#etf-az-container');
+        const azTabs        = $('#etf-az-tabs');
 
-          // Cache le bloc de la lettre s'il est vide ET qu'un filtre est actif
-          // (sinon on aurait 25 "Aucun ETF…" empilés sous la 1 ou 2 lettres
-          // qui ont un résultat)
-          const letterBlock = body.closest('.etf-letter');
-          if (filterActive && !list.length){
-            if (letterBlock) letterBlock.classList.add('hidden');
-            return;
+        if (useFlatMode && flatContainer) {
+          // Mode flat : un seul tableau trié globalement, pas de groupement A→Z
+          azContainer?.classList.add('hidden');
+          if (azTabs) azTabs.style.display = 'none';
+          flatContainer.classList.remove('hidden');
+          const flatBody = $('#etf-flat-body');
+          if (flatBody) {
+            flatBody.innerHTML = '';
+            const getter = SORT_GETTERS[sortKey];
+            const sorted = [...filtered].sort((a, b) => {
+              const va = getter(a), vb = getter(b);
+              const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+              return sortAsc ? cmp : -cmp;
+            }).slice(0, 200); // limite perf
+            sorted.forEach(etf => renderETFRow(etf, flatBody));
           }
-          if (filterActive && letterBlock) letterBlock.classList.remove('hidden');
+        } else {
+          // Mode lettre classique
+          flatContainer?.classList.add('hidden');
+          if (azTabs) azTabs.style.display = '';
+          azContainer?.classList.remove('hidden');
 
-          if (!list.length){
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="12" class="text-center py-4 text-gray-400">
-                <i class="fas fa-info-circle mr-2"></i>Aucun ETF pour cette lettre
-              </td>`;
-            body.appendChild(tr);
-            return;
-          }
-
-          list.forEach((etf) => {
-            const chCls  = clsPct(etf.return_1d);
-            const ytdCls = clsPct(etf.return_ytd);
-            const y1Cls  = clsPct(etf.return_1y);
-
-            const tickerHTML = highlight(getTicker(etf));
-            const nameHTML   = highlight(getName(etf));
-
-            // Détection yield synthétique (covered call, derivative income…)
-            const yieldVal = Number(etf.yield_ttm ?? etf.dividend_yield ?? 0);
-            const isSynthYield = yieldVal > 0.15 && ['derivative_income','derivative_income_index','covered_call','leveraged_single_stock'].includes(etf.exposure);
-            const yieldHTML = isSynthYield
-              ? `<span title="Yield synthétique (options/dérivés) — ne reflète pas un dividende classique. Perf 1Y: ${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}"
-                   style="color:#ff9800;">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</span>
-                 <span style="display:inline-block;font-size:0.55rem;padding:1px 4px;border-radius:4px;background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);color:#ff9800;margin-left:3px;vertical-align:middle;cursor:help;"
-                   title="Ce rendement provient de la vente d'options (covered call / derivative income), pas de dividendes classiques. Le prix du fonds s'érode progressivement (NAV erosion). Regardez la perf 1 an pour la vraie performance.">⚠ synth.</span>`
-              : fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield);
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td class="py-2 px-3">
-                <div class="flex items-start gap-2">
-                  <input type="checkbox" class="etf-compare-checkbox mt-1"
-                    data-ticker="${getTicker(etf)}"
-                    title="Ajouter au comparateur"
-                    style="accent-color:#00FF87;cursor:pointer;flex-shrink:0;" />
-                  <div>
-                    <div class="font-medium">${tickerHTML}</div>
-                    <div class="text-xs opacity-70 mt-1">${nameHTML}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="text-right"><span class="ter-badge">${fmtRatioPct(etf.total_expense_ratio ?? etf.ter)}</span></td>
-              <td class="text-right"><span class="aum-badge">${fmtAUM(etf.aum_usd ?? etf.aum)}</span></td>
-              <td class="text-right">${fmtNum(etf.last_close ?? etf.price,2)}€</td>
-              <td class="text-right ${chCls}">${fmtPct(etf.daily_change_pct ?? etf.return_1d)}</td>
-              <td class="text-right ${ytdCls}">${fmtPct(etf.ytd_return_pct ?? etf.return_ytd)}</td>
-              <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
-              <td class="text-right">${fmtPct(etf.vol_3y_pct ?? etf.volatility, 2, false)}</td>
-              <td class="text-right">${yieldHTML}</td>
-              <td class="text-center"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium" style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);color:rgba(255,255,255,0.75);font-family:'JetBrains Mono',monospace;font-size:0.6rem;white-space:nowrap;">${etf.exposure || '–'}</span></td>
-              <td class="text-center">
-                <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
-                  <i class="fas fa-chevron-down"></i>
-                </button>
-              </td>
-            `;
-
-            // ---------- Détails enrichis ----------
-            const sectors = toSectors(etf); // [{s,w}]
-            const holdings = toHoldings(etf); // [{t,n,w}]
-            const topSector = sectors[0] ? `${sectors[0].s}${sectors[0].w!=null ? ' — '+fmtNum(sectors[0].w)+'%' : ''}` : (etf.sector_top || '—');
-
-            const sectorsHTML = sectors.length
-              ? sectors.map(x => `<span class="inline-block px-2 py-1 rounded bg-white/5 border border-white/10 mr-1 mb-1 text-xs">
-                                    ${x.s}${x.w!=null?` <span class="opacity-60">(${fmtNum(x.w)}%)</span>`:''}
-                                  </span>`).join('')
-              : '<span class="opacity-60">—</span>';
-
-            const holdingsHTML = holdings.length
-              ? holdings.map(h => `<span class="inline-block px-2 py-1 rounded bg-white/5 border border-white/10 mr-1 mb-1 text-xs">
-                                      <strong>${h.t || '—'}</strong>${h.n?` — ${h.n}`:''}${h.w!=null?` <span class="opacity-60">(${fmtNum(h.w)}%)</span>`:''}
-                                    </span>`).join('')
-              : '<span class="opacity-60">—</span>';
-
-            const details = document.createElement('tr');
-            details.className = 'details-row hidden';
-            details.innerHTML = `
-              <td colspan="12">
-                <div class="grid md:grid-cols-3 gap-6 p-4 text-sm">
-                  <div>
-                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Objectif du fonds</div>
-                    <p class="leading-relaxed">${etf.objective || '—'}</p>
-                  </div>
-                  <div>
-                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Secteurs</div>
-                    <div class="mb-2"><span class="opacity-60">Top secteur:</span> <strong>${topSector}</strong></div>
-                    <div class="flex flex-wrap">${sectorsHTML}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Top holdings</div>
-                    <div class="flex flex-wrap">${holdingsHTML}</div>
-                  </div>
-                </div>
-              </td>
-            `;
-
-            body.appendChild(row);
-            body.appendChild(details);
+          'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l => {
+            const body = $(`#etf-az-body-${l}`); if (!body) return;
+            body.innerHTML = '';
+            const list = indexAZ[l] || [];
+            const letterBlock = body.closest('.etf-letter');
+            if (filterActive && !list.length){
+              if (letterBlock) letterBlock.classList.add('hidden');
+              return;
+            }
+            if (filterActive && letterBlock) letterBlock.classList.remove('hidden');
+            if (!list.length){
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td colspan="13" class="text-center py-4 text-gray-400">
+                  <i class="fas fa-info-circle mr-2"></i>Aucun ETF pour cette lettre
+                </td>`;
+              body.appendChild(tr);
+              return;
+            }
+            list.forEach(etf => renderETFRow(etf, body));
           });
-        });
+        }
 
         $('#etf-az-loading')?.classList.add('hidden');
         $('#etf-az-error')?.classList.add('hidden');
-        $('#etf-az-container')?.classList.remove('hidden');
+        if (!useFlatMode) azContainer?.classList.remove('hidden');
       }
 
       // ---------- Drill-down sub-pills (rendu dynamique) ----------
@@ -1833,6 +1938,19 @@
             render();
           });
         });
+        // pill favoris
+        $('#etf-az-fav-pill')?.addEventListener('click', () => {
+          fFavOnly = !fFavOnly;
+          const btn = $('#etf-az-fav-pill');
+          if (btn) {
+            btn.classList.toggle('active', fFavOnly);
+            btn.setAttribute('aria-selected', fFavOnly ? 'true' : 'false');
+            const icon = btn.querySelector('i');
+            if (icon) { icon.className = fFavOnly ? 'fas fa-star' : 'far fa-star'; }
+          }
+          render();
+        });
+
         // tri colonnes (clic sur les <th> sortables)
         document.addEventListener('click', ev => {
           const th = ev.target.closest('th.sortable');
