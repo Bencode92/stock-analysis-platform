@@ -707,14 +707,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Chiffre d'affaires et marge
             const seuils = {
-                'bic-vente': 188700,
-                'bic-service': 77700,
-                'bnc': 77700,
-                'artisanale': 188700,
+                'bic-vente': 203100,
+                'bic-service': 83600,
+                'bnc': 83600,
+                'artisanale': 203100,
                 'agricole': 95000
             };
             
-            const seuil = seuils[userResponses.typeActivite] || 77700;
+            const seuil = seuils[userResponses.typeActivite] || 83600;
             
             if (userResponses.chiffreAffaires < seuil * 0.7 && forme.id === 'micro-entreprise') {
                 scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;

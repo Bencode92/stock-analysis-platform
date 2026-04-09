@@ -556,7 +556,7 @@ window.initComparatifStatuts = function() {
   function getThresholds2025() {
     const T = (window.recoEngine && window.recoEngine.thresholds) || window.thresholds || {};
     const def = {
-      micro: { bic_sales:188700, bic_service:77700, bnc:77700, meuble_classe_ca:77700, meuble_non_classe_ca:15000 },
+      micro: { bic_sales:203100, bic_service:83600, bnc:83600, meuble_classe_ca:83600, meuble_non_classe_ca:15000 },
       tva_franchise_base: { ventes:85000, services:37500, tolerance_ventes:93500, tolerance_services:41250 }
     };
     return {

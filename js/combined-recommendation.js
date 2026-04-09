@@ -2938,12 +2938,12 @@ this.thresholdsLastUpdated = '2026-04-08';
 this.thresholds = {
   micro: {
     // Micro-BIC/BNC — plafonds 2023-2025 (en vigueur tant que 2026-2028 non publiés)
-    bic_sales: 188_700,        // ventes de marchandises / hébergement
-    bic_service: 77_700,       // prestations de services BIC
-    bnc: 77_700,               // BNC
+    bic_sales: 203_100,        // ventes de marchandises / hébergement
+    bic_service: 83_600,       // prestations de services BIC
+    bnc: 83_600,               // BNC
 
     // Meublés de tourisme (LF 2024)
-    meuble_classe_ca: 77_700,  // classé : aligné sur seuil services depuis LF 2024
+    meuble_classe_ca: 83_600,  // classé : aligné sur seuil services depuis LF 2024
     meuble_non_classe_ca: 15_000 // non classé : abaissé à 15 k€ par LF 2024
   },
 
@@ -3551,8 +3551,8 @@ applySpecificFilters() {
   // Référentiels + fallbacks
   const TH = this.thresholds || {};
   const MICRO = (TH.micro || {
-    bic_sales: 188_700, bic_service: 77_700, bnc: 77_700,
-    meuble_classe_ca: 77_700, meuble_non_classe_ca: 15_000
+    bic_sales: 203_100, bic_service: 83_600, bnc: 83_600,
+    meuble_classe_ca: 83_600, meuble_non_classe_ca: 15_000
   });
 
   // Helper micro (utilise le helper externe s'il existe, sinon fallback local)
@@ -5152,15 +5152,15 @@ getStrengths(statusId) {
       // fallback local cohérent avec applySpecificFilters()
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds?.micro?.meuble_classe_ca ?? 77700
+          ? this.thresholds?.micro?.meuble_classe_ca ?? 83600
           : this.thresholds?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds?.micro?.bic_sales   ?? 188700;
-      if (nature === 'bnc')                                                return this.thresholds?.micro?.bnc         ?? 77700;
-      return this.thresholds?.micro?.bic_service ?? 77700;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds?.micro?.bic_sales   ?? 203100;
+      if (nature === 'bnc')                                                return this.thresholds?.micro?.bnc         ?? 83600;
+      return this.thresholds?.micro?.bic_service ?? 83600;
     } catch {
-      return 77700;
+      return 83600;
     }
   })();
 
@@ -5326,15 +5326,15 @@ getWeaknesses(statusId) {
       }
       if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
         return A.furnished_tourism_classed === 'yes'
-          ? this.thresholds?.micro?.meuble_classe_ca ?? 77700
+          ? this.thresholds?.micro?.meuble_classe_ca ?? 83600
           : this.thresholds?.micro?.meuble_non_classe_ca ?? 15000;
       }
       const nature = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds?.micro?.bic_sales   ?? 188700;
-      if (nature === 'bnc')                                                return this.thresholds?.micro?.bnc         ?? 77700;
-      return this.thresholds?.micro?.bic_service ?? 77700;
+      if (['ventes','hébergement','hebergement','bic_sales'].includes(nature)) return this.thresholds?.micro?.bic_sales   ?? 203100;
+      if (nature === 'bnc')                                                return this.thresholds?.micro?.bnc         ?? 83600;
+      return this.thresholds?.micro?.bic_service ?? 83600;
     } catch {
-      return 77700;
+      return 83600;
     }
   })();
 
@@ -5935,15 +5935,15 @@ if (A && A.projected_revenue != null) {
         const M = T.micro || {};
         if (A.activity_type === 'immobilier' && A.real_estate_model === 'meuble') {
           return (A.furnished_tourism_classed === 'yes')
-            ? (M.meuble_classe_ca != null ? M.meuble_classe_ca : 77700)
+            ? (M.meuble_classe_ca != null ? M.meuble_classe_ca : 83600)
             : (M.meuble_non_classe_ca != null ? M.meuble_non_classe_ca : 15000);
         }
         const n = String(A.activity_nature || A.activity_category || A.activity_type || '').toLowerCase();
-        if (['ventes','hébergement','hebergement','bic_sales'].indexOf(n) !== -1) return (M.bic_sales != null ? M.bic_sales : 188700);
-        if (n === 'bnc') return (M.bnc != null ? M.bnc : 77700);
-        return (M.bic_service != null ? M.bic_service : 77700);
+        if (['ventes','hébergement','hebergement','bic_sales'].indexOf(n) !== -1) return (M.bic_sales != null ? M.bic_sales : 203100);
+        if (n === 'bnc') return (M.bnc != null ? M.bnc : 83600);
+        return (M.bic_service != null ? M.bic_service : 83600);
       } catch (e) {
-        return 77700;
+        return 83600;
       }
     }).call(this);
 
@@ -6012,8 +6012,8 @@ getStatusExplanations(statusId, answers) {
 
   // Plafonds micro & TVA (fallbacks 2026 si non configurés)
   const MICRO_SERVICES = (micro.bic_service != null ? micro.bic_service
-                        : (micro.bnc != null ? micro.bnc : 77700));
-  const MICRO_VENTES   = (micro.bic_sales != null ? micro.bic_sales : 188700);
+                        : (micro.bnc != null ? micro.bnc : 83600));
+  const MICRO_VENTES   = (micro.bic_sales != null ? micro.bic_sales : 203100);
 
   const TVA_SERVICES       = (tvab.services != null ? tvab.services : 37500);
   const TVA_VENTES         = (tvab.ventes != null ? tvab.ventes : 85000);

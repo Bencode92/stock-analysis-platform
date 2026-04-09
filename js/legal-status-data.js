@@ -772,9 +772,9 @@ console.log("window.legalStatuses a été défini avec succès, contient", Objec
 const scales2025 = {
     // Seuils micro-entreprise 2026
     micro: {
-        bic_sales: 188700,
-        bic_service: 77700,
-        bnc: 77700,
+        bic_sales: 203100,
+        bic_service: 83600,
+        bnc: 83600,
         vat_franchise_bic_sales: 94300,
         vat_franchise_bic_service: 36800,
         vat_franchise_bnc: 36800

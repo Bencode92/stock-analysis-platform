@@ -528,7 +528,7 @@ const questions = [
         id: "projected_revenue",
         sectionId: "finances",
         title: "Chiffre d'affaires prévisionnel",
-        description: "Quel chiffre d'affaires annuel prévoyez-vous pour la première année ? (Rappel: seuils micro en vigueur - BIC vente: 188 700€, BIC service: 77 700€, BNC: 77 700€)",
+        description: "Quel chiffre d'affaires annuel prévoyez-vous pour la première année ? (Rappel: seuils micro 2026 - BIC vente: 203 100€, BIC service: 83 600€, BNC: 83 600€)",
         type: "slider",
         min: 0,
         max: 1000000,

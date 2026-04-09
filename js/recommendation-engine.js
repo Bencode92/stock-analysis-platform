@@ -343,9 +343,9 @@ class RecommendationEngine {
         // Paramètres des seuils pour 2026
         this.thresholds = {
             micro: {
-                bic_sales: 188700,
-                bic_service: 77700,
-                bnc: 77700
+                bic_sales: 203100,
+                bic_service: 83600,
+                bnc: 83600
             },
             is_reduced_rate_limit: 42500
         };

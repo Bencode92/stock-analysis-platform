@@ -118,7 +118,7 @@ class SimulationsFiscales {
     static simulerMicroEntreprise(params) {
         const np = this.normalizeAssociatesParams(params, 'micro');
         const { ca, typeMicro = 'BIC', versementLiberatoire = false, tauxMarge = 1.0, depensesPro = null } = np;
-        const plafonds = { 'BIC_VENTE': 188700, 'BIC_SERVICE': 77700, 'BNC': 77700 }; // Plafonds 2023-2025 en vigueur
+        const plafonds = { 'BIC_VENTE': 203100, 'BIC_SERVICE': 83600, 'BNC': 83600 }; // Plafonds 2026-2028 (revalorisation triennale)
         const abattements = { 'BIC_VENTE': 0.71, 'BIC_SERVICE': 0.50, 'BNC': 0.34 };
         const tauxCotisations = { 'BIC_VENTE': 0.123, 'BIC_SERVICE': 0.212, 'BNC': 0.256 }; // BNC SSI 25,6% (CIPAV: 23,2%)
         const tauxVFL = { 'BIC_VENTE': 0.01, 'BIC_SERVICE': 0.017, 'BNC': 0.022 };
