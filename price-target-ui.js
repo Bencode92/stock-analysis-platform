@@ -517,11 +517,11 @@ class PriceTargetUI {
             </div>
           </details>
 
-          <!-- ═══════ PROJECTION MULTI-ANNÉES : Acheter vs Louer ═══════ -->
-          ${this._generateBuyVsRentProjection(r)}
-
         </div>
       </div>
+
+      <!-- ═══════ PROJECTION MULTI-ANNÉES (hors card pour pleine largeur) ═══════ -->
+      ${this._generateBuyVsRentProjection(r)}
     `;
   }
 
@@ -636,6 +636,9 @@ class PriceTargetUI {
         border:1px solid rgba(0,191,255,0.2);
         border-radius:16px;
         backdrop-filter:blur(10px);
+        max-width:100%;
+        width:100%;
+        box-sizing:border-box;
       “>
         <h4 style=”margin:0 0 4px; color:#e2e8f0; font-size:1.15rem; font-weight:700;”>
           <i class=”fas fa-chart-line” style=”color:#00bfff; margin-right:8px;”></i>
