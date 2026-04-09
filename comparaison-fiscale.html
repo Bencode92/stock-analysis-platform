@@ -3333,9 +3333,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
 
-      // Marché de référence
+      // Marché de référence (supprimer l'ancien avant d'en créer un nouveau)
+      const oldMarketRef = document.getElementById('jeanbrun-market-ref');
+      if (oldMarketRef) oldMarketRef.remove();
       grid.insertAdjacentHTML('beforebegin',
-        `<div style="font-size:0.75rem; color:rgba(255,255,255,0.5); margin-bottom:0.4rem;">
+        `<div id="jeanbrun-market-ref" style="font-size:0.75rem; color:rgba(255,255,255,0.5); margin-bottom:0.4rem;">
           📍 <strong>${villeName}</strong> — Loyer marché : <strong>${fmt(loyerMarche)} €/mois</strong> (${loyerMarcheM2.toFixed(1)} €/m²)
         </div>`
       );
