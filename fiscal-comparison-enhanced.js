@@ -274,6 +274,11 @@ class FiscalComparator {
             description: regime.description
         };
         
+        // Normaliser chargeMensuelleCredit (compatibilité entre SimulateurImmo et MarketFiscalAnalyzer)
+        if (!baseResults.chargeMensuelleCredit) {
+            baseResults.chargeMensuelleCredit = baseResults.mensualiteTotale || baseResults.mensualite || 0;
+        }
+
         // Préparer les données communes pour tous les calculs
         const commonData = {
             loyerMensuel: baseResults.loyerBrut,
@@ -283,7 +288,7 @@ class FiscalComparator {
             assurancePNO: baseResults.assurancePNO / 12 || 15,
             entretien: baseResults.entretienAnnuel || 500,
             gestionLocative: data.gestionLocativeTaux > 0 ? loyerAnnuel * (data.gestionLocativeTaux / 100) : 0,
-            interetsAnnuels: baseResults.interetsAnnee1 || baseResults.tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0),
+            interetsAnnuels: baseResults.interetsAnnee1 || (baseResults.tableauAmortissement?.slice(0, 12).reduce((sum, m) => sum + m.interets, 0) ?? 0),
             fraisAchat: baseResults.fraisAchat || 0,
             travaux: baseResults.travaux || 0
         };
