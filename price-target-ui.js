@@ -620,21 +620,23 @@ class PriceTargetUI {
       ? `<span style=”color:#22c55e; font-weight:700;”>L'achat devient plus rentable à partir de l'année ${breakEvenYear}</span>`
       : `<span style=”color:#ef4444; font-weight:600;”>L'achat ne rattrape pas la location sur ${duree} ans avec ces hypothèses</span>`;
 
-    let tableRows = rows.map(row => {
+    let tableRows = rows.map((row, idx) => {
       const isPos = row.avantageAchat >= 0;
-      const highlight = row.isBreakEven ? 'background:rgba(34,197,94,0.08);' : '';
+      const bgRow = row.isBreakEven
+        ? 'background:rgba(34,197,94,0.12); border-left:3px solid #22c55e;'
+        : (idx % 2 === 0 ? 'background:rgba(255,255,255,0.02);' : '');
       return `
-        <tr style=”${highlight}”>
-          <td style=”padding:6px 8px; font-weight:${row.isBreakEven ? '700' : '400'};”>
-            ${row.isBreakEven ? '🏆 ' : ''}Année ${row.year}
+        <tr style=”${bgRow}”>
+          <td style=”padding:10px 12px; font-weight:${row.isBreakEven ? '700' : '400'}; color:#e2e8f0; white-space:nowrap;”>
+            ${row.isBreakEven ? '<span style=”color:#22c55e;”>🏆</span> ' : '<span style=”opacity:0.3; margin-right:2px;”>·</span> '}Année ${row.year}
           </td>
-          <td style=”padding:6px 8px; text-align:right; color:#3b82f6;”>
+          <td style=”padding:10px 12px; text-align:right; color:#60a5fa; font-variant-numeric:tabular-nums;”>
             ${fmt(row.patrimoineLocataire)}
           </td>
-          <td style=”padding:6px 8px; text-align:right; color:#22c55e;”>
+          <td style=”padding:10px 12px; text-align:right; color:#4ade80; font-variant-numeric:tabular-nums;”>
             ${fmt(row.patrimoineProprio)}
           </td>
-          <td style=”padding:6px 8px; text-align:right; font-weight:600; color:${isPos ? '#22c55e' : '#ef4444'};”>
+          <td style=”padding:10px 12px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; color:${isPos ? '#22c55e' : '#ef4444'};”>
             ${isPos ? '+' : '−'}${fmt(Math.abs(row.avantageAchat))}
           </td>
         </tr>`;
@@ -642,39 +644,48 @@ class PriceTargetUI {
 
     return `
       <div style=”
-        margin-top:20px;
-        padding:20px;
-        background:linear-gradient(135deg, rgba(99,102,241,0.04), rgba(34,197,94,0.04));
-        border:1px solid rgba(148,163,184,0.3);
-        border-radius:12px;
+        margin-top:24px;
+        padding:24px;
+        background:linear-gradient(135deg, rgba(10,15,30,0.95), rgba(15,25,50,0.9));
+        border:1px solid rgba(0,191,255,0.2);
+        border-radius:16px;
+        backdrop-filter:blur(10px);
       “>
-        <h4 style=”margin:0 0 6px; color:#1e293b; font-size:1.1rem;”>
-          📈 Projection : Acheter vs Louer + placer l'apport
+        <h4 style=”margin:0 0 4px; color:#e2e8f0; font-size:1.15rem; font-weight:700;”>
+          <i class=”fas fa-chart-line” style=”color:#00bfff; margin-right:8px;”></i>
+          Acheter vs Louer + placer l'apport
         </h4>
-        <div style=”font-size:0.8rem; color:#64748b; margin-bottom:12px;”>
-          Hypothèses : appréciation immobilière ${(appreciation*100).toFixed(0)}%/an,
-          hausse loyers ${(rentInflation*100).toFixed(1)}%/an,
-          placement apport ${(oppRate*100).toFixed(0)}%/an.
-          Contribution conjoint : ${fmt(partner)}/mois.
+        <div style=”font-size:0.8rem; color:rgba(255,255,255,0.4); margin-bottom:16px;”>
+          Appréciation ${(appreciation*100).toFixed(0)}%/an · Loyers +${(rentInflation*100).toFixed(1)}%/an · Placement ${(oppRate*100).toFixed(0)}%/an · Conjoint ${fmt(partner)}/mois
         </div>
 
-        <div style=”text-align:center; padding:10px 0; margin-bottom:12px; font-size:1rem;”>
+        <div style=”
+          text-align:center;
+          padding:14px 20px;
+          margin-bottom:16px;
+          background:${breakEvenYear ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)'};
+          border:1px solid ${breakEvenYear ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'};
+          border-radius:10px;
+          font-size:1.05rem;
+        “>
           ${breakEvenMsg}
         </div>
 
         <div style=”overflow-x:auto;”>
-          <table style=”width:100%; border-collapse:collapse; font-size:0.85rem;”>
+          <table style=”width:100%; border-collapse:separate; border-spacing:0; font-size:0.85rem;”>
             <thead>
-              <tr style=”border-bottom:2px solid rgba(148,163,184,0.3);”>
-                <th style=”padding:8px; text-align:left; color:#64748b;”>Horizon</th>
-                <th style=”padding:8px; text-align:right; color:#3b82f6;”>
-                  🏠 Locataire<br><span style=”font-size:0.7rem; font-weight:400;”>Apport placé à ${(oppRate*100).toFixed(0)}%</span>
+              <tr>
+                <th style=”padding:10px 12px; text-align:left; color:rgba(255,255,255,0.5); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
+                  Horizon
                 </th>
-                <th style=”padding:8px; text-align:right; color:#22c55e;”>
-                  🏡 Propriétaire<br><span style=”font-size:0.7rem; font-weight:400;”>Bien − dette</span>
+                <th style=”padding:10px 12px; text-align:right; color:#3b82f6; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
+                  <i class=”fas fa-building” style=”margin-right:4px;”></i>Locataire
                 </th>
-                <th style=”padding:8px; text-align:right; color:#475569;”>
-                  Δ Avantage<br><span style=”font-size:0.7rem; font-weight:400;”>achat</span>
+                <th style=”padding:10px 12px; text-align:right; color:#22c55e; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
+                  <i class=”fas fa-home” style=”margin-right:4px;”></i>Propriétaire
+                </th>
+                <th style=”padding:10px 12px; text-align:right; color:rgba(255,255,255,0.5); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
+                  Δ Avantage
                 </th>
               </tr>
             </thead>
@@ -684,9 +695,8 @@ class PriceTargetUI {
           </table>
         </div>
 
-        <div style=”margin-top:12px; font-size:0.75rem; color:#94a3b8; text-align:center;”>
-          Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP,
-          pas d'impôt sur revenus de placement). Capital restant dû calculé par amortissement linéaire.
+        <div style=”margin-top:14px; font-size:0.7rem; color:rgba(255,255,255,0.3); text-align:center; line-height:1.5;”>
+          Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP, pas d'impôt sur revenus de placement).
         </div>
       </div>
     `;
