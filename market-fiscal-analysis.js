@@ -1425,7 +1425,10 @@ case 'sci_is': {
     Number(params.taxeFonciere ?? 0) +
     Number(params.entretienAnnuel ?? 0) +
     Number(params.assurancePNO ?? 0) * 12 +
-    Number(params.chargesCoproNonRecup ?? 0) * 12;
+    Number(params.chargesCoproNonRecup ?? 0) * 12 +
+    Number(params.comptaAn ?? 0) +
+    Number(params.cfeAn ?? 0) +
+    Number(params.tenueCompteAn ?? 0);
 
   // 🆕 CF calculé en HC (Jeanbrun : revenus plafonnés via décote)
   const revenusNetsCFEffectifs = (key === 'nu_jeanbrun' && regime._jeanbrun)
