@@ -1695,11 +1695,13 @@
         const tkr = getTicker(etf);
         const isFav = favorites.has(tkr);
 
-        const yieldVal = Number(etf.yield_ttm ?? etf.dividend_yield ?? 0);
-        const isSynthYield = yieldVal > 0.15 && ['derivative_income','derivative_income_index','covered_call','leveraged_single_stock'].includes(etf.exposure);
+        // Yield : toujours ratio × 100 (yield_ttm est un ratio brut, ex 0.03 = 3%, 2.12 = 212%)
+        const yieldRaw = Number(etf.yield_ttm ?? etf.dividend_yield ?? 0);
+        const yieldPct = Number.isFinite(yieldRaw) ? (yieldRaw * 100).toFixed(2) + '%' : '-';
+        const isSynthYield = yieldRaw > 0.15 && ['derivative_income','derivative_income_index','covered_call','leveraged_single_stock'].includes(etf.exposure);
         const yieldHTML = isSynthYield
-          ? `<span title="Yield synthétique — Perf 1Y: ${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}" style="color:#ff9800;">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</span><span style="display:inline-block;font-size:0.55rem;padding:1px 4px;border-radius:4px;background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);color:#ff9800;margin-left:3px;cursor:help;" title="Rendement provenant d'options/dérivés, pas de dividendes classiques.">⚠ synth.</span>`
-          : fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield);
+          ? `<span title="Yield synthétique — Perf 1Y: ${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}" style="color:#ff9800;">${yieldPct}</span><span style="display:inline-block;font-size:0.55rem;padding:1px 4px;border-radius:4px;background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);color:#ff9800;margin-left:3px;cursor:help;" title="Rendement provenant d'options/dérivés, pas de dividendes classiques.">⚠ synth.</span>`
+          : yieldPct;
 
         const row = document.createElement('tr');
         row.className = 'etf-row-hoverable';
