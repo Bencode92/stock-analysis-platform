@@ -796,7 +796,7 @@ const exclusionFilters = [
   {
     id: "professional_order",
     condition: (answers) =>
-      isYes(A.professional_order) || isYes(A.regulated_profession),
+      isYes(answers.professional_order) || isYes(answers.regulated_profession),
     excluded_statuses: ["SNC", "SARL", "SAS", "SA", "SCA", "EURL", "SASU"],
     tolerance_message:
       "Pour une profession réglementée avec ordre, l'exercice en société impose une SEL (SELARL/SELAS). EI/Micro restent possibles en exercice individuel."
@@ -808,7 +808,7 @@ const exclusionFilters = [
     id: "team_structure",
     condition: (answers) =>
       answers.team_structure === "solo" &&
-      !(answers.activity_type === 'immobilier' && isYes(A.family_project)),
+      !(answers.activity_type === 'immobilier' && isYes(answers.family_project)),
     excluded_statuses: ["SAS", "SARL", "SA", "SNC", "SCI", "SCA"],
     tolerance_message: null
   },
@@ -836,7 +836,7 @@ const exclusionFilters = [
   {
     id: "age",
     condition: (answers) => answers.age === "minor",
-    tolerance_condition: (answers) => isYes(A.emancipated_minor),
+    tolerance_condition: (answers) => isYes(answers.emancipated_minor),
     excluded_statuses: ["SAS", "SARL", "SA", "EURL", "SASU", "SNC", "SCI", "SELARL", "SELAS", "SCA"],
     tolerance_message:
       "Si vous êtes mineur émancipé, certaines sociétés commerciales restent accessibles."
@@ -858,7 +858,7 @@ const exclusionFilters = [
   {
     id: "public_listing_or_aps",
     condition: (answers) =>
-      isYes(A.public_listing_or_aps) || isYes(A.ipo_path),
+      isYes(answers.public_listing_or_aps) || isYes(answers.ipo_path),
     excluded_statuses: ["EI", "MICRO", "EURL", "SASU", "SAS", "SARL", "SNC", "SCI", "SELARL", "SELAS"],
     tolerance_message:
       "Pour une cotation ou un appel public à l'épargne, orientez-vous vers une SA (ou SCA)."
@@ -1595,7 +1595,7 @@ apply: (statusId, score, answers, metrics) => {
 {
   id: 'dividend_preference_is',
   description: 'Préférence dividendes : favorable aux formes IS',
-  condition: answers => A.remuneration_preference === 'dividends',
+  condition: answers => answers.remuneration_preference === 'dividends',
 apply: (statusId, score, answers, metrics) => {
     // Dividendes + : SASU/SAS/SA/SELAS (pas de cotisations sociales en principe)
     if (['SASU', 'SAS', 'SA', 'SELAS'].includes(statusId)) return score + 0.75;
@@ -1615,7 +1615,7 @@ apply: (statusId, score, answers, metrics) => {
 {
   id: 'salary_preference_is',
   description: 'Préférence salaire : favorable aux formes IS (déductible)',
-  condition: answers => A.remuneration_preference === 'salary',
+  condition: answers => answers.remuneration_preference === 'salary',
  apply: (statusId, score, answers, metrics) => {
     // Le "salaire" du dirigeant est une charge déductible en société à l'IS
     if (['SASU', 'SAS', 'SA', 'SARL', 'EURL', 'SELARL', 'SELAS', 'SCA'].includes(statusId)) return score + 0.75;
@@ -1902,7 +1902,7 @@ apply: (statusId, score, answers, metrics) => {
 {
   id: 'dividends_tns_social_malus',
   description: 'Dividendes > 10% (EURL / SARL gérant majoritaire) : cotisations TNS',
-  condition: answers => A.remuneration_preference === 'dividends',
+  condition: answers => answers.remuneration_preference === 'dividends',
  apply: (statusId, score, answers, metrics) => {
     if (statusId === 'EURL') return score - 0.5;
     if (statusId === 'SARL' && parseFloat(answers.capital_percentage ?? 0) >= 50) return score - 0.5;
@@ -3563,7 +3563,7 @@ applySpecificFilters() {
     }
     // Fallback : calcule selon l'activité
     if (isImmo && ['meuble', 'meublé'].includes(String(A.real_estate_model || '').toLowerCase())) {
-      return isYes(A.furnished_tourism_classed)
+      return isYes(answers.furnished_tourism_classed)
         ? MICRO.meuble_classe_ca       // 83 600 €
         : MICRO.meuble_non_classe_ca;  // 15 000 €
     }
@@ -3597,7 +3597,7 @@ applySpecificFilters() {
    * 1) Activité relevant d'un ordre professionnel
    *    → MICRO tolérée selon cas ; SNC exclue
    * ------------------------------------------------------------------ */
-  if (isYes(A.professional_order) || isYes(A.regulated_profession)) {
+  if (isYes(answers.professional_order) || isYes(answers.regulated_profession)) {
     this.excludeStatus(
       'SNC',
       "Activité relevant d'un ordre professionnel – SNC exclue (responsabilité illimitée)"
@@ -3617,7 +3617,7 @@ applySpecificFilters() {
   /* ------------------------------------------------------------------
    * 3) Besoin de lever des fonds → EI / MICRO / SNC exclus
    * ------------------------------------------------------------------ */
-  if (isYes(A.fundraising) || isYes(A.investors)) {
+  if (isYes(answers.fundraising) || isYes(answers.investors)) {
     this.excludeStatuses(
       ['EI', 'MICRO', 'SNC'],
       'Levée de fonds envisagée – statuts peu attractifs exclus (préférez SAS/SASU/SA)'
@@ -3629,9 +3629,9 @@ applySpecificFilters() {
    *    → si pas d'ordre/réglementation, SELARL/SELAS exclues
    * ------------------------------------------------------------------ */
   const hasOrder =
-    isYes(A.professional_order) ||
-    isYes(A.regulated_activity) ||
-    isYes(A.regulated_profession);
+    isYes(answers.professional_order) ||
+    isYes(answers.regulated_activity) ||
+    isYes(answers.regulated_profession);
 
   if (!hasOrder) {
     this.excludeStatuses(
@@ -3663,7 +3663,7 @@ applySpecificFilters() {
   /* ------------------------------------------------------------------
    * 6) Risque pro élevé → éviter responsabilité illimitée
    * ------------------------------------------------------------------ */
-  if (isYes(A.high_professional_risk)) {
+  if (isYes(answers.high_professional_risk)) {
     this.excludeStatus(
       'SNC',
       'Risque professionnel élevé – responsabilité solidaire/illimitée exclue'
@@ -3702,7 +3702,7 @@ applySpecificFilters() {
    *    (règles légales appliquées uniquement si nbAssoc connu)
    * ------------------------------------------------------------------ */
   if (teamSolo) {
-    const immoFamily = isImmo && isYes(A.family_project);
+    const immoFamily = isImmo && isYes(answers.family_project);
 
     const baseList = ['SARL', 'SAS', 'SA', 'SNC', 'SCA'];
     // Ne PAS exclure la SCI si projet immo familial
@@ -3749,7 +3749,7 @@ applySpecificFilters() {
    * 11) Levée de fonds ≥ 1 M€ → éviter SARL / SNC (préférer SAS/SA)
    * ------------------------------------------------------------------ */
   const fundraisingAmount = parseFloat(A.fundraising_amount || '0');
-  if ((isYes(A.fundraising) || isYes(A.investors)) && fundraisingAmount >= 1_000_000) {
+  if ((isYes(answers.fundraising) || isYes(answers.investors)) && fundraisingAmount >= 1_000_000) {
     this.excludeStatuses(['SARL', 'SNC'], 'Levée de fonds importante (≥ 1 M€) – privilégier SAS/SA');
   }
 
@@ -6108,13 +6108,13 @@ getStatusExplanations(statusId, answers) {
   else if (statusId === 'EURL') {
     if (wantsProtect) out.push({ title: "Responsabilité limitée", explanation: "Votre patrimoine personnel est protégé à hauteur des apports." });
     if (socialPrefTns) out.push({ title: "Coût social contenu (TNS)", explanation: "Un gérant associé unique relève du régime TNS, souvent moins coûteux qu'un régime assimilé salarié. Attention : cotisations retraite de base plus faibles = pension de retraite plus basse à terme. Prévoyez un contrat Madelin/PER pour compenser." });
-    if (['dividends','mixed'].includes(A.remuneration_preference)) {
+    if (['dividends','mixed'].includes(answers.remuneration_preference)) {
       out.push({
         title: "Dividendes : attention au piège des cotisations SSI",
         explanation: "En EURL à l'IS, les dividendes dépassant 10 % de la base (capital social + primes d'émission + CCA) sont soumis aux cotisations SSI (~45 %). Exemple concret : sur 50 000 € de dividendes avec un capital de 1 000 €, 49 900 € seront assujettis aux cotisations TNS. Résultat : vous cotisez pour la retraite SSI (pension modeste), mais le net perçu chute fortement. En contrepartie, ces cotisations ouvrent des droits retraite — mais au régime SSI, nettement moins favorable que le régime général (SASU)."
       });
     }
-    if (isYes(A.unemployment_benefits)) {
+    if (isYes(answers.unemployment_benefits)) {
       out.push({
         title: "Impact sur votre ARE (allocation chômage)",
         explanation: "En tant que gérant TNS d'EURL, des cotisations minimales SSI sont dues même sans rémunération (~1 100 €/an). France Travail peut considérer l'existence de cette activité comme un revenu et recalculer votre ARE à la baisse. En SASU, le président sans salaire n'a aucune cotisation obligatoire — l'ARE est intégralement conservée."
@@ -6125,13 +6125,13 @@ getStatusExplanations(statusId, answers) {
   }
   else if (statusId === 'SASU' || statusId === 'SAS') {
     if (socialPrefAsm) out.push({ title: "Régime social 'assimilé salarié'", explanation: "Protection du régime général pour le président (maladie, retraite de base + complémentaire AGIRC-ARRCO, prévoyance). Couverture supérieure au TNS, mais cotisations plus élevées sur le salaire." });
-    if (isYes(A.unemployment_benefits)) {
+    if (isYes(answers.unemployment_benefits)) {
       out.push({
         title: "Stratégie ARE + dividendes (votre cas)",
         explanation: "En tant que président de SASU, vous pouvez ne vous verser aucun salaire et percevoir uniquement des dividendes. Les dividendes de SASU ne sont pas considérés comme un revenu d'activité par France Travail : votre ARE est intégralement maintenue. Aucune cotisation sociale n'est due (seulement 17,2 % de prélèvements sociaux ou PFU 30 %). C'est la stratégie optimale pour un créateur d'entreprise au chômage qui veut maximiser son reste à vivre."
       });
     }
-    if (['dividends','mixed'].includes(A.remuneration_preference)) {
+    if (['dividends','mixed'].includes(answers.remuneration_preference)) {
       out.push({
         title: "Dividendes sans cotisations sociales — mais attention retraite",
         explanation: "Les dividendes de SASU/SAS ne supportent aucune cotisation sociale (contrairement à l'EURL : ~45 % au-delà de 10 % du capital). Fiscalement avantageux à court terme, mais contrepartie importante : si vous ne vous versez aucun salaire, vous ne validez aucun trimestre de retraite et n'acquérez aucun droit à la pension. Solution : versez-vous un salaire minimum (~600 €/mois) pour valider 4 trimestres/an, ou alimentez un PER individuel."
