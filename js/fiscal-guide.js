@@ -734,6 +734,28 @@ function calcReserveLegale({ resultatApresIS, capitalLibere=0, reserveExistante=
 }
 
 function setupSimulator() {
+  // --- Pré-remplissage depuis les réponses du questionnaire (si dispo) ---
+  const A = window.userResponses || {};
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && v != null && v !== '') el.value = v;
+  };
+  if (A.projected_revenue || A.revenue_projection) {
+    setVal('sim-ca', A.projected_revenue || A.revenue_projection);
+    setVal('sim-marge', A.gross_margin || '30');
+    setVal('sim-nb-associes', A.associates_number || '1');
+    setVal('sim-part-associe', A.capital_percentage || '100');
+    // Adapter le ratio salaire selon la préférence de rémunération
+    const remPref = A.remuneration_preference;
+    if (remPref === 'dividends') setVal('sim-salaire', '20');
+    else if (remPref === 'salary') setVal('sim-salaire', '90');
+    else if (remPref === 'mixed') setVal('sim-salaire', '60');
+    else setVal('sim-salaire', '70');
+    // Capital social
+    if (A.available_capital) setVal('sim-capital', A.available_capital);
+    console.log('Guide fiscal pré-rempli depuis le questionnaire');
+  }
+
   // --- Valeurs par défaut cohérentes (si vides) ---
   const setIfEmpty = (id, v) => {
     const el = document.getElementById(id);
