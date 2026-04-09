@@ -1183,7 +1183,6 @@
                               <th class="sortable" data-sort="1y" style="cursor:pointer;">1 AN % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                               <th class="sortable" data-sort="vol" style="cursor:pointer;">VOLATILITÉ <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                               <th class="sortable" data-sort="yield" style="cursor:pointer;">RENDEMENT <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
-                              <th class="sortable" data-sort="score" style="cursor:pointer;">SCORE <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                               <th class="sortable" data-sort="exposure" style="cursor:pointer;">EXPO <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                               <th></th>
                             </tr>
@@ -1545,7 +1544,6 @@
                     <th class="sortable" data-sort="1y" style="cursor:pointer;">1 AN % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th class="sortable" data-sort="vol" style="cursor:pointer;">VOLATILITÉ <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th class="sortable" data-sort="yield" style="cursor:pointer;">RENDEMENT <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
-                    <th class="sortable" data-sort="score" style="cursor:pointer;">SCORE <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th class="sortable" data-sort="exposure" style="cursor:pointer;">EXPO <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th></th>
                   </tr>
@@ -1558,8 +1556,8 @@
       }
 
       function closeAllDetails(){
-        $$('#etf-az-container tr.details-row').forEach(r => r.classList.add('hidden'));
-        $$('#etf-az-container .details-toggle').forEach(btn => {
+        $$('#etf-az-container tr.details-row, #etf-flat-container tr.details-row').forEach(r => r.classList.add('hidden'));
+        $$('#etf-az-container .details-toggle, #etf-flat-container .details-toggle').forEach(btn => {
           btn.setAttribute('aria-expanded','false');
           const ic = btn.querySelector('i');
           if (ic){ ic.classList.add('fa-chevron-down'); ic.classList.remove('fa-chevron-up'); }
@@ -1605,7 +1603,6 @@
         '1y':     e => Number(e.one_year_return_pct ?? e.return_1y ?? 0),
         vol:      e => Number(e.vol_3y_pct ?? e.volatility ?? 0),
         yield:    e => Number(e.yield_ttm ?? e.dividend_yield ?? 0),
-        score:    e => Number(e.__score ?? -1),
         exposure: e => String(e.exposure || 'zzz'),
       };
 
@@ -1730,7 +1727,6 @@
           <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
           <td class="text-right">${fmtPct(etf.vol_3y_pct ?? etf.volatility, 2, false)}</td>
           <td class="text-right">${yieldHTML}</td>
-          <td class="text-center">${scoreBadge(etf.__score)}</td>
           <td class="text-center"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium" style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);color:rgba(255,255,255,0.75);font-family:'JetBrains Mono',monospace;font-size:0.6rem;white-space:nowrap;">${etf.exposure || '–'}</span></td>
           <td class="text-center">
             <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
@@ -1751,7 +1747,7 @@
         const details = document.createElement('tr');
         details.className = 'details-row hidden';
         details.innerHTML = `
-          <td colspan="13">
+          <td colspan="12">
             <div class="grid md:grid-cols-3 gap-6 p-4 text-sm">
               <div><div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Objectif du fonds</div><p class="leading-relaxed">${etf.objective || '—'}</p></div>
               <div><div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Secteurs</div><div class="mb-2"><span class="opacity-60">Top secteur:</span> <strong>${topSector}</strong></div><div class="flex flex-wrap">${sectorsHTML}</div></div>
@@ -1852,7 +1848,7 @@
             if (filterActive && letterBlock) letterBlock.classList.remove('hidden');
             if (!list.length){
               const tr = document.createElement('tr');
-              tr.innerHTML = `<td colspan="13" class="text-center py-4 text-gray-400">
+              tr.innerHTML = `<td colspan="12" class="text-center py-4 text-gray-400">
                   <i class="fas fa-info-circle mr-2"></i>Aucun ETF pour cette lettre
                 </td>`;
               body.appendChild(tr);
@@ -2025,14 +2021,23 @@
           const th = ev.target.closest('th.sortable');
           if (!th || !th.dataset.sort) return;
           const key = th.dataset.sort;
-          if (sortKey === key) { sortAsc = !sortAsc; }
-          else { sortKey = key; sortAsc = (key === 'ter' || key === 'vol'); /* asc par défaut pour "moins = mieux" */ }
+          if (sortKey === key) {
+            const defaultAsc = (key === 'ter' || key === 'vol');
+            if (sortAsc !== defaultAsc) {
+              // Already toggled once; clicking a 3rd time clears the sort
+              sortKey = null; sortAsc = true;
+            } else {
+              sortAsc = !sortAsc;
+            }
+          } else { sortKey = key; sortAsc = (key === 'ter' || key === 'vol'); /* asc par défaut pour "moins = mieux" */ }
           // Mise à jour des icônes dans TOUS les thead (chaque lettre a le sien)
           $$('th.sortable i.fas').forEach(i => { i.className = 'fas fa-sort'; i.style.opacity = '.3'; });
-          $$(`th.sortable[data-sort="${key}"] i.fas`).forEach(i => {
-            i.className = sortAsc ? 'fas fa-sort-up' : 'fas fa-sort-down';
-            i.style.opacity = '1';
-          });
+          if (sortKey) {
+            $$(`th.sortable[data-sort="${sortKey}"] i.fas`).forEach(i => {
+              i.className = sortAsc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+              i.style.opacity = '1';
+            });
+          }
           render();
         });
 
