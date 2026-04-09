@@ -3563,7 +3563,7 @@ applySpecificFilters() {
     }
     // Fallback : calcule selon l'activité
     if (isImmo && ['meuble', 'meublé'].includes(String(A.real_estate_model || '').toLowerCase())) {
-      return isYes(answers.furnished_tourism_classed)
+      return isYes(A.furnished_tourism_classed)
         ? MICRO.meuble_classe_ca       // 83 600 €
         : MICRO.meuble_non_classe_ca;  // 15 000 €
     }
@@ -3597,7 +3597,7 @@ applySpecificFilters() {
    * 1) Activité relevant d'un ordre professionnel
    *    → MICRO tolérée selon cas ; SNC exclue
    * ------------------------------------------------------------------ */
-  if (isYes(answers.professional_order) || isYes(answers.regulated_profession)) {
+  if (isYes(A.professional_order) || isYes(A.regulated_profession)) {
     this.excludeStatus(
       'SNC',
       "Activité relevant d'un ordre professionnel – SNC exclue (responsabilité illimitée)"
@@ -3617,7 +3617,7 @@ applySpecificFilters() {
   /* ------------------------------------------------------------------
    * 3) Besoin de lever des fonds → EI / MICRO / SNC exclus
    * ------------------------------------------------------------------ */
-  if (isYes(answers.fundraising) || isYes(answers.investors)) {
+  if (isYes(A.fundraising) || isYes(A.investors)) {
     this.excludeStatuses(
       ['EI', 'MICRO', 'SNC'],
       'Levée de fonds envisagée – statuts peu attractifs exclus (préférez SAS/SASU/SA)'
@@ -3629,9 +3629,9 @@ applySpecificFilters() {
    *    → si pas d'ordre/réglementation, SELARL/SELAS exclues
    * ------------------------------------------------------------------ */
   const hasOrder =
-    isYes(answers.professional_order) ||
-    isYes(answers.regulated_activity) ||
-    isYes(answers.regulated_profession);
+    isYes(A.professional_order) ||
+    isYes(A.regulated_activity) ||
+    isYes(A.regulated_profession);
 
   if (!hasOrder) {
     this.excludeStatuses(
@@ -3663,7 +3663,7 @@ applySpecificFilters() {
   /* ------------------------------------------------------------------
    * 6) Risque pro élevé → éviter responsabilité illimitée
    * ------------------------------------------------------------------ */
-  if (isYes(answers.high_professional_risk)) {
+  if (isYes(A.high_professional_risk)) {
     this.excludeStatus(
       'SNC',
       'Risque professionnel élevé – responsabilité solidaire/illimitée exclue'
@@ -3702,7 +3702,7 @@ applySpecificFilters() {
    *    (règles légales appliquées uniquement si nbAssoc connu)
    * ------------------------------------------------------------------ */
   if (teamSolo) {
-    const immoFamily = isImmo && isYes(answers.family_project);
+    const immoFamily = isImmo && isYes(A.family_project);
 
     const baseList = ['SARL', 'SAS', 'SA', 'SNC', 'SCA'];
     // Ne PAS exclure la SCI si projet immo familial
@@ -3749,7 +3749,7 @@ applySpecificFilters() {
    * 11) Levée de fonds ≥ 1 M€ → éviter SARL / SNC (préférer SAS/SA)
    * ------------------------------------------------------------------ */
   const fundraisingAmount = parseFloat(A.fundraising_amount || '0');
-  if ((isYes(answers.fundraising) || isYes(answers.investors)) && fundraisingAmount >= 1_000_000) {
+  if ((isYes(A.fundraising) || isYes(A.investors)) && fundraisingAmount >= 1_000_000) {
     this.excludeStatuses(['SARL', 'SNC'], 'Levée de fonds importante (≥ 1 M€) – privilégier SAS/SA');
   }
 
