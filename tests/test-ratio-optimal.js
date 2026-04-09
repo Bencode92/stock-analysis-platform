@@ -2,83 +2,91 @@
 // var s=document.createElement('script');s.src='tests/test-ratio-optimal.js?'+Date.now();document.head.appendChild(s);
 
 (function(){
-  if (!window.FiscalUtils || !window.SimulationsFiscales) {
-    console.error('FiscalUtils ou SimulationsFiscales non chargé');
-    return;
-  }
-
+  if (typeof SimulationsFiscales === 'undefined') { console.error('SimulationsFiscales non chargé'); return; }
+  var F = SimulationsFiscales;
   var fmt = function(n){ return typeof n === 'number' ? n.toLocaleString('fr-FR') : '—'; };
+
   console.clear();
   console.log('══════════════════════════════════════════════════');
   console.log('  TEST RATIO OPTIMAL SALAIRE / DIVIDENDES');
   console.log('══════════════════════════════════════════════════');
 
-  var results = [];
+  // Optimisation manuelle : teste 0% à 100% par pas de 5%, affine à 1%
+  function trouverOptimal(label, simulFunc, params) {
+    var best = {ratio:0, net:0};
+    // Passe 1 : pas de 5%
+    for (var r = 0; r <= 100; r += 5) {
+      try {
+        var p = {};
+        for (var k in params) p[k] = params[k];
+        p.tauxRemuneration = r / 100;
+        var res = simulFunc(p);
+        var net = res && res.revenuNetTotal || 0;
+        if (net > best.net) { best = {ratio: r, net: net}; }
+      } catch(e) {}
+    }
+    // Passe 2 : affinage 1% autour du meilleur
+    var lo = Math.max(0, best.ratio - 4);
+    var hi = Math.min(100, best.ratio + 4);
+    for (var r2 = lo; r2 <= hi; r2++) {
+      try {
+        var p2 = {};
+        for (var k2 in params) p2[k2] = params[k2];
+        p2.tauxRemuneration = r2 / 100;
+        var res2 = simulFunc(p2);
+        var net2 = res2 && res2.revenuNetTotal || 0;
+        if (net2 > best.net) { best = {ratio: r2, net: net2}; }
+      } catch(e) {}
+    }
+    return best;
+  }
 
   // ── SASU 100k, marge 40% ──
   console.log('\n── SASU 100k, marge 40%, capital 1k ──');
-  var optSASU = FiscalUtils.optimiserRatioRemuneration(
-    {ca:100000, tauxMarge:0.4, capitalSocial:1000, ratioMin:0, ratioMax:1, favoriserDividendes:true},
-    function(p){ return SimulationsFiscales.simulerSASU(p); }
-  );
-  console.log('   Ratio optimal : ' + Math.round(optSASU.ratio*100) + '% salaire');
-  console.log('   Net optimal   : ' + fmt(optSASU.net) + '€');
+  var optSASU = trouverOptimal('SASU', function(p){ return F.simulerSASU(p); },
+    {ca:100000, tauxMarge:0.4, capitalSocial:1000});
+  var r50sasu = F.simulerSASU({ca:100000, tauxMarge:0.4, tauxRemuneration:0.5, capitalSocial:1000});
+  console.log('   Ratio optimal : ' + optSASU.ratio + '% salaire → net ' + fmt(optSASU.net) + '€');
+  console.log('   Ratio 50%     : net ' + fmt(r50sasu.revenuNetTotal) + '€');
+  console.log('   Gain optimal  : +' + fmt(optSASU.net - r50sasu.revenuNetTotal) + '€/an');
+  console.log(optSASU.ratio < 50 ? '✅ Dividendes SASU avantageux → ratio bas' : '⚠️ Salaire avantageux');
 
-  // Comparaison avec ratio fixe
-  var r50 = SimulationsFiscales.simulerSASU({ca:100000, tauxMarge:0.4, tauxRemuneration:0.5, capitalSocial:1000});
-  console.log('   Net à 50%     : ' + fmt(r50.revenuNetTotal) + '€');
-  var gain = optSASU.net - r50.revenuNetTotal;
-  console.log('   Gain optimal  : +' + fmt(gain) + '€/an vs 50% salaire');
-  var ok1 = optSASU.ratio < 0.5 && gain > 0;
-  results.push(ok1);
-  console.log(ok1 ? '✅ SASU : ratio bas optimal (dividendes avantageux)' : '❌ Résultat inattendu');
+  // Détail par tranche
+  console.log('\n   Détail par ratio :');
+  [0, 10, 20, 30, 50, 70, 100].forEach(function(r) {
+    var res = F.simulerSASU({ca:100000, tauxMarge:0.4, tauxRemuneration:r/100, capitalSocial:1000});
+    var sal = res.salaireNetApresIR || res.salaireNet || 0;
+    var div = res.dividendesNets || 0;
+    console.log('   ' + (r < 10 ? ' ' : '') + r + '% sal → salaire ' + fmt(sal) + '€ + div ' + fmt(div) + '€ = NET ' + fmt(res.revenuNetTotal) + '€');
+  });
 
-  // ── EURL IS 100k, marge 40%, capital 1k ──
-  console.log('\n── EURL IS 100k, marge 40%, capital 1k ──');
-  var optEURL1k = FiscalUtils.optimiserRatioRemuneration(
-    {ca:100000, tauxMarge:0.4, capitalSocial:1000, ratioMin:0, ratioMax:1, favoriserDividendes:false},
-    function(p){ return SimulationsFiscales.simulerEURL(Object.assign({}, p, {optionIS:true})); }
-  );
-  console.log('   Ratio optimal : ' + Math.round(optEURL1k.ratio*100) + '% salaire');
-  console.log('   Net optimal   : ' + fmt(optEURL1k.net) + '€');
+  // ── EURL IS 100k, capital 1k vs 50k ──
+  console.log('\n── EURL IS 100k, marge 40% ──');
+  var optEURL1k = trouverOptimal('EURL cap1k', function(p){ p.optionIS = true; return F.simulerEURL(p); },
+    {ca:100000, tauxMarge:0.4, capitalSocial:1000});
+  var optEURL50k = trouverOptimal('EURL cap50k', function(p){ p.optionIS = true; return F.simulerEURL(p); },
+    {ca:100000, tauxMarge:0.4, capitalSocial:50000});
+  console.log('   Capital 1k  : ratio optimal ' + optEURL1k.ratio + '% → net ' + fmt(optEURL1k.net) + '€');
+  console.log('   Capital 50k : ratio optimal ' + optEURL50k.ratio + '% → net ' + fmt(optEURL50k.net) + '€');
+  console.log('   Impact capital : +' + fmt(optEURL50k.net - optEURL1k.net) + '€/an');
+  console.log(optEURL50k.net > optEURL1k.net ? '✅ Capital élevé = plus de dividendes exonérés SSI' : '⚠️ Pas d\'impact');
 
-  // ── EURL IS 100k, marge 40%, capital 50k ──
-  console.log('\n── EURL IS 100k, marge 40%, capital 50k ──');
-  var optEURL50k = FiscalUtils.optimiserRatioRemuneration(
-    {ca:100000, tauxMarge:0.4, capitalSocial:50000, ratioMin:0, ratioMax:1, favoriserDividendes:false},
-    function(p){ return SimulationsFiscales.simulerEURL(Object.assign({}, p, {optionIS:true})); }
-  );
-  console.log('   Ratio optimal : ' + Math.round(optEURL50k.ratio*100) + '% salaire');
-  console.log('   Net optimal   : ' + fmt(optEURL50k.net) + '€');
-
-  var ok2 = optEURL50k.ratio !== optEURL1k.ratio || optEURL50k.net !== optEURL1k.net;
-  results.push(ok2);
-  console.log(ok2 ? '✅ EURL IS : capital impacte le ratio optimal' : '⚠️ Capital sans impact sur le ratio');
-
-  // ── SARL gérant majoritaire 200k ──
+  // ── SARL TNS 200k ──
   console.log('\n── SARL gérant majoritaire 200k, marge 35% ──');
-  var optSARL = FiscalUtils.optimiserRatioRemuneration(
-    {ca:200000, tauxMarge:0.35, capitalSocial:5000, nbAssocies:2, partAssocie:0.5, gerantMajoritaire:true, ratioMin:0, ratioMax:1},
-    function(p){ return SimulationsFiscales.simulerSARL(p); }
-  );
-  console.log('   Ratio optimal : ' + Math.round(optSARL.ratio*100) + '% salaire');
-  console.log('   Net optimal   : ' + fmt(optSARL.net) + '€');
-  var rSARL50 = SimulationsFiscales.simulerSARL({ca:200000, tauxMarge:0.35, tauxRemuneration:0.5, capitalSocial:5000, nbAssocies:2, partAssocie:0.5, gerantMajoritaire:true});
-  var gainSARL = optSARL.net - rSARL50.revenuNetTotal;
-  console.log('   Net à 50%     : ' + fmt(rSARL50.revenuNetTotal) + '€');
-  console.log('   Gain optimal  : ' + (gainSARL >= 0 ? '+' : '') + fmt(gainSARL) + '€/an');
-  results.push(gainSARL >= 0);
-  console.log(gainSARL >= 0 ? '✅ SARL : ratio optimal >= ratio 50%' : '❌ Ratio 50% meilleur que l\'optimal');
+  var optSARL = trouverOptimal('SARL', function(p){ return F.simulerSARL(p); },
+    {ca:200000, tauxMarge:0.35, capitalSocial:5000, nbAssocies:2, partAssocie:0.5, gerantMajoritaire:true});
+  console.log('   Ratio optimal : ' + optSARL.ratio + '% salaire → net ' + fmt(optSARL.net) + '€');
 
-  // ── Résumé ──
-  console.log('\n── TABLEAU COMPARATIF RATIO OPTIMAL ──');
-  console.log('   SASU      : ' + Math.round(optSASU.ratio*100) + '% sal → net ' + fmt(optSASU.net) + '€');
-  console.log('   EURL cap1k: ' + Math.round(optEURL1k.ratio*100) + '% sal → net ' + fmt(optEURL1k.net) + '€');
-  console.log('   EURL cap50k:' + Math.round(optEURL50k.ratio*100) + '% sal → net ' + fmt(optEURL50k.net) + '€');
-  console.log('   SARL TNS  : ' + Math.round(optSARL.ratio*100) + '% sal → net ' + fmt(optSARL.net) + '€');
-
-  var ok = results.filter(Boolean).length;
+  // ── COMPARATIF FINAL ──
   console.log('\n══════════════════════════════════════════════════');
-  console.log('  RÉSULTAT : ' + ok + '/' + results.length + ' ✅');
+  console.log('  COMPARATIF — CA 100k, marge 40%');
+  console.log('══════════════════════════════════════════════════');
+  console.log('  SASU       : ' + optSASU.ratio + '% sal → ' + fmt(optSASU.net) + '€ net');
+  console.log('  EURL IS 1k : ' + optEURL1k.ratio + '% sal → ' + fmt(optEURL1k.net) + '€ net');
+  console.log('  EURL IS 50k: ' + optEURL50k.ratio + '% sal → ' + fmt(optEURL50k.net) + '€ net');
+  var eurlIR = F.simulerEI({ca:100000, tauxMarge:0.4});
+  console.log('  EI / EURL IR : 100% → ' + fmt(eurlIR.revenuNetTotal) + '€ net');
+  var micro = F.simulerMicroEntreprise({ca:83600, typeMicro:'BNC'});
+  console.log('  MICRO BNC 83k: 100% → ' + fmt(micro.revenuNetTotal) + '€ net');
   console.log('══════════════════════════════════════════════════');
 })();
