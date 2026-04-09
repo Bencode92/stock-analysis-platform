@@ -80,8 +80,14 @@ function calculateProgressiveIRFallback(revenuImposable) {
     return Math.round(impot);
 }
 
-function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS = false, isGerantMajoritaire = false, tmiActuel = 30, revenuImposable = 0) {
-    const dividendesBrutsSociete = Math.max(0, resultatApresIS);
+function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS = false, isGerantMajoritaire = false, tmiActuel = 30, revenuImposable = 0, reserveLegale = false, capitalSocial = 0) {
+    // Réserve légale : 5% du bénéfice après IS, jusqu'à 10% du capital social
+    let dotationReserveLegale = 0;
+    if (reserveLegale && capitalSocial > 0 && resultatApresIS > 0) {
+        const reserveMax = capitalSocial * 0.10;
+        dotationReserveLegale = Math.min(Math.round(resultatApresIS * 0.05), reserveMax);
+    }
+    const dividendesBrutsSociete = Math.max(0, resultatApresIS - dotationReserveLegale);
     const dividendesBrutsAssocie = Math.floor(dividendesBrutsSociete * partAssocie);
     let cotTNSDiv = 0;
     if (isTNS && isGerantMajoritaire && dividendesBrutsAssocie > 0) {
@@ -95,7 +101,7 @@ function calculerDividendesIS(resultatApresIS, partAssocie, capitalDetenu, isTNS
         else { divTax = choisirFiscaliteDividendesLocal(dividendesBrutsAssocie, tmiActuel); }
         prelevementForfaitaire = divTax.total; methodeDividendes = divTax.methode; economieMethode = divTax.economie;
     }
-    return { dividendesBrutsSociete, dividendesBrutsAssocie, cotTNSDiv, prelevementForfaitaire, dividendesNets: dividendesBrutsAssocie - prelevementForfaitaire - cotTNSDiv, capitalDetenu, methodeDividendes, economieMethode };
+    return { dividendesBrutsSociete, dividendesBrutsAssocie, cotTNSDiv, prelevementForfaitaire, dividendesNets: dividendesBrutsAssocie - prelevementForfaitaire - cotTNSDiv, capitalDetenu, methodeDividendes, economieMethode, dotationReserveLegale };
 }
 
 class SimulationsFiscales {
@@ -117,17 +123,20 @@ class SimulationsFiscales {
 
     static simulerMicroEntreprise(params) {
         const np = this.normalizeAssociatesParams(params, 'micro');
-        const { ca, typeMicro = 'BIC', versementLiberatoire = false, tauxMarge = 1.0, depensesPro = null } = np;
+        const { ca, typeMicro = 'BIC', versementLiberatoire = false, tauxMarge = 1.0, depensesPro = null, acre = false } = np;
         const plafonds = { 'BIC_VENTE': 203100, 'BIC_SERVICE': 83600, 'BNC': 83600 }; // Plafonds 2026-2028 (revalorisation triennale)
         const abattements = { 'BIC_VENTE': 0.71, 'BIC_SERVICE': 0.50, 'BNC': 0.34 };
         const tauxCotisations = { 'BIC_VENTE': 0.123, 'BIC_SERVICE': 0.212, 'BNC': 0.256 }; // BNC SSI 25,6% (CIPAV: 23,2%)
         const tauxVFL = { 'BIC_VENTE': 0.01, 'BIC_SERVICE': 0.017, 'BNC': 0.022 };
+        // ACRE micro 2026 : taux réduits (environ 50% la 1ère année)
+        const tauxCotisACRE = { 'BIC_VENTE': 0.062, 'BIC_SERVICE': 0.106, 'BNC': 0.128 };
         let typeEffectif;
         if (typeMicro === 'BIC_VENTE' || typeMicro === 'vente') typeEffectif = 'BIC_VENTE';
         else if (typeMicro === 'BIC_SERVICE' || typeMicro === 'BIC' || typeMicro === 'service') typeEffectif = 'BIC_SERVICE';
         else typeEffectif = 'BNC';
         if (ca > plafonds[typeEffectif]) return { compatible: false, message: `CA supérieur au plafond micro-entreprise de ${plafonds[typeEffectif]}€` };
-        const cotisationsSociales = Math.round(ca * tauxCotisations[typeEffectif]);
+        const tauxEffectif = acre ? tauxCotisACRE[typeEffectif] : tauxCotisations[typeEffectif];
+        const cotisationsSociales = Math.round(ca * tauxEffectif);
         const revenuImposable = Math.round(ca * (1 - abattements[typeEffectif]));
         const tmiReel = window.FiscalUtils ? window.FiscalUtils.getTMI(revenuImposable) : calculerTMI(revenuImposable);
         let impotRevenu;
@@ -151,9 +160,10 @@ class SimulationsFiscales {
 
     static simulerEI(params) {
         const np = this.normalizeAssociatesParams(params, 'ei');
-        const { ca, tauxMarge = 0.3 } = np;
+        const { ca, tauxMarge = 0.3, acre = false } = np;
         const beneficeAvantCotisations = Math.round(ca * tauxMarge);
         let cotisationsSociales = window.FiscalUtils ? window.FiscalUtils.cotisationsTNSSurBenefice(beneficeAvantCotisations) : Math.round(beneficeAvantCotisations * TAUX_CHARGES.TNS);
+        cotisationsSociales = SimulationsFiscales._applyACRE(cotisationsSociales, beneficeAvantCotisations, acre);
         const csgNonDeductible = Math.round(beneficeAvantCotisations * TAUX_CSG_NON_DEDUCTIBLE);
         const cashAvantIR = beneficeAvantCotisations - cotisationsSociales;
         const baseImposableIR = cashAvantIR + csgNonDeductible;
@@ -164,13 +174,27 @@ class SimulationsFiscales {
         return { compatible: true, ca, typeEntreprise: 'Entreprise Individuelle', tauxMarge: tauxMarge * 100 + '%', beneficeAvantCotisations, cotisationsSociales, csgNonDeductible, cashAvantIR, baseImposableIR, beneficeApresCotisations: cashAvantIR, beneficeImposable: baseImposableIR, impotRevenu, revenuNetApresImpot, revenuNetTotal, ratioNetCA: (revenuNetApresImpot / ca) * 100, tmiReel, modeExpert: true, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
     }
 
+    // Réduction ACRE TNS (partagée EI/EURL/SARL gérant majoritaire)
+    static _applyACRE(cotisations, revenuBase, acre) {
+        if (!acre) return cotisations;
+        const PASS = 48060;
+        const seuilBas = PASS * 0.75;
+        if (revenuBase <= seuilBas) return Math.round(cotisations * 0.75);
+        if (revenuBase < PASS) {
+            const tauxReduction = 0.25 * (PASS - revenuBase) / (PASS - seuilBas);
+            return Math.round(cotisations * (1 - tauxReduction));
+        }
+        return cotisations;
+    }
+
     static simulerEURL(params) {
         const np = this.normalizeAssociatesParams(params, 'eurl');
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, capitalSocial = 1 } = np;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, capitalSocial = 1, acre = false } = np;
         const resultatEntreprise = Math.round(ca * tauxMarge);
         if (!optionIS) {
             const baseCalculTNS = resultatEntreprise;
             let cotisationsSociales = window.FiscalUtils ? window.FiscalUtils.cotisationsTNSSurBenefice(baseCalculTNS) : Math.round(baseCalculTNS * TAUX_CHARGES.TNS);
+            cotisationsSociales = this._applyACRE(cotisationsSociales, baseCalculTNS, acre);
             const csgNonDeductible = Math.round(resultatEntreprise * TAUX_CSG_NON_DEDUCTIBLE);
             const cashAvantIR = resultatEntreprise - cotisationsSociales;
             const baseImposableIR = cashAvantIR + csgNonDeductible;
@@ -192,7 +216,7 @@ class SimulationsFiscales {
             let impotRevenu = (window.FiscalUtils?.calculateProgressiveIR) ? window.FiscalUtils.calculateProgressiveIR(baseImposableIR) : calculateProgressiveIRFallback(baseImposableIR);
             const is = calculerISProgressif(resultatApresRemuneration);
             const resultatApresIS = resultatApresRemuneration - is;
-            const dividendesInfo = calculerDividendesIS(resultatApresIS, 1, capitalSocial, true, true, tmiReel, baseImposableIR);
+            const dividendesInfo = calculerDividendesIS(resultatApresIS, 1, capitalSocial, true, true, tmiReel, baseImposableIR, acre ? false : (np.reserveLegale || false), capitalSocial);
             const revenuNetSalaire = remunerationNetteSociale - impotRevenu;
             const revenuNetTotal = revenuNetSalaire + dividendesInfo.dividendesNets;
             return { compatible: true, ca, typeEntreprise: "EURL à l'IS", tauxMarge: tauxMarge * 100 + '%', resultatAvantRemuneration: resultatEntreprise, remuneration, resultatApresRemuneration, cotisationsSociales, remunerationNetteSociale, csgNonDeductible, baseImposableIR, impotRevenu, revenuNetSalaire, is, resultatApresIS, dividendes: dividendesInfo.dividendesBrutsAssocie, cotTNSDiv: dividendesInfo.cotTNSDiv, prelevementForfaitaire: dividendesInfo.prelevementForfaitaire, dividendesNets: dividendesInfo.dividendesNets, revenuNetTotal, ratioNetCA: (revenuNetTotal / ca) * 100, resultatEntreprise, ratioEffectif, tmiReel, modeExpert: true, methodeDividendes: dividendesInfo.methodeDividendes, economieMethode: dividendesInfo.economieMethode, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
@@ -201,7 +225,7 @@ class SimulationsFiscales {
 
     static simulerSASU(params) {
         const np = this.normalizeAssociatesParams(params, 'sasu');
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, secteur = "Tous", taille = "<50" } = np;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, secteur = "Tous", taille = "<50", reserveLegale = false, capitalSocial = 0 } = np;
         const resultatEntreprise = Math.round(ca * tauxMarge);
         const remunerationSouhaitee = calculerSalaireBrut(resultatEntreprise, tauxRemuneration, false);
         const remuneration = ajusterRemuneration(remunerationSouhaitee, resultatEntreprise, 0.55);
@@ -219,7 +243,7 @@ class SimulationsFiscales {
         const salaireNetApresIR = salaireNet - impotRevenu;
         const is = calculerISProgressif(resultatApresRemuneration);
         const resultatApresIS = resultatApresRemuneration - is;
-        const dividendesInfo = calculerDividendesIS(resultatApresIS, 1, 0, false, false, tmiReel, baseImposableIR);
+        const dividendesInfo = calculerDividendesIS(resultatApresIS, 1, 0, false, false, tmiReel, baseImposableIR, reserveLegale, capitalSocial);
         const revenuNetTotal = salaireNetApresIR + dividendesInfo.dividendesNets;
         return { compatible: true, ca, typeEntreprise: 'SASU', tauxMarge: tauxMarge * 100 + '%', resultatEntreprise, remuneration, chargesPatronales, coutTotalEmployeur, chargesSalariales, salaireNet, csgNonDeductible, baseImposableIR, impotRevenu, salaireNetApresIR, revenuNetSalaire: salaireNetApresIR, resultatApresRemuneration, is, resultatApresIS, dividendes: dividendesInfo.dividendesBrutsAssocie, prelevementForfaitaire: dividendesInfo.prelevementForfaitaire, dividendesNets: dividendesInfo.dividendesNets, revenuNetTotal, ratioNetCA: (revenuNetTotal / ca) * 100, secteur, taille, ratioEffectif, modeExpert: true, tmiReel, methodeDividendes: dividendesInfo.methodeDividendes, economieMethode: dividendesInfo.economieMethode, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
     }
