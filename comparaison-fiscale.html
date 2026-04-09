@@ -1394,6 +1394,17 @@ td.neutral {
             </div>
           </div>
         </label>
+
+        <label class="mode-option">
+          <input type="radio" name="regime-actuel" value="nu_jeanbrun">
+          <div class="mode-card">
+            <div class="mode-icon"><i class="fas fa-landmark"></i></div>
+            <div class="mode-content">
+              <h4>Jeanbrun</h4>
+              <p>Amortissement en nu</p>
+            </div>
+          </div>
+        </label>
       </div>
     </div>
 
@@ -1451,6 +1462,59 @@ td.neutral {
           </div>
         </label>
       </div>
+    </div>
+  </div>
+
+  <!-- Options spécifiques Jeanbrun (masquées par défaut) -->
+  <div id="jeanbrun-options" class="input-with-label" style="display:none; margin-top:1rem; padding:1rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); border-radius:12px;">
+    <label style="color:#6366f1; font-weight:600; margin-bottom:0.75rem; display:block;">
+      <i class="fas fa-landmark"></i> Options du Dispositif Jeanbrun
+    </label>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div>
+        <label class="form-label">Type de bien</label>
+        <div class="piece-selector" style="flex-direction:column; gap:0.5rem;">
+          <label class="mode-option" style="width:100%;">
+            <input type="radio" name="jeanbrun-type" value="neuf">
+            <div class="mode-card" style="padding:0.5rem 1rem;">
+              <div class="mode-content"><h4 style="font-size:0.85rem;">Neuf / VEFA</h4></div>
+            </div>
+          </label>
+          <label class="mode-option" style="width:100%;">
+            <input type="radio" name="jeanbrun-type" value="ancien" checked>
+            <div class="mode-card" style="padding:0.5rem 1rem;">
+              <div class="mode-content"><h4 style="font-size:0.85rem;">Ancien + travaux &ge; 30%</h4></div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Niveau de loyer</label>
+        <div class="piece-selector" style="flex-direction:column; gap:0.5rem;">
+          <label class="mode-option" style="width:100%;">
+            <input type="radio" name="jeanbrun-niveau" value="intermediaire" checked>
+            <div class="mode-card" style="padding:0.5rem 1rem;">
+              <div class="mode-content"><h4 style="font-size:0.85rem;">Intermédiaire (−15%)</h4></div>
+            </div>
+          </label>
+          <label class="mode-option" style="width:100%;">
+            <input type="radio" name="jeanbrun-niveau" value="social">
+            <div class="mode-card" style="padding:0.5rem 1rem;">
+              <div class="mode-content"><h4 style="font-size:0.85rem;">Social (−30%)</h4></div>
+            </div>
+          </label>
+          <label class="mode-option" style="width:100%;">
+            <input type="radio" name="jeanbrun-niveau" value="tresSocial">
+            <div class="mode-card" style="padding:0.5rem 1rem;">
+              <div class="mode-content"><h4 style="font-size:0.85rem;">Très social (−45%)</h4></div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(99,102,241,0.08); border-radius:8px; font-size:0.8rem; color:rgba(255,255,255,0.7);">
+      <i class="fas fa-info-circle" style="color:#6366f1;"></i>
+      Engagement 9 ans min. Collectif uniquement. Amortissements réintégrés à la revente.
     </div>
   </div>
 
@@ -1966,12 +2030,13 @@ td.neutral {
   
   // Table de correspondance avec ID pour plus de robustesse
   const REGIME_LABELS = {
-  'nu_micro'   : { id: 'micro-foncier', label: 'Micro-foncier' },
-  'nu_reel'    : { id: 'reel-foncier',  label: 'Location nue au réel' },
-  'lmnp_micro' : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
-  'lmnp_reel'  : { id: 'lmnp-reel',     label: 'LMNP au réel' },
-  'lmp_reel'   : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
-  'sci_is'     : { id: 'sci-is',        label: "SCI à l'IS" }
+  'nu_micro'    : { id: 'micro-foncier', label: 'Micro-foncier' },
+  'nu_reel'     : { id: 'reel-foncier',  label: 'Location nue au réel' },
+  'nu_jeanbrun' : { id: 'jeanbrun',      label: 'Dispositif Jeanbrun' },
+  'lmnp_micro'  : { id: 'lmnp-micro',    label: 'LMNP Micro-BIC' },
+  'lmnp_reel'   : { id: 'lmnp-reel',     label: 'LMNP au réel' },
+  'lmp_reel'    : { id: 'lmp',           label: 'LMP (Loueur Meublé Professionnel)' },
+  'sci_is'      : { id: 'sci-is',        label: "SCI à l'IS" }
 };
         // Helper pour calculer la mensualité
         function calcMensualite(capital, tauxAnnuelPct, dureeAn) {
@@ -2206,7 +2271,10 @@ document.getElementById('property-form').addEventListener('submit', async functi
     fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0,
     // AJOUT: Récupérer le régime actuel sélectionné
     regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
-    forceRegime: document.getElementById('force-regime')?.checked || false
+    forceRegime: document.getElementById('force-regime')?.checked || false,
+    // Paramètres Jeanbrun
+    jeanbrunType: document.querySelector('input[name="jeanbrun-type"]:checked')?.value || 'ancien',
+    jeanbrunNiveau: document.querySelector('input[name="jeanbrun-niveau"]:checked')?.value || 'intermediaire'
   };
 
   // Calculer le montant emprunté et la mensualité
@@ -3121,6 +3189,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log('✅ Régime sélectionné :', e.target.value);
+
+        // C) Afficher/masquer les options Jeanbrun
+        const jbPanel = document.getElementById('jeanbrun-options');
+        if (jbPanel) {
+          jbPanel.style.display = e.target.value === 'nu_jeanbrun' ? 'block' : 'none';
+        }
+      });
+    });
+
+    // Propager les sous-options Jeanbrun vers le data object
+    document.querySelectorAll('input[name="jeanbrun-type"], input[name="jeanbrun-niveau"]').forEach(input => {
+      input.addEventListener('change', () => {
+        console.log('🏛️ Jeanbrun option changée :', input.name, '=', input.value);
       });
     });
   }

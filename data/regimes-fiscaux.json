@@ -194,5 +194,52 @@
             "Pas de déficit foncier personnel",
             "Perte du caractère familial = retour automatique à l'IS"
         ]
+    },
+    {
+        "id": "jeanbrun",
+        "nom": "Dispositif Jeanbrun",
+        "description": "Nouveau dispositif issu de la LF 2026 (art. 47) : amortissement en location nue avec loyers plafonnés et déficit foncier.",
+        "calcul": {
+            "type": "reel-amortissement-nu",
+            "deficitDeductible": true,
+            "deficitMax": 10700,
+            "partTerrain": 0.20
+        },
+        "resume_simplifie": {
+            "c_est_quoi": "Un dispositif inédit qui permet d'amortir fiscalement un bien loué nu, à condition de pratiquer des loyers inférieurs au marché. Remplace en pratique le Pinel.",
+            "comment_ca_marche": "Tu achètes un logement collectif (neuf ou ancien rénové), tu t'engages à le louer nu pendant 9 ans à un loyer plafonné (−15 à −45% du marché). En contrepartie, tu déduis un amortissement annuel de tes revenus fonciers, ce qui peut créer un déficit foncier imputable sur ton revenu global (10 700€/an max).",
+            "a_retenir": [
+                "Amortissement de 3 à 5,5% par an selon type de bien et niveau de loyer",
+                "Plafond annuel d'amortissement : 8 000 à 12 000€",
+                "Loyers réduits de 15 à 45% vs marché",
+                "Effet fiscal croissant avec la TMI (intéressant à partir de 30%)",
+                "Réintégration des amortissements dans le calcul de la plus-value à la revente"
+            ]
+        },
+        "conditions_eligibilite": [
+            "Location nue uniquement, résidence principale du locataire",
+            "Engagement de location de 9 ans minimum",
+            "Logements collectifs uniquement (pas de maison individuelle)",
+            "Neuf/VEFA OU ancien avec travaux ≥ 30% du prix d'achat",
+            "Pour l'ancien : DPE A ou B obligatoire après travaux",
+            "Pas de zonage géographique",
+            "Exclusion : locations intra-famille, acquisitions démembrées",
+            "SCI à l'IR possible, SCI à l'IS exclue",
+            "Acquisitions jusqu'au 31 décembre 2028"
+        ],
+        "modalites_application": [
+            "Base amortissable = 80% du prix d'acquisition (20% terrain)",
+            "Loyer intermédiaire (−15%) : amort. 3,5%/an neuf, 3%/an ancien — plafond 8 000€/an",
+            "Loyer social (−30%) : amort. 4,5%/an neuf, 3,5%/an ancien — plafond 10 000€/an",
+            "Loyer très social (−45%) : amort. 5,5%/an neuf, 4%/an ancien — plafond 12 000€/an",
+            "Déficit foncier imputable sur revenu global : 10 700€/an max",
+            "Prélèvements sociaux (17,2%) applicables comme en location nue classique"
+        ],
+        "specificites_fiscales": [
+            "Amortissement cumulable avec le déficit foncier (fait inédit en location nue)",
+            "L'avantage fiscal croît avec la TMI : marginal à 11%, significatif à 30%, optimal à 41-45%",
+            "À la revente : les amortissements déduits sont réintégrés dans le calcul de la plus-value immobilière",
+            "Avant 30 ans de détention, la PV est donc mécaniquement gonflée par les amortissements"
+        ]
     }
 ]

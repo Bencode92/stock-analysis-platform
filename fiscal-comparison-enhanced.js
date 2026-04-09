@@ -43,7 +43,7 @@ class FiscalComparator {
             return 0; // L'IS est calculé différemment dans la méthode dédiée
         }
         
-        // Location nue (micro-foncier, réel) : IR + PS
+        // Location nue (micro-foncier, réel, jeanbrun) : IR + PS
         return tmi + this.TAUX_PS;
     }
 
@@ -79,6 +79,40 @@ class FiscalComparator {
                 calcul: {
                     deficitMax: 10700,
                     type: 'reel'
+                }
+            },
+            {
+                id: 'jeanbrun',
+                nom: 'Dispositif Jeanbrun',
+                icone: 'fa-landmark',
+                couleur: '#6366f1',
+                description: 'Amortissement en location nue + déficit foncier (LF 2026)',
+                conditions: {
+                    locationNue: true,
+                    collectifUniquement: true,
+                    engagementMinAnnees: 9,
+                    acquisitionAvant: '2028-12-31'
+                },
+                calcul: {
+                    type: 'reel-amortissement-nu',
+                    // Taux d'amortissement par catégorie : [neuf, ancien+travaux]
+                    tauxAmortissement: {
+                        intermediaire: { neuf: 0.035, ancien: 0.030 },
+                        social:        { neuf: 0.045, ancien: 0.035 },
+                        tresSocial:    { neuf: 0.055, ancien: 0.040 }
+                    },
+                    plafondAmortissement: {
+                        intermediaire: 8000,
+                        social: 10000,
+                        tresSocial: 12000
+                    },
+                    decoteLoyer: {
+                        intermediaire: 0.15,
+                        social: 0.30,
+                        tresSocial: 0.45
+                    },
+                    partTerrain: 0.20,    // 20% non amortissable
+                    deficitMax: 10700     // Plafond déficit foncier
                 }
             },
             {
@@ -268,6 +302,10 @@ class FiscalComparator {
             case 'reel-amortissement':
                 result = this.calculateLMNPReel(result, baseResults, data, commonData);
                 break;
+
+            case 'reel-amortissement-nu':
+                result = this.calculateJeanbrun(result, baseResults, data, commonData);
+                break;
                 
             case 'professionnel':
                 result = this.calculateLMP(result, baseResults, data, commonData);
@@ -436,6 +474,124 @@ class FiscalComparator {
             result.deficitReportable > 0 ? `Déficit reportable : ${result.deficitReportable.toFixed(0)}€` : null
         ].filter(Boolean);
         
+        return result;
+    }
+
+    /**
+     * Calcul pour Dispositif Jeanbrun (LF 2026, art. 47)
+     * Hybride : location nue + amortissement + déficit foncier 10 700€
+     * Loyers plafonnés selon niveau (intermédiaire/social/très social)
+     */
+    calculateJeanbrun(result, baseResults, data, calcul) {
+        console.log('📊 Calcul Dispositif Jeanbrun');
+
+        // --- Paramètres Jeanbrun depuis data ou défauts ---
+        const niveauLoyer = data.jeanbrunNiveau || 'intermediaire';
+        const typeBien = data.jeanbrunType || 'ancien';
+        const regime = this.regimes.find(r => r.id === 'jeanbrun');
+        const regiCalc = regime.calcul;
+
+        // --- Décote du loyer ---
+        const decote = regiCalc.decoteLoyer[niveauLoyer] || 0.15;
+        const loyerMarcheAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
+        const loyerJeanbrunAnnuel = loyerMarcheAnnuel * (1 - decote);
+
+        // --- Amortissement fiscal (non décaissé) ---
+        const valeurBien = baseResults.prixAchat || data.prixBien || 0;
+        const baseAmortissable = valeurBien * (1 - regiCalc.partTerrain); // 80% du prix
+        const tauxAmort = regiCalc.tauxAmortissement[niveauLoyer]?.[typeBien] || 0.035;
+        const plafondAmort = regiCalc.plafondAmortissement[niveauLoyer] || 8000;
+        const amortissementBrut = baseAmortissable * tauxAmort;
+        const amortissementEffectif = Math.min(amortissementBrut, plafondAmort);
+
+        // --- Charges déductibles (réellement payées) ---
+        const chargesDeductibles = {
+            interets: calcul.interetsAnnuels || 0,
+            taxeFonciere: calcul.taxeFonciere || 0,
+            chargesCopro: (calcul.chargesCopro || 0) * 12,
+            assurancePNO: (calcul.assurancePNO || 0) * 12,
+            entretien: calcul.entretien || 0,
+            gestionLocative: calcul.gestionLocative || 0,
+            total: 0
+        };
+        chargesDeductibles.total = Object.values(chargesDeductibles)
+            .filter(v => typeof v === 'number')
+            .reduce((a, b) => a + b, 0);
+
+        // --- Résultat fiscal = loyers plafonné - charges - amortissement ---
+        const resultatFiscal = loyerJeanbrunAnnuel - chargesDeductibles.total - amortissementEffectif;
+        const deficit = resultatFiscal < 0 ? Math.abs(resultatFiscal) : 0;
+        const deficitImputable = Math.min(deficit, regiCalc.deficitMax);
+
+        // --- Base imposable ---
+        const baseImposable = Math.max(0, resultatFiscal);
+
+        // --- Impôts : IR + PS (location nue) ---
+        const impotRevenu = baseImposable * (data.tmi / 100);
+        const prelevementsSociaux = baseImposable * 0.172;
+        const impotTotal = impotRevenu + prelevementsSociaux;
+
+        // --- Économie d'impôt si déficit ---
+        const economieDeficit = deficitImputable * (data.tmi / 100);
+
+        // --- Cash-flow réel (basé sur loyer PLAFONNÉ et charges réelles) ---
+        const chargesReellementPayees = chargesDeductibles.total - chargesDeductibles.interets;
+        const mensualiteCredit = baseResults.chargeMensuelleCredit * 12;
+        const cashflowBrut = loyerJeanbrunAnnuel - chargesReellementPayees - mensualiteCredit;
+        result.cashflowNetAnnuel = cashflowBrut - impotTotal + economieDeficit;
+        result.cashflowMensuel = result.cashflowNetAnnuel / 12;
+
+        // Logging
+        console.log('Jeanbrun - Détails:', {
+            niveauLoyer,
+            typeBien,
+            loyerMarche: loyerMarcheAnnuel,
+            loyerJeanbrun: loyerJeanbrunAnnuel,
+            decote: `${(decote * 100)}%`,
+            amortissementBrut,
+            amortissementEffectif,
+            plafondAmort,
+            chargesDeductibles: chargesDeductibles.total,
+            resultatFiscal,
+            deficit,
+            economieDeficit,
+            impotTotal,
+            cashflowNet: result.cashflowNetAnnuel
+        });
+
+        // --- Résultats ---
+        result.baseImposable = baseImposable;
+        result.impotAnnuel = -(impotTotal - economieDeficit);
+        result.amortissements = amortissementEffectif;
+        result.deficit = deficit;
+        result.deficitReportable = deficit - deficitImputable;
+        result.rendementNet = data.prixBien ? (result.cashflowNetAnnuel / data.prixBien) * 100 : 0;
+
+        result.details = {
+            regime: 'Dispositif Jeanbrun',
+            niveauLoyer: niveauLoyer,
+            typeBien: typeBien,
+            decoteLoyer: `${(decote * 100)}%`,
+            loyerMarche: loyerMarcheAnnuel.toFixed(0),
+            loyerJeanbrun: loyerJeanbrunAnnuel.toFixed(0),
+            amortissementEffectif: amortissementEffectif.toFixed(0),
+            plafondAmortissement: plafondAmort,
+            chargesDeductibles: chargesDeductibles.total.toFixed(0),
+            deficit: deficit.toFixed(0),
+            economieDeficit: economieDeficit.toFixed(0)
+        };
+
+        const niveauLabel = { intermediaire: 'intermédiaire', social: 'social', tresSocial: 'très social' }[niveauLoyer];
+        result.avantages = [
+            `Amortissement ${(tauxAmort * 100).toFixed(1)}%/an → ${amortissementEffectif.toFixed(0)}€ déduits`,
+            `Loyer ${niveauLabel} (−${(decote * 100)}% vs marché)`,
+            deficit > 0 ? `Déficit foncier : ${deficit.toFixed(0)}€ (${deficitImputable.toFixed(0)}€ imputables)` : null,
+            economieDeficit > 0 ? `Économie d'impôt déficit : ${economieDeficit.toFixed(0)}€/an` : null,
+            'Pas de zonage géographique',
+            '⚠️ Engagement 9 ans minimum',
+            '⚠️ Réintégration amortissements à la revente'
+        ].filter(Boolean);
+
         return result;
     }
 

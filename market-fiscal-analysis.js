@@ -168,7 +168,7 @@ class MarketFiscalAnalyzer {
   }
 
   _computeBestRegimeCFAnnuel(input, params = {}) {
-    const ids = ['nu_micro','nu_reel','lmnp_micro','lmnp_reel','lmp','sci_is'];
+    const ids = ['nu_micro','nu_reel','nu_jeanbrun','lmnp_micro','lmnp_reel','lmp','sci_is'];
     let best = { regimeId: null, regimeNom: '', cashflowAnnuel: -Infinity, cashflowMensuel: -Infinity };
 
     for (const id of ids) {
@@ -317,28 +317,31 @@ normalizeRegimeKey(reg) {
   if (raw.includes('lmnp') && raw.includes('micro')) return 'lmnp_micro';
   if (raw.includes('lmp'))                           return 'lmp';
   if (raw.includes('micro-foncier') || raw.includes('nu_micro')) return 'nu_micro';
+  if (raw.includes('jeanbrun'))                                 return 'nu_jeanbrun';
   if ((raw.includes('nu') || raw.includes('foncier')) && raw.includes('reel')) return 'nu_reel';
   if (raw.includes('sci') && raw.includes('is'))     return 'sci_is';
 
   // Valeurs exactes utilisées par le formulaire
-  if (raw === 'nu_micro')   return 'nu_micro';
-  if (raw === 'nu_reel')    return 'nu_reel';
-  if (raw === 'lmnp_micro') return 'lmnp_micro';
-  if (raw === 'lmnp_reel')  return 'lmnp_reel';
-  if (raw === 'lmp_reel')   return 'lmp';
-  if (raw === 'sci_is')     return 'sci_is';
+  if (raw === 'nu_micro')    return 'nu_micro';
+  if (raw === 'nu_reel')     return 'nu_reel';
+  if (raw === 'nu_jeanbrun') return 'nu_jeanbrun';
+  if (raw === 'lmnp_micro')  return 'lmnp_micro';
+  if (raw === 'lmnp_reel')   return 'lmnp_reel';
+  if (raw === 'lmp_reel')    return 'lmp';
+  if (raw === 'sci_is')      return 'sci_is';
 
   return raw.replace(/\s+/g,'-');
 }
 
     getRegimeRegistry() {
         return {
-            nu_micro   : { id:'nu_micro',   nom:'Micro-foncier',                icone:'fa-leaf' },
-            nu_reel    : { id:'nu_reel',    nom:'Location nue au réel',         icone:'fa-calculator' },
-            lmnp_micro : { id:'lmnp_micro', nom:'LMNP Micro-BIC',               icone:'fa-bed' },
-            lmnp_reel  : { id:'lmnp_reel',  nom:'LMNP au réel',                 icone:'fa-file-invoice-dollar' },
-            lmp        : { id:'lmp',        nom:'LMP Réel',                     icone:'fa-briefcase' },
-            sci_is     : { id:'sci_is',     nom:"SCI à l'IS",                   icone:'fa-building' }
+            nu_micro    : { id:'nu_micro',    nom:'Micro-foncier',                icone:'fa-leaf' },
+            nu_reel     : { id:'nu_reel',     nom:'Location nue au réel',         icone:'fa-calculator' },
+            nu_jeanbrun : { id:'nu_jeanbrun', nom:'Dispositif Jeanbrun',          icone:'fa-landmark' },
+            lmnp_micro  : { id:'lmnp_micro',  nom:'LMNP Micro-BIC',               icone:'fa-bed' },
+            lmnp_reel   : { id:'lmnp_reel',   nom:'LMNP au réel',                 icone:'fa-file-invoice-dollar' },
+            lmp         : { id:'lmp',         nom:'LMP Réel',                     icone:'fa-briefcase' },
+            sci_is      : { id:'sci_is',      nom:"SCI à l'IS",                   icone:'fa-building' }
         };
     }
 
@@ -500,7 +503,7 @@ async performCompleteAnalysis(data) {
     }
         // 8bis) S'assurer que tous les régimes de base existent (dont LMP)
     {
-      const required = ['nu_micro','nu_reel','lmnp_micro','lmnp_reel','lmp','sci_is']; // ou ['lmp'] si tu veux minimal
+      const required = ['nu_micro','nu_reel','nu_jeanbrun','lmnp_micro','lmnp_reel','lmp','sci_is']; // ou ['lmp'] si tu veux minimal
       const registry = this.getRegimeRegistry();
 
       const addIfMissing = (key) => {
@@ -1052,6 +1055,85 @@ case 'nu_micro': {
     }
 
     // ───────────────────────────────────────────────────────────
+    // C-bis) DISPOSITIF JEANBRUN (LF 2026, art. 47)
+    //   Location nue + amortissement + déficit foncier 10 700€
+    //   Loyers plafonnés : −15% (intermédiaire) / −30% (social) / −45% (très social)
+    // ───────────────────────────────────────────────────────────
+    case 'nu_jeanbrun': {
+      // Sous-options Jeanbrun (passées via inputData depuis le formulaire)
+      const jbNiveau = inputData.jeanbrunNiveau || 'intermediaire';
+      const jbType   = inputData.jeanbrunType   || 'ancien';
+
+      // Décote loyer selon niveau
+      const decoteMap = { intermediaire: 0.15, social: 0.30, tresSocial: 0.45 };
+      const decote = decoteMap[jbNiveau] || 0.15;
+
+      // Taux d'amortissement selon niveau × type de bien
+      const tauxAmortMap = {
+        intermediaire: { neuf: 0.035, ancien: 0.030 },
+        social:        { neuf: 0.045, ancien: 0.035 },
+        tresSocial:    { neuf: 0.055, ancien: 0.040 }
+      };
+      const tauxAmort = tauxAmortMap[jbNiveau]?.[jbType] || 0.035;
+
+      // Plafond amortissement annuel
+      const plafondAmortMap = { intermediaire: 8000, social: 10000, tresSocial: 12000 };
+      const plafondAmort = plafondAmortMap[jbNiveau] || 8000;
+
+      // Loyer plafonné (décote vs marché)
+      const revenusNetsJeanbrun = revenusNets * (1 - decote);
+
+      // Base amortissable = 80% du prix (20% = terrain non amortissable)
+      const prixBien = Number(inputData.price ?? inputData.prixBien ?? 0);
+      const baseAmortissable = prixBien * 0.80;
+      const amortBrut = baseAmortissable * tauxAmort;
+      const amortEffectif = Math.min(amortBrut, plafondAmort);
+
+      // Charges (identiques au réel foncier)
+      const chargesHorsInterets =
+        Number(params.taxeFonciere ?? 0) +
+        Number(params.chargesCoproNonRecup ?? 0) * 12 +
+        Number(params.assurancePNO ?? 0) * 12 +
+        Number(params.entretienAnnuel ?? 0);
+
+      // Résultat fiscal : loyer plafonné - charges - intérêts - amortissement
+      const resultatFiscal = revenusNetsJeanbrun - chargesHorsInterets - interetsAnnuels - amortEffectif;
+
+      // Déficit foncier (plafonné à 10 700€ imputable sur revenu global)
+      const deficit = Math.min(0, resultatFiscal);
+      const deficitAbs = Math.abs(deficit);
+      const imputableGlobal = Math.min(FISCAL_CONSTANTS.DEFICIT_FONCIER_MAX, deficitAbs);
+
+      baseImposable = Math.max(0, resultatFiscal);
+
+      // IR + PS (location nue = IR + PS 17.2%)
+      const irSurBase = usePreciseIR
+        ? this.computeIRProgressif(baseImposable, parts, params)
+        : baseImposable * TMI;
+
+      impotRevenu         = irSurBase - (imputableGlobal * TMI);
+      prelevementsSociaux = baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+
+      chargesDeductibles  = interetsAnnuels + chargesHorsInterets + amortEffectif;
+
+      // Stocker les détails Jeanbrun pour l'affichage
+      regime._jeanbrun = {
+        niveau: jbNiveau,
+        typeBien: jbType,
+        decote: decote,
+        tauxAmort: tauxAmort,
+        amortEffectif: amortEffectif,
+        plafondAmort: plafondAmort,
+        loyerMarche: revenusNets,
+        loyerPlafonné: revenusNetsJeanbrun,
+        deficit: deficitAbs,
+        deficitImputable: imputableGlobal
+      };
+
+      break;
+    }
+
+    // ───────────────────────────────────────────────────────────
     // D) LMNP MICRO-BIC
     // ───────────────────────────────────────────────────────────
     case 'lmnp_micro': {
@@ -1343,9 +1425,13 @@ case 'sci_is': {
     Number(params.assurancePNO ?? 0) * 12 +
     Number(params.chargesCoproNonRecup ?? 0) * 12;
 
-  // 🆕 CF calculé en HC
+  // 🆕 CF calculé en HC (Jeanbrun : revenus plafonnés via décote)
+  const revenusNetsCFEffectifs = (key === 'nu_jeanbrun' && regime._jeanbrun)
+    ? revenusNetsCF * (1 - regime._jeanbrun.decote)
+    : revenusNetsCF;
+
   const cashflowNetAnnuel =
-    revenusNetsCF -
+    revenusNetsCFEffectifs -
     chargesCashAnnuel -
     totalImpots -
     mensualiteAnnuelle;
