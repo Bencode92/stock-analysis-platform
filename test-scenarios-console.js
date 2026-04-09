@@ -96,6 +96,9 @@
 
   async function runAnalysis(sc) {
     try {
+      // Vider le cache du comparateur (sinon même data = résultat caché)
+      if (analyzer.comparateur?.cache) analyzer.comparateur.cache.clear();
+
       const pd = buildPropertyData(sc);
       const result = await analyzer.performCompleteAnalysis(pd);
       return result?.fiscal || result?.fiscalResults || result?.results || [];
