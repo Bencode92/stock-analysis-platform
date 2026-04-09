@@ -1811,6 +1811,20 @@ apply: (statusId, score, answers, metrics) => {
   apply: (statusId, score) => (statusId === 'MICRO' ? score + 1.5 : score),
   criteria: 'taxation_optimization'
 },
+{
+  id: 'sasu_overkill_small_revenue',
+  description: 'SASU sur-dimensionnée sur petit CA sans besoin ARE ni levée',
+  condition: (a) => {
+    const ca = parseFloat(a.revenue_projection || 0);
+    return ca > 0 && ca < 50000 && !isYes(a.unemployment_benefits) && !isYes(a.fundraising);
+  },
+  apply: (statusId, score) => {
+    // SASU sans ARE ni levée à <50k = charges sociales et admin disproportionnées
+    if (statusId === 'SASU') return score - 2;
+    return score;
+  },
+  criteria: 'credibility'
+},
 
 // ── RÈGLES IS_OPTION (option à l'IS pour EURL/EI) — ajouté 2026-04-08 ──
 // Logique : EURL est par défaut à l'IR mais peut opter à l'IS (irrévocable
