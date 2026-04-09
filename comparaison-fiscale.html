@@ -1516,15 +1516,16 @@ td.neutral {
     <div id="jeanbrun-travaux-check" style="display:none; margin-top:0.75rem; padding:0.75rem; border-radius:8px; font-size:0.8rem;">
     </div>
 
-    <!-- Aide au choix du niveau de loyer -->
-    <div id="jeanbrun-loyer-help" style="margin-top:0.75rem; padding:0.75rem; background:rgba(99,102,241,0.08); border-radius:8px; font-size:0.8rem; color:rgba(255,255,255,0.7);">
+    <!-- Simulation des loyers plafonnés Jeanbrun -->
+    <div id="jeanbrun-loyer-help" style="margin-top:0.75rem; padding:0.75rem; background:rgba(99,102,241,0.08); border-radius:8px; font-size:0.85rem; color:rgba(255,255,255,0.8);">
       <div style="font-weight:600; color:#6366f1; margin-bottom:0.5rem;">
-        <i class="fas fa-info-circle"></i> Comment choisir le niveau de loyer ?
+        <i class="fas fa-coins"></i> Loyers plafonnés Jeanbrun
       </div>
-      <div id="jeanbrun-loyer-detail">
-        Comparez votre loyer saisi avec le loyer marché de la ville. Le niveau est déterminé par la décote appliquée :
-        <strong>−15%</strong> = intermédiaire, <strong>−30%</strong> = social, <strong>−45%</strong> = très social.
-        Des plafonds de ressources locataire s'appliquent aussi (non vérifiés ici).
+      <div id="jeanbrun-loyer-grid" style="display:none;">
+        <!-- Rempli dynamiquement : 3 cartes avec loyer marché → loyer plafonné -->
+      </div>
+      <div id="jeanbrun-loyer-no-data" style="color:rgba(255,255,255,0.5); font-size:0.8rem;">
+        <i class="fas fa-map-marker-alt"></i> Renseignez une ville et la surface pour voir les loyers plafonnés calculés automatiquement.
       </div>
       <div id="jeanbrun-loyer-suggestion" style="margin-top:0.5rem; display:none;"></div>
     </div>
@@ -3275,38 +3276,92 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // --- 2. Suggestion du niveau de loyer ---
+    // --- 2. Grille des loyers plafonnés + suggestion ---
+    const grid = document.getElementById('jeanbrun-loyer-grid');
+    const noData = document.getElementById('jeanbrun-loyer-no-data');
     const suggestion = document.getElementById('jeanbrun-loyer-suggestion');
-    if (suggestion && loyerHC > 0) {
-      // Récupérer le loyer marché (depuis la ville si dispo)
-      const villeData = window.villeSearchManager?.getSelectedVilleData();
-      const surface = parseFloat(document.getElementById('propertySurface')?.value) || 0;
-      const loyerMarcheM2 = villeData?.loyer_m2 || 0;
-      const loyerMarche = loyerMarcheM2 > 0 && surface > 0 ? loyerMarcheM2 * surface : 0;
+    const villeData = window.villeSearchManager?.getSelectedVilleData();
+    const surface = parseFloat(document.getElementById('propertySurface')?.value) || 0;
+    const loyerMarcheM2 = villeData?.loyer_m2 || 0;
+    const loyerMarche = loyerMarcheM2 > 0 && surface > 0 ? loyerMarcheM2 * surface : 0;
+    const villeName = villeData?.ville || '';
 
-      if (loyerMarche > 0) {
+    if (grid && loyerMarche > 0) {
+      noData.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+      grid.style.gap = '0.5rem';
+
+      const niveaux = [
+        { id: 'intermediaire', label: 'Intermédiaire', decote: 0.15, color: '#6366f1' },
+        { id: 'social',        label: 'Social',        decote: 0.30, color: '#818cf8' },
+        { id: 'tresSocial',    label: 'Très social',   decote: 0.45, color: '#a78bfa' }
+      ];
+
+      const fmt = (v) => Math.round(v).toLocaleString('fr-FR');
+      const niveauActuel = document.querySelector('input[name="jeanbrun-niveau"]:checked')?.value || 'intermediaire';
+
+      grid.innerHTML = niveaux.map(n => {
+        const loyerPlafond = loyerMarche * (1 - n.decote);
+        const selected = n.id === niveauActuel;
+        return `
+          <div style="
+            background: ${selected ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)'};
+            border: 1px solid ${selected ? n.color : 'rgba(255,255,255,0.1)'};
+            border-radius: 8px; padding: 0.6rem; text-align: center; cursor: pointer;
+            transition: all 0.2s ease;
+          " data-jb-niveau="${n.id}"
+             onmouseenter="this.style.borderColor='${n.color}'"
+             onmouseleave="this.style.borderColor='${selected ? n.color : 'rgba(255,255,255,0.1)'}'"
+          >
+            <div style="font-size:0.7rem; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.5px;">${n.label}</div>
+            <div style="font-size:0.7rem; color:rgba(255,255,255,0.4); margin:2px 0;">−${n.decote * 100}% du marché</div>
+            <div style="font-size:1.1rem; font-weight:700; color:${n.color};">${fmt(loyerPlafond)} €</div>
+            <div style="font-size:0.65rem; color:rgba(255,255,255,0.4);">${(loyerPlafond / Math.max(1, surface)).toFixed(1)} €/m²</div>
+          </div>`;
+      }).join('');
+
+      // Clic sur une carte = sélectionne le radio correspondant
+      grid.querySelectorAll('[data-jb-niveau]').forEach(card => {
+        card.addEventListener('click', () => {
+          const niveau = card.dataset.jbNiveau;
+          const radio = document.querySelector(`input[name="jeanbrun-niveau"][value="${niveau}"]`);
+          if (radio) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      });
+
+      // Marché de référence
+      grid.insertAdjacentHTML('beforebegin',
+        `<div style="font-size:0.75rem; color:rgba(255,255,255,0.5); margin-bottom:0.4rem;">
+          📍 <strong>${villeName}</strong> — Loyer marché : <strong>${fmt(loyerMarche)} €/mois</strong> (${loyerMarcheM2.toFixed(1)} €/m²)
+        </div>`
+      );
+
+      // Suggestion basée sur le loyer saisi
+      if (suggestion && loyerHC > 0) {
         const decoteReelle = ((loyerMarche - loyerHC) / loyerMarche) * 100;
-        let niveauSuggere = '';
-        let couleur = '';
-
-        if (decoteReelle >= 45) {
-          niveauSuggere = 'Très social (−45%)'; couleur = '#a78bfa';
-        } else if (decoteReelle >= 30) {
-          niveauSuggere = 'Social (−30%)'; couleur = '#818cf8';
-        } else if (decoteReelle >= 15) {
-          niveauSuggere = 'Intermédiaire (−15%)'; couleur = '#6366f1';
-        } else {
-          niveauSuggere = 'Loyer trop élevé pour Jeanbrun'; couleur = '#ef4444';
-        }
+        let niveauSuggere, couleur;
+        if (decoteReelle >= 45) { niveauSuggere = 'Très social'; couleur = '#a78bfa'; }
+        else if (decoteReelle >= 30) { niveauSuggere = 'Social'; couleur = '#818cf8'; }
+        else if (decoteReelle >= 15) { niveauSuggere = 'Intermédiaire'; couleur = '#6366f1'; }
+        else { niveauSuggere = 'Loyer trop élevé'; couleur = '#ef4444'; }
 
         suggestion.style.display = 'block';
-        suggestion.innerHTML = `
-          <i class="fas fa-lightbulb" style="color:${couleur};"></i>
-          Votre loyer (${loyerHC}€) = <strong>${decoteReelle.toFixed(0)}%</strong> sous le marché (${loyerMarche.toFixed(0)}€)
-          → Niveau suggéré : <strong style="color:${couleur};">${niveauSuggere}</strong>`;
-      } else {
-        suggestion.style.display = 'none';
+        suggestion.innerHTML = decoteReelle >= 15
+          ? `<i class="fas fa-lightbulb" style="color:${couleur};"></i>
+             Votre loyer (${fmt(loyerHC)} €) = <strong>${decoteReelle.toFixed(0)}%</strong> sous le marché
+             → <strong style="color:${couleur};">Niveau ${niveauSuggere}</strong>`
+          : `<i class="fas fa-exclamation-circle" style="color:#ef4444;"></i>
+             Votre loyer (${fmt(loyerHC)} €) n'est que <strong>${decoteReelle.toFixed(0)}%</strong> sous le marché.
+             <strong>Minimum −15% requis</strong> pour Jeanbrun.`;
       }
+    } else if (grid) {
+      grid.style.display = 'none';
+      if (noData) noData.style.display = 'block';
+      if (suggestion) suggestion.style.display = 'none';
     }
   }
   
