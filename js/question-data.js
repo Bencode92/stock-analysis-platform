@@ -4,58 +4,39 @@
 const sections = [
     {
         id: "profile",
-        title: "Profil & horizon personnel",
+        title: "Profil",
         icon: "fa-user",
-        description: "Informations sur votre situation personnelle"
+        description: "Situation personnelle, régime social et aides"
     },
     {
         id: "team",
-        title: "Équipe & gouvernance",
+        title: "Équipe",
         icon: "fa-users",
-        description: "Composition et structure de l'équipe"
+        description: "Structure de l'équipe et gouvernance"
     },
     {
         id: "activity",
-        title: "Nature de l'activité",
+        title: "Activité",
         icon: "fa-briefcase",
-        description: "Type d'activité et réglementation"
+        description: "Nature de l'activité et réglementation"
     },
     {
         id: "finances",
-        title: "Volumétrie & finances",
+        title: "Finances",
         icon: "fa-euro-sign",
-        description: "Aspects financiers et prévisionnels"
-    },
-    {
-        id: "capital",
-        title: "Capital & apports",
-        icon: "fa-piggy-bank",
-        description: "Structure du capital et apports initiaux"
-    },
-    {
-        id: "aids",
-        title: "Aides & dispositifs",
-        icon: "fa-hands-helping",
-        description: "Aides et dispositifs applicables"
+        description: "CA, capital, fiscalité et financement"
     },
     {
         id: "exit",
-        title: "Sortie & transmission",
+        title: "Sortie",
         icon: "fa-sign-out-alt",
         description: "Stratégie de sortie et transmission"
     },
     {
-        id: "advanced",
-        title: "Options avancées",
-        icon: "fa-cogs",
-        description: "Paramètres avancés pour utilisateurs experts",
-        isAdvanced: true
-    },
-    {
         id: "priorities",
-        title: "Priorisation des objectifs",
+        title: "Priorités",
         icon: "fa-tasks",
-        description: "Définissez vos priorités principales"
+        description: "Classez vos 3 priorités principales"
     }
 ];
 
@@ -666,10 +647,10 @@ const questions = [
         ]
     },
 
-    // Section 5: Capital & apports
+    // Capital (fusionné dans Finances)
     {
         id: "available_capital",
-        sectionId: "capital",
+        sectionId: "finances",
         title: "Capital social disponible",
         description: "Quel montant de capital social pouvez-vous apporter ?",
         type: "number",
@@ -681,10 +662,10 @@ const questions = [
         required: true
     },
 
-    // Section 6: Aides & dispositifs
+    // Aides (fusionné dans Profil)
     {
         id: "acre",
-        sectionId: "aids",
+        sectionId: "profile",
         title: "ACRE",
         description: "Souhaitez-vous bénéficier de l'Aide à la Création ou Reprise d'Entreprise (ACRE) ?",
         type: "radio",
@@ -696,7 +677,7 @@ const questions = [
     },
     {
         id: "jei_cir_cii",
-        sectionId: "aids",
+        sectionId: "profile",
         title: "JEI / CIR / CII",
         description: "Envisagez-vous de recourir aux dispositifs suivants ?",
         type: "checkbox",
@@ -768,7 +749,7 @@ const questions = [
 
     {
         id: "is_option",
-        sectionId: "advanced",
+        sectionId: "finances",
         title: "Option à l'IS pour EURL/EI",
         description: "Pour une EURL ou EI, souhaitez-vous opter pour l'impôt sur les sociétés (IS) ?",
         type: "radio",
@@ -780,7 +761,7 @@ const questions = [
     },
     {
         id: "real_expenses_rate",
-        sectionId: "advanced",
+        sectionId: "finances",
         title: "Projection micro vs réel",
        description: "Quel est votre taux de frais réels ? (À comparer avec l'abattement forfaitaire du régime micro-entreprise)",
         type: "slider",
