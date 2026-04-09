@@ -1179,7 +1179,7 @@ case 'lmnp_reel': {
   const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;  // ex: 8% → 0.08
   const tauxCom = Number(params.commissionImmo   ?? 0) / 100;  // ex: 4% → 0.04
   const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);  // ex: 0.15
-  const partMob = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);  // ex: 0.10
+  const partMob = Math.max(0, Math.min(1, Number(params.partMobilier ?? 10) / 100));  // Param formulaire (défaut 10%)
 
   // Frais d'acquisition intégrés au bâti (notaire + agence)
   const fraisNot   = prix * tauxNot;
@@ -1258,7 +1258,7 @@ case 'lmp': {
   const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;   // ex: 8% → 0.08
   const tauxCom = Number(params.commissionImmo   ?? 0) / 100;   // ex: 4% → 0.04
   const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);   // 0.15
-  const partMob = Number(FISCAL_CONSTANTS.LMNP_PART_MOBILIER ?? 0);   // 0.10
+  const partMob = Math.max(0, Math.min(1, Number(params.partMobilier ?? 10) / 100));  // Param formulaire
 
   const fraisNot   = prix * tauxNot;
   const commission = prix * tauxCom;
@@ -1855,7 +1855,7 @@ buildChargesSection(calc, params) {
 
       // ➕ Frais structurels (si saisis)
       Number(params.comptaAn ?? 0) > 0
-        ? { label: "Comptabilité SCI (honoraires)", value: Number(params.comptaAn), formula: "€/an", included: true }
+        ? { label: "Expert-comptable", value: Number(params.comptaAn), formula: "€/an", included: true }
         : null,
       Number(params.assuranceEmprunteurAn ?? 0) > 0
         ? { label: "Assurance emprunteur (ADI)", value: Number(params.assuranceEmprunteurAn), formula: "€/an", included: true }
