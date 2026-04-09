@@ -623,9 +623,13 @@ class PriceTargetUI {
     let tableRows = rows.map((row, idx) => {
       const isPos = row.avantageAchat >= 0;
       const isBE = row.isBreakEven;
-      const bg = isBE ? 'background-color:rgba(34,197,94,0.12)' : (idx%2===0 ? 'background-color:rgba(255,255,255,0.03)' : '');
-      const bl = isBE ? 'border-left:3px solid #22c55e' : '';
-      return `<tr style=”${bg};${bl}”><td style=”padding:8px 10px;color:#e2e8f0;font-weight:${isBE?'700':'400'};border:0;text-align:left”>${isBE?'🏆 ':''}An ${row.year}</td><td style=”padding:8px 10px;color:#60a5fa;border:0;text-align:right”>${fmt(row.patrimoineLocataire)}</td><td style=”padding:8px 10px;color:#4ade80;border:0;text-align:right”>${fmt(row.patrimoineProprio)}</td><td style=”padding:8px 10px;color:${isPos?'#22c55e':'#ef4444'};font-weight:700;border:0;text-align:right”>${isPos?'+':'−'}${fmt(Math.abs(row.avantageAchat))}</td></tr>`;
+      const cls = isBE ? 'bvr-be' : (idx%2===0 ? 'bvr-alt' : '');
+      return `<tr class=”${cls}”>` +
+        `<td class=”bvr-left ${isBE?'bvr-bold':''}” style=”color:#e2e8f0”>${isBE?'🏆 ':''}An ${row.year}</td>` +
+        `<td class=”bvr-right bvr-loc”>${fmt(row.patrimoineLocataire)}</td>` +
+        `<td class=”bvr-right bvr-prop”>${fmt(row.patrimoineProprio)}</td>` +
+        `<td class=”bvr-right ${isPos?'bvr-pos':'bvr-neg'}”>${isPos?'+':'−'}${fmt(Math.abs(row.avantageAchat))}</td>` +
+        `</tr>`;
     }).join('\n');
 
     return `
@@ -660,16 +664,33 @@ class PriceTargetUI {
           ${breakEvenMsg}
         </div>
 
-        <table style=”width:100%;border-collapse:collapse;font-size:0.85rem;table-layout:fixed”>
+        <div class=”buy-vs-rent-table-wrap” style=”overflow-x:auto”>
+        <style>
+          .bvr-table { width:100%; border-collapse:collapse; font-size:0.85rem; table-layout:fixed; }
+          .bvr-table th, .bvr-table td { padding:10px 12px; border:none; }
+          .bvr-table th { color:rgba(255,255,255,0.4); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px; }
+          .bvr-table thead tr { border-bottom:2px solid rgba(0,191,255,0.25); }
+          .bvr-table .bvr-right { text-align:right; }
+          .bvr-table .bvr-left { text-align:left; }
+          .bvr-table .bvr-loc { color:#60a5fa; }
+          .bvr-table .bvr-prop { color:#4ade80; }
+          .bvr-table .bvr-pos { color:#22c55e; font-weight:700; }
+          .bvr-table .bvr-neg { color:#ef4444; font-weight:700; }
+          .bvr-table .bvr-be { background:rgba(34,197,94,0.12); border-left:3px solid #22c55e; }
+          .bvr-table .bvr-alt { background:rgba(255,255,255,0.03); }
+          .bvr-table .bvr-bold { font-weight:700; }
+        </style>
+        <table class=”bvr-table”>
           <colgroup><col style=”width:20%”><col style=”width:27%”><col style=”width:27%”><col style=”width:26%”></colgroup>
-          <thead><tr style=”border-bottom:2px solid rgba(0,191,255,0.25)”>
-            <th style=”padding:10px;text-align:left;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;border:0”>Horizon</th>
-            <th style=”padding:10px;text-align:right;color:#3b82f6;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;border:0”>Locataire</th>
-            <th style=”padding:10px;text-align:right;color:#22c55e;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;border:0”>Propriétaire</th>
-            <th style=”padding:10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;border:0”>Δ Avantage</th>
+          <thead><tr>
+            <th class=”bvr-left”>Horizon</th>
+            <th class=”bvr-right” style=”color:#3b82f6”>Locataire</th>
+            <th class=”bvr-right” style=”color:#22c55e”>Propriétaire</th>
+            <th class=”bvr-right”>Δ Avantage</th>
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
+        </div>
 
         <div style=”margin-top:14px; font-size:0.7rem; color:rgba(255,255,255,0.3); text-align:center; line-height:1.5;”>
           Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP, pas d'impôt sur revenus de placement).
