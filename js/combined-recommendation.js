@@ -5200,6 +5200,12 @@ getStrengths(statusId) {
   // SASU
   if (statusId === 'SASU') {
     if (wantsAssimilated) strengths.push("Président assimilé salarié (régime général : maladie, retraite, prévoyance).");
+    if (isYes(answers.unemployment_benefits)) {
+      strengths.push("ARE préservée : en ne vous versant aucun salaire et en percevant uniquement des dividendes, vous conservez 100 % de vos allocations chômage. Les dividendes de SASU ne sont pas considérés comme un revenu d'activité par France Travail.");
+    }
+    if (['dividends','mixed'].includes(answers.remuneration_preference)) {
+      strengths.push("Dividendes sans cotisations sociales : contrairement à l'EURL (où les dividendes > 10 % du capital sont soumis aux cotisations SSI ~45 %), les dividendes de SASU ne supportent que les prélèvements sociaux (17,2 % CSG/CRDS) ou le PFU à 30 %.");
+    }
     if (wantsGovFlex) strengths.push("Grande liberté statutaire et de gouvernance.");
     if (fundraising) strengths.push("Attractive pour investisseurs (BSPCE, actions de préférence, pactes…).");
   }
@@ -5362,20 +5368,30 @@ getWeaknesses(statusId) {
   }
 
   // EURL
-  if (statusId === 'EURL') {
+  if (statusId === ‘EURL’) {
     if (wantsGovFlex) weaknesses.push("Moins flexible qu’une SASU pour la gouvernance et l’entrée d’investisseurs.");
     if (fundraising) weaknesses.push("Peu attractive pour les levées de fonds significatives.");
     if (wantsAssimilated) {
       weaknesses.push("Par défaut gérant associé = TNS (assimilé salarié seulement si gérant non associé).");
     }
-    weaknesses.push("À l’IS, dividendes > 10 % base (capital libéré + primes + CCA) assujettis aux cotisations TNS.");
+    weaknesses.push("À l’IS, dividendes > 10 % de la base (capital libéré + primes + CCA) sont assujettis aux cotisations TNS (~45 %). Conséquence : vous cotisez pour la retraite de base et complémentaire SSI, mais le montant net de dividendes perçu est significativement réduit.");
+    if (isYes(answers.unemployment_benefits)) {
+      weaknesses.push("Attention ARE : en tant que gérant TNS, des cotisations minimales SSI sont dues même sans rémunération. France Travail peut les considérer comme un revenu d’activité et réduire votre allocation chômage.");
+    }
+    if ([‘dividends’,’mixed’].includes(answers.remuneration_preference)) {
+      weaknesses.push("Cotisations retraite incluses mais limitées : le régime TNS (SSI) offre des cotisations retraite inférieures à celles du régime général. Sans complémentaire privée (Madelin), la pension de retraite sera nettement plus basse qu’en assimilé salarié (SASU).");
+    }
   }
 
   // SASU
-  if (statusId === 'SASU') {
+  if (statusId === ‘SASU’) {
     if (wantsTNS) weaknesses.push("Incompatible avec votre préférence TNS (président assimilé salarié).");
     if (revenue > 0 && revenue < 30000) weaknesses.push("Coûts de gestion/compta élevés pour un faible CA.");
-    weaknesses.push("Charges sociales élevées sur la rémunération (URSSAF, retraite).");
+    if ([‘dividends’].includes(answers.remuneration_preference) && !isYes(answers.unemployment_benefits)) {
+      weaknesses.push("Attention retraite si 100 % dividendes : sans vous verser de salaire, vous ne cotisez PAS pour la retraite (ni base ni complémentaire). Vous êtes couvert par la PUMA pour la santé, mais votre pension sera à 0 trimestre. Prévoyez une épargne retraite privée (PER) ou versez-vous un salaire minimum pour valider vos trimestres.");
+    } else {
+      weaknesses.push("Charges sociales élevées sur la rémunération (~65-80 % du net pour un salaire). Cet écart vs TNS (~45 %) est le prix d’une meilleure couverture retraite et prévoyance.");
+    }
   }
 
   // SAS
@@ -6089,17 +6105,41 @@ getStatusExplanations(statusId, answers) {
     if (tvaFranchiseNote) out.push({ title: "TVA — franchise en base", explanation: tvaFranchiseNote });
     if (tmiLabel) out.push({ title: "Lisibilité fiscale", explanation: `Bénéfices imposés à l’IR (TMI ${tmiLabel}). En cas de montée en charge, l’option IS (assimilation EURL) reste envisageable.` });
   }
-  else if (statusId === 'EURL') {
+  else if (statusId === ‘EURL’) {
     if (wantsProtect) out.push({ title: "Responsabilité limitée", explanation: "Votre patrimoine personnel est protégé à hauteur des apports." });
-    if (socialPrefTns) out.push({ title: "Coût social contenu (TNS)", explanation: "Un gérant associé unique relève du régime TNS, souvent moins coûteux qu’un régime assimilé salarié." });
+    if (socialPrefTns) out.push({ title: "Coût social contenu (TNS)", explanation: "Un gérant associé unique relève du régime TNS, souvent moins coûteux qu’un régime assimilé salarié. Attention : cotisations retraite de base plus faibles = pension de retraite plus basse à terme. Prévoyez un contrat Madelin/PER pour compenser." });
+    if ([‘dividends’,’mixed’].includes(answers.remuneration_preference)) {
+      out.push({
+        title: "Dividendes : attention au piège des cotisations SSI",
+        explanation: "En EURL à l’IS, les dividendes dépassant 10 % de la base (capital social + primes d’émission + CCA) sont soumis aux cotisations SSI (~45 %). Exemple concret : sur 50 000 € de dividendes avec un capital de 1 000 €, 49 900 € seront assujettis aux cotisations TNS. Résultat : vous cotisez pour la retraite SSI (pension modeste), mais le net perçu chute fortement. En contrepartie, ces cotisations ouvrent des droits retraite — mais au régime SSI, nettement moins favorable que le régime général (SASU)."
+      });
+    }
+    if (isYes(answers.unemployment_benefits)) {
+      out.push({
+        title: "Impact sur votre ARE (allocation chômage)",
+        explanation: "En tant que gérant TNS d’EURL, des cotisations minimales SSI sont dues même sans rémunération (~1 100 €/an). France Travail peut considérer l’existence de cette activité comme un revenu et recalculer votre ARE à la baisse. En SASU, le président sans salaire n’a aucune cotisation obligatoire — l’ARE est intégralement conservée."
+      });
+    }
     if (tmiLabel) out.push({ title: "Arbitrage IR / IS", explanation: `Par défaut à l’IR (TMI ${tmiLabel}) ; option possible pour l’IS (15 % puis 25 %) si votre TMI est élevée ou pour lisser la fiscalité.` });
     if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
   }
-  else if (statusId === 'SASU' || statusId === 'SAS') {
-    if (socialPrefAsm) out.push({ title: "Régime social ‘assimilé salarié’", explanation: "Protection du régime général pour le président (hors assurance chômage)." });
+  else if (statusId === ‘SASU’ || statusId === ‘SAS’) {
+    if (socialPrefAsm) out.push({ title: "Régime social ‘assimilé salarié’", explanation: "Protection du régime général pour le président (maladie, retraite de base + complémentaire AGIRC-ARRCO, prévoyance). Couverture supérieure au TNS, mais cotisations plus élevées sur le salaire." });
+    if (isYes(answers.unemployment_benefits)) {
+      out.push({
+        title: "Stratégie ARE + dividendes (votre cas)",
+        explanation: "En tant que président de SASU, vous pouvez ne vous verser aucun salaire et percevoir uniquement des dividendes. Les dividendes de SASU ne sont pas considérés comme un revenu d’activité par France Travail : votre ARE est intégralement maintenue. Aucune cotisation sociale n’est due (seulement 17,2 % de prélèvements sociaux ou PFU 30 %). C’est la stratégie optimale pour un créateur d’entreprise au chômage qui veut maximiser son reste à vivre."
+      });
+    }
+    if ([‘dividends’,’mixed’].includes(answers.remuneration_preference)) {
+      out.push({
+        title: "Dividendes sans cotisations sociales — mais attention retraite",
+        explanation: "Les dividendes de SASU/SAS ne supportent aucune cotisation sociale (contrairement à l’EURL : ~45 % au-delà de 10 % du capital). Fiscalement avantageux à court terme, mais contrepartie importante : si vous ne vous versez aucun salaire, vous ne validez aucun trimestre de retraite et n’acquérez aucun droit à la pension. Solution : versez-vous un salaire minimum (~600 €/mois) pour valider 4 trimestres/an, ou alimentez un PER individuel."
+      });
+    }
     if (wantsGovFlex) out.push({ title: "Gouvernance flexible", explanation: "Statuts personnalisables : organes, droits de vote, clauses d’agrément/inaliénabilité, actions de préférence…" });
     if (wantsFund)   out.push({ title: "Prête pour les investisseurs", explanation: "Ouvre facilement le capital (BSPCE, BSA, actions de préférence, pactes), adaptée aux levées de fonds." });
-    if (tmiLabel)    out.push({ title: "Arbitrage salaire/dividendes", explanation: `IS à 15 % / 25 % dissociant fiscalité pro/perso ; avec une TMI ${tmiLabel}, vous pouvez moduler salaire et dividendes.` });
+    if (tmiLabel)    out.push({ title: "Arbitrage salaire/dividendes", explanation: `IS à 15 % / 25 % dissociant fiscalité pro/perso ; avec une TMI ${tmiLabel}, vous pouvez moduler salaire et dividendes pour optimiser votre charge fiscale globale.` });
     if (isReducedISNote) out.push({ title: "IS à taux réduit (conditions)", explanation: isReducedISNote });
   }
   else if (statusId === 'SARL') {
