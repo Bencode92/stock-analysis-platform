@@ -1422,7 +1422,11 @@ function displayResults(recommendations) {
                 <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
                     <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
                 </button>
+                <button id="fiscal-sim-btn" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-lg ml-4">
+                    <i class="fas fa-chart-line mr-2"></i> Simulation fiscale 3 ans
+                </button>
             </div>
+            <div id="fiscal-simulation-3y" class="mt-8" style="display:none;"></div>
         </div>
     `;
     
@@ -1539,6 +1543,141 @@ function displayResults(recommendations) {
     document.getElementById('compare-btn').addEventListener('click', () => {
         alert('Fonctionnalité de comparaison à implémenter');
     });
+
+    // ── Simulation fiscale 3 ans ──
+    const fiscalSimBtn = document.getElementById('fiscal-sim-btn');
+    if (fiscalSimBtn) {
+        fiscalSimBtn.addEventListener('click', () => {
+            const container = document.getElementById('fiscal-simulation-3y');
+            if (!container) return;
+            if (container.style.display !== 'none') {
+                container.style.display = 'none';
+                return;
+            }
+
+            const A = window.userResponses || {};
+            const ca = parseFloat(A.projected_revenue || A.revenue_projection || 60000);
+            const marge = parseFloat(A.gross_margin || 50) / 100;
+            const nbAssocies = parseInt(A.associates_number || 1, 10);
+            const partAssocie = parseFloat(A.capital_percentage || 100) / 100;
+            const capitalSocial = parseFloat(A.available_capital || 1000);
+            const tauxRemuneration = A.remuneration_preference === 'dividends' ? 0.3 :
+                                     A.remuneration_preference === 'salary' ? 0.9 : 0.7;
+
+            // Map activity_type to typeMicro
+            const actMap = {bic_sales:'BIC_VENTE', bic_service:'BIC_SERVICE', bnc:'BNC', craft:'BIC_SERVICE', liberal:'BNC', consulting:'BNC'};
+            const typeMicro = actMap[A.activity_type] || 'BIC_SERVICE';
+
+            if (typeof SimulationsFiscales === 'undefined') {
+                container.innerHTML = '<p class="text-red-400 text-center p-4">Module de simulation fiscale non chargé.</p>';
+                container.style.display = 'block';
+                return;
+            }
+
+            const growth = 0.10; // +10% CA / an
+            const years = [
+                { label: 'Année 1', ca: ca },
+                { label: 'Année 2', ca: Math.round(ca * (1 + growth)) },
+                { label: 'Année 3', ca: Math.round(ca * (1 + growth) * (1 + growth)) }
+            ];
+
+            // Statuts to simulate = recommended ones
+            const statutsToSim = recommendations.map(r => r.id || r.status?.id || r.shortName || r.status?.shortName).filter(Boolean);
+            const simulators = {
+                MICRO: 'simulerMicroEntreprise',
+                EI: 'simulerEI',
+                EURL: 'simulerEURL',
+                SASU: 'simulerSASU',
+                SARL: 'simulerSARL',
+                SAS: 'simulerSAS',
+                SA: 'simulerSA'
+            };
+
+            const fmt = n => typeof n === 'number' ? n.toLocaleString('fr-FR') : '—';
+
+            let html = `
+                <div style="background:rgba(1,42,74,.4);border:1px solid rgba(0,255,135,.2);border-radius:12px;padding:24px;">
+                    <h3 style="color:#00ff87;font-size:1.25rem;margin-bottom:4px;">
+                        <i class="fas fa-chart-line"></i> Simulation fiscale sur 3 ans
+                    </h3>
+                    <p style="color:#94a3b8;font-size:.85rem;margin-bottom:16px;">
+                        CA initial : ${fmt(ca)} € | Marge : ${Math.round(marge*100)}% | Croissance : +${Math.round(growth*100)}%/an
+                    </p>
+            `;
+
+            statutsToSim.forEach(statutId => {
+                const method = simulators[statutId];
+                if (!method || typeof SimulationsFiscales[method] !== 'function') return;
+
+                html += `<h4 style="color:#e2e8f0;font-size:1rem;margin:16px 0 8px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:6px;">
+                    ${statutId}
+                </h4>`;
+                html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                    <thead>
+                        <tr style="color:#00ff87;text-align:right;">
+                            <th style="text-align:left;padding:6px 10px;"></th>
+                            <th style="padding:6px 10px;">CA</th>
+                            <th style="padding:6px 10px;">Charges sociales</th>
+                            <th style="padding:6px 10px;">Impôt (IR/IS)</th>
+                            <th style="padding:6px 10px;">Revenu net</th>
+                            <th style="padding:6px 10px;">% net/CA</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                years.forEach((y, yi) => {
+                    try {
+                        const params = {
+                            ca: y.ca,
+                            tauxMarge: marge,
+                            tauxRemuneration: tauxRemuneration,
+                            nbAssocies: nbAssocies,
+                            partAssocie: partAssocie,
+                            capitalSocial: capitalSocial,
+                            typeMicro: typeMicro,
+                            secteur: 'Tous',
+                            taille: '<50'
+                        };
+                        const res = SimulationsFiscales[method](params);
+                        if (!res || !res.compatible) {
+                            html += `<tr style="color:#94a3b8;${yi%2?'background:rgba(255,255,255,.03)':''}">
+                                <td style="padding:6px 10px;font-weight:600;">${y.label}</td>
+                                <td colspan="5" style="padding:6px 10px;text-align:center;color:#f87171;">Non compatible (CA: ${fmt(y.ca)} €)</td>
+                            </tr>`;
+                            return;
+                        }
+                        const charges = res.cotisationsSociales || res.chargesPatronales || 0;
+                        const impot = (res.impotRevenu || 0) + (res.is || 0);
+                        const net = res.revenuNetTotal || res.salaireNetApresIR || 0;
+                        const ratio = y.ca > 0 ? Math.round(net / y.ca * 100) : 0;
+                        const bgRow = yi % 2 ? 'background:rgba(255,255,255,.03);' : '';
+                        html += `<tr style="color:#e2e8f0;${bgRow}text-align:right;">
+                            <td style="text-align:left;padding:6px 10px;font-weight:600;">${y.label}</td>
+                            <td style="padding:6px 10px;">${fmt(y.ca)} €</td>
+                            <td style="padding:6px 10px;">${fmt(charges)} €</td>
+                            <td style="padding:6px 10px;">${fmt(impot)} €</td>
+                            <td style="padding:6px 10px;color:#00ff87;font-weight:700;">${fmt(net)} €</td>
+                            <td style="padding:6px 10px;">${ratio}%</td>
+                        </tr>`;
+                    } catch(e) {
+                        html += `<tr><td colspan="6" style="color:#f87171;padding:6px 10px;">${y.label} — Erreur: ${e.message}</td></tr>`;
+                    }
+                });
+
+                html += '</tbody></table></div>';
+            });
+
+            html += `
+                    <p style="color:#64748b;font-size:.75rem;margin-top:16px;text-align:center;">
+                        Simulation indicative basée sur vos réponses. Consultez un expert-comptable pour une projection personnalisée.
+                    </p>
+                </div>`;
+
+            container.innerHTML = html;
+            container.style.display = 'block';
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
 }
 
 // IMPORTANT: Exposer l'affichage des résultats de façon cohérente
