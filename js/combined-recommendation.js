@@ -1782,8 +1782,8 @@ apply: (statusId, score, answers, metrics) => {
     return ca > 0 && ca < 50000;
   },
   apply: (statusId, score) => {
-    if (statusId === 'MICRO') return score + 2;
-    if (statusId === 'EI')    return score + 1.5;
+    if (statusId === 'MICRO') return score + 2.5;
+    if (statusId === 'EI')    return score + 2;
     return score;
   },
   criteria: 'administrative_simplicity'
@@ -1796,7 +1796,7 @@ apply: (statusId, score, answers, metrics) => {
     return ca > 0 && ca < 50000;
   },
   apply: (statusId, score) => {
-    if (['SASU','SAS','SARL','EURL'].includes(statusId)) return score - 1.5;
+    if (['SASU','SAS','SARL','EURL'].includes(statusId)) return score - 2;
     return score;
   },
   criteria: 'social_charges'
@@ -1808,7 +1808,7 @@ apply: (statusId, score, answers, metrics) => {
     const ca = parseFloat(a.revenue_projection || 0);
     return ca > 0 && ca < 50000;
   },
-  apply: (statusId, score) => (statusId === 'MICRO' ? score + 1 : score),
+  apply: (statusId, score) => (statusId === 'MICRO' ? score + 1.5 : score),
   criteria: 'taxation_optimization'
 },
 
@@ -2239,8 +2239,8 @@ apply: (statusId, score, answers, metrics) => {
     a.governance_complexity === 'simple' &&
     String(a.control_preservation || '').toLowerCase() === 'essential',
   apply: (statusId, score) => {
-    if (statusId === 'SARL') return score + 2;
-    if (statusId === 'SAS')  return score - 1; // SAS sur-dimensionnée pour ce besoin
+    if (statusId === 'SARL') return score + 2.5;
+    if (statusId === 'SAS')  return score - 1.5;
     return score;
   },
   criteria: 'governance_flexibility'
@@ -2251,8 +2251,20 @@ apply: (statusId, score, answers, metrics) => {
   condition: (a) =>
     isYes(a.family_project) &&
     String(a.control_preservation || '').toLowerCase() === 'essential',
-  apply: (statusId, score) => (statusId === 'SARL' ? score + 1 : score),
+  apply: (statusId, score) => (statusId === 'SARL' ? score + 1.5 : score),
   criteria: 'patrimony_protection'
+},
+{
+  id: 'sarl_famille_transmission_admin',
+  description: 'SARL famille : cadre simple et stable pour transmission (pas besoin de statuts sur-mesure SAS)',
+  condition: (a) =>
+    isYes(a.family_project) && isYes(a.family_transmission),
+  apply: (statusId, score) => {
+    if (statusId === 'SARL') return score + 1;
+    if (statusId === 'SAS')  return score - 0.5;
+    return score;
+  },
+  criteria: 'administrative_simplicity'
 },
 
 {
