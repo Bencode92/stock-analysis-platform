@@ -233,7 +233,7 @@ const legalStatuses = {
     "Consultants ou prestataires recherchant une image corporate",
     "Projets appelés à évoluer en SAS multi-actionnaires"
   ],
-  casConseille: 'Salaire élevé, recherche d'investisseurs',
+  casConseille: "Salaire élevé, recherche d'investisseurs",
   casDeconseille: 'Très petit CA ou absence de rémunération',
   transmission: 'Oui',
   plafondCA: 'Aucun plafond',
@@ -269,7 +269,7 @@ const legalStatuses = {
   publicationComptes: 'Oui',
   formalites: 'Standard',
   activite: 'Commerciales, artisanales, industrielles ; pour professions libérales réglementées : en pratique SELARL',
-  leveeFonds: 'Limité (pas d'appel public à l'épargne, agrément obligatoire)',
+  leveeFonds: "Limité (pas d'appel public à l'épargne, agrément obligatoire)",
   entreeAssocies: "Encadrée (cession à des tiers soumise à agrément : majorité des associés représentant au moins la moitié des parts)",
   profilOptimal: 'PME ou société familiale recherchant stabilité',
   advantages: [
@@ -448,7 +448,7 @@ const legalStatuses = {
   regimeSocial: "Associés gérants : TNS ; gérant non associé : assimilé salarié (régime général). Associés non gérants : TNS s'ils exercent une activité",
   protectionPatrimoine: 'Non',
   chargesSociales: "À l'IR : cotisations TNS sur la part de bénéfices (même non distribués). À l'IS : cotisations sur la rémunération des associés TNS ; gérant non associé : sur salaire",
-  fiscal: 'Oui, selon IR/IS (transparence à l'IR ; IS sur option)',
+  fiscal: "Oui, selon IR/IS (transparence à l'IR ; IS sur option)",
   regimeTVA: "Assujettie ; franchise en base possible (85 000 € ventes / 37 500 € services ; tolérance 93 500 € / 41 250 €). Option TVA possible sous seuils",
   publicationComptes: "Non par défaut (obligatoire si tous les associés sont des sociétés à responsabilité limitée)",
   formalites: 'Standard (statuts, immatriculation, comptabilité commerciale)',
@@ -511,7 +511,7 @@ const legalStatuses = {
   publicationComptes: 'Non',
   formalites: "Standard : statuts, immatriculation au RCS, publicité ; AG annuelle recommandée",
   activite: "Gestion immobilière civile (pas d'activité commerciale : meublé habituel, marchand de biens… sauf choix de structures/régimes adaptés)",
-  leveeFonds: 'Non (pas d'appel public à l'épargne)',
+  leveeFonds: "Non (pas d'appel public à l'épargne)",
   entreeAssocies: 'Oui (souvent avec agrément prévu aux statuts)',
   profilOptimal: 'Gestion et transmission de patrimoine immobilier',
   advantages: [
@@ -1284,7 +1284,7 @@ const scoringRules = [
   // 3) Caution perso avec périmètre commun : malus plus fort (toutes formes)
   {
     id: 'guarantee_common_scope_strong_malus',
-    description: 'Caution personnelle susceptible d'engager les biens communs',
+    description: "Caution personnelle susceptible d'engager les biens communs",
     condition: (a) => !!a._bank_guarantee_common_scope,
     apply: (statusId, score) => (ALL_STATUS_IDS.includes(statusId) ? score - 0.5 : score),
     criteria: 'patrimony_protection',
@@ -1427,7 +1427,7 @@ apply: (statusId, score, answers, metrics) => {
 },
   {
   id: 'sa_scale_bonus',
-  description: 'SA adaptée aux projets d'envergure (CA, levée, #associés, gouvernance complexe)',
+  description: "SA adaptée aux projets d'envergure (CA, levée, #associés, gouvernance complexe)",
   condition: (a) =>
     (Number(a?.projected_revenue) >= 800000) ||
     (String(a?.fundraising).toLowerCase() === 'yes' && Number(a?.fundraising_amount) >= 2000000) ||
@@ -2058,7 +2058,7 @@ apply: (statusId, score, answers, metrics) => {
 },
 {
   id: 'sa_large_scale_bonus',
-  description: 'SA pour projets d'envergure…',
+  description: "SA pour projets d'envergure…",
   condition: (a) => {
     const nAssoc = parseInt(a.associates_number||0,10);
     const nInv   = parseInt(a.investors_count||0,10);
@@ -2095,7 +2095,7 @@ apply: (statusId, score, answers, metrics) => {
 },
 {
   id: 'many_investors_bonus_sas',
-  description: 'Nombre élevé d'investisseurs (angel/seed) → SAS/SA',
+  description: "Nombre élevé d'investisseurs (angel/seed) → SAS/SA",
   condition: answers => parseInt(answers.investors_count ?? answers.associates_number ?? 0, 10) > 20,
   apply: (statusId, score, answers, metrics) => {
     if (['SAS', 'SA'].includes(statusId)) return score + 0.75;
@@ -2186,7 +2186,7 @@ apply: (statusId, score, answers, metrics) => {
 },
 {
   id: 'employee_share_plan_bonus',
-  description: 'Plan d'actionnariat salarié : sociétés par actions avantagées',
+  description: "Plan d'actionnariat salarié : sociétés par actions avantagées",
   condition: (a) => isYes(a.employee_share_plan),
   apply: (statusId, score) =>
     (['SAS', 'SASU', 'SA', 'SELAS'].includes(statusId) ? score + 0.5 : score),
@@ -2529,7 +2529,7 @@ return score + (isRE ? 1 : 0.5);
 // 7) SCI/SNC : formes inadaptées à l'exercice libéral
 {
   id: 'regulated_sci_strong_malus',
-  description: 'SCI inadaptée à l'exercice libéral : malus',
+  description: "SCI inadaptée à l'exercice libéral : malus",
   condition: (a) => isYes(a.professional_order) || isYes(a.regulated_profession),
   apply: (statusId, score) => (statusId === 'SCI' ? score - 2 : score),
   criteria: 'credibility'
@@ -2598,7 +2598,7 @@ return score + (isRE ? 1 : 0.5);
 // 10) Dispositifs de partage (BSPCE/AGA…) quand éligible : avantage SELAS
 {
   id: 'regulated_sharing_instruments_selas',
-  description: 'Instruments d'intéressement/attraction talents : SELAS +',
+  description: "Instruments d'intéressement/attraction talents : SELAS +",
   condition: (a) =>
     (isYes(a.professional_order) || isYes(a.regulated_profession)) &&
     Array.isArray(a.sharing_instruments) &&
@@ -5679,7 +5679,7 @@ showStatusDetails(recommendation) {
             <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
           </h3>
           <ul class="space-y-2">
-            ${ weaknesses.length ? listHTML(weaknesses, 'fa-times', 'text-red-400') : '<li class="text-gray-300">Aucun point d'attention majeur identifié.</li>' }
+            ${ weaknesses.length ? listHTML(weaknesses, 'fa-times', 'text-red-400') : '<li class="text-gray-300">Aucun point d\'attention majeur identifié.</li>' }
           </ul>
         </div>
       </div>
