@@ -1,4 +1,4 @@
-// question-data.js - Données pour le simulateur de forme juridique 2025
+// question-data.js - Données pour le simulateur de forme juridique 2026
 
 // Sections du questionnaire
 const sections = [
@@ -231,19 +231,6 @@ const questions = [
         ]
     },
     {
-        id: "project_horizon",
-        sectionId: "profile",
-        title: "Horizon du projet",
-        description: "Sur quelle durée envisagez-vous votre projet ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "short", label: "Court terme (1-2 ans)", icon: "fa-clock" },
-            { id: "medium", label: "Moyen terme (3-5 ans)", icon: "fa-hourglass-half" },
-            { id: "long", label: "Long terme (plus de 5 ans)", icon: "fa-calendar-alt" }
-        ]
-    },
-    {
         id: "income_objective_year1",
         sectionId: "profile",
         title: "Objectif de revenu net - Année 1",
@@ -253,19 +240,6 @@ const questions = [
         max: 50000,
         step: 100,
         default: 2000,
-        format: "€/mois",
-        required: true
-    },
-    {
-        id: "income_objective_year3",
-        sectionId: "profile",
-        title: "Objectif de revenu net - Année 3",
-        description: "Quel revenu net mensuel souhaitez-vous dégager en troisième année ?",
-        type: "number",
-        min: 0,
-        max: 100000,
-        step: 100,
-        default: 3000,
         format: "€/mois",
         required: true
     },
@@ -321,32 +295,6 @@ const questions = [
   step: 1,
   default: 100,
   format: "%",
-  showIf: { "team_structure": ["family", "associates", "investors"] },
-  required: true
-},
-{
-  id: "associate_current_account",
-  sectionId: "team",
-  title: "Compte courant d'associé",
-  description: "Envisagez-vous d'apporter des fonds en compte courant d'associé ?",
-  type: "radio",
-  options: [
-    { id: "yes", label: "Oui", icon: "fa-check-circle" },
-    { id: "no", label: "Non", icon: "fa-times-circle" }
-  ],
-  showIf: { "team_structure": ["family", "associates", "investors"] },
-  required: true
-},
-{
-  id: "approval_clause",
-  sectionId: "team",
-  title: "Clause d'agrément / préemption",
-  description: "Souhaitez-vous une clause d'agrément ou de préemption ?",
-  type: "radio",
-  options: [
-    { id: "yes", label: "Oui", icon: "fa-check-circle" },
-    { id: "no", label: "Non", icon: "fa-times-circle" }
-  ],
   showIf: { "team_structure": ["family", "associates", "investors"] },
   required: true
 },
@@ -566,21 +514,6 @@ const questions = [
         required: false
     },
     {
-        id: "specific_approval",
-        sectionId: "activity",
-        title: "Agrément spécifique",
-        description: "Votre activité nécessite-t-elle un agrément spécifique ?",
-        type: "checkbox",
-        required: false,
-        options: [
-            { id: "amf", label: "AMF", icon: "fa-landmark" },
-            { id: "arcep", label: "ARCEP", icon: "fa-broadcast-tower" },
-            { id: "iobsp", label: "IOBSP", icon: "fa-money-bill-wave" },
-            { id: "kyc", label: "KYC", icon: "fa-id-card" },
-            { id: "other", label: "Autre", icon: "fa-plus-circle" }
-        ]
-    },
-    {
         id: "high_professional_risk",
         sectionId: "activity",
         title: "Risques professionnels élevés",
@@ -606,39 +539,13 @@ const questions = [
             { id: "exempt", label: "Activité exonérée", icon: "fa-ban" }
         ]
     },
-    {
-        id: "cnil_rgpd",
-        sectionId: "activity",
-        title: "Conformité CNIL/RGPD",
-        description: "Votre activité nécessite-t-elle une vérification CNIL/RGPD ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-shield-alt" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
-        id: "intellectual_property",
-        sectionId: "activity",
-        title: "Propriété intellectuelle",
-        description: "Votre activité implique-t-elle des enjeux de propriété intellectuelle ?",
-        type: "checkbox",
-        required: false,
-        options: [
-            { id: "patents", label: "Brevets", icon: "fa-certificate" },
-            { id: "trademarks", label: "Marques", icon: "fa-trademark" },
-            { id: "copyright", label: "Droits d'auteur", icon: "fa-copyright" },
-            { id: "software", label: "Logiciels", icon: "fa-laptop-code" }
-        ]
-    },
 
     // Section 4: Volumétrie & finances
     {
         id: "projected_revenue",
         sectionId: "finances",
         title: "Chiffre d'affaires prévisionnel",
-        description: "Quel chiffre d'affaires annuel prévoyez-vous pour la première année ? (Rappel: seuils micro 2026 - BIC vente: 203 100€, BIC service: 83 600€, BNC: 83 600€)",
+        description: "Quel chiffre d'affaires annuel prévoyez-vous pour la première année ? (Rappel: seuils micro en vigueur - BIC vente: 188 700€, BIC service: 77 700€, BNC: 77 700€)",
         type: "slider",
         min: 0,
         max: 1000000,
@@ -756,21 +663,6 @@ const questions = [
             { id: "flexible", label: "Flexible", icon: "fa-sliders-h" }
         ]
     },
-    {
-        id: "expense_structure",
-        sectionId: "finances",
-        title: "Structure des dépenses",
-        description: "Comment se répartissent vos principales dépenses ?",
-        type: "checkbox",
-        required: false,
-        options: [
-            { id: "equipment", label: "Équipement important", icon: "fa-tools" },
-            { id: "premises", label: "Locaux", icon: "fa-building" },
-            { id: "salaries", label: "Salaires", icon: "fa-users" },
-            { id: "stock", label: "Stock", icon: "fa-boxes" },
-            { id: "marketing", label: "Marketing", icon: "fa-ad" }
-        ]
-    },
 
     // Section 5: Capital & apports
     {
@@ -785,90 +677,6 @@ const questions = [
         default: 1000,
         format: "€",
         required: true
-    },
-    {
-        id: "liberated_percentage",
-        sectionId: "capital",
-        title: "Pourcentage libéré",
-        description: "Quel pourcentage du capital sera libéré immédiatement ?",
-        type: "slider",
-        min: 0,
-        max: 100,
-        step: 5,
-        default: 100,
-        format: "%",
-        required: true
-    },
-    {
-        id: "contributions_in_kind",
-        sectionId: "capital",
-        title: "Apports en nature",
-        description: "Prévoyez-vous des apports en nature ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
-        id: "contributions_in_kind_value",
-        sectionId: "capital",
-        title: "Valeur des apports en nature",
-        description: "Quelle est la valeur estimée de vos apports en nature ?",
-        type: "number",
-        min: 0,
-        max: 1000000,
-        step: 100,
-        default: 0,
-        format: "€",
-        showIf: {
-            "contributions_in_kind": ["yes"]
-        },
-        infoText: "Si > 30 000 € ou > 50% du capital, un Commissaire aux Apports (CAC) sera obligatoire",
-        required: false
-    },
-    {
-        id: "associate_current_account_amount",
-        sectionId: "capital",
-        title: "Apports en compte courant d'associé",
-        description: "Quel montant prévoyez-vous d'apporter en compte courant d'associé ?",
-        type: "number",
-        min: 0,
-        max: 1000000,
-        step: 100,
-        default: 0,
-        format: "€",
-        required: false
-    },
-    {
-        id: "progressive_contribution",
-        sectionId: "capital",
-        title: "Apport progressif",
-        description: "Souhaitez-vous pouvoir apporter le capital de façon progressive ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
-        id: "capital_structure",
-        sectionId: "capital",
-        title: "Structure du capital",
-        description: "Comment souhaitez-vous structurer votre capital ?",
-        type: "radio",
-        required: false,
-        showIf: {
-            "team_structure": ["associates", "investors"]
-        },
-        options: [
-            { id: "equal_shares", label: "Parts égales", icon: "fa-equals" },
-            { id: "majority", label: "Majoritaire", icon: "fa-greater-than" },
-            { id: "control", label: "Contrôle (>66%)", icon: "fa-crown" },
-            { id: "minority", label: "Minoritaire", icon: "fa-less-than" }
-        ]
     },
 
     // Section 6: Aides & dispositifs
@@ -895,60 +703,6 @@ const questions = [
             { id: "jei", label: "Jeune Entreprise Innovante (JEI)", icon: "fa-lightbulb" },
             { id: "cir", label: "Crédit d'Impôt Recherche (CIR)", icon: "fa-flask" },
             { id: "cii", label: "Crédit d'Impôt Innovation (CII)", icon: "fa-rocket" }
-        ]
-    },
-    {
-        id: "zone",
-        sectionId: "aids",
-        title: "Zone d'implantation spécifique",
-        description: "Votre entreprise sera-t-elle implantée dans une zone spécifique ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "zfu", label: "Zone Franche Urbaine (ZFU)", icon: "fa-city" },
-            { id: "qpv", label: "Quartier Prioritaire de la Ville (QPV)", icon: "fa-building" },
-            { id: "zrr", label: "Zone de Revitalisation Rurale (ZRR)", icon: "fa-tree" },
-            { id: "other", label: "Autre zone spécifique", icon: "fa-map-marker-alt" },
-            { id: "none", label: "Aucune zone spécifique", icon: "fa-times-circle" }
-        ]
-    },
-    {
-        id: "bpi_aids",
-        sectionId: "aids",
-        title: "Aides BPI, régionales, DeepTech",
-        description: "Envisagez-vous de solliciter des aides spécifiques ?",
-        type: "checkbox",
-        required: false,
-        options: [
-            { id: "bpi", label: "Aides BPI France", icon: "fa-landmark" },
-            { id: "regional", label: "Aides régionales", icon: "fa-map" },
-            { id: "deeptech", label: "Label DeepTech", icon: "fa-atom" }
-        ]
-    },
-    {
-        id: "cumulative_devices",
-        sectionId: "aids",
-        title: "Cumul de dispositifs",
-        description: "Souhaitez-vous cumuler plusieurs dispositifs d'aide ?",
-        type: "checkbox",
-        required: false,
-        options: [
-            { id: "acre_jei", label: "ACRE + JEI", icon: "fa-plus" },
-            { id: "cir_cii", label: "CIR + CII", icon: "fa-plus" },
-            { id: "zfu_acre", label: "ZFU + ACRE", icon: "fa-plus" },
-            { id: "other", label: "Autres combinaisons", icon: "fa-plus" }
-        ]
-    },
-    {
-        id: "startup_incentives",
-        sectionId: "aids",
-        title: "Incitations pour startups",
-        description: "Êtes-vous intéressé(e) par les incitations spécifiques aux startups ?",
-        type: "radio",
-        required: false,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
         ]
     },
 
@@ -983,34 +737,6 @@ const questions = [
         required: false
     },
     {
-        id: "exit_horizon",
-        sectionId: "exit",
-        title: "Horizon de sortie",
-        description: "Dans combien d'années envisagez-vous cette sortie ?",
-        type: "number",
-        min: 1,
-        max: 30,
-        step: 1,
-        default: 5,
-        format: "années",
-        showIf: {
-            "exit_intention": ["sale", "transmission"]
-        },
-        required: false
-    },
-    {
-        id: "donation_succession",
-        sectionId: "exit",
-        title: "Donation / Succession",
-        description: "Avez-vous planifié une donation ou succession ?",
-        type: "radio",
-        required: true,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
         id: "partial_transfer",
         sectionId: "exit",
         title: "Cession partielle",
@@ -1037,48 +763,7 @@ const questions = [
             { id: "no", label: "Non", icon: "fa-times-circle" }
         ]
     },
-    {
-        id: "pacte_dutreil",
-        sectionId: "exit",
-        title: "Pacte Dutreil",
-        description: "Êtes-vous intéressé(e) par le Pacte Dutreil pour la transmission ?",
-        type: "radio",
-        required: false,
-        showIf: {
-            "family_transmission": ["yes"]
-        },
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" },
-            { id: "need_info", label: "J'ai besoin d'informations", icon: "fa-info-circle" }
-        ]
-    },
 
-    // Section 8: Options avancées
-    {
-        id: "holding_company",
-        sectionId: "advanced",
-        title: "Holding de tête",
-        description: "Envisagez-vous de créer une holding de tête ?",
-        type: "radio",
-        required: false,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
-    {
-        id: "tax_integration",
-        sectionId: "advanced",
-        title: "Intégration fiscale de groupe",
-        description: "Souhaitez-vous mettre en place une intégration fiscale de groupe ?",
-        type: "radio",
-        required: false,
-        options: [
-            { id: "yes", label: "Oui", icon: "fa-check-circle" },
-            { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
-    },
     {
         id: "is_option",
         sectionId: "advanced",
@@ -1103,34 +788,6 @@ const questions = [
         default: 30,
         format: "%",
         required: false
-    },
-    {
-        id: "tax_optimization",
-        sectionId: "advanced",
-        title: "Optimisation fiscale",
-        description: "Quelles stratégies d'optimisation fiscale vous intéressent ?",
-        type: "checkbox",
-        required: false,
-        options: [
-            { id: "holding", label: "Structure de holding", icon: "fa-building" },
-            { id: "ip_box", label: "IP Box / Patent Box", icon: "fa-file-contract" },
-            { id: "international", label: "Structure internationale", icon: "fa-globe" },
-            { id: "r_and_d", label: "Optimisation R&D", icon: "fa-flask" }
-        ]
-    },
-    {
-        id: "accounting_complexity",
-        sectionId: "advanced",
-        title: "Complexité comptable",
-        description: "Quel niveau de complexité comptable pouvez-vous gérer ?",
-        type: "radio",
-        required: false,
-        options: [
-            { id: "simple", label: "Simple (comptabilité de trésorerie)", icon: "fa-calculator" },
-            { id: "moderate", label: "Modérée (comptabilité sans TVA)", icon: "fa-calculator" },
-            { id: "complete", label: "Complète (comptabilité d'engagement)", icon: "fa-calculator" },
-            { id: "outsourced", label: "Externalisée (expert-comptable)", icon: "fa-user-tie" }
-        ]
     },
 
     // Section 9: Priorisation des objectifs
