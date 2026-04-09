@@ -620,26 +620,22 @@ class PriceTargetUI {
       ? `<span style=”color:#22c55e; font-weight:700;”>L'achat devient plus rentable à partir de l'année ${breakEvenYear}</span>`
       : `<span style=”color:#ef4444; font-weight:600;”>L'achat ne rattrape pas la location sur ${duree} ans avec ces hypothèses</span>`;
 
+    // Construire les lignes en divs (plus fiable que table dans ce contexte)
     let tableRows = rows.map((row, idx) => {
       const isPos = row.avantageAchat >= 0;
-      const bgRow = row.isBreakEven
-        ? 'background:rgba(34,197,94,0.12); border-left:3px solid #22c55e;'
-        : (idx % 2 === 0 ? 'background:rgba(255,255,255,0.02);' : '');
+      const isBE = row.isBreakEven;
+      const bg = isBE
+        ? 'background:rgba(34,197,94,0.12);border-left:3px solid #22c55e;'
+        : (idx % 2 === 0 ? 'background:rgba(255,255,255,0.03);' : 'background:transparent;');
       return `
-        <tr style=”${bgRow}”>
-          <td style=”padding:10px 12px; font-weight:${row.isBreakEven ? '700' : '400'}; color:#e2e8f0; white-space:nowrap;”>
-            ${row.isBreakEven ? '<span style=”color:#22c55e;”>🏆</span> ' : '<span style=”opacity:0.3; margin-right:2px;”>·</span> '}Année ${row.year}
-          </td>
-          <td style=”padding:10px 12px; text-align:right; color:#60a5fa; font-variant-numeric:tabular-nums;”>
-            ${fmt(row.patrimoineLocataire)}
-          </td>
-          <td style=”padding:10px 12px; text-align:right; color:#4ade80; font-variant-numeric:tabular-nums;”>
-            ${fmt(row.patrimoineProprio)}
-          </td>
-          <td style=”padding:10px 12px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; color:${isPos ? '#22c55e' : '#ef4444'};”>
-            ${isPos ? '+' : '−'}${fmt(Math.abs(row.avantageAchat))}
-          </td>
-        </tr>`;
+        <div style=”display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:0;${bg};padding:0;border-radius:${isBE?'8':'0'}px;margin-bottom:1px;”>
+          <div style=”padding:10px 14px;color:#e2e8f0;font-weight:${isBE?'700':'400'};display:flex;align-items:center;”>
+            ${isBE ? '<span style=”color:#22c55e;font-size:1.1em;margin-right:6px;”>🏆</span>' : ''}Année ${row.year}
+          </div>
+          <div style=”padding:10px 14px;text-align:right;color:#60a5fa;font-weight:500;”>${fmt(row.patrimoineLocataire)}</div>
+          <div style=”padding:10px 14px;text-align:right;color:#4ade80;font-weight:500;”>${fmt(row.patrimoineProprio)}</div>
+          <div style=”padding:10px 14px;text-align:right;font-weight:700;color:${isPos?'#22c55e':'#ef4444'};”>${isPos?'+':'−'}${fmt(Math.abs(row.avantageAchat))}</div>
+        </div>`;
     }).join('');
 
     return `
@@ -671,28 +667,16 @@ class PriceTargetUI {
           ${breakEvenMsg}
         </div>
 
-        <div style=”overflow-x:auto;”>
-          <table style=”width:100%; border-collapse:separate; border-spacing:0; font-size:0.85rem;”>
-            <thead>
-              <tr>
-                <th style=”padding:10px 12px; text-align:left; color:rgba(255,255,255,0.5); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
-                  Horizon
-                </th>
-                <th style=”padding:10px 12px; text-align:right; color:#3b82f6; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
-                  <i class=”fas fa-building” style=”margin-right:4px;”></i>Locataire
-                </th>
-                <th style=”padding:10px 12px; text-align:right; color:#22c55e; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
-                  <i class=”fas fa-home” style=”margin-right:4px;”></i>Propriétaire
-                </th>
-                <th style=”padding:10px 12px; text-align:right; color:rgba(255,255,255,0.5); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.1);”>
-                  Δ Avantage
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
+        <div style=”font-size:0.85rem;”>
+          <!-- Header -->
+          <div style=”display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:0;border-bottom:2px solid rgba(0,191,255,0.2);padding-bottom:8px;margin-bottom:4px;”>
+            <div style=”padding:8px 14px;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.8px;”>Horizon</div>
+            <div style=”padding:8px 14px;text-align:right;color:#3b82f6;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.8px;”><i class=”fas fa-building” style=”margin-right:4px;”></i>Locataire</div>
+            <div style=”padding:8px 14px;text-align:right;color:#22c55e;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.8px;”><i class=”fas fa-home” style=”margin-right:4px;”></i>Propriétaire</div>
+            <div style=”padding:8px 14px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.8px;”>Δ Avantage</div>
+          </div>
+          <!-- Rows -->
+          ${tableRows}
         </div>
 
         <div style=”margin-top:14px; font-size:0.7rem; color:rgba(255,255,255,0.3); text-align:center; line-height:1.5;”>
