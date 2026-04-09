@@ -173,6 +173,16 @@
     return null;
   }
 
+  // -- Overlap holdings entre 2 ETF -----------------------------------------
+  function computeOverlap(etfA, etfB) {
+    const holdA = getHoldings(etfA).map(h => (h.t || '').toUpperCase()).filter(Boolean);
+    const holdB = getHoldings(etfB).map(h => (h.t || '').toUpperCase()).filter(Boolean);
+    if (!holdA.length || !holdB.length) return null;
+    const setB = new Set(holdB);
+    const common = holdA.filter(t => setB.has(t));
+    return Math.round((common.length / Math.min(holdA.length, holdB.length)) * 100);
+  }
+
   // -- ETFComparator ---------------------------------------------------------
   const ETFComparator = {
     MAX: MAX_SELECT,
@@ -257,6 +267,15 @@
             <i class="fas fa-bolt" style="margin-right:4px;"></i>Comparer
           </button>
         </div>
+        ${this.selected.size === 2 ? (() => {
+          const [a, b] = items;
+          const ov = computeOverlap(a, b);
+          if (ov == null) return '';
+          const ovColor = ov >= 70 ? '#f44336' : ov >= 30 ? '#ff9800' : '#4caf50';
+          return `<div style="font-size:0.7rem;color:${ovColor};font-family:'JetBrains Mono',monospace;" title="Pourcentage de holdings communs dans le top 10">
+            <i class="fas fa-clone" style="margin-right:3px;"></i>Overlap: ${ov}%
+          </div>`;
+        })() : ''}
       `;
     },
 

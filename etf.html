@@ -748,6 +748,32 @@
         .clear-btn:hover{color:var(--accent-color)}
         /* surlignage des hits */
         .search-highlight{background:var(--accent-subtle);border-radius:4px;padding:0 2px}
+      /* ── Tooltip enrichi sur hover ticker ────────────────────────────── */
+      .etf-tooltip {
+        position: absolute;
+        z-index: 9999;
+        background: rgba(10, 25, 41, 0.97);
+        border: 1px solid rgba(0, 255, 135, 0.3);
+        border-radius: 10px;
+        padding: 12px 14px;
+        max-width: 320px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        pointer-events: none;
+        font-size: 0.75rem;
+        color: #fff;
+        line-height: 1.4;
+        animation: tooltipIn .15s ease-out;
+      }
+      .etf-tooltip .tt-ticker { color:#00FF87; font-weight:700; font-size:0.85rem; font-family:'JetBrains Mono',monospace; }
+      .etf-tooltip .tt-name { opacity:.7; font-size:0.7rem; margin-top:2px; }
+      .etf-tooltip .tt-obj { margin-top:6px; opacity:.6; font-size:0.65rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+      .etf-tooltip .tt-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px; }
+      .etf-tooltip .tt-kv .k { font-size:0.55rem; text-transform:uppercase; opacity:.5; letter-spacing:.5px; }
+      .etf-tooltip .tt-kv .v { font-size:0.75rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
+      .etf-tooltip .tt-holdings { margin-top:8px; font-size:0.65rem; opacity:.7; }
+      .etf-tooltip .tt-holdings span { color:#00FF87; font-weight:600; }
+      @keyframes tooltipIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
       /* ── Sous-pills (drill-down) — visuellement subordonnées ────────── */
       .pills.sub-pills {
         position: relative;
@@ -1938,6 +1964,49 @@
             render();
           });
         });
+        // ── Tooltip enrichi au survol du ticker ──
+        let tooltipEl = null;
+        let tooltipTimer = null;
+        function showTooltip(cell, ticker){
+          hideTooltip();
+          const etf = dataAll.find(e => getTicker(e) === ticker);
+          if (!etf) return;
+          const holdings = toHoldings(etf).slice(0, 3);
+          const holdStr = holdings.map(h => `<span>${h.t||h.n||'?'}</span> ${h.w!=null?h.w.toFixed(1)+'%':''}`).join(' · ') || '–';
+          const el = document.createElement('div');
+          el.className = 'etf-tooltip';
+          el.innerHTML = `
+            <div class="tt-ticker">${ticker}</div>
+            <div class="tt-name">${getName(etf)}</div>
+            ${etf.objective ? `<div class="tt-obj">${String(etf.objective).slice(0,150)}…</div>` : ''}
+            <div class="tt-grid">
+              <div class="tt-kv"><div class="k">TER</div><div class="v">${fmtRatioPct(etf.total_expense_ratio??etf.ter)}</div></div>
+              <div class="tt-kv"><div class="k">AUM</div><div class="v">${fmtAUM(etf.aum_usd??etf.aum)}</div></div>
+              <div class="tt-kv"><div class="k">1 an</div><div class="v" style="color:${Number(etf.one_year_return_pct??etf.return_1y)>=0?'#4caf50':'#f44336'}">${fmtPct(etf.one_year_return_pct??etf.return_1y)}</div></div>
+            </div>
+            <div class="tt-holdings">Top 3 : ${holdStr}</div>
+          `;
+          const rect = cell.getBoundingClientRect();
+          el.style.left = rect.left + 'px';
+          el.style.top  = (rect.bottom + 6) + 'px';
+          document.body.appendChild(el);
+          tooltipEl = el;
+        }
+        function hideTooltip(){
+          if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+          clearTimeout(tooltipTimer);
+        }
+        document.addEventListener('mouseover', ev => {
+          const cell = ev.target.closest('[data-ticker-hover]');
+          if (cell) {
+            clearTimeout(tooltipTimer);
+            tooltipTimer = setTimeout(() => showTooltip(cell, cell.dataset.tickerHover), 350);
+          }
+        });
+        document.addEventListener('mouseout', ev => {
+          if (ev.target.closest('[data-ticker-hover]')) hideTooltip();
+        });
+
         // pill favoris
         $('#etf-az-fav-pill')?.addEventListener('click', () => {
           fFavOnly = !fFavOnly;
