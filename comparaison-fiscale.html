@@ -1512,8 +1512,25 @@ td.neutral {
         </div>
       </div>
     </div>
-    <div style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(99,102,241,0.08); border-radius:8px; font-size:0.8rem; color:rgba(255,255,255,0.7);">
-      <i class="fas fa-info-circle" style="color:#6366f1;"></i>
+    <!-- Validation travaux ≥ 30% (visible si ancien sélectionné) -->
+    <div id="jeanbrun-travaux-check" style="display:none; margin-top:0.75rem; padding:0.75rem; border-radius:8px; font-size:0.8rem;">
+    </div>
+
+    <!-- Aide au choix du niveau de loyer -->
+    <div id="jeanbrun-loyer-help" style="margin-top:0.75rem; padding:0.75rem; background:rgba(99,102,241,0.08); border-radius:8px; font-size:0.8rem; color:rgba(255,255,255,0.7);">
+      <div style="font-weight:600; color:#6366f1; margin-bottom:0.5rem;">
+        <i class="fas fa-info-circle"></i> Comment choisir le niveau de loyer ?
+      </div>
+      <div id="jeanbrun-loyer-detail">
+        Comparez votre loyer saisi avec le loyer marché de la ville. Le niveau est déterminé par la décote appliquée :
+        <strong>−15%</strong> = intermédiaire, <strong>−30%</strong> = social, <strong>−45%</strong> = très social.
+        Des plafonds de ressources locataire s'appliquent aussi (non vérifiés ici).
+      </div>
+      <div id="jeanbrun-loyer-suggestion" style="margin-top:0.5rem; display:none;"></div>
+    </div>
+
+    <div style="margin-top:0.5rem; padding:0.5rem 0.75rem; background:rgba(99,102,241,0.05); border-radius:8px; font-size:0.75rem; color:rgba(255,255,255,0.5);">
+      <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i>
       Engagement 9 ans min. Collectif uniquement. Amortissements réintégrés à la revente.
     </div>
   </div>
@@ -3190,20 +3207,107 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('✅ Régime sélectionné :', e.target.value);
 
-        // C) Afficher/masquer les options Jeanbrun
+        // C) Afficher/masquer les options Jeanbrun + déclencher la validation
         const jbPanel = document.getElementById('jeanbrun-options');
         if (jbPanel) {
           jbPanel.style.display = e.target.value === 'nu_jeanbrun' ? 'block' : 'none';
+          if (e.target.value === 'nu_jeanbrun') {
+            setTimeout(updateJeanbrunValidation, 100);
+          }
         }
       });
     });
 
-    // Propager les sous-options Jeanbrun vers le data object
+    // Propager les sous-options Jeanbrun + validation dynamique
     document.querySelectorAll('input[name="jeanbrun-type"], input[name="jeanbrun-niveau"]').forEach(input => {
       input.addEventListener('change', () => {
         console.log('🏛️ Jeanbrun option changée :', input.name, '=', input.value);
+        updateJeanbrunValidation();
       });
     });
+
+    // Écouter aussi les changements de prix et travaux pour la validation
+    ['propertyPrice', 'travaux-renovation', 'loyer-hc'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateJeanbrunValidation);
+    });
+  }
+
+  /**
+   * Validation dynamique du panneau Jeanbrun :
+   * 1. Vérifie travaux ≥ 30% du prix si "ancien" sélectionné
+   * 2. Suggère le niveau de loyer basé sur le loyer saisi vs marché
+   */
+  function updateJeanbrunValidation() {
+    const jbPanel = document.getElementById('jeanbrun-options');
+    if (!jbPanel || jbPanel.style.display === 'none') return;
+
+    const typeAncien = document.querySelector('input[name="jeanbrun-type"]:checked')?.value === 'ancien';
+    const prix = parseFloat(document.getElementById('propertyPrice')?.value) || 0;
+    const travaux = parseFloat(document.getElementById('travaux-renovation')?.value) || 0;
+    const loyerHC = parseFloat(document.getElementById('loyer-hc')?.value) || 0;
+
+    // --- 1. Validation travaux ≥ 30% ---
+    const travauxCheck = document.getElementById('jeanbrun-travaux-check');
+    if (travauxCheck) {
+      if (typeAncien && prix > 0) {
+        travauxCheck.style.display = 'block';
+        const ratio = (travaux / prix) * 100;
+        const ok = ratio >= 30;
+        travauxCheck.style.background = ok
+          ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.15)';
+        travauxCheck.style.border = ok
+          ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(239,68,68,0.4)';
+        travauxCheck.innerHTML = ok
+          ? `<i class="fas fa-check-circle" style="color:#22c55e;"></i>
+             Travaux = <strong>${ratio.toFixed(1)}%</strong> du prix d'achat (≥ 30%) — <strong>éligible</strong>`
+          : `<i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+             Travaux = <strong>${ratio.toFixed(1)}%</strong> du prix d'achat — <strong>minimum 30% requis</strong> (${Math.ceil(prix * 0.3).toLocaleString('fr-FR')} €).
+             <br>Renseignez le montant dans <em>Paramètres avancés → Travaux de rénovation initiaux</em>.`;
+      } else {
+        travauxCheck.style.display = typeAncien ? 'block' : 'none';
+        if (typeAncien && prix === 0) {
+          travauxCheck.style.background = 'rgba(245,158,11,0.1)';
+          travauxCheck.style.border = '1px solid rgba(245,158,11,0.3)';
+          travauxCheck.innerHTML = `<i class="fas fa-info-circle" style="color:#f59e0b;"></i>
+            Renseignez le prix d'achat pour vérifier l'éligibilité travaux ≥ 30%.`;
+        }
+      }
+    }
+
+    // --- 2. Suggestion du niveau de loyer ---
+    const suggestion = document.getElementById('jeanbrun-loyer-suggestion');
+    if (suggestion && loyerHC > 0) {
+      // Récupérer le loyer marché (depuis la ville si dispo)
+      const villeData = window.villeSearchManager?.getSelectedVilleData();
+      const surface = parseFloat(document.getElementById('propertySurface')?.value) || 0;
+      const loyerMarcheM2 = villeData?.loyer_m2 || 0;
+      const loyerMarche = loyerMarcheM2 > 0 && surface > 0 ? loyerMarcheM2 * surface : 0;
+
+      if (loyerMarche > 0) {
+        const decoteReelle = ((loyerMarche - loyerHC) / loyerMarche) * 100;
+        let niveauSuggere = '';
+        let couleur = '';
+
+        if (decoteReelle >= 45) {
+          niveauSuggere = 'Très social (−45%)'; couleur = '#a78bfa';
+        } else if (decoteReelle >= 30) {
+          niveauSuggere = 'Social (−30%)'; couleur = '#818cf8';
+        } else if (decoteReelle >= 15) {
+          niveauSuggere = 'Intermédiaire (−15%)'; couleur = '#6366f1';
+        } else {
+          niveauSuggere = 'Loyer trop élevé pour Jeanbrun'; couleur = '#ef4444';
+        }
+
+        suggestion.style.display = 'block';
+        suggestion.innerHTML = `
+          <i class="fas fa-lightbulb" style="color:${couleur};"></i>
+          Votre loyer (${loyerHC}€) = <strong>${decoteReelle.toFixed(0)}%</strong> sous le marché (${loyerMarche.toFixed(0)}€)
+          → Niveau suggéré : <strong style="color:${couleur};">${niveauSuggere}</strong>`;
+      } else {
+        suggestion.style.display = 'none';
+      }
+    }
   }
   
   // ─────────────────────────────────────────────────────────────────────
