@@ -1360,8 +1360,16 @@
           {key:'aerospace_defense',  label:'Aerospace & Défense'},
           {key:'transportation',     label:'Transport'},
         ],
-        // Finance et REITs n'ont pas de drill-down : etf_exposure.py ne les
-        // sous-classe pas (financial et reits sont des catégories monolithiques).
+        finance: [
+          {key:'financials',     label:'Financials (broad)'},
+          {key:'banks',          label:'Banks'},
+          {key:'regional_banks', label:'Regional banks'},
+          {key:'insurance',      label:'Insurance'},
+        ],
+        reits: [
+          {key:'reits',           label:'REITs (broad)'},
+          {key:'mortgage_reits',  label:'Mortgage REITs'},
+        ],
       };
 
       function matchesFineExposure(e, key){

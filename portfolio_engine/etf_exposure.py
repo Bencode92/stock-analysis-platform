@@ -707,6 +707,16 @@ TICKER_TO_EXPOSURE = {
     "vgk": "europe",
 
     # === FINANCIALS (10) ===
+    # === Banks / Insurance / Regional Banks (sous-catégories financials) ===
+    "kbe": "banks",
+    "kbwb": "banks",
+    "ftxo": "banks",
+    "kie": "insurance",
+    "iak": "insurance",
+    "kre": "regional_banks",
+    "iat": "regional_banks",
+    "dpst": "regional_banks",   # Direxion 3x Regional Banks Bull
+
     "dfnl": "financials",
     "gabf": "financials",
     "iyg": "financials",
@@ -1581,6 +1591,10 @@ TICKER_TO_EXPOSURE = {
     "wbil": "quality",
 
     # === REITS (36) ===
+    # === Mortgage REITs (sous-catégorie reits) ===
+    "mort": "mortgage_reits",
+    "rem": "mortgage_reits",
+
     "area": "reits",
     "avre": "reits",
     "bbre": "reits",
@@ -1600,7 +1614,7 @@ TICKER_TO_EXPOSURE = {
     "iyr": "reits",
     "jre": "reits",
     "lpre": "reits",
-    "mort": "reits",
+    # "mort" → mortgage_reits (défini plus haut dans la section Mortgage REITs)
     "mvrl": "reits",
     "netl": "reits",
     "nure": "reits",

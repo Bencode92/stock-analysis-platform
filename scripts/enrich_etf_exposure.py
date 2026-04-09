@@ -111,7 +111,7 @@ EXPOSURE_TO_SECTOR: dict[str, str] = {
 
     # === Finance ===
     "financials": "finance", "banks": "finance", "insurance": "finance",
-    "regional_banks": "finance",
+    "regional_banks": "finance", "closed_end_fund": "finance",
 
     # === Énergie ===
     "energy": "energy", "oil_gas": "energy", "clean_energy": "energy",
@@ -120,6 +120,7 @@ EXPOSURE_TO_SECTOR: dict[str, str] = {
 
     # === REITs / immobilier ===
     "reits": "reits", "real_estate": "reits", "mortgage_reits": "reits",
+    "homebuilders": "reits",
 
     # === Consommation ===
     "consumer_discretionary": "consumer", "consumer_staples": "consumer",

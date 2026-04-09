@@ -696,9 +696,47 @@ const PRESETS_ETF = {
       // 6 bis. Filtre exposures (etf_exposure.py — catégorisation curated)
       state.filters.exposures = new Set(preset.exposures || []);
 
+      // 6 ter. Synchro pills A→Z avec le preset (si les pills existent sur la page)
+      // Mapping exposure → geo pill
+      const EXPO_TO_GEO = {
+        sp500:'us',nasdaq100:'us',russell2000:'us',russell1000:'us',dow:'us',dow30:'us',
+        us_total_market:'us',us_equity:'us',us_large_cap:'us',us_mid_cap:'us',us_small_cap:'us',
+        sp400_midcap:'us',sp600_smallcap:'us',sp500_value:'us',sp500_growth:'us',sp500_quality:'us',
+        europe:'europe',eurozone:'europe',ftse100:'europe',uk:'europe',germany:'europe',
+        france:'europe',switzerland:'europe',msci_europe:'europe',
+        japan:'asia',south_korea:'asia',taiwan:'asia',asia_pacific:'asia',asia_ex_japan:'asia',
+        emerging_markets:'emerging',china:'emerging',india:'emerging',brazil:'emerging',
+        mexico:'emerging',latin_america:'emerging',frontier:'emerging',
+        acwi:'world',msci_world:'world',global_developed:'world',eafe:'world',
+        international:'world',global_equity:'world',developed_markets:'world',
+      };
+      const EXPO_TO_SECTOR = {
+        tech:'tech',semiconductors:'tech',semiconductor:'tech',software:'tech',ai:'tech',
+        cloud:'tech',cybersecurity:'tech',robotics:'tech',fintech:'tech',cloud_computing:'tech',
+        healthcare:'health',biotech:'health',pharma:'health',genomics:'health',medical_devices:'health',
+        financials:'finance',banks:'finance',insurance:'finance',regional_banks:'finance',
+        energy:'energy',oil_gas:'energy',clean_energy:'energy',solar:'energy',uranium:'energy',
+        reits:'reits',real_estate:'reits',mortgage_reits:'reits',
+        consumer_discretionary:'consumer',consumer_staples:'consumer',retail:'consumer',
+        industrials:'industrial',aerospace_defense:'industrial',transportation:'industrial',infrastructure:'industrial',
+        gold_physical:'metals',gold_miners:'metals',silver_physical:'metals',silver_miners:'metals',
+        copper:'metals',platinum:'metals',palladium:'metals',metals_mining:'metals',materials:'metals',
+      };
+      if (preset.exposures && preset.exposures.length > 0) {
+        // Déduire la geo et le sector à partir de la première exposure
+        const firstExpo = preset.exposures[0];
+        const geoKey = EXPO_TO_GEO[firstExpo] || 'all';
+        const secKey = EXPO_TO_SECTOR[firstExpo] || 'all';
+        // Click les pills correspondantes si elles existent
+        const geoBtn = document.querySelector(`[data-geo="${geoKey}"]`);
+        if (geoBtn) geoBtn.click();
+        const secBtn = document.querySelector(`[data-sectorpill="${secKey}"]`);
+        if (secBtn) secBtn.click();
+      }
+
       // 7. Filtres personnalisés
       state.customFilters = [...preset.customFilters]; // copie
-      
+
       // 8. Rebuild UI et recalculer
       recomputeFacetCatalogs();
       renderDynamicFacets();
