@@ -1401,6 +1401,7 @@
       let scope = 'GLOBAL'; // GLOBAL | ACTIONS | BONDS
       let fGeo = 'all', fSectorPill = 'all', fStrategy = 'all';
       let fGeoFine = 'all', fSectorFine = 'all'; // drill-down (exposure exact)
+      let sortKey = null, sortAsc = true; // tri colonnes
       let dataAll = [];
       let indexAZ = {};
       let lastUpdate = null;
@@ -1469,15 +1470,16 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>TICKER / NOM</th>
-                    <th>TER</th>
-                    <th>AUM</th>
+                    <th class="sortable" data-sort="ticker" style="cursor:pointer;">TICKER / NOM <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="ter" style="cursor:pointer;">TER <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="aum" style="cursor:pointer;">AUM <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th>DERNIER</th>
-                    <th>VAR %</th>
-                    <th>YTD %</th>
-                    <th>1 AN %</th>
-                    <th>VOLATILITÉ</th>
-                    <th>RENDEMENT</th>
+                    <th class="sortable" data-sort="var" style="cursor:pointer;">VAR % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="ytd" style="cursor:pointer;">YTD % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="1y" style="cursor:pointer;">1 AN % <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="vol" style="cursor:pointer;">VOLATILITÉ <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="yield" style="cursor:pointer;">RENDEMENT <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
+                    <th class="sortable" data-sort="exposure" style="cursor:pointer;">EXPO <i class="fas fa-sort" style="opacity:.3;font-size:.6rem;margin-left:3px;"></i></th>
                     <th></th>
                   </tr>
                 </thead>
@@ -1526,17 +1528,40 @@
           return true;
         });
       }
+      // Tri colonnes : extracteur de valeur numérique par clé de tri
+      const SORT_GETTERS = {
+        ticker:   e => getTicker(e).toLowerCase(),
+        ter:      e => Number(e.total_expense_ratio ?? e.ter ?? 999),
+        aum:      e => Number(e.aum_usd ?? e.aum ?? 0),
+        var:      e => Number(e.daily_change_pct ?? e.return_1d ?? 0),
+        ytd:      e => Number(e.ytd_return_pct ?? e.return_ytd ?? 0),
+        '1y':     e => Number(e.one_year_return_pct ?? e.return_1y ?? 0),
+        vol:      e => Number(e.vol_3y_pct ?? e.volatility ?? 0),
+        yield:    e => Number(e.yield_ttm ?? e.dividend_yield ?? 0),
+        exposure: e => String(e.exposure || 'zzz'),
+      };
+
       function indexByLetter(list){
         const map = {}; 'abcdefghijklmnopqrstuvwxyz'.split('').forEach(l=>map[l]=[]);
         list.forEach(e => {
-          // Utiliser getTicker pour le classement alphabétique
           const keySrc = String(getTicker(e)).trim();
           if (!keySrc || keySrc === '—') return;
           const first = keySrc[0].toLowerCase();
           if (map[first]) map[first].push(e);
         });
-        // Trier par ticker avec helper
-        Object.keys(map).forEach(l => map[l].sort((a,b)=> String(getTicker(a)).localeCompare(String(getTicker(b)))));
+        // Tri : si sortKey actif, trier par cette colonne. Sinon alphabétique.
+        const getter = sortKey && SORT_GETTERS[sortKey];
+        Object.keys(map).forEach(l => {
+          if (getter) {
+            map[l].sort((a, b) => {
+              const va = getter(a), vb = getter(b);
+              const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+              return sortAsc ? cmp : -cmp;
+            });
+          } else {
+            map[l].sort((a, b) => String(getTicker(a)).localeCompare(String(getTicker(b))));
+          }
+        });
         return map;
       }
 
@@ -1599,7 +1624,7 @@
 
           if (!list.length){
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="10" class="text-center py-4 text-gray-400">
+            tr.innerHTML = `<td colspan="12" class="text-center py-4 text-gray-400">
                 <i class="fas fa-info-circle mr-2"></i>Aucun ETF pour cette lettre
               </td>`;
             body.appendChild(tr);
@@ -1636,6 +1661,7 @@
               <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
               <td class="text-right">${fmtPct(etf.vol_3y_pct ?? etf.volatility, 2, false)}</td>
               <td class="text-right">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</td>
+              <td class="text-center"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium" style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);color:rgba(255,255,255,0.75);font-family:'JetBrains Mono',monospace;font-size:0.6rem;white-space:nowrap;">${etf.exposure || '–'}</span></td>
               <td class="text-center">
                 <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
                   <i class="fas fa-chevron-down"></i>
@@ -1663,7 +1689,7 @@
             const details = document.createElement('tr');
             details.className = 'details-row hidden';
             details.innerHTML = `
-              <td colspan="10">
+              <td colspan="12">
                 <div class="grid md:grid-cols-3 gap-6 p-4 text-sm">
                   <div>
                     <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Objectif du fonds</div>
@@ -1789,6 +1815,22 @@
             render();
           });
         });
+        // tri colonnes (clic sur les <th> sortables)
+        document.addEventListener('click', ev => {
+          const th = ev.target.closest('th.sortable');
+          if (!th || !th.dataset.sort) return;
+          const key = th.dataset.sort;
+          if (sortKey === key) { sortAsc = !sortAsc; }
+          else { sortKey = key; sortAsc = (key === 'ter' || key === 'vol'); /* asc par défaut pour "moins = mieux" */ }
+          // Mise à jour des icônes dans TOUS les thead (chaque lettre a le sien)
+          $$('th.sortable i.fas').forEach(i => { i.className = 'fas fa-sort'; i.style.opacity = '.3'; });
+          $$(`th.sortable[data-sort="${key}"] i.fas`).forEach(i => {
+            i.className = sortAsc ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            i.style.opacity = '1';
+          });
+          render();
+        });
+
         // bouton auto-comparateur (top 5 du pool filtré)
         $('#etf-az-auto-compare')?.addEventListener('click', () => {
           if (!window.ETFComparator) return;
