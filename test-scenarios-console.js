@@ -54,13 +54,52 @@
     setField('commission-immo', sc.commission || 4);
   }
 
-  async function runAnalysis() {
+  // Construire le propertyData complet comme le fait le formulaire
+  function buildPropertyData(sc) {
+    const loyerCC = sc.loyerHC + (sc.chargesRecup || 50);
+    return {
+      ville: sc.ville || {},
+      prixPaye: sc.prix,
+      surface: sc.surface,
+      loyerActuel: sc.loyerHC,
+      loyerHC: sc.loyerHC,
+      charges: sc.chargesRecup || 50,
+      monthlyCharges: sc.chargesRecup || 50,
+      loyerCC: loyerCC,
+      apport: sc.apport,
+      duree: sc.duree,
+      taux: sc.taux,
+      tmi: sc.tmi,
+      typeAchat: sc.typeAchat || 'classique',
+      occupationMode: 'investment',
+      partnerContribution: 0,
+      fraisBancairesDossier: 900,
+      fraisBancairesCompte: 150,
+      fraisGarantie: 1.3709,
+      taxeFonciere: sc.taxeFonciere || 800,
+      vacanceLocative: sc.vacance || 0,
+      gestionLocativeTaux: sc.gestion || 0,
+      gestionLocative: (sc.gestion || 0) > 0,
+      travaux: sc.travaux || 0,
+      travauxRenovation: sc.travaux || 0,
+      entretienAnnuel: sc.entretien || 500,
+      chargesCoproNonRecup: sc.copro || 50,
+      assurancePNO: sc.pno || 15,
+      fraisNotaireTaux: sc.notaire || 8,
+      commissionImmo: sc.commission || 4,
+      regimeActuel: 'nu_micro',
+      forceRegime: false,
+      jeanbrunType: sc.jeanbrunType || 'ancien',
+      jeanbrunNiveau: sc.jeanbrunNiveau || 'intermediaire'
+    };
+  }
+
+  async function runAnalysis(sc) {
     try {
-      const result = await analyzer.performCompleteAnalysis();
-      return result?.fiscalResults || result?.results || [];
+      const pd = buildPropertyData(sc);
+      const result = await analyzer.performCompleteAnalysis(pd);
+      return result?.fiscal || result?.fiscalResults || result?.results || [];
     } catch (e) {
-      // Fallback : extraire les résultats depuis la propriété
-      if (analyzer.lastFiscalResults) return analyzer.lastFiscalResults;
       console.warn('performCompleteAnalysis error:', e.message);
       return [];
     }
@@ -134,7 +173,7 @@
     console.log(`%c${sc.desc}`, 'color:#94a3b8');
     console.log(`Prix: ${sc.prix.toLocaleString('fr-FR')}€ | ${sc.surface}m² | Loyer: ${sc.loyerHC}€ | TMI: ${sc.tmi}% | Compta: ${sc.comptaAn}€ | CFE: ${sc.cfeAn}€ | Mob: ${sc.partMobilier}%`);
 
-    const raw = await runAnalysis();
+    const raw = await runAnalysis(sc);
     const res = extractResults(raw);
 
     if (res.length === 0) {
@@ -199,8 +238,9 @@
     { label: 'Compta 1200€ + CFE 500€', comptaAn: 1200, cfeAn: 500 },
     { label: 'Compta 1500€ + CFE 800€', comptaAn: 1500, cfeAn: 800 }
   ]) {
-    injectScenario({ ...baseSc, ...cfg });
-    const raw = await runAnalysis();
+    const scCfg = { ...baseSc, ...cfg };
+    injectScenario(scCfg);
+    const raw = await runAnalysis(scCfg);
     const res = extractResults(raw);
     const find = (id1, id2) => res.find(r => r.id === id1 || r.id === id2);
 
@@ -223,8 +263,9 @@
 
   const mobRows = [];
   for (const mob of [0, 5, 10, 15, 20]) {
-    injectScenario({ ...baseSc, comptaAn: 1200, cfeAn: 500, partMobilier: mob });
-    const raw = await runAnalysis();
+    const scMob = { ...baseSc, comptaAn: 1200, cfeAn: 500, partMobilier: mob };
+    injectScenario(scMob);
+    const raw = await runAnalysis(scMob);
     const res = extractResults(raw);
     const lmnp = res.find(r => r.id === 'lmnp_reel' || r.id === 'lmnp-reel');
     const jb = res.find(r => r.id === 'nu_jeanbrun' || r.id === 'jeanbrun');
@@ -246,8 +287,9 @@
 
   const tmiRows = [];
   for (const tmi of [0, 11, 30, 41, 45]) {
-    injectScenario({ ...baseSc, tmi, comptaAn: 1200, cfeAn: 500 });
-    const raw = await runAnalysis();
+    const scTmi = { ...baseSc, tmi, comptaAn: 1200, cfeAn: 500 };
+    injectScenario(scTmi);
+    const raw = await runAnalysis(scTmi);
     const res = extractResults(raw);
     const jb = res.find(r => r.id === 'nu_jeanbrun' || r.id === 'jeanbrun');
     const lmnp = res.find(r => r.id === 'lmnp_reel' || r.id === 'lmnp-reel');
@@ -263,12 +305,13 @@
   }
   console.table(tmiRows);
 
-  // Restaurer défauts
-  injectScenario({
+  // Restaurer défauts dans le DOM
+  const defaults = {
     prix: 200000, surface: 60, loyerHC: 800, apport: 40000,
     duree: 20, taux: 3.5, tmi: 30, gestion: 0,
     comptaAn: 0, cfeAn: 0, partMobilier: 10, taxeFonciere: 800
-  });
+  };
+  injectScenario(defaults);
 
   console.log('');
   console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
