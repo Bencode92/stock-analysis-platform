@@ -2562,6 +2562,55 @@ function renderMarketAnalysis(data) {
             <div class="market-metric-comparison">Sur votre investissement</div>
           </div>
         </div>
+
+        ${(() => {
+          // Loyers plafonnés Jeanbrun + alerte cohérence
+          const loyerMarche = marketRentM2 * surface;
+          const decoteReelle = loyerMarche > 0 ? ((loyerMarche - loyerCC) / loyerMarche) * 100 : 0;
+          const jbIntermed = Math.round(loyerMarche * 0.85);
+          const jbSocial = Math.round(loyerMarche * 0.70);
+          const jbTresSocial = Math.round(loyerMarche * 0.55);
+
+          let html = '';
+
+          // Alerte si loyer < -15% du marché (possible loyer social non déclaré)
+          if (decoteReelle > 15 && decoteReelle < 50) {
+            html += '<div style="margin-top:1rem; padding:0.75rem 1rem; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; font-size:0.85rem;">';
+            html += '<i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> ';
+            html += '<strong>Loyer ' + Math.round(decoteReelle) + '% sous le marché</strong> — ';
+            if (decoteReelle >= 30) {
+              html += 'Compatible avec un <strong>loyer social Jeanbrun (−30%)</strong>. ';
+            } else {
+              html += 'Compatible avec un <strong>loyer intermédiaire Jeanbrun (−15%)</strong>. ';
+            }
+            html += 'Si ce n\'est pas intentionnel, vous pourriez augmenter à ' + formatNumber(loyerMarche) + ' €/mois.';
+            html += '</div>';
+          }
+
+          // Grille Jeanbrun
+          html += '<div style="margin-top:1rem; padding:0.75rem 1rem; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:8px;">';
+          html += '<div style="font-size:0.8rem; color:#6366f1; font-weight:600; margin-bottom:0.5rem;">';
+          html += '<i class="fas fa-landmark"></i> Loyers plafonnés Dispositif Jeanbrun</div>';
+          html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.5rem; text-align:center;">';
+
+          const niveaux = [
+            { label: 'Intermédiaire', decote: '−15%', loyer: jbIntermed, color: '#6366f1' },
+            { label: 'Social', decote: '−30%', loyer: jbSocial, color: '#818cf8' },
+            { label: 'Très social', decote: '−45%', loyer: jbTresSocial, color: '#a78bfa' }
+          ];
+          niveaux.forEach(n => {
+            const match = Math.abs(loyerCC - n.loyer) < loyerMarche * 0.05;
+            html += '<div style="padding:0.5rem; border-radius:6px; background:' + (match ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)') + '; border:1px solid ' + (match ? n.color : 'rgba(255,255,255,0.08)') + ';">';
+            html += '<div style="font-size:0.65rem; color:rgba(255,255,255,0.5); text-transform:uppercase;">' + n.label + '</div>';
+            html += '<div style="font-size:0.65rem; color:rgba(255,255,255,0.4);">' + n.decote + '</div>';
+            html += '<div style="font-size:1rem; font-weight:700; color:' + n.color + ';">' + formatNumber(n.loyer) + ' €</div>';
+            if (match) html += '<div style="font-size:0.6rem; color:#22c55e;">≈ votre loyer</div>';
+            html += '</div>';
+          });
+          html += '</div></div>';
+
+          return html;
+        })()}
       </div>
 
       <!-- Recommandations -->
@@ -2743,18 +2792,67 @@ function generateRecommendations(pricePosition, rentPosition, data = {}) {
         `;
     }
     
+    // Indicateur cash-flow rapide (aperçu avant phase 3)
+    const quickCF = (() => {
+      try {
+        if (!window.analyzer?.comparateur?.compareAllRegimes) return null;
+        const surface = Number(data.surface) || 0;
+        const prixPaye = Number(data.prixPaye) || 0;
+        const loyerHC = Number(data.loyerActuel) || 0;
+        const tmi = Number(data.tmi) || 30;
+        if (!surface || !prixPaye || !loyerHC) return null;
+
+        // Calcul synchrone rapide via le comparateur (pas performCompleteAnalysis)
+        // On ne peut pas await ici, donc on teste si un résultat récent existe
+        const lastFiscal = window._lastQuickCF;
+        if (lastFiscal) return lastFiscal;
+
+        // Lancer en background pour la prochaine fois
+        window.analyzer.comparateur.cache.clear();
+        window.analyzer.comparateur.compareAllRegimes({
+          apport: Number(data.apport) || 0, taux: Number(data.taux) || 3.5,
+          duree: Number(data.duree) || 20, surface, prixBien: prixPaye,
+          loyerMensuel: loyerHC, tmi, gestionLocativeTaux: 0, typeAchat: data.typeAchat || 'classique',
+          jeanbrunNiveau: 'intermediaire', jeanbrunType: 'ancien'
+        }).then(results => {
+          if (results?.length > 0) {
+            const best = results[0];
+            window._lastQuickCF = {
+              nom: best.nom || best.id,
+              cf: Math.round(best.cashflowMensuel || 0)
+            };
+            // Injecter dans le DOM si le placeholder existe
+            const ph = document.getElementById('quick-cf-result');
+            if (ph) {
+              const isPos = window._lastQuickCF.cf >= 0;
+              ph.innerHTML = '<strong style="color:' + (isPos ? '#22c55e' : '#f59e0b') + ';">'
+                + (isPos ? '+' : '') + window._lastQuickCF.cf + ' €/mois</strong> en '
+                + '<strong>' + window._lastQuickCF.nom + '</strong>';
+            }
+          }
+        });
+        return null;
+      } catch(e) { return null; }
+    })();
+
+    const cfDisplay = quickCF
+      ? '<strong style="color:' + (quickCF.cf >= 0 ? '#22c55e' : '#f59e0b') + ';">'
+        + (quickCF.cf >= 0 ? '+' : '') + quickCF.cf + ' €/mois</strong> en <strong>' + quickCF.nom + '</strong>'
+      : '<span id="quick-cf-result" style="color:#94a3b8;">Calcul en cours...</span>';
+
     recommendations += `
-        <div class="recommendation-item">
+        <div class="recommendation-item" style="background:rgba(0,191,255,0.05); border:1px solid rgba(0,191,255,0.2); border-radius:8px; padding:1rem; margin-top:0.5rem;">
             <div class="recommendation-icon">
-                <i class="fas fa-balance-scale"></i>
+                <i class="fas fa-bolt" style="color:#00bfff;"></i>
             </div>
             <div class="recommendation-content">
-                <h4>Optimisation fiscale recommandée</h4>
-                <p>Passez à l'étape suivante pour découvrir le régime fiscal le plus avantageux pour votre situation.</p>
+                <h4 style="color:#00bfff;">Aperçu cash-flow</h4>
+                <p>Meilleur régime estimé : ${cfDisplay}</p>
+                <p style="font-size:0.8rem; color:#64748b; margin-top:4px;">Passez à l'étape suivante pour le détail complet par régime.</p>
             </div>
         </div>
     `;
-    
+
     return recommendations;
 }
 function computePriceTargetLocatif(baseInput, regimeId = null) {
