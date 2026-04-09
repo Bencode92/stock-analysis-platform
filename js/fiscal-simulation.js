@@ -145,7 +145,8 @@ class SimulationsFiscales {
         if (cashNetReel < 0) warnings.push(`🚨 Cash net réel négatif (${Math.round(cashNetReel)}€).`);
         else if (cashNetReel < revenuNetApresImpot * 0.3) warnings.push(`⚠️ Cash net réel (${Math.round(cashNetReel)}€) très inférieur au net fiscal (${Math.round(revenuNetApresImpot)}€).`);
         const chargesFiscales = cotisationsSociales + impotRevenu;
-        return { compatible: true, ca, typeEntreprise: 'Micro-entreprise', typeMicro: typeEffectif, abattement: abattementEffectif * 100 + '%', abattementDecimal: abattementEffectif, revenuImposable, cotisationsSociales, impotRevenu, revenuNetApresImpot, ratioNetCA: (revenuNetApresImpot / ca) * 100, tauxMarge, tauxMargePct: Math.round(tauxMarge * 100) + '%', depensesPro: depensesProEstimees, beneficeForfaitaire, beneficeReel, ecartFiscal, cashNetReel, ratioCashNetCA: (cashNetReel / ca) * 100, seuilMargeSurvie: chargesFiscales / ca, seuilMargeSurviePct: Math.round(chargesFiscales / ca * 100) + '%', microDefavorable: tauxMarge < (1 - abattementEffectif), warnings, versementLiberatoire, modeExpert: true, tmiReel, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
+        const revenuNetTotal = revenuNetApresImpot;
+        return { compatible: true, ca, typeEntreprise: 'Micro-entreprise', typeMicro: typeEffectif, abattement: abattementEffectif * 100 + '%', abattementDecimal: abattementEffectif, revenuImposable, cotisationsSociales, impotRevenu, revenuNetApresImpot, revenuNetTotal, ratioNetCA: (revenuNetApresImpot / ca) * 100, tauxMarge, tauxMargePct: Math.round(tauxMarge * 100) + '%', depensesPro: depensesProEstimees, beneficeForfaitaire, beneficeReel, ecartFiscal, cashNetReel, ratioCashNetCA: (cashNetReel / ca) * 100, seuilMargeSurvie: chargesFiscales / ca, seuilMargeSurviePct: Math.round(chargesFiscales / ca * 100) + '%', microDefavorable: tauxMarge < (1 - abattementEffectif), warnings, versementLiberatoire, modeExpert: true, tmiReel, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
     }
 
     static simulerEI(params) {
@@ -159,7 +160,8 @@ class SimulationsFiscales {
         const tmiReel = window.FiscalUtils ? window.FiscalUtils.getTMI(baseImposableIR) : calculerTMI(baseImposableIR);
         let impotRevenu = (window.FiscalUtils?.calculateProgressiveIR) ? window.FiscalUtils.calculateProgressiveIR(baseImposableIR) : calculateProgressiveIRFallback(baseImposableIR);
         const revenuNetApresImpot = cashAvantIR - impotRevenu;
-        return { compatible: true, ca, typeEntreprise: 'Entreprise Individuelle', tauxMarge: tauxMarge * 100 + '%', beneficeAvantCotisations, cotisationsSociales, csgNonDeductible, cashAvantIR, baseImposableIR, beneficeApresCotisations: cashAvantIR, beneficeImposable: baseImposableIR, impotRevenu, revenuNetApresImpot, ratioNetCA: (revenuNetApresImpot / ca) * 100, tmiReel, modeExpert: true, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
+        const revenuNetTotal = revenuNetApresImpot;
+        return { compatible: true, ca, typeEntreprise: 'Entreprise Individuelle', tauxMarge: tauxMarge * 100 + '%', beneficeAvantCotisations, cotisationsSociales, csgNonDeductible, cashAvantIR, baseImposableIR, beneficeApresCotisations: cashAvantIR, beneficeImposable: baseImposableIR, impotRevenu, revenuNetApresImpot, revenuNetTotal, ratioNetCA: (revenuNetApresImpot / ca) * 100, tmiReel, modeExpert: true, nbAssocies: 1, partAssocie: 1, partAssociePct: 100 };
     }
 
     static simulerEURL(params) {

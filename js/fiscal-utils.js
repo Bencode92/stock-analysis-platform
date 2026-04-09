@@ -169,9 +169,13 @@ class FiscalUtils {
         const prevSocPFU = Math.round(dividendes * 0.186);
         const totalPFU = impotPFU + prevSocPFU;
 
-        // Calcul barème progressif : abattement 40% puis IR au TMI + 18,6% PS (LFSS 2026)
+        // Calcul barème progressif : abattement 40% puis IR marginal réel + 18,6% PS (LFSS 2026)
         const baseIR = dividendes * 0.60; // Après abattement de 40%
-        const impotProgressif = Math.round(baseIR * (tmi / 100));
+        // IR marginal = IR(revenu + dividendes après abattement) - IR(revenu seul)
+        // Plus précis que TMI × base qui ignore l'effet de seuil
+        const irSansDiv = FiscalUtils.calculateProgressiveIR(revenuImposable);
+        const irAvecDiv = FiscalUtils.calculateProgressiveIR(revenuImposable + baseIR);
+        const impotProgressif = Math.max(0, irAvecDiv - irSansDiv);
         const prevSocProg = Math.round(dividendes * 0.186);
         const totalProgressif = impotProgressif + prevSocProg;
         

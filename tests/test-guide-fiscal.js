@@ -61,13 +61,13 @@
   // 1d. EURL IS — 70% salaire / dividendes (capital 1 000€)
   var r1d = show('1d. EURL IS — 70% salaire (capital 1 000€)', F.simulerEURL({
     ca: 80000, tauxMarge: 0.5, tauxRemuneration: 0.7,
-    nbAssocies: 1, partAssocie: 1, capitalSocial: 1000
+    nbAssocies: 1, partAssocie: 1, capitalSocial: 1000, optionIS: true
   }), 'Dividendes > 10% capital (1000€) → cotisations SSI sur excédent');
 
   // 1e. EURL IS — 70% salaire / dividendes (capital 10 000€)
   show('1e. EURL IS — 70% salaire (capital 10 000€)', F.simulerEURL({
     ca: 80000, tauxMarge: 0.5, tauxRemuneration: 0.7,
-    nbAssocies: 1, partAssocie: 1, capitalSocial: 10000
+    nbAssocies: 1, partAssocie: 1, capitalSocial: 10000, optionIS: true
   }), 'Capital plus élevé → base 10% = 1000€ → plus de dividendes exonérés');
 
   // 1f. EURL IR (pas d'IS)
@@ -104,13 +104,13 @@
   // 3a. EURL IS capital 1 000€
   show('3a. EURL IS 150k — capital 1 000€', F.simulerEURL({
     ca: 150000, tauxMarge: 0.4, tauxRemuneration: 0.5,
-    nbAssocies: 1, partAssocie: 1, capitalSocial: 1000
+    nbAssocies: 1, partAssocie: 1, capitalSocial: 1000, optionIS: true
   }), 'Base 10% = 100€ → quasi-tout le dividende soumis SSI');
 
   // 3b. EURL IS capital 30 000€
   show('3b. EURL IS 150k — capital 30 000€', F.simulerEURL({
     ca: 150000, tauxMarge: 0.4, tauxRemuneration: 0.5,
-    nbAssocies: 1, partAssocie: 1, capitalSocial: 30000
+    nbAssocies: 1, partAssocie: 1, capitalSocial: 30000, optionIS: true
   }), 'Base 10% = 3 000€ → plus de dividendes exonérés de SSI');
 
   // 3c. SASU 150k — 50% salaire
