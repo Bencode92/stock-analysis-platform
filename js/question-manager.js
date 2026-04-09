@@ -1539,9 +1539,23 @@ function displayResults(recommendations) {
         });
     }
     
-    // Événement pour le bouton de comparaison
+    // Événement pour le bouton de comparaison → bascule sur l'onglet Comparatif
     document.getElementById('compare-btn').addEventListener('click', () => {
-        alert('Fonctionnalité de comparaison à implémenter');
+        // Récupère les shortNames des statuts recommandés
+        const statuts = recommendations.map(r => r.shortName || r.status?.shortName || r.id).filter(Boolean);
+
+        // Bascule sur l'onglet "Comparatif des statuts"
+        const tabs = document.querySelectorAll('.tab-item');
+        const comparatifTab = Array.from(tabs).find(t => t.textContent.includes('Comparatif'));
+        if (comparatifTab) {
+            comparatifTab.click();
+            // Pré-sélectionne les statuts dans le comparateur via le hook global
+            setTimeout(() => {
+                if (window.__comparatifHooks && window.__comparatifHooks.setComparison) {
+                    window.__comparatifHooks.setComparison(statuts);
+                }
+            }, 500);
+        }
     });
 
     // ── Simulation fiscale 3 ans ──

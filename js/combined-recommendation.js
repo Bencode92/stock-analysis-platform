@@ -5548,11 +5548,12 @@ showStatusDetails(recommendation) {
   // ─── Overlay ──────────────────────────────────────────────────────
   const overlay = document.createElement('div');
   overlay.setAttribute('data-status-modal', 'true');
-  overlay.className = 'fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4';
+  overlay.className = 'fixed inset-0 flex items-center justify-center p-4';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;backdrop-filter:blur(4px);';
 
   // ─── Contenu (ON échappe toutes les interpolations) ───────────────
   overlay.innerHTML = `
-    <div class="bg-blue-900 bg-opacity-70 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto outline-none"
+    <div style="background:#0a1929;border:1px solid rgba(0,255,135,.2);border-radius:12px;padding:24px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;outline:none;"
          role="dialog" aria-modal="true" aria-labelledby="${titleId}" aria-describedby="${descId}"
          tabindex="-1">
       <!-- Header -->
