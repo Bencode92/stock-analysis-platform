@@ -1465,7 +1465,73 @@ function displayResults(recommendations) {
     const downloadBtn = document.querySelector('.download-btn');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
-            alert('Fonctionnalité de téléchargement PDF à implémenter');
+            const mainReco = recommendations[0];
+            if (!mainReco) return;
+            const st = mainReco.status || mainReco;
+            const name = st.shortName || st.name || 'Recommandation';
+            const score = mainReco.score || mainReco.finalScore || '—';
+
+            // Construire un HTML propre pour le PDF
+            const strengths = (mainReco.strengths || []).map(s => '<li style="margin-bottom:6px;">' + s + '</li>').join('');
+            const weaknesses = (mainReco.weaknesses || []).map(w => '<li style="margin-bottom:6px;">' + w + '</li>').join('');
+
+            const pdfContent = document.createElement('div');
+            pdfContent.style.cssText = 'padding:30px;font-family:Arial,sans-serif;color:#1a1a2e;max-width:700px;';
+            pdfContent.innerHTML = `
+                <div style="text-align:center;margin-bottom:20px;">
+                    <h1 style="color:#012a4a;font-size:22px;margin-bottom:4px;">Recommandation de forme juridique</h1>
+                    <p style="color:#666;font-size:12px;">Généré le ${new Date().toLocaleDateString('fr-FR')} — bencode92.github.io/stock-analysis-platform</p>
+                </div>
+                <div style="background:#f0f9ff;border:2px solid #0ea5e9;border-radius:12px;padding:20px;margin-bottom:20px;">
+                    <h2 style="color:#012a4a;margin:0 0 8px 0;font-size:20px;">${st.name || name}</h2>
+                    <span style="background:#10b981;color:#fff;padding:4px 12px;border-radius:20px;font-weight:bold;font-size:14px;">Score : ${score}/100</span>
+                    <p style="margin-top:12px;font-size:13px;color:#334155;">${st.description || ''}</p>
+                </div>
+                <div style="display:flex;gap:20px;margin-bottom:20px;">
+                    <div style="flex:1;">
+                        <h3 style="color:#10b981;font-size:15px;">✅ Points forts</h3>
+                        <ul style="font-size:12px;line-height:1.6;padding-left:16px;">${strengths || '<li>—</li>'}</ul>
+                    </div>
+                    <div style="flex:1;">
+                        <h3 style="color:#ef4444;font-size:15px;">⚠️ Points d\'attention</h3>
+                        <ul style="font-size:12px;line-height:1.6;padding-left:16px;">${weaknesses || '<li>—</li>'}</ul>
+                    </div>
+                </div>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:20px;">
+                    <h3 style="font-size:14px;color:#012a4a;margin:0 0 10px 0;">Caractéristiques</h3>
+                    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+                        <tr><td style="padding:4px 8px;font-weight:bold;width:40%;">Régime fiscal</td><td style="padding:4px 8px;">${st.fiscalite || '—'}</td></tr>
+                        <tr style="background:#f0f9ff;"><td style="padding:4px 8px;font-weight:bold;">Régime social</td><td style="padding:4px 8px;">${st.regimeSocial || '—'}</td></tr>
+                        <tr><td style="padding:4px 8px;font-weight:bold;">Capital minimum</td><td style="padding:4px 8px;">${st.capitalMinimum || '—'}</td></tr>
+                        <tr style="background:#f0f9ff;"><td style="padding:4px 8px;font-weight:bold;">Responsabilité</td><td style="padding:4px 8px;">${st.responsabilite || '—'}</td></tr>
+                    </table>
+                </div>
+                <p style="font-size:10px;color:#94a3b8;text-align:center;margin-top:20px;">
+                    ⚖️ Ce document est fourni à titre indicatif. Consultez un expert-comptable ou un avocat pour votre situation personnelle.
+                </p>
+            `;
+
+            document.body.appendChild(pdfContent);
+            const opt = {
+                margin: 10,
+                filename: 'recommandation-' + name.replace(/\s+/g, '-').toLowerCase() + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            if (typeof html2pdf !== 'undefined') {
+                html2pdf().set(opt).from(pdfContent).save().then(() => {
+                    document.body.removeChild(pdfContent);
+                }).catch(err => {
+                    console.error('Erreur PDF:', err);
+                    document.body.removeChild(pdfContent);
+                    alert('Erreur lors de la génération du PDF.');
+                });
+            } else {
+                document.body.removeChild(pdfContent);
+                alert('Bibliothèque PDF non chargée. Rechargez la page.');
+            }
         });
     }
     
