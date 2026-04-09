@@ -1,289 +1,277 @@
 /**
- * test-scenarios-console.js
+ * test-scenarios-console.js v3
  *
- * Tests automatisés avec différents profils d'investisseurs
- * Inclut expert-comptable, CFE et part mobilier
+ * Injecte les données dans le formulaire DOM puis appelle performCompleteAnalysis
+ * pour que compta, CFE et part mobilier soient pris en compte.
  *
- * Usage : fetch('test-scenarios-console.js').then(r=>r.text()).then(eval)
+ * Usage : fetch('test-scenarios-console.js?v=3').then(r=>r.text()).then(eval)
  */
 
 (async function runScenarios() {
   const analyzer = window.analyzer;
-  if (!analyzer?.comparateur?.compareAllRegimes) {
-    console.error('❌ Analyzer non disponible. Remplir au moins une fois le formulaire puis relancer.');
+  if (!analyzer?.performCompleteAnalysis) {
+    console.error('❌ Analyzer non disponible. Charge la page comparaison-fiscale.html et remplis le formulaire une fois.');
     return;
   }
 
-  // Helper : injecter une valeur dans un champ du DOM (pour que getAllAdvancedParams les lise)
+  // ── Helpers ──────────────────────────────────────────────
   function setField(id, value) {
     const el = document.getElementById(id);
-    if (el) {
-      if (el.type === 'checkbox') el.checked = !!value;
-      else el.value = value;
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = !!value;
+    else if (el.tagName === 'SELECT') {
+      // Pour les <select>, chercher l'option correspondante
+      const opt = Array.from(el.options).find(o => o.value == value);
+      if (opt) el.value = opt.value;
+    }
+    else el.value = value;
+  }
+
+  function injectScenario(sc) {
+    // Formulaire principal
+    setField('propertyPrice', sc.prix);
+    setField('propertySurface', sc.surface);
+    setField('monthlyRent', sc.loyerHC);
+    setField('monthlyCharges', sc.chargesRecup || 50);
+    setField('apport', sc.apport);
+    setField('loanDuration', sc.duree);
+    setField('loanRate', sc.taux);
+    setField('tmi', sc.tmi);
+    setField('occupationMode', 'investment');
+
+    // Params avancés
+    setField('compta-an', sc.comptaAn || 0);
+    setField('cfe-an', sc.cfeAn || 0);
+    setField('part-mobilier', sc.partMobilier || 10);
+    setField('taxeFonciere', sc.taxeFonciere || 800);
+    setField('vacanceLocative', sc.vacance || 0);
+    setField('gestionLocative', sc.gestion || 0);
+    setField('travaux-renovation', sc.travaux || 0);
+    setField('entretien-annuel', sc.entretien || 500);
+    setField('assurance-pno', sc.pno || 15);
+    setField('charges-copro-non-recup', sc.copro || 50);
+    setField('frais-notaire-taux', sc.notaire || 8);
+    setField('commission-immo', sc.commission || 4);
+  }
+
+  async function runAnalysis() {
+    try {
+      const result = await analyzer.performCompleteAnalysis();
+      return result?.fiscalResults || result?.results || [];
+    } catch (e) {
+      // Fallback : extraire les résultats depuis la propriété
+      if (analyzer.lastFiscalResults) return analyzer.lastFiscalResults;
+      console.warn('performCompleteAnalysis error:', e.message);
+      return [];
     }
   }
 
-  // Helper : injecter les params avancés d'un scénario dans le DOM
-  function injectAdvancedParams(params) {
-    setField('compta-an', params.comptaAn ?? 0);
-    setField('cfe-an', params.cfeAn ?? 0);
-    setField('part-mobilier', params.partMobilier ?? 10);
-    setField('entretien-annuel', params.entretienAnnuel ?? 500);
-    setField('assurance-pno', params.assurancePNO ?? 15);
-    setField('taxeFonciere', params.taxeFonciere ?? 800);
-    setField('vacanceLocative', params.vacanceLocative ?? 0);
-    setField('gestionLocative', params.gestionLocativeTaux ?? 0);
-    setField('travaux-renovation', params.travauxRenovation ?? 0);
-    setField('charges-copro-non-recup', params.chargesCopro ?? 50);
+  function extractResults(results) {
+    if (!Array.isArray(results) || results.length === 0) return [];
+    // Normaliser et trier par cash-flow
+    return results
+      .map(r => ({
+        id: analyzer.normalizeRegimeKey?.(r) || r.id,
+        nom: r.nom || r.id,
+        cf: Math.round(r.cashflowMensuel ?? (r.cashflowNetAnnuel || 0) / 12),
+        cfAn: Math.round(r.cashflowNetAnnuel || 0),
+        impot: Math.round(r.impotAnnuel || 0),
+        rdt: (r.rendementNet || 0).toFixed(2)
+      }))
+      .sort((a, b) => b.cf - a.cf);
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // SCÉNARIOS
-  // ═══════════════════════════════════════════════════════════
+  // ── Scénarios ────────────────────────────────────────────
   const scenarios = [
     {
-      nom: '🏠 Studio étudiant — Lille (sans compta)',
-      desc: 'Petit budget, micro-BIC probable, pas de compta',
-      data: {
-        apport: 15000, taux: 3.2, duree: 20, surface: 20,
-        prixBien: 80000, loyerMensuel: 450, tmi: 11,
-        gestionLocativeTaux: 0, typeAchat: 'classique',
-        jeanbrunNiveau: 'intermediaire', jeanbrunType: 'ancien'
-      },
-      params: { comptaAn: 0, cfeAn: 0, partMobilier: 10 }
+      nom: '🏢 T3 Lyon — SANS compta/CFE',
+      desc: 'Référence pour comparer l\'impact des charges pro',
+      prix: 200000, surface: 60, loyerHC: 800, apport: 40000,
+      duree: 20, taux: 3.5, tmi: 30, gestion: 7,
+      comptaAn: 0, cfeAn: 0, partMobilier: 10, taxeFonciere: 1200
     },
     {
-      nom: '🏢 T3 Lyon — avec compta + CFE',
-      desc: '60m², TMI 30%, charges réalistes complètes',
-      data: {
-        apport: 40000, taux: 3.5, duree: 20, surface: 60,
-        prixBien: 200000, loyerMensuel: 800, tmi: 30,
-        gestionLocativeTaux: 7, typeAchat: 'classique',
-        jeanbrunNiveau: 'intermediaire', jeanbrunType: 'ancien'
-      },
-      params: { comptaAn: 1200, cfeAn: 500, partMobilier: 10, taxeFonciere: 1200 }
+      nom: '🏢 T3 Lyon — AVEC compta 1200€ + CFE 500€',
+      desc: 'Même bien, charges pro réalistes',
+      prix: 200000, surface: 60, loyerHC: 800, apport: 40000,
+      duree: 20, taux: 3.5, tmi: 30, gestion: 7,
+      comptaAn: 1200, cfeAn: 500, partMobilier: 10, taxeFonciere: 1200
     },
     {
-      nom: '💰 Paris TMI 41% — compta + CFE + mobilier 15%',
-      desc: 'Haut revenu, bien meublé haut de gamme',
-      data: {
-        apport: 80000, taux: 3.5, duree: 25, surface: 45,
-        prixBien: 400000, loyerMensuel: 1400, tmi: 41,
-        gestionLocativeTaux: 7, typeAchat: 'classique',
-        jeanbrunNiveau: 'intermediaire', jeanbrunType: 'neuf'
-      },
-      params: { comptaAn: 1500, cfeAn: 800, partMobilier: 15, taxeFonciere: 2000 }
+      nom: '💰 Paris TMI 41% — compta 1500€ + CFE 800€',
+      desc: 'Haut revenu, mobilier 15%',
+      prix: 400000, surface: 45, loyerHC: 1400, apport: 80000,
+      duree: 25, taux: 3.5, tmi: 41, gestion: 7,
+      comptaAn: 1500, cfeAn: 800, partMobilier: 15, taxeFonciere: 2000
     },
     {
-      nom: '🔨 Ancien rénové — travaux 40%, compta',
-      desc: 'Éligible Jeanbrun ancien, loyer social',
-      data: {
-        apport: 25000, taux: 3.3, duree: 20, surface: 70,
-        prixBien: 120000, loyerMensuel: 650, tmi: 30,
-        gestionLocativeTaux: 0, typeAchat: 'classique',
-        jeanbrunNiveau: 'social', jeanbrunType: 'ancien'
-      },
-      params: { comptaAn: 800, cfeAn: 300, partMobilier: 10, travauxRenovation: 48000 }
-    },
-    {
-      nom: '🤑 TMI 45% — max fiscal Jeanbrun très social',
-      desc: 'Gros déficit foncier, forte économie impôt',
-      data: {
-        apport: 100000, taux: 3.5, duree: 20, surface: 50,
-        prixBien: 350000, loyerMensuel: 1200, tmi: 45,
-        gestionLocativeTaux: 7, typeAchat: 'classique',
-        jeanbrunNiveau: 'tresSocial', jeanbrunType: 'neuf'
-      },
-      params: { comptaAn: 1500, cfeAn: 700, partMobilier: 10, taxeFonciere: 1800 }
+      nom: '🤑 TMI 45% — compta 1500€ + CFE 700€',
+      desc: 'Max fiscal, Jeanbrun très social neuf',
+      prix: 350000, surface: 50, loyerHC: 1200, apport: 100000,
+      duree: 20, taux: 3.5, tmi: 45, gestion: 7,
+      comptaAn: 1500, cfeAn: 700, partMobilier: 10, taxeFonciere: 1800
     },
     {
       nom: '👶 Primo TMI 11% — sans charges pro',
-      desc: 'Petit apport, pas de compta, micro probable',
-      data: {
-        apport: 10000, taux: 3.8, duree: 25, surface: 30,
-        prixBien: 100000, loyerMensuel: 500, tmi: 11,
-        gestionLocativeTaux: 0, typeAchat: 'classique',
-        jeanbrunNiveau: 'intermediaire', jeanbrunType: 'ancien'
-      },
-      params: { comptaAn: 0, cfeAn: 0, partMobilier: 10 }
-    },
-    {
-      nom: '📊 T3 Lyon SANS compta (comparaison)',
-      desc: 'Même bien que scénario 2 mais SANS compta ni CFE',
-      data: {
-        apport: 40000, taux: 3.5, duree: 20, surface: 60,
-        prixBien: 200000, loyerMensuel: 800, tmi: 30,
-        gestionLocativeTaux: 7, typeAchat: 'classique',
-        jeanbrunNiveau: 'intermediaire', jeanbrunType: 'ancien'
-      },
-      params: { comptaAn: 0, cfeAn: 0, partMobilier: 10, taxeFonciere: 1200 }
+      desc: 'Petit budget, micro probable',
+      prix: 100000, surface: 30, loyerHC: 500, apport: 10000,
+      duree: 25, taux: 3.8, tmi: 11, gestion: 0,
+      comptaAn: 0, cfeAn: 0, partMobilier: 10, taxeFonciere: 500
     }
   ];
 
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
-  console.log('%c  🧪 TESTS MULTI-SCÉNARIOS — avec compta, CFE & part mobilier', 'color:#6366f1;font-size:14px;font-weight:bold');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
+  console.log('%c  🧪 TESTS v3 — via performCompleteAnalysis (compta + CFE intégrés)', 'color:#6366f1;font-size:14px;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
   console.log('');
 
   const synthese = [];
 
   for (const sc of scenarios) {
-    // Injecter les params avancés dans le DOM
-    injectAdvancedParams({ ...sc.params, gestionLocativeTaux: sc.data.gestionLocativeTaux });
+    injectScenario(sc);
 
     console.group(`%c${sc.nom}`, 'color:#00bfff;font-size:12px;font-weight:bold');
     console.log(`%c${sc.desc}`, 'color:#94a3b8');
-    console.log(`Prix: ${sc.data.prixBien.toLocaleString('fr-FR')}€ | ${sc.data.surface}m² | Loyer: ${sc.data.loyerMensuel}€ | TMI: ${sc.data.tmi}%`);
-    console.log(`Compta: ${sc.params.comptaAn||0}€ | CFE: ${sc.params.cfeAn||0}€ | Mobilier: ${sc.params.partMobilier||10}%`);
+    console.log(`Prix: ${sc.prix.toLocaleString('fr-FR')}€ | ${sc.surface}m² | Loyer: ${sc.loyerHC}€ | TMI: ${sc.tmi}% | Compta: ${sc.comptaAn}€ | CFE: ${sc.cfeAn}€ | Mob: ${sc.partMobilier}%`);
 
-    try {
-      const results = await analyzer.comparateur.compareAllRegimes(sc.data);
+    const raw = await runAnalysis();
+    const res = extractResults(raw);
 
-      console.table(results.map((r, i) => ({
-        '#': i + 1,
-        'Régime': (r.nom || r.id).substring(0, 22),
-        'CF/mois': Math.round(r.cashflowMensuel || 0) + ' €',
-        'CF/an': Math.round(r.cashflowNetAnnuel || 0) + ' €',
-        'Impôt': Math.round(r.impotAnnuel || 0) + ' €',
-        'Rdt': (r.rendementNet || 0).toFixed(2) + '%'
-      })));
-
-      const jb = results.find(r => r.id === 'jeanbrun');
-      const best = results[0];
-      const lmnp = results.find(r => r.id === 'lmnp-reel');
-      const jbRank = jb ? results.indexOf(jb) + 1 : '-';
-
-      synthese.push({
-        'Scénario': sc.nom.replace(/^.{2} /, '').substring(0, 30),
-        'TMI': sc.data.tmi + '%',
-        'Compta': (sc.params.comptaAn || 0) + '€',
-        'CFE': (sc.params.cfeAn || 0) + '€',
-        'Mob%': (sc.params.partMobilier || 10) + '%',
-        '#1': (best.nom || best.id).substring(0, 16),
-        'CF #1': Math.round(best.cashflowMensuel || 0) + '€',
-        'JB #': jbRank,
-        'JB CF': Math.round(jb?.cashflowMensuel || 0) + '€',
-        'LMNP CF': Math.round(lmnp?.cashflowMensuel || 0) + '€'
-      });
-
-    } catch (err) {
-      console.error('Erreur:', err.message);
+    if (res.length === 0) {
+      console.warn('Aucun résultat — vérifier que le formulaire est initialisé');
+      console.groupEnd();
+      continue;
     }
+
+    console.table(res.map((r, i) => ({
+      '#': i + 1,
+      'Régime': r.nom.substring(0, 22),
+      'CF/mois': r.cf + ' €',
+      'CF/an': r.cfAn + ' €',
+      'Impôt': r.impot + ' €',
+      'Rdt': r.rdt + '%'
+    })));
+
+    const jb = res.find(r => r.id === 'nu_jeanbrun' || r.id === 'jeanbrun');
+    const lmnp = res.find(r => r.id === 'lmnp_reel' || r.id === 'lmnp-reel');
+    const best = res[0];
+    const jbRank = jb ? res.indexOf(jb) + 1 : '-';
+
+    synthese.push({
+      'Scénario': sc.nom.replace(/^.{2} /, '').substring(0, 28),
+      'TMI': sc.tmi + '%',
+      'Compta': sc.comptaAn + '€',
+      'CFE': sc.cfeAn + '€',
+      '#1': best.nom.substring(0, 16),
+      'CF #1': best.cf + '€/m',
+      'JB #': jbRank,
+      'JB CF': (jb?.cf || 0) + '€/m',
+      'LMNP CF': (lmnp?.cf || 0) + '€/m',
+      'Δ JB-LMNP': ((jb?.cf||0) - (lmnp?.cf||0)) + '€'
+    });
+
     console.groupEnd();
     console.log('');
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // SYNTHÈSE
-  // ═══════════════════════════════════════════════════════════
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
-  console.log('%c  📊 SYNTHÈSE COMPARATIVE', 'color:#6366f1;font-size:14px;font-weight:bold');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
+  // ── Synthèse ─────────────────────────────────────────────
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
+  console.log('%c  📊 SYNTHÈSE', 'color:#6366f1;font-size:14px;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#6366f1;font-weight:bold');
   console.table(synthese);
 
-  // ═══════════════════════════════════════════════════════════
-  // IMPACT COMPTA + CFE (même bien, avec vs sans)
-  // ═══════════════════════════════════════════════════════════
+  // ── Impact compta + CFE (même bien, 4 configs) ───────────
   console.log('');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#f59e0b;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#f59e0b;font-weight:bold');
   console.log('%c  💸 IMPACT COMPTA + CFE — T3 200K€ TMI 30%', 'color:#f59e0b;font-size:14px;font-weight:bold');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#f59e0b;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#f59e0b;font-weight:bold');
 
-  const baseData = {
-    apport: 40000, taux: 3.5, duree: 20, surface: 60,
-    prixBien: 200000, loyerMensuel: 800, tmi: 30,
-    gestionLocativeTaux: 7, typeAchat: 'classique',
-    jeanbrunNiveau: 'intermediaire', jeanbrunType: 'ancien'
+  const baseSc = {
+    prix: 200000, surface: 60, loyerHC: 800, apport: 40000,
+    duree: 20, taux: 3.5, tmi: 30, gestion: 7,
+    partMobilier: 10, taxeFonciere: 1200
   };
 
-  const impact = [];
-  const configs = [
+  const impactRows = [];
+  for (const cfg of [
     { label: 'Sans compta ni CFE', comptaAn: 0, cfeAn: 0 },
-    { label: 'Compta 800€ seul', comptaAn: 800, cfeAn: 0 },
+    { label: 'Compta 800€', comptaAn: 800, cfeAn: 0 },
     { label: 'Compta 1200€ + CFE 500€', comptaAn: 1200, cfeAn: 500 },
     { label: 'Compta 1500€ + CFE 800€', comptaAn: 1500, cfeAn: 800 }
-  ];
+  ]) {
+    injectScenario({ ...baseSc, ...cfg });
+    const raw = await runAnalysis();
+    const res = extractResults(raw);
+    const find = (id1, id2) => res.find(r => r.id === id1 || r.id === id2);
 
-  for (const cfg of configs) {
-    injectAdvancedParams({ ...cfg, partMobilier: 10, taxeFonciere: 1200 });
-    const res = await analyzer.comparateur.compareAllRegimes(baseData);
-    const jb = res.find(r => r.id === 'jeanbrun');
-    const lmnp = res.find(r => r.id === 'lmnp-reel');
-    const reel = res.find(r => r.id === 'reel-foncier');
-    const micro = res.find(r => r.id === 'micro-foncier');
-
-    impact.push({
+    impactRows.push({
       'Config': cfg.label,
-      'LMNP Réel': Math.round(lmnp?.cashflowMensuel || 0) + '€/m',
-      'Jeanbrun': Math.round(jb?.cashflowMensuel || 0) + '€/m',
-      'Réel foncier': Math.round(reel?.cashflowMensuel || 0) + '€/m',
-      'Micro-fonc.': Math.round(micro?.cashflowMensuel || 0) + '€/m',
-      '#1': (res[0]?.nom || res[0]?.id || '?').substring(0, 16)
+      'LMNP Réel': (find('lmnp_reel','lmnp-reel')?.cf||0) + '€/m',
+      'Jeanbrun': (find('nu_jeanbrun','jeanbrun')?.cf||0) + '€/m',
+      'Réel foncier': (find('nu_reel','reel-foncier')?.cf||0) + '€/m',
+      'Micro': (find('nu_micro','micro-foncier')?.cf||0) + '€/m',
+      '#1': res[0]?.nom?.substring(0, 16) || '?'
     });
   }
-  console.table(impact);
-  console.log('%cNote : la compta impacte surtout LMNP/LMP/SCI (charge réelle). Le micro n\'est pas affecté.', 'color:#94a3b8;font-style:italic');
+  console.table(impactRows);
 
-  // ═══════════════════════════════════════════════════════════
-  // IMPACT PART MOBILIER
-  // ═══════════════════════════════════════════════════════════
+  // ── Impact part mobilier ─────────────────────────────────
   console.log('');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#a78bfa;font-weight:bold');
-  console.log('%c  🪑 IMPACT PART MOBILIER — T3 200K€ TMI 30%', 'color:#a78bfa;font-size:14px;font-weight:bold');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#a78bfa;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#a78bfa;font-weight:bold');
+  console.log('%c  🪑 IMPACT PART MOBILIER — T3 200K€ TMI 30% (compta 1200€ + CFE 500€)', 'color:#a78bfa;font-size:14px;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#a78bfa;font-weight:bold');
 
-  const mobImpact = [];
+  const mobRows = [];
   for (const mob of [0, 5, 10, 15, 20]) {
-    injectAdvancedParams({ comptaAn: 1200, cfeAn: 500, partMobilier: mob, taxeFonciere: 1200 });
-    const res = await analyzer.comparateur.compareAllRegimes(baseData);
-    const lmnp = res.find(r => r.id === 'lmnp-reel');
-    const jb = res.find(r => r.id === 'jeanbrun');
+    injectScenario({ ...baseSc, comptaAn: 1200, cfeAn: 500, partMobilier: mob });
+    const raw = await runAnalysis();
+    const res = extractResults(raw);
+    const lmnp = res.find(r => r.id === 'lmnp_reel' || r.id === 'lmnp-reel');
+    const jb = res.find(r => r.id === 'nu_jeanbrun' || r.id === 'jeanbrun');
 
-    mobImpact.push({
+    mobRows.push({
       'Mobilier': mob + '%',
-      'LMNP amort total': Math.round(lmnp?.amortissements || 0) + '€',
-      'LMNP CF/mois': Math.round(lmnp?.cashflowMensuel || 0) + '€',
-      'Jeanbrun CF/mois': Math.round(jb?.cashflowMensuel || 0) + '€',
-      '#1': (res[0]?.nom || res[0]?.id || '?').substring(0, 16)
+      'LMNP CF/mois': (lmnp?.cf||0) + '€',
+      'JB CF/mois': (jb?.cf||0) + '€',
+      '#1': res[0]?.nom?.substring(0, 16) || '?'
     });
   }
-  console.table(mobImpact);
-  console.log('%cNote : le mobilier augmente l\'amort LMNP (amorti sur 10 ans vs 40 ans pour le bâti). Jeanbrun n\'est pas affecté (amort propre).', 'color:#94a3b8;font-style:italic');
+  console.table(mobRows);
 
-  // ═══════════════════════════════════════════════════════════
-  // SENSIBILITÉ TMI (avec charges réalistes)
-  // ═══════════════════════════════════════════════════════════
+  // ── Sensibilité TMI (avec charges réalistes) ─────────────
   console.log('');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
   console.log('%c  📈 SENSIBILITÉ TMI — avec compta 1200€ + CFE 500€', 'color:#22c55e;font-size:14px;font-weight:bold');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
 
-  injectAdvancedParams({ comptaAn: 1200, cfeAn: 500, partMobilier: 10, taxeFonciere: 1200 });
-
-  const tmiTest = [];
+  const tmiRows = [];
   for (const tmi of [0, 11, 30, 41, 45]) {
-    const d = { ...baseData, tmi, jeanbrunType: 'ancien', jeanbrunNiveau: 'intermediaire' };
-    const res = await analyzer.comparateur.compareAllRegimes(d);
-    const jb = res.find(r => r.id === 'jeanbrun');
-    const lmnp = res.find(r => r.id === 'lmnp-reel');
-    const jbWins = (jb?.cashflowMensuel || 0) > (lmnp?.cashflowMensuel || 0);
+    injectScenario({ ...baseSc, tmi, comptaAn: 1200, cfeAn: 500 });
+    const raw = await runAnalysis();
+    const res = extractResults(raw);
+    const jb = res.find(r => r.id === 'nu_jeanbrun' || r.id === 'jeanbrun');
+    const lmnp = res.find(r => r.id === 'lmnp_reel' || r.id === 'lmnp-reel');
 
-    tmiTest.push({
+    tmiRows.push({
       'TMI': tmi + '%',
-      'Jeanbrun': Math.round(jb?.cashflowMensuel || 0) + '€/m',
-      'LMNP Réel': Math.round(lmnp?.cashflowMensuel || 0) + '€/m',
-      'Écart': Math.round((jb?.cashflowMensuel || 0) - (lmnp?.cashflowMensuel || 0)) + '€',
-      '#1': (res[0]?.nom || res[0]?.id || '?').substring(0, 16),
-      'JB > LMNP ?': jbWins ? '✅ OUI' : '❌ Non'
+      'Jeanbrun': (jb?.cf||0) + '€/m',
+      'LMNP Réel': (lmnp?.cf||0) + '€/m',
+      'Écart': ((jb?.cf||0) - (lmnp?.cf||0)) + '€',
+      '#1': res[0]?.nom?.substring(0, 16) || '?',
+      'JB > LMNP ?': (jb?.cf||0) > (lmnp?.cf||0) ? '✅ OUI' : '❌ Non'
     });
   }
-  console.table(tmiTest);
+  console.table(tmiRows);
 
-  // Restaurer les params par défaut
-  injectAdvancedParams({ comptaAn: 0, cfeAn: 0, partMobilier: 10, taxeFonciere: 800 });
+  // Restaurer défauts
+  injectScenario({
+    prix: 200000, surface: 60, loyerHC: 800, apport: 40000,
+    duree: 20, taux: 3.5, tmi: 30, gestion: 0,
+    comptaAn: 0, cfeAn: 0, partMobilier: 10, taxeFonciere: 800
+  });
 
   console.log('');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
   console.log('%c  ✅ TOUS LES SCÉNARIOS TERMINÉS', 'color:#22c55e;font-size:14px;font-weight:bold');
-  console.log('%c═══════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
+  console.log('%c═══════════════════════════════════════════════════════════════════', 'color:#22c55e;font-weight:bold');
 })();
