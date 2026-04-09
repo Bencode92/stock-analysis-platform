@@ -386,6 +386,7 @@ const questions = [
   id: "investors_count",
   sectionId: "team",
   title: "Nombre d'investisseurs pressentis",
+  description: "Combien d'investisseurs envisagez-vous de faire entrer au capital ?",
   type: "number",
   min: 0,
   max: 200,
@@ -397,6 +398,7 @@ const questions = [
   id: "investor_origin",
   sectionId: "team",
   title: "Origine des investisseurs",
+  description: "Vos investisseurs sont-ils basés en France/UE ou à l'international ?",
   type: "radio",
   options: [
     { id: "domestic",      label: "France/UE" },
