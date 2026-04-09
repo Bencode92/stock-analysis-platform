@@ -661,3 +661,102 @@
     rgba(0, 153, 204, 0.04)
   ) !important;
 }
+
+/* ════════════════════════════════════════════════════════════ */
+/* TABLEAU PROJECTION ACHETER VS LOUER                         */
+/* ════════════════════════════════════════════════════════════ */
+
+.bvr-wrap {
+  margin-top: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(10,15,30,0.95), rgba(15,25,50,0.9));
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-radius: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bvr-wrap h4 {
+  margin: 0 0 4px;
+  color: #e2e8f0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.bvr-wrap .bvr-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 16px;
+}
+
+.bvr-wrap .bvr-breakeven {
+  text-align: center;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  font-size: 1.05rem;
+}
+
+.bvr-wrap .bvr-breakeven.found {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.bvr-wrap .bvr-breakeven.notfound {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.bvr-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 0.85rem;
+  table-layout: fixed;
+}
+
+.bvr-table th {
+  padding: 10px 12px;
+  border: none !important;
+  border-bottom: 2px solid rgba(0, 191, 255, 0.25) !important;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.bvr-table td {
+  padding: 10px 12px;
+  border: none !important;
+  color: #e2e8f0;
+}
+
+.bvr-table .bvr-right { text-align: right; }
+.bvr-table .bvr-left { text-align: left; }
+
+.bvr-table .bvr-loc { color: #60a5fa; font-weight: 500; }
+.bvr-table .bvr-prop { color: #4ade80; font-weight: 500; }
+.bvr-table .bvr-pos { color: #22c55e; font-weight: 700; }
+.bvr-table .bvr-neg { color: #ef4444; font-weight: 700; }
+.bvr-table .bvr-bold { font-weight: 700; }
+
+.bvr-table .bvr-be {
+  background: rgba(34, 197, 94, 0.12);
+  border-left: 3px solid #22c55e;
+}
+
+.bvr-table .bvr-alt {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bvr-table tr:hover td {
+  background: rgba(0, 191, 255, 0.05);
+}
+
+.bvr-footer {
+  margin-top: 14px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  line-height: 1.5;
+}

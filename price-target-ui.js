@@ -633,66 +633,31 @@ class PriceTargetUI {
     }).join('\n');
 
     return `
-      <div style=”
-        margin-top:24px;
-        padding:24px;
-        background:linear-gradient(135deg, rgba(10,15,30,0.95), rgba(15,25,50,0.9));
-        border:1px solid rgba(0,191,255,0.2);
-        border-radius:16px;
-        backdrop-filter:blur(10px);
-        max-width:100%;
-        width:100%;
-        box-sizing:border-box;
-      “>
-        <h4 style=”margin:0 0 4px; color:#e2e8f0; font-size:1.15rem; font-weight:700;”>
+      <div class=”bvr-wrap”>
+        <h4>
           <i class=”fas fa-chart-line” style=”color:#00bfff; margin-right:8px;”></i>
           Acheter vs Louer + placer l'apport
         </h4>
-        <div style=”font-size:0.8rem; color:rgba(255,255,255,0.4); margin-bottom:16px;”>
+        <div class=”bvr-subtitle”>
           Appréciation ${(appreciation*100).toFixed(0)}%/an · Loyers +${(rentInflation*100).toFixed(1)}%/an · Placement ${(oppRate*100).toFixed(0)}%/an · Conjoint ${fmt(partner)}/mois
         </div>
 
-        <div style=”
-          text-align:center;
-          padding:14px 20px;
-          margin-bottom:16px;
-          background:${breakEvenYear ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)'};
-          border:1px solid ${breakEvenYear ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'};
-          border-radius:10px;
-          font-size:1.05rem;
-        “>
+        <div class=”bvr-breakeven ${breakEvenYear ? 'found' : 'notfound'}”>
           ${breakEvenMsg}
         </div>
 
-        <div class=”buy-vs-rent-table-wrap” style=”overflow-x:auto”>
-        <style>
-          .bvr-table { width:100%; border-collapse:collapse; font-size:0.85rem; table-layout:fixed; }
-          .bvr-table th, .bvr-table td { padding:10px 12px; border:none; }
-          .bvr-table th { color:rgba(255,255,255,0.4); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px; }
-          .bvr-table thead tr { border-bottom:2px solid rgba(0,191,255,0.25); }
-          .bvr-table .bvr-right { text-align:right; }
-          .bvr-table .bvr-left { text-align:left; }
-          .bvr-table .bvr-loc { color:#60a5fa; }
-          .bvr-table .bvr-prop { color:#4ade80; }
-          .bvr-table .bvr-pos { color:#22c55e; font-weight:700; }
-          .bvr-table .bvr-neg { color:#ef4444; font-weight:700; }
-          .bvr-table .bvr-be { background:rgba(34,197,94,0.12); border-left:3px solid #22c55e; }
-          .bvr-table .bvr-alt { background:rgba(255,255,255,0.03); }
-          .bvr-table .bvr-bold { font-weight:700; }
-        </style>
         <table class=”bvr-table”>
           <colgroup><col style=”width:20%”><col style=”width:27%”><col style=”width:27%”><col style=”width:26%”></colgroup>
           <thead><tr>
             <th class=”bvr-left”>Horizon</th>
-            <th class=”bvr-right” style=”color:#3b82f6”>Locataire</th>
-            <th class=”bvr-right” style=”color:#22c55e”>Propriétaire</th>
+            <th class=”bvr-right” style=”color:#3b82f6 !important”>Locataire</th>
+            <th class=”bvr-right” style=”color:#22c55e !important”>Propriétaire</th>
             <th class=”bvr-right”>Δ Avantage</th>
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
-        </div>
 
-        <div style=”margin-top:14px; font-size:0.7rem; color:rgba(255,255,255,0.3); text-align:center; line-height:1.5;”>
+        <div class=”bvr-footer”>
           Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP, pas d'impôt sur revenus de placement).
         </div>
       </div>
