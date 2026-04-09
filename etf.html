@@ -1647,6 +1647,16 @@
             const tickerHTML = highlight(getTicker(etf));
             const nameHTML   = highlight(getName(etf));
 
+            // Détection yield synthétique (covered call, derivative income…)
+            const yieldVal = Number(etf.yield_ttm ?? etf.dividend_yield ?? 0);
+            const isSynthYield = yieldVal > 0.15 && ['derivative_income','derivative_income_index','covered_call','leveraged_single_stock'].includes(etf.exposure);
+            const yieldHTML = isSynthYield
+              ? `<span title="Yield synthétique (options/dérivés) — ne reflète pas un dividende classique. Perf 1Y: ${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}"
+                   style="color:#ff9800;">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</span>
+                 <span style="display:inline-block;font-size:0.55rem;padding:1px 4px;border-radius:4px;background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.4);color:#ff9800;margin-left:3px;vertical-align:middle;cursor:help;"
+                   title="Ce rendement provient de la vente d'options (covered call / derivative income), pas de dividendes classiques. Le prix du fonds s'érode progressivement (NAV erosion). Regardez la perf 1 an pour la vraie performance.">⚠ synth.</span>`
+              : fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield);
+
             const row = document.createElement('tr');
             row.innerHTML = `
               <td class="py-2 px-3">
@@ -1668,7 +1678,7 @@
               <td class="text-right ${ytdCls}">${fmtPct(etf.ytd_return_pct ?? etf.return_ytd)}</td>
               <td class="text-right ${y1Cls}">${fmtPct(etf.one_year_return_pct ?? etf.return_1y)}</td>
               <td class="text-right">${fmtPct(etf.vol_3y_pct ?? etf.volatility, 2, false)}</td>
-              <td class="text-right">${fmtRatioPct(etf.yield_ttm ?? etf.dividend_yield)}</td>
+              <td class="text-right">${yieldHTML}</td>
               <td class="text-center"><span class="inline-block px-2 py-0.5 rounded text-xs font-medium" style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);color:rgba(255,255,255,0.75);font-family:'JetBrains Mono',monospace;font-size:0.6rem;white-space:nowrap;">${etf.exposure || '–'}</span></td>
               <td class="text-center">
                 <button class="action-button details-toggle" aria-expanded="false" onclick="toggleEtfAzDetails(this)">
