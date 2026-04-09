@@ -5,21 +5,23 @@
  * Version 3.0 - Corrections complètes
  */
 
-// Constantes fiscales
+// Constantes fiscales — mises à jour LF 2026 + LFSS 2026
 const FISCAL_CONSTANTS = {
     // Taux
-    PRELEVEMENTS_SOCIAUX: 0.172,
+    PRELEVEMENTS_SOCIAUX: 0.172,        // Location nue (revenus fonciers) : inchangé 17,2%
+    PRELEVEMENTS_SOCIAUX_MEUBLE: 0.186, // LMNP/LMP non assujetti SSI : 18,6% (CSG +1,4pt, LFSS 2026)
     IS_TAUX_REDUIT: 0.15,
-    IS_PLAFOND_REDUIT: 42500,
-    
+    IS_PLAFOND_REDUIT: 100000,          // Relevé de 42 500€ à 100 000€ (LF 2026, art. CF1086)
+
     // Abattements
     MICRO_FONCIER_ABATTEMENT: 0.30,
     MICRO_BIC_ABATTEMENT: 0.50,
-    
+
     // Plafonds
     MICRO_FONCIER_PLAFOND: 15000,
-    MICRO_BIC_PLAFOND: 77700,     
+    MICRO_BIC_PLAFOND: 77700,           // Longue durée : inchangé. Tourisme non classé : 15 000€ (géré côté UI)
     DEFICIT_FONCIER_MAX: 10700,
+    DEFICIT_FONCIER_MAX_RENO_ENERGETIQUE: 21400, // Doublé si travaux E/F/G→A/B/C/D (prorogé fin 2027)
     
     // Amortissement
     LMNP_TAUX_AMORTISSEMENT_BIEN: 0.025,
@@ -37,7 +39,7 @@ const FISCAL_CONSTANTS = {
 
     // LMP (cotisations sociales pro)
     LMP_COTISATIONS_TAUX: 0.35,   // 35% par défaut
-    LMP_COTISATIONS_MIN: 1200
+    LMP_COTISATIONS_MIN: 1220     // Minimum cotisations SSI 2026 (revalorisé)
 };
 
 /**
@@ -1150,12 +1152,12 @@ case 'nu_micro': {
         : baseImposable * TMI;
 
       const assujetti     = !!inputData.assujettiCotisSociales;
-      prelevementsSociaux = assujetti ? 0 : baseImposable * FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX;
+      prelevementsSociaux = assujetti ? 0 : baseImposable * (FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX_MEUBLE ?? 0.186);
       break;
     }
 
 // ───────────────────────────────────────────────────────────
-// E) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, sinon PS = 17,2%
+// E) LMNP AU RÉEL — assujetti ⇒ cotisations sociales, sinon PS = 18,6% (LFSS 2026)
 // ───────────────────────────────────────────────────────────
 case 'lmnp_reel': {
   // 1) Charges réelles (intérêts + TF + copro NR + PNO + entretien + frais bancaires + garantie amortie)
@@ -1216,12 +1218,12 @@ case 'lmnp_reel': {
     const tauxRaw   = Number(inputData.lmpCotisationsTaux);
     const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX ?? 0.35);
     const minRaw    = Number(inputData.lmpCotisationsMin);
-    const minCotis  = Number.isFinite(minRaw) ? minRaw : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_MIN ?? 1200);
+    const minCotis  = Number.isFinite(minRaw) ? minRaw : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_MIN ?? 1220);
     cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
     prelevementsSociaux = 0;
   } else {
     cotisationsSociales  = 0;
-    prelevementsSociaux  = baseImposable * Number(FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX ?? 0.172);
+    prelevementsSociaux  = baseImposable * Number(FISCAL_CONSTANTS.PRELEVEMENTS_SOCIAUX_MEUBLE ?? 0.186);
   }
 
   // 5) Expositions & sorties
@@ -1291,7 +1293,7 @@ case 'lmp': {
   const tauxRaw   = Number(inputData.lmpCotisationsTaux);
   const tauxCotis = Number.isFinite(tauxRaw) ? (tauxRaw / 100) : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_TAUX ?? 0.35);
   const minRaw    = Number(inputData.lmpCotisationsMin);
-  const minCotis  = Number.isFinite(minRaw) ? minRaw : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_MIN ?? 1200);
+  const minCotis  = Number.isFinite(minRaw) ? minRaw : Number(FISCAL_CONSTANTS.LMP_COTISATIONS_MIN ?? 1220);
   cotisationsSociales = Math.max(baseImposable * tauxCotis, minCotis);
 
   // 5) Exposition & total charges

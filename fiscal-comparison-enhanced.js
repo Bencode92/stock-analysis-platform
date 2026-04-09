@@ -21,9 +21,11 @@ class FiscalComparator {
         // Cache pour optimiser les calculs
         this.cache = new Map();
         
-        // Constantes fiscales 2024
-        this.SEUIL_IS_2024 = 42500;
-        this.TAUX_PS = 17.2;
+        // Constantes fiscales 2026
+        this.SEUIL_IS = 100000;          // Relevé de 42 500€ à 100 000€ (LF 2026)
+        this.SEUIL_IS_2024 = 42500;      // Compat legacy
+        this.TAUX_PS = 17.2;             // Location nue : inchangé
+        this.TAUX_PS_MEUBLE = 18.6;      // LMNP/LMP : CSG +1,4pt (LFSS 2026)
     }
 
     /**
@@ -33,17 +35,17 @@ class FiscalComparator {
      * @returns {number} - Taux d'imposition total à appliquer
      */
     getTauxImposition(regimeId, tmi) {
-        // LMNP, LMP : pas de prélèvements sociaux
+        // LMNP, LMP non assujetti SSI : IR + PS 18,6% (LFSS 2026, hausse CSG +1,4pt)
         if (regimeId === 'lmnp-micro' || regimeId === 'lmnp-reel' || regimeId === 'lmp') {
-            return tmi;
+            return tmi + this.TAUX_PS_MEUBLE;
         }
-        
+
         // SCI IS : traitement spécial (IS, pas IR+PS)
         if (regimeId === 'sci-is') {
             return 0; // L'IS est calculé différemment dans la méthode dédiée
         }
-        
-        // Location nue (micro-foncier, réel, jeanbrun) : IR + PS
+
+        // Location nue (micro-foncier, réel, jeanbrun) : IR + PS 17,2%
         return tmi + this.TAUX_PS;
     }
 
@@ -171,9 +173,9 @@ class FiscalComparator {
                     structureSociete: true
                 },
                 calcul: {
-                    tauxIS: 0.15, // 15% jusqu'à 42.5K€
+                    tauxIS: 0.15, // 15% jusqu'à 100K€
                     tauxISPlein: 0.25, // 25% au-delà
-                    seuilIS: 42500, // Seuil 2024
+                    seuilIS: 100000, // Relevé à 100 000€ (LF 2026)
                     type: 'societe'
                 }
             }
@@ -604,7 +606,7 @@ class FiscalComparator {
         const loyerAnnuel = calcul.loyerMensuel * 12 * (1 - calcul.vacanceLocative / 100);
         const abattement = 0.50; // 50% d'abattement
         const baseImposable = loyerAnnuel * (1 - abattement);
-        const impot = baseImposable * (data.tmi / 100); // Pas de PS en LMNP
+        const impot = baseImposable * ((data.tmi / 100) + 0.186); // IR + PS 18,6% (LFSS 2026)
         
         // ✅ Charges réelles pour le cash-flow (sans abattement)
         const chargesReelles = 
@@ -690,8 +692,8 @@ class FiscalComparator {
         // Résultat fiscal
         const resultatFiscal = Math.max(0, loyerAnnuel - chargesFiscalesDeductibles);
         
-        // Calcul de l'impôt (pas de PS en LMNP)
-        const impot = resultatFiscal * (data.tmi / 100);
+        // Calcul de l'impôt : IR + PS 18,6% (LFSS 2026, hausse CSG)
+        const impot = resultatFiscal * ((data.tmi / 100) + 0.186);
         
         // ✅ CORRECTION PRINCIPALE : Cash-flow basé sur les charges RÉELLES
         const cashflowAvantImpot = loyerAnnuel - chargesReellementPayees;
@@ -805,10 +807,10 @@ class FiscalComparator {
         
         // Calcul IS avec taux réduit
         let impotIS = 0;
-        if (resultatImposable <= 42500) {
+        if (resultatImposable <= 100000) {
             impotIS = resultatImposable * 0.15; // Taux réduit 15%
         } else {
-            impotIS = 42500 * 0.15 + (resultatImposable - 42500) * 0.25;
+            impotIS = 100000 * 0.15 + (resultatImposable - 100000) * 0.25;
         }
         
         // ✅ NOUVEAU : Cash-flow réel SCI
@@ -846,13 +848,13 @@ class FiscalComparator {
         
         result.details = {
             regime: 'SCI à l\'IS',
-            tauxIS: resultatImposable <= 42500 ? '15%' : 'Mixte 15%/25%',
+            tauxIS: resultatImposable <= 100000 ? '15%' : 'Mixte 15%/25%',
             amortissements: (chargesDeductibles.amortissementBien + chargesDeductibles.amortissementFrais).toFixed(2),
             economieVsIR: economieVsIR.toFixed(2)
         };
         
         result.avantages = [
-            `Taux IS : ${resultatImposable <= 42500 ? '15%' : 'jusqu\'à 15%'} vs TMI ${data.tmi}%`,
+            `Taux IS : ${resultatImposable <= 100000 ? '15%' : 'jusqu\'à 15%'} vs TMI ${data.tmi}%`,
             `Amortissement du bien : ${chargesDeductibles.amortissementBien.toFixed(0)}€/an`,
             economieVsIR > 0 ? `Économie vs IR : ${economieVsIR.toFixed(0)}€/an` : null,
             'Possibilité de déduire la rémunération du gérant',
