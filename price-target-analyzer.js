@@ -229,10 +229,18 @@
         rpApport: Math.round(currentCost.apport),
         rpOpportunityRate: currentCost.tauxOpportunite, // en %
 
-        // 🔹 NOUVEAU : KPIs mensuels pour l’UI (effort / capital)
-        rpMonthlyNet: Math.round(currentCost.net),                    // signé (+ surcoût, - économie)
-        rpMonthlyEffortAbs: Math.round(Math.abs(currentCost.net)),   // toujours positif
+        // 🔹 KPIs mensuels pour l’UI (effort / capital)
+        rpMonthlyNet: Math.round(currentCost.net),
+        rpMonthlyEffortAbs: Math.round(Math.abs(currentCost.net)),
         rpMonthlyCapital: Math.round(currentCost.capitalAnnuel / 12),
+
+        // 🔹 Données pour la projection multi-années
+        rpMensualite: Math.round(currentCost.mensualite),
+        rpCharges: Math.round(currentCost.charges),
+        rpLoyerMarche: Math.round(params.loyerMarche),
+        rpPartner: Math.round(params.partner || 0),
+        rpTaux: Number(baseInput.loanRate ?? baseInput.taux ?? 3.5),
+        rpDuree: Number(baseInput.loanDuration ?? baseInput.duree ?? 20),
 
         recommendation: this._generateRPRecommendation(gap, gapPercent, params.loyerMarche)
       };

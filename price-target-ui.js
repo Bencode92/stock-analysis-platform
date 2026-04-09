@@ -471,44 +471,44 @@ class PriceTargetUI {
           </div>
 
           <!-- Détail des flux annuels (accordion) -->
-          <details style="margin-bottom:4px;">
-            <summary style="cursor:pointer; font-size:0.9rem; color:#475569;">
+          <details style=”margin-bottom:4px;”>
+            <summary style=”cursor:pointer; font-size:0.9rem; color:#475569;”>
               🔍 Voir le détail des flux annuels
             </summary>
-            <div style="margin-top:8px;">
-              <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <div style=”margin-top:8px;”>
+              <table style=”width:100%; border-collapse:collapse; font-size:0.9rem;”>
                 <tbody>
                   <tr>
-                    <td style="padding:6px 4px;">💰 Gain / perte de cash vs loyer</td>
-                    <td style="padding:6px 4px; text-align:right; font-weight:600; color:${deltaCash >= 0 ? '#16a34a' : '#b91c1c'};">
+                    <td style=”padding:6px 4px;”>💰 Gain / perte de cash vs loyer</td>
+                    <td style=”padding:6px 4px; text-align:right; font-weight:600; color:${deltaCash >= 0 ? '#16a34a' : '#b91c1c'};”>
                       ${deltaCash >= 0 ? '+' : '−'}${fmt(Math.abs(deltaCash))}
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 4px;">🏦 Capital remboursé</td>
-                    <td style="padding:6px 4px; text-align:right; font-weight:600; color:#16a34a;">
+                    <td style=”padding:6px 4px;”>🏦 Capital remboursé</td>
+                    <td style=”padding:6px 4px; text-align:right; font-weight:600; color:#16a34a;”>
                       +${fmt(Math.abs(capital))}
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4);">
+                    <td style=”padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4);”>
                       <strong>= Enrichissement “comptable” (sans coût d'opportunité)</strong>
                     </td>
-                    <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4); text-align:right; font-weight:700;">
+                    <td style=”padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4); text-align:right; font-weight:700;”>
                       ${simple >= 0 ? '+' : '−'}${fmt(Math.abs(simple))}
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 4px; color:#b91c1c;">📉 Coût d'opportunité de l'apport</td>
-                    <td style="padding:6px 4px; text-align:right; font-weight:600; color:#b91c1c;">
+                    <td style=”padding:6px 4px; color:#b91c1c;”>📉 Coût d'opportunité de l'apport</td>
+                    <td style=”padding:6px 4px; text-align:right; font-weight:600; color:#b91c1c;”>
                       −${fmt(Math.abs(oppCost))}
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4);">
+                    <td style=”padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4);”>
                       <strong>= Enrichissement “patrimonial” (vue réaliste)</strong>
                     </td>
-                    <td style="padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4); text-align:right; font-weight:700;">
+                    <td style=”padding:6px 4px; border-top:1px solid rgba(148,163,184,0.4); text-align:right; font-weight:700;”>
                       ${realistic >= 0 ? '+' : '−'}${fmt(Math.abs(realistic))}
                     </td>
                   </tr>
@@ -517,6 +517,176 @@ class PriceTargetUI {
             </div>
           </details>
 
+          <!-- ═══════ PROJECTION MULTI-ANNÉES : Acheter vs Louer ═══════ -->
+          ${this._generateBuyVsRentProjection(r)}
+
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Projection multi-années : patrimoine Propriétaire vs Locataire
+   * Locataire : place l'apport + les économies mensuelles
+   * Propriétaire : valeur du bien − capital restant dû
+   */
+  _generateBuyVsRentProjection(r) {
+    const fmt = (v) => this._formatCurrency(v);
+    const currentPrice = Number(r.currentPrice ?? 0);
+    const apport       = Number(r.rpApport ?? 0);
+    const oppRate      = Number(r.rpOpportunityRate ?? 3) / 100;    // ex: 0.03
+    const appreciation = 0.02;                                       // 2%/an appréciation immobilière
+    const rentInflation = 0.015;                                     // 1.5%/an hausse loyers
+    const mensualite   = Number(r.rpMensualite ?? r.currentMonthlyCost ?? 0) + Number(r.rpCharges ?? 0);
+    const loyerMarche  = Number(r.rpLoyerMarche ?? 0);
+    const partner      = Number(r.rpPartner ?? 0);
+    const capital      = Number(r.rpCapitalAnnual ?? 0);
+    const taux         = Number(r.rpTaux ?? 3.5);
+    const duree        = Number(r.rpDuree ?? 20);
+    const emprunt      = currentPrice - apport;
+
+    if (!currentPrice || !loyerMarche) {
+      return '<div style=”color:#94a3b8; text-align:center; padding:16px;”>Données insuffisantes pour la projection.</div>';
+    }
+
+    // Calcul de la mensualité du prêt
+    const tauxM = taux / 100 / 12;
+    const nbMens = duree * 12;
+    const mensu = tauxM > 0
+      ? (emprunt * tauxM) / (1 - Math.pow(1 + tauxM, -nbMens))
+      : emprunt / nbMens;
+
+    // Charges propriétaire mensuelles (hors mensualité prêt)
+    const chargesProprio = Number(r.rpCharges ?? 200);
+
+    // Coût total mensuel proprio (hors partner)
+    const coutProprioMensuel = mensu + chargesProprio;
+
+    // Projection sur les horizons clés
+    const horizons = [1, 3, 5, 7, 10, 15, 20, 25];
+    const rows = [];
+    let breakEvenYear = null;
+
+    let capitalRestant = emprunt;
+
+    for (let year = 1; year <= Math.max(25, duree); year++) {
+      // ── LOCATAIRE ──
+      // Loyer annuel (avec inflation)
+      const loyerAnnee = (loyerMarche * 12) * Math.pow(1 + rentInflation, year - 1);
+      const loyerNetConjoint = loyerAnnee - (partner * 12);
+
+      // Patrimoine locataire = apport composé + économies accumulées
+      const patrimoineLocataire = apport * Math.pow(1 + oppRate, year);
+
+      // ── PROPRIÉTAIRE ──
+      // Valeur du bien (avec appréciation)
+      const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
+
+      // Capital restant dû (amortissement simplifié)
+      if (year <= duree) {
+        const interetsAnnee = capitalRestant * (taux / 100);
+        const capitalRembourse = (mensu * 12) - interetsAnnee;
+        capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
+      } else {
+        capitalRestant = 0;
+      }
+
+      // Patrimoine propriétaire = valeur bien − capital restant dû
+      const patrimoineProprio = valeurBien - capitalRestant;
+
+      // Avantage = patrimoine proprio − patrimoine locataire
+      const avantageAchat = patrimoineProprio - patrimoineLocataire;
+
+      // Détecter le point de bascule
+      if (breakEvenYear === null && avantageAchat > 0) {
+        breakEvenYear = year;
+      }
+
+      if (horizons.includes(year) || year === breakEvenYear) {
+        rows.push({
+          year,
+          patrimoineLocataire: Math.round(patrimoineLocataire),
+          patrimoineProprio: Math.round(patrimoineProprio),
+          valeurBien: Math.round(valeurBien),
+          capitalRestant: Math.round(capitalRestant),
+          avantageAchat: Math.round(avantageAchat),
+          isBreakEven: year === breakEvenYear
+        });
+      }
+    }
+
+    // Construire le HTML
+    const breakEvenMsg = breakEvenYear
+      ? `<span style=”color:#22c55e; font-weight:700;”>L'achat devient plus rentable à partir de l'année ${breakEvenYear}</span>`
+      : `<span style=”color:#ef4444; font-weight:600;”>L'achat ne rattrape pas la location sur ${duree} ans avec ces hypothèses</span>`;
+
+    let tableRows = rows.map(row => {
+      const isPos = row.avantageAchat >= 0;
+      const highlight = row.isBreakEven ? 'background:rgba(34,197,94,0.08);' : '';
+      return `
+        <tr style=”${highlight}”>
+          <td style=”padding:6px 8px; font-weight:${row.isBreakEven ? '700' : '400'};”>
+            ${row.isBreakEven ? '🏆 ' : ''}Année ${row.year}
+          </td>
+          <td style=”padding:6px 8px; text-align:right; color:#3b82f6;”>
+            ${fmt(row.patrimoineLocataire)}
+          </td>
+          <td style=”padding:6px 8px; text-align:right; color:#22c55e;”>
+            ${fmt(row.patrimoineProprio)}
+          </td>
+          <td style=”padding:6px 8px; text-align:right; font-weight:600; color:${isPos ? '#22c55e' : '#ef4444'};”>
+            ${isPos ? '+' : '−'}${fmt(Math.abs(row.avantageAchat))}
+          </td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div style=”
+        margin-top:20px;
+        padding:20px;
+        background:linear-gradient(135deg, rgba(99,102,241,0.04), rgba(34,197,94,0.04));
+        border:1px solid rgba(148,163,184,0.3);
+        border-radius:12px;
+      “>
+        <h4 style=”margin:0 0 6px; color:#1e293b; font-size:1.1rem;”>
+          📈 Projection : Acheter vs Louer + placer l'apport
+        </h4>
+        <div style=”font-size:0.8rem; color:#64748b; margin-bottom:12px;”>
+          Hypothèses : appréciation immobilière ${(appreciation*100).toFixed(0)}%/an,
+          hausse loyers ${(rentInflation*100).toFixed(1)}%/an,
+          placement apport ${(oppRate*100).toFixed(0)}%/an.
+          Contribution conjoint : ${fmt(partner)}/mois.
+        </div>
+
+        <div style=”text-align:center; padding:10px 0; margin-bottom:12px; font-size:1rem;”>
+          ${breakEvenMsg}
+        </div>
+
+        <div style=”overflow-x:auto;”>
+          <table style=”width:100%; border-collapse:collapse; font-size:0.85rem;”>
+            <thead>
+              <tr style=”border-bottom:2px solid rgba(148,163,184,0.3);”>
+                <th style=”padding:8px; text-align:left; color:#64748b;”>Horizon</th>
+                <th style=”padding:8px; text-align:right; color:#3b82f6;”>
+                  🏠 Locataire<br><span style=”font-size:0.7rem; font-weight:400;”>Apport placé à ${(oppRate*100).toFixed(0)}%</span>
+                </th>
+                <th style=”padding:8px; text-align:right; color:#22c55e;”>
+                  🏡 Propriétaire<br><span style=”font-size:0.7rem; font-weight:400;”>Bien − dette</span>
+                </th>
+                <th style=”padding:8px; text-align:right; color:#475569;”>
+                  Δ Avantage<br><span style=”font-size:0.7rem; font-weight:400;”>achat</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+
+        <div style=”margin-top:12px; font-size:0.75rem; color:#94a3b8; text-align:center;”>
+          Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP,
+          pas d'impôt sur revenus de placement). Capital restant dû calculé par amortissement linéaire.
         </div>
       </div>
     `;
