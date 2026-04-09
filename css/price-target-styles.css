@@ -708,13 +708,21 @@
 }
 
 .bvr-table {
+  display: table !important;
   width: 100% !important;
   border-collapse: collapse !important;
   font-size: 0.85rem;
   table-layout: fixed;
 }
 
+.bvr-table thead { display: table-header-group; }
+.bvr-table tbody { display: table-row-group; }
+.bvr-table tr    { display: table-row; }
+.bvr-table colgroup { display: table-column-group; }
+.bvr-table col   { display: table-column; }
+
 .bvr-table th {
+  display: table-cell;
   padding: 10px 12px;
   border: none !important;
   border-bottom: 2px solid rgba(0, 191, 255, 0.25) !important;
@@ -726,6 +734,7 @@
 }
 
 .bvr-table td {
+  display: table-cell;
   padding: 10px 12px;
   border: none !important;
   color: #e2e8f0;
