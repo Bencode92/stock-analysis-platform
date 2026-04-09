@@ -5602,65 +5602,56 @@ showStatusDetails(recommendation) {
       </div>
 
       <!-- Caractéristiques -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-          <h3 class="font-semibold mb-2 flex items-center">
-            <i class="fas fa-users mr-2 text-green-400"></i> Structure
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+        <div style="background:rgba(30,58,95,.5);padding:16px;border-radius:8px;">
+          <h3 style="font-weight:600;margin-bottom:10px;display:flex;align-items:center;">
+            <i class="fas fa-users" style="color:#00ff87;margin-right:8px;"></i> Structure
           </h3>
-          <ul class="space-y-2 text-sm">
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Associés :</span>
-              <span class="text-right">${safe(status, 'associes')}</span>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Capital :</span>
-              <span class="text-right">${safe(status, 'capital')}</span>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Responsabilité :</span>
-              <span class="text-right">${safe(status, 'responsabilite')}</span>
-            </li>
-          </ul>
+          <table style="width:100%;font-size:.85rem;border-collapse:collapse;">
+            <tr><td style="color:#94a3b8;padding:4px 0;white-space:nowrap;vertical-align:top;">Associés</td><td style="text-align:right;padding:4px 0;">${safe(status, 'associes')}</td></tr>
+            <tr><td style="color:#94a3b8;padding:4px 0;white-space:nowrap;vertical-align:top;">Capital</td><td style="text-align:right;padding:4px 0;">${safe(status, 'capital')}</td></tr>
+            <tr><td style="color:#94a3b8;padding:4px 0;white-space:nowrap;vertical-align:top;">Responsabilité</td><td style="text-align:right;padding:4px 0;">${safe(status, 'responsabilite')}</td></tr>
+          </table>
         </div>
 
-        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-          <h3 class="font-semibold mb-2 flex items-center">
-            <i class="fas fa-file-invoice-dollar mr-2 text-green-400"></i> Fiscalité
+        <div style="background:rgba(30,58,95,.5);padding:16px;border-radius:8px;">
+          <h3 style="font-weight:600;margin-bottom:10px;display:flex;align-items:center;">
+            <i class="fas fa-file-invoice-dollar" style="color:#00ff87;margin-right:8px;"></i> Fiscalité
           </h3>
-          <ul class="space-y-2 text-sm">
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Régime :</span>
-              <span class="text-right">${safe(status, 'fiscalite')}</span>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Option :</span>
-              <span class="text-right">${safe(status, 'fiscaliteOption')}</span>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">TVA :</span>
-              <span class="text-right">${safe(status, 'regimeTVA')}</span>
-            </li>
-          </ul>
+          <div style="font-size:.85rem;">
+            <div style="margin-bottom:8px;">
+              <span style="color:#94a3b8;">Régime :</span>
+              <span style="margin-left:4px;">${safe(status, 'fiscalite')}</span>
+            </div>
+            <div style="margin-bottom:8px;">
+              <span style="color:#94a3b8;">Option :</span>
+              <p style="margin:4px 0 0;font-size:.8rem;line-height:1.4;color:#cbd5e1;">${safe(status, 'fiscaliteOption')}</p>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">TVA :</span>
+              <p style="margin:4px 0 0;font-size:.8rem;line-height:1.4;color:#cbd5e1;">${safe(status, 'regimeTVA')}</p>
+            </div>
+          </div>
         </div>
 
-        <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-          <h3 class="font-semibold mb-2 flex items-center">
-            <i class="fas fa-user-shield mr-2 text-green-400"></i> Social
+        <div style="background:rgba(30,58,95,.5);padding:16px;border-radius:8px;">
+          <h3 style="font-weight:600;margin-bottom:10px;display:flex;align-items:center;">
+            <i class="fas fa-user-shield" style="color:#00ff87;margin-right:8px;"></i> Social
           </h3>
-          <ul class="space-y-2 text-sm">
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Régime :</span>
-              <span class="text-right">${safe(status, 'regimeSocial')}</span>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Charges :</span>
-              <span class="text-right">${safe(status, 'chargesSociales')}</span>
-            </li>
-            <li class="flex justify-between gap-3">
-              <span class="text-gray-400">Protection :</span>
-              <span class="text-right">${safe(status, 'protectionPatrimoine')}</span>
-            </li>
-          </ul>
+          <div style="font-size:.85rem;">
+            <div style="margin-bottom:8px;">
+              <span style="color:#94a3b8;">Régime :</span>
+              <p style="margin:4px 0 0;font-size:.8rem;line-height:1.4;color:#cbd5e1;">${safe(status, 'regimeSocial')}</p>
+            </div>
+            <div style="margin-bottom:8px;">
+              <span style="color:#94a3b8;">Charges :</span>
+              <p style="margin:4px 0 0;font-size:.8rem;line-height:1.4;color:#cbd5e1;">${safe(status, 'chargesSociales')}</p>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">Protection :</span>
+              <span style="margin-left:4px;">${safe(status, 'protectionPatrimoine')}</span>
+            </div>
+          </div>
         </div>
       </div>
 
