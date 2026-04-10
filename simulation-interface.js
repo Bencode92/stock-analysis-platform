@@ -277,29 +277,66 @@ document.addEventListener('DOMContentLoaded', function() {
         // Si aucun résultat viable n'est trouvé
         if (!resultats.classique && !resultats.encheres) {
             if (statusDiv) {
+                // Calculer les données contextuelles pour expliquer
+                const sim = window.simulateur;
+                const prixM2 = sim?.params?.communs?.prixM2 || 0;
+                const loyerM2 = sim?.params?.communs?.loyerM2 || 0;
+                const taux = sim?.params?.base?.taux || 0;
+                const duree = sim?.params?.base?.duree || 0;
+                const apport = sim?.params?.base?.apport || 0;
+                const rdtBrut = prixM2 > 0 ? ((loyerM2 * 12) / prixM2 * 100).toFixed(1) : '?';
+                const mode = sim?.params?.base?.calculationMode || 'loyer-mensualite';
+                const modeLabel = mode === 'cashflow-positif' ? 'Cash-flow positif' : 'Loyer ≥ Mensualité';
+
+                // Estimer la surface min viable (20m²) pour donner un ordre de grandeur
+                const surfaceMin = sim?.defaults?.surfaceMin || 20;
+                const prixMin = surfaceMin * prixM2;
+                const loyerMin = surfaceMin * loyerM2;
+                const tauxM = taux / 100 / 12;
+                const nbM = duree * 12;
+                const mensMin = prixMin > apport && tauxM > 0
+                  ? ((prixMin - apport) * tauxM) / (1 - Math.pow(1 + tauxM, -nbM))
+                  : 0;
+
                 statusDiv.innerHTML = `
                     <div class="no-results-card">
                         <div class="no-results-icon">
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <h3>Aucune solution viable trouvée</h3>
-                        <p>Avec vos paramètres actuels, aucun investissement ne permet d'atteindre vos objectifs.</p>
+                        <p>Avec le mode <strong>${modeLabel}</strong>, aucune surface entre 20m² et 120m² ne permet d'atteindre vos objectifs.</p>
+
+                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:16px;margin:16px 0;text-align:left;">
+                            <div style="font-weight:600;color:#ef4444;margin-bottom:8px;">
+                                <i class="fas fa-calculator"></i> Diagnostic
+                            </div>
+                            <div style="font-size:0.9rem;color:rgba(255,255,255,0.8);line-height:1.6;">
+                                <div>Rendement brut : <strong>${rdtBrut}%</strong> ${parseFloat(rdtBrut) < 5 ? '<span style="color:#ef4444">(trop faible pour autofinancer)</span>' : ''}</div>
+                                <div>Prix au m² : <strong>${prixM2.toLocaleString('fr-FR')} €</strong> · Loyer : <strong>${loyerM2.toFixed(1)} €/m²/mois</strong></div>
+                                <div>Même un ${surfaceMin}m² à ${prixMin.toLocaleString('fr-FR')}€ aurait une mensualité de ~${Math.round(mensMin).toLocaleString('fr-FR')}€ pour un loyer de ${Math.round(loyerMin)}€</div>
+                            </div>
+                        </div>
+
                         <div class="suggestions">
-                            <h4>Suggestions pour améliorer votre simulation :</h4>
+                            <h4>Solutions possibles :</h4>
                             <ul>
-                                <li><i class="fas fa-plus-circle"></i> Augmenter votre apport</li>
-                                <li><i class="fas fa-percentage"></i> Vérifier le taux d'emprunt</li>
-                                <li><i class="fas fa-home"></i> Explorer d'autres villes</li>
-                                <li><i class="fas fa-sliders-h"></i> Ajuster vos critères dans les paramètres avancés</li>
+                                <li><i class="fas fa-exchange-alt" style="color:#f59e0b;"></i> <strong>Passer en mode "${mode === 'cashflow-positif' ? 'Loyer ≥ Mensualité' : 'Cash-flow positif'}"</strong> — critère moins strict</li>
+                                <li><i class="fas fa-plus-circle" style="color:#22c55e;"></i> <strong>Augmenter l'apport</strong> (actuellement ${apport.toLocaleString('fr-FR')}€) — réduit la mensualité</li>
+                                <li><i class="fas fa-home" style="color:#60a5fa;"></i> <strong>Explorer des villes moins chères</strong> — utilisez le comparateur multi-villes</li>
+                                <li><i class="fas fa-balance-scale" style="color:#a78bfa;"></i> <strong>Optimiser la fiscalité</strong> — en LMNP ou Jeanbrun, l'impôt réduit peut changer la donne</li>
                             </ul>
                         </div>
-                        <button class="btn btn-primary" onclick="location.reload()">
-                            <i class="fas fa-redo"></i> Nouvelle simulation
-                        </button>
+                        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+                            <button class="btn btn-primary" onclick="location.reload()">
+                                <i class="fas fa-redo"></i> Nouvelle simulation
+                            </button>
+                            <button class="btn btn-accent" onclick="document.getElementById('btn-compare-cities')?.click()">
+                                <i class="fas fa-city"></i> Comparer des villes
+                            </button>
+                        </div>
                     </div>
                 `;
                 statusDiv.style.display = 'block';
-                // Masquer les résultats si aucune solution
                 if (resultsContainer) {
                     resultsContainer.classList.add('hidden');
                 }
