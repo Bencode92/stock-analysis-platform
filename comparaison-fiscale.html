@@ -1363,7 +1363,7 @@ td.neutral {
       </div>
 
 <!-- ⬇️ NOUVEAU : Choix du régime fiscal actuel (AVANT le bloc Continue) -->
-<div class="form-section">
+<div class="form-section" id="regime-fiscal-section">
   <div class="form-section-title">
     <i class="fas fa-balance-scale"></i>
     Régime fiscal actuel
@@ -2217,7 +2217,21 @@ occupationSelect.addEventListener('change', toggleFieldsForRP);
 
 function toggleFieldsForRP() {
   const isRP = occupationSelect.value === 'residence';
+
+  // Afficher/masquer la contribution conjoint
   document.getElementById('partnerContribution-group').style.display = isRP ? '' : 'none';
+
+  // Masquer la section régimes fiscaux en mode RP (pas de revenus locatifs = pas de régime)
+  const regimeSection = document.getElementById('regime-fiscal-section');
+  if (regimeSection) {
+    regimeSection.style.display = isRP ? 'none' : '';
+  }
+
+  // Masquer les options Jeanbrun en mode RP
+  const jbPanel = document.getElementById('jeanbrun-options');
+  if (jbPanel && isRP) {
+    jbPanel.style.display = 'none';
+  }
 }
 toggleFieldsForRP();
 
@@ -2316,7 +2330,6 @@ document.getElementById('property-form').addEventListener('submit', async functi
     fraisFixes: typeAchat === 'encheres' ? parseFloat(document.getElementById('frais-fixes').value) || 50 : 0,
     // AJOUT: Récupérer le régime actuel sélectionné
     regimeActuel: document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro',
-    forceRegime: document.getElementById('force-regime')?.checked || false,
     // Paramètres Jeanbrun
     jeanbrunType: document.querySelector('input[name="jeanbrun-type"]:checked')?.value || 'ancien',
     jeanbrunNiveau: document.querySelector('input[name="jeanbrun-niveau"]:checked')?.value || 'intermediaire'
@@ -2522,7 +2535,7 @@ function renderMarketAnalysis(data) {
           </div>
           <div class="vs-separator">VS</div>
           <div class="input-with-label">
-            <label>Loyer du marché</label>
+            <label>Loyer du marché (HC médian)</label>
             <div style="font-size:2em;font-weight:700;color:#00bfff;">
               ${marketRentM2.toFixed(2)} €/m²
             </div>
