@@ -1357,13 +1357,17 @@ class PriceTargetUI {
     const chargesEtImpotsAn1 = loyerAnnuel - cfAn1 - mensualiteAn;
 
     // Amortissements LMNP cumulés (pour réintégration à la revente)
-    const amortAnnuel = isLMNP ? currentPrice * 0.80 * 0.025 : 0; // 2.5% de 80% du prix
+    const amortAnnuel = isLMNP ? currentPrice * 0.80 * 0.025 : 0;
+
+    // Taux de placement SCI IS (trésorerie réinvestie)
+    const tauxPlacementSCI = 0.03; // 3%/an par défaut
 
     // Construire le tableau année par année
     const rows = [];
     let capitalRestant = emprunt;
     let cfCumul = 0;
     let amortCumul = 0;
+    let tresorerieSCI = 0; // Trésorerie cumulée SCI IS (après IS, réinvestie)
 
     for (let year = 1; year <= maxYears; year++) {
       const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
@@ -1381,8 +1385,19 @@ class PriceTargetUI {
       cfCumul += cfAnnee;
       amortCumul += amortAnnuel;
 
+      // SCI IS : le surplus reste dans la société et est réinvesti
+      if (isSCI && cfAnnee > 0) {
+        // Le CF positif en SCI IS est déjà net d'IS (calculé dans chargesAnnee)
+        tresorerieSCI += cfAnnee;
+      }
+      // Intérêts sur la trésorerie accumulée
+      if (isSCI && tresorerieSCI > 0) {
+        const interetsTreso = tresorerieSCI * tauxPlacementSCI;
+        tresorerieSCI += interetsTreso;
+      }
+
       const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
-      const patrimoine = valeurBien - capitalRestant;
+      const patrimoine = valeurBien - capitalRestant + (isSCI ? tresorerieSCI : 0);
 
       // PV et impôt PV
       let pvBrute = valeurBien - currentPrice;
@@ -1391,20 +1406,33 @@ class PriceTargetUI {
       const reintegration = isLMNP ? amortCumul : 0;
       const pvImposable = pvBrute + reintegration;
 
-      // Abattements durée détention
+      // Abattements durée détention (pas d'abattement pour SCI IS — PV des particuliers)
       let abattIR = 0, abattPS = 0;
-      if (year > 5) {
+      if (!isSCI && year > 5) {
         abattIR = Math.min(1, (year - 5) * 0.06);
         abattPS = Math.min(1, (year - 5) * 0.0165);
       }
-      if (year > 22) abattIR = 1;
-      if (year > 30) abattPS = 1;
+      if (!isSCI && year > 22) abattIR = 1;
+      if (!isSCI && year > 30) abattPS = 1;
 
-      const pvNetteIR = Math.max(0, pvImposable) * (1 - abattIR);
-      const pvNettePS = Math.max(0, pvImposable) * (1 - abattPS);
-      const impotPV = Math.max(0, pvNetteIR * 0.19 + pvNettePS * 0.172);
+      // SCI IS : PV sur VNC (valeur nette comptable), pas d'abattement durée
+      let impotPV;
+      if (isSCI) {
+        // VNC = prix - amortissements comptables (SCI amortit le bien)
+        const amortSCI = currentPrice * 0.80 * (1/30) * year; // 30 ans amort linéaire
+        const vnc = Math.max(0, currentPrice - amortSCI);
+        const pvSCI = valeurBien - vnc;
+        impotPV = Math.max(0, pvSCI * 0.25); // IS 25% sur la PV
+        // + PFU 30% si distribution des dividendes (à la sortie)
+      } else {
+        const pvNetteIR = Math.max(0, pvImposable) * (1 - abattIR);
+        const pvNettePS = Math.max(0, pvImposable) * (1 - abattPS);
+        impotPV = Math.max(0, pvNetteIR * 0.19 + pvNettePS * 0.172);
+      }
+
       const fraisVente = valeurBien * fraisRevente;
-      const netRevente = valeurBien - capitalRestant - impotPV - fraisVente;
+      // SCI : le net inclut la trésorerie accumulée
+      const netRevente = valeurBien - capitalRestant - impotPV - fraisVente + (isSCI ? tresorerieSCI : 0);
 
       rows.push({
         year, loyerAnnee: Math.round(loyerAnnee),
@@ -1413,6 +1441,7 @@ class PriceTargetUI {
         cfAnnee: Math.round(cfAnnee), cfCumul: Math.round(cfCumul),
         capitalRestant: Math.round(capitalRestant),
         valeurBien: Math.round(valeurBien), patrimoine: Math.round(patrimoine),
+        tresorerieSCI: Math.round(tresorerieSCI),
         pvBrute: Math.round(pvBrute), reintegration: Math.round(reintegration),
         impotPV: Math.round(impotPV), fraisVente: Math.round(fraisVente),
         netRevente: Math.round(netRevente)
@@ -1469,6 +1498,7 @@ class PriceTargetUI {
         <div style="font-size:1.4rem;font-weight:800;color:${color};margin:4px 0;">TRI ${tri}%</div>
         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(row.netRevente)}€ · ×${multiple}</div>
         ${isLMNP ? `<div style="font-size:0.65rem;color:#f59e0b;margin-top:2px;">Réintég. amort: ${fmt(row.reintegration)}€</div>` : ''}
+        ${isSCI ? `<div style="font-size:0.65rem;color:#a78bfa;margin-top:2px;">Tréso. SCI: +${fmt(row.tresorerieSCI || 0)}€</div>` : ''}
       </div>`;
     }).join('');
 
@@ -1488,6 +1518,7 @@ class PriceTargetUI {
         `<td style="${S.td};text-align:right;color:#60a5fa">${fmt(row.capitalRestant)}</td>` +
         `<td style="${S.td};text-align:right;color:#4ade80;font-weight:600">${fmt(row.patrimoine)}</td>` +
         `<td style="${S.td};text-align:right;color:${row.netRevente >= 0 ? '#22c55e' : '#ef4444'}">${fmt(row.netRevente)}</td>` +
+        (isSCI ? `<td style="${S.td};text-align:right;color:#a78bfa;font-weight:600">${fmt(row.tresorerieSCI || 0)}</td>` : '') +
         `</tr>`;
     }).join('\n');
 
@@ -1514,6 +1545,7 @@ class PriceTargetUI {
         <div style="${S.sub}">
           Prix ${fmt(currentPrice)}€ · Apport ${fmt(apport)}€ · Emprunt ${fmt(emprunt)}€ à ${taux}% sur ${duree} ans · Appréciation ${(appreciation*100)}%/an · Loyers +${(hausseLoyers*100).toFixed(1)}%/an
           ${isLMNP ? `· <span style="color:#f59e0b;">Amort. LMNP ${fmt(amortAnnuel)}€/an réintégré en PV</span>` : ''}
+          ${isSCI ? `· <span style="color:#a78bfa;">Trésorerie SCI réinvestie à ${(tauxPlacementSCI*100)}%/an</span>` : ''}
         </div>
 
         <!-- TRI par horizon -->
@@ -1538,6 +1570,7 @@ class PriceTargetUI {
               <th style="${S.th};text-align:right;color:#60a5fa">Dette</th>
               <th style="${S.th};text-align:right;color:#4ade80">Patrimoine</th>
               <th style="${S.th};text-align:right">Net revente</th>
+              ${isSCI ? `<th style="${S.th};text-align:right;color:#a78bfa">Tréso. SCI</th>` : ''}
             </tr></thead>
             <tbody>${tableRows}</tbody>
           </table>
@@ -1546,6 +1579,14 @@ class PriceTargetUI {
         ${isLMNP ? `
         <div style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;font-size:0.8rem;color:#f59e0b;">
           <i class="fas fa-exclamation-triangle"></i> <strong>Réintégration LMNP (loi du 15/02/2025, art. 84)</strong> : les amortissements déduits (${fmt(amortAnnuel)}€/an) sont réintégrés dans la plus-value à la revente. Exonération : résidences étudiantes, seniors, EHPAD.
+        </div>` : ''}
+
+        ${isSCI ? `
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;font-size:0.8rem;color:#a78bfa;">
+          <i class="fas fa-building"></i> <strong>Avantage SCI IS — Trésorerie réinvestie</strong> :
+          Les bénéfices après IS (15%) restent dans la société et sont placés à ${(tauxPlacementSCI*100)}%/an (effet composé).
+          À la revente : la trésorerie accumulée s'ajoute au produit de cession.
+          <strong>Attention</strong> : PV calculée sur VNC (pas d'abattement durée détention) + PFU 30% si distribution.
         </div>` : ''}
 
         <!-- Export -->
