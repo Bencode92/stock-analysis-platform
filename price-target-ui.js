@@ -1549,14 +1549,69 @@ class PriceTargetUI {
         </div>
 
         <!-- TRI par horizon -->
-        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
           ${triCards}
+        </div>
+
+        <!-- Sélecteur horizon personnalisé -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:12px 16px;background:rgba(0,191,255,0.05);border:1px solid rgba(0,191,255,0.15);border-radius:10px;flex-wrap:wrap;">
+          <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;"><i class="fas fa-calendar-alt" style="margin-right:6px;"></i>Horizon personnalisé :</span>
+          <input type="range" id="bp-horizon-slider" min="5" max="25" value="${duree}" step="1"
+            style="flex:1;min-width:120px;accent-color:#00bfff;">
+          <span id="bp-horizon-label" style="color:#00bfff;font-weight:700;font-size:1rem;min-width:50px;">${duree} ans</span>
+          <span style="color:rgba(255,255,255,0.4);font-size:0.85rem;">→</span>
+          <span id="bp-horizon-tri" style="color:#22c55e;font-weight:700;font-size:1.1rem;">TRI ${calcTRI(duree)}%</span>
+          <span id="bp-horizon-net" style="color:rgba(255,255,255,0.5);font-size:0.85rem;">Net ${fmt(rows[duree-1]?.netRevente || 0)}€</span>
         </div>
 
         <!-- Graphique -->
         <div style="margin-bottom:20px;padding:16px;background:rgba(0,0,0,0.2);border-radius:10px;">
           <canvas id="bp-chart" height="200"></canvas>
         </div>
+
+        <script>
+        (function(){
+          const triData = ${JSON.stringify(rows.map(r => ({ y: r.year, net: r.netRevente, cf: r.cfAnnee })))};
+          const apport = ${apport};
+          const slider = document.getElementById('bp-horizon-slider');
+          const label = document.getElementById('bp-horizon-label');
+          const triEl = document.getElementById('bp-horizon-tri');
+          const netEl = document.getElementById('bp-horizon-net');
+          if (!slider) return;
+
+          function calcTRIjs(years) {
+            const flows = [-apport];
+            for (let i = 0; i < years && i < triData.length; i++) {
+              const d = triData[i];
+              flows.push(i === years - 1 ? d.cf + d.net : d.cf);
+            }
+            let r = 0.05;
+            for (let it = 0; it < 100; it++) {
+              let npv = 0, dnpv = 0;
+              for (let t = 0; t < flows.length; t++) {
+                npv += flows[t] / Math.pow(1 + r, t);
+                dnpv -= t * flows[t] / Math.pow(1 + r, t + 1);
+              }
+              if (Math.abs(dnpv) < 0.001) break;
+              const nr = r - npv / dnpv;
+              if (Math.abs(nr - r) < 0.0001) { r = nr; break; }
+              r = Math.max(-0.5, Math.min(1, nr));
+            }
+            return (r * 100).toFixed(2);
+          }
+
+          slider.addEventListener('input', function() {
+            const y = parseInt(this.value);
+            label.textContent = y + ' ans';
+            const tri = calcTRIjs(y);
+            const triNum = parseFloat(tri);
+            triEl.textContent = 'TRI ' + tri + '%';
+            triEl.style.color = triNum >= 5 ? '#22c55e' : triNum >= 2 ? '#f59e0b' : '#ef4444';
+            const row = triData[y - 1];
+            netEl.textContent = 'Net ' + Math.round(row?.net || 0).toLocaleString('fr-FR') + '€';
+          });
+        })();
+        </script>
 
         <!-- Tableau année par année -->
         <div style="overflow-x:auto;">
@@ -1600,6 +1655,111 @@ class PriceTargetUI {
             <i class="fas fa-copy"></i> Copier
           </button>
         </div>
+
+        <!-- Comparaison TRI par régime -->
+        <details style="margin-top:16px;">
+          <summary style="cursor:pointer;color:#00bfff;font-size:0.9rem;font-weight:600;padding:8px 0;">
+            <i class="fas fa-balance-scale" style="margin-right:6px;"></i>Comparer le TRI avec les autres régimes (horizon ${duree} ans)
+          </summary>
+          <div id="bp-regime-comparison" style="margin-top:12px;">
+            <div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">Calcul en cours...</div>
+          </div>
+        </details>
+
+        <script>
+        (function(){
+          // Calcul TRI pour chaque régime (utilise les mêmes données de base)
+          const container = document.getElementById('bp-regime-comparison');
+          if (!container || !window.analyzer) return;
+
+          const regimes = ['nu_micro','nu_reel','nu_jeanbrun','lmnp_reel','lmp','sci_is'];
+          const registry = window.analyzer.getRegimeRegistry?.() || {};
+          const baseInput = ${JSON.stringify(r._baseInput || {})};
+          const apportVal = ${apport};
+          const currentPriceVal = ${currentPrice};
+          const dureeVal = ${duree};
+          const currentRegime = '${regimeId}';
+
+          // Observer le click sur le <details>
+          container.closest('details').addEventListener('toggle', function() {
+            if (!this.open || container.dataset.loaded) return;
+            container.dataset.loaded = 'true';
+
+            const params = window.analyzer.getAllAdvancedParams?.() || {};
+            const results = [];
+
+            regimes.forEach(rId => {
+              try {
+                const ptResult = window.priceTargetAnalyzer?.calculatePriceTarget(baseInput, 0, { regimeId: rId });
+                if (!ptResult) return;
+                const cf = ptResult.currentBreakdown?.cashflow || 0;
+                const cap = ptResult.currentBreakdown?.capital || 0;
+                const enrich = ptResult.currentEnrichment || 0;
+                const net = ptResult.currentBreakdown ? (function(){
+                  // Simplified net revente at duree
+                  const val = currentPriceVal * Math.pow(1.02, dureeVal);
+                  return val - 0 - val * 0.07; // simplifié
+                })() : 0;
+
+                // TRI simplifié
+                const flows = [-apportVal];
+                for (let i = 0; i < dureeVal; i++) {
+                  const cfY = cf * Math.pow(1.015, i); // hausse loyers approx
+                  flows.push(i === dureeVal - 1 ? cfY + net + (cap * dureeVal) : cfY);
+                }
+                let rate = 0.05;
+                for (let it = 0; it < 80; it++) {
+                  let npv = 0, dnpv = 0;
+                  for (let t = 0; t < flows.length; t++) {
+                    npv += flows[t] / Math.pow(1 + rate, t);
+                    dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
+                  }
+                  if (Math.abs(dnpv) < 0.001) break;
+                  const nr = rate - npv / dnpv;
+                  if (Math.abs(nr - rate) < 0.0001) { rate = nr; break; }
+                  rate = Math.max(-0.5, Math.min(1, nr));
+                }
+                const tri = (rate * 100).toFixed(2);
+
+                results.push({
+                  id: rId,
+                  nom: registry[rId]?.nom || rId,
+                  tri: parseFloat(tri),
+                  triStr: tri,
+                  enrich: Math.round(enrich),
+                  cf: Math.round(cf),
+                  isCurrent: rId === currentRegime || rId === window.analyzer.normalizeRegimeKey?.({id: currentRegime})
+                });
+              } catch(e) {}
+            });
+
+            results.sort((a, b) => b.tri - a.tri);
+            const fmt = v => Math.round(v).toLocaleString('fr-FR');
+
+            let html = '<table style="width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.85rem;">';
+            html += '<thead><tr style="border-bottom:2px solid rgba(0,191,255,0.2);">';
+            html += '<th style="padding:8px 10px;text-align:left;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Régime</th>';
+            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">TRI ' + dureeVal + ' ans</th>';
+            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Enrichissement/an</th>';
+            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">CF/an</th>';
+            html += '</tr></thead><tbody>';
+
+            results.forEach((r, i) => {
+              const bg = r.isCurrent ? 'background:rgba(0,191,255,0.1);border-left:3px solid #00bfff;' : (i % 2 === 0 ? 'background:rgba(255,255,255,0.03);' : '');
+              const triColor = r.tri >= 5 ? '#22c55e' : r.tri >= 2 ? '#f59e0b' : '#ef4444';
+              html += '<tr style="' + bg + '">';
+              html += '<td style="padding:8px 10px;color:#e2e8f0;font-weight:' + (r.isCurrent ? '700' : '400') + ';">' + (i === 0 ? '🏆 ' : '') + r.nom + (r.isCurrent ? ' <span style="color:#00bfff;font-size:0.7rem;">← actuel</span>' : '') + '</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + triColor + ';font-weight:700;font-size:1rem;">' + r.triStr + '%</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + (r.enrich >= 0 ? '#22c55e' : '#ef4444') + ';">' + (r.enrich >= 0 ? '+' : '') + fmt(r.enrich) + '€</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + (r.cf >= 0 ? '#22c55e' : '#ef4444') + ';">' + (r.cf >= 0 ? '+' : '') + fmt(r.cf) + '€</td>';
+              html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+          });
+        })();
+        </script>
 
         <div style="${S.foot}">
           PV : abattement IR 6%/an après 5 ans (exo 22 ans) + PS 1.65%/an après 5 ans (exo 30 ans). Frais revente ${(fraisRevente*100)}%.
