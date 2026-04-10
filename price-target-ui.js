@@ -155,6 +155,9 @@ class PriceTargetUI {
             </p>
           </div>
 
+          <!-- VERDICT INVESTISSEMENT -->
+          ${this._generateVerdictBox(r)}
+
           <!-- HERO KPI (enrichissement annuel + rendement sur apport) -->
           ${heroKPI}
 
@@ -696,6 +699,103 @@ class PriceTargetUI {
         <div style=”${S.foot}”>
           Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP, pas d'impôt sur revenus de placement).
         </div>
+      </div>
+    `;
+  }
+
+  // 📊 Verdict investissement (locatif)
+  _generateVerdictBox(r) {
+    const fmt = (v) => this._formatCurrency(v);
+    const enrichment = Number(r.currentEnrichment ?? 0);
+    const gap = Number(r.gap ?? 0);
+    const gapPct = Math.abs(Number(r.gapPercent ?? 0));
+    const equity = Number(r.apport ?? 0);
+    const roe = equity > 0 ? (enrichment / equity) * 100 : 0;
+    const cf = Number(r.currentBreakdown?.cashflow ?? 0);
+    const cfMensuel = Math.round(cf / 12);
+    const isPriceGood = gap < 0;
+
+    // Calculer la projection 20 ans (simplifié)
+    const appreciation = 0.02;
+    const currentPrice = Number(r.currentPrice ?? 0);
+    const pvLatente20 = currentPrice * (Math.pow(1 + appreciation, 20) - 1);
+    const enrichTotal20 = (enrichment * 20) + pvLatente20;
+
+    // Suggestion régime
+    let bestRegimeMsg = '';
+    try {
+      const analyzer = this.analyzer?.analyzer;
+      if (analyzer?._computeBestRegimeCFAnnuel && r._baseInput) {
+        const params = analyzer.getAllAdvancedParams?.() || {};
+        const best = analyzer._computeBestRegimeCFAnnuel(
+          analyzer._buildInputForPrice(r._baseInput, currentPrice, params), params
+        );
+        const currentKey = analyzer.normalizeRegimeKey?.({ id: r.regimeId }) || r.regimeId;
+        if (best?.regimeId && best.regimeId !== currentKey) {
+          const registry = analyzer.getRegimeRegistry?.() || {};
+          const bestNom = registry[best.regimeId]?.nom || best.regimeNom;
+          const bestEnrich = best.cashflowAnnuel + (Number(r.currentBreakdown?.capital ?? 0));
+          const delta = bestEnrich - enrichment;
+          if (delta > 0) {
+            bestRegimeMsg = `<strong style="color:#22c55e">${bestNom}</strong> donnerait +${fmt(delta)}/an de mieux`;
+          }
+        }
+      }
+    } catch(e) {}
+
+    // Construire les lignes de verdict
+    const lines = [];
+
+    // 1. Prix
+    if (isPriceGood) {
+      lines.push({ icon: 'fa-tag', color: '#22c55e', text: `<strong>Prix :</strong> ${gapPct.toFixed(0)}% sous l'équilibre (marge de ${fmt(Math.abs(gap))})` });
+    } else if (gapPct < 5) {
+      lines.push({ icon: 'fa-tag', color: '#f59e0b', text: `<strong>Prix :</strong> proche de l'équilibre (${gapPct.toFixed(0)}% au-dessus)` });
+    } else {
+      lines.push({ icon: 'fa-tag', color: '#ef4444', text: `<strong>Prix :</strong> ${gapPct.toFixed(0)}% au-dessus de l'équilibre (surcoût ${fmt(Math.abs(gap))})` });
+    }
+
+    // 2. Enrichissement
+    if (enrichment > 0) {
+      lines.push({ icon: 'fa-chart-line', color: '#22c55e', text: `<strong>Enrichissement :</strong> +${fmt(enrichment)}/an (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% sur apport)` });
+    } else {
+      lines.push({ icon: 'fa-chart-line', color: '#ef4444', text: `<strong>Enrichissement :</strong> ${fmt(enrichment)}/an (appauvrissement)` });
+    }
+
+    // 3. Patrimoine 20 ans
+    lines.push({ icon: 'fa-building', color: '#60a5fa', text: `<strong>Patrimoine 20 ans :</strong> enrichissement total estimé ${enrichTotal20 >= 0 ? '+' : ''}${fmt(enrichTotal20)}` });
+
+    // 4. Cash-flow
+    if (cfMensuel >= 0) {
+      lines.push({ icon: 'fa-wallet', color: '#22c55e', text: `<strong>Cash-flow :</strong> +${fmt(Math.abs(cfMensuel))}/mois (autofinancé)` });
+    } else {
+      lines.push({ icon: 'fa-wallet', color: '#f59e0b', text: `<strong>Cash-flow :</strong> ${fmt(cfMensuel)}/mois d'effort de trésorerie` });
+    }
+
+    // 5. Suggestion régime
+    if (bestRegimeMsg) {
+      lines.push({ icon: 'fa-lightbulb', color: '#a78bfa', text: `<strong>Optimisation :</strong> ${bestRegimeMsg}` });
+    } else {
+      lines.push({ icon: 'fa-check-circle', color: '#22c55e', text: `<strong>Régime :</strong> ${r.regimeUsed} est déjà optimal` });
+    }
+
+    const linesHTML = lines.map(l => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;">
+        <i class="fas ${l.icon}" style="color:${l.color};margin-top:3px;width:16px;text-align:center;flex-shrink:0"></i>
+        <span style="color:#e2e8f0;font-size:0.9rem;line-height:1.4">${l.text}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div style="
+        margin-bottom:20px;padding:18px 22px;
+        background:linear-gradient(135deg,rgba(0,191,255,0.04),rgba(99,102,241,0.04));
+        border:1px solid rgba(0,191,255,0.2);border-radius:12px;
+      ">
+        <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:10px;font-weight:600;">
+          <i class="fas fa-clipboard-check" style="margin-right:6px"></i>Verdict investissement
+        </div>
+        ${linesHTML}
       </div>
     `;
   }
