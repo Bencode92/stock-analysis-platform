@@ -666,53 +666,63 @@
 /* TABLEAU PROJECTION ACHETER VS LOUER                         */
 /* ════════════════════════════════════════════════════════════ */
 
+/* ── Container ── */
 .bvr-wrap {
-  margin-top: 24px;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(10,15,30,0.95), rgba(15,25,50,0.9));
-  border: 1px solid rgba(0, 191, 255, 0.2);
+  margin-top: 30px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(10,15,30,0.97), rgba(15,25,50,0.92));
+  border: 1px solid rgba(0, 191, 255, 0.25);
   border-radius: 16px;
   width: 100%;
   box-sizing: border-box;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .bvr-wrap h4 {
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   color: #e2e8f0;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
 }
 
 .bvr-wrap .bvr-subtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
-  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 20px;
+  line-height: 1.5;
 }
 
+/* ── Break-even message ── */
 .bvr-wrap .bvr-breakeven {
   text-align: center;
-  padding: 14px 20px;
-  margin-bottom: 16px;
-  border-radius: 10px;
-  font-size: 1.05rem;
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .bvr-wrap .bvr-breakeven.found {
-  background: rgba(34, 197, 94, 0.08);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }
 
 .bvr-wrap .bvr-breakeven.notfound {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
+/* ── Table ── */
 .bvr-table {
   display: table !important;
   width: 100% !important;
-  border-collapse: collapse !important;
-  font-size: 0.85rem;
+  border-collapse: separate !important;
+  border-spacing: 0 2px !important;
+  font-size: 0.9rem;
   table-layout: fixed;
+  margin-top: 8px;
 }
 
 .bvr-table thead { display: table-header-group; }
@@ -723,48 +733,60 @@
 
 .bvr-table th {
   display: table-cell;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border: none !important;
-  border-bottom: 2px solid rgba(0, 191, 255, 0.25) !important;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.7rem;
+  border-bottom: 2px solid rgba(0, 191, 255, 0.3) !important;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   font-weight: 600;
 }
 
 .bvr-table td {
   display: table-cell;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border: none !important;
   color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
 }
 
 .bvr-table .bvr-right { text-align: right; }
 .bvr-table .bvr-left { text-align: left; }
 
-.bvr-table .bvr-loc { color: #60a5fa; font-weight: 500; }
-.bvr-table .bvr-prop { color: #4ade80; font-weight: 500; }
+.bvr-table .bvr-loc { color: #60a5fa; font-weight: 600; }
+.bvr-table .bvr-prop { color: #4ade80; font-weight: 600; }
 .bvr-table .bvr-pos { color: #22c55e; font-weight: 700; }
 .bvr-table .bvr-neg { color: #ef4444; font-weight: 700; }
-.bvr-table .bvr-bold { font-weight: 700; }
+.bvr-table .bvr-bold { font-weight: 700; color: #ffffff; }
 
+/* ── Break-even row ── */
 .bvr-table .bvr-be {
-  background: rgba(34, 197, 94, 0.12);
-  border-left: 3px solid #22c55e;
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-left: 3px solid #22c55e !important;
 }
 
+.bvr-table .bvr-be td {
+  font-weight: 700;
+}
+
+/* ── Alternating rows ── */
 .bvr-table .bvr-alt {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.bvr-table tr:hover td {
-  background: rgba(0, 191, 255, 0.05);
+/* ── Hover ── */
+.bvr-table tbody tr:hover td {
+  background: rgba(0, 191, 255, 0.06);
+  transition: background 0.15s ease;
 }
 
+/* ── Footer ── */
 .bvr-footer {
-  margin-top: 14px;
-  font-size: 0.7rem;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.3);
   text-align: center;
   line-height: 1.5;
