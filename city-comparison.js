@@ -387,15 +387,15 @@ class CityComparator {
                 }
             }
             
-            // MODIFICATION 2: Tri par **rendement net** (critère principal), puis cash-flow, puis loyer net
+            // Tri par **enrichissement annuel** (critère principal), puis rendement, puis cash-flow
             results.sort((a, b) =>
+                ((b.enrichissementAnnuel||0) - (a.enrichissementAnnuel||0)) ||
                 (b.rendement - a.rendement) ||
-                (b.cashFlow - a.cashFlow) ||
-                (b.loyerNetMensuel - a.loyerNetMensuel)
+                (b.cashFlow - a.cashFlow)
             );
-            
+
             console.log('✅ Résultats obtenus:', results.length);
-            console.log('📊 Critère de tri: Rendement net');
+            console.log('📊 Critère de tri: Enrichissement annuel (CF + capital)');
             
             // Afficher les résultats
             this.displayResults(results);
@@ -505,6 +505,12 @@ class CityComparator {
             
             if (!best) return null;
             
+            // Capital remboursé an 1 (depuis le tableau d'amortissement)
+            const capitalAn1 = best.tableauAmortissement
+                ? best.tableauAmortissement.slice(0, 12).reduce((s, m) => s + m.amortissementCapital, 0)
+                : 0;
+            const enrichissementAnnuel = (best.cashFlow * 12) + capitalAn1;
+
             return {
                 mode: mode,
                 surface: best.surface,
@@ -517,7 +523,11 @@ class CityComparator {
                 prixM2: pieceData.prix_m2,
                 loyerM2: pieceData.loyer_m2,
                 mensualite: best.mensualite,
-                coutTotal: best.coutTotal
+                mensualiteTotale: best.mensualiteTotale,
+                coutTotal: best.coutTotal,
+                capitalAn1: capitalAn1,
+                enrichissementAnnuel: enrichissementAnnuel,
+                enrichissementMensuel: Math.round(enrichissementAnnuel / 12)
             };
             
         } finally {
@@ -570,7 +580,7 @@ class CityComparator {
                     </h3>
                     <p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
                         <i class="fas fa-info-circle mr-1"></i>
-                        Classement par rendement net le plus élevé
+                        Classement par enrichissement annuel (cash-flow + capital remboursé)
                     </p>
                     
                     <div class="city-results-grid">
@@ -589,6 +599,12 @@ class CityComparator {
                                 </span>
                                 
                                 <div class="stats-grid">
+                                    <div class="stat-item ${r.enrichissementAnnuel >= 0 ? 'positive' : 'negative'}" style="grid-column: 1 / -1; background:${r.enrichissementAnnuel >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)'}; border-radius:8px; padding:10px;">
+                                        <p class="stat-value" style="font-size:1.3em;">
+                                            ${r.enrichissementAnnuel >= 0 ? '+' : ''}${Math.round(r.enrichissementAnnuel).toLocaleString('fr-FR')}€/an
+                                        </p>
+                                        <p class="stat-label">Enrichissement (CF + capital remboursé)</p>
+                                    </div>
                                     <div class="stat-item highlight">
                                         <p class="stat-value">${r.rendement.toFixed(2)}%</p>
                                         <p class="stat-label">Rendement net</p>
@@ -597,7 +613,7 @@ class CityComparator {
                                         <p class="stat-value">
                                             ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                         </p>
-                                        <p class="stat-label">Cash-flow</p>
+                                        <p class="stat-label">Cash-flow/mois</p>
                                     </div>
                                     <div class="stat-item">
                                         <p class="stat-value">${Math.round(r.loyerNetMensuel)}€</p>
@@ -632,7 +648,8 @@ class CityComparator {
                                             <th>Ville</th>
                                             <th>Type</th>
                                             <th>Mode</th>
-                                            <th class="highlight">Rendement</th>
+                                            <th class="highlight">Enrichissement</th>
+                                            <th>Rendement</th>
                                             <th>Cash-flow</th>
                                             <th>Loyer net/mois</th>
                                             <th>Prix</th>
@@ -648,7 +665,10 @@ class CityComparator {
                                                         ${r.mode === 'encheres' ? 'Enchères' : 'Classique'}
                                                     </span>
                                                 </td>
-                                                <td style="text-align: right;" class="highlight">${r.rendement.toFixed(2)}%</td>
+                                                <td style="text-align: right; font-weight: 700;" class="${(r.enrichissementAnnuel||0) >= 0 ? 'positive' : 'negative'} highlight">
+                                                    ${(r.enrichissementAnnuel||0) >= 0 ? '+' : ''}${Math.round(r.enrichissementAnnuel||0).toLocaleString('fr-FR')}€
+                                                </td>
+                                                <td style="text-align: right;">${r.rendement.toFixed(2)}%</td>
                                                 <td style="text-align: right; font-weight: 600;" class="${r.cashFlow >= 0 ? 'positive' : 'negative'}">
                                                     ${r.cashFlow >= 0 ? '+' : ''}${Math.round(r.cashFlow)}€
                                                 </td>
