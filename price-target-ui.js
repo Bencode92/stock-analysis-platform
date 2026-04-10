@@ -37,6 +37,14 @@ class PriceTargetUI {
     container.style.display = 'block';
     this.isVisible = true;
 
+    // Injecter la projection Buy vs Rent séparément (évite le parsing HTML cassé)
+    if (result.regimeId === 'rp') {
+      const slot = document.getElementById('bvr-projection-slot');
+      if (slot) {
+        slot.innerHTML = this._generateBuyVsRentProjection(result);
+      }
+    }
+
     // Activer le toggle du panneau scénarios (si présent)
     this._attachScenarioToggle?.();
 
@@ -520,8 +528,8 @@ class PriceTargetUI {
         </div>
       </div>
 
-      <!-- ═══════ PROJECTION MULTI-ANNÉES (hors card pour pleine largeur) ═══════ -->
-      ${this._generateBuyVsRentProjection(r)}
+      <!-- placeholder projection -->
+      <div id="bvr-projection-slot"></div>
     `;
   }
 
