@@ -313,7 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div style="font-size:0.9rem;color:rgba(255,255,255,0.8);line-height:1.6;">
                                 <div>Rendement brut : <strong>${rdtBrut}%</strong> ${parseFloat(rdtBrut) < 5 ? '<span style="color:#ef4444">(trop faible pour autofinancer)</span>' : ''}</div>
                                 <div>Prix au m² : <strong>${prixM2.toLocaleString('fr-FR')} €</strong> · Loyer : <strong>${loyerM2.toFixed(1)} €/m²/mois</strong></div>
-                                <div>Même un ${surfaceMin}m² à ${prixMin.toLocaleString('fr-FR')}€ aurait une mensualité de ~${Math.round(mensMin).toLocaleString('fr-FR')}€ pour un loyer de ${Math.round(loyerMin)}€</div>
+                                <div>Même un ${surfaceMin}m² à ${prixMin.toLocaleString('fr-FR')}€ aurait une mensualité de ~${Math.round(mensMin).toLocaleString('fr-FR')}€ pour un loyer net de ${Math.round(loyerMin * 0.95)}€</div>
+                                ${mensMin > loyerMin * 0.95 ? `<div style="margin-top:4px;color:#f59e0b;">Il vous manque environ <strong>${Math.round(((mensMin - loyerMin * 0.95) * ((1 - Math.pow(1 + (taux/100/12), -(duree*12))) / (taux/100/12)))).toLocaleString('fr-FR')}€ d'apport</strong> pour qu'un ${surfaceMin}m² soit viable.</div>` : ''}
                             </div>
                         </div>
 
