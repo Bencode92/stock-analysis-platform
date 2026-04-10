@@ -37,11 +37,16 @@ class PriceTargetUI {
     container.style.display = 'block';
     this.isVisible = true;
 
-    // Injecter la projection Buy vs Rent séparément (évite le parsing HTML cassé)
+    // Injecter les projections séparément (évite le parsing HTML cassé)
     if (result.regimeId === 'rp') {
       const slot = document.getElementById('bvr-projection-slot');
       if (slot) {
         slot.innerHTML = this._generateBuyVsRentProjection(result);
+      }
+    } else {
+      const slot = document.getElementById('locatif-projection-slot');
+      if (slot) {
+        slot.innerHTML = this._generateLocatifProjection(result);
       }
     }
 
@@ -209,8 +214,14 @@ class PriceTargetUI {
 
           <!-- Recommandation -->
           ${this._generateRecommendation(r.recommendation, isPriceGood, gapPercent)}
+
+          <!-- Suggestion meilleur régime -->
+          ${this._generateRegimeSuggestion(r)}
         </div>
       </div>
+
+      <!-- Projection enrichissement multi-années (locatif) -->
+      <div id="locatif-projection-slot"></div>
     `;
   }
 
@@ -684,6 +695,158 @@ class PriceTargetUI {
 
         <div style=”${S.foot}”>
           Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP, pas d'impôt sur revenus de placement).
+        </div>
+      </div>
+    `;
+  }
+
+  // 💡 Suggestion du meilleur régime (locatif)
+  _generateRegimeSuggestion(r) {
+    try {
+      const analyzer = this.analyzer?.analyzer;
+      if (!analyzer?._computeBestRegimeCFAnnuel) return '';
+
+      const baseInput = r._baseInput;
+      if (!baseInput) return '';
+
+      const params = analyzer.getAllAdvancedParams?.() || {};
+      const best = analyzer._computeBestRegimeCFAnnuel(
+        analyzer._buildInputForPrice(baseInput, r.currentPrice, params),
+        params
+      );
+
+      if (!best?.regimeId) return '';
+
+      const currentKey = analyzer.normalizeRegimeKey?.({ id: r.regimeId }) || r.regimeId;
+      if (best.regimeId === currentKey) return ''; // Déjà le meilleur
+
+      const fmt = (v) => this._formatCurrency(v);
+      const bestEnrich = best.cashflowAnnuel + (r.currentBreakdown?.capital ?? 0);
+      const delta = bestEnrich - (r.currentEnrichment || 0);
+
+      if (delta <= 0) return '';
+
+      const registry = analyzer.getRegimeRegistry?.() || {};
+      const bestNom = registry[best.regimeId]?.nom || best.regimeNom || best.regimeId;
+
+      return `
+        <div style="
+          margin-top:16px;padding:14px 18px;
+          background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(34,197,94,0.06));
+          border:1px solid rgba(99,102,241,0.25);border-radius:12px;
+        ">
+          <div style="font-size:0.85rem;color:#6366f1;font-weight:600;margin-bottom:6px;">
+            <i class="fas fa-lightbulb" style="margin-right:6px;"></i>Suggestion de régime
+          </div>
+          <div style="font-size:0.9rem;color:#e2e8f0;line-height:1.5;">
+            En passant en <strong style="color:#22c55e;">${bestNom}</strong>,
+            votre enrichissement passerait à
+            <strong style="color:#22c55e;">${bestEnrich >= 0 ? '+' : ''}${fmt(bestEnrich)}/an</strong>
+            soit <strong style="color:#22c55e;">+${fmt(delta)}/an</strong> de mieux.
+          </div>
+        </div>`;
+    } catch(e) {
+      console.warn('Suggestion régime erreur:', e);
+      return '';
+    }
+  }
+
+  // 📈 Projection enrichissement multi-années (locatif)
+  _generateLocatifProjection(r) {
+    const fmt = (v) => this._formatCurrency(v);
+    const currentPrice = Number(r.currentPrice ?? 0);
+    const enrichAnnuel = Number(r.currentEnrichment ?? 0);
+    const cfAnnuel = Number(r.currentBreakdown?.cashflow ?? 0);
+    const capAnnuel = Number(r.currentBreakdown?.capital ?? 0);
+    const apport = Number(r.apport ?? 0);
+    const taux = Number(r._baseInput?.loanRate ?? r._baseInput?.taux ?? 3.5);
+    const duree = Number(r._baseInput?.loanDuration ?? r._baseInput?.duree ?? 20);
+    const emprunt = currentPrice - apport;
+    const appreciation = 0.02;
+    const regimeNom = r.regimeUsed || r.regimeId || '?';
+
+    if (!currentPrice || !enrichAnnuel) return '';
+
+    const tauxM = taux / 100 / 12;
+    const nbMens = duree * 12;
+    const mensu = tauxM > 0 ? (emprunt * tauxM) / (1 - Math.pow(1 + tauxM, -nbMens)) : emprunt / nbMens;
+
+    const horizons = [1, 3, 5, 7, 10, 15, 20];
+    const rows = [];
+    let capitalRestant = emprunt;
+    let enrichCumul = 0;
+
+    for (let year = 1; year <= 20; year++) {
+      const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
+
+      if (year <= duree) {
+        const interets = capitalRestant * (taux / 100);
+        const capitalRembourse = (mensu * 12) - interets;
+        capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
+      } else {
+        capitalRestant = 0;
+      }
+
+      // Enrichissement cumulé (simplifié : enrichissement annuel constant + appréciation)
+      enrichCumul += enrichAnnuel;
+      const pvLatente = valeurBien - currentPrice;
+      const enrichTotal = enrichCumul + pvLatente;
+
+      const patrimoine = valeurBien - capitalRestant;
+
+      if (horizons.includes(year)) {
+        rows.push({ year, patrimoine: Math.round(patrimoine), enrichCumul: Math.round(enrichCumul), pvLatente: Math.round(pvLatente), enrichTotal: Math.round(enrichTotal) });
+      }
+    }
+
+    const S = {
+      wrap: 'margin-top:30px;padding:28px 32px;background:linear-gradient(135deg,rgba(10,15,30,0.97),rgba(15,25,50,0.92));border:1px solid rgba(0,191,255,0.25);border-radius:16px;width:100%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
+      h4: 'margin:0 0 8px;color:#e2e8f0;font-size:1.2rem;font-weight:700',
+      sub: 'font-size:0.82rem;color:rgba(255,255,255,0.45);margin-bottom:20px;line-height:1.5',
+      tbl: 'display:table;width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.9rem;table-layout:fixed;margin-top:8px',
+      th: 'display:table-cell;padding:12px 16px;border:none;border-bottom:2px solid rgba(0,191,255,0.3);color:rgba(255,255,255,0.5);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.8px;font-weight:600',
+      td: 'display:table-cell;padding:12px 16px;border:none;color:#e2e8f0;font-variant-numeric:tabular-nums',
+      foot: 'margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5'
+    };
+
+    const isEnriching = enrichAnnuel >= 0;
+
+    const tableRows = rows.map((row, idx) => {
+      const isPos = row.enrichTotal >= 0;
+      const trBg = idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '';
+      return `<tr style="display:table-row;${trBg}">` +
+        `<td style="${S.td};text-align:left;color:#fff">An ${row.year}</td>` +
+        `<td style="${S.td};text-align:right;color:#4ade80;font-weight:600">${fmt(row.patrimoine)}</td>` +
+        `<td style="${S.td};text-align:right;color:${row.enrichCumul >= 0 ? '#22c55e' : '#ef4444'};font-weight:600">${row.enrichCumul >= 0 ? '+' : '−'}${fmt(Math.abs(row.enrichCumul))}</td>` +
+        `<td style="${S.td};text-align:right;color:#60a5fa;font-weight:500">${fmt(row.pvLatente)}</td>` +
+        `<td style="${S.td};text-align:right;color:${isPos ? '#22c55e' : '#ef4444'};font-weight:700">${isPos ? '+' : '−'}${fmt(Math.abs(row.enrichTotal))}</td>` +
+        `</tr>`;
+    }).join('\n');
+
+    return `
+      <div style="${S.wrap}">
+        <h4 style="${S.h4}">
+          <i class="fas fa-chart-line" style="color:#00bfff;margin-right:8px"></i>
+          Projection enrichissement — ${regimeNom}
+        </h4>
+        <div style="${S.sub}">
+          Enrichissement annuel : ${isEnriching ? '+' : ''}${fmt(enrichAnnuel)}/an · Appréciation ${(appreciation * 100).toFixed(0)}%/an · Apport ${fmt(apport)}
+        </div>
+
+        <table style="${S.tbl}">
+          <colgroup><col style="width:14%"><col style="width:22%"><col style="width:22%"><col style="width:20%"><col style="width:22%"></colgroup>
+          <thead><tr style="display:table-row">
+            <th style="${S.th};text-align:left">Horizon</th>
+            <th style="${S.th};text-align:right;color:#4ade80">Patrimoine</th>
+            <th style="${S.th};text-align:right">Cash-flow cumulé</th>
+            <th style="${S.th};text-align:right;color:#60a5fa">PV latente</th>
+            <th style="${S.th};text-align:right">Enrichissement total</th>
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+
+        <div style="${S.foot}">
+          Patrimoine = valeur du bien − capital restant dû. PV latente = appréciation ${(appreciation * 100).toFixed(0)}%/an (hors fiscalité PV). Cash-flow cumulé = enrichissement annuel × nombre d'années.
         </div>
       </div>
     `;
