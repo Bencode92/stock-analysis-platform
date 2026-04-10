@@ -134,7 +134,7 @@ class CityRadar {
         };
         
         this.customSurfaces = { ...this.defaultSurfaces };
-        this.sortCriteria = 'rentabilite';
+        this.sortCriteria = 'enrichissement';
     }
     
     // 🔧 Helper : Normalisation accent-insensible
@@ -363,7 +363,14 @@ class CityRadar {
                         <h3><i class="fas fa-sort-amount-down"></i> Critère de classement</h3>
                         <div class="sort-options-grid">
                             <label class="sort-option-card active">
-                                <input type="radio" name="sort-criteria" value="rentabilite" checked>
+                                <input type="radio" name="sort-criteria" value="enrichissement" checked>
+                                <div class="sort-card-content">
+                                    <i class="fas fa-chart-line fa-2x"></i>
+                                    <span>Enrichissement</span>
+                                </div>
+                            </label>
+                            <label class="sort-option-card">
+                                <input type="radio" name="sort-criteria" value="rentabilite">
                                 <div class="sort-card-content">
                                     <i class="fas fa-percentage fa-2x"></i>
                                     <span>Rentabilité brute</span>
@@ -1365,7 +1372,30 @@ class CityRadar {
                     
                     const rentabilite = (loyerMensuel * 12 / prixTotal) * 100; // brute
                     const rapport = loyerMensuel / (prixTotal / 1000); // €/k€ investi
-                    
+
+                    // Enrichissement annuel via le simulateur (CF + capital remboursé)
+                    let enrichissementAnnuel = 0;
+                    let cashFlowMensuel = 0;
+                    try {
+                        const sim = window.simulateur;
+                        if (sim) {
+                            const origPrix = sim.params.communs.prixM2;
+                            const origLoyer = sim.params.communs.loyerM2;
+                            sim.params.communs.prixM2 = prixM2;
+                            sim.params.communs.loyerM2 = loyerM2;
+                            const res = sim.calculeTout(surface, 'classique');
+                            if (res) {
+                                cashFlowMensuel = res.cashFlow;
+                                const capitalAn1 = res.tableauAmortissement
+                                    ? res.tableauAmortissement.slice(0, 12).reduce((s, m) => s + m.amortissementCapital, 0)
+                                    : 0;
+                                enrichissementAnnuel = (res.cashFlow * 12) + capitalAn1;
+                            }
+                            sim.params.communs.prixM2 = origPrix;
+                            sim.params.communs.loyerM2 = origLoyer;
+                        }
+                    } catch(e) { /* fallback : enrichissement = 0 */ }
+
                     results.push({
                         ville: ville.nom,
                         departement: ville.departement,
@@ -1376,7 +1406,9 @@ class CityRadar {
                         rentabilite,
                         rapport,
                         prixM2,
-                        loyerM2
+                        loyerM2,
+                        enrichissementAnnuel,
+                        cashFlowMensuel
                     });
                 }
             }
@@ -1418,6 +1450,9 @@ class CityRadar {
     
     sortResults(results) {
         switch (this.sortCriteria) {
+            case 'enrichissement':
+                results.sort((a, b) => (b.enrichissementAnnuel||0) - (a.enrichissementAnnuel||0));
+                break;
             case 'rentabilite':
                 results.sort((a, b) => b.rentabilite - a.rentabilite);
                 break;
@@ -1464,6 +1499,7 @@ class CityRadar {
         
         // ✅ Label "Rentabilité brute"
         const critereLabel = {
+            'enrichissement': 'Enrichissement annuel',
             'rentabilite': 'Rentabilité brute',
             'loyer': 'Loyer mensuel',
             'prix': 'Prix total',
@@ -1565,6 +1601,12 @@ class CityRadar {
                 </div>
                 
                 <div class="result-metrics">
+                    <div class="metric-item ${this.sortCriteria === 'enrichissement' ? 'highlight-metric' : ''}" style="grid-column: 1 / -1; background:${(result.enrichissementAnnuel||0) >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:8px; padding:8px;">
+                        <div class="metric-value" style="font-size:1.2em; color:${(result.enrichissementAnnuel||0) >= 0 ? '#22c55e' : '#ef4444'};">
+                            ${(result.enrichissementAnnuel||0) >= 0 ? '+' : ''}${Math.round(result.enrichissementAnnuel||0).toLocaleString()}€/an
+                        </div>
+                        <div class="metric-label">Enrichissement (CF + capital)</div>
+                    </div>
                     <div class="metric-item ${this.sortCriteria === 'loyer' ? 'highlight-metric' : ''}">
                         <div class="metric-value">${Math.round(result.loyerMensuel).toLocaleString()}€</div>
                         <div class="metric-label">Loyer/mois</div>
