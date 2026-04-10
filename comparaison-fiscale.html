@@ -2975,6 +2975,14 @@ async function proceedToFiscalAnalysis() {
 
   goToStep(3);
 
+  // Afficher le nom du régime sélectionné
+  const regimeValue = document.querySelector('input[name="regime-actuel"]:checked')?.value || 'nu_micro';
+  const regimeMeta = REGIME_LABELS[regimeValue];
+  const regimeDisplayEl = document.getElementById('regime-display-name');
+  if (regimeDisplayEl && regimeMeta) {
+    regimeDisplayEl.textContent = regimeMeta.label;
+  }
+
   // Afficher un loading
   const resultsDiv = document.getElementById('fiscal-comparison-results');
   resultsDiv.innerHTML = `
