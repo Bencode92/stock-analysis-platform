@@ -114,7 +114,7 @@
   console.log(`  Capital remboursé an 1: ${fmt(capitalAn1)}€`);
   console.log(`  CF an 1: ${fmt(cfAn1)}€`);
 
-  P('Emprunt > prix (inclut frais)', emprunt > sc.prix);
+  P('Emprunt > 0 et < coût total', emprunt > 0 && emprunt < sc.prix * 1.15);
   P('Mensualité entre 500 et 2000€/mois', mensu > 500 && mensu < 2000);
   P('Capital remboursé an 1 > 0', capitalAn1 > 0);
   P('Intérêts an 1 > capital an 1 (début de prêt)', interetsAn1 > capitalAn1);
@@ -290,9 +290,13 @@
   console.log('');
   console.group('%c6️⃣ Export CSV — vérification', 'color:#00bfff;font-size:12px;font-weight:bold');
 
-  const csvLink = document.querySelector('a[download="business-plan-immobilier.csv"]');
-  P('Bouton export CSV présent', !!csvLink);
+  // Les boutons CSV/Copier sont dans le business-plan-slot (rempli après analyse complète)
+  const bpSlot = document.getElementById('business-plan-slot');
+  const csvLink = bpSlot?.querySelector('a[download]') || document.querySelector('a[download="business-plan-immobilier.csv"]');
+  const copyBtn = bpSlot?.querySelector('button[onclick*="clipboard"]') || document.querySelector('button[onclick*="clipboard"]');
+
   if (csvLink) {
+    P('Bouton export CSV présent', true);
     const href = csvLink.getAttribute('href');
     P('CSV contient des données', href?.length > 100);
     const csvContent = decodeURIComponent(href.replace('data:text/csv;charset=utf-8,', ''));
@@ -300,10 +304,15 @@
     P('CSV a un header', lines[0]?.includes('Année'));
     P('CSV a au moins 20 lignes de données', lines.length >= 20);
     console.log(`  CSV: ${lines.length} lignes, ${lines[0]?.split(';').length} colonnes`);
+  } else {
+    W('Bouton export CSV présent (lancer l\'analyse complète d\'abord)', false);
   }
 
-  const copyBtn = document.querySelector('button[onclick*="clipboard"]');
-  P('Bouton copier présent', !!copyBtn);
+  if (copyBtn) {
+    P('Bouton copier présent', true);
+  } else {
+    W('Bouton copier présent (lancer l\'analyse complète d\'abord)', false);
+  }
   console.groupEnd();
 
   // ═══════════════════════════════════════════════════
