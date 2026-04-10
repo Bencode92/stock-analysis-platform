@@ -48,6 +48,10 @@ class PriceTargetUI {
       if (slot) {
         slot.innerHTML = this._generateLocatifProjection(result);
       }
+      const bpSlot = document.getElementById('business-plan-slot');
+      if (bpSlot) {
+        bpSlot.innerHTML = this._generateBusinessPlan(result);
+      }
     }
 
     // Activer le toggle du panneau scénarios (si présent)
@@ -225,6 +229,9 @@ class PriceTargetUI {
 
       <!-- Projection enrichissement multi-années (locatif) -->
       <div id="locatif-projection-slot"></div>
+
+      <!-- Business Plan + TRI -->
+      <div id="business-plan-slot"></div>
     `;
   }
 
@@ -1054,6 +1061,229 @@ class PriceTargetUI {
         <div style="${S.foot}">
           Loyers : +${(hausseLoyers * 100).toFixed(1)}%/an (IRL). Charges/impôts : +${(chargesInflation * 100).toFixed(0)}%/an. Mensualité fixe pendant ${duree} ans puis 0.
           PV latente hors fiscalité plus-value. Après le crédit, le CF annuel augmente fortement.
+        </div>
+      </div>
+    `;
+  }
+
+  // 📊 Business Plan année par année + TRI
+  _generateBusinessPlan(r) {
+    const fmt = v => Math.round(v).toLocaleString('fr-FR');
+    const currentPrice = Number(r.currentPrice ?? 0);
+    const apport = Number(r.apport ?? 0);
+    const taux = Number(r._baseInput?.loanRate ?? r._baseInput?.taux ?? 3.5);
+    const duree = Number(r._baseInput?.loanDuration ?? r._baseInput?.duree ?? 20);
+    const emprunt = Number(r._baseInput?.loanAmount ?? r._baseInput?.montantEmprunt ?? (currentPrice - apport));
+    const loyerAnnuel = Number(r._baseInput?.loyerHC ?? 0) * 12;
+    const cfAn1 = Number(r.currentBreakdown?.cashflow ?? 0);
+    const regimeNom = r.regimeUsed || r.regimeId || '?';
+
+    if (!currentPrice || !loyerAnnuel) return '';
+
+    // Hypothèses
+    const appreciation = 0.02;
+    const hausseLoyers = 0.015;
+    const hausseCharges = 0.02;
+    const fraisRevente = 0.07; // 7%
+    const horizon = duree; // même que durée du prêt
+
+    // Mensualité
+    const tauxM = taux / 100 / 12;
+    const nbM = duree * 12;
+    const mensu = tauxM > 0 ? (emprunt * tauxM) / (1 - Math.pow(1 + tauxM, -nbM)) : emprunt / nbM;
+    const mensualiteAn = mensu * 12;
+
+    // Charges + impôts an 1 (déduits du CF)
+    const chargesEtImpotsAn1 = loyerAnnuel - cfAn1 - mensualiteAn;
+
+    // Construire le tableau année par année
+    const rows = [];
+    let capitalRestant = emprunt;
+    let cfCumul = 0;
+    const cashFlows = [-apport]; // TRI : flux année 0
+
+    for (let year = 1; year <= Math.max(horizon, 25); year++) {
+      const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
+      const chargesAnnee = chargesEtImpotsAn1 * Math.pow(1 + hausseCharges, year - 1);
+      const mensAnnee = year <= duree ? mensualiteAn : 0;
+
+      // Amortissement
+      let interets = 0, capitalRembourse = 0;
+      if (year <= duree && capitalRestant > 0) {
+        interets = capitalRestant * (taux / 100);
+        capitalRembourse = mensualiteAn - interets;
+        capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
+      } else {
+        capitalRestant = 0;
+      }
+
+      const cfAnnee = loyerAnnee - chargesAnnee - mensAnnee;
+      cfCumul += cfAnnee;
+
+      const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
+      const patrimoine = valeurBien - capitalRestant;
+
+      // PV et impôt PV (si revente cette année)
+      const pvBrute = valeurBien - currentPrice;
+      // Abattement PV : 6%/an après 5 ans pour IR, 1.65%/an après 5 ans pour PS
+      let abattIR = 0, abattPS = 0;
+      if (year > 5) {
+        abattIR = Math.min(1, (year - 5) * 0.06);
+        abattPS = Math.min(1, (year - 5) * 0.0165);
+      }
+      if (year > 22) abattIR = 1; // exonération IR après 22 ans
+      if (year > 30) abattPS = 1; // exonération PS après 30 ans
+      const pvNetteIR = pvBrute * (1 - abattIR);
+      const pvNettePS = pvBrute * (1 - abattPS);
+      const impotPV = Math.max(0, pvNetteIR * 0.19 + pvNettePS * 0.172);
+      const fraisVente = valeurBien * fraisRevente;
+      const netRevente = valeurBien - capitalRestant - impotPV - fraisVente;
+
+      // Flux pour le TRI : CF annuel, et à la dernière année on ajoute le net revente
+      cashFlows.push(cfAnnee);
+
+      rows.push({
+        year, loyerAnnee: Math.round(loyerAnnee),
+        chargesAnnee: Math.round(chargesAnnee),
+        mensAnnee: Math.round(mensAnnee),
+        interets: Math.round(interets),
+        capitalRembourse: Math.round(capitalRembourse),
+        cfAnnee: Math.round(cfAnnee), cfCumul: Math.round(cfCumul),
+        capitalRestant: Math.round(capitalRestant),
+        valeurBien: Math.round(valeurBien),
+        patrimoine: Math.round(patrimoine),
+        pvBrute: Math.round(pvBrute), impotPV: Math.round(impotPV),
+        fraisVente: Math.round(fraisVente), netRevente: Math.round(netRevente)
+      });
+    }
+
+    // Calcul TRI pour différents horizons
+    const calcTRI = (years) => {
+      const flows = [-apport];
+      for (let i = 0; i < years; i++) {
+        const row = rows[i];
+        if (i === years - 1) {
+          flows.push(row.cfAnnee + row.netRevente); // Dernière année : CF + revente
+        } else {
+          flows.push(row.cfAnnee);
+        }
+      }
+      // Newton-Raphson pour TRI
+      let r = 0.05;
+      for (let iter = 0; iter < 100; iter++) {
+        let npv = 0, dnpv = 0;
+        for (let t = 0; t < flows.length; t++) {
+          npv += flows[t] / Math.pow(1 + r, t);
+          dnpv -= t * flows[t] / Math.pow(1 + r, t + 1);
+        }
+        if (Math.abs(dnpv) < 0.001) break;
+        const newR = r - npv / dnpv;
+        if (Math.abs(newR - r) < 0.0001) { r = newR; break; }
+        r = Math.max(-0.5, Math.min(1, newR));
+      }
+      return (r * 100).toFixed(2);
+    };
+
+    // Horizons à afficher dans le tableau
+    const displayYears = [1, 2, 3, 5, 7, 10, 15, 20, 25].filter(y => y <= Math.max(horizon, 25));
+
+    // Styles inline
+    const S = {
+      wrap: 'margin-top:30px;padding:28px 32px;background:linear-gradient(135deg,rgba(10,15,30,0.97),rgba(15,25,50,0.92));border:1px solid rgba(0,191,255,0.25);border-radius:16px;width:100%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
+      h4: 'margin:0 0 8px;color:#e2e8f0;font-size:1.2rem;font-weight:700',
+      sub: 'font-size:0.82rem;color:rgba(255,255,255,0.45);margin-bottom:16px;line-height:1.5',
+      tbl: 'display:table;width:100%;border-collapse:separate;border-spacing:0 2px;font-size:0.8rem;table-layout:auto;margin-top:8px',
+      th: 'display:table-cell;padding:8px 10px;border:none;border-bottom:2px solid rgba(0,191,255,0.3);color:rgba(255,255,255,0.5);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;white-space:nowrap',
+      td: 'display:table-cell;padding:8px 10px;border:none;color:#e2e8f0;font-variant-numeric:tabular-nums;white-space:nowrap',
+      foot: 'margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5'
+    };
+
+    // KPIs TRI pour 3 horizons
+    const triRows = [10, 15, 20].filter(y => y <= Math.max(horizon, 25)).map(y => {
+      const row = rows[y - 1];
+      const tri = calcTRI(y);
+      const multiple = apport > 0 ? (row.netRevente / apport).toFixed(1) : '—';
+      return { horizon: y, tri, netRevente: row.netRevente, multiple, patrimoine: row.patrimoine };
+    });
+
+    // Tableau principal
+    const tableRows = displayYears.map((y, idx) => {
+      const row = rows[y - 1];
+      if (!row) return '';
+      const bg = idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '';
+      const isEndLoan = y === duree;
+      const highlight = isEndLoan ? 'background:rgba(0,191,255,0.08);border-left:3px solid #00bfff' : bg;
+      return `<tr style="display:table-row;${highlight}">` +
+        `<td style="${S.td};text-align:left;color:#fff;font-weight:${isEndLoan?'700':'400'}">${isEndLoan?'🏦 ':''}An ${y}</td>` +
+        `<td style="${S.td};text-align:right;color:#4ade80">${fmt(row.loyerAnnee)}</td>` +
+        `<td style="${S.td};text-align:right;color:#f87171">−${fmt(Math.abs(row.chargesAnnee))}</td>` +
+        `<td style="${S.td};text-align:right;color:${row.mensAnnee > 0 ? '#f59e0b' : '#22c55e'}">${row.mensAnnee > 0 ? '−' + fmt(row.mensAnnee) : '0'}</td>` +
+        `<td style="${S.td};text-align:right;color:${row.cfAnnee >= 0 ? '#22c55e' : '#ef4444'};font-weight:600">${row.cfAnnee >= 0 ? '+' : ''}${fmt(row.cfAnnee)}</td>` +
+        `<td style="${S.td};text-align:right;color:#60a5fa">${fmt(row.capitalRestant)}</td>` +
+        `<td style="${S.td};text-align:right;color:#4ade80;font-weight:600">${fmt(row.patrimoine)}</td>` +
+        `<td style="${S.td};text-align:right;color:${row.netRevente >= 0 ? '#22c55e' : '#ef4444'}">${fmt(row.netRevente)}</td>` +
+        `</tr>`;
+    }).join('\n');
+
+    // Bouton export CSV
+    const csvData = [
+      ['Année','Loyer','Charges+Impôts','Mensualité','CF net','CF cumulé','Capital restant','Valeur bien','Patrimoine','PV brute','Impôt PV','Frais vente','Net revente'].join(';'),
+      ...rows.map(r => [r.year,r.loyerAnnee,r.chargesAnnee,r.mensAnnee,r.cfAnnee,r.cfCumul,r.capitalRestant,r.valeurBien,r.patrimoine,r.pvBrute,r.impotPV,r.fraisVente,r.netRevente].join(';'))
+    ].join('\n');
+    const csvEncoded = encodeURIComponent(csvData);
+
+    return `
+      <div style="${S.wrap}">
+        <h4 style="${S.h4}">
+          <i class="fas fa-file-invoice-dollar" style="color:#00bfff;margin-right:8px"></i>
+          Business Plan — ${regimeNom}
+        </h4>
+        <div style="${S.sub}">
+          Prix ${fmt(currentPrice)}€ · Apport ${fmt(apport)}€ · Emprunt ${fmt(emprunt)}€ à ${taux}% sur ${duree} ans · Appréciation ${(appreciation*100)}%/an · Loyers +${(hausseLoyers*100).toFixed(1)}%/an
+        </div>
+
+        <!-- TRI par horizon -->
+        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+          ${triRows.map(t => `
+            <div style="flex:1;min-width:140px;padding:14px 16px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;text-align:center;">
+              <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;">Revente à ${t.horizon} ans</div>
+              <div style="font-size:1.4rem;font-weight:800;color:#22c55e;margin:4px 0;">TRI ${t.tri}%</div>
+              <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(t.netRevente)}€ · ×${t.multiple} l'apport</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Tableau année par année -->
+        <div style="overflow-x:auto;">
+          <table style="${S.tbl}">
+            <thead><tr style="display:table-row">
+              <th style="${S.th};text-align:left">Année</th>
+              <th style="${S.th};text-align:right;color:#4ade80">Loyer</th>
+              <th style="${S.th};text-align:right;color:#f87171">Charges</th>
+              <th style="${S.th};text-align:right;color:#f59e0b">Mensualité</th>
+              <th style="${S.th};text-align:right">CF net</th>
+              <th style="${S.th};text-align:right;color:#60a5fa">Dette</th>
+              <th style="${S.th};text-align:right;color:#4ade80">Patrimoine</th>
+              <th style="${S.th};text-align:right">Net revente</th>
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+
+        <!-- Export -->
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+          <a href="data:text/csv;charset=utf-8,${csvEncoded}" download="business-plan-immobilier.csv"
+             style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,191,255,0.1);border:1px solid rgba(0,191,255,0.3);border-radius:8px;color:#00bfff;text-decoration:none;font-size:0.85rem;cursor:pointer;">
+            <i class="fas fa-download"></i> Exporter CSV
+          </a>
+          <button onclick="navigator.clipboard.writeText(decodeURIComponent('${csvEncoded}'));this.innerHTML='<i class=\\'fas fa-check\\'></i> Copié !';setTimeout(()=>this.innerHTML='<i class=\\'fas fa-copy\\'></i> Copier',2000)"
+             style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#6366f1;font-size:0.85rem;cursor:pointer;">
+            <i class="fas fa-copy"></i> Copier
+          </button>
+        </div>
+
+        <div style="${S.foot}">
+          PV : abattement IR 6%/an après 5 ans (exo 22 ans) + PS 1.65%/an après 5 ans (exo 30 ans). Frais revente ${(fraisRevente*100)}%. TRI = taux de rendement interne sur l'apport investi.
         </div>
       </div>
     `;
