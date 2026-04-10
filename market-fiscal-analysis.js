@@ -652,7 +652,15 @@ prepareFiscalDataForComparator(rawData) {
     // Pour compatibilité avec le simulateur
     montantEmprunt: rawData.loanAmount,
     fraisBancaires: (rawData.fraisBancairesDossier ?? 0) + (rawData.fraisBancairesCompte ?? 0),
-    fraisGarantie: rawData.fraisGarantie
+    fraisGarantie: rawData.fraisGarantie,
+
+    // Jeanbrun (propagé depuis prepareFiscalData)
+    jeanbrunNiveau: rawData.jeanbrunNiveau || 'intermediaire',
+    jeanbrunType: rawData.jeanbrunType || 'ancien',
+
+    // Occupation / RP
+    occupationMode: rawData.occupationMode || 'investment',
+    partnerContribution: rawData.partnerContribution || 0
   };
 }
 
@@ -2278,7 +2286,7 @@ buildIndicateursSection(calc, inputData) {
 /**
  * Prépare les données pour la comparaison fiscale - VERSION COMPLÈTE
  */
-prepareFiscalData() {
+prepareFiscalData(externalData) {
     // Récupérer les données de ville sélectionnée
     const villeData = window.villeSearchManager?.getSelectedVilleData();
     
@@ -2389,6 +2397,15 @@ const yearlyCharges = charges * 12;
         cautionRestituee: formData.cautionRestituee
     });
     
+    // Merger les données externes (propertyData) si fournies — priorité aux données du formulaire
+    // sauf pour les champs spécifiques qui ne sont pas dans le DOM (Jeanbrun, occupation, etc.)
+    const ext = externalData || {};
+    if (ext.jeanbrunNiveau) formData.jeanbrunNiveau = ext.jeanbrunNiveau;
+    if (ext.jeanbrunType) formData.jeanbrunType = ext.jeanbrunType;
+    if (ext.occupationMode) formData.occupationMode = ext.occupationMode;
+    if (ext.partnerContribution != null) formData.partnerContribution = ext.partnerContribution;
+    if (ext.regimeActuel) formData.regimeActuel = ext.regimeActuel;
+
     // Format compatible avec le comparateur fiscal existant
 return {
     typeAchat: formData.typeAchat,
