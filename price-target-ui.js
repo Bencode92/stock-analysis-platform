@@ -43,6 +43,10 @@ class PriceTargetUI {
       if (slot) {
         slot.innerHTML = this._generateBuyVsRentProjection(result);
       }
+      const bpRpSlot = document.getElementById('bp-rp-slot');
+      if (bpRpSlot) {
+        bpRpSlot.innerHTML = this._generateRPBusinessPlan(result);
+      }
     } else {
       const slot = document.getElementById('locatif-projection-slot');
       if (slot) {
@@ -551,6 +555,260 @@ class PriceTargetUI {
 
       <!-- placeholder projection -->
       <div id="bvr-projection-slot"></div>
+
+      <!-- Business Plan RP -->
+      <div id="bp-rp-slot"></div>
+    `;
+  }
+
+  // 📊 Business Plan Résidence Principale — année par année + graphique
+  _generateRPBusinessPlan(r) {
+    const fmt = v => Math.round(v).toLocaleString('fr-FR');
+    const currentPrice = Number(r.currentPrice ?? 0);
+    const apport = Number(r.rpApport ?? 0);
+    const taux = Number(r.rpTaux ?? 3.5);
+    const duree = Number(r.rpDuree ?? 20);
+    const emprunt = Number(r._baseInput?.loanAmount ?? r._baseInput?.montantEmprunt ?? (currentPrice - apport));
+    const partner = Number(r.rpPartner ?? 0);
+    const loyerMarche = Number(r.rpLoyerMarche ?? 0);
+    const oppRate = Number(r.rpOpportunityRate ?? 3) / 100;
+    const charges = Number(r.rpCharges ?? 200); // charges proprio mensuelles
+
+    if (!currentPrice || !loyerMarche) return '';
+
+    const appreciation = 0.02;
+    const rentInflation = 0.015;
+    const chargesInflation = 0.02;
+    const maxYears = 25;
+
+    // Mensualité
+    const tauxM = taux / 100 / 12;
+    const nbM = duree * 12;
+    const mensu = tauxM > 0 ? (emprunt * tauxM) / (1 - Math.pow(1 + tauxM, -nbM)) : emprunt / nbM;
+
+    const rows = [];
+    let capitalRestant = emprunt;
+    let patrimoineLocataireCumul = apport;
+    let coutProprioTotal = 0;
+    let coutLocataireTotal = 0;
+
+    for (let year = 1; year <= maxYears; year++) {
+      const loyerAnnee = (loyerMarche * 12) * Math.pow(1 + rentInflation, year - 1);
+      const chargesAnnee = (charges * 12) * Math.pow(1 + chargesInflation, year - 1);
+      const mensAnnee = year <= duree ? mensu * 12 : 0;
+      const partnerAnnee = partner * 12;
+
+      // Propriétaire
+      const coutProprioAn = mensAnnee + chargesAnnee - partnerAnnee;
+      coutProprioTotal += Math.max(0, coutProprioAn);
+
+      // Locataire
+      const coutLocataireAn = loyerAnnee - partnerAnnee;
+      coutLocataireTotal += Math.max(0, coutLocataireAn);
+
+      // Capital restant dû
+      if (year <= duree && capitalRestant > 0) {
+        const interets = capitalRestant * (taux / 100);
+        capitalRestant = Math.max(0, capitalRestant - (mensu * 12 - interets));
+      } else { capitalRestant = 0; }
+
+      // Patrimoine locataire (apport placé)
+      patrimoineLocataireCumul = apport * Math.pow(1 + oppRate, year);
+
+      // Patrimoine propriétaire
+      const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
+      const patrimoineProprio = valeurBien - capitalRestant;
+
+      // Économie mensuelle proprio vs locataire
+      const economieMensuelle = (loyerAnnee - mensAnnee - chargesAnnee) / 12;
+
+      // Enrichissement cumulé = patrimoine proprio - patrimoine locataire
+      const enrichissement = patrimoineProprio - patrimoineLocataireCumul;
+
+      rows.push({
+        year,
+        coutProprio: Math.round(coutProprioAn / 12),
+        coutLocataire: Math.round(coutLocataireAn / 12),
+        economieMensuelle: Math.round(economieMensuelle),
+        capitalRestant: Math.round(capitalRestant),
+        valeurBien: Math.round(valeurBien),
+        patrimoineProprio: Math.round(patrimoineProprio),
+        patrimoineLocataire: Math.round(patrimoineLocataireCumul),
+        enrichissement: Math.round(enrichissement)
+      });
+    }
+
+    // TRI RP (simplifié : flux = -apport, puis économie vs loyer, dernière année + patrimoine)
+    const calcTRI_RP = (years) => {
+      const flows = [-apport];
+      for (let i = 0; i < years; i++) {
+        const row = rows[i];
+        const econAnnuelle = (row.coutLocataire - row.coutProprio) * 12;
+        if (i === years - 1) {
+          flows.push(econAnnuelle + row.patrimoineProprio);
+        } else {
+          flows.push(econAnnuelle);
+        }
+      }
+      let rate = 0.05;
+      for (let iter = 0; iter < 100; iter++) {
+        let npv = 0, dnpv = 0;
+        for (let t = 0; t < flows.length; t++) {
+          npv += flows[t] / Math.pow(1 + rate, t);
+          dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
+        }
+        if (Math.abs(dnpv) < 0.001) break;
+        const newR = rate - npv / dnpv;
+        if (Math.abs(newR - rate) < 0.0001) { rate = newR; break; }
+        rate = Math.max(-0.5, Math.min(1, newR));
+      }
+      return (rate * 100).toFixed(2);
+    };
+
+    const displayYears = [1, 3, 5, 7, 10, 15, 20, 25];
+    const triHorizons = [10, 15, 20].filter(y => y <= maxYears);
+
+    const S = {
+      wrap: 'margin-top:30px;padding:28px 32px;background:linear-gradient(135deg,rgba(10,15,30,0.97),rgba(15,25,50,0.92));border:1px solid rgba(0,191,255,0.25);border-radius:16px;width:100%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
+      h4: 'margin:0 0 8px;color:#e2e8f0;font-size:1.2rem;font-weight:700',
+      sub: 'font-size:0.82rem;color:rgba(255,255,255,0.45);margin-bottom:16px;line-height:1.5',
+      tbl: 'display:table;width:100%;border-collapse:separate;border-spacing:0 2px;font-size:0.8rem;table-layout:auto;margin-top:8px',
+      th: 'display:table-cell;padding:8px 10px;border:none;border-bottom:2px solid rgba(0,191,255,0.3);color:rgba(255,255,255,0.5);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;white-space:nowrap',
+      td: 'display:table-cell;padding:8px 10px;border:none;color:#e2e8f0;font-variant-numeric:tabular-nums;white-space:nowrap',
+      foot: 'margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5'
+    };
+
+    // TRI cards
+    const triCards = triHorizons.map(y => {
+      const tri = calcTRI_RP(y);
+      const triNum = parseFloat(tri);
+      const row = rows[y - 1];
+      const color = triNum >= 5 ? '#22c55e' : triNum >= 2 ? '#f59e0b' : '#ef4444';
+      const bg = triNum >= 5 ? 'rgba(34,197,94,0.08)' : triNum >= 2 ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
+      const border = triNum >= 5 ? 'rgba(34,197,94,0.2)' : triNum >= 2 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+      return `<div style="flex:1;min-width:130px;padding:14px 16px;background:${bg};border:1px solid ${border};border-radius:10px;text-align:center;">
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);text-transform:uppercase;">Horizon ${y} ans</div>
+        <div style="font-size:1.4rem;font-weight:800;color:${color};margin:4px 0;">TRI ${tri}%</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Patrimoine ${fmt(row.patrimoineProprio)}€</div>
+      </div>`;
+    }).join('');
+
+    // Table
+    const tableRows = displayYears.map((y, idx) => {
+      const row = rows[y - 1];
+      if (!row) return '';
+      const bg = idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '';
+      const isEndLoan = y === duree;
+      const hl = isEndLoan ? 'background:rgba(0,191,255,0.08);border-left:3px solid #00bfff' : bg;
+      const enrichColor = row.enrichissement >= 0 ? '#22c55e' : '#ef4444';
+      return `<tr style="display:table-row;${hl}">` +
+        `<td style="${S.td};text-align:left;color:#fff;font-weight:${isEndLoan?'700':'400'}">${isEndLoan?'🏦 ':''}An ${y}</td>` +
+        `<td style="${S.td};text-align:right;color:#f59e0b">${fmt(row.coutProprio)}€</td>` +
+        `<td style="${S.td};text-align:right;color:#60a5fa">${fmt(row.coutLocataire)}€</td>` +
+        `<td style="${S.td};text-align:right;color:${row.economieMensuelle >= 0 ? '#22c55e' : '#ef4444'}">${row.economieMensuelle >= 0 ? '+' : ''}${fmt(row.economieMensuelle)}€</td>` +
+        `<td style="${S.td};text-align:right;color:#4ade80;font-weight:600">${fmt(row.patrimoineProprio)}€</td>` +
+        `<td style="${S.td};text-align:right;color:#3b82f6">${fmt(row.patrimoineLocataire)}€</td>` +
+        `<td style="${S.td};text-align:right;color:${enrichColor};font-weight:700">${row.enrichissement >= 0 ? '+' : ''}${fmt(row.enrichissement)}€</td>` +
+        `</tr>`;
+    }).join('\n');
+
+    // Chart data
+    const chartData = JSON.stringify({
+      labels: displayYears.map(y => 'An ' + y),
+      proprio: displayYears.map(y => rows[y-1]?.patrimoineProprio || 0),
+      locataire: displayYears.map(y => rows[y-1]?.patrimoineLocataire || 0),
+      enrichissement: displayYears.map(y => rows[y-1]?.enrichissement || 0)
+    });
+
+    // CSV
+    const csvHeader = ['Année','Coût proprio/mois','Coût locataire/mois','Économie/mois','Patrimoine proprio','Patrimoine locataire','Enrichissement'].join(';');
+    const csvRows = rows.map(row => [row.year,row.coutProprio,row.coutLocataire,row.economieMensuelle,row.patrimoineProprio,row.patrimoineLocataire,row.enrichissement].join(';'));
+    const csvEncoded = encodeURIComponent([csvHeader, ...csvRows].join('\n'));
+
+    return `
+      <div style="${S.wrap}">
+        <h4 style="${S.h4}">
+          <i class="fas fa-home" style="color:#00bfff;margin-right:8px"></i>
+          Business Plan — Résidence Principale
+        </h4>
+        <div style="${S.sub}">
+          Prix ${fmt(currentPrice)}€ · Apport ${fmt(apport)}€ · ${taux}% sur ${duree} ans · Conjoint ${fmt(partner)}€/mois · Loyer marché ${fmt(loyerMarche)}€/mois · Placement apport ${(oppRate*100).toFixed(0)}%/an
+        </div>
+
+        <!-- TRI par horizon -->
+        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+          ${triCards}
+        </div>
+
+        <!-- Graphique -->
+        <div style="margin-bottom:20px;padding:16px;background:rgba(0,0,0,0.2);border-radius:10px;">
+          <canvas id="bp-rp-chart" height="200"></canvas>
+        </div>
+
+        <!-- Tableau -->
+        <div style="overflow-x:auto;">
+          <table style="${S.tbl}">
+            <thead><tr style="display:table-row">
+              <th style="${S.th};text-align:left">Année</th>
+              <th style="${S.th};text-align:right;color:#f59e0b">Coût proprio</th>
+              <th style="${S.th};text-align:right;color:#60a5fa">Coût locataire</th>
+              <th style="${S.th};text-align:right">Économie/mois</th>
+              <th style="${S.th};text-align:right;color:#4ade80">Patrim. proprio</th>
+              <th style="${S.th};text-align:right;color:#3b82f6">Patrim. locataire</th>
+              <th style="${S.th};text-align:right">Δ Enrichissement</th>
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+
+        <!-- Export -->
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+          <a href="data:text/csv;charset=utf-8,${csvEncoded}" download="business-plan-rp.csv"
+             style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,191,255,0.1);border:1px solid rgba(0,191,255,0.3);border-radius:8px;color:#00bfff;text-decoration:none;font-size:0.85rem;cursor:pointer;">
+            <i class="fas fa-download"></i> Exporter CSV
+          </a>
+          <button onclick="navigator.clipboard.writeText(decodeURIComponent('${csvEncoded}'));this.innerHTML='<i class=\\'fas fa-check\\'></i> Copié !';setTimeout(()=>this.innerHTML='<i class=\\'fas fa-copy\\'></i> Copier',2000)"
+             style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#6366f1;font-size:0.85rem;cursor:pointer;">
+            <i class="fas fa-copy"></i> Copier
+          </button>
+        </div>
+
+        <div style="${S.foot}">
+          Proprio : mensualité + charges − conjoint. Locataire : loyer − conjoint + apport placé à ${(oppRate*100).toFixed(0)}%/an.
+          Appréciation ${(appreciation*100)}%/an. Hausse loyers ${(rentInflation*100).toFixed(1)}%/an. RP exonérée d'impôt sur la plus-value.
+        </div>
+      </div>
+
+      <script>
+        (function(){
+          const d = ${chartData};
+          const ctx = document.getElementById('bp-rp-chart');
+          if (ctx && typeof Chart !== 'undefined') {
+            new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: d.labels,
+                datasets: [
+                  { label: 'Patrimoine propriétaire', data: d.proprio, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', fill: true, tension: 0.3 },
+                  { label: 'Patrimoine locataire', data: d.locataire, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.05)', fill: true, tension: 0.3 },
+                  { label: 'Enrichissement vs location', data: d.enrichissement, borderColor: '#f59e0b', borderDash: [5,5], fill: false, tension: 0.3 }
+                ]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+                  tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + Math.round(c.raw).toLocaleString('fr-FR') + ' €' } }
+                },
+                scales: {
+                  x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                  y: { ticks: { color: '#64748b', callback: v => (v/1000).toFixed(0) + 'K€' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+              }
+            });
+          }
+        })();
+      </script>
     `;
   }
 
