@@ -628,44 +628,61 @@ class PriceTargetUI {
       ? `<span style=”color:#22c55e; font-weight:700;”>L'achat devient plus rentable à partir de l'année ${breakEvenYear}</span>`
       : `<span style=”color:#ef4444; font-weight:600;”>L'achat ne rattrape pas la location sur ${duree} ans avec ces hypothèses</span>`;
 
+    const tdS = 'display:table-cell;padding:12px 16px;border:none;font-variant-numeric:tabular-nums';
     let tableRows = rows.map((row, idx) => {
       const isPos = row.avantageAchat >= 0;
       const isBE = row.isBreakEven;
-      const cls = isBE ? 'bvr-be' : (idx%2===0 ? 'bvr-alt' : '');
-      return `<tr class=”${cls}”>` +
-        `<td class=”bvr-left ${isBE?'bvr-bold':''}” style=”color:#e2e8f0”>${isBE?'🏆 ':''}An ${row.year}</td>` +
-        `<td class=”bvr-right bvr-loc”>${fmt(row.patrimoineLocataire)}</td>` +
-        `<td class=”bvr-right bvr-prop”>${fmt(row.patrimoineProprio)}</td>` +
-        `<td class=”bvr-right ${isPos?'bvr-pos':'bvr-neg'}”>${isPos?'+':'−'}${fmt(Math.abs(row.avantageAchat))}</td>` +
+      const trBg = isBE
+        ? 'background:rgba(34,197,94,0.15);border-left:3px solid #22c55e'
+        : (idx%2===0 ? 'background:rgba(255,255,255,0.03)' : '');
+      const fw = isBE ? ';font-weight:700' : '';
+      return `<tr style=”display:table-row;${trBg}”>` +
+        `<td style=”${tdS};text-align:left;color:#fff${fw}”>${isBE?'🏆 ':''}An ${row.year}</td>` +
+        `<td style=”${tdS};text-align:right;color:#60a5fa;font-weight:600”>${fmt(row.patrimoineLocataire)}</td>` +
+        `<td style=”${tdS};text-align:right;color:#4ade80;font-weight:600”>${fmt(row.patrimoineProprio)}</td>` +
+        `<td style=”${tdS};text-align:right;color:${isPos?'#22c55e':'#ef4444'};font-weight:700”>${isPos?'+':'−'}${fmt(Math.abs(row.avantageAchat))}</td>` +
         `</tr>`;
     }).join('\n');
 
+    // Styles inline (le fichier CSS externe peut ne pas être chargé/caché)
+    const S = {
+      wrap: 'margin-top:30px;padding:28px 32px;background:linear-gradient(135deg,rgba(10,15,30,0.97),rgba(15,25,50,0.92));border:1px solid rgba(0,191,255,0.25);border-radius:16px;width:100%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
+      h4: 'margin:0 0 8px;color:#e2e8f0;font-size:1.2rem;font-weight:700',
+      sub: 'font-size:0.82rem;color:rgba(255,255,255,0.45);margin-bottom:20px;line-height:1.5',
+      beOk: 'text-align:center;padding:16px 24px;margin-bottom:20px;border-radius:12px;font-size:1.1rem;font-weight:600;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#22c55e',
+      beNo: 'text-align:center;padding:16px 24px;margin-bottom:20px;border-radius:12px;font-size:1.1rem;font-weight:600;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444',
+      tbl: 'display:table;width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.9rem;table-layout:fixed;margin-top:8px',
+      th: 'display:table-cell;padding:12px 16px;border:none;border-bottom:2px solid rgba(0,191,255,0.3);color:rgba(255,255,255,0.5);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.8px;font-weight:600',
+      td: 'display:table-cell;padding:12px 16px;border:none;color:#e2e8f0;font-variant-numeric:tabular-nums',
+      foot: 'margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5'
+    };
+
     return `
-      <div class=”bvr-wrap”>
-        <h4>
-          <i class=”fas fa-chart-line” style=”color:#00bfff; margin-right:8px;”></i>
+      <div style=”${S.wrap}”>
+        <h4 style=”${S.h4}”>
+          <i class=”fas fa-chart-line” style=”color:#00bfff;margin-right:8px”></i>
           Acheter vs Louer + placer l'apport
         </h4>
-        <div class=”bvr-subtitle”>
+        <div style=”${S.sub}”>
           Appréciation ${(appreciation*100).toFixed(0)}%/an · Loyers +${(rentInflation*100).toFixed(1)}%/an · Placement ${(oppRate*100).toFixed(0)}%/an · Conjoint ${fmt(partner)}/mois
         </div>
 
-        <div class=”bvr-breakeven ${breakEvenYear ? 'found' : 'notfound'}”>
+        <div style=”${breakEvenYear ? S.beOk : S.beNo}”>
           ${breakEvenMsg}
         </div>
 
-        <table class=”bvr-table”>
-          <colgroup><col style=”width:20%”><col style=”width:27%”><col style=”width:27%”><col style=”width:26%”></colgroup>
-          <thead><tr>
-            <th class=”bvr-left”>Horizon</th>
-            <th class=”bvr-right” style=”color:#3b82f6 !important”>Locataire</th>
-            <th class=”bvr-right” style=”color:#22c55e !important”>Propriétaire</th>
-            <th class=”bvr-right”>Δ Avantage</th>
+        <table style=”${S.tbl}”>
+          <colgroup><col style=”width:18%”><col style=”width:27%”><col style=”width:27%”><col style=”width:28%”></colgroup>
+          <thead><tr style=”display:table-row”>
+            <th style=”${S.th};text-align:left”>Horizon</th>
+            <th style=”${S.th};text-align:right;color:#60a5fa”>Locataire</th>
+            <th style=”${S.th};text-align:right;color:#4ade80”>Propriétaire</th>
+            <th style=”${S.th};text-align:right”>Δ Avantage</th>
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
 
-        <div class=”bvr-footer”>
+        <div style=”${S.foot}”>
           Projection simplifiée hors fiscalité (pas d'impôt sur PV immobilière pour RP, pas d'impôt sur revenus de placement).
         </div>
       </div>
