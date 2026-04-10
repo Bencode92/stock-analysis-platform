@@ -755,73 +755,127 @@ class PriceTargetUI {
   _generateLocatifProjection(r) {
     const fmt = (v) => this._formatCurrency(v);
     const currentPrice = Number(r.currentPrice ?? 0);
-    const enrichAnnuel = Number(r.currentEnrichment ?? 0);
-    const cfAnnuel = Number(r.currentBreakdown?.cashflow ?? 0);
-    const capAnnuel = Number(r.currentBreakdown?.capital ?? 0);
+    const cfAnnuelAn1 = Number(r.currentBreakdown?.cashflow ?? 0);
+    const capAnnuelAn1 = Number(r.currentBreakdown?.capital ?? 0);
+    const enrichAn1 = Number(r.currentEnrichment ?? 0);
     const apport = Number(r.apport ?? 0);
     const taux = Number(r._baseInput?.loanRate ?? r._baseInput?.taux ?? 3.5);
     const duree = Number(r._baseInput?.loanDuration ?? r._baseInput?.duree ?? 20);
+    const loyerAnnuel = Number(r._baseInput?.loyerHC ?? 0) * 12;
     const emprunt = currentPrice - apport;
-    const appreciation = 0.02;
     const regimeNom = r.regimeUsed || r.regimeId || '?';
 
-    if (!currentPrice || !enrichAnnuel) return '';
+    // Hypothèses paramétrables
+    const appreciation = 0.02;    // Appréciation immobilière
+    const hausseLoyers = 0.015;   // Hausse loyers annuelle
+    const chargesInflation = 0.02; // Hausse charges
+
+    if (!currentPrice) return '';
 
     const tauxM = taux / 100 / 12;
     const nbMens = duree * 12;
     const mensu = tauxM > 0 ? (emprunt * tauxM) / (1 - Math.pow(1 + tauxM, -nbMens)) : emprunt / nbMens;
+    const mensualiteAn = mensu * 12;
 
-    const horizons = [1, 3, 5, 7, 10, 15, 20];
+    // Décomposer le CF de l'an 1 pour recalculer avec hausse loyer
+    // CF = loyer_net - charges - impôts - mensualité
+    // Le "surplus" hors loyer = CF - loyer_net + mensualité = -(charges + impôts)
+    const chargesEtImpotsAn1 = loyerAnnuel - cfAnnuelAn1 - mensualiteAn;
+
+    const horizons = [1, 3, 5, 7, 10, 15, 20, 25];
     const rows = [];
     let capitalRestant = emprunt;
-    let enrichCumul = 0;
+    let cfCumul = 0;
+    let breakEvenYear = null;
 
-    for (let year = 1; year <= 20; year++) {
+    for (let year = 1; year <= Math.max(25, duree); year++) {
+      // Valeur du bien
       const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
 
+      // Capital restant dû
       if (year <= duree) {
         const interets = capitalRestant * (taux / 100);
-        const capitalRembourse = (mensu * 12) - interets;
+        const capitalRembourse = mensualiteAn - interets;
         capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
       } else {
         capitalRestant = 0;
       }
 
-      // Enrichissement cumulé (simplifié : enrichissement annuel constant + appréciation)
-      enrichCumul += enrichAnnuel;
-      const pvLatente = valeurBien - currentPrice;
-      const enrichTotal = enrichCumul + pvLatente;
+      // Loyer avec hausse annuelle
+      const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
 
+      // Charges et impôts avec inflation
+      const chargesAnnee = chargesEtImpotsAn1 * Math.pow(1 + chargesInflation, year - 1);
+
+      // Mensualité (fixe si crédit en cours, 0 après)
+      const mensAnnee = year <= duree ? mensualiteAn : 0;
+
+      // Cash-flow de l'année = loyer - charges_et_impots - mensualité
+      const cfAnnee = loyerAnnee - chargesAnnee - mensAnnee;
+      cfCumul += cfAnnee;
+
+      // PV latente
+      const pvLatente = valeurBien - currentPrice;
+
+      // Patrimoine = valeur - dette
       const patrimoine = valeurBien - capitalRestant;
 
-      if (horizons.includes(year)) {
-        rows.push({ year, patrimoine: Math.round(patrimoine), enrichCumul: Math.round(enrichCumul), pvLatente: Math.round(pvLatente), enrichTotal: Math.round(enrichTotal) });
+      // Enrichissement total = CF cumulé + PV latente
+      const enrichTotal = cfCumul + pvLatente;
+
+      // Point de bascule (si CF cumulé négatif → positif)
+      if (breakEvenYear === null && cfCumul > 0 && cfAnnuelAn1 < 0) {
+        breakEvenYear = year;
+      }
+
+      if (horizons.includes(year) || year === breakEvenYear) {
+        rows.push({
+          year,
+          patrimoine: Math.round(patrimoine),
+          cfAnnee: Math.round(cfAnnee),
+          cfCumul: Math.round(cfCumul),
+          pvLatente: Math.round(pvLatente),
+          enrichTotal: Math.round(enrichTotal),
+          isBreakEven: year === breakEvenYear
+        });
       }
     }
+
+    // Résumé 20 ans
+    const row20 = rows.find(r => r.year === 20) || rows[rows.length - 1];
 
     const S = {
       wrap: 'margin-top:30px;padding:28px 32px;background:linear-gradient(135deg,rgba(10,15,30,0.97),rgba(15,25,50,0.92));border:1px solid rgba(0,191,255,0.25);border-radius:16px;width:100%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
       h4: 'margin:0 0 8px;color:#e2e8f0;font-size:1.2rem;font-weight:700',
-      sub: 'font-size:0.82rem;color:rgba(255,255,255,0.45);margin-bottom:20px;line-height:1.5',
+      sub: 'font-size:0.82rem;color:rgba(255,255,255,0.45);margin-bottom:16px;line-height:1.5',
+      summary: 'text-align:center;padding:16px 24px;margin-bottom:16px;border-radius:12px;font-size:1rem',
       tbl: 'display:table;width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.9rem;table-layout:fixed;margin-top:8px',
-      th: 'display:table-cell;padding:12px 16px;border:none;border-bottom:2px solid rgba(0,191,255,0.3);color:rgba(255,255,255,0.5);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.8px;font-weight:600',
-      td: 'display:table-cell;padding:12px 16px;border:none;color:#e2e8f0;font-variant-numeric:tabular-nums',
+      th: 'display:table-cell;padding:12px 14px;border:none;border-bottom:2px solid rgba(0,191,255,0.3);color:rgba(255,255,255,0.5);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.6px;font-weight:600',
+      td: 'display:table-cell;padding:12px 14px;border:none;color:#e2e8f0;font-variant-numeric:tabular-nums',
       foot: 'margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5'
     };
 
-    const isEnriching = enrichAnnuel >= 0;
-
     const tableRows = rows.map((row, idx) => {
       const isPos = row.enrichTotal >= 0;
-      const trBg = idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '';
+      const isBE = row.isBreakEven;
+      const trBg = isBE
+        ? 'background:rgba(34,197,94,0.15);border-left:3px solid #22c55e'
+        : (idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '');
+      const fw = isBE ? ';font-weight:700' : '';
       return `<tr style="display:table-row;${trBg}">` +
-        `<td style="${S.td};text-align:left;color:#fff">An ${row.year}</td>` +
+        `<td style="${S.td};text-align:left;color:#fff${fw}">${isBE ? '🏆 ' : ''}An ${row.year}</td>` +
         `<td style="${S.td};text-align:right;color:#4ade80;font-weight:600">${fmt(row.patrimoine)}</td>` +
-        `<td style="${S.td};text-align:right;color:${row.enrichCumul >= 0 ? '#22c55e' : '#ef4444'};font-weight:600">${row.enrichCumul >= 0 ? '+' : '−'}${fmt(Math.abs(row.enrichCumul))}</td>` +
-        `<td style="${S.td};text-align:right;color:#60a5fa;font-weight:500">${fmt(row.pvLatente)}</td>` +
-        `<td style="${S.td};text-align:right;color:${isPos ? '#22c55e' : '#ef4444'};font-weight:700">${isPos ? '+' : '−'}${fmt(Math.abs(row.enrichTotal))}</td>` +
+        `<td style="${S.td};text-align:right;color:${row.cfAnnee >= 0 ? '#22c55e' : '#f59e0b'};font-weight:500">${row.cfAnnee >= 0 ? '+' : ''}${fmt(row.cfAnnee)}</td>` +
+        `<td style="${S.td};text-align:right;color:${row.cfCumul >= 0 ? '#22c55e' : '#ef4444'};font-weight:600">${row.cfCumul >= 0 ? '+' : ''}${fmt(row.cfCumul)}</td>` +
+        `<td style="${S.td};text-align:right;color:#60a5fa;font-weight:500">+${fmt(row.pvLatente)}</td>` +
+        `<td style="${S.td};text-align:right;color:${isPos ? '#22c55e' : '#ef4444'};font-weight:700">${isPos ? '+' : ''}${fmt(row.enrichTotal)}</td>` +
         `</tr>`;
     }).join('\n');
+
+    // Message résumé
+    const summaryColor = (row20?.enrichTotal || 0) >= 0 ? '#22c55e' : '#ef4444';
+    const summaryBg = (row20?.enrichTotal || 0) >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)';
+    const summaryBorder = (row20?.enrichTotal || 0) >= 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)';
 
     return `
       <div style="${S.wrap}">
@@ -830,23 +884,32 @@ class PriceTargetUI {
           Projection enrichissement — ${regimeNom}
         </h4>
         <div style="${S.sub}">
-          Enrichissement annuel : ${isEnriching ? '+' : ''}${fmt(enrichAnnuel)}/an · Appréciation ${(appreciation * 100).toFixed(0)}%/an · Apport ${fmt(apport)}
+          Appréciation bien ${(appreciation * 100).toFixed(0)}%/an · Hausse loyers +${(hausseLoyers * 100).toFixed(1)}%/an · Hausse charges +${(chargesInflation * 100).toFixed(0)}%/an · Apport ${fmt(apport)}
+        </div>
+
+        <div style="${S.summary};background:${summaryBg};border:1px solid ${summaryBorder}">
+          <span style="color:${summaryColor};font-weight:700">
+            Sur 20 ans : patrimoine ${fmt(row20?.patrimoine || 0)} € · enrichissement total ${(row20?.enrichTotal || 0) >= 0 ? '+' : ''}${fmt(row20?.enrichTotal || 0)} €
+          </span>
+          ${breakEvenYear && cfAnnuelAn1 < 0 ? `<br><span style="color:#22c55e;font-size:0.85rem">Cash-flow cumulé positif à partir de l'année ${breakEvenYear}</span>` : ''}
         </div>
 
         <table style="${S.tbl}">
-          <colgroup><col style="width:14%"><col style="width:22%"><col style="width:22%"><col style="width:20%"><col style="width:22%"></colgroup>
+          <colgroup><col style="width:12%"><col style="width:18%"><col style="width:18%"><col style="width:18%"><col style="width:16%"><col style="width:18%"></colgroup>
           <thead><tr style="display:table-row">
             <th style="${S.th};text-align:left">Horizon</th>
             <th style="${S.th};text-align:right;color:#4ade80">Patrimoine</th>
-            <th style="${S.th};text-align:right">Cash-flow cumulé</th>
+            <th style="${S.th};text-align:right">CF/an</th>
+            <th style="${S.th};text-align:right">CF cumulé</th>
             <th style="${S.th};text-align:right;color:#60a5fa">PV latente</th>
-            <th style="${S.th};text-align:right">Enrichissement total</th>
+            <th style="${S.th};text-align:right">Enrichissement</th>
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
 
         <div style="${S.foot}">
-          Patrimoine = valeur du bien − capital restant dû. PV latente = appréciation ${(appreciation * 100).toFixed(0)}%/an (hors fiscalité PV). Cash-flow cumulé = enrichissement annuel × nombre d'années.
+          Loyers : +${(hausseLoyers * 100).toFixed(1)}%/an (IRL). Charges/impôts : +${(chargesInflation * 100).toFixed(0)}%/an. Mensualité fixe pendant ${duree} ans puis 0.
+          PV latente hors fiscalité plus-value. Après le crédit, le CF annuel augmente fortement.
         </div>
       </div>
     `;
