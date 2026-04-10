@@ -2120,6 +2120,22 @@ document.addEventListener('DOMContentLoaded', function () {
   window.analyzer = new MarketFiscalAnalyzer();
   analyzer = window.analyzer; // garde la variable existante utilisée plus bas
 
+  // Pré-remplir depuis les URL params (venant d'immoSim)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('prix')) {
+    const fields = {
+      'propertyPrice': 'prix', 'propertySurface': 'surface',
+      'monthlyRent': 'loyer', 'apport': 'apport',
+      'loanRate': 'taux', 'loanDuration': 'duree'
+    };
+    Object.entries(fields).forEach(([id, param]) => {
+      const val = urlParams.get(param);
+      const el = document.getElementById(id);
+      if (val && el) el.value = val;
+    });
+    console.log('📥 Données pré-remplies depuis immoSim:', Object.fromEntries(urlParams));
+  }
+
   // ✅ Instanciation unique du moteur de prix cible
   if (window.PriceTargetAnalyzer && window.PriceTargetUI) {
     priceTargetAnalyzer = new window.PriceTargetAnalyzer(analyzer);

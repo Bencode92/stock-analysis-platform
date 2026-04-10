@@ -90,10 +90,14 @@ class SimulateurImmo {
                 cautionRestituee: true
             },
             fiscalite: {
-                tauxPrelevementsSociaux: 17.2, // %
-                tauxMarginalImpot: 30,        // %
+                tauxPrelevementsSociaux: 17.2,      // % location nue (inchangé 2026)
+                tauxPrelevementsSociauxMeuble: 18.6, // % LMNP/LMP (LFSS 2026, CSG +1.4pt)
+                tauxMarginalImpot: 30,               // %
                 deficitFoncier: true,
-                plafondDeficitFoncier: 10700  // € par an (hors intérêts)
+                plafondDeficitFoncier: 10700,        // € par an (hors intérêts)
+                plafondDeficitRenoEnergetique: 21400, // € si travaux E/F/G→A/B/C/D (prorogé fin 2027)
+                tauxISReduit: 15,                     // % IS taux réduit PME
+                plafondISReduit: 100000               // € seuil IS réduit (LF 2026, ex-42500)
             },
             // Pour stocker les résultats
             resultats: {

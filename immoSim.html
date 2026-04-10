@@ -487,7 +487,7 @@
                                 Vacance locative
                             </label>
                             <div class="form-input-wrapper">
-                                <input type="number" id="vacance-locative" class="form-input" value="0" step="1">
+                                <input type="number" id="vacance-locative" class="form-input" value="5" step="1">
                                 <span class="form-addon-text">%</span>
                             </div>
                         </div>
@@ -1164,8 +1164,11 @@
                 </div>
             </div>
             
-            <!-- Guide explicatif (un seul bouton placé stratégiquement) -->
-            <div class="text-center mt-4">
+            <!-- Bouton vers optimisation fiscale avec données pré-remplies -->
+            <div class="text-center mt-4" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                <button id="btn-optimize-fiscal" class="btn btn-primary" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;padding:12px 24px;font-size:1rem;">
+                    <i class="fas fa-balance-scale" style="margin-right:8px;"></i> Optimiser la fiscalité
+                </button>
                 <button id="btn-guide-cashflow" class="btn btn-outline guide-button">
                     <i class="fas fa-info-circle"></i> Comprendre le cash-flow
                 </button>
@@ -1418,6 +1421,36 @@
             childList: true,
             subtree: true
         });
+    </script>
+
+    <!-- Bouton "Optimiser la fiscalité" → transmet les données vers comparaison-fiscale -->
+    <script>
+    document.getElementById('btn-optimize-fiscal')?.addEventListener('click', function() {
+      // Récupérer les résultats de la simulation en cours
+      const sim = window.simulateur;
+      const resC = sim?.params?.resultats?.classique;
+      if (!resC) {
+        alert('Lancez d\'abord une simulation avant d\'optimiser la fiscalité.');
+        return;
+      }
+
+      // Construire les paramètres URL
+      const params = new URLSearchParams();
+      params.set('prix', Math.round(resC.prixAchat));
+      params.set('surface', Math.round(resC.surface));
+      params.set('loyer', Math.round(resC.loyerBrut));
+      params.set('apport', sim.params.base.apport);
+      params.set('taux', sim.params.base.taux);
+      params.set('duree', sim.params.base.duree);
+
+      // Ville si disponible
+      const villeData = window.villeSearchManager?.getSelectedVilleData?.();
+      if (villeData?.ville) {
+        params.set('ville', villeData.ville);
+      }
+
+      window.location.href = 'comparaison-fiscale.html?' + params.toString();
+    });
     </script>
 </body>
 </html>
