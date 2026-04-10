@@ -562,7 +562,7 @@ class PriceTargetUI {
     const capital      = Number(r.rpCapitalAnnual ?? 0);
     const taux         = Number(r.rpTaux ?? 3.5);
     const duree        = Number(r.rpDuree ?? 20);
-    const emprunt      = currentPrice - apport;
+    const emprunt      = Number(r._baseInput?.loanAmount ?? r._baseInput?.montantEmprunt ?? (currentPrice - apport));
 
     if (!currentPrice || !loyerMarche) {
       return '<div style=”color:#94a3b8; text-align:center; padding:16px;”>Données insuffisantes pour la projection.</div>';
@@ -762,7 +762,7 @@ class PriceTargetUI {
     const taux = Number(r._baseInput?.loanRate ?? r._baseInput?.taux ?? 3.5);
     const duree = Number(r._baseInput?.loanDuration ?? r._baseInput?.duree ?? 20);
     const loyerAnnuel = Number(r._baseInput?.loyerHC ?? 0) * 12;
-    const emprunt = currentPrice - apport;
+    const emprunt = Number(r._baseInput?.loanAmount ?? r._baseInput?.montantEmprunt ?? (currentPrice - apport));
     const regimeNom = r.regimeUsed || r.regimeId || '?';
 
     // Hypothèses paramétrables
