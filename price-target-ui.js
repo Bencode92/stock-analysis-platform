@@ -1066,7 +1066,7 @@ class PriceTargetUI {
     `;
   }
 
-  // 📊 Business Plan année par année + TRI
+  // 📊 Business Plan année par année + TRI + graphique + réintégration LMNP
   _generateBusinessPlan(r) {
     const fmt = v => Math.round(v).toLocaleString('fr-FR');
     const currentPrice = Number(r.currentPrice ?? 0);
@@ -1076,7 +1076,11 @@ class PriceTargetUI {
     const emprunt = Number(r._baseInput?.loanAmount ?? r._baseInput?.montantEmprunt ?? (currentPrice - apport));
     const loyerAnnuel = Number(r._baseInput?.loyerHC ?? 0) * 12;
     const cfAn1 = Number(r.currentBreakdown?.cashflow ?? 0);
-    const regimeNom = r.regimeUsed || r.regimeId || '?';
+    const regimeId = r.regimeId || '';
+    const regimeNom = r.regimeUsed || regimeId || '?';
+    const isLMNP = regimeId.includes('lmnp') || regimeId.includes('lmp');
+    const isSCI = regimeId.includes('sci');
+    const fraisAchat = Number(r._baseInput?.coutTotalAcquisition ?? currentPrice * 1.12) - currentPrice;
 
     if (!currentPrice || !loyerAnnuel) return '';
 
@@ -1084,110 +1088,105 @@ class PriceTargetUI {
     const appreciation = 0.02;
     const hausseLoyers = 0.015;
     const hausseCharges = 0.02;
-    const fraisRevente = 0.07; // 7%
-    const horizon = duree; // même que durée du prêt
+    const fraisRevente = 0.07;
+    const maxYears = 25;
 
     // Mensualité
     const tauxM = taux / 100 / 12;
     const nbM = duree * 12;
     const mensu = tauxM > 0 ? (emprunt * tauxM) / (1 - Math.pow(1 + tauxM, -nbM)) : emprunt / nbM;
     const mensualiteAn = mensu * 12;
-
-    // Charges + impôts an 1 (déduits du CF)
     const chargesEtImpotsAn1 = loyerAnnuel - cfAn1 - mensualiteAn;
+
+    // Amortissements LMNP cumulés (pour réintégration à la revente)
+    const amortAnnuel = isLMNP ? currentPrice * 0.80 * 0.025 : 0; // 2.5% de 80% du prix
 
     // Construire le tableau année par année
     const rows = [];
     let capitalRestant = emprunt;
     let cfCumul = 0;
-    const cashFlows = [-apport]; // TRI : flux année 0
+    let amortCumul = 0;
 
-    for (let year = 1; year <= Math.max(horizon, 25); year++) {
+    for (let year = 1; year <= maxYears; year++) {
       const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
       const chargesAnnee = chargesEtImpotsAn1 * Math.pow(1 + hausseCharges, year - 1);
       const mensAnnee = year <= duree ? mensualiteAn : 0;
 
-      // Amortissement
       let interets = 0, capitalRembourse = 0;
       if (year <= duree && capitalRestant > 0) {
         interets = capitalRestant * (taux / 100);
         capitalRembourse = mensualiteAn - interets;
         capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
-      } else {
-        capitalRestant = 0;
-      }
+      } else { capitalRestant = 0; }
 
       const cfAnnee = loyerAnnee - chargesAnnee - mensAnnee;
       cfCumul += cfAnnee;
+      amortCumul += amortAnnuel;
 
       const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
       const patrimoine = valeurBien - capitalRestant;
 
-      // PV et impôt PV (si revente cette année)
-      const pvBrute = valeurBien - currentPrice;
-      // Abattement PV : 6%/an après 5 ans pour IR, 1.65%/an après 5 ans pour PS
+      // PV et impôt PV
+      let pvBrute = valeurBien - currentPrice;
+
+      // Réintégration amortissements LMNP (loi 2025, art. 84)
+      const reintegration = isLMNP ? amortCumul : 0;
+      const pvImposable = pvBrute + reintegration;
+
+      // Abattements durée détention
       let abattIR = 0, abattPS = 0;
       if (year > 5) {
         abattIR = Math.min(1, (year - 5) * 0.06);
         abattPS = Math.min(1, (year - 5) * 0.0165);
       }
-      if (year > 22) abattIR = 1; // exonération IR après 22 ans
-      if (year > 30) abattPS = 1; // exonération PS après 30 ans
-      const pvNetteIR = pvBrute * (1 - abattIR);
-      const pvNettePS = pvBrute * (1 - abattPS);
+      if (year > 22) abattIR = 1;
+      if (year > 30) abattPS = 1;
+
+      const pvNetteIR = Math.max(0, pvImposable) * (1 - abattIR);
+      const pvNettePS = Math.max(0, pvImposable) * (1 - abattPS);
       const impotPV = Math.max(0, pvNetteIR * 0.19 + pvNettePS * 0.172);
       const fraisVente = valeurBien * fraisRevente;
       const netRevente = valeurBien - capitalRestant - impotPV - fraisVente;
 
-      // Flux pour le TRI : CF annuel, et à la dernière année on ajoute le net revente
-      cashFlows.push(cfAnnee);
-
       rows.push({
         year, loyerAnnee: Math.round(loyerAnnee),
-        chargesAnnee: Math.round(chargesAnnee),
-        mensAnnee: Math.round(mensAnnee),
-        interets: Math.round(interets),
-        capitalRembourse: Math.round(capitalRembourse),
+        chargesAnnee: Math.round(chargesAnnee), mensAnnee: Math.round(mensAnnee),
+        interets: Math.round(interets), capitalRembourse: Math.round(capitalRembourse),
         cfAnnee: Math.round(cfAnnee), cfCumul: Math.round(cfCumul),
         capitalRestant: Math.round(capitalRestant),
-        valeurBien: Math.round(valeurBien),
-        patrimoine: Math.round(patrimoine),
-        pvBrute: Math.round(pvBrute), impotPV: Math.round(impotPV),
-        fraisVente: Math.round(fraisVente), netRevente: Math.round(netRevente)
+        valeurBien: Math.round(valeurBien), patrimoine: Math.round(patrimoine),
+        pvBrute: Math.round(pvBrute), reintegration: Math.round(reintegration),
+        impotPV: Math.round(impotPV), fraisVente: Math.round(fraisVente),
+        netRevente: Math.round(netRevente)
       });
     }
 
-    // Calcul TRI pour différents horizons
+    // Calcul TRI
     const calcTRI = (years) => {
       const flows = [-apport];
       for (let i = 0; i < years; i++) {
         const row = rows[i];
-        if (i === years - 1) {
-          flows.push(row.cfAnnee + row.netRevente); // Dernière année : CF + revente
-        } else {
-          flows.push(row.cfAnnee);
-        }
+        flows.push(i === years - 1 ? row.cfAnnee + row.netRevente : row.cfAnnee);
       }
-      // Newton-Raphson pour TRI
-      let r = 0.05;
+      let rate = 0.05;
       for (let iter = 0; iter < 100; iter++) {
         let npv = 0, dnpv = 0;
         for (let t = 0; t < flows.length; t++) {
-          npv += flows[t] / Math.pow(1 + r, t);
-          dnpv -= t * flows[t] / Math.pow(1 + r, t + 1);
+          npv += flows[t] / Math.pow(1 + rate, t);
+          dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
         }
         if (Math.abs(dnpv) < 0.001) break;
-        const newR = r - npv / dnpv;
-        if (Math.abs(newR - r) < 0.0001) { r = newR; break; }
-        r = Math.max(-0.5, Math.min(1, newR));
+        const newR = rate - npv / dnpv;
+        if (Math.abs(newR - rate) < 0.0001) { rate = newR; break; }
+        rate = Math.max(-0.5, Math.min(1, newR));
       }
-      return (r * 100).toFixed(2);
+      return (rate * 100).toFixed(2);
     };
 
-    // Horizons à afficher dans le tableau
-    const displayYears = [1, 2, 3, 5, 7, 10, 15, 20, 25].filter(y => y <= Math.max(horizon, 25));
+    // Horizons
+    const triHorizons = [7, 10, 15, 20].filter(y => y <= maxYears);
+    const displayYears = [1, 2, 3, 5, 7, 10, 15, 20, 25];
 
-    // Styles inline
     const S = {
       wrap: 'margin-top:30px;padding:28px 32px;background:linear-gradient(135deg,rgba(10,15,30,0.97),rgba(15,25,50,0.92));border:1px solid rgba(0,191,255,0.25);border-radius:16px;width:100%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
       h4: 'margin:0 0 8px;color:#e2e8f0;font-size:1.2rem;font-weight:700',
@@ -1198,22 +1197,31 @@ class PriceTargetUI {
       foot: 'margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5'
     };
 
-    // KPIs TRI pour 3 horizons
-    const triRows = [10, 15, 20].filter(y => y <= Math.max(horizon, 25)).map(y => {
+    // TRI cards
+    const triCards = triHorizons.map(y => {
       const row = rows[y - 1];
       const tri = calcTRI(y);
+      const triNum = parseFloat(tri);
       const multiple = apport > 0 ? (row.netRevente / apport).toFixed(1) : '—';
-      return { horizon: y, tri, netRevente: row.netRevente, multiple, patrimoine: row.patrimoine };
-    });
+      const color = triNum >= 5 ? '#22c55e' : triNum >= 2 ? '#f59e0b' : '#ef4444';
+      const bg = triNum >= 5 ? 'rgba(34,197,94,0.08)' : triNum >= 2 ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
+      const border = triNum >= 5 ? 'rgba(34,197,94,0.2)' : triNum >= 2 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+      return `<div style="flex:1;min-width:130px;padding:14px 16px;background:${bg};border:1px solid ${border};border-radius:10px;text-align:center;">
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;">Revente à ${y} ans</div>
+        <div style="font-size:1.4rem;font-weight:800;color:${color};margin:4px 0;">TRI ${tri}%</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(row.netRevente)}€ · ×${multiple}</div>
+        ${isLMNP ? `<div style="font-size:0.65rem;color:#f59e0b;margin-top:2px;">Réintég. amort: ${fmt(row.reintegration)}€</div>` : ''}
+      </div>`;
+    }).join('');
 
-    // Tableau principal
+    // Table rows
     const tableRows = displayYears.map((y, idx) => {
       const row = rows[y - 1];
       if (!row) return '';
       const bg = idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '';
       const isEndLoan = y === duree;
-      const highlight = isEndLoan ? 'background:rgba(0,191,255,0.08);border-left:3px solid #00bfff' : bg;
-      return `<tr style="display:table-row;${highlight}">` +
+      const hl = isEndLoan ? 'background:rgba(0,191,255,0.08);border-left:3px solid #00bfff' : bg;
+      return `<tr style="display:table-row;${hl}">` +
         `<td style="${S.td};text-align:left;color:#fff;font-weight:${isEndLoan?'700':'400'}">${isEndLoan?'🏦 ':''}An ${y}</td>` +
         `<td style="${S.td};text-align:right;color:#4ade80">${fmt(row.loyerAnnee)}</td>` +
         `<td style="${S.td};text-align:right;color:#f87171">−${fmt(Math.abs(row.chargesAnnee))}</td>` +
@@ -1225,32 +1233,39 @@ class PriceTargetUI {
         `</tr>`;
     }).join('\n');
 
-    // Bouton export CSV
-    const csvData = [
-      ['Année','Loyer','Charges+Impôts','Mensualité','CF net','CF cumulé','Capital restant','Valeur bien','Patrimoine','PV brute','Impôt PV','Frais vente','Net revente'].join(';'),
-      ...rows.map(r => [r.year,r.loyerAnnee,r.chargesAnnee,r.mensAnnee,r.cfAnnee,r.cfCumul,r.capitalRestant,r.valeurBien,r.patrimoine,r.pvBrute,r.impotPV,r.fraisVente,r.netRevente].join(';'))
-    ].join('\n');
-    const csvEncoded = encodeURIComponent(csvData);
+    // CSV export
+    const csvHeader = ['Année','Loyer','Charges+Impôts','Mensualité','CF net','CF cumulé','Capital restant','Valeur bien','Patrimoine','PV brute',isLMNP?'Réintég. amort':'','Impôt PV','Frais vente','Net revente'].filter(Boolean).join(';');
+    const csvRows = rows.map(row => [row.year,row.loyerAnnee,row.chargesAnnee,row.mensAnnee,row.cfAnnee,row.cfCumul,row.capitalRestant,row.valeurBien,row.patrimoine,row.pvBrute,isLMNP?row.reintegration:'',row.impotPV,row.fraisVente,row.netRevente].filter(v=>v!=='').join(';'));
+    const csvEncoded = encodeURIComponent([csvHeader, ...csvRows].join('\n'));
+
+    // Graphique Chart.js (données pour canvas injecté après)
+    const chartData = JSON.stringify({
+      labels: displayYears.map(y => 'An ' + y),
+      patrimoine: displayYears.map(y => rows[y-1]?.patrimoine || 0),
+      cfCumul: displayYears.map(y => rows[y-1]?.cfCumul || 0),
+      netRevente: displayYears.map(y => rows[y-1]?.netRevente || 0)
+    });
 
     return `
       <div style="${S.wrap}">
         <h4 style="${S.h4}">
           <i class="fas fa-file-invoice-dollar" style="color:#00bfff;margin-right:8px"></i>
           Business Plan — ${regimeNom}
+          ${isLMNP ? '<span style="font-size:0.7rem;color:#f59e0b;margin-left:8px;">⚠️ Réintégration amort. (loi 2025)</span>' : ''}
         </h4>
         <div style="${S.sub}">
           Prix ${fmt(currentPrice)}€ · Apport ${fmt(apport)}€ · Emprunt ${fmt(emprunt)}€ à ${taux}% sur ${duree} ans · Appréciation ${(appreciation*100)}%/an · Loyers +${(hausseLoyers*100).toFixed(1)}%/an
+          ${isLMNP ? `· <span style="color:#f59e0b;">Amort. LMNP ${fmt(amortAnnuel)}€/an réintégré en PV</span>` : ''}
         </div>
 
         <!-- TRI par horizon -->
         <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-          ${triRows.map(t => `
-            <div style="flex:1;min-width:140px;padding:14px 16px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;text-align:center;">
-              <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;">Revente à ${t.horizon} ans</div>
-              <div style="font-size:1.4rem;font-weight:800;color:#22c55e;margin:4px 0;">TRI ${t.tri}%</div>
-              <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(t.netRevente)}€ · ×${t.multiple} l'apport</div>
-            </div>
-          `).join('')}
+          ${triCards}
+        </div>
+
+        <!-- Graphique -->
+        <div style="margin-bottom:20px;padding:16px;background:rgba(0,0,0,0.2);border-radius:10px;">
+          <canvas id="bp-chart" height="200"></canvas>
         </div>
 
         <!-- Tableau année par année -->
@@ -1270,6 +1285,11 @@ class PriceTargetUI {
           </table>
         </div>
 
+        ${isLMNP ? `
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;font-size:0.8rem;color:#f59e0b;">
+          <i class="fas fa-exclamation-triangle"></i> <strong>Réintégration LMNP (loi du 15/02/2025, art. 84)</strong> : les amortissements déduits (${fmt(amortAnnuel)}€/an) sont réintégrés dans la plus-value à la revente. Exonération : résidences étudiantes, seniors, EHPAD.
+        </div>` : ''}
+
         <!-- Export -->
         <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
           <a href="data:text/csv;charset=utf-8,${csvEncoded}" download="business-plan-immobilier.csv"
@@ -1283,9 +1303,41 @@ class PriceTargetUI {
         </div>
 
         <div style="${S.foot}">
-          PV : abattement IR 6%/an après 5 ans (exo 22 ans) + PS 1.65%/an après 5 ans (exo 30 ans). Frais revente ${(fraisRevente*100)}%. TRI = taux de rendement interne sur l'apport investi.
+          PV : abattement IR 6%/an après 5 ans (exo 22 ans) + PS 1.65%/an après 5 ans (exo 30 ans). Frais revente ${(fraisRevente*100)}%.
+          ${isLMNP ? 'Amortissements réintégrés dans la PV (loi 2025).' : ''} TRI = taux de rendement interne sur l'apport.
         </div>
       </div>
+
+      <script>
+        (function(){
+          const d = ${chartData};
+          const ctx = document.getElementById('bp-chart');
+          if (ctx && typeof Chart !== 'undefined') {
+            new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: d.labels,
+                datasets: [
+                  { label: 'Patrimoine net', data: d.patrimoine, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', fill: true, tension: 0.3 },
+                  { label: 'CF cumulé', data: d.cfCumul, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.05)', fill: true, tension: 0.3 },
+                  { label: 'Net si revente', data: d.netRevente, borderColor: '#00bfff', borderDash: [5,5], fill: false, tension: 0.3 }
+                ]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+                  tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + Math.round(c.raw).toLocaleString('fr-FR') + ' €' } }
+                },
+                scales: {
+                  x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                  y: { ticks: { color: '#64748b', callback: v => (v/1000).toFixed(0) + 'K€' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+              }
+            });
+          }
+        })();
+      </script>
     `;
   }
 
