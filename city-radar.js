@@ -1522,9 +1522,108 @@ class CityRadar {
                 </p>
             </div>
             
+            <!-- Graphique Radar Chart.js -->
+            <div style="max-width:500px;margin:0 auto 2rem;padding:20px;background:rgba(0,0,0,0.2);border-radius:12px;">
+                <canvas id="city-radar-chart" height="300"></canvas>
+            </div>
+
             <div class="results-grid">
                 ${top5.map((r, i) => this.createResultCard(r, i)).join('')}
             </div>
+
+            <script>
+            (function(){
+                const top5Data = ${JSON.stringify(top5.map(r => ({
+                    label: r.ville + ' ' + r.type,
+                    rentabilite: r.rentabilite,
+                    loyerM2: r.loyerM2,
+                    rapport: r.rapport,
+                    enrichissement: r.enrichissementAnnuel || 0,
+                    prixM2: r.prixM2
+                })))};
+
+                const ctx = document.getElementById('city-radar-chart');
+                if (!ctx || typeof Chart === 'undefined' || top5Data.length === 0) return;
+
+                // Normaliser chaque axe entre 0 et 100
+                const axes = ['rentabilite', 'loyerM2', 'rapport', 'enrichissement'];
+                const axeLabels = ['Rentabilité %', 'Loyer €/m²', '€/k€ investi', 'Enrichissement'];
+
+                // Pour prix/m² on inverse (moins cher = mieux)
+                axes.push('prixM2Inv');
+                axeLabels.push('Prix abordable');
+
+                const maxVals = {};
+                const minVals = {};
+                axes.forEach(a => {
+                    const key = a === 'prixM2Inv' ? 'prixM2' : a;
+                    const vals = top5Data.map(d => d[key] || 0);
+                    maxVals[a] = Math.max(...vals, 1);
+                    minVals[a] = Math.min(...vals, 0);
+                });
+
+                function normalize(val, axis) {
+                    const key = axis === 'prixM2Inv' ? 'prixM2' : axis;
+                    const max = maxVals[axis];
+                    const min = minVals[axis];
+                    const range = max - min || 1;
+                    let n = ((val - min) / range) * 100;
+                    if (axis === 'prixM2Inv') n = 100 - n; // inverser pour prix
+                    return Math.max(0, Math.min(100, n));
+                }
+
+                const colors = [
+                    'rgba(99,102,241,0.7)', 'rgba(34,197,94,0.7)', 'rgba(245,158,11,0.7)',
+                    'rgba(239,68,68,0.7)', 'rgba(6,182,212,0.7)'
+                ];
+                const bgColors = [
+                    'rgba(99,102,241,0.15)', 'rgba(34,197,94,0.15)', 'rgba(245,158,11,0.15)',
+                    'rgba(239,68,68,0.15)', 'rgba(6,182,212,0.15)'
+                ];
+
+                const datasets = top5Data.map((d, i) => ({
+                    label: d.label,
+                    data: axes.map(a => {
+                        const key = a === 'prixM2Inv' ? 'prixM2' : a;
+                        return normalize(d[key] || 0, a);
+                    }),
+                    borderColor: colors[i],
+                    backgroundColor: bgColors[i],
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: colors[i]
+                }));
+
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: { labels: axeLabels, datasets },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { display: false },
+                                grid: { color: 'rgba(255,255,255,0.08)' },
+                                angleLines: { color: 'rgba(255,255,255,0.1)' },
+                                pointLabels: { color: '#94a3b8', font: { size: 11 } }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: { color: '#e2e8f0', font: { size: 10 }, boxWidth: 12 },
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (c) => c.dataset.label + ': ' + c.raw.toFixed(0) + '/100'
+                                }
+                            }
+                        }
+                    }
+                });
+            })();
+            </script>
             
             ${remaining.length > 0 ? `
                 <details style="margin-top: 2rem;">

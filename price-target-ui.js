@@ -1761,6 +1761,103 @@ class PriceTargetUI {
         })();
         </script>
 
+        <!-- Stress Test -->
+        <details style="margin-top:16px;">
+          <summary style="cursor:pointer;color:#f59e0b;font-size:0.9rem;font-weight:600;padding:8px 0;">
+            <i class="fas fa-bolt" style="margin-right:6px;"></i>Stress Test — Que se passe-t-il si...
+          </summary>
+          <div style="margin-top:12px;overflow-x:auto;">
+            ${(() => {
+              // Calculer le TRI pour différents scénarios de stress
+              const stressScenarios = [
+                { nom: '📈 Optimiste', desc: 'Appréciation 3%, loyers +2%', appreciation: 0.03, hausseL: 0.02, vacance: 0 },
+                { nom: '📊 Base', desc: 'Appréciation 2%, loyers +1.5%', appreciation: 0.02, hausseL: 0.015, vacance: 0 },
+                { nom: '⚠️ Taux monte +1%', desc: 'Même bien, taux +1%', appreciation: 0.02, hausseL: 0.015, vacance: 0, tauxDelta: 1 },
+                { nom: '📉 Loyers −10%', desc: 'Baisse loyers de 10%', appreciation: 0.02, hausseL: 0.015, vacance: 0, loyerFactor: 0.9 },
+                { nom: '🏚️ Vacance 2 mois/an', desc: '16.7% de vacance', appreciation: 0.02, hausseL: 0.015, vacance: 16.7 },
+                { nom: '💥 Crash immo −20%', desc: 'Prix baisse de 20%', appreciation: -0.01, hausseL: 0.01, vacance: 5 },
+                { nom: '🌟 Tout va bien', desc: 'Appréciation 4%, 0% vacance', appreciation: 0.04, hausseL: 0.025, vacance: 0 }
+              ];
+
+              const stressResults = stressScenarios.map(sc => {
+                const tauxS = taux + (sc.tauxDelta || 0);
+                const loyerS = loyerAnnuel * (sc.loyerFactor || 1);
+                const empruntS = emprunt; // même emprunt
+                const tauxMS = tauxS / 100 / 12;
+                const mensuS = tauxMS > 0 ? (empruntS * tauxMS) / (1 - Math.pow(1 + tauxMS, -nbM)) : empruntS / nbM;
+                const mensuAnS = mensuS * 12;
+                const loyerNetS = loyerS * (1 - (sc.vacance || 0) / 100);
+                const chargesS = chargesEtImpotsAn1; // simplifié
+
+                // TRI à 15 ans
+                const flows = [-apport];
+                let capRest = empruntS;
+                for (let y = 1; y <= 15; y++) {
+                  const lY = loyerNetS * Math.pow(1 + sc.hausseL, y - 1);
+                  const cY = chargesS * Math.pow(1 + 0.02, y - 1);
+                  const mY = y <= duree ? mensuAnS : 0;
+                  const cfY = lY - cY - mY;
+                  if (y <= duree && capRest > 0) {
+                    const inter = capRest * (tauxS / 100);
+                    capRest = Math.max(0, capRest - (mensuAnS - inter));
+                  }
+                  if (y === 15) {
+                    const val = currentPrice * Math.pow(1 + sc.appreciation, y);
+                    const fraisV = val * 0.07;
+                    const net = val - capRest - fraisV;
+                    flows.push(cfY + net);
+                  } else {
+                    flows.push(cfY);
+                  }
+                }
+
+                let rate = 0.05;
+                for (let it = 0; it < 80; it++) {
+                  let npv = 0, dnpv = 0;
+                  for (let t = 0; t < flows.length; t++) {
+                    npv += flows[t] / Math.pow(1 + rate, t);
+                    dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
+                  }
+                  if (Math.abs(dnpv) < 0.001) break;
+                  const nr = rate - npv / dnpv;
+                  if (Math.abs(nr - rate) < 0.0001) { rate = nr; break; }
+                  rate = Math.max(-0.5, Math.min(1, nr));
+                }
+                const tri = (rate * 100).toFixed(2);
+                const triNum = parseFloat(tri);
+
+                return { ...sc, tri, triNum, cfAn1: Math.round((loyerNetS - chargesS - (duree >= 1 ? mensuAnS : 0))) };
+              });
+
+              const stTd = 'display:table-cell;padding:10px 12px;border:none;color:#e2e8f0;font-size:0.85rem';
+              const stTh = 'display:table-cell;padding:10px 12px;border:none;border-bottom:2px solid rgba(245,158,11,0.3);color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;font-weight:600';
+
+              return `<table style="display:table;width:100%;border-collapse:separate;border-spacing:0 3px;table-layout:auto;">
+                <thead><tr style="display:table-row">
+                  <th style="${stTh};text-align:left">Scénario</th>
+                  <th style="${stTh};text-align:left">Hypothèse</th>
+                  <th style="${stTh};text-align:right">TRI 15 ans</th>
+                  <th style="${stTh};text-align:right">CF an 1</th>
+                </tr></thead>
+                <tbody>
+                  ${stressResults.map((s, i) => {
+                    const bg = i % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '';
+                    const isBase = s.nom.includes('Base');
+                    const hl = isBase ? 'background:rgba(0,191,255,0.08);border-left:3px solid #00bfff' : bg;
+                    const triColor = s.triNum >= 5 ? '#22c55e' : s.triNum >= 2 ? '#f59e0b' : '#ef4444';
+                    return `<tr style="display:table-row;${hl}">
+                      <td style="${stTd};font-weight:${isBase?'700':'400'}">${s.nom}</td>
+                      <td style="${stTd};color:rgba(255,255,255,0.5);font-size:0.8rem">${s.desc}</td>
+                      <td style="${stTd};text-align:right;color:${triColor};font-weight:700;font-size:1rem">${s.tri}%</td>
+                      <td style="${stTd};text-align:right;color:${s.cfAn1 >= 0 ? '#22c55e' : '#ef4444'}">${s.cfAn1 >= 0 ? '+' : ''}${fmt(s.cfAn1)}€</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>`;
+            })()}
+          </div>
+        </details>
+
         <div style="${S.foot}">
           PV : abattement IR 6%/an après 5 ans (exo 22 ans) + PS 1.65%/an après 5 ans (exo 30 ans). Frais revente ${(fraisRevente*100)}%.
           ${isLMNP ? 'Amortissements réintégrés dans la PV (loi 2025).' : ''} TRI = taux de rendement interne sur l'apport.
