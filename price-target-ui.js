@@ -743,46 +743,90 @@ class PriceTargetUI {
       }
     } catch(e) {}
 
-    // Construire les lignes de verdict
+    // Construire les lignes de verdict avec interprétation
     const lines = [];
 
     // 1. Prix
     if (isPriceGood) {
-      lines.push({ icon: 'fa-tag', color: '#22c55e', text: `<strong>Prix :</strong> ${gapPct.toFixed(0)}% sous l'équilibre (marge de ${fmt(Math.abs(gap))})` });
+      const margeMsg = gapPct > 30
+        ? 'Excellente affaire — vous avez une grosse marge de sécurité.'
+        : gapPct > 10
+          ? 'Bon prix — vous êtes bien positionné.'
+          : 'Prix correct — peu de marge mais l\'opération reste positive.';
+      lines.push({ icon: 'fa-tag', color: '#22c55e',
+        text: `<strong>Prix :</strong> ${gapPct.toFixed(0)}% sous l'équilibre (marge de ${fmt(Math.abs(gap))})`,
+        explain: margeMsg });
     } else if (gapPct < 5) {
-      lines.push({ icon: 'fa-tag', color: '#f59e0b', text: `<strong>Prix :</strong> proche de l'équilibre (${gapPct.toFixed(0)}% au-dessus)` });
+      lines.push({ icon: 'fa-tag', color: '#f59e0b',
+        text: `<strong>Prix :</strong> proche de l'équilibre (${gapPct.toFixed(0)}% au-dessus)`,
+        explain: 'À ce prix, vous ne gagnez ni ne perdez. Négociez si possible.' });
     } else {
-      lines.push({ icon: 'fa-tag', color: '#ef4444', text: `<strong>Prix :</strong> ${gapPct.toFixed(0)}% au-dessus de l'équilibre (surcoût ${fmt(Math.abs(gap))})` });
+      lines.push({ icon: 'fa-tag', color: '#ef4444',
+        text: `<strong>Prix :</strong> ${gapPct.toFixed(0)}% au-dessus de l'équilibre (surcoût ${fmt(Math.abs(gap))})`,
+        explain: `Vous surpayez de ${fmt(Math.abs(gap))}. Pour que l'opération soit rentable, visez ${fmt(Number(r.priceTarget ?? 0))} ou changez de régime fiscal.` });
     }
 
     // 2. Enrichissement
     if (enrichment > 0) {
-      lines.push({ icon: 'fa-chart-line', color: '#22c55e', text: `<strong>Enrichissement :</strong> +${fmt(enrichment)}/an (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% sur apport)` });
+      const enrichMensuel = Math.round(enrichment / 12);
+      const enrichMsg = roe > 5
+        ? `Très bon rendement — vous construisez ${fmt(enrichMensuel)}/mois de patrimoine net.`
+        : roe > 2
+          ? `Rendement correct — c'est l'équivalent de ${fmt(enrichMensuel)}/mois d'épargne forcée.`
+          : `Rendement modeste — mais vous construisez du patrimoine (${fmt(enrichMensuel)}/mois).`;
+      lines.push({ icon: 'fa-chart-line', color: '#22c55e',
+        text: `<strong>Enrichissement :</strong> +${fmt(enrichment)}/an (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% sur apport)`,
+        explain: enrichMsg });
     } else {
-      lines.push({ icon: 'fa-chart-line', color: '#ef4444', text: `<strong>Enrichissement :</strong> ${fmt(enrichment)}/an (appauvrissement)` });
+      lines.push({ icon: 'fa-chart-line', color: '#ef4444',
+        text: `<strong>Enrichissement :</strong> ${fmt(enrichment)}/an`,
+        explain: `Vous perdez ${fmt(Math.abs(enrichment))}/an. Le bien coûte plus qu'il ne rapporte. Changez de régime ou négociez le prix.` });
     }
 
     // 3. Patrimoine 20 ans
-    lines.push({ icon: 'fa-building', color: '#60a5fa', text: `<strong>Patrimoine 20 ans :</strong> enrichissement total estimé ${enrichTotal20 >= 0 ? '+' : ''}${fmt(enrichTotal20)}` });
+    const enrichMsg20 = enrichTotal20 > 100000
+      ? `Sur 20 ans, votre patrimoine immobilier prend ${fmt(enrichTotal20)} de valeur. C'est un investissement patrimonial solide.`
+      : enrichTotal20 > 0
+        ? `Gain modeste mais positif sur 20 ans. La plus-value immobilière compense les cash-flows négatifs.`
+        : `Attention : même sur 20 ans, l'opération est déficitaire avec ces hypothèses.`;
+    lines.push({ icon: 'fa-building', color: '#60a5fa',
+      text: `<strong>Patrimoine 20 ans :</strong> enrichissement total estimé ${enrichTotal20 >= 0 ? '+' : ''}${fmt(enrichTotal20)}`,
+      explain: enrichMsg20 });
 
     // 4. Cash-flow
     if (cfMensuel >= 0) {
-      lines.push({ icon: 'fa-wallet', color: '#22c55e', text: `<strong>Cash-flow :</strong> +${fmt(Math.abs(cfMensuel))}/mois (autofinancé)` });
+      lines.push({ icon: 'fa-wallet', color: '#22c55e',
+        text: `<strong>Cash-flow :</strong> +${fmt(Math.abs(cfMensuel))}/mois`,
+        explain: 'Le bien s\'autofinance — les loyers couvrent toutes les charges et le crédit. Aucun effort de trésorerie.' });
     } else {
-      lines.push({ icon: 'fa-wallet', color: '#f59e0b', text: `<strong>Cash-flow :</strong> ${fmt(cfMensuel)}/mois d'effort de trésorerie` });
+      const effortMsg = Math.abs(cfMensuel) > 500
+        ? `Effort important : vérifiez que votre budget supporte ${fmt(Math.abs(cfMensuel))}/mois pendant ${Number(r._baseInput?.loanDuration ?? 20)} ans.`
+        : Math.abs(cfMensuel) > 200
+          ? `Effort modéré. C'est de l'épargne forcée : une partie rembourse le capital de votre bien.`
+          : `Effort faible — le bien est presque autofinancé.`;
+      lines.push({ icon: 'fa-wallet', color: cfMensuel > -200 ? '#f59e0b' : '#ef4444',
+        text: `<strong>Cash-flow :</strong> ${fmt(cfMensuel)}/mois d'effort`,
+        explain: effortMsg });
     }
 
     // 5. Suggestion régime
     if (bestRegimeMsg) {
-      lines.push({ icon: 'fa-lightbulb', color: '#a78bfa', text: `<strong>Optimisation :</strong> ${bestRegimeMsg}` });
+      lines.push({ icon: 'fa-lightbulb', color: '#a78bfa',
+        text: `<strong>Optimisation :</strong> ${bestRegimeMsg}`,
+        explain: 'Un changement de régime fiscal pourrait significativement améliorer la rentabilité de votre investissement.' });
     } else {
-      lines.push({ icon: 'fa-check-circle', color: '#22c55e', text: `<strong>Régime :</strong> ${r.regimeUsed} est déjà optimal` });
+      lines.push({ icon: 'fa-check-circle', color: '#22c55e',
+        text: `<strong>Régime :</strong> ${r.regimeUsed} est déjà optimal`,
+        explain: 'Vous avez le meilleur régime fiscal pour ce bien. Aucune optimisation supplémentaire possible.' });
     }
 
     const linesHTML = lines.map(l => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;">
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
         <i class="fas ${l.icon}" style="color:${l.color};margin-top:3px;width:16px;text-align:center;flex-shrink:0"></i>
-        <span style="color:#e2e8f0;font-size:0.9rem;line-height:1.4">${l.text}</span>
+        <div>
+          <div style="color:#e2e8f0;font-size:0.9rem;line-height:1.4">${l.text}</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:0.8rem;line-height:1.4;margin-top:2px">${l.explain}</div>
+        </div>
       </div>
     `).join('');
 
