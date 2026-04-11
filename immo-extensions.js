@@ -274,6 +274,14 @@ const ImmoExtensions = (function() {
             // NOUVEAU BLOC SWITCH FOURNI PAR L'UTILISATEUR
             switch (regimeFiscal) {
                 /* ------------------------------------------------------------------ */
+                case 'sans':
+                    // Pas d'impact fiscal — retourner directement 0 impôt
+                    return {
+                        revenuFoncier, abattement: 0, chargesDeduites: 0, amortissement: 0,
+                        revenusImposables: 0, impot: 0, revenuNet: revenuFoncier, type: 'SANS'
+                    };
+
+                /* ------------------------------------------------------------------ */
                 case 'micro-foncier':
                     // Abattement forfaitaire de 30 %
                     // Revenu imposable = loyers bruts  –  30 %
@@ -304,6 +312,27 @@ const ImmoExtensions = (function() {
                     // Revenu imposable = loyers bruts  –  (intérêts + charges + amortissements)
                     chargesDeduites   = interetsEmprunt + charges + amortissement;
                     revenusImposables = Math.max(0, revenuFoncier - chargesDeduites);
+                    break;
+
+                /* ------------------------------------------------------------------ */
+                case 'jeanbrun':
+                    // Dispositif Jeanbrun (LF 2026) : loyer plafonné −15%, amortissement 3%/an, plafond 8000€
+                    const loyerJB = revenuFoncier * 0.85; // loyer intermédiaire −15%
+                    const amortJB = Math.min(revenuFoncier * 0.80 * 0.03, 8000); // 3% de 80% du prix, plafonné
+                    chargesDeduites = interetsEmprunt + charges + amortJB;
+                    revenusImposables = Math.max(0, loyerJB - chargesDeduites);
+                    // Si déficit → économie d'impôt
+                    if (loyerJB - chargesDeduites < 0) {
+                        const deficit = Math.abs(loyerJB - chargesDeduites);
+                        const deficitImputable = Math.min(deficit, 10700);
+                        // Retourner avec économie d'impôt
+                        const econIR = deficitImputable * (this.params.fiscalite.tauxMarginalImpot / 100);
+                        return {
+                            revenuFoncier, abattement: 0, chargesDeduites, amortissement: amortJB,
+                            revenusImposables: 0, impot: -econIR, revenuNet: revenuFoncier + econIR,
+                            type: 'IR', regime: 'jeanbrun'
+                        };
+                    }
                     break;
 
                 /* ------------------------------------------------------------------ */
@@ -338,8 +367,12 @@ const ImmoExtensions = (function() {
             }
             
             // Calcul de l'impôt (pour les régimes IR)
+            const isMeuble = regimeFiscal === 'lmnp-reel' || regimeFiscal === 'lmnp-micro' || regimeFiscal === 'lmp-reel';
+            const tauxPS = isMeuble
+                ? (this.params.fiscalite.tauxPrelevementsSociauxMeuble || 18.6) / 100
+                : (this.params.fiscalite.tauxPrelevementsSociaux || 17.2) / 100;
             const baseIR = revenusImposables * (this.params.fiscalite.tauxMarginalImpot / 100);
-            const basePS = revenusImposables * (this.params.fiscalite.tauxPrelevementsSociaux / 100);
+            const basePS = revenusImposables * tauxPS;
             const impot = baseIR + basePS; // signe positif = impôt à payer
             
             // Log du résultat
