@@ -417,7 +417,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Charger les paramètres dans le simulateur
             simulateur.chargerParametres(formData);
-            
+
+            // Synchroniser le régime fiscal pour immo-extensions.js
+            if (formData.regimeImmo && formData.regimeImmo !== 'sans') {
+                simulateur.params.fiscalite.regimeFiscal = formData.regimeImmo;
+            } else {
+                simulateur.params.fiscalite.regimeFiscal = 'micro-foncier'; // défaut legacy
+            }
+
             // Exécuter la simulation
             const resultats = simulateur.simuler();
             
