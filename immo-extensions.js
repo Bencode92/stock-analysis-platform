@@ -1483,18 +1483,20 @@ function ajouterSelectionRegimeFiscal() {
         }
         
         // Récupérer le régime fiscal actuel
-        const regimeFiscal = simulateur.params.fiscalite.regimeFiscal || 'micro-foncier';
+        const regimeFiscal = simulateur.params.base.regimeImmo || simulateur.params.fiscalite.regimeFiscal || 'sans';
         let regimeLabel = '';
-        
+
         switch(regimeFiscal) {
+            case 'sans': regimeLabel = 'Sans impôt (brut)'; break;
             case 'micro-foncier': regimeLabel = 'Micro-foncier (abattement 30%)'; break;
             case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
             case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
             case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
+            case 'jeanbrun': regimeLabel = 'Jeanbrun (amort. en nu, LF 2026)'; break;
             case 'sci-is': regimeLabel = 'SCI à l\'IS'; break;
             case 'sas-is': regimeLabel = 'SAS (IS)'; break;
             case 'sarl-is': regimeLabel = 'SARL (IS)'; break;
-            default: regimeLabel = 'Micro-foncier';
+            default: regimeLabel = regimeFiscal;
         }
         
         // Afficher le taux d'IS pour les régimes concernés
@@ -2040,18 +2042,20 @@ function ajouterSelectionRegimeFiscal() {
         
         if (!resultats.classique || !resultats.encheres) return;
         
-        const regimeFiscal = simulateur.params.fiscalite.regimeFiscal || 'micro-foncier';
+        const regimeFiscal = simulateur.params.base.regimeImmo || simulateur.params.fiscalite.regimeFiscal || 'sans';
         let regimeLabel = '';
-        
+
         switch(regimeFiscal) {
+            case 'sans': regimeLabel = 'Sans impôt (brut)'; break;
             case 'micro-foncier': regimeLabel = 'Micro-foncier (abattement 30%)'; break;
             case 'reel-foncier': regimeLabel = 'Régime réel foncier'; break;
             case 'lmnp-micro': regimeLabel = 'LMNP micro-BIC (abattement 50%)'; break;
             case 'lmnp-reel': regimeLabel = 'LMNP réel avec amortissements'; break;
+            case 'jeanbrun': regimeLabel = 'Jeanbrun (amort. en nu, LF 2026)'; break;
             case 'sci-is': regimeLabel = `SCI à l'IS (${simulateur.params.fiscalite.tauxIS || 25}%)`;  break;
             case 'sas-is': regimeLabel = `SAS (IS ${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
             case 'sarl-is': regimeLabel = `SARL (IS ${simulateur.params.fiscalite.tauxIS || 25}%)`; break;
-            default: regimeLabel = 'Micro-foncier';
+            default: regimeLabel = regimeFiscal;
         }
         
         // Mettre à jour les éléments fiscaux pour l'achat classique

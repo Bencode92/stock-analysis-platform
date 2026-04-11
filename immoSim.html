@@ -446,9 +446,14 @@
                         </div>
                     </label>
                 </div>
-                <div id="regime-impact-info" class="text-sm mt-2 pl-2" style="color:rgba(255,255,255,0.5);">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    <span id="regime-impact-text">Mode sans impôt : le cash-flow ne tient pas compte de la fiscalité.</span>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
+                    <button type="button" id="btn-best-regime" class="btn btn-outline" style="font-size:0.8rem;padding:6px 14px;">
+                        <i class="fas fa-magic"></i> Trouver le meilleur régime
+                    </button>
+                    <span id="regime-impact-text" style="color:rgba(255,255,255,0.5);font-size:0.8rem;">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Mode sans impôt : le cash-flow ne tient pas compte de la fiscalité.
+                    </span>
                 </div>
             </div>
 
@@ -1479,7 +1484,53 @@
         });
     </script>
 
-    <!-- Info régime fiscal dynamique -->
+    <!-- Bouton meilleur régime + info dynamique -->
+    <script>
+    document.getElementById('btn-best-regime')?.addEventListener('click', function() {
+      const sim = window.simulateur;
+      if (!sim) { alert('Lance d\'abord une simulation.'); return; }
+
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul...';
+      this.disabled = true;
+
+      setTimeout(() => {
+        const regimes = ['sans', 'micro-foncier', 'reel-foncier', 'lmnp-reel', 'jeanbrun'];
+        const origRegime = sim.params.base.regimeImmo;
+        let bestRegime = 'sans', bestSurface = 0, bestCF = -Infinity;
+
+        regimes.forEach(regime => {
+          sim.params.base.regimeImmo = regime;
+          const result = sim.chercheSurfaceDesc('classique', 1);
+          if (result) {
+            const score = result.cashFlow * 12 + result.surface; // CF annuel + surface bonus
+            if (score > bestCF) {
+              bestCF = score;
+              bestSurface = result.surface;
+              bestRegime = regime;
+            }
+          }
+        });
+
+        // Restaurer et sélectionner le meilleur
+        sim.params.base.regimeImmo = origRegime;
+        const radio = document.querySelector(`input[name="regime-immo"][value="${bestRegime}"]`);
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        const labels = { 'sans': 'Sans impôt', 'micro-foncier': 'Micro-foncier', 'reel-foncier': 'Réel foncier', 'lmnp-reel': 'LMNP Réel', 'jeanbrun': 'Jeanbrun' };
+        const infoEl = document.getElementById('regime-impact-text');
+        if (infoEl) {
+          infoEl.innerHTML = `<i class="fas fa-trophy" style="color:#22c55e;"></i> <strong style="color:#22c55e;">${labels[bestRegime]}</strong> est le meilleur : surface ${bestSurface}m², CF optimisé.`;
+        }
+
+        this.innerHTML = '<i class="fas fa-magic"></i> Trouver le meilleur régime';
+        this.disabled = false;
+      }, 100);
+    });
+    </script>
+
     <script>
     document.querySelectorAll('input[name="regime-immo"]').forEach(radio => {
       radio.addEventListener('change', function() {
