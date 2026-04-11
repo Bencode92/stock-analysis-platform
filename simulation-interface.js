@@ -1185,6 +1185,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // CORRECTION: Récupérer le mode de calcul
             calculationMode: document.querySelector('input[name="calculation-mode"]:checked')?.value || 'loyer-mensualite',
+
+            // Régime fiscal (impacte le cash-flow en mode cash-flow positif)
+            regimeImmo: document.querySelector('input[name="regime-immo"]:checked')?.value || 'sans',
             
             // Ajouter le paramètre d'apport minimum
             pourcentApportMin: document.getElementById('pourcent-apport')?.value || 10,

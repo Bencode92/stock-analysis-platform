@@ -381,8 +381,67 @@ class SimulateurImmo {
             const entretienMensuel = prixAchat * (this.params.communs.entretienAnnuel / 100) / 12;
             const assurancePNO = this.params.communs.assurancePNO / 12;
             
-            // Calcul du cash-flow complet
-            const cashFlow = loyerNet - mensualiteTotale - taxeFonciere - chargesNonRecuperables - entretienMensuel - assurancePNO;
+            // Calcul du cash-flow complet (avant impôt)
+            const cashFlowAvantImpot = loyerNet - mensualiteTotale - taxeFonciere - chargesNonRecuperables - entretienMensuel - assurancePNO;
+
+            // Impact fiscal selon le régime sélectionné
+            const regimeImmo = this.params.base.regimeImmo || 'sans';
+            let impotMensuel = 0;
+
+            if (regimeImmo !== 'sans') {
+                const loyerAnnuel = loyerNet * 12;
+                const TMI = (this.params.fiscalite.tauxMarginalImpot || 30) / 100;
+                const PS_NU = (this.params.fiscalite.tauxPrelevementsSociaux || 17.2) / 100;
+                const PS_MEUBLE = (this.params.fiscalite.tauxPrelevementsSociauxMeuble || 18.6) / 100;
+
+                // Charges déductibles annuelles
+                const interetsAn = emprunt * (taux / 100); // approximation an 1
+                const chargesDeductibles = (taxeFonciere + chargesNonRecuperables + entretienMensuel + assurancePNO) * 12 + interetsAn;
+
+                if (regimeImmo === 'micro-foncier') {
+                    // 30% abattement, IR + PS 17.2%
+                    const baseImposable = Math.max(0, loyerAnnuel * 0.70);
+                    impotMensuel = (baseImposable * (TMI + PS_NU)) / 12;
+
+                } else if (regimeImmo === 'reel-foncier') {
+                    // Charges réelles déductibles, déficit foncier possible
+                    const baseImposable = Math.max(0, loyerAnnuel - chargesDeductibles);
+                    impotMensuel = (baseImposable * (TMI + PS_NU)) / 12;
+                    // Économie déficit si négatif
+                    if (loyerAnnuel - chargesDeductibles < 0) {
+                        const deficit = Math.abs(loyerAnnuel - chargesDeductibles);
+                        const deficitImputable = Math.min(deficit, this.params.fiscalite.plafondDeficitFoncier || 10700);
+                        impotMensuel = -(deficitImputable * TMI) / 12; // économie !
+                    }
+
+                } else if (regimeImmo === 'lmnp-reel') {
+                    // Amortissements annulent souvent l'impôt
+                    const amortBien = prixAchat * 0.80 * 0.025; // 2.5% de 80%
+                    const amortMobilier = prixAchat * 0.10 * 0.10; // 10% de 10%
+                    const totalAmort = amortBien + amortMobilier;
+                    const resultatAvantAmort = loyerAnnuel - chargesDeductibles;
+                    const amortUtilise = Math.min(totalAmort, Math.max(0, resultatAvantAmort));
+                    const baseImposable = Math.max(0, resultatAvantAmort - amortUtilise);
+                    impotMensuel = (baseImposable * (TMI + PS_MEUBLE)) / 12;
+
+                } else if (regimeImmo === 'jeanbrun') {
+                    // Loyer plafonné −15% + amortissement 3%/an
+                    const loyerJeanbrun = loyerAnnuel * 0.85;
+                    const amortJB = prixAchat * 0.80 * 0.03;
+                    const plafondAmort = 8000;
+                    const amortEffectif = Math.min(amortJB, plafondAmort);
+                    const resultatFiscal = loyerJeanbrun - chargesDeductibles - amortEffectif;
+                    if (resultatFiscal >= 0) {
+                        impotMensuel = (resultatFiscal * (TMI + PS_NU)) / 12;
+                    } else {
+                        const deficit = Math.abs(resultatFiscal);
+                        const deficitImputable = Math.min(deficit, 10700);
+                        impotMensuel = -(deficitImputable * TMI) / 12;
+                    }
+                }
+            }
+
+            const cashFlow = cashFlowAvantImpot - impotMensuel;
             return cashFlow >= -this.defaults.epsSeuil;
         }
     }
@@ -481,6 +540,10 @@ class SimulateurImmo {
         // Ajouter le mode de calcul aux paramètres
         if (formData.calculationMode !== undefined)
             this.params.base.calculationMode = formData.calculationMode || 'loyer-mensualite';
+
+        // Régime fiscal (impacte le cash-flow en mode cash-flow positif)
+        if (formData.regimeImmo !== undefined)
+            this.params.base.regimeImmo = formData.regimeImmo || 'sans';
         
         // Ajouter le chargement du pourcentage d'apport minimum
         if (formData.pourcentApportMin !== undefined)

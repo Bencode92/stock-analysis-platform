@@ -395,7 +395,63 @@
                     Choisissez le critère qui déterminera la surface maximale que vous pourrez acquérir.
                 </div>
             </div>
-            
+
+            <!-- Sélection du régime fiscal -->
+            <div class="form-group">
+                <label class="form-label">Régime fiscal (impacte le cash-flow net)</label>
+                <div class="calculation-mode-container" style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <label class="mode-option" style="flex:1;min-width:120px;">
+                        <input type="radio" name="regime-immo" value="sans" checked>
+                        <div class="mode-card" style="padding:10px;">
+                            <div class="mode-content" style="text-align:center;">
+                                <h4 style="font-size:0.85rem;">Sans impôt</h4>
+                                <p style="font-size:0.7rem;">Brut (défaut)</p>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="mode-option" style="flex:1;min-width:120px;">
+                        <input type="radio" name="regime-immo" value="micro-foncier">
+                        <div class="mode-card" style="padding:10px;">
+                            <div class="mode-content" style="text-align:center;">
+                                <h4 style="font-size:0.85rem;">Micro-foncier</h4>
+                                <p style="font-size:0.7rem;">Abattement 30%</p>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="mode-option" style="flex:1;min-width:120px;">
+                        <input type="radio" name="regime-immo" value="reel-foncier">
+                        <div class="mode-card" style="padding:10px;">
+                            <div class="mode-content" style="text-align:center;">
+                                <h4 style="font-size:0.85rem;">Réel foncier</h4>
+                                <p style="font-size:0.7rem;">Charges au réel</p>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="mode-option" style="flex:1;min-width:120px;">
+                        <input type="radio" name="regime-immo" value="lmnp-reel">
+                        <div class="mode-card" style="padding:10px;">
+                            <div class="mode-content" style="text-align:center;">
+                                <h4 style="font-size:0.85rem;">LMNP Réel</h4>
+                                <p style="font-size:0.7rem;">Amortissements</p>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="mode-option" style="flex:1;min-width:120px;">
+                        <input type="radio" name="regime-immo" value="jeanbrun">
+                        <div class="mode-card" style="padding:10px;">
+                            <div class="mode-content" style="text-align:center;">
+                                <h4 style="font-size:0.85rem;">Jeanbrun</h4>
+                                <p style="font-size:0.7rem;">Amort. en nu</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                <div id="regime-impact-info" class="text-sm mt-2 pl-2" style="color:rgba(255,255,255,0.5);">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <span id="regime-impact-text">Mode sans impôt : le cash-flow ne tient pas compte de la fiscalité.</span>
+                </div>
+            </div>
+
             <div class="flex justify-center mt-4">
                 <button id="btn-simulate" class="btn btn-primary btn-simulate">
                     <i class="fas fa-calculator"></i> Simuler
@@ -1421,6 +1477,23 @@
             childList: true,
             subtree: true
         });
+    </script>
+
+    <!-- Info régime fiscal dynamique -->
+    <script>
+    document.querySelectorAll('input[name="regime-immo"]').forEach(radio => {
+      radio.addEventListener('change', function() {
+        const infos = {
+          'sans': 'Mode sans impôt : le cash-flow ne tient pas compte de la fiscalité.',
+          'micro-foncier': 'Micro-foncier : 30% d\'abattement. Impôt = 70% du loyer × (TMI + 17.2%). Simple mais lourd.',
+          'reel-foncier': 'Réel foncier : charges déductibles (intérêts, TF, entretien...). Déficit foncier possible (-10 700€/an).',
+          'lmnp-reel': 'LMNP Réel : amortissement du bien + mobilier. Souvent 0€ d\'impôt. Le plus avantageux en cash-flow.',
+          'jeanbrun': 'Jeanbrun (LF 2026) : amortissement en location nue. Loyer plafonné à -15%. Déficit foncier cumulable.'
+        };
+        const el = document.getElementById('regime-impact-text');
+        if (el) el.textContent = infos[this.value] || '';
+      });
+    });
     </script>
 
     <!-- Bouton "Optimiser la fiscalité" → transmet les données vers comparaison-fiscale -->
