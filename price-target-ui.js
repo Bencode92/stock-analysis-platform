@@ -204,10 +204,6 @@ class PriceTargetUI {
         bpRpSlot.innerHTML = this._generateRPBusinessPlan(result);
       }
     } else {
-      // Supprimer la projection (redondante avec le Business Plan)
-      const projSlot = document.getElementById('locatif-projection-slot');
-      if (projSlot) projSlot.innerHTML = '';
-
       const bpSlot = document.getElementById('business-plan-slot');
       if (bpSlot) {
         bpSlot.innerHTML = this._generateBusinessPlan(result);
@@ -386,9 +382,6 @@ class PriceTargetUI {
           ${this._generateRegimeSuggestion(r)}
         </div>
       </div>
-
-      <!-- Projection enrichissement multi-années (locatif) -->
-      <div id="locatif-projection-slot"></div>
 
       <!-- Business Plan + TRI -->
       <div id="business-plan-slot"></div>
@@ -1581,8 +1574,10 @@ class PriceTargetUI {
     const taux = Number(r._baseInput?.loanRate ?? r._baseInput?.taux ?? 3.5);
     const duree = Number(r._baseInput?.loanDuration ?? r._baseInput?.duree ?? 20);
     const emprunt = Number(r._baseInput?.loanAmount ?? r._baseInput?.montantEmprunt ?? (currentPrice - apport));
-    const loyerAnnuel = Number(r._baseInput?.loyerHC ?? 0) * 12;
+    const loyerHC = Number(r._baseInput?.loyerHC ?? 0);
+    const loyerAnnuel = loyerHC * 12;
     const cfAn1 = Number(r.currentBreakdown?.cashflow ?? 0);
+    const enrichAn1 = Number(r.currentEnrichment ?? 0);
     const regimeId = r.regimeId || '';
     const regimeNom = r.regimeUsed || regimeId || '?';
     const isLMNP = regimeId.includes('lmnp') || regimeId.includes('lmp');
@@ -1619,8 +1614,6 @@ class PriceTargetUI {
     let tresorerieSCI = 0; // Trésorerie cumulée SCI IS (après IS, réinvestie)
 
     for (let year = 1; year <= maxYears; year++) {
-      const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
-      const chargesAnnee = chargesEtImpotsAn1 * Math.pow(1 + hausseCharges, year - 1);
       const mensAnnee = year <= duree ? mensualiteAn : 0;
 
       let interets = 0, capitalRembourse = 0;
@@ -1630,7 +1623,12 @@ class PriceTargetUI {
         capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
       } else { capitalRestant = 0; }
 
-      const cfAnnee = loyerAnnee - chargesAnnee - mensAnnee;
+      // CF basé sur cfAn1 (source : getDetailedCalculations) projeté avec hausse loyers
+      // Après le crédit, le CF augmente de la mensualité
+      const hausseCF = (loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1) - loyerAnnuel); // gain loyer
+      const hausseCh = (chargesEtImpotsAn1 * Math.pow(1 + hausseCharges, year - 1) - chargesEtImpotsAn1); // hausse charges
+      const cfAnnee = cfAn1 + hausseCF - hausseCh + (year > duree ? mensualiteAn : 0);
+      const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
       cfCumul += cfAnnee;
       amortCumul += amortAnnuel;
 
@@ -1985,9 +1983,10 @@ class PriceTargetUI {
             ${(() => {
               const an1 = rows[0] || {};
               const an20 = rows[19] || rows[rows.length - 1] || {};
-              const cfAn = an1.cfAnnee || 0;
-              const capAn = an1.capitalRembourse || 0;
-              const enrichAn = cfAn + capAn;
+              // Utiliser les données du verdict (source unique) pour la cohérence
+              const cfAn = Number(r.currentBreakdown?.cashflow ?? an1.cfAnnee ?? 0);
+              const capAn = Number(r.currentBreakdown?.capital ?? an1.capitalRembourse ?? 0);
+              const enrichAn = Number(r.currentEnrichment ?? (cfAn + capAn));
               const tri20 = calcTRI(Math.min(20, maxYears));
               return `
             <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📊 Enrichissement annuel (an 1)</div>
