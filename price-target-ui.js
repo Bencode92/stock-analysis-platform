@@ -1588,10 +1588,15 @@ class PriceTargetUI {
 
       const fraisVente = valeurBien * fraisRevente;
       // SCI : le net inclut la trésorerie accumulée
-      // SCI IS : trésorerie distribuée avec PFU 30% (flat tax)
+      // SCI IS : trésorerie — deux scénarios
       const pfuTaux = 0.30;
       const tresoNettePFU = isSCI ? tresorerieSCI * (1 - pfuTaux) : 0;
-      const netRevente = valeurBien - capitalRestant - impotPV - fraisVente + tresoNettePFU;
+      // Scénario 1 : distribution → PFU 30%
+      const netReventeDistrib = valeurBien - capitalRestant - impotPV - fraisVente + tresoNettePFU;
+      // Scénario 2 : capitalisation (pas de PFU, fonds restent en SCI pour réinvestir)
+      const netReventeCapital = valeurBien - capitalRestant - impotPV - fraisVente + (isSCI ? tresorerieSCI : 0);
+      // Par défaut on utilise le scénario distribution (plus conservateur)
+      const netRevente = isSCI ? netReventeDistrib : (valeurBien - capitalRestant - impotPV - fraisVente);
 
       rows.push({
         year, loyerAnnee: Math.round(loyerAnnee),
@@ -1601,6 +1606,8 @@ class PriceTargetUI {
         capitalRestant: Math.round(capitalRestant),
         valeurBien: Math.round(valeurBien), patrimoine: Math.round(patrimoine),
         tresorerieSCI: Math.round(tresorerieSCI),
+        tresoNettePFU: Math.round(tresoNettePFU),
+        netReventeCapital: Math.round(isSCI ? netReventeCapital : 0),
         pvBrute: Math.round(pvBrute), reintegration: Math.round(reintegration),
         impotPV: Math.round(impotPV), fraisVente: Math.round(fraisVente),
         netRevente: Math.round(netRevente)
@@ -1657,7 +1664,8 @@ class PriceTargetUI {
         <div style="font-size:1.4rem;font-weight:800;color:${color};margin:4px 0;">TRI ${tri}%</div>
         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(row.netRevente)}€ · ×${multiple}</div>
         ${isLMNP ? `<div style="font-size:0.65rem;color:#f59e0b;margin-top:2px;">Réintég. amort: ${fmt(row.reintegration)}€</div>` : ''}
-        ${isSCI ? `<div style="font-size:0.65rem;color:#a78bfa;margin-top:2px;">Tréso. brute: ${fmt(row.tresorerieSCI || 0)}€ → nette PFU 30%: ${fmt(Math.round((row.tresorerieSCI || 0) * 0.70))}€</div>` : ''}
+        ${isSCI ? `<div style="font-size:0.65rem;color:#a78bfa;margin-top:2px;">Tréso: ${fmt(row.tresorerieSCI || 0)}€</div>
+        <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);margin-top:1px;">Si distribué: −PFU 30% = ${fmt(row.tresoNettePFU || 0)}€ | Si réinvesti: ${fmt(row.tresorerieSCI || 0)}€</div>` : ''}
       </div>`;
     }).join('');
 
@@ -1745,9 +1753,12 @@ class PriceTargetUI {
         <div style="margin-top:12px;padding:10px 14px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;font-size:0.8rem;color:#a78bfa;">
           <i class="fas fa-building"></i> <strong>Avantage SCI IS — Trésorerie capitalisée</strong> :
           Les bénéfices après IS (15%) restent dans la société et sont placés à ${(tauxPlacementSCI*100)}%/an (effet composé).
-          À la sortie : <strong>PFU 30%</strong> (flat tax) prélevé sur la trésorerie distribuée.
-          Tréso brute × 70% = tréso nette dans votre poche.
-          PV calculée sur VNC (pas d'abattement durée détention).
+          <br><br>
+          <strong>2 options à la sortie :</strong><br>
+          📤 <strong>Distribution</strong> : PFU 30% sur la trésorerie → tréso brute × 70% dans votre poche.<br>
+          🔄 <strong>Réinvestissement</strong> : la trésorerie reste dans la SCI et sert d'apport pour un 2ème bien. <strong>Pas de PFU</strong> tant que l'argent ne sort pas.
+          <br><br>
+          ⚠️ PV calculée sur VNC (pas d'abattement durée détention). Les calculs ci-dessus utilisent le scénario <strong>distribution</strong> (conservateur).
         </div>` : ''}
 
         <!-- Export -->
