@@ -42,7 +42,7 @@ const ImmoExtensions = (function() {
         fraisReventePct: 7,        // Frais de revente par défaut (7%)
         partTerrain: 20,           // Part du terrain non-amortissable (20%)
         eligibleTauxReduitIS: true, // Éligibilité au taux réduit IS
-        reintegrationAmortLMNP2025: false // <- PAS de réintégration LMNP par défaut
+        reintegrationAmortLMNP2025: true // Réintégration LMNP active (loi 15/02/2025, art. 84)
     };
     
     // ===============================================================
@@ -72,14 +72,14 @@ const ImmoExtensions = (function() {
         }
 
         // RÉGIMES PERSONNES PHYSIQUES & LMNP
-        if (['micro-foncier','reel-foncier','lmnp-micro','lmnp-reel'].includes(regime)) {
+        if (['micro-foncier','reel-foncier','lmnp-micro','lmnp-reel','jeanbrun','lmp-reel'].includes(regime)) {
             const fraisMajores = Math.max(fraisAcq, prixAchat * 0.075);
             const travauxMajores = nbAnnees >= 5 ? prixAchat * 0.15 : 0;
 
             let prixMajore = prixAchat + fraisMajores + travauxMajores;
 
-            // Réforme 2025 : ré-intégration amortissements LMNP réel (avec flag)
-            if (regime === 'lmnp-reel' && reintegrationAmortLMNP2025) {
+            // Réforme 2025 : ré-intégration amortissements LMNP/Jeanbrun réel
+            if ((regime === 'lmnp-reel' || regime === 'jeanbrun' || regime === 'lmp-reel') && reintegrationAmortLMNP2025) {
                 prixMajore -= amortissementAnnuel * nbAnnees;
             }
 
@@ -134,10 +134,10 @@ const ImmoExtensions = (function() {
             // Barème IS avec taux réduit conditionnel
             let impotIS;
             if (eligibleTauxReduitIS) {
-                // Taux réduit 15% jusqu'à 42 500€, puis taux normal
-                impotIS = baseIS <= 42_500
+                // Taux réduit 15% jusqu'à 100 000€ (LF 2026, ex-42 500€)
+                impotIS = baseIS <= 100_000
                     ? baseIS * 0.15
-                    : 42_500 * 0.15 + (baseIS - 42_500) * (tauxIS / 100);
+                    : 100_000 * 0.15 + (baseIS - 100_000) * (tauxIS / 100);
             } else {
                 // Taux plein directement
                 impotIS = baseIS * (tauxIS / 100);
