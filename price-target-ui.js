@@ -114,10 +114,10 @@ class PriceTargetUI {
         bpRpSlot.innerHTML = this._generateRPBusinessPlan(result);
       }
     } else {
-      const slot = document.getElementById('locatif-projection-slot');
-      if (slot) {
-        slot.innerHTML = this._generateLocatifProjection(result);
-      }
+      // Supprimer la projection (redondante avec le Business Plan)
+      const projSlot = document.getElementById('locatif-projection-slot');
+      if (projSlot) projSlot.innerHTML = '';
+
       const bpSlot = document.getElementById('business-plan-slot');
       if (bpSlot) {
         bpSlot.innerHTML = this._generateBusinessPlan(result);
