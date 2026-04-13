@@ -97,15 +97,15 @@ class PriceTargetUI {
                 const vnc = Math.max(0, prix - amortSCI);
                 const pvSCI = valeur - vnc;
                 impotPV = Math.max(0, pvSCI * 0.25);
-                // Trésorerie capitalisée (CF positif après IS placé à 3%)
+                // Trésorerie SCI capitalisée : CF positif net d'IS + composé à 3%/an
                 let treso = 0;
                 for (let y = 1; y <= year; y++) {
-                  const cfY = cfAnnuel * Math.pow(1.015, y - 1);
-                  if (cfY > 0) treso += cfY;
-                  treso *= 1.03; // placement 3%
+                  const cfY = cfAnnuel * Math.pow(1.015, y - 1); // CF avec hausse loyer 1.5%
+                  if (cfY > 0) treso += cfY;       // 1. Ajouter le CF positif de l'année
+                  treso *= (1 + 0.03);              // 2. Toute la tréso composée à 3%/an
                 }
-                // PFU 31.4% si distribution
-                tresoBonus = treso * (1 - 0.314); // net de PFU 31.4%
+                // Distribution : PFU 31.4% (12.8% IR + 18.6% PS)
+                tresoBonus = treso * (1 - 0.314);
               } else if (isLMNPr) {
                 // LMNP : réintégration amortissements (loi 2025)
                 const amortCumul = prix * 0.80 * 0.025 * year;
@@ -768,15 +768,18 @@ class PriceTargetUI {
         capitalRestant = Math.max(0, capitalRestant - (mensu * 12 - interets));
       } else { capitalRestant = 0; }
 
-      // Patrimoine locataire (apport placé)
-      patrimoineLocataireCumul = apport * Math.pow(1 + oppRate, year);
+      // Patrimoine locataire = apport placé + économies cumulées placées
+      // Si le locataire paie moins que le proprio, il place la différence
+      const econAnnuelle = Math.max(0, coutProprioAn - coutLocataireAn);
+      patrimoineLocataireCumul = (patrimoineLocataireCumul + econAnnuelle) * (1 + oppRate);
 
       // Patrimoine propriétaire
       const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
       const patrimoineProprio = valeurBien - capitalRestant;
 
-      // Économie mensuelle proprio vs locataire
-      const economieMensuelle = (loyerAnnee - mensAnnee - chargesAnnee) / 12;
+      // Économie mensuelle : ce que le locataire paie − ce que le proprio paie
+      // (le conjoint s'annule car il réduit les deux côtés)
+      const economieMensuelle = (coutLocataireAn - coutProprioAn) / 12;
 
       // Enrichissement cumulé = patrimoine proprio - patrimoine locataire
       const enrichissement = patrimoineProprio - patrimoineLocataireCumul;
@@ -1631,15 +1634,17 @@ class PriceTargetUI {
       cfCumul += cfAnnee;
       amortCumul += amortAnnuel;
 
-      // SCI IS : le surplus reste dans la société et est réinvesti
-      if (isSCI && cfAnnee > 0) {
-        // Le CF positif en SCI IS est déjà net d'IS (calculé dans chargesAnnee)
-        tresorerieSCI += cfAnnee;
-      }
-      // Intérêts sur la trésorerie accumulée
-      if (isSCI && tresorerieSCI > 0) {
-        const interetsTreso = tresorerieSCI * tauxPlacementSCI;
-        tresorerieSCI += interetsTreso;
+      // SCI IS : trésorerie capitalisée dans la société
+      if (isSCI) {
+        // 1. Le CF positif (déjà net d'IS) est conservé dans la SCI
+        if (cfAnnee > 0) {
+          tresorerieSCI += cfAnnee;
+        }
+        // 2. Toute la trésorerie accumulée est placée à 3%/an (composé)
+        //    Même si le CF de l'année est négatif, la tréso existante rapporte
+        if (tresorerieSCI > 0) {
+          tresorerieSCI *= (1 + tauxPlacementSCI);
+        }
       }
 
       const valeurBien = currentPrice * Math.pow(1 + appreciation, year);
