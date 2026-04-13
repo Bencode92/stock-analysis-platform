@@ -37,6 +37,72 @@ class PriceTargetUI {
     container.style.display = 'block';
     this.isVisible = true;
 
+    // Comparaison TRI par régime (locatif) — exécuté ici car les <script> injectés via innerHTML ne fonctionnent pas
+    if (result.regimeId !== 'rp') {
+      setTimeout(() => {
+        const compContainer = document.getElementById('bp-regime-comparison');
+        if (!compContainer || compContainer.dataset.loaded) return;
+
+        const details = compContainer.closest('details');
+        if (!details) return;
+
+        details.addEventListener('toggle', () => {
+          if (!details.open || compContainer.dataset.loaded) return;
+          compContainer.dataset.loaded = 'true';
+
+          try {
+            const regimes = ['nu_micro','nu_reel','nu_jeanbrun','lmnp_reel','lmp','sci_is'];
+            const registry = this.analyzer?.analyzer?.getRegimeRegistry?.() || {};
+            const baseInput = this.analyzer?.analyzer?.prepareFiscalData?.() || {};
+            const ptA = window.priceTargetAnalyzer;
+            const currentRegime = this.analyzer?.analyzer?.normalizeRegimeKey?.({id: result.regimeId}) || result.regimeId;
+            const results = [];
+            const fmt = v => Math.round(v).toLocaleString('fr-FR');
+            const dureeVal = Number(result._baseInput?.loanDuration ?? result._baseInput?.duree ?? 20);
+
+            regimes.forEach(rId => {
+              try {
+                const ptResult = ptA?.calculatePriceTarget(baseInput, 0, { regimeId: rId });
+                if (!ptResult) return;
+                const cf = ptResult.currentBreakdown?.cashflow || 0;
+                const cap = ptResult.currentBreakdown?.capital || 0;
+                const enrich = ptResult.currentEnrichment || 0;
+                results.push({
+                  id: rId, nom: registry[rId]?.nom || rId,
+                  tri: parseFloat(ptResult.currentEnrichment ? '0' : '0'), // simplifié
+                  enrich: Math.round(enrich), cf: Math.round(cf),
+                  isCurrent: rId === currentRegime
+                });
+              } catch(e) { console.warn('Régime ' + rId + ':', e.message); }
+            });
+
+            results.sort((a, b) => b.enrich - a.enrich);
+
+            let html = '<table style="width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.85rem;">';
+            html += '<thead><tr style="border-bottom:2px solid rgba(0,191,255,0.2);">';
+            html += '<th style="padding:8px 10px;text-align:left;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Régime</th>';
+            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Enrichissement/an</th>';
+            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">CF/an</th>';
+            html += '</tr></thead><tbody>';
+
+            results.forEach((r, i) => {
+              const bg = r.isCurrent ? 'background:rgba(0,191,255,0.1);border-left:3px solid #00bfff;' : (i % 2 === 0 ? 'background:rgba(255,255,255,0.03);' : '');
+              const enrichColor = r.enrich >= 0 ? '#22c55e' : '#ef4444';
+              html += '<tr style="' + bg + '">';
+              html += '<td style="padding:8px 10px;color:#e2e8f0;font-weight:' + (r.isCurrent ? '700' : '400') + ';">' + (i === 0 ? '🏆 ' : '') + r.nom + (r.isCurrent ? ' <span style="color:#00bfff;font-size:0.7rem;">← actuel</span>' : '') + '</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + enrichColor + ';font-weight:700;">' + (r.enrich >= 0 ? '+' : '') + fmt(r.enrich) + '€</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + (r.cf >= 0 ? '#22c55e' : '#ef4444') + ';">' + (r.cf >= 0 ? '+' : '') + fmt(r.cf) + '€</td>';
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            compContainer.innerHTML = html;
+          } catch(e) {
+            compContainer.innerHTML = '<div style="color:#ef4444;padding:12px;">Erreur: ' + e.message + '</div>';
+          }
+        });
+      }, 500);
+    }
+
     // Injecter les projections séparément (évite le parsing HTML cassé)
     if (result.regimeId === 'rp') {
       const slot = document.getElementById('bvr-projection-slot');
@@ -1643,64 +1709,10 @@ class PriceTargetUI {
           ${triCards}
         </div>
 
-        <!-- Sélecteur horizon personnalisé -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:12px 16px;background:rgba(0,191,255,0.05);border:1px solid rgba(0,191,255,0.15);border-radius:10px;flex-wrap:wrap;">
-          <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;"><i class="fas fa-calendar-alt" style="margin-right:6px;"></i>Horizon personnalisé :</span>
-          <input type="range" id="bp-horizon-slider" min="5" max="25" value="${duree}" step="1"
-            style="flex:1;min-width:120px;accent-color:#00bfff;">
-          <span id="bp-horizon-label" style="color:#00bfff;font-weight:700;font-size:1rem;min-width:50px;">${duree} ans</span>
-          <span style="color:rgba(255,255,255,0.4);font-size:0.85rem;">→</span>
-          <span id="bp-horizon-tri" style="color:#22c55e;font-weight:700;font-size:1.1rem;">TRI ${calcTRI(duree)}%</span>
-          <span id="bp-horizon-net" style="color:rgba(255,255,255,0.5);font-size:0.85rem;">Net ${fmt(rows[duree-1]?.netRevente || 0)}€</span>
-        </div>
-
         <!-- Graphique -->
         <div style="margin-bottom:20px;padding:16px;background:rgba(0,0,0,0.2);border-radius:10px;">
           <canvas id="bp-chart" height="200"></canvas>
         </div>
-
-        <script>
-        (function(){
-          const triData = ${JSON.stringify(rows.map(r => ({ y: r.year, net: r.netRevente, cf: r.cfAnnee })))};
-          const apport = ${apport};
-          const slider = document.getElementById('bp-horizon-slider');
-          const label = document.getElementById('bp-horizon-label');
-          const triEl = document.getElementById('bp-horizon-tri');
-          const netEl = document.getElementById('bp-horizon-net');
-          if (!slider) return;
-
-          function calcTRIjs(years) {
-            const flows = [-apport];
-            for (let i = 0; i < years && i < triData.length; i++) {
-              const d = triData[i];
-              flows.push(i === years - 1 ? d.cf + d.net : d.cf);
-            }
-            let r = 0.05;
-            for (let it = 0; it < 100; it++) {
-              let npv = 0, dnpv = 0;
-              for (let t = 0; t < flows.length; t++) {
-                npv += flows[t] / Math.pow(1 + r, t);
-                dnpv -= t * flows[t] / Math.pow(1 + r, t + 1);
-              }
-              if (Math.abs(dnpv) < 0.001) break;
-              const nr = r - npv / dnpv;
-              if (Math.abs(nr - r) < 0.0001) { r = nr; break; }
-              r = Math.max(-0.5, Math.min(1, nr));
-            }
-            return (r * 100).toFixed(2);
-          }
-
-          slider.addEventListener('input', function() {
-            const y = parseInt(this.value);
-            label.textContent = y + ' ans';
-            const tri = calcTRIjs(y);
-            const triNum = parseFloat(tri);
-            triEl.textContent = 'TRI ' + tri + '%';
-            triEl.style.color = triNum >= 5 ? '#22c55e' : triNum >= 2 ? '#f59e0b' : '#ef4444';
-            const row = triData[y - 1];
-            netEl.textContent = 'Net ' + Math.round(row?.net || 0).toLocaleString('fr-FR') + '€';
-          });
-        })();
         </script>
 
         <!-- Tableau année par année -->
@@ -1755,106 +1767,6 @@ class PriceTargetUI {
             <div style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">Calcul en cours...</div>
           </div>
         </details>
-
-        <script>
-        (function(){
-          // Calcul TRI pour chaque régime
-          const container = document.getElementById('bp-regime-comparison');
-          if (!container || !window.analyzer) return;
-
-          const regimes = ['nu_micro','nu_reel','nu_jeanbrun','lmnp_reel','lmp','sci_is'];
-          const registry = window.analyzer.getRegimeRegistry?.() || {};
-          const apportVal = ${apport};
-          const currentPriceVal = ${currentPrice};
-          const dureeVal = ${duree};
-          const currentRegime = '${regimeId}';
-
-          // Observer le click sur le <details>
-          container.closest('details').addEventListener('toggle', function() {
-            if (!this.open || container.dataset.loaded) return;
-            container.dataset.loaded = 'true';
-
-            const params = window.analyzer.getAllAdvancedParams?.() || {};
-            const baseInput = window.analyzer.prepareFiscalData?.() || {};
-            const results = [];
-
-            regimes.forEach(rId => {
-              try {
-                const ptResult = window.priceTargetAnalyzer?.calculatePriceTarget(baseInput, 0, { regimeId: rId });
-                if (!ptResult) return;
-                const cf = ptResult.currentBreakdown?.cashflow || 0;
-                const cap = ptResult.currentBreakdown?.capital || 0;
-                const enrich = ptResult.currentEnrichment || 0;
-                const net = ptResult.currentBreakdown ? (function(){
-                  // Simplified net revente at duree
-                  const val = currentPriceVal * Math.pow(1.02, dureeVal);
-                  return val - 0 - val * 0.07; // simplifié
-                })() : 0;
-
-                // TRI simplifié
-                const flows = [-apportVal];
-                for (let i = 0; i < dureeVal; i++) {
-                  const cfY = cf * Math.pow(1.015, i); // hausse loyers approx
-                  flows.push(i === dureeVal - 1 ? cfY + net + (cap * dureeVal) : cfY);
-                }
-                let rate = 0.05;
-                for (let it = 0; it < 80; it++) {
-                  let npv = 0, dnpv = 0;
-                  for (let t = 0; t < flows.length; t++) {
-                    npv += flows[t] / Math.pow(1 + rate, t);
-                    dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
-                  }
-                  if (Math.abs(dnpv) < 0.001) break;
-                  const nr = rate - npv / dnpv;
-                  if (Math.abs(nr - rate) < 0.0001) { rate = nr; break; }
-                  rate = Math.max(-0.5, Math.min(1, nr));
-                }
-                const tri = (rate * 100).toFixed(2);
-
-                results.push({
-                  id: rId,
-                  nom: registry[rId]?.nom || rId,
-                  tri: parseFloat(tri),
-                  triStr: tri,
-                  enrich: Math.round(enrich),
-                  cf: Math.round(cf),
-                  isCurrent: rId === currentRegime || rId === window.analyzer.normalizeRegimeKey?.({id: currentRegime})
-                });
-              } catch(e) { console.warn('Erreur régime ' + rId + ':', e.message); }
-            });
-
-            if (results.length === 0) {
-              container.innerHTML = '<div style="text-align:center;color:#f59e0b;padding:16px;">Aucun résultat. Vérifiez que le formulaire est rempli.</div>';
-              return;
-            }
-
-            results.sort((a, b) => b.tri - a.tri);
-            const fmt = v => Math.round(v).toLocaleString('fr-FR');
-
-            let html = '<table style="width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.85rem;">';
-            html += '<thead><tr style="border-bottom:2px solid rgba(0,191,255,0.2);">';
-            html += '<th style="padding:8px 10px;text-align:left;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Régime</th>';
-            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">TRI ' + dureeVal + ' ans</th>';
-            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Enrichissement/an</th>';
-            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">CF/an</th>';
-            html += '</tr></thead><tbody>';
-
-            results.forEach((r, i) => {
-              const bg = r.isCurrent ? 'background:rgba(0,191,255,0.1);border-left:3px solid #00bfff;' : (i % 2 === 0 ? 'background:rgba(255,255,255,0.03);' : '');
-              const triColor = r.tri >= 5 ? '#22c55e' : r.tri >= 2 ? '#f59e0b' : '#ef4444';
-              html += '<tr style="' + bg + '">';
-              html += '<td style="padding:8px 10px;color:#e2e8f0;font-weight:' + (r.isCurrent ? '700' : '400') + ';">' + (i === 0 ? '🏆 ' : '') + r.nom + (r.isCurrent ? ' <span style="color:#00bfff;font-size:0.7rem;">← actuel</span>' : '') + '</td>';
-              html += '<td style="padding:8px 10px;text-align:right;color:' + triColor + ';font-weight:700;font-size:1rem;">' + r.triStr + '%</td>';
-              html += '<td style="padding:8px 10px;text-align:right;color:' + (r.enrich >= 0 ? '#22c55e' : '#ef4444') + ';">' + (r.enrich >= 0 ? '+' : '') + fmt(r.enrich) + '€</td>';
-              html += '<td style="padding:8px 10px;text-align:right;color:' + (r.cf >= 0 ? '#22c55e' : '#ef4444') + ';">' + (r.cf >= 0 ? '+' : '') + fmt(r.cf) + '€</td>';
-              html += '</tr>';
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-          });
-        })();
-        </script>
 
         <!-- Stress Test -->
         <details style="margin-top:16px;">
