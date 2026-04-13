@@ -732,7 +732,7 @@ class PriceTargetUI {
           Business Plan — Résidence Principale
         </h4>
         <div style="${S.sub}">
-          Prix ${fmt(currentPrice)}€ · Apport ${fmt(apport)}€ · ${taux}% sur ${duree} ans · Conjoint ${fmt(partner)}€/mois · Loyer marché ${fmt(loyerMarche)}€/mois · Placement apport ${(oppRate*100).toFixed(0)}%/an
+          Prix ${fmt(currentPrice)}€ · Apport ${fmt(apport)}€ (${(apport/currentPrice*100).toFixed(0)}%) · Frais notaire ~${((emprunt + apport - currentPrice) > 0 ? ((emprunt + apport - currentPrice)/currentPrice*100).toFixed(1) : '8')}% · ${taux}% sur ${duree} ans · Conjoint ${fmt(partner)}€/mois · Loyer ${fmt(loyerMarche)}€/mois · Placement ${(oppRate*100).toFixed(0)}%/an
         </div>
 
         <!-- TRI par horizon -->
@@ -772,6 +772,96 @@ class PriceTargetUI {
             <i class="fas fa-copy"></i> Copier
           </button>
         </div>
+
+        <!-- Sensibilité appréciation -->
+        <details style="margin-top:16px;">
+          <summary style="cursor:pointer;color:#00bfff;font-size:0.9rem;font-weight:600;padding:8px 0;">
+            <i class="fas fa-chart-bar" style="margin-right:6px;"></i>Sensibilité : TRI selon le taux d'appréciation (0.5% à 3%)
+          </summary>
+          <div style="margin-top:12px;overflow-x:auto;">
+            ${(() => {
+              const appreciations = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03];
+              const horizonsTest = [10, 15, 20];
+
+              // Header
+              let html = `<table style="display:table;width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.85rem;table-layout:auto;">`;
+              html += `<thead><tr style="display:table-row;">`;
+              html += `<th style="${S.th};text-align:left">Appréciation</th>`;
+              horizonsTest.forEach(h => { html += `<th style="${S.th};text-align:right">TRI ${h} ans</th>`; });
+              html += `<th style="${S.th};text-align:right">Patrimoine 20 ans</th>`;
+              html += `</tr></thead><tbody>`;
+
+              appreciations.forEach((app, idx) => {
+                const bg = Math.abs(app - appreciation) < 0.001
+                  ? 'background:rgba(0,191,255,0.08);border-left:3px solid #00bfff'
+                  : (idx % 2 === 0 ? 'background:rgba(255,255,255,0.03)' : '');
+                const isCurrent = Math.abs(app - appreciation) < 0.001;
+
+                html += `<tr style="display:table-row;${bg}">`;
+                html += `<td style="${S.td};text-align:left;color:#fff;font-weight:${isCurrent?'700':'400'}">`;
+                html += `${isCurrent ? '→ ' : ''}${(app*100).toFixed(1)}%/an${isCurrent ? ' (actuel)' : ''}</td>`;
+
+                // TRI pour chaque horizon
+                horizonsTest.forEach(h => {
+                  // Recalculer avec cette appréciation
+                  const flows = [-apport];
+                  let capR = emprunt;
+                  let patLoc = apport;
+                  for (let y = 1; y <= h; y++) {
+                    const loyerY = (loyerMarche * 12) * Math.pow(1 + rentInflation, y - 1);
+                    const chgY = (charges * 12) * Math.pow(1 + chargesInflation, y - 1);
+                    const mensY = y <= duree ? mensu * 12 : 0;
+                    const partY = partner * 12;
+                    const econY = (loyerY - partY) - (mensY + chgY - partY);
+                    if (y <= duree && capR > 0) {
+                      const inter = capR * (taux / 100);
+                      capR = Math.max(0, capR - (mensu * 12 - inter));
+                    } else { capR = 0; }
+                    patLoc = apport * Math.pow(1 + oppRate, y);
+                    const valBien = currentPrice * Math.pow(1 + app, y);
+                    if (y === h) {
+                      flows.push(econY + (valBien - capR));
+                    } else {
+                      flows.push(econY);
+                    }
+                  }
+                  // TRI Newton-Raphson
+                  let rate = 0.05;
+                  for (let it = 0; it < 80; it++) {
+                    let npv = 0, dnpv = 0;
+                    for (let t = 0; t < flows.length; t++) {
+                      npv += flows[t] / Math.pow(1 + rate, t);
+                      dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
+                    }
+                    if (Math.abs(dnpv) < 0.001) break;
+                    const nr = rate - npv / dnpv;
+                    if (Math.abs(nr - rate) < 0.0001) { rate = nr; break; }
+                    rate = Math.max(-0.5, Math.min(1, nr));
+                  }
+                  const tri = (rate * 100).toFixed(1);
+                  const triNum = parseFloat(tri);
+                  const color = triNum >= 7 ? '#22c55e' : triNum >= 3 ? '#f59e0b' : '#ef4444';
+                  html += `<td style="${S.td};text-align:right;color:${color};font-weight:600">${tri}%</td>`;
+                });
+
+                // Patrimoine proprio à 20 ans
+                const val20 = currentPrice * Math.pow(1 + app, 20);
+                let capR20 = emprunt;
+                for (let y = 1; y <= Math.min(20, duree); y++) {
+                  const inter = capR20 * (taux / 100);
+                  capR20 = Math.max(0, capR20 - (mensu * 12 - inter));
+                }
+                if (20 > duree) capR20 = 0;
+                const patrim20 = Math.round(val20 - capR20);
+                html += `<td style="${S.td};text-align:right;color:#4ade80;font-weight:600">${fmt(patrim20)}€</td>`;
+                html += `</tr>`;
+              });
+
+              html += `</tbody></table>`;
+              return html;
+            })()}
+          </div>
+        </details>
 
         <div style="${S.foot}">
           Proprio : mensualité + charges − conjoint. Locataire : loyer − conjoint + apport placé à ${(oppRate*100).toFixed(0)}%/an.
