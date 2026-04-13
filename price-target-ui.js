@@ -375,6 +375,52 @@ class PriceTargetUI {
             </div>
           </div>
 
+          <!-- Formules explicatives Prix Cible -->
+          <details style="margin-top:16px;">
+            <summary style="cursor:pointer;color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:600;padding:8px 0;">
+              <i class="fas fa-graduation-cap" style="margin-right:6px;"></i>Comprendre les formules
+            </summary>
+            <div style="margin-top:12px;padding:16px 20px;background:rgba(0,191,255,0.04);border:1px solid rgba(0,191,255,0.15);border-radius:10px;font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.7;">
+
+              <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🎯 Prix d'équilibre</div>
+              <div style="padding-left:12px;margin-bottom:14px;">
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                  Prix d'équilibre = prix max où <strong>enrichissement = 0€/an</strong><br>
+                  Si prix &lt; équilibre → vous vous enrichissez<br>
+                  Si prix &gt; équilibre → vous vous appauvrissez<br><br>
+                  Votre prix : <span style="color:#4ade80">${fmt(r.currentPrice)}€</span> vs équilibre : <span style="color:#00bfff">${fmt(Math.round(r.priceTarget/1000)*1000)}€</span>
+                  → marge de <span style="color:#22c55e">${Math.abs(r.gapPercent).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📊 Enrichissement = Cash-flow + Capital remboursé</div>
+              <div style="padding-left:12px;margin-bottom:14px;">
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                  <span style="color:${r.currentEnrichment >= 0 ? '#22c55e' : '#ef4444'}">${r.currentEnrichment >= 0 ? '+' : ''}${fmt(r.currentEnrichment)}€/an</span> = <span style="color:${(r.currentBreakdown?.cashflow||0) >= 0 ? '#22c55e' : '#ef4444'}">${fmt(r.currentBreakdown?.cashflow || 0)}€</span> (CF) + <span style="color:#60a5fa">${fmt(r.currentBreakdown?.capital || 0)}€</span> (capital)
+                </div>
+                <strong>Cash-flow</strong> = loyer net − charges − impôts (${r.regimeUsed}) − mensualité crédit<br>
+                <strong>Capital remboursé</strong> = part de la mensualité qui réduit la dette (pas les intérêts)
+              </div>
+
+              <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">💰 Rendement sur apport</div>
+              <div style="padding-left:12px;margin-bottom:14px;">
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                  ${fmt(r.currentEnrichment)}€ ÷ ${fmt(r.apport)}€ (apport) = <span style="color:#22c55e">${(r.apport > 0 ? (r.currentEnrichment / r.apport * 100).toFixed(2) : 0)}%/an</span>
+                </div>
+                C'est le rendement réel de votre mise de départ. À comparer avec un placement sans risque (Livret A ~3%) ou des actions (~7%).
+              </div>
+
+              <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">⚖️ Comparaison au prix cible</div>
+              <div style="padding-left:12px;margin-bottom:4px;">
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                  Au prix actuel (${fmt(r.currentPrice)}€) : CF <span style="color:${(r.currentBreakdown?.cashflow||0) >= 0 ? '#22c55e' : '#ef4444'}">${fmt(r.currentBreakdown?.cashflow || 0)}€</span> + capital ${fmt(r.currentBreakdown?.capital || 0)}€ = enrichissement <span style="color:#22c55e">${fmt(r.currentEnrichment)}€</span><br>
+                  Au prix d'équilibre (~${fmt(Math.round(r.priceTarget/1000)*1000)}€) : enrichissement ≈ 0€ (ni gain ni perte)
+                </div>
+                Plus vous achetez <strong>sous l'équilibre</strong>, plus vous vous enrichissez. Au-delà, l'opération vous coûte de l'argent.
+              </div>
+            </div>
+          </details>
+
           <!-- Recommandation -->
           ${this._generateRecommendation(r.recommendation, isPriceGood, gapPercent)}
 
