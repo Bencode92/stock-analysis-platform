@@ -1319,6 +1319,16 @@ class PriceTargetUI {
         explain: `Vous surpayez de ${fmt(Math.abs(gap))}. Pour que l'opération soit rentable, visez ${fmt(Number(r.priceTarget ?? 0))} ou changez de régime fiscal.` });
     }
 
+    // 1b. Coût total de l'opération
+    const coutTotal = Number(r._baseInput?.coutTotalAcquisition ?? 0);
+    const fraisTotal = coutTotal - currentPrice;
+    if (coutTotal > 0) {
+      const pctFrais = currentPrice > 0 ? ((fraisTotal / currentPrice) * 100).toFixed(1) : '0';
+      lines.push({ icon: 'fa-receipt', color: '#60a5fa',
+        text: `<strong>Coût total :</strong> ${fmt(coutTotal)}€ (prix ${fmt(currentPrice)}€ + ${fmt(fraisTotal)}€ de frais soit ${pctFrais}%)`,
+        explain: `Frais = notaire + commission + bancaires + travaux. Vous empruntez ${fmt(Number(r._baseInput?.loanAmount ?? 0))}€ et apportez ${fmt(apport)}€ (${currentPrice > 0 ? (apport/coutTotal*100).toFixed(0) : 0}% du total).` });
+    }
+
     // 2. Enrichissement
     if (enrichment > 0) {
       const enrichMensuel = Math.round(enrichment / 12);
