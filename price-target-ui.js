@@ -104,8 +104,8 @@ class PriceTargetUI {
                   if (cfY > 0) treso += cfY;
                   treso *= 1.03; // placement 3%
                 }
-                // PFU 30% si distribution
-                tresoBonus = treso * 0.70;
+                // PFU 31.4% si distribution
+                tresoBonus = treso * (1 - 0.314); // net de PFU 31.4%
               } else if (isLMNPr) {
                 // LMNP : réintégration amortissements (loi 2025)
                 const amortCumul = prix * 0.80 * 0.025 * year;
@@ -1669,7 +1669,7 @@ class PriceTargetUI {
         const vnc = Math.max(0, currentPrice - amortSCI);
         const pvSCI = valeurBien - vnc;
         impotPV = Math.max(0, pvSCI * 0.25); // IS 25% sur la PV
-        // + PFU 30% si distribution des dividendes (à la sortie)
+        // + PFU 31.4% si distribution des dividendes (à la sortie)
       } else {
         const pvNetteIR = Math.max(0, pvImposable) * (1 - abattIR);
         const pvNettePS = Math.max(0, pvImposable) * (1 - abattPS);
@@ -1679,9 +1679,9 @@ class PriceTargetUI {
       const fraisVente = valeurBien * fraisRevente;
       // SCI : le net inclut la trésorerie accumulée
       // SCI IS : trésorerie — deux scénarios
-      const pfuTaux = 0.30;
+      const pfuTaux = 0.314; // PFU 2026 : 12.8% IR + 18.6% PS = 31.4%
       const tresoNettePFU = isSCI ? tresorerieSCI * (1 - pfuTaux) : 0;
-      // Scénario 1 : distribution → PFU 30%
+      // Scénario 1 : distribution → PFU 31.4%
       const netReventeDistrib = valeurBien - capitalRestant - impotPV - fraisVente + tresoNettePFU;
       // Scénario 2 : capitalisation (pas de PFU, fonds restent en SCI pour réinvestir)
       const netReventeCapital = valeurBien - capitalRestant - impotPV - fraisVente + (isSCI ? tresorerieSCI : 0);
@@ -1755,7 +1755,7 @@ class PriceTargetUI {
         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(row.netRevente)}€ · ×${multiple}</div>
         ${isLMNP ? `<div style="font-size:0.65rem;color:#f59e0b;margin-top:2px;">Réintég. amort: ${fmt(row.reintegration)}€</div>` : ''}
         ${isSCI ? `<div style="font-size:0.65rem;color:#a78bfa;margin-top:2px;">Tréso: ${fmt(row.tresorerieSCI || 0)}€</div>
-        <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);margin-top:1px;">Si distribué: −PFU 30% = ${fmt(row.tresoNettePFU || 0)}€ | Si réinvesti: ${fmt(row.tresorerieSCI || 0)}€</div>` : ''}
+        <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);margin-top:1px;">Si distribué: −PFU 31.4% = ${fmt(row.tresoNettePFU || 0)}€ | Si réinvesti: ${fmt(row.tresorerieSCI || 0)}€</div>` : ''}
       </div>`;
     }).join('');
 
@@ -1845,7 +1845,7 @@ class PriceTargetUI {
           Les bénéfices après IS (15%) restent dans la société et sont placés à ${(tauxPlacementSCI*100)}%/an (effet composé).
           <br><br>
           <strong>2 options à la sortie :</strong><br>
-          📤 <strong>Distribution</strong> : PFU 30% sur la trésorerie → tréso brute × 70% dans votre poche.<br>
+          📤 <strong>Distribution</strong> : PFU 31.4% sur la trésorerie → tréso brute × 68.6% dans votre poche.<br>
           🔄 <strong>Réinvestissement</strong> : la trésorerie reste dans la SCI et sert d'apport pour un 2ème bien. <strong>Pas de PFU</strong> tant que l'argent ne sort pas.
           <br><br>
           ⚠️ PV calculée sur VNC (pas d'abattement durée détention). Les calculs ci-dessus utilisent le scénario <strong>distribution</strong> (conservateur).

@@ -1375,7 +1375,7 @@ case 'sci_is': {
   let pfu = 0, dividendesBruts = 0, dividendesNets = 0, resteSociete = beneficeApresIS;
   if (applyPFU && beneficeApresIS > 0) {
     dividendesBruts = beneficeApresIS * distribRatio;
-    pfu             = dividendesBruts * 0.30;
+    pfu             = dividendesBruts * 0.314; // PFU 2026 : 12.8% IR + 18.6% PS = 31.4%
     dividendesNets  = dividendesBruts - pfu;
     resteSociete    = beneficeApresIS - dividendesBruts;
   }
@@ -2009,7 +2009,7 @@ buildFiscaliteSection(calc, inputData) {
             <td class="text-right">-${fmt(calc._sciDividendesBruts)}</td>
             <td class="formula">= Résultat après IS × ratio</td></tr>
 
-        <tr><td>PFU 30% sur dividendes</td>
+        <tr><td>PFU 31.4% sur dividendes</td>
             <td class="text-right negative">-${fmt(calc._pfu)}</td>
             <td class="formula">= Dividendes × 30%</td></tr>
 
