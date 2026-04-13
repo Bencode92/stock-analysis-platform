@@ -801,7 +801,7 @@ class PriceTargetUI {
         const row = rows[i];
         const econAnnuelle = (row.coutLocataire - row.coutProprio) * 12;
         if (i === years - 1) {
-          flows.push(econAnnuelle + row.patrimoineProprio);
+          flows.push(econAnnuelle + row.patrimoineProprio - row.patrimoineLocataire);
         } else {
           flows.push(econAnnuelle);
         }
@@ -976,7 +976,7 @@ class PriceTargetUI {
                     patLoc = apport * Math.pow(1 + oppRate, y);
                     const valBien = currentPrice * Math.pow(1 + app, y);
                     if (y === h) {
-                      flows.push(econY + (valBien - capR));
+                      flows.push(econY + (valBien - capR) - patLoc);
                     } else {
                       flows.push(econY);
                     }
