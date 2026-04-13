@@ -113,7 +113,10 @@ class PriceTargetUI {
                 let abattIR = 0, abattPS = 0;
                 if (year > 5) {
                   abattIR = Math.min(1, (year - 5) * 0.06);
-                  abattPS = Math.min(1, (year - 5) * 0.0165);
+                  // Barème réel PS : 1.65%/an (6e-21e), 1.60% (22e), 9%/an (23e-30e)
+        if (year <= 21) abattPS = (year - 5) * 0.0165;
+        else if (year === 22) abattPS = 16 * 0.0165 + 0.016;
+        else abattPS = 0.28 + (year - 22) * 0.09;
                 }
                 if (year > 22) abattIR = 1;
                 if (year > 30) abattPS = 1;
@@ -123,7 +126,10 @@ class PriceTargetUI {
                 let abattIR = 0, abattPS = 0;
                 if (year > 5) {
                   abattIR = Math.min(1, (year - 5) * 0.06);
-                  abattPS = Math.min(1, (year - 5) * 0.0165);
+                  // Barème réel PS : 1.65%/an (6e-21e), 1.60% (22e), 9%/an (23e-30e)
+        if (year <= 21) abattPS = (year - 5) * 0.0165;
+        else if (year === 22) abattPS = 16 * 0.0165 + 0.016;
+        else abattPS = 0.28 + (year - 22) * 0.09;
                 }
                 if (year > 22) abattIR = 1;
                 if (year > 30) abattPS = 1;
@@ -1718,7 +1724,10 @@ class PriceTargetUI {
       let abattIR = 0, abattPS = 0;
       if (!isSCI && year > 5) {
         abattIR = Math.min(1, (year - 5) * 0.06);
-        abattPS = Math.min(1, (year - 5) * 0.0165);
+        // Barème réel PS : 1.65%/an (6e-21e), 1.60% (22e), 9%/an (23e-30e)
+        if (year <= 21) abattPS = (year - 5) * 0.0165;
+        else if (year === 22) abattPS = 16 * 0.0165 + 0.016;
+        else abattPS = 0.28 + (year - 22) * 0.09;
       }
       if (!isSCI && year > 22) abattIR = 1;
       if (!isSCI && year > 30) abattPS = 1;
@@ -1727,7 +1736,7 @@ class PriceTargetUI {
       let impotPV;
       if (isSCI) {
         // VNC = prix - amortissements comptables (SCI amortit le bien)
-        const amortSCI = currentPrice * 0.80 * (1/30) * year; // 30 ans amort linéaire
+        const amortSCI = currentPrice * 0.80 * (1/30) * year; // SCI IS : amort comptable 30 ans (3.33%/an, plus courant que 40 ans)
         const vnc = Math.max(0, currentPrice - amortSCI);
         const pvSCI = valeurBien - vnc;
         impotPV = Math.max(0, pvSCI * 0.25); // IS 25% sur la PV

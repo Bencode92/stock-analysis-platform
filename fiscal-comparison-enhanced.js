@@ -131,9 +131,12 @@ class FiscalComparator {
 
     isRegimeApplicable(regime, data, baseResults) {
         const conditions = regime.conditions;
-        const loyerAnnuel = baseResults.loyerBrut * 12;
-        if (conditions.loyerAnnuelMax && loyerAnnuel > conditions.loyerAnnuelMax) return false;
-        if (conditions.loyerAnnuelMin && loyerAnnuel < conditions.loyerAnnuelMin) return false;
+        // Utiliser le loyer CC (charges comprises) pour les plafonds micro-foncier/micro-BIC
+        const chargesRecup = Number(data.chargesCopro ?? data.monthlyCharges ?? 0);
+        const loyerAnnuelCC = (baseResults.loyerBrut + chargesRecup) * 12;
+        if (conditions.loyerAnnuelMax && loyerAnnuelCC > conditions.loyerAnnuelMax) return false;
+        // Pour le seuil LMP, c'est aussi en recettes brutes
+        if (conditions.loyerAnnuelMin && loyerAnnuelCC < conditions.loyerAnnuelMin) return false;
         return true;
     }
 
