@@ -1186,7 +1186,7 @@ case 'lmnp_reel': {
   const prix    = Number(inputData.price ?? 0);
   const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;  // ex: 8% → 0.08
   const tauxCom = Number(params.commissionImmo   ?? 0) / 100;  // ex: 4% → 0.04
-  const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);  // ex: 0.15
+  const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);  // 0.20 (BOFiP)
   const partMob = Math.max(0, Math.min(1, Number(params.partMobilier ?? 10) / 100));  // Param formulaire (défaut 10%)
 
   // Frais d'acquisition intégrés au bâti (notaire + agence)
@@ -1265,7 +1265,7 @@ case 'lmp': {
   const prix    = Number(inputData.price ?? 0);
   const tauxNot = Number(params.fraisNotaireTaux ?? 0) / 100;   // ex: 8% → 0.08
   const tauxCom = Number(params.commissionImmo   ?? 0) / 100;   // ex: 4% → 0.04
-  const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);   // 0.15
+  const partTer = Number(FISCAL_CONSTANTS.LMNP_PART_TERRAIN  ?? 0);   // 0.20 (BOFiP)
   const partMob = Math.max(0, Math.min(1, Number(params.partMobilier ?? 10) / 100));  // Param formulaire
 
   const fraisNot   = prix * tauxNot;
