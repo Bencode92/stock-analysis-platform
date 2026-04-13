@@ -1865,10 +1865,53 @@ class PriceTargetUI {
           </div>
         </details>
 
-        <div style="${S.foot}">
-          PV : abattement IR 6%/an après 5 ans (exo 22 ans) + PS 1.65%/an après 5 ans (exo 30 ans). Frais revente ${(fraisRevente*100)}%.
-          ${isLMNP ? 'Amortissements réintégrés dans la PV (loi 2025).' : ''} TRI = taux de rendement interne sur l'apport.
-        </div>
+        <!-- Cadran explicatif des formules -->
+        <details style="margin-top:16px;">
+          <summary style="cursor:pointer;color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:600;padding:8px 0;">
+            <i class="fas fa-graduation-cap" style="margin-right:6px;"></i>Comprendre les formules
+          </summary>
+          <div style="margin-top:12px;padding:16px 20px;background:rgba(0,191,255,0.04);border:1px solid rgba(0,191,255,0.15);border-radius:10px;font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.7;">
+
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📊 Enrichissement annuel</div>
+            <div style="padding-left:12px;margin-bottom:12px;">
+              <code style="color:#4ade80;">Enrichissement = Cash-flow net + Capital remboursé</code><br>
+              Le cash-flow peut être négatif (effort mensuel) mais le capital remboursé construit du patrimoine.
+              <strong>C'est le vrai indicateur</strong> — pas le cash-flow seul.
+            </div>
+
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">💰 Cash-flow net annuel</div>
+            <div style="padding-left:12px;margin-bottom:12px;">
+              <code style="color:#4ade80;">CF = Loyer net − Charges − Impôts − Mensualité crédit</code><br>
+              Loyer net = loyer brut × (1 − vacance%). Les charges incluent TF, copro, entretien, PNO, compta, CFE.
+              L'impôt dépend du régime fiscal choisi.
+            </div>
+
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🏦 Patrimoine net</div>
+            <div style="padding-left:12px;margin-bottom:12px;">
+              <code style="color:#4ade80;">Patrimoine = Valeur du bien − Capital restant dû</code><br>
+              Le bien s'apprécie de ${(appreciation*100)}%/an. La dette diminue chaque année grâce au remboursement du capital.
+            </div>
+
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🎯 Net si revente</div>
+            <div style="padding-left:12px;margin-bottom:12px;">
+              <code style="color:#4ade80;">Net = Valeur bien − Dette − Impôt PV − Frais revente (${(fraisRevente*100)}%)</code><br>
+              ${isLMNP
+                ? 'En LMNP : les amortissements déduits sont <strong style="color:#f59e0b;">réintégrés dans la PV</strong> (loi 2025). L\'impôt PV est donc plus élevé.'
+                : isSCI
+                  ? 'En SCI IS : la PV est calculée sur la <strong>VNC</strong> (valeur nette comptable), pas sur le prix d\'achat. Pas d\'abattement durée détention.'
+                  : 'Abattement PV : IR −6%/an après 5 ans (exonération 22 ans). PS −1.65%/an après 5 ans (exonération 30 ans).'
+              }
+            </div>
+
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📈 TRI (Taux de Rendement Interne)</div>
+            <div style="padding-left:12px;margin-bottom:4px;">
+              <code style="color:#4ade80;">TRI = taux r tel que : −Apport + Σ(CF année t / (1+r)^t) + Net revente / (1+r)^N = 0</code><br>
+              C'est le rendement annualisé de votre apport en tenant compte de tous les flux.
+              <strong>Un TRI de 5%</strong> signifie que votre apport de ${fmt(apport)}€ rapporte l'équivalent de 5%/an composé.
+              ${isSCI ? '<br>En SCI IS : la trésorerie réinvestie est incluse dans le net revente.' : ''}
+            </div>
+          </div>
+        </details>
       </div>
 
       <script>
