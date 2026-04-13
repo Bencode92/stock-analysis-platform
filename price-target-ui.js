@@ -60,6 +60,26 @@ class PriceTargetUI {
             const fmt = v => Math.round(v).toLocaleString('fr-FR');
             const dureeVal = Number(result._baseInput?.loanDuration ?? result._baseInput?.duree ?? 20);
 
+            // Fonction TRI Newton-Raphson
+            function calcTRIflows(flows) {
+              let rate = 0.05;
+              for (let it = 0; it < 100; it++) {
+                let npv = 0, dnpv = 0;
+                for (let t = 0; t < flows.length; t++) {
+                  npv += flows[t] / Math.pow(1 + rate, t);
+                  dnpv -= t * flows[t] / Math.pow(1 + rate, t + 1);
+                }
+                if (Math.abs(dnpv) < 0.001) break;
+                const nr = rate - npv / dnpv;
+                if (Math.abs(nr - rate) < 0.0001) { rate = nr; break; }
+                rate = Math.max(-0.5, Math.min(1, nr));
+              }
+              return rate * 100;
+            }
+
+            const apportVal = Number(result.apport ?? 0);
+            const currentPriceVal = Number(result.currentPrice ?? 0);
+
             regimes.forEach(rId => {
               try {
                 const ptResult = ptA?.calculatePriceTarget(baseInput, 0, { regimeId: rId });
@@ -67,30 +87,48 @@ class PriceTargetUI {
                 const cf = ptResult.currentBreakdown?.cashflow || 0;
                 const cap = ptResult.currentBreakdown?.capital || 0;
                 const enrich = ptResult.currentEnrichment || 0;
+
+                // Calculer le vrai TRI sur dureeVal ans
+                const flows = [-apportVal];
+                for (let y = 0; y < dureeVal; y++) {
+                  const cfY = cf * Math.pow(1.015, y);
+                  if (y === dureeVal - 1) {
+                    const valRevente = currentPriceVal * Math.pow(1.02, dureeVal);
+                    const fraisR = valRevente * 0.07;
+                    flows.push(cfY + valRevente - fraisR);
+                  } else {
+                    flows.push(cfY);
+                  }
+                }
+                const tri = calcTRIflows(flows);
+
                 results.push({
                   id: rId, nom: registry[rId]?.nom || rId,
-                  tri: parseFloat(ptResult.currentEnrichment ? '0' : '0'), // simplifié
+                  tri: tri, triStr: tri.toFixed(2),
                   enrich: Math.round(enrich), cf: Math.round(cf),
                   isCurrent: rId === currentRegime
                 });
               } catch(e) { console.warn('Régime ' + rId + ':', e.message); }
             });
 
-            results.sort((a, b) => b.enrich - a.enrich);
+            results.sort((a, b) => b.tri - a.tri);
 
             let html = '<table style="width:100%;border-collapse:separate;border-spacing:0 3px;font-size:0.85rem;">';
             html += '<thead><tr style="border-bottom:2px solid rgba(0,191,255,0.2);">';
             html += '<th style="padding:8px 10px;text-align:left;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Régime</th>';
+            html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">TRI ' + dureeVal + ' ans</th>';
             html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">Enrichissement/an</th>';
             html += '<th style="padding:8px 10px;text-align:right;color:rgba(255,255,255,0.4);font-size:0.7rem;text-transform:uppercase;">CF/an</th>';
             html += '</tr></thead><tbody>';
 
             results.forEach((r, i) => {
               const bg = r.isCurrent ? 'background:rgba(0,191,255,0.1);border-left:3px solid #00bfff;' : (i % 2 === 0 ? 'background:rgba(255,255,255,0.03);' : '');
+              const triColor = r.tri >= 5 ? '#22c55e' : r.tri >= 2 ? '#f59e0b' : '#ef4444';
               const enrichColor = r.enrich >= 0 ? '#22c55e' : '#ef4444';
               html += '<tr style="' + bg + '">';
               html += '<td style="padding:8px 10px;color:#e2e8f0;font-weight:' + (r.isCurrent ? '700' : '400') + ';">' + (i === 0 ? '🏆 ' : '') + r.nom + (r.isCurrent ? ' <span style="color:#00bfff;font-size:0.7rem;">← actuel</span>' : '') + '</td>';
-              html += '<td style="padding:8px 10px;text-align:right;color:' + enrichColor + ';font-weight:700;">' + (r.enrich >= 0 ? '+' : '') + fmt(r.enrich) + '€</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + triColor + ';font-weight:800;font-size:1.05rem;">' + r.triStr + '%</td>';
+              html += '<td style="padding:8px 10px;text-align:right;color:' + enrichColor + ';font-weight:600;">' + (r.enrich >= 0 ? '+' : '') + fmt(r.enrich) + '€</td>';
               html += '<td style="padding:8px 10px;text-align:right;color:' + (r.cf >= 0 ? '#22c55e' : '#ef4444') + ';">' + (r.cf >= 0 ? '+' : '') + fmt(r.cf) + '€</td>';
               html += '</tr>';
             });
