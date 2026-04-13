@@ -1623,12 +1623,15 @@ class PriceTargetUI {
         capitalRestant = Math.max(0, capitalRestant - capitalRembourse);
       } else { capitalRestant = 0; }
 
-      // CF basé sur cfAn1 (source : getDetailedCalculations) projeté avec hausse loyers
-      // Après le crédit, le CF augmente de la mensualité
-      const hausseCF = (loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1) - loyerAnnuel); // gain loyer
-      const hausseCh = (chargesEtImpotsAn1 * Math.pow(1 + hausseCharges, year - 1) - chargesEtImpotsAn1); // hausse charges
-      const cfAnnee = cfAn1 + hausseCF - hausseCh + (year > duree ? mensualiteAn : 0);
+      // Loyer et charges projetés avec inflation
       const loyerAnnee = loyerAnnuel * Math.pow(1 + hausseLoyers, year - 1);
+      const chargesAnnee = chargesEtImpotsAn1 * Math.pow(1 + hausseCharges, year - 1);
+
+      // CF basé sur cfAn1 (source : getDetailedCalculations) projeté avec hausse loyers/charges
+      // Après le crédit, le CF augmente de la mensualité (plus de remboursement)
+      const hausseCF = loyerAnnee - loyerAnnuel;
+      const hausseCh = chargesAnnee - chargesEtImpotsAn1;
+      const cfAnnee = cfAn1 + hausseCF - hausseCh + (year > duree ? mensualiteAn : 0);
       cfCumul += cfAnnee;
       amortCumul += amortAnnuel;
 
