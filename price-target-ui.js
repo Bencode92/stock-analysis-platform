@@ -1588,7 +1588,10 @@ class PriceTargetUI {
 
       const fraisVente = valeurBien * fraisRevente;
       // SCI : le net inclut la trésorerie accumulée
-      const netRevente = valeurBien - capitalRestant - impotPV - fraisVente + (isSCI ? tresorerieSCI : 0);
+      // SCI IS : trésorerie distribuée avec PFU 30% (flat tax)
+      const pfuTaux = 0.30;
+      const tresoNettePFU = isSCI ? tresorerieSCI * (1 - pfuTaux) : 0;
+      const netRevente = valeurBien - capitalRestant - impotPV - fraisVente + tresoNettePFU;
 
       rows.push({
         year, loyerAnnee: Math.round(loyerAnnee),
@@ -1654,7 +1657,7 @@ class PriceTargetUI {
         <div style="font-size:1.4rem;font-weight:800;color:${color};margin:4px 0;">TRI ${tri}%</div>
         <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Net ${fmt(row.netRevente)}€ · ×${multiple}</div>
         ${isLMNP ? `<div style="font-size:0.65rem;color:#f59e0b;margin-top:2px;">Réintég. amort: ${fmt(row.reintegration)}€</div>` : ''}
-        ${isSCI ? `<div style="font-size:0.65rem;color:#a78bfa;margin-top:2px;">Tréso. SCI: +${fmt(row.tresorerieSCI || 0)}€</div>` : ''}
+        ${isSCI ? `<div style="font-size:0.65rem;color:#a78bfa;margin-top:2px;">Tréso. brute: ${fmt(row.tresorerieSCI || 0)}€ → nette PFU 30%: ${fmt(Math.round((row.tresorerieSCI || 0) * 0.70))}€</div>` : ''}
       </div>`;
     }).join('');
 
@@ -1740,10 +1743,11 @@ class PriceTargetUI {
 
         ${isSCI ? `
         <div style="margin-top:12px;padding:10px 14px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;font-size:0.8rem;color:#a78bfa;">
-          <i class="fas fa-building"></i> <strong>Avantage SCI IS — Trésorerie réinvestie</strong> :
+          <i class="fas fa-building"></i> <strong>Avantage SCI IS — Trésorerie capitalisée</strong> :
           Les bénéfices après IS (15%) restent dans la société et sont placés à ${(tauxPlacementSCI*100)}%/an (effet composé).
-          À la revente : la trésorerie accumulée s'ajoute au produit de cession.
-          <strong>Attention</strong> : PV calculée sur VNC (pas d'abattement durée détention) + PFU 30% si distribution.
+          À la sortie : <strong>PFU 30%</strong> (flat tax) prélevé sur la trésorerie distribuée.
+          Tréso brute × 70% = tréso nette dans votre poche.
+          PV calculée sur VNC (pas d'abattement durée détention).
         </div>` : ''}
 
         <!-- Export -->
@@ -1872,44 +1876,56 @@ class PriceTargetUI {
           </summary>
           <div style="margin-top:12px;padding:16px 20px;background:rgba(0,191,255,0.04);border:1px solid rgba(0,191,255,0.15);border-radius:10px;font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.7;">
 
-            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📊 Enrichissement annuel</div>
-            <div style="padding-left:12px;margin-bottom:12px;">
-              <code style="color:#4ade80;">Enrichissement = Cash-flow net + Capital remboursé</code><br>
-              Le cash-flow peut être négatif (effort mensuel) mais le capital remboursé construit du patrimoine.
-              <strong>C'est le vrai indicateur</strong> — pas le cash-flow seul.
+            ${(() => {
+              const an1 = rows[0] || {};
+              const an20 = rows[19] || rows[rows.length - 1] || {};
+              const cfAn = an1.cfAnnee || 0;
+              const capAn = an1.capitalRembourse || 0;
+              const enrichAn = cfAn + capAn;
+              const tri20 = calcTRI(Math.min(20, maxYears));
+              return `
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📊 Enrichissement annuel (an 1)</div>
+            <div style="padding-left:12px;margin-bottom:14px;">
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                <span style="color:#4ade80">${fmt(enrichAn)}€</span> = <span style="color:${cfAn >= 0 ? '#22c55e' : '#ef4444'}">${fmt(cfAn)}€</span> (cash-flow) + <span style="color:#60a5fa">${fmt(capAn)}€</span> (capital remboursé)
+              </div>
+              Le cash-flow ${cfAn < 0 ? 'est négatif (−' + fmt(Math.abs(cfAn/12)) + '€/mois d\'effort)' : 'est positif'} mais le capital remboursé construit du patrimoine. <strong>L'enrichissement est le vrai indicateur.</strong>
             </div>
 
-            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">💰 Cash-flow net annuel</div>
-            <div style="padding-left:12px;margin-bottom:12px;">
-              <code style="color:#4ade80;">CF = Loyer net − Charges − Impôts − Mensualité crédit</code><br>
-              Loyer net = loyer brut × (1 − vacance%). Les charges incluent TF, copro, entretien, PNO, compta, CFE.
-              L'impôt dépend du régime fiscal choisi.
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">💰 Cash-flow net (an 1)</div>
+            <div style="padding-left:12px;margin-bottom:14px;">
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                <span style="color:${cfAn >= 0 ? '#22c55e' : '#ef4444'}">${fmt(cfAn)}€/an</span> = ${fmt(an1.loyerAnnee)}€ (loyer) − ${fmt(Math.abs(an1.chargesAnnee))}€ (charges+impôts) − ${fmt(an1.mensAnnee)}€ (mensualité)
+              </div>
+              Soit <strong>${fmt(Math.round(cfAn/12))}€/mois</strong>. ${cfAn < 0 ? 'Vous devez sortir cet effort de votre trésorerie.' : 'Le bien s\'autofinance.'}
             </div>
 
-            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🏦 Patrimoine net</div>
-            <div style="padding-left:12px;margin-bottom:12px;">
-              <code style="color:#4ade80;">Patrimoine = Valeur du bien − Capital restant dû</code><br>
-              Le bien s'apprécie de ${(appreciation*100)}%/an. La dette diminue chaque année grâce au remboursement du capital.
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🏦 Patrimoine net (an 1 → an ${Math.min(20, maxYears)})</div>
+            <div style="padding-left:12px;margin-bottom:14px;">
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                An 1 : <span style="color:#4ade80">${fmt(an1.patrimoine)}€</span> = ${fmt(an1.valeurBien)}€ (bien) − ${fmt(an1.capitalRestant)}€ (dette)<br>
+                An ${Math.min(20, maxYears)} : <span style="color:#4ade80">${fmt(an20.patrimoine)}€</span> = ${fmt(an20.valeurBien)}€ (bien) − ${fmt(an20.capitalRestant)}€ (dette)
+              </div>
+              Appréciation ${(appreciation*100)}%/an. De ${fmt(an1.patrimoine)}€ à <strong>${fmt(an20.patrimoine)}€</strong> en ${Math.min(20, maxYears)} ans.
             </div>
 
-            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🎯 Net si revente</div>
-            <div style="padding-left:12px;margin-bottom:12px;">
-              <code style="color:#4ade80;">Net = Valeur bien − Dette − Impôt PV − Frais revente (${(fraisRevente*100)}%)</code><br>
-              ${isLMNP
-                ? 'En LMNP : les amortissements déduits sont <strong style="color:#f59e0b;">réintégrés dans la PV</strong> (loi 2025). L\'impôt PV est donc plus élevé.'
-                : isSCI
-                  ? 'En SCI IS : la PV est calculée sur la <strong>VNC</strong> (valeur nette comptable), pas sur le prix d\'achat. Pas d\'abattement durée détention.'
-                  : 'Abattement PV : IR −6%/an après 5 ans (exonération 22 ans). PS −1.65%/an après 5 ans (exonération 30 ans).'
-              }
+            <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">🎯 Net si revente (an ${Math.min(20, maxYears)})</div>
+            <div style="padding-left:12px;margin-bottom:14px;">
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                <span style="color:#22c55e">${fmt(an20.netRevente)}€</span> = ${fmt(an20.valeurBien)}€ − ${fmt(an20.capitalRestant)}€ (dette) − ${fmt(an20.impotPV)}€ (impôt PV) − ${fmt(an20.fraisVente)}€ (frais ${(fraisRevente*100)}%)
+                ${isLMNP ? '<br><span style="color:#f59e0b;">⚠️ Amort. réintégrés : +' + fmt(an20.reintegration) + '€ dans la PV imposable</span>' : ''}
+                ${isSCI ? '<br><span style="color:#a78bfa;">Trésorerie SCI incluse : +' + fmt(an20.tresorerieSCI) + '€</span>' : ''}
+              </div>
             </div>
 
             <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📈 TRI (Taux de Rendement Interne)</div>
             <div style="padding-left:12px;margin-bottom:4px;">
-              <code style="color:#4ade80;">TRI = taux r tel que : −Apport + Σ(CF année t / (1+r)^t) + Net revente / (1+r)^N = 0</code><br>
-              C'est le rendement annualisé de votre apport en tenant compte de tous les flux.
-              <strong>Un TRI de 5%</strong> signifie que votre apport de ${fmt(apport)}€ rapporte l'équivalent de 5%/an composé.
-              ${isSCI ? '<br>En SCI IS : la trésorerie réinvestie est incluse dans le net revente.' : ''}
-            </div>
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                Apport : <span style="color:#ef4444">−${fmt(apport)}€</span> → ${Math.min(20, maxYears)} ans de CF → revente <span style="color:#22c55e">+${fmt(an20.netRevente)}€</span> → <strong style="color:#00bfff">TRI = ${tri20}%/an</strong>
+              </div>
+              Votre apport de ${fmt(apport)}€ rapporte l'équivalent de <strong>${tri20}%/an composé</strong> sur ${Math.min(20, maxYears)} ans.
+            </div>`;
+            })()}
           </div>
         </details>
       </div>
