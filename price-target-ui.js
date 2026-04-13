@@ -1758,13 +1758,12 @@ class PriceTargetUI {
 
         <script>
         (function(){
-          // Calcul TRI pour chaque régime (utilise les mêmes données de base)
+          // Calcul TRI pour chaque régime
           const container = document.getElementById('bp-regime-comparison');
           if (!container || !window.analyzer) return;
 
           const regimes = ['nu_micro','nu_reel','nu_jeanbrun','lmnp_reel','lmp','sci_is'];
           const registry = window.analyzer.getRegimeRegistry?.() || {};
-          const baseInput = ${JSON.stringify(r._baseInput || {})};
           const apportVal = ${apport};
           const currentPriceVal = ${currentPrice};
           const dureeVal = ${duree};
@@ -1776,6 +1775,7 @@ class PriceTargetUI {
             container.dataset.loaded = 'true';
 
             const params = window.analyzer.getAllAdvancedParams?.() || {};
+            const baseInput = window.analyzer.prepareFiscalData?.() || {};
             const results = [];
 
             regimes.forEach(rId => {
@@ -1820,8 +1820,13 @@ class PriceTargetUI {
                   cf: Math.round(cf),
                   isCurrent: rId === currentRegime || rId === window.analyzer.normalizeRegimeKey?.({id: currentRegime})
                 });
-              } catch(e) {}
+              } catch(e) { console.warn('Erreur régime ' + rId + ':', e.message); }
             });
+
+            if (results.length === 0) {
+              container.innerHTML = '<div style="text-align:center;color:#f59e0b;padding:16px;">Aucun résultat. Vérifiez que le formulaire est rempli.</div>';
+              return;
+            }
 
             results.sort((a, b) => b.tri - a.tri);
             const fmt = v => Math.round(v).toLocaleString('fr-FR');
