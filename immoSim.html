@@ -450,10 +450,11 @@
                     <button type="button" id="btn-best-regime" class="btn btn-outline" style="font-size:0.8rem;padding:6px 14px;">
                         <i class="fas fa-magic"></i> Trouver le meilleur régime
                     </button>
-                    <span id="regime-impact-text" style="color:rgba(255,255,255,0.5);font-size:0.8rem;">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Mode sans impôt : le cash-flow ne tient pas compte de la fiscalité.
-                    </span>
+                    <div id="regime-impact-text" style="font-size:0.8rem;"></div>
+                    <div id="regime-sans-impot-alerte" style="margin-top:8px;padding:10px 14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:0.8rem;color:#f59e0b;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
+                        <strong>Estimation hors fiscalité.</strong> En réalité, l'impôt réduira ce cash-flow de 15% à 50% selon votre régime. Sélectionnez un régime fiscal pour un résultat réaliste.
+                    </div>
                 </div>
             </div>
 
@@ -1274,6 +1275,17 @@
             <div id="resultats-scenarios" class="mt-4" style="display: none;">
                 <!-- Les résultats seront affichés ici -->
             </div>
+
+            <!-- Lien vers Business Plan complet -->
+            <div style="text-align:center;margin-top:16px;padding:14px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;">
+                <div style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:8px;">
+                    Besoin d'un Business Plan complet avec TRI, stress test et export CSV ?
+                </div>
+                <button id="btn-bp-complet" class="btn btn-primary" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;padding:10px 20px;">
+                    <i class="fas fa-file-invoice-dollar" style="margin-right:6px;"></i>
+                    Ouvrir le Business Plan complet
+                </button>
+            </div>
         </div>
         
         <!-- Guide explicatif du cash-flow (masqué par défaut) -->
@@ -1535,19 +1547,41 @@
     document.querySelectorAll('input[name="regime-immo"]').forEach(radio => {
       radio.addEventListener('change', function() {
         const infos = {
-          'sans': 'Mode sans impôt : le cash-flow ne tient pas compte de la fiscalité.',
-          'micro-foncier': 'Micro-foncier : 30% d\'abattement. Impôt = 70% du loyer × (TMI + 17.2%). Simple mais lourd.',
-          'reel-foncier': 'Réel foncier : charges déductibles (intérêts, TF, entretien...). Déficit foncier possible (-10 700€/an).',
-          'lmnp-reel': 'LMNP Réel : amortissement du bien + mobilier. Souvent 0€ d\'impôt. Le plus avantageux en cash-flow.',
-          'jeanbrun': 'Jeanbrun (LF 2026) : amortissement en location nue. Loyer plafonné à -15%. Déficit foncier cumulable.'
+          'sans': '',
+          'micro-foncier': '<i class="fas fa-info-circle" style="color:#3b82f6;margin-right:4px;"></i>Micro-foncier : 30% d\'abattement. Impôt = 70% du loyer × (TMI + 17.2%).',
+          'reel-foncier': '<i class="fas fa-info-circle" style="color:#8b5cf6;margin-right:4px;"></i>Réel foncier : charges déductibles. Déficit foncier possible (−10 700€/an).',
+          'lmnp-reel': '<i class="fas fa-info-circle" style="color:#f59e0b;margin-right:4px;"></i>LMNP Réel : amortissements → souvent 0€ d\'impôt. Le plus avantageux.',
+          'jeanbrun': '<i class="fas fa-info-circle" style="color:#6366f1;margin-right:4px;"></i>Jeanbrun (LF 2026) : amort. en nu, loyer −15%, déficit foncier cumulable.'
         };
         const el = document.getElementById('regime-impact-text');
-        if (el) el.textContent = infos[this.value] || '';
+        if (el) el.innerHTML = infos[this.value] || '';
+
+        // Afficher/masquer l'alerte "sans impôt"
+        const alerte = document.getElementById('regime-sans-impot-alerte');
+        if (alerte) alerte.style.display = this.value === 'sans' ? 'block' : 'none';
       });
     });
     </script>
 
-    <!-- Bouton "Optimiser la fiscalité" → transmet les données vers comparaison-fiscale -->
+    <!-- Boutons vers comparaison-fiscale (optimiser fiscalité + BP complet) -->
+    <script>
+    document.getElementById('btn-bp-complet')?.addEventListener('click', function() {
+      const sim = window.simulateur;
+      const resC = sim?.params?.resultats?.classique;
+      if (!resC) { alert('Lancez d\'abord une simulation.'); return; }
+      const params = new URLSearchParams();
+      params.set('prix', Math.round(resC.prixAchat));
+      params.set('surface', Math.round(resC.surface));
+      params.set('loyer', Math.round(resC.loyerBrut));
+      params.set('apport', sim.params.base.apport);
+      params.set('taux', sim.params.base.taux);
+      params.set('duree', sim.params.base.duree);
+      const villeData = window.villeSearchManager?.getSelectedVilleData?.();
+      if (villeData?.ville) params.set('ville', villeData.ville);
+      window.location.href = 'comparaison-fiscale.html?' + params.toString();
+    });
+    </script>
+
     <script>
     document.getElementById('btn-optimize-fiscal')?.addEventListener('click', function() {
       // Récupérer les résultats de la simulation en cours

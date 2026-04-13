@@ -511,6 +511,17 @@ class CityComparator {
                 : 0;
             const enrichissementAnnuel = (best.cashFlow * 12) + capitalAn1;
 
+            // Enrichissement net estimé (taux effectif d'imposition simplifié)
+            const regimeImmo = this.simulateur.params.base?.regimeImmo || 'sans';
+            let tauxEffectif = 0;
+            if (regimeImmo === 'micro-foncier') tauxEffectif = 0.47; // TMI 30% + PS 17.2%
+            else if (regimeImmo === 'reel-foncier') tauxEffectif = 0.25;
+            else if (regimeImmo === 'lmnp-reel') tauxEffectif = 0.05; // quasi 0 grâce aux amort
+            else if (regimeImmo === 'jeanbrun') tauxEffectif = 0.15;
+            // Le CF brut est réduit par l'impôt, pas le capital remboursé
+            const cfNetEstime = (best.cashFlow * 12) * (1 - tauxEffectif);
+            const enrichissementNet = cfNetEstime + capitalAn1;
+
             return {
                 mode: mode,
                 surface: best.surface,
@@ -527,7 +538,9 @@ class CityComparator {
                 coutTotal: best.coutTotal,
                 capitalAn1: capitalAn1,
                 enrichissementAnnuel: enrichissementAnnuel,
-                enrichissementMensuel: Math.round(enrichissementAnnuel / 12)
+                enrichissementNet: enrichissementNet,
+                enrichissementMensuel: Math.round(enrichissementAnnuel / 12),
+                regimeImmo: regimeImmo
             };
             
         } finally {
@@ -603,7 +616,8 @@ class CityComparator {
                                         <p class="stat-value" style="font-size:1.3em;">
                                             ${r.enrichissementAnnuel >= 0 ? '+' : ''}${Math.round(r.enrichissementAnnuel).toLocaleString('fr-FR')}€/an
                                         </p>
-                                        <p class="stat-label">Enrichissement (CF + capital remboursé)</p>
+                                        <p class="stat-label">Enrichissement brut (CF + capital)</p>
+                                        ${r.regimeImmo && r.regimeImmo !== 'sans' ? `<p class="stat-label" style="font-size:0.75rem;margin-top:4px;color:rgba(255,255,255,0.4);">Net estimé (${({'micro-foncier':'Micro','reel-foncier':'Réel','lmnp-reel':'LMNP','jeanbrun':'JB'})[r.regimeImmo] || r.regimeImmo}) : <strong style="color:${(r.enrichissementNet||0) >= 0 ? '#22c55e' : '#ef4444'};">${(r.enrichissementNet||0) >= 0 ? '+' : ''}${Math.round(r.enrichissementNet||0).toLocaleString('fr-FR')}€</strong></p>` : ''}
                                     </div>
                                     <div class="stat-item highlight">
                                         <p class="stat-value">${r.rendement.toFixed(2)}%</p>
