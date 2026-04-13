@@ -383,8 +383,8 @@ class PriceTargetUI {
         </div>
       </div>
 
-      <!-- Business Plan + TRI -->
-      <div id="business-plan-slot"></div>
+      <!-- Business Plan + TRI (pas de gap) -->
+      <div id="business-plan-slot" style="margin-top:-10px;"></div>
     `;
   }
 
@@ -2025,6 +2025,37 @@ class PriceTargetUI {
                 ${isSCI ? '<br><span style="color:#a78bfa;">Trésorerie SCI incluse : +' + fmt(an20.tresorerieSCI) + '€</span>' : ''}
               </div>
             </div>
+
+            ${isSCI ? `
+            <div style="font-weight:700;color:#a78bfa;margin-bottom:8px;">🏢 Spécificité SCI à l'IS</div>
+            <div style="padding-left:12px;margin-bottom:14px;">
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                <strong>Trésorerie SCI :</strong> CF positif net d'IS (15%) reste dans la société<br>
+                Placée à 3%/an composé → An ${Math.min(20, maxYears)} : <span style="color:#a78bfa">${fmt(an20.tresorerieSCI || 0)}€ brut</span><br>
+                Si distribution : PFU 31.4% → <span style="color:#22c55e">${fmt(Math.round((an20.tresorerieSCI || 0) * 0.686))}€ net</span><br>
+                Si réinvestissement : <span style="color:#22c55e">${fmt(an20.tresorerieSCI || 0)}€</span> (pas de PFU)
+              </div>
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                <strong>PV à la revente :</strong> calculée sur VNC (valeur nette comptable)<br>
+                VNC = prix achat − amort comptable (${fmt(currentPrice)}€ − ${fmt(Math.round(currentPrice * 0.80 / 30 * Math.min(20, maxYears)))}€)<br>
+                PV SCI = valeur revente − VNC → IS 25% (pas d'abattement durée détention)
+              </div>
+              <strong>Avantage SCI :</strong> trésorerie capitalisée sans impôt tant qu'elle reste dans la société.
+              <strong>Inconvénient :</strong> PV sur VNC + IS 25% + PFU 31.4% si distribution = double imposition à la sortie.
+            </div>
+            ` : ''}
+
+            ${isLMNP ? `
+            <div style="font-weight:700;color:#f59e0b;margin-bottom:8px;">⚠️ Spécificité LMNP — Réintégration</div>
+            <div style="padding-left:12px;margin-bottom:14px;">
+              <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;font-family:monospace;font-size:0.85rem;margin-bottom:6px;">
+                Amort. déduit : <span style="color:#f59e0b">${fmt(amortAnnuel)}€/an × ${Math.min(20, maxYears)} ans = ${fmt(Math.round(amortAnnuel * Math.min(20, maxYears)))}€ cumulé</span><br>
+                PV imposable = PV brute + amort. réintégrés → impôt PV plus élevé<br>
+                An ${Math.min(20, maxYears)} : PV brute ${fmt(an20.pvBrute)}€ + réintég. ${fmt(an20.reintegration || 0)}€ = PV imposable ${fmt((an20.pvBrute || 0) + (an20.reintegration || 0))}€
+              </div>
+              Les amortissements qui ont réduit l'impôt annuel sont <strong>récupérés à la revente</strong> (loi 2025).
+            </div>
+            ` : ''}
 
             <div style="font-weight:700;color:#00bfff;margin-bottom:8px;">📈 TRI (Taux de Rendement Interne)</div>
             <div style="padding-left:12px;margin-bottom:4px;">
