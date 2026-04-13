@@ -80,6 +80,59 @@ class PriceTargetUI {
             const apportVal = Number(result.apport ?? 0);
             const currentPriceVal = Number(result.currentPrice ?? 0);
 
+            // Fonction : calcul net revente spécifique au régime
+            function calcNetRevente(regimeId, year, prix, cfAnnuel) {
+              const valeur = prix * Math.pow(1.02, year);
+              const fraisVente = valeur * 0.07;
+              const pvBrute = valeur - prix;
+              const isLMNPr = regimeId.includes('lmnp') || regimeId.includes('lmp');
+              const isSCIr = regimeId.includes('sci');
+
+              let impotPV = 0;
+              let tresoBonus = 0;
+
+              if (isSCIr) {
+                // SCI IS : PV sur VNC (amort comptable 30 ans) + IS 25%
+                const amortSCI = prix * 0.80 * (1/30) * year;
+                const vnc = Math.max(0, prix - amortSCI);
+                const pvSCI = valeur - vnc;
+                impotPV = Math.max(0, pvSCI * 0.25);
+                // Trésorerie capitalisée (CF positif après IS placé à 3%)
+                let treso = 0;
+                for (let y = 1; y <= year; y++) {
+                  const cfY = cfAnnuel * Math.pow(1.015, y - 1);
+                  if (cfY > 0) treso += cfY;
+                  treso *= 1.03; // placement 3%
+                }
+                // PFU 30% si distribution
+                tresoBonus = treso * 0.70;
+              } else if (isLMNPr) {
+                // LMNP : réintégration amortissements (loi 2025)
+                const amortCumul = prix * 0.80 * 0.025 * year;
+                const pvImposable = pvBrute + amortCumul;
+                let abattIR = 0, abattPS = 0;
+                if (year > 5) {
+                  abattIR = Math.min(1, (year - 5) * 0.06);
+                  abattPS = Math.min(1, (year - 5) * 0.0165);
+                }
+                if (year > 22) abattIR = 1;
+                if (year > 30) abattPS = 1;
+                impotPV = Math.max(0, pvImposable * (1 - abattIR) * 0.19 + pvImposable * (1 - abattPS) * 0.172);
+              } else {
+                // Location nue / Jeanbrun / Micro : abattements durée détention standard
+                let abattIR = 0, abattPS = 0;
+                if (year > 5) {
+                  abattIR = Math.min(1, (year - 5) * 0.06);
+                  abattPS = Math.min(1, (year - 5) * 0.0165);
+                }
+                if (year > 22) abattIR = 1;
+                if (year > 30) abattPS = 1;
+                impotPV = Math.max(0, pvBrute * (1 - abattIR) * 0.19 + pvBrute * (1 - abattPS) * 0.172);
+              }
+
+              return valeur - impotPV - fraisVente + tresoBonus;
+            }
+
             regimes.forEach(rId => {
               try {
                 const ptResult = ptA?.calculatePriceTarget(baseInput, 0, { regimeId: rId });
@@ -88,14 +141,13 @@ class PriceTargetUI {
                 const cap = ptResult.currentBreakdown?.capital || 0;
                 const enrich = ptResult.currentEnrichment || 0;
 
-                // Calculer le vrai TRI sur dureeVal ans
+                // TRI avec revente spécifique au régime
                 const flows = [-apportVal];
                 for (let y = 0; y < dureeVal; y++) {
                   const cfY = cf * Math.pow(1.015, y);
                   if (y === dureeVal - 1) {
-                    const valRevente = currentPriceVal * Math.pow(1.02, dureeVal);
-                    const fraisR = valRevente * 0.07;
-                    flows.push(cfY + valRevente - fraisR);
+                    const netRev = calcNetRevente(rId, dureeVal, currentPriceVal, cf);
+                    flows.push(cfY + netRev);
                   } else {
                     flows.push(cfY);
                   }
