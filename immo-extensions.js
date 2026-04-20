@@ -2210,7 +2210,7 @@ function ajouterSelectionRegimeFiscal() {
                     </tr>
                     ${fiscal.abattement > 0 ? `
                     <tr>
-                        <td>Abattement forfaitaire</td>
+                        <td>${regime === 'micro-foncier' ? 'Abattement forfaitaire (30%)' : regime === 'lmnp-micro' ? 'Abattement forfaitaire (50%)' : 'Déductions fiscales'}</td>
                         <td>- ${formaterMontant(fiscal.abattement)}</td>
                     </tr>
                     ` : ''}
