@@ -1516,35 +1516,60 @@
       this.disabled = true;
 
       setTimeout(() => {
-        const regimes = ['sans', 'micro-foncier', 'reel-foncier', 'lmnp-reel', 'jeanbrun'];
+        const regimes = ['micro-foncier', 'reel-foncier', 'lmnp-reel', 'jeanbrun']; // Pas "sans" — on cherche un vrai régime
         const origRegime = sim.params.base.regimeImmo;
-        let bestRegime = 'sans', bestSurface = 0, bestCF = -Infinity;
+        const origMode = sim.params.base.calculationMode;
+
+        // Forcer le mode cash-flow positif (seul mode où le régime fait une différence)
+        sim.params.base.calculationMode = 'cashflow-positif';
+
+        let bestRegime = null, bestSurface = 0, bestCF = -Infinity;
+        const resultats = [];
 
         regimes.forEach(regime => {
           sim.params.base.regimeImmo = regime;
           const result = sim.chercheSurfaceDesc('classique', 1);
+          const surface = result ? result.surface : 0;
+          const cf = result ? Math.round(result.cashFlow * 12) : -99999;
+          resultats.push({ regime, surface, cf, viable: !!result });
+
           if (result) {
-            const score = result.cashFlow * 12 + result.surface; // CF annuel + surface bonus
+            const score = cf + surface;
             if (score > bestCF) {
               bestCF = score;
-              bestSurface = result.surface;
+              bestSurface = surface;
               bestRegime = regime;
             }
           }
         });
 
-        // Restaurer et sélectionner le meilleur
+        // Restaurer les paramètres originaux
         sim.params.base.regimeImmo = origRegime;
-        const radio = document.querySelector(`input[name="regime-immo"][value="${bestRegime}"]`);
-        if (radio) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        sim.params.base.calculationMode = origMode;
+
+        // Sélectionner le meilleur
+        if (bestRegime) {
+          const radio = document.querySelector(`input[name="regime-immo"][value="${bestRegime}"]`);
+          if (radio) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+          }
         }
 
-        const labels = { 'sans': 'Sans impôt', 'micro-foncier': 'Micro-foncier', 'reel-foncier': 'Réel foncier', 'lmnp-reel': 'LMNP Réel', 'jeanbrun': 'Jeanbrun' };
+        const labels = { 'micro-foncier': 'Micro-foncier', 'reel-foncier': 'Réel foncier', 'lmnp-reel': 'LMNP Réel', 'jeanbrun': 'Jeanbrun' };
         const infoEl = document.getElementById('regime-impact-text');
         if (infoEl) {
-          infoEl.innerHTML = `<i class="fas fa-trophy" style="color:#22c55e;"></i> <strong style="color:#22c55e;">${labels[bestRegime]}</strong> est le meilleur : surface ${bestSurface}m², CF optimisé.`;
+          if (bestRegime) {
+            // Afficher le comparatif de tous les régimes
+            const compHTML = resultats.map(r => {
+              const isBest = r.regime === bestRegime;
+              const color = r.viable ? (isBest ? '#22c55e' : 'rgba(255,255,255,0.6)') : '#ef4444';
+              return `<span style="color:${color};font-weight:${isBest?'700':'400'};">${isBest?'🏆 ':''}${labels[r.regime]}: ${r.viable ? r.surface + 'm² / CF ' + r.cf + '€/an' : 'non viable'}</span>`;
+            }).join(' · ');
+            infoEl.innerHTML = compHTML;
+          } else {
+            infoEl.innerHTML = '<span style="color:#ef4444;">Aucun régime ne permet un cash-flow positif avec ces paramètres.</span>';
+          }
         }
 
         this.innerHTML = '<i class="fas fa-magic"></i> Trouver le meilleur régime';
