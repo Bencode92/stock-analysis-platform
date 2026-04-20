@@ -623,22 +623,30 @@ const ImmoExtensions = (function() {
         // ===============================================================
         // MÉTHODE CALCULER AMORTISSEMENT ANNUEL (avec part terrain)
         // ===============================================================
-        SimulateurImmo.prototype.calculerAmortissementAnnuel = function(regime) {
-            if (!['lmnp-reel', 'sci-is', 'sas-is', 'sarl-is'].includes(regime)) return 0;
-            
+        SimulateurImmo.prototype.calculerAmortissementAnnuel = function(regime, prixAchatForce) {
+            if (!['lmnp-reel', 'lmp-reel', 'jeanbrun', 'sci-is', 'sas-is', 'sarl-is'].includes(regime)) return 0;
+
+            // Utiliser le prix passé en paramètre, sinon chercher dans les résultats
             const modeActuel = this.modeActuel || 'classique';
-            
-            // Vérifier que les résultats existent
-            if (!this.params.resultats || !this.params.resultats[modeActuel]) {
-                return 0;
-            }
-            
-            const prixAchat = this.params.resultats[modeActuel].prixAchat || 0;
+            const prixAchat = prixAchatForce
+                || this.params.resultats?.[modeActuel]?.prixAchat
+                || this._prixAchatEnCours // fallback pendant calculeTout
+                || 0;
+
+            if (prixAchat <= 0) return 0;
+
             const partTerrain = (this.params.projections?.partTerrain || DEFAULTS_PROJECTIONS.partTerrain) / 100;
             const partConstruction = 1 - partTerrain;
-            const tauxAmortissement = 0.025; // 2.5% par an (40 ans)
-            
-            return prixAchat * partConstruction * tauxAmortissement;
+            const partMobilier = 0.10; // 10% du prix en mobilier (LMNP)
+
+            // Amortissement bâti (2.5%/an sur 40 ans)
+            const amortBien = prixAchat * partConstruction * 0.025;
+            // Amortissement mobilier (10%/an sur 10 ans) — seulement pour LMNP/LMP
+            const amortMobilier = ['lmnp-reel', 'lmp-reel'].includes(regime)
+                ? prixAchat * partMobilier * 0.10
+                : 0;
+
+            return amortBien + amortMobilier;
         };
 
         // NOUVEAU: Connecter les calculs fiscaux avec le régime sélectionné
@@ -661,6 +669,9 @@ const ImmoExtensions = (function() {
                     cashFlow: res.cashFlow
                 });
                 
+                // Stocker le prix pour calculerAmortissementAnnuel (pas encore dans resultats)
+                this._prixAchatEnCours = res.prixAchat;
+
                 // Recalculer l'impact fiscal avec le régime choisi
                 const regime = this.params.fiscalite.regimeFiscal || 'micro-foncier';
                 
@@ -2205,13 +2216,13 @@ function ajouterSelectionRegimeFiscal() {
                     ` : ''}
                     ${fiscal.chargesDeduites > 0 ? `
                     <tr>
-                        <td>Charges déductibles</td>
+                        <td>Charges déductibles (intérêts + charges${fiscal.amortissement > 0 ? ' + amort.' : ''})</td>
                         <td>- ${formaterMontant(fiscal.chargesDeduites)}</td>
                     </tr>
                     ` : ''}
                     ${fiscal.amortissement > 0 ? `
-                    <tr>
-                        <td>Amortissement</td>
+                    <tr style="color:rgba(255,255,255,0.5);font-size:0.9em;">
+                        <td style="padding-left:20px;">└ dont amortissement bien + mobilier</td>
                         <td>- ${formaterMontant(fiscal.amortissement)}</td>
                     </tr>
                     ` : ''}
