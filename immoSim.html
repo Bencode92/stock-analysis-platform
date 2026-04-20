@@ -1522,7 +1522,8 @@
       }
 
       setTimeout(() => {
-        const regimes = ['micro-foncier', 'reel-foncier', 'lmnp-reel', 'jeanbrun']; // Pas "sans" — on cherche un vrai régime
+        // Pas "sans" ni "jeanbrun" (loyer plafonné −15% fausse la comparaison)
+        const regimes = ['micro-foncier', 'reel-foncier', 'lmnp-reel'];
         const origRegime = sim.params.base.regimeImmo;
         const origMode = sim.params.base.calculationMode;
 
@@ -1562,7 +1563,7 @@
           }
         }
 
-        const labels = { 'micro-foncier': 'Micro-foncier', 'reel-foncier': 'Réel foncier', 'lmnp-reel': 'LMNP Réel', 'jeanbrun': 'Jeanbrun' };
+        const labels = { 'micro-foncier': 'Micro-foncier', 'reel-foncier': 'Réel foncier', 'lmnp-reel': 'LMNP Réel' };
         const infoEl = document.getElementById('regime-impact-text');
         if (infoEl) {
           if (bestRegime) {
