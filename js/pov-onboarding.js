@@ -380,37 +380,94 @@ const POVOnboarding = (function() {
     }
 
     // ============================================================
-    // APPLICATION dans l'app existante
+    // APPLICATION dans l'app existante — avec retry robuste
     // ============================================================
-    function applyPOVToApp() {
-        // 1. Appliquer un preset famille cohérent avec le POV
-        const preset = PRESET_BY_POV[povState.pov];
-        if (preset && typeof window.SD !== 'undefined' && typeof SD.applyFamilyPreset === 'function') {
-            try { SD.applyFamilyPreset(preset); } catch (e) { console.warn('[POV] preset apply failed', e); }
+    function tryApplyFamilyPreset(preset, attempt) {
+        attempt = attempt || 1;
+        const maxAttempts = 20;
+        const sdReady = typeof window.SD !== 'undefined' && typeof SD.applyFamilyPreset === 'function';
+        const fgReady = typeof window.FamilyGraph !== 'undefined' && typeof FamilyGraph.getPersons === 'function';
+        const domReady = !!document.getElementById('family-persons-list');
+
+        if (!sdReady || !fgReady || !domReady) {
+            if (attempt >= maxAttempts) {
+                console.warn('[POV] Abandon applyFamilyPreset après ' + maxAttempts + ' tentatives — SD/FamilyGraph/DOM indisponibles.');
+                return false;
+            }
+            setTimeout(() => tryApplyFamilyPreset(preset, attempt + 1), 150);
+            return false;
         }
 
-        // 2. Mode détail : quick → simplifie, full → détaillé
-        if (typeof window.SD !== 'undefined' && typeof SD.setDetailMode === 'function') {
-            try { SD.setDetailMode(povState.mode === 'quick' ? 'simplifie' : 'detaille'); } catch (e) {}
+        try {
+            SD.applyFamilyPreset(preset);
+        } catch (e) {
+            console.warn('[POV] applyFamilyPreset a levé une erreur', e);
+            return false;
         }
+
+        // Vérification : FamilyGraph doit contenir des personnes
+        const persons = FamilyGraph.getPersons();
+        if (!persons || persons.length === 0) {
+            console.warn('[POV] FamilyGraph vide après preset — retry', attempt);
+            if (attempt < maxAttempts) {
+                setTimeout(() => tryApplyFamilyPreset(preset, attempt + 1), 150);
+            }
+            return false;
+        }
+
+        // Force re-render propre (renderFamilyAll appelle renderFamilyTree en interne)
+        try {
+            if (typeof SD.renderFamilyAll === 'function') SD.renderFamilyAll();
+            else if (typeof SD.renderFamilyTree === 'function') SD.renderFamilyTree();
+        } catch (e) { console.warn('[POV] render family a échoué', e); }
+
+        // Sync vers step 2 (beneficiaries list) si dispo
+        try {
+            if (typeof SD.syncGraphToStep2 === 'function') SD.syncGraphToStep2();
+        } catch (e) { /* silent */ }
+
+        // Update aside
+        try { if (typeof SD.updateAside === 'function') SD.updateAside(); } catch (e) {}
+
+        console.log('[POV] ✅ preset "' + preset + '" appliqué — ' + persons.length + ' personnes');
+        return true;
+    }
+
+    function applyPOVToApp() {
+        console.log('[POV] applyPOVToApp démarre — pov=' + povState.pov + ' objectif=' + povState.objectif + ' mode=' + povState.mode);
+
+        // 1. Appliquer un preset famille cohérent avec le POV (avec retry)
+        const preset = PRESET_BY_POV[povState.pov];
+        if (preset) {
+            tryApplyFamilyPreset(preset);
+        } else {
+            console.log('[POV] pas de preset pour POV=' + povState.pov + ' (mode pro ?)');
+        }
+
+        // 2. Mode détail : quick → simplifie, full → détaillé — différé pour attendre SD
+        setTimeout(() => {
+            if (typeof window.SD !== 'undefined' && typeof SD.setDetailMode === 'function') {
+                try { SD.setDetailMode(povState.mode === 'quick' ? 'simplifie' : 'detaille'); } catch (e) {}
+            }
+        }, 400);
 
         // 3. Activer le switch objectif correspondant (si présent dans l'UI)
-        const switchId = OBJ_SWITCH_MAP[povState.objectif];
-        if (switchId) {
-            const swEl = document.getElementById(switchId);
-            if (swEl && !swEl.classList.contains('on')) {
-                swEl.classList.add('on');
-                try { swEl.click(); swEl.click(); } catch (e) {} // synchronise le state via SD.toggleSwitch si besoin
-                // fallback : toggle direct du dataset
-                swEl.classList.add('on');
+        setTimeout(() => {
+            const switchId = OBJ_SWITCH_MAP[povState.objectif];
+            if (switchId) {
+                const swEl = document.getElementById(switchId);
+                if (swEl && !swEl.classList.contains('on')) {
+                    // Utilise SD.toggleSwitch via un click simple (SD branche onclick sur l'élément)
+                    try { swEl.click(); } catch (e) { swEl.classList.add('on'); }
+                }
             }
-        }
+        }, 500);
 
         // 4. Publier le POV pour les autres modules (i18n, estimation, results…)
         window.__POV__ = Object.assign({}, povState);
         document.dispatchEvent(new CustomEvent('pov:ready', { detail: window.__POV__ }));
 
-        // 5. Mise à jour de l'aside si possible (badges POV)
+        // 5. Badge header
         renderPOVBadge();
     }
 
@@ -499,14 +556,15 @@ const POVOnboarding = (function() {
         load();
         const start = () => {
             if (povState.completed) {
+                // Reload : le state SD est vierge, il faut ré-appliquer le preset
+                // pour que l'utilisateur retrouve son arbre famille préconfiguré.
                 window.__POV__ = Object.assign({}, povState);
-                // Laisser SD.init s'exécuter d'abord puis publier
                 setTimeout(() => {
-                    document.dispatchEvent(new CustomEvent('pov:ready', { detail: window.__POV__ }));
-                    renderPOVBadge();
-                }, 400);
+                    console.log('[POV] reload — re-application POV=' + povState.pov);
+                    applyPOVToApp();
+                }, 600);
             } else {
-                // Attendre 200ms que SD ait démarré pour éviter le flash
+                // Première visite : attendre 200ms que SD ait démarré pour éviter le flash
                 setTimeout(show, 200);
             }
         };
