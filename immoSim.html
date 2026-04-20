@@ -1510,10 +1510,16 @@
     <script>
     document.getElementById('btn-best-regime')?.addEventListener('click', function() {
       const sim = window.simulateur;
-      if (!sim) { alert('Lance d\'abord une simulation.'); return; }
+      if (!sim) { alert('Simulateur non disponible.'); return; }
 
       this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul...';
       this.disabled = true;
+
+      // Charger les paramètres du formulaire AVANT de comparer
+      if (typeof collecterDonneesFormulaire === 'function') {
+        const formData = collecterDonneesFormulaire();
+        sim.chargerParametres(formData);
+      }
 
       setTimeout(() => {
         const regimes = ['micro-foncier', 'reel-foncier', 'lmnp-reel', 'jeanbrun']; // Pas "sans" — on cherche un vrai régime

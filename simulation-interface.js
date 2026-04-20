@@ -1280,6 +1280,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return formData;
     }
 
+    // Exposer pour le bouton "meilleur régime"
+    window.collecterDonneesFormulaire = collecterDonneesFormulaire;
+
   /**
  * Formate un montant en euros
  * @param {number} montant - Montant à formater
