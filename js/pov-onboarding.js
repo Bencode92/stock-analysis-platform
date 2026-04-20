@@ -60,13 +60,66 @@ const POVOnboarding = (function() {
         ]
     };
 
-    // Mapping POV → preset famille par défaut
+    // Mapping POV → preset famille par défaut (clé utilisée par SD.applyFamilyPreset si dispo)
     const PRESET_BY_POV = {
         self:       'couple_2enfants',
         child:      'couple_3enfants',
         grandchild: 'gp_parents_enfants',
         spouse:     'couple_2enfants',
         pro:        null
+    };
+
+    // ============================================================
+    // DÉFINITION INLINE des presets (bypass de SD.applyFamilyPreset)
+    // ============================================================
+    // Ces builders sont identiques à ceux de successions-donations.js
+    // mais appelés directement ici pour éviter toute dépendance silencieuse.
+    const PRESET_BUILDERS = {
+        couple_2enfants: function(FG) {
+            const m  = FG.addPerson('Mère', 55, 200000);
+            const p  = FG.addPerson('Père', 58, 200000);
+            const e1 = FG.addPerson('Enfant 1', 25);
+            const e2 = FG.addPerson('Enfant 2', 22);
+            FG.addRelation('spouse', m.id, p.id);
+            [e1, e2].forEach(function(e) {
+                FG.addRelation('parent', m.id, e.id);
+                FG.addRelation('parent', p.id, e.id);
+            });
+            m.isDonor = true; p.isDonor = true;
+            e1.isBeneficiary = true; e2.isBeneficiary = true;
+        },
+        couple_3enfants: function(FG) {
+            const m  = FG.addPerson('Mère', 55, 200000);
+            const p  = FG.addPerson('Père', 58, 200000);
+            const e1 = FG.addPerson('Enfant 1', 28);
+            const e2 = FG.addPerson('Enfant 2', 25);
+            const e3 = FG.addPerson('Enfant 3', 22);
+            FG.addRelation('spouse', m.id, p.id);
+            [e1, e2, e3].forEach(function(e) {
+                FG.addRelation('parent', m.id, e.id);
+                FG.addRelation('parent', p.id, e.id);
+            });
+            m.isDonor = true; p.isDonor = true;
+            e1.isBeneficiary = true; e2.isBeneficiary = true; e3.isBeneficiary = true;
+        },
+        gp_parents_enfants: function(FG) {
+            const gm = FG.addPerson('Grand-mère', 78, 150000);
+            const gp = FG.addPerson('Grand-père', 80, 150000);
+            const m  = FG.addPerson('Mère', 55, 200000);
+            const p  = FG.addPerson('Père', 58, 200000);
+            const e1 = FG.addPerson('Enfant 1', 28);
+            const e2 = FG.addPerson('Enfant 2', 25);
+            FG.addRelation('spouse', gm.id, gp.id);
+            FG.addRelation('parent', gm.id, m.id);
+            FG.addRelation('parent', gp.id, m.id);
+            FG.addRelation('spouse', m.id, p.id);
+            [e1, e2].forEach(function(e) {
+                FG.addRelation('parent', m.id, e.id);
+                FG.addRelation('parent', p.id, e.id);
+            });
+            gm.isDonor = true; gp.isDonor = true; m.isDonor = true; p.isDonor = true;
+            e1.isBeneficiary = true; e2.isBeneficiary = true;
+        }
     };
 
     // Mapping objectif → switch UI à activer
@@ -384,52 +437,75 @@ const POVOnboarding = (function() {
     // ============================================================
     function tryApplyFamilyPreset(preset, attempt) {
         attempt = attempt || 1;
-        const maxAttempts = 20;
-        const sdReady = typeof window.SD !== 'undefined' && typeof SD.applyFamilyPreset === 'function';
-        const fgReady = typeof window.FamilyGraph !== 'undefined' && typeof FamilyGraph.getPersons === 'function';
+        const maxAttempts = 25;
+        const fgReady = typeof window.FamilyGraph !== 'undefined'
+                        && typeof FamilyGraph.getPersons === 'function'
+                        && typeof FamilyGraph.addPerson === 'function'
+                        && typeof FamilyGraph.addRelation === 'function'
+                        && typeof FamilyGraph.reset === 'function';
         const domReady = !!document.getElementById('family-persons-list');
 
-        if (!sdReady || !fgReady || !domReady) {
+        if (!fgReady || !domReady) {
             if (attempt >= maxAttempts) {
-                console.warn('[POV] Abandon applyFamilyPreset après ' + maxAttempts + ' tentatives — SD/FamilyGraph/DOM indisponibles.');
+                console.warn('[POV] Abandon après ' + maxAttempts + ' tentatives — FamilyGraph/DOM indisponibles.');
                 return false;
             }
-            setTimeout(() => tryApplyFamilyPreset(preset, attempt + 1), 150);
+            setTimeout(function() { tryApplyFamilyPreset(preset, attempt + 1); }, 150);
             return false;
         }
 
+        // 1. Reset + build DIRECTEMENT via FamilyGraph (bypass SD.applyFamilyPreset)
+        const builder = PRESET_BUILDERS[preset];
+        if (!builder) {
+            console.warn('[POV] preset inconnu : ' + preset);
+            return false;
+        }
         try {
-            SD.applyFamilyPreset(preset);
+            FamilyGraph.reset();
+            builder(FamilyGraph);
         } catch (e) {
-            console.warn('[POV] applyFamilyPreset a levé une erreur', e);
+            console.error('[POV] builder a levé une erreur', e);
             return false;
         }
 
-        // Vérification : FamilyGraph doit contenir des personnes
         const persons = FamilyGraph.getPersons();
         if (!persons || persons.length === 0) {
-            console.warn('[POV] FamilyGraph vide après preset — retry', attempt);
+            console.warn('[POV] FamilyGraph vide après builder — retry', attempt);
             if (attempt < maxAttempts) {
-                setTimeout(() => tryApplyFamilyPreset(preset, attempt + 1), 150);
+                setTimeout(function() { tryApplyFamilyPreset(preset, attempt + 1); }, 150);
             }
             return false;
         }
+        console.log('[POV] FamilyGraph chargé avec ' + persons.length + ' personnes.');
 
-        // Force re-render propre (renderFamilyAll appelle renderFamilyTree en interne)
-        try {
-            if (typeof SD.renderFamilyAll === 'function') SD.renderFamilyAll();
-            else if (typeof SD.renderFamilyTree === 'function') SD.renderFamilyTree();
-        } catch (e) { console.warn('[POV] render family a échoué', e); }
+        // 2. Force render via SD (plusieurs chemins possibles)
+        const renderPaths = [
+            function() { if (typeof SD !== 'undefined' && SD.renderFamilyAll)  SD.renderFamilyAll(); },
+            function() { if (typeof SD !== 'undefined' && SD.renderFamilyTree) SD.renderFamilyTree(); },
+            function() { if (typeof SD !== 'undefined' && SD.renderFamilyPersons) SD.renderFamilyPersons(); },
+            function() { if (typeof SD !== 'undefined' && SD.renderFamilyRoles) SD.renderFamilyRoles(); }
+        ];
+        let renderedOk = false;
+        renderPaths.forEach(function(fn) {
+            try { fn(); renderedOk = true; } catch (e) { /* ignore */ }
+        });
 
-        // Sync vers step 2 (beneficiaries list) si dispo
-        try {
-            if (typeof SD.syncGraphToStep2 === 'function') SD.syncGraphToStep2();
-        } catch (e) { /* silent */ }
+        // 3. Sync vers PathOptimizer / step 2 si dispo
+        try { if (typeof SD !== 'undefined' && SD.syncGraphToStep2) SD.syncGraphToStep2(); } catch (e) {}
 
-        // Update aside
-        try { if (typeof SD.updateAside === 'function') SD.updateAside(); } catch (e) {}
+        // 4. Update aside
+        try { if (typeof SD !== 'undefined' && SD.updateAside) SD.updateAside(); } catch (e) {}
 
-        console.log('[POV] ✅ preset "' + preset + '" appliqué — ' + persons.length + ' personnes');
+        // 5. Dernière chance : si le container est vide, re-render après un micro-delay
+        setTimeout(function() {
+            const cont = document.getElementById('family-persons-list');
+            if (cont && !cont.innerHTML.trim()) {
+                console.warn('[POV] container famille encore vide après render — retry render');
+                try { if (typeof SD !== 'undefined' && SD.renderFamilyTree) SD.renderFamilyTree(); } catch (e) {}
+            }
+        }, 300);
+
+        console.log('[POV] ✅ preset "' + preset + '" appliqué — ' + persons.length + ' personnes (renderedOk=' + renderedOk + ')');
         return true;
     }
 
