@@ -314,7 +314,34 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div>Rendement brut : <strong>${rdtBrut}%</strong> ${parseFloat(rdtBrut) < 5 ? '<span style="color:#ef4444">(trop faible pour autofinancer)</span>' : ''}</div>
                                 <div>Prix au m² : <strong>${prixM2.toLocaleString('fr-FR')} €</strong> · Loyer : <strong>${loyerM2.toFixed(1)} €/m²/mois</strong></div>
                                 <div>Même un ${surfaceMin}m² à ${prixMin.toLocaleString('fr-FR')}€ aurait une mensualité de ~${Math.round(mensMin).toLocaleString('fr-FR')}€ pour un loyer net de ${Math.round(loyerMin * 0.95)}€</div>
-                                ${mensMin > loyerMin * 0.95 ? `<div style="margin-top:4px;color:#f59e0b;">Il vous manque environ <strong>${Math.round(((mensMin - loyerMin * 0.95) * ((1 - Math.pow(1 + (taux/100/12), -(duree*12))) / (taux/100/12)))).toLocaleString('fr-FR')}€ d'apport</strong> pour qu'un ${surfaceMin}m² soit viable.</div>` : ''}
+                                ${(() => {
+                                  // Calculer l'apport minimum pour un 20m²
+                                  const loyerNet20 = loyerMin * 0.95;
+                                  const frais20 = prixMin * 0.12; // ~12% frais (notaire + commission + bancaires)
+                                  const coutTotal20 = prixMin + frais20;
+                                  // Emprunt max pour que mensualité = loyer net
+                                  const empruntMax = loyerNet20 > 0 && tauxM > 0
+                                    ? loyerNet20 * ((1 - Math.pow(1 + tauxM, -nbM)) / tauxM)
+                                    : 0;
+                                  const apportMin = Math.max(0, Math.ceil(coutTotal20 - empruntMax));
+                                  const apportManquant = Math.max(0, apportMin - apport);
+
+                                  if (apportManquant > 0) {
+                                    return `
+                                    <div style="margin-top:12px;padding:12px 16px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:8px;">
+                                      <div style="font-weight:600;color:#22c55e;margin-bottom:4px;">
+                                        <i class="fas fa-piggy-bank"></i> Apport minimum pour un ${surfaceMin}m²
+                                      </div>
+                                      <div style="font-size:1.1rem;color:#22c55e;font-weight:700;">
+                                        ${apportMin.toLocaleString('fr-FR')} € <span style="font-size:0.85rem;font-weight:400;color:rgba(255,255,255,0.5);">(il vous manque ${apportManquant.toLocaleString('fr-FR')}€)</span>
+                                      </div>
+                                      <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:4px;">
+                                        Coût total estimé : ${Math.round(coutTotal20).toLocaleString('fr-FR')}€ (prix + ~12% frais) · Emprunt max : ${Math.round(empruntMax).toLocaleString('fr-FR')}€
+                                      </div>
+                                    </div>`;
+                                  }
+                                  return '';
+                                })()}
                             </div>
                         </div>
 
