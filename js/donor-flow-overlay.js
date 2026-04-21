@@ -70,23 +70,54 @@ const DonorFlowOverlay = (function() {
 /* Les ft-node doivent accepter l'overflow pour nos sous-éléments flottants */
 #family-persons-list .ft-node { overflow: visible; }
 
-/* Badge pill "génération sautée" : en bas-droite de la box (sous les icônes) */
+/* Badge abattement : toujours visible sur les bénéficiaires, couleur selon le type */
 .dfo-ben-badge {
     display: inline-block;
     margin-top: 6px;
     padding: 2px 8px; border-radius: 10px;
-    background: linear-gradient(135deg, rgba(255,179,0,.92), rgba(255,179,0,.78));
-    color: #1a1108; font-size: .62rem; font-weight: 800;
+    font-size: .62rem; font-weight: 800;
     white-space: nowrap; line-height: 1.25;
-    box-shadow: 0 3px 10px rgba(255,179,0,.25);
-    border: 1px solid rgba(255,179,0,.55);
     letter-spacing: .01em;
     pointer-events: none;
+    border: 1px solid transparent;
 }
-.dfo-ben-badge::before {
-    content: '✨ '; font-size: .7rem;
+/* Génération sautée : orange éclatant */
+.dfo-ben-badge.dfo-b-skip {
+    background: linear-gradient(135deg, rgba(255,179,0,.92), rgba(255,179,0,.78));
+    color: #1a1108;
+    border-color: rgba(255,179,0,.55);
+    box-shadow: 0 3px 10px rgba(255,179,0,.25);
 }
-/* Marker "étoile" discret : petite pastille en haut-droite INTERNE de la box */
+.dfo-ben-badge.dfo-b-skip::before { content: '✨ '; font-size: .7rem; }
+/* Transmission directe (enfant) : vert discret */
+.dfo-ben-badge.dfo-b-direct {
+    background: rgba(16,185,129,.15);
+    color: var(--accent-green, #10B981);
+    border-color: rgba(16,185,129,.35);
+}
+.dfo-ben-badge.dfo-b-direct::before { content: '→ '; font-size: .7rem; font-weight: 900; }
+/* Conjoint : bleu */
+.dfo-ben-badge.dfo-b-conjoint {
+    background: rgba(59,130,246,.15);
+    color: var(--accent-blue, #3B82F6);
+    border-color: rgba(59,130,246,.35);
+}
+.dfo-ben-badge.dfo-b-conjoint::before { content: '💍 '; font-size: .7rem; }
+/* Autres (frère/sœur, neveu, tiers) : violet */
+.dfo-ben-badge.dfo-b-other {
+    background: rgba(167,139,250,.15);
+    color: var(--accent-purple, #A78BFA);
+    border-color: rgba(167,139,250,.35);
+}
+/* Badge mixte : bordure dorée + contenu 2 lignes */
+.dfo-ben-badge.dfo-b-mixed {
+    background: linear-gradient(135deg, rgba(16,185,129,.1), rgba(255,179,0,.15));
+    color: var(--text-primary, #fff);
+    border-color: rgba(255,179,0,.35);
+}
+.dfo-ben-badge.dfo-b-mixed::before { content: '✨→ '; font-size: .7rem; }
+
+/* Marker discret sur les donateurs (étoile haut-droite interne) */
 .dfo-donor-mark {
     position: absolute; top: 4px; right: 4px;
     width: 14px; height: 14px; border-radius: 50%;
@@ -153,15 +184,13 @@ const DonorFlowOverlay = (function() {
                 let lien = 'tiers';
                 try { lien = FamilyGraph.computeFiscalLien(d.id, b.id) || 'tiers'; } catch (e) {}
                 const lienNorm = lien.replace(/-/g, '_');
-                let category = null;
-                // ⚠️ On NE DESSINE PAS les flux 'direct' (parent→enfant) :
-                // l'arbre généalogique existant montre déjà cette relation,
-                // les flèches en plus créent du bruit visuel inutile.
-                if (lienNorm === 'petit_enfant' || lienNorm === 'arriere_petit_enfant') category = 'skip';
+                let category;
+                if (lienNorm === 'enfant') category = 'direct';
+                else if (lienNorm === 'petit_enfant' || lienNorm === 'arriere_petit_enfant') category = 'skip';
                 else if (lienNorm.startsWith('conjoint')) category = 'conjoint';
                 else if (lienNorm === 'frere_soeur' || lienNorm === 'neveu_niece') category = 'other';
-                else if (lienNorm === 'tiers' || lienNorm === 'enfant') return; // skip
-                if (!category) return;
+                else if (lienNorm === 'tiers') category = 'other';
+                else category = 'other';
                 pairs.push({
                     from: d, to: b,
                     lien: lienNorm,
@@ -300,35 +329,61 @@ const DonorFlowOverlay = (function() {
         canvas.querySelectorAll('.dfo-ben-badge, .dfo-donor-mark').forEach(n => n.remove());
 
         const pairs = computePairs();
-        const skipPaths = pairs.filter(p => p.category === 'skip');
-        if (skipPaths.length === 0) { renderBanner([]); return; }
+        if (pairs.length === 0) { renderBanner([]); return; }
 
-        // Agrège par bénéficiaire
-        const benAggregate = {};
-        skipPaths.forEach(p => {
+        // Agrège par bénéficiaire, en conservant la répartition par catégorie
+        const byBen = {};
+        pairs.forEach(p => {
             const k = p.to.id;
-            if (!benAggregate[k]) benAggregate[k] = { ben: p.to, total: 0, donorIds: new Set() };
-            benAggregate[k].total += isFinite(p.abat) ? p.abat : 0;
-            benAggregate[k].donorIds.add(p.from.id);
+            if (!byBen[k]) byBen[k] = { ben: p.to, total: 0, byCat: {}, donorIds: new Set() };
+            byBen[k].total += isFinite(p.abat) ? p.abat : 0;
+            byBen[k].byCat[p.category] = (byBen[k].byCat[p.category] || 0) + (isFinite(p.abat) ? p.abat : 0);
+            byBen[k].donorIds.add(p.from.id);
         });
 
-        // Badge sur chaque bénéficiaire PE/APE
-        Object.keys(benAggregate).forEach(bid => {
-            const agg = benAggregate[bid];
-            const nodeEl = canvas.querySelector('.ft-node[data-pid="' + agg.ben.id + '"]');
+        // Catégorie dominante = plus gros abattement cumulé
+        function dominantCat(byCat) {
+            let best = null, bestVal = -1;
+            Object.keys(byCat).forEach(c => { if (byCat[c] > bestVal) { bestVal = byCat[c]; best = c; } });
+            return best;
+        }
+        function catLabel(c) {
+            return { direct: 'en direct', skip: 'via génération sautée', conjoint: 'au conjoint', other: 'transmission' }[c] || 'transmission';
+        }
+
+        const labels = {};
+        Object.keys(byBen).forEach(bid => {
+            const agg = byBen[bid];
+            const cats = Object.keys(agg.byCat);
+            const main = dominantCat(agg.byCat);
+            const nGP = agg.donorIds.size;
+            // S'il y a PLUSIEURS catégories (ex: skip + direct), on utilise "mixed"
+            const cls = cats.length > 1 ? 'mixed' : main;
+            labels[bid] = {
+                main, cls,
+                text: '+ ' + fmt(agg.total) + (nGP > 1 ? ' (×' + nGP + ')' : ''),
+                title: 'Abattement total mobilisable : ' + fmt(agg.total)
+                     + ' · ' + nGP + ' donateur' + (nGP > 1 ? 's' : '')
+                     + ' (' + cats.map(catLabel).join(' + ') + ')'
+            };
+        });
+
+        // Rendu des badges
+        Object.keys(labels).forEach(bid => {
+            const info = labels[bid];
+            const nodeEl = canvas.querySelector('.ft-node[data-pid="' + bid + '"]');
             if (!nodeEl) return;
-            // S'assure que le parent a position:relative pour le positionnement du badge
             const cs = getComputedStyle(nodeEl);
             if (cs.position === 'static') nodeEl.style.position = 'relative';
             const badge = document.createElement('span');
-            badge.className = 'dfo-ben-badge';
-            const nGP = agg.donorIds.size;
-            badge.textContent = '+ ' + fmt(agg.total) + (nGP > 1 ? ' (×' + nGP + ')' : '');
-            badge.title = 'Génération sautée : ' + nGP + ' GP peut/peuvent donner directement. Abattement petit-enfant cumulé : ' + fmt(agg.total) + '.';
+            badge.className = 'dfo-ben-badge dfo-b-' + info.cls;
+            badge.textContent = info.text;
+            badge.title = info.title;
             nodeEl.appendChild(badge);
         });
 
-        // Marker discret sur chaque donateur (GP) impliqué
+        // Marker ✨ uniquement sur les donateurs impliqués dans une GÉNÉRATION SAUTÉE
+        const skipPaths = pairs.filter(p => p.category === 'skip');
         const donorIds = new Set();
         skipPaths.forEach(p => donorIds.add(p.from.id));
         donorIds.forEach(did => {
@@ -339,7 +394,7 @@ const DonorFlowOverlay = (function() {
             const mark = document.createElement('span');
             mark.className = 'dfo-donor-mark';
             mark.textContent = '✨';
-            mark.title = 'Ce donateur peut transmettre directement aux petits-enfants (abattement 31 865 € par PE).';
+            mark.title = 'Ce donateur peut transmettre directement aux petits-enfants (génération sautée).';
             nodeEl.appendChild(mark);
         });
 
