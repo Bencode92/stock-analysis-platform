@@ -63,6 +63,19 @@ const DonorFlowOverlay = (function() {
     function injectStyles() {
         if (document.getElementById('dfo-styles')) return;
         const css = `
+/* Élargit visuellement l'arbre pour qu'il respire dans la carte */
+#family-persons-list .ft-canvas.ft-levels {
+    zoom: 1.25;
+    margin: 0 auto;
+}
+@supports not (zoom: 1) {
+    /* Firefox fallback : transform scale */
+    #family-persons-list .ft-canvas.ft-levels {
+        transform: scale(1.25);
+        transform-origin: top center;
+        margin-bottom: 80px;  /* compensation pour le scale */
+    }
+}
 /* Badge pill "génération sautée" collé en haut-droite de chaque bénéficiaire */
 .dfo-ben-badge {
     position: absolute; top: -10px; right: -10px;
@@ -340,17 +353,32 @@ const DonorFlowOverlay = (function() {
 
     // ============================================================
     // BANDEAU "génération sautée détectée"
+    // → mise à jour in-place pour éviter la réanimation à chaque render
     // ============================================================
+    let _lastBannerHash = '';
     function renderBanner(skipPaths) {
         const treeContainer = document.getElementById('family-persons-list');
         if (!treeContainer) return;
 
-        const old = document.getElementById(BANNER_ID);
-        if (old) old.remove();
-
-        if (!skipPaths || skipPaths.length === 0) return;
+        // Cas : plus aucun chemin de génération sautée → retire le bandeau
+        if (!skipPaths || skipPaths.length === 0) {
+            const old = document.getElementById(BANNER_ID);
+            if (old) old.remove();
+            _lastBannerHash = '';
+            return;
+        }
 
         const totalEcon = skipPaths.reduce((s, p) => s + (isFinite(p.abat) ? p.abat : 0), 0);
+        const hash = skipPaths.length + '|' + totalEcon;
+
+        // Si le bandeau existe déjà avec le même contenu, NE RIEN FAIRE
+        // (évite la réanimation fadeIn à chaque clic sur une box).
+        const existing = document.getElementById(BANNER_ID);
+        if (existing && _lastBannerHash === hash) return;
+
+        _lastBannerHash = hash;
+
+        if (existing) existing.remove();
 
         const banner = document.createElement('div');
         banner.id = BANNER_ID;
