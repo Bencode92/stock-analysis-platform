@@ -70,52 +70,54 @@ const DonorFlowOverlay = (function() {
 /* Les ft-node doivent accepter l'overflow pour nos sous-éléments flottants */
 #family-persons-list .ft-node { overflow: visible; }
 
-/* Badge abattement : toujours visible sur les bénéficiaires, couleur selon le type */
+/* Conteneur des badges : empilement vertical SOUS le nom */
+.dfo-badges {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-top: 7px;
+    width: 100%;
+    align-items: center;
+}
+
+/* Badge abattement : taille compacte, pleine largeur dans la box */
 .dfo-ben-badge {
-    display: inline-block;
-    margin-top: 6px;
-    padding: 2px 8px; border-radius: 10px;
-    font-size: .62rem; font-weight: 800;
-    white-space: nowrap; line-height: 1.25;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 9px;
+    font-size: .62rem; font-weight: 700;
+    white-space: nowrap; line-height: 1.2;
     letter-spacing: .01em;
     pointer-events: none;
     border: 1px solid transparent;
+    max-width: 100%;
 }
+.dfo-ben-badge .dfo-icon { font-size: .7rem; }
+.dfo-ben-badge .dfo-amount { font-weight: 800; }
+.dfo-ben-badge .dfo-kind { opacity: .75; font-weight: 500; font-size: .58rem; }
+
 /* Génération sautée : orange éclatant */
 .dfo-ben-badge.dfo-b-skip {
     background: linear-gradient(135deg, rgba(255,179,0,.92), rgba(255,179,0,.78));
     color: #1a1108;
     border-color: rgba(255,179,0,.55);
-    box-shadow: 0 3px 10px rgba(255,179,0,.25);
+    box-shadow: 0 2px 8px rgba(255,179,0,.22);
 }
-.dfo-ben-badge.dfo-b-skip::before { content: '✨ '; font-size: .7rem; }
 /* Transmission directe (enfant) : vert discret */
 .dfo-ben-badge.dfo-b-direct {
-    background: rgba(16,185,129,.15);
+    background: rgba(16,185,129,.14);
     color: var(--accent-green, #10B981);
     border-color: rgba(16,185,129,.35);
 }
-.dfo-ben-badge.dfo-b-direct::before { content: '→ '; font-size: .7rem; font-weight: 900; }
 /* Conjoint : bleu */
 .dfo-ben-badge.dfo-b-conjoint {
-    background: rgba(59,130,246,.15);
+    background: rgba(59,130,246,.14);
     color: var(--accent-blue, #3B82F6);
     border-color: rgba(59,130,246,.35);
 }
-.dfo-ben-badge.dfo-b-conjoint::before { content: '💍 '; font-size: .7rem; }
 /* Autres (frère/sœur, neveu, tiers) : violet */
 .dfo-ben-badge.dfo-b-other {
-    background: rgba(167,139,250,.15);
+    background: rgba(167,139,250,.14);
     color: var(--accent-purple, #A78BFA);
     border-color: rgba(167,139,250,.35);
 }
-/* Badge mixte : bordure dorée + contenu 2 lignes */
-.dfo-ben-badge.dfo-b-mixed {
-    background: linear-gradient(135deg, rgba(16,185,129,.1), rgba(255,179,0,.15));
-    color: var(--text-primary, #fff);
-    border-color: rgba(255,179,0,.35);
-}
-.dfo-ben-badge.dfo-b-mixed::before { content: '✨→ '; font-size: .7rem; }
 
 /* Marker discret sur les donateurs (étoile haut-droite interne) */
 .dfo-donor-mark {
@@ -325,61 +327,59 @@ const DonorFlowOverlay = (function() {
         const canvas = document.querySelector('#family-persons-list .ft-canvas');
         if (!canvas) { renderBanner([]); return; }
 
-        // Nettoie les anciens badges/marks
-        canvas.querySelectorAll('.dfo-ben-badge, .dfo-donor-mark').forEach(n => n.remove());
+        // Nettoie les anciens badges/marks/containers
+        canvas.querySelectorAll('.dfo-badges, .dfo-ben-badge, .dfo-donor-mark').forEach(n => n.remove());
 
         const pairs = computePairs();
         if (pairs.length === 0) { renderBanner([]); return; }
 
-        // Agrège par bénéficiaire, en conservant la répartition par catégorie
+        // Agrège par bénéficiaire + par catégorie : total abattement et nb donateurs par type
         const byBen = {};
         pairs.forEach(p => {
             const k = p.to.id;
-            if (!byBen[k]) byBen[k] = { ben: p.to, total: 0, byCat: {}, donorIds: new Set() };
-            byBen[k].total += isFinite(p.abat) ? p.abat : 0;
-            byBen[k].byCat[p.category] = (byBen[k].byCat[p.category] || 0) + (isFinite(p.abat) ? p.abat : 0);
-            byBen[k].donorIds.add(p.from.id);
+            if (!byBen[k]) byBen[k] = { ben: p.to, cats: {} };
+            const c = p.category;
+            if (!byBen[k].cats[c]) byBen[k].cats[c] = { total: 0, donors: new Set() };
+            byBen[k].cats[c].total += isFinite(p.abat) ? p.abat : 0;
+            byBen[k].cats[c].donors.add(p.from.id);
         });
 
-        // Catégorie dominante = plus gros abattement cumulé
-        function dominantCat(byCat) {
-            let best = null, bestVal = -1;
-            Object.keys(byCat).forEach(c => { if (byCat[c] > bestVal) { bestVal = byCat[c]; best = c; } });
-            return best;
-        }
-        function catLabel(c) {
-            return { direct: 'en direct', skip: 'via génération sautée', conjoint: 'au conjoint', other: 'transmission' }[c] || 'transmission';
-        }
+        // Ordre d'affichage des catégories (plus "intéressant" en premier)
+        const CAT_ORDER = ['skip', 'direct', 'conjoint', 'other'];
+        const CAT_META = {
+            skip:     { icon: '✨', kind: 'via GP',   title: 'Génération sautée : abattement petit-enfant mobilisable' },
+            direct:   { icon: '→',  kind: 'direct',   title: 'Transmission directe parent→enfant : abattement 100 000 €' },
+            conjoint: { icon: '💍', kind: 'conjoint', title: 'Transmission au conjoint : abattement donation 80 724 €' },
+            other:    { icon: '•',  kind: 'autre',    title: 'Autre lien de parenté' }
+        };
 
-        const labels = {};
+        // Rendu : 1 badge PAR catégorie, empilés dans un conteneur vertical
         Object.keys(byBen).forEach(bid => {
             const agg = byBen[bid];
-            const cats = Object.keys(agg.byCat);
-            const main = dominantCat(agg.byCat);
-            const nGP = agg.donorIds.size;
-            // S'il y a PLUSIEURS catégories (ex: skip + direct), on utilise "mixed"
-            const cls = cats.length > 1 ? 'mixed' : main;
-            labels[bid] = {
-                main, cls,
-                text: '+ ' + fmt(agg.total) + (nGP > 1 ? ' (×' + nGP + ')' : ''),
-                title: 'Abattement total mobilisable : ' + fmt(agg.total)
-                     + ' · ' + nGP + ' donateur' + (nGP > 1 ? 's' : '')
-                     + ' (' + cats.map(catLabel).join(' + ') + ')'
-            };
-        });
-
-        // Rendu des badges
-        Object.keys(labels).forEach(bid => {
-            const info = labels[bid];
             const nodeEl = canvas.querySelector('.ft-node[data-pid="' + bid + '"]');
             if (!nodeEl) return;
             const cs = getComputedStyle(nodeEl);
             if (cs.position === 'static') nodeEl.style.position = 'relative';
-            const badge = document.createElement('span');
-            badge.className = 'dfo-ben-badge dfo-b-' + info.cls;
-            badge.textContent = info.text;
-            badge.title = info.title;
-            nodeEl.appendChild(badge);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'dfo-badges';
+
+            CAT_ORDER.forEach(cat => {
+                const data = agg.cats[cat];
+                if (!data) return;
+                const nDon = data.donors.size;
+                const meta = CAT_META[cat];
+                const badge = document.createElement('span');
+                badge.className = 'dfo-ben-badge dfo-b-' + cat;
+                badge.innerHTML =
+                    '<span class="dfo-icon">' + meta.icon + '</span>'
+                  + '<span class="dfo-amount">+ ' + fmt(data.total) + '</span>'
+                  + '<span class="dfo-kind">' + meta.kind + (nDon > 1 ? ' ×' + nDon : '') + '</span>';
+                badge.title = meta.title + ' — ' + nDon + ' donateur' + (nDon > 1 ? 's' : '');
+                wrap.appendChild(badge);
+            });
+
+            if (wrap.children.length) nodeEl.appendChild(wrap);
         });
 
         // Marker ✨ uniquement sur les donateurs impliqués dans une GÉNÉRATION SAUTÉE
@@ -482,7 +482,10 @@ const DonorFlowOverlay = (function() {
                 const removed = Array.from(m.removedNodes || []);
                 return added.concat(removed).some(n => {
                     if (n.nodeType !== 1) return false;
-                    return !n.classList || (!n.classList.contains('dfo-ben-badge') && !n.classList.contains('dfo-donor-mark'));
+                    if (!n.classList) return true;
+                    return !n.classList.contains('dfo-ben-badge')
+                        && !n.classList.contains('dfo-donor-mark')
+                        && !n.classList.contains('dfo-badges');
                 });
             });
             if (hasForeign) scheduleRender();
