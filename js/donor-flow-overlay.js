@@ -63,27 +63,28 @@ const DonorFlowOverlay = (function() {
     function injectStyles() {
         if (document.getElementById('dfo-styles')) return;
         const css = `
-/* Élargit le canvas de l'arbre pour donner de l'air aux flèches */
-#family-persons-list .ft-canvas.ft-levels {
-    min-width: min(100%, 1100px) !important;
-    padding: 36px 48px !important;
+/* Badge pill "génération sautée" collé en haut-droite de chaque bénéficiaire */
+.dfo-ben-badge {
+    position: absolute; top: -10px; right: -10px;
+    padding: 3px 8px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255,179,0,.92), rgba(255,179,0,.78));
+    color: #1a1108; font-size: .65rem; font-weight: 800;
+    white-space: nowrap; line-height: 1.2;
+    box-shadow: 0 3px 10px rgba(255,179,0,.35);
+    z-index: 5; pointer-events: none;
+    border: 1px solid rgba(255,179,0,.55);
+    letter-spacing: .01em;
 }
-.${OVERLAY_CLASS} {
-    position: absolute; left: 0; top: 0; pointer-events: none;
-    z-index: 2;  /* au-dessus du .ft-svg (z=0) et des .ft-node (z=1) */
-    overflow: visible;
+.dfo-ben-badge::before {
+    content: '✨ '; font-size: .72rem;
 }
-.dfo-path { fill: none; transition: stroke-width .2s; }
-.dfo-path.dfo-direct      { stroke: rgba(16,185,129,.55); stroke-width: 1.6; }
-.dfo-path.dfo-skip        { stroke: rgba(255,179,0,.85); stroke-width: 1.8; stroke-dasharray: 5 4; }
-.dfo-path.dfo-conjoint    { stroke: rgba(59,130,246,.6); stroke-width: 1.6; }
-.dfo-path.dfo-other       { stroke: rgba(167,139,250,.5); stroke-width: 1.4; stroke-dasharray: 3 3; }
-.dfo-arrow { fill: currentColor; }
-.dfo-label {
-    font-size: 10px; font-weight: 700;
-    fill: rgba(255,179,0,.95);
-    paint-order: stroke; stroke: rgba(25,21,16,.85); stroke-width: 3px;
-    pointer-events: none;
+/* Marker discret sur les donateurs-GP (étoile coin haut-gauche) */
+.dfo-donor-mark {
+    position: absolute; top: -8px; left: -8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(255,179,0,.2); border: 1px solid rgba(255,179,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; z-index: 5; pointer-events: none;
 }
 #${BANNER_ID} {
     margin: 8px 0 14px;
@@ -275,7 +276,11 @@ const DonorFlowOverlay = (function() {
     }
 
     // ============================================================
-    // RENDER OVERLAY (SVG par-dessus le canvas)
+    // RENDER — approche DOM légère (pas de SVG) :
+    //   → badge pill au coin des bénéficiaires concernés par génération sautée
+    //   → bandeau récap au-dessus de l'arbre
+    //   → AUCUNE flèche : l'arbre généalogique existant suffit, et un
+    //     overlay SVG crée des mutations DOM qui re-déclenchent l'observer.
     // ============================================================
     function render() {
         injectStyles();
@@ -283,81 +288,53 @@ const DonorFlowOverlay = (function() {
         const canvas = document.querySelector('#family-persons-list .ft-canvas');
         if (!canvas) { renderBanner([]); return; }
 
-        // Nettoie l'ancien overlay
-        canvas.querySelectorAll('.' + OVERLAY_CLASS).forEach(s => s.remove());
+        // Nettoie les anciens badges/marks
+        canvas.querySelectorAll('.dfo-ben-badge, .dfo-donor-mark').forEach(n => n.remove());
 
         const pairs = computePairs();
-        if (pairs.length === 0) { renderBanner([]); return; }
+        const skipPaths = pairs.filter(p => p.category === 'skip');
+        if (skipPaths.length === 0) { renderBanner([]); return; }
 
-        const w = canvas.scrollWidth;
-        const h = canvas.scrollHeight;
-        const svg = document.createElementNS(SVG_NS, 'svg');
-        svg.setAttribute('class', OVERLAY_CLASS);
-        svg.setAttribute('width', w);
-        svg.setAttribute('height', h);
-        svg.style.width = w + 'px';
-        svg.style.height = h + 'px';
-
-        // Marqueurs de flèche par couleur
-        makeArrowMarker(svg, 'dfo-arrow-direct',   '#10B981');
-        makeArrowMarker(svg, 'dfo-arrow-skip',     '#FFB300');
-        makeArrowMarker(svg, 'dfo-arrow-conjoint', '#3B82F6');
-        makeArrowMarker(svg, 'dfo-arrow-other',    '#A78BFA');
-
-        const skipPaths = [];
-
-        // Regroupe les paires par donateur pour permettre l'étalement horizontal
-        const byDonor = {};
-        pairs.forEach(p => {
-            const k = p.from.id;
-            if (!byDonor[k]) byDonor[k] = [];
-            byDonor[k].push(p);
-        });
-
-        Object.keys(byDonor).forEach(donorId => {
-            const list = byDonor[donorId];
-            list.forEach((pair, idx) => {
-                const from = getNodeRect(canvas, pair.from.id);
-                const to   = getNodeRect(canvas, pair.to.id);
-                if (!from || !to) return;
-
-                const d = buildPath(from, to, idx, list.length, pair.category, w);
-                const path = document.createElementNS(SVG_NS, 'path');
-                path.setAttribute('d', d);
-                path.setAttribute('class', 'dfo-path dfo-' + pair.category);
-                path.setAttribute('marker-end', 'url(#dfo-arrow-' + pair.category + ')');
-                svg.appendChild(path);
-
-                if (pair.category === 'skip') skipPaths.push(pair);
-            });
-        });
-
-        // Labels uniquement en HAUT de chaque bénéficiaire recevant une génération sautée
-        // → 1 label par PE (somme des abattements), pas 1 par flèche
+        // Agrège par bénéficiaire
         const benAggregate = {};
         skipPaths.forEach(p => {
             const k = p.to.id;
-            if (!benAggregate[k]) benAggregate[k] = { ben: p.to, total: 0, count: 0 };
+            if (!benAggregate[k]) benAggregate[k] = { ben: p.to, total: 0, donorIds: new Set() };
             benAggregate[k].total += isFinite(p.abat) ? p.abat : 0;
-            benAggregate[k].count++;
-        });
-        Object.keys(benAggregate).forEach(bid => {
-            const agg = benAggregate[bid];
-            const rect = getNodeRect(canvas, agg.ben.id);
-            if (!rect) return;
-            const text = document.createElementNS(SVG_NS, 'text');
-            text.setAttribute('x', rect.cx);
-            text.setAttribute('y', rect.top - 8);
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('class', 'dfo-label');
-            const label = agg.count > 1
-                ? '+ ' + fmt(agg.total) + ' abat. (×' + agg.count + ' GP)'
-                : '+ ' + fmt(agg.total) + ' abat.';
-            text.textContent = label;
-            svg.appendChild(text);
+            benAggregate[k].donorIds.add(p.from.id);
         });
 
-        canvas.appendChild(svg);
+        // Badge sur chaque bénéficiaire PE/APE
+        Object.keys(benAggregate).forEach(bid => {
+            const agg = benAggregate[bid];
+            const nodeEl = canvas.querySelector('.ft-node[data-pid="' + agg.ben.id + '"]');
+            if (!nodeEl) return;
+            // S'assure que le parent a position:relative pour le positionnement du badge
+            const cs = getComputedStyle(nodeEl);
+            if (cs.position === 'static') nodeEl.style.position = 'relative';
+            const badge = document.createElement('span');
+            badge.className = 'dfo-ben-badge';
+            const nGP = agg.donorIds.size;
+            badge.textContent = '+ ' + fmt(agg.total) + (nGP > 1 ? ' (×' + nGP + ')' : '');
+            badge.title = 'Génération sautée : ' + nGP + ' GP peut/peuvent donner directement. Abattement petit-enfant cumulé : ' + fmt(agg.total) + '.';
+            nodeEl.appendChild(badge);
+        });
+
+        // Marker discret sur chaque donateur (GP) impliqué
+        const donorIds = new Set();
+        skipPaths.forEach(p => donorIds.add(p.from.id));
+        donorIds.forEach(did => {
+            const nodeEl = canvas.querySelector('.ft-node[data-pid="' + did + '"]');
+            if (!nodeEl) return;
+            const cs = getComputedStyle(nodeEl);
+            if (cs.position === 'static') nodeEl.style.position = 'relative';
+            const mark = document.createElement('span');
+            mark.className = 'dfo-donor-mark';
+            mark.textContent = '✨';
+            mark.title = 'Ce donateur peut transmettre directement aux petits-enfants (abattement 31 865 € par PE).';
+            nodeEl.appendChild(mark);
+        });
+
         renderBanner(skipPaths);
     }
 
@@ -399,18 +376,40 @@ const DonorFlowOverlay = (function() {
 
     // ============================================================
     // SCHEDULER : debounce + observer + events
+    // → On déconnecte l'observer pendant le render pour éviter la boucle
+    //   (nos propres ajouts DOM déclenchaient une nouvelle mutation).
     // ============================================================
+    function safeRender() {
+        if (_observer) { try { _observer.disconnect(); } catch (e) {} }
+        try { render(); } catch (e) { console.warn('[DFO] render failed', e); }
+        if (_observer) {
+            const tree = document.getElementById('family-persons-list');
+            if (tree) _observer.observe(tree, { childList: true, subtree: true });
+        }
+    }
+
     function scheduleRender() {
         clearTimeout(_redrawTO);
-        _redrawTO = setTimeout(render, 120);
+        _redrawTO = setTimeout(safeRender, 150);
     }
 
     function attachObserver() {
         if (_observer) return;
         const tree = document.getElementById('family-persons-list');
         if (!tree) return;
-        _observer = new MutationObserver(() => scheduleRender());
-        _observer.observe(tree, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-pid'] });
+        _observer = new MutationObserver(muts => {
+            // Ignore les mutations qui viennent UNIQUEMENT de nos propres nœuds
+            const hasForeign = muts.some(m => {
+                const added = Array.from(m.addedNodes || []);
+                const removed = Array.from(m.removedNodes || []);
+                return added.concat(removed).some(n => {
+                    if (n.nodeType !== 1) return false;
+                    return !n.classList || (!n.classList.contains('dfo-ben-badge') && !n.classList.contains('dfo-donor-mark'));
+                });
+            });
+            if (hasForeign) scheduleRender();
+        });
+        _observer.observe(tree, { childList: true, subtree: true });
     }
 
     function init() {
