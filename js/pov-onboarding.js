@@ -438,7 +438,10 @@ const POVOnboarding = (function() {
     function tryApplyFamilyPreset(preset, attempt) {
         attempt = attempt || 1;
         const maxAttempts = 25;
-        const fgReady = typeof window.FamilyGraph !== 'undefined'
+        // ⚠️ FamilyGraph et SD sont déclarés `const` au top-level dans successions-donations.js
+        // → ils NE SONT PAS exposés sur window (seul `var` le ferait).
+        // → on doit les tester via `typeof X !== 'undefined'` directement, sans window.
+        const fgReady = (typeof FamilyGraph !== 'undefined')
                         && typeof FamilyGraph.getPersons === 'function'
                         && typeof FamilyGraph.addPerson === 'function'
                         && typeof FamilyGraph.addRelation === 'function'
@@ -522,7 +525,7 @@ const POVOnboarding = (function() {
 
         // 2. Mode détail : quick → simplifie, full → détaillé — différé pour attendre SD
         setTimeout(() => {
-            if (typeof window.SD !== 'undefined' && typeof SD.setDetailMode === 'function') {
+            if (typeof SD !== 'undefined' && typeof SD.setDetailMode === 'function') {
                 try { SD.setDetailMode(povState.mode === 'quick' ? 'simplifie' : 'detaille'); } catch (e) {}
             }
         }, 400);
