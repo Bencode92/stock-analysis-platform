@@ -1,0 +1,365 @@
+{
+  "timestamp": "2026-04-21T09:19:38.952329",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-04-21",
+    "brent_usd": 90.7,
+    "brent_usd_avg5d": 93.93841739999999,
+    "gold_usd": 4785.51895,
+    "silver_usd": 78.76971,
+    "vix": 22.0,
+    "fed_funds_rate": 3.64,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "cpi_index": 330.293,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 283.0,
+    "us_10y_yield": 4.26,
+    "us_2y_yield": 3.71,
+    "yield_curve_2s10s": 55.0,
+    "breakeven_5y": 2.57,
+    "sp500_level": 7109.14,
+    "sp500_change_1d_pct": 3.2368897976254174,
+    "hyg_change_1d_pct": 0.3987042113132235,
+    "lqd_change_1d_pct": 0.3740193395365778,
+    "trade_weighted_usd": 118.0795,
+    "eurusd": 1.17594,
+    "nasdaq_change_1d_pct": -0.31748442,
+    "xlu_perf_1d_pct": -0.88821458,
+    "xle_perf_1d_pct": 0.090874658,
+    "cpi_core_mom_pct": 0.2,
+    "pce_yoy_pct": 2.8,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4784.67994,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 10.247118236110385,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.6,
+    "favored_sectors": "energy",
+    "avoided_sectors": "communication-services, financials, information-technology",
+    "favored_regions": "brazil, taiwan, turkey",
+    "avoided_regions": "india, germany",
+    "key_trends": "Secteur leader: energy (+37.6% YTD) | Région leader: south-korea (+31.4% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: energy (+32.5% sur 12 mois) | 6M leader: energy (+33.8% sur 6 mois)",
+    "risks": "Secteurs en difficulté: financials, communication-services, information-technology | Régions en difficulté: germany, switzerland, italy | Concentration: peu de secteurs en zone favorable (rotation possible) | 5 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "materials(neutral,b=0.85,d=0.03%), energy(favored,b=0.74,d=1.76%), financials(avoided,b=0.94,d=-1.63%), communication-services(avoided,b=1.12,d=-2.51%), information-technology(avoided,b=1.33,d=-1.22%), consumer-staples(neutral,b=0.25,d=1.34%), industrials(neutral,b=0.9,d=-0.61%), utilities(neutral,b=0.37,d=-0.81%), real-estate(neutral,b=0.52,d=-0.22%), healthcare(avoided,b=0.55,d=-1.19%), consumer-discretionary(avoided,b=1.1,d=-2.14%)"
+  },
+  "ai_response": {
+    "regime": "risk_off",
+    "regime_confidence": 3,
+    "regime_rationale": "VIX à 22 avec tech/financials/comm-services en forte baisse malgré un S&P en hausse (rotation défensive massive, pas un rally broad-based), Brent élevé à $91 alimentant une inflation PCE encore à 2.8% avec une Fed en pause — le marché price un ralentissement avec inflation persistante. Dollar faible (DTWEXBGS 118, EUR/USD 1.176) suggère une fuite du dollar inhabituelle, gold à $4785 en drawdown de 10% depuis ATH indique une prise de profit après un rally massif mais le niveau reste historiquement extrême.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Surpondérer energy — seul secteur en momentum positif, Brent élevé, leadership clair",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "Energy +37.6% YTD, seul secteur favorisé par le RADAR, Brent $91 soutient les earnings et protège contre l'inflation persistante."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire exposition tech/AI — momentum 6M dégradé, beta élevé en risk-off",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": -3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "IT avoided par RADAR, QQQ -0.3% alors que SPX +3.2%, beta 1.33 pénalisant en régime de volatilité montante avec taux réels élevés."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire semi — corrélé tech, momentum dégradé",
+        "params": {
+          "theme": "semi",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Semiconducteurs suivent le même pattern que IT avec beta élevé et 5 secteurs en refroidissement 3M, rotation hors growth en cours."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer dividend/value — rotation défensive visible, consumer staples +1.34%",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Consumer staples beta 0.25 surperforme en risk-off, courbe 2s10s pentifiée à +55bps favorise les banques value et les dividendes élevés vs duration longue."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Maintenir gold malgré drawdown 10% — niveau absolu reste hedge systémique",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 1
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Dollar faible (DTWEXBGS 118) + inflation PCE 2.8% + incertitude géopolitique (Brent $91) soutiennent l'or comme hedge même après correction de 10%."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Préférer TIPS + treasury court, éviter HY, raccourcir duration",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 4.0,
+          "fund_types": [
+            "High Yield Bond"
+          ]
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "PCE 2.8% > target avec breakeven 5Y à 2.57% rend les TIPS attractifs; HY spreads 283bps trop serrés pour le risque en risk-off, duration courte protège si la Fed doit remonter."
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Relever légèrement le floor obligataire pour Stable",
+        "params": {
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Rotation défensive en cours avec VIX 22 et tech en baisse — augmenter la protection obligataire du profil conservateur via TIPS et treasury court."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer healthcare — défensif, beta 0.55, sous-évalué après baisse",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 2,
+        "rationale": "Healthcare en baisse (-1.19% daily) mais beta faible et caractère défensif en font un candidat de rotation si le risk-off s'approfondit."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "TIPS surpondérés pour capturer l'inflation persistante (PCE 2.8%), treasury court comme ancrage, duration limitée à 4-5y car la Fed en pause à 3.64% pourrait devoir resserrer si le Brent reste >$90.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 5.0
+    },
+    "cash_allocation": {
+      "Agressif": 4,
+      "Modéré": 5,
+      "Stable": 3,
+      "rationale": "VIX 22 avec divergence SPX/QQQ massive (+3.2% vs -0.3%) signale une rotation instable — garder du cash comme option d'achat sur un éventuel dip tech ou élargissement des spreads HY."
+    },
+    "_cash_guidance": "MINIMUM CASH: Agressif 2% si VIX>20 (option d'achat sur la vol), Modéré 3%, Stable 0% (T-bills = cash productif). Le cash est une POSITION, pas une absence de position.",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0,
+      "rationale": "Crypto = risk asset corrélé tech en risk-off; réduire l'exposition mais maintenir une position minimale en Agressif car le dollar faible est historiquement favorable au BTC."
+    },
+    "warnings": [
+      "DIVERGENCE SPX/QQQ EXTRÊME: S&P +3.2% vs Nasdaq -0.3% le même jour — rotation violente hors tech, potentiel de mean-reversion brutal ou d'accélération du sell-off tech",
+      "BRENT $91 + PCE 2.8%: si le pétrole dépasse $95, la Fed pourrait être forcée de remonter les taux malgré le ralentissement — scénario stagflationniste à surveiller",
+      "DOLLAR FAIBLE (DTWEXBGS 118, EUR/USD 1.176): inhabituel en risk-off, pourrait signaler une perte de confiance dans les actifs US ou des flux sortants — surveiller les adjudications Treasury",
+      "HY SPREADS 283bps TROP SERRÉS: ne pricent pas le risque de récession; si le VIX passe >30, les spreads HY pourraient s'écarter de 150-200bps rapidement",
+      "GOLD DRAWDOWN 10% DEPUIS ATH: correction saine après rally parabolique, mais si le dollar se renforce soudainement (flight to USD), l'or pourrait corriger encore 5-10%",
+      "CONCENTRATION SECTORIELLE: seul energy en zone favorable — si le Brent corrige (cessez-le-feu géopolitique, OPEC+), le marché n'a plus de leadership"
+    ],
+    "market_interpretation": {
+      "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+      "geopolitical_risk": "Brent à $91 avec energy seul secteur en momentum positif suggère des tensions géopolitiques persistantes (Moyen-Orient/sanctions) maintenant une prime de risque élevée sur le pétrole.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 10,
+      "sentiment_estimate": "fear",
+      "dollar_assessment": "weak"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "ai_infra": {
+        "Agressif": -3,
+        "Modéré": -3
+      },
+      "semi": {
+        "Agressif": -2,
+        "Modéré": -2
+      },
+      "dividend_value": {
+        "Modéré": 3,
+        "Stable": 3
+      },
+      "healthcare": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 1,
+        "Modéré": 1,
+        "Stable": 1
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_risk_off"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_risk_off"
+    ],
+    "bond_floor_deltas": {
+      "Stable": 2
+    },
+    "cash_tactical": {
+      "Agressif": 4,
+      "Modéré": 5,
+      "Stable": 3
+    },
+    "cash_tactical_rationale": "VIX 22 avec divergence SPX/QQQ massive (+3.2% vs -0.3%) signale une rotation instable — garder du cash comme option d'achat sur un éventuel dip tech ou élargissement des spreads HY.",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0
+    },
+    "ai_regime": "risk_off",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "DIVERGENCE SPX/QQQ EXTRÊME: S&P +3.2% vs Nasdaq -0.3% le même jour — rotation violente hors tech, potentiel de mean-reversion brutal ou d'accélération du sell-off tech",
+      "BRENT $91 + PCE 2.8%: si le pétrole dépasse $95, la Fed pourrait être forcée de remonter les taux malgré le ralentissement — scénario stagflationniste à surveiller",
+      "DOLLAR FAIBLE (DTWEXBGS 118, EUR/USD 1.176): inhabituel en risk-off, pourrait signaler une perte de confiance dans les actifs US ou des flux sortants — surveiller les adjudications Treasury",
+      "HY SPREADS 283bps TROP SERRÉS: ne pricent pas le risque de récession; si le VIX passe >30, les spreads HY pourraient s'écarter de 150-200bps rapidement",
+      "GOLD DRAWDOWN 10% DEPUIS ATH: correction saine après rally parabolique, mais si le dollar se renforce soudainement (flight to USD), l'or pourrait corriger encore 5-10%",
+      "CONCENTRATION SECTORIELLE: seul energy en zone favorable — si le Brent corrige (cessez-le-feu géopolitique, OPEC+), le marché n'a plus de leadership"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "TIPS surpondérés pour capturer l'inflation persistante (PCE 2.8%), treasury court comme ancrage, duration limitée à 4-5y car la Fed en pause à 3.64% pourrait devoir resserrer si le Brent reste >$90.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 5.0
+    }
+  },
+  "regime": "risk_off",
+  "regime_rationale": "VIX à 22 avec tech/financials/comm-services en forte baisse malgré un S&P en hausse (rotation défensive massive, pas un rally broad-based), Brent élevé à $91 alimentant une inflation PCE encore à 2.8% avec une Fed en pause — le marché price un ralentissement avec inflation persistante. Dollar faible (DTWEXBGS 118, EUR/USD 1.176) suggère une fuite du dollar inhabituelle, gold à $4785 en drawdown de 10% depuis ATH indique une prise de profit après un rally massif mais le niveau reste historiquement extrême.",
+  "market_interpretation": {
+    "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+    "geopolitical_risk": "Brent à $91 avec energy seul secteur en momentum positif suggère des tensions géopolitiques persistantes (Moyen-Orient/sanctions) maintenant une prime de risque élevée sur le pétrole.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 10,
+    "sentiment_estimate": "fear",
+    "dollar_assessment": "weak"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "TIPS surpondérés pour capturer l'inflation persistante (PCE 2.8%), treasury court comme ancrage, duration limitée à 4-5y car la Fed en pause à 3.64% pourrait devoir resserrer si le Brent reste >$90.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": true,
+    "avoid_securitized": false,
+    "avoid_em_bonds": true,
+    "max_duration_stable": 4.0,
+    "max_duration_moderate": 5.0
+  },
+  "warnings": [
+    "DIVERGENCE SPX/QQQ EXTRÊME: S&P +3.2% vs Nasdaq -0.3% le même jour — rotation violente hors tech, potentiel de mean-reversion brutal ou d'accélération du sell-off tech",
+    "BRENT $91 + PCE 2.8%: si le pétrole dépasse $95, la Fed pourrait être forcée de remonter les taux malgré le ralentissement — scénario stagflationniste à surveiller",
+    "DOLLAR FAIBLE (DTWEXBGS 118, EUR/USD 1.176): inhabituel en risk-off, pourrait signaler une perte de confiance dans les actifs US ou des flux sortants — surveiller les adjudications Treasury",
+    "HY SPREADS 283bps TROP SERRÉS: ne pricent pas le risque de récession; si le VIX passe >30, les spreads HY pourraient s'écarter de 150-200bps rapidement",
+    "GOLD DRAWDOWN 10% DEPUIS ATH: correction saine après rally parabolique, mais si le dollar se renforce soudainement (flight to USD), l'or pourrait corriger encore 5-10%",
+    "CONCENTRATION SECTORIELLE: seul energy en zone favorable — si le Brent corrige (cessez-le-feu géopolitique, OPEC+), le marché n'a plus de leadership"
+  ]
+}
