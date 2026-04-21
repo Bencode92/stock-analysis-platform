@@ -1040,7 +1040,7 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
 async function fetchVolume(symbol) {
   try {
     const { data } = await axios.get('https://api.twelvedata.com/quote', { params:{ symbol, apikey:API_KEY }});
-    return Number(data?.volume) || Number(data?.average_volume) || 0;
+    return Math.max(Number(data?.average_volume) || 0, Number(data?.volume) || 0);
   } catch { return 0; }
 }
 
@@ -1131,7 +1131,9 @@ async function throttle() {
       const exch   = r['Bourse de valeurs'] || '';
       const mic    = toMIC(exch, r['Pays'] || '');
       let { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
-      let vol = quote ? (Number(quote.volume)||Number(quote.average_volume)||0) : await fetchVolume(sym);
+      let vol = quote
+        ? Math.max(Number(quote.average_volume)||0, Number(quote.volume)||0)
+        : await fetchVolume(sym);
 
       // ITALY_FALLBACK whitelist
       if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) {
