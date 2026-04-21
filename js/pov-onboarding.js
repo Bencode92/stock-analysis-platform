@@ -553,7 +553,11 @@ const POVOnboarding = (function() {
     function renderPOVBadge() {
         if (!povState.completed) return;
         const header = document.querySelector('.page-header');
-        if (!header || document.getElementById('pov-badge')) return;
+        if (!header) return;
+
+        // Si déjà présent, on le retire pour le re-créer (au cas où le POV change)
+        const existing = document.getElementById('pov-badge');
+        if (existing) existing.remove();
 
         const labels = {
             self:       { icon: '👤',   text: 'Pour moi' },
@@ -563,16 +567,44 @@ const POVOnboarding = (function() {
             pro:        { icon: '💼',   text: 'Mode Pro' }
         };
         const lbl = labels[povState.pov] || labels.self;
-        const badge = document.createElement('button');
-        badge.id = 'pov-badge';
-        badge.title = 'Cliquer pour changer le point de vue';
-        badge.style.cssText = 'margin-left:10px;padding:6px 12px;border-radius:20px;background:rgba(198,134,66,0.1);border:1px solid rgba(198,134,66,0.2);color:var(--primary-color,#C68642);font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .2s;';
-        badge.innerHTML = `<span>${lbl.icon}</span><span>${lbl.text}</span>`;
-        badge.addEventListener('mouseover', () => { badge.style.background = 'rgba(198,134,66,0.18)'; });
-        badge.addEventListener('mouseout',  () => { badge.style.background = 'rgba(198,134,66,0.1)'; });
-        badge.addEventListener('click', () => reset());
+
+        // Conteneur : badge POV + bouton "Changer"
+        const wrap = document.createElement('div');
+        wrap.id = 'pov-badge';
+        wrap.style.cssText = 'margin-left:12px;display:inline-flex;align-items:center;gap:6px;';
+
+        const badge = document.createElement('div');
+        badge.style.cssText = 'padding:6px 12px;border-radius:20px;background:rgba(198,134,66,0.12);border:1px solid rgba(198,134,66,0.25);color:var(--primary-color,#C68642);font-size:.72rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;';
+        badge.innerHTML = `<span style="font-size:.95rem;">${lbl.icon}</span><span>${lbl.text}</span>`;
+
+        const changeBtn = document.createElement('button');
+        changeBtn.id = 'pov-change-btn';
+        changeBtn.title = 'Recommencer / changer le point de vue';
+        changeBtn.style.cssText = 'padding:6px 10px;border-radius:20px;background:rgba(198,134,66,0.06);border:1px solid rgba(198,134,66,0.18);color:var(--primary-color,#C68642);font-size:.7rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;transition:all .2s;';
+        changeBtn.innerHTML = '<i class="fas fa-redo-alt" style="font-size:.65rem;"></i><span>Changer</span>';
+        changeBtn.addEventListener('mouseover', () => {
+            changeBtn.style.background = 'rgba(198,134,66,0.18)';
+            changeBtn.style.borderColor = 'var(--primary-color,#C68642)';
+            changeBtn.style.transform = 'translateY(-1px)';
+        });
+        changeBtn.addEventListener('mouseout', () => {
+            changeBtn.style.background = 'rgba(198,134,66,0.06)';
+            changeBtn.style.borderColor = 'rgba(198,134,66,0.18)';
+            changeBtn.style.transform = '';
+        });
+        changeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm('Recommencer la simulation avec un autre profil ?\n\nLes données de la famille et du patrimoine seront conservées dans le navigateur, mais l\'écran POV sera relancé.')) {
+                reset();
+            }
+        });
+
+        wrap.appendChild(badge);
+        wrap.appendChild(changeBtn);
+
         const h1 = header.querySelector('h1');
-        if (h1) h1.appendChild(badge); else header.appendChild(badge);
+        if (h1) h1.appendChild(wrap); else header.appendChild(wrap);
     }
 
     // ============================================================
