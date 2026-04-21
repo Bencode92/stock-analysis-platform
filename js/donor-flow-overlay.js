@@ -190,51 +190,62 @@ const DonorFlowOverlay = (function() {
     // DESSIN d'une courbe Bézier orientée donateur → bénéficiaire
     // ============================================================
     /**
-     * Construit un path Bézier qui CONTOURNE les nodes intermédiaires.
-     * - offsetIdx / total : permet de décaler horizontalement les flèches
-     *   qui partagent un même donateur (évite les superpositions)
-     * - Pour génération sautée : la courbe passe par l'EXTÉRIEUR (gauche ou droite)
-     *   pour ne pas traverser la rangée des parents
+     * Construit un path Bézier qui ÉVITE les nodes intermédiaires (notamment la rangée des parents).
+     * Pour la génération sautée (GP → PE), on sort PAR LE CÔTÉ :
+     *   - si le bénéficiaire est à gauche du donateur → sweep par la gauche
+     *   - si à droite → sweep par la droite
+     *   - si en-dessous strict → on sort du côté le plus proche de l'arête
      */
-    function buildPath(from, to, offsetIdx, total, category) {
-        const sameAxis = Math.abs(from.cx - to.cx) < 4;
+    function buildPath(from, to, offsetIdx, total, category, canvasW) {
         const goingRight = to.cx > from.cx;
         const goingDown = to.cy > from.cy;
 
-        // Décalage horizontal du point de départ : étale les flèches
-        // sur la largeur du donateur (si plusieurs cibles)
+        if (category === 'skip') {
+            // On part du CÔTÉ du donateur (pas du centre-bas), ce qui évite
+            // immédiatement de plonger sur la rangée des parents.
+            const sx = goingRight ? from.right - 6 : from.left + 6;
+            const sy = from.cy;
+            // On arrive par le HAUT du bénéficiaire, légèrement du côté "intérieur"
+            const ex = to.cx + (goingRight ? -6 : 6);
+            const ey = to.top - 6;
+
+            // Largeur de la déviation latérale : proportionnelle au dx ET à la largeur canvas
+            const dx = Math.abs(ex - sx);
+            const sideBase = Math.max(60, Math.min(dx * 0.45, (canvasW || 800) * 0.18));
+            const sideSign = goingRight ? 1 : -1;
+
+            // Deux control points en dehors de la rangée parents :
+            //   ctrl1 : au niveau du donateur, poussé latéralement
+            //   ctrl2 : au niveau du bénéficiaire, poussé latéralement
+            const ctrl1x = sx + sideSign * sideBase;
+            const ctrl1y = sy + 20;  // tire vers le bas pour sortir du bandeau donateur
+            const ctrl2x = ex + sideSign * sideBase * 0.75;
+            const ctrl2y = ey - 40;  // remonte depuis l'extérieur vers l'enfant
+            return `M ${sx} ${sy} C ${ctrl1x} ${ctrl1y}, ${ctrl2x} ${ctrl2y}, ${ex} ${ey}`;
+        }
+
+        // Conjoint : arc latéral doux (reste proche de la rangée)
+        if (category === 'conjoint') {
+            const sx = goingRight ? from.right : from.left;
+            const ex = goingRight ? to.left    : to.right;
+            const sy = from.cy;
+            const ey = to.cy;
+            const midY = (sy + ey) / 2;
+            const sideSign = goingRight ? 1 : -1;
+            const sideAmp = Math.max(20, Math.abs(ex - sx) * 0.15);
+            return `M ${sx} ${sy} Q ${(sx+ex)/2 + sideSign * sideAmp} ${midY}, ${ex} ${ey}`;
+        }
+
+        // Autres (frère/sœur, neveu/nièce) : courbe simple, pointillée côté CSS
         let spread = 0;
         if (total > 1) {
-            spread = (offsetIdx - (total - 1) / 2) * Math.min(20, from.w / (total + 1));
+            spread = (offsetIdx - (total - 1) / 2) * Math.min(16, from.w / (total + 1));
         }
         const sx = from.cx + spread;
         const ex = to.cx - spread * 0.5;
-
-        // Y de départ et d'arrivée : bord du node, légèrement décalé
         const startY = goingDown ? from.bottom + 2 : from.top - 2;
         const endY   = goingDown ? to.top - 6      : to.bottom + 6;
-
         const dy = Math.abs(endY - startY);
-
-        // Pour génération sautée : courbe contournante ample (par l'extérieur)
-        if (category === 'skip') {
-            // Détoure par la gauche ou la droite selon la position
-            const sideOffset = goingRight ? 60 : -60;
-            const ctrl1x = sx + sideOffset * 0.4;
-            const ctrl1y = startY + dy * 0.35;
-            const ctrl2x = ex - sideOffset * 0.4;
-            const ctrl2y = endY - dy * 0.35;
-            return `M ${sx} ${startY} C ${ctrl1x} ${ctrl1y}, ${ctrl2x} ${ctrl2y}, ${ex} ${endY}`;
-        }
-
-        // Pour conjoint : ligne légèrement courbée latérale
-        if (category === 'conjoint') {
-            const midY = (startY + endY) / 2;
-            const offX = sameAxis ? 30 : 0;
-            return `M ${sx} ${startY} Q ${(sx+ex)/2 + offX} ${midY}, ${ex} ${endY}`;
-        }
-
-        // Cas par défaut : Bézier vertical doux
         const c1y = startY + (goingDown ? dy * 0.5 : -dy * 0.5);
         const c2y = endY   - (goingDown ? dy * 0.5 : -dy * 0.5);
         return `M ${sx} ${startY} C ${sx} ${c1y}, ${ex} ${c2y}, ${ex} ${endY}`;
@@ -310,28 +321,40 @@ const DonorFlowOverlay = (function() {
                 const to   = getNodeRect(canvas, pair.to.id);
                 if (!from || !to) return;
 
-                const d = buildPath(from, to, idx, list.length, pair.category);
+                const d = buildPath(from, to, idx, list.length, pair.category, w);
                 const path = document.createElementNS(SVG_NS, 'path');
                 path.setAttribute('d', d);
                 path.setAttribute('class', 'dfo-path dfo-' + pair.category);
                 path.setAttribute('marker-end', 'url(#dfo-arrow-' + pair.category + ')');
                 svg.appendChild(path);
 
-                // Label spécial pour génération sautée : abattement gagné
-                if (pair.category === 'skip') {
-                    // Position du label : à mi-hauteur, légèrement décalé
-                    const midX = (from.cx + to.cx) / 2 + (idx - (list.length - 1) / 2) * 20;
-                    const midY = (from.bottom + to.top) / 2;
-                    const text = document.createElementNS(SVG_NS, 'text');
-                    text.setAttribute('x', midX);
-                    text.setAttribute('y', midY);
-                    text.setAttribute('text-anchor', 'middle');
-                    text.setAttribute('class', 'dfo-label');
-                    text.textContent = '+ ' + fmt(pair.abat) + ' abat.';
-                    svg.appendChild(text);
-                    skipPaths.push(pair);
-                }
+                if (pair.category === 'skip') skipPaths.push(pair);
             });
+        });
+
+        // Labels uniquement en HAUT de chaque bénéficiaire recevant une génération sautée
+        // → 1 label par PE (somme des abattements), pas 1 par flèche
+        const benAggregate = {};
+        skipPaths.forEach(p => {
+            const k = p.to.id;
+            if (!benAggregate[k]) benAggregate[k] = { ben: p.to, total: 0, count: 0 };
+            benAggregate[k].total += isFinite(p.abat) ? p.abat : 0;
+            benAggregate[k].count++;
+        });
+        Object.keys(benAggregate).forEach(bid => {
+            const agg = benAggregate[bid];
+            const rect = getNodeRect(canvas, agg.ben.id);
+            if (!rect) return;
+            const text = document.createElementNS(SVG_NS, 'text');
+            text.setAttribute('x', rect.cx);
+            text.setAttribute('y', rect.top - 8);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('class', 'dfo-label');
+            const label = agg.count > 1
+                ? '+ ' + fmt(agg.total) + ' abat. (×' + agg.count + ' GP)'
+                : '+ ' + fmt(agg.total) + ' abat.';
+            text.textContent = label;
+            svg.appendChild(text);
         });
 
         canvas.appendChild(svg);
