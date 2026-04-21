@@ -871,7 +871,7 @@ const SD = (() => {
 
 
         // === ABSOLUTE POSITIONING LAYOUT ===
-        var nodeW = 160, gapX = 36, gapY = 85;
+        var nodeW = 200, gapX = 50, gapY = 90;
         var maxCols = 0;
         for (var cl = 0; cl <= maxLvl; cl++) maxCols = Math.max(maxCols, byLvl[cl].length);
         var totalW = maxCols * (nodeW + gapX);

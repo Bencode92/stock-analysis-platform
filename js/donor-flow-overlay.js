@@ -63,41 +63,36 @@ const DonorFlowOverlay = (function() {
     function injectStyles() {
         if (document.getElementById('dfo-styles')) return;
         const css = `
-/* Élargit visuellement l'arbre pour qu'il respire dans la carte */
-#family-persons-list .ft-canvas.ft-levels {
-    zoom: 1.25;
-    margin: 0 auto;
-}
-@supports not (zoom: 1) {
-    /* Firefox fallback : transform scale */
-    #family-persons-list .ft-canvas.ft-levels {
-        transform: scale(1.25);
-        transform-origin: top center;
-        margin-bottom: 80px;  /* compensation pour le scale */
-    }
-}
-/* Badge pill "génération sautée" collé en haut-droite de chaque bénéficiaire */
+/* Pas de zoom : garde les traits SVG existants alignés.
+   Les indicateurs (badge + étoile) restent à l'INTÉRIEUR des boxes
+   pour ne pas être coupés par overflow:auto du canvas. */
+
+/* Les ft-node doivent accepter l'overflow pour nos sous-éléments flottants */
+#family-persons-list .ft-node { overflow: visible; }
+
+/* Badge pill "génération sautée" : en bas-droite de la box (sous les icônes) */
 .dfo-ben-badge {
-    position: absolute; top: -10px; right: -10px;
-    padding: 3px 8px; border-radius: 12px;
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px; border-radius: 10px;
     background: linear-gradient(135deg, rgba(255,179,0,.92), rgba(255,179,0,.78));
-    color: #1a1108; font-size: .65rem; font-weight: 800;
-    white-space: nowrap; line-height: 1.2;
-    box-shadow: 0 3px 10px rgba(255,179,0,.35);
-    z-index: 5; pointer-events: none;
+    color: #1a1108; font-size: .62rem; font-weight: 800;
+    white-space: nowrap; line-height: 1.25;
+    box-shadow: 0 3px 10px rgba(255,179,0,.25);
     border: 1px solid rgba(255,179,0,.55);
     letter-spacing: .01em;
+    pointer-events: none;
 }
 .dfo-ben-badge::before {
-    content: '✨ '; font-size: .72rem;
+    content: '✨ '; font-size: .7rem;
 }
-/* Marker discret sur les donateurs-GP (étoile coin haut-gauche) */
+/* Marker "étoile" discret : petite pastille en haut-droite INTERNE de la box */
 .dfo-donor-mark {
-    position: absolute; top: -8px; left: -8px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: rgba(255,179,0,.2); border: 1px solid rgba(255,179,0,.5);
+    position: absolute; top: 4px; right: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,179,0,.22); border: 1px solid rgba(255,179,0,.5);
     display: flex; align-items: center; justify-content: center;
-    font-size: .7rem; z-index: 5; pointer-events: none;
+    font-size: .55rem; z-index: 3; pointer-events: none;
 }
 #${BANNER_ID} {
     margin: 8px 0 14px;
