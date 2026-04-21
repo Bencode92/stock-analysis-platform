@@ -63,6 +63,11 @@ const DonorFlowOverlay = (function() {
     function injectStyles() {
         if (document.getElementById('dfo-styles')) return;
         const css = `
+/* Élargit le canvas de l'arbre pour donner de l'air aux flèches */
+#family-persons-list .ft-canvas.ft-levels {
+    min-width: min(100%, 1100px) !important;
+    padding: 36px 48px !important;
+}
 .${OVERLAY_CLASS} {
     position: absolute; left: 0; top: 0; pointer-events: none;
     z-index: 2;  /* au-dessus du .ft-svg (z=0) et des .ft-node (z=1) */
@@ -138,13 +143,16 @@ const DonorFlowOverlay = (function() {
                 if (d.id === b.id) return;
                 let lien = 'tiers';
                 try { lien = FamilyGraph.computeFiscalLien(d.id, b.id) || 'tiers'; } catch (e) {}
-                // Normaliser : computeFiscalLien renvoie p.ex. 'petit-enfant' (avec tiret)
                 const lienNorm = lien.replace(/-/g, '_');
-                let category = 'other';
-                if (lienNorm === 'enfant') category = 'direct';
-                else if (lienNorm === 'petit_enfant' || lienNorm === 'arriere_petit_enfant') category = 'skip';
+                let category = null;
+                // ⚠️ On NE DESSINE PAS les flux 'direct' (parent→enfant) :
+                // l'arbre généalogique existant montre déjà cette relation,
+                // les flèches en plus créent du bruit visuel inutile.
+                if (lienNorm === 'petit_enfant' || lienNorm === 'arriere_petit_enfant') category = 'skip';
                 else if (lienNorm.startsWith('conjoint')) category = 'conjoint';
                 else if (lienNorm === 'frere_soeur' || lienNorm === 'neveu_niece') category = 'other';
+                else if (lienNorm === 'tiers' || lienNorm === 'enfant') return; // skip
+                if (!category) return;
                 pairs.push({
                     from: d, to: b,
                     lien: lienNorm,
@@ -181,21 +189,54 @@ const DonorFlowOverlay = (function() {
     // ============================================================
     // DESSIN d'une courbe Bézier orientée donateur → bénéficiaire
     // ============================================================
-    function buildPath(from, to) {
-        // Départ : milieu bas du donateur
-        const sx = from.cx;
-        const sy = from.bottom;
-        // Arrivée : milieu haut du bénéficiaire (avec offset pour la flèche)
-        const ex = to.cx;
-        const ey = to.top - 4;
-        // Si donateur est EN-DESSOUS du bénéficiaire (cas rare), on inverse les ancres
-        const goingDown = sy < ey;
-        const startY = goingDown ? from.bottom : from.top;
-        const endY   = goingDown ? to.top - 4   : to.bottom + 4;
-        // Bézier cubique : control points décalés verticalement
+    /**
+     * Construit un path Bézier qui CONTOURNE les nodes intermédiaires.
+     * - offsetIdx / total : permet de décaler horizontalement les flèches
+     *   qui partagent un même donateur (évite les superpositions)
+     * - Pour génération sautée : la courbe passe par l'EXTÉRIEUR (gauche ou droite)
+     *   pour ne pas traverser la rangée des parents
+     */
+    function buildPath(from, to, offsetIdx, total, category) {
+        const sameAxis = Math.abs(from.cx - to.cx) < 4;
+        const goingRight = to.cx > from.cx;
+        const goingDown = to.cy > from.cy;
+
+        // Décalage horizontal du point de départ : étale les flèches
+        // sur la largeur du donateur (si plusieurs cibles)
+        let spread = 0;
+        if (total > 1) {
+            spread = (offsetIdx - (total - 1) / 2) * Math.min(20, from.w / (total + 1));
+        }
+        const sx = from.cx + spread;
+        const ex = to.cx - spread * 0.5;
+
+        // Y de départ et d'arrivée : bord du node, légèrement décalé
+        const startY = goingDown ? from.bottom + 2 : from.top - 2;
+        const endY   = goingDown ? to.top - 6      : to.bottom + 6;
+
         const dy = Math.abs(endY - startY);
-        const c1y = startY + (goingDown ? dy * 0.55 : -dy * 0.55);
-        const c2y = endY   - (goingDown ? dy * 0.55 : -dy * 0.55);
+
+        // Pour génération sautée : courbe contournante ample (par l'extérieur)
+        if (category === 'skip') {
+            // Détoure par la gauche ou la droite selon la position
+            const sideOffset = goingRight ? 60 : -60;
+            const ctrl1x = sx + sideOffset * 0.4;
+            const ctrl1y = startY + dy * 0.35;
+            const ctrl2x = ex - sideOffset * 0.4;
+            const ctrl2y = endY - dy * 0.35;
+            return `M ${sx} ${startY} C ${ctrl1x} ${ctrl1y}, ${ctrl2x} ${ctrl2y}, ${ex} ${endY}`;
+        }
+
+        // Pour conjoint : ligne légèrement courbée latérale
+        if (category === 'conjoint') {
+            const midY = (startY + endY) / 2;
+            const offX = sameAxis ? 30 : 0;
+            return `M ${sx} ${startY} Q ${(sx+ex)/2 + offX} ${midY}, ${ex} ${endY}`;
+        }
+
+        // Cas par défaut : Bézier vertical doux
+        const c1y = startY + (goingDown ? dy * 0.5 : -dy * 0.5);
+        const c2y = endY   - (goingDown ? dy * 0.5 : -dy * 0.5);
         return `M ${sx} ${startY} C ${sx} ${c1y}, ${ex} ${c2y}, ${ex} ${endY}`;
     }
 
@@ -254,31 +295,43 @@ const DonorFlowOverlay = (function() {
 
         const skipPaths = [];
 
-        pairs.forEach(pair => {
-            const from = getNodeRect(canvas, pair.from.id);
-            const to   = getNodeRect(canvas, pair.to.id);
-            if (!from || !to) return;
+        // Regroupe les paires par donateur pour permettre l'étalement horizontal
+        const byDonor = {};
+        pairs.forEach(p => {
+            const k = p.from.id;
+            if (!byDonor[k]) byDonor[k] = [];
+            byDonor[k].push(p);
+        });
 
-            const d = buildPath(from, to);
-            const path = document.createElementNS(SVG_NS, 'path');
-            path.setAttribute('d', d);
-            path.setAttribute('class', 'dfo-path dfo-' + pair.category);
-            path.setAttribute('marker-end', 'url(#dfo-arrow-' + pair.category + ')');
-            svg.appendChild(path);
+        Object.keys(byDonor).forEach(donorId => {
+            const list = byDonor[donorId];
+            list.forEach((pair, idx) => {
+                const from = getNodeRect(canvas, pair.from.id);
+                const to   = getNodeRect(canvas, pair.to.id);
+                if (!from || !to) return;
 
-            // Label spécial pour génération sautée : abattement gagné
-            if (pair.category === 'skip') {
-                const midX = (from.cx + to.cx) / 2;
-                const midY = (from.bottom + to.top) / 2;
-                const text = document.createElementNS(SVG_NS, 'text');
-                text.setAttribute('x', midX);
-                text.setAttribute('y', midY);
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('class', 'dfo-label');
-                text.textContent = '+ ' + fmt(pair.abat) + ' abat.';
-                svg.appendChild(text);
-                skipPaths.push(pair);
-            }
+                const d = buildPath(from, to, idx, list.length, pair.category);
+                const path = document.createElementNS(SVG_NS, 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'dfo-path dfo-' + pair.category);
+                path.setAttribute('marker-end', 'url(#dfo-arrow-' + pair.category + ')');
+                svg.appendChild(path);
+
+                // Label spécial pour génération sautée : abattement gagné
+                if (pair.category === 'skip') {
+                    // Position du label : à mi-hauteur, légèrement décalé
+                    const midX = (from.cx + to.cx) / 2 + (idx - (list.length - 1) / 2) * 20;
+                    const midY = (from.bottom + to.top) / 2;
+                    const text = document.createElementNS(SVG_NS, 'text');
+                    text.setAttribute('x', midX);
+                    text.setAttribute('y', midY);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('class', 'dfo-label');
+                    text.textContent = '+ ' + fmt(pair.abat) + ' abat.';
+                    svg.appendChild(text);
+                    skipPaths.push(pair);
+                }
+            });
         });
 
         canvas.appendChild(svg);
