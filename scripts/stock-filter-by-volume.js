@@ -70,6 +70,11 @@ const RATE_LIMIT_PAUSE_MS = 70000;
 // Seuils par région
 const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
 
+// ✅ v2.14: Fallback dollar-volume pour blue chips haut-prix/faible-shares
+// Ex: NVR ($7K × 22K shares = $156M/j), MKL ($1.9K × 54K = $106M/j), AZO, MELI, EQIX…
+// Ces titres échouent le seuil en shares mais sont ultra-liquides en $.
+const DOLLAR_VOL_MIN_US = 50_000_000; // $50M/jour
+
 const VOL_MIN_BY_MIC = {
   XNAS: 500_000, XNYS: 350_000, BATS: 500_000,
   XETR: 100_000, XPAR: 40_000, XLON: 120_000, XMIL: 80_000, XMAD: 80_000,
@@ -1134,6 +1139,7 @@ async function throttle() {
       let vol = quote
         ? Math.max(Number(quote.average_volume)||0, Number(quote.volume)||0)
         : await fetchVolume(sym);
+      const price = quote ? (Number(quote.close)||Number(quote.previous_close)||0) : 0;
 
       // ITALY_FALLBACK whitelist
       if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) {
@@ -1145,7 +1151,12 @@ async function throttle() {
       const source = VOL_MIN_BY_MIC[mic || ''] ? `MIC:${mic}` : `REGION:${region}`;
       stats.total++;
 
-      if (vol >= thr) {
+      // ✅ v2.14: fallback dollar-volume US pour blue chips haut-prix
+      const dollarVol = vol * price;
+      const passShares  = vol >= thr;
+      const passDollars = US_MICS.has(mic) && dollarVol >= DOLLAR_VOL_MIN_US;
+
+      if (passShares || passDollars) {
         filtered.push({
           'Ticker': ticker,
           'Stock': r['Stock']||'',
@@ -1160,7 +1171,11 @@ async function throttle() {
           'net_margin': null, 'revenue_growth_3y': null
         });
         stats.passed++;
-        console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
+        if (passShares) {
+          console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
+        } else {
+          console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()} BUT $${Math.round(dollarVol/1e6)}M/j >= $${DOLLAR_VOL_MIN_US/1e6}M ($VOL-US)`);
+        }
       } else {
         stats.failed++;
         console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()} (${source})`);

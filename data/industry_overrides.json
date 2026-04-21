@@ -1,7 +1,7 @@
 {
   "_COMMENT": "Overrides manuels sector/industry — placé dans data/industry_overrides.json",
   "_USAGE": "Appliqués avant computeQualityScores(). Supporte: sector/industry override, _name_verified, _banned, _alias",
-  "_UPDATED": "2026-02-16 — v3.31f ban K + alias HEIA→HEI.A",
+  "_UPDATED": "2026-04-21 — alias BRKB→BRK.B (Twelve Data résout vers Berkshire Argentine XBUE/ARS)",
 
   "K": {
     "_banned": true,
@@ -11,6 +11,11 @@
     "_alias": "HEI.A",
     "_region": "US",
     "_reason": "HEICO Corp Class A = HEI.A sur NYSE. HEIA résout vers Heineken NV (Euronext). Alias US uniquement — HEIA reste Heineken en Europe."
+  },
+  "BRKB": {
+    "_alias": "BRK.B",
+    "_region": "US",
+    "_reason": "Berkshire Hathaway Class B = BRK.B sur NYSE (avg_vol 4.67M). BRKB résout vers Berkshire Argentine (XBUE/ARS, vol 37K). Alias US uniquement."
   },
 
   "TEN": {
