@@ -1,91 +1,93 @@
 {
   "_market_data_flat": {
-    "date": "2026-04-23",
-    "brent_usd": 98.85,
-    "brent_usd_avg5d": 97.02000122070312,
-    "gold_usd": 4696.53587,
-    "silver_usd": 75.16643,
-    "vix": 19.71,
+    "date": "2026-04-24",
+    "brent_usd": 100.77,
+    "brent_usd_avg5d": 100.34200134277344,
+    "gold_usd": 4693.97589,
+    "silver_usd": 74.89325,
+    "vix": 19.24,
     "fed_funds_rate": 3.64,
     "fed_funds_rate_delta_6m": 0.0,
     "cpi_yoy_pct": 3.32,
     "cpi_index": 330.293,
-    "ig_spread_bps": 100.0,
-    "hy_spread_bps": 285.0,
+    "ig_spread_bps": 99.0,
+    "hy_spread_bps": 284.0,
     "us_10y_yield": 4.3,
-    "us_2y_yield": 3.78,
-    "yield_curve_2s10s": 52.0,
-    "breakeven_5y": 2.61,
-    "sp500_level": 7137.9,
-    "sp500_change_1d_pct": 1.636776568251231,
-    "hyg_change_1d_pct": 0.049714143673882986,
-    "lqd_change_1d_pct": -0.1091504456976574,
+    "us_2y_yield": 3.79,
+    "yield_curve_2s10s": 51.0,
+    "breakeven_5y": 2.58,
+    "sp500_level": 7108.4,
+    "sp500_change_1d_pct": 0.9532357753135777,
+    "hyg_change_1d_pct": 0.02489110143125107,
+    "lqd_change_1d_pct": 0.08224435712326528,
     "trade_weighted_usd": 118.0795,
-    "eurusd": 1.16959,
-    "nasdaq_change_1d_pct": 1.67305,
-    "xlu_perf_1d_pct": -0.1779796,
-    "xle_perf_1d_pct": 1.19922,
+    "eurusd": 1.16869,
+    "nasdaq_change_1d_pct": -0.56326457,
+    "xlu_perf_1d_pct": 2.71897,
+    "xle_perf_1d_pct": 0.77820768,
     "cpi_core_mom_pct": 0.2,
     "pce_yoy_pct": 2.8,
     "vix_trend": "Stable",
     "hy_spread_trend": "Stable",
-    "_stress_flags": []
+    "_stress_flags": [
+      "energy_shock"
+    ]
   },
   "macro_environment": {
     "brent": {
-      "price": 98.85,
+      "price": 100.77,
       "source": "yahoo_BZ=F",
-      "date": "2026-04-23",
-      "avg_5d": 97.02000122070312,
+      "date": "2026-04-24",
+      "avg_5d": 100.34200134277344,
       "_fred_price": 103.4,
       "_fred_date": "2026-04-20"
     },
     "gold": {
-      "price": 4696.53587,
-      "change_1d_pct": -0.91237726,
-      "datetime": "2026-04-23"
+      "price": 4693.97589,
+      "change_1d_pct": 0.0064827714,
+      "datetime": "2026-04-24"
     },
     "silver": {
-      "price": 75.16643,
-      "change_1d_pct": -3.28341
+      "price": 74.89325,
+      "change_1d_pct": -0.73074851
     },
     "trade_weighted_usd": {
       "value": 118.0795,
       "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130."
     },
     "sp500": {
-      "level": 7137.9,
-      "change_1d_pct": 1.636776568251231,
+      "level": 7108.4,
+      "change_1d_pct": 0.9532357753135777,
       "source": "yahoo_^GSPC",
-      "date": "2026-04-22 20:36"
+      "date": "2026-04-23 20:40"
     },
     "vix": {
-      "value": 19.71,
-      "date": "2026-04-23 09:01",
-      "change": 12.757437070938218,
+      "value": 19.24,
+      "date": "2026-04-24 09:05",
+      "change": 1.9607843137254766,
       "source": "yahoo_^VIX",
-      "_fred_value": 19.5,
-      "_fred_date": "2026-04-21",
+      "_fred_value": 18.92,
+      "_fred_date": "2026-04-22",
       "trend": "Stable",
-      "delta": 0.6
+      "delta": -0.6
     },
     "hyg_live": {
-      "price": 80.5,
-      "change_1d_pct": 0.049714143673882986,
-      "date": "2026-04-22 20:00",
+      "price": 80.37,
+      "change_1d_pct": 0.02489110143125107,
+      "date": "2026-04-23 20:00",
       "source": "yahoo_HYG",
       "_doc": "HYG ETF live. Baisse = spreads HY s'écartent."
     },
     "lqd_live": {
-      "price": 109.82,
-      "change_1d_pct": -0.1091504456976574,
-      "date": "2026-04-22 20:00",
+      "price": 109.52,
+      "change_1d_pct": 0.08224435712326528,
+      "date": "2026-04-23 20:00",
       "source": "yahoo_LQD",
       "_doc": "LQD ETF live. Baisse = spreads IG s'écartent."
     },
     "fed_rate": {
       "value": 3.64,
-      "date": "2026-04-21",
+      "date": "2026-04-22",
       "delta_6m": 0.0
     },
     "cpi": {
@@ -94,47 +96,47 @@
       "date": "2026-03-01"
     },
     "ig_spread": {
-      "value_pct": 1.0,
-      "value_bps": 100.0,
-      "date": "2026-04-21"
+      "value_pct": 0.99,
+      "value_bps": 99.0,
+      "date": "2026-04-22"
     },
     "hy_spread": {
-      "value_pct": 2.85,
-      "value_bps": 285.0,
-      "date": "2026-04-21",
+      "value_pct": 2.84,
+      "value_bps": 284.0,
+      "date": "2026-04-22",
       "trend": "Stable",
-      "delta_bps": -2.0
+      "delta_bps": -1.0
     },
     "us_10y_yield": {
       "value": 4.3,
-      "date": "2026-04-21"
-    },
-    "us_2y_yield": {
-      "value": 3.78,
-      "date": "2026-04-21"
-    },
-    "yield_curve_2s10s": {
-      "value_bps": 52.0
-    },
-    "breakeven_5y": {
-      "value": 2.61,
       "date": "2026-04-22"
     },
+    "us_2y_yield": {
+      "value": 3.79,
+      "date": "2026-04-22"
+    },
+    "yield_curve_2s10s": {
+      "value_bps": 51.0
+    },
+    "breakeven_5y": {
+      "value": 2.58,
+      "date": "2026-04-23"
+    },
     "eurusd": {
-      "price": 1.16959,
-      "change_1d_pct": -0.091401432
+      "price": 1.16869,
+      "change_1d_pct": 0.032525614
     },
     "nasdaq": {
-      "level": 655.10999,
-      "change_1d_pct": 1.67305
+      "level": 651.41998,
+      "change_1d_pct": -0.56326457
     },
     "xlu": {
-      "price": 44.87,
-      "change_1d_pct": -0.1779796
+      "price": 46.09,
+      "change_1d_pct": 2.71897
     },
     "xle": {
-      "price": 56.54,
-      "change_1d_pct": 1.19922
+      "price": 56.98,
+      "change_1d_pct": 0.77820768
     },
     "cpi_core": {
       "index_value": 334.165,
@@ -146,20 +148,24 @@
       "yoy_pct": 2.8,
       "date": "2026-02-01"
     },
-    "_flags": [],
-    "_updated": "2026-04-23T09:16:21.538295",
+    "_flags": [
+      "energy_shock"
+    ],
+    "_updated": "2026-04-24T09:20:28.973093",
     "_sources": [
       "twelve_data",
       "fred"
     ]
   },
   "_meta": {
-    "updated": "2026-04-23T09:16:21.538996",
+    "updated": "2026-04-24T09:20:28.973759",
     "sources": [
       "twelve_data",
       "fred"
     ],
     "fields": 30,
-    "stress_flags": []
+    "stress_flags": [
+      "energy_shock"
+    ]
   }
 }
