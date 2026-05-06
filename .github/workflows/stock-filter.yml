@@ -65,7 +65,7 @@ on:
     - cron: '0 22 * * 1-5'
 
 concurrency:
-  group: repo-writes-global
+  group: writes-stocks-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -87,10 +87,9 @@ jobs:
       should_run: ${{ steps.detect.outputs.should_run }}
       
     steps:
-      - name: 🕐 Detect market session based on local time
+      - name: 🕐 Detect market session from cron
         id: detect
         run: |
-          # Si workflow_dispatch, on passe direct
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "market=${{ inputs.market }}" >> $GITHUB_OUTPUT
             echo "session=${{ inputs.session }}" >> $GITHUB_OUTPUT
@@ -98,78 +97,29 @@ jobs:
             echo "✅ Manual trigger: market=${{ inputs.market }}, session=${{ inputs.session }}"
             exit 0
           fi
-          
-          # Récupérer les heures locales (format HHMM)
-          TOKYO=$(TZ=Asia/Tokyo date +%H%M)
-          SHANGHAI=$(TZ=Asia/Shanghai date +%H%M)
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          NY=$(TZ=America/New_York date +%H%M)
-          
-          echo "══════════════════════════════════════════════════════════════"
-          echo "📍 Current local times:"
-          echo "   🗼 Tokyo    = $TOKYO"
-          echo "   🏯 Shanghai = $SHANGHAI"
-          echo "   🗼 Paris    = $PARIS"
-          echo "   🗽 New York = $NY"
-          echo "══════════════════════════════════════════════════════════════"
-          
-          MARKET=""
-          SESSION=""
-          
-          # ══════════════════════════════════════════════════════════════════
-          # 🌏 ASIA GATES (fenêtres élargies ±20min)
-          # ══════════════════════════════════════════════════════════════════
-          if [ "$TOKYO" -ge "0840" ] && [ "$TOKYO" -le "0920" ]; then
-            MARKET="asia"; SESSION="open"
-            echo "🌏 Tokyo OPEN detected"
-          elif [ "$SHANGHAI" -ge "0910" ] && [ "$SHANGHAI" -le "0950" ]; then
-            MARKET="asia"; SESSION="open"
-            echo "🌏 Shanghai OPEN detected"
-          elif [ "$TOKYO" -ge "1440" ] && [ "$TOKYO" -le "1520" ]; then
-            MARKET="asia"; SESSION="close"
-            echo "🌏 Tokyo CLOSE detected"
-          elif [ "$SHANGHAI" -ge "1440" ] && [ "$SHANGHAI" -le "1520" ]; then
-            MARKET="asia"; SESSION="close"
-            echo "🌏 Shanghai CLOSE detected"
-            
-          # ══════════════════════════════════════════════════════════════════
-          # 🇪🇺 EUROPE GATES (fenêtres élargies ±20min)
-          # ══════════════════════════════════════════════════════════════════
-          elif [ "$PARIS" -ge "0840" ] && [ "$PARIS" -le "0920" ]; then
-            MARKET="europe"; SESSION="open"
-            echo "🇪🇺 Europe OPEN detected (Paris 09:00)"
-          elif [ "$PARIS" -ge "1715" ] && [ "$PARIS" -le "1755" ]; then
-            MARKET="europe"; SESSION="close"
-            echo "🇪🇺 Europe CLOSE detected (Paris 17:35)"
-            
-          # ══════════════════════════════════════════════════════════════════
-          # 🇺🇸 US GATES (fenêtres élargies ±20min)
-          # ══════════════════════════════════════════════════════════════════
-          elif [ "$NY" -ge "0910" ] && [ "$NY" -le "0950" ]; then
-            MARKET="us"; SESSION="open"
-            echo "🇺🇸 US OPEN detected (NYSE 09:30)"
-          elif [ "$NY" -ge "1540" ] && [ "$NY" -le "1620" ]; then
-            MARKET="us"; SESSION="close"
-            echo "🇺🇸 US CLOSE detected (NYSE 16:00)"
-            
-          # ══════════════════════════════════════════════════════════════════
-          # 🌍 GLOBAL CONSOLIDATION (23:00 Paris, fenêtre élargie ±20min)
-          # ══════════════════════════════════════════════════════════════════
-          elif [ "$PARIS" -ge "2240" ] && [ "$PARIS" -le "2320" ]; then
-            MARKET="all"; SESSION="consolidation"
-            echo "🌍 GLOBAL CONSOLIDATION detected"
-          fi
-          
-          # Output
+
+          # Trust the cron — derive market/session from the schedule that fired
+          SCHEDULE='${{ github.event.schedule }}'
+          MARKET=""; SESSION=""
+          case "$SCHEDULE" in
+            '0 0 * * 1-5')                       MARKET="asia";   SESSION="open"  ;;  # Tokyo open
+            '30 1 * * 1-5')                      MARKET="asia";   SESSION="open"  ;;  # Shanghai open
+            '0 6 * * 1-5')                       MARKET="asia";   SESSION="close" ;;  # Tokyo close
+            '0 7 * * 1-5'|'0 8 * * 1-5')         MARKET="europe"; SESSION="open"  ;;  # Europe open (été/hiver)
+            '35 15 * * 1-5'|'35 16 * * 1-5')     MARKET="europe"; SESSION="close" ;;  # Europe close
+            '30 13 * * 1-5'|'30 14 * * 1-5')     MARKET="us";     SESSION="open"  ;;  # US open
+            '0 20 * * 1-5'|'0 21 * * 1-5')       MARKET="us";     SESSION="close" ;;  # US close
+            '0 22 * * 1-5')                      MARKET="all";    SESSION="consolidation" ;;  # Conso (hiver)
+            *) MARKET=""; SESSION="" ;;
+          esac
+
           if [ -n "$MARKET" ]; then
-            echo "══════════════════════════════════════════════════════════════"
-            echo "✅ Gate PASSED: market=$MARKET, session=$SESSION"
+            echo "✅ market=$MARKET, session=$SESSION (from cron: $SCHEDULE)"
             echo "market=$MARKET" >> $GITHUB_OUTPUT
             echo "session=$SESSION" >> $GITHUB_OUTPUT
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
-            echo "══════════════════════════════════════════════════════════════"
-            echo "⏭️ Gate SKIPPED: No matching market/session for current time"
+            echo "❌ No mapping for cron: $SCHEDULE"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 

@@ -29,7 +29,7 @@ on:
     - cron: '0 0 * * 1-5'    # Lun-Ven 00:00 UTC
 
 concurrency:
-  group: repo-writes-global
+  group: writes-etf-filter-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -52,24 +52,11 @@ jobs:
         id: detect
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
             echo "✅ Manual trigger"
-            exit 0
-          fi
-          
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          echo "══════════════════════════════════════════════════════════════"
-          echo "📍 Paris time: $PARIS"
-          echo "══════════════════════════════════════════════════════════════"
-          
-          # Night heavy window: 00:40 - 01:20 Paris (fenêtre élargie ±20min)
-          if [ "$PARIS" -ge "0040" ] && [ "$PARIS" -le "0120" ]; then
-            echo "🌙 Night HEAVY window detected"
-            echo "should_run=true" >> $GITHUB_OUTPUT
           else
-            echo "⏭️ Gate skipped: PARIS=$PARIS not in heavy window (00:40-01:20)"
-            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "✅ Schedule trigger (cron: ${{ github.event.schedule }})"
           fi
+          echo "should_run=true" >> $GITHUB_OUTPUT
 
   # ═══════════════════════════════════════════════════════════════════════════
   # JOB 2: ETF HEAVY - etf-advanced-filter.js

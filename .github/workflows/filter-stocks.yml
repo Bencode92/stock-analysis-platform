@@ -29,7 +29,7 @@ on:
     - cron: '0 3 * * 1-5'
 
 concurrency:
-  group: repo-writes-global
+  group: writes-filter-stocks-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -53,26 +53,13 @@ jobs:
         id: detect
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
             echo "regions=${{ inputs.region }}" >> $GITHUB_OUTPUT
             echo "✅ Manual trigger: region=${{ inputs.region }}"
-            exit 0
-          fi
-          
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          echo "══════════════════════════════════════════════════════════════"
-          echo "📍 Paris time: $PARIS"
-          echo "══════════════════════════════════════════════════════════════"
-          
-          # Window: 03:40 - 04:20 Paris (fenêtre élargie ±20min)
-          if [ "$PARIS" -ge "0340" ] && [ "$PARIS" -le "0420" ]; then
-            echo "🌙 Volume filter window detected"
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "regions=all" >> $GITHUB_OUTPUT
           else
-            echo "⏭️ Skipped: PARIS=$PARIS not in window (03:40-04:20)"
-            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "regions=all" >> $GITHUB_OUTPUT
+            echo "✅ Schedule trigger (cron: ${{ github.event.schedule }})"
           fi
+          echo "should_run=true" >> $GITHUB_OUTPUT
 
   # ═══════════════════════════════════════════════════════════════════════════
   # JOB 2: Filter by Volume

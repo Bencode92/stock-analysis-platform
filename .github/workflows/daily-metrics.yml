@@ -27,7 +27,7 @@ on:
     - cron: '0 15 * * 1-5'
 
 concurrency:
-  group: repo-writes-global
+  group: writes-daily-metrics-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -53,44 +53,20 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             PARIS=$(TZ=Europe/Paris date +%H%M)
-            if [ "$PARIS" -lt "1200" ]; then
-              echo "session=AM" >> $GITHUB_OUTPUT
-            else
-              echo "session=PM" >> $GITHUB_OUTPUT
-            fi
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ Manual trigger"
-            exit 0
-          fi
-          
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          echo "══════════════════════════════════════════════════════════════"
-          echo "📍 Paris time: $PARIS"
-          echo "══════════════════════════════════════════════════════════════"
-          
-          SESSION=""
-          
-          # AM refresh: 09:20 - 09:55 Paris (fenêtre élargie ±20min)
-          if [ "$PARIS" -ge "0920" ] && [ "$PARIS" -le "0955" ]; then
-            SESSION="AM"
-            echo "☀️ AM REFRESH window detected"
-            
-          # PM refresh: 15:45 - 16:20 Paris (fenêtre élargie ±20min)
-          elif [ "$PARIS" -ge "1545" ] && [ "$PARIS" -le "1620" ]; then
-            SESSION="PM"
-            echo "🌅 PM REFRESH window detected"
-          fi
-          
-          if [ -n "$SESSION" ]; then
-            echo "══════════════════════════════════════════════════════════════"
-            echo "✅ Gate passed: session=$SESSION"
-            echo "session=$SESSION" >> $GITHUB_OUTPUT
-            echo "should_run=true" >> $GITHUB_OUTPUT
+            [ "$PARIS" -lt "1200" ] && SESSION="AM" || SESSION="PM"
+            echo "✅ Manual trigger: session=$SESSION"
           else
-            echo "══════════════════════════════════════════════════════════════"
-            echo "⏭️ Gate skipped: PARIS=$PARIS not in refresh window"
-            echo "should_run=false" >> $GITHUB_OUTPUT
+            # Trust the cron — derive session from the schedule that fired
+            SCHEDULE='${{ github.event.schedule }}'
+            case "$SCHEDULE" in
+              '34 7 * * 1-5'|'34 8 * * 1-5') SESSION="AM" ;;
+              '0 14 * * 1-5'|'0 15 * * 1-5') SESSION="PM" ;;
+              *) SESSION="AM" ;;
+            esac
+            echo "✅ session=$SESSION (from cron: $SCHEDULE)"
           fi
+          echo "session=$SESSION" >> $GITHUB_OUTPUT
+          echo "should_run=true" >> $GITHUB_OUTPUT
 
   # ═══════════════════════════════════════════════════════════════════════════
   # JOB 2: Daily Metrics - etf-bond-daily-metrics.js

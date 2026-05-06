@@ -35,7 +35,7 @@ on:
     - cron: '35 21 * * 1-5'
 
 concurrency:
-  group: repo-writes-global
+  group: writes-sectors-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -64,38 +64,18 @@ jobs:
             echo "✅ Manual trigger"
             exit 0
           fi
-          
-          PARIS=$(TZ=Europe/Paris date +%H%M)
-          echo "══════════════════════════════════════════════════════════════"
-          echo "📍 Paris time: $PARIS"
-          echo "══════════════════════════════════════════════════════════════"
-          
-          SESSION=""
-          
-          # Matin: 09:20 - 09:30 Paris
-          if [ "$PARIS" -ge "0920" ] && [ "$PARIS" -le "0930" ]; then
-            SESSION="morning"
-            echo "🌅 MORNING session"
-            
-          # Post-Europe: 18:05 - 18:15 Paris
-          elif [ "$PARIS" -ge "1805" ] && [ "$PARIS" -le "1815" ]; then
-            SESSION="post-europe"
-            echo "🇪🇺 POST-EUROPE session"
-            
-          # Post-US: 22:30 - 22:40 Paris
-          elif [ "$PARIS" -ge "2230" ] && [ "$PARIS" -le "2240" ]; then
-            SESSION="post-us"
-            echo "🇺🇸 POST-US session"
-          fi
-          
-          if [ -n "$SESSION" ]; then
-            echo "✅ Gate passed: session=$SESSION"
-            echo "session=$SESSION" >> $GITHUB_OUTPUT
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "⏭️ Gate skipped: PARIS=$PARIS"
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
+
+          # Trust the cron — derive session from the schedule that fired
+          SCHEDULE='${{ github.event.schedule }}'
+          case "$SCHEDULE" in
+            '25 7 * * 1-5'|'25 8 * * 1-5')   SESSION="morning"     ;;
+            '10 16 * * 1-5'|'10 17 * * 1-5') SESSION="post-europe" ;;
+            '35 20 * * 1-5'|'35 21 * * 1-5') SESSION="post-us"     ;;
+            *) SESSION="unknown" ;;
+          esac
+          echo "✅ session=$SESSION (from cron: $SCHEDULE)"
+          echo "session=$SESSION" >> $GITHUB_OUTPUT
+          echo "should_run=true" >> $GITHUB_OUTPUT
 
   # ═══════════════════════════════════════════════════════════════════════════
   # JOB 2: Update Sectors
