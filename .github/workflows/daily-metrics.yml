@@ -27,7 +27,7 @@ on:
     - cron: '0 15 * * 1-5'
 
 concurrency:
-  group: writes-daily-metrics-${{ github.ref }}
+  group: repo-writes-global
   cancel-in-progress: false
 
 permissions:

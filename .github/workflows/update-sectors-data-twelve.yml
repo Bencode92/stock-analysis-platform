@@ -35,7 +35,7 @@ on:
     - cron: '35 21 * * 1-5'
 
 concurrency:
-  group: writes-sectors-${{ github.ref }}
+  group: repo-writes-global
   cancel-in-progress: false
 
 permissions:

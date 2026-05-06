@@ -29,7 +29,7 @@ on:
     - cron: '0 3 * * 1-5'
 
 concurrency:
-  group: writes-filter-stocks-${{ github.ref }}
+  group: repo-writes-global
   cancel-in-progress: false
 
 permissions:

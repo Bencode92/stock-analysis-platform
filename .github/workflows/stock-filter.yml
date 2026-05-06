@@ -65,7 +65,7 @@ on:
     - cron: '0 22 * * 1-5'
 
 concurrency:
-  group: writes-stocks-${{ github.ref }}
+  group: repo-writes-global
   cancel-in-progress: false
 
 permissions:

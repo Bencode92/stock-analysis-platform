@@ -29,7 +29,7 @@ on:
     - cron: '0 0 * * 1-5'    # Lun-Ven 00:00 UTC
 
 concurrency:
-  group: writes-etf-filter-${{ github.ref }}
+  group: repo-writes-global
   cancel-in-progress: false
 
 permissions:
