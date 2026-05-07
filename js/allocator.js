@@ -705,42 +705,25 @@
     _renderTradesPanel(res) {
       const el = this.root.querySelector('[data-allocator-trades]');
       if (!res) { el.innerHTML = ''; return; }
-      const { trades, usedTurnover, fullTurnover, alpha, warnings } = res;
+      this._lastResult = res;
+      // Per-trade veto: keys are trade indices the user has unchecked
+      this._vetoedTrades = this._vetoedTrades || new Set();
+      // Reset veto if a fresh compute happened (different trades count)
+      if (!this._lastTradesSnap || this._lastTradesSnap !== res.trades) {
+        this._vetoedTrades = new Set();
+        this._lastTradesSnap = res.trades;
+      }
+      const { trades, fullTurnover, alpha, warnings } = res;
       if (!trades.length) {
         el.innerHTML = `<div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;color:var(--text-secondary);">Aucun trade nécessaire — portefeuille déjà aligné.</div>`;
         return;
       }
-      const totalBuy = trades.filter(t => t.side === 'BUY').reduce((s, t) => s + t.target_value, 0);
-      const totalSell = trades.filter(t => t.side === 'SELL').reduce((s, t) => s + t.target_value, 0);
-      const cashImbalance = totalSell - totalBuy;
-
-      const rows = trades.map(t => {
-        const sideColor = t.side === 'BUY' ? '#4caf50' : '#ff5252';
-        const proxyHint = t.ucits_proxy
-          ? `<span style="color:var(--text-muted);font-size:0.7rem;"> via <span style="font-family:var(--font-mono);">${t.ticker_exec}</span></span>`
-          : '';
-        const tgtCell = t.weight_target != null
-          ? `<span style="color:var(--text-muted);font-size:0.75rem;">(cible ${(t.weight_target*100).toFixed(1)}%)</span>`
-          : '';
-        return `<tr>
-          <td style="padding:6px 8px;font-weight:600;color:${sideColor};">${t.side}</td>
-          <td style="padding:6px 8px;font-family:var(--font-mono);">${t.ticker_target}${proxyHint}</td>
-          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_from*100).toFixed(1)}%</td>
-          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_to*100).toFixed(1)}% ${tgtCell}</td>
-          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;font-weight:600;color:${sideColor};">${t.target_value.toFixed(2)} €</td>
-          <td style="padding:6px 8px;font-size:0.75rem;color:var(--text-secondary);">${t.reason}</td>
-        </tr>`;
-      }).join('');
 
       const alphaPct = (alpha * 100).toFixed(0);
       const fullPct = (fullTurnover * 100).toFixed(1);
       const explainer = alpha >= 0.999
-        ? `<span style="color:#4caf50;">Rebalance complet vers la cible (turnover ${(usedTurnover*100).toFixed(1)} % suffit).</span>`
-        : `Avec un budget de ${(this.alloc.maxTurnover*100).toFixed(0)} % one-way, on parcourt <strong>${alphaPct} %</strong> du chemin vers la cible. Le rebalance complet demanderait <strong>${fullPct} %</strong> de turnover. Tous les tickers progressent au même rythme — pas de cash résiduel par construction.`;
-
-      const cashWarn = Math.abs(cashImbalance) > 1
-        ? `<div style="color:#ffb300;font-size:0.75rem;margin-top:4px;">⚠ Écart sells/buys ${cashImbalance.toFixed(2)} € (positions sous le ticket minimum ${this.alloc.minNotional} €).</div>`
-        : '';
+        ? `<span style="color:#4caf50;">Rebalance complet vers la cible (turnover ${fullPct} % suffit).</span>`
+        : `Avec un budget de ${(this.alloc.maxTurnover*100).toFixed(0)} % one-way, on parcourt <strong>${alphaPct} %</strong> du chemin vers la cible. Le rebalance complet demanderait <strong>${fullPct} %</strong> de turnover. Tous les tickers progressent au même rythme.`;
 
       const warnHtml = warnings.length
         ? `<div style="margin-top:0.6rem;color:#ffb300;font-size:0.8rem;">${warnings.join(' ')}</div>`
@@ -751,7 +734,7 @@
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.8rem;gap:1rem;">
             <div>
               <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.4rem;">
-                Plan d'arbitrage — ${trades.length} ordres
+                Plan d'arbitrage — décoche pour exclure une ligne
               </div>
               <div style="font-size:0.85rem;color:var(--text-secondary);max-width:560px;line-height:1.5;">
                 ${explainer}
@@ -761,17 +744,10 @@
               <i class="fas fa-download"></i> Export CSV
             </button>
           </div>
-
-          <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--surface-2,#0e1622);border-radius:8px;">
-            <span>Ventes : <strong style="color:#ff5252;font-family:var(--font-mono);">${totalSell.toFixed(2)} €</strong></span>
-            <span>Achats : <strong style="color:#4caf50;font-family:var(--font-mono);">${totalBuy.toFixed(2)} €</strong></span>
-            <span>Cash résiduel : <strong style="font-family:var(--font-mono);color:${Math.abs(cashImbalance) < 1 ? '#4caf50' : '#ffb300'};">${cashImbalance.toFixed(2)} €</strong></span>
-            <span>Turnover réalisé : <strong style="font-family:var(--font-mono);">${(usedTurnover*100).toFixed(1)} %</strong> one-way</span>
-          </div>
-          ${cashWarn}
-
+          <div data-trades-summary></div>
           <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
             <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;border-bottom:1px solid var(--border-subtle);">
+              <th style="padding:6px 8px;">Faire</th>
               <th style="text-align:left;padding:6px 8px;">Side</th>
               <th style="text-align:left;padding:6px 8px;">Ticker</th>
               <th style="text-align:right;padding:6px 8px;">De</th>
@@ -779,12 +755,159 @@
               <th style="text-align:right;padding:6px 8px;">Montant</th>
               <th style="text-align:left;padding:6px 8px;">Motif</th>
             </tr></thead>
-            <tbody>${rows}</tbody>
+            <tbody data-trades-body></tbody>
           </table>
           ${warnHtml}
+          <div data-final-state style="margin-top:1rem;"></div>
         </div>
       `;
-      el.querySelector('[data-allocator-export]').addEventListener('click', () => this._exportCsv(trades));
+      el.querySelector('[data-allocator-export]').addEventListener('click', () => this._exportCsv(this._activeTrades()));
+      this._renderTradesBody();
+      this._renderTradesSummary();
+      this._renderFinalState();
+    }
+
+    _activeTrades() {
+      const all = this._lastResult ? this._lastResult.trades : [];
+      return all.filter((_, i) => !this._vetoedTrades.has(i));
+    }
+
+    _renderTradesBody() {
+      const body = this.root.querySelector('[data-trades-body]');
+      if (!body || !this._lastResult) return;
+      const trades = this._lastResult.trades;
+      body.innerHTML = trades.map((t, i) => {
+        const vetoed = this._vetoedTrades.has(i);
+        const sideColor = t.side === 'BUY' ? '#4caf50' : '#ff5252';
+        const rowOpacity = vetoed ? '0.35' : '1';
+        const rowDecor = vetoed ? 'text-decoration:line-through;' : '';
+        const proxyHint = t.ucits_proxy
+          ? `<span style="color:var(--text-muted);font-size:0.7rem;"> via <span style="font-family:var(--font-mono);">${t.ticker_exec}</span></span>`
+          : '';
+        const tgtCell = t.weight_target != null
+          ? `<span style="color:var(--text-muted);font-size:0.75rem;">(cible ${(t.weight_target*100).toFixed(1)}%)</span>`
+          : '';
+        return `<tr style="opacity:${rowOpacity};${rowDecor}">
+          <td style="padding:6px 8px;text-align:center;"><input type="checkbox" data-trade-veto="${i}" ${vetoed ? '' : 'checked'}></td>
+          <td style="padding:6px 8px;font-weight:600;color:${sideColor};">${t.side}</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);">${t.ticker_target}${proxyHint}</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_from*100).toFixed(1)}%</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_to*100).toFixed(1)}% ${tgtCell}</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;font-weight:600;color:${sideColor};">${t.target_value.toFixed(2)} €</td>
+          <td style="padding:6px 8px;font-size:0.75rem;color:var(--text-secondary);">${t.reason}</td>
+        </tr>`;
+      }).join('');
+      body.querySelectorAll('[data-trade-veto]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const idx = parseInt(e.target.dataset.tradeVeto, 10);
+          if (e.target.checked) this._vetoedTrades.delete(idx);
+          else this._vetoedTrades.add(idx);
+          this._renderTradesBody();
+          this._renderTradesSummary();
+          this._renderFinalState();
+        });
+      });
+    }
+
+    _renderTradesSummary() {
+      const el = this.root.querySelector('[data-trades-summary]');
+      if (!el) return;
+      const trades = this._activeTrades();
+      const totalBuy = trades.filter(t => t.side === 'BUY').reduce((s, t) => s + t.target_value, 0);
+      const totalSell = trades.filter(t => t.side === 'SELL').reduce((s, t) => s + t.target_value, 0);
+      const cash = totalSell - totalBuy;
+      const turnover = trades.reduce((s, t) => s + Math.abs(t.delta_weight), 0) / 2;
+      const cashColor = Math.abs(cash) < 1 ? '#4caf50' : '#ffb300';
+      const totalAll = this._lastResult ? this._lastResult.trades.length : 0;
+      const vetoCount = this._vetoedTrades.size;
+      el.innerHTML = `
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--surface-2,#0e1622);border-radius:8px;">
+          <span>Ordres actifs : <strong style="font-family:var(--font-mono);">${trades.length}/${totalAll}${vetoCount ? ` (${vetoCount} vetoés)` : ''}</strong></span>
+          <span>Ventes : <strong style="color:#ff5252;font-family:var(--font-mono);">${totalSell.toFixed(2)} €</strong></span>
+          <span>Achats : <strong style="color:#4caf50;font-family:var(--font-mono);">${totalBuy.toFixed(2)} €</strong></span>
+          <span title="Différence sells - buys après les ordres actifs. >0 = cash en attente d'investissement.">Cash résiduel : <strong style="font-family:var(--font-mono);color:${cashColor};">${cash >= 0 ? '+' : ''}${cash.toFixed(2)} €</strong></span>
+          <span>Turnover : <strong style="font-family:var(--font-mono);">${(turnover*100).toFixed(1)} %</strong> one-way</span>
+        </div>
+      `;
+    }
+
+    /**
+     * Final portfolio state after applying the active (non-vetoed) trades.
+     * Shows post-rebalance % vs target % per ticker, sorted by post-rebalance
+     * weight desc.
+     */
+    _renderFinalState() {
+      const el = this.root.querySelector('[data-final-state]');
+      if (!el) return;
+      const trades = this._activeTrades();
+      const cur = this.alloc._currentWeights();
+      const tgt = this.alloc.buildAdjustedTarget();
+      // Apply trade deltas to current
+      const finalW = { ...cur };
+      let cashDelta = 0;
+      for (const t of trades) {
+        finalW[t.ticker_target] = (finalW[t.ticker_target] || 0) + t.delta_weight;
+        cashDelta += t.side === 'SELL' ? t.target_value : -t.target_value;
+      }
+      // Cash residual is held as an extra "line" in € terms (not in weights)
+      const allTickers = new Set([...Object.keys(finalW), ...Object.keys(tgt)]);
+      const rows = [...allTickers]
+        .map(t => ({
+          ticker: t,
+          cur: cur[t] || 0,
+          final: finalW[t] || 0,
+          target: tgt[t] || 0,
+          gap: (tgt[t] || 0) - (finalW[t] || 0)
+        }))
+        .filter(r => r.cur > 0.001 || r.final > 0.001 || r.target > 0.001)
+        .sort((a, b) => b.final - a.final);
+
+      const nav = this.alloc.nav;
+      const trBody = rows.map(r => {
+        const finalEur = r.final * nav;
+        const gapAbs = Math.abs(r.gap);
+        const gapColor = gapAbs < 0.005 ? '#4caf50' : (gapAbs < 0.02 ? '#8bc34a' : '#ffb300');
+        const gapTxt = r.target === 0 && r.final > 0
+          ? '<span style="color:var(--text-muted);">(hors cible)</span>'
+          : `${r.gap >= 0 ? '+' : ''}${(r.gap*100).toFixed(1)}%`;
+        const onTarget = gapAbs < 0.005 ? ' <i class="fas fa-check" style="color:#4caf50;font-size:0.7rem;"></i>' : '';
+        return `<tr>
+          <td style="padding:4px 8px;font-family:var(--font-mono);">${r.ticker}${onTarget}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:var(--text-muted);">${(r.cur*100).toFixed(1)}%</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${(r.final*100).toFixed(1)}%</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:var(--text-muted);">${r.target ? (r.target*100).toFixed(1)+'%' : '—'}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:${gapColor};">${gapTxt}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${finalEur.toFixed(2)} €</td>
+        </tr>`;
+      }).join('');
+
+      const cashRow = Math.abs(cashDelta) > 0.5 ? `<tr style="border-top:1px dashed var(--border-subtle);">
+        <td style="padding:4px 8px;font-family:var(--font-mono);color:#ffb300;">CASH</td>
+        <td style="padding:4px 8px;text-align:right;color:var(--text-muted);">—</td>
+        <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:#ffb300;">${(cashDelta/nav*100).toFixed(1)}%</td>
+        <td style="padding:4px 8px;text-align:right;color:var(--text-muted);">0%</td>
+        <td style="padding:4px 8px;text-align:right;color:#ffb300;">—</td>
+        <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:#ffb300;">${cashDelta.toFixed(2)} €</td>
+      </tr>` : '';
+
+      el.innerHTML = `
+        <div style="margin-top:1rem;background:var(--surface-2,#0e1622);border:1px solid var(--border-subtle);border-radius:10px;padding:1rem;">
+          <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.6rem;">
+            <i class="fas fa-flag-checkered" style="margin-right:4px;"></i>Portefeuille final après exécution des ordres actifs
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+            <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;">
+              <th style="text-align:left;padding:4px 8px;">Ticker</th>
+              <th style="text-align:right;padding:4px 8px;">Avant</th>
+              <th style="text-align:right;padding:4px 8px;">Après</th>
+              <th style="text-align:right;padding:4px 8px;">Cible</th>
+              <th style="text-align:right;padding:4px 8px;">Gap</th>
+              <th style="text-align:right;padding:4px 8px;">Valeur</th>
+            </tr></thead>
+            <tbody>${trBody}${cashRow}</tbody>
+          </table>
+        </div>
+      `;
     }
 
     _exportCsv(trades) {
