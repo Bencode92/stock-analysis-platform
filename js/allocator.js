@@ -1,0 +1,754 @@
+/**
+ * Allocator — current portfolio → target portfolio with turnover constraint
+ *
+ * Reads:
+ *   - data/portfolios.json (target by profile, optional `_alternates`)
+ *   - data/ticker_mapping_ucits.json (UCITS ↔ US reconciliation)
+ *   - User-uploaded Trading 212 CSV (current holdings)
+ *
+ * Produces a prioritized BUY/SELL plan capped by max_turnover.
+ *
+ * Pure vanilla JS, no deps. Ported from portfolio_engine/trade_generator.py.
+ */
+
+(function () {
+  'use strict';
+
+  const PROFILES = ['Agressif', 'Modéré', 'Stable'];
+  const BUCKETS = ['Actions', 'ETF', 'Obligations', 'Crypto'];
+  const PRIO = { EXIT: 0, TRIM: 1, BUY: 2 };
+
+  class Allocator {
+    constructor() {
+      this.portfolios = null;
+      this.ucits = null;
+      this.profile = 'Agressif';
+      this.maxTurnover = 0.15;
+      this.minTradeWeight = 0.005;
+      this.minNotional = 50;
+      this.currentPositions = [];
+      this.nav = 0;
+      this.skipped = new Set();
+      this.substitutions = {};
+      this.unmappedExits = new Set();
+      this.preserveLosses = true; // Don't propose SELL/TRIM on positions at unrealized loss
+    }
+
+    // ───────────────────────────── data loading
+
+    async load() {
+      const [p, u] = await Promise.all([
+        this._fetchJson([
+          'data/portfolios.json', './data/portfolios.json',
+          '/stock-analysis-platform/data/portfolios.json'
+        ]),
+        this._fetchJson([
+          'data/ticker_mapping_ucits.json', './data/ticker_mapping_ucits.json',
+          '/stock-analysis-platform/data/ticker_mapping_ucits.json'
+        ])
+      ]);
+      if (!p) throw new Error('portfolios.json introuvable');
+      this.portfolios = p;
+      this.ucits = u || {};
+    }
+
+    async _fetchJson(paths) {
+      const ts = Date.now();
+      for (const url of paths) {
+        try {
+          const r = await fetch(`${url}?_=${ts}`);
+          if (!r.ok) continue;
+          const t = await r.text();
+          return JSON.parse(t.replace(/\bNaN\b/g, 'null').replace(/\b-?Infinity\b/g, 'null'));
+        } catch {}
+      }
+      return null;
+    }
+
+    // ───────────────────────────── CSV parsing (Trading 212 export)
+
+    parseT212Csv(text) {
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (!lines.length) return [];
+      const rows = lines.map(l => this._splitCsvLine(l));
+      const header = rows[0].map(h => h.toLowerCase().trim());
+      // Prefer exact match, fallback to startsWith, fallback to includes
+      const idx = (name) => {
+        let i = header.findIndex(h => h === name);
+        if (i < 0) i = header.findIndex(h => h.startsWith(name));
+        if (i < 0) i = header.findIndex(h => h.includes(name));
+        return i;
+      };
+      const iSlice = idx('slice'), iName = idx('name');
+      // "Value" = current market value (NOT "Invested value")
+      const iValue = header.findIndex(h => h === 'value');
+      const iInvested = header.findIndex(h => h === 'invested value');
+      const iResult = header.findIndex(h => h === 'result');
+      const iQty = idx('owned quantity');
+      if (iSlice < 0 || iValue < 0) {
+        throw new Error('CSV invalide: colonnes "Slice" et "Value" requises');
+      }
+
+      const positions = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const ticker = (r[iSlice] || '').trim();
+        if (!ticker || /^total/i.test(ticker)) continue;
+        const value = parseFloat(r[iValue]) || 0;
+        const qty = parseFloat(r[iQty]) || 0;
+        if (value <= 0) continue;
+        const invested = iInvested >= 0 ? (parseFloat(r[iInvested]) || 0) : 0;
+        const result = iResult >= 0 ? (parseFloat(r[iResult]) || 0) : (value - invested);
+        positions.push({
+          ticker_raw: ticker,
+          name: (r[iName] || '').trim(),
+          value,
+          quantity: qty,
+          invested,
+          pnl: result,
+          at_loss: result < 0
+        });
+      }
+      return positions;
+    }
+
+    _splitCsvLine(line) {
+      const out = []; let cur = ''; let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; continue; }
+        if (c === ',' && !inQ) { out.push(cur); cur = ''; continue; }
+        cur += c;
+      }
+      out.push(cur);
+      return out;
+    }
+
+    setCurrentPositions(positions) {
+      this.currentPositions = positions;
+      this.nav = positions.reduce((s, p) => s + p.value, 0);
+      // Reconciliation: assign target_ticker (UCITS → US)
+      for (const p of positions) {
+        const map = this.ucits[p.ticker_raw];
+        if (map && map.us_equivalent) {
+          p.target_ticker = map.us_equivalent;
+          p.similarity = map.similarity;
+          p.mapping_note = map.note || null;
+        } else {
+          p.target_ticker = p.ticker_raw;
+          p.similarity = (this._targetTickers().has(p.ticker_raw)) ? 'exact' : 'unmapped';
+        }
+      }
+    }
+
+    // ───────────────────────────── target access helpers
+
+    _profileData() {
+      return (this.portfolios && this.portfolios[this.profile]) || {};
+    }
+
+    _targetWeights() {
+      const t = this._profileData()._tickers || {};
+      return t;
+    }
+
+    _targetTickers() {
+      return new Set(Object.keys(this._targetWeights()));
+    }
+
+    _tickerMeta(ticker) {
+      const m = this._profileData()._tickers_meta || {};
+      return m[ticker] || null;
+    }
+
+    _bucketOfTicker(ticker) {
+      const m = this._tickerMeta(ticker);
+      if (m && m.category) return m.category;
+      // Fallback: scan Actions/ETF/Obligations/Crypto sections for display name match
+      const pd = this._profileData();
+      for (const b of BUCKETS) {
+        const obj = pd[b] || {};
+        for (const dispName of Object.keys(obj)) {
+          if (dispName.includes(`(${ticker})`) || dispName.endsWith(ticker)) return b;
+        }
+      }
+      return 'ETF';
+    }
+
+    _alternatesForBucket(bucket) {
+      const a = this._profileData()._alternates || {};
+      return a[bucket] || [];
+    }
+
+    // ───────────────────────────── adjusted target (skip + substitute)
+
+    /**
+     * Build the effective target weights after applying:
+     *   - this.skipped: tickers marked non-investable → weight removed
+     *   - this.substitutions: ticker → replacementTicker (weight transferred)
+     *   - leftover weight from skipped (without substitution) → redistributed
+     *     pro-rata across remaining tickers of the same bucket.
+     *   - this.preserveLosses: tickers held at unrealized loss are pinned to
+     *     their current weight (no SELL/TRIM); excess vs target is taken from
+     *     the other non-frozen target tickers pro-rata.
+     */
+    buildAdjustedTarget() {
+      const orig = this._targetWeights();
+      const adj = {};
+      const removedByBucket = {}; // bucket → leftover weight to redistribute
+      for (const t of Object.keys(orig)) {
+        const w = orig[t];
+        if (this.skipped.has(t)) {
+          const sub = this.substitutions[t];
+          if (sub) {
+            adj[sub] = (adj[sub] || 0) + w;
+          } else {
+            const b = this._bucketOfTicker(t);
+            removedByBucket[b] = (removedByBucket[b] || 0) + w;
+          }
+        } else {
+          adj[t] = (adj[t] || 0) + w;
+        }
+      }
+      // Redistribute leftover weights pro-rata within the same bucket
+      for (const [bucket, leftover] of Object.entries(removedByBucket)) {
+        if (leftover <= 0) continue;
+        const peers = Object.keys(adj).filter(t => this._bucketOfTicker(t) === bucket);
+        const peerSum = peers.reduce((s, t) => s + adj[t], 0);
+        if (peerSum > 0) {
+          for (const p of peers) adj[p] += leftover * (adj[p] / peerSum);
+        } else {
+          // No peer in bucket — global pro-rata
+          const tot = Object.values(adj).reduce((s, v) => s + v, 0);
+          if (tot > 0) {
+            for (const t of Object.keys(adj)) adj[t] += leftover * (adj[t] / tot);
+          }
+        }
+      }
+      // Renormalize to safety
+      let total = Object.values(adj).reduce((s, v) => s + v, 0);
+      if (total > 0 && Math.abs(total - 1) > 1e-6) {
+        for (const t of Object.keys(adj)) adj[t] /= total;
+      }
+
+      // Loss-preservation: pin frozen tickers to their current weight when
+      // current > adjusted target, then absorb the excess pro-rata from
+      // non-frozen target tickers. Targets above current stay (BUY allowed).
+      if (this.preserveLosses) {
+        const curW = this._currentWeights();
+        const frozen = new Set(this._frozenTickers());
+        let excess = 0;
+        for (const t of frozen) {
+          const cur = curW[t] || 0;
+          const tgt = adj[t] || 0;
+          if (cur > tgt) {
+            excess += (cur - tgt);
+            adj[t] = cur;
+          }
+        }
+        if (excess > 1e-6) {
+          const peers = Object.keys(adj).filter(t => !frozen.has(t));
+          const peerSum = peers.reduce((s, t) => s + adj[t], 0);
+          if (peerSum > 0) {
+            const ratio = Math.max(0, 1 - (excess / peerSum));
+            for (const t of peers) adj[t] *= ratio;
+          }
+        }
+      }
+
+      total = Object.values(adj).reduce((s, v) => s + v, 0);
+      if (total > 0 && Math.abs(total - 1) > 1e-6) {
+        for (const t of Object.keys(adj)) adj[t] /= total;
+      }
+      return adj;
+    }
+
+    _currentWeights() {
+      const cw = {};
+      for (const p of this.currentPositions) {
+        const t = p.target_ticker || p.ticker_raw;
+        cw[t] = (cw[t] || 0) + (this.nav > 0 ? p.value / this.nav : 0);
+      }
+      return cw;
+    }
+
+    /** Tickers (US/target side) currently held at unrealized loss. */
+    _frozenTickers() {
+      if (!this.preserveLosses) return [];
+      return this.currentPositions
+        .filter(p => p.at_loss)
+        .map(p => p.target_ticker || p.ticker_raw);
+    }
+
+    // ───────────────────────────── trade computation (port from Python)
+
+    /**
+     * Compute prioritized trade list given a turnover budget.
+     * Returns { trades, usedTurnover, warnings }.
+     */
+    computeTrades() {
+      const target = this.buildAdjustedTarget();
+      const current = {};
+      for (const p of this.currentPositions) {
+        const t = p.target_ticker || p.ticker_raw;
+        current[t] = (current[t] || 0) + (this.nav > 0 ? p.value / this.nav : 0);
+      }
+
+      const allTickers = new Set([...Object.keys(current), ...Object.keys(target)]);
+      const deltas = [];
+      for (const t of allTickers) {
+        const wCur = current[t] || 0;
+        const wTgt = target[t] || 0;
+        const delta = wTgt - wCur;
+        if (Math.abs(delta) < this.minTradeWeight) continue;
+        let priority, reason;
+        if (wTgt === 0 && wCur > 0) {
+          priority = PRIO.EXIT;
+          reason = 'Sortie complète (hors cible)';
+        } else if (wCur > wTgt) {
+          priority = PRIO.TRIM;
+          reason = `Réduire de ${(wCur*100).toFixed(1)}% → ${(wTgt*100).toFixed(1)}%`;
+        } else if (wCur === 0) {
+          priority = PRIO.BUY;
+          reason = `Nouvelle position ${(wTgt*100).toFixed(1)}%`;
+        } else {
+          priority = PRIO.BUY;
+          reason = `Renforcer de ${(wCur*100).toFixed(1)}% → ${(wTgt*100).toFixed(1)}%`;
+        }
+        deltas.push({ ticker: t, wCur, wTgt, delta, priority, reason });
+      }
+
+      // Sort: priority asc (exits first), then magnitude desc
+      deltas.sort((a, b) => (a.priority - b.priority) || (Math.abs(b.delta) - Math.abs(a.delta)));
+
+      const trades = [];
+      const warnings = [];
+      let used = 0;
+      // One-way turnover convention: sum(|deltas|) / 2 = one-way %.
+      // Cap on sum(|deltas|) is therefore 2 * maxTurnover (the slider is one-way).
+      const sumDeltaCap = this.maxTurnover * 2;
+
+      for (const d of deltas) {
+        let { ticker, wCur, wTgt, delta, priority, reason } = d;
+        const need = Math.abs(delta);
+        if (used + need > sumDeltaCap) {
+          const remaining = sumDeltaCap - used;
+          if (remaining <= this.minTradeWeight) {
+            warnings.push(`Budget turnover atteint à ${(used/2*100).toFixed(1)}% (one-way), arrêt.`);
+            break;
+          }
+          delta = delta > 0 ? remaining : -remaining;
+          wTgt = wCur + delta;
+          reason += ' (clipé par limite turnover)';
+        }
+        const notional = Math.abs(delta) * this.nav;
+        if (notional < this.minNotional) continue;
+
+        // Resolve display ticker for execution: prefer UCITS ticker if user holds it
+        const ucitsTicker = this._reverseUcitsLookup(ticker);
+        const execTicker = ucitsTicker || ticker;
+
+        trades.push({
+          ticker_target: ticker,
+          ticker_exec: execTicker,
+          side: delta > 0 ? 'BUY' : 'SELL',
+          weight_from: wCur,
+          weight_to: wTgt,
+          delta_weight: delta,
+          target_value: Math.round(notional * 100) / 100,
+          priority,
+          reason,
+          ucits_proxy: ucitsTicker !== ticker && ucitsTicker !== null
+        });
+        used += Math.abs(delta);
+      }
+      // usedTurnover is one-way (sum |deltas| / 2)
+      return { trades, usedTurnover: used / 2, warnings };
+    }
+
+    _reverseUcitsLookup(usTicker) {
+      // 1. Held: a UCITS the user holds maps to this US ticker.
+      for (const p of this.currentPositions) {
+        if (p.target_ticker === usTicker && p.ticker_raw !== usTicker) {
+          return p.ticker_raw;
+        }
+      }
+      // 2. Static map: invert ucits[*].us_equivalent → first match
+      for (const [ucits, m] of Object.entries(this.ucits)) {
+        if (ucits.startsWith('_')) continue;
+        if (m && m.us_equivalent === usTicker) return ucits;
+      }
+      return null;
+    }
+
+    // ───────────────────────────── alternates suggestion
+
+    /**
+     * Suggest up to N alternates for a target ticker the user marked non-investable.
+     * Priority: same bucket from `_alternates` exposed by the optimizer; falls back
+     * to other tickers in the same bucket already in target.
+     */
+    suggestAlternates(ticker, n = 3) {
+      const bucket = this._bucketOfTicker(ticker);
+      const alts = this._alternatesForBucket(bucket);
+      const out = [];
+      if (alts.length) {
+        const meta = this._tickerMeta(ticker) || {};
+        const sourceTheme = meta.industry || meta.sector || '';
+        const ranked = [...alts].sort((a, b) => {
+          const aScore = (a.score || 0) + ((a.industry || a.sector || '') === sourceTheme ? 20 : 0);
+          const bScore = (b.score || 0) + ((b.industry || b.sector || '') === sourceTheme ? 20 : 0);
+          return bScore - aScore;
+        });
+        for (const a of ranked.slice(0, n)) {
+          out.push({
+            ticker: a.ticker,
+            name: a.name || a.ticker,
+            score: a.score,
+            source: '_alternates'
+          });
+        }
+      }
+      // Fallback: peer tickers already in current target (same bucket, not skipped)
+      if (out.length < n) {
+        const peers = Object.keys(this._targetWeights())
+          .filter(t => t !== ticker && !this.skipped.has(t) && this._bucketOfTicker(t) === bucket);
+        for (const p of peers.slice(0, n - out.length)) {
+          out.push({ ticker: p, name: p, score: null, source: 'peer' });
+        }
+      }
+      return out;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UI controller
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  class AllocatorUI {
+    constructor(rootEl) {
+      this.root = rootEl;
+      this.alloc = new Allocator();
+      this._render();
+    }
+
+    async start() {
+      try {
+        await this.alloc.load();
+        this._renderProfilePicker();
+      } catch (e) {
+        this._setStatus(`Erreur de chargement: ${e.message}`, true);
+      }
+    }
+
+    _setStatus(msg, isError = false) {
+      const s = this.root.querySelector('[data-allocator-status]');
+      if (!s) return;
+      s.textContent = msg;
+      s.style.color = isError ? '#ff5252' : 'var(--text-secondary)';
+    }
+
+    _render() {
+      this.root.innerHTML = `
+        <div class="allocator-toolbar" style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin-bottom:1.2rem;">
+          <label style="font-size:0.8rem;color:var(--text-secondary);">
+            Profil cible:
+            <select data-allocator-profile style="margin-left:6px;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:6px;padding:4px 8px;">
+              ${PROFILES.map(p => `<option value="${p}">${p}</option>`).join('')}
+            </select>
+          </label>
+          <label style="font-size:0.8rem;color:var(--text-secondary);">
+            CSV Trading 212:
+            <input type="file" data-allocator-csv accept=".csv,text/csv" style="margin-left:6px;color:var(--text-secondary);">
+          </label>
+          <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;">
+            Turnover max: <span data-allocator-turnover-label style="font-family:var(--font-mono);color:var(--text-primary);">15%</span>
+            <input type="range" data-allocator-turnover min="5" max="50" step="1" value="15" style="width:140px;">
+          </label>
+          <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;" title="Ne propose aucun SELL ni TRIM sur les positions en moins-value latente. Les BUYs (renforcement DCA) restent autorisés.">
+            <input type="checkbox" data-allocator-preserve-losses checked> Préserver MV (ne pas vendre les positions en perte)
+          </label>
+          <button data-allocator-compute style="background:var(--accent,#26c281);color:#0a1410;border:none;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer;">
+            <i class="fas fa-bolt" style="margin-right:4px;"></i>Calculer arbitrages
+          </button>
+        </div>
+        <div data-allocator-status style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.8rem;">Charge un CSV pour démarrer.</div>
+        <div data-allocator-recon></div>
+        <div data-allocator-target></div>
+        <div data-allocator-trades style="margin-top:1.5rem;"></div>
+      `;
+      this._wireEvents();
+    }
+
+    _renderProfilePicker() {
+      const sel = this.root.querySelector('[data-allocator-profile]');
+      sel.value = this.alloc.profile;
+    }
+
+    _wireEvents() {
+      this.root.querySelector('[data-allocator-profile]').addEventListener('change', (e) => {
+        this.alloc.profile = e.target.value;
+        this.alloc.skipped = new Set();
+        this.alloc.substitutions = {};
+        this._renderTargetPanel();
+        this._renderReconPanel();
+        this._renderTradesPanel(null);
+      });
+      this.root.querySelector('[data-allocator-csv]').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        try {
+          const positions = this.alloc.parseT212Csv(text);
+          this.alloc.setCurrentPositions(positions);
+          this._setStatus(`CSV chargé: ${positions.length} positions, NAV ${this.alloc.nav.toFixed(2)} €`);
+          this._renderReconPanel();
+          this._renderTargetPanel();
+        } catch (err) {
+          this._setStatus(`CSV invalide: ${err.message}`, true);
+        }
+      });
+      const slider = this.root.querySelector('[data-allocator-turnover]');
+      slider.addEventListener('input', (e) => {
+        const pct = parseInt(e.target.value, 10);
+        this.alloc.maxTurnover = pct / 100;
+        this.root.querySelector('[data-allocator-turnover-label]').textContent = `${pct}%`;
+      });
+      this.root.querySelector('[data-allocator-preserve-losses]').addEventListener('change', (e) => {
+        this.alloc.preserveLosses = e.target.checked;
+        this._renderTargetPanel();
+        this._renderReconPanel();
+      });
+      this.root.querySelector('[data-allocator-compute]').addEventListener('click', () => {
+        if (!this.alloc.currentPositions.length) {
+          this._setStatus('Charge d\'abord un CSV.', true);
+          return;
+        }
+        const res = this.alloc.computeTrades();
+        this._renderTradesPanel(res);
+      });
+    }
+
+    _renderReconPanel() {
+      const el = this.root.querySelector('[data-allocator-recon]');
+      const positions = this.alloc.currentPositions;
+      if (!positions.length) { el.innerHTML = ''; return; }
+      const targetSet = this.alloc._targetTickers();
+      const rows = positions.map(p => {
+        const inTarget = targetSet.has(p.target_ticker);
+        const badge = p.similarity === 'exact' ? '<span style="color:#4caf50;">≡ exact</span>'
+          : p.similarity === 'equivalent' ? '<span style="color:#8bc34a;">≈ équivalent</span>'
+          : p.similarity === 'proxy' ? '<span style="color:#ffb300;">≈ proxy</span>'
+          : '<span style="color:#ff5252;">✗ hors cible</span>';
+        const wPct = this.alloc.nav > 0 ? (p.value / this.alloc.nav * 100) : 0;
+        const pnl = p.pnl != null ? p.pnl : 0;
+        const pnlColor = pnl < 0 ? '#ff5252' : (pnl > 0 ? '#4caf50' : 'var(--text-muted)');
+        const lockBadge = (p.at_loss && this.alloc.preserveLosses)
+          ? ' <span title="Position verrouillée en MV — pas de vente proposée" style="color:#ffb300;">🔒</span>'
+          : '';
+        return `<tr>
+          <td style="padding:4px 8px;font-family:var(--font-mono);">${p.ticker_raw}${lockBadge}</td>
+          <td style="padding:4px 8px;color:var(--text-secondary);font-size:0.75rem;">${p.name || ''}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${wPct.toFixed(1)}%</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${p.value.toFixed(2)} €</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:${pnlColor};">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} €</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);">→ ${p.target_ticker}</td>
+          <td style="padding:4px 8px;font-size:0.75rem;">${badge}</td>
+        </tr>`;
+      }).join('');
+      el.innerHTML = `
+        <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+          <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.6rem;">
+            Réconciliation détenu ↔ cible (${positions.length} positions, NAV ${this.alloc.nav.toFixed(2)} €)
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;border-bottom:1px solid var(--border-subtle);">
+              <th style="text-align:left;padding:4px 8px;">UCITS</th>
+              <th style="text-align:left;padding:4px 8px;">Nom</th>
+              <th style="text-align:right;padding:4px 8px;">Poids</th>
+              <th style="text-align:right;padding:4px 8px;">Valeur</th>
+              <th style="text-align:right;padding:4px 8px;">P&L</th>
+              <th style="text-align:left;padding:4px 8px;">Cible</th>
+              <th style="text-align:left;padding:4px 8px;">Match</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    _renderTargetPanel() {
+      const el = this.root.querySelector('[data-allocator-target]');
+      const tw = this.alloc._targetWeights();
+      const tickers = Object.keys(tw).sort((a, b) => tw[b] - tw[a]);
+      if (!tickers.length) { el.innerHTML = ''; return; }
+      const heldUS = new Set(this.alloc.currentPositions.map(p => p.target_ticker));
+      const rows = tickers.map(t => {
+        const m = this.alloc._tickerMeta(t) || {};
+        const w = tw[t] * 100;
+        const held = heldUS.has(t);
+        const isSkipped = this.alloc.skipped.has(t);
+        const sub = this.alloc.substitutions[t];
+        const checked = isSkipped ? 'checked' : '';
+        return `<tr data-target-row="${t}">
+          <td style="padding:4px 8px;"><input type="checkbox" data-skip="${t}" ${checked}></td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);">${t}</td>
+          <td style="padding:4px 8px;color:var(--text-secondary);font-size:0.75rem;">${m.name || t}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${w.toFixed(1)}%</td>
+          <td style="padding:4px 8px;font-size:0.75rem;color:var(--text-muted);">${m.category || ''}</td>
+          <td style="padding:4px 8px;font-size:0.75rem;">${held ? '<span style="color:#4caf50;">détenu</span>' : '<span style="color:var(--text-muted);">à acheter</span>'}</td>
+          <td style="padding:4px 8px;" data-sub-cell="${t}">${isSkipped ? this._renderSubChooser(t, sub) : ''}</td>
+        </tr>`;
+      }).join('');
+      el.innerHTML = `
+        <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+          <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.6rem;">
+            Portefeuille cible ${this.alloc.profile} — coche "non investissable" pour exclure et substituer
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;border-bottom:1px solid var(--border-subtle);">
+              <th style="padding:4px 8px;">Skip</th>
+              <th style="text-align:left;padding:4px 8px;">Ticker</th>
+              <th style="text-align:left;padding:4px 8px;">Nom</th>
+              <th style="text-align:right;padding:4px 8px;">Cible</th>
+              <th style="text-align:left;padding:4px 8px;">Bucket</th>
+              <th style="text-align:left;padding:4px 8px;">Détenu</th>
+              <th style="text-align:left;padding:4px 8px;">Substitution</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+      el.querySelectorAll('[data-skip]').forEach(cb => {
+        cb.addEventListener('change', (e) => this._onSkipToggle(e.target.dataset.skip, e.target.checked));
+      });
+    }
+
+    _renderSubChooser(ticker, currentSub) {
+      const alts = this.alloc.suggestAlternates(ticker, 3);
+      if (!alts.length) {
+        return '<span style="color:var(--text-muted);font-size:0.75rem;">redistribué dans bucket</span>';
+      }
+      const opts = alts.map(a => {
+        const lbl = a.score != null ? `${a.ticker} (score ${a.score.toFixed(0)})` : `${a.ticker} (peer)`;
+        return `<option value="${a.ticker}" ${currentSub === a.ticker ? 'selected' : ''}>${lbl}</option>`;
+      }).join('');
+      return `
+        <select data-sub-for="${ticker}" style="background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:4px;padding:2px 6px;font-size:0.75rem;">
+          <option value="">— redistribuer pro-rata —</option>
+          ${opts}
+        </select>
+      `;
+    }
+
+    _onSkipToggle(ticker, checked) {
+      if (checked) {
+        this.alloc.skipped.add(ticker);
+      } else {
+        this.alloc.skipped.delete(ticker);
+        delete this.alloc.substitutions[ticker];
+      }
+      // Re-render the substitution cell for this row only
+      const cell = this.root.querySelector(`[data-sub-cell="${ticker}"]`);
+      if (cell) {
+        cell.innerHTML = checked ? this._renderSubChooser(ticker, this.alloc.substitutions[ticker]) : '';
+        const sel = cell.querySelector(`[data-sub-for="${ticker}"]`);
+        if (sel) {
+          sel.addEventListener('change', (e) => {
+            const v = e.target.value;
+            if (v) this.alloc.substitutions[ticker] = v;
+            else delete this.alloc.substitutions[ticker];
+          });
+        }
+      }
+    }
+
+    _renderTradesPanel(res) {
+      const el = this.root.querySelector('[data-allocator-trades]');
+      if (!res) { el.innerHTML = ''; return; }
+      const { trades, usedTurnover, warnings } = res;
+      if (!trades.length) {
+        el.innerHTML = `<div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;color:var(--text-secondary);">Aucun trade nécessaire — portefeuille déjà aligné sous la limite turnover.</div>`;
+        return;
+      }
+      const totalBuy = trades.filter(t => t.side === 'BUY').reduce((s, t) => s + t.target_value, 0);
+      const totalSell = trades.filter(t => t.side === 'SELL').reduce((s, t) => s + t.target_value, 0);
+      const rows = trades.map(t => {
+        const sideColor = t.side === 'BUY' ? '#4caf50' : '#ff5252';
+        const proxyHint = t.ucits_proxy ? `<span style="color:var(--text-muted);font-size:0.7rem;"> (via ${t.ticker_exec})</span>` : '';
+        return `<tr>
+          <td style="padding:4px 8px;font-weight:600;color:${sideColor};">${t.side}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);">${t.ticker_target}${proxyHint}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_from*100).toFixed(1)}%</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_to*100).toFixed(1)}%</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${t.target_value.toFixed(2)} €</td>
+          <td style="padding:4px 8px;font-size:0.75rem;color:var(--text-secondary);">${t.reason}</td>
+        </tr>`;
+      }).join('');
+      const warnHtml = warnings.length ? `<div style="margin-top:0.5rem;color:#ffb300;font-size:0.8rem;">⚠ ${warnings.join(' — ')}</div>` : '';
+      el.innerHTML = `
+        <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">
+              Plan d'arbitrage — ${trades.length} ordres, turnover ${(usedTurnover*100).toFixed(1)}%
+            </div>
+            <button data-allocator-export style="background:var(--surface-2,#1a2332);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">
+              <i class="fas fa-download"></i> Export CSV
+            </button>
+          </div>
+          <div style="display:flex;gap:1.5rem;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.6rem;">
+            <span>Achats: <strong style="color:#4caf50;font-family:var(--font-mono);">${totalBuy.toFixed(2)} €</strong></span>
+            <span>Ventes: <strong style="color:#ff5252;font-family:var(--font-mono);">${totalSell.toFixed(2)} €</strong></span>
+            <span>Net: <strong style="font-family:var(--font-mono);">${(totalSell - totalBuy).toFixed(2)} €</strong></span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;border-bottom:1px solid var(--border-subtle);">
+              <th style="text-align:left;padding:4px 8px;">Side</th>
+              <th style="text-align:left;padding:4px 8px;">Ticker</th>
+              <th style="text-align:right;padding:4px 8px;">De</th>
+              <th style="text-align:right;padding:4px 8px;">Vers</th>
+              <th style="text-align:right;padding:4px 8px;">Montant</th>
+              <th style="text-align:left;padding:4px 8px;">Motif</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${warnHtml}
+        </div>
+      `;
+      el.querySelector('[data-allocator-export]').addEventListener('click', () => this._exportCsv(trades));
+    }
+
+    _exportCsv(trades) {
+      const header = 'side,ticker_target,ticker_exec,weight_from_pct,weight_to_pct,amount_eur,reason';
+      const lines = trades.map(t => [
+        t.side,
+        t.ticker_target,
+        t.ticker_exec,
+        (t.weight_from * 100).toFixed(2),
+        (t.weight_to * 100).toFixed(2),
+        t.target_value.toFixed(2),
+        `"${t.reason.replace(/"/g, '""')}"`
+      ].join(','));
+      const csv = [header, ...lines].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trades_${this.alloc.profile}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  }
+
+  // Auto-init when a host element is present on the page
+  document.addEventListener('DOMContentLoaded', () => {
+    const root = document.getElementById('allocator-root');
+    if (!root) return;
+    const ui = new AllocatorUI(root);
+    ui.start();
+  });
+
+  // Export for tests / external use
+  window.Allocator = Allocator;
+  window.AllocatorUI = AllocatorUI;
+})();

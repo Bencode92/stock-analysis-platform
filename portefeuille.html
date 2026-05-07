@@ -283,6 +283,15 @@
             </div>
         </section>
 
+        <!-- Allocateur — current → target with turnover constraint -->
+        <section id="allocator-section" style="margin-top:3rem;">
+            <div class="section-header">
+                <h2><i class="fas fa-bullseye" style="margin-right:0.5rem;"></i>Allocateur — mon portefeuille → cible</h2>
+                <p class="section-description">Importe ton CSV (Trading 212), choisis le profil et la limite de turnover, marque les lignes non investissables, l'allocateur sort un plan d'achat/vente exécutable.</p>
+            </div>
+            <div id="allocator-root" class="colored-container" style="padding:1.5rem;border-radius:12px;"></div>
+        </section>
+
         <!-- Correlation Diagnostics Section -->
         <section id="correlation-section" style="margin-top:3rem;">
             <div class="section-header">
@@ -410,6 +419,7 @@
     <script src="ui-enhancements.js"></script>
     <script src="portfolio-loader.js"></script>
     <script src="portfolio-history.js"></script>
+    <script src="js/allocator.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Market clock

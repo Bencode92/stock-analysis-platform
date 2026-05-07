@@ -5447,14 +5447,14 @@ class PortfolioOptimizer:
         
         return allocation   
     def build_portfolio(
-        self, 
-        universe: List[Asset], 
+        self,
+        universe: List[Asset],
         profile_name: str,
         prev_weights: Optional[Dict[str, float]] = None  # P0 PARTNER
     ) -> Tuple[Dict[str, float], dict]:
         """
         Pipeline complet: déduplication + Buffett hard filter + buckets + optimisation.
-        
+
         Args:
             universe: Liste des actifs
             profile_name: Nom du profil ("Agressif", "Modéré", "Stable")
@@ -5462,14 +5462,55 @@ class PortfolioOptimizer:
         """
         profile = PROFILES[profile_name]
         candidates = self.select_candidates(universe, profile)
-        
+
         if len(candidates) < profile.min_assets:
             raise ValueError(
                 f"Univers insuffisant pour {profile_name}: "
                 f"{len(candidates)} candidats < {profile.min_assets} requis"
             )
-        
-        return self.optimize(candidates, profile, prev_weights)
+
+        allocation, diagnostics = self.optimize(candidates, profile, prev_weights)
+        diagnostics["alternates"] = self._compute_alternates(candidates, allocation)
+        return allocation, diagnostics
+
+    def _compute_alternates(
+        self,
+        candidates: List[Asset],
+        allocation: Dict[str, float],
+        top_n_per_bucket: int = 10,
+    ) -> Dict[str, List[Dict]]:
+        """
+        Build per-bucket runner-up list: candidates that survived select_candidates()
+        but were not picked (or assigned weight 0) by optimize().
+
+        Used downstream by the Allocator UI to suggest substitutes when a target
+        ticker is flagged non-investable by the user.
+        """
+        allocated_ids = {aid for aid, w in (allocation or {}).items() if w and w > 0}
+        by_cat: Dict[str, List[Asset]] = {}
+        for a in candidates:
+            if a.id in allocated_ids:
+                continue
+            by_cat.setdefault(a.category, []).append(a)
+        out: Dict[str, List[Dict]] = {}
+        for cat, assets in by_cat.items():
+            assets.sort(key=lambda x: (x.score or 0.0, x.id), reverse=True)
+            entries = []
+            for a in assets[:top_n_per_bucket]:
+                sd = getattr(a, "source_data", None) or {}
+                entries.append({
+                    "ticker": a.ticker or a.symbol or a.id,
+                    "name": a.name,
+                    "score": round(float(a.score or 0.0), 2),
+                    "category": a.category,
+                    "sector": a.sector or sd.get("sector"),
+                    "industry": sd.get("industry"),
+                    "region": a.region,
+                    "vol_annual": round(float(a.vol_annual or 0.0), 2),
+                    "exposure_family": getattr(a, "exposure_family", None),
+                })
+            out[cat] = entries
+        return out
 
     # v7.3: Yield-driven optimization configs
     YIELD_CONFIGS = {

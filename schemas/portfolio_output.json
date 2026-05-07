@@ -162,6 +162,29 @@
             "weighted_yield": { "type": "number" },
             "n_positions": { "type": "integer" }
           }
+        },
+        "_alternates": {
+          "type": "object",
+          "description": "Per-bucket runner-up candidates from select_candidates() that didn't make the final allocation. Consumed by the Allocator UI to suggest substitutes when a target ticker is flagged non-investable.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "ticker": { "type": "string" },
+                "name": { "type": "string" },
+                "score": { "type": "number" },
+                "category": { "type": "string" },
+                "sector": { "type": ["string", "null"] },
+                "industry": { "type": ["string", "null"] },
+                "region": { "type": ["string", "null"] },
+                "vol_annual": { "type": "number" },
+                "exposure_family": { "type": ["string", "null"] }
+              },
+              "required": ["ticker", "name", "score"]
+            }
+          }
         }
       }
     },

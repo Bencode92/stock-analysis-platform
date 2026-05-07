@@ -1,0 +1,142 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Mapping entre tickers UCITS (Trading 212 EU, plateformes EU/FR) et tickers US référencés dans portfolios.json. Sert à la réconciliation portefeuille détenu ↔ portefeuille cible et à la substitution lors d'une allocation.",
+    "format": "Chaque entrée est indexée par le ticker UCITS. 'us_equivalent' pointe vers le ticker US équivalent (même sous-jacent ou exposition très proche). 'similarity' indique la qualité du proxy: 'exact' (même titre/ETF), 'equivalent' (même sous-jacent/indice), 'proxy' (thème proche mais expo non identique).",
+    "extension": "Pour ajouter une équivalence, dupliquer une entrée et adapter. La table peut être étendue manuellement par l'utilisateur."
+  },
+  "VVMX": {
+    "name": "VanEck Rare Earth and Strategic Metals (Acc) UCITS",
+    "us_equivalent": "REMX",
+    "us_name": "VanEck Rare Earth/Strategic Metals ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "metals_mining_rare_earth"
+  },
+  "SGLN": {
+    "name": "iShares Physical Gold UCITS",
+    "us_equivalent": "GLD",
+    "us_name": "SPDR Gold Shares",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "gold"
+  },
+  "V0IH": {
+    "name": "VanEck Oil Services (Acc) UCITS",
+    "us_equivalent": "OIH",
+    "us_name": "VanEck Oil Services ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "energy_oil_services"
+  },
+  "HY9H": {
+    "name": "SK hynix (ADR/UCITS-listed wrapper)",
+    "us_equivalent": "000660",
+    "us_name": "SK Hynix Inc",
+    "similarity": "exact",
+    "category": "Actions",
+    "theme": "semiconductors_korea"
+  },
+  "FLXK": {
+    "name": "Franklin FTSE Korea (Acc) UCITS",
+    "us_equivalent": "FLKR",
+    "us_name": "Franklin FTSE South Korea ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "equity_korea"
+  },
+  "SEC0": {
+    "name": "iShares MSCI Global Semiconductors (Acc) UCITS",
+    "us_equivalent": "SOXX",
+    "us_name": "iShares Semiconductor ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "semiconductors"
+  },
+  "BTEC": {
+    "name": "iShares Nasdaq US Biotechnology (Acc) UCITS",
+    "us_equivalent": "XBI",
+    "us_name": "SPDR S&P Biotech ETF",
+    "similarity": "proxy",
+    "category": "ETF",
+    "theme": "biotech"
+  },
+  "IS3N": {
+    "name": "iShares Core MSCI EM IMI (Acc) UCITS",
+    "us_equivalent": "XCEM",
+    "us_name": "Columbia EM Core ex-China ETF",
+    "similarity": "proxy",
+    "category": "ETF",
+    "theme": "emerging_markets",
+    "note": "IS3N inclut la Chine, XCEM l'exclut — proxy thématique mais expo non identique."
+  },
+  "RIO": {
+    "name": "Rio Tinto (LSE)",
+    "us_equivalent": "PICK",
+    "us_name": "iShares MSCI Global Metals & Mining Producers ETF",
+    "similarity": "proxy",
+    "category": "Actions",
+    "theme": "metals_mining",
+    "note": "RIO est un single stock, PICK un ETF diversifié — proxy thématique."
+  },
+  "NVDA": {
+    "name": "Nvidia (UCITS-listed via Trading 212)",
+    "us_equivalent": "NVDA",
+    "us_name": "Nvidia Corp",
+    "similarity": "exact",
+    "category": "Actions",
+    "theme": "semiconductors"
+  },
+  "VRT": {
+    "name": "Vertiv (UCITS-listed via Trading 212)",
+    "us_equivalent": "VRT",
+    "us_name": "Vertiv Holdings Class A",
+    "similarity": "exact",
+    "category": "Actions",
+    "theme": "data_center_infrastructure"
+  },
+  "BKR": {
+    "name": "Baker Hughes (UCITS-listed via Trading 212)",
+    "us_equivalent": "BKR",
+    "us_name": "Baker Hughes",
+    "similarity": "exact",
+    "category": "Actions",
+    "theme": "energy_oil_services"
+  },
+  "AXA": {
+    "name": "AXA (Euronext Paris)",
+    "us_equivalent": null,
+    "us_name": null,
+    "similarity": "none",
+    "category": "Actions",
+    "theme": "insurance_eu",
+    "note": "Single stock EU non présent dans les portefeuilles cibles US. À considérer comme position legacy."
+  },
+  "CLOA": {
+    "name": "Invesco EUR AAA CLO (Acc) UCITS",
+    "us_equivalent": null,
+    "us_name": null,
+    "similarity": "none",
+    "category": "Obligations",
+    "theme": "clo_aaa_eur",
+    "note": "Pas d'équivalent direct dans les portefeuilles cibles. Plus proche conceptuellement: FLTR/FLOT (floating-rate IG) côté Agressif."
+  },
+  "LVWC": {
+    "name": "Amundi MSCI World 2X Leveraged (Acc) UCITS",
+    "us_equivalent": null,
+    "us_name": null,
+    "similarity": "none",
+    "category": "ETF",
+    "theme": "leveraged_world",
+    "note": "ETF à effet de levier, exclu par les politiques d'optim US (catégorie 'leveraged' filtrée). Pas de remplaçant direct."
+  },
+  "IB01": {
+    "name": "iShares USD Treasury Bond 0-1yr (Acc) UCITS",
+    "us_equivalent": "GBIL",
+    "us_name": "Goldman Sachs Access Treasury 0-1 Year ETF",
+    "similarity": "equivalent",
+    "category": "Obligations",
+    "theme": "treasury_short",
+    "note": "Présent dans cible Modéré (GBIL 9%), absent de cible Agressif."
+  }
+}

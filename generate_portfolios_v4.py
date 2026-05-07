@@ -5983,6 +5983,28 @@ def save_portfolios(portfolios: Dict, assets: list):
                 for _tk in _t:
                     _t[_tk] /= _total
 
+    # Inject _alternates (per-bucket runner-up candidates from select_candidates that
+    # didn't make the final allocation). Consumed by the Allocator UI to propose
+    # substitutes when a target ticker is flagged non-investable by the user.
+    for _p_name in ["Agressif", "Modéré", "Stable"]:
+        if _p_name not in v1_data or _p_name not in portfolios:
+            continue
+        _alts = portfolios[_p_name].get("diagnostics", {}).get("alternates")
+        if _alts:
+            # Filter out alternates whose ticker ended up in the final _tickers (post-dedup)
+            _final_tickers = set(v1_data[_p_name].get("_tickers", {}).keys())
+            _filtered = {}
+            for _bucket, _entries in _alts.items():
+                _kept = [e for e in _entries if e.get("ticker") not in _final_tickers]
+                if _kept:
+                    _filtered[_bucket] = _kept
+            if _filtered:
+                v1_data[_p_name]["_alternates"] = _filtered
+                logger.info(
+                    f"   [{_p_name}] _alternates: "
+                    + ", ".join(f"{b}={len(e)}" for b, e in _filtered.items())
+                )
+
     v1_path = CONFIG["output_path"]
     with open(v1_path, "w", encoding="utf-8") as f:
         json.dump(v1_data, f, ensure_ascii=False, indent=2)
