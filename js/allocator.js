@@ -328,17 +328,17 @@
         const ucitsTicker = this._reverseUcitsLookup(t);
         const execTicker = ucitsTicker || t;
 
+        // Reason is a label only — percentages stay in the De/Vers/cible
+        // columns so they remain consistent after the post-emit balancing pass.
         let reason;
         if (wTgt === 0 && wCur > 0) {
-          reason = alpha >= 0.999
-            ? 'Sortie complète (hors cible)'
-            : `Sortie partielle (${(wNew*100).toFixed(1)}% restant)`;
+          reason = alpha >= 0.999 ? 'Sortie complète (hors cible)' : 'Sortie partielle (hors cible)';
         } else if (wCur === 0) {
-          reason = `Nouvelle position ${(wNew*100).toFixed(1)}%`;
+          reason = 'Nouvelle position';
         } else if (delta < 0) {
-          reason = `Réduire ${(wCur*100).toFixed(1)}% → ${(wNew*100).toFixed(1)}%`;
+          reason = 'Réduction vers cible';
         } else {
-          reason = `Renforcer ${(wCur*100).toFixed(1)}% → ${(wNew*100).toFixed(1)}%`;
+          reason = 'Renforcement vers cible';
         }
 
         trades.push({
@@ -385,15 +385,9 @@
       });
 
       const warnings = [];
-      if (alpha < 1) {
-        warnings.push(
-          `Rebalance partiel : ${(alpha*100).toFixed(0)} % du chemin vers la cible. `
-          + `Le rebalance complet demanderait ${(fullTurnover*100).toFixed(1)} % de turnover one-way.`
-        );
-      }
       if (rebalanced) {
         warnings.push(
-          `Sells/buys équilibrés a posteriori (les petits trades < ${this.minNotional} € de ticket minimum sont écartés et créent un écart, recalibré pour 0 € de cash résiduel).`
+          `Sells/buys équilibrés à 0 € après filtrage des micro-trades (< ${this.minNotional} € de ticket minimum). Sous-rebalance marginal des plus gros ordres pour maintenir la neutralité cash.`
         );
       }
       return {
