@@ -283,87 +283,126 @@
     // ───────────────────────────── trade computation (port from Python)
 
     /**
-     * Compute prioritized trade list given a turnover budget.
-     * Returns { trades, usedTurnover, warnings }.
+     * Convex-combination rebalancer (cash-neutral by construction).
+     *
+     *   new_w = current_w + α · (target_w − current_w),  α ∈ [0,1]
+     *
+     *   α = min(1, budget / fullTurnover)
+     *
+     * α=1 means full rebalance to target (when budget ≥ fullTurnover).
+     * α<1 means a partial rebalance: every ticker progresses by the same
+     * fraction toward its target. Sells = Buys exactly (no cash leftover).
+     *
+     * Returns { trades, usedTurnover, fullTurnover, alpha, warnings }.
      */
     computeTrades() {
       const target = this.buildAdjustedTarget();
-      const current = {};
-      for (const p of this.currentPositions) {
-        const t = p.target_ticker || p.ticker_raw;
-        current[t] = (current[t] || 0) + (this.nav > 0 ? p.value / this.nav : 0);
-      }
-
+      const current = this._currentWeights();
       const allTickers = new Set([...Object.keys(current), ...Object.keys(target)]);
-      const deltas = [];
+
+      // Full deltas needed for a complete rebalance to target.
+      const fullDelta = {};
+      let fullDeltaSum = 0;
+      for (const t of allTickers) {
+        const d = (target[t] || 0) - (current[t] || 0);
+        fullDelta[t] = d;
+        fullDeltaSum += Math.abs(d);
+      }
+      const fullTurnover = fullDeltaSum / 2; // one-way (sells = buys)
+
+      const alpha = fullTurnover > 0
+        ? Math.min(1, this.maxTurnover / fullTurnover)
+        : 1;
+
+      const trades = [];
+      let executedSum = 0;
       for (const t of allTickers) {
         const wCur = current[t] || 0;
         const wTgt = target[t] || 0;
-        const delta = wTgt - wCur;
+        const delta = alpha * fullDelta[t];
         if (Math.abs(delta) < this.minTradeWeight) continue;
-        let priority, reason;
-        if (wTgt === 0 && wCur > 0) {
-          priority = PRIO.EXIT;
-          reason = 'Sortie complète (hors cible)';
-        } else if (wCur > wTgt) {
-          priority = PRIO.TRIM;
-          reason = `Réduire de ${(wCur*100).toFixed(1)}% → ${(wTgt*100).toFixed(1)}%`;
-        } else if (wCur === 0) {
-          priority = PRIO.BUY;
-          reason = `Nouvelle position ${(wTgt*100).toFixed(1)}%`;
-        } else {
-          priority = PRIO.BUY;
-          reason = `Renforcer de ${(wCur*100).toFixed(1)}% → ${(wTgt*100).toFixed(1)}%`;
-        }
-        deltas.push({ ticker: t, wCur, wTgt, delta, priority, reason });
-      }
-
-      // Sort: priority asc (exits first), then magnitude desc
-      deltas.sort((a, b) => (a.priority - b.priority) || (Math.abs(b.delta) - Math.abs(a.delta)));
-
-      const trades = [];
-      const warnings = [];
-      let used = 0;
-      // One-way turnover convention: sum(|deltas|) / 2 = one-way %.
-      // Cap on sum(|deltas|) is therefore 2 * maxTurnover (the slider is one-way).
-      const sumDeltaCap = this.maxTurnover * 2;
-
-      for (const d of deltas) {
-        let { ticker, wCur, wTgt, delta, priority, reason } = d;
-        const need = Math.abs(delta);
-        if (used + need > sumDeltaCap) {
-          const remaining = sumDeltaCap - used;
-          if (remaining <= this.minTradeWeight) {
-            warnings.push(`Budget turnover atteint à ${(used/2*100).toFixed(1)}% (one-way), arrêt.`);
-            break;
-          }
-          delta = delta > 0 ? remaining : -remaining;
-          wTgt = wCur + delta;
-          reason += ' (clipé par limite turnover)';
-        }
         const notional = Math.abs(delta) * this.nav;
         if (notional < this.minNotional) continue;
 
-        // Resolve display ticker for execution: prefer UCITS ticker if user holds it
-        const ucitsTicker = this._reverseUcitsLookup(ticker);
-        const execTicker = ucitsTicker || ticker;
+        const wNew = wCur + delta;
+        const ucitsTicker = this._reverseUcitsLookup(t);
+        const execTicker = ucitsTicker || t;
+
+        let reason;
+        if (wTgt === 0 && wCur > 0) {
+          reason = alpha >= 0.999
+            ? 'Sortie complète (hors cible)'
+            : `Sortie partielle (${(wNew*100).toFixed(1)}% restant)`;
+        } else if (wCur === 0) {
+          reason = `Nouvelle position ${(wNew*100).toFixed(1)}%`;
+        } else if (delta < 0) {
+          reason = `Réduire ${(wCur*100).toFixed(1)}% → ${(wNew*100).toFixed(1)}%`;
+        } else {
+          reason = `Renforcer ${(wCur*100).toFixed(1)}% → ${(wNew*100).toFixed(1)}%`;
+        }
 
         trades.push({
-          ticker_target: ticker,
+          ticker_target: t,
           ticker_exec: execTicker,
           side: delta > 0 ? 'BUY' : 'SELL',
           weight_from: wCur,
-          weight_to: wTgt,
+          weight_to: wNew,
+          weight_target: wTgt,
           delta_weight: delta,
           target_value: Math.round(notional * 100) / 100,
-          priority,
           reason,
-          ucits_proxy: ucitsTicker !== ticker && ucitsTicker !== null
+          ucits_proxy: ucitsTicker !== null && ucitsTicker !== t,
         });
-        used += Math.abs(delta);
+        executedSum += Math.abs(delta);
       }
-      // usedTurnover is one-way (sum |deltas| / 2)
-      return { trades, usedTurnover: used / 2, warnings };
+
+      // Cash-neutral post-emit balancing: minNotional pruning is asymmetric and
+      // can leave a residual sell/buy gap. Scale the larger side down so that
+      // sum(sells) = sum(buys). Slight under-rebalance, zero cash residual.
+      const sumBuy = trades.filter(t => t.side === 'BUY').reduce((s, t) => s + t.target_value, 0);
+      const sumSell = trades.filter(t => t.side === 'SELL').reduce((s, t) => s + t.target_value, 0);
+      let rebalanced = false;
+      if (sumBuy > 0 && sumSell > 0 && Math.abs(sumBuy - sumSell) > 0.5) {
+        const matchEur = Math.min(sumBuy, sumSell);
+        const scaleBuy = matchEur / sumBuy;
+        const scaleSell = matchEur / sumSell;
+        for (const t of trades) {
+          const s = t.side === 'BUY' ? scaleBuy : scaleSell;
+          if (s < 0.999) {
+            t.target_value = Math.round(t.target_value * s * 100) / 100;
+            t.delta_weight *= s;
+            t.weight_to = t.weight_from + t.delta_weight;
+            rebalanced = true;
+          }
+        }
+        executedSum = trades.reduce((s, t) => s + Math.abs(t.delta_weight), 0);
+      }
+
+      // Display order: SELLs first (largest), then BUYs (largest)
+      trades.sort((a, b) => {
+        if (a.side !== b.side) return a.side === 'SELL' ? -1 : 1;
+        return Math.abs(b.delta_weight) - Math.abs(a.delta_weight);
+      });
+
+      const warnings = [];
+      if (alpha < 1) {
+        warnings.push(
+          `Rebalance partiel : ${(alpha*100).toFixed(0)} % du chemin vers la cible. `
+          + `Le rebalance complet demanderait ${(fullTurnover*100).toFixed(1)} % de turnover one-way.`
+        );
+      }
+      if (rebalanced) {
+        warnings.push(
+          `Sells/buys équilibrés a posteriori (les petits trades < ${this.minNotional} € de ticket minimum sont écartés et créent un écart, recalibré pour 0 € de cash résiduel).`
+        );
+      }
+      return {
+        trades,
+        usedTurnover: executedSum / 2,
+        fullTurnover,
+        alpha,
+        warnings,
+      };
     }
 
     _reverseUcitsLookup(usTicker) {
@@ -666,49 +705,79 @@
     _renderTradesPanel(res) {
       const el = this.root.querySelector('[data-allocator-trades]');
       if (!res) { el.innerHTML = ''; return; }
-      const { trades, usedTurnover, warnings } = res;
+      const { trades, usedTurnover, fullTurnover, alpha, warnings } = res;
       if (!trades.length) {
-        el.innerHTML = `<div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;color:var(--text-secondary);">Aucun trade nécessaire — portefeuille déjà aligné sous la limite turnover.</div>`;
+        el.innerHTML = `<div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;color:var(--text-secondary);">Aucun trade nécessaire — portefeuille déjà aligné.</div>`;
         return;
       }
       const totalBuy = trades.filter(t => t.side === 'BUY').reduce((s, t) => s + t.target_value, 0);
       const totalSell = trades.filter(t => t.side === 'SELL').reduce((s, t) => s + t.target_value, 0);
+      const cashImbalance = totalSell - totalBuy;
+
       const rows = trades.map(t => {
         const sideColor = t.side === 'BUY' ? '#4caf50' : '#ff5252';
-        const proxyHint = t.ucits_proxy ? `<span style="color:var(--text-muted);font-size:0.7rem;"> (via ${t.ticker_exec})</span>` : '';
+        const proxyHint = t.ucits_proxy
+          ? `<span style="color:var(--text-muted);font-size:0.7rem;"> via <span style="font-family:var(--font-mono);">${t.ticker_exec}</span></span>`
+          : '';
+        const tgtCell = t.weight_target != null
+          ? `<span style="color:var(--text-muted);font-size:0.75rem;">(cible ${(t.weight_target*100).toFixed(1)}%)</span>`
+          : '';
         return `<tr>
-          <td style="padding:4px 8px;font-weight:600;color:${sideColor};">${t.side}</td>
-          <td style="padding:4px 8px;font-family:var(--font-mono);">${t.ticker_target}${proxyHint}</td>
-          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_from*100).toFixed(1)}%</td>
-          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_to*100).toFixed(1)}%</td>
-          <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${t.target_value.toFixed(2)} €</td>
-          <td style="padding:4px 8px;font-size:0.75rem;color:var(--text-secondary);">${t.reason}</td>
+          <td style="padding:6px 8px;font-weight:600;color:${sideColor};">${t.side}</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);">${t.ticker_target}${proxyHint}</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_from*100).toFixed(1)}%</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;">${(t.weight_to*100).toFixed(1)}% ${tgtCell}</td>
+          <td style="padding:6px 8px;font-family:var(--font-mono);text-align:right;font-weight:600;color:${sideColor};">${t.target_value.toFixed(2)} €</td>
+          <td style="padding:6px 8px;font-size:0.75rem;color:var(--text-secondary);">${t.reason}</td>
         </tr>`;
       }).join('');
-      const warnHtml = warnings.length ? `<div style="margin-top:0.5rem;color:#ffb300;font-size:0.8rem;">⚠ ${warnings.join(' — ')}</div>` : '';
+
+      const alphaPct = (alpha * 100).toFixed(0);
+      const fullPct = (fullTurnover * 100).toFixed(1);
+      const explainer = alpha >= 0.999
+        ? `<span style="color:#4caf50;">Rebalance complet vers la cible (turnover ${(usedTurnover*100).toFixed(1)} % suffit).</span>`
+        : `Avec un budget de ${(this.alloc.maxTurnover*100).toFixed(0)} % one-way, on parcourt <strong>${alphaPct} %</strong> du chemin vers la cible. Le rebalance complet demanderait <strong>${fullPct} %</strong> de turnover. Tous les tickers progressent au même rythme — pas de cash résiduel par construction.`;
+
+      const cashWarn = Math.abs(cashImbalance) > 1
+        ? `<div style="color:#ffb300;font-size:0.75rem;margin-top:4px;">⚠ Écart sells/buys ${cashImbalance.toFixed(2)} € (positions sous le ticket minimum ${this.alloc.minNotional} €).</div>`
+        : '';
+
+      const warnHtml = warnings.length
+        ? `<div style="margin-top:0.6rem;color:#ffb300;font-size:0.8rem;">${warnings.join(' ')}</div>`
+        : '';
+
       el.innerHTML = `
-        <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1rem;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
-            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">
-              Plan d'arbitrage — ${trades.length} ordres, turnover ${(usedTurnover*100).toFixed(1)}%
+        <div style="background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;padding:1.2rem;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.8rem;gap:1rem;">
+            <div>
+              <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.4rem;">
+                Plan d'arbitrage — ${trades.length} ordres
+              </div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);max-width:560px;line-height:1.5;">
+                ${explainer}
+              </div>
             </div>
-            <button data-allocator-export style="background:var(--surface-2,#1a2332);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">
+            <button data-allocator-export style="background:var(--surface-2,#1a2332);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:6px;padding:6px 12px;font-size:0.75rem;cursor:pointer;white-space:nowrap;">
               <i class="fas fa-download"></i> Export CSV
             </button>
           </div>
-          <div style="display:flex;gap:1.5rem;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.6rem;">
-            <span>Achats: <strong style="color:#4caf50;font-family:var(--font-mono);">${totalBuy.toFixed(2)} €</strong></span>
-            <span>Ventes: <strong style="color:#ff5252;font-family:var(--font-mono);">${totalSell.toFixed(2)} €</strong></span>
-            <span>Net: <strong style="font-family:var(--font-mono);">${(totalSell - totalBuy).toFixed(2)} €</strong></span>
+
+          <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--surface-2,#0e1622);border-radius:8px;">
+            <span>Ventes : <strong style="color:#ff5252;font-family:var(--font-mono);">${totalSell.toFixed(2)} €</strong></span>
+            <span>Achats : <strong style="color:#4caf50;font-family:var(--font-mono);">${totalBuy.toFixed(2)} €</strong></span>
+            <span>Cash résiduel : <strong style="font-family:var(--font-mono);color:${Math.abs(cashImbalance) < 1 ? '#4caf50' : '#ffb300'};">${cashImbalance.toFixed(2)} €</strong></span>
+            <span>Turnover réalisé : <strong style="font-family:var(--font-mono);">${(usedTurnover*100).toFixed(1)} %</strong> one-way</span>
           </div>
+          ${cashWarn}
+
           <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
             <thead><tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase;border-bottom:1px solid var(--border-subtle);">
-              <th style="text-align:left;padding:4px 8px;">Side</th>
-              <th style="text-align:left;padding:4px 8px;">Ticker</th>
-              <th style="text-align:right;padding:4px 8px;">De</th>
-              <th style="text-align:right;padding:4px 8px;">Vers</th>
-              <th style="text-align:right;padding:4px 8px;">Montant</th>
-              <th style="text-align:left;padding:4px 8px;">Motif</th>
+              <th style="text-align:left;padding:6px 8px;">Side</th>
+              <th style="text-align:left;padding:6px 8px;">Ticker</th>
+              <th style="text-align:right;padding:6px 8px;">De</th>
+              <th style="text-align:right;padding:6px 8px;">Vers (cible)</th>
+              <th style="text-align:right;padding:6px 8px;">Montant</th>
+              <th style="text-align:left;padding:6px 8px;">Motif</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
