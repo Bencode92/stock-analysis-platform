@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-05-10-09-18-33",
-    "git_sha": "436bec472",
-    "git_sha_full": "436bec472e62fe7e276c3c56d6345a764fba7616",
+    "run_id": "2026-05-11-10-50-30",
+    "git_sha": "a3d6c77d7",
+    "git_sha_full": "a3d6c77d79cbe9a7d2641d7cb63623fadf4f431f",
     "config_hash": "e70cbbfb",
-    "universe_asof": "2026-05-10",
-    "timestamp_utc": "2026-05-10T09:18:33.503431+00:00",
+    "universe_asof": "2026-05-11",
+    "timestamp_utc": "2026-05-11T10:50:30.327879+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 427.93
+    "total_duration_sec": 462.37
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,18 +22,18 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3246,
-      "after": 3246,
+      "before": 3244,
+      "after": 3244,
       "rejected": 0,
-      "equity": 1070,
+      "equity": 1068,
       "etf": 1406,
       "crypto": 337,
       "bond": 433
     },
     "hard_filters_equity": {
       "name": "hard_filters",
-      "before": 1070,
-      "after": 1035,
+      "before": 1068,
+      "after": 1033,
       "rejected": 35,
       "category": "equity",
       "reason_counts": {
@@ -51,43 +51,43 @@
       "top_k": [
         {
           "ticker": "2059",
-          "score": 0.8363
-        },
-        {
-          "ticker": "NVDA",
-          "score": 0.8227
+          "score": 0.831
         },
         {
           "ticker": "000660",
-          "score": 0.8203
+          "score": 0.8251
+        },
+        {
+          "ticker": "NVDA",
+          "score": 0.8217
         },
         {
           "ticker": "FIX",
-          "score": 0.8054
+          "score": 0.8046
         },
         {
           "ticker": "2345",
-          "score": 0.7886
+          "score": 0.7946
         },
         {
           "ticker": "GOOGL",
-          "score": 0.7857
+          "score": 0.7856
         },
         {
           "ticker": "FRES",
-          "score": 0.7569
+          "score": 0.7574
         },
         {
           "ticker": "CDE",
-          "score": 0.7559
+          "score": 0.7555
         },
         {
           "ticker": "EME",
-          "score": 0.754
+          "score": 0.7534
         },
         {
-          "ticker": "VRT",
-          "score": 0.7473
+          "ticker": "3653",
+          "score": 0.7492
         }
       ]
     },
@@ -231,43 +231,43 @@
       "top_k": [
         {
           "ticker": "BMED",
-          "score": 0.7971
+          "score": 0.7983
         },
         {
           "ticker": "VICI",
-          "score": 0.7506
+          "score": 0.7498
         },
         {
           "ticker": "ITX",
-          "score": 0.7103
+          "score": 0.7107
         },
         {
           "ticker": "LI",
-          "score": 0.6948
+          "score": 0.6947
         },
         {
           "ticker": "5274",
-          "score": 0.679
+          "score": 0.6791
         },
         {
           "ticker": "ML",
-          "score": 0.6783
+          "score": 0.6785
         },
         {
           "ticker": "CF",
-          "score": 0.6616
+          "score": 0.6604
         },
         {
           "ticker": "EXPD",
-          "score": 0.6585
+          "score": 0.6576
         },
         {
           "ticker": "BZU",
-          "score": 0.6574
+          "score": 0.6565
         },
         {
           "ticker": "RIO",
-          "score": 0.6548
+          "score": 0.6532
         }
       ]
     },
@@ -399,51 +399,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 160,
-      "after": 160,
+      "before": 159,
+      "after": 159,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "VICI",
-          "score": 0.7758
+          "score": 0.7724
         },
         {
           "ticker": "5274",
-          "score": 0.7249
+          "score": 0.7256
         },
         {
           "ticker": "LI",
-          "score": 0.7232
+          "score": 0.7226
         },
         {
-          "ticker": "BMED",
-          "score": 0.7098
+          "ticker": "CS",
+          "score": 0.7087
         },
         {
           "ticker": "SCHP",
-          "score": 0.7089
+          "score": 0.7081
         },
         {
           "ticker": "SCHN",
-          "score": 0.6948
+          "score": 0.6938
         },
         {
           "ticker": "ITX",
-          "score": 0.6761
+          "score": 0.6742
         },
         {
           "ticker": "SNA",
-          "score": 0.6756
+          "score": 0.6734
         },
         {
           "ticker": "IBE",
-          "score": 0.6486
+          "score": 0.6491
         },
         {
           "ticker": "GD",
-          "score": 0.6437
+          "score": 0.6428
         }
       ]
     },
@@ -543,7 +543,7 @@
   "top10_by_preset": {
     "equity": {
       "agressif": {
-        "count": 32,
+        "count": 31,
         "criteria": {
           "vol_min": 35
         },
@@ -592,10 +592,23 @@
             "roe": 27.1,
             "div_yield": 0.12,
             "payout": 10.0,
-            "perf_ytd": -1.1,
-            "perf_1y": -22.2,
+            "perf_ytd": -2.4,
+            "perf_1y": -21.6,
             "mcap": "1.5T",
             "sector": "Biens de consommatio"
+          },
+          {
+            "ticker": "3529",
+            "name": "EMEMORY TECHNOLOGY INC",
+            "buffett": 67.0,
+            "vol": 37.1,
+            "roe": 51.5,
+            "div_yield": 1.31,
+            "payout": 0.0,
+            "perf_ytd": -9.2,
+            "perf_1y": 16.0,
+            "mcap": "19.7B",
+            "sector": "Technologie de l'inf"
           },
           {
             "ticker": "PNFP",
@@ -615,10 +628,10 @@
             "name": "YUM CHINA HOLDINGS INC",
             "buffett": 60.0,
             "vol": 37.6,
-            "div_yield": 2.12,
+            "div_yield": 2.13,
             "payout": 38.0,
-            "perf_ytd": 0.7,
-            "perf_1y": 2.7,
+            "perf_ytd": 0.4,
+            "perf_1y": 2.0,
             "mcap": "134.5B",
             "sector": "Biens de consommatio"
           },
@@ -626,11 +639,11 @@
             "ticker": "2020",
             "name": "ANTA SPORTS PRODUCTS LTD",
             "buffett": 60.0,
-            "vol": 36.8,
-            "div_yield": 3.27,
+            "vol": 36.7,
+            "div_yield": 3.25,
             "payout": 49.0,
-            "perf_ytd": -3.0,
-            "perf_1y": -14.4,
+            "perf_ytd": -2.2,
+            "perf_1y": -14.6,
             "mcap": "235.1B",
             "sector": "Biens de consommatio"
           },
@@ -638,11 +651,11 @@
             "ticker": "9901",
             "name": "NEW ORIENTAL EDUCATION & TECHN",
             "buffett": 60.0,
-            "vol": 50.4,
-            "div_yield": 1.07,
+            "vol": 50.5,
+            "div_yield": 1.13,
             "payout": 22.0,
-            "perf_ytd": 3.1,
-            "perf_1y": 15.7,
+            "perf_ytd": -2.1,
+            "perf_1y": 7.7,
             "mcap": "65.9B",
             "sector": "Biens de consommatio"
           },
@@ -652,11 +665,11 @@
             "buffett": 60.0,
             "vol": 43.5,
             "roe": 6.9,
-            "div_yield": 3.4,
+            "div_yield": 3.49,
             "payout": 32.0,
-            "perf_ytd": 0.5,
-            "perf_1y": 8.0,
-            "mcap": "19.4T",
+            "perf_ytd": -2.2,
+            "perf_1y": 5.9,
+            "mcap": "18.9T",
             "sector": "Industries"
           },
           {
@@ -747,14 +760,26 @@
             "sector": "Biens de consommatio"
           },
           {
+            "ticker": "9988",
+            "name": "ALIBABA GROUP HOLDING LTD",
+            "buffett": 50.0,
+            "vol": 43.1,
+            "div_yield": 1.45,
+            "payout": 20.0,
+            "perf_ytd": -6.1,
+            "perf_1y": 14.0,
+            "mcap": "2.9T",
+            "sector": "Biens de consommatio"
+          },
+          {
             "ticker": "2382",
             "name": "SUNNY OPTICAL TECHNOLOGY LTD",
             "buffett": 50.0,
             "vol": 51.4,
-            "div_yield": 0.79,
+            "div_yield": 0.82,
             "payout": 12.0,
-            "perf_ytd": 3.1,
-            "perf_1y": 3.1,
+            "perf_ytd": -0.5,
+            "perf_1y": -0.5,
             "mcap": "69.2B",
             "sector": "Technologie de l'inf"
           },
@@ -762,43 +787,18 @@
             "ticker": "0300",
             "name": "MIDEA GROUP LTD CLASS H",
             "buffett": 50.0,
-            "vol": 41.2,
-            "div_yield": 0.64,
+            "vol": 41.1,
+            "div_yield": 0.63,
             "payout": 69.0,
-            "perf_ytd": 0.9,
-            "perf_1y": 15.4,
+            "perf_ytd": 2.5,
+            "perf_1y": 17.8,
             "mcap": "680.3B",
-            "sector": "Biens de consommatio"
-          },
-          {
-            "ticker": "DIXON",
-            "name": "DIXON TECHNOLOGIES (INDIA) LTD",
-            "buffett": 50.0,
-            "vol": 38.4,
-            "roe": 47.5,
-            "div_yield": 0.07,
-            "payout": 3.0,
-            "perf_ytd": -8.6,
-            "perf_1y": -31.2,
-            "mcap": "670.5B",
-            "sector": "Biens de consommatio"
-          },
-          {
-            "ticker": "9863",
-            "name": "ZHEJIANG LEAPMOTOR TECHNOLOGY ",
-            "buffett": 50.0,
-            "vol": 60.5,
-            "div_yield": 0.0,
-            "payout": 0.0,
-            "perf_ytd": -1.8,
-            "perf_1y": -12.7,
-            "mcap": "75.4B",
             "sector": "Biens de consommatio"
           }
         ]
       },
       "croissance": {
-        "count": 26,
+        "count": 28,
         "criteria": {
           "vol_min": 20,
           "perf_1y_min": 10
@@ -816,32 +816,6 @@
             "perf_1y": 16.0,
             "mcap": "22.4B",
             "sector": "Biens de consommatio"
-          },
-          {
-            "ticker": "3008",
-            "name": "LARGAN PRECISION LTD",
-            "buffett": 83.0,
-            "vol": 35.0,
-            "roe": 11.5,
-            "div_yield": 3.11,
-            "payout": 54.0,
-            "perf_ytd": 3.0,
-            "perf_1y": 15.5,
-            "mcap": "335.5B",
-            "sector": "Technologie de l'inf"
-          },
-          {
-            "ticker": "OBEROIRLTY",
-            "name": "OBEROI REALTY LTD",
-            "buffett": 83.0,
-            "vol": 31.9,
-            "roe": 15.1,
-            "div_yield": 0.35,
-            "payout": 13.0,
-            "perf_ytd": 1.4,
-            "perf_1y": 8.7,
-            "mcap": "609.0B",
-            "sector": "Immobilier"
           },
           {
             "ticker": "EQT",
@@ -894,6 +868,32 @@
             "perf_1y": 62.3,
             "mcap": "13.7B",
             "sector": "Santé"
+          },
+          {
+            "ticker": "3008",
+            "name": "LARGAN PRECISION LTD",
+            "buffett": 67.0,
+            "vol": 35.0,
+            "roe": 11.5,
+            "div_yield": 3.14,
+            "payout": 54.0,
+            "perf_ytd": 2.0,
+            "perf_1y": 15.2,
+            "mcap": "332.9B",
+            "sector": "Technologie de l'inf"
+          },
+          {
+            "ticker": "APLAPOLLO",
+            "name": "APL APOLLO TUBES LTD",
+            "buffett": 67.0,
+            "vol": 30.2,
+            "roe": 19.4,
+            "div_yield": 0.3,
+            "payout": 13.0,
+            "perf_ytd": 1.8,
+            "perf_1y": 17.2,
+            "mcap": "541.0B",
+            "sector": "Matériaux"
           },
           {
             "ticker": "HPQ",
@@ -974,17 +974,17 @@
             "sector": "Finance"
           },
           {
-            "ticker": "TITAN",
-            "name": "TITAN COMPANY LTD",
+            "ticker": "DIVISLAB",
+            "name": "DIVIS LABORATORIES LTD",
             "buffett": 50.0,
-            "vol": 21.4,
-            "roe": 31.8,
-            "div_yield": 0.26,
-            "payout": 20.0,
-            "perf_ytd": 5.6,
-            "perf_1y": 28.1,
-            "mcap": "3.8T",
-            "sector": "Biens de consommatio"
+            "vol": 24.6,
+            "roe": 15.3,
+            "div_yield": 0.45,
+            "payout": 32.0,
+            "perf_ytd": 5.0,
+            "perf_1y": 13.0,
+            "mcap": "1.8T",
+            "sector": "Santé"
           },
           {
             "ticker": "DMART",
@@ -994,8 +994,8 @@
             "roe": 13.5,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 16.4,
-            "perf_1y": 9.5,
+            "perf_ytd": 16.0,
+            "perf_1y": 7.9,
             "mcap": "2.9T",
             "sector": "Biens de consommatio"
           },
@@ -1007,9 +1007,9 @@
             "roe": 14.9,
             "div_yield": 0.24,
             "payout": 20.0,
-            "perf_ytd": 13.6,
-            "perf_1y": 18.5,
-            "mcap": "421.5B",
+            "perf_ytd": 13.4,
+            "perf_1y": 17.1,
+            "mcap": "421.7B",
             "sector": "Industries"
           },
           {
@@ -1052,21 +1052,22 @@
             "sector": "Industries"
           },
           {
-            "ticker": "SDLF",
-            "name": "STANDARD LIFE PLC",
-            "buffett": 25.0,
-            "vol": 30.2,
-            "roe": -22.3,
-            "div_yield": 7.28,
-            "payout": 51.0,
-            "perf_ytd": 0.7,
-            "mcap": "7.6B",
-            "sector": "Finance"
+            "ticker": "TATACONSUM",
+            "name": "TATA CONSUMER PRODUCTS LTD",
+            "buffett": 33.0,
+            "vol": 23.1,
+            "roe": 6.6,
+            "div_yield": 0.65,
+            "payout": 53.0,
+            "perf_ytd": 6.7,
+            "perf_1y": 9.5,
+            "mcap": "1.2T",
+            "sector": "Biens de consommatio"
           }
         ]
       },
       "defensif": {
-        "count": 44,
+        "count": 45,
         "criteria": {
           "vol_max": 28,
           "roe_min": 10,
@@ -1246,13 +1247,13 @@
             "ticker": "ICICIBANK",
             "name": "ICICI BANK LTD",
             "buffett": 83.0,
-            "vol": 18.5,
+            "vol": 18.4,
             "roe": 16.4,
             "div_yield": 0.87,
             "payout": 15.0,
-            "perf_ytd": -6.0,
-            "perf_1y": -12.8,
-            "mcap": "9.2T",
+            "perf_ytd": -5.6,
+            "perf_1y": -11.4,
+            "mcap": "9.1T",
             "sector": "Finance"
           },
           {
@@ -1261,10 +1262,10 @@
             "buffett": 83.0,
             "vol": 21.5,
             "roe": 18.5,
-            "div_yield": 0.12,
+            "div_yield": 0.13,
             "payout": 12.0,
-            "perf_ytd": 1.9,
-            "perf_1y": 8.4,
+            "perf_ytd": 0.5,
+            "perf_1y": 5.9,
             "mcap": "1.1T",
             "sector": "Santé"
           },
@@ -1335,30 +1336,8 @@
           }
         ]
       },
-      "low_volatility": {
-        "count": 1,
-        "criteria": {
-          "vol_max": 22,
-          "buffett_min": 55
-        },
-        "top_10": [
-          {
-            "ticker": "HDFCBANK",
-            "name": "HDFC BANK LTD",
-            "buffett": 60.0,
-            "vol": 19.8,
-            "roe": 8.3,
-            "div_yield": 0.87,
-            "payout": 22.0,
-            "perf_ytd": -21.4,
-            "perf_1y": -20.4,
-            "mcap": "12.3T",
-            "sector": "Finance"
-          }
-        ]
-      },
       "momentum_trend": {
-        "count": 334,
+        "count": 329,
         "criteria": {
           "vol_min": 25,
           "perf_ytd_min": 5
@@ -1409,11 +1388,11 @@
             "buffett": 100.0,
             "vol": 32.8,
             "roe": 28.1,
-            "div_yield": 4.31,
+            "div_yield": 4.37,
             "payout": 91.0,
-            "perf_ytd": 21.1,
-            "perf_1y": 12.8,
-            "mcap": "305.2B",
+            "perf_ytd": 19.4,
+            "perf_1y": 11.4,
+            "mcap": "301.1B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -1607,7 +1586,7 @@
             "div_yield": 2.31,
             "payout": 16.0,
             "perf_ytd": 39.0,
-            "perf_1y": 118.1,
+            "perf_1y": 122.5,
             "mcap": "18.8T",
             "sector": "Industries"
           },
@@ -1662,50 +1641,50 @@
             "buffett": 83.0,
             "vol": 54.7,
             "roe": 48.0,
-            "div_yield": 1.42,
+            "div_yield": 1.39,
             "payout": 28.0,
-            "perf_ytd": 15.9,
-            "perf_1y": 173.0,
-            "mcap": "962.7B",
+            "perf_ytd": 19.1,
+            "perf_1y": 181.1,
+            "mcap": "992.4B",
             "sector": "Technologie de l'inf"
           },
           {
             "ticker": "000660",
             "name": "SK HYNIX INC",
             "buffett": 80.0,
-            "vol": 52.8,
+            "vol": 53.2,
             "roe": 44.1,
-            "div_yield": 0.08,
+            "div_yield": 0.07,
             "payout": 4.0,
-            "perf_ytd": 159.0,
-            "perf_1y": 831.5,
-            "mcap": "1194.9T",
+            "perf_ytd": 188.8,
+            "perf_1y": 954.4,
+            "mcap": "1334.5T",
             "sector": "Technologie de l'inf"
           },
           {
             "ticker": "402340",
             "name": "SK SQUARE LTD",
             "buffett": 80.0,
-            "vol": 59.4,
+            "vol": 59.6,
             "roe": 37.1,
             "div_yield": 0.14,
             "payout": 0.0,
-            "perf_ytd": 198.4,
-            "perf_1y": 1184.2,
-            "mcap": "144.7T",
+            "perf_ytd": 222.6,
+            "perf_1y": 1318.2,
+            "mcap": "156.5T",
             "sector": "Industries"
           },
           {
             "ticker": "267260",
             "name": "HD HYUNDAI ELECTRIC LTD",
             "buffett": 80.0,
-            "vol": 61.7,
+            "vol": 61.8,
             "roe": 41.3,
             "div_yield": 0.08,
             "payout": 30.0,
-            "perf_ytd": 81.3,
-            "perf_1y": 371.6,
-            "mcap": "50.5T",
+            "perf_ytd": 76.0,
+            "perf_1y": 364.9,
+            "mcap": "49.0T",
             "sector": "Industries"
           },
           {
@@ -1714,17 +1693,17 @@
             "buffett": 80.0,
             "vol": 64.0,
             "roe": 75.3,
-            "div_yield": 0.59,
+            "div_yield": 0.58,
             "payout": 46.0,
-            "perf_ytd": 87.9,
-            "perf_1y": 510.4,
-            "mcap": "16.2T",
+            "perf_ytd": 89.6,
+            "perf_1y": 485.6,
+            "mcap": "16.4T",
             "sector": "Biens de consommatio"
           }
         ]
       },
       "quality_premium": {
-        "count": 201,
+        "count": 199,
         "criteria": {
           "vol_max": 35,
           "roe_min": 15,
@@ -1991,7 +1970,7 @@
         ]
       },
       "recovery": {
-        "count": 83,
+        "count": 87,
         "criteria": {
           "vol_min": 35,
           "perf_ytd_max": -10
@@ -2252,9 +2231,9 @@
             "roe": 6.5,
             "div_yield": 0.37,
             "payout": 9.0,
-            "perf_ytd": -11.3,
-            "perf_1y": 11.5,
-            "mcap": "32.1T",
+            "perf_ytd": -12.8,
+            "perf_1y": 10.4,
+            "mcap": "31.6T",
             "sector": "La communication"
           }
         ]
@@ -2549,19 +2528,6 @@
             "sector": "Santé"
           },
           {
-            "ticker": "MPHASIS",
-            "name": "MPHASIS LTD",
-            "buffett": 100.0,
-            "vol": 30.5,
-            "roe": 18.5,
-            "div_yield": 2.58,
-            "payout": 60.0,
-            "perf_ytd": -20.7,
-            "perf_1y": -7.9,
-            "mcap": "418.5B",
-            "sector": "Technologie de l'inf"
-          },
-          {
             "ticker": "INTU",
             "name": "INTUIT INC",
             "buffett": 83.0,
@@ -2664,6 +2630,19 @@
             "perf_1y": -18.6,
             "mcap": "14.0B",
             "sector": "Finance"
+          },
+          {
+            "ticker": "MPHASIS",
+            "name": "MPHASIS LTD",
+            "buffett": 83.0,
+            "vol": 30.5,
+            "roe": 18.5,
+            "div_yield": 2.59,
+            "payout": 60.0,
+            "perf_ytd": -21.2,
+            "perf_1y": -7.3,
+            "mcap": "422.5B",
+            "sector": "Technologie de l'inf"
           },
           {
             "ticker": "BAC",
@@ -3408,7 +3387,32 @@
   },
   "drift_vs_previous": {
     "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "drift_pct": 0.62,
+    "details": {
+      "1_initial.after": {
+        "current": 3244,
+        "previous": 3246,
+        "delta": -2,
+        "pct_change": 0.06
+      },
+      "1_initial.equity": {
+        "current": 1068,
+        "previous": 1070,
+        "delta": -2,
+        "pct_change": 0.19
+      },
+      "hard_filters_equity.after": {
+        "current": 1033,
+        "previous": 1035,
+        "delta": -2,
+        "pct_change": 0.19
+      },
+      "5_selection_equity_Stable.after": {
+        "current": 159,
+        "previous": 160,
+        "delta": -1,
+        "pct_change": 0.62
+      }
+    }
   }
 }
