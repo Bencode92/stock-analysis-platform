@@ -1029,6 +1029,100 @@ PROFILE_POLICY: Dict[str, Dict] = {
 }
 
 
+# ═══════════════════════════════════════════════════════════════════
+# DIVIDENDE — Profil rendement personnel (PEA + CTO complémentaire)
+# ═══════════════════════════════════════════════════════════════════
+# Deux sous-enveloppes fiscales :
+#   - Dividende-PEA : actions EU/EEE éligibles PEA > 5 ans (UK exclu post-Brexit)
+#   - Dividende-CTO : actions US/UK/CH non-éligibles PEA, compte-titres ordinaire
+# Logique commune : 100% actions, faible turnover, yield × qualité, anti value-trap.
+
+PEA_ELIGIBLE_COUNTRIES = {
+    "France", "Allemagne", "Belgique", "Italie", "Espagne", "Portugal",
+    "Pays-Bas", "Luxembourg", "Autriche", "Suède", "Finlande", "Danemark",
+    "Irlande", "Grèce", "Pologne", "République Tchèque", "Slovaquie",
+    "Slovénie", "Hongrie", "Roumanie", "Bulgarie", "Estonie", "Lettonie",
+    "Lituanie", "Croatie", "Chypre", "Malte",
+    # EEE
+    "Norvège", "Islande", "Liechtenstein",
+}
+
+CTO_ELIGIBLE_COUNTRIES = {
+    "Etats-Unis", "Royaume-Uni", "Suisse",
+    "Canada", "Australie", "Japon",
+}
+
+
+def _make_dividende_policy(envelope_label: str, fiscal_notes: str,
+                            target_holdings: int, max_per_sector: int,
+                            country_filter_mode: str) -> Dict:
+    """Construit une PROFILE_POLICY pour une sous-enveloppe Dividende (PEA ou CTO)."""
+    return {
+        "allowed_equity_presets": {
+            "rendement", "value_dividend", "quality_premium",
+            "defensif", "low_volatility",
+        },
+        "min_buffett_score": 55,
+        "min_quality_gate": 60,
+        "hard_filters": {
+            "dividend_yield_min": 2.5,
+            "payout_ratio_max": 85.0,
+            "roe_min": 8.0,
+            "fcf_yield_min": 0.5,
+            "quality_score_min": 50,
+            "quality_coverage_min": 65,
+            "volatility_3y_max": 35.0,
+            "dividend_coverage_min": 1.0,
+        },
+        "equity_min_weight": 1.0,           # 100% equity, pas de bonds/crypto
+        "equity_max_weight": 1.0,
+        "min_equity_positions": max(10, target_holdings - 2),
+        "score_weights": {
+            # Income-tilted (35%) — dominant
+            "dividend_yield":         0.25,
+            "dividend_growth_3y":     0.10,
+            # Quality (35%) — anti value-trap
+            "quality_safety_sub":     0.20,   # bilan solide + payout sain
+            "quality_quality_sub":    0.10,   # ROE+ROIC+marge
+            "quality_value_sub":      0.05,   # ne pas surpayer
+            # Risk pénalité (20%)
+            "volatility_3y":         -0.10,
+            "max_drawdown_3y":       -0.10,
+            # Momentum filet (5%)
+            "perf_1y":                0.05,
+        },
+        "description": f"Profil rendement dividende+qualité — enveloppe {envelope_label}",
+        "expected_vol_range": (8, 13),
+        # === Métadonnées sous-enveloppe (utilisées par generate_portfolios_v4.py) ===
+        "_envelope": envelope_label,
+        "_envelope_fiscal_notes": fiscal_notes,
+        "_country_filter_mode": country_filter_mode,
+        "_target_holdings": target_holdings,
+        "_max_per_sector": max_per_sector,
+    }
+
+
+PROFILE_POLICY["Dividende-PEA"] = _make_dividende_policy(
+    envelope_label="PEA > 5 ans",
+    fiscal_notes=("0% IR sur dividendes et plus-values intra-PEA après 5 ans. "
+                  "17.2% prélèvements sociaux à la sortie. Plafond versements 150 000€. "
+                  "Univers EU/EEE strict (UK exclu depuis Brexit post-2021)."),
+    target_holdings=16,
+    max_per_sector=3,
+    country_filter_mode="pea",
+)
+
+PROFILE_POLICY["Dividende-CTO"] = _make_dividende_policy(
+    envelope_label="CTO (US/UK/CH)",
+    fiscal_notes=("Compte-titres ordinaire en personne physique. "
+                  "PFU 30% sur dividendes et plus-values (12.8% IR + 17.2% PS). "
+                  "Complète la diversif géo non couverte par le PEA."),
+    target_holdings=10,
+    max_per_sector=2,
+    country_filter_mode="cto",
+)
+
+
 # ============ UTILITY FUNCTIONS ============
 
 def safe_float(value, default: float = 0.0) -> float:

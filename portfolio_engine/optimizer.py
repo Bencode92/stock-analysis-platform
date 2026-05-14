@@ -973,10 +973,10 @@ PROFILES = {
         max_single_position=10.0,  # FIX v2.4.0-O: 13→10% (SYY/EQNR ne dominent plus)
     ),
     "Stable": ProfileConstraints(
-        name="Stable", 
+        name="Stable",
         vol_target=6.0,
         vol_tolerance=3.0,
-        crypto_max=0.0, 
+        crypto_max=0.0,
         bonds_min=35.0,            # v3.1.2: 40→35% (3 ETFs need ~21%, actions ~34%, bonds ~35%)
         bonds_max=65.0,            # FIX v2.4.0-M: 60→65% (marge pour 5 bonds)
         max_turnover=15.0,
@@ -985,6 +985,45 @@ PROFILES = {
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
         max_single_position=13.0,     # FIX v2.4.0-M: 10→13% (10% forçait equal-weight)
+    ),
+    # ═══ DIVIDENDE — Profils rendement perso (PEA + CTO complémentaire) ═══
+    # 100% actions, faible turnover, scoring tilt yield × qualité (cf. PROFILE_POLICY).
+    # Sous-enveloppes fiscales distinctes : PEA = EU/EEE éligibles, CTO = US/UK/CH.
+    "Dividende-PEA": ProfileConstraints(
+        name="Dividende-PEA",
+        vol_target=11.0,
+        vol_tolerance=4.0,
+        crypto_max=0.0,
+        bonds_min=0.0,
+        bonds_max=0.0,
+        max_single_position=8.0,
+        max_sector=25.0,
+        min_assets=15,
+        max_assets=18,
+        max_turnover=12.0,             # FORT anti-rotation
+        turnover_penalty=0.30,         # pénalité élevée
+        score_scale=4.0,
+        bucket_penalty_lambda=2.0,
+        max_any_category=70.0,
+        euus_mode=True,                # univers EU principalement
+    ),
+    "Dividende-CTO": ProfileConstraints(
+        name="Dividende-CTO",
+        vol_target=11.0,
+        vol_tolerance=4.0,
+        crypto_max=0.0,
+        bonds_min=0.0,
+        bonds_max=0.0,
+        max_single_position=10.0,      # univers plus restreint, on tolère un peu plus
+        max_sector=35.0,
+        min_assets=8,
+        max_assets=12,
+        max_turnover=12.0,
+        turnover_penalty=0.30,
+        score_scale=4.0,
+        bucket_penalty_lambda=2.0,
+        max_any_category=70.0,
+        euus_mode=True,
     ),
 }
 

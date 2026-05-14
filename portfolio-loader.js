@@ -122,6 +122,8 @@ class PortfolioManagerV3 {
 
   getProfileConfig(type) {
     const n = this.normalizeType(type);
+    if (n.includes('dividende-pea') || n.includes('dividende pea')) return { color: '#be50ff', bg: 'rgba(190,80,255,0.08)', icon: 'fa-piggy-bank', label: 'Dividende PEA', risk: 'Modéré', horizon: '10+ ans' };
+    if (n.includes('dividende-cto') || n.includes('dividende cto')) return { color: '#ffb43c', bg: 'rgba(255,180,60,0.08)', icon: 'fa-coins', label: 'Dividende CTO', risk: 'Modéré', horizon: '10+ ans' };
     if (n.includes('agressif')) return { color: '#FF7B00', bg: 'rgba(255,123,0,0.08)', icon: 'fa-rocket', label: 'Agressif', risk: 'Élevé', horizon: '5+ ans' };
     if (n.includes('stable')) return { color: '#00B2FF', bg: 'rgba(0,178,255,0.08)', icon: 'fa-shield-alt', label: 'Stable', risk: 'Faible', horizon: '1-3 ans' };
     return { color: '#00FF87', bg: 'rgba(0,255,135,0.08)', icon: 'fa-balance-scale', label: 'Modéré', risk: 'Modéré', horizon: '3-5 ans' };

@@ -89,6 +89,14 @@
             background: rgba(0,178,255,0.08); border-color: var(--stable-color);
             color: var(--stable-color); box-shadow: 0 0 20px rgba(0,178,255,0.15);
         }
+        .portfolio-tab[data-target="portfolio-dividende-pea"].active {
+            background: rgba(190,80,255,0.08); border-color: #be50ff;
+            color: #be50ff; box-shadow: 0 0 20px rgba(190,80,255,0.18);
+        }
+        .portfolio-tab[data-target="portfolio-dividende-cto"].active {
+            background: rgba(255,180,60,0.08); border-color: #ffb43c;
+            color: #ffb43c; box-shadow: 0 0 20px rgba(255,180,60,0.18);
+        }
 
         /* ── Update bar ── */
         .portfolio-update-info {
@@ -266,6 +274,12 @@
                     </button>
                     <button class="portfolio-tab" data-target="portfolio-stable" data-original-type="Stable">
                         <i class="fas fa-shield-alt" style="margin-right:4px;"></i> Stable
+                    </button>
+                    <button class="portfolio-tab" data-target="portfolio-dividende-pea" data-original-type="Dividende-PEA">
+                        <i class="fas fa-piggy-bank" style="margin-right:4px;"></i> Dividende PEA
+                    </button>
+                    <button class="portfolio-tab" data-target="portfolio-dividende-cto" data-original-type="Dividende-CTO">
+                        <i class="fas fa-coins" style="margin-right:4px;"></i> Dividende CTO
                     </button>
                     <button class="portfolio-tab" data-target="portfolio-lombard" data-original-type="Lombard">
                         <i class="fas fa-university" style="margin-right:4px;"></i> Lombard
@@ -473,7 +487,7 @@
 
             // Active profile tab
             const activeTab = document.querySelector('.portfolio-tab.active');
-            const profileMap = {'portfolio-agressif':'Agressif','portfolio-modere':'Modéré','portfolio-stable':'Stable'};
+            const profileMap = {'portfolio-agressif':'Agressif','portfolio-modere':'Modéré','portfolio-stable':'Stable','portfolio-dividende-pea':'Dividende-PEA','portfolio-dividende-cto':'Dividende-CTO'};
             let activeProfile = 'Agressif';
             if (activeTab) activeProfile = profileMap[activeTab.dataset.target] || 'Agressif';
 

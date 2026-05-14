@@ -950,6 +950,29 @@ PROFILE_WEIGHTS = {
         liquidity=0.08,
         mean_reversion=0.05
     ),
+    # === DIVIDENDE — Profils rendement perso (100% actions) ===
+    # Faible momentum (anti-rotation), qualité dominante, low vol modérée,
+    # pas de bond_quality (pas d'obligations dans le profil).
+    "Dividende-PEA": FactorWeights(
+        momentum=0.08,
+        quality_fundamental=0.35,
+        low_vol=0.20,
+        cost_efficiency=0.07,
+        bond_quality=0.00,
+        tactical_context=0.10,
+        liquidity=0.10,
+        mean_reversion=0.10
+    ),
+    "Dividende-CTO": FactorWeights(
+        momentum=0.08,
+        quality_fundamental=0.35,
+        low_vol=0.20,
+        cost_efficiency=0.07,
+        bond_quality=0.00,
+        tactical_context=0.10,
+        liquidity=0.10,
+        mean_reversion=0.10
+    ),
 }
 
 

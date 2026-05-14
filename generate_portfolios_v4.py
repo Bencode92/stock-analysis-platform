@@ -431,7 +431,14 @@ CONFIG = {
         "Agressif": 50,   # Plus permissif → autorise les "pépites" volatiles
         "Modéré": 60,     # Seuil standard
         "Stable": 70,     # Plus strict → qualité Buffett élevée requise
+        "Dividende-PEA": 55,  # Niveau Modéré-soft, focus dividende plutôt que Buffett
+        "Dividende-CTO": 55,
     },
+    # === v8.x: DIVIDENDE PROFILE (PEA + CTO complémentaire) ===
+    # Active la génération du 4e profil avec ses 2 sous-enveloppes fiscales.
+    # Désactivable d'un seul flag si le pipeline régresse.
+    "enable_dividende": True,
+    "dividende_envelopes": ["Dividende-PEA", "Dividende-CTO"],
     # === v4.9.0: Tactical Context RADAR (data-driven) ===
     "use_tactical_context": True,
     "tactical_mode": "radar",  # "radar" (déterministe) ou "gpt" (ancien)
@@ -490,7 +497,55 @@ CANDIDATES_BY_PROFILE = {
     "Agressif": 350,
     "Modéré": 250,
     "Stable": 200,
+    # Pool plus restreint car univers déjà filtré par éligibilité fiscale
+    "Dividende-PEA": 120,
+    "Dividende-CTO": 100,
 }
+
+
+# v8.x: helper de construction de la liste de profils à traiter selon CONFIG
+def _active_profiles(config: Dict) -> List[str]:
+    """Retourne la liste des profils à traiter selon la CONFIG.
+
+    Les 3 profils historiques restent inconditionnels. Le profil Dividende
+    (sous-enveloppes PEA et CTO) ne s'active qu'avec CONFIG['enable_dividende'].
+    """
+    profiles = ["Agressif", "Modéré", "Stable"]
+    if config.get("enable_dividende", False):
+        profiles += list(config.get("dividende_envelopes", ["Dividende-PEA", "Dividende-CTO"]))
+    return profiles
+
+
+# v8.x: country filter pré-stage pour les sous-enveloppes Dividende
+def _apply_envelope_country_filter(equities: List[dict], profile: str) -> List[dict]:
+    """Applique le filtre pays selon l'enveloppe fiscale (PEA / CTO).
+
+    Pour les 3 profils historiques (Agressif/Modéré/Stable) ou tout profil sans
+    sous-enveloppe : retourne la liste inchangée.
+    """
+    try:
+        from portfolio_engine.preset_meta import (
+            PROFILE_POLICY,
+            PEA_ELIGIBLE_COUNTRIES,
+            CTO_ELIGIBLE_COUNTRIES,
+        )
+    except ImportError:
+        return equities
+
+    policy = PROFILE_POLICY.get(profile, {})
+    mode = policy.get("_country_filter_mode")
+    if not mode:
+        return equities
+
+    if mode == "pea":
+        allowed = PEA_ELIGIBLE_COUNTRIES
+    elif mode == "cto":
+        allowed = CTO_ELIGIBLE_COUNTRIES
+    else:
+        return equities
+
+    filtered = [e for e in equities if (e.get("country") or "").strip() in allowed]
+    return filtered
 
 # =============================================================================
 # v4.14.0: RESEARCH DISCLAIMER (ChatGPT suggestion for AMF compliance)
@@ -1948,28 +2003,37 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 if old_threshold != threshold:
                     logger.info(f"   🔄 PROFILE_POLICY[{profile_name}].min_buffett_score: {old_threshold} → {threshold}")
     
-    for profile in ["Agressif", "Modéré", "Stable"]:
+    for profile in _active_profiles(CONFIG):
         logger.info(f"⚙️  Optimisation profil {profile}...")
-        
+
+        # v8.x: Country filter pré-stage pour sous-enveloppes Dividende (PEA/CTO).
+        # No-op pour les 3 profils historiques.
+        eq_filtered_for_profile = _apply_envelope_country_filter(eq_filtered, profile)
+        if len(eq_filtered_for_profile) != len(eq_filtered):
+            logger.info(
+                f"   [{profile}] 🌍 Filtre enveloppe : "
+                f"{len(eq_filtered_for_profile)}/{len(eq_filtered)} équités éligibles"
+            )
+
         # === v4.13: Sélection d'équités spécifique au profil ===
         # v4.14.0 FIX R6: Une seule source de vérité pour Buffett = PROFILE_POLICY
         # Le filtre Buffett est appliqué dans select_equities_for_profile_v2 via PROFILE_POLICY
         # (synchronisé avec CONFIG["buffett_min_score_by_profile"] au début de la boucle)
-        
+
         # Log pour diagnostic
         buffett_thresholds = CONFIG.get("buffett_min_score_by_profile", {})
         profile_buffett_min = buffett_thresholds.get(profile, CONFIG.get("buffett_min_score", 40))
-        missing_buffett = sum(1 for e in eq_filtered if e.get("_buffett_score") is None)
+        missing_buffett = sum(1 for e in eq_filtered_for_profile if e.get("_buffett_score") is None)
         if missing_buffett > 0:
-            logger.warning(f"   [{profile}] ⚠️ {missing_buffett}/{len(eq_filtered)} equities sans score Buffett")
-        
-        # Passer TOUT eq_filtered à select_equities_for_profile_v2
+            logger.warning(f"   [{profile}] ⚠️ {missing_buffett}/{len(eq_filtered_for_profile)} equities sans score Buffett")
+
+        # Passer eq_filtered_for_profile (avec filtre enveloppe appliqué)
         # Le filtrage Buffett se fait dans la fonction via PROFILE_POLICY (source unique)
         profile_equities, profile_selection_meta = select_equities_for_profile(
-            eq_filtered=eq_filtered,
+            eq_filtered=eq_filtered_for_profile,
             profile=profile,
             market_context=market_context,
-            target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered)),
+            target_n=min(CANDIDATES_BY_PROFILE.get(profile, 250), len(eq_filtered_for_profile)),
         )
         profile_selection_meta["buffett_threshold_policy"] = profile_buffett_min
         profile_selection_meta["buffett_missing_count"] = missing_buffett
@@ -1988,18 +2052,20 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         
         # === v5.1.4 FIX R1: Collecter profile_selections pour selection_audit ===
         # Les vraies stats hard_filters sont dans stages.hard_filters (pas top-level)
+        # v8.x: utiliser eq_filtered_for_profile pour que before/rejected soient
+        #       cohérents avec le filtre enveloppe quand il s'applique
         _hf_stats = profile_selection_meta.get("stages", {}).get("hard_filters", {})
         _profile_selections_for_audit[profile] = {
-            "before": eq_filtered,
+            "before": eq_filtered_for_profile,
             "after": profile_equities,
             "stats": _hf_stats if _hf_stats else {
-                "before": len(eq_filtered),
+                "before": len(eq_filtered_for_profile),
                 "after": len(profile_equities),
-                "rejected": len(eq_filtered) - len(profile_equities),
+                "rejected": len(eq_filtered_for_profile) - len(profile_equities),
                 "reasons": {},
             },
             "selected": profile_equities,
-            "candidates": eq_filtered,
+            "candidates": eq_filtered_for_profile,
             "meta": profile_selection_meta,
         }
         
@@ -2131,7 +2197,14 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                     )
         
         # === v5.1.0: Sélection ETF/Crypto/Bond par profil ===
-        if HAS_MODULAR_SELECTORS:
+        # v8.x: Skip ETF/bonds/crypto pour les profils Dividende (100% actions par construction).
+        _is_dividende_profile = profile in ("Dividende-PEA", "Dividende-CTO")
+        if _is_dividende_profile:
+            logger.info(f"   [{profile}] 💯 100% actions — skip ETF/bonds/crypto selection")
+            profile_etf_data = []
+            profile_bonds_data = []
+            profile_crypto_data = []
+        if HAS_MODULAR_SELECTORS and not _is_dividende_profile:
             # --- ETF actions ---
             if not etf_df_master.empty:
                 etf_df = etf_df_master.copy()
@@ -2323,7 +2396,8 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             )
         else:
             # Fallback: utiliser universe_others global
-            profile_universe_others = universe_others  
+            # v8.x: pour les profils Dividende, ne pas inclure d'autres actifs (100% actions)
+            profile_universe_others = [] if _is_dividende_profile else universe_others
         # v5.0.0: Log du mode de scoring utilisé
         if scoring_mode == "preset":
             # Vérifier que _profile_score est présent
@@ -3859,7 +3933,8 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     all_assets_ids = set()
     equities_by_profile_euus = {}  # Pour diagnostic overlap
     all_scored_etfs = {}  # v1.1.0 FIX: was missing → NameError on line 2825
-    
+    all_scored_bonds = {}  # v8.x FIX: was missing → NameError on line 4009
+
     for profile in ["Agressif", "Modéré", "Stable"]:
         logger.info(f"⚙️  Optimisation EU/US {profile} (sélection PAR PROFIL)...")
         
@@ -5550,7 +5625,8 @@ def save_portfolios(portfolios: Dict, assets: list):
     # === v5.3.2 EQUITY CAP: Individual stocks max 10% Agressif, 11% Modéré, 10% Stable ===
     # Runs AFTER all post-processing (RADAR caps, AGG caps, dust cleanup)
     # Catches VRT 11% that survived earlier cap due to redistribution
-    _EQ_CAP_FINAL = {"Agressif": 0.10, "Modéré": 0.11, "Stable": 0.10}
+    _EQ_CAP_FINAL = {"Agressif": 0.10, "Modéré": 0.11, "Stable": 0.10,
+                       "Dividende-PEA": 0.08, "Dividende-CTO": 0.10}
     for _p_name in ["Agressif", "Modéré", "Stable"]:
         if _p_name not in v1_data:
             continue
@@ -5704,7 +5780,8 @@ def save_portfolios(portfolios: Dict, assets: list):
     # === v3.3 CRYPTO NUCLEAR CAP: Force crypto <= crypto_max ABSOLUTE LAST ===
     # ETF dedup, equity cap, and ETF cap all redistribute to non-equity including crypto.
     # This final cap ensures crypto never exceeds the profile limit in the output JSON.
-    _CRYPTO_MAX_BY_PROFILE = {"Agressif": 0.10, "Modéré": 0.05, "Stable": 0.0}
+    _CRYPTO_MAX_BY_PROFILE = {"Agressif": 0.10, "Modéré": 0.05, "Stable": 0.0,
+                                "Dividende-PEA": 0.0, "Dividende-CTO": 0.0}
     try:
         from optimizer import PROFILES as _OPT_PROFILES
         for _pn in _CRYPTO_MAX_BY_PROFILE:

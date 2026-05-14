@@ -260,9 +260,11 @@ class PortfolioHistoryViewer {
         const typeMap = {
             'agressif': ['Agressif', 'agressif', 'AGRESSIF'],
             'modere': ['Modéré', 'modere', 'Modere', 'MODÉRÉ', 'MODERE'],
-            'stable': ['Stable', 'stable', 'STABLE']
+            'stable': ['Stable', 'stable', 'STABLE'],
+            'dividende-pea': ['Dividende-PEA', 'dividende-pea', 'DIVIDENDE-PEA'],
+            'dividende-cto': ['Dividende-CTO', 'dividende-cto', 'DIVIDENDE-CTO']
         };
-        
+
         // Variables pour suivre si un portefeuille a été trouvé
         let portfolioFound = false;
         
@@ -349,6 +351,8 @@ class PortfolioHistoryViewer {
         // Convertir les types pour faciliter la comparaison
         const typeMap = {
             'agressif': ['Agressif', 'agressif'],
+            'dividende-pea': ['Dividende-PEA', 'dividende-pea'],
+            'dividende-cto': ['Dividende-CTO', 'dividende-cto'],
             'modere': ['Modéré', 'modere', 'Modere'],
             'stable': ['Stable', 'stable']
         };
