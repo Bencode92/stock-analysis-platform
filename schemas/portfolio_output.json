@@ -193,6 +193,11 @@
               "required": ["ticker", "name", "score"]
             }
           }
+        },
+        "_benchmarks": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "v8.x: Benchmarks de référence injectés pour les profils Dividende (SCHD, EEI, IWDA + protocole de comparaison). Voir config/dividend_benchmarks.json."
         }
       }
     },
