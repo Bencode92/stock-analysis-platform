@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-05-15-14-01-05",
-    "git_sha": "9d544b94f",
-    "git_sha_full": "9d544b94fc78a69a41cf96b481a4a918cb91f4f3",
-    "config_hash": "ddf24393",
+    "run_id": "2026-05-15-14-51-18",
+    "git_sha": "5ad72d7dd",
+    "git_sha_full": "5ad72d7dd492c90d99e4f5aac0e991bc55da7b3d",
+    "config_hash": "d87156a6",
     "universe_asof": "2026-05-15",
-    "timestamp_utc": "2026-05-15T14:01:05.044629+00:00",
+    "timestamp_utc": "2026-05-15T14:51:18.208849+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 823.91
+    "total_duration_sec": 533.49
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -541,101 +541,89 @@
     },
     "5_selection_equity_Dividende-PEA": {
       "name": "selection_equity",
-      "before": 120,
-      "after": 120,
+      "before": 12,
+      "after": 12,
       "rejected": 0,
       "category": "equity",
       "profile": "Dividende-PEA",
       "top_k": [
         {
           "ticker": "LI",
-          "score": 0.7188
+          "score": 0.6042
         },
         {
           "ticker": "AGS",
-          "score": 0.7106
+          "score": 0.5358
         },
         {
           "ticker": "ML",
-          "score": 0.6398
+          "score": 0.4567
+        },
+        {
+          "ticker": "ACN",
+          "score": 0.3983
+        },
+        {
+          "ticker": "ACA",
+          "score": 0.5325
+        },
+        {
+          "ticker": "HNR1",
+          "score": 0.5225
+        },
+        {
+          "ticker": "BMED",
+          "score": 0.5225
         },
         {
           "ticker": "HEN",
-          "score": 0.6389
+          "score": 0.4558
         },
         {
           "ticker": "ITX",
-          "score": 0.6388
-        },
-        {
-          "ticker": "G1A",
-          "score": 0.6021
+          "score": 0.4475
         },
         {
           "ticker": "IBE",
-          "score": 0.5991
-        },
-        {
-          "ticker": "PAH3",
-          "score": 0.5962
-        },
-        {
-          "ticker": "IG",
-          "score": 0.5795
-        },
-        {
-          "ticker": "CA",
-          "score": 0.5783
+          "score": 0.4158
         }
       ]
     },
     "5_selection_equity_Dividende-CTO": {
       "name": "selection_equity",
-      "before": 51,
-      "after": 51,
+      "before": 7,
+      "after": 7,
       "rejected": 0,
       "category": "equity",
       "profile": "Dividende-CTO",
       "top_k": [
         {
           "ticker": "VICI",
-          "score": 0.7375
-        },
-        {
-          "ticker": "ADM",
-          "score": 0.6548
-        },
-        {
-          "ticker": "RKT",
-          "score": 0.6158
-        },
-        {
-          "ticker": "SCHN",
-          "score": 0.5877
-        },
-        {
-          "ticker": "PG",
-          "score": 0.5791
-        },
-        {
-          "ticker": "AUTO",
-          "score": 0.5709
+          "score": 0.7322
         },
         {
           "ticker": "EOG",
-          "score": 0.5705
+          "score": 0.6424
         },
         {
-          "ticker": "SHEL",
-          "score": 0.5679
+          "ticker": "SCHN",
+          "score": 0.6313
+        },
+        {
+          "ticker": "AUTO",
+          "score": 0.614
+        },
+        {
+          "ticker": "PG",
+          "score": 0.6111
         },
         {
           "ticker": "NOVN",
-          "score": 0.5634
+          "score": 0.6057
         },
         {
-          "ticker": "IMB",
-          "score": 0.5621
+          "ticker": "CTSH",
+          "score": 0.584
         }
       ]
     }
@@ -3469,8 +3457,21 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 90.0,
+    "details": {
+      "5_selection_equity_Dividende-PEA.after": {
+        "current": 12,
+        "previous": 120,
+        "delta": -108,
+        "pct_change": 90.0
+      },
+      "5_selection_equity_Dividende-CTO.after": {
+        "current": 7,
+        "previous": 51,
+        "delta": -44,
+        "pct_change": 86.27
+      }
+    }
   }
 }
