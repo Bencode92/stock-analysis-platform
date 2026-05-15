@@ -998,10 +998,12 @@ PROFILES = {
         bonds_max=0.0,
         max_single_position=8.0,
         max_sector=25.0,
-        min_assets=15,
+        # v8.x.3: min_assets 15→8 — quand baseline figé, certains tickers peuvent
+        # temporairement disparaître du scoring sans qu'on veuille casser le run
+        min_assets=8,
         max_assets=18,
-        max_turnover=12.0,             # FORT anti-rotation
-        turnover_penalty=0.30,         # pénalité élevée
+        max_turnover=8.0,              # encore plus strict : buy-and-hold
+        turnover_penalty=0.50,         # pénalité forte anti-rotation
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
@@ -1018,10 +1020,11 @@ PROFILES = {
         # Assumé honnêtement vs faire dépasser silencieusement par l'optimizer
         max_single_position=12.0,
         max_sector=35.0,
-        min_assets=8,
+        # v8.x.3: min_assets 8→5 — marge pour baseline filtré + buy-and-hold
+        min_assets=5,
         max_assets=12,
-        max_turnover=12.0,
-        turnover_penalty=0.30,
+        max_turnover=8.0,
+        turnover_penalty=0.50,
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,

@@ -439,6 +439,12 @@ CONFIG = {
     # Désactivable d'un seul flag si le pipeline régresse.
     "enable_dividende": True,
     "dividende_envelopes": ["Dividende-PEA", "Dividende-CTO"],
+    # v8.x: baseline figé pour Dividende (anti-turnover, buy-and-hold strict).
+    # Si True, les tickers de config/dividende_baseline.json restent fixes entre
+    # runs (seuls les poids fluctuent). Mettre à True pour forcer une nouvelle
+    # sélection complète depuis l'univers (regenerate baseline depuis zéro).
+    "force_dividende_rebalance": False,
+    "dividende_baseline_path": "config/dividende_baseline.json",
     # === v4.9.0: Tactical Context RADAR (data-driven) ===
     "use_tactical_context": True,
     "tactical_mode": "radar",  # "radar" (déterministe) ou "gpt" (ancien)
@@ -519,8 +525,116 @@ def _active_profiles(config: Dict) -> List[str]:
 # v8.x: country filter pré-stage pour les sous-enveloppes Dividende
 # v8.x.1: support des overrides PEA pour les cas hybrides (Accenture, STM, etc.)
 # v8.x.2: max_country cap post-optimisation pour Dividende (anti-concentration souveraine)
+# v8.x.3: baseline figé Dividende (anti-turnover, buy-and-hold strict)
 
 _PEA_OVERRIDES_CACHE: Optional[Dict] = None
+_DIVIDENDE_BASELINE_CACHE: Optional[Dict] = None
+_DIVIDENDE_BASELINE_ACTIVE: set = set()  # profils où le baseline a été effectivement appliqué
+
+
+def _load_dividende_baseline() -> Dict[str, List[str]]:
+    """Charge config/dividende_baseline.json (cached).
+
+    Retourne {profile: [list of tickers]} ou {} si fichier absent.
+    """
+    global _DIVIDENDE_BASELINE_CACHE
+    if _DIVIDENDE_BASELINE_CACHE is not None:
+        return _DIVIDENDE_BASELINE_CACHE
+    path = CONFIG.get("dividende_baseline_path", "config/dividende_baseline.json")
+    if not os.path.exists(path):
+        _DIVIDENDE_BASELINE_CACHE = {}
+        return _DIVIDENDE_BASELINE_CACHE
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        _DIVIDENDE_BASELINE_CACHE = data.get("holdings", {})
+        logger.info(f"📌 Baseline Dividende chargé : "
+                    + ", ".join(f"{p}={len(t)}" for p, t in _DIVIDENDE_BASELINE_CACHE.items()))
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"⚠️ Échec lecture baseline {path}: {e}")
+        _DIVIDENDE_BASELINE_CACHE = {}
+    return _DIVIDENDE_BASELINE_CACHE
+
+
+def _detect_baseline_toxicity(profile: str, baseline_tickers: List[str],
+                                eq_universe: List[dict]) -> List[str]:
+    """Détecte les tickers du baseline devenus VRAIMENT toxiques (rebalance forcé).
+
+    Critères stricts (vraie alerte structurelle, pas du tuning de seuil) :
+      - Ticker disparu de l'univers (delisting, M&A)
+      - quality_score < 30 (effondrement qualité, pas une dérive)
+      - payout > 110% (paie plus que les bénéfices = dividende non soutenable)
+      - dividend_growth_3y < -25% (coupes récurrentes)
+
+    Une dérive modérée (payout 90-110%, quality 30-50) est tolérée — c'est
+    précisément le rôle du baseline figé : ne pas rebalancer pour du bruit.
+
+    Retourne la liste des tickers toxiques (vide si baseline encore valide).
+    """
+    by_ticker = {(e.get("ticker") or "").upper(): e for e in eq_universe}
+    toxic = []
+    for tk in baseline_tickers:
+        tk_up = tk.upper()
+        eq = by_ticker.get(tk_up)
+        if eq is None:
+            toxic.append(f"{tk}:disparu")
+            continue
+        qs = eq.get("quality_score")
+        if qs is not None and qs < 30:
+            toxic.append(f"{tk}:quality={qs}")
+            continue
+        payout = eq.get("payout_ratio_ttm")
+        if payout is not None:
+            payout_pct = payout if payout > 1.5 else payout * 100
+            if payout_pct > 110:
+                toxic.append(f"{tk}:payout={payout_pct:.0f}%")
+                continue
+        dg = eq.get("dividend_growth_3y")
+        if dg is not None and dg < -25:
+            toxic.append(f"{tk}:div_growth={dg:.0f}%")
+            continue
+    return toxic
+
+
+def _apply_dividende_baseline_filter(equities: List[dict], profile: str) -> List[dict]:
+    """Filtre les candidats au baseline pour le profil Dividende.
+
+    Si baseline existe pour ce profil ET pas de force_rebalance ET baseline non
+    toxique : retourne UNIQUEMENT les équités dont le ticker est dans le baseline.
+    Sinon : retourne la liste inchangée (sélection libre).
+    """
+    if not profile.startswith("Dividende-"):
+        return equities
+    if CONFIG.get("force_dividende_rebalance", False):
+        logger.info(f"   [{profile}] 🔄 force_dividende_rebalance=True — sélection libre")
+        return equities
+    baseline = _load_dividende_baseline()
+    baseline_tickers = baseline.get(profile, [])
+    if not baseline_tickers:
+        logger.info(f"   [{profile}] ℹ️ Pas de baseline — première sélection libre")
+        return equities
+
+    toxic = _detect_baseline_toxicity(profile, baseline_tickers, equities)
+    if toxic:
+        logger.warning(f"   [{profile}] ⚠️ Baseline toxique ({len(toxic)} positions) — "
+                       f"rebalance forcé : {', '.join(toxic[:5])}")
+        return equities
+
+    baseline_set = {t.upper() for t in baseline_tickers}
+    filtered = []
+    seen_tickers = set()
+    for e in equities:
+        tk = (e.get("ticker") or "").upper()
+        if tk in baseline_set and tk not in seen_tickers:
+            # Marquer comme protégé : bypass hard_filters et min_buffett
+            e["_baseline_protected"] = True
+            filtered.append(e)
+            seen_tickers.add(tk)
+    _DIVIDENDE_BASELINE_ACTIVE.add(profile)
+    logger.info(f"   [{profile}] 📌 Baseline appliqué : "
+                f"{len(filtered)}/{len(baseline_tickers)} tickers trouvés "
+                f"(turnover sera ≈ 0)")
+    return filtered
 
 # Cap par pays pour les profils Dividende (anti-concentration souveraine).
 # Spécifique à Dividende car les autres profils ont déjà max_region.
@@ -528,6 +642,70 @@ DIVIDENDE_MAX_COUNTRY_PCT = {
     "Dividende-PEA": 30.0,   # univers EU 10 pays, France/Allemagne/Espagne se concentrent vite
     "Dividende-CTO": 60.0,   # univers CTO US dominant, cap plus permissif
 }
+
+
+def _equal_weight_baseline(assets: list, profile: str) -> Dict[str, float]:
+    """v8.x.3: Equal-weight tilté par score sur les baseline tickers présents
+    dans le candidate pool. Garantit qu'aucun baseline ticker n'est silencieusement
+    drop (poids ≥ min_position_weight pour tous).
+
+    Args:
+        assets: liste d'Asset post-baseline_filter (tous tickers du baseline trouvés)
+        profile: "Dividende-PEA" ou "Dividende-CTO"
+
+    Returns:
+        Dict {asset_id: weight_pct} avec equal-weight + tilt ±20% selon score.
+    """
+    try:
+        from portfolio_engine.optimizer import PROFILES as _PROFS
+    except ImportError:
+        _PROFS = {}
+
+    constraints = _PROFS.get(profile)
+    max_pos_pct = (constraints.max_single_position if constraints else 12.0)
+    min_pos_pct = 1.0  # poids minimum plancher
+
+    # Filtrer aux Actions uniquement (Dividende = 100% equity)
+    equity_assets = [a for a in assets if getattr(a, "category", "") in ("Actions", "Equity", "equity")]
+    if not equity_assets:
+        equity_assets = list(assets)
+    n = len(equity_assets)
+    if n == 0:
+        return {}
+
+    base_weight = 100.0 / n
+
+    # Tilt par score (±20% relatif autour de equal-weight)
+    scores = [max(0.001, getattr(a, "score", 0) or 0) for a in equity_assets]
+    mean_score = sum(scores) / len(scores) or 1.0
+    tilt = 0.20
+
+    raw_weights = []
+    for a, s in zip(equity_assets, scores):
+        mult = 1.0 + tilt * (s / mean_score - 1.0)
+        raw_weights.append(base_weight * max(0.5, mult))
+
+    # Cap + renormalisation itérative
+    for _ in range(50):
+        total = sum(raw_weights)
+        if total <= 0:
+            break
+        raw_weights = [w * 100.0 / total for w in raw_weights]
+        capped = [min(max(w, min_pos_pct), max_pos_pct) for w in raw_weights]
+        if abs(sum(capped) - 100.0) < 0.1:
+            raw_weights = capped
+            break
+        raw_weights = capped
+
+    allocation = {}
+    for a, w in zip(equity_assets, raw_weights):
+        aid = getattr(a, "id", None) or getattr(a, "ticker", None)
+        if aid:
+            allocation[aid] = round(w, 2)
+
+    logger.info(f"   [{profile}] 📐 Equal-weight baseline appliqué : "
+                f"{len(allocation)} positions, bornes [{min_pos_pct}%, {max_pos_pct}%]")
+    return allocation
 
 
 def _enforce_max_country(allocation: Dict[str, float], assets: list, profile: str) -> Dict[str, float]:
@@ -2151,6 +2329,12 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 f"{len(eq_filtered_for_profile)}/{len(eq_filtered)} équités éligibles"
             )
 
+        # v8.x.3: baseline filter pour Dividende — figer les tickers entre runs
+        # (buy-and-hold strict, turnover ≈ 0). No-op pour les 3 profils historiques.
+        eq_filtered_for_profile = _apply_dividende_baseline_filter(
+            eq_filtered_for_profile, profile
+        )
+
         # === v4.13: Sélection d'équités spécifique au profil ===
         # v4.14.0 FIX R6: Une seule source de vérité pour Buffett = PROFILE_POLICY
         # Le filtre Buffett est appliqué dans select_equities_for_profile_v2 via PROFILE_POLICY
@@ -2732,6 +2916,15 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   [{profile}] Price loading failed: {_e}, using structured only")
 
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
+
+        # v8.x.3: Pour les profils Dividende AVEC baseline ACTIF, on remplace
+        # l'output de l'optimizer par un equal-weight (tilté par score) sur TOUS
+        # les baseline tickers présents. Sinon l'optimizer drop des baseline
+        # tickers (poids < seuil) → sorties silencieuses, casse le buy-and-hold.
+        # Le set _DIVIDENDE_BASELINE_ACTIVE est rempli par le baseline filter
+        # SI il a effectivement réduit l'univers (pas de toxicité, pas force_rebalance).
+        if profile in _DIVIDENDE_BASELINE_ACTIVE:
+            allocation = _equal_weight_baseline(assets, profile)
 
         # v8.x: max_country post-process pour profils Dividende (anti-concentration souveraine)
         if profile in DIVIDENDE_MAX_COUNTRY_PCT:

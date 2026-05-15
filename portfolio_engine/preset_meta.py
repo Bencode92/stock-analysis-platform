@@ -1485,6 +1485,13 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
     for eq in equities:
         reasons = []
 
+        # v8.x.3: baseline-protected → bypass hard filters (buy-and-hold figé)
+        # Le ticker a été explicitement sélectionné dans config/dividende_baseline.json,
+        # on respecte cette décision même si une métrique a légèrement dérivé.
+        if eq.get("_baseline_protected"):
+            filtered.append(eq)
+            continue
+
         # v8.x: filters effectifs = base + relaxations sectorielles si applicable
         if sector_relaxations:
             sector = (eq.get("sector") or eq.get("sector_api") or "").strip()

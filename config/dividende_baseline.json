@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "purpose": "Portefeuille cible figé (baseline) pour les profils Dividende-PEA et Dividende-CTO. Évite que l'optimizer remplace des titres entre deux runs (turnover doit être proche de zéro pour une stratégie buy-and-hold dividende).",
+    "rebalance_policy": "Le baseline N'EST modifié QUE dans 3 cas : (1) flag CONFIG['force_dividende_rebalance']=True, (2) trigger auto si un titre devient toxique (dividend cut, quality_score<40, payout>95%), (3) édition manuelle de ce fichier (PR git).",
+    "between_rebalances": "Mêmes tickers, seuls les poids peuvent fluctuer de ±2-3pp selon le marché. Aucune entrée/sortie.",
+    "last_rebalance_date": "2026-05-15",
+    "last_rebalance_trigger": "initial_setup",
+    "usage_in_code": "Chargé par generate_portfolios_v4.py via _load_dividende_baseline(). Si présent, restreint l'univers candidats Dividende à ces tickers."
+  },
+  "holdings": {
+    "Dividende-PEA": [
+      "G1A", "TTE", "ITX", "HEN", "ML", "ACN", "SAN", "LI",
+      "BMED", "HNR1", "ACA", "AGS", "IBE"
+    ],
+    "Dividende-CTO": [
+      "SCHN", "VICI", "PG", "EOG", "AUTO", "NOVN", "ADM", "CTSH"
+    ]
+  }
+}
