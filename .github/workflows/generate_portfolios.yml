@@ -661,7 +661,23 @@ jobs:
  
           git commit -m "📊 Portefeuilles v5.3.0 + Market Intelligence 🧠 + Lombard Ranking 💰 + Backtest 90j ✓" || echo "rien à committer"
  
-          git push || (git pull --rebase origin main && git push)
+          # v8.x: retry loop avec auto-résolution des conflits sur data/*.json.
+          # En cas de conflit pendant le rebase (autre workflow CI ayant régénéré
+          # data/macro_indicators.json ou data/market_context.json), on garde la
+          # version locale fraichement régénérée (-X theirs en sémantique rebase).
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "✅ Push OK (tentative $attempt)"
+              break
+            fi
+            echo "⚠️ Push rejeté, rebase auto-résolutif (tentative $attempt)..."
+            git pull --rebase --strategy-option=theirs origin main || git rebase --abort 2>/dev/null || true
+            if [ "$attempt" = "5" ]; then
+              echo "❌ Push impossible après 5 tentatives"
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
  
       - name: 🗂️ Archive market_context.json
         if: success()
