@@ -5766,7 +5766,7 @@ def save_portfolios(portfolios: Dict, assets: list):
     # Runs AFTER all post-processing (RADAR caps, AGG caps, dust cleanup)
     # Catches VRT 11% that survived earlier cap due to redistribution
     _EQ_CAP_FINAL = {"Agressif": 0.10, "Modéré": 0.11, "Stable": 0.10,
-                       "Dividende-PEA": 0.08, "Dividende-CTO": 0.10}
+                       "Dividende-PEA": 0.08, "Dividende-CTO": 0.12}  # v8.x: 0.10→0.12 sans Asie
     for _p_name in ["Agressif", "Modéré", "Stable"]:
         if _p_name not in v1_data:
             continue
@@ -6514,8 +6514,9 @@ def main():
                 saved_portfolios = _json.load(_f)
 
             # Build fake portfolios dict with allocation from final _tickers
+            # v8.x: étendu aux profils Dividende (justifications LLM aussi pour eux)
             portfolios_for_rationale = {}
-            for profile in ["Agressif", "Modéré", "Stable"]:
+            for profile in _active_profiles(CONFIG):
                 if profile not in saved_portfolios:
                     continue
                 _tickers = saved_portfolios[profile].get("_tickers", {})
@@ -6548,10 +6549,32 @@ def main():
             )
 
             # Inject rationales back into the saved JSON
-            for profile in ["Agressif", "Modéré", "Stable"]:
+            # v8.x: étendu aux profils Dividende si actifs
+            _profiles_for_inject = _active_profiles(CONFIG)
+            for profile in _profiles_for_inject:
                 if profile in rationales and rationales[profile]:
                     saved_portfolios[profile]["_asset_details"] = rationales[profile]
                     logger.info(f"✅ {profile}: {len(rationales[profile])} justifications ajoutées")
+
+            # v8.x: injecter les benchmarks de référence pour les profils Dividende
+            _bench_path = os.path.join("config", "dividend_benchmarks.json")
+            if os.path.exists(_bench_path):
+                try:
+                    with open(_bench_path, "r", encoding="utf-8") as _bf:
+                        _bench_data = _json.load(_bf)
+                    _bench_map = _bench_data.get("benchmarks", {})
+                    _bench_global = _bench_map.get("global_discipline")
+                    _bench_protocol = _bench_data.get("comparison_protocol")
+                    for profile in ("Dividende-PEA", "Dividende-CTO"):
+                        if profile in saved_portfolios:
+                            saved_portfolios[profile]["_benchmarks"] = {
+                                "primary": _bench_map.get(profile, {}),
+                                "global": _bench_global,
+                                "protocol": _bench_protocol,
+                            }
+                    logger.info("✅ Benchmarks de référence injectés dans les profils Dividende")
+                except (OSError, ValueError) as _be:
+                    logger.warning(f"⚠️ Échec injection benchmarks: {_be}")
 
             with open(output_path, "w", encoding="utf-8") as _f:
                 _json.dump(saved_portfolios, _f, ensure_ascii=False, indent=2)

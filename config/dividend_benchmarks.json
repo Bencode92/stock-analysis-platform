@@ -1,0 +1,63 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "purpose": "Benchmarks de référence pour évaluer la performance des portefeuilles Dividende-PEA et Dividende-CTO. Recommandés par l'expert externe (mai 2026).",
+    "usage": "Comparaison qualitative et quantitative. Pour les perfs (YTD/1Y/3Y/5Y), consulter Boursorama, Justetf ou Bloomberg manuellement, ou intégrer une API (TWELVE_DATA, Yahoo Finance) plus tard.",
+    "rebalance_frequency": "Annuel suggéré : comparer ton portefeuille vs benchmarks pour validation de l'edge stratégique."
+  },
+  "benchmarks": {
+    "Dividende-CTO": {
+      "primary": {
+        "ticker": "SCHD",
+        "name": "Schwab U.S. Dividend Equity ETF",
+        "isin": "US8085246083",
+        "purpose": "Benchmark dividende+qualité US. Méthodologie : Dow Jones U.S. Dividend 100, sélection sur historique de paiement + solidité fondamentale (FCF/dette, ROE, dividend growth 5Y).",
+        "ter": 0.06,
+        "approx_yield": 3.4,
+        "key_holdings_pattern": ["LMT", "COP", "VZ", "CVX", "BMY", "MRK", "MO", "TXN", "KO", "PEP"],
+        "rationale": "Si ton sleeve CTO sous-performe SCHD de >2%/an sur 3+ ans à volatilité similaire, revoir la sélection."
+      }
+    },
+    "Dividende-PEA": {
+      "primary": {
+        "ticker": "EEI",
+        "name": "WisdomTree Europe Equity Income UCITS ETF",
+        "isin": "IE00BQZJBM26",
+        "purpose": "Benchmark dividende EU pondéré par dividende versé. Univers MSCI Europe haut rendement filtré qualité.",
+        "ter": 0.29,
+        "approx_yield": 4.5,
+        "rationale": "Comparaison directe avec ton sleeve PEA. Attention l'EEI est UCITS Irlande donc éligible PEA si ton broker le permet."
+      },
+      "alternative": {
+        "ticker": "SXRZ",
+        "name": "iShares STOXX Europe Select Dividend 30 UCITS ETF",
+        "isin": "DE0002635299",
+        "ter": 0.31,
+        "purpose": "Plus concentré (30 actions), pondération yield-driven. Alternative si EEI indisponible."
+      }
+    },
+    "global_discipline": {
+      "ticker": "IWDA",
+      "name": "iShares Core MSCI World UCITS ETF",
+      "isin": "IE00B4L5Y983",
+      "ter": 0.20,
+      "purpose": "Benchmark discipline globale. Évalue si ta stratégie dividende génère un edge net vs une simple détention MSCI World.",
+      "rationale": "Si ton portefeuille combiné PEA+CTO sous-performe IWDA de >2%/an sur 5 ans à vol similaire ou supérieure, la stratégie dividende est statistiquement perdante pour ton cas. Reconsidérer."
+    }
+  },
+  "comparison_protocol": {
+    "frequency": "Annuel",
+    "metrics_to_compare": [
+      "Total return (dividendes réinvestis)",
+      "Volatilité annualisée",
+      "Sharpe ratio",
+      "Maximum drawdown",
+      "Yield-on-cost à 3 ans"
+    ],
+    "decision_rules": {
+      "outperform_2pct_after_5y": "Ton edge est documenté, continue",
+      "match_within_1pct": "Le portefeuille est équivalent — la complexité ne paye pas, simplifier (3-4 lignes + 1 ETF)",
+      "underperform_2pct_after_5y": "Stratégie statistiquement perdante — basculer 100% sur SCHD + IWDA"
+    }
+  }
+}

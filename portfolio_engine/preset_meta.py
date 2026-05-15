@@ -149,6 +149,16 @@ DUAL_LISTING_TICKERS: Dict[str, List[str]] = {
     # Asia local vs ADR
     "TSM": ["2330"],            # TSMC (NYSE ADR vs TWSE local)
     "005930": ["SSNLF"],        # Samsung Electronics
+    # v8.x: paires EU ordinaire / préférentielle (même société, même droit
+    # économique, l'une avec droit de vote, l'autre sans). Évite la double
+    # exposure type Henkel HEN+HEN3 à 18% du portefeuille.
+    "HEN3": ["HEN"],            # Henkel AG & Co (pref / ord)
+    "VOW3": ["VOW"],            # Volkswagen AG (pref / ord)
+    "BMW3": ["BMW"],            # BMW AG (pref / ord)
+    "SRT3": ["SRT"],            # Sartorius AG (pref / ord)
+    "FPE3": ["FPE"],            # Fuchs SE (pref / ord)
+    "MTX3": ["MTX"],            # MTU Aero Engines (rare double cotation)
+    "DRW3": ["DRW8"],            # Drägerwerk (pref / ord)
 }
 
 # Reverse lookup: duplicate_ticker -> canonical_ticker
@@ -1049,13 +1059,10 @@ PEA_ELIGIBLE_COUNTRIES = {
 
 CTO_ELIGIBLE_COUNTRIES = {
     "Etats-Unis", "Royaume-Uni", "Suisse",
-    "Canada", "Australie", "Japon",
-    # v8.x: ajouts post-feedback expert pour élargir l'univers CTO
-    # Marchés Asie matures à culture dividende, accessibles via la plupart des brokers FR
-    "Taïwan",   # TSMC ADR, semi-conducteurs, dividend culture mature
-    "Corée",    # Banques (KB, Shinhan), Samsung, électronique
-    # Volontairement exclus : Chine, Hong Kong (risque réglementaire post-2020),
-    # Inde (fiscalité ADR complexe), Thaïlande/Philippines (taille univers négligeable)
+    "Canada", "Australie",
+    # v8.x: décision user (2026-05-15) — pas d'Asie pour le profil rendement.
+    # Volontairement exclus : Japon, Taïwan, Corée (concentration ratio risque/familiarité),
+    # Chine/HK (risque réglementaire), Inde (fiscalité ADR), petits marchés émergents.
 }
 
 

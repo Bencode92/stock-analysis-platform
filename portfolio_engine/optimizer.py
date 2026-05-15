@@ -1014,7 +1014,9 @@ PROFILES = {
         crypto_max=0.0,
         bonds_min=0.0,
         bonds_max=0.0,
-        max_single_position=10.0,      # univers plus restreint, on tolère un peu plus
+        # v8.x: 10→12% — sans Asie, univers CTO trop maigre pour 10% strict
+        # Assumé honnêtement vs faire dépasser silencieusement par l'optimizer
+        max_single_position=12.0,
         max_sector=35.0,
         min_assets=8,
         max_assets=12,

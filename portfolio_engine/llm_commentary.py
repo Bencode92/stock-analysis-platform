@@ -163,6 +163,26 @@ FALLBACK_COMMENTS = {
         "et au risque de crédit. En période de hausse des taux, la valeur des obligations "
         "peut diminuer significativement."
     ),
+    "Dividende-PEA": (
+        "Ce portefeuille Dividende PEA cible le rendement et la qualité sur l'univers "
+        "des actions UE/EEE éligibles au PEA (UK exclu depuis Brexit). Sélection filtrée "
+        "anti value-trap : yield ≥ 2.5%, payout ≤ 75% (sauf REITs), ROE ≥ 10%, "
+        "FCF yield ≥ 2% (sauf banques), croissance dividende positive. "
+        "Construction à faible turnover (turnover penalty élevé) pour bénéficier "
+        "du réinvestissement composé en PEA > 5 ans (0% IR sur dividendes et plus-values, "
+        "17.2% prélèvements sociaux à la sortie). Plafond versements PEA : 150 000€. "
+        "Risques : concentration sectorielle Finance/Utilities/Industries, "
+        "sensibilité aux taux d'intérêt, exposition macro européenne."
+    ),
+    "Dividende-CTO": (
+        "Ce portefeuille Dividende CTO complète le sleeve PEA en exposant aux dividend "
+        "payers US, UK et suisses non-éligibles PEA. Mêmes filtres qualité que le PEA "
+        "(payout, ROE, FCF) avec exceptions sectorielles (banques, REITs). "
+        "Détention en compte-titres ordinaire personne physique : PFU 30% sur dividendes "
+        "et plus-values (12.8% IR + 17.2% PS). Buy-and-hold privilégié pour éviter "
+        "la friction fiscale de rotation. Risques : sensibilité au taux de change EUR/USD, "
+        "concentration sur quelques marchés matures, retenue à la source variable selon pays."
+    ),
 }
 
 
