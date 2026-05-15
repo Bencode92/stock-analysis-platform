@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "purpose": "Override de l'éligibilité PEA pour les cas hybrides où le pays du dataset ne reflète pas le siège fiscal réel ou la décision broker.",
+    "usage": "Consulté par _apply_envelope_country_filter() dans generate_portfolios_v4.py. Si un ticker est listé ici, sa valeur prime sur le filtre pays par défaut.",
+    "verification": "À valider au cas par cas avec ton broker (Bourse Direct, Fortuneo, Boursorama, Saxo) — l'éligibilité PEA n'est PAS systématique sur tous les brokers même quand le siège est UE.",
+    "last_updated": "2026-05-14"
+  },
+  "overrides": {
+    "ACN": {
+      "name": "Accenture plc",
+      "country_in_dataset": "Etats-Unis",
+      "real_hq": "Irlande",
+      "pea_eligible": true,
+      "reason": "Siège fiscal Irlande depuis 2009 (Dublin). Cotée NYSE mais éligible PEA chez la plupart des brokers FR. Excellent dividend grower (~1.2% yield, ~10%/an growth)."
+    },
+    "STM": {
+      "name": "STMicroelectronics N.V.",
+      "country_in_dataset": "France",
+      "real_hq": "Pays-Bas",
+      "pea_eligible": true,
+      "reason": "Siège Amsterdam (Pays-Bas), double cotation Paris/Milan/NYSE. Éligible PEA."
+    },
+    "EXOR": {
+      "name": "EXOR N.V.",
+      "country_in_dataset": "Italie",
+      "real_hq": "Pays-Bas",
+      "pea_eligible": true,
+      "reason": "Siège Amsterdam, holding Agnelli. Éligible PEA."
+    },
+    "STLA": {
+      "name": "Stellantis N.V.",
+      "country_in_dataset": "France",
+      "real_hq": "Pays-Bas",
+      "pea_eligible": true,
+      "reason": "Siège Amsterdam. Éligible PEA."
+    },
+    "FERG": {
+      "name": "Ferguson plc",
+      "country_in_dataset": "Royaume-Uni",
+      "real_hq": "Jersey",
+      "pea_eligible": false,
+      "reason": "Domiciliée Jersey + déplacement cotation NYSE en 2024. Non éligible PEA."
+    }
+  }
+}

@@ -517,11 +517,122 @@ def _active_profiles(config: Dict) -> List[str]:
 
 
 # v8.x: country filter pré-stage pour les sous-enveloppes Dividende
+# v8.x.1: support des overrides PEA pour les cas hybrides (Accenture, STM, etc.)
+# v8.x.2: max_country cap post-optimisation pour Dividende (anti-concentration souveraine)
+
+_PEA_OVERRIDES_CACHE: Optional[Dict] = None
+
+# Cap par pays pour les profils Dividende (anti-concentration souveraine).
+# Spécifique à Dividende car les autres profils ont déjà max_region.
+DIVIDENDE_MAX_COUNTRY_PCT = {
+    "Dividende-PEA": 30.0,   # univers EU 10 pays, France/Allemagne/Espagne se concentrent vite
+    "Dividende-CTO": 60.0,   # univers CTO US dominant, cap plus permissif
+}
+
+
+def _enforce_max_country(allocation: Dict[str, float], assets: list, profile: str) -> Dict[str, float]:
+    """Post-process : redistribue les excès d'allocation par pays.
+
+    Pour les profils Dividende uniquement. Ne touche pas aux autres profils.
+    Trim proportionnel sur les positions du pays en excès, redistribue sur
+    les positions des autres pays (même profil) au prorata de leur poids.
+    """
+    cap_pct = DIVIDENDE_MAX_COUNTRY_PCT.get(profile)
+    if not cap_pct or not allocation:
+        return allocation
+
+    # Build country lookup: aid -> country
+    aid_to_country = {}
+    for a in assets:
+        aid = getattr(a, "id", None) or getattr(a, "ticker", None)
+        country = (getattr(a, "country", None) or "").strip()
+        if aid:
+            aid_to_country[aid] = country
+
+    # Group by country
+    by_country: Dict[str, float] = {}
+    for aid, w in allocation.items():
+        c = aid_to_country.get(aid, "?")
+        by_country[c] = by_country.get(c, 0.0) + w
+
+    total = sum(allocation.values())
+    if total <= 0:
+        return allocation
+
+    cap_abs = cap_pct * (total / 100.0)  # allocation peut être en % ou décimal
+    if total > 5:  # heuristique : si total > 5, c'est en %
+        cap_abs = cap_pct
+
+    # Find violations
+    violations = {c: w for c, w in by_country.items() if w > cap_abs + 0.5}
+    if not violations:
+        return allocation
+
+    logger.warning(f"   [{profile}] 🌍 Violations max_country (cap {cap_pct}%): "
+                   + ", ".join(f"{c}={w:.1f}%" for c, w in violations.items()))
+
+    new_allocation = dict(allocation)
+    for offending_country, excess_total in violations.items():
+        excess = excess_total - cap_abs
+        # Positions à trimmer (du pays en excès, du plus gros au plus petit)
+        offending_aids = sorted(
+            [aid for aid, w in new_allocation.items()
+             if aid_to_country.get(aid) == offending_country],
+            key=lambda a: -new_allocation[a],
+        )
+        # Beneficiaires (autres pays, prorata du poids)
+        other_aids = [aid for aid in new_allocation if aid_to_country.get(aid) != offending_country]
+        other_total = sum(new_allocation[aid] for aid in other_aids) or 1.0
+
+        # Trim proportionnel sur le pays en excès
+        for aid in offending_aids:
+            if excess <= 0.05:
+                break
+            cur = new_allocation[aid]
+            reduction = min(cur * (excess / excess_total), cur * 0.5)
+            new_allocation[aid] = round(cur - reduction, 3)
+            excess -= reduction
+            logger.info(f"      Trim {aid} (-{reduction:.2f}%)")
+
+        # Redistribute on other countries
+        trimmed_total = sum(new_allocation[aid] for aid in offending_aids)
+        redistrib = (excess_total - cap_abs) - max(0, excess)  # actually trimmed
+        for aid in other_aids:
+            share = (new_allocation[aid] / other_total) * redistrib
+            new_allocation[aid] = round(new_allocation[aid] + share, 3)
+
+    return new_allocation
+
+
+def _load_pea_overrides() -> Dict[str, Dict]:
+    """Charge config/pea_eligibility_overrides.json (cached)."""
+    global _PEA_OVERRIDES_CACHE
+    if _PEA_OVERRIDES_CACHE is not None:
+        return _PEA_OVERRIDES_CACHE
+    path = os.path.join("config", "pea_eligibility_overrides.json")
+    if not os.path.exists(path):
+        _PEA_OVERRIDES_CACHE = {}
+        return _PEA_OVERRIDES_CACHE
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        _PEA_OVERRIDES_CACHE = data.get("overrides", {})
+        logger.info(f"📋 PEA eligibility overrides chargés : {len(_PEA_OVERRIDES_CACHE)} tickers")
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"⚠️ Échec lecture {path}: {e}")
+        _PEA_OVERRIDES_CACHE = {}
+    return _PEA_OVERRIDES_CACHE
+
+
 def _apply_envelope_country_filter(equities: List[dict], profile: str) -> List[dict]:
     """Applique le filtre pays selon l'enveloppe fiscale (PEA / CTO).
 
     Pour les 3 profils historiques (Agressif/Modéré/Stable) ou tout profil sans
     sous-enveloppe : retourne la liste inchangée.
+
+    v8.x.1: les overrides PEA (config/pea_eligibility_overrides.json) priment
+    sur le filtre pays par défaut pour les cas hybrides (Accenture siège IE
+    coté NYSE, STM siège NL coté Paris, etc.).
     """
     try:
         from portfolio_engine.preset_meta import (
@@ -544,7 +655,32 @@ def _apply_envelope_country_filter(equities: List[dict], profile: str) -> List[d
     else:
         return equities
 
-    filtered = [e for e in equities if (e.get("country") or "").strip() in allowed]
+    overrides = _load_pea_overrides()
+
+    filtered = []
+    overrides_applied = 0
+    for e in equities:
+        ticker = (e.get("ticker") or "").upper().strip()
+        country = (e.get("country") or "").strip()
+        override = overrides.get(ticker)
+
+        if override is not None:
+            # Override explicite : on respecte la décision
+            override_pea_eligible = bool(override.get("pea_eligible"))
+            if mode == "pea" and override_pea_eligible:
+                filtered.append(e)
+                overrides_applied += 1
+            elif mode == "cto" and not override_pea_eligible:
+                filtered.append(e)
+                overrides_applied += 1
+            # Sinon : on EXCLUT (l'override force le ticker dans l'autre enveloppe)
+        else:
+            # Pas d'override : filtre pays classique
+            if country in allowed:
+                filtered.append(e)
+
+    if overrides_applied:
+        logger.info(f"   [{profile}] 📋 {overrides_applied} overrides PEA appliqués")
     return filtered
 
 # =============================================================================
@@ -2596,6 +2732,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
             logger.warning(f"   [{profile}] Price loading failed: {_e}, using structured only")
 
         allocation, diagnostics = optimizer.build_portfolio(assets, profile)
+
+        # v8.x: max_country post-process pour profils Dividende (anti-concentration souveraine)
+        if profile in DIVIDENDE_MAX_COUNTRY_PCT:
+            allocation = _enforce_max_country(allocation, assets, profile)
 
         # v7.3: Flow RENDEMENT — mêmes candidats, poids yield-driven
         try:

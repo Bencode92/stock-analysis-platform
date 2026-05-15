@@ -1050,6 +1050,12 @@ PEA_ELIGIBLE_COUNTRIES = {
 CTO_ELIGIBLE_COUNTRIES = {
     "Etats-Unis", "Royaume-Uni", "Suisse",
     "Canada", "Australie", "Japon",
+    # v8.x: ajouts post-feedback expert pour élargir l'univers CTO
+    # Marchés Asie matures à culture dividende, accessibles via la plupart des brokers FR
+    "Taïwan",   # TSMC ADR, semi-conducteurs, dividend culture mature
+    "Corée",    # Banques (KB, Shinhan), Samsung, électronique
+    # Volontairement exclus : Chine, Hong Kong (risque réglementaire post-2020),
+    # Inde (fiscalité ADR complexe), Thaïlande/Philippines (taille univers négligeable)
 }
 
 
@@ -1065,31 +1071,49 @@ def _make_dividende_policy(envelope_label: str, fiscal_notes: str,
         "min_buffett_score": 55,
         "min_quality_gate": 60,
         "hard_filters": {
+            # v8.x: resserrés post-feedback expert pour éliminer mécaniquement les value-traps
             "dividend_yield_min": 2.5,
-            "payout_ratio_max": 85.0,
-            "roe_min": 8.0,
-            "fcf_yield_min": 0.5,
-            "quality_score_min": 50,
+            "dividend_yield_max": 8.0,       # NEW: cap yield (>8% = signal coupe imminente)
+            "payout_ratio_max": 75.0,        # ↓ 85 → 75 (sauf REITs, cf. sector_relaxations)
+            "roe_min": 10.0,                 # ↑ 8 → 10 (sauf Finance, 12 dans relaxations)
+            "fcf_yield_min": 2.0,            # ↑ 0.5 → 2.0 (sauf Finance, 0.0 dans relaxations)
+            "quality_score_min": 60,         # ↑ 50 → 60 (cohérent qualité)
             "quality_coverage_min": 65,
             "volatility_3y_max": 35.0,
-            "dividend_coverage_min": 1.0,
+            "dividend_coverage_min": 1.3,    # ↑ 1.0 → 1.3 (marge de sécurité)
+        },
+        # v8.x: relaxations sectorielles — quand une métrique est structurellement
+        # différente selon le secteur (banques : FCF accounting spécifique ;
+        # REITs : payout 90%+ légalement obligatoire ; etc.)
+        "sector_relaxations": {
+            "Finance": {                       # Banques, assurances
+                "fcf_yield_min": 0.0,          # FCF yield non pertinent (modèle business)
+                "roe_min": 12.0,               # mais ROE plus exigeant
+            },
+            "Immobilier": {                    # REITs (Klépierre, VICI, GLPI, etc.)
+                "payout_ratio_max": 95.0,      # REITs doivent distribuer ≥90% légalement
+                "fcf_yield_min": 0.5,          # FCF yield comptabilité spéciale (REIT)
+            },
         },
         "equity_min_weight": 1.0,           # 100% equity, pas de bonds/crypto
         "equity_max_weight": 1.0,
         "min_equity_positions": max(10, target_holdings - 2),
         "score_weights": {
-            # Income-tilted (35%) — dominant
-            "dividend_yield":         0.25,
-            "dividend_growth_3y":     0.10,
-            # Quality (35%) — anti value-trap
+            # v8.x: rééquilibrage post-feedback expert — parité yield/growth pour
+            # privilégier le yield-on-cost long terme vs le yield brut instantané.
+            # Income (35%) — yield ET growth à parité (Diageo/P&G/Hershey beats high-yield)
+            "dividend_yield":         0.18,   # ↓ 0.25 → 0.18
+            "dividend_growth_3y":     0.17,   # ↑ 0.10 → 0.17  (presque parité)
+            "dividend_coverage":      0.05,   # NEW: récompense FCF coverage > 1.5x
+            # Quality (32%) — anti value-trap, légèrement renforcée
             "quality_safety_sub":     0.20,   # bilan solide + payout sain
-            "quality_quality_sub":    0.10,   # ROE+ROIC+marge
+            "quality_quality_sub":    0.12,   # ↑ 0.10 → 0.12 (ROE+ROIC+marge)
             "quality_value_sub":      0.05,   # ne pas surpayer
             # Risk pénalité (20%)
             "volatility_3y":         -0.10,
             "max_drawdown_3y":       -0.10,
-            # Momentum filet (5%)
-            "perf_1y":                0.05,
+            # Momentum filet (3%) — évite chutes prolongées
+            "perf_1y":                0.03,
         },
         "description": f"Profil rendement dividende+qualité — enveloppe {envelope_label}",
         "expected_vol_range": (8, 13),
@@ -1437,19 +1461,34 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
     """
     v4.15.2 FIX: vol_missing traité comme les autres métriques.
     Plus de default 25.0 - si vol manquante = reject.
+
+    v8.x: support des sector_relaxations dans PROFILE_POLICY pour overrider
+    certains seuils par secteur (ex: banques fcf_yield_min, REITs payout_ratio_max).
     """
     policy = get_profile_policy(profile)
-    filters = policy.get("hard_filters", {})
-    
-    if not filters:
+    base_filters = policy.get("hard_filters", {})
+    sector_relaxations = policy.get("sector_relaxations", {})
+
+    if not base_filters:
         return equities, {"skipped": True, "before": len(equities), "after": len(equities)}
-    
+
     filtered = []
     rejection_counts = {}
-    
+
     for eq in equities:
         reasons = []
-        
+
+        # v8.x: filters effectifs = base + relaxations sectorielles si applicable
+        if sector_relaxations:
+            sector = (eq.get("sector") or eq.get("sector_api") or "").strip()
+            filters = dict(base_filters)
+            for sect_key, relax in sector_relaxations.items():
+                if sect_key in sector:
+                    filters.update(relax)
+                    break
+        else:
+            filters = base_filters
+
         # v4.15.2: vol sans default, traité comme les autres
         vol = get_metric_value(eq, "volatility_3y")
         roe = get_metric_value(eq, "roe")
@@ -1476,13 +1515,18 @@ def apply_hard_filters(equities: List[Dict], profile: str) -> Tuple[List[Dict], 
             elif roe < filters["roe_min"]:
                 reasons.append(f"roe<{filters['roe_min']}")
         
-        # Dividend yield filter
+        # Dividend yield filter (floor)
         if "dividend_yield_min" in filters:
             if div_yield is None:
                 reasons.append("div_yield_missing")
             elif div_yield < filters["dividend_yield_min"]:
                 reasons.append(f"div<{filters['dividend_yield_min']}")
-        
+
+        # v8.x: Dividend yield cap (signal de coupe imminente au-dessus du seuil)
+        if "dividend_yield_max" in filters and div_yield is not None:
+            if div_yield > filters["dividend_yield_max"]:
+                reasons.append(f"div>{filters['dividend_yield_max']}")
+
         # Anti yield-trap: payout
         if "payout_ratio_max" in filters:
             if payout is None:
