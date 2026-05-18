@@ -1,0 +1,85 @@
+# Réconciliation ISIN/composite des tickers sur l'univers complet.
+#
+# Lance script 01 (patché par l'expert) sur les 806+ titres pour détecter
+# les collisions de tickers (ADM Admiral vs Archer Daniels, SAN Sanofi vs
+# Santander, etc.) et produire un mapping ISIN/composite officiel.
+#
+# Utilise la clé Twelve Data des secrets repo (TWELVE_DATA_API).
+# Avec plan Ultra : rate 100-500 req/min recommandé.
+#
+# Déclenchement : onglet Actions → "Reconcile ISIN (full universe)" → Run workflow
+
+name: Reconcile ISIN (full universe)
+
+on:
+  workflow_dispatch:
+    inputs:
+      rate:
+        description: "Requetes/minute (free=8, Ultra=100-500)"
+        required: false
+        default: "100"
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests pandas
+
+      - name: Flatten stocks_*.json (script attend liste plate)
+        run: |
+          mkdir -p data_flat
+          python3 - <<'PY'
+          import json, glob, os
+          for fp in glob.glob("data/stocks_*.json"):
+              with open(fp) as f:
+                  d = json.load(f)
+              flat = d.get("stocks") or d.get("data")
+              if flat is None and isinstance(d, dict):
+                  for v in d.values():
+                      if isinstance(v, list):
+                          flat = v
+                          break
+              flat = flat or []
+              # Renomme ticker en symbol si nécessaire
+              for s in flat:
+                  if isinstance(s, dict) and "symbol" not in s and "ticker" in s:
+                      s["symbol"] = s["ticker"]
+              out_path = os.path.join("data_flat", os.path.basename(fp))
+              with open(out_path, "w") as out:
+                  json.dump(flat, out)
+              print(f"  {out_path} : {len(flat)} titres")
+          PY
+
+      - name: Run reconciliation (full universe)
+        env:
+          # Le repo utilise TWELVE_DATA_API ; le script attend TWELVEDATA_API_KEY
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_API }}
+        run: |
+          mkdir -p reconcile_out
+          python3 scripts/reconcile_isin.py \
+            --universe-dir data_flat \
+            --rate "${{ github.event.inputs.rate }}" \
+            --out-dir reconcile_out
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation-reports
+          path: |
+            reconcile_out/reconciliation_report.csv
+            reconcile_out/isin_map.json
+          retention-days: 30
