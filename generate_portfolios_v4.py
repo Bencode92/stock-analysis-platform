@@ -530,6 +530,71 @@ def _active_profiles(config: Dict) -> List[str]:
 _PEA_OVERRIDES_CACHE: Optional[Dict] = None
 _DIVIDENDE_BASELINE_CACHE: Optional[Dict] = None
 _DIVIDENDE_BASELINE_ACTIVE: set = set()  # profils où le baseline a été effectivement appliqué
+_TICKER_COLLISIONS_DETECTED: Dict[str, List[Dict]] = {}  # ticker → liste d'instances colliding
+
+
+def _detect_ticker_collisions(equities: List[Dict]) -> Dict[str, List[Dict]]:
+    """v8.x.5: Détecte les tickers présents avec plusieurs sociétés/pays/MIC.
+
+    Le ticker ADM, par exemple, existe dans stocks_europe.json (Admiral Group
+    UK, XLON, quality 72) ET dans stocks_us.json (Archer Daniels Midland,
+    XNYS, quality 34). Sans détection, le pipeline traite l'un ou l'autre
+    silencieusement selon l'ordre de chargement.
+
+    Retourne un dict {ticker: [list_of_collision_records]} pour les tickers
+    avec >1 société distincte. Une "société distincte" est définie par
+    (country, MIC) différents.
+    """
+    by_ticker: Dict[str, List[Dict]] = {}
+    for eq in equities:
+        tk = (eq.get("ticker") or "").upper().strip()
+        if not tk:
+            continue
+        by_ticker.setdefault(tk, []).append(eq)
+
+    collisions = {}
+    for tk, instances in by_ticker.items():
+        if len(instances) <= 1:
+            continue
+        # Vérifie qu'il s'agit bien de sociétés distinctes (country/MIC différent)
+        unique_signatures = {(e.get("country", ""), e.get("data_mic") or e.get("exchange", ""))
+                              for e in instances}
+        if len(unique_signatures) > 1:
+            collisions[tk] = [
+                {
+                    "name": e.get("name") or e.get("name_api", ""),
+                    "country": e.get("country", "?"),
+                    "mic": e.get("data_mic") or e.get("exchange", "?"),
+                    "quality_score": e.get("quality_score"),
+                    "dividend_yield": e.get("dividend_yield_regular") or e.get("dividend_yield"),
+                }
+                for e in instances
+            ]
+    return collisions
+
+
+def _match_baseline_key(eq: Dict, key: str) -> bool:
+    """v8.x.5: Match d'une équité à une clé baseline.
+
+    Supporte :
+      - clé simple "ADM" → match ticker uniquement (peut être ambigu)
+      - clé composite "ADM@XLON" → match ticker ET MIC exactement
+      - clé composite "ADM@Royaume-Uni" → match ticker ET country exactement
+
+    Recommandation : utiliser des clés composites pour tous les tickers
+    en collision (cf. _TICKER_COLLISIONS_DETECTED).
+    """
+    tk = (eq.get("ticker") or "").upper().strip()
+    if "@" not in key:
+        return tk == key.upper().strip()
+    base_ticker, discriminator = key.upper().split("@", 1)
+    if tk != base_ticker.strip():
+        return False
+    # Discriminateur : MIC ou country
+    eq_mic = (eq.get("data_mic") or eq.get("exchange") or "").upper().strip()
+    eq_country = (eq.get("country") or "").upper().strip()
+    disc = discriminator.strip()
+    return disc == eq_mic or disc == eq_country
 
 
 def _load_dividende_baseline() -> Dict[str, List[str]]:
@@ -620,16 +685,23 @@ def _apply_dividende_baseline_filter(equities: List[dict], profile: str) -> List
                        f"rebalance forcé : {', '.join(toxic[:5])}")
         return equities
 
-    baseline_set = {t.upper() for t in baseline_tickers}
+    # v8.x.5: support clés composites TICKER@MIC pour désambiguer collisions
+    # (ex: "ADM@XLON" = Admiral UK vs "ADM@XNYS" = Archer Daniels US)
     filtered = []
-    seen_tickers = set()
-    for e in equities:
-        tk = (e.get("ticker") or "").upper()
-        if tk in baseline_set and tk not in seen_tickers:
-            # Marquer comme protégé : bypass hard_filters et min_buffett
-            e["_baseline_protected"] = True
-            filtered.append(e)
-            seen_tickers.add(tk)
+    seen_keys = set()
+    for baseline_key in baseline_tickers:
+        # Cherche le premier match (1ère occurrence dans l'univers)
+        for e in equities:
+            if _match_baseline_key(e, baseline_key):
+                # Anti-doublon si plusieurs équités matchent la même clé (ne devrait pas arriver avec composite)
+                tk_signature = f"{(e.get('ticker') or '').upper()}@{e.get('data_mic') or e.get('country', '')}"
+                if tk_signature in seen_keys:
+                    continue
+                seen_keys.add(tk_signature)
+                e["_baseline_protected"] = True
+                filtered.append(e)
+                break
+
     _DIVIDENDE_BASELINE_ACTIVE.add(profile)
     logger.info(f"   [{profile}] 📌 Baseline appliqué : "
                 f"{len(filtered)}/{len(baseline_tickers)} tickers trouvés "
@@ -862,7 +934,25 @@ def _apply_envelope_country_filter(equities: List[dict], profile: str) -> List[d
     v8.x.1: les overrides PEA (config/pea_eligibility_overrides.json) priment
     sur le filtre pays par défaut pour les cas hybrides (Accenture siège IE
     coté NYSE, STM siège NL coté Paris, etc.).
+
+    v8.x.5: détecte les collisions de tickers au premier appel et logue les
+    cas ambigus (ADM = Admiral UK + Archer Daniels US, etc.).
     """
+    global _TICKER_COLLISIONS_DETECTED
+    # Une fois par session, scanne l'univers pour repérer les collisions
+    if not _TICKER_COLLISIONS_DETECTED and equities:
+        _TICKER_COLLISIONS_DETECTED = _detect_ticker_collisions(equities)
+        if _TICKER_COLLISIONS_DETECTED:
+            logger.warning(f"⚠️  Collisions de tickers détectées dans l'univers ({len(_TICKER_COLLISIONS_DETECTED)} tickers) :")
+            for tk, instances in _TICKER_COLLISIONS_DETECTED.items():
+                logger.warning(f"   • {tk} :")
+                for inst in instances:
+                    logger.warning(f"       └─ {inst['name'][:40]:40s} | {inst['country']:<14} | {inst['mic']:<10} | "
+                                   f"quality={inst['quality_score']} | yield={inst['dividend_yield']}%")
+            logger.warning(f"   💡 Utiliser clés composites (ex: 'ADM@XLON') dans dividende_baseline.json")
+        else:
+            logger.info("✅ Aucune collision de ticker détectée dans l'univers")
+
     try:
         from portfolio_engine.preset_meta import (
             PROFILE_POLICY,
