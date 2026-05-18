@@ -8,14 +8,28 @@
   "benchmarks": {
     "Dividende-CTO": {
       "primary": {
+        "ticker": "VIG",
+        "name": "Vanguard Dividend Appreciation ETF",
+        "isin": "US9219088443",
+        "purpose": "Benchmark dividend growers US. Méthodologie : S&P U.S. Dividend Growers Index, sociétés ayant augmenté leur dividende au moins 10 ans consécutifs. Aligné avec la stratégie Dividend Growth choisie (total return long terme, pas income immédiat).",
+        "ter": 0.06,
+        "approx_yield": 1.8,
+        "rationale": "Si ton sleeve CTO sous-performe VIG de >2%/an sur 3+ ans à volatilité similaire, revoir la sélection. Le yield 3.37% du CTO est PLUS élevé que VIG (1.8%) tout en gardant la philosophie growth — c'est un edge à mesurer."
+      },
+      "alternative": {
+        "ticker": "NOBL",
+        "name": "ProShares S&P 500 Dividend Aristocrats ETF",
+        "isin": "US74348A2434",
+        "ter": 0.35,
+        "approx_yield": 2.0,
+        "purpose": "Aristocrats S&P 500 (25+ ans de croissance dividende consécutive). Plus exigeant mais plus concentré (65 titres)."
+      },
+      "income_alternative": {
         "ticker": "SCHD",
         "name": "Schwab U.S. Dividend Equity ETF",
-        "isin": "US8085246083",
-        "purpose": "Benchmark dividende+qualité US. Méthodologie : Dow Jones U.S. Dividend 100, sélection sur historique de paiement + solidité fondamentale (FCF/dette, ROE, dividend growth 5Y).",
         "ter": 0.06,
         "approx_yield": 3.4,
-        "key_holdings_pattern": ["LMT", "COP", "VZ", "CVX", "BMY", "MRK", "MO", "TXN", "KO", "PEP"],
-        "rationale": "Si ton sleeve CTO sous-performe SCHD de >2%/an sur 3+ ans à volatilité similaire, revoir la sélection."
+        "note": "Si tu changes de stratégie vers income (yield 4%+), SCHD devient le bench pertinent. Conserve la référence."
       }
     },
     "Dividende-PEA": {

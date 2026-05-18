@@ -996,18 +996,19 @@ PROFILES = {
         crypto_max=0.0,
         bonds_min=0.0,
         bonds_max=0.0,
-        max_single_position=8.0,
+        # v8.x.4: caps RÉALISTES vs concentration baseline 9 lignes (post audit v3).
+        # Avec 9 positions, max_pos doit être ≥ 100%/9 = 11.1% pour être faisable.
+        # 14% laisse une marge de tilt scoring autour du baseline equal-weight.
+        max_single_position=14.0,
         max_sector=25.0,
-        # v8.x.3: min_assets 15→8 — quand baseline figé, certains tickers peuvent
-        # temporairement disparaître du scoring sans qu'on veuille casser le run
         min_assets=8,
         max_assets=18,
-        max_turnover=8.0,              # encore plus strict : buy-and-hold
-        turnover_penalty=0.50,         # pénalité forte anti-rotation
+        max_turnover=8.0,
+        turnover_penalty=0.50,
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
-        euus_mode=True,                # univers EU principalement
+        euus_mode=True,
     ),
     "Dividende-CTO": ProfileConstraints(
         name="Dividende-CTO",
@@ -1016,11 +1017,10 @@ PROFILES = {
         crypto_max=0.0,
         bonds_min=0.0,
         bonds_max=0.0,
-        # v8.x: 10→12% — sans Asie, univers CTO trop maigre pour 10% strict
-        # Assumé honnêtement vs faire dépasser silencieusement par l'optimizer
-        max_single_position=12.0,
+        # v8.x.4: avec 7 positions, max_pos doit être ≥ 100%/7 = 14.3%.
+        # 18% laisse marge tilt scoring. Concentration assumée vu petit univers.
+        max_single_position=18.0,
         max_sector=35.0,
-        # v8.x.3: min_assets 8→5 — marge pour baseline filtré + buy-and-hold
         min_assets=5,
         max_assets=12,
         max_turnover=8.0,

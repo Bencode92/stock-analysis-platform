@@ -558,16 +558,16 @@ def _load_dividende_baseline() -> Dict[str, List[str]]:
 
 def _detect_baseline_toxicity(profile: str, baseline_tickers: List[str],
                                 eq_universe: List[dict]) -> List[str]:
-    """Détecte les tickers du baseline devenus VRAIMENT toxiques (rebalance forcé).
+    """Détecte les tickers du baseline devenus toxiques (rebalance forcé).
 
-    Critères stricts (vraie alerte structurelle, pas du tuning de seuil) :
+    v8.x.4 (post audit expert) : seuils resserrés :
       - Ticker disparu de l'univers (delisting, M&A)
-      - quality_score < 30 (effondrement qualité, pas une dérive)
-      - payout > 110% (paie plus que les bénéfices = dividende non soutenable)
-      - dividend_growth_3y < -25% (coupes récurrentes)
+      - quality_score < 40 (zone alerte qualité — était 30)
+      - payout > 100% (paie plus que ses bénéfices — était 110%)
+      - dividend_growth_3y < -20% (coupes récurrentes — était -25%)
 
-    Une dérive modérée (payout 90-110%, quality 30-50) est tolérée — c'est
-    précisément le rôle du baseline figé : ne pas rebalancer pour du bruit.
+    Reste tolérant à la dérive modérée (payout 80-100%, quality 40-50)
+    pour ne pas rebalancer sur du bruit de marché.
 
     Retourne la liste des tickers toxiques (vide si baseline encore valide).
     """
@@ -580,17 +580,17 @@ def _detect_baseline_toxicity(profile: str, baseline_tickers: List[str],
             toxic.append(f"{tk}:disparu")
             continue
         qs = eq.get("quality_score")
-        if qs is not None and qs < 30:
+        if qs is not None and qs < 40:
             toxic.append(f"{tk}:quality={qs}")
             continue
         payout = eq.get("payout_ratio_ttm")
         if payout is not None:
             payout_pct = payout if payout > 1.5 else payout * 100
-            if payout_pct > 110:
+            if payout_pct > 100:
                 toxic.append(f"{tk}:payout={payout_pct:.0f}%")
                 continue
         dg = eq.get("dividend_growth_3y")
-        if dg is not None and dg < -25:
+        if dg is not None and dg < -20:
             toxic.append(f"{tk}:div_growth={dg:.0f}%")
             continue
     return toxic
@@ -638,9 +638,11 @@ def _apply_dividende_baseline_filter(equities: List[dict], profile: str) -> List
 
 # Cap par pays pour les profils Dividende (anti-concentration souveraine).
 # Spécifique à Dividende car les autres profils ont déjà max_region.
+# v8.x.4: caps faisables — vu max_pos PEA=14% et 3 positions FR baseline,
+# France peut atteindre 42% (3×14%). Cap 35% laisse marge de respiration.
 DIVIDENDE_MAX_COUNTRY_PCT = {
-    "Dividende-PEA": 30.0,   # univers EU 10 pays, France/Allemagne/Espagne se concentrent vite
-    "Dividende-CTO": 60.0,   # univers CTO US dominant, cap plus permissif
+    "Dividende-PEA": 35.0,   # 3 FR × max_pos 14% = 42% théorique, cap 35% = compromis
+    "Dividende-CTO": 65.0,   # US naturellement dominant, cap plus permissif
 }
 
 
@@ -708,18 +710,39 @@ def _equal_weight_baseline(assets: list, profile: str) -> Dict[str, float]:
     return allocation
 
 
-def _enforce_max_country(allocation: Dict[str, float], assets: list, profile: str) -> Dict[str, float]:
-    """Post-process : redistribue les excès d'allocation par pays.
+def _enforce_caps_iterative(allocation: Dict[str, float], assets: list,
+                              profile: str, max_iter: int = 20,
+                              tol: float = 0.1) -> Dict[str, float]:
+    """v8.x.4: Itération bornée pour respecter SIMULTANÉMENT max_country
+    et max_single_position. Sans itération, max_country redistribue les excès
+    et viole le cap individuel ; vice-versa.
 
-    Pour les profils Dividende uniquement. Ne touche pas aux autres profils.
-    Trim proportionnel sur les positions du pays en excès, redistribue sur
-    les positions des autres pays (même profil) au prorata de leur poids.
+    Algo (expert reco) :
+      for i in range(max_iter):
+          weights = cap_positions(weights, max_pos)
+          weights = cap_country(weights, max_country)
+          weights = renormalize(weights)
+          if converged: return
+      log warning + best effort
+
+    Reset des contraintes : pour les profils non-Dividende, no-op.
     """
-    cap_pct = DIVIDENDE_MAX_COUNTRY_PCT.get(profile)
-    if not cap_pct or not allocation:
+    if not allocation or not profile.startswith("Dividende-"):
         return allocation
 
-    # Build country lookup: aid -> country
+    cap_country_pct = DIVIDENDE_MAX_COUNTRY_PCT.get(profile)
+    if not cap_country_pct:
+        return allocation
+
+    # Charge max_single_position depuis PROFILES
+    try:
+        from portfolio_engine.optimizer import PROFILES as _PROFS
+        constraints = _PROFS.get(profile)
+        cap_pos_pct = constraints.max_single_position if constraints else 12.0
+    except ImportError:
+        cap_pos_pct = 12.0
+
+    # Build country lookup
     aid_to_country = {}
     for a in assets:
         aid = getattr(a, "id", None) or getattr(a, "ticker", None)
@@ -727,59 +750,87 @@ def _enforce_max_country(allocation: Dict[str, float], assets: list, profile: st
         if aid:
             aid_to_country[aid] = country
 
-    # Group by country
-    by_country: Dict[str, float] = {}
-    for aid, w in allocation.items():
+    weights = dict(allocation)
+    total_before = sum(weights.values())
+    if total_before <= 0:
+        return weights
+
+    def _normalize(w: Dict[str, float]) -> Dict[str, float]:
+        s = sum(w.values())
+        if s <= 0:
+            return w
+        return {k: v * 100.0 / s for k, v in w.items()}
+
+    weights = _normalize(weights)
+
+    for iteration in range(max_iter):
+        w_before = dict(weights)
+
+        # 1. Cap par position individuelle — trim ceux au-dessus, redistribue prorata
+        over_pos = {k: v for k, v in weights.items() if v > cap_pos_pct + tol}
+        if over_pos:
+            excess = sum(v - cap_pos_pct for v in over_pos.values())
+            for k in over_pos:
+                weights[k] = cap_pos_pct
+            # Redistribuer l'excès sur les non-cappés (prorata)
+            others = {k: v for k, v in weights.items() if k not in over_pos and v < cap_pos_pct - tol}
+            other_total = sum(others.values()) or 1.0
+            for k in others:
+                weights[k] += excess * (others[k] / other_total)
+
+        # 2. Cap par pays
+        by_country: Dict[str, float] = {}
+        for aid, w in weights.items():
+            c = aid_to_country.get(aid, "?")
+            by_country[c] = by_country.get(c, 0.0) + w
+
+        over_country = {c: w for c, w in by_country.items() if w > cap_country_pct + tol}
+        if over_country:
+            for country, total_w in over_country.items():
+                excess = total_w - cap_country_pct
+                offending = [aid for aid, w in weights.items()
+                              if aid_to_country.get(aid) == country]
+                # Trim proportionnel
+                for aid in offending:
+                    cur = weights[aid]
+                    weights[aid] = cur * (cap_country_pct / total_w)
+                # Redistribuer sur autres pays (prorata, sans dépasser cap_pos)
+                others = [aid for aid in weights if aid_to_country.get(aid) != country
+                          and weights[aid] < cap_pos_pct - tol]
+                other_total = sum(weights[a] for a in others) or 1.0
+                for aid in others:
+                    add = excess * (weights[aid] / other_total)
+                    # Anticipe le cap individuel : limite l'add
+                    add_max = max(0, cap_pos_pct - weights[aid])
+                    weights[aid] += min(add, add_max)
+
+        # 3. Renormaliser
+        weights = _normalize(weights)
+
+        # 4. Test de convergence
+        max_change = max(abs(weights[k] - w_before.get(k, 0)) for k in weights)
+        if max_change < tol:
+            logger.info(f"   [{profile}] 📐 Caps convergés en {iteration+1} itération(s)")
+            break
+    else:
+        logger.warning(f"   [{profile}] ⚠️ Caps non convergés après {max_iter} itérations, "
+                       f"best effort retenu (Δ max = {max_change:.2f}pp)")
+
+    # Vérif finale
+    final_max = max(weights.values()) if weights else 0
+    final_by_country: Dict[str, float] = {}
+    for aid, w in weights.items():
         c = aid_to_country.get(aid, "?")
-        by_country[c] = by_country.get(c, 0.0) + w
+        final_by_country[c] = final_by_country.get(c, 0.0) + w
+    final_max_country = max(final_by_country.values()) if final_by_country else 0
+    logger.info(f"   [{profile}] 🎯 Final : max_pos={final_max:.1f}% (cap {cap_pos_pct}%), "
+                f"max_country={final_max_country:.1f}% (cap {cap_country_pct}%)")
 
-    total = sum(allocation.values())
-    if total <= 0:
-        return allocation
+    return {k: round(v, 3) for k, v in weights.items()}
 
-    cap_abs = cap_pct * (total / 100.0)  # allocation peut être en % ou décimal
-    if total > 5:  # heuristique : si total > 5, c'est en %
-        cap_abs = cap_pct
 
-    # Find violations
-    violations = {c: w for c, w in by_country.items() if w > cap_abs + 0.5}
-    if not violations:
-        return allocation
-
-    logger.warning(f"   [{profile}] 🌍 Violations max_country (cap {cap_pct}%): "
-                   + ", ".join(f"{c}={w:.1f}%" for c, w in violations.items()))
-
-    new_allocation = dict(allocation)
-    for offending_country, excess_total in violations.items():
-        excess = excess_total - cap_abs
-        # Positions à trimmer (du pays en excès, du plus gros au plus petit)
-        offending_aids = sorted(
-            [aid for aid, w in new_allocation.items()
-             if aid_to_country.get(aid) == offending_country],
-            key=lambda a: -new_allocation[a],
-        )
-        # Beneficiaires (autres pays, prorata du poids)
-        other_aids = [aid for aid in new_allocation if aid_to_country.get(aid) != offending_country]
-        other_total = sum(new_allocation[aid] for aid in other_aids) or 1.0
-
-        # Trim proportionnel sur le pays en excès
-        for aid in offending_aids:
-            if excess <= 0.05:
-                break
-            cur = new_allocation[aid]
-            reduction = min(cur * (excess / excess_total), cur * 0.5)
-            new_allocation[aid] = round(cur - reduction, 3)
-            excess -= reduction
-            logger.info(f"      Trim {aid} (-{reduction:.2f}%)")
-
-        # Redistribute on other countries
-        trimmed_total = sum(new_allocation[aid] for aid in offending_aids)
-        redistrib = (excess_total - cap_abs) - max(0, excess)  # actually trimmed
-        for aid in other_aids:
-            share = (new_allocation[aid] / other_total) * redistrib
-            new_allocation[aid] = round(new_allocation[aid] + share, 3)
-
-    return new_allocation
+# Alias pour compatibilité descendante avec le code existant
+_enforce_max_country = _enforce_caps_iterative
 
 
 def _load_pea_overrides() -> Dict[str, Dict]:
