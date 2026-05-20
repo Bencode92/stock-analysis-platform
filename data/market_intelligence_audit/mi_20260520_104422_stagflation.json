@@ -1,0 +1,387 @@
+{
+  "timestamp": "2026-05-20T10:44:22.536091",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-05-20",
+    "brent_usd": 109.04,
+    "brent_usd_avg5d": 108.9502,
+    "gold_usd": 4495.4794,
+    "silver_usd": 75.64433,
+    "vix": 22.0,
+    "fed_funds_rate": 3.63,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "cpi_index": 332.407,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 283.0,
+    "us_10y_yield": 4.61,
+    "us_2y_yield": 4.07,
+    "yield_curve_2s10s": 54.0,
+    "breakeven_5y": 2.66,
+    "sp500_level": 7353.61,
+    "sp500_change_1d_pct": -0.63978186613629,
+    "hyg_change_1d_pct": -0.6510579691999627,
+    "lqd_change_1d_pct": -1.3264554163596147,
+    "trade_weighted_usd": 119.2825,
+    "eurusd": 1.16002,
+    "nasdaq_change_1d_pct": -0.61624859,
+    "xlu_perf_1d_pct": 0.91033577,
+    "xle_perf_1d_pct": 1.172,
+    "cpi_core_mom_pct": 0.38,
+    "pce_yoy_pct": 3.5,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [
+      "energy_shock"
+    ],
+    "gold_price": 4495.67888,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 15.668312191210907,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.86,
+    "favored_sectors": "energy",
+    "avoided_sectors": "financials, healthcare",
+    "favored_regions": "israel, china, mexico",
+    "avoided_regions": "india, argentina",
+    "key_trends": "Secteur leader: energy (+37.1% YTD) | Région leader: south-korea (+79.0% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+47.3% sur 12 mois) | 6M leader: energy (+36.4% sur 6 mois)",
+    "risks": "Secteurs en difficulté: financials, healthcare, consumer-discretionary | Régions en difficulté: germany, france, chile | Concentration: peu de secteurs en zone favorable (rotation possible)",
+    "sector_momentum_summary": "financials(avoided,b=0.91,d=-1.29%), information-technology(neutral,b=1.48,d=-0.77%), utilities(neutral,b=0.75,d=-2.74%), industrials(neutral,b=0.95,d=-1.18%), healthcare(avoided,b=0.57,d=1.13%), energy(favored,b=-0.07,d=1.17%), consumer-staples(neutral,b=0.24,d=-0.62%), consumer-discretionary(neutral,b=1.22,d=-1.11%), real-estate(neutral,b=0.47,d=0.43%), communication-services(neutral,b=1.18,d=-1.11%), materials(neutral,b=0.79,d=-2.35%)"
+  },
+  "ai_response": {
+    "regime": "stagflation",
+    "regime_confidence": 4,
+    "regime_rationale": "Brent à $109 alimentant une inflation persistante (PCE 3.5%, core MoM 0.38% = ~4.6% annualisé) alors que la Fed est en pause à 3.63% et que les spreads de crédit s'écartent en temps réel (LQD -1.3%, HYG -0.65%). La courbe 2s10s positive à +54bps avec un 10Y à 4.61% reflète des primes de terme élevées liées à l'inflation, pas une croissance saine.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Surpondérer energy/oil — leader momentum + couverture inflation naturelle",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 4
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 5,
+        "rationale": "Brent $109, energy +37% YTD, beta négatif au marché (-0.07) = hedge parfait en stagflation et source de performance décorrélée."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire semi/AI — duration longue implicite + beta GDP élevé",
+        "params": {
+          "theme": "semi",
+          "delta_pct": -3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "IT beta 1.48, taux réels élevés (10Y 4.61% - breakeven 2.66% = 1.95%) compressent les multiples growth; semi en refroidissement relatif vs energy."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer precious metals — gold en drawdown 15.7% = opportunité",
+        "params": {
+          "theme": "precious_metals",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold à -15.7% de l'ATH malgré inflation persistante et dollar neutre (DTWEXBGS 119) = dislocation; silver à $75 confirme la demande réelle de métaux."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Renforcer gold comme hedge stagflation + tail risk",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "En stagflation, gold est le seul actif qui protège simultanément contre l'inflation et le risque de queue systémique; le drawdown actuel offre un point d'entrée."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer dividend_value — défensif + income en environnement de taux élevés",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Utilities +0.91% aujourd'hui vs SPX -0.64% confirme la rotation défensive; les dividendes offrent un coussin réel en stagflation."
+      },
+      {
+        "type": "bond_preference",
+        "action": "TIPS obligatoires + duration courte + éviter HY et securitized",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 3.5,
+          "fund_types": [
+            "High Yield Bond",
+            "Securitized Bond"
+          ]
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 5,
+        "rationale": "PCE 3.5% + core MoM 0.38% = inflation réaccélère; TIPS protègent le pouvoir d'achat, duration courte limite le risque si la Fed doit resserrer, HY spreads s'écartent (HYG -0.65% today)."
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Relever le floor obligataire pour Stable et Modéré",
+        "params": {
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX 22 + spreads qui s'écartent en temps réel = réduire l'exposition equity nette au profit de TIPS/treasury court qui offrent ~4% de rendement réel."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire healthcare malgré son caractère défensif — RADAR l'évite",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 2,
+        "rationale": "Healthcare classé 'avoided' par le RADAR quantitatif malgré un daily +1.13%; momentum 3M/6M négatif suggère un rebond technique, pas un retournement."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Stagflation = TIPS + treasury ultra-court; éviter tout crédit à spread (HY, CLO, securitized) car les spreads s'écartent activement; MTBA dans le portefeuille Agressif est à risque.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 3.5,
+      "max_duration_moderate": 4.5
+    },
+    "cash_allocation": {
+      "Agressif": 4,
+      "Modéré": 6,
+      "Stable": 5,
+      "rationale": "VIX 22 + spreads en écartement actif = garder de la poudre sèche pour acheter un éventuel sell-off equity plus prononcé; les T-bills à ~4% rendent le cash productif en attendant."
+    },
+    "_cash_guidance": "MINIMUM CASH: Agressif 2% si VIX>20 (option d'achat sur la vol), Modéré 3%, Stable 0% (T-bills = cash productif). Le cash est une POSITION, pas une absence de position.",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0,
+      "rationale": "Crypto = risk asset pur; en stagflation avec VIX 22 et spreads qui s'écartent, réduire l'exposition mais ne pas éliminer pour l'Agressif car BTC peut servir de hedge monétaire partiel."
+    },
+    "warnings": [
+      "RISQUE #1 — Choc pétrolier phase 2: Brent $109 déjà élevé, tout escalade géopolitique (Moyen-Orient, sanctions) pourrait pousser vers $130+ et forcer la Fed à resserrer malgré la croissance faible",
+      "RISQUE #2 — Réaccélération inflation: Core MoM 0.38% = 4.6% annualisé, bien au-dessus du target; si le prochain print confirme, la Fed pourrait reprendre les hausses → choc obligataire",
+      "RISQUE #3 — Crédit cracking: LQD -1.3% et HYG -0.65% en une seule journée; si les spreads IG passent >180bps ou HY >400bps, risque de contagion aux marchés equity",
+      "RISQUE #4 — MTBA (MBS) dans le portefeuille Agressif: les securitized bonds souffrent quand les taux montent et les spreads s'écartent; envisager un swap vers STIP ou VGSH",
+      "RISQUE #5 — Gold drawdown prolongé: -15.7% de l'ATH inhabituel; si c'est lié à des liquidations forcées (margin calls ailleurs), le rebond peut tarder",
+      "RISQUE #6 — Concentration sectorielle RADAR: peu de secteurs en zone favorable (energy seul) = risque de rotation brutale si le pétrole corrige"
+    ],
+    "market_interpretation": {
+      "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+      "geopolitical_risk": "Brent à $109 signale des tensions géopolitiques élevées (probablement Moyen-Orient/OPEC+); combiné au VIX 22 et à l'energy comme seul secteur en momentum positif, le marché price un risque d'approvisionnement persistant.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 25,
+      "sentiment_estimate": "fear",
+      "dollar_assessment": "neutral"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 4,
+        "Modéré": 4
+      },
+      "semi": {
+        "Agressif": -3,
+        "Modéré": -3
+      },
+      "precious_metals": {
+        "Agressif": 3,
+        "Modéré": 3,
+        "Stable": 3
+      },
+      "dividend_value": {
+        "Modéré": 2,
+        "Stable": 2
+      },
+      "healthcare": {
+        "Agressif": -2,
+        "Modéré": -2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 2,
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 3.5,
+        "fund_types": [
+          "High Yield Bond",
+          "Securitized Bond"
+        ],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Securitized Bond",
+          "Bank Loan"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 3.5,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 4.5,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_stagflation"
+    ],
+    "bond_floor_deltas": {
+      "Modéré": 3,
+      "Stable": 3
+    },
+    "cash_tactical": {
+      "Agressif": 4,
+      "Modéré": 6,
+      "Stable": 5
+    },
+    "cash_tactical_rationale": "VIX 22 + spreads en écartement actif = garder de la poudre sèche pour acheter un éventuel sell-off equity plus prononcé; les T-bills à ~4% rendent le cash productif en attendant.",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0
+    },
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 4,
+    "ai_warnings": [
+      "RISQUE #1 — Choc pétrolier phase 2: Brent $109 déjà élevé, tout escalade géopolitique (Moyen-Orient, sanctions) pourrait pousser vers $130+ et forcer la Fed à resserrer malgré la croissance faible",
+      "RISQUE #2 — Réaccélération inflation: Core MoM 0.38% = 4.6% annualisé, bien au-dessus du target; si le prochain print confirme, la Fed pourrait reprendre les hausses → choc obligataire",
+      "RISQUE #3 — Crédit cracking: LQD -1.3% et HYG -0.65% en une seule journée; si les spreads IG passent >180bps ou HY >400bps, risque de contagion aux marchés equity",
+      "RISQUE #4 — MTBA (MBS) dans le portefeuille Agressif: les securitized bonds souffrent quand les taux montent et les spreads s'écartent; envisager un swap vers STIP ou VGSH",
+      "RISQUE #5 — Gold drawdown prolongé: -15.7% de l'ATH inhabituel; si c'est lié à des liquidations forcées (margin calls ailleurs), le rebond peut tarder",
+      "RISQUE #6 — Concentration sectorielle RADAR: peu de secteurs en zone favorable (energy seul) = risque de rotation brutale si le pétrole corrige"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Stagflation = TIPS + treasury ultra-court; éviter tout crédit à spread (HY, CLO, securitized) car les spreads s'écartent activement; MTBA dans le portefeuille Agressif est à risque.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 3.5,
+      "max_duration_moderate": 4.5
+    }
+  },
+  "regime": "stagflation",
+  "regime_rationale": "Brent à $109 alimentant une inflation persistante (PCE 3.5%, core MoM 0.38% = ~4.6% annualisé) alors que la Fed est en pause à 3.63% et que les spreads de crédit s'écartent en temps réel (LQD -1.3%, HYG -0.65%). La courbe 2s10s positive à +54bps avec un 10Y à 4.61% reflète des primes de terme élevées liées à l'inflation, pas une croissance saine.",
+  "market_interpretation": {
+    "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+    "geopolitical_risk": "Brent à $109 signale des tensions géopolitiques élevées (probablement Moyen-Orient/OPEC+); combiné au VIX 22 et à l'energy comme seul secteur en momentum positif, le marché price un risque d'approvisionnement persistant.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 25,
+    "sentiment_estimate": "fear",
+    "dollar_assessment": "neutral"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Stagflation = TIPS + treasury ultra-court; éviter tout crédit à spread (HY, CLO, securitized) car les spreads s'écartent activement; MTBA dans le portefeuille Agressif est à risque.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": true,
+    "avoid_securitized": true,
+    "avoid_em_bonds": true,
+    "max_duration_stable": 3.5,
+    "max_duration_moderate": 4.5
+  },
+  "warnings": [
+    "RISQUE #1 — Choc pétrolier phase 2: Brent $109 déjà élevé, tout escalade géopolitique (Moyen-Orient, sanctions) pourrait pousser vers $130+ et forcer la Fed à resserrer malgré la croissance faible",
+    "RISQUE #2 — Réaccélération inflation: Core MoM 0.38% = 4.6% annualisé, bien au-dessus du target; si le prochain print confirme, la Fed pourrait reprendre les hausses → choc obligataire",
+    "RISQUE #3 — Crédit cracking: LQD -1.3% et HYG -0.65% en une seule journée; si les spreads IG passent >180bps ou HY >400bps, risque de contagion aux marchés equity",
+    "RISQUE #4 — MTBA (MBS) dans le portefeuille Agressif: les securitized bonds souffrent quand les taux montent et les spreads s'écartent; envisager un swap vers STIP ou VGSH",
+    "RISQUE #5 — Gold drawdown prolongé: -15.7% de l'ATH inhabituel; si c'est lié à des liquidations forcées (margin calls ailleurs), le rebond peut tarder",
+    "RISQUE #6 — Concentration sectorielle RADAR: peu de secteurs en zone favorable (energy seul) = risque de rotation brutale si le pétrole corrige"
+  ]
+}
