@@ -4,15 +4,16 @@
     "purpose": "Portefeuille cible figé (baseline) pour les profils Dividende-PEA et Dividende-CTO. Évite que l'optimizer remplace des titres entre deux runs (turnover doit être proche de zéro pour une stratégie buy-and-hold dividende).",
     "rebalance_policy": "Le baseline N'EST modifié QUE dans 3 cas : (1) flag CONFIG['force_dividende_rebalance']=True, (2) trigger auto si un titre devient toxique (quality<40, payout>100%, dividend_growth_3y<-20%, ou ticker disparu), (3) édition manuelle de ce fichier (PR git).",
     "between_rebalances": "Mêmes tickers, seuls les poids peuvent fluctuer de ±2-3pp selon le marché. Aucune entrée/sortie.",
-    "last_rebalance_date": "2026-05-18",
-    "last_rebalance_trigger": "force_rebalance_audit + manual IG addition",
+    "last_rebalance_date": "2026-05-21",
+    "last_rebalance_trigger": "expert_v4_data_correction",
     "usage_in_code": "Chargé par generate_portfolios_v4.py via _load_dividende_baseline(). Si présent, restreint l'univers candidats Dividende à ces tickers.",
     "v1.1_changes": "Concentration 13→9 PEA (drop HNR1/ACA/AGS, garde BMED), drop ADM du CTO. Recos expert v3.",
-    "v1.2_changes": "Ajout IG (Italgas, IT, yield 8.3% qual 75 payout 54%) découvert lors du force_rebalance d'audit du 2026-05-18. Italgas avait été oublié dans le baseline initial mais passe tous les filtres. PEA: 10→11 lignes."
+    "v1.2_changes": "Ajout IG (Italgas) sur donnée yield 8.3% du composer UI — RÉTRACTÉ ensuite (donnée fausse).",
+    "v1.3_changes": "RETRAIT IG (Italgas) — vérification matérielle dans stocks_europe.json donne yield_regular 3.56% (et non 8.3% du composer UI). Expert v4 confirme : cash payout ratio 151%, dette massive post-acquisition 2i Rete Gas. La thèse 8.3% reposait sur une donnée erronée. PEA: 11→10 lignes (retour au v1.1)."
   },
   "holdings": {
     "Dividende-PEA": [
-      "G1A", "TTE", "ITX", "HEN", "ML", "ACN", "SAN", "LI", "BMED", "IBE", "IG"
+      "G1A", "TTE", "ITX", "HEN", "ML", "ACN", "SAN", "LI", "BMED", "IBE"
     ],
     "Dividende-CTO": [
       "SCHN", "VICI", "PG", "EOG", "AUTO", "NOVN", "CTSH"
