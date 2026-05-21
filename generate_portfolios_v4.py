@@ -533,6 +533,127 @@ _DIVIDENDE_BASELINE_ACTIVE: set = set()  # profils où le baseline a été effec
 _TICKER_COLLISIONS_DETECTED: Dict[str, List[Dict]] = {}  # ticker → liste d'instances colliding
 
 
+# v8.x.5: ETF Foundation pour profils Dividende
+# Le pipeline produit naturellement les picks. On injecte les ETF foundation
+# en post-process pour que le frontend (portefeuille.html) affiche le plan
+# d'exécution complet (ETF + picks) tel que validé par l'expert.
+ETF_FOUNDATION_DIVIDENDE = {
+    "Dividende-PEA": {
+        "etf_ticker": "CD9",
+        "etf_name": "AMUNDI MSCI EU HIGH DIVIDEND",
+        "etf_isin": "LU1812092168",
+        "etf_weight": 0.64,
+        "picks_total_weight": 0.28,
+        "cash_weight": 0.08,
+    },
+    "Dividende-CTO": {
+        "etf_ticker": "SCHD",
+        "etf_name": "SCHWAB US DIVIDEND EQUITY ETF",
+        "etf_isin": "US8085246083",
+        "etf_weight": 0.67,
+        "picks_total_weight": 0.33,
+        "cash_weight": 0.0,
+    },
+}
+
+
+def inject_etf_foundation_dividende(portfolios_path: str = "data/portfolios.json"):
+    """v8.x.5: Post-process portfolios.json pour injecter les ETFs Foundation
+    dans les profils Dividende. Le pipeline produit les picks ; on ajoute ETF
+    + cash pour matcher le plan d'exécution réel (validé expert).
+
+    Pour Dividende-PEA : picks 28% + Amundi MSCI EU HD 64% + cash 8%
+    Pour Dividende-CTO : picks 33% + SCHD 67%
+    """
+    import json as _json
+    if not os.path.exists(portfolios_path):
+        logger.warning(f"⚠️ {portfolios_path} introuvable, skip injection ETF")
+        return
+    try:
+        with open(portfolios_path, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+    except (OSError, ValueError) as e:
+        logger.warning(f"⚠️ Échec lecture {portfolios_path}: {e}")
+        return
+
+    modified = False
+    for profile, cfg in ETF_FOUNDATION_DIVIDENDE.items():
+        if profile not in data:
+            continue
+        pf = data[profile]
+        actions = pf.get("Actions", {}) or {}
+        if not actions:
+            logger.info(f"   [{profile}] Pas de picks à scaler, skip injection ETF")
+            continue
+
+        # Parse actuel : "Actions" = {"NAME": "XX.X%", ...}
+        def _parse_pct(v):
+            try:
+                return float(str(v).rstrip("%").replace(",", ".").strip())
+            except (ValueError, TypeError):
+                return 0.0
+
+        current_picks_weight = sum(_parse_pct(v) for v in actions.values())
+        if current_picks_weight <= 0:
+            continue
+
+        # v8.x.5b: equal-weight strict sur les picks (par décision expert).
+        # Conforme au plan d'exécution validé : 4 PEA picks × 7% chacun,
+        # 2 CTO picks × 16.5% chacun.
+        target_picks_pct = cfg["picks_total_weight"] * 100.0
+        n_picks = len(actions)
+        per_pick_pct = target_picks_pct / n_picks
+        new_actions = {}
+        for name in actions:
+            new_actions[name] = f"{per_pick_pct:.1f}%"
+
+        # Injecte ETF dans la section ETF
+        etf_display = f"{cfg['etf_name']} ({cfg['etf_ticker']})"
+        etf_pct = cfg["etf_weight"] * 100.0
+        etf_section = pf.get("ETF", {}) or {}
+        etf_section[etf_display] = f"{etf_pct:.1f}%"
+
+        # Cash si applicable
+        cash_section = pf.get("Cash", {}) or {}
+        if cfg["cash_weight"] > 0:
+            cash_section["Cash réserve"] = f"{cfg['cash_weight']*100:.1f}%"
+
+        pf["Actions"] = new_actions
+        pf["ETF"] = etf_section
+        if cash_section:
+            pf["Cash"] = cash_section
+
+        # Mise à jour _tickers (décimaux 0-1) — equal-weight aussi
+        tickers = pf.get("_tickers", {}) or {}
+        per_pick_decimal = cfg["picks_total_weight"] / max(len(tickers), 1)
+        new_tickers = {tk: round(per_pick_decimal, 4) for tk in tickers}
+        # Ajoute l'ETF dans _tickers
+        new_tickers[cfg["etf_ticker"]] = round(cfg["etf_weight"], 4)
+        pf["_tickers"] = new_tickers
+
+        # Update _tickers_meta si présent
+        tmeta = pf.get("_tickers_meta") or {}
+        if isinstance(tmeta, dict):
+            tmeta[cfg["etf_ticker"]] = {
+                "weight": round(cfg["etf_weight"], 4),
+                "category": "ETF",
+                "name": cfg["etf_name"],
+                "isin": cfg["etf_isin"],
+                "_etf_foundation": True,
+            }
+            pf["_tickers_meta"] = tmeta
+
+        modified = True
+        logger.info(f"   [{profile}] ✅ ETF Foundation injecté : "
+                    f"{cfg['etf_ticker']} {etf_pct:.0f}% + picks scalés à {target_picks_pct:.0f}%"
+                    + (f" + cash {cfg['cash_weight']*100:.0f}%" if cfg["cash_weight"] > 0 else ""))
+
+    if modified:
+        with open(portfolios_path, "w", encoding="utf-8") as f:
+            _json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.info(f"💾 {portfolios_path} mis à jour avec ETF Foundation")
+
+
 def _detect_ticker_collisions(equities: List[Dict]) -> Dict[str, List[Dict]]:
     """v8.x.5: Détecte les tickers présents avec plusieurs sociétés/pays/MIC.
 
@@ -6832,6 +6953,15 @@ def main():
     portfolios = apply_compliance(portfolios)
     
     save_portfolios(portfolios, assets)
+
+    # === v8.x.5: Injection ETF Foundation pour profils Dividende ===
+    # Le pipeline produit naturellement les picks ; on injecte Amundi MSCI EU HD
+    # (64% PEA) et SCHD (67% CTO) en post-process pour que le frontend affiche
+    # le plan d'exécution complet validé par l'expert.
+    try:
+        inject_etf_foundation_dividende(CONFIG.get("output_path", "data/portfolios.json"))
+    except Exception as _etf_e:
+        logger.warning(f"⚠️ Échec injection ETF Foundation Dividende: {_etf_e}")
 
     # === v7.4: Génération des justifications LLM APRÈS save_portfolios ===
     # Rationales must be generated on the FINAL tickers (post-dedup, post-cap, post-round)

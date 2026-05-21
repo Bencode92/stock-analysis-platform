@@ -996,13 +996,13 @@ PROFILES = {
         crypto_max=0.0,
         bonds_min=0.0,
         bonds_max=0.0,
-        # v8.x.4: caps RÉALISTES vs concentration baseline 9 lignes (post audit v3).
-        # Avec 9 positions, max_pos doit être ≥ 100%/9 = 11.1% pour être faisable.
-        # 14% laisse une marge de tilt scoring autour du baseline equal-weight.
-        max_single_position=14.0,
-        max_sector=25.0,
-        min_assets=8,
-        max_assets=18,
+        # v8.x.5: baseline final concentré à 4 picks PEA (LI+TTE+PUB+CS).
+        # Le reste du portefeuille (70%) est l'ETF Amundi MSCI EU High Div,
+        # acheté séparément hors pipeline. Donc baseline_pipeline = 4 lignes.
+        max_single_position=30.0,    # 4 picks equal-weight = 25% chacun
+        max_sector=50.0,             # univers trop concentré pour cap serré
+        min_assets=3,                # marge si 1 ticker manque
+        max_assets=12,
         max_turnover=8.0,
         turnover_penalty=0.50,
         score_scale=4.0,
@@ -1017,11 +1017,11 @@ PROFILES = {
         crypto_max=0.0,
         bonds_min=0.0,
         bonds_max=0.0,
-        # v8.x.4: avec 7 positions, max_pos doit être ≥ 100%/7 = 14.3%.
-        # 18% laisse marge tilt scoring. Concentration assumée vu petit univers.
-        max_single_position=18.0,
-        max_sector=35.0,
-        min_assets=5,
+        # v8.x.5: baseline final concentré à 2 picks CTO (VICI+AUTO).
+        # Le reste du CTO (67%) est SCHD, acheté séparément hors pipeline.
+        max_single_position=60.0,    # 2 picks equal-weight = 50% chacun
+        max_sector=70.0,
+        min_assets=2,
         max_assets=12,
         max_turnover=8.0,
         turnover_penalty=0.50,
