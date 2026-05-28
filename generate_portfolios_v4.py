@@ -2183,6 +2183,82 @@ def select_equities_for_profile(
         )
 # ============= PIPELINE PRINCIPAL =============
 
+def _enforce_final_turnover(v1_data: Dict, prev_path: str) -> None:
+    """Phase 2-B4: garde-fou turnover final sur _tickers, après toute la cascade.
+
+    L'optimizer enforce déjà max_turnover via sa contrainte SLSQP, mais la cascade
+    post-processing (caps equity, PE, dedup ETF, redistribution sectorielle, etc.)
+    peut faire dériver l'allocation finale. On compare _tickers (final) à _tickers
+    du fichier précédent et on blend si dépassement.
+
+    Le blend ne réintroduit JAMAIS de tickers qui ne sont plus dans l'allocation
+    actuelle (no resurrection). max_single_position est préservé (combinaison
+    linéaire de valeurs ≤ cap reste ≤ cap).
+
+    Mute v1_data en place. No-op si le fichier précédent n'existe pas.
+    """
+    if not os.path.exists(prev_path):
+        return
+    try:
+        with open(prev_path, encoding="utf-8") as f:
+            prev = json.load(f)
+    except Exception as e:
+        logger.warning(f"[FINAL TURNOVER] could not read {prev_path}: {e}")
+        return
+
+    try:
+        from portfolio_engine.optimizer import PROFILES as _PROFILES
+    except ImportError:
+        return
+
+    for profile in ("Agressif", "Modéré", "Stable"):
+        if profile not in v1_data:
+            continue
+        cur = v1_data[profile].get("_tickers") or {}
+        prev_t = ((prev.get(profile) or {}).get("_tickers")) or {}
+        if not cur or not prev_t:
+            continue
+
+        max_to = _PROFILES[profile].max_turnover / 100.0
+
+        # Filtrer prev aux tickers encore présents dans cur (pas de résurrection)
+        prev_in_cur = {k: float(v) for k, v in prev_t.items() if k in cur and float(v) > 0}
+        prev_total = sum(prev_in_cur.values())
+        if prev_total <= 0:
+            continue
+        prev_in_cur = {k: v / prev_total for k, v in prev_in_cur.items()}
+
+        all_k = set(cur) | set(prev_in_cur)
+        turnover = 0.5 * sum(abs(float(cur.get(k, 0.0)) - prev_in_cur.get(k, 0.0)) for k in all_k)
+
+        if turnover <= max_to:
+            logger.info(
+                f"[FINAL TURNOVER {profile}] ✅ {turnover*100:.1f}% ≤ {max_to*100:.0f}%"
+            )
+            continue
+
+        alpha = max(0.0, min(1.0, 1.0 - (max_to / turnover)))
+        blended = {
+            k: alpha * prev_in_cur.get(k, 0.0) + (1.0 - alpha) * float(cur.get(k, 0.0))
+            for k in all_k
+        }
+        # Drop dust (< 0.5%)
+        blended = {k: v for k, v in blended.items() if v >= 0.005}
+        total = sum(blended.values())
+        if total > 0:
+            blended = {k: v / total for k, v in blended.items()}
+
+        new_tov = 0.5 * sum(
+            abs(blended.get(k, 0.0) - prev_in_cur.get(k, 0.0))
+            for k in set(blended) | set(prev_in_cur)
+        )
+        v1_data[profile]["_tickers"] = blended
+        logger.info(
+            f"[FINAL TURNOVER {profile}] {turnover*100:.1f}% → {new_tov*100:.1f}% "
+            f"(max={max_to*100:.0f}%, alpha={alpha:.2f}, n={len(blended)})"
+        )
+
+
 def _load_previous_allocation(
     path: str,
 ) -> Dict[str, Dict[str, Dict[str, float]]]:
@@ -6732,6 +6808,10 @@ def save_portfolios(portfolios: Dict, assets: list):
                 )
 
     v1_path = CONFIG["output_path"]
+
+    # Phase 2-B4: garde-fou turnover final (lit le prev AVANT l'écrasement)
+    _enforce_final_turnover(v1_data, v1_path)
+
     with open(v1_path, "w", encoding="utf-8") as f:
         json.dump(v1_data, f, ensure_ascii=False, indent=2)
     logger.info(f"✅ Sauvegardé: {v1_path}")
