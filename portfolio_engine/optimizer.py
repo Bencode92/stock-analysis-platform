@@ -964,7 +964,7 @@ PROFILES = {
         vol_tolerance=3.0,
         crypto_max=5.0,
         bonds_min=22.0,            # FIX v2.4.0-O: 15→22% (vrai profil balanced)
-        bonds_max=40.0,           # PATCH v8.4: cap obligations
+        bonds_max=50.0,           # Phase2-I2: 40→50 (fenêtre trop étroite avec bonds_min=22, max_single_bond=8 → 3 bonds min, dérive systématique bond-heavy)
         max_turnover=25.0,
         turnover_penalty=2.0,    # Phase1-B2: 0.10→2.0
         score_scale=4.0,
