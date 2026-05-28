@@ -944,29 +944,29 @@ class ProfileConstraints:
 # v6.11: Alignement avec PROFILE_POLICY (preset_meta.py v2.3)
 PROFILES = {
     "Agressif": ProfileConstraints(
-        name="Agressif", 
+        name="Agressif",
         vol_target=24.0,              # v2.1: 18→24% (pool high-beta: NVDA 50%, VRT 55%, MU 42%)
         vol_tolerance=6.0,            # v2.1: 3→6% (plage [18-30%], vol réalisée ~25% OK)
-        crypto_max=10.0, 
+        crypto_max=10.0,
         bonds_min=10.0,           # PATCH v8.4: 5→10%
         bonds_max=20.0,           # PATCH v8.4: cap obligations
         max_sector=35.0,
         max_turnover=30.0,
-        turnover_penalty=0.05,
+        turnover_penalty=1.0,    # Phase1-B2: 0.05→1.0 (scale homogène avec port_score)
         score_scale=5.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
         max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
     ),
     "Modéré": ProfileConstraints(
-        name="Modéré", 
-        vol_target=12.0, 
+        name="Modéré",
+        vol_target=12.0,
         vol_tolerance=3.0,
-        crypto_max=5.0, 
+        crypto_max=5.0,
         bonds_min=22.0,            # FIX v2.4.0-O: 15→22% (vrai profil balanced)
         bonds_max=40.0,           # PATCH v8.4: cap obligations
         max_turnover=25.0,
-        turnover_penalty=0.10,
+        turnover_penalty=2.0,    # Phase1-B2: 0.10→2.0
         score_scale=4.0,
         bucket_penalty_lambda=5.0,  # v7.2.1: was 2.0 — satellite was 6% vs target 15%
         max_any_category=65.0,
@@ -980,7 +980,7 @@ PROFILES = {
         bonds_min=35.0,            # v3.1.2: 40→35% (3 ETFs need ~21%, actions ~34%, bonds ~35%)
         bonds_max=65.0,            # FIX v2.4.0-M: 60→65% (marge pour 5 bonds)
         max_turnover=15.0,
-        turnover_penalty=0.20,
+        turnover_penalty=4.0,    # Phase1-B2: 0.20→4.0
         score_scale=3.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
@@ -1036,44 +1036,44 @@ PROFILES = {
 # === v2.2: PROFILES EU/US Focus ===
 PROFILES_EUUS = {
     "Agressif": ProfileConstraints(
-        name="Agressif", 
+        name="Agressif",
         vol_target=24.0,              # v2.1: aligned with PROFILES global
         vol_tolerance=6.0,
-        crypto_max=10.0, 
+        crypto_max=10.0,
         bonds_min=10.0,           # PATCH v8.4: 5→10%
         bonds_max=20.0,           # PATCH v8.4: cap obligations
         max_sector=35.0,
         max_turnover=30.0,
-        turnover_penalty=0.05,
+        turnover_penalty=1.0,    # Phase1-B2: aligné avec PROFILES global
         euus_mode=True,
         score_scale=5.0,
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
-        max_single_position=13.0, 
+        max_single_position=13.0,
     ),
     "Modéré": ProfileConstraints(
-        name="Modéré", 
-        vol_target=12.0, 
+        name="Modéré",
+        vol_target=12.0,
         vol_tolerance=3.0,
-        crypto_max=5.0, 
+        crypto_max=5.0,
         bonds_min=15.0,
         bonds_max=40.0,           # PATCH v8.4: cap obligations
         max_turnover=25.0,
-        turnover_penalty=0.10,
+        turnover_penalty=2.0,    # Phase1-B2: aligné avec PROFILES global
         euus_mode=True,
         score_scale=4.0,
         bucket_penalty_lambda=2.0,
         max_any_category=65.0,
     ),
     "Stable": ProfileConstraints(
-        name="Stable", 
+        name="Stable",
         vol_target=6.0,
         vol_tolerance=3.0,
-        crypto_max=0.0, 
+        crypto_max=0.0,
         bonds_min=35.0,
         bonds_max=60.0,           # PATCH v8.4: cap obligations
         max_turnover=15.0,
-        turnover_penalty=0.20,
+        turnover_penalty=4.0,    # Phase1-B2: aligné avec PROFILES global
         euus_mode=True,
         score_scale=3.0,
         bucket_penalty_lambda=2.0,
@@ -3049,6 +3049,57 @@ class PortfolioOptimizer:
         
         return weights
     
+    def _blend_to_max_turnover(
+        self,
+        allocation: Dict[str, float],
+        prev_weights: Dict[str, float],
+        max_turnover_pct: float,
+        candidates: List[Asset],
+    ) -> Dict[str, float]:
+        """Phase1.5: enforce turnover ≤ max_turnover_pct by blending toward prev_weights.
+
+        Only used when SLSQP fails and fallback runs (SLSQP path already enforces
+        turnover via its hard constraint).
+
+        - Filters prev_weights to tickers still in the candidate universe (delisted /
+          filtered-out tickers can't survive).
+        - Renormalizes the surviving prev_weights to 100%.
+        - If current turnover > max, applies a linear blend alpha·prev + (1-alpha)·new
+          chosen so the resulting turnover equals max_turnover_pct.
+        - Drops dust (<0.5%) and renormalizes to 100%.
+        Returns the input allocation untouched if prev_weights or universe overlap is empty.
+        """
+        if not prev_weights or not allocation:
+            return allocation
+        candidate_ids = {c.id for c in candidates}
+        prev_in_universe = {k: float(v) for k, v in prev_weights.items() if k in candidate_ids and float(v) > 0}
+        prev_total = sum(prev_in_universe.values())
+        if prev_total <= 0:
+            return allocation
+        prev_in_universe = {k: v * 100.0 / prev_total for k, v in prev_in_universe.items()}
+
+        all_ids = set(allocation) | set(prev_in_universe)
+        turnover = 0.5 * sum(
+            abs(allocation.get(k, 0.0) - prev_in_universe.get(k, 0.0)) for k in all_ids
+        )
+        if turnover <= max_turnover_pct:
+            return allocation
+
+        alpha = max(0.0, min(1.0, 1.0 - (max_turnover_pct / turnover)))
+        blended = {
+            k: alpha * prev_in_universe.get(k, 0.0) + (1.0 - alpha) * allocation.get(k, 0.0)
+            for k in all_ids
+        }
+        blended = {k: round(v, 2) for k, v in blended.items() if v >= 0.5}
+        total = sum(blended.values())
+        if total > 0:
+            blended = {k: round(v * 100.0 / total, 2) for k, v in blended.items()}
+        logger.info(
+            f"Phase1.5: fallback turnover clipped {turnover:.1f}% → {max_turnover_pct:.1f}% "
+            f"(alpha={alpha:.2f}, n={len(blended)})"
+        )
+        return blended
+
     def _fallback_allocation(
         self,
         candidates: List[Asset],
@@ -3457,9 +3508,16 @@ class PortfolioOptimizer:
             allocation, candidates, profile, prev_weights
         )
 
+        # Phase1.5: SLSQP n'a pas tourné — la contrainte turnover n'a pas été appliquée.
+        # On force ici le respect via un blend vers prev_weights.
+        if prev_weights:
+            allocation = self._blend_to_max_turnover(
+                allocation, prev_weights, profile.max_turnover, candidates
+            )
+
         # Cap déplacé dans optimize() comme FINAL GUARD (après tout post-processing)
         return allocation
-    
+
     def _adjust_for_vol_target(
         self,
         allocation: Dict[str, float],
@@ -3537,56 +3595,6 @@ class PortfolioOptimizer:
         logger.info(f"Vol after adjustment: {current_vol:.1f}% (target={vol_target:.1f}%)")
         
         return allocation
-    def _clip_turnover(
-        self,
-        allocation: Dict[str, float],
-        prev_weights: Dict[str, float],
-        max_turnover: float,
-        candidates: List[Asset]
-    ) -> Dict[str, float]:
-        """
-        P0 PARTNER: Clip allocation pour respecter max_turnover.
-        
-        Si turnover > max, on blend vers prev_weights.
-        """
-        # Calculer turnover actuel
-        all_ids = set(allocation.keys()) | set(prev_weights.keys())
-        turnover = 0.5 * sum(
-            abs(allocation.get(aid, 0) - prev_weights.get(aid, 0))
-            for aid in all_ids
-        )
-        
-        if turnover <= max_turnover:
-            return allocation
-        
-        # Blend factor: combien de prev_weights garder
-        # turnover_blend = alpha * prev + (1-alpha) * new
-        # On veut: 0.5 * sum(|alpha*prev + (1-alpha)*new - prev|) = max_turnover
-        # = 0.5 * (1-alpha) * sum(|new - prev|) = max_turnover
-        # => alpha = 1 - max_turnover / turnover
-        alpha = 1.0 - (max_turnover / turnover)
-        alpha = max(0, min(1, alpha))
-        
-        blended = {}
-        for aid in all_ids:
-            w_new = allocation.get(aid, 0)
-            w_old = prev_weights.get(aid, 0)
-            blended[aid] = round(alpha * w_old + (1 - alpha) * w_new, 2)
-        
-        # Normaliser à 100%
-        total = sum(blended.values())
-        if total > 0:
-            blended = {k: round(v * 100 / total, 2) for k, v in blended.items()}
-        
-        # Retirer les poids < 0.5%
-        blended = {k: v for k, v in blended.items() if v >= 0.5}
-        
-        logger.warning(
-            f"P0 PARTNER: Turnover clipped from {turnover:.1f}% to {max_turnover:.1f}% "
-            f"(blend alpha={alpha:.2f})"
-        )
-        
-        return blended
     def optimize(
         self,
         candidates: List[Asset],
@@ -3612,13 +3620,35 @@ class PortfolioOptimizer:
         
         # === P0 PARTNER: Préparer prev_weights pour turnover ===
         if prev_weights is not None:
-            # Convertir dict {id: pct} en array aligné sur candidates
+            # Phase1.5: traduire ticker → Asset.id (les keys de prev_weights viennent de
+            # portfolios.json _tickers, qui utilise les symboles ; Asset.id est "EQ_N" pour
+            # les actions et le nom complet pour les ETF/Obligations).
+            ticker_to_id: Dict[str, str] = {}
+            for c in candidates:
+                for k in (c.ticker, c.symbol, c.id):
+                    if k:
+                        ticker_to_id.setdefault(str(k), c.id)
+            prev_weights_remapped: Dict[str, float] = {}
+            for k, v in prev_weights.items():
+                target_id = ticker_to_id.get(str(k))
+                if target_id is None:
+                    continue  # ticker n'est plus dans l'univers — drop
+                prev_weights_remapped[target_id] = prev_weights_remapped.get(target_id, 0.0) + float(v)
+            # Renormaliser à 100% sur les tickers survivants (sinon turnover artificiellement haut)
+            _total = sum(prev_weights_remapped.values())
+            if _total > 0:
+                prev_weights_remapped = {k: v * 100.0 / _total for k, v in prev_weights_remapped.items()}
+            prev_weights = prev_weights_remapped
+
             prev_weights_array = np.array([
                 prev_weights.get(c.id, 0.0) / 100.0 for c in candidates
             ])
-            has_prev_weights = True
-            prev_total = sum(prev_weights.values())
-            logger.info(f"P0 PARTNER: Turnover control enabled, prev_total={prev_total:.1f}%")
+            has_prev_weights = bool(prev_weights)
+            _n_survivors = sum(1 for c in candidates if c.id in prev_weights)
+            logger.info(
+                f"P0 PARTNER: Turnover control enabled, "
+                f"{_n_survivors}/{len(candidates)} candidates match previous allocation"
+            )
         else:
             prev_weights_array = np.zeros(n)
             has_prev_weights = False
@@ -4866,15 +4896,9 @@ class PortfolioOptimizer:
             allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
             allocation = self._adjust_to_100(allocation, profile, candidates)
             
-            # 7. Turnover check
-            if prev_weights is not None:
-                allocation = self._clip_turnover(
-                    allocation, prev_weights, profile.max_turnover, candidates
-                )
-                # IMPORTANT: turnover peut casser le cap bond (et crypto aussi)
-                allocation = self._enforce_single_bond_cap(allocation, candidates, profile)
-                allocation = self._adjust_to_100(allocation, profile, candidates)
-            
+            # 7. Turnover: handled inside SLSQP via hard constraint (optimizer.py:_build_constraints)
+            #    Post-hoc clipping removed (was double-correction that could violate bond/sector caps).
+
             # === v6.33 FIX ChatGPT #3: STOCK SLEEVE APRÈS region+turnover ===
             # 8-9. v7.0: SUPPRIMÉ — stock sleeve enforcement déprécié
             
@@ -5568,6 +5592,7 @@ class PortfolioOptimizer:
         universe: List[Asset],
         profile_name: str,
         yield_config: Optional[Dict] = None,
+        prev_weights: Optional[Dict[str, float]] = None,
     ) -> Tuple[Dict[str, float], dict]:
         """
         Flow RENDEMENT: mêmes candidats, objectif yield-driven.
@@ -5614,7 +5639,7 @@ class PortfolioOptimizer:
             yield_scores.append(combined * 100)  # Scale to 0-100 for normalize
 
         allocation, diagnostics = self.optimize(
-            candidates, profile, scores_override=yield_scores
+            candidates, profile, prev_weights=prev_weights, scores_override=yield_scores
         )
 
         diagnostics["flow"] = "rendement"

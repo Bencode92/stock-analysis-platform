@@ -2183,6 +2183,42 @@ def select_equities_for_profile(
         )
 # ============= PIPELINE PRINCIPAL =============
 
+def _load_previous_allocation(
+    path: str,
+) -> Dict[str, Dict[str, Dict[str, float]]]:
+    """Phase1-B1: Load previous portfolio weights for turnover control.
+
+    Returns {profile: {"standard": {ticker: pct}, "yield": {ticker: pct}}} where
+    pct values are in 0-100 scale (matching optimizer.prev_weights convention).
+    Empty dict on missing/malformed file → first-run behaviour (no turnover cap).
+    """
+    try:
+        if not os.path.exists(path):
+            logger.info(f"   [turnover] No previous file at {path} → first-run mode (no turnover cap)")
+            return {}
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        out: Dict[str, Dict[str, Dict[str, float]]] = {}
+        for profile in ("Agressif", "Modéré", "Stable"):
+            prof = data.get(profile)
+            if not isinstance(prof, dict):
+                continue
+            standard = prof.get("_tickers") or {}
+            yield_t = prof.get("_tickers_rendement") or {}
+            if not standard and not yield_t:
+                continue
+            out[profile] = {
+                "standard": {k: float(v) * 100.0 for k, v in standard.items() if v},
+                "yield": {k: float(v) * 100.0 for k, v in yield_t.items() if v},
+            }
+        if out:
+            logger.info(f"   [turnover] Loaded previous allocation from {path} for {sorted(out.keys())}")
+        return out
+    except Exception as e:
+        logger.warning(f"   [turnover] Failed to load previous allocation from {path}: {e}")
+        return {}
+
+
 def build_portfolios_deterministic() -> Dict[str, Dict]:
     """Pipeline déterministe : mêmes données → mêmes poids."""
     logger.info("🧮 Construction des portefeuilles (déterministe)...")
@@ -2578,7 +2614,10 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 PROFILE_POLICY[profile_name]["min_buffett_score"] = threshold
                 if old_threshold != threshold:
                     logger.info(f"   🔄 PROFILE_POLICY[{profile_name}].min_buffett_score: {old_threshold} → {threshold}")
-    
+
+    # Phase1-B1: Charger l'allocation précédente une seule fois (turnover control)
+    _prev_alloc = _load_previous_allocation(CONFIG["output_path"])
+
     for profile in _active_profiles(CONFIG):
         logger.info(f"⚙️  Optimisation profil {profile}...")
 
@@ -3177,7 +3216,13 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         except Exception as _e:
             logger.warning(f"   [{profile}] Price loading failed: {_e}, using structured only")
 
-        allocation, diagnostics = optimizer.build_portfolio(assets, profile)
+        # Phase1-B1: prev_weights pour contrôle turnover (None au premier run)
+        _prev_std = (_prev_alloc.get(profile) or {}).get("standard") or None
+        _prev_yld = (_prev_alloc.get(profile) or {}).get("yield") or None
+
+        allocation, diagnostics = optimizer.build_portfolio(
+            assets, profile, prev_weights=_prev_std
+        )
 
         # v8.x.3: Pour les profils Dividende AVEC baseline ACTIF, on remplace
         # l'output de l'optimizer par un equal-weight (tilté par score) sur TOUS
@@ -3194,7 +3239,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
 
         # v7.3: Flow RENDEMENT — mêmes candidats, poids yield-driven
         try:
-            alloc_yield, diag_yield = optimizer.build_portfolio_yield(assets, profile)
+            alloc_yield, diag_yield = optimizer.build_portfolio_yield(
+                assets, profile, prev_weights=_prev_yld
+            )
             _wy = diag_yield.get('yield_metrics', {}).get('weighted_yield', '?')
             logger.info(f"   [{profile}] Rendement: {len(alloc_yield)} pos, yield={_wy}%")
         except Exception as _e:
@@ -4519,7 +4566,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     )
     
     logger.info(f"   Universe ETF/Bonds EU/US: {len(universe_others)} actifs")
-    
+
     # 6. v4.15.0 P0 FIX: Optimiser PAR PROFIL avec sélection equities différenciée
     # v5.1.4 FIX Step7: use_preset_etf=False (même raison que pipeline global)
     optimizer = PortfolioOptimizer(use_preset_etf=False)
@@ -4527,6 +4574,9 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     all_assets = []
     all_assets_ids = set()
     equities_by_profile_euus = {}  # Pour diagnostic overlap
+
+    # Phase1-B1: prev_weights pour contrôle turnover EU/US
+    _prev_alloc_euus = _load_previous_allocation("data/portfolios_euus.json")
     all_scored_etfs = {}  # v1.1.0 FIX: was missing → NameError on line 2825
     all_scored_bonds = {}  # v8.x FIX: was missing → NameError on line 4009
 
@@ -4684,7 +4734,11 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             logger.warning(f"   [{profile}] EU/US Price loading failed: {_e}, using structured only")
 
         try:
-            allocation, diagnostics = optimizer.build_portfolio_euus(assets, profile)
+            # Phase1-B1: prev_weights pour contrôle turnover EU/US
+            _prev_std_euus = (_prev_alloc_euus.get(profile) or {}).get("standard") or None
+            allocation, diagnostics = optimizer.build_portfolio_euus(
+                assets, profile, prev_weights=_prev_std_euus
+            )
 
             # Normaliser allocation en % si retournée en décimal
             total_alloc = sum(allocation.values()) if allocation else 0.0
