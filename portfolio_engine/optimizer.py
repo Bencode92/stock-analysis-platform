@@ -985,9 +985,12 @@ PROFILES = {
         bucket_penalty_lambda=5.0,  # v7.2.1: was 2.0 — satellite was 6% vs target 15%
         max_any_category=65.0,
         max_single_position=10.0,  # FIX v2.4.0-O: 13→10% (SYY/EQNR ne dominent plus)
-        # Phase Convexité-1 : cas central, cap strict pour casser SCHD+DIVB
+        # Phase Convexité-1 v2 : seuil descendu 0.92 → 0.85 après mesure réelle
+        # sur 90j (logs CORR DIAG) — FNDX↔DIVB = 0.905, SCHD↔DIVB = 0.801,
+        # SCHD↔FNDX = 0.743. 0.85 capture le duo FNDX+DIVB sans bruit (le
+        # bruit LOREAL↔NEWMONT à 0.77 est artefact à éviter).
         correlation_cluster_cap=0.12,
-        correlation_cluster_threshold=0.92,
+        correlation_cluster_threshold=0.85,
     ),
     "Stable": ProfileConstraints(
         name="Stable",
@@ -1002,9 +1005,10 @@ PROFILES = {
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
         max_single_position=13.0,     # FIX v2.4.0-M: 10→13% (10% forçait equal-weight)
-        # Phase Convexité-1 : Stable encore plus strict
+        # Phase Convexité-1 v2 : seuil aligné Modéré (0.85) — mêmes ETF
+        # défensifs (ACWV/SPLV) potentiellement à capper.
         correlation_cluster_cap=0.10,
-        correlation_cluster_threshold=0.92,
+        correlation_cluster_threshold=0.85,
     ),
     # ═══ DIVIDENDE — Profils rendement perso (PEA + CTO complémentaire) ═══
     # 100% actions, faible turnover, scoring tilt yield × qualité (cf. PROFILE_POLICY).

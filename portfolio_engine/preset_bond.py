@@ -113,11 +113,18 @@ SCORING_WEIGHTS = {
         "ter": 0.10,          # Coûts
     },
     "Modéré": {
-        "yield": 0.30,        # Rendement plus important
-        "credit": 0.25,
-        "duration": 0.20,
+        # Phase Convexité-1 v2 (reco expert) : barbell bonds.
+        # Avant : duration=0.20 pénalisait fortement les bonds intermédiaires
+        # → sélection finale = STIP+GBIL+VGSH (tous duration < 2y) = cash
+        # déguisé, downside capture 46% (pas de rally duration en crise).
+        # On augmente yield (= duration plus longue naturellement) et on
+        # réduit drastiquement la pénalité duration courte. Resultat attendu :
+        # mix court (cash buffer) + intermédiaire (convexité crise).
+        "yield": 0.40,        # 0.30 → 0.40 (favorise les bonds qui paient)
+        "credit": 0.30,       # 0.25 → 0.30 (préserve la qualité IG)
         "vol": 0.15,
-        "ter": 0.10,
+        "duration": 0.10,     # 0.20 → 0.10 (laisse passer 5-10y duration)
+        "ter": 0.05,          # 0.10 → 0.05
     },
     "Agressif": {
         "yield": 0.40,        # Rendement prioritaire
