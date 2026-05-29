@@ -5832,6 +5832,10 @@ def normalize_to_frontend_v1(portfolios: Dict[str, Dict], assets: list) -> Dict:
             "is_heuristic": optimization_mode.startswith("fallback"),
             "vol_realized": diagnostics.get("portfolio_vol"),
             "vol_target": diagnostics.get("vol_target"),
+            # Phase Sélection-1 (#3) : exposer fiabilité cov pour traçabilité
+            "covariance_trustworthy": diagnostics.get("covariance_trustworthy"),
+            "returns_coverage_pct": diagnostics.get("returns_coverage_pct"),
+            "covariance_empirical_weight": diagnostics.get("covariance_empirical_weight"),
         }
         
         # PR3: Enrichir pour les profils heuristiques (Stable)

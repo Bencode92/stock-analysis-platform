@@ -4011,6 +4011,12 @@ class PortfolioOptimizer:
             "vol_target": profile.vol_target,
             "vol_tolerance": profile.vol_tolerance,
             "vol_diff": round(port_vol - profile.vol_target, 2),
+            # Phase Sélection-1 (#3) : exposer la fiabilité de la covariance
+            # dans le diagnostic sauvegardé pour que l'utilisateur sache si
+            # vol_target/vol_realized peuvent être pris au sérieux ou non.
+            "covariance_trustworthy": cov_diagnostics.get("covariance_trustworthy", False),
+            "returns_coverage_pct": cov_diagnostics.get("returns_coverage_pct", 0.0),
+            "covariance_empirical_weight": round(float(cov_diagnostics.get("empirical_weight", 0.0)), 3),
             # P0 PARTNER: Turnover diagnostics
             "turnover_control_enabled": has_prev_weights,
             "turnover_pct": round(final_turnover, 2) if final_turnover is not None else None,
