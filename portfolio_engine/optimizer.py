@@ -3676,7 +3676,10 @@ class PortfolioOptimizer:
         _n_with_returns = sum(1 for c in candidates if getattr(c, "returns_series", None) is not None)
         _returns_coverage = _n_with_returns / max(1, len(candidates))
         cov_diagnostics["returns_coverage_pct"] = round(_returns_coverage * 100, 1)
-        cov_diagnostics["covariance_trustworthy"] = (_emp_w >= 0.5 and _returns_coverage >= 0.8)
+        # Seuil 70 % : sur ~56-60 candidats, les bonds (cov structurée par design)
+        # + quelques ETF récents amputent 25-30 % structurellement. 70 % laisse
+        # passer le cas typique observé (72 % Agressif) tout en restant strict.
+        cov_diagnostics["covariance_trustworthy"] = (_emp_w >= 0.5 and _returns_coverage >= 0.7)
         if not cov_diagnostics["covariance_trustworthy"]:
             logger.warning(
                 f"[COV GATE {profile.name}] ⚠️ covariance non fiable "

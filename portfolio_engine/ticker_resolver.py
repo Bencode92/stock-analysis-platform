@@ -34,23 +34,49 @@ VERSION = "1.0.0"
 class TickerResolver:
     """
     Resolves ticker symbols to their correct API parameters.
-    
+
     Usage:
         resolver = TickerResolver.from_stock_files()
-        
+
         # Get the best symbol + mic_code for API call
         symbol, mic, exchange = resolver.resolve("AGS")
         # → ("AGS", "XBRU", "Euronext")
-        
+
         symbol, mic, exchange = resolver.resolve("2360")
         # → ("2360", "XTAI", "TWSE")
     """
-    
+
+    # Overrides manuels — appliqués APRÈS le build auto pour corriger les
+    # cas où TwelveData n'accepte pas le symbol par défaut. Format :
+    #   ticker_dans_nos_data → {"symbol": symbol_pour_twelvedata, "mic": mic_code, "exchange": nom}
+    # Justification au cas par cas.
+    MANUAL_OVERRIDES: Dict[str, Dict[str, str]] = {
+        # AXA : nos données utilisent "AXA" mais Euronext Paris (XPAR) référence
+        # AXA SA sous le ticker historique "CS" (legacy Crédit Suisse). Confirmé
+        # par Trading 212 (CSV utilise "CS") et par test TwelveData direct.
+        "AXA": {"symbol": "CS", "mic": "XPAR", "exchange": "Euronext"},
+    }
+
     def __init__(self):
         self.mic_code_map: Dict[str, str] = {}
         self.exchange_map: Dict[str, str] = {}
         self.resolved_symbol_map: Dict[str, str] = {}
         self._loaded = False
+        self._apply_manual_overrides()
+
+    def _apply_manual_overrides(self) -> None:
+        """Inject MANUAL_OVERRIDES into the resolution maps."""
+        for src_ticker, conf in self.MANUAL_OVERRIDES.items():
+            up = src_ticker.upper()
+            if "symbol" in conf:
+                self.resolved_symbol_map[src_ticker] = conf["symbol"]
+                self.resolved_symbol_map[up] = conf["symbol"]
+            if "mic" in conf:
+                self.mic_code_map[src_ticker] = conf["mic"]
+                self.mic_code_map[up] = conf["mic"]
+            if "exchange" in conf:
+                self.exchange_map[src_ticker] = conf["exchange"]
+                self.exchange_map[up] = conf["exchange"]
     
     @classmethod
     def from_stock_files(cls, data_dir: str = "data") -> "TickerResolver":
@@ -94,14 +120,18 @@ class TickerResolver:
             except Exception as e:
                 logger.warning(f"[TickerResolver] Error loading {filepath}: {e}")
         
+        # Re-applique les overrides manuels APRÈS l'auto-build (ils gagnent
+        # sur les valeurs déduites des fichiers JSON).
+        self._apply_manual_overrides()
         self._loaded = True
         logger.info(
             f"[TickerResolver] Ready: {len(self.mic_code_map)} mic_codes, "
             f"{len(self.exchange_map)} exchanges, "
-            f"{len(self.resolved_symbol_map)} resolved_symbols"
+            f"{len(self.resolved_symbol_map)} resolved_symbols "
+            f"(+{len(self.MANUAL_OVERRIDES)} manual overrides)"
         )
         return count
-    
+
     def load_from_equities(self, equities: list) -> int:
         """Load mappings from already-loaded equity dicts (from generate_portfolios_v4)."""
         count = 0
@@ -109,13 +139,16 @@ class TickerResolver:
             if isinstance(eq, dict):
                 self._register_stock(eq)
                 count += 1
-        
+
+        # Idem : overrides APRÈS l'auto-build pour gagner sur les données source.
+        self._apply_manual_overrides()
         self._loaded = True
         logger.info(
             f"[TickerResolver] Built from {count} equities: "
             f"{len(self.mic_code_map)} mic_codes, "
             f"{len(self.exchange_map)} exchanges, "
-            f"{len(self.resolved_symbol_map)} resolved_symbols"
+            f"{len(self.resolved_symbol_map)} resolved_symbols "
+            f"(+{len(self.MANUAL_OVERRIDES)} manual overrides)"
         )
         return count
     
