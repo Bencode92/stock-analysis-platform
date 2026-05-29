@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-05-29-14-21-49",
-    "git_sha": "95e8e43d4",
-    "git_sha_full": "95e8e43d44129f610732e4af5435d06b42cc8412",
+    "run_id": "2026-05-29-15-33-54",
+    "git_sha": "aafc7fec8",
+    "git_sha_full": "aafc7fec89894a71923a12133f7af720166fe2e6",
     "config_hash": "d87156a6",
     "universe_asof": "2026-05-29",
-    "timestamp_utc": "2026-05-29T14:21:49.665370+00:00",
+    "timestamp_utc": "2026-05-29T15:33:54.110794+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 601.29
+    "total_duration_sec": 568.12
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -231,43 +231,43 @@
       "top_k": [
         {
           "ticker": "BMED",
-          "score": 0.8004
+          "score": 0.8015
         },
         {
           "ticker": "PEG",
-          "score": 0.7523
+          "score": 0.7547
         },
         {
           "ticker": "VICI",
-          "score": 0.7431
+          "score": 0.745
         },
         {
           "ticker": "ITX",
-          "score": 0.7138
+          "score": 0.7157
         },
         {
-          "ticker": "EICHERMOT",
-          "score": 0.6686
+          "ticker": "LI",
+          "score": 0.6866
+        },
+        {
+          "ticker": "BZU",
+          "score": 0.6825
         },
         {
           "ticker": "ML",
-          "score": 0.6667
+          "score": 0.6695
         },
         {
           "ticker": "EOG",
-          "score": 0.6666
+          "score": 0.6692
+        },
+        {
+          "ticker": "EICHERMOT",
+          "score": 0.6682
         },
         {
           "ticker": "SCHN",
-          "score": 0.6613
-        },
-        {
-          "ticker": "RIO",
-          "score": 0.6564
-        },
-        {
-          "ticker": "TJX",
-          "score": 0.6498
+          "score": 0.6609
         }
       ]
     },
@@ -399,51 +399,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 115,
-      "after": 115,
+      "before": 147,
+      "after": 147,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "VICI",
-          "score": 0.7717
+          "score": 0.7745
         },
         {
-          "ticker": "SCHP",
-          "score": 0.7224
+          "ticker": "LI",
+          "score": 0.7258
+        },
+        {
+          "ticker": "SCHN",
+          "score": 0.7242
         },
         {
           "ticker": "CS",
-          "score": 0.7205
+          "score": 0.7219
         },
         {
           "ticker": "ITX",
-          "score": 0.6843
+          "score": 0.6855
         },
         {
           "ticker": "PG",
-          "score": 0.6581
+          "score": 0.6578
         },
         {
           "ticker": "GD",
-          "score": 0.6485
+          "score": 0.6535
+        },
+        {
+          "ticker": "GGG",
+          "score": 0.6454
         },
         {
           "ticker": "TJX",
-          "score": 0.6289
+          "score": 0.6259
         },
         {
           "ticker": "SUNPHARMA",
-          "score": 0.6155
-        },
-        {
-          "ticker": "NOVN",
-          "score": 0.6113
-        },
-        {
-          "ticker": "KO",
-          "score": 0.6088
+          "score": 0.6191
         }
       ]
     },
@@ -3414,8 +3414,15 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 27.83,
+    "details": {
+      "5_selection_equity_Stable.after": {
+        "current": 147,
+        "previous": 115,
+        "delta": 32,
+        "pct_change": 27.83
+      }
+    }
   }
 }
