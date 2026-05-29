@@ -194,6 +194,77 @@ def build_returns_dict_from_candidates(
 # Logging helper (factorisation pour _build_constraints + _fallback)
 # ============================================================================
 
+def report_top_correlations(
+    returns_dict: dict,
+    top_n: int = 15,
+    min_obs: int = 60,
+) -> List[tuple]:
+    """Calibration helper : retourne les N paires d'assets les plus corrélées.
+
+    Permet de comprendre la distribution réelle des corrélations sur l'univers
+    actuel pour calibrer `corr_threshold` de façon éclairée plutôt qu'à
+    l'aveugle.
+
+    Args:
+        returns_dict: {asset_id: returns_series}
+        top_n: nombre de paires retournées
+        min_obs: minimum d'observations communes
+
+    Returns:
+        list de tuples (asset_a, asset_b, |corr|) triés desc par corr.
+    """
+    ids = [
+        aid for aid, ret in returns_dict.items()
+        if ret is not None and len(ret) >= min_obs
+    ]
+    if len(ids) < 2:
+        return []
+    series = [np.asarray(returns_dict[aid], dtype=float) for aid in ids]
+    common_len = min(len(s) for s in series)
+    if common_len < min_obs:
+        return []
+    series = [s[-common_len:] for s in series]
+    R = np.column_stack(series)
+    R = np.nan_to_num(R, nan=0.0, posinf=0.0, neginf=0.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        corr = np.corrcoef(R, rowvar=False)
+    corr = np.nan_to_num(corr, nan=0.0)
+    abs_corr = np.abs(corr)
+
+    pairs = []
+    n = len(ids)
+    for i in range(n):
+        for j in range(i + 1, n):
+            pairs.append((ids[i], ids[j], float(abs_corr[i, j])))
+    pairs.sort(key=lambda p: -p[2])
+    return pairs[:top_n]
+
+
+def report_threshold_impact(
+    returns_dict: dict,
+    thresholds: tuple = (0.95, 0.92, 0.90, 0.88, 0.85, 0.80),
+    min_obs: int = 60,
+) -> dict:
+    """Pour chaque seuil candidat, compte combien de clusters seraient détectés
+    et combien d'assets seraient concernés. Utile pour calibrer le bon seuil.
+
+    Returns:
+        dict {threshold: {"n_clusters": int, "n_assets_in_clusters": int,
+                          "largest_cluster": int}}
+    """
+    out = {}
+    for thr in thresholds:
+        clusters = detect_redundant_clusters(returns_dict, corr_threshold=thr, min_obs=min_obs)
+        n_assets = sum(len(c) for c in clusters)
+        largest = max((len(c) for c in clusters), default=0)
+        out[thr] = {
+            "n_clusters": len(clusters),
+            "n_assets_in_clusters": n_assets,
+            "largest_cluster": largest,
+        }
+    return out
+
+
 def log_clusters_detected(
     clusters: List[Set[str]],
     profile_name: str,

@@ -2977,6 +2977,36 @@ class PortfolioOptimizer:
                     return _is_equity_like(a)
                 returns_dict = build_returns_dict_from_candidates(candidates, equity_filter=_eq_filter)
                 if len(returns_dict) >= 2:
+                    # Diagnostics calibration : on logge TOUJOURS les top
+                    # corrélations + l'impact des seuils alternatifs, qu'un
+                    # cluster soit détecté ou pas. Permet de calibrer
+                    # threshold à partir des données réelles.
+                    try:
+                        from portfolio_engine.correlation_cluster import (
+                            report_top_correlations, report_threshold_impact,
+                        )
+                        names = {a.id: a.name for a in candidates}
+                        top = report_top_correlations(returns_dict, top_n=12, min_obs=60)
+                        if top:
+                            logger.info(
+                                f"[CORR DIAG {profile.name}] top 12 paires |corr| "
+                                f"(N={len(returns_dict)} equity-like):"
+                            )
+                            for a, b, c in top:
+                                an = (names.get(a, a) or a)[:40]
+                                bn = (names.get(b, b) or b)[:40]
+                                logger.info(f"  {c:.3f}  {a} ↔ {b}  ({an} / {bn})")
+                        impact = report_threshold_impact(returns_dict)
+                        logger.info(f"[CORR DIAG {profile.name}] impact par seuil :")
+                        for thr, stats in sorted(impact.items(), reverse=True):
+                            logger.info(
+                                f"  thr={thr}: {stats['n_clusters']} clusters, "
+                                f"{stats['n_assets_in_clusters']} assets concernés, "
+                                f"largest={stats['largest_cluster']}"
+                            )
+                    except Exception as _ediag:
+                        logger.debug(f"[CORR DIAG {profile.name}] skip: {_ediag}")
+
                     clusters = detect_redundant_clusters(
                         returns_dict, corr_threshold=cluster_thr, min_obs=60,
                     )
@@ -2990,6 +3020,11 @@ class PortfolioOptimizer:
                         logger.info(
                             f"[CLUSTER {profile.name}] {len(cluster_cons)} contraintes ajoutées "
                             f"(threshold={cluster_thr}, cap={cluster_cap*100:.0f}%)"
+                        )
+                    else:
+                        logger.info(
+                            f"[CLUSTER {profile.name}] aucun cluster détecté au seuil "
+                            f"{cluster_thr} sur {len(returns_dict)} assets"
                         )
             except Exception as e:
                 logger.warning(f"[CLUSTER {profile.name}] cap-corrélation skippé : {e}")
