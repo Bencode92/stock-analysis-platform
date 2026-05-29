@@ -5122,13 +5122,23 @@ def run_backtest_all_profiles(config: Dict) -> Dict:
     
     logger.info(f"📥 Chargement des prix ({CONFIG['backtest_days']}j)...")
     try:
+        # FIX : récupérer le resolver globalement (il est créé par
+        # build_portfolios_deterministic mais cette fonction tourne dans un
+        # autre scope). get_resolver retourne le singleton mis en place via
+        # set_resolver(), ou le reconstruit depuis data/ si absent.
+        try:
+            from portfolio_engine.ticker_resolver import get_resolver as _get_resolver
+            _resolver = _get_resolver()
+        except Exception as _e:
+            logger.warning(f"⚠️ TickerResolver indisponible ({_e}), backtest sans mic_code resolution")
+            _resolver = None
         result = load_prices_for_backtest(
             yaml_config,
             start_date=start_date,
             end_date=end_date,
             api_key=api_key,
             plan="ultra",
-            resolver=ticker_resolver,  # v1.1.0: mic_code resolution
+            resolver=_resolver,  # v1.1.0: mic_code resolution
         )
         
         if isinstance(result, tuple):
@@ -5300,6 +5310,13 @@ def run_backtest_euus_profiles(config: Dict) -> Dict:
     
     logger.info(f"📥 Chargement des prix ({CONFIG['backtest_days']}j)...")
     try:
+        # FIX : récupérer le resolver via le singleton global (cf. run_backtest_all_profiles)
+        try:
+            from portfolio_engine.ticker_resolver import get_resolver as _get_resolver
+            _resolver = _get_resolver()
+        except Exception as _e:
+            logger.warning(f"⚠️ TickerResolver indisponible ({_e}), backtest EU/US sans mic_code resolution")
+            _resolver = None
         result = load_prices_for_backtest(
             yaml_config,
             start_date=start_date,
@@ -5307,7 +5324,7 @@ def run_backtest_euus_profiles(config: Dict) -> Dict:
             api_key=api_key,
             plan="ultra",
             portfolios_path=euus_path,
-            resolver=ticker_resolver,  # v1.1.0: mic_code resolution
+            resolver=_resolver,  # v1.1.0: mic_code resolution
         )
         
         if isinstance(result, tuple):
