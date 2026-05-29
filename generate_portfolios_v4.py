@@ -2085,6 +2085,55 @@ def print_tactical_context_diagnostic(market_context: Dict, mode: str = "radar")
 
 
 # ============= v4.13.2: SÉLECTION ÉQUITIES PAR PROFIL (CORRIGÉ) =============
+# Phase Sélection-1 (#1) : hard gate liquidité par profil.
+# Élimine les small/mid-caps illiquides avant tout scoring.
+# market_cap en USD raw (ex : Apple ≈ 3.4e12). ADV en shares (volume).
+_LIQUIDITY_GATE = {
+    # Note : market_cap est exprimé en devise locale (EUR pour stocks EU, USD pour US,
+    # INR pour Indien, etc.). On ne convertit pas — les seuils sont en "B local currency",
+    # ce qui filtre correctement les mid-caps locales tout en laissant passer les
+    # mega-caps non-USD (ex : Sun Pharma 4425B INR ≈ 53B USD passe).
+    "Agressif": {"market_cap_min": 2.0e9,  "share_volume_min": 200_000},   # mid/large
+    "Modéré":   {"market_cap_min": 12.0e9, "share_volume_min": 500_000},   # élimine BUZZI 9.6B EUR, KLEPIERRE 10B, ITALGAS 10.7B
+    "Stable":   {"market_cap_min": 18.0e9, "share_volume_min": 1_000_000}, # large/mega — Schindler 27B reste OK
+    # Profils Dividende perso : seuils intermédiaires (PEA accepte mid-caps EU)
+    "Dividende-PEA": {"market_cap_min": 2.0e9, "share_volume_min": 100_000},
+    "Dividende-CTO": {"market_cap_min": 2.0e9, "share_volume_min": 100_000},
+}
+
+
+def _apply_liquidity_gate(equities: List[dict], profile: str) -> Tuple[List[dict], Dict[str, int]]:
+    """Filtre les équités sous les seuils de liquidité du profil.
+
+    Returns: (kept, stats) où stats = {"rejected": N, "by_reason": {...}}.
+    """
+    cfg = _LIQUIDITY_GATE.get(profile)
+    if not cfg:
+        return equities, {"rejected": 0, "by_reason": {}}
+    mcap_min = cfg["market_cap_min"]
+    vol_min = cfg["share_volume_min"]
+    kept = []
+    by_reason: Dict[str, int] = {}
+    for e in equities:
+        # Bonds et ETFs ne sont pas concernés (déjà filtrés par AUM)
+        cat = (e.get("category") or "").lower()
+        if cat in ("etf", "bond", "obligations", "crypto"):
+            kept.append(e); continue
+        mcap = e.get("market_cap")
+        vol = e.get("volume")
+        # Si données absentes, on garde (sera scorée bas via factor liquidity)
+        if mcap is None or mcap == 0:
+            kept.append(e); continue
+        if float(mcap) < mcap_min:
+            by_reason["market_cap"] = by_reason.get("market_cap", 0) + 1
+            continue
+        if vol is not None and vol != 0 and float(vol) < vol_min:
+            by_reason["share_volume"] = by_reason.get("share_volume", 0) + 1
+            continue
+        kept.append(e)
+    return kept, {"rejected": sum(by_reason.values()), "by_reason": by_reason}
+
+
 def select_equities_for_profile(
     eq_filtered: List[dict],
     profile: str,
@@ -2093,21 +2142,32 @@ def select_equities_for_profile(
 ) -> Tuple[List[dict], Dict]:
     """
     v4.13.2: Sélection avec VRAIE différenciation via preset_meta.
-    
+
     Délègue à select_equities_for_profile_v2() de preset_meta.py qui:
     1. Assigne automatiquement _matched_preset
     2. Applique hard_filters (vol_min/vol_max) pour forcer divergence
     3. Score avec normalisation robuste [-S,+S] → [0,1]
-    
+
+    Phase Sélection-1 (#1) : pré-filtre liquidité dur avant scoring.
+
     Args:
         eq_filtered: Liste d'équités pré-filtrées
         profile: "Agressif", "Modéré", ou "Stable"
         market_context: Contexte RADAR pour tilts
         target_n: Nombre cible d'équités
-    
+
     Returns:
         (equities_selected, selection_meta)
     """
+    # Phase Sélection-1 (#1) : hard gate liquidité par profil
+    _before = len(eq_filtered)
+    eq_filtered, _liq_stats = _apply_liquidity_gate(eq_filtered, profile)
+    if _liq_stats["rejected"]:
+        logger.info(
+            f"   [{profile}] Liquidity gate: {_liq_stats['rejected']} rejetés "
+            f"({_before} → {len(eq_filtered)}) — raisons: {_liq_stats['by_reason']}"
+        )
+
     if not HAS_PROFILE_POLICY:
         logger.warning(f"⚠️ PROFILE_POLICY non disponible pour {profile}, fallback uniforme")
         return sector_balanced_selection(

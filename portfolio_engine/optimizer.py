@@ -3664,6 +3664,27 @@ class PortfolioOptimizer:
             scores = self._normalize_scores(raw_scores) * _scale
         
         cov, cov_diagnostics = self.compute_covariance(candidates)
+
+        # Phase Sélection-1 (#3) : Quality gate covariance
+        # Sans retours empiriques (TWELVE_DATA_API down, cache expiré, etc.),
+        # cov_diagnostics["empirical_weight"] ≈ 0 → SLSQP optimise sur
+        # covariance structurée seule qui sous-estime fortement la vol agrégée.
+        # C'est la cause directe d'un Modéré qui livre vol=18.9% pour cible 12%.
+        # On loggue clairement et on annote diagnostics pour que l'utilisateur sache
+        # que vol_realized est non fiable.
+        _emp_w = float(cov_diagnostics.get("empirical_weight", 0.0))
+        _n_with_returns = sum(1 for c in candidates if getattr(c, "returns_series", None) is not None)
+        _returns_coverage = _n_with_returns / max(1, len(candidates))
+        cov_diagnostics["returns_coverage_pct"] = round(_returns_coverage * 100, 1)
+        cov_diagnostics["covariance_trustworthy"] = (_emp_w >= 0.5 and _returns_coverage >= 0.8)
+        if not cov_diagnostics["covariance_trustworthy"]:
+            logger.warning(
+                f"[COV GATE {profile.name}] ⚠️ covariance non fiable "
+                f"(empirical_weight={_emp_w:.2f}, returns_coverage={_returns_coverage*100:.0f}% "
+                f"sur {len(candidates)} candidats). Vol cible non fiable. "
+                f"Vérifie TWELVE_DATA_API + freshness data/price_cache.json."
+            )
+
         # PR3: Initialiser heuristic_metadata (vide par défaut, rempli si Stable)
         heuristic_metadata = {}
         

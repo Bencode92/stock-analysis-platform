@@ -931,12 +931,16 @@ PROFILE_WEIGHTS = {
         mean_reversion=0.05
     ),
     "Modéré": FactorWeights(
-        momentum=0.28,
-        quality_fundamental=0.25,
-        low_vol=0.15,
+        # Phase Sélection-1 (#4) : recalibrage pour ramener la vol structurelle
+        # vers la cible 12%. Précédemment : momentum=0.28, low_vol=0.15 → la
+        # sélection était trop momentum-tilted pour un profil balanced, vol
+        # réalisée 18.9% vs cible 12%.
+        momentum=0.18,            # 0.28 → 0.18
+        quality_fundamental=0.30, # 0.25 → 0.30 (qualité prioritaire en balanced)
+        low_vol=0.22,             # 0.15 → 0.22 (ancrage vol)
         cost_efficiency=0.07,
         bond_quality=0.08,
-        tactical_context=0.07,
+        tactical_context=0.05,    # 0.07 → 0.05 (moins de tilt RADAR)
         liquidity=0.05,
         mean_reversion=0.05
     ),
