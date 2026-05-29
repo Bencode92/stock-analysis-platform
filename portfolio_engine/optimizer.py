@@ -939,6 +939,13 @@ class ProfileConstraints:
     score_scale: float = 4.0           # Poids du score dans l'objectif (3.0-5.0)
     bucket_penalty_lambda: float = 2.0 # Intensité pénalité soft buckets
     max_any_category: float = 70.0     # % max dans une seule catégorie (garde-fou)
+    # === Phase Convexité-1 : cap-corrélation empirique (equity-like) ===
+    # Single-linkage clustering sur |corr| des returns_series déjà chargés.
+    # Capture l'overlap économique entre ETF dividend/factor (SCHD≈DIVB)
+    # qu'aucun autre mécanisme n'attrape (label-based dedup, sector cap,
+    # exposure family). Voir portfolio_engine/correlation_cluster.py.
+    correlation_cluster_cap: float = 0.12       # plafond Σ w_cluster
+    correlation_cluster_threshold: float = 0.92 # seuil de fusion |corr|
 
 
 # v6.11: Alignement avec PROFILE_POLICY (preset_meta.py v2.3)
@@ -957,6 +964,9 @@ PROFILES = {
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
         max_single_position=13.0,     # ÉTAIT 15.0 (default dataclass)
+        # Phase Convexité-1 : Agressif plus tolérant (univers EM/Asia restreint)
+        correlation_cluster_cap=0.18,
+        correlation_cluster_threshold=0.90,
     ),
     "Modéré": ProfileConstraints(
         name="Modéré",
@@ -975,6 +985,9 @@ PROFILES = {
         bucket_penalty_lambda=5.0,  # v7.2.1: was 2.0 — satellite was 6% vs target 15%
         max_any_category=65.0,
         max_single_position=10.0,  # FIX v2.4.0-O: 13→10% (SYY/EQNR ne dominent plus)
+        # Phase Convexité-1 : cas central, cap strict pour casser SCHD+DIVB
+        correlation_cluster_cap=0.12,
+        correlation_cluster_threshold=0.92,
     ),
     "Stable": ProfileConstraints(
         name="Stable",
@@ -989,6 +1002,9 @@ PROFILES = {
         bucket_penalty_lambda=2.0,
         max_any_category=70.0,
         max_single_position=13.0,     # FIX v2.4.0-M: 10→13% (10% forçait equal-weight)
+        # Phase Convexité-1 : Stable encore plus strict
+        correlation_cluster_cap=0.10,
+        correlation_cluster_threshold=0.92,
     ),
     # ═══ DIVIDENDE — Profils rendement perso (PEA + CTO complémentaire) ═══
     # 100% actions, faible turnover, scoring tilt yield × qualité (cf. PROFILE_POLICY).
@@ -2943,7 +2959,41 @@ class PortfolioOptimizer:
                 def group_constraint(w, idx=group_idx, max_val=MAX_CORPORATE_GROUP_WEIGHT):
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
-        
+
+        # 7b. Phase Convexité-1 — CAP-CORRÉLATION EMPIRIQUE (equity-like)
+        # Capture l'overlap économique entre ETF factor (SCHD≈DIVB) qu'aucun
+        # autre mécanisme n'attrape. Single-linkage sur |corr| des returns.
+        cluster_cap = getattr(profile, "correlation_cluster_cap", 0.0)
+        cluster_thr = getattr(profile, "correlation_cluster_threshold", 0.92)
+        if cluster_cap > 0:
+            try:
+                from portfolio_engine.correlation_cluster import (
+                    detect_redundant_clusters, cluster_weight_constraints,
+                    build_returns_dict_from_candidates, log_clusters_detected,
+                )
+                # Equity-like seulement (Actions + ETF equity). Bonds & crypto
+                # gérés par leurs propres caps.
+                def _eq_filter(a):
+                    return _is_equity_like(a)
+                returns_dict = build_returns_dict_from_candidates(candidates, equity_filter=_eq_filter)
+                if len(returns_dict) >= 2:
+                    clusters = detect_redundant_clusters(
+                        returns_dict, corr_threshold=cluster_thr, min_obs=60,
+                    )
+                    if clusters:
+                        names = {a.id: a.name for a in candidates}
+                        log_clusters_detected(clusters, profile.name, names)
+                        cluster_cons = cluster_weight_constraints(
+                            [c.id for c in candidates], clusters, cap=cluster_cap,
+                        )
+                        constraints.extend(cluster_cons)
+                        logger.info(
+                            f"[CLUSTER {profile.name}] {len(cluster_cons)} contraintes ajoutées "
+                            f"(threshold={cluster_thr}, cap={cluster_cap*100:.0f}%)"
+                        )
+            except Exception as e:
+                logger.warning(f"[CLUSTER {profile.name}] cap-corrélation skippé : {e}")
+
         # 8. v7.0: Bucket targets → SOFT CONSTRAINT dans l'objectif (plus de hard ici)
         # Les bucket targets (CORE/DEFENSIVE/SATELLITE) sont maintenant une pénalité
         # dans objective() pour éviter l'infaisabilité SLSQP.
@@ -3103,6 +3153,83 @@ class PortfolioOptimizer:
             f"(alpha={alpha:.2f}, n={len(blended)})"
         )
         return blended
+
+    def _enforce_correlation_clusters(
+        self,
+        allocation: Dict[str, float],
+        candidates: List[Asset],
+        profile: ProfileConstraints,
+    ) -> Dict[str, float]:
+        """Phase Convexité-1 — applique le cap-corrélation côté fallback.
+
+        Le fallback heuristique (Stable + cas SLSQP failed) ne voit pas
+        les contraintes SLSQP. On enforce ici en scaling-down les membres
+        d'un cluster proportionnellement si Σ w_cluster > cap, et on
+        redistribue le surplus aux autres equity-like non-clusterisés.
+        """
+        cluster_cap = getattr(profile, "correlation_cluster_cap", 0.0)
+        cluster_thr = getattr(profile, "correlation_cluster_threshold", 0.92)
+        if cluster_cap <= 0 or not allocation:
+            return allocation
+        try:
+            from portfolio_engine.correlation_cluster import (
+                detect_redundant_clusters, build_returns_dict_from_candidates,
+                log_clusters_detected,
+            )
+        except ImportError:
+            return allocation
+
+        # Filtre equity-like ET présent dans l'allocation
+        in_alloc = set(allocation.keys())
+        def _eq_filter(a):
+            return _is_equity_like(a) and a.id in in_alloc
+        returns_dict = build_returns_dict_from_candidates(candidates, equity_filter=_eq_filter)
+        if len(returns_dict) < 2:
+            return allocation
+        clusters = detect_redundant_clusters(returns_dict, corr_threshold=cluster_thr, min_obs=60)
+        if not clusters:
+            return allocation
+        names = {a.id: a.name for a in candidates}
+        log_clusters_detected(clusters, profile.name, names)
+
+        # cap_pct = cluster_cap × 100 puisque allocation est en pourcent
+        cap_pct = cluster_cap * 100.0
+        modified = False
+        for cluster in clusters:
+            members = [aid for aid in cluster if aid in allocation]
+            if len(members) < 2:
+                continue
+            total = sum(allocation[m] for m in members)
+            if total <= cap_pct + 0.01:
+                continue
+            # Scale-down proportionnel des membres ; surplus = total - cap_pct
+            scale = cap_pct / total
+            surplus = total - cap_pct
+            for m in members:
+                allocation[m] = round(allocation[m] * scale, 2)
+            # Redistribue le surplus aux equity-like non-clusterisés
+            cluster_ids = set(cluster)
+            non_cluster_eq = [
+                a.id for a in candidates
+                if a.id in allocation and a.id not in cluster_ids and _is_equity_like(a)
+            ]
+            non_cluster_total = sum(allocation[aid] for aid in non_cluster_eq)
+            if non_cluster_eq and non_cluster_total > 0:
+                for aid in non_cluster_eq:
+                    allocation[aid] += round(surplus * allocation[aid] / non_cluster_total, 2)
+            logger.info(
+                f"[CLUSTER-FALLBACK {profile.name}] {sorted(members)} : "
+                f"{total:.1f}% → {cap_pct:.1f}%, surplus {surplus:.1f}% redistribué "
+                f"({len(non_cluster_eq)} bénéficiaires)"
+            )
+            modified = True
+
+        if modified:
+            # Renormalise à 100 (arrondi peut avoir dérivé)
+            total = sum(allocation.values())
+            if total > 0 and abs(total - 100.0) > 0.5:
+                allocation = {k: round(v * 100.0 / total, 2) for k, v in allocation.items()}
+        return allocation
 
     def _fallback_allocation(
         self,
@@ -3518,6 +3645,10 @@ class PortfolioOptimizer:
             allocation = self._blend_to_max_turnover(
                 allocation, prev_weights, profile.max_turnover, candidates
             )
+
+        # Phase Convexité-1 — cap-corrélation appliquée aussi en fallback (Stable).
+        # Le fallback n'a pas vu les contraintes SLSQP, on enforce ici.
+        allocation = self._enforce_correlation_clusters(allocation, candidates, profile)
 
         # Cap déplacé dans optimize() comme FINAL GUARD (après tout post-processing)
         return allocation
