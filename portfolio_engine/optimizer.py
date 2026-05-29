@@ -960,7 +960,11 @@ PROFILES = {
     ),
     "Modéré": ProfileConstraints(
         name="Modéré",
-        vol_target=12.0,
+        # Phase Convexité-1 (reco expert) : 12 % est calibré sur un 65-70 %
+        # actions ; un vrai Balanced (60/40) tourne 9-11 % vol historique.
+        # On reciblage 11 % — comble une partie du gap structurel sans
+        # masquer le travail à faire sur la convexité (cluster ETF + barbell).
+        vol_target=11.0,           # 12.0 → 11.0
         vol_tolerance=3.0,
         crypto_max=5.0,
         bonds_min=22.0,            # FIX v2.4.0-O: 15→22% (vrai profil balanced)
@@ -1053,7 +1057,7 @@ PROFILES_EUUS = {
     ),
     "Modéré": ProfileConstraints(
         name="Modéré",
-        vol_target=12.0,
+        vol_target=11.0,           # Phase Convexité-1 : aligné avec PROFILES global (12 → 11)
         vol_tolerance=3.0,
         crypto_max=5.0,
         bonds_min=15.0,

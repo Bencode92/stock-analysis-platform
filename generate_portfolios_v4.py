@@ -2093,9 +2093,14 @@ _LIQUIDITY_GATE = {
     # INR pour Indien, etc.). On ne convertit pas — les seuils sont en "B local currency",
     # ce qui filtre correctement les mid-caps locales tout en laissant passer les
     # mega-caps non-USD (ex : Sun Pharma 4425B INR ≈ 53B USD passe).
-    "Agressif": {"market_cap_min": 2.0e9,  "share_volume_min": 200_000},   # mid/large
-    "Modéré":   {"market_cap_min": 12.0e9, "share_volume_min": 500_000},   # élimine BUZZI 9.6B EUR, KLEPIERRE 10B, ITALGAS 10.7B
-    "Stable":   {"market_cap_min": 18.0e9, "share_volume_min": 1_000_000}, # large/mega — Schindler 27B reste OK
+    # Phase Convexité-1 : seuils mcap revus à la baisse (reco expert).
+    # Au sommet de la distribution, mcap et beta sont négativement corrélés
+    # → un floor mcap haut agit comme un filtre low-beta furtif et fige
+    # Modéré dans un univers structurellement défensif. On laisse le floor
+    # volume jouer le rôle de filtre liquidité.
+    "Agressif": {"market_cap_min": 1.0e9,  "share_volume_min": 200_000},   # SMid OK pour growth
+    "Modéré":   {"market_cap_min": 5.0e9,  "share_volume_min": 500_000},   # 12B → 5B : réinjecte mid-cap beta
+    "Stable":   {"market_cap_min": 10.0e9, "share_volume_min": 1_000_000}, # 18B → 10B : reste prudent
     # Profils Dividende perso : seuils intermédiaires (PEA accepte mid-caps EU)
     "Dividende-PEA": {"market_cap_min": 2.0e9, "share_volume_min": 100_000},
     "Dividende-CTO": {"market_cap_min": 2.0e9, "share_volume_min": 100_000},

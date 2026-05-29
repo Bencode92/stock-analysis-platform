@@ -28,9 +28,12 @@ logger = logging.getLogger("portfolio_engine.market_context")
 # ============= CONFIGURATION DES TILTS (PYTHON, PAS GPT) =============
 
 TILT_CONFIG = {
-    "favored": +0.15,       # Bonus pour secteur/région favorisé
-    "avoided": -0.15,       # Malus pour secteur/région évité
-    "max_tactical": 0.30,   # Plafond total du tilt tactique
+    # Phase Convexité-1 (reco expert) : ±15 % compensait jusqu'à 2 grades de
+    # qualité fondamentale, et les favored par défaut (healthcare/staples/
+    # utilities) aggravent le biais défensif. On capse à ±10 %.
+    "favored": +0.10,       # 0.15 → 0.10
+    "avoided": -0.10,       # -0.15 → -0.10
+    "max_tactical": 0.20,   # 0.30 → 0.20 (plafond total)
 }
 
 
