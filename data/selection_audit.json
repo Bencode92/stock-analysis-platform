@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-29T16:53:15.109000",
+  "timestamp": "2026-05-29T17:22:18.446908",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -10,8 +10,8 @@
     "etf_selected": 13,
     "etf_rejected_notable": 20,
     "crypto_initial": 6,
-    "crypto_selected": 0,
-    "crypto_rejected_notable": 6,
+    "crypto_selected": 1,
+    "crypto_rejected_notable": 5,
     "bonds_initial": 31,
     "bonds_selected": 8,
     "total_filters_applied": 6,
@@ -42,7 +42,7 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 6
+          "selected": 5
         },
         "quality_high_vol": {
           "total": 4,
@@ -50,7 +50,7 @@
         },
         "quality_premium": {
           "total": 20,
-          "selected": 3
+          "selected": 2
         },
         "recovery": {
           "total": 20,
@@ -58,7 +58,7 @@
         },
         "rendement": {
           "total": 20,
-          "selected": 8
+          "selected": 9
         },
         "value_dividend": {
           "total": 20,
@@ -1216,10 +1216,12 @@
         "ticker": "GVT&D",
         "sort_score": 0.7158,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "momentum_trend",
         "profile_score": 0.7158,
         "buffett_score": 50.0,
+        "rejection_reason": "Filtré par hard_filters_Stable",
+        "rejection_filter": "hard_filters_Stable",
         "sector": "Industries",
         "country": "Inde",
         "volatility": 45.3,
@@ -2037,12 +2039,10 @@
         "ticker": "NOVN",
         "sort_score": 0.6142,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "rendement",
         "profile_score": 0.6142,
         "buffett_score": 100.0,
-        "rejection_reason": "Filtré par hard_filters_Agressif",
-        "rejection_filter": "hard_filters_Agressif",
         "sector": "Santé",
         "country": "Suisse",
         "volatility": 19.4,
@@ -2549,10 +2549,11 @@
         "ticker": "ITX",
         "sort_score": 0.5827,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "quality_premium",
         "profile_score": 0.5827,
         "buffett_score": 83.0,
+        "rejection_reason": "Score composite (0.583) insuffisant pour le quota",
         "sector": "Biens de consommation cycliques",
         "country": "Espagne",
         "volatility": 23.2,
@@ -4544,67 +4545,66 @@
         "matched_preset": "crypto_preset_other",
         "profile_score": 100.0,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 15.5
+        "volatility": 24.5
       },
       {
         "rank": 2,
         "name": "BNB/USD",
         "ticker": "BNB/USD",
-        "sort_score": 94.3,
+        "sort_score": 96.82,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "crypto_preset_exchange",
-        "profile_score": 94.3,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 23.3
+        "profile_score": 96.82,
+        "volatility": 24.2
       },
       {
         "rank": 3,
-        "name": "XMR/EUR",
-        "ticker": "XMR/EUR",
-        "sort_score": 89.71,
+        "name": "BNT/USD",
+        "ticker": "BNT/USD",
+        "sort_score": 92.24,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_privacy",
-        "profile_score": 89.71,
+        "matched_preset": "crypto_preset_other",
+        "profile_score": 92.24,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 44.9
+        "volatility": 38.4
       },
       {
         "rank": 4,
-        "name": "RENDER/USD",
-        "ticker": "RENDER/USD",
-        "sort_score": 86.74,
+        "name": "OKB/USD",
+        "ticker": "OKB/USD",
+        "sort_score": 89.37,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 86.74,
+        "matched_preset": "crypto_preset_exchange",
+        "profile_score": 89.37,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 62.9
+        "volatility": 41.1
       },
       {
         "rank": 5,
-        "name": "BNT/USD",
-        "ticker": "BNT/USD",
-        "sort_score": 85.92,
+        "name": "BTC/USD",
+        "ticker": "BTC/USD",
+        "sort_score": 86.7,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_other",
-        "profile_score": 85.92,
+        "matched_preset": "crypto_preset_blue_chip",
+        "profile_score": 86.7,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 38.2
+        "volatility": 26.8
       },
       {
         "rank": 6,
-        "name": "ATOM/USD",
-        "ticker": "ATOM/USD",
-        "sort_score": 85.07,
+        "name": "XLM/USD",
+        "ticker": "XLM/USD",
+        "sort_score": 85.88,
         "sort_score_source": "_profile_score",
         "selected": false,
-        "matched_preset": "crypto_preset_smart_contract",
-        "profile_score": 85.07,
+        "matched_preset": "crypto_preset_payment",
+        "profile_score": 85.88,
         "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 48.9
+        "volatility": 100.8
       }
     ],
     "bond": [
@@ -4678,29 +4678,6 @@
       },
       {
         "rank": 7,
-        "name": "Goldman Sachs Access Inflation-Protected Securities Fund",
-        "ticker": "GTIP",
-        "sort_score": 96.27,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 96.27,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 4.9,
-        "ytd": "0.81%"
-      },
-      {
-        "rank": 8,
-        "name": "Vanguard Short-Term Treasury Fund",
-        "ticker": "VGSH",
-        "sort_score": 96.09,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "profile_score": 96.09,
-        "volatility": 2.0,
-        "ytd": "-0.73%"
-      },
-      {
-        "rank": 9,
         "name": "Eldridge AAA CLO ETF",
         "ticker": "CLOX",
         "sort_score": 95.64,
@@ -4712,7 +4689,7 @@
         "ytd": "0.31%"
       },
       {
-        "rank": 10,
+        "rank": 8,
         "name": "Vanguard Short-Term Treasury Fund",
         "ticker": "VGSH",
         "sort_score": 94.88,
@@ -4723,77 +4700,18 @@
         "ytd": "-0.73%"
       },
       {
-        "rank": 11,
-        "name": "Schwab Short-Term U.S. Treasury ETF",
-        "ticker": "SCHO",
-        "sort_score": 93.6,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 93.6,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 2.0,
-        "ytd": "-0.7%"
-      },
-      {
-        "rank": 12,
-        "name": "Goldman Sachs Access Treasury 0-1 Year ETF",
-        "ticker": "GBIL",
-        "sort_score": 93.36,
+        "rank": 9,
+        "name": "PGIM AAA CLO ETF",
+        "ticker": "PAAA",
+        "sort_score": 93.57,
         "sort_score_source": "_profile_score",
         "selected": true,
-        "profile_score": 93.36,
-        "volatility": 1.5,
-        "ytd": "0.18%"
+        "profile_score": 93.57,
+        "volatility": 1.8,
+        "ytd": "0.39%"
       },
       {
-        "rank": 13,
-        "name": "SPDR Portfolio Treasury ETF",
-        "ticker": "SPTB",
-        "sort_score": 93.27,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 93.27,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 3.9,
-        "ytd": "-1.16%"
-      },
-      {
-        "rank": 14,
-        "name": "WisdomTree Floating Rate Treasury Fund",
-        "ticker": "USFR",
-        "sort_score": 93.11,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 93.11,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 1.4,
-        "ytd": "-0.02%"
-      },
-      {
-        "rank": 15,
-        "name": "iShares 0-5 Year TIPS Bond ETF",
-        "ticker": "STIP",
-        "sort_score": 91.95,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "profile_score": 91.95,
-        "volatility": 2.3,
-        "ytd": "1.21%"
-      },
-      {
-        "rank": 16,
-        "name": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
-        "ticker": "TDTT",
-        "sort_score": 90.7,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 90.7,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 3.1,
-        "ytd": "1.0%"
-      },
-      {
-        "rank": 17,
+        "rank": 10,
         "name": "SPDR Bloomberg Emerging Markets USD Bond ETF",
         "ticker": "EMHC",
         "sort_score": 90.63,
@@ -4805,7 +4723,7 @@
         "ytd": "-0.3%"
       },
       {
-        "rank": 18,
+        "rank": 11,
         "name": "Simplify MBS ETF",
         "ticker": "MTBA",
         "sort_score": 90.32,
@@ -4817,7 +4735,7 @@
         "ytd": "-2.51%"
       },
       {
-        "rank": 19,
+        "rank": 12,
         "name": "Virtus Seix Senior Loan ETF",
         "ticker": "SEIX",
         "sort_score": 90.28,
@@ -4829,7 +4747,7 @@
         "ytd": "-0.49%"
       },
       {
-        "rank": 20,
+        "rank": 13,
         "name": "Nuveen AA-BBB CLO ETF",
         "ticker": "NCLO",
         "sort_score": 89.88,
@@ -4841,7 +4759,7 @@
         "ytd": "0.74%"
       },
       {
-        "rank": 21,
+        "rank": 14,
         "name": "Pacer Pacific Asset Floating Rate High Income ETF",
         "ticker": "FLRT",
         "sort_score": 89.25,
@@ -4853,19 +4771,7 @@
         "ytd": "-0.78%"
       },
       {
-        "rank": 22,
-        "name": "Dimensional Inflation-Protected Securities ETF",
-        "ticker": "DFIP",
-        "sort_score": 89.17,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "profile_score": 89.17,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
-        "volatility": 5.3,
-        "ytd": "0.91%"
-      },
-      {
-        "rank": 23,
+        "rank": 15,
         "name": "PGIM Ultra Short Bond ETF",
         "ticker": "PULS",
         "sort_score": 87.88,
@@ -4877,7 +4783,31 @@
         "ytd": "0.18%"
       },
       {
-        "rank": 24,
+        "rank": 16,
+        "name": "Simplify Treasury Option Income ETF",
+        "ticker": "BUCK",
+        "sort_score": 87.4,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 87.4,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 4.3,
+        "ytd": "-1.28%"
+      },
+      {
+        "rank": 17,
+        "name": "Regan Floating Rate MBS ETF",
+        "ticker": "MBSF",
+        "sort_score": 86.65,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 86.65,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 3.2,
+        "ytd": "-0.19%"
+      },
+      {
+        "rank": 18,
         "name": "SPDR Bloomberg Investment Grade Floating Rate ETF",
         "ticker": "FLRN",
         "sort_score": 85.49,
@@ -4889,7 +4819,7 @@
         "ytd": "0.33%"
       },
       {
-        "rank": 25,
+        "rank": 19,
         "name": "Vanguard Short-Term Inflation-Protected Securities Index Fund",
         "ticker": "VTIP",
         "sort_score": 84.31,
@@ -4901,7 +4831,31 @@
         "ytd": "1.92%"
       },
       {
-        "rank": 26,
+        "rank": 20,
+        "name": "Goldman Sachs Access Inflation-Protected Securities Fund",
+        "ticker": "GTIP",
+        "sort_score": 84.05,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 84.05,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 4.9,
+        "ytd": "0.81%"
+      },
+      {
+        "rank": 21,
+        "name": "US Treasury 3 Month Bill ETF",
+        "ticker": "TBIL",
+        "sort_score": 83.41,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 83.41,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 1.3,
+        "ytd": "-0.1%"
+      },
+      {
+        "rank": 22,
         "name": "iShares Floating Rate Bond ETF",
         "ticker": "FLOT",
         "sort_score": 83.04,
@@ -4913,7 +4867,7 @@
         "ytd": "0.37%"
       },
       {
-        "rank": 27,
+        "rank": 23,
         "name": "Invesco Variable Rate Investment Grade ETF",
         "ticker": "VRIG",
         "sort_score": 82.96,
@@ -4925,7 +4879,7 @@
         "ytd": "-0.14%"
       },
       {
-        "rank": 28,
+        "rank": 24,
         "name": "VanEck IG Floating Rate ETF",
         "ticker": "FLTR",
         "sort_score": 82.9,
@@ -4936,7 +4890,7 @@
         "ytd": "0.35%"
       },
       {
-        "rank": 29,
+        "rank": 25,
         "name": "iShares Government Money Market ETF",
         "ticker": "GMMF",
         "sort_score": 80.8,
@@ -4948,7 +4902,7 @@
         "ytd": "0.01%"
       },
       {
-        "rank": 30,
+        "rank": 26,
         "name": "Janus Henderson AAA CLO ETF",
         "ticker": "JAAA",
         "sort_score": 79.96,
@@ -4959,7 +4913,41 @@
         "ytd": "0.2%"
       },
       {
-        "rank": 31,
+        "rank": 27,
+        "name": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
+        "ticker": "TDTT",
+        "sort_score": 79.45,
+        "sort_score_source": "_profile_score",
+        "selected": true,
+        "profile_score": 79.45,
+        "volatility": 3.1,
+        "ytd": "1.0%"
+      },
+      {
+        "rank": 28,
+        "name": "SPDR Portfolio Treasury ETF",
+        "ticker": "SPTB",
+        "sort_score": 78.62,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "profile_score": 78.62,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 3.9,
+        "ytd": "-1.16%"
+      },
+      {
+        "rank": 29,
+        "name": "Vanguard Short-Term Treasury Fund",
+        "ticker": "VGSH",
+        "sort_score": 78.6,
+        "sort_score_source": "_profile_score",
+        "selected": true,
+        "profile_score": 78.6,
+        "volatility": 2.0,
+        "ytd": "-0.73%"
+      },
+      {
+        "rank": 30,
         "name": "Vanguard Short-Term Bond ETF",
         "ticker": "BSV",
         "sort_score": 78.24,
@@ -4968,6 +4956,17 @@
         "profile_score": 78.24,
         "volatility": 2.5,
         "ytd": "-0.94%"
+      },
+      {
+        "rank": 31,
+        "name": "FlexShares iBoxx 5-Year Target Duration TIPS Index Fund",
+        "ticker": "TDTF",
+        "sort_score": 77.23,
+        "sort_score_source": "_profile_score",
+        "selected": true,
+        "profile_score": 77.23,
+        "volatility": 4.6,
+        "ytd": "1.0%"
       }
     ]
   },
@@ -6468,10 +6467,12 @@
           "ticker": "GVT&D",
           "sort_score": 0.7158,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "momentum_trend",
           "profile_score": 0.7158,
           "buffett_score": 50.0,
+          "rejection_reason": "Filtré par hard_filters_Stable",
+          "rejection_filter": "hard_filters_Stable",
           "sector": "Industries",
           "country": "Inde",
           "volatility": 45.3,
@@ -6823,10 +6824,11 @@
           "ticker": "ITX",
           "sort_score": 0.5827,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "quality_premium",
           "profile_score": 0.5827,
           "buffett_score": 83.0,
+          "rejection_reason": "Score composite (0.583) insuffisant pour le quota",
           "sector": "Biens de consommation cycliques",
           "country": "Espagne",
           "volatility": 23.2,
@@ -7691,12 +7693,10 @@
           "ticker": "NOVN",
           "sort_score": 0.6142,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "rendement",
           "profile_score": 0.6142,
           "buffett_score": 100.0,
-          "rejection_reason": "Filtré par hard_filters_Agressif",
-          "rejection_filter": "hard_filters_Agressif",
           "sector": "Santé",
           "country": "Suisse",
           "volatility": 19.4,
@@ -14749,26 +14749,28 @@
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     }
   ],
-  "crypto_selected": [],
-  "crypto_rejected": [
-    {
-      "name": "Unknown",
-      "ticker": "XMR/EUR",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_privacy",
-      "profile_score": 89.71,
-      "volatility": 44.9,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
+  "crypto_selected": [
     {
       "name": "Unknown",
       "ticker": "BNB/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_exchange",
-      "profile_score": 94.3,
-      "volatility": 23.3,
+      "profile_score": 96.82,
+      "volatility": 24.2,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score profil élevé (96.82); Preset: crypto_preset_exchange"
+    }
+  ],
+  "crypto_rejected": [
+    {
+      "name": "Unknown",
+      "ticker": "XLM/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_payment",
+      "profile_score": 85.88,
+      "volatility": 100.8,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -14779,29 +14781,7 @@
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
       "profile_score": 100.0,
-      "volatility": 15.5,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "RENDER/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_other",
-      "profile_score": 86.74,
-      "volatility": 62.9,
-      "radar_tilt": "neutral",
-      "selected": false,
-      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
-    },
-    {
-      "name": "Unknown",
-      "ticker": "ATOM/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_smart_contract",
-      "profile_score": 85.07,
-      "volatility": 48.9,
+      "volatility": 24.5,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -14811,8 +14791,30 @@
       "ticker": "BNT/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_other",
-      "profile_score": 85.92,
-      "volatility": 38.2,
+      "profile_score": 92.24,
+      "volatility": 38.4,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "OKB/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_exchange",
+      "profile_score": 89.37,
+      "volatility": 41.1,
+      "radar_tilt": "neutral",
+      "selected": false,
+      "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
+    },
+    {
+      "name": "Unknown",
+      "ticker": "BTC/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_blue_chip",
+      "profile_score": 86.7,
+      "volatility": 26.8,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -14853,37 +14855,37 @@
       "selection_reason": "Score profil élevé (82.90)"
     },
     {
-      "name": "Vanguard Short-Term Treasury Fund",
-      "ticker": "VGSH",
+      "name": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
+      "ticker": "TDTT",
       "category": "bond",
-      "profile_score": 96.09,
-      "volatility": 2.0,
+      "profile_score": 79.45,
+      "volatility": 3.1,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 4,
-      "selection_reason": "Score profil élevé (96.09)"
+      "selection_reason": "Score profil élevé (79.45)"
     },
     {
-      "name": "Goldman Sachs Access Treasury 0-1 Year ETF",
-      "ticker": "GBIL",
+      "name": "Vanguard Short-Term Treasury Fund",
+      "ticker": "VGSH",
       "category": "bond",
-      "profile_score": 93.36,
-      "volatility": 1.5,
+      "profile_score": 78.6,
+      "volatility": 2.0,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 5,
-      "selection_reason": "Score profil élevé (93.36)"
+      "selection_reason": "Score profil élevé (78.60)"
     },
     {
-      "name": "iShares 0-5 Year TIPS Bond ETF",
-      "ticker": "STIP",
+      "name": "FlexShares iBoxx 5-Year Target Duration TIPS Index Fund",
+      "ticker": "TDTF",
       "category": "bond",
-      "profile_score": 91.95,
-      "volatility": 2.3,
+      "profile_score": 77.23,
+      "volatility": 4.6,
       "radar_tilt": "neutral",
       "selected": true,
       "ranking": 6,
-      "selection_reason": "Score profil élevé (91.95)"
+      "selection_reason": "Score profil élevé (77.23)"
     },
     {
       "name": "Invesco Treasury Collateral ETF",
