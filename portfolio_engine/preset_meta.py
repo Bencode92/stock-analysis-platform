@@ -159,6 +159,7 @@ DUAL_LISTING_TICKERS: Dict[str, List[str]] = {
     "FPE3": ["FPE"],            # Fuchs SE (pref / ord)
     "MTX3": ["MTX"],            # MTU Aero Engines (rare double cotation)
     "DRW3": ["DRW8"],            # Drägerwerk (pref / ord)
+    "SCHN": ["SCHP"],            # Schindler Holding (registered SCHN / participation SCHP — Suisse)
 }
 
 # Reverse lookup: duplicate_ticker -> canonical_ticker
