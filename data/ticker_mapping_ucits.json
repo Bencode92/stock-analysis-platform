@@ -1,9 +1,12 @@
 {
   "_meta": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Mapping entre tickers UCITS (Trading 212 EU, plateformes EU/FR) et tickers US référencés dans portfolios.json. Sert à la réconciliation portefeuille détenu ↔ portefeuille cible et à la substitution lors d'une allocation.",
-    "format": "Chaque entrée est indexée par le ticker UCITS. 'us_equivalent' pointe vers le ticker US équivalent (même sous-jacent ou exposition très proche). 'similarity' indique la qualité du proxy: 'exact' (même titre/ETF), 'equivalent' (même sous-jacent/indice), 'proxy' (thème proche mais expo non identique).",
-    "extension": "Pour ajouter une équivalence, dupliquer une entrée et adapter. La table peut être étendue manuellement par l'utilisateur."
+    "format": "Chaque entrée est indexée par le ticker UCITS. 'us_equivalent' pointe vers le ticker US équivalent (même sous-jacent ou exposition très proche). 'similarity' indique la qualité du proxy: 'exact' (même titre/ETF), 'equivalent' (même sous-jacent/indice), 'proxy' (thème proche mais expo non identique), 'none' (aucun équivalent US documenté — ex : actions EU sans ADR pertinent, ETFs leveraged exclus).",
+    "extension": "Pour ajouter une équivalence, dupliquer une entrée et adapter. La table peut être étendue manuellement par l'utilisateur.",
+    "changelog": {
+      "1.1.0": "Phase Allocator-1 — ajout CS (AXA via Trading 212), broad US/World/Nasdaq UCITS, bonds AGGH, dividend VHYL, Europe EUNL, tech IUIT, healthcare IHCU."
+    }
   },
   "VVMX": {
     "name": "VanEck Rare Earth and Strategic Metals (Acc) UCITS",
@@ -138,5 +141,179 @@
     "category": "Obligations",
     "theme": "treasury_short",
     "note": "Présent dans cible Modéré (GBIL 9%), absent de cible Agressif."
+  },
+  "CS": {
+    "name": "AXA (Euronext Paris) — ticker Trading 212",
+    "us_equivalent": null,
+    "us_name": null,
+    "similarity": "none",
+    "category": "Actions",
+    "theme": "insurance_eu",
+    "note": "Trading 212 utilise le ticker 'CS' (code Euronext Paris) pour AXA. Pas d'ADR US pertinent dans les cibles. Voir aussi entrée 'AXA' (même sous-jacent, autre code source)."
+  },
+  "CSPX": {
+    "name": "iShares Core S&P 500 (Acc) UCITS",
+    "us_equivalent": "SPY",
+    "us_name": "SPDR S&P 500 ETF Trust",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_large_cap_broad"
+  },
+  "VUAA": {
+    "name": "Vanguard S&P 500 (Acc) UCITS",
+    "us_equivalent": "SPY",
+    "us_name": "SPDR S&P 500 ETF Trust",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_large_cap_broad"
+  },
+  "VUSA": {
+    "name": "Vanguard S&P 500 (Dist) UCITS",
+    "us_equivalent": "SPY",
+    "us_name": "SPDR S&P 500 ETF Trust",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_large_cap_broad"
+  },
+  "SXR8": {
+    "name": "iShares Core S&P 500 UCITS (Xetra)",
+    "us_equivalent": "SPY",
+    "us_name": "SPDR S&P 500 ETF Trust",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_large_cap_broad",
+    "note": "Même ETF que CSPX, cotation Xetra (EUR)."
+  },
+  "VWCE": {
+    "name": "Vanguard FTSE All-World (Acc) UCITS",
+    "us_equivalent": "VT",
+    "us_name": "Vanguard Total World Stock ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "world_equity_broad"
+  },
+  "IWDA": {
+    "name": "iShares Core MSCI World (Acc) UCITS",
+    "us_equivalent": "URTH",
+    "us_name": "iShares MSCI World ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "developed_world_equity"
+  },
+  "SWRD": {
+    "name": "SPDR MSCI World (Acc) UCITS",
+    "us_equivalent": "URTH",
+    "us_name": "iShares MSCI World ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "developed_world_equity"
+  },
+  "EQQQ": {
+    "name": "Invesco EQQQ Nasdaq-100 UCITS",
+    "us_equivalent": "QQQ",
+    "us_name": "Invesco QQQ Trust",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_nasdaq100"
+  },
+  "CNDX": {
+    "name": "iShares Nasdaq 100 (Acc) UCITS",
+    "us_equivalent": "QQQ",
+    "us_name": "Invesco QQQ Trust",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_nasdaq100"
+  },
+  "AGGH": {
+    "name": "iShares Core Global Aggregate Bond (Acc) UCITS",
+    "us_equivalent": "AGG",
+    "us_name": "iShares Core US Aggregate Bond ETF",
+    "similarity": "proxy",
+    "category": "Obligations",
+    "theme": "bond_aggregate",
+    "note": "AGGH = global aggregate (multi-pays), AGG = US-only — proxy thématique (qualité credit similaire, durée similaire)."
+  },
+  "VHYL": {
+    "name": "Vanguard FTSE All-World High Dividend Yield (Dist) UCITS",
+    "us_equivalent": "SCHD",
+    "us_name": "Schwab US Dividend Equity ETF",
+    "similarity": "proxy",
+    "category": "ETF",
+    "theme": "dividend_global",
+    "note": "VHYL = global high-yield, SCHD = US-only dividend growers — proxy thématique."
+  },
+  "EUNL": {
+    "name": "iShares Core MSCI Europe (Acc) UCITS",
+    "us_equivalent": "VGK",
+    "us_name": "Vanguard FTSE Europe ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "europe_equity"
+  },
+  "IMEU": {
+    "name": "iShares MSCI Europe (Acc) UCITS",
+    "us_equivalent": "VGK",
+    "us_name": "Vanguard FTSE Europe ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "europe_equity"
+  },
+  "EIMI": {
+    "name": "iShares Core MSCI EM IMI (Acc) UCITS",
+    "us_equivalent": "VWO",
+    "us_name": "Vanguard FTSE Emerging Markets ETF",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "emerging_markets",
+    "note": "Inclut la Chine (différent de IS3N → XCEM qui exclut)."
+  },
+  "IUIT": {
+    "name": "iShares S&P 500 Information Technology Sector (Acc) UCITS",
+    "us_equivalent": "XLK",
+    "us_name": "Technology Select Sector SPDR Fund",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_tech_sector"
+  },
+  "IITU": {
+    "name": "iShares S&P 500 Information Technology Sector (Dist) UCITS",
+    "us_equivalent": "XLK",
+    "us_name": "Technology Select Sector SPDR Fund",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_tech_sector"
+  },
+  "IHCU": {
+    "name": "iShares S&P 500 Health Care Sector (Acc) UCITS",
+    "us_equivalent": "XLV",
+    "us_name": "Health Care Select Sector SPDR Fund",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_healthcare_sector"
+  },
+  "IUFS": {
+    "name": "iShares S&P 500 Financials Sector (Acc) UCITS",
+    "us_equivalent": "XLF",
+    "us_name": "Financial Select Sector SPDR Fund",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_financials_sector"
+  },
+  "IUES": {
+    "name": "iShares S&P 500 Energy Sector (Acc) UCITS",
+    "us_equivalent": "XLE",
+    "us_name": "Energy Select Sector SPDR Fund",
+    "similarity": "equivalent",
+    "category": "ETF",
+    "theme": "us_energy_sector"
+  },
+  "WSML": {
+    "name": "iShares MSCI World Small Cap (Acc) UCITS",
+    "us_equivalent": "VSS",
+    "us_name": "Vanguard FTSE All-World ex-US Small Cap ETF",
+    "similarity": "proxy",
+    "category": "ETF",
+    "theme": "world_small_cap",
+    "note": "WSML inclut US small caps, VSS exclut — proxy thématique."
   }
 }

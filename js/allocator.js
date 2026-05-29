@@ -23,7 +23,9 @@
       this.portfolios = null;
       this.ucits = null;
       this.profile = 'Agressif';
-      this.maxTurnover = 0.15;
+      // Phase Allocator-1: par défaut, plan complet vers la cible (alpha=1).
+      // L'utilisateur peut activer le mode "budget turnover" via le toggle Avancé.
+      this.maxTurnover = Infinity;
       this.minTradeWeight = 0.005;
       this.minNotional = 50;
       this.currentPositions = [];
@@ -127,16 +129,31 @@
     setCurrentPositions(positions) {
       this.currentPositions = positions;
       this.nav = positions.reduce((s, p) => s + p.value, 0);
-      // Reconciliation: assign target_ticker (UCITS → US)
+      // Reconciliation: assign target_ticker (UCITS → US).
+      // Three explicit cases:
+      //   - mapped + us_equivalent → 'exact' | 'equivalent' | 'proxy'
+      //   - mapped + similarity='none' (documented "no US equivalent") → 'no_equivalent'
+      //   - not in target portfolio AND no UCITS mapping → 'unmapped'
+      //   - ticker_raw IS a target ticker directly → 'exact'
       for (const p of positions) {
         const map = this.ucits[p.ticker_raw];
         if (map && map.us_equivalent) {
           p.target_ticker = map.us_equivalent;
-          p.similarity = map.similarity;
+          p.similarity = map.similarity || 'equivalent';
           p.mapping_note = map.note || null;
-        } else {
+        } else if (map && (map.similarity === 'none' || !map.us_equivalent)) {
+          // UCITS connu mais aucun équivalent US documenté
+          p.target_ticker = null;
+          p.similarity = 'no_equivalent';
+          p.mapping_note = map.note || null;
+        } else if (this._targetTickers().has(p.ticker_raw)) {
           p.target_ticker = p.ticker_raw;
-          p.similarity = (this._targetTickers().has(p.ticker_raw)) ? 'exact' : 'unmapped';
+          p.similarity = 'exact';
+          p.mapping_note = null;
+        } else {
+          p.target_ticker = null;
+          p.similarity = 'unmapped';
+          p.mapping_note = null;
         }
       }
     }
@@ -494,16 +511,23 @@
             CSV Trading 212:
             <input type="file" data-allocator-csv accept=".csv,text/csv" style="margin-left:6px;color:var(--text-secondary);">
           </label>
-          <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;">
-            Turnover max: <span data-allocator-turnover-label style="font-family:var(--font-mono);color:var(--text-primary);">15%</span>
-            <input type="range" data-allocator-turnover min="5" max="50" step="1" value="15" style="width:140px;">
-          </label>
           <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;" title="Ne propose aucun SELL ni TRIM sur les positions en moins-value latente. Les BUYs (renforcement DCA) restent autorisés.">
             <input type="checkbox" data-allocator-preserve-losses checked> Préserver MV (ne pas vendre les positions en perte)
           </label>
           <button data-allocator-compute style="background:var(--accent,#26c281);color:#0a1410;border:none;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer;">
             <i class="fas fa-bolt" style="margin-right:4px;"></i>Calculer arbitrages
           </button>
+          <button data-allocator-advanced-toggle title="Activer un budget turnover maximum (par défaut : plan complet vers la cible)" style="background:transparent;color:var(--text-muted);border:1px dashed var(--border-subtle);border-radius:6px;padding:5px 10px;font-size:0.72rem;cursor:pointer;">
+            <i class="fas fa-sliders-h" style="margin-right:4px;"></i>Avancé
+          </button>
+          <div data-allocator-advanced style="display:none;flex-basis:100%;padding:0.6rem 0.8rem;background:var(--surface-2,#0e1622);border:1px dashed var(--border-subtle);border-radius:8px;font-size:0.78rem;color:var(--text-secondary);">
+            <label style="display:flex;align-items:center;gap:6px;">
+              Budget turnover max :
+              <span data-allocator-turnover-label style="font-family:var(--font-mono);color:var(--text-primary);">illimité</span>
+              <input type="range" data-allocator-turnover min="0" max="60" step="1" value="0" style="width:160px;">
+              <span style="color:var(--text-muted);font-size:0.7rem;">0 = plan complet (recommandé)</span>
+            </label>
+          </div>
         </div>
         <div data-allocator-status style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.8rem;">Charge un CSV pour démarrer.</div>
         <div data-allocator-recon></div>
@@ -542,10 +566,19 @@
         }
       });
       const slider = this.root.querySelector('[data-allocator-turnover]');
+      const sliderLabel = this.root.querySelector('[data-allocator-turnover-label]');
       slider.addEventListener('input', (e) => {
         const pct = parseInt(e.target.value, 10);
-        this.alloc.maxTurnover = pct / 100;
-        this.root.querySelector('[data-allocator-turnover-label]').textContent = `${pct}%`;
+        // 0 = illimité (alpha=1, plan complet). > 0 = budget en %.
+        this.alloc.maxTurnover = pct === 0 ? Infinity : pct / 100;
+        sliderLabel.textContent = pct === 0 ? 'illimité' : `${pct}%`;
+      });
+      const advancedBtn = this.root.querySelector('[data-allocator-advanced-toggle]');
+      const advancedPanel = this.root.querySelector('[data-allocator-advanced]');
+      advancedBtn.addEventListener('click', () => {
+        const visible = advancedPanel.style.display !== 'none';
+        advancedPanel.style.display = visible ? 'none' : 'block';
+        advancedBtn.style.background = visible ? 'transparent' : 'var(--surface-2,#0e1622)';
       });
       this.root.querySelector('[data-allocator-preserve-losses]').addEventListener('change', (e) => {
         this.alloc.preserveLosses = e.target.checked;
@@ -567,25 +600,34 @@
       const positions = this.alloc.currentPositions;
       if (!positions.length) { el.innerHTML = ''; return; }
       const targetSet = this.alloc._targetTickers();
+      const BADGES = {
+        exact:        '<span style="color:#4caf50;">≡ exact</span>',
+        equivalent:   '<span style="color:#8bc34a;">≈ équivalent</span>',
+        proxy:        '<span style="color:#ffb300;">≈ proxy</span>',
+        no_equivalent:'<span style="color:#9e9e9e;" title="UCITS documenté mais sans équivalent US dans la cible">⊘ pas d\'équivalent</span>',
+        unmapped:     '<span style="color:#ff5252;">✗ hors cible</span>',
+      };
       const rows = positions.map(p => {
-        const inTarget = targetSet.has(p.target_ticker);
-        const badge = p.similarity === 'exact' ? '<span style="color:#4caf50;">≡ exact</span>'
-          : p.similarity === 'equivalent' ? '<span style="color:#8bc34a;">≈ équivalent</span>'
-          : p.similarity === 'proxy' ? '<span style="color:#ffb300;">≈ proxy</span>'
-          : '<span style="color:#ff5252;">✗ hors cible</span>';
+        const badge = BADGES[p.similarity] || BADGES.unmapped;
         const wPct = this.alloc.nav > 0 ? (p.value / this.alloc.nav * 100) : 0;
         const pnl = p.pnl != null ? p.pnl : 0;
         const pnlColor = pnl < 0 ? '#ff5252' : (pnl > 0 ? '#4caf50' : 'var(--text-muted)');
         const lockBadge = (p.at_loss && this.alloc.preserveLosses)
           ? ' <span title="Position verrouillée en MV — pas de vente proposée" style="color:#ffb300;">🔒</span>'
           : '';
+        // Affichage cible: flèche uniquement si on a un vrai target US différent.
+        // Si pas de cible (unmapped / no_equivalent / ticker_raw == target), montrer un tiret.
+        const showArrow = p.target_ticker && p.target_ticker !== p.ticker_raw;
+        const cibleCell = showArrow
+          ? `→ ${p.target_ticker}`
+          : '<span style="color:var(--text-muted);">—</span>';
         return `<tr>
           <td style="padding:4px 8px;font-family:var(--font-mono);">${p.ticker_raw}${lockBadge}</td>
           <td style="padding:4px 8px;color:var(--text-secondary);font-size:0.75rem;">${p.name || ''}</td>
           <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${wPct.toFixed(1)}%</td>
           <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;">${p.value.toFixed(2)} €</td>
           <td style="padding:4px 8px;font-family:var(--font-mono);text-align:right;color:${pnlColor};">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} €</td>
-          <td style="padding:4px 8px;font-family:var(--font-mono);">→ ${p.target_ticker}</td>
+          <td style="padding:4px 8px;font-family:var(--font-mono);">${cibleCell}</td>
           <td style="padding:4px 8px;font-size:0.75rem;">${badge}</td>
         </tr>`;
       }).join('');
@@ -716,8 +758,8 @@
       const alphaPct = (alpha * 100).toFixed(0);
       const fullPct = (fullTurnover * 100).toFixed(1);
       const explainer = alpha >= 0.999
-        ? `<span style="color:#4caf50;">Rebalance complet vers la cible (turnover ${fullPct} % suffit).</span>`
-        : `Avec un budget de ${(this.alloc.maxTurnover*100).toFixed(0)} % one-way, on parcourt <strong>${alphaPct} %</strong> du chemin vers la cible. Le rebalance complet demanderait <strong>${fullPct} %</strong> de turnover. Tous les tickers progressent au même rythme.`;
+        ? `<span style="color:#4caf50;">Plan complet vers la cible</span> — turnover ${fullPct} % one-way, sells = buys (cash-neutral).`
+        : `Budget turnover : ${(this.alloc.maxTurnover*100).toFixed(0)} % one-way. On parcourt <strong>${alphaPct} %</strong> du chemin vers la cible (rebalance complet : ${fullPct} %). Tous les tickers progressent au même rythme.`;
 
       const warnHtml = warnings.length
         ? `<div style="margin-top:0.6rem;color:#ffb300;font-size:0.8rem;">${warnings.join(' ')}</div>`
