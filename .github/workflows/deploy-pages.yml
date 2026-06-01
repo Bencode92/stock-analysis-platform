@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   # Se déclenche après la mise à jour des données
   workflow_run:
-    workflows: ["Update Market Data (Optimized)"]
+    workflows: ["Update Market Data (Optimized)", "Congress Portfolio Pipeline"]
     types:
       - completed
   
