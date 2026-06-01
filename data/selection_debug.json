@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-06-01-13-23-35",
-    "git_sha": "d3abe0e0f",
-    "git_sha_full": "d3abe0e0fe7fbf86e8b7b637961275c27dae1de4",
+    "run_id": "2026-06-01-13-46-12",
+    "git_sha": "d6b0b07f4",
+    "git_sha_full": "d6b0b07f46c7b3ffd334e7c2f4a3c23b080b6356",
     "config_hash": "d87156a6",
     "universe_asof": "2026-06-01",
-    "timestamp_utc": "2026-06-01T13:23:35.443741+00:00",
+    "timestamp_utc": "2026-06-01T13:46:12.240278+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 707.14
+    "total_duration_sec": 610.68
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -223,58 +223,58 @@
     },
     "5_selection_equity_Modéré": {
       "name": "selection_equity",
-      "before": 250,
-      "after": 250,
+      "before": 213,
+      "after": 213,
       "rejected": 0,
       "category": "equity",
       "profile": "Modéré",
       "top_k": [
         {
           "ticker": "BMED",
-          "score": 0.7819
+          "score": 0.753
         },
         {
           "ticker": "ITX",
-          "score": 0.7053
+          "score": 0.6873
         },
         {
           "ticker": "NOVN",
-          "score": 0.6795
-        },
-        {
-          "ticker": "SCHN",
-          "score": 0.6668
+          "score": 0.6602
         },
         {
           "ticker": "REC",
-          "score": 0.6607
+          "score": 0.647
+        },
+        {
+          "ticker": "SCHN",
+          "score": 0.6296
         },
         {
           "ticker": "GD",
-          "score": 0.6553
+          "score": 0.6276
         },
         {
           "ticker": "EOG",
-          "score": 0.6501
+          "score": 0.6108
         },
         {
           "ticker": "PG",
-          "score": 0.6491
+          "score": 0.6106
         },
         {
           "ticker": "VICI",
-          "score": 0.6405
+          "score": 0.6039
         },
         {
-          "ticker": "LUPIN",
-          "score": 0.6358
+          "ticker": "GLPI",
+          "score": 0.5997
         }
       ]
     },
     "5_selection_etf_Modéré": {
       "name": "selection_etf",
-      "before": 10,
-      "after": 10,
+      "before": 9,
+      "after": 9,
       "rejected": 0,
       "category": "etf",
       "profile": "Modéré",
@@ -290,10 +290,6 @@
         {
           "ticker": "VPL",
           "score": 99.61
-        },
-        {
-          "ticker": "DIVB",
-          "score": 99.22
         },
         {
           "ticker": "GPIQ",
@@ -399,51 +395,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 146,
-      "after": 146,
+      "before": 197,
+      "after": 197,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "CS",
-          "score": 0.7156
+          "score": 0.7496
+        },
+        {
+          "ticker": "SCHN",
+          "score": 0.7326
         },
         {
           "ticker": "PG",
-          "score": 0.7084
-        },
-        {
-          "ticker": "SCHP",
-          "score": 0.7049
+          "score": 0.7238
         },
         {
           "ticker": "NOVN",
-          "score": 0.6749
-        },
-        {
-          "ticker": "GGG",
-          "score": 0.6666
+          "score": 0.6864
         },
         {
           "ticker": "ITX",
-          "score": 0.6633
+          "score": 0.6843
         },
         {
           "ticker": "VICI",
-          "score": 0.6483
+          "score": 0.6777
         },
         {
           "ticker": "GD",
-          "score": 0.6435
+          "score": 0.6746
+        },
+        {
+          "ticker": "GGG",
+          "score": 0.6727
         },
         {
           "ticker": "LI",
-          "score": 0.6293
+          "score": 0.6585
         },
         {
-          "ticker": "RO",
-          "score": 0.6038
+          "ticker": "ROP",
+          "score": 0.6115
         }
       ]
     },
@@ -3394,32 +3390,26 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.69,
+    "has_drift": true,
+    "drift_pct": 34.93,
     "details": {
-      "1_initial.after": {
-        "current": 3232,
-        "previous": 3226,
-        "delta": 6,
-        "pct_change": 0.19
+      "5_selection_equity_Modéré.after": {
+        "current": 213,
+        "previous": 250,
+        "delta": -37,
+        "pct_change": 14.8
       },
-      "1_initial.equity": {
-        "current": 1072,
-        "previous": 1066,
-        "delta": 6,
-        "pct_change": 0.56
-      },
-      "hard_filters_equity.after": {
-        "current": 1031,
-        "previous": 1025,
-        "delta": 6,
-        "pct_change": 0.59
+      "5_selection_etf_Modéré.after": {
+        "current": 9,
+        "previous": 10,
+        "delta": -1,
+        "pct_change": 10.0
       },
       "5_selection_equity_Stable.after": {
-        "current": 146,
-        "previous": 145,
-        "delta": 1,
-        "pct_change": 0.69
+        "current": 197,
+        "previous": 146,
+        "delta": 51,
+        "pct_change": 34.93
       }
     }
   }
