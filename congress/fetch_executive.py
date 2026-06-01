@@ -26,9 +26,28 @@ sys.path.insert(0, str(HERE))
 from congress_fetch import normalize_row  # noqa: E402
 
 OUT_PATH = HERE / "data" / "executive_trades.json"
+SEED_PATH = HERE / "data" / "executive_seed.json"
 
 # (nom tel qu'attendu par Quiver, branche affichee)
 EXECUTIVES = [("Donald Trump", "Executive")]
+
+
+def _exploitable(t: dict) -> bool:
+    return bool(t.get("ticker") and t["ticker"] not in ("-",)
+               and t.get("report_date") and t.get("transaction"))
+
+
+def load_seed() -> list[dict]:
+    """Trades executifs curés a la main (fallback quand l'API ne renvoie rien)."""
+    if not SEED_PATH.exists():
+        return []
+    payload = json.loads(SEED_PATH.read_text(encoding="utf-8"))
+    rows = []
+    for t in payload.get("trades", []):
+        t = dict(t)
+        t.setdefault("house", "Executive")
+        rows.append(t)
+    return rows
 
 
 def fetch_rows() -> list[dict]:
@@ -58,20 +77,26 @@ def fetch_rows() -> list[dict]:
 
 
 def main() -> None:
-    rows = [
-        t for t in fetch_rows()
-        if t["ticker"] and t["ticker"] not in ("-",) and t["report_date"] and t["transaction"]
-    ]
+    rows = [t for t in fetch_rows() if _exploitable(t)]
+    source = "quiver-executive"
+
+    if not rows:  # l'API ne couvre pas l'executif -> fallback seed cure
+        seed = [t for t in load_seed() if _exploitable(t)]
+        if seed:
+            rows = seed
+            source = "seed-manuel"
+            print(f"  API vide -> fallback seed : {len(rows)} trades")
+
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps({
         "meta": {
-            "source": "quiver-executive",
+            "source": source,
             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "count": len(rows),
         },
         "trades": rows,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"OK: {len(rows)} trades executifs exploitables -> {OUT_PATH}")
+    print(f"OK: {len(rows)} trades executifs exploitables ({source}) -> {OUT_PATH}")
 
 
 if __name__ == "__main__":
