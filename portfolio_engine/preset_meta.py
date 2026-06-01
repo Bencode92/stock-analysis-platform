@@ -2122,17 +2122,17 @@ def select_equities_for_profile(
     for eq in eq_hard:
         eq["_profile_score"] = score_equity_for_profile(eq, profile, universe_dists)
 
-    # === v5.6.0 (Sélection-4): Profile-native boost ===
-    # Une action dont le profil natif (calculé via fit_score multi-critères dans
-    # profile_assignment.py) correspond au profil courant reçoit un boost
-    # multiplicatif. Une action dont le profil natif est autre voit son score
-    # légèrement pénalisé. Cela force chaque mega-cap à aller dans son profil
-    # le plus adapté (AAPL → Modéré, NVDA → Agressif, VICI → Stable) au lieu
-    # de laisser le premier profil qui les sélectionne les rafler.
-    _NATIVE_BOOST = 1.25   # +25% si profil natif == profile
-    _NON_NATIVE_PENALTY = 0.85  # -15% si profil natif != profile
+    # === Sélection-4 + Sélection-5: Profile-native boost ===
+    # Sélection-4 : boost ×1.25 / penalty ×0.85 (timide — NOVN finit Stable)
+    # Sélection-5 : boost ×1.40 / penalty ×0.70 + HARD-EXCLUDE si fit_native
+    #   très élevé (≥ 0.95) et profil ≠ native. Un stock collé à 95%+ à un
+    #   autre profil (NOVN fit_M=0.97) n'a rien à faire ailleurs.
+    _NATIVE_BOOST = 1.40
+    _NON_NATIVE_PENALTY = 0.70
+    _STRICT_NATIVE_THRESHOLD = 0.95
     _native_boosted = 0
     _native_penalized = 0
+    _native_excluded = 0
     for eq in eq_hard:
         _native = eq.get("_profile_native")
         if not _native:
@@ -2141,18 +2141,30 @@ def select_equities_for_profile(
             eq["_profile_score"] = eq["_profile_score"] * _NATIVE_BOOST
             _native_boosted += 1
         else:
-            eq["_profile_score"] = eq["_profile_score"] * _NON_NATIVE_PENALTY
-            _native_penalized += 1
-    if _native_boosted or _native_penalized:
+            _fit_native = max(
+                eq.get("_fit_stable", 0) or 0,
+                eq.get("_fit_modere", 0) or 0,
+                eq.get("_fit_agressif", 0) or 0,
+            )
+            if _fit_native >= _STRICT_NATIVE_THRESHOLD:
+                eq["_profile_score"] = 0.0
+                _native_excluded += 1
+            else:
+                eq["_profile_score"] = eq["_profile_score"] * _NON_NATIVE_PENALTY
+                _native_penalized += 1
+    if _native_boosted or _native_penalized or _native_excluded:
         logger.info(
             f"   [{profile}] 🎯 Native fit: {_native_boosted} boosted (×{_NATIVE_BOOST}), "
-            f"{_native_penalized} penalized (×{_NON_NATIVE_PENALTY})"
+            f"{_native_penalized} penalized (×{_NON_NATIVE_PENALTY}), "
+            f"{_native_excluded} hard-excluded (fit_native ≥ {_STRICT_NATIVE_THRESHOLD})"
         )
         meta["stages"]["native_fit"] = {
             "boosted": _native_boosted,
             "penalized": _native_penalized,
+            "hard_excluded": _native_excluded,
             "boost_factor": _NATIVE_BOOST,
             "penalty_factor": _NON_NATIVE_PENALTY,
+            "strict_threshold": _STRICT_NATIVE_THRESHOLD,
         }
 
     # v5.3.1 FIX: Coverage haircut — penalize stocks with missing data

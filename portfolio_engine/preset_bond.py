@@ -663,29 +663,72 @@ def compute_profile_score(df: pd.DataFrame, profile: str) -> pd.DataFrame:
 def select_bonds_for_profile(
     df: pd.DataFrame,
     profile: str,
-    top_n: Optional[int] = None
+    top_n: Optional[int] = None,
+    bond_strategy: Optional[Dict[str, Any]] = None,
 ) -> pd.DataFrame:
     """
     Sélectionne les ETF obligataires pour un profil donné.
-    
+
     Args:
         df: DataFrame avec les ETF bonds
         profile: "Stable", "Modéré", ou "Agressif"
         top_n: Nombre max de bonds à retourner (optionnel)
-    
+        bond_strategy: Dict du Market Intelligence (bond_strategy_full) avec clés :
+            prefer_tips, prefer_treasury, avoid_hy, avoid_securitized,
+            avoid_em_bonds, max_duration_stable, max_duration_moderate.
+            Si fourni, applique les tilts macro après les contraintes hard.
+
     Returns:
         DataFrame filtré avec _profile_score
     """
     if profile not in PROFILE_PRESETS:
         raise ValueError(f"Profil inconnu: {profile}. Valides: {list(PROFILE_PRESETS.keys())}")
-    
+
     logger.info(f"[Bond] Sélection pour profil {profile} - Univers initial: {len(df)}")
-    
+
     # Couche 0: Data QC
     df_clean = apply_data_qc_filters(df)
-    
+
     # Couche 1: Hard constraints
     df_constrained = apply_hard_constraints(df_clean, profile)
+
+    # === Phase Sélection-5: Macro tilt filters (bond_strategy_full) ===
+    # Appliqués APRÈS hard constraints, AVANT presets union, pour orienter
+    # l'univers vers la stratégie macro du Market Intelligence (stagflation,
+    # disinflation, etc.). En stagflation : prefer_tips + avoid_securitized.
+    if bond_strategy:
+        _bs_before = len(df_constrained)
+        _filters_applied = []
+
+        if bond_strategy.get("avoid_securitized") and "fund_type" in df_constrained.columns:
+            _ft_lower = df_constrained["fund_type"].fillna("").str.lower()
+            _is_securitized = (
+                _ft_lower.str.contains("clo", regex=False)
+                | _ft_lower.str.contains("mbs", regex=False)
+                | _ft_lower.str.contains("mortgage", regex=False)
+                | _ft_lower.str.contains("abs", regex=False)
+                | _ft_lower.str.contains("securitized", regex=False)
+                | _ft_lower.str.contains("asset-backed", regex=False)
+            )
+            df_constrained = df_constrained[~_is_securitized].copy()
+            _filters_applied.append(f"avoid_securitized: -{_bs_before - len(df_constrained)}")
+
+        if bond_strategy.get("avoid_em_bonds") and "fund_type" in df_constrained.columns:
+            _ft_lower = df_constrained["fund_type"].fillna("").str.lower()
+            _before = len(df_constrained)
+            _is_em = (
+                _ft_lower.str.contains("emerging", regex=False)
+                | _ft_lower.str.contains(" em ", regex=False)
+            )
+            df_constrained = df_constrained[~_is_em].copy()
+            if _before != len(df_constrained):
+                _filters_applied.append(f"avoid_em_bonds: -{_before - len(df_constrained)}")
+
+        if _filters_applied:
+            logger.info(
+                f"[Bond {profile}] Macro tilt filters: {_bs_before} → "
+                f"{len(df_constrained)}  ({', '.join(_filters_applied)})"
+            )
     
     # Couche 2: Presets union
     df_preset = apply_presets_union(df_constrained, profile)
@@ -717,6 +760,49 @@ def select_bonds_for_profile(
             _drop_hy = _hy_rows.index.difference(_keep_hy)
             df_sorted = df_sorted.drop(index=_drop_hy)
             logger.info(f"[Bond {profile}] HY limit: kept {_max_hy}, dropped {len(_drop_hy)} excess HY")
+
+    # === Phase Sélection-5: FORCE-INCLUDE TIPS si prefer_tips actif ===
+    # En régime inflationniste/stagflation, le Market Intelligence indique
+    # `prefer_tips: True`. Le scoring naturel peut quand même favoriser des
+    # bonds nominaux courts (BSV, CLTL) qui battent les TIPS sur yield pur.
+    # On force au moins 1 TIPS dans Stable (et 1 dans Modéré) pour respecter
+    # le tilt macro.
+    if bond_strategy and bond_strategy.get("prefer_tips") and top_n and top_n >= 3:
+        if "fund_type" in df_sorted.columns:
+            _ft_lower = df_sorted["fund_type"].fillna("").str.lower()
+            _is_tips = (
+                _ft_lower.str.contains("tips", regex=False)
+                | _ft_lower.str.contains("inflation", regex=False)
+                | _ft_lower.str.contains("inflation-protected", regex=False)
+            )
+            _has_tips_in_top = _is_tips.head(top_n).any()
+            if not _has_tips_in_top:
+                _tips_pool = df_sorted[_is_tips]
+                if not _tips_pool.empty:
+                    _winner = _tips_pool.iloc[0]
+                    _wsym = _winner.get("symbol", "?")
+                    _wscore = _winner.get("_profile_score", 0)
+                    _wft = _winner.get("fund_type", "?")
+                    _top = df_sorted.head(top_n)
+                    _dropped = _top.iloc[-1]
+                    _dsym = _dropped.get("symbol", "?")
+                    _dscore = _dropped.get("_profile_score", 0)
+                    _new_order = pd.concat([
+                        _top.head(top_n - 1),
+                        _winner.to_frame().T,
+                        df_sorted.drop(index=_top.index).drop(index=_winner.name, errors="ignore"),
+                    ])
+                    df_sorted = _new_order
+                    logger.info(
+                        f"[Bond {profile}] FORCE-INCLUDE TIPS (prefer_tips macro tilt): "
+                        f"{_wsym} (fund_type={_wft}, score {_wscore:.1f}) "
+                        f"remplace {_dsym} (score {_dscore:.1f})"
+                    )
+                else:
+                    logger.warning(
+                        f"[Bond {profile}] prefer_tips actif mais aucun TIPS éligible "
+                        f"dans l'univers post-filtres."
+                    )
 
     # Phase Convexité-1 v4 : FORCE-INCLUDE Treasury/Aggregate intermédiaire
     # pour Modéré. Le scoring naturel favorise les bonds courts (VGSH/SCHO)

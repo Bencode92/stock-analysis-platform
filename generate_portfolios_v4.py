@@ -2775,6 +2775,30 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 if old_threshold != threshold:
                     logger.info(f"   🔄 PROFILE_POLICY[{profile_name}].min_buffett_score: {old_threshold} → {threshold}")
 
+    # === Phase Sélection-5: Charger le dernier bond_strategy du Market Intelligence ===
+    # Le MI tourne actuellement APRÈS les select_bonds (architecture v4),
+    # on utilise donc le dernier mi_*.json disponible pour orienter les bonds
+    # via avoid_securitized / prefer_tips / avoid_em_bonds.
+    bond_strategy = None
+    try:
+        import glob as _glob_mi
+        _mi_files = sorted(_glob_mi.glob("data/market_intelligence_audit/mi_*.json"))
+        if _mi_files:
+            with open(_mi_files[-1], "r", encoding="utf-8") as _f_mi:
+                _mi_data = json.load(_f_mi)
+            bond_strategy = _mi_data.get("bond_strategy_full") or {}
+            if bond_strategy:
+                logger.info(
+                    f"   [Bond strategy] Loaded from {os.path.basename(_mi_files[-1])}: "
+                    f"tips={bond_strategy.get('prefer_tips')}, "
+                    f"avoid_sec={bond_strategy.get('avoid_securitized')}, "
+                    f"avoid_em={bond_strategy.get('avoid_em_bonds')}, "
+                    f"regime={_mi_data.get('regime','?')}"
+                )
+    except Exception as _e_bs:
+        logger.warning(f"   [Bond strategy] Could not load MI: {_e_bs}")
+        bond_strategy = None
+
     # Phase1-B1: Charger l'allocation précédente une seule fois (turnover control)
     _prev_alloc = _load_previous_allocation(CONFIG["output_path"])
 
@@ -3099,7 +3123,9 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
                 bonds_df = pd.DataFrame(bonds_data)
                 # v6.33: top_n par profil — Stable = peu mais qualité, Agressif = plus large
                 bonds_top_n = {"Stable": 6, "Modéré": 10, "Agressif": 15}.get(profile, 10)
-                bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=bonds_top_n)
+                bonds_selected_df = select_bonds_for_profile(
+                    bonds_df, profile, top_n=bonds_top_n, bond_strategy=bond_strategy,
+                )
                 profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
                 logger.info(f"   [{profile}] Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
                 # v5.1.2 FIX: Forcer category="bond"
@@ -4801,7 +4827,9 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
             
             if bonds_data:
                 bonds_df = pd.DataFrame(bonds_data)
-                bonds_selected_df = select_bonds_for_profile(bonds_df, profile, top_n=20)
+                bonds_selected_df = select_bonds_for_profile(
+                    bonds_df, profile, top_n=20, bond_strategy=bond_strategy,
+                )
                 profile_bonds_data = bonds_selected_df.to_dict('records') if not bonds_selected_df.empty else []
                 logger.info(f"   [{profile}] EU/US Bonds sélectionnés: {len(profile_bonds_data)}/{len(bonds_data)}")
                 # v5.1.2 FIX: Forcer category="bond" pour éviter reclassification
