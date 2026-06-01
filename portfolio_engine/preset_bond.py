@@ -115,18 +115,16 @@ SCORING_WEIGHTS = {
         "ter": 0.10,          # Coûts
     },
     "Modéré": {
-        # Phase Convexité-1 v2 (reco expert) : barbell bonds.
-        # Avant : duration=0.20 pénalisait fortement les bonds intermédiaires
-        # → sélection finale = STIP+GBIL+VGSH (tous duration < 2y) = cash
-        # déguisé, downside capture 46% (pas de rally duration en crise).
-        # On augmente yield (= duration plus longue naturellement) et on
-        # réduit drastiquement la pénalité duration courte. Resultat attendu :
-        # mix court (cash buffer) + intermédiaire (convexité crise).
-        "yield": 0.40,        # 0.30 → 0.40 (favorise les bonds qui paient)
-        "credit": 0.30,       # 0.25 → 0.30 (préserve la qualité IG)
+        # Phase Convexité-1 v3 (revert) : scoring stable et conservateur.
+        # On NE compte plus sur le scoring pour piocher l'intermediate
+        # Treasury (CLO et MBS battraient AGG/IEF sur yield pur). À la
+        # place on FORCE l'inclusion d'un Treasury intermédiaire via
+        # un post-process dans select_bonds_for_profile.
+        "yield": 0.40,
+        "credit": 0.30,
         "vol": 0.15,
-        "duration": 0.10,     # 0.20 → 0.10 (laisse passer 5-10y duration)
-        "ter": 0.05,          # 0.10 → 0.05
+        "duration": 0.10,
+        "ter": 0.05,
     },
     "Agressif": {
         "yield": 0.40,        # Rendement prioritaire
@@ -720,12 +718,70 @@ def select_bonds_for_profile(
             df_sorted = df_sorted.drop(index=_drop_hy)
             logger.info(f"[Bond {profile}] HY limit: kept {_max_hy}, dropped {len(_drop_hy)} excess HY")
 
+    # Phase Convexité-1 v4 : FORCE-INCLUDE Treasury/Aggregate intermédiaire
+    # pour Modéré. Le scoring naturel favorise les bonds courts (VGSH/SCHO)
+    # ou les CLO/MBS hauts rendements — aucun n'apporte la convexité crise
+    # (= rally duration quand le Fed baisse en sell-off equity).
+    # → On force au moins 1 bond Treasury/Aggregate Gov, duration ≥ 3.5y,
+    #   credit AA+ minimum (85+) dans le top_n.
+    if profile == "Modéré" and top_n and top_n >= 3:
+        if "bond_avg_duration" in df_sorted.columns:
+            # Critère strict : fund_type "Treasury", "Aggregate" ou
+            # "Government" (PAS "Securitized", "Mortgage", "CLO", "TIPS")
+            _ft_lower = df_sorted.get("fund_type", pd.Series("", index=df_sorted.index)).fillna("").str.lower()
+            _is_treasury_class = (
+                _ft_lower.str.contains("treasury", regex=False)
+                | _ft_lower.str.contains("aggregate", regex=False)
+                | (_ft_lower.str.contains("government", regex=False)
+                   & ~_ft_lower.str.contains("mortgage", regex=False))
+            )
+            _credit_col = df_sorted.apply(_get_credit_score, axis=1)
+            _dur = _to_numeric(df_sorted["bond_avg_duration"])
+            _is_intermediate_treasury = (
+                _is_treasury_class
+                & (_dur >= 3.5)
+                & ((_credit_col >= 85) | _credit_col.isna())
+            )
+            _has_it = _is_intermediate_treasury.head(top_n).any()
+            if not _has_it:
+                _pool = df_sorted[_is_intermediate_treasury]
+                if not _pool.empty:
+                    _winner = _pool.iloc[0]
+                    _wsym = _winner.get("symbol", "?")
+                    _wscore = _winner.get("_profile_score", 0)
+                    _wdur = _winner.get("bond_avg_duration", "?")
+                    _wft = _winner.get("fund_type", "?")
+                    _top = df_sorted.head(top_n)
+                    _dropped = _top.iloc[-1]
+                    _dsym = _dropped.get("symbol", "?")
+                    _dscore = _dropped.get("_profile_score", 0)
+                    # Construit le top en remplaçant le dernier par le winner.
+                    # On préserve le reste de la liste (au-delà de top_n) pour
+                    # que le head(top_n) ultérieur ne casse rien.
+                    _new_order = pd.concat([
+                        _top.head(top_n - 1),
+                        _winner.to_frame().T,
+                        df_sorted.drop(index=_top.index).drop(index=_winner.name, errors="ignore"),
+                    ])
+                    df_sorted = _new_order
+                    logger.info(
+                        f"[Bond Modéré] FORCE-INCLUDE intermediate Treasury : "
+                        f"{_wsym} (dur={_wdur}, fund_type={_wft}, score {_wscore:.1f}) "
+                        f"remplace {_dsym} (score {_dscore:.1f}) — barbell convexité crise."
+                    )
+                else:
+                    logger.warning(
+                        f"[Bond Modéré] Aucun Treasury intermédiaire éligible "
+                        f"trouvé dans l'univers (duration ≥ 3.5y, credit ≥ AA+). "
+                        f"Barbell impossible cette itération."
+                    )
+
     # Top N
     if top_n and len(df_sorted) > top_n:
         df_sorted = df_sorted.head(top_n)
-    
+
     logger.info(f"[Bond {profile}] Sélection finale: {len(df_sorted)} bonds")
-    
+
     return df_sorted
 
 
