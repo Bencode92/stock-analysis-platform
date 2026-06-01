@@ -2606,7 +2606,26 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     eq_rows = enrich_equities_with_roe_warnings(eq_rows)
     
     eq_filtered = filter_equities(eq_rows)
-    
+
+    # === v5.6.0 (Sélection-4): Coherence-driven profile assignment ===
+    # Annote chaque action avec son profil natif basé sur ses fondamentaux
+    # (fit_score Stable/Modéré/Agressif). Permet de router AAPL/GOOG/ASML vers
+    # leur profil naturel plutôt que de laisser Agressif rafler les mega-caps.
+    try:
+        from portfolio_engine.profile_assignment import (
+            annotate_universe_with_fits, log_assignment_summary,
+        )
+        annotate_universe_with_fits(eq_filtered)
+        _native_counts = log_assignment_summary(eq_filtered)
+        logger.info(
+            f"   [Sélection-4] Profile-native: "
+            f"Stable={_native_counts['Stable']}, "
+            f"Modéré={_native_counts['Modéré']}, "
+            f"Agressif={_native_counts['Agressif']}"
+        )
+    except Exception as _e:
+        logger.warning(f"   [Sélection-4] annotate_universe_with_fits failed: {_e}")
+
     # === v5.1.0: AUDIT HOOK 3 - After hard filters ===
     if _collector:
         with _collector.stage("hard_filters", category="equity") as _stage:

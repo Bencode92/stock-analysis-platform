@@ -2121,7 +2121,40 @@ def select_equities_for_profile(
     # Score
     for eq in eq_hard:
         eq["_profile_score"] = score_equity_for_profile(eq, profile, universe_dists)
-    
+
+    # === v5.6.0 (Sélection-4): Profile-native boost ===
+    # Une action dont le profil natif (calculé via fit_score multi-critères dans
+    # profile_assignment.py) correspond au profil courant reçoit un boost
+    # multiplicatif. Une action dont le profil natif est autre voit son score
+    # légèrement pénalisé. Cela force chaque mega-cap à aller dans son profil
+    # le plus adapté (AAPL → Modéré, NVDA → Agressif, VICI → Stable) au lieu
+    # de laisser le premier profil qui les sélectionne les rafler.
+    _NATIVE_BOOST = 1.25   # +25% si profil natif == profile
+    _NON_NATIVE_PENALTY = 0.85  # -15% si profil natif != profile
+    _native_boosted = 0
+    _native_penalized = 0
+    for eq in eq_hard:
+        _native = eq.get("_profile_native")
+        if not _native:
+            continue
+        if _native == profile:
+            eq["_profile_score"] = eq["_profile_score"] * _NATIVE_BOOST
+            _native_boosted += 1
+        else:
+            eq["_profile_score"] = eq["_profile_score"] * _NON_NATIVE_PENALTY
+            _native_penalized += 1
+    if _native_boosted or _native_penalized:
+        logger.info(
+            f"   [{profile}] 🎯 Native fit: {_native_boosted} boosted (×{_NATIVE_BOOST}), "
+            f"{_native_penalized} penalized (×{_NON_NATIVE_PENALTY})"
+        )
+        meta["stages"]["native_fit"] = {
+            "boosted": _native_boosted,
+            "penalized": _native_penalized,
+            "boost_factor": _NATIVE_BOOST,
+            "penalty_factor": _NON_NATIVE_PENALTY,
+        }
+
     # v5.3.1 FIX: Coverage haircut — penalize stocks with missing data
     # SBIN (63%), SOLARINDS (64%), VEDL (64%) score too high because
     # their weaknesses are invisible (missing roe_avg_3y, net_margin, etc.)
