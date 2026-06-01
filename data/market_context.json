@@ -5,8 +5,7 @@
   "macro_tilts": {
     "favored_sectors": [
       "information-technology",
-      "materials",
-      "industrials",
+      "energy",
       "utilities"
     ],
     "avoided_sectors": [
@@ -14,9 +13,9 @@
     ],
     "favored_regions": [
       "asie",
-      "israel",
-      "netherlands",
-      "japan"
+      "japan",
+      "turkey",
+      "united-states"
     ],
     "avoided_regions": [
       "india"
@@ -35,32 +34,22 @@
     "Régions en difficulté: india"
   ],
   "sector_risk_profile": {
-    "energy": {
-      "beta": -0.14,
-      "vol_3y": 21.68,
-      "risk_flag": "defensive",
+    "industrials": {
+      "beta": 0.96,
+      "vol_3y": 16.21,
       "region": "US",
       "classification": "neutral",
-      "daily": -1.16,
-      "reason": "out_of_range|defensive_asset"
+      "daily": -1.09,
+      "reason": "out_of_range|cooling_m3"
     },
     "consumer-discretionary": {
       "beta": 1.21,
-      "vol_3y": 20.64,
+      "vol_3y": 20.65,
       "risk_flag": "high_beta",
       "region": "US",
       "classification": "neutral",
-      "daily": -0.97,
+      "daily": -1.83,
       "reason": "out_of_range|high_beta_warning"
-    },
-    "utilities": {
-      "beta": 0.37,
-      "vol_3y": 15.11,
-      "risk_flag": "defensive",
-      "region": "Europe",
-      "classification": "favored",
-      "daily": 0.09,
-      "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed|defensive_asset"
     },
     "healthcare": {
       "beta": 0.53,
@@ -68,67 +57,77 @@
       "risk_flag": "defensive",
       "region": "US",
       "classification": "neutral",
-      "daily": -0.77,
+      "daily": -1.34,
       "reason": "underperform|avoided_rescued_w52_positive|cooling_m3|defensive_asset"
     },
     "communication-services": {
       "beta": 1.2,
-      "vol_3y": 21.61,
+      "vol_3y": 21.63,
       "region": "US",
       "classification": "neutral",
-      "daily": 1.61,
+      "daily": 1.06,
       "reason": "out_of_range"
-    },
-    "industrials": {
-      "beta": 0.96,
-      "vol_3y": 16.24,
-      "region": "US",
-      "classification": "favored",
-      "daily": -0.39,
-      "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed"
-    },
-    "materials": {
-      "beta": 0.81,
-      "vol_3y": 17.07,
-      "region": "US",
-      "classification": "favored",
-      "daily": -0.41,
-      "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed"
-    },
-    "financials": {
-      "beta": 0.91,
-      "vol_3y": 17.71,
-      "region": "US",
-      "classification": "avoided",
-      "daily": 0.77,
-      "reason": "underperform|deep_negative_kept"
     },
     "real-estate": {
       "beta": 0.43,
-      "vol_3y": 16.79,
+      "vol_3y": 16.8,
       "risk_flag": "defensive",
       "region": "US",
       "classification": "neutral",
-      "daily": -0.95,
+      "daily": -0.8,
       "reason": "out_of_range|defensive_asset"
+    },
+    "utilities": {
+      "beta": 0.37,
+      "vol_3y": 15.11,
+      "risk_flag": "defensive",
+      "region": "Europe",
+      "classification": "favored",
+      "daily": -0.45,
+      "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed|defensive_asset"
+    },
+    "information-technology": {
+      "beta": 1.52,
+      "vol_3y": 23.4,
+      "risk_flag": "high_beta",
+      "region": "US",
+      "classification": "favored",
+      "daily": 0.96,
+      "reason": "sweet_spot|divergent|w52_confirmed|m6_confirmed|high_beta_warning"
+    },
+    "materials": {
+      "beta": 0.8,
+      "vol_3y": 17.06,
+      "region": "US",
+      "classification": "neutral",
+      "daily": -1.46,
+      "reason": "out_of_range|cooling_m3"
+    },
+    "energy": {
+      "beta": -0.15,
+      "vol_3y": 21.67,
+      "risk_flag": "defensive",
+      "region": "US",
+      "classification": "favored",
+      "daily": 2.36,
+      "reason": "sweet_spot|w52_confirmed|m6_confirmed|defensive_asset"
+    },
+    "financials": {
+      "beta": 0.91,
+      "vol_3y": 17.7,
+      "region": "US",
+      "classification": "avoided",
+      "daily": -0.29,
+      "reason": "underperform|deep_negative_kept"
     },
     "consumer-staples": {
       "beta": 0.24,
-      "vol_3y": 14.03,
+      "vol_3y": 14.04,
       "risk_flag": "defensive",
       "region": "US",
       "classification": "neutral",
       "daily": -1.17,
       "reason": "out_of_range|cooling_m3|defensive_asset"
-    },
-    "information-technology": {
-      "beta": 1.52,
-      "vol_3y": 23.38,
-      "risk_flag": "high_beta",
-      "region": "US",
-      "classification": "favored",
-      "daily": 1.36,
-      "reason": "sweet_spot|divergent|w52_confirmed|m6_confirmed|high_beta_warning"
     }
   },
   "region_risk_profile": {
@@ -138,7 +137,7 @@
       "ytd": 2.19,
       "w52": 2.57,
       "m3": 1.21,
-      "daily": -0.14
+      "daily": -0.67
     },
     "united-kingdom": {
       "classification": "neutral",
@@ -146,7 +145,7 @@
       "ytd": 6.71,
       "w52": 16.48,
       "m3": -2.47,
-      "daily": -0.15
+      "daily": -0.88
     },
     "switzerland": {
       "classification": "neutral",
@@ -154,7 +153,7 @@
       "ytd": 5.29,
       "w52": 13.67,
       "m3": -0.72,
-      "daily": 0.45
+      "daily": -2.15
     },
     "italy": {
       "classification": "neutral",
@@ -162,7 +161,7 @@
       "ytd": 9.28,
       "w52": 22.87,
       "m3": 6.11,
-      "daily": 0.2
+      "daily": -1.04
     },
     "france": {
       "classification": "neutral",
@@ -170,15 +169,15 @@
       "ytd": 2.18,
       "w52": 6.56,
       "m3": -1.29,
-      "daily": -0.07
+      "daily": -1.15
     },
     "netherlands": {
-      "classification": "favored",
-      "reason": "sweet_spot|w52_confirmed|m6_confirmed",
+      "classification": "neutral",
+      "reason": "out_of_range",
       "ytd": 17.55,
       "w52": 25.8,
       "m3": 9.31,
-      "daily": 0.12
+      "daily": -0.73
     },
     "spain": {
       "classification": "neutral",
@@ -186,7 +185,7 @@
       "ytd": 7.42,
       "w52": 31.94,
       "m3": 3.36,
-      "daily": 0.24
+      "daily": -1.85
     },
     "sweden": {
       "classification": "neutral",
@@ -194,7 +193,7 @@
       "ytd": 7.13,
       "w52": 15.61,
       "m3": -0.81,
-      "daily": 0.09
+      "daily": -1.97
     },
     "zone euro": {
       "classification": "neutral",
@@ -202,7 +201,7 @@
       "ytd": 5.47,
       "w52": 13.32,
       "m3": 2.04,
-      "daily": -0.18
+      "daily": -0.8
     },
     "europe": {
       "classification": "neutral",
@@ -210,7 +209,7 @@
       "ytd": 6.46,
       "w52": 14.84,
       "m3": 0.84,
-      "daily": -0.02
+      "daily": -1.12
     },
     "united-states": {
       "classification": "favored",
@@ -218,7 +217,7 @@
       "ytd": 10.93,
       "w52": 27.63,
       "m3": 10.21,
-      "daily": 0.25
+      "daily": -0.08
     },
     "canada": {
       "classification": "neutral",
@@ -226,15 +225,15 @@
       "ytd": 9.05,
       "w52": 29.57,
       "m3": 1.12,
-      "daily": 0.39
+      "daily": -0.35
     },
     "mexico": {
-      "classification": "favored",
-      "reason": "sweet_spot|w52_confirmed|m6_confirmed",
+      "classification": "neutral",
+      "reason": "out_of_range",
       "ytd": 13.13,
       "w52": 29.34,
       "m3": -1.3,
-      "daily": -0.48
+      "daily": -0.93
     },
     "brazil": {
       "classification": "neutral",
@@ -242,7 +241,7 @@
       "ytd": 13.03,
       "w52": 31.68,
       "m3": -7.07,
-      "daily": -0.55
+      "daily": -0.84
     },
     "chile": {
       "classification": "neutral",
@@ -250,7 +249,7 @@
       "ytd": 3.91,
       "w52": 33.14,
       "m3": 1.01,
-      "daily": 0.0
+      "daily": -1.05
     },
     "argentina": {
       "classification": "neutral",
@@ -258,14 +257,14 @@
       "ytd": 6.88,
       "w52": 8.99,
       "m3": 8.86,
-      "daily": 1.72
+      "daily": 0.58
     },
     "china": {
       "classification": "neutral",
       "reason": "out_of_range|overheat_w52|divergent",
-      "ytd": 15.68,
-      "w52": 60.08,
-      "m3": -1.39,
+      "ytd": 18.7,
+      "w52": 64.26,
+      "m3": 1.19,
       "daily": -2.55
     },
     "south-korea": {
@@ -274,7 +273,7 @@
       "ytd": 111.72,
       "w52": 233.38,
       "m3": 39.51,
-      "daily": -0.28
+      "daily": 2.12
     },
     "taiwan": {
       "classification": "neutral",
@@ -282,7 +281,7 @@
       "ytd": 61.78,
       "w52": 94.51,
       "m3": 36.91,
-      "daily": 0.43
+      "daily": 2.44
     },
     "japan": {
       "classification": "favored",
@@ -290,7 +289,7 @@
       "ytd": 15.14,
       "w52": 23.88,
       "m3": 3.06,
-      "daily": 0.28
+      "daily": -0.48
     },
     "hong-kong": {
       "classification": "neutral",
@@ -298,7 +297,7 @@
       "ytd": 8.75,
       "w52": 20.49,
       "m3": -3.47,
-      "daily": 0.17
+      "daily": -0.95
     },
     "singapore": {
       "classification": "neutral",
@@ -306,7 +305,7 @@
       "ytd": 7.2,
       "w52": 13.29,
       "m3": 4.28,
-      "daily": 0.2
+      "daily": 0.19
     },
     "india": {
       "classification": "avoided",
@@ -314,7 +313,7 @@
       "ytd": -10.16,
       "w52": -10.96,
       "m3": -4.69,
-      "daily": -0.27
+      "daily": -1.55
     },
     "asie": {
       "classification": "favored",
@@ -322,7 +321,7 @@
       "ytd": 27.86,
       "w52": 52.23,
       "m3": 13.5,
-      "daily": 0.08
+      "daily": 1.43
     },
     "saudi-arabia": {
       "classification": "neutral",
@@ -330,31 +329,31 @@
       "ytd": 6.43,
       "w52": 1.55,
       "m3": 5.93,
-      "daily": 0.1
+      "daily": -1.34
     },
     "israel": {
-      "classification": "favored",
-      "reason": "sweet_spot|overheat_w52|divergent|w52_confirmed|m6_confirmed|overheat_warning",
+      "classification": "neutral",
+      "reason": "out_of_range|overheat_w52|divergent",
       "ytd": 25.14,
       "w52": 61.29,
       "m3": 9.84,
-      "daily": 0.09
+      "daily": -3.83
     },
     "turkey": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
+      "classification": "favored",
+      "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed",
       "ytd": 10.98,
       "w52": 27.12,
       "m3": -3.51,
-      "daily": -0.8
+      "daily": 2.09
     },
     "australia": {
-      "classification": "favored",
-      "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed",
+      "classification": "neutral",
+      "reason": "out_of_range|cooling_m3",
       "ytd": 11.68,
       "w52": 11.85,
       "m3": -2.27,
-      "daily": 0.97
+      "daily": -0.99
     },
     "south-africa": {
       "classification": "neutral",
@@ -362,11 +361,11 @@
       "ytd": 0.89,
       "w52": 30.3,
       "m3": -13.13,
-      "daily": -0.43
+      "daily": -3.34
     }
   },
   "_meta": {
-    "generated_at": "2026-06-01T13:46:12.244479",
+    "generated_at": "2026-06-01T14:38:47.977840",
     "model": "radar_deterministic_v1.6.1",
     "mode": "DATA_DRIVEN",
     "amf_compliant": true,
@@ -479,7 +478,7 @@
       "beta_floor_neutral_count": 0,
       "dead_zone_activated": 0,
       "circuit_breaker_threshold": 5.0,
-      "dispersion_std": 9.82,
+      "dispersion_std": 9.79,
       "dispersion_stressed": false,
       "effective_ytd_max": 40.0
     },
@@ -488,31 +487,31 @@
       "markets_loaded": 29,
       "sector_classifications": [
         {
-          "key": "energy",
-          "ytd": 25.9,
-          "daily": -1.16,
-          "w52": 36.3,
-          "m3": -1.31,
-          "m6": 23.28,
-          "beta": -0.14,
-          "vol_3y": 21.68,
-          "beta_flag": "defensive",
+          "key": "industrials",
+          "ytd": 11.61,
+          "daily": -1.09,
+          "w52": 21.38,
+          "m3": -3.23,
+          "m6": 14.32,
+          "beta": 0.96,
+          "vol_3y": 16.21,
+          "beta_flag": null,
           "beta_region": "US",
-          "effective_momentum": 25.9,
+          "effective_momentum": 11.61,
           "classification": "neutral",
-          "reason": "out_of_range|defensive_asset",
-          "symbol": "XLE",
+          "reason": "out_of_range|cooling_m3",
+          "symbol": "XLI",
           "selection_method": "preferred"
         },
         {
           "key": "consumer-discretionary",
           "ytd": 1.22,
-          "daily": -0.97,
+          "daily": -1.83,
           "w52": 12.8,
           "m3": 4.72,
           "m6": 2.17,
           "beta": 1.21,
-          "vol_3y": 20.64,
+          "vol_3y": 20.65,
           "beta_flag": "high_beta",
           "beta_region": "US",
           "effective_momentum": 1.22,
@@ -522,26 +521,9 @@
           "selection_method": "preferred"
         },
         {
-          "key": "utilities",
-          "ytd": 11.33,
-          "daily": 0.09,
-          "w52": 21.3,
-          "m3": -4.25,
-          "m6": 12.64,
-          "beta": 0.37,
-          "vol_3y": 15.11,
-          "beta_flag": "defensive",
-          "beta_region": "Europe",
-          "effective_momentum": 11.33,
-          "classification": "favored",
-          "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed|defensive_asset",
-          "symbol": "EXH9",
-          "selection_method": "medoid"
-        },
-        {
           "key": "healthcare",
           "ytd": -3.18,
-          "daily": -0.77,
+          "daily": -1.34,
           "w52": 13.44,
           "m3": -4.62,
           "m6": -3.82,
@@ -558,12 +540,12 @@
         {
           "key": "communication-services",
           "ytd": 5.28,
-          "daily": 1.61,
+          "daily": 1.06,
           "w52": 11.97,
           "m3": 16.87,
           "m6": 5.19,
           "beta": 1.2,
-          "vol_3y": 21.61,
+          "vol_3y": 21.63,
           "beta_flag": null,
           "beta_region": "US",
           "effective_momentum": 5.28,
@@ -573,65 +555,14 @@
           "selection_method": "medoid"
         },
         {
-          "key": "industrials",
-          "ytd": 11.61,
-          "daily": -0.39,
-          "w52": 21.38,
-          "m3": -3.23,
-          "m6": 14.32,
-          "beta": 0.96,
-          "vol_3y": 16.24,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 11.61,
-          "classification": "favored",
-          "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed",
-          "symbol": "XLI",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "materials",
-          "ytd": 12.79,
-          "daily": -0.41,
-          "w52": 17.79,
-          "m3": -3.94,
-          "m6": 14.71,
-          "beta": 0.81,
-          "vol_3y": 17.07,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 12.79,
-          "classification": "favored",
-          "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed",
-          "symbol": "XLB",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "financials",
-          "ytd": -5.31,
-          "daily": 0.77,
-          "w52": 6.58,
-          "m3": 1.95,
-          "m6": -1.62,
-          "beta": 0.91,
-          "vol_3y": 17.71,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -5.31,
-          "classification": "avoided",
-          "reason": "underperform|deep_negative_kept",
-          "symbol": "IYG",
-          "selection_method": "preferred"
-        },
-        {
           "key": "real-estate",
           "ytd": 9.02,
-          "daily": -0.95,
+          "daily": -0.8,
           "w52": 5.26,
           "m3": 0.16,
           "m6": 7.06,
           "beta": 0.43,
-          "vol_3y": 16.79,
+          "vol_3y": 16.8,
           "beta_flag": "defensive",
           "beta_region": "US",
           "effective_momentum": 9.02,
@@ -641,31 +572,31 @@
           "selection_method": "preferred"
         },
         {
-          "key": "consumer-staples",
-          "ytd": 6.04,
-          "daily": -1.17,
-          "w52": -2.25,
-          "m3": -6.56,
-          "m6": 1.93,
-          "beta": 0.24,
-          "vol_3y": 14.03,
+          "key": "utilities",
+          "ytd": 11.33,
+          "daily": -0.45,
+          "w52": 21.3,
+          "m3": -4.25,
+          "m6": 12.64,
+          "beta": 0.37,
+          "vol_3y": 15.11,
           "beta_flag": "defensive",
-          "beta_region": "US",
-          "effective_momentum": 6.04,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3|defensive_asset",
-          "symbol": "FTXG",
+          "beta_region": "Europe",
+          "effective_momentum": 11.33,
+          "classification": "favored",
+          "reason": "sweet_spot|cooling_m3|w52_confirmed|m6_confirmed|defensive_asset",
+          "symbol": "EXH9",
           "selection_method": "medoid"
         },
         {
           "key": "information-technology",
           "ytd": 26.66,
-          "daily": 1.36,
+          "daily": 0.96,
           "w52": 58.38,
           "m3": 32.3,
           "m6": 27.14,
           "beta": 1.52,
-          "vol_3y": 23.38,
+          "vol_3y": 23.4,
           "beta_flag": "high_beta",
           "beta_region": "US",
           "effective_momentum": 26.66,
@@ -673,13 +604,81 @@
           "reason": "sweet_spot|divergent|w52_confirmed|m6_confirmed|high_beta_warning",
           "symbol": "IYW",
           "selection_method": "preferred"
+        },
+        {
+          "key": "materials",
+          "ytd": 12.79,
+          "daily": -1.46,
+          "w52": 17.79,
+          "m3": -3.94,
+          "m6": 14.71,
+          "beta": 0.8,
+          "vol_3y": 17.06,
+          "beta_flag": null,
+          "beta_region": "US",
+          "effective_momentum": 12.79,
+          "classification": "neutral",
+          "reason": "out_of_range|cooling_m3",
+          "symbol": "XLB",
+          "selection_method": "preferred"
+        },
+        {
+          "key": "energy",
+          "ytd": 25.9,
+          "daily": 2.36,
+          "w52": 36.3,
+          "m3": -1.31,
+          "m6": 23.28,
+          "beta": -0.15,
+          "vol_3y": 21.67,
+          "beta_flag": "defensive",
+          "beta_region": "US",
+          "effective_momentum": 25.9,
+          "classification": "favored",
+          "reason": "sweet_spot|w52_confirmed|m6_confirmed|defensive_asset",
+          "symbol": "XLE",
+          "selection_method": "preferred"
+        },
+        {
+          "key": "financials",
+          "ytd": -5.31,
+          "daily": -0.29,
+          "w52": 6.58,
+          "m3": 1.95,
+          "m6": -1.62,
+          "beta": 0.91,
+          "vol_3y": 17.7,
+          "beta_flag": null,
+          "beta_region": "US",
+          "effective_momentum": -5.31,
+          "classification": "avoided",
+          "reason": "underperform|deep_negative_kept",
+          "symbol": "IYG",
+          "selection_method": "preferred"
+        },
+        {
+          "key": "consumer-staples",
+          "ytd": 7.3,
+          "daily": -1.17,
+          "w52": -1.1,
+          "m3": -5.46,
+          "m6": 3.13,
+          "beta": 0.24,
+          "vol_3y": 14.04,
+          "beta_flag": "defensive",
+          "beta_region": "US",
+          "effective_momentum": 7.3,
+          "classification": "neutral",
+          "reason": "out_of_range|cooling_m3|defensive_asset",
+          "symbol": "FTXG",
+          "selection_method": "medoid"
         }
       ],
       "region_classifications": [
         {
           "key": "germany",
           "ytd": 2.19,
-          "daily": -0.14,
+          "daily": -0.67,
           "w52": 2.57,
           "m3": 1.21,
           "m6": 7.18,
@@ -696,7 +695,7 @@
         {
           "key": "united-kingdom",
           "ytd": 6.71,
-          "daily": -0.15,
+          "daily": -0.88,
           "w52": 16.48,
           "m3": -2.47,
           "m6": 9.32,
@@ -713,7 +712,7 @@
         {
           "key": "switzerland",
           "ytd": 5.29,
-          "daily": 0.45,
+          "daily": -2.15,
           "w52": 13.67,
           "m3": -0.72,
           "m6": 9.94,
@@ -730,7 +729,7 @@
         {
           "key": "italy",
           "ytd": 9.28,
-          "daily": 0.2,
+          "daily": -1.04,
           "w52": 22.87,
           "m3": 6.11,
           "m6": 12.74,
@@ -747,7 +746,7 @@
         {
           "key": "france",
           "ytd": 2.18,
-          "daily": -0.07,
+          "daily": -1.15,
           "w52": 6.56,
           "m3": -1.29,
           "m6": 3.51,
@@ -764,7 +763,7 @@
         {
           "key": "netherlands",
           "ytd": 17.55,
-          "daily": 0.12,
+          "daily": -0.73,
           "w52": 25.8,
           "m3": 9.31,
           "m6": 14.95,
@@ -773,15 +772,15 @@
           "beta_flag": null,
           "beta_region": "US",
           "effective_momentum": 17.55,
-          "classification": "favored",
-          "reason": "sweet_spot|w52_confirmed|m6_confirmed",
+          "classification": "neutral",
+          "reason": "out_of_range",
           "symbol": "N/A",
           "selection_method": "N/A"
         },
         {
           "key": "spain",
           "ytd": 7.42,
-          "daily": 0.24,
+          "daily": -1.85,
           "w52": 31.94,
           "m3": 3.36,
           "m6": 12.29,
@@ -798,7 +797,7 @@
         {
           "key": "sweden",
           "ytd": 7.13,
-          "daily": 0.09,
+          "daily": -1.97,
           "w52": 15.61,
           "m3": -0.81,
           "m6": 10.84,
@@ -815,7 +814,7 @@
         {
           "key": "zone euro",
           "ytd": 5.47,
-          "daily": -0.18,
+          "daily": -0.8,
           "w52": 13.32,
           "m3": 2.04,
           "m6": 7.83,
@@ -832,7 +831,7 @@
         {
           "key": "europe",
           "ytd": 6.46,
-          "daily": -0.02,
+          "daily": -1.12,
           "w52": 14.84,
           "m3": 0.84,
           "m6": 9.73,
@@ -849,7 +848,7 @@
         {
           "key": "united-states",
           "ytd": 10.93,
-          "daily": 0.25,
+          "daily": -0.08,
           "w52": 27.63,
           "m3": 10.21,
           "m6": 11.2,
@@ -866,7 +865,7 @@
         {
           "key": "canada",
           "ytd": 9.05,
-          "daily": 0.39,
+          "daily": -0.35,
           "w52": 29.57,
           "m3": 1.12,
           "m6": 12.71,
@@ -883,7 +882,7 @@
         {
           "key": "mexico",
           "ytd": 13.13,
-          "daily": -0.48,
+          "daily": -0.93,
           "w52": 29.34,
           "m3": -1.3,
           "m6": 14.56,
@@ -892,15 +891,15 @@
           "beta_flag": null,
           "beta_region": "US",
           "effective_momentum": 13.13,
-          "classification": "favored",
-          "reason": "sweet_spot|w52_confirmed|m6_confirmed",
+          "classification": "neutral",
+          "reason": "out_of_range",
           "symbol": "N/A",
           "selection_method": "N/A"
         },
         {
           "key": "brazil",
           "ytd": 13.03,
-          "daily": -0.55,
+          "daily": -0.84,
           "w52": 31.68,
           "m3": -7.07,
           "m6": 7.51,
@@ -917,7 +916,7 @@
         {
           "key": "chile",
           "ytd": 3.91,
-          "daily": 0.0,
+          "daily": -1.05,
           "w52": 33.14,
           "m3": 1.01,
           "m6": 11.38,
@@ -934,7 +933,7 @@
         {
           "key": "argentina",
           "ytd": 6.88,
-          "daily": 1.72,
+          "daily": 0.58,
           "w52": 8.99,
           "m3": 8.86,
           "m6": 5.71,
@@ -950,16 +949,16 @@
         },
         {
           "key": "china",
-          "ytd": 15.68,
+          "ytd": 18.7,
           "daily": -2.55,
-          "w52": 60.08,
-          "m3": -1.39,
-          "m6": 22.88,
+          "w52": 64.26,
+          "m3": 1.19,
+          "m6": 26.09,
           "beta": null,
           "vol_3y": null,
           "beta_flag": null,
           "beta_region": "US",
-          "effective_momentum": 15.68,
+          "effective_momentum": 18.7,
           "classification": "neutral",
           "reason": "out_of_range|overheat_w52|divergent",
           "symbol": "N/A",
@@ -968,7 +967,7 @@
         {
           "key": "south-korea",
           "ytd": 111.72,
-          "daily": -0.28,
+          "daily": 2.12,
           "w52": 233.38,
           "m3": 39.51,
           "m6": 127.14,
@@ -985,7 +984,7 @@
         {
           "key": "taiwan",
           "ytd": 61.78,
-          "daily": 0.43,
+          "daily": 2.44,
           "w52": 94.51,
           "m3": 36.91,
           "m6": 60.27,
@@ -1002,7 +1001,7 @@
         {
           "key": "japan",
           "ytd": 15.14,
-          "daily": 0.28,
+          "daily": -0.48,
           "w52": 23.88,
           "m3": 3.06,
           "m6": 12.64,
