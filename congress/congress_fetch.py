@@ -63,6 +63,20 @@ def _to_date(raw) -> str | None:
     return s if re.match(r"\d{4}-\d{2}-\d{2}", s) else None
 
 
+_PARTY_MAP = {
+    "democratic": "Democrat", "democrat": "Democrat", "d": "Democrat",
+    "republican": "Republican", "r": "Republican",
+    "independent": "Independent", "i": "Independent", "libertarian": "Independent",
+}
+
+
+def _normalize_party(raw: str | None) -> str | None:
+    """Le bulk renvoie 'Democratic'/'Republican' ; on cale sur l'enum du schema."""
+    if not raw:
+        return None
+    return _PARTY_MAP.get(str(raw).strip().lower(), None)
+
+
 def _lag_days(transaction_date: str | None, report_date: str | None) -> int | None:
     if not transaction_date or not report_date:
         return None
@@ -98,7 +112,7 @@ def normalize_row(row: dict) -> dict:
     return {
         "representative": (row.get("Representative") or row.get("Name") or "").strip(),
         "bioguide_id": row.get("BioGuideID") or None,
-        "party": row.get("Party") or None,
+        "party": _normalize_party(row.get("Party")),
         "house": row.get("House") or None,
         "ticker": (row.get("Ticker") or "").strip().upper() or None,
         "ticker_type": row.get("TickerType") or None,
