@@ -64,9 +64,11 @@ RATING_TO_SCORE = {
 
 # Presets par profil (union) - v1.1.0: aligné avec preset_meta.py
 # v7.2.1: ajouté tips_inflation pour Modéré et Stable (TIPS = inflation hedge, Role.CORE)
+# Phase Convexité-1 v3: ajout intermediate_treasury sur Modéré et Stable
+#   pour ouvrir l'univers aux Treasury 5-10y (IEF, AGG, BND) — barbell vrai.
 PROFILE_PRESETS = {
-    "Stable": ["cash_ultra_short", "defensif_oblig", "tips_inflation"],
-    "Modéré": ["defensif_oblig", "tips_inflation"],
+    "Stable": ["cash_ultra_short", "defensif_oblig", "tips_inflation", "intermediate_treasury"],
+    "Modéré": ["defensif_oblig", "tips_inflation", "intermediate_treasury"],
     "Agressif": ["high_yield", "ig_credit"],
 }
 
@@ -460,6 +462,55 @@ def _preset_ig_credit(df: pd.DataFrame) -> pd.Series:
     return mask
 
 
+def _preset_intermediate_treasury(df: pd.DataFrame) -> pd.Series:
+    """
+    Preset: Treasury / Aggregate Intermediate (Phase Convexité-1 v3)
+
+    Cible duration 5-10y, qualité crédit AA+ (Treasury) ou IG (Aggregate),
+    pour ajouter de la convexité de crise au sleeve obligataire (rally
+    duration en sell-off equity). Capte typiquement IEF (7-10y Treasury),
+    AGG (US Aggregate Bond), BND (Total Bond Market), GOVT (broad US gov),
+    IEI (3-7y Treasury limite basse).
+
+    Conçu pour le barbell Modéré : on garde un sleeve ultra-court
+    (cash buffer) ET on ajoute un sleeve intermédiaire (assurance crise).
+    """
+    mask = pd.Series(False, index=df.index)
+
+    # Filtre 1 : duration 4-10 ans (intermédiaire pure)
+    if "bond_avg_duration" in df.columns:
+        duration = _to_numeric(df["bond_avg_duration"])
+        duration_mask = (duration >= 4.0) & (duration <= 10.0)
+    else:
+        duration_mask = pd.Series(False, index=df.index)
+
+    # Filtre 2 : keywords Treasury / Aggregate dans name + objective
+    name_obj_text = pd.Series("", index=df.index)
+    if "name" in df.columns:
+        name_obj_text = name_obj_text + " " + df["name"].fillna("").str.lower()
+    if "objective" in df.columns:
+        name_obj_text = name_obj_text + " " + df["objective"].fillna("").str.lower()
+    treasury_kw = ["treasury", "aggregate", "us govt", "us government",
+                   "intermediate", "core bond", "total bond"]
+    keyword_mask = pd.Series(False, index=df.index)
+    for kw in treasury_kw:
+        keyword_mask |= name_obj_text.str.contains(kw, regex=False)
+
+    # Filtre 3 : exclure ce qui n'est pas pertinent (corp HY, EM, leveraged)
+    exclusion_kw = ["high yield", "high-yield", "junk", "emerging",
+                    "leveraged", "inverse", "convertible"]
+    exclusion_mask = pd.Series(False, index=df.index)
+    for kw in exclusion_kw:
+        exclusion_mask |= name_obj_text.str.contains(kw, regex=False)
+
+    # Filtre 4 : qualité crédit IG minimum (BBB+)
+    credit_col = df.apply(_get_credit_score, axis=1)
+    credit_ok = (credit_col >= 60) | credit_col.isna()
+
+    mask = duration_mask & keyword_mask & ~exclusion_mask & credit_ok
+    return mask
+
+
 def _preset_tips_inflation(df: pd.DataFrame) -> pd.Series:
     """
     Preset: TIPS / Inflation-Protected (v7.2.1)
@@ -498,6 +549,7 @@ PRESET_FUNCTIONS = {
     "high_yield": _preset_high_yield,
     "ig_credit": _preset_ig_credit,  # v1.3.0
     "tips_inflation": _preset_tips_inflation,  # v7.2.1
+    "intermediate_treasury": _preset_intermediate_treasury,  # Phase Convexité-1 v3
 }
 
 
