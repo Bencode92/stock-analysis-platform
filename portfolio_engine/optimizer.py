@@ -400,6 +400,119 @@ def compute_turnover(weights_new: np.ndarray, weights_old: np.ndarray) -> float:
 
 # ============= P1-2 v2: DIAGONAL SHRINKAGE (NEW) =============
 
+def corr_based_shrink_to_target(
+    cov: np.ndarray,
+    target_cond: float = CONDITION_NUMBER_TARGET,
+    max_steps: int = 30,
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """
+    Phase Diagnostic-1 — correlation-based shrinkage.
+
+    Le `diag_shrink_to_target` historique opère sur cov directement → quand
+    la diagonale elle-même contient un spread variance énorme (bonds ~10⁻⁴
+    et equity ~10⁻²), aucun mélange (1-λ)·cov + λ·diag ne peut ramener
+    cond sous la cible : c'est intrinsèque à la diagonale.
+
+    Solution standard multi-asset : passer en correlation space où la
+    diagonale est uniformément 1.0, shrinker la corrélation, reconstruire
+    la cov avec les vraies stdevs.
+
+    Args:
+        cov: matrice n×n symétrique PSD.
+        target_cond: cible de cond_number après shrinkage.
+        max_steps: nombre maximum d'itérations de shrinkage.
+
+    Returns:
+        (cov_shrunk, info_dict).
+    """
+    cov = np.asarray(cov, dtype=float)
+    n = cov.shape[0]
+
+    try:
+        cond0 = float(np.linalg.cond(cov))
+    except Exception:
+        cond0 = float("inf")
+
+    if np.isfinite(cond0) and cond0 <= target_cond:
+        return cov, {
+            "cond_before": round(cond0, 2),
+            "cond_after": round(cond0, 2),
+            "shrink_lambda": 0.0,
+            "shrink_steps": 0,
+            "shrink_applied": False,
+            "method": "corr_shrink_skipped",
+        }
+
+    # 1. Extraire la diagonale (variances) et calculer les stdevs
+    diag_var = np.diag(cov).copy()
+    diag_var = np.maximum(diag_var, 1e-12)
+    sd = np.sqrt(diag_var)
+
+    # 2. Construire la matrice de corrélation
+    inv_sd = 1.0 / sd
+    corr = cov * np.outer(inv_sd, inv_sd)
+    # Force diagonal exactly 1 (handle floating point drift)
+    np.fill_diagonal(corr, 1.0)
+    # Clip values to [-1, 1] (numerical hygiene)
+    corr = np.clip(corr, -1.0, 1.0)
+
+    try:
+        cond_corr_before = float(np.linalg.cond(corr))
+    except Exception:
+        cond_corr_before = float("inf")
+
+    # 3. Shrink corrélation vers l'identité (diag = 1 partout déjà)
+    #    corr_shrunk = (1 - λ) * corr + λ * I
+    identity = np.eye(n)
+    lam = 0.01
+    corr_best = corr.copy()
+    cond_best = cond_corr_before
+    final_lam = 0.0
+
+    for step in range(1, max_steps + 1):
+        corr2 = (1.0 - lam) * corr + lam * identity
+        np.fill_diagonal(corr2, 1.0)
+        try:
+            cond2 = float(np.linalg.cond(corr2))
+        except Exception:
+            cond2 = float("inf")
+
+        if np.isfinite(cond2) and cond2 < cond_best:
+            corr_best = corr2
+            cond_best = cond2
+            final_lam = lam
+
+        if np.isfinite(cond2) and cond2 <= target_cond:
+            # 4. Reconstruct cov avec stdevs originales
+            cov_final = corr2 * np.outer(sd, sd)
+            return cov_final, {
+                "cond_before": round(cond0, 2) if np.isfinite(cond0) else None,
+                "cond_corr_before": round(cond_corr_before, 2) if np.isfinite(cond_corr_before) else None,
+                "cond_corr_after": round(cond2, 2),
+                "cond_after": round(float(np.linalg.cond(cov_final)), 2),
+                "shrink_lambda": round(lam, 4),
+                "shrink_steps": step,
+                "shrink_applied": True,
+                "method": "corr_shrink",
+            }
+
+        # Increment λ : géométrique modéré (1.3×) pour finesse + clamp ≤ 0.95
+        lam = min(lam * 1.3, 0.95)
+
+    # Convergence non atteinte : retourne le best trouvé
+    cov_final = corr_best * np.outer(sd, sd)
+    return cov_final, {
+        "cond_before": round(cond0, 2) if np.isfinite(cond0) else None,
+        "cond_corr_before": round(cond_corr_before, 2) if np.isfinite(cond_corr_before) else None,
+        "cond_corr_after": round(cond_best, 2) if np.isfinite(cond_best) else None,
+        "cond_after": round(float(np.linalg.cond(cov_final)), 2),
+        "shrink_lambda": round(final_lam, 4),
+        "shrink_steps": max_steps,
+        "shrink_applied": True,
+        "method": "corr_shrink_max_steps",
+    }
+
+
 def diag_shrink_to_target(
     cov: np.ndarray,
     target_cond: float = CONDITION_NUMBER_TARGET,
@@ -2009,31 +2122,65 @@ class HybridCovarianceEstimator:
         # Fusionner les KPIs dans diagnostics
         diagnostics.update(eigen_kpis)
         
-        # === P1-2 v2: DIAGONAL SHRINKAGE SI CONDITION NUMBER TROP ÉLEVÉ ===
+        # === Phase Diagnostic-1 : CORRELATION-BASED SHRINKAGE ===
+        # Remplace diag_shrink_to_target qui ne peut pas réduire cond
+        # quand la diagonale elle-même contient un spread variance énorme
+        # (bonds ~10⁻⁴ vs equity ~10⁻²). Le corr-based shrink opère sur
+        # la matrice de corrélation (diag = 1.0 uniforme) puis reconstruit
+        # la cov avec les stdevs originales. Voir docs/diagnostic_phase1_findings.md.
         cond_number = diagnostics.get("condition_number", float("inf"))
         if cond_number is not None and cond_number > CONDITION_NUMBER_TARGET:
-            cov, shrink_info = diag_shrink_to_target(cov, target_cond=CONDITION_NUMBER_TARGET)
-
-            # FIX: Recalculer KPIs APRÈS shrink (sinon diagnostics incohérents)
-            cov, eigen_kpis2 = self._ensure_positive_definite_with_kpis(cov)
-            diagnostics.update(eigen_kpis2)
-
-            # Ajouter les infos de shrinkage
-            diagnostics["diag_shrink_applied"] = shrink_info["shrink_applied"]
-            diagnostics["diag_shrink_lambda"] = shrink_info["shrink_lambda"]
-            diagnostics["diag_shrink_steps"] = shrink_info["shrink_steps"]
-            diagnostics["condition_number_before_diag_shrink"] = shrink_info["cond_before"]
-
-            # Mettre à jour method
-            if diagnostics.get("method") == "structured":
-                diagnostics["method"] = "structured+diag_shrink"
-            elif "+diag_shrink" not in diagnostics.get("method", ""):
-                diagnostics["method"] = diagnostics.get("method", "unknown") + "+diag_shrink"
-
-            logger.info(
-                f"🔧 DIAG SHRINK: cond {shrink_info['cond_before']:.0f} → {diagnostics.get('condition_number'):.0f} "
-                f"(λ={shrink_info['shrink_lambda']:.3f}, steps={shrink_info['shrink_steps']})"
-            )
+            try:
+                cov_corr, shrink_info = corr_based_shrink_to_target(
+                    cov, target_cond=CONDITION_NUMBER_TARGET
+                )
+                # FIX: Recalculer KPIs APRÈS shrink
+                cov_corr, eigen_kpis2 = self._ensure_positive_definite_with_kpis(cov_corr)
+                # Sanity check : si corr-shrink échoue à réduire (cond_after > avant),
+                # on retombe sur diag_shrink classique.
+                cond_corr_final = eigen_kpis2.get("condition_number", float("inf"))
+                if (np.isfinite(cond_corr_final) and cond_corr_final < cond_number
+                        and shrink_info.get("shrink_applied")):
+                    cov = cov_corr
+                    diagnostics.update(eigen_kpis2)
+                    diagnostics["corr_shrink_applied"] = True
+                    diagnostics["corr_shrink_lambda"] = shrink_info["shrink_lambda"]
+                    diagnostics["corr_shrink_steps"] = shrink_info["shrink_steps"]
+                    diagnostics["cond_corr_before"] = shrink_info.get("cond_corr_before")
+                    diagnostics["cond_corr_after"] = shrink_info.get("cond_corr_after")
+                    diagnostics["method"] = (
+                        diagnostics.get("method", "unknown")
+                        if "+corr_shrink" in diagnostics.get("method", "")
+                        else diagnostics.get("method", "unknown") + "+corr_shrink"
+                    )
+                    logger.info(
+                        f"🔧 CORR SHRINK: cond {cond_number:.0f} → {cond_corr_final:.0f} "
+                        f"(corr_cond {shrink_info.get('cond_corr_before','?')} → {shrink_info.get('cond_corr_after','?')}, "
+                        f"λ={shrink_info['shrink_lambda']:.3f}, steps={shrink_info['shrink_steps']})"
+                    )
+                else:
+                    # Fallback : diag_shrink historique
+                    raise RuntimeError(
+                        f"corr_based_shrink insuffisant ({cond_number:.0f} → {cond_corr_final}), fallback diag"
+                    )
+            except Exception as _e:
+                logger.info(f"📐 corr_shrink fallback to diag_shrink : {_e}")
+                cov, shrink_info = diag_shrink_to_target(cov, target_cond=CONDITION_NUMBER_TARGET)
+                cov, eigen_kpis2 = self._ensure_positive_definite_with_kpis(cov)
+                diagnostics.update(eigen_kpis2)
+                diagnostics["diag_shrink_applied"] = shrink_info["shrink_applied"]
+                diagnostics["diag_shrink_lambda"] = shrink_info["shrink_lambda"]
+                diagnostics["diag_shrink_steps"] = shrink_info["shrink_steps"]
+                diagnostics["condition_number_before_diag_shrink"] = shrink_info["cond_before"]
+                if diagnostics.get("method") == "structured":
+                    diagnostics["method"] = "structured+diag_shrink"
+                elif "+diag_shrink" not in diagnostics.get("method", ""):
+                    diagnostics["method"] = diagnostics.get("method", "unknown") + "+diag_shrink"
+                logger.info(
+                    f"🔧 DIAG SHRINK (fallback): cond {shrink_info['cond_before']:.0f} "
+                    f"→ {diagnostics.get('condition_number'):.0f} "
+                    f"(λ={shrink_info['shrink_lambda']:.3f}, steps={shrink_info['shrink_steps']})"
+                )
         
         # Log warnings si matrice mal conditionnée
         if not diagnostics.get("is_well_conditioned", True):
