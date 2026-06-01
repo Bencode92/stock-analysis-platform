@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-01T08:57:18.445567",
+  "timestamp": "2026-06-01T11:26:25.956621",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -38,7 +38,7 @@
         },
         "momentum_trend": {
           "total": 20,
-          "selected": 5
+          "selected": 6
         },
         "quality_high_vol": {
           "total": 4,
@@ -46,15 +46,15 @@
         },
         "quality_premium": {
           "total": 20,
-          "selected": 2
+          "selected": 3
         },
         "recovery": {
           "total": 20,
-          "selected": 0
+          "selected": 1
         },
         "rendement": {
           "total": 20,
-          "selected": 8
+          "selected": 9
         },
         "value_dividend": {
           "total": 20,
@@ -962,12 +962,10 @@
         "ticker": "CDE",
         "sort_score": 0.7721,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "momentum_trend",
         "profile_score": 0.7721,
         "buffett_score": 50.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Matériaux",
         "country": "Etats-Unis",
         "volatility": 69.6,
@@ -982,12 +980,10 @@
         "ticker": "PLTR",
         "sort_score": 0.7617,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "recovery",
         "profile_score": 0.7617,
         "buffett_score": 50.0,
-        "rejection_reason": "Filtré par hard_filters_Stable",
-        "rejection_filter": "hard_filters_Stable",
         "sector": "Technologie de l'information",
         "country": "Etats-Unis",
         "volatility": 62.7,
@@ -2063,12 +2059,10 @@
         "ticker": "IG",
         "sort_score": 0.6143,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "rendement",
         "profile_score": 0.6143,
         "buffett_score": 67.0,
-        "rejection_reason": "Filtré par hard_filters_Modéré",
-        "rejection_filter": "hard_filters_Modéré",
         "sector": "Services publics",
         "country": "Italie",
         "volatility": 19.4,
@@ -2552,11 +2546,10 @@
         "ticker": "ITX",
         "sort_score": 0.5851,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "quality_premium",
         "profile_score": 0.5851,
         "buffett_score": 83.0,
-        "rejection_reason": "Score composite (0.585) insuffisant pour le quota",
         "sector": "Biens de consommation cycliques",
         "country": "Espagne",
         "volatility": 23.2,
@@ -4556,9 +4549,10 @@
         "ticker": "BNB/USD",
         "sort_score": 96.82,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "crypto_preset_exchange",
         "profile_score": 96.82,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 24.2
       },
       {
@@ -4603,10 +4597,9 @@
         "ticker": "XLM/USD",
         "sort_score": 85.88,
         "sort_score_source": "_profile_score",
-        "selected": false,
+        "selected": true,
         "matched_preset": "crypto_preset_payment",
         "profile_score": 85.88,
-        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
         "volatility": 100.8
       }
     ],
@@ -6291,12 +6284,10 @@
           "ticker": "CDE",
           "sort_score": 0.7721,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "momentum_trend",
           "profile_score": 0.7721,
           "buffett_score": 50.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Matériaux",
           "country": "Etats-Unis",
           "volatility": 69.6,
@@ -6809,11 +6800,10 @@
           "ticker": "ITX",
           "sort_score": 0.5851,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "quality_premium",
           "profile_score": 0.5851,
           "buffett_score": 83.0,
-          "rejection_reason": "Score composite (0.585) insuffisant pour le quota",
           "sector": "Biens de consommation cycliques",
           "country": "Espagne",
           "volatility": 23.2,
@@ -7049,12 +7039,10 @@
           "ticker": "PLTR",
           "sort_score": 0.7617,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "recovery",
           "profile_score": 0.7617,
           "buffett_score": 50.0,
-          "rejection_reason": "Filtré par hard_filters_Stable",
-          "rejection_filter": "hard_filters_Stable",
           "sector": "Technologie de l'information",
           "country": "Etats-Unis",
           "volatility": 62.7,
@@ -7680,12 +7668,10 @@
           "ticker": "IG",
           "sort_score": 0.6143,
           "sort_score_source": "_profile_score",
-          "selected": false,
+          "selected": true,
           "matched_preset": "rendement",
           "profile_score": 0.6143,
           "buffett_score": 67.0,
-          "rejection_reason": "Filtré par hard_filters_Modéré",
-          "rejection_filter": "hard_filters_Modéré",
           "sector": "Services publics",
           "country": "Italie",
           "volatility": 19.4,
@@ -10078,10 +10064,10 @@
       "dividend_coverage": 1.77,
       "sector": "Services publics",
       "country": "Etats-Unis",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 6,
-      "selection_reason": "Qualité Buffett solide (50); Score profil élevé (0.75); Preset: rendement"
+      "selection_reason": "Qualité Buffett solide (50); Score profil élevé (0.75); Preset: rendement; Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "AXA SA",
@@ -10648,10 +10634,10 @@
       "dividend_coverage": 1.64,
       "sector": "Services publics",
       "country": "Italie",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 32,
-      "selection_reason": "Qualité Buffett solide (67); Preset: rendement; ROE élevé (20%)"
+      "selection_reason": "Qualité Buffett solide (67); Preset: rendement; ROE élevé (20%); Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "JENTECH PRECISION INDUSTRIAL LTD",
@@ -10844,10 +10830,10 @@
       "dividend_coverage": 1.22,
       "sector": "Services publics",
       "country": "Italie",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 41,
-      "selection_reason": "Qualité Buffett solide (50); Preset: rendement"
+      "selection_reason": "Qualité Buffett solide (50); Preset: rendement; Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "ARISTA NETWORKS INC",
@@ -11062,10 +11048,10 @@
       "dividend_coverage": 1.2,
       "sector": "Services publics",
       "country": "Espagne",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 51,
-      "selection_reason": "Qualité Buffett solide (67); Preset: defensif"
+      "selection_reason": "Qualité Buffett solide (67); Preset: defensif; Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "SAMSUNG ELECTRONICS NON VOTING PRE",
@@ -12114,10 +12100,10 @@
       "dividend_coverage": 1.25,
       "sector": "Services publics",
       "country": "Espagne",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 99,
-      "selection_reason": "Qualité Buffett excellente (83); Preset: rendement; ROE élevé (21%)"
+      "selection_reason": "Qualité Buffett excellente (83); Preset: rendement; ROE élevé (21%); Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "IMPERIAL BRANDS PLC",
@@ -12619,10 +12605,10 @@
       "dividend_coverage": 1.71,
       "sector": "Services publics",
       "country": "Espagne",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 122,
-      "selection_reason": "Qualité Buffett solide (67); Preset: defensif; ROE élevé (24%)"
+      "selection_reason": "Qualité Buffett solide (67); Preset: defensif; ROE élevé (24%); Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "HANNOVER RUECK",
@@ -13925,7 +13911,7 @@
       "dividend_coverage": 62.49,
       "sector": "Services publics",
       "country": "Corée",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": false,
       "rejection_reason": "Filtré par hard_filters_Stable",
       "rejection_filter": "hard_filters_Stable"
@@ -14368,10 +14354,10 @@
       "profile_score": 98.87,
       "volatility": 25.1,
       "sector": "Utilities",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 6,
-      "selection_reason": "Score profil élevé (98.87); Preset: croissance_tech; Score composite élevé (98.87)"
+      "selection_reason": "Score profil élevé (98.87); Preset: croissance_tech; Score composite élevé (98.87); Secteur favorisé RADAR (utilities)"
     },
     {
       "name": "Schwab U.S. Dividend Equity ETF",
@@ -14466,10 +14452,10 @@
       "profile_score": 88.75,
       "volatility": 11.0,
       "sector": "Utilities",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": true,
       "ranking": 13,
-      "selection_reason": "Score profil élevé (88.75); Preset: rendement_etf; Score composite élevé (88.75)"
+      "selection_reason": "Score profil élevé (88.75); Preset: rendement_etf; Score composite élevé (88.75); Secteur favorisé RADAR (utilities)"
     }
   ],
   "etf_rejected": [
@@ -14573,7 +14559,7 @@
       "profile_score": 33.0,
       "volatility": 16.3,
       "sector": "Utilities",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14586,7 +14572,7 @@
       "profile_score": 25.68,
       "volatility": 16.2,
       "sector": "Utilities",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14638,7 +14624,7 @@
       "profile_score": 40.16,
       "volatility": 16.6,
       "sector": "Utilities",
-      "radar_tilt": "neutral",
+      "radar_tilt": "favored",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
     },
@@ -14736,25 +14722,25 @@
   "crypto_selected": [
     {
       "name": "Unknown",
-      "ticker": "BNB/USD",
-      "category": "crypto",
-      "matched_preset": "crypto_preset_exchange",
-      "profile_score": 96.82,
-      "volatility": 24.2,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 1,
-      "selection_reason": "Score profil élevé (96.82); Preset: crypto_preset_exchange"
-    }
-  ],
-  "crypto_rejected": [
-    {
-      "name": "Unknown",
       "ticker": "XLM/USD",
       "category": "crypto",
       "matched_preset": "crypto_preset_payment",
       "profile_score": 85.88,
       "volatility": 100.8,
+      "radar_tilt": "neutral",
+      "selected": true,
+      "ranking": 1,
+      "selection_reason": "Score profil élevé (85.88); Preset: crypto_preset_payment"
+    }
+  ],
+  "crypto_rejected": [
+    {
+      "name": "Unknown",
+      "ticker": "BNB/USD",
+      "category": "crypto",
+      "matched_preset": "crypto_preset_exchange",
+      "profile_score": 96.82,
+      "volatility": 24.2,
       "radar_tilt": "neutral",
       "selected": false,
       "rejection_reason": "Non sélectionné (score insuffisant ou quota atteint)"
@@ -14992,7 +14978,8 @@
     "favored_sectors": [
       "information-technology",
       "materials",
-      "industrials"
+      "industrials",
+      "utilities"
     ],
     "avoided_sectors": [
       "financials"
