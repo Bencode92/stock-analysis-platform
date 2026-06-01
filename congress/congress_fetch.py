@@ -85,12 +85,18 @@ def _fnum(v) -> float | None:
 
 
 def normalize_row(row: dict) -> dict:
-    """Mappe une ligne brute Quiver vers le schema congress_trades."""
-    transaction_date = _to_date(row.get("TransactionDate"))
-    report_date = _to_date(row.get("ReportDate"))
+    """Mappe une ligne brute Quiver vers le schema congress_trades.
+
+    Les endpoints /live/ et /bulk/ n'ont pas les memes noms de colonnes :
+    - live : TransactionDate / ReportDate
+    - bulk : Traded / Filed
+    On accepte les deux jeux de noms.
+    """
+    transaction_date = _to_date(row.get("TransactionDate") or row.get("Traded"))
+    report_date = _to_date(row.get("ReportDate") or row.get("Filed"))
     amount_min, amount_max = _parse_amount_range(row.get("Range") or row.get("Amount"))
     return {
-        "representative": (row.get("Representative") or "").strip(),
+        "representative": (row.get("Representative") or row.get("Name") or "").strip(),
         "bioguide_id": row.get("BioGuideID") or None,
         "party": row.get("Party") or None,
         "house": row.get("House") or None,
@@ -113,7 +119,10 @@ def fetch_raw(token: str) -> list[dict]:
     import quiverquant  # import tardif: le module ne sert qu'ici
 
     client = quiverquant.quiver(token)
-    df = client.congress_trading()  # pandas.DataFrame
+    # recent=False -> endpoint /bulk/ = TOUT l'historique (depuis 2016).
+    # recent=True (defaut) ne renvoie que les trades recents (~2 ans) -> insuffisant
+    # pour juger la regularite d'un politicien.
+    df = client.congress_trading(recent=False)  # pandas.DataFrame
     return df.to_dict(orient="records")
 
 
