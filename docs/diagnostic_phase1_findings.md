@@ -145,3 +145,134 @@ non fiable à cause cond_number 50M).
 
 Après ce mode live, formuler les fixes A/B/C/D précisément avant tout
 push code.
+
+---
+
+## 9. Findings du mode live (run 2026-06-01 11:46:28)
+
+### Cov diagnostics par profil (extraits des logs)
+
+| Profil | n_assets | cond_before LW | δ shrinkage | cond_after LW | eigen_clipped | well_cond |
+|---|---|---|---|---|---|---|
+| **Agressif** | 60 | 22 103 555 826 (22 G) | 0.065 | **9 323** | 0/60 | ✅ |
+| **Modéré** | 62 | 259 441 021 015 (259 G) | **0.506** | **21 614 982** | 3/62 (4.8%) | ❌ |
+| **Stable** | 57 | 259 412 414 039 (259 G) | **0.506** | **21 059 281** | 3/57 (5.3%) | ❌ |
+| Dividende-PEA | 4 | 6 | 0.054 | 5 | 0/4 | ✅ |
+| Dividende-CTO | 2 | 4 | 0.143 | 2 | 0/2 | ✅ |
+
+### Conclusion définitive — pattern parfait
+
+Le `condition_number > 10⁴` apparaît **uniquement** quand le mélange
+**bonds + equity** est présent dans la même matrice :
+
+- **Agressif** : quasi pas de bonds (FLTR + PAAA, durations 1-2y) → cond OK
+- **Dividende** : 100 % actions, pas de bonds → cond OK
+- **Modéré / Stable** : 3-5 bonds + 50+ equity → cond explose
+
+### Cause mathématique
+
+Variances quotidiennes en magnitude :
+
+- Bonds daily vol ~ 10⁻⁴ à 10⁻³ (1-10 bp daily moves)
+- Equity daily vol ~ 10⁻² à 5×10⁻² (1-5 % daily moves)
+- **Spread variance bond ↔ equity ≈ 100²-1000²**
+
+Quand la matrice cov mélange ces magnitudes, **la diagonale elle-même**
+spanne 4+ ordres de grandeur. Le shrinkage Ledoit-Wolf (δ=0.506) et le
+diag_shrink itératif ne peuvent pas ramener cond sous 10⁴ parce que
+c'est intrinsèque à la diagonale, pas à la structure off-diagonal.
+
+### Conséquence
+
+- Vol modèle Modéré = `sqrt(w · cov · w)` avec cov instable → varie
+  entre 6.75 % et 21.43 % sur 5 runs sans changement significatif
+  d'allocation.
+- SLSQP optimise sur des gradients numériquement instables → tend à
+  produire des solutions de coin (top-N candidates à equal-weight).
+- Toutes nos modifications de scoring/seuils tombent dans le bruit
+  numérique de la cov.
+
+## 10. Fix unique recommandé — correlation-based shrinkage
+
+Au lieu de shrinkage sur cov directement, **convertir → corr → shrink → reconstruct** :
+
+```python
+# Pseudo-code de la modification proposée pour compute()
+# Étape standard "correlation-based shrinkage"
+def cov_to_corr(cov):
+    sd = np.sqrt(np.diag(cov))
+    sd[sd == 0] = 1.0
+    inv_sd = 1.0 / sd
+    return cov * np.outer(inv_sd, inv_sd), sd
+
+corr, sd = cov_to_corr(cov_hybrid)
+# Maintenant corr a diag = 1.0 partout → cond ne dépend QUE
+# de la structure des corrélations, pas des variances.
+# Shrink le CORR (pas la cov).
+corr_shrunk, _ = diag_shrink_to_target(corr, target_cond=CONDITION_NUMBER_TARGET)
+# Reconstruct cov avec les vraies variances diagonales.
+cov_final = corr_shrunk * np.outer(sd, sd)
+```
+
+### Pourquoi ça résout le problème
+
+- `corr` a `diag = 1.0` partout → spread variance éliminé
+- Cond(corr) ne dépend que des co-mouvements (off-diagonal)
+- Sur 251 jours × 62 assets, cond(corr) typique = 50-500 (au lieu de 21M)
+- Le `diag_shrink_to_target(corr, target=1000)` converge rapidement
+- En reconstruisant `cov = corr × outer(sd, sd)`, on préserve les
+  vraies vols individuelles → vol_portfolio = `sqrt(w·cov·w)` reste
+  cohérente avec les vol_annual des assets
+
+### Effet attendu
+
+| Métrique | Avant | Après fix |
+|---|---|---|
+| Modéré cond_number | 21 614 982 | **< 1 000** |
+| Stable cond_number | 21 059 281 | **< 1 000** |
+| Modéré vol modèle | 6.75-21.43 % erratique | Stable autour de 9-12 % |
+| Stable vol modèle | 28.98 % aberrant | Stable autour de 6-8 % |
+| SLSQP convergence | Solutions de coin equal-weight | Diversification réelle pondérée par score |
+
+### Risque
+
+- Ce changement modifie la valeur numérique de la cov utilisée par
+  SLSQP → l'allocation finale va **changer** au prochain run.
+- Direction du changement : on s'attend à ce que la diversification
+  améliore (poids plus distribués) et que vol modèle se rapproche
+  de vol backtest.
+- Le scoring et toutes les autres logiques **ne changent pas**.
+
+## 11. Plan d'action — 3 options pour le user
+
+### Option A — Implémenter correlation-based shrinkage (1-2h)
+
+1. Modifier `HybridCovarianceEstimator.compute()` pour faire le
+   passage cov → corr → shrink → cov.
+2. Garder le fallback diag_shrink existant en safety net.
+3. Test local (post-mortem + live si possible).
+4. Push + workflow run.
+5. Compare cond_number et vol modèle Modéré/Stable avant/après.
+
+### Option B — Patch ciblé `diag_shrink_to_target` (30 min)
+
+Le shrink actuel monte λ par puissance de 2 jusqu'à 12 steps. Au-delà
+de λ=1 le résultat est nonsensical. Plus simple : clamp λ ≤ 0.95 et
+boucler 30 steps fines (λ × 1.3 par step). Effet : diag_shrink ne
+peut pas faire mieux que `diag(cov)` qui contient déjà le problème.
+**Insuffisant** mais minor improvement.
+
+### Option C — Accepter cov instable + désactiver vol modèle (15 min)
+
+Ne pas toucher la cov. Désactiver l'affichage `vol_realized` quand
+`covariance_trustworthy=False`. Le backtest 90j reste la source
+de vérité pour la vol. C'est l'option pragmatique court terme.
+
+## 12. Recommandation explicite
+
+**Option A**. C'est la seule qui adresse la root cause. Le code change
+est local (`HybridCovarianceEstimator.compute()` uniquement, ~20
+lignes). Le test est simple (cond_number before/after observable).
+L'effet est mesurable et prédictible.
+
+Option B et C sont des patches cosmétiques qui ne résolvent rien.
