@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-01T08:27:34.788047",
+  "timestamp": "2026-06-01T08:57:18.445567",
   "version": "v1.7.0",
   "preset_meta_version": "v5.1.4",
   "summary": {
@@ -13,7 +13,7 @@
     "crypto_selected": 1,
     "crypto_rejected_notable": 5,
     "bonds_initial": 31,
-    "bonds_selected": 8,
+    "bonds_selected": 7,
     "total_filters_applied": 6,
     "etf_scoring_issues": 6,
     "category_rankings_sizes": {
@@ -46,7 +46,7 @@
         },
         "quality_premium": {
           "total": 20,
-          "selected": 3
+          "selected": 2
         },
         "recovery": {
           "total": 20,
@@ -2552,10 +2552,11 @@
         "ticker": "ITX",
         "sort_score": 0.5851,
         "sort_score_source": "_profile_score",
-        "selected": true,
+        "selected": false,
         "matched_preset": "quality_premium",
         "profile_score": 0.5851,
         "buffett_score": 83.0,
+        "rejection_reason": "Score composite (0.585) insuffisant pour le quota",
         "sector": "Biens de consommation cycliques",
         "country": "Espagne",
         "volatility": 23.2,
@@ -4961,14 +4962,15 @@
       },
       {
         "rank": 31,
-        "name": "FlexShares iBoxx 5-Year Target Duration TIPS Index Fund",
-        "ticker": "TDTF",
-        "sort_score": 77.23,
+        "name": "Vanguard Intermediate-Term Treasury Fund",
+        "ticker": "VGIT",
+        "sort_score": 59.92,
         "sort_score_source": "_profile_score",
-        "selected": true,
-        "profile_score": 77.23,
-        "volatility": 4.6,
-        "ytd": "1.0%"
+        "selected": false,
+        "profile_score": 59.92,
+        "rejection_reason": "Pas de composite_score → non scoré (filtré avant scoring)",
+        "volatility": 4.7,
+        "ytd": "-1.47%"
       }
     ]
   },
@@ -6807,10 +6809,11 @@
           "ticker": "ITX",
           "sort_score": 0.5851,
           "sort_score_source": "_profile_score",
-          "selected": true,
+          "selected": false,
           "matched_preset": "quality_premium",
           "profile_score": 0.5851,
           "buffett_score": 83.0,
+          "rejection_reason": "Score composite (0.585) insuffisant pour le quota",
           "sector": "Biens de consommation cycliques",
           "country": "Espagne",
           "volatility": 23.2,
@@ -14858,17 +14861,6 @@
       "selection_reason": "Score profil élevé (78.60)"
     },
     {
-      "name": "FlexShares iBoxx 5-Year Target Duration TIPS Index Fund",
-      "ticker": "TDTF",
-      "category": "bond",
-      "profile_score": 77.23,
-      "volatility": 4.6,
-      "radar_tilt": "neutral",
-      "selected": true,
-      "ranking": 6,
-      "selection_reason": "Score profil élevé (77.23)"
-    },
-    {
       "name": "Invesco Treasury Collateral ETF",
       "ticker": "CLTL",
       "category": "bond",
@@ -14876,7 +14868,7 @@
       "volatility": 1.4,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 7,
+      "ranking": 6,
       "selection_reason": "Score profil élevé (100.00)"
     },
     {
@@ -14887,7 +14879,7 @@
       "volatility": 2.5,
       "radar_tilt": "neutral",
       "selected": true,
-      "ranking": 8,
+      "ranking": 7,
       "selection_reason": "Score profil élevé (78.24)"
     }
   ],
