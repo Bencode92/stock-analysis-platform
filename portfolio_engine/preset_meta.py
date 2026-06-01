@@ -957,7 +957,8 @@ PROFILE_POLICY: Dict[str, Dict] = {
     "Modéré": {
         "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility", "rendement"},
         "min_buffett_score": 65,     # v5.4.0 (Sélection-2): 60→65, exclut PEG (50), AZN (33)
-        "min_quality_gate": 65,      # v4.15: OR gate (inchangé)
+        "min_quality_gate": 65,      # v4.15: gate (Modéré: AND)
+        "gate_logic": "and",         # v5.5.0 (Sélection-3): AND strict — buffett ET quality requis
          "hard_filters": {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
@@ -1005,6 +1006,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "allowed_equity_presets": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
         "min_buffett_score": 70,  # v5.4.0 (Sélection-2): 60→70 — élite uniquement pour Stable
         "min_quality_gate": 62,   # v5.3.3: was 65 — slight relaxation, TTE quality=62 is legitimate
+        "gate_logic": "and",      # v5.5.0 (Sélection-3): AND strict — Stable veut Buffett haut ET quality OK
         "hard_filters": {
             "volatility_3y_max": 28.0,
             "roe_min": 10.0,
@@ -1851,16 +1853,22 @@ def select_equities_for_profile(
         preset_dist[p] = preset_dist.get(p, 0) + 1
     meta["stages"]["presets"] = preset_dist
     
-    # v4.15: Buffett OR Quality gate — le quality_score (peer-relative) rescue
-    # les secteurs à moat structurellement bas (REITs, Utilities)
+    # v5.5.0 (Sélection-3): Gate logique configurable par profil
+    # - "or"  (défaut historique) : buffett ≥ X OR quality ≥ Y — permet rescue
+    # - "and" (NEW v5.5.0)        : buffett ≥ X AND quality ≥ Y — strict
+    # Pour Modéré/Stable on veut AND pour exclure définitivement les actions
+    # avec un Buffett faible (PEG=50) même si peer-relative quality est OK.
     min_buffett = policy.get("min_buffett_score", 0)
     min_quality = policy.get("min_quality_gate", 0)
-    
+    gate_logic = policy.get("gate_logic", "or")  # défaut conservé pour rétro-compat
+
     def passes_gate(eq):
         b = get_metric_value(eq, "buffett_score") or 0
         q = get_metric_value(eq, "quality_score") or 0
+        if gate_logic == "and":
+            return b >= min_buffett and q >= min_quality
         return b >= min_buffett or q >= min_quality
-    
+
     eq_buffett = [eq for eq in equities if passes_gate(eq)]
     
     # Diagnostic: combien rescued par quality?

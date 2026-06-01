@@ -631,8 +631,8 @@ MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
         "energy": 1,           # v3.4: Max 1 energy
         "resources": 2,        # Max 2 non-energy resources
         "multi_asset": 1,
-        "dividend": 2,
-        "allocation": 1,
+        "dividend": 1,         # v5.5.0 (Sélection-3): 2→1 — casse la concentration SCHD+FNDX+FNDF+DIVB
+        "allocation": 1,       # v5.5.0 : max 1 ETF allocation factor (FNDX/FNDF same factor)
         "healthcare": 1,
         "default": 2,
     },

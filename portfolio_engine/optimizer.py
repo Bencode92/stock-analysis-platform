@@ -3111,6 +3111,44 @@ class PortfolioOptimizer:
                     return max_val - np.sum(w[idx])
                 constraints.append({"type": "ineq", "fun": group_constraint})
 
+        # 7a-bis. Phase Sélection-3 — FORCE-INCLUDE intermediate Treasury (Modéré uniquement)
+        # Le preset_bond peut sélectionner VGIT/AGG/IEF dans le pool top_n=10, mais
+        # SLSQP les rejette systématiquement (score 60 vs CLO/TIPS scores 85-100).
+        # Pour assurer le BARBELL crisis-convexity dont Modéré a besoin, on impose
+        # une contrainte hard au niveau optimizer : Σ w_intermediate_treasury ≥ 5%.
+        # Voir docs/diagnostic_phase1_findings.md §5.
+        if profile.name == "Modéré":
+            _intermediate_treasury_idx = []
+            for _i, _a in enumerate(candidates):
+                if _a.category != "Obligations":
+                    continue
+                _ft = (getattr(_a, "fund_type", None)
+                       or (_a.source_data or {}).get("fund_type", "") or "")
+                _ft_lower = str(_ft).lower()
+                # Cible : Treasury/Aggregate de duration ~3-10y, exclut CLO/HY/TIPS-only
+                if (("treasury" in _ft_lower or "aggregate" in _ft_lower
+                     or ("government" in _ft_lower and "mortgage" not in _ft_lower))
+                    and "short" not in _ft_lower
+                    and "ultrashort" not in _ft_lower):
+                    _intermediate_treasury_idx.append(_i)
+            if _intermediate_treasury_idx:
+                def _intermediate_treasury_min_constraint(w, idx=_intermediate_treasury_idx, min_val=0.05):
+                    return float(np.sum(w[idx])) - min_val
+                constraints.append({
+                    "type": "ineq",
+                    "fun": _intermediate_treasury_min_constraint
+                })
+                _names = [candidates[i].name for i in _intermediate_treasury_idx[:5]]
+                logger.info(
+                    f"[BARBELL Modéré] Force-include intermediate Treasury ≥ 5% "
+                    f"({len(_intermediate_treasury_idx)} candidats: {_names})"
+                )
+            else:
+                logger.warning(
+                    f"[BARBELL Modéré] Aucun intermediate Treasury dans candidates — "
+                    f"contrainte SLSQP skip (barbell impossible cette itération)"
+                )
+
         # 7b. Phase Convexité-1 — CAP-CORRÉLATION EMPIRIQUE (equity-like)
         # Capture l'overlap économique entre ETF factor (SCHD≈DIVB) qu'aucun
         # autre mécanisme n'attrape. Single-linkage sur |corr| des returns.
