@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradepulse/politician_leaderboard.schema.json",
+  "title": "PoliticianLeaderboard",
+  "description": "Classement par politicien base sur la REGULARITE (pas le rendement brut). Etage 2 de la pipeline (ml/politician_rank.py).",
+  "type": "object",
+  "required": ["meta", "ranking"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["generated_at", "params", "universe_size"],
+      "additionalProperties": false,
+      "properties": {
+        "generated_at": { "type": "string", "format": "date-time" },
+        "universe_size": { "type": "integer", "description": "Nb de politiciens evalues avant filtres." },
+        "eligible_count": { "type": "integer", "description": "Nb restant apres filtres anti-bruit." },
+        "params": { "$ref": "#/$defs/scoring_params" }
+      }
+    },
+    "ranking": {
+      "type": "array",
+      "description": "Trie par regularity_score decroissant.",
+      "items": { "$ref": "#/$defs/politician" }
+    }
+  },
+  "$defs": {
+    "scoring_params": {
+      "type": "object",
+      "description": "Parametres du score, traces pour reproductibilite.",
+      "additionalProperties": false,
+      "properties": {
+        "min_trades": { "type": "integer", "description": "Echantillon minimum pour etre eligible." },
+        "min_distinct_tickers": { "type": "integer", "description": "Anti-concentration: rejette le +71% chanceux sur 2 titres." },
+        "min_active_years": { "type": "integer", "description": "Anti one-shot: il faut plusieurs annees." },
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "median_return": { "type": "number" },
+            "consistency": { "type": "number" },
+            "diversity": { "type": "number" },
+            "sample": { "type": "number" }
+          }
+        }
+      }
+    },
+    "politician": {
+      "type": "object",
+      "required": ["representative", "regularity_score", "rank", "eligible"],
+      "additionalProperties": false,
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1 },
+        "representative": { "type": "string" },
+        "bioguide_id": { "type": ["string", "null"] },
+        "party": { "type": ["string", "null"] },
+        "house": { "type": ["string", "null"] },
+        "eligible": { "type": "boolean", "description": "false si recale par un filtre anti-bruit (garde en base pour transparence)." },
+        "regularity_score": { "type": "number", "description": "Score composite [0..100]. C'est la cle de tri ET de ponderation a l'etage 3." },
+        "median_annual_excess_return": { "type": ["number", "null"], "description": "Mediane des surperf annuelles vs SPY (robuste aux annees folles)." },
+        "annual_return_std": { "type": ["number", "null"], "description": "Ecart-type des perf annuelles. Plus bas = plus constant." },
+        "n_trades": { "type": "integer" },
+        "n_distinct_tickers": { "type": "integer" },
+        "n_active_years": { "type": "integer" },
+        "by_year": {
+          "type": "array",
+          "description": "Detail annee par annee pour reperer regularite vs coup unique.",
+          "items": {
+            "type": "object",
+            "required": ["year", "excess_return", "n_trades"],
+            "additionalProperties": false,
+            "properties": {
+              "year": { "type": "integer" },
+              "excess_return": { "type": ["number", "null"], "description": "Surperf moyenne des trades de l'annee (entree = report_date)." },
+              "n_trades": { "type": "integer" },
+              "n_distinct_tickers": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

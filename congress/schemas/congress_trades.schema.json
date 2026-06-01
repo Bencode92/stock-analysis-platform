@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradepulse/congress_trades.schema.json",
+  "title": "CongressTradesCache",
+  "description": "Cache brut des trades du Congres rapatries depuis Quiver. Etage 1 de la pipeline (services/congress_fetch.py).",
+  "type": "object",
+  "required": ["meta", "trades"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["source", "fetched_at", "count"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "const": "quiver" },
+        "fetched_at": { "type": "string", "format": "date-time", "description": "Horodatage UTC du pull." },
+        "count": { "type": "integer", "minimum": 0 },
+        "history_start": { "type": "string", "format": "date", "description": "Date du trade le plus ancien present dans le cache." }
+      }
+    },
+    "trades": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/trade" }
+    }
+  },
+  "$defs": {
+    "trade": {
+      "type": "object",
+      "required": ["representative", "ticker", "transaction", "transaction_date", "report_date"],
+      "additionalProperties": false,
+      "properties": {
+        "representative": { "type": "string", "description": "Nom du membre du Congres." },
+        "bioguide_id": { "type": ["string", "null"], "description": "Identifiant stable du membre (cle de jointure fiable, contrairement au nom)." },
+        "party": { "type": ["string", "null"], "enum": ["Democrat", "Republican", "Independent", null] },
+        "house": { "type": ["string", "null"], "enum": ["Representatives", "Senate", null] },
+        "ticker": { "type": "string" },
+        "ticker_type": { "type": ["string", "null"], "description": "ST (action), OP (option), etc. On filtre sur ST en V1." },
+        "transaction": { "type": "string", "enum": ["buy", "sell"], "description": "Normalise depuis Purchase/Sale/Sale (Partial)." },
+        "transaction_date": { "type": "string", "format": "date", "description": "Date d'EXECUTION du trade. NE JAMAIS l'utiliser comme date d'entree backtest." },
+        "report_date": { "type": "string", "format": "date", "description": "Date de DECLARATION (disclosure). C'est l'entree backtest = anti look-ahead." },
+        "disclosure_lag_days": { "type": ["integer", "null"], "minimum": 0, "description": "report_date - transaction_date. Indicateur de retard (max legal STOCK Act = 45j)." },
+        "amount_min": { "type": ["number", "null"], "description": "Borne basse de la fourchette declaree (USD)." },
+        "amount_max": { "type": ["number", "null"], "description": "Borne haute de la fourchette declaree (USD)." },
+        "excess_return": { "type": ["number", "null"], "description": "Surperformance du trade vs SPY, pre-calculee par Quiver (en %)." },
+        "price_change": { "type": ["number", "null"], "description": "Variation du titre depuis le trade (%), pre-calculee Quiver." },
+        "spy_change": { "type": ["number", "null"], "description": "Variation du SPY sur la meme periode (%), pre-calculee Quiver." }
+      }
+    }
+  }
+}

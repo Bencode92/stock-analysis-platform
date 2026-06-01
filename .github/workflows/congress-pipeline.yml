@@ -1,0 +1,52 @@
+name: Congress Portfolio Pipeline
+
+# Rafraichit le cache des trades + le leaderboard de regularite.
+# Secrets requis (deja presents dans le repo) : QUIVERAPI (et TWELVE_DATA_API pour l'etage 4).
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # tous les jours 06:00 UTC (les declarations Quiver sont quotidiennes)
+  workflow_dispatch: {}    # bouton "Run workflow" pour lancer a la main
+
+permissions:
+  contents: write          # necessaire pour recommit les JSON generes
+
+concurrency:
+  group: congress-pipeline
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install quiverquant pandas numpy
+
+      - name: Etage 1 - Fetch Congress trades (Quiver)
+        env:
+          QUIVERAPI: ${{ secrets.QUIVERAPI }}
+        run: python congress/congress_fetch.py
+
+      - name: Etage 2 - Rank politicians (regularite)
+        run: python congress/politician_rank.py --top 20
+
+      - name: Commit data if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add congress/data/congress_trades.json congress/data/politician_leaderboard.json
+          if git diff --staged --quiet; then
+            echo "Pas de changement de donnees."
+          else
+            git commit -m "chore(congress): refresh trades + leaderboard [skip ci]"
+            git push
+          fi

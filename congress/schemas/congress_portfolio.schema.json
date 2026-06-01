@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradepulse/congress_portfolio.schema.json",
+  "title": "CongressPortfolio",
+  "description": "Portefeuille genere a partir du Top politiciens reguliers. Etage 3 (services/congress_portfolio.py), consomme par le backtest et congress.html.",
+  "type": "object",
+  "required": ["meta", "holdings"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["generated_at", "as_of", "params"],
+      "additionalProperties": false,
+      "properties": {
+        "generated_at": { "type": "string", "format": "date-time" },
+        "as_of": { "type": "string", "format": "date", "description": "Date de reference de la composition (rebalancing)." },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "top_k_politicians": { "type": "integer", "description": "Nb de politiciens reguliers retenus." },
+            "lookback_days": { "type": "integer", "description": "Fenetre d'achats agregee (defaut 90j)." },
+            "weighting": { "type": "string", "enum": ["equal", "conviction"], "description": "conviction = poids ponderes par regularity_score des acheteurs." },
+            "side_filter": { "type": "string", "enum": ["buy", "buy_and_sell"], "description": "V1: buy seulement." }
+          }
+        }
+      }
+    },
+    "holdings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ticker", "weight"],
+        "additionalProperties": false,
+        "properties": {
+          "ticker": { "type": "string" },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1, "description": "Somme des weights = 1." },
+          "buyers": {
+            "type": "array",
+            "description": "Politiciens reguliers ayant achete ce titre dans la fenetre.",
+            "items": {
+              "type": "object",
+              "required": ["representative", "regularity_score"],
+              "properties": {
+                "representative": { "type": "string" },
+                "regularity_score": { "type": "number" },
+                "report_date": { "type": "string", "format": "date" }
+              }
+            }
+          },
+          "eligibility": {
+            "type": "object",
+            "description": "Pour le mapping achetable cote courtier (reutilise dividend_portfolio.py).",
+            "additionalProperties": false,
+            "properties": {
+              "pea": { "type": "boolean" },
+              "cto": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
