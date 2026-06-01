@@ -1,0 +1,365 @@
+{
+  "timestamp": "2026-06-01T15:04:40.138409",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-01",
+    "brent_usd": 97.36,
+    "brent_usd_avg5d": 94.219734,
+    "gold_usd": 4457.99661,
+    "silver_usd": 74.31371,
+    "vix": 22.0,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": 0.0,
+    "ig_spread_bps": 135.0,
+    "breakeven_5y": 2.52,
+    "sp500_level": 7572.46,
+    "sp500_change_1d_pct": 1.32455204878055,
+    "hyg_change_1d_pct": -0.3128519584532599,
+    "lqd_change_1d_pct": 0.1291870443849779,
+    "eurusd": 1.16166,
+    "nasdaq_change_1d_pct": 0.098874788,
+    "xlu_perf_1d_pct": -1.83476,
+    "xle_perf_1d_pct": 2.62036,
+    "vix_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4458.71923,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 16.361615638480735,
+    "cpi_yoy_pct": 2.4,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.9,
+    "favored_sectors": "information-technology, energy, utilities",
+    "avoided_sectors": "financials",
+    "favored_regions": "asie, japan, turkey, united-states",
+    "avoided_regions": "india",
+    "key_trends": "Secteur leader: information-technology (+26.7% YTD) | Région leader: south-korea (+111.7% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+58.4% sur 12 mois) | 6M leader: information-technology (+27.1% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, financials | Régions en difficulté: india",
+    "sector_momentum_summary": "industrials(neutral,b=0.96,d=-1.09%), consumer-discretionary(neutral,b=1.21,d=-1.83%), healthcare(neutral,b=0.53,d=-1.34%), communication-services(neutral,b=1.2,d=1.06%), real-estate(neutral,b=0.43,d=-0.8%), utilities(favored,b=0.37,d=-0.45%), information-technology(favored,b=1.52,d=0.96%), materials(neutral,b=0.8,d=-1.46%), energy(favored,b=-0.15,d=2.36%), financials(avoided,b=0.91,d=-0.29%), consumer-staples(neutral,b=0.24,d=-1.17%)"
+  },
+  "ai_response": {
+    "regime": "stagflation",
+    "regime_confidence": 3,
+    "regime_rationale": "Brent near $97 with 5-day avg climbing toward $100, CPI at 2.4% but breakeven inflation at 2.52% signaling market expects higher inflation ahead, while Fed is on hold (0 delta 6m) and VIX at 22 reflects elevated uncertainty. Gold at $4458 with silver at $74 confirms inflation hedging demand; IG spreads at 135bps and HYG declining suggest credit stress building — this is early-stage stagflation with energy shock risk.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Increase energy/oil cap on Brent surge toward $100",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 4
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "Brent at $97 with rising 5-day avg and XLE +2.6% daily confirms energy momentum; stagflation regime historically favors energy producers."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Reduce AI/semi exposure on stagflation risk",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": -3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Despite IT leading YTD (+26.7%), QQQ daily change near flat (+0.1%) while energy surges — rotation signal; high-beta tech underperforms in stagflation as real rates rise and margins compress."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Increase precious metals cap",
+        "params": {
+          "theme": "precious_metals",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold at $4458 and silver at $74 despite 16% drawdown from ATH signals massive structural demand; in stagflation gold is the premier real asset hedge."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Increase dividend/value tilt for defensiveness",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Consumer staples and utilities provide inflation pass-through and lower beta; financials avoided per RADAR confirms value rotation should be selective toward dividend payers."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Increase gold hedge allocation",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Stagflation + geopolitical energy risk + dollar weakening (EUR/USD 1.16) = gold is the primary portfolio insurance."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Prefer TIPS and shorten duration, avoid HY",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 4.0,
+          "fund_types": [
+            "High Yield Bond"
+          ]
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Breakeven at 2.52% with Brent near $100 means inflation surprise risk is real; TIPS protect purchasing power while short duration limits rate risk if Fed is forced to hike."
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Increase bond floor for Stable profile",
+        "params": {
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Stable at 37.6% bonds is adequate but should increase slightly given credit deterioration (HYG -0.3%) and stagflation defensiveness."
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Raise tactical cash for dip-buying optionality",
+        "params": {
+          "Agressif": 4,
+          "Modéré": 5,
+          "Stable": 5
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX at 22 with energy shock building means a vol spike to 30+ is plausible; cash provides optionality to buy the dip if oil triggers a broader selloff."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Stagflation playbook: TIPS for inflation protection, treasury short-end for safety, avoid HY and securitized as credit stress builds with IG at 135bps and HYG declining.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 5.0
+    },
+    "cash_allocation": {
+      "Agressif": 4,
+      "Modéré": 5,
+      "Stable": 5,
+      "rationale": "VIX 22 with energy shock risk warrants dry powder; not max cash because existing T-bill positions (CLTL, VGSH) already serve as productive cash proxies earning ~4%."
+    },
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0,
+      "rationale": "Crypto is a risk asset that correlates with liquidity; stagflation = tighter liquidity conditions, reduce exposure but maintain small BTC allocation as digital gold hedge in Agressif."
+    },
+    "warnings": [
+      "OIL SHOCK ESCALATION: Brent 5-day avg accelerating from $94 to $97 — if it breaks $100, expect CPI to re-accelerate within 2-3 months, forcing Fed to pivot hawkish and triggering a risk-off cascade.",
+      "CREDIT DETERIORATION: IG at 135bps with HYG declining daily — monitor for HY spreads blowing past 400bps which would signal regime shift from stagflation to risk_off.",
+      "DOLLAR WEAKNESS TRAP: EUR/USD at 1.16 implies weak dollar which normally supports risk assets, but combined with oil surge it amplifies imported inflation for Europe — watch for ECB hawkish surprise.",
+      "GOLD DRAWDOWN ANOMALY: Gold 16% off ATH despite perfect macro backdrop (inflation + weak dollar + geopolitical risk) — suggests forced liquidation or margin calls elsewhere; if gold breaks below $4200, systemic stress is worse than visible.",
+      "FINANCIALS SECTOR STRESS: RADAR flags financials as avoided — combined with credit spread widening, monitor regional bank exposure and CRE loan books.",
+      "FED POLICY ERROR RISK: Fed on hold at 3.62% with oil surging — if they stay dovish too long, inflation expectations could de-anchor (breakevens already at 2.52%); if they hike, they crash growth. Classic stagflation trap."
+    ],
+    "market_interpretation": {
+      "geopolitical_risk": "Brent at $97 with sharp daily energy moves (+2.6% XLE) suggests active supply disruption or geopolitical premium — likely Middle East or OPEC+ supply constraint driving an energy shock scenario.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 15,
+      "sentiment_estimate": "fear",
+      "dollar_assessment": "weak"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 4,
+        "Modéré": 4
+      },
+      "ai_infra": {
+        "Agressif": -3,
+        "Modéré": -3
+      },
+      "precious_metals": {
+        "Agressif": 3,
+        "Modéré": 3,
+        "Stable": 3
+      },
+      "dividend_value": {
+        "Modéré": 3,
+        "Stable": 3
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 2,
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Securitized Bond",
+          "Bank Loan"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_stagflation"
+    ],
+    "bond_floor_deltas": {
+      "Stable": 3
+    },
+    "cash_tactical": {
+      "Agressif": 4,
+      "Modéré": 5,
+      "Stable": 5
+    },
+    "cash_tactical_rationale": "VIX 22 with energy shock risk warrants dry powder; not max cash because existing T-bill positions (CLTL, VGSH) already serve as productive cash proxies earning ~4%.",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0
+    },
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "OIL SHOCK ESCALATION: Brent 5-day avg accelerating from $94 to $97 — if it breaks $100, expect CPI to re-accelerate within 2-3 months, forcing Fed to pivot hawkish and triggering a risk-off cascade.",
+      "CREDIT DETERIORATION: IG at 135bps with HYG declining daily — monitor for HY spreads blowing past 400bps which would signal regime shift from stagflation to risk_off.",
+      "DOLLAR WEAKNESS TRAP: EUR/USD at 1.16 implies weak dollar which normally supports risk assets, but combined with oil surge it amplifies imported inflation for Europe — watch for ECB hawkish surprise.",
+      "GOLD DRAWDOWN ANOMALY: Gold 16% off ATH despite perfect macro backdrop (inflation + weak dollar + geopolitical risk) — suggests forced liquidation or margin calls elsewhere; if gold breaks below $4200, systemic stress is worse than visible.",
+      "FINANCIALS SECTOR STRESS: RADAR flags financials as avoided — combined with credit spread widening, monitor regional bank exposure and CRE loan books.",
+      "FED POLICY ERROR RISK: Fed on hold at 3.62% with oil surging — if they stay dovish too long, inflation expectations could de-anchor (breakevens already at 2.52%); if they hike, they crash growth. Classic stagflation trap."
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Stagflation playbook: TIPS for inflation protection, treasury short-end for safety, avoid HY and securitized as credit stress builds with IG at 135bps and HYG declining.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": true,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 5.0
+    }
+  },
+  "regime": "stagflation",
+  "regime_rationale": "Brent near $97 with 5-day avg climbing toward $100, CPI at 2.4% but breakeven inflation at 2.52% signaling market expects higher inflation ahead, while Fed is on hold (0 delta 6m) and VIX at 22 reflects elevated uncertainty. Gold at $4458 with silver at $74 confirms inflation hedging demand; IG spreads at 135bps and HYG declining suggest credit stress building — this is early-stage stagflation with energy shock risk.",
+  "market_interpretation": {
+    "geopolitical_risk": "Brent at $97 with sharp daily energy moves (+2.6% XLE) suggests active supply disruption or geopolitical premium — likely Middle East or OPEC+ supply constraint driving an energy shock scenario.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 15,
+    "sentiment_estimate": "fear",
+    "dollar_assessment": "weak"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Stagflation playbook: TIPS for inflation protection, treasury short-end for safety, avoid HY and securitized as credit stress builds with IG at 135bps and HYG declining.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": true,
+    "avoid_securitized": true,
+    "avoid_em_bonds": true,
+    "max_duration_stable": 4.0,
+    "max_duration_moderate": 5.0
+  },
+  "warnings": [
+    "OIL SHOCK ESCALATION: Brent 5-day avg accelerating from $94 to $97 — if it breaks $100, expect CPI to re-accelerate within 2-3 months, forcing Fed to pivot hawkish and triggering a risk-off cascade.",
+    "CREDIT DETERIORATION: IG at 135bps with HYG declining daily — monitor for HY spreads blowing past 400bps which would signal regime shift from stagflation to risk_off.",
+    "DOLLAR WEAKNESS TRAP: EUR/USD at 1.16 implies weak dollar which normally supports risk assets, but combined with oil surge it amplifies imported inflation for Europe — watch for ECB hawkish surprise.",
+    "GOLD DRAWDOWN ANOMALY: Gold 16% off ATH despite perfect macro backdrop (inflation + weak dollar + geopolitical risk) — suggests forced liquidation or margin calls elsewhere; if gold breaks below $4200, systemic stress is worse than visible.",
+    "FINANCIALS SECTOR STRESS: RADAR flags financials as avoided — combined with credit spread widening, monitor regional bank exposure and CRE loan books.",
+    "FED POLICY ERROR RISK: Fed on hold at 3.62% with oil surging — if they stay dovish too long, inflation expectations could de-anchor (breakevens already at 2.52%); if they hike, they crash growth. Classic stagflation trap."
+  ]
+}
