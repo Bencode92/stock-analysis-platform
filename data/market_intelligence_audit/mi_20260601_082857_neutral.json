@@ -1,0 +1,327 @@
+{
+  "timestamp": "2026-06-01T08:28:57.781132",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-01",
+    "brent_usd": 94.08,
+    "brent_usd_avg5d": 93.570248,
+    "gold_usd": 4495.07224,
+    "silver_usd": 75.40795,
+    "vix": 22.0,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": 0.0,
+    "hy_spread_bps": 272.0,
+    "us_10y_yield": 4.45,
+    "sp500_level": 7580.06,
+    "sp500_change_1d_pct": 1.804258016686098,
+    "hyg_change_1d_pct": 0.5131414267834751,
+    "lqd_change_1d_pct": 1.1001201811962629,
+    "eurusd": 1.16558,
+    "nasdaq_change_1d_pct": 0.36840974,
+    "xlu_perf_1d_pct": -0.470542,
+    "xle_perf_1d_pct": -1.15891,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4494.349,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 15.693258595964615,
+    "cpi_yoy_pct": 2.4,
+    "ig_spread_bps": 135.0,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.9,
+    "favored_sectors": "information-technology, materials, industrials",
+    "avoided_sectors": "financials",
+    "favored_regions": "asie, israel, netherlands, japan",
+    "avoided_regions": "india",
+    "key_trends": "Secteur leader: information-technology (+26.7% YTD) | Région leader: south-korea (+111.7% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+59.4% sur 12 mois) | 6M leader: information-technology (+27.3% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, financials | Régions en difficulté: india",
+    "sector_momentum_summary": "consumer-discretionary(neutral,b=1.21,d=-0.95%), healthcare(neutral,b=0.53,d=-0.77%), real-estate(neutral,b=0.43,d=-0.95%), utilities(neutral,b=0.37,d=-0.64%), energy(neutral,b=-0.14,d=-1.12%), consumer-staples(neutral,b=0.24,d=-1.17%), financials(avoided,b=0.91,d=0.77%), materials(favored,b=0.81,d=-0.37%), industrials(favored,b=0.96,d=-0.36%), communication-services(neutral,b=1.2,d=1.58%), information-technology(favored,b=1.52,d=1.36%)"
+  },
+  "ai_response": {
+    "regime": "neutral",
+    "regime_confidence": 3,
+    "regime_rationale": "Brent élevé ($94) et VIX modéré (22) créent une tension inflationniste latente, mais CPI à 2.4% reste contenu et la Fed est en pause (0 delta 6m). Spreads IG (135bps) et HY (272bps) stables et raisonnables, equity en momentum positif (S&P +1.8% daily, IT leader) — pas de stress systémique mais pas de goldilocks non plus avec le pétrole à ce niveau.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Relever cap AI/semi — IT leader momentum 52W (+59.4%) et 6M (+27.3%), RADAR favored",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "Information-technology est le secteur leader sur tous les horizons (YTD +26.7%, 52W +59.4%) avec un momentum RADAR confirmé, justifiant une surpondération tactique."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Relever cap semi en soutien du cycle AI",
+        "params": {
+          "theme": "semi",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif"
+        ],
+        "conviction": 3,
+        "rationale": "Les semi bénéficient du même cycle AI/infra que l'IT, mais concentration sectorielle élevée — limiter au profil Agressif."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Relever cap energy modérément — Brent $94 soutient les marges mais XLE en baisse daily",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Brent à $94 soutient les cash flows energy, mais le beta négatif du secteur (-0.14) et la baisse daily (-1.12%) signalent un découplage temporaire — position modeste."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Maintenir gold malgré drawdown 15.7% — hedge géopolitique et inflation latente",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 1
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Gold en drawdown de 15.7% depuis ATH offre un point d'entrée pour un hedge contre le risque d'escalade pétrolière ($94 Brent) et l'inflation latente, dans un contexte de dollar faible (EUR/USD 1.165)."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire healthcare — RADAR signale secteur en difficulté, beta faible",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 2,
+        "rationale": "Healthcare identifié en difficulté par le RADAR avec un beta de 0.53 et daily -0.77%, sous-performance relative dans un marché qui récompense le momentum."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Duration intermédiaire, légère préférence TIPS — inflation latente avec Brent $94",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 5.0
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Brent à $94 crée un risque de pass-through inflationniste dans les 3-6 prochains mois; TIPS offrent une protection asymétrique avec un CPI encore à 2.4% (breakevens probablement sous-pricés)."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Avoid HY pour Stable — spreads serrés (272bps) offrent peu de compensation vs risque de widening",
+        "params": {
+          "action": "avoid_fund_types",
+          "fund_types": [
+            "High Yield Bond"
+          ]
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "HY spreads à 272bps sont historiquement serrés — le ratio risque/rendement est asymétriquement négatif pour un profil Stable si le pétrole pousse l'inflation et force la Fed à resserrer."
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Cash modéré — VIX 22 + incertitude pétrole = garder de la poudre sèche",
+        "params": {
+          "Agressif": 3,
+          "Modéré": 4,
+          "Stable": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX à 22 avec Brent $94 suggère une volatilité potentielle à venir; cash tactique permet d'acheter un éventuel dip si le pétrole provoque un choc inflationniste."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Duration intermédiaire (3-5y) avec tilt TIPS pour couvrir le risque inflationniste latent du pétrole à $94, IG acceptable mais HY à éviter en Stable vu les spreads serrés.",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    },
+    "cash_allocation": {
+      "Agressif": 3,
+      "Modéré": 4,
+      "Stable": 2,
+      "rationale": "VIX 22 + Brent $94 = risque de choc inflationniste; cash modéré comme option d'achat sur la volatilité, mais pas excessif car T-bills (CLTL, VGSH) dans les portefeuilles jouent déjà ce rôle de cash productif."
+    },
+    "_cash_guidance": "MINIMUM CASH: Agressif 2% si VIX>20 (option d'achat sur la vol), Modéré 3%, Stable 0% (T-bills = cash productif). Le cash est une POSITION, pas une absence de position.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0,
+      "rationale": "Régime neutral avec momentum equity positif permet une allocation crypto modérée; dollar faible (EUR/USD 1.165) est structurellement favorable au BTC, mais VIX 22 justifie de ne pas maximiser."
+    },
+    "warnings": [
+      "RISQUE #1 — Choc pétrolier: Brent à $94 proche du seuil $100 — un franchissement pourrait basculer le régime vers stagflation, forçant une rotation défensive rapide (duration courte, TIPS, energy up, tech down).",
+      "RISQUE #2 — Fed repricing: Fed en pause avec 0 delta 6m mais 10Y à 4.45% — si le pétrole pousse le CPI au-dessus de 2.8%, le marché pourrait repricer des hikes, causant un sell-off obligataire et equity simultané.",
+      "RISQUE #3 — Concentration IT: Le leadership extrême de l'IT (+59.4% 52W) crée un risque de rotation violente si les earnings déçoivent ou si les taux montent — surveiller les résultats NVDA/MSFT.",
+      "RISQUE #4 — Gold drawdown 15.7%: Peut signaler soit un point d'entrée (mean reversion) soit un changement de régime (risk appetite trop fort pour le gold) — surveiller si le drawdown s'approfondit au-delà de 20%.",
+      "RISQUE #5 — Dollar faible (EUR/USD 1.165): Favorable aux EM et commodities mais peut amplifier l'inflation importée aux US, renforçant le risque de repricing Fed."
+    ],
+    "market_interpretation": {
+      "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+      "geopolitical_risk": "Brent à $94 signale des tensions géopolitiques élevées (probablement Moyen-Orient/OPEC+) sans être en crise ouverte; le VIX à 22 confirme un stress modéré mais pas de panique.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 10,
+      "sentiment_estimate": "neutral",
+      "dollar_assessment": "weak"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "ai_infra": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "semi": {
+        "Agressif": 2
+      },
+      "energy_oil": {
+        "Agressif": 2,
+        "Modéré": 2
+      },
+      "healthcare": {
+        "Agressif": -2,
+        "Modéré": -2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 1,
+        "Modéré": 1,
+        "Stable": 1
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": null,
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 7.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_neutral"
+    ],
+    "cash_tactical": {
+      "Agressif": 3,
+      "Modéré": 4,
+      "Stable": 2
+    },
+    "cash_tactical_rationale": "VIX 22 + Brent $94 = risque de choc inflationniste; cash modéré comme option d'achat sur la volatilité, mais pas excessif car T-bills (CLTL, VGSH) dans les portefeuilles jouent déjà ce rôle de cash productif.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0
+    },
+    "ai_regime": "neutral",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "RISQUE #1 — Choc pétrolier: Brent à $94 proche du seuil $100 — un franchissement pourrait basculer le régime vers stagflation, forçant une rotation défensive rapide (duration courte, TIPS, energy up, tech down).",
+      "RISQUE #2 — Fed repricing: Fed en pause avec 0 delta 6m mais 10Y à 4.45% — si le pétrole pousse le CPI au-dessus de 2.8%, le marché pourrait repricer des hikes, causant un sell-off obligataire et equity simultané.",
+      "RISQUE #3 — Concentration IT: Le leadership extrême de l'IT (+59.4% 52W) crée un risque de rotation violente si les earnings déçoivent ou si les taux montent — surveiller les résultats NVDA/MSFT.",
+      "RISQUE #4 — Gold drawdown 15.7%: Peut signaler soit un point d'entrée (mean reversion) soit un changement de régime (risk appetite trop fort pour le gold) — surveiller si le drawdown s'approfondit au-delà de 20%.",
+      "RISQUE #5 — Dollar faible (EUR/USD 1.165): Favorable aux EM et commodities mais peut amplifier l'inflation importée aux US, renforçant le risque de repricing Fed."
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Duration intermédiaire (3-5y) avec tilt TIPS pour couvrir le risque inflationniste latent du pétrole à $94, IG acceptable mais HY à éviter en Stable vu les spreads serrés.",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    }
+  },
+  "regime": "neutral",
+  "regime_rationale": "Brent élevé ($94) et VIX modéré (22) créent une tension inflationniste latente, mais CPI à 2.4% reste contenu et la Fed est en pause (0 delta 6m). Spreads IG (135bps) et HY (272bps) stables et raisonnables, equity en momentum positif (S&P +1.8% daily, IT leader) — pas de stress systémique mais pas de goldilocks non plus avec le pétrole à ce niveau.",
+  "market_interpretation": {
+    "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+    "geopolitical_risk": "Brent à $94 signale des tensions géopolitiques élevées (probablement Moyen-Orient/OPEC+) sans être en crise ouverte; le VIX à 22 confirme un stress modéré mais pas de panique.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 10,
+    "sentiment_estimate": "neutral",
+    "dollar_assessment": "weak"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Duration intermédiaire (3-5y) avec tilt TIPS pour couvrir le risque inflationniste latent du pétrole à $94, IG acceptable mais HY à éviter en Stable vu les spreads serrés.",
+    "prefer_tips": true,
+    "prefer_treasury": false,
+    "avoid_hy": false,
+    "avoid_securitized": false,
+    "avoid_em_bonds": false,
+    "max_duration_stable": 5.0,
+    "max_duration_moderate": 7.0
+  },
+  "warnings": [
+    "RISQUE #1 — Choc pétrolier: Brent à $94 proche du seuil $100 — un franchissement pourrait basculer le régime vers stagflation, forçant une rotation défensive rapide (duration courte, TIPS, energy up, tech down).",
+    "RISQUE #2 — Fed repricing: Fed en pause avec 0 delta 6m mais 10Y à 4.45% — si le pétrole pousse le CPI au-dessus de 2.8%, le marché pourrait repricer des hikes, causant un sell-off obligataire et equity simultané.",
+    "RISQUE #3 — Concentration IT: Le leadership extrême de l'IT (+59.4% 52W) crée un risque de rotation violente si les earnings déçoivent ou si les taux montent — surveiller les résultats NVDA/MSFT.",
+    "RISQUE #4 — Gold drawdown 15.7%: Peut signaler soit un point d'entrée (mean reversion) soit un changement de régime (risk appetite trop fort pour le gold) — surveiller si le drawdown s'approfondit au-delà de 20%.",
+    "RISQUE #5 — Dollar faible (EUR/USD 1.165): Favorable aux EM et commodities mais peut amplifier l'inflation importée aux US, renforçant le risque de repricing Fed."
+  ]
+}
