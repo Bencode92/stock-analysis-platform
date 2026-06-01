@@ -38,6 +38,21 @@ jobs:
           QUIVERAPI: ${{ secrets.QUIVERAPI }}
         run: python congress/congress_fetch.py
 
+      - name: Cache des prix Twelve Data
+        uses: actions/cache@v4
+        with:
+          path: congress/data/prices
+          key: tw-prices-${{ github.run_id }}
+          restore-keys: |
+            tw-prices-
+
+      - name: Etage 1bis - Enrichir les rendements (Twelve Data)
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+          # Releve TWELVE_DATA_RATE si plan paye (free = 8 appels/min).
+          TWELVE_DATA_RATE: "8"
+        run: python congress/enrich_returns.py
+
       - name: Etage 2 - Rank politicians (regularite)
         run: python congress/politician_rank.py --top 20
 
