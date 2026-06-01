@@ -956,8 +956,8 @@ PROFILE_POLICY: Dict[str, Dict] = {
     },
     "Modéré": {
         "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility", "rendement"},
-        "min_buffett_score": 60,
-        "min_quality_gate": 65,     # v4.15: OR gate
+        "min_buffett_score": 65,     # v5.4.0 (Sélection-2): 60→65, exclut PEG (50), AZN (33)
+        "min_quality_gate": 65,      # v4.15: OR gate (inchangé)
          "hard_filters": {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
@@ -965,19 +965,25 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "de_ratio_max": 2.0,        # FIX v5.2.0-Q: D/E max
             "quality_score_min": 40,    # v4.15: filtre qualité complémentaire au moat
             "quality_coverage_min": 70, # v5.3.1: éjecte actions avec données manquantes (SBIN 63%)
+            "perf_3y_min": -10.0,       # v5.4.0 (Sélection-2): exclut MC (-43%), NESN (-27%), SAN (-20%)
         },
         "equity_min_weight": 0.40,
         "equity_max_weight": 0.60,
         "min_equity_positions": 10,
         "score_weights": {
-            # ═══ v5.3.0: SCORING v3 — 0 REDONDANCE ═══
-            # Quality subscores — ÉQUILIBRÉ (50% du score)
-            "quality_quality_sub": 0.15,   # ROE+ROIC+margin — qualité business
-            "quality_safety_sub":  0.15,   # D/E+payout — solidité bilan
-            "quality_value_sub":   0.10,   # P/E+FCF — pas surpayer
-            "quality_growth_sub":  0.10,   # EPS+revenue — croissance passée
+            # ═══ v5.4.0 (Sélection-2): RÉINTRODUCTION buffett_score ABSOLU ═══
+            # Auparavant (v5.3.0) : seulement subscores peer-relative → biais geo
+            # (VICI peer-relative US REITs Q89 battait Roche peer-relative EU pharma Q67
+            #  alors que Buffett absolu Roche=100 vs VICI=67).
+            # Maintenant : Buffett (absolu) pèse 15%, peer-relative réduit.
+            "buffett_score":       0.15,   # ★ NEW v5.4.0 — qualité Buffett absolue
+            # Quality subscores — RÉDUITS (38% du score, vs 50% avant)
+            "quality_quality_sub": 0.10,   # ROE+ROIC+margin (peer-relative) — 0.15→0.10
+            "quality_safety_sub":  0.12,   # D/E+payout (peer-relative) — 0.15→0.12
+            "quality_value_sub":   0.08,   # P/E+FCF (peer-relative) — 0.10→0.08
+            "quality_growth_sub":  0.08,   # EPS+revenue (peer-relative) — 0.10→0.08
             # Forward-looking
-            "eps_growth_forecast_5y": 0.08, # Croissance future (était 0.10, -0.02 pour eps_surprise)
+            "eps_growth_forecast_5y": 0.08, # Croissance future
             # v7.3: EPS Surprise — PEAD
             "eps_surprise":        0.05,   # Avg surprise 2 derniers trimestres
             # Income
@@ -985,12 +991,11 @@ PROFILE_POLICY: Dict[str, Dict] = {
             # Risque — PÈSE LOURD (20%)
             "volatility_3y":      -0.10,   # Vol pénalisée
             "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
-            # Momentum — RÉSIDUEL (10%)
-            # v7.2.1: perf_1y renforcé, perf_3m réduit — 3m trop bruité
-            "perf_1y":             0.04,   # Momentum 1 an (était 0.07, -0.03 pour eps_surprise)
-            "perf_3m":             0.03,   # Momentum court (était 0.05)
+            # Momentum — RÉSIDUEL (7%)
+            "perf_1y":             0.04,   # Momentum 1 an
+            "perf_3m":             0.03,   # Momentum court
             # SUPPRIMÉS (déjà dans subscores):
-            # roe, buffett_score, eps_growth_5y, fcf_yield, de_ratio
+            # roe, eps_growth_5y, fcf_yield, de_ratio
         },
         "description": "Profil équilibré qualité/momentum, risque maîtrisé",
         "expected_vol_range": (10, 15),
@@ -998,7 +1003,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
     },
     "Stable": {
         "allowed_equity_presets": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
-        "min_buffett_score": 60,  # v5.3.3: was 70 — aligned with Modéré. Buffett = growth quality, not stability
+        "min_buffett_score": 70,  # v5.4.0 (Sélection-2): 60→70 — élite uniquement pour Stable
         "min_quality_gate": 62,   # v5.3.3: was 65 — slight relaxation, TTE quality=62 is legitimate
         "hard_filters": {
             "volatility_3y_max": 28.0,
@@ -1009,29 +1014,30 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "quality_score_min": 50,    # v4.15: filtre qualité complémentaire au moat
             "fcf_yield_min": 0.0,       # v4.15: exige FCF positif pour profil stable
             "quality_coverage_min": 70, # v5.3.1: éjecte actions avec données manquantes
+            "perf_3y_min": -5.0,        # v5.4.0 (Sélection-2): pas de drawdown long pour Stable
         },
         "equity_min_weight": 0.25,
         "equity_max_weight": 0.45,
         "min_equity_positions": 8,
         "score_weights": {
-            # ═══ v5.3.0: SCORING v3 — 0 REDONDANCE ═══
-            # Quality subscores — SAFETY DOMINANT (45%)
-            "quality_quality_sub": 0.10,   # Qualité du business
-            "quality_safety_sub":  0.25,   # ★ Safety dominant — bilan solide
-            "quality_value_sub":   0.10,   # Pas surpayer
+            # ═══ v5.4.0 (Sélection-2): RÉINTRODUCTION buffett_score ABSOLU ═══
+            "buffett_score":       0.20,   # ★ NEW v5.4.0 — qualité Buffett absolue (Stable = élite)
+            # Quality subscores — RÉDUITS (30% du score, vs 45% avant)
+            "quality_quality_sub": 0.05,   # 0.10→0.05
+            "quality_safety_sub":  0.20,   # 0.25→0.20 (toujours dominant safety)
+            "quality_value_sub":   0.05,   # 0.10→0.05
             # Forward-looking
             "eps_growth_forecast_5y": 0.05, # Croissance minimale requise
             # Income — IMPORTANT (20%)
-            "dividend_yield":      0.15,   # Rendement (était 0.20, -0.05 pour perf_1y)
+            "dividend_yield":      0.15,   # Rendement
             "dividend_growth_3y":  0.05,   # Croissance du dividende
             # Momentum — FILET DE SÉCURITÉ (5%)
-            # v7.2.1: ajouté perf_1y pour détecter les chutes prolongées
-            "perf_1y":             0.05,   # Momentum 1 an (évite de garder une action en chute)
+            "perf_1y":             0.05,   # Évite de garder une action en chute
             # Risque — TRÈS PÉNALISÉ (30%)
             "volatility_3y":      -0.20,   # ★★ Vol très pénalisée
             "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
             # SUPPRIMÉS (déjà dans subscores):
-            # roe, buffett_score, eps_growth_5y, fcf_yield
+            # roe, eps_growth_5y, fcf_yield
         },
         "description": "Profil défensif, faible volatilité, haut dividende",
         "expected_vol_range": (6, 10),
