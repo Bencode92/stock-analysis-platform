@@ -477,10 +477,16 @@ def _preset_intermediate_treasury(df: pd.DataFrame) -> pd.Series:
     """
     mask = pd.Series(False, index=df.index)
 
-    # Filtre 1 : duration 4-10 ans (intermédiaire pure)
+    # Filtre 1 : duration ~3-10 ans (intermédiaire pure).
+    # NB : `bond_avg_duration` dans combined_bonds.csv est l'effective
+    # duration retournée par TwelveData (souvent plus basse que la
+    # Macaulay duration). Exemples observés :
+    #   AGG 3.78 / BND 3.81 / GOVT 3.19 / IEF 4.13 / IEI 3.47 / VGIT 3.56
+    # → seuil min 3.0 pour capter ces broad-aggregate / intermediate
+    #   Treasury sans capturer les ultra-court (SHY 1.96, SCHO 2.04).
     if "bond_avg_duration" in df.columns:
         duration = _to_numeric(df["bond_avg_duration"])
-        duration_mask = (duration >= 4.0) & (duration <= 10.0)
+        duration_mask = (duration >= 3.0) & (duration <= 10.0)
     else:
         duration_mask = pd.Series(False, index=df.index)
 
