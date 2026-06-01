@@ -49,8 +49,10 @@ jobs:
       - name: Etage 1bis - Enrichir les rendements (Twelve Data)
         env:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
-          # Releve TWELVE_DATA_RATE si plan paye (free = 8 appels/min).
-          TWELVE_DATA_RATE: "8"
+          # Plan Ultra : cadence haute -> ~1200 tickers pricés en une run (~2 min).
+          # Le handler RateLimit fait backoff propre si jamais on touche un plafond.
+          TWELVE_DATA_RATE: "600"
+          MAX_NEW_TICKERS: "3000"
         run: python congress/enrich_returns.py
 
       - name: Etage 2 - Rank politicians (regularite)
