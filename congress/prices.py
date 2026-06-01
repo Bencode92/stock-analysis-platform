@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -53,6 +54,7 @@ class TwelveData:
             return None
 
         self._throttle()
+        self.calls += 1
         qs = urllib.parse.urlencode({
             "symbol": symbol, "interval": "1day",
             "outputsize": 5000, "order": "ASC", "apikey": self.apikey,
@@ -60,10 +62,18 @@ class TwelveData:
         try:
             with urllib.request.urlopen(f"{BASE_URL}?{qs}", timeout=30) as r:
                 j = json.loads(r.read())
-        except Exception as e:  # reseau : ne pas mettre en cache, signaler
-            print(f"  ! {symbol}: erreur reseau {e}")
+        except urllib.error.HTTPError as he:
+            if he.code == 429:
+                raise RateLimit("HTTP 429")
+            if he.code == 404:
+                # symbole delisté / renommé / inconnu : cache vide -> jamais re-tente
+                f.write_text("{}")
+                return {}
+            print(f"  ! {symbol}: HTTP {he.code}", flush=True)
+            return None  # 5xx/transitoire : pas de cache, retry au prochain run
+        except Exception as e:  # timeout / reseau : pas de cache, retry
+            print(f"  ! {symbol}: erreur reseau {e}", flush=True)
             return None
-        self.calls += 1
 
         if isinstance(j, dict) and j.get("status") == "error":
             msg = str(j.get("message", ""))
