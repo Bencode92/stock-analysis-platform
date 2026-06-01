@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from bisect import bisect_left
 from collections import Counter
 from pathlib import Path
@@ -32,6 +33,11 @@ TRADES_PATH = Path(os.environ.get("TRADES_FILE", HERE / "data" / "congress_trade
 BENCHMARK = "SPY"
 HORIZON = int(os.environ.get("RETURN_HORIZON_DAYS", "252"))
 MAX_NEW_TICKERS = int(os.environ.get("MAX_NEW_TICKERS", "800"))
+
+
+def _log(msg: str) -> None:
+    """Print immediat (flush) pour un suivi live dans les logs GitHub Actions."""
+    print(msg, flush=True)
 
 
 def _sorted_series(price_map: dict[str, float]) -> tuple[list[str], list[float]]:
@@ -70,32 +76,46 @@ def main() -> None:
     client = make_client()
 
     # SPY d'abord (benchmark obligatoire).
+    _log("SPY: recuperation du benchmark...")
     spy_map = client.get_daily(BENCHMARK)
     if not spy_map:
         raise SystemExit("Impossible de recuperer le benchmark SPY -> abandon.")
     spy_dates, spy_closes = _sorted_series(spy_map)
+    _log("SPY OK.")
 
     # Tickers par frequence d'achat decroissante (impact maximal d'abord).
     freq = Counter(t["ticker"] for t in buys)
     tickers = [tk for tk, _ in freq.most_common()]
+    n_tk = len(tickers)
+    _log(f"{n_tk} tickers a pricer ({len(buys)} achats) | plafond appels neufs: {MAX_NEW_TICKERS}")
 
     cache: dict[str, tuple[list[str], list[float]] | None] = {}
     rate_limited = False
+    t0 = time.time()
 
-    for tk in tickers:
+    for i, tk in enumerate(tickers, 1):
         if tk in cache:
             continue
         allow = (client.calls < MAX_NEW_TICKERS) and not rate_limited
         try:
             pm = client.get_daily(tk, allow_fetch=allow)
         except RateLimit as e:
-            print(f"  Rate-limit Twelve Data atteint ({e}). On s'arrete aux tickers en cache.")
+            _log(f"Rate-limit Twelve Data atteint ({e}). On s'arrete aux tickers en cache.")
             rate_limited = True
             pm = None
         # pm None = pas (encore) dispo ; {} = symbole sans donnees ; sinon series prix
         cache[tk] = _sorted_series(pm) if pm else None
 
+        # Progression live tous les 50 tickers (et a la fin).
+        if i % 50 == 0 or i == n_tk:
+            ok = sum(1 for v in cache.values() if v)
+            dt = time.time() - t0
+            rate = client.calls / dt * 60 if dt > 0 else 0
+            _log(f"  {i}/{n_tk} tickers | prix OK {ok} | appels API {client.calls} "
+                 f"({rate:.0f}/min) | {dt:.0f}s")
+
     # Calcul des rendements.
+    _log(f"Prix recuperes. Calcul des excess returns sur {len(buys)} achats...")
     enriched = 0
     for t in buys:
         ser = cache.get(t["ticker"])
@@ -127,13 +147,13 @@ def main() -> None:
     n_buys = len(buys)
     n_tickers = len(tickers)
     cached_ok = sum(1 for v in cache.values() if v)
-    print(f"Enrichi {enriched}/{n_buys} achats "
-          f"({100*enriched//max(n_buys,1)}%) | "
-          f"tickers prix dispo {cached_ok}/{n_tickers} | "
-          f"appels API ce run: {client.calls}")
+    _log(f"=> Enrichi {enriched}/{n_buys} achats "
+         f"({100*enriched//max(n_buys,1)}%) | "
+         f"tickers prix dispo {cached_ok}/{n_tickers} | "
+         f"appels API ce run: {client.calls}")
     if rate_limited or cached_ok < n_tickers:
-        print("Couverture partielle : relance le workflow (le cache prix se complete "
-              "a chaque run jusqu'a couverture totale).")
+        _log("Couverture partielle : relance le workflow (le cache prix se complete "
+             "a chaque run jusqu'a couverture totale).")
 
 
 if __name__ == "__main__":

@@ -58,6 +58,7 @@ jobs:
           # Le handler RateLimit fait backoff propre si jamais on touche un plafond.
           TWELVE_DATA_RATE: "600"
           MAX_NEW_TICKERS: "3000"
+          PYTHONUNBUFFERED: "1"   # logs de progression en temps reel
         run: python congress/enrich_returns.py
 
       - name: Etage 1bis-exec - Enrichir les rendements executifs
@@ -66,6 +67,7 @@ jobs:
           TWELVE_DATA_RATE: "600"
           MAX_NEW_TICKERS: "3000"
           TRADES_FILE: congress/data/executive_trades.json
+          PYTHONUNBUFFERED: "1"
         run: python congress/enrich_returns.py
 
       - name: Etage 2 - Rank politicians (regularite)
