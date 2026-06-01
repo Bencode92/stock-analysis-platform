@@ -42,17 +42,39 @@ DEFAULTS = {
 }
 
 
-def load_trades(path: Path) -> pd.DataFrame:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    df = pd.DataFrame(payload["trades"])
-    if df.empty:
-        return df
+def _pid(row) -> str:
+    """Cle d'identite par ligne : bioguide_id si present, sinon le nom.
+    Evite de fusionner tous les bioguide_id nuls (ex. executif) sous un meme groupe."""
+    b = row.get("bioguide_id")
+    if isinstance(b, str) and b.strip():
+        return b
+    return str(row.get("representative") or "?")
+
+
+def load_trades(paths: list[Path]) -> pd.DataFrame:
+    """Charge et fusionne un ou plusieurs caches de trades (Congres + Executif)."""
+    frames = []
+    for path in paths:
+        if not path.exists():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        f = pd.DataFrame(payload["trades"])
+        if not f.empty:
+            frames.append(f)
+    if not frames:
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
+    for col in ("bioguide_id", "house", "party", "excess_return"):
+        if col not in df.columns:
+            df[col] = None
     # On classe sur les ACHATS (le signal d'allocation). report_date = horodatage retenu.
     df = df[df["transaction"] == "buy"].copy()
     df["report_date"] = pd.to_datetime(df["report_date"], errors="coerce")
     df = df.dropna(subset=["report_date", "ticker"])
     df["year"] = df["report_date"].dt.year
     df["excess_return"] = pd.to_numeric(df["excess_return"], errors="coerce")
+    df["branch"] = df["house"].apply(lambda h: "Executive" if h == "Executive" else "Congress")
+    df["pid"] = df.apply(_pid, axis=1)
     return df
 
 
@@ -84,23 +106,28 @@ def _minmax(series: pd.Series) -> pd.Series:
 
 def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
     universe = []
-    key = "bioguide_id" if df["bioguide_id"].notna().any() else "representative"
 
-    for ident, g in df.groupby(key):
+    for pid, g in df.groupby("pid"):
         by_year = per_year_table(g)
         annual = pd.Series([r["excess_return"] for r in by_year if r["excess_return"] is not None])
         n_trades = int(len(g))
         n_tickers = int(g["ticker"].nunique())
         n_years = int(g["year"].nunique())
+        branch = "Executive" if (g["branch"] == "Executive").any() else "Congress"
 
+        # L'executif (Trump) est montre "a part" : historique trop court / recent pour
+        # un score de regularite valable -> on le garde dans le tableau mais hors classement.
         eligible = (
-            n_trades >= params["min_trades"]
+            branch != "Executive"
+            and n_trades >= params["min_trades"]
             and n_tickers >= params["min_distinct_tickers"]
             and n_years >= params["min_active_years"]
         )
         universe.append({
             "representative": str(g["representative"].iloc[0]),
-            "bioguide_id": (None if key == "representative" else str(ident)),
+            "bioguide_id": (str(g["bioguide_id"].dropna().iloc[0]) if g["bioguide_id"].notna().any() else None),
+            "pid": str(pid),
+            "branch": branch,
             "party": (g["party"].dropna().iloc[0] if g["party"].notna().any() else None),
             "house": (g["house"].dropna().iloc[0] if g["house"].notna().any() else None),
             "eligible": bool(eligible),
@@ -132,11 +159,8 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
     else:
         eligibles["regularity_score"] = []
 
-    # Recolle scores; les non-eligibles gardent un score 0 (transparence).
-    frame = frame.merge(
-        eligibles[["representative", "bioguide_id", "regularity_score"]],
-        on=["representative", "bioguide_id"], how="left",
-    )
+    # Recolle scores; les non-eligibles (dont l'executif) gardent un score 0 (transparence).
+    frame = frame.merge(eligibles[["pid", "regularity_score"]], on="pid", how="left")
     frame["regularity_score"] = frame["regularity_score"].fillna(0.0)
     frame = frame.sort_values(["eligible", "regularity_score"], ascending=[False, False]).reset_index(drop=True)
     frame["rank"] = frame.index + 1
@@ -156,6 +180,8 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser(description="Rank politicians by trading regularity.")
     p.add_argument("--trades", default=str(TRADES_PATH))
+    p.add_argument("--executive", default=str(DATA_DIR / "executive_trades.json"),
+                   help="Cache des trades executifs (Trump), montres a part.")
     p.add_argument("--out", default=str(OUT_PATH))
     p.add_argument("--min-trades", type=int, default=DEFAULTS["min_trades"])
     p.add_argument("--min-tickers", type=int, default=DEFAULTS["min_distinct_tickers"])
@@ -170,9 +196,9 @@ def main() -> None:
         "min_active_years": args.min_years,
     }
 
-    df = load_trades(Path(args.trades))
+    df = load_trades([Path(args.trades), Path(args.executive)])
     if df.empty:
-        raise SystemExit("Aucun trade 'buy' exploitable. Lance d'abord services/congress_fetch.py.")
+        raise SystemExit("Aucun trade 'buy' exploitable. Lance d'abord congress/congress_fetch.py.")
 
     board = build_leaderboard(df, params)
     Path(args.out).write_text(json.dumps(board, ensure_ascii=False, indent=2), encoding="utf-8")

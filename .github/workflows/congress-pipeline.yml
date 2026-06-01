@@ -38,6 +38,11 @@ jobs:
           QUIVERAPI: ${{ secrets.QUIVERAPI }}
         run: python congress/congress_fetch.py
 
+      - name: Etage 1ter - Fetch Executive trades (Trump, a part)
+        env:
+          QUIVERAPI: ${{ secrets.QUIVERAPI }}
+        run: python congress/fetch_executive.py
+
       - name: Cache des prix Twelve Data
         uses: actions/cache@v4
         with:
@@ -55,6 +60,14 @@ jobs:
           MAX_NEW_TICKERS: "3000"
         run: python congress/enrich_returns.py
 
+      - name: Etage 1bis-exec - Enrichir les rendements executifs
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+          TWELVE_DATA_RATE: "600"
+          MAX_NEW_TICKERS: "3000"
+          TRADES_FILE: congress/data/executive_trades.json
+        run: python congress/enrich_returns.py
+
       - name: Etage 2 - Rank politicians (regularite)
         run: python congress/politician_rank.py --top 20
 
@@ -62,7 +75,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add congress/data/congress_trades.json congress/data/politician_leaderboard.json
+          git add congress/data/congress_trades.json congress/data/executive_trades.json congress/data/politician_leaderboard.json
           if git diff --staged --quiet; then
             echo "Pas de changement de donnees."
             exit 0

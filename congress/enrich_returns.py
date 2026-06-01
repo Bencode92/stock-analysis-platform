@@ -28,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # pour importer le module frere `prices`
 from prices import RateLimit, make_client  # noqa: E402
 
-TRADES_PATH = HERE / "data" / "congress_trades.json"
+TRADES_PATH = Path(os.environ.get("TRADES_FILE", HERE / "data" / "congress_trades.json"))
 BENCHMARK = "SPY"
 HORIZON = int(os.environ.get("RETURN_HORIZON_DAYS", "252"))
 MAX_NEW_TICKERS = int(os.environ.get("MAX_NEW_TICKERS", "800"))
@@ -56,10 +56,16 @@ def _close_on_or_after(dates: list[str], closes: list[float], d: str):
 
 
 def main() -> None:
+    if not TRADES_PATH.exists():
+        print(f"{TRADES_PATH} absent : rien a enrichir.")
+        return
     payload = json.loads(TRADES_PATH.read_text(encoding="utf-8"))
     trades = payload["trades"]
     buys = [t for t in trades if t.get("transaction") == "buy"
             and t.get("ticker") and t.get("report_date")]
+    if not buys:
+        print(f"{TRADES_PATH.name} : aucun achat a enrichir.")
+        return
 
     client = make_client()
 

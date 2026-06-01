@@ -43,6 +43,9 @@
   .pill.Democrat{background:rgba(91,140,255,.15);color:var(--dem)}
   .pill.Republican{background:rgba(255,107,107,.15);color:var(--rep)}
   .pill.Independent{background:rgba(185,139,255,.15);color:var(--ind)}
+  .pill.exec{background:rgba(255,207,91,.15);color:var(--warn);font-weight:700}
+  tr.execrow td{background:rgba(255,207,91,.06)}
+  tr.execrow:hover td{background:rgba(255,207,91,.10)}
   .score{font-weight:700}
   .bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:4px;width:80px}
   .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent))}
@@ -93,7 +96,8 @@ const fmtNum = v => v==null ? "—" : Number(v).toLocaleString("fr-FR");
 function render(){
   const q = document.getElementById("q").value.trim().toLowerCase();
   const onlyEl = document.getElementById("onlyEligible").checked;
-  let rows = ROWS.filter(r => (!onlyEl || r.eligible) &&
+  // L'executif (Trump) reste toujours visible, meme avec le filtre "eligibles".
+  let rows = ROWS.filter(r => (!onlyEl || r.eligible || r.branch === "Executive") &&
         (!q || (r.representative||"").toLowerCase().includes(q)));
 
   rows.sort((a,b)=>{
@@ -120,9 +124,11 @@ function render(){
   html += "</tr></thead><tbody>";
   for(const r of rows){
     const med = r.median_annual_excess_return;
-    html += `<tr>
-      <td class="num rank">${r.rank}</td>
-      <td><span class="name">${esc(r.representative)}</span>${r.house?` <span style="color:var(--muted);font-size:12px">· ${r.house==="Senate"?"Sénat":"Chambre"}</span>`:""}</td>
+    const isExec = r.branch === "Executive";
+    const houseLbl = r.house==="Senate" ? "Sénat" : r.house==="Representatives" ? "Chambre" : "";
+    html += `<tr class="${isExec?"execrow":""}">
+      <td class="num rank">${isExec?"—":r.rank}</td>
+      <td><span class="name">${esc(r.representative)}</span>${isExec?` <span class="pill exec">Exécutif · hors-classement</span>`:(houseLbl?` <span style="color:var(--muted);font-size:12px">· ${houseLbl}</span>`:"")}</td>
       <td>${r.party?`<span class="pill ${r.party}">${partyFr(r.party)}</span>`:"—"}</td>
       <td class="num"><span class="score">${r.regularity_score?.toFixed(1) ?? "—"}</span>
           <div class="bar"><i style="width:${Math.round(100*(r.regularity_score||0)/maxScore)}%"></i></div></td>
