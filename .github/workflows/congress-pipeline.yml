@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historique complet pour pouvoir rebaser avant le push
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -46,7 +48,17 @@ jobs:
           git add congress/data/congress_trades.json congress/data/politician_leaderboard.json
           if git diff --staged --quiet; then
             echo "Pas de changement de donnees."
-          else
-            git commit -m "chore(congress): refresh trades + leaderboard [skip ci]"
-            git push
+            exit 0
           fi
+          git commit -m "chore(congress): refresh trades + leaderboard [skip ci]"
+          # main peut avoir avance pendant le run (bot Pages, autres workflows) :
+          # on rebase sur la derniere version puis on pousse, avec retry anti-course.
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && { echo "push OK (tentative $i)"; exit 0; }
+            echo "Course detectee, nouvelle tentative ($i)…"
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          echo "Echec du push apres 5 tentatives." >&2
+          exit 1
