@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-06-02T10:41:25+00:00",
+    "generated_at": "2026-06-02T11:24:20+00:00",
     "params": {
       "start": "2019-01-01",
       "top_k": 15,
@@ -9,10 +9,11 @@
       "max_weight": 0.15,
       "score_horizon_days": 365,
       "min_completed": 10,
+      "min_median": 5.0,
       "cost_bps": 10.0
     },
     "n_rebalances": 88,
-    "avg_holdings": 23.4,
+    "avg_holdings": 22.8,
     "period": [
       "2019-01-01",
       "2026-05-01"
@@ -21,12 +22,12 @@
   },
   "metrics": {
     "strategy": {
-      "total_return": 230.7,
-      "cagr": 17.7,
-      "vol": 26.2,
-      "sharpe": 0.68,
+      "total_return": 242.3,
+      "cagr": 18.3,
+      "vol": 26.3,
+      "sharpe": 0.69,
       "max_drawdown": -44.5,
-      "alpha_vs_qqq": -4.5
+      "alpha_vs_qqq": -3.9
     },
     "SPY": {
       "total_return": 188.1,
@@ -57,12 +58,12 @@
       "end": "2021-01-20",
       "metrics": {
         "strategy": {
-          "total_return": 82.9,
-          "cagr": 33.5,
-          "vol": 31.6,
-          "sharpe": 1.06,
+          "total_return": 93.7,
+          "cagr": 37.3,
+          "vol": 32.0,
+          "sharpe": 1.16,
           "max_drawdown": -30.3,
-          "alpha_vs_qqq": -8.6
+          "alpha_vs_qqq": -4.8
         },
         "SPY": {
           "total_return": 50.4,
@@ -86,7 +87,7 @@
       "end": "2025-01-20",
       "metrics": {
         "strategy": {
-          "total_return": 28.3,
+          "total_return": 28.2,
           "cagr": 6.4,
           "vol": 24.8,
           "sharpe": 0.26,
@@ -122,12 +123,12 @@
       "end": "2026-05-01",
       "metrics": {
         "strategy": {
-          "total_return": 40.9,
-          "cagr": 31.8,
-          "vol": 17.8,
-          "sharpe": 1.78,
+          "total_return": 37.8,
+          "cagr": 29.4,
+          "vol": 17.5,
+          "sharpe": 1.69,
           "max_drawdown": -9.6,
-          "alpha_vs_qqq": 8.2
+          "alpha_vs_qqq": 5.8
         },
         "SPY": {
           "total_return": 20.6,
@@ -153,6 +154,143 @@
       }
     }
   ],
+  "sweep": [
+    {
+      "top_k": 5,
+      "min_median": 0,
+      "cagr": 30.5,
+      "sharpe": 0.94,
+      "max_drawdown": -41.1,
+      "alpha_vs_qqq": 8.3,
+      "avg_holdings": 10.8
+    },
+    {
+      "top_k": 5,
+      "min_median": 5,
+      "cagr": 30.5,
+      "sharpe": 0.94,
+      "max_drawdown": -41.1,
+      "alpha_vs_qqq": 8.3,
+      "avg_holdings": 10.8
+    },
+    {
+      "top_k": 5,
+      "min_median": 10,
+      "cagr": 25.2,
+      "sharpe": 0.85,
+      "max_drawdown": -41.1,
+      "alpha_vs_qqq": 3.0,
+      "avg_holdings": 8.7
+    },
+    {
+      "top_k": 8,
+      "min_median": 0,
+      "cagr": 17.3,
+      "sharpe": 0.57,
+      "max_drawdown": -49.4,
+      "alpha_vs_qqq": -4.9,
+      "avg_holdings": 16.7
+    },
+    {
+      "top_k": 8,
+      "min_median": 5,
+      "cagr": 17.3,
+      "sharpe": 0.57,
+      "max_drawdown": -49.4,
+      "alpha_vs_qqq": -4.9,
+      "avg_holdings": 16.7
+    },
+    {
+      "top_k": 8,
+      "min_median": 10,
+      "cagr": 17.5,
+      "sharpe": 0.68,
+      "max_drawdown": -49.4,
+      "alpha_vs_qqq": -4.7,
+      "avg_holdings": 12.4
+    },
+    {
+      "top_k": 10,
+      "min_median": 0,
+      "cagr": 17.3,
+      "sharpe": 0.63,
+      "max_drawdown": -45.7,
+      "alpha_vs_qqq": -4.9,
+      "avg_holdings": 20.6
+    },
+    {
+      "top_k": 10,
+      "min_median": 5,
+      "cagr": 17.7,
+      "sharpe": 0.65,
+      "max_drawdown": -45.7,
+      "alpha_vs_qqq": -4.5,
+      "avg_holdings": 20.2
+    },
+    {
+      "top_k": 10,
+      "min_median": 10,
+      "cagr": 18.9,
+      "sharpe": 0.8,
+      "max_drawdown": -45.7,
+      "alpha_vs_qqq": -3.3,
+      "avg_holdings": 15.6
+    },
+    {
+      "top_k": 15,
+      "min_median": 0,
+      "cagr": 17.3,
+      "sharpe": 0.66,
+      "max_drawdown": -44.5,
+      "alpha_vs_qqq": -4.9,
+      "avg_holdings": 23.4
+    },
+    {
+      "top_k": 15,
+      "min_median": 5,
+      "cagr": 18.3,
+      "sharpe": 0.69,
+      "max_drawdown": -44.5,
+      "alpha_vs_qqq": -3.9,
+      "avg_holdings": 22.8
+    },
+    {
+      "top_k": 15,
+      "min_median": 10,
+      "cagr": 17.5,
+      "sharpe": 0.74,
+      "max_drawdown": -44.5,
+      "alpha_vs_qqq": -4.7,
+      "avg_holdings": 17.8
+    },
+    {
+      "top_k": 20,
+      "min_median": 0,
+      "cagr": 14.1,
+      "sharpe": 0.59,
+      "max_drawdown": -44.8,
+      "alpha_vs_qqq": -8.1,
+      "avg_holdings": 24.0
+    },
+    {
+      "top_k": 20,
+      "min_median": 5,
+      "cagr": 17.8,
+      "sharpe": 0.69,
+      "max_drawdown": -44.8,
+      "alpha_vs_qqq": -4.4,
+      "avg_holdings": 23.4
+    },
+    {
+      "top_k": 20,
+      "min_median": 10,
+      "cagr": 17.5,
+      "sharpe": 0.74,
+      "max_drawdown": -44.6,
+      "alpha_vs_qqq": -4.7,
+      "avg_holdings": 17.8
+    }
+  ],
   "equity": [
     {
       "date": "2019-01-01",
@@ -163,616 +301,616 @@
     },
     {
       "date": "2019-02-01",
-      "strategy": 1.0867,
+      "strategy": 1.0865,
       "SPY": 1.0795,
       "QQQ": 1.0812,
       "NANC": 1.0
     },
     {
       "date": "2019-03-01",
-      "strategy": 1.1449,
+      "strategy": 1.1414,
       "SPY": 1.1209,
       "QQQ": 1.126,
       "NANC": 1.0
     },
     {
       "date": "2019-04-01",
-      "strategy": 1.1702,
+      "strategy": 1.1745,
       "SPY": 1.1425,
       "QQQ": 1.1754,
       "NANC": 1.0
     },
     {
       "date": "2019-05-01",
-      "strategy": 1.186,
+      "strategy": 1.1693,
       "SPY": 1.1664,
       "QQQ": 1.2198,
       "NANC": 1.0
     },
     {
       "date": "2019-06-01",
-      "strategy": 1.1088,
+      "strategy": 1.1003,
       "SPY": 1.0975,
       "QQQ": 1.0984,
       "NANC": 1.0
     },
     {
       "date": "2019-07-01",
-      "strategy": 1.2095,
+      "strategy": 1.2038,
       "SPY": 1.1818,
       "QQQ": 1.222,
       "NANC": 1.0
     },
     {
       "date": "2019-08-01",
-      "strategy": 1.1969,
+      "strategy": 1.1957,
       "SPY": 1.1785,
       "QQQ": 1.2277,
       "NANC": 1.0
     },
     {
       "date": "2019-09-01",
-      "strategy": 1.1687,
+      "strategy": 1.1955,
       "SPY": 1.1621,
       "QQQ": 1.1987,
       "NANC": 1.0
     },
     {
       "date": "2019-10-01",
-      "strategy": 1.1593,
+      "strategy": 1.1923,
       "SPY": 1.1721,
       "QQQ": 1.2091,
       "NANC": 1.0
     },
     {
       "date": "2019-11-01",
-      "strategy": 1.2465,
+      "strategy": 1.3009,
       "SPY": 1.2237,
       "QQQ": 1.284,
       "NANC": 1.0
     },
     {
       "date": "2019-12-01",
-      "strategy": 1.229,
+      "strategy": 1.2765,
       "SPY": 1.2457,
       "QQQ": 1.3107,
       "NANC": 1.0
     },
     {
       "date": "2020-01-01",
-      "strategy": 1.5116,
+      "strategy": 1.5901,
       "SPY": 1.2985,
       "QQQ": 1.3957,
       "NANC": 1.0
     },
     {
       "date": "2020-02-01",
-      "strategy": 1.5458,
+      "strategy": 1.6432,
       "SPY": 1.2955,
       "QQQ": 1.4358,
       "NANC": 1.0
     },
     {
       "date": "2020-03-01",
-      "strategy": 1.4616,
+      "strategy": 1.5538,
       "SPY": 1.2355,
       "QQQ": 1.3973,
       "NANC": 1.0
     },
     {
       "date": "2020-04-01",
-      "strategy": 1.0775,
+      "strategy": 1.1455,
       "SPY": 0.9839,
       "QQQ": 1.1771,
       "NANC": 1.0
     },
     {
       "date": "2020-05-01",
-      "strategy": 1.2462,
+      "strategy": 1.3252,
       "SPY": 1.1303,
       "QQQ": 1.3736,
       "NANC": 1.0
     },
     {
       "date": "2020-06-01",
-      "strategy": 1.374,
+      "strategy": 1.4613,
       "SPY": 1.2213,
       "QQQ": 1.5112,
       "NANC": 1.0
     },
     {
       "date": "2020-07-01",
-      "strategy": 1.4413,
+      "strategy": 1.5319,
       "SPY": 1.2412,
       "QQQ": 1.6173,
       "NANC": 1.0
     },
     {
       "date": "2020-08-01",
-      "strategy": 1.5387,
+      "strategy": 1.6333,
       "SPY": 1.3142,
       "QQQ": 1.7393,
       "NANC": 1.0
     },
     {
       "date": "2020-09-01",
-      "strategy": 1.7024,
+      "strategy": 1.8071,
       "SPY": 1.4094,
       "QQQ": 1.9365,
       "NANC": 1.0
     },
     {
       "date": "2020-10-01",
-      "strategy": 1.6303,
+      "strategy": 1.7305,
       "SPY": 1.3472,
       "QQQ": 1.8224,
       "NANC": 1.0
     },
     {
       "date": "2020-11-01",
-      "strategy": 1.5312,
+      "strategy": 1.6236,
       "SPY": 1.3198,
       "QQQ": 1.7432,
       "NANC": 1.0
     },
     {
       "date": "2020-12-01",
-      "strategy": 1.6743,
+      "strategy": 1.7732,
       "SPY": 1.463,
       "QQQ": 1.9593,
       "NANC": 1.0
     },
     {
       "date": "2021-01-01",
-      "strategy": 1.7139,
+      "strategy": 1.8151,
       "SPY": 1.4741,
       "QQQ": 1.9971,
       "NANC": 1.0
     },
     {
       "date": "2021-02-01",
-      "strategy": 1.8286,
+      "strategy": 1.9366,
       "SPY": 1.5038,
       "QQQ": 2.0817,
       "NANC": 1.0
     },
     {
       "date": "2021-03-01",
-      "strategy": 1.8658,
+      "strategy": 1.976,
       "SPY": 1.5572,
       "QQQ": 2.0893,
       "NANC": 1.0
     },
     {
       "date": "2021-04-01",
-      "strategy": 1.8262,
+      "strategy": 1.9341,
       "SPY": 1.6013,
       "QQQ": 2.0956,
       "NANC": 1.0
     },
     {
       "date": "2021-05-01",
-      "strategy": 1.858,
+      "strategy": 1.9677,
       "SPY": 1.6716,
       "QQQ": 2.1706,
       "NANC": 1.0
     },
     {
       "date": "2021-06-01",
-      "strategy": 1.8517,
+      "strategy": 1.9611,
       "SPY": 1.6775,
       "QQQ": 2.1489,
       "NANC": 1.0
     },
     {
       "date": "2021-07-01",
-      "strategy": 1.9555,
+      "strategy": 2.071,
       "SPY": 1.7205,
       "QQQ": 2.2893,
       "NANC": 1.0
     },
     {
       "date": "2021-08-01",
-      "strategy": 1.9738,
+      "strategy": 2.0904,
       "SPY": 1.7491,
       "QQQ": 2.3541,
       "NANC": 1.0
     },
     {
       "date": "2021-09-01",
-      "strategy": 2.009,
+      "strategy": 2.1277,
       "SPY": 1.8059,
       "QQQ": 2.4573,
       "NANC": 1.0
     },
     {
       "date": "2021-10-01",
-      "strategy": 2.0269,
+      "strategy": 2.1466,
       "SPY": 1.7357,
       "QQQ": 2.3255,
       "NANC": 1.0
     },
     {
       "date": "2021-11-01",
-      "strategy": 2.1956,
+      "strategy": 2.3252,
       "SPY": 1.8388,
       "QQQ": 2.5015,
       "NANC": 1.0
     },
     {
       "date": "2021-12-01",
-      "strategy": 2.0538,
+      "strategy": 2.1751,
       "SPY": 1.8007,
       "QQQ": 2.4995,
       "NANC": 1.0
     },
     {
       "date": "2022-01-01",
-      "strategy": 2.0687,
+      "strategy": 2.1909,
       "SPY": 1.9095,
       "QQQ": 2.5935,
       "NANC": 1.0
     },
     {
       "date": "2022-02-01",
-      "strategy": 1.8504,
+      "strategy": 1.9596,
       "SPY": 1.8105,
       "QQQ": 2.36,
       "NANC": 1.0
     },
     {
       "date": "2022-03-01",
-      "strategy": 1.797,
+      "strategy": 1.9031,
       "SPY": 1.7187,
       "QQQ": 2.2049,
       "NANC": 1.0
     },
     {
       "date": "2022-04-01",
-      "strategy": 1.8002,
+      "strategy": 1.9065,
       "SPY": 1.8104,
       "QQQ": 2.3363,
       "NANC": 1.0
     },
     {
       "date": "2022-05-01",
-      "strategy": 1.5381,
+      "strategy": 1.629,
       "SPY": 1.6567,
       "QQQ": 2.0563,
       "NANC": 1.0
     },
     {
       "date": "2022-06-01",
-      "strategy": 1.4799,
+      "strategy": 1.5673,
       "SPY": 1.6372,
       "QQQ": 1.9757,
       "NANC": 1.0
     },
     {
       "date": "2022-07-01",
-      "strategy": 1.329,
+      "strategy": 1.4075,
       "SPY": 1.5239,
       "QQQ": 1.8216,
       "NANC": 1.0
     },
     {
       "date": "2022-08-01",
-      "strategy": 1.4994,
+      "strategy": 1.588,
       "SPY": 1.6419,
       "QQQ": 2.0356,
       "NANC": 1.0
     },
     {
       "date": "2022-09-01",
-      "strategy": 1.4132,
+      "strategy": 1.4957,
       "SPY": 1.5845,
       "QQQ": 1.9331,
       "NANC": 1.0
     },
     {
       "date": "2022-10-01",
-      "strategy": 1.2995,
+      "strategy": 1.3754,
       "SPY": 1.4654,
       "QQQ": 1.7661,
       "NANC": 1.0
     },
     {
       "date": "2022-11-01",
-      "strategy": 1.2374,
+      "strategy": 1.3097,
       "SPY": 1.537,
       "QQQ": 1.7763,
       "NANC": 1.0
     },
     {
       "date": "2022-12-01",
-      "strategy": 1.3251,
+      "strategy": 1.4025,
       "SPY": 1.6283,
       "QQQ": 1.8964,
       "NANC": 1.0
     },
     {
       "date": "2023-01-01",
-      "strategy": 1.2185,
+      "strategy": 1.2897,
       "SPY": 1.5222,
       "QQQ": 1.7076,
       "NANC": 1.0
     },
     {
       "date": "2023-02-01",
-      "strategy": 1.4995,
+      "strategy": 1.5871,
       "SPY": 1.642,
       "QQQ": 1.9429,
       "NANC": 1.0
     },
     {
       "date": "2023-03-01",
-      "strategy": 1.4537,
+      "strategy": 1.5387,
       "SPY": 1.5778,
       "QQQ": 1.8802,
       "NANC": 0.9407
     },
     {
       "date": "2023-04-01",
-      "strategy": 1.389,
+      "strategy": 1.4701,
       "SPY": 1.6426,
       "QQQ": 2.0671,
       "NANC": 0.9914
     },
     {
       "date": "2023-05-01",
-      "strategy": 1.3393,
+      "strategy": 1.4175,
       "SPY": 1.6608,
       "QQQ": 2.0803,
       "NANC": 0.9956
     },
     {
       "date": "2023-06-01",
-      "strategy": 1.4074,
+      "strategy": 1.4896,
       "SPY": 1.6861,
       "QQQ": 2.2728,
       "NANC": 1.0393
     },
     {
       "date": "2023-07-01",
-      "strategy": 1.6769,
+      "strategy": 1.7749,
       "SPY": 1.7739,
       "QQQ": 2.3908,
       "NANC": 1.0937
     },
     {
       "date": "2023-08-01",
-      "strategy": 1.7412,
+      "strategy": 1.8429,
       "SPY": 1.8246,
       "QQQ": 2.4715,
       "NANC": 1.1311
     },
     {
       "date": "2023-09-01",
-      "strategy": 1.6558,
+      "strategy": 1.7525,
       "SPY": 1.8035,
       "QQQ": 2.438,
       "NANC": 1.1187
     },
     {
       "date": "2023-10-01",
-      "strategy": 1.5893,
+      "strategy": 1.6821,
       "SPY": 1.708,
       "QQQ": 2.3325,
       "NANC": 1.0615
     },
     {
       "date": "2023-11-01",
-      "strategy": 1.651,
+      "strategy": 1.7474,
       "SPY": 1.6894,
       "QQQ": 2.3048,
       "NANC": 1.0524
     },
     {
       "date": "2023-12-01",
-      "strategy": 1.7647,
+      "strategy": 1.8678,
       "SPY": 1.8351,
       "QQQ": 2.5177,
       "NANC": 1.1616
     },
     {
       "date": "2024-01-01",
-      "strategy": 1.8525,
+      "strategy": 1.9607,
       "SPY": 1.8892,
       "QQQ": 2.5994,
       "NANC": 1.1845
     },
     {
       "date": "2024-02-01",
-      "strategy": 2.0584,
+      "strategy": 2.1787,
       "SPY": 1.9554,
       "QQQ": 2.7239,
       "NANC": 1.2442
     },
     {
       "date": "2024-03-01",
-      "strategy": 2.325,
+      "strategy": 2.4608,
       "SPY": 2.0499,
       "QQQ": 2.8771,
       "NANC": 1.3141
     },
     {
       "date": "2024-04-01",
-      "strategy": 2.3486,
+      "strategy": 2.4858,
       "SPY": 2.0871,
       "QQQ": 2.8729,
       "NANC": 1.353
     },
     {
       "date": "2024-05-01",
-      "strategy": 2.3324,
+      "strategy": 2.4686,
       "SPY": 2.0,
       "QQQ": 2.7216,
       "NANC": 1.2845
     },
     {
       "date": "2024-06-01",
-      "strategy": 2.4053,
+      "strategy": 2.5458,
       "SPY": 2.1097,
       "QQQ": 2.9257,
       "NANC": 1.3718
     },
     {
       "date": "2024-07-01",
-      "strategy": 2.5225,
+      "strategy": 2.6698,
       "SPY": 2.1798,
       "QQQ": 3.1116,
       "NANC": 1.4311
     },
     {
       "date": "2024-08-01",
-      "strategy": 2.4339,
+      "strategy": 2.576,
       "SPY": 2.1705,
       "QQQ": 2.9678,
       "NANC": 1.3836
     },
     {
       "date": "2024-09-01",
-      "strategy": 2.4042,
+      "strategy": 2.5446,
       "SPY": 2.2067,
       "QQQ": 2.9817,
       "NANC": 1.3977
     },
     {
       "date": "2024-10-01",
-      "strategy": 2.4828,
+      "strategy": 2.6278,
       "SPY": 2.2728,
       "QQQ": 3.1074,
       "NANC": 1.4472
     },
     {
       "date": "2024-11-01",
-      "strategy": 2.4064,
+      "strategy": 2.5469,
       "SPY": 2.2825,
       "QQQ": 3.1471,
       "NANC": 1.4821
     },
     {
       "date": "2024-12-01",
-      "strategy": 2.4041,
+      "strategy": 2.5445,
       "SPY": 2.4128,
       "QQQ": 3.327,
       "NANC": 1.5732
     },
     {
       "date": "2025-01-01",
-      "strategy": 2.3295,
+      "strategy": 2.4656,
       "SPY": 2.3369,
       "QQQ": 3.2944,
       "NANC": 1.5124
     },
     {
       "date": "2025-02-01",
-      "strategy": 2.3465,
+      "strategy": 2.4835,
       "SPY": 2.3894,
       "QQQ": 3.3452,
       "NANC": 1.5595
     },
     {
       "date": "2025-03-01",
-      "strategy": 2.1777,
+      "strategy": 2.3049,
       "SPY": 2.3334,
       "QQQ": 3.2093,
       "NANC": 1.4955
     },
     {
       "date": "2025-04-01",
-      "strategy": 2.121,
+      "strategy": 2.2447,
       "SPY": 2.2423,
       "QQQ": 3.052,
       "NANC": 1.4193
     },
     {
       "date": "2025-05-01",
-      "strategy": 2.157,
+      "strategy": 2.2875,
       "SPY": 2.2323,
       "QQQ": 3.11,
       "NANC": 1.4413
     },
     {
       "date": "2025-06-01",
-      "strategy": 2.3469,
+      "strategy": 2.4889,
       "SPY": 2.3691,
       "QQQ": 3.3782,
       "NANC": 1.5479
     },
     {
       "date": "2025-07-01",
-      "strategy": 2.483,
+      "strategy": 2.6315,
       "SPY": 2.4688,
       "QQQ": 3.5317,
       "NANC": 1.638
     },
     {
       "date": "2025-08-01",
-      "strategy": 2.5245,
+      "strategy": 2.6755,
       "SPY": 2.4851,
       "QQQ": 3.5762,
       "NANC": 1.6345
     },
     {
       "date": "2025-09-01",
-      "strategy": 2.6142,
+      "strategy": 2.7286,
       "SPY": 2.5592,
       "QQQ": 3.652,
       "NANC": 1.6961
     },
     {
       "date": "2025-10-01",
-      "strategy": 2.7768,
+      "strategy": 2.9038,
       "SPY": 2.6719,
       "QQQ": 3.895,
       "NANC": 1.7656
     },
     {
       "date": "2025-11-01",
-      "strategy": 2.8615,
+      "strategy": 2.9876,
       "SPY": 2.7314,
       "QQQ": 4.0811,
       "NANC": 1.8257
     },
     {
       "date": "2025-12-01",
-      "strategy": 2.7954,
+      "strategy": 2.9258,
       "SPY": 2.7191,
       "QQQ": 3.9848,
       "NANC": 1.7974
     },
     {
       "date": "2026-01-01",
-      "strategy": 2.9227,
+      "strategy": 3.0502,
       "SPY": 2.7307,
       "QQQ": 3.9587,
       "NANC": 1.7907
     },
     {
       "date": "2026-02-01",
-      "strategy": 3.0636,
+      "strategy": 3.1973,
       "SPY": 2.7796,
       "QQQ": 4.0427,
       "NANC": 1.8068
     },
     {
       "date": "2026-03-01",
-      "strategy": 3.0266,
+      "strategy": 3.1724,
       "SPY": 2.7435,
       "QQQ": 3.9262,
       "NANC": 1.7581
     },
     {
       "date": "2026-04-01",
-      "strategy": 2.9108,
+      "strategy": 3.0328,
       "SPY": 2.6191,
       "QQQ": 3.7727,
       "NANC": 1.6722
     },
     {
       "date": "2026-05-01",
-      "strategy": 3.3067,
+      "strategy": 3.4228,
       "SPY": 2.8805,
       "QQQ": 4.3527,
       "NANC": 1.8547
