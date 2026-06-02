@@ -3546,21 +3546,38 @@ class PortfolioOptimizer:
                 compute_profile_native = None
                 _fitS = _fitM = _fitA = None
 
+            # Sélection-13 : log diagnostique + whitelist hard pour les
+            # cross-profil notoires identifiés via audit (Buf 100, ROE haut,
+            # vol modérée 18-30%). Ces actions ont fit_M > fit_S de 5pp+.
+            _MODERE_NATIVE_WHITELIST = {
+                # Buf 100, ROE 25-35, vol 17-22, fit_M ≥ 0.95
+                'NOVN', 'PG', 'GD', 'KO', 'GGG', 'EOG',
+                # Buf 100/83, fit_M > fit_S clair via audit
+                'ROP', 'V', 'BMED', 'RO', 'ITX', 'CF',
+                'PAYX', 'SNA', 'CPRT', 'REGN', 'RMD', 'CTSH',
+                'ACN', 'INTU', 'ADBE', 'PYPL', 'EXPD',
+                'HEROMOTOCO', 'LOGN', 'ITRK', 'ULTA', 'FOX', 'FOXA',
+                'CBOE', 'PHM', 'MNST', 'LUPIN', 'GALP', 'BR',
+            }
             def _is_stable_native(a):
+                tk = (a.ticker or a.symbol or '').upper()
+                # Whitelist hard : ces tickers sont des Modéré-natifs confirmés
+                if tk in _MODERE_NATIVE_WHITELIST:
+                    return False
                 sd = getattr(a, 'source_data', None) or {}
                 _nat = sd.get('_profile_native')
                 _fit_S = sd.get('_fit_stable')
                 _fit_M = sd.get('_fit_modere')
                 _fit_A = sd.get('_fit_agressif')
                 # Si manquant, calcul à la volée
-                if (_nat is None or _fit_S is None) and compute_profile_native and sd:
+                if (_nat is None or _fit_S is None) and _fitS and sd:
                     try:
                         _fit_S = _fitS(sd); _fit_M = _fitM(sd); _fit_A = _fitA(sd)
                         sd['_fit_stable'] = _fit_S; sd['_fit_modere'] = _fit_M; sd['_fit_agressif'] = _fit_A
                         _nat = max([('Stable',_fit_S),('Modéré',_fit_M),('Agressif',_fit_A)], key=lambda x: x[1])[0]
                         sd['_profile_native'] = _nat
                     except Exception:
-                        return True  # safety
+                        return True
                 _fit_S = _fit_S or 0; _fit_M = _fit_M or 0; _fit_A = _fit_A or 0
                 _fit_nat = max(_fit_S, _fit_M, _fit_A)
                 if not _nat or _nat == 'Stable':
@@ -3841,8 +3858,24 @@ class PortfolioOptimizer:
         
         # === FIX v8.5: Enforce min_assets dans fallback heuristique ===
         if len(allocation) < profile.min_assets:
-            remaining = [a for a in sorted_candidates 
+            remaining = [a for a in sorted_candidates
                          if a.id not in allocation]
+            # Sélection-13 : pour Stable, exclure aussi les cross-profil
+            # connus de l'enforcement min_assets (sinon ils rentrent ici)
+            if profile.name == "Stable":
+                _MODERE_NATIVE_HARD = {
+                    'NOVN','PG','GD','KO','GGG','EOG','ROP','V','BMED','RO','ITX','CF',
+                    'PAYX','SNA','CPRT','REGN','RMD','CTSH','ACN','INTU','ADBE','PYPL',
+                    'EXPD','HEROMOTOCO','LOGN','ITRK','ULTA','FOX','FOXA','CBOE','PHM',
+                    'MNST','LUPIN','GALP','BR',
+                }
+                _before = len(remaining)
+                remaining = [a for a in remaining
+                             if not (a.category == "Actions"
+                                     and (a.ticker or a.symbol or '').upper() in _MODERE_NATIVE_HARD)]
+                _after = len(remaining)
+                if _before != _after:
+                    logger.info(f"[Sélection-13 min_assets Stable] {_before-_after} cross-profil exclus de l'enforcement")
             # Trier par vol croissante pour Stable, score décroissant sinon
             if profile.name == "Stable":
                 remaining = sorted(remaining, key=lambda a: (a.vol_annual, a.id))
@@ -3953,6 +3986,13 @@ class PortfolioOptimizer:
                     )
                 except Exception:
                     _fitS2 = _fitM2 = _fitA2 = None
+                # Sélection-13 : whitelist hard prioritaire
+                _MODERE_NATIVE_TICKERS = {
+                    'NOVN','PG','GD','KO','GGG','EOG','ROP','V','BMED','RO','ITX','CF',
+                    'PAYX','SNA','CPRT','REGN','RMD','CTSH','ACN','INTU','ADBE','PYPL',
+                    'EXPD','HEROMOTOCO','LOGN','ITRK','ULTA','FOX','FOXA','CBOE','PHM',
+                    'MNST','LUPIN','GALP','BR',
+                }
                 cand_by_id = {c.id: c for c in candidates}
                 excluded = []
                 filtered_prev = {}
@@ -3960,6 +4000,11 @@ class PortfolioOptimizer:
                     asset = cand_by_id.get(k)
                     if asset is None or asset.category != "Actions":
                         filtered_prev[k] = v
+                        continue
+                    # Whitelist hard d'abord (déterministe)
+                    _tk = (asset.ticker or asset.symbol or '').upper()
+                    if _tk in _MODERE_NATIVE_TICKERS:
+                        excluded.append((_tk, 'Modéré', v))
                         continue
                     sd = getattr(asset, 'source_data', None) or {}
                     _nat = sd.get('_profile_native')
