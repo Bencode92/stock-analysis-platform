@@ -38,6 +38,8 @@
        padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
   .tab:hover{color:var(--txt)}
   .tab.active{color:var(--txt);border-bottom-color:var(--accent)}
+  #alert-badge:not(:empty){display:inline-block;margin-left:6px;background:var(--accent);color:#06231a;
+    border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px;vertical-align:middle}
   .view{display:none}
   .view.active{display:block;animation:fade .2s ease}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
@@ -98,6 +100,7 @@
     <button class="tab active" data-tab="rank">🏆 Classement</button>
     <button class="tab" data-tab="pf">💼 Portefeuille</button>
     <button class="tab" data-tab="bt">📈 Backtest</button>
+    <button class="tab" data-tab="alerts">🔔 Alertes<span id="alert-badge"></span></button>
   </div>
 
   <!-- CLASSEMENT -->
@@ -121,6 +124,12 @@
   <section class="view" id="view-bt">
     <p class="meta-line" id="btmeta"></p>
     <div class="card"><div id="backtest"><div class="empty">Chargement…</div></div></div>
+  </section>
+
+  <!-- ALERTES -->
+  <section class="view" id="view-alerts">
+    <p class="meta-line" id="almeta"></p>
+    <div class="card"><div id="alerts"><div class="empty">Chargement…</div></div></div>
   </section>
 
   <footer>
@@ -286,6 +295,31 @@ function renderBT(){
   document.getElementById("backtest").innerHTML=h;
 }
 
+// ---- Alertes ----
+let AL={};
+function daysAgo(d, ref){return Math.round((new Date(ref)-new Date(d))/86400000);}
+function renderAlerts(){
+  const a=AL.alerts||[], m=AL.meta||{};
+  document.getElementById("almeta").innerHTML=
+    `Nouveaux achats des performers suivis (médiane ≥ ${m.params?.min_median}%) · ${m.followed||0} suivis · maj ${m.as_of||"—"}`;
+  if(!a.length){ document.getElementById("alerts").innerHTML=`<div class="empty">Aucune alerte pour l'instant. Elles apparaissent quand un performer suivi achète (run quotidien).</div>`;
+    document.getElementById("alert-badge").textContent=""; return; }
+  // badge = nb d'alertes des 7 derniers jours
+  const recent=a.filter(x=>daysAgo(x.report_date,m.as_of)<=7).length;
+  document.getElementById("alert-badge").textContent=recent?recent:"";
+  let h=`<table><thead><tr><th>Déclaré</th><th>Performer</th><th>Achat</th><th class="num">Montant</th><th class="num">Médiane</th></tr></thead><tbody>`;
+  for(const x of a){
+    const fresh=daysAgo(x.report_date,m.as_of)<=7;
+    h+=`<tr>
+      <td>${x.report_date}${fresh?' <span class="pill exec" style="background:rgba(52,216,164,.15);color:var(--accent)">NEW</span>':''}</td>
+      <td><span class="name">${esc(x.representative)}</span>${x.party?` <span class="pill ${x.party}">${partyFr(x.party)}</span>`:""}</td>
+      <td><span class="name" style="color:var(--accent2)">${esc(x.ticker)}</span> <span style="color:var(--accent)">▲ achat</span></td>
+      <td class="num">${x.amount_usd?"~"+Math.round(x.amount_usd/1000)+"k$":"—"}</td>
+      <td class="num ${cls(x.median_excess)}">${fmtPct(x.median_excess)}</td></tr>`;
+  }
+  document.getElementById("alerts").innerHTML=h+"</tbody></table>";
+}
+
 // ---- Load ----
 function load(url, set, render, emptyEl, emptyHtml){
   fetch(url,{cache:"no-store"}).then(r=>r.ok?r.text():Promise.reject(r.status))
@@ -297,6 +331,7 @@ function load(url, set, render, emptyEl, emptyHtml){
 load("data/politician_leaderboard.json", d=>LB=d, renderRank, "content", emptyRank());
 load("data/congress_portfolio.json", d=>PF=d, renderPF, "portfolio", `<div class="empty">Portefeuille pas encore généré.</div>`);
 load("data/congress_backtest.json", d=>BT=d, renderBT, "backtest", `<div class="empty">Backtest pas encore généré.</div>`);
+load("data/alerts.json", d=>AL=d, renderAlerts, "alerts", `<div class="empty">Aucune alerte pour l'instant.</div>`);
 document.getElementById("q").addEventListener("input", renderRank);
 document.getElementById("onlyEligible").addEventListener("change", renderRank);
 </script>
