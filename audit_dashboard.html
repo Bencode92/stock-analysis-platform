@@ -943,33 +943,112 @@ function renderCategories() {
 // EXPORT POUR EXPERT (Markdown complet)
 // =============================================================================
 function generateExportMarkdown() {
-  const lines = [];
+  const L = [];
+  const push = (s) => L.push(s);
   const now = new Date().toISOString().split('T')[0];
-  lines.push(`# 📊 Audit portefeuille — ${now}`);
-  lines.push('');
-  lines.push(`Généré par audit_dashboard.html — analyse data-driven du pipeline de sélection Sélection-1 à 5.`);
-  lines.push('');
+  const fmt2 = (n) => isNaN(n)||n===null||n===undefined ? '' : Number(n).toFixed(2);
+  const fmt0 = (n) => isNaN(n)||n===null||n===undefined ? '' : Number(n).toFixed(0);
+  const fmt1 = (n) => isNaN(n)||n===null||n===undefined ? '' : Number(n).toFixed(1);
 
-  // === 1. Configuration MI ===
-  lines.push('## 🔧 Configuration Market Intelligence');
+  push(`# 📊 Audit Portefeuille — Rapport Expert — ${now}`);
+  push('');
+  push(`> Généré par \`audit_dashboard.html\` — analyse data-driven complète du pipeline.`);
+  push(`> Univers : ${STATE.stocks.length} actions, ${STATE.bonds.length} bonds, ${STATE.etfs.length} ETFs.`);
+  push('');
+  push('---');
+  push('');
+
+  // ===== TABLE DES MATIÈRES =====
+  push('## Table des matières');
+  push('1. Méthodologie du pipeline (Sélection-1 à 14)');
+  push('2. Configuration Market Intelligence active');
+  push('3. Composition par profil (cartes d\'identité complètes)');
+  push('4. Métriques agrégées par profil');
+  push('5. Diagnostic cohérence native');
+  push('6. Anomalies cross-profil');
+  push('7. Top natifs absents');
+  push('8. Tops fondamentaux par catégorie (Buffett, ROE, Quality, etc.)');
+  push('9. Univers complet Top 30 actions (toutes catégories)');
+  push('10. Obligations sélectionnées + univers');
+  push('11. ETFs sélectionnés + univers');
+  push('12. Questions méthodologiques à l\'expert');
+  push('13. Fichiers à fournir pour reproduire');
+  push('');
+  push('---');
+  push('');
+
+  // ===== 1. MÉTHODOLOGIE =====
+  push('## 1. 🔧 Méthodologie du pipeline');
+  push('');
+  push('Le pipeline `generate_portfolios_v4.py` construit 3 portefeuilles (Agressif, Modéré, Stable) en 3 étages :');
+  push('');
+  push('**Étage 1 — Sélection des candidats** (`preset_meta.py::select_equities_for_profile_v2`)');
+  push('- Univers complet → filtre `filter_equities` (vol 8-70%, drawdown ≤ 50%)');
+  push('- Gate Buffett+Quality (AND pour Modéré/Stable, OR pour Agressif)');
+  push('- Hard filters par profil (vol band, ROE min, D/E max, perf_3y min, coverage)');
+  push('- Annotation `_profile_native` via `profile_assignment.py` (fit_score Stable/Modéré/Agressif)');
+  push('- Boost ×1.40 si profil natif, pénalité ×0.70 sinon, hard-exclude si fit > 0.85 et profil ≠ native');
+  push('- Sortie : pool de ~25-50 actions classées par `_profile_score`');
+  push('');
+  push('**Étage 2 — Optimisation SLSQP** (`optimizer.py::optimize`)');
+  push('- Markowitz : maximize Sharpe sous contraintes vol cible, bonds min, sector caps, region caps');
+  push('- Bonus `fit_native × 6.0` dans l\'objectif (Sélection-6)');
+  push('- Stable utilise un FALLBACK heuristique (contraintes mathématiquement incompatibles avec Markowitz)');
+  push('- Sortie : 5-20 positions avec poids %');
+  push('');
+  push('**Étage 3 — Post-process** (enforce caps, dedup, cluster correlation, turnover)');
+  push('- Enforce sector_caps, region_caps, max_single_position');
+  push('- Dedup ETF par exposure_group, dual-listings (GOOG/GOOGL, BRK.A/B)');
+  push('- Blend turnover vs prev allocation (max 15% Stable, 25% Modéré, 30% Agressif)');
+  push('');
+  push('### Phases Sélection-1 à 14 — résumé');
+  push('');
+  push('| Phase | Levier | Effet |');
+  push('|---|---|---|');
+  push('| S-1 | Modéré vol band 12-45 + liquidité + cov ≥ 70 | Resserre Modéré |');
+  push('| S-2 | buffett_score: 0.15 absolu + perf_3y_min: -10% | Roche entre, MC sort |');
+  push('| S-3 | Gate AND strict + ETF dedup + barbell bonds Modéré | PEG out (Buf 50, qual 65) |');
+  push('| S-4 | `profile_assignment.py` : fit_S/M/A + _profile_native | Routing AAPL→Modéré au lieu Agressif |');
+  push('| S-5 | Bonds macro tilt (avoid_securitized, prefer_tips) + native boost ×1.40 | TIPS forcé Stable, plus de CLO en stagflation |');
+  push('| S-6 | Bonus fit_native ×6.0 dans objective SLSQP | SLSQP force natifs |');
+  push('| S-7 | perf_3y_min Modéré -10→-40% + bump boost | ACN/INTU/ADBE débloqués (Tech US comeback) |');
+  push('| S-8 | Routing exclusif si gap fit > 5pp | NOVN/GD/KO exclus pool Stable |');
+  push('| S-9 | Filtre `_is_stable_native` fallback Stable | Sécurité 2e couche |');
+  push('| S-10 | Filtre prev_weights cross-profil turnover blend | Sécurité 3e couche |');
+  push('| S-11 | Calcul fit à la volée si source_data manquant | Robustesse |');
+  push('| S-12 | Logs `[TRACE-Stable @<stage>]` | Diagnostic CI |');
+  push('| S-13 | Whitelist hard Modéré-natifs (35 tickers) | Définitif : exclus Stable |');
+  push('| S-14 | Retire `quality_premium` d\'Agressif allowed_presets | Vraie séparation Agressif/Modéré |');
+  push('');
+
+  // ===== 2. CONFIG MI =====
+  push('## 2. 🌐 Configuration Market Intelligence active');
+  push('');
   const bs = STATE.bondStrategy;
   if (bs) {
-    lines.push('Bond strategy actif :');
-    lines.push(`- prefer_tips: ${bs.prefer_tips}`);
-    lines.push(`- prefer_treasury: ${bs.prefer_treasury}`);
-    lines.push(`- avoid_hy: ${bs.avoid_hy}`);
-    lines.push(`- avoid_securitized: ${bs.avoid_securitized}`);
-    lines.push(`- avoid_em_bonds: ${bs.avoid_em_bonds}`);
-    lines.push(`- max_duration_stable: ${bs.max_duration_stable}y`);
-    lines.push(`- max_duration_moderate: ${bs.max_duration_moderate}y`);
+    push('**Bond strategy (régime stagflation/neutral)**');
+    push('| Paramètre | Valeur |');
+    push('|---|---|');
+    push(`| prefer_tips | ${bs.prefer_tips} |`);
+    push(`| prefer_treasury | ${bs.prefer_treasury} |`);
+    push(`| avoid_hy | ${bs.avoid_hy} |`);
+    push(`| avoid_securitized | ${bs.avoid_securitized} |`);
+    push(`| avoid_em_bonds | ${bs.avoid_em_bonds} |`);
+    push(`| max_duration_stable | ${bs.max_duration_stable}y |`);
+    push(`| max_duration_moderate | ${bs.max_duration_moderate}y |`);
   } else {
-    lines.push('_Bond strategy non disponible dans le portefeuille chargé — utilisation des defaults stagflation_');
+    push('_Bond strategy non embarquée dans le portefeuille — defaults stagflation appliqués_');
   }
-  lines.push('');
+  push('');
+  push('**RADAR / Macro tilts** (depuis `data/market_context.json` — à charger côté pipeline)');
+  push('- Avoided sectors : `financials` (PYPL/TROW exclus)');
+  push('- Avoided regions : `india` (HEROMOTOCO/INFY exclus)');
+  push('- Favored sectors : `information-technology, energy, materials, industrials`');
+  push('');
 
-  // === 2. Snapshot portefeuille ===
-  lines.push('## 📊 Portefeuille actuel');
-  lines.push('');
+  // ===== 3. CARTES IDENTITÉ PAR PROFIL =====
+  push('## 3. 🎯 Composition portefeuille par profil (cartes d\'identité)');
+  push('');
   let totalStocks=0, crossProfile=0, okNative=0;
   for (const prof of ['Agressif','Modéré','Stable']) {
     const positions = STATE.portfolioByProfile[prof] || [];
@@ -977,65 +1056,121 @@ function generateExportMarkdown() {
     const rawProf = (STATE.portfolio.portfolios && STATE.portfolio.portfolios[prof]) || STATE.portfolio[prof] || {};
     const com = rawProf.comment || rawProf.Commentaire || '';
     const volM = com.match(/de (\d+\.\d+)%/);
+    const linesM = com.match(/(\d+) lignes/);
     const vol = volM ? volM[1]+'%' : '?';
-    lines.push(`### ${prof} (vol ${vol})`);
-    lines.push('');
-    lines.push('| Tk | Nom | Cat | Buf | Vol | Div | Match | Poids |');
-    lines.push('|---|---|---|---|---|---|---|---|');
+    const nLines = linesM ? linesM[1] : positions.length;
+    push(`### ${prof} — ${nLines} positions, vol ${vol}`);
+    push('');
+    push('| Ticker | Nom | Cat | Pays | Secteur | Industry | Buf | Qual | Vol3y | ROE | D/E | Div% | Perf1Y | Perf3Y | fit_S | fit_M | fit_A | Natif | Match | Poids |');
+    push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
     for (const p of positions.sort((a,b)=>b.weight-a.weight)) {
       const tk = p.ticker || '—';
-      const stock = tk ? STATE.byTicker[tk] : null;
+      const s = tk ? STATE.byTicker[tk] : null;
       let match = '—';
-      if (stock) {
+      if (s) {
         totalStocks++;
-        const native = stock._profile_native;
+        const native = s._profile_native;
         if (native === prof) { match = '✓ natif'; okNative++; }
         else { match = `→ ${native}`; crossProfile++; }
       }
-      const buf = stock ? num(stock.buffett_score).toFixed(0) : '-';
-      const vol2 = stock ? num(stock.volatility_3y||stock.vol_3y_pct).toFixed(0) : '-';
-      const div = stock ? num(stock.dividend_yield).toFixed(1) : '-';
-      lines.push(`| ${tk} | ${(p.name||'').slice(0,30)} | ${p.category||'?'} | ${buf} | ${vol2} | ${div} | ${match} | ${fmt(p.weight,2)}% |`);
+      const row = s ? [
+        fmt0(s.buffett_score), fmt0(s.quality_score), fmt1(s.volatility_3y||s.vol_3y_pct),
+        fmt0(s.roe), fmt2(s.de_ratio), fmt2(s.dividend_yield),
+        fmt1(s.perf_1y), fmt1(s.perf_3y),
+        fmt2(s._fit_S), fmt2(s._fit_M), fmt2(s._fit_A),
+        s._profile_native || '?', match
+      ] : ['-','-','-','-','-','-','-','-','-','-','-','-', match];
+      const country = s ? (s.country||'') : '';
+      const sector = s ? (s.sector||'').slice(0,18) : '';
+      const industry = s ? (s.industry||'').slice(0,22) : '';
+      push(`| ${tk} | ${(p.name||'').slice(0,28)} | ${p.category||'?'} | ${country} | ${sector} | ${industry} | ${row.join(' | ')} | ${fmt2(p.weight)}% |`);
     }
-    lines.push('');
+    push('');
   }
 
-  // === 3. Cohérence globale ===
-  lines.push('## 🎯 Cohérence native');
-  lines.push(`- Actions identifiées : ${totalStocks}`);
-  lines.push(`- ✓ Profil natif : ${okNative} (${totalStocks?Math.round(okNative*100/totalStocks):0}%)`);
-  lines.push(`- ✗ Cross-profil : ${crossProfile}`);
-  lines.push('');
+  // ===== 4. MÉTRIQUES AGRÉGÉES PAR PROFIL =====
+  push('## 4. 📊 Métriques agrégées par profil');
+  push('');
+  for (const prof of ['Agressif','Modéré','Stable']) {
+    const positions = STATE.portfolioByProfile[prof] || [];
+    if (!positions.length) continue;
+    const cats = { Actions: 0, ETF: 0, Obligations: 0, Crypto: 0 };
+    const regs = {}, secs = {}, inds = {};
+    let wBuf=0, wRoe=0, wDiv=0, wVol=0, wTotal=0;
+    for (const p of positions) {
+      const cat = p.category || 'Other';
+      cats[cat] = (cats[cat]||0) + p.weight;
+      const s = p.ticker ? STATE.byTicker[p.ticker] : null;
+      if (s) {
+        const w = p.weight;
+        const buf = num(s.buffett_score), roe = num(s.roe), div = num(s.dividend_yield), vol = num(s.volatility_3y||s.vol_3y_pct);
+        if (buf) { wBuf += buf * w; wTotal += w; }
+        if (roe) wRoe += roe * w;
+        if (div) wDiv += div * w;
+        if (vol) wVol += vol * w;
+        regs[s.country||'?'] = (regs[s.country||'?']||0) + w;
+        secs[s.sector||'?'] = (secs[s.sector||'?']||0) + w;
+        inds[s.industry||'?'] = (inds[s.industry||'?']||0) + w;
+      }
+    }
+    push(`### ${prof}`);
+    push('');
+    push('**Répartition par catégorie :**');
+    for (const [c, w] of Object.entries(cats).sort((a,b)=>b[1]-a[1])) if (w>0) push(`- ${c} : ${w.toFixed(1)}%`);
+    push('');
+    if (wTotal) {
+      push('**Métriques pondérées (actions) :**');
+      push(`- Buffett moyen pondéré : ${(wBuf/wTotal).toFixed(1)}`);
+      push(`- ROE moyen pondéré : ${(wRoe/wTotal).toFixed(1)}%`);
+      push(`- Dividend yield pondéré : ${(wDiv/wTotal).toFixed(2)}%`);
+      push(`- Volatilité moyenne pondérée : ${(wVol/wTotal).toFixed(1)}%`);
+      push('');
+    }
+    push('**Top 5 pays (actions) :**');
+    for (const [r, w] of Object.entries(regs).sort((a,b)=>b[1]-a[1]).slice(0,5)) push(`- ${r} : ${w.toFixed(1)}%`);
+    push('');
+    push('**Top 5 secteurs (actions) :**');
+    for (const [c, w] of Object.entries(secs).sort((a,b)=>b[1]-a[1]).slice(0,5)) push(`- ${c} : ${w.toFixed(1)}%`);
+    push('');
+    push('**Top 5 industries (actions) :**');
+    for (const [i, w] of Object.entries(inds).sort((a,b)=>b[1]-a[1]).slice(0,5)) push(`- ${i} : ${w.toFixed(1)}%`);
+    push('');
+  }
 
-  // === 4. Anomalies par profil ===
-  lines.push('## ⚠️ Anomalies détectées');
+  // ===== 5. COHÉRENCE =====
+  push('## 5. 🎯 Diagnostic cohérence native');
+  push(`- Actions identifiées : ${totalStocks}`);
+  push(`- ✓ Profil natif : ${okNative} (${totalStocks?Math.round(okNative*100/totalStocks):0}%)`);
+  push(`- ✗ Cross-profil : ${crossProfile}`);
+  push('');
+
+  // ===== 6. ANOMALIES =====
+  push('## 6. ⚠️ Anomalies cross-profil détectées');
   for (const prof of ['Agressif','Modéré','Stable']) {
     const positions = STATE.portfolioByProfile[prof] || [];
     const anomalies = [];
     for (const pos of positions) {
-      const stock = pos.ticker ? STATE.byTicker[pos.ticker] : null;
-      if (!stock) continue;
-      const native = stock._profile_native;
-      if (native !== prof) {
-        const fitCurrent = stock[PROFILE_CFG[prof].fitKey] || 0;
-        const fitNative = stock[PROFILE_CFG[native].fitKey] || 0;
-        anomalies.push({ ticker: pos.ticker, name: stock.name, weight: pos.weight, native, fitCurrent, fitNative });
-      }
+      const s = pos.ticker ? STATE.byTicker[pos.ticker] : null;
+      if (!s || s._profile_native === prof) continue;
+      const native = s._profile_native;
+      const fitCurrent = s[PROFILE_CFG[prof].fitKey] || 0;
+      const fitNative = s[PROFILE_CFG[native].fitKey] || 0;
+      anomalies.push({ ticker: pos.ticker, name: s.name, weight: pos.weight, native, fitCurrent, fitNative, buf: num(s.buffett_score), vol: num(s.volatility_3y||s.vol_3y_pct) });
     }
     if (anomalies.length) {
-      lines.push(`### ${prof} — ${anomalies.length} anomalies`);
-      lines.push('| Tk | Nom | Poids | Natif | fit ici | fit natif | Δ |');
-      lines.push('|---|---|---|---|---|---|---|');
+      push(`### ${prof} — ${anomalies.length} anomalies`);
+      push('| Tk | Nom | Poids | Buf | Vol | Natif | fit ici | fit natif | Δ |');
+      push('|---|---|---|---|---|---|---|---|---|');
       anomalies.sort((a,b)=>(b.fitNative-b.fitCurrent)-(a.fitNative-a.fitCurrent));
       for (const a of anomalies) {
-        lines.push(`| ${a.ticker} | ${(a.name||'').slice(0,30)} | ${fmt(a.weight,2)}% | ${a.native} | ${a.fitCurrent.toFixed(2)} | ${a.fitNative.toFixed(2)} | ${(a.fitNative-a.fitCurrent).toFixed(2)} |`);
+        push(`| ${a.ticker} | ${(a.name||'').slice(0,28)} | ${fmt2(a.weight)}% | ${fmt0(a.buf)} | ${fmt1(a.vol)} | ${a.native} | ${fmt2(a.fitCurrent)} | ${fmt2(a.fitNative)} | ${(a.fitNative-a.fitCurrent).toFixed(2)} |`);
       }
-      lines.push('');
+      push('');
     }
   }
 
-  // === 5. Top natifs absents ===
-  lines.push('## 🚫 Top natifs absents du portefeuille global');
+  // ===== 7. TOP NATIFS ABSENTS =====
+  push('## 7. 🚫 Top natifs absents du portefeuille global');
   const allTk = new Set();
   for (const positions of Object.values(STATE.portfolioByProfile)) for (const p of positions) if (p.ticker) allTk.add(p.ticker);
   for (const prof of ['Agressif','Modéré','Stable']) {
@@ -1052,56 +1187,195 @@ function generateExportMarkdown() {
         return (s[cfg.fitKey] || 0) >= 0.85;
       })
       .sort((a,b) => (b[cfg.fitKey]||0) - (a[cfg.fitKey]||0))
-      .slice(0, 10);
+      .slice(0, 15);
     if (absents.length) {
-      lines.push(`### ${prof} — ${absents.length} top natifs jamais sélectionnés`);
-      lines.push('| Tk | Nom | Pays | Buf | ROE | Vol | Div | fit |');
-      lines.push('|---|---|---|---|---|---|---|---|');
+      push(`### ${prof} — ${absents.length} top natifs jamais sélectionnés`);
+      push('| Tk | Nom | Pays | Secteur | Buf | Qual | ROE | Vol | Div | Perf3Y | fit |');
+      push('|---|---|---|---|---|---|---|---|---|---|---|');
       for (const s of absents) {
-        lines.push(`| ${s.ticker||s.symbol||''} | ${(s.name||'').slice(0,30)} | ${s.country||''} | ${num(s.buffett_score).toFixed(0)} | ${num(s.roe).toFixed(0)} | ${num(s.volatility_3y||s.vol_3y_pct).toFixed(0)} | ${num(s.dividend_yield).toFixed(1)} | ${(s[cfg.fitKey]||0).toFixed(2)} |`);
+        push(`| ${s.ticker||s.symbol||''} | ${(s.name||'').slice(0,28)} | ${s.country||''} | ${(s.sector||'').slice(0,18)} | ${fmt0(num(s.buffett_score))} | ${fmt0(num(s.quality_score))} | ${fmt0(num(s.roe))} | ${fmt1(num(s.volatility_3y||s.vol_3y_pct))} | ${fmt2(num(s.dividend_yield))} | ${fmt1(num(s.perf_3y))} | ${fmt2(s[cfg.fitKey]||0)} |`);
       }
-      lines.push('');
+      push('');
     }
   }
 
-  // === 6. Tops par catégorie (résumé) ===
-  lines.push('## 🎯 Tops par catégorie fondamentale');
+  // ===== 8. TOPS PAR CATÉGORIE =====
+  push('## 8. 🏆 Tops fondamentaux par catégorie');
   for (const cat of CATEGORIES) {
     const ranked = STATE.stocks
       .map(s => ({ s, val: cat.extract(s) }))
       .filter(x => x.val != null && !isNaN(x.val) && x.val > -Infinity)
       .sort((a,b) => b.val - a.val)
-      .slice(0, 10);
+      .slice(0, 15);
     const inP = ranked.filter(x => getPosForStock(x.s)).length;
-    lines.push(`### ${cat.label} — ${inP}/10 dans le portefeuille`);
-    lines.push('| # | Tk | Nom | Pays | Val | Buf | Native | Portefeuille |');
-    lines.push('|---|---|---|---|---|---|---|---|');
+    push(`### ${cat.label} — ${inP}/15 dans le portefeuille`);
+    push(`_${cat.desc}_`);
+    push('');
+    push('| # | Tk | Nom | Pays | Val | Buf | Vol | Div | Native | Portefeuille |');
+    push('|---|---|---|---|---|---|---|---|---|---|');
     for (let i=0; i<ranked.length; i++) {
       const { s, val } = ranked[i];
       const tk = s.ticker || s.symbol || '';
       const pos = getPosForStock(s);
-      const port = pos ? `${pos.profile} ${fmt(pos.weight,1)}%` : '❌ absent';
-      lines.push(`| ${i+1} | ${tk} | ${(s.name||'').slice(0,25)} | ${(s.country||'').slice(0,12)} | ${typeof val==='number'?val.toFixed(cat.unit==='%'?1:0):val}${cat.unit} | ${num(s.buffett_score).toFixed(0)} | ${s._profile_native||'?'} | ${port} |`);
+      const port = pos ? `${pos.profile} ${fmt1(pos.weight)}%` : '❌ absent';
+      push(`| ${i+1} | ${tk} | ${(s.name||'').slice(0,25)} | ${(s.country||'').slice(0,12)} | ${typeof val==='number'?val.toFixed(cat.unit==='%'?1:0):val}${cat.unit} | ${fmt0(num(s.buffett_score))} | ${fmt1(num(s.volatility_3y||s.vol_3y_pct))} | ${fmt2(num(s.dividend_yield))} | ${s._profile_native||'?'} | ${port} |`);
     }
-    lines.push('');
+    push('');
   }
 
-  // === 7. Question à l'expert ===
-  lines.push('## 🤔 Questions à l\'expert');
-  lines.push('1. **Routing cross-profil** : pourquoi les actions au fit natif fort (cf section Anomalies) restent dans le mauvais profil malgré boost ×1.40 + hard-exclude fit ≥ 0.95 ? Le SLSQP est-il à blâmer ?');
-  lines.push('2. **Top natifs absents** : pourquoi des actions Buffett 100, fit ≥ 0.85, filtres OK ne sont JAMAIS sélectionnées ? Le pool target_n est-il trop petit ?');
-  lines.push('3. **Concentration vs diversification** : SLSQP sparsifie à 5 actions/profil avec 10% chacune. Faut-il imposer min_n_actions par profil pour utiliser plus de candidats ?');
-  lines.push('4. **ETF/Bond macro tilt** : les filtres avoid_securitized/prefer_tips s\'appliquent-ils dans tous les régimes ou seulement quand le MI le dit explicitement ?');
-  lines.push('');
-  lines.push('## 📂 Fichiers à fournir pour reproduire');
-  lines.push('- `data/stocks_us.json` + `stocks_europe.json` + `stocks_asia.json`');
-  lines.push('- `data/combined_bonds.csv` + `data/combined_etfs.csv`');
-  lines.push('- `data/portfolio_history/portfolios_v4_<latest>.json` ou `data/portfolios.json`');
-  lines.push('- `data/market_intelligence_audit/mi_<latest>.json`');
-  lines.push('- `portfolio_engine/profile_assignment.py` (Sélection-4)');
-  lines.push('- `portfolio_engine/preset_meta.py` (boost natif Sélection-5)');
-  lines.push('- `portfolio_engine/preset_bond.py` (filtres bond macro tilt)');
-  return lines.join('\n');
+  // ===== 9. UNIVERS TOP 30 PAR PROFIL NATIF =====
+  push('## 9. 🌐 Univers — Top 30 actions par profil natif');
+  push('');
+  push('_Top 30 actions de l\'univers entier pour chaque profil natif, classées par fit_score. Permet à l\'expert de vérifier la qualité du screening avant SLSQP._');
+  push('');
+  for (const prof of ['Stable','Modéré','Agressif']) {
+    const fitKey = PROFILE_CFG[prof].fitKey;
+    const top = STATE.stocks
+      .filter(s => s._profile_native === prof)
+      .sort((a,b)=>(b[fitKey]||0)-(a[fitKey]||0))
+      .slice(0, 30);
+    push(`### Top 30 natifs ${prof}`);
+    push('| # | Tk | Nom | Pays | Secteur | Buf | Qual | Vol | Div | Perf3Y | fit | Portefeuille |');
+    push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+    for (let i=0; i<top.length; i++) {
+      const s = top[i];
+      const tk = s.ticker || s.symbol || '';
+      const pos = getPosForStock(s);
+      const port = pos ? `${pos.profile} ${fmt1(pos.weight)}%` : '—';
+      push(`| ${i+1} | ${tk} | ${(s.name||'').slice(0,25)} | ${(s.country||'').slice(0,12)} | ${(s.sector||'').slice(0,15)} | ${fmt0(num(s.buffett_score))} | ${fmt0(num(s.quality_score))} | ${fmt1(num(s.volatility_3y||s.vol_3y_pct))} | ${fmt2(num(s.dividend_yield))} | ${fmt1(num(s.perf_3y))} | ${fmt2(s[fitKey]||0)} | ${port} |`);
+    }
+    push('');
+  }
+
+  // ===== 10. BONDS =====
+  push('## 10. 💵 Obligations sélectionnées + Top 20 univers');
+  push('');
+  push('### Obligations dans le portefeuille');
+  push('| Profil | Symbol | Nom | Fund Type | Duration | Credit | Yield TTM | Poids |');
+  push('|---|---|---|---|---|---|---|---|');
+  for (const prof of ['Stable','Modéré','Agressif']) {
+    const positions = STATE.portfolioByProfile[prof] || [];
+    for (const p of positions.filter(x => x.category === 'Obligations' || x.category === 'bond').sort((a,b)=>b.weight-a.weight)) {
+      const b = STATE.bonds.find(x => x.symbol === p.ticker || x.name === p.name);
+      const ft = b ? (b.fund_type||'') : '';
+      const dur = b ? fmt1(parseFloat(b.bond_avg_duration)) : '';
+      const credit = b ? fmt0(parseFloat(b.bond_credit_score)) : '';
+      const yld = b ? fmt2(parseFloat(b.yield_ttm)*100) : '';
+      push(`| ${prof} | ${p.ticker||''} | ${(p.name||'').slice(0,30)} | ${ft.slice(0,22)} | ${dur} | ${credit} | ${yld}% | ${fmt2(p.weight)}% |`);
+    }
+  }
+  push('');
+  push('### Top 20 obligations univers (par yield * credit-adjusted)');
+  if (STATE.bonds.length) {
+    const bondScores = STATE.bonds.map(b => {
+      const yld = parseFloat(b.yield_ttm) || 0;
+      const credit = parseFloat(b.bond_credit_score) || 0;
+      return { b, score: yld * 100 + (credit/100) };
+    }).sort((a,b)=>b.score-a.score).slice(0, 20);
+    push('| # | Symbol | Nom | Fund Type | Duration | Credit | Yield TTM | AUM | Présent ? |');
+    push('|---|---|---|---|---|---|---|---|---|');
+    for (let i=0; i<bondScores.length; i++) {
+      const b = bondScores[i].b;
+      const inP = STATE.portfolioPositions[b.symbol] || STATE.portfolioPositions[b.name];
+      const pres = inP ? inP[0].profile : '—';
+      push(`| ${i+1} | ${b.symbol||''} | ${(b.name||'').slice(0,32)} | ${(b.fund_type||'').slice(0,22)} | ${fmt1(parseFloat(b.bond_avg_duration))} | ${fmt0(parseFloat(b.bond_credit_score))} | ${fmt2(parseFloat(b.yield_ttm)*100)}% | ${b.aum_usd?(parseFloat(b.aum_usd)/1e9).toFixed(1)+'B':''} | ${pres} |`);
+    }
+  }
+  push('');
+
+  // ===== 11. ETFs =====
+  push('## 11. 📈 ETFs sélectionnés + Top 30 univers');
+  push('');
+  push('### ETFs dans le portefeuille');
+  push('| Profil | Symbol | Nom | Fund Type | AUM | TER | YTD | Poids |');
+  push('|---|---|---|---|---|---|---|---|');
+  for (const prof of ['Stable','Modéré','Agressif']) {
+    const positions = STATE.portfolioByProfile[prof] || [];
+    for (const p of positions.filter(x => x.category === 'ETF').sort((a,b)=>b.weight-a.weight)) {
+      const e = STATE.etfs.find(x => x.symbol === p.ticker || x.name === p.name);
+      const ft = e ? (e.fund_type||'') : '';
+      const aum = e && e.aum_usd ? (parseFloat(e.aum_usd)/1e9).toFixed(1)+'B' : '';
+      const ter = e ? fmt2(parseFloat(e.total_expense_ratio)*100) : '';
+      const ytd = e ? fmt1(parseFloat(e.ytd_return_pct)) : '';
+      push(`| ${prof} | ${p.ticker||''} | ${(p.name||'').slice(0,32)} | ${ft.slice(0,22)} | ${aum} | ${ter}% | ${ytd}% | ${fmt2(p.weight)}% |`);
+    }
+  }
+  push('');
+  push('### Top 30 ETFs univers (par AUM)');
+  if (STATE.etfs.length) {
+    const etfRanked = [...STATE.etfs].sort((a,b)=>(parseFloat(b.aum_usd)||0)-(parseFloat(a.aum_usd)||0)).slice(0, 30);
+    push('| # | Symbol | Nom | Fund Type | AUM | TER | YTD | Présent ? |');
+    push('|---|---|---|---|---|---|---|---|');
+    for (let i=0; i<etfRanked.length; i++) {
+      const e = etfRanked[i];
+      const inP = STATE.portfolioPositions[e.symbol] || STATE.portfolioPositions[e.name];
+      const pres = inP ? inP[0].profile : '—';
+      push(`| ${i+1} | ${e.symbol||''} | ${(e.name||'').slice(0,32)} | ${(e.fund_type||'').slice(0,22)} | ${e.aum_usd?(parseFloat(e.aum_usd)/1e9).toFixed(1)+'B':''} | ${fmt2(parseFloat(e.total_expense_ratio)*100)}% | ${fmt1(parseFloat(e.ytd_return_pct))}% | ${pres} |`);
+    }
+  }
+  push('');
+
+  // ===== 12. QUESTIONS EXPERT =====
+  push('## 12. 🤔 Questions méthodologiques à l\'expert');
+  push('');
+  push('### Q1. Tradeoff Markowitz vs qualité absolue');
+  push('Le SLSQP final maximise Sharpe sous contraintes vol/diversification, mais ne tient pas compte explicitement de Buffett. Sur 10 Top Buffett 100 Modéré-natifs (PG, ACN, INTU, ADBE, REGN, PYPL, CPRT, PAYX, RMD, CTSH), **0 à 1 finissent dans le portefeuille final**. Le pool de sélection les contient pourtant (rangs #2 à #49 selon le ticker).');
+  push('');
+  push('**Question** : faut-il introduire un constraint dur "min N actions Buffett=100 par profil" dans SLSQP, au prix d\'une légère sous-optimalité Sharpe ?');
+  push('');
+  push('### Q2. Routing _profile_native vs preset historique');
+  push('Le fit_score (`profile_assignment.py`) classe une action comme Modéré-native si Buffett haut + ROE solide + vol modérée 18-32%. Mais le preset historique (`assign_preset_to_equity`) peut la marquer `momentum_trend` si perf récente forte. Ces 2 systèmes coexistent et peuvent diverger.');
+  push('');
+  push('**Question** : faut-il fusionner profile_native et matched_preset en un seul système, ou garder l\'orthogonalité actuelle (preset = comportement, native = nature) ?');
+  push('');
+  push('### Q3. Whitelist Sélection-13 vs autopromotion');
+  push('La whitelist (35 tickers Modéré-natifs notoires) bloque NOVN/PG/GD/KO du fallback Stable. C\'est efficace mais nécessite maintenance manuelle.');
+  push('');
+  push('**Question** : comment automatiser cette détection sans whitelist ? L\'approche serait de propager `_profile_native` jusqu\'à `Asset.source_data` (problème architecture découvert lors de Sélection-11).');
+  push('');
+  push('### Q4. Diversification covariance vs concentration sectorielle');
+  push(`Le portefeuille Modéré final contient souvent ITX (retail Europe) + CF (chimie agricole) + GALP (énergie Portugal) + EXPD (logistique US) + LUPIN (pharma Inde) — exposition globalement diversifiée. Mais les Buf 100 Tech US (ADBE/INTU/ACN/REGN/CPRT) sont écartés malgré leur qualité absolue supérieure.`);
+  push('');
+  push('**Question** : la cible Modéré devrait-elle pencher plus vers (a) "best-of qualité absolue", ou (b) "best diversification sous contrainte Sharpe" ?');
+  push('');
+  push('### Q5. Macro tilt et stabilité MI');
+  push('Le `bond_strategy_full` du Market Intelligence change entre runs (AI Claude non déterministe). `avoid_securitized` peut être True un jour et False le lendemain selon le régime détecté (stagflation vs neutral).');
+  push('');
+  push('**Question** : faut-il "verrouiller" certains tilts macro (ex: prefer_tips toujours True quand inflation > seuil) au lieu de les laisser à l\'AI ?');
+  push('');
+
+  // ===== 13. FICHIERS =====
+  push('## 13. 📂 Fichiers à fournir pour reproduire');
+  push('');
+  push('**Données d\'entrée :**');
+  push('- `data/stocks_us.json` (530 actions)');
+  push('- `data/stocks_europe.json` (283 actions)');
+  push('- `data/stocks_asia.json` (270 actions)');
+  push('- `data/combined_bonds.csv` (433 obligations)');
+  push('- `data/combined_etfs.csv` (1406 ETFs)');
+  push('- `data/portfolio_history/portfolios_v4_<latest>.json` (portefeuille final)');
+  push('- `data/portfolios.json` (alias dernier)');
+  push('- `data/market_context.json` (RADAR : régime, tilts, sectors avoided/favored)');
+  push('- `data/market_intelligence_audit/mi_<latest>.json` (MI complet : bond_strategy_full, adjustments)');
+  push('- `data/selection_audit.json` (audit Étage 1 et 2 : equities_selected, _profile_score, _matched_preset, rankings)');
+  push('');
+  push('**Code source du pipeline :**');
+  push('- `generate_portfolios_v4.py` (orchestrateur principal)');
+  push('- `portfolio_engine/preset_meta.py` (gates, hard filters, scoring, boost natif, PROFILE_POLICY)');
+  push('- `portfolio_engine/profile_assignment.py` (fit_score Stable/Modéré/Agressif, _profile_native)');
+  push('- `portfolio_engine/preset_bond.py` (filtres bond + macro tilt avoid_securitized/prefer_tips)');
+  push('- `portfolio_engine/preset_etf.py` (presets ETF, dedup par exposure_group)');
+  push('- `portfolio_engine/optimizer.py` (SLSQP + fallback Stable + whitelist Sélection-13)');
+  push('- `portfolio_engine/universe.py::filter_equities` (filtre vol/dd_ytd initial)');
+  push('');
+  push('**Schemas / config :**');
+  push('- `schemas/portfolio_output.json` (validation schéma portfolios.json)');
+  push('- `portfolio_config.json` (paramètres globaux)');
+  push('');
+  push('---');
+  push('');
+  push(`_Fin du rapport — généré le ${now}_`);
+  return L.join('\n');
 }
 
 function downloadFile(name, content) {
