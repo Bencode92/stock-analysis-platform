@@ -31,7 +31,15 @@ HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"
 LEADERBOARD_PATH = DATA / "politician_leaderboard.json"
 TRADES_PATH = DATA / "congress_trades.json"
+LIVE_PATH = DATA / "congress_live.json"   # trades recents avec montants (taille des trades)
 OUT_PATH = DATA / "congress_portfolio.json"
+
+
+def _amount_mid(t):
+    lo, hi = t.get("amount_min"), t.get("amount_max")
+    if lo is None:
+        return None
+    return (lo + hi) / 2 if hi is not None else lo
 
 
 def _cap_and_normalize(weights: dict[str, float], cap: float) -> dict[str, float]:
@@ -97,22 +105,56 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
 
     recent = [t for pid in top_pids for t in recent_by_pid[pid]]
 
-    # 3. Conviction par titre = somme des scores des performers acheteurs (1 fois/pid).
-    raw = defaultdict(float)
-    buyers = defaultdict(dict)  # ticker -> pid -> dernier achat
+    # 2bis. VENTES recentes des performers retenus = signal de sortie.
+    sold_recent = defaultdict(dict)  # ticker -> pid -> derniere date de vente
+    for t in trades:
+        if (t.get("transaction") == "sell" and t.get("ticker") and t.get("report_date")
+                and t["report_date"] >= cutoff):
+            pid = _pid(t)
+            if pid in top_pids and t["report_date"] > sold_recent[t["ticker"]].get(pid, ""):
+                sold_recent[t["ticker"]][pid] = t["report_date"]
+
+    # 3. Conviction par titre, PONDEREE PAR LA TAILLE des trades (gros trades = signal fort).
+    #    contrib(performer, titre) = score_regularite x $ total investi dans la fenetre.
+    size_mode = params.get("size_mode", "amount")          # "amount" | "conviction"
+    min_amount = float(params.get("min_amount", 0) or 0)   # ignore les petits trades CONNUS
+    neutral = min_amount if min_amount > 0 else 50000.0    # montant si inconnu (live partiel)
+    amount_lookup = params.get("amount_lookup", {})
+
+    pos = defaultdict(lambda: defaultdict(float))  # ticker -> pid -> $ total (ou 1 en mode conviction)
+    last_buy = defaultdict(dict)                    # ticker -> pid -> dernier report_date
     for t in recent:
-        pid = _pid(t)
-        tk = t["ticker"]
-        if pid not in buyers[tk]:
-            contrib = score_by_pid[pid] if params["weighting"] == "conviction" else 1.0
-            raw[tk] += contrib
-        prev = buyers[tk].get(pid)
-        if not prev or t["report_date"] > prev["report_date"]:
-            buyers[tk][pid] = {
+        pid, tk, d = _pid(t), t["ticker"], t["report_date"]
+        if size_mode == "amount":
+            mid = amount_lookup.get((pid, tk, d))
+            if mid is not None and mid < min_amount:
+                continue                           # gros trades only : on jette les petits montants connus
+            pos[tk][pid] += mid if mid is not None else neutral
+        else:
+            pos[tk][pid] = 1.0
+        if d > last_buy[tk].get(pid, ""):
+            last_buy[tk][pid] = d
+
+    # Filtre VENTES : un performer qui a vendu un titre APRES l'avoir acheté en sort -> exclu.
+    dropped_by_sell = 0
+    for tk in list(pos):
+        for pid in list(pos[tk]):
+            sd = sold_recent.get(tk, {}).get(pid)
+            if sd and sd >= last_buy[tk][pid]:
+                del pos[tk][pid]
+                dropped_by_sell += 1
+
+    raw = defaultdict(float)
+    buyers = defaultdict(list)
+    for tk, by_pid in pos.items():
+        for pid, amt in by_pid.items():
+            raw[tk] += score_by_pid[pid] * amt
+            buyers[tk].append({
                 "representative": name_by_pid[pid],
                 "regularity_score": round(score_by_pid[pid], 2),
-                "report_date": t["report_date"],
-            }
+                "amount_usd": round(amt) if size_mode == "amount" else None,
+                "report_date": last_buy[tk][pid],
+            })
 
     # Anti-dilution : ne garder que les N titres a plus forte conviction (les
     # hyperactifs type Khanna inondent sinon le portefeuille de mono-acheteurs).
@@ -122,14 +164,17 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
 
     holdings = []
     for tk, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
-        bl = sorted(buyers[tk].values(), key=lambda b: b["regularity_score"], reverse=True)
+        bl = sorted(buyers[tk], key=lambda b: b["regularity_score"], reverse=True)
+        total_usd = sum(b["amount_usd"] or 0 for b in bl) if size_mode == "amount" else None
+        usd_txt = f", ~{round(total_usd/1000)}k$ investis" if total_usd else ""
         holdings.append({
             "ticker": tk,
             "weight": round(w, 4),
             "n_buyers": len(bl),
+            "total_amount_usd": total_usd,
             "buyers": bl,
             "rationale": (f"Achete par {len(bl)} performer(s) du Top {params['top_k']} "
-                          f"sur {params['window_days']}j (ex. {bl[0]['representative']}, "
+                          f"sur {params['window_days']}j{usd_txt} (ex. {bl[0]['representative']}, "
                           f"score {bl[0]['regularity_score']})."),
             "eligibility": {"pea": False, "cto": True},  # actions US -> CTO (a affiner)
         })
@@ -144,10 +189,13 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
                 "weighting": params["weighting"],
                 "max_weight": params["max_weight"],
                 "max_holdings": params["max_holdings"],
+                "size_mode": params.get("size_mode", "amount"),
+                "min_amount": params.get("min_amount", 0),
                 "side_filter": "buy",
             },
             "n_holdings": len(holdings),
             "n_candidates": n_candidates,
+            "positions_dropped_by_sell": dropped_by_sell,
             "n_eligible": len(eligibles),
             "n_active": len(active),
             "n_selected": len(top),
@@ -173,13 +221,29 @@ def main() -> None:
     p.add_argument("--max-holdings", type=int, default=int(os.environ.get("MAX_HOLDINGS", "30")))
     p.add_argument("--weighting", default=os.environ.get("WEIGHTING", "conviction"),
                    choices=["conviction", "equal"])
+    p.add_argument("--size-mode", default=os.environ.get("SIZE_MODE", "amount"),
+                   choices=["amount", "conviction"])
+    p.add_argument("--min-amount", type=float, default=float(os.environ.get("MIN_AMOUNT", "50000")))
     args = p.parse_args()
 
     leaderboard = json.loads(Path(args.leaderboard).read_text(encoding="utf-8"))
     trades = json.loads(Path(args.trades).read_text(encoding="utf-8"))["trades"]
+
+    # Montants depuis le /live/ (le /bulk/ n'en a pas) -> ponderation par taille de trade.
+    amount_lookup = {}
+    if LIVE_PATH.exists():
+        for t in json.loads(LIVE_PATH.read_text(encoding="utf-8")).get("trades", []):
+            mid = _amount_mid(t)
+            if mid is not None:
+                b = t.get("bioguide_id")
+                pid = b if isinstance(b, str) and b.strip() else t.get("representative")
+                amount_lookup[(pid, t.get("ticker"), t.get("report_date"))] = mid
+    print(f"Montants live disponibles : {len(amount_lookup)} trades")
+
     params = {"top_k": args.top_k, "window_days": args.window,
               "max_weight": args.max_weight, "max_holdings": args.max_holdings,
-              "weighting": args.weighting}
+              "weighting": args.weighting, "size_mode": args.size_mode,
+              "min_amount": args.min_amount, "amount_lookup": amount_lookup}
 
     portfolio = build_portfolio(leaderboard, trades, params)
     Path(args.out).write_text(json.dumps(portfolio, ensure_ascii=False, indent=2), encoding="utf-8")

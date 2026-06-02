@@ -80,6 +80,8 @@ jobs:
           MAX_WEIGHT: "0.15"
           MAX_HOLDINGS: "30"
           WEIGHTING: conviction
+          SIZE_MODE: amount
+          MIN_AMOUNT: "50000"
         run: python congress/congress_portfolio.py
 
       - name: Etage 4 - Backtest (vs SPY/QQQ/NANC)
@@ -99,7 +101,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add congress/data/congress_trades.json congress/data/executive_trades.json congress/data/politician_leaderboard.json congress/data/congress_portfolio.json congress/data/congress_backtest.json
+          git add congress/data/congress_trades.json congress/data/congress_live.json congress/data/executive_trades.json congress/data/politician_leaderboard.json congress/data/congress_portfolio.json congress/data/congress_backtest.json
           if git diff --staged --quiet; then
             echo "Pas de changement de donnees."
             exit 0

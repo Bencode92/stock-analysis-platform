@@ -123,7 +123,7 @@ function render(){
   const cols = [
     ["rank","#","num"],["representative","Politicien",""],["party","Parti",""],
     ["regularity_score","Score","num"],["median_annual_excess_return","Médiane excès/SPY","num"],
-    ["n_trades","Trades","num"],["n_distinct_tickers","Titres","num"],["n_active_years","Années","num"]
+    ["win_rate","% gagnants","num"],["n_trades","Trades","num"],["n_distinct_tickers","Titres","num"],["n_active_years","Années","num"]
   ];
 
   if(!rows.length){
@@ -145,6 +145,7 @@ function render(){
       <td class="num"><span class="score">${r.regularity_score?.toFixed(1) ?? "—"}</span>
           <div class="bar"><i style="width:${Math.round(100*(r.regularity_score||0)/maxScore)}%"></i></div></td>
       <td class="num ${med>0?"pos":med<0?"neg":""}">${fmtPct(med)}</td>
+      <td class="num">${r.win_rate!=null?r.win_rate+"%":"—"}</td>
       <td class="num">${fmtNum(r.n_trades)}</td>
       <td class="num">${fmtNum(r.n_distinct_tickers)}</td>
       <td class="num">${fmtNum(r.n_active_years)}</td>
@@ -203,8 +204,10 @@ function renderPortfolio(p){
   }
   const pr = meta.params || {};
   const act = meta.n_active!=null ? ` · ${meta.n_selected}/${meta.n_active} actifs retenus (sur ${meta.n_eligible} éligibles)` : "";
-  elMeta.innerHTML = `Top ${pr.top_k_politicians} performers <b>actifs</b> · achats des ${pr.lookback_days} derniers jours · `
-    + `pondération ${pr.weighting} · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne · ${holdings.length} lignes${act}`;
+  const size = pr.size_mode==="amount" ? ` · pondéré par <b>taille de trade</b> (≥ ${Math.round((pr.min_amount||0)/1000)}k$)` : "";
+  const sells = meta.positions_dropped_by_sell ? ` · ${meta.positions_dropped_by_sell} sortie(s) exclue(s) (ventes)` : "";
+  elMeta.innerHTML = `Top ${pr.top_k_politicians} performers <b>actifs</b> · achats des ${pr.lookback_days} derniers jours${size}`
+    + ` · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne · ${holdings.length} lignes${act}${sells}`;
   const maxW = Math.max(...holdings.map(h=>h.weight));
   let html = `<table><thead><tr>
       <th>Ticker</th><th class="num">Poids</th><th class="num">Acheteurs</th><th>Performers (rationale)</th>

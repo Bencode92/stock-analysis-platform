@@ -22,6 +22,7 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 CACHE_PATH = DATA_DIR / "congress_trades.json"
+LIVE_PATH = DATA_DIR / "congress_live.json"   # trades recents AVEC montants (Range)
 
 # Quiver renvoie les montants sous forme de fourchette texte: "$1,001 - $15,000".
 _RANGE_RE = re.compile(r"\$?\s*([\d,]+)(?:\s*-\s*\$?\s*([\d,]+))?")
@@ -140,6 +141,31 @@ def fetch_raw(token: str) -> list[dict]:
     return df.to_dict(orient="records")
 
 
+def fetch_live(token: str) -> list[dict]:
+    """Pull /live/ = trades recents AVEC le montant (Range), pour pondérer le portefeuille.
+    Le /bulk/ ne fournit pas les montants ; le /live/ si."""
+    import quiverquant
+    client = quiverquant.quiver(token)
+    df = client.congress_trading(recent=True)  # endpoint /live/
+    return df.to_dict(orient="records")
+
+
+def build_live_cache(raw_rows: list[dict]) -> dict:
+    trades = [normalize_row(r) for r in raw_rows]
+    trades = [t for t in trades
+              if t["ticker"] and t["report_date"] and t["transaction"]]
+    with_amount = sum(1 for t in trades if t.get("amount_min") is not None)
+    return {
+        "meta": {
+            "source": "quiver-live",
+            "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "count": len(trades),
+            "with_amount": with_amount,
+        },
+        "trades": trades,
+    }
+
+
 def build_cache(raw_rows: list[dict]) -> dict:
     trades = [normalize_row(r) for r in raw_rows]
     # On ne garde que les lignes exploitables: ticker + les 2 dates + sens connu.
@@ -176,7 +202,16 @@ def main() -> None:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"OK: {cache['meta']['count']} trades -> {out} (depuis {cache['meta']['history_start']})")
+    print(f"OK bulk: {cache['meta']['count']} trades -> {out} (depuis {cache['meta']['history_start']})")
+
+    # Live (recent + montants) pour la ponderation par taille de trade.
+    try:
+        live = build_live_cache(fetch_live(token))
+        LIVE_PATH.write_text(json.dumps(live, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"OK live: {live['meta']['count']} trades recents "
+              f"({live['meta']['with_amount']} avec montant) -> {LIVE_PATH}")
+    except Exception as ex:
+        print(f"  ! pull live echoue ({ex}) - portefeuille sans ponderation taille")
 
 
 if __name__ == "__main__":

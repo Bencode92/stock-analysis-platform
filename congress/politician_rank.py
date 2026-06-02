@@ -116,6 +116,8 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
         n_years = int(g["year"].nunique())
         branch = "Executive" if (g["branch"] == "Executive").any() else "Congress"
         med_val = _safe_float(annual.median()) if not annual.empty else None
+        ex_all = [v for v in g["excess_return"].tolist() if v is not None and v == v]
+        win_rate = round(100 * sum(1 for v in ex_all if v > 0) / len(ex_all), 1) if ex_all else None
 
         # L'executif (Trump) est montre "a part" : historique trop court / recent pour
         # un score de regularite valable -> on le garde dans le tableau mais hors classement.
@@ -137,6 +139,7 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
             "house": (g["house"].dropna().iloc[0] if g["house"].notna().any() else None),
             "eligible": bool(eligible),
             "median_annual_excess_return": med_val,
+            "win_rate": win_rate,   # % de trades (a horizon clos) qui battent le SPY
             "annual_return_std": _safe_float(annual.std(ddof=0)) if len(annual) > 1 else None,
             "n_trades": n_trades,
             "n_distinct_tickers": n_tickers,
