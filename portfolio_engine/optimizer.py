@@ -3531,10 +3531,39 @@ class PortfolioOptimizer:
         _HEALTHCARE_KEYWORDS = {"santé", "healthcare", "health care", "health"}
         
         if profile.name == "Stable":
+            # Sélection-9 (Fallback Stable) : exclure les actions cross-profil
+            # Le _fallback_allocation utilise sorted_candidates qui inclut des
+            # actions Modéré-natives (PG/NOVN/GD/KO). Le filtrage Sélection-8
+            # sur select_equities_for_profile n'a pas d'effet ici. On force le
+            # filtre au moment du fallback : on garde uniquement les actions
+            # dont _profile_native == 'Stable' (ou non annotées = no _fit).
+            def _is_stable_native(a):
+                sd = getattr(a, 'source_data', None) or {}
+                _nat = sd.get('_profile_native')
+                if not _nat:
+                    return True  # action non annotée → on autorise
+                if _nat == 'Stable':
+                    return True
+                # cross-profil : exclure si gap fit > 5pp ou fit_native ≥ 0.85
+                _fit_S = sd.get('_fit_stable', 0) or 0
+                _fit_nat = max(
+                    sd.get('_fit_stable', 0) or 0,
+                    sd.get('_fit_modere', 0) or 0,
+                    sd.get('_fit_agressif', 0) or 0,
+                )
+                if _fit_nat >= 0.85:
+                    return False
+                if _fit_nat - _fit_S > 0.05:
+                    return False
+                return True
+
             _actions_pool = sorted(
-                [a for a in sorted_candidates if a.category == "Actions" and a.id not in allocation],
+                [a for a in sorted_candidates if a.category == "Actions" and a.id not in allocation and _is_stable_native(a)],
                 key=lambda a: (-a.score, a.vol_annual, a.id)
             )
+            _excluded_count = sum(1 for a in sorted_candidates if a.category == "Actions" and a.id not in allocation and not _is_stable_native(a))
+            if _excluded_count:
+                logger.info(f"[Sélection-9 Stable fallback] {_excluded_count} actions cross-profil exclues du _actions_pool")
             _actions_reserved = 0
             _fin_reserved = 0  # v5.3.2: Track financials count
             _healthcare_reserved = 0  # v5.3.2: Track healthcare count
