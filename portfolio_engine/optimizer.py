@@ -3531,26 +3531,41 @@ class PortfolioOptimizer:
         _HEALTHCARE_KEYWORDS = {"santé", "healthcare", "health care", "health"}
         
         if profile.name == "Stable":
-            # Sélection-9 (Fallback Stable) : exclure les actions cross-profil
-            # Le _fallback_allocation utilise sorted_candidates qui inclut des
-            # actions Modéré-natives (PG/NOVN/GD/KO). Le filtrage Sélection-8
-            # sur select_equities_for_profile n'a pas d'effet ici. On force le
-            # filtre au moment du fallback : on garde uniquement les actions
-            # dont _profile_native == 'Stable' (ou non annotées = no _fit).
+            # Sélection-9 + 11 : exclure les actions cross-profil
+            # Sélection-11 : si _profile_native pas dans source_data, le calcule
+            # à la volée via profile_assignment.py (sinon helper retourne True
+            # par défaut et ne filtre rien — découvert sur run 120421).
+            try:
+                from portfolio_engine.profile_assignment import (
+                    compute_profile_native,
+                    fit_score_stable as _fitS,
+                    fit_score_modere as _fitM,
+                    fit_score_agressif as _fitA,
+                )
+            except Exception:
+                compute_profile_native = None
+                _fitS = _fitM = _fitA = None
+
             def _is_stable_native(a):
                 sd = getattr(a, 'source_data', None) or {}
                 _nat = sd.get('_profile_native')
-                if not _nat:
-                    return True  # action non annotée → on autorise
-                if _nat == 'Stable':
+                _fit_S = sd.get('_fit_stable')
+                _fit_M = sd.get('_fit_modere')
+                _fit_A = sd.get('_fit_agressif')
+                # Si manquant, calcul à la volée
+                if (_nat is None or _fit_S is None) and compute_profile_native and sd:
+                    try:
+                        _fit_S = _fitS(sd); _fit_M = _fitM(sd); _fit_A = _fitA(sd)
+                        sd['_fit_stable'] = _fit_S; sd['_fit_modere'] = _fit_M; sd['_fit_agressif'] = _fit_A
+                        _nat = max([('Stable',_fit_S),('Modéré',_fit_M),('Agressif',_fit_A)], key=lambda x: x[1])[0]
+                        sd['_profile_native'] = _nat
+                    except Exception:
+                        return True  # safety
+                _fit_S = _fit_S or 0; _fit_M = _fit_M or 0; _fit_A = _fit_A or 0
+                _fit_nat = max(_fit_S, _fit_M, _fit_A)
+                if not _nat or _nat == 'Stable':
                     return True
-                # cross-profil : exclure si gap fit > 5pp ou fit_native ≥ 0.85
-                _fit_S = sd.get('_fit_stable', 0) or 0
-                _fit_nat = max(
-                    sd.get('_fit_stable', 0) or 0,
-                    sd.get('_fit_modere', 0) or 0,
-                    sd.get('_fit_agressif', 0) or 0,
-                )
+                # cross-profil : exclure si fit_native ≥ 0.85 OR gap > 5pp
                 if _fit_nat >= 0.85:
                     return False
                 if _fit_nat - _fit_S > 0.05:
@@ -3900,6 +3915,15 @@ class PortfolioOptimizer:
             # NOVN/GD/KO/PG en Stable malgré filtrage Sélection-8/9.
             filtered_prev = prev_weights
             if profile.name == "Stable":
+                # Sélection-11: compute fits à la volée si source_data n'est pas annotée
+                try:
+                    from portfolio_engine.profile_assignment import (
+                        fit_score_stable as _fitS2,
+                        fit_score_modere as _fitM2,
+                        fit_score_agressif as _fitA2,
+                    )
+                except Exception:
+                    _fitS2 = _fitM2 = _fitA2 = None
                 cand_by_id = {c.id: c for c in candidates}
                 excluded = []
                 filtered_prev = {}
@@ -3910,22 +3934,28 @@ class PortfolioOptimizer:
                         continue
                     sd = getattr(asset, 'source_data', None) or {}
                     _nat = sd.get('_profile_native')
+                    _fit_S = sd.get('_fit_stable')
+                    _fit_M = sd.get('_fit_modere')
+                    _fit_A = sd.get('_fit_agressif')
+                    if (_nat is None or _fit_S is None) and _fitS2 and sd:
+                        try:
+                            _fit_S = _fitS2(sd); _fit_M = _fitM2(sd); _fit_A = _fitA2(sd)
+                            _nat = max([('Stable',_fit_S),('Modéré',_fit_M),('Agressif',_fit_A)], key=lambda x: x[1])[0]
+                        except Exception:
+                            filtered_prev[k] = v
+                            continue
+                    _fit_S = _fit_S or 0; _fit_M = _fit_M or 0; _fit_A = _fit_A or 0
                     if not _nat or _nat == "Stable":
                         filtered_prev[k] = v
                         continue
-                    _fit_S = sd.get('_fit_stable', 0) or 0
-                    _fit_nat = max(
-                        sd.get('_fit_stable', 0) or 0,
-                        sd.get('_fit_modere', 0) or 0,
-                        sd.get('_fit_agressif', 0) or 0,
-                    )
+                    _fit_nat = max(_fit_S, _fit_M, _fit_A)
                     if _fit_nat >= 0.85 or (_fit_nat - _fit_S) > 0.05:
                         excluded.append((asset.ticker or asset.symbol or k, _nat, v))
                         continue
                     filtered_prev[k] = v
                 if excluded:
                     logger.info(
-                        f"[Sélection-10 turnover Stable] {len(excluded)} prev positions "
+                        f"[Sélection-11 turnover Stable] {len(excluded)} prev positions "
                         f"cross-profil exclues : {[(t, n, f'{w:.1f}%') for t,n,w in excluded[:6]]}"
                     )
             allocation = self._blend_to_max_turnover(
