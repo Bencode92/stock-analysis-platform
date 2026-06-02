@@ -547,29 +547,47 @@ function buildProposalActions(profile) {
 // Bonds : appliquer macro tilt MI (avoid_securitized, prefer_tips)
 function buildProposalBonds(profile) {
   if (!STATE.bonds.length) return [];
-  const bs = STATE.bondStrategy || {};
+  // Defaults conservateurs si pas de MI chargé (régime stagflation par défaut)
+  const bs = STATE.bondStrategy || {
+    prefer_tips: true, prefer_treasury: true,
+    avoid_hy: true, avoid_securitized: true, avoid_em_bonds: true,
+    max_duration_stable: 4.0, max_duration_moderate: 5.0,
+  };
   const durMax = profile === 'Stable' ? (bs.max_duration_stable || 4) : (bs.max_duration_moderate || 5);
+
+  // Hard exclude : non-bonds, leveraged, derivative income, real estate, equity
+  const HARD_EXCLUDE_FT = ['derivative income','real estate','convertible','bank loan','equity precious metals','equity energy','target maturity'];
+
   const filtered = STATE.bonds.filter(b => {
     const ft = (b.fund_type||'').toLowerCase();
     const obj = (b.objective||'').toLowerCase();
-    if (bs.avoid_securitized && (ft.includes('securit')||ft.includes('clo')||ft.includes('mbs'))) return false;
+    if (HARD_EXCLUDE_FT.some(x => ft.includes(x))) return false;
+    if (ft.includes('leveraged') || ft.includes('inverse') || obj.includes('leveraged')) return false;
+    if (bs.avoid_securitized && (ft.includes('securit')||ft.includes('clo')||ft.includes('mbs')||ft.includes('mortgage'))) return false;
     if (bs.avoid_em_bonds && (ft.includes('emerging')||obj.includes('emerging'))) return false;
-    if (bs.avoid_hy && obj.includes('high yield')) return false;
+    if (bs.avoid_hy && (ft.includes('high yield')||obj.includes('high yield')||obj.includes('high-yield'))) return false;
     const d = parseFloat(b.bond_avg_duration);
     if (!isNaN(d) && d > durMax * 1.2) return false;
+    // Yield aberrant (>20% n'est pas un bond IG)
+    const yld = parseFloat(b.yield_ttm) || 0;
+    if (yld > 0.20) return false;
     return true;
   });
-  // Score : prefer TIPS si actif, score yield ajusté
+
+  // Score : credit + TIPS bonus + treasury bonus + yield cappé
   filtered.forEach(b => {
     const ft = (b.fund_type||'').toLowerCase();
-    let score = parseFloat(b.yield_ttm) || 0;
-    if (bs.prefer_tips && (ft.includes('tips')||ft.includes('inflation'))) score += 0.02;
-    if (bs.prefer_treasury && (ft.includes('treasury')||ft.includes('government'))) score += 0.005;
     const credit = parseFloat(b.bond_credit_score) || 0;
-    score += (credit / 100) * 0.01; // small kicker for credit
+    const yld = parseFloat(b.yield_ttm) || 0;
+    let score = (credit / 100) * 0.5;
+    if (bs.prefer_tips && (ft.includes('tips')||ft.includes('inflation'))) score += 0.30;
+    if (bs.prefer_treasury && (ft.includes('treasury')||ft.includes('government'))) score += 0.15;
+    if (ft.includes('ultrashort')||ft.includes('short-term')||ft.includes('short government')) score += 0.10;
+    score += Math.min(yld, 0.06) * 2.0;
     b._proposal_score = score;
   });
   filtered.sort((a,b) => (b._proposal_score||0) - (a._proposal_score||0));
+
   // Dedup par fund_type (max 1)
   const seen = {};
   const result = [];
@@ -583,27 +601,39 @@ function buildProposalBonds(profile) {
   return result;
 }
 
-// ETF : heuristique par profil — fund_type alignés
+// ETF heuristique par profil — fund_type alignés
 const ETF_HEURISTIC = {
-  'Stable':   ['Large Value', 'Dividend', 'Large Blend', 'Low Volatility', 'Defensive', 'Conservative', 'Allocation'],
-  'Modéré':   ['Foreign Large', 'Large Blend', 'Dividend', 'World Allocation', 'Mid-Cap', 'Commodities', 'Natural Resources'],
-  'Agressif': ['Technology', 'Semiconductor', 'Emerging', 'Growth', 'Small Growth', 'Mid-Cap Growth', 'Energy', 'Healthcare', 'China', 'India', 'Korea', 'Solar', 'Biotech', 'Clean Energy', 'Sector', 'Thematic'],
+  'Stable':   ['Large Value', 'Dividend', 'Large Blend', 'Low Volatility', 'Conservative Allocation', 'World Allocation', 'Equity Income'],
+  'Modéré':   ['Foreign Large Blend', 'Foreign Large Value', 'Large Blend', 'Dividend', 'World Allocation', 'Moderately Aggressive Allocation', 'Diversified Emerging', 'Natural Resources', 'Mid-Cap Blend'],
+  'Agressif': ['Technology', 'Semiconductors', 'Diversified Emerging', 'Large Growth', 'Mid-Cap Growth', 'Small Growth', 'Health', 'Biotech', 'China Region', 'India Equity', 'Latin America Stock', 'Equity Energy', 'Communications'],
 };
+
+// Hard exclude : leveraged, inverse, ultra-thematic spéculatif, target maturity bonds (qui leaked dans ETF)
+const ETF_HARD_EXCLUDE = ['leveraged', 'inverse', 'trading--', 'derivative income', 'target maturity', 'volatility', 'managed futures', 'bear market'];
 
 function buildProposalETFs(profile) {
   if (!STATE.etfs.length) return [];
   const heur = ETF_HEURISTIC[profile] || [];
+
   const matched = STATE.etfs.filter(e => {
     const ft = (e.fund_type||'').toLowerCase();
+    if (!ft) return false;
+    if (ETF_HARD_EXCLUDE.some(x => ft.includes(x))) return false;
+    // ETF doit matcher heuristique du profil
     return heur.some(h => ft.includes(h.toLowerCase()));
   });
-  // Score : AUM (size) + perf YTD
+
+  // Score : AUM dominant (taille = liquidité), YTD CAPPÉ à 30% (sinon leveraged remontent), TER bas
   matched.forEach(e => {
     const aum = parseFloat(e.aum_usd) || 0;
-    const ytd = parseFloat(e.ytd_return_pct) || 0;
-    e._proposal_score = Math.log10(Math.max(aum, 1)) * 1.0 + ytd * 0.3;
+    const ytd = Math.max(-20, Math.min(parseFloat(e.ytd_return_pct) || 0, 30));  // cap [-20, 30]
+    const ter = parseFloat(e.total_expense_ratio) || 0.005;
+    e._proposal_score = Math.log10(Math.max(aum, 1)) * 1.0
+                      + ytd * 0.05
+                      - ter * 10;  // pénalise TER élevé
   });
   matched.sort((a,b) => (b._proposal_score||0) - (a._proposal_score||0));
+
   // Dedup fund_type (max 1 par type)
   const seen = {};
   const result = [];
