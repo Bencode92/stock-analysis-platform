@@ -75,6 +75,26 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
     eligibles = [r for r in leaderboard["ranking"]
                  if r.get("eligible") and r.get("branch") == "Congress"]
     eligibles = sorted(eligibles, key=lambda r: r["regularity_score"], reverse=True)
+    n_eligible_raw = len(eligibles)
+
+    # Plancher de QUALITE : on ne suit pas les actifs mediocres (ex. Khanna, mediane +0.1%).
+    min_median = float(params.get("min_median", 0) or 0)
+    min_win = float(params.get("min_win_rate", 0) or 0)
+
+    def _quality(r):
+        m = r.get("median_annual_excess_return")
+        if m is None or m < min_median:
+            return False
+        if min_win > 0 and (r.get("win_rate") is None or r["win_rate"] < min_win):
+            return False
+        return True
+    eligibles = [r for r in eligibles if _quality(r)]
+
+    # Whitelist optionnelle : ne suivre que ces noms (sous-chaine, insensible a la casse).
+    wl = [w.strip().lower() for w in params.get("whitelist", []) if w.strip()]
+    if wl:
+        eligibles = [r for r in eligibles
+                     if any(w in r["representative"].lower() or w == str(r["pid"]).lower() for w in wl)]
 
     # 1. Fenetre recente : cutoff = derniere declaration du DATASET - WINDOW jours.
     all_buys = [t for t in trades
@@ -191,6 +211,9 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
                 "max_holdings": params["max_holdings"],
                 "size_mode": params.get("size_mode", "amount"),
                 "min_amount": params.get("min_amount", 0),
+                "min_median": min_median,
+                "min_win_rate": min_win,
+                "whitelist": wl,
                 "side_filter": "buy",
             },
             "n_holdings": len(holdings),
@@ -224,6 +247,10 @@ def main() -> None:
     p.add_argument("--size-mode", default=os.environ.get("SIZE_MODE", "amount"),
                    choices=["amount", "conviction"])
     p.add_argument("--min-amount", type=float, default=float(os.environ.get("MIN_AMOUNT", "50000")))
+    p.add_argument("--min-median", type=float, default=float(os.environ.get("MIN_MEDIAN", "5")))
+    p.add_argument("--min-win-rate", type=float, default=float(os.environ.get("MIN_WIN_RATE", "0")))
+    p.add_argument("--whitelist", default=os.environ.get("WHITELIST", ""),
+                   help="Noms a suivre, separes par des virgules (vide = tous).")
     args = p.parse_args()
 
     leaderboard = json.loads(Path(args.leaderboard).read_text(encoding="utf-8"))
@@ -243,7 +270,9 @@ def main() -> None:
     params = {"top_k": args.top_k, "window_days": args.window,
               "max_weight": args.max_weight, "max_holdings": args.max_holdings,
               "weighting": args.weighting, "size_mode": args.size_mode,
-              "min_amount": args.min_amount, "amount_lookup": amount_lookup}
+              "min_amount": args.min_amount, "amount_lookup": amount_lookup,
+              "min_median": args.min_median, "min_win_rate": args.min_win_rate,
+              "whitelist": [w for w in args.whitelist.split(",") if w.strip()]}
 
     portfolio = build_portfolio(leaderboard, trades, params)
     Path(args.out).write_text(json.dumps(portfolio, ensure_ascii=False, indent=2), encoding="utf-8")

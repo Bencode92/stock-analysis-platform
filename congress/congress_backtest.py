@@ -47,6 +47,7 @@ P = {
     "max_weight": float(os.environ.get("MAX_WEIGHT", "0.15")),
     "score_horizon_days": int(os.environ.get("SCORE_HORIZON_DAYS", "365")),
     "min_completed": int(os.environ.get("MIN_COMPLETED", "10")),
+    "min_median": float(os.environ.get("BT_MIN_MEDIAN", "0")),  # plancher de qualite des performers
     "cost_bps": float(os.environ.get("COST_BPS", "10")),  # friction par rebalancing (aller-retour)
 }
 
@@ -131,7 +132,7 @@ def point_in_time_performers(by_pid_completed, as_of: str, params: dict) -> dict
             per_year[yr].append(ex)
         annual = [sum(v) / len(v) for v in per_year.values()]
         med = median(annual)
-        if med > 0:                       # performance pure : bat le SPY
+        if med > params.get("min_median", 0):   # plancher de qualite (defaut 0 = bat le SPY)
             scores[pid] = med
     if not scores:
         return {}
@@ -195,48 +196,70 @@ def main() -> None:
             price_cache[ticker] = Series(pm) if pm else None
         return price_cache[ticker]
 
-    # Boucle de backtest.
-    eq = {"strategy": [1.0]}
-    for name in bench_series:
-        eq[name] = [1.0]
-    rets = {"strategy": [], **{n: [] for n in bench_series}}
-    dates_kept = [rebals[0]]
-    n_hold_log = []
+    def simulate(cfg: dict):
+        """Rejoue la strategie pour une config donnee -> (eq, rets, dates, n_hold)."""
+        eqL = {"strategy": [1.0], **{n: [1.0] for n in bench_series}}
+        retsL = {"strategy": [], **{n: [] for n in bench_series}}
+        dts = [rebals[0]]
+        nhold = []
+        for i in range(len(rebals) - 1):
+            t0, t1 = rebals[i], rebals[i + 1]
+            perfs = point_in_time_performers(by_pid_completed, t0, cfg)
+            w = build_portfolio_at(buys, t0, perfs, cfg) if perfs else {}
+            nhold.append(len(w))
+            port_ret, wsum = 0.0, 0.0
+            for tk, wt in w.items():
+                s = series_for(tk)
+                if not s:
+                    continue
+                _, c0 = s.on_or_after(t0)
+                _, c1 = s.on_or_after(t1)
+                if c0 and c1 and c0 > 0:
+                    port_ret += wt * (c1 / c0 - 1)
+                    wsum += wt
+            port_ret = (port_ret / wsum) if wsum > 0 else 0.0
+            if w:
+                port_ret -= cfg["cost_bps"] / 10000.0
+            retsL["strategy"].append(port_ret)
+            eqL["strategy"].append(eqL["strategy"][-1] * (1 + port_ret))
+            for name, s in bench_series.items():
+                _, c0 = s.on_or_after(t0)
+                _, c1 = s.on_or_after(t1)
+                r = (c1 / c0 - 1) if (c0 and c1 and c0 > 0) else 0.0
+                retsL[name].append(r)
+                eqL[name].append(eqL[name][-1] * (1 + r))
+            dts.append(t1)
+        return eqL, retsL, dts, nhold
 
-    for i in range(len(rebals) - 1):
-        t0, t1 = rebals[i], rebals[i + 1]
-        perfs = point_in_time_performers(by_pid_completed, t0, P)
-        w = build_portfolio_at(buys, t0, perfs, P) if perfs else {}
-        n_hold_log.append(len(w))
+    def years_of(dts):
+        return (datetime.strptime(dts[-1], "%Y-%m-%d") - datetime.strptime(dts[0], "%Y-%m-%d")).days / 365.25
 
-        # Rendement strategie sur [t0, t1].
-        port_ret, wsum = 0.0, 0.0
-        for tk, wt in w.items():
-            s = series_for(tk)
-            if not s:
-                continue
-            _, c0 = s.on_or_after(t0)
-            _, c1 = s.on_or_after(t1)
-            if c0 and c1 and c0 > 0:
-                port_ret += wt * (c1 / c0 - 1)
-                wsum += wt
-        port_ret = (port_ret / wsum) if wsum > 0 else 0.0
-        if w:  # friction au rebalancing
-            port_ret -= P["cost_bps"] / 10000.0
-        rets["strategy"].append(port_ret)
-        eq["strategy"].append(eq["strategy"][-1] * (1 + port_ret))
+    # --- SWEEP optionnel : balayer (top_k, min_median) et choisir la meilleure config ---
+    sweep = []
+    if os.environ.get("SWEEP"):
+        _log("\n=== SWEEP (top_k x min_median) ===")
+        _log(f"{'top_k':>6}{'min_med':>8}{'CAGR':>8}{'Sharpe':>8}{'MaxDD':>8}{'AlphaQQQ':>10}{'~lignes':>9}")
+        for k in (5, 8, 10, 15, 20):
+            for mm in (0, 5, 10):
+                cfg = {**P, "top_k": k, "min_median": mm}
+                e, r, d, nh = simulate(cfg)
+                ny = years_of(d)
+                ms = metrics(e["strategy"], r["strategy"], ny)
+                mq = metrics(e["QQQ"], r["QQQ"], ny) if "QQQ" in e else {}
+                al = round(ms.get("cagr", 0) - mq.get("cagr", 0), 1)
+                row = {"top_k": k, "min_median": mm, "cagr": ms.get("cagr"), "sharpe": ms.get("sharpe"),
+                       "max_drawdown": ms.get("max_drawdown"), "alpha_vs_qqq": al,
+                       "avg_holdings": round(sum(nh) / max(len(nh), 1), 1)}
+                sweep.append(row)
+                _log(f"{k:>6}{mm:>8}{ms.get('cagr',0):>7}%{ms.get('sharpe',0):>8}"
+                     f"{ms.get('max_drawdown',0):>7}%{al:>9}{row['avg_holdings']:>9}")
+        best = max(sweep, key=lambda x: (x["sharpe"] or -9))
+        _log(f"\nMeilleure config IN-SAMPLE (Sharpe) : top_k={best['top_k']} min_median={best['min_median']} "
+             f"-> Sharpe {best['sharpe']}, alpha/QQQ {best['alpha_vs_qqq']}")
+        _log("(Le resultat principal garde la config configuree -> pas de sur-ajustement affiche.)")
 
-        # Benchmarks sur [t0, t1].
-        for name, s in bench_series.items():
-            _, c0 = s.on_or_after(t0)
-            _, c1 = s.on_or_after(t1)
-            r = (c1 / c0 - 1) if (c0 and c1 and c0 > 0) else 0.0
-            rets[name].append(r)
-            eq[name].append(eq[name][-1] * (1 + r))
-        dates_kept.append(t1)
-
-    n_years = (datetime.strptime(dates_kept[-1], "%Y-%m-%d")
-               - datetime.strptime(dates_kept[0], "%Y-%m-%d")).days / 365.25
+    eq, rets, dates_kept, n_hold_log = simulate(P)
+    n_years = years_of(dates_kept)
 
     series_names = ["strategy"] + list(bench_series)
 
@@ -289,6 +312,7 @@ def main() -> None:
         },
         "metrics": met,
         "segments": segments,
+        "sweep": sweep,
         "equity": curve,
     }
     OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")

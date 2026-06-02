@@ -269,6 +269,20 @@ function renderBT(){
         <td class="num"><b class="${cls(al)}">${al==null?"—":(al>0?"+":"")+al}</b></td></tr>`;}
     h+="</tbody></table>";
   }
+  const sw=BT.sweep||[];
+  if(sw.length){
+    const best=sw.reduce((a,b)=>(b.sharpe??-9)>(a.sharpe??-9)?b:a);
+    h+=`<div class="section-h">Sweep d'optimisation — quelle config (nb performers × plancher qualité) ? <span style="color:var(--warn)">⚠️ best in-sample = piège du sur-ajustement</span></div>`;
+    h+=`<table><thead><tr><th class="num">Top K</th><th class="num">Plancher méd.</th><th class="num">CAGR</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Alpha/QQQ</th><th class="num">~lignes</th></tr></thead><tbody>`;
+    for(const r of sw){const isb=r===best;
+      h+=`<tr${isb?' style="font-weight:700;background:rgba(52,216,164,.08)"':''}>
+        <td class="num">${r.top_k}</td><td class="num">${r.min_median}%</td>
+        <td class="num ${cls(r.cagr)}">${r.cagr}%</td><td class="num">${r.sharpe}</td>
+        <td class="num neg">${r.max_drawdown}%</td>
+        <td class="num"><b class="${cls(r.alpha_vs_qqq)}">${r.alpha_vs_qqq>0?"+":""}${r.alpha_vs_qqq}</b></td>
+        <td class="num">${r.avg_holdings}</td></tr>`;}
+    h+=`</tbody></table><div class="verdict">Meilleur Sharpe in-sample : <b>Top ${best.top_k} · plancher ${best.min_median}%</b> (Sharpe ${best.sharpe}, alpha ${best.alpha_vs_qqq>0?"+":""}${best.alpha_vs_qqq}). À confirmer en forward avant de l'adopter.</div>`;
+  }
   document.getElementById("backtest").innerHTML=h;
 }
 

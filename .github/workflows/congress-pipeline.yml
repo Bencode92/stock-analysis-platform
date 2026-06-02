@@ -82,6 +82,8 @@ jobs:
           WEIGHTING: conviction
           SIZE_MODE: amount
           MIN_AMOUNT: "50000"
+          MIN_MEDIAN: "5"        # plancher qualite : ecarte les actifs mediocres (ex. Khanna +0.1%)
+          # WHITELIST: "Pelosi,Mullin,Green"   # decommenter pour ne suivre que ces noms
         run: python congress/congress_portfolio.py
 
       - name: Etage 4 - Backtest (vs SPY/QQQ/NANC)
@@ -94,6 +96,8 @@ jobs:
           MAX_HOLDINGS: "30"
           MAX_WEIGHT: "0.15"
           COST_BPS: "10"
+          BT_MIN_MEDIAN: "5"     # backtester la MEME strategie que le portefeuille (plancher qualite)
+          SWEEP: "1"             # balayer top_k x min_median et logguer la meilleure config
           PYTHONUNBUFFERED: "1"
         run: python congress/congress_backtest.py
 
