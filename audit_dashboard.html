@@ -131,11 +131,35 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="portfolio">📊 Mon Portefeuille</button>
-    <button class="tab" data-tab="compare">🎯 Comparatif Top Natifs</button>
+    <button class="tab" data-tab="categories">🎯 Tops par catégorie</button>
+    <button class="tab" data-tab="compare">🔀 Comparatif Natifs</button>
     <button class="tab" data-tab="actions">📋 Toutes Actions</button>
     <button class="tab" data-tab="bonds">💵 Obligations</button>
     <button class="tab" data-tab="etfs">📈 ETFs</button>
-    <button class="tab" data-tab="phases">🔧 Phases Sélection</button>
+    <button class="tab" data-tab="phases">🔧 Phases</button>
+    <button class="tab" data-tab="export" style="margin-left: auto; background: rgba(110,212,127,0.1); color: var(--green); border-radius: 4px;">📥 Export pour expert</button>
+  </div>
+
+  <!-- =================== CATEGORIES (Tops par axe fondamental) =================== -->
+  <div class="tab-content" id="tab-categories">
+    <div class="panel">
+      <h2>Tops par catégorie — qui est dans le portefeuille ?</h2>
+      <p class="help">Pour chaque axe fondamental (Buffett, ROE, Dividende, Perf, Growth…), top 20 actions de l'univers avec marker présence portfolio. Permet de voir : <strong>les meilleurs Buffett 100 sont-ils tous dans le portefeuille ? Lesquels manquent ?</strong></p>
+    </div>
+    <div id="categories-content"></div>
+  </div>
+
+  <!-- =================== EXPORT =================== -->
+  <div class="tab-content" id="tab-export">
+    <div class="panel">
+      <h2>📥 Export analyse pour expert</h2>
+      <p class="help">Génère un fichier Markdown complet avec : portefeuille actuel, anomalies cross-profil, top natifs absents, tops par catégorie, configuration MI active. Tu peux l'envoyer à un expert (ou à moi) pour optimiser le code.</p>
+      <div style="margin: 14px 0;">
+        <button id="btn-export" style="background: var(--green); color: var(--bg); border: none; padding: 10px 24px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer;">📥 Générer & télécharger le rapport (.md)</button>
+        <button id="btn-export-copy" style="background: var(--accent); color: var(--bg); border: none; padding: 10px 24px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 8px;">📋 Copier dans le presse-papier</button>
+      </div>
+      <pre id="export-preview" style="background: var(--bg); padding: 14px; border-radius: 4px; border: 1px solid var(--border); max-height: 60vh; overflow: auto; font-size: 11px; color: var(--text-dim); white-space: pre-wrap;"></pre>
+    </div>
   </div>
 
   <!-- =================== MON PORTEFEUILLE =================== -->
@@ -864,6 +888,242 @@ function renderPortfolio() {
 }
 
 // =============================================================================
+// VIEW — TOPS PAR CATÉGORIE (Buffett, Perf, ROE, Dividend, Growth, Value, Quality)
+// =============================================================================
+const CATEGORIES = [
+  { key: 'buffett_score', label: '🏆 Top Buffett Score (qualité absolue)', extract: s => num(s.buffett_score), unit: '', desc: 'Buffett score = scoring fondamentaux ROE/marges/D-E/croissance' },
+  { key: 'quality_score', label: '💎 Top Quality Score (peer-relative)', extract: s => num(s.quality_score), unit: '', desc: 'Quality score = position peer-relative (vs secteur)' },
+  { key: 'roe', label: '⚡ Top ROE (rentabilité capital)', extract: s => num(s.roe), unit: '%', desc: 'Return on Equity' },
+  { key: 'dividend_yield', label: '💰 Top Dividend Yield', extract: s => num(s.dividend_yield), unit: '%', desc: 'Dividende yield (top dividend payers)' },
+  { key: 'perf_3y', label: '🚀 Top Performance 3Y', extract: s => num(s.perf_3y), unit: '%', desc: 'Performance sur 3 ans' },
+  { key: 'perf_1y', label: '⚡ Top Performance 1Y (momentum)', extract: s => num(s.perf_1y), unit: '%', desc: 'Performance sur 1 an' },
+  { key: 'perf_ytd', label: '📈 Top Performance YTD', extract: s => num(s.perf_ytd), unit: '%', desc: 'Performance year-to-date' },
+  { key: 'eps_growth_forecast_5y', label: '📊 Top EPS Growth 5Y (forecast)', extract: s => num(s.eps_growth_forecast_5y), unit: '%', desc: 'Prévision croissance EPS 5 ans' },
+  // Composite "Value" : low PE + high Buffett
+  { key: '_value', label: '🔍 Top Value (PE bas + Buffett élevé)', extract: s => { const pe = num(s.pe_ratio); if (pe <= 0) return -1; return num(s.buffett_score) / pe; }, unit: '', desc: 'Composite : buffett_score / pe_ratio' },
+];
+
+function renderCategories() {
+  const root = document.getElementById('categories-content');
+  if (!STATE.stocks.length) { root.innerHTML = '<div class="panel"><p class="dim">Charge les stocks pour voir les tops.</p></div>'; return; }
+
+  let html = '';
+  for (const cat of CATEGORIES) {
+    // Top 20 par cette catégorie
+    const ranked = STATE.stocks
+      .map(s => ({ s, val: cat.extract(s) }))
+      .filter(x => x.val != null && !isNaN(x.val) && x.val > -Infinity)
+      .sort((a,b) => b.val - a.val)
+      .slice(0, 20);
+
+    let inP = 0;
+    let rows = '';
+    for (let i=0; i<ranked.length; i++) {
+      const { s, val } = ranked[i];
+      const tk = s.ticker || s.symbol || '';
+      const pos = getPosForStock(s);
+      const inPort = !!pos;
+      if (inPort) inP++;
+      const badge = inPort ? profBadge(pos.profile) + ` <span class="badge gray">${fmt(pos.weight,1)}%</span>` : '<span class="badge red">❌ absente</span>';
+      const native = s._profile_native ? `<span class="badge gray">${s._profile_native}</span>` : '';
+      const buf = num(s.buffett_score), vol = num(s.volatility_3y||s.vol_3y_pct), div = num(s.dividend_yield);
+      rows += `<tr><td class="num dim">#${i+1}</td><td class="tk">${tk}</td><td title="${s.name||''}">${(s.name||'').slice(0,30)}</td><td>${(s.country||'').slice(0,10)}</td><td>${(s.sector||'').slice(0,16)}</td><td class="num"><strong style="color:var(--accent)">${typeof val==='number'?val.toFixed(cat.unit==='%'?1:0):val}${cat.unit}</strong></td><td class="num">${buf.toFixed(0)}</td><td class="num">${vol.toFixed(0)}</td><td class="num">${div.toFixed(1)}</td><td>${native}</td><td>${badge}</td></tr>`;
+    }
+
+    html += `<div class="panel">
+      <h2>${cat.label}</h2>
+      <p class="help">${cat.desc} · <strong>${inP}/${ranked.length}</strong> dans le portefeuille global</p>
+      <table class="pf-table"><thead><tr><th>#</th><th>Tk</th><th>Nom</th><th>Pays</th><th>Secteur</th><th class="num">${cat.label.split(' ')[1] || 'val'}</th><th class="num">Buf</th><th class="num">Vol</th><th class="num">Div</th><th>Natif</th><th>Portefeuille</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  }
+  root.innerHTML = html;
+}
+
+// =============================================================================
+// EXPORT POUR EXPERT (Markdown complet)
+// =============================================================================
+function generateExportMarkdown() {
+  const lines = [];
+  const now = new Date().toISOString().split('T')[0];
+  lines.push(`# 📊 Audit portefeuille — ${now}`);
+  lines.push('');
+  lines.push(`Généré par audit_dashboard.html — analyse data-driven du pipeline de sélection Sélection-1 à 5.`);
+  lines.push('');
+
+  // === 1. Configuration MI ===
+  lines.push('## 🔧 Configuration Market Intelligence');
+  const bs = STATE.bondStrategy;
+  if (bs) {
+    lines.push('Bond strategy actif :');
+    lines.push(`- prefer_tips: ${bs.prefer_tips}`);
+    lines.push(`- prefer_treasury: ${bs.prefer_treasury}`);
+    lines.push(`- avoid_hy: ${bs.avoid_hy}`);
+    lines.push(`- avoid_securitized: ${bs.avoid_securitized}`);
+    lines.push(`- avoid_em_bonds: ${bs.avoid_em_bonds}`);
+    lines.push(`- max_duration_stable: ${bs.max_duration_stable}y`);
+    lines.push(`- max_duration_moderate: ${bs.max_duration_moderate}y`);
+  } else {
+    lines.push('_Bond strategy non disponible dans le portefeuille chargé — utilisation des defaults stagflation_');
+  }
+  lines.push('');
+
+  // === 2. Snapshot portefeuille ===
+  lines.push('## 📊 Portefeuille actuel');
+  lines.push('');
+  let totalStocks=0, crossProfile=0, okNative=0;
+  for (const prof of ['Agressif','Modéré','Stable']) {
+    const positions = STATE.portfolioByProfile[prof] || [];
+    if (!positions.length) continue;
+    const rawProf = (STATE.portfolio.portfolios && STATE.portfolio.portfolios[prof]) || STATE.portfolio[prof] || {};
+    const com = rawProf.comment || rawProf.Commentaire || '';
+    const volM = com.match(/de (\d+\.\d+)%/);
+    const vol = volM ? volM[1]+'%' : '?';
+    lines.push(`### ${prof} (vol ${vol})`);
+    lines.push('');
+    lines.push('| Tk | Nom | Cat | Buf | Vol | Div | Match | Poids |');
+    lines.push('|---|---|---|---|---|---|---|---|');
+    for (const p of positions.sort((a,b)=>b.weight-a.weight)) {
+      const tk = p.ticker || '—';
+      const stock = tk ? STATE.byTicker[tk] : null;
+      let match = '—';
+      if (stock) {
+        totalStocks++;
+        const native = stock._profile_native;
+        if (native === prof) { match = '✓ natif'; okNative++; }
+        else { match = `→ ${native}`; crossProfile++; }
+      }
+      const buf = stock ? num(stock.buffett_score).toFixed(0) : '-';
+      const vol2 = stock ? num(stock.volatility_3y||stock.vol_3y_pct).toFixed(0) : '-';
+      const div = stock ? num(stock.dividend_yield).toFixed(1) : '-';
+      lines.push(`| ${tk} | ${(p.name||'').slice(0,30)} | ${p.category||'?'} | ${buf} | ${vol2} | ${div} | ${match} | ${fmt(p.weight,2)}% |`);
+    }
+    lines.push('');
+  }
+
+  // === 3. Cohérence globale ===
+  lines.push('## 🎯 Cohérence native');
+  lines.push(`- Actions identifiées : ${totalStocks}`);
+  lines.push(`- ✓ Profil natif : ${okNative} (${totalStocks?Math.round(okNative*100/totalStocks):0}%)`);
+  lines.push(`- ✗ Cross-profil : ${crossProfile}`);
+  lines.push('');
+
+  // === 4. Anomalies par profil ===
+  lines.push('## ⚠️ Anomalies détectées');
+  for (const prof of ['Agressif','Modéré','Stable']) {
+    const positions = STATE.portfolioByProfile[prof] || [];
+    const anomalies = [];
+    for (const pos of positions) {
+      const stock = pos.ticker ? STATE.byTicker[pos.ticker] : null;
+      if (!stock) continue;
+      const native = stock._profile_native;
+      if (native !== prof) {
+        const fitCurrent = stock[PROFILE_CFG[prof].fitKey] || 0;
+        const fitNative = stock[PROFILE_CFG[native].fitKey] || 0;
+        anomalies.push({ ticker: pos.ticker, name: stock.name, weight: pos.weight, native, fitCurrent, fitNative });
+      }
+    }
+    if (anomalies.length) {
+      lines.push(`### ${prof} — ${anomalies.length} anomalies`);
+      lines.push('| Tk | Nom | Poids | Natif | fit ici | fit natif | Δ |');
+      lines.push('|---|---|---|---|---|---|---|');
+      anomalies.sort((a,b)=>(b.fitNative-b.fitCurrent)-(a.fitNative-a.fitCurrent));
+      for (const a of anomalies) {
+        lines.push(`| ${a.ticker} | ${(a.name||'').slice(0,30)} | ${fmt(a.weight,2)}% | ${a.native} | ${a.fitCurrent.toFixed(2)} | ${a.fitNative.toFixed(2)} | ${(a.fitNative-a.fitCurrent).toFixed(2)} |`);
+      }
+      lines.push('');
+    }
+  }
+
+  // === 5. Top natifs absents ===
+  lines.push('## 🚫 Top natifs absents du portefeuille global');
+  const allTk = new Set();
+  for (const positions of Object.values(STATE.portfolioByProfile)) for (const p of positions) if (p.ticker) allTk.add(p.ticker);
+  for (const prof of ['Agressif','Modéré','Stable']) {
+    const cfg = PROFILE_CFG[prof];
+    const absents = STATE.stocks
+      .filter(s => s._profile_native === prof)
+      .filter(s => {
+        const buf = num(s.buffett_score), qual = num(s.quality_score);
+        if (!(buf >= cfg.buf_min && qual >= cfg.qual_min)) return false;
+        const vol = num(s.volatility_3y || s.vol_3y_pct);
+        if (vol < cfg.vol_min || vol > cfg.vol_max) return false;
+        const tk = s.ticker || s.symbol || '';
+        if (!tk || allTk.has(tk)) return false;
+        return (s[cfg.fitKey] || 0) >= 0.85;
+      })
+      .sort((a,b) => (b[cfg.fitKey]||0) - (a[cfg.fitKey]||0))
+      .slice(0, 10);
+    if (absents.length) {
+      lines.push(`### ${prof} — ${absents.length} top natifs jamais sélectionnés`);
+      lines.push('| Tk | Nom | Pays | Buf | ROE | Vol | Div | fit |');
+      lines.push('|---|---|---|---|---|---|---|---|');
+      for (const s of absents) {
+        lines.push(`| ${s.ticker||s.symbol||''} | ${(s.name||'').slice(0,30)} | ${s.country||''} | ${num(s.buffett_score).toFixed(0)} | ${num(s.roe).toFixed(0)} | ${num(s.volatility_3y||s.vol_3y_pct).toFixed(0)} | ${num(s.dividend_yield).toFixed(1)} | ${(s[cfg.fitKey]||0).toFixed(2)} |`);
+      }
+      lines.push('');
+    }
+  }
+
+  // === 6. Tops par catégorie (résumé) ===
+  lines.push('## 🎯 Tops par catégorie fondamentale');
+  for (const cat of CATEGORIES) {
+    const ranked = STATE.stocks
+      .map(s => ({ s, val: cat.extract(s) }))
+      .filter(x => x.val != null && !isNaN(x.val) && x.val > -Infinity)
+      .sort((a,b) => b.val - a.val)
+      .slice(0, 10);
+    const inP = ranked.filter(x => getPosForStock(x.s)).length;
+    lines.push(`### ${cat.label} — ${inP}/10 dans le portefeuille`);
+    lines.push('| # | Tk | Nom | Pays | Val | Buf | Native | Portefeuille |');
+    lines.push('|---|---|---|---|---|---|---|---|');
+    for (let i=0; i<ranked.length; i++) {
+      const { s, val } = ranked[i];
+      const tk = s.ticker || s.symbol || '';
+      const pos = getPosForStock(s);
+      const port = pos ? `${pos.profile} ${fmt(pos.weight,1)}%` : '❌ absent';
+      lines.push(`| ${i+1} | ${tk} | ${(s.name||'').slice(0,25)} | ${(s.country||'').slice(0,12)} | ${typeof val==='number'?val.toFixed(cat.unit==='%'?1:0):val}${cat.unit} | ${num(s.buffett_score).toFixed(0)} | ${s._profile_native||'?'} | ${port} |`);
+    }
+    lines.push('');
+  }
+
+  // === 7. Question à l'expert ===
+  lines.push('## 🤔 Questions à l\'expert');
+  lines.push('1. **Routing cross-profil** : pourquoi les actions au fit natif fort (cf section Anomalies) restent dans le mauvais profil malgré boost ×1.40 + hard-exclude fit ≥ 0.95 ? Le SLSQP est-il à blâmer ?');
+  lines.push('2. **Top natifs absents** : pourquoi des actions Buffett 100, fit ≥ 0.85, filtres OK ne sont JAMAIS sélectionnées ? Le pool target_n est-il trop petit ?');
+  lines.push('3. **Concentration vs diversification** : SLSQP sparsifie à 5 actions/profil avec 10% chacune. Faut-il imposer min_n_actions par profil pour utiliser plus de candidats ?');
+  lines.push('4. **ETF/Bond macro tilt** : les filtres avoid_securitized/prefer_tips s\'appliquent-ils dans tous les régimes ou seulement quand le MI le dit explicitement ?');
+  lines.push('');
+  lines.push('## 📂 Fichiers à fournir pour reproduire');
+  lines.push('- `data/stocks_us.json` + `stocks_europe.json` + `stocks_asia.json`');
+  lines.push('- `data/combined_bonds.csv` + `data/combined_etfs.csv`');
+  lines.push('- `data/portfolio_history/portfolios_v4_<latest>.json` ou `data/portfolios.json`');
+  lines.push('- `data/market_intelligence_audit/mi_<latest>.json`');
+  lines.push('- `portfolio_engine/profile_assignment.py` (Sélection-4)');
+  lines.push('- `portfolio_engine/preset_meta.py` (boost natif Sélection-5)');
+  lines.push('- `portfolio_engine/preset_bond.py` (filtres bond macro tilt)');
+  return lines.join('\n');
+}
+
+function downloadFile(name, content) {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function renderExportPreview() {
+  const pre = document.getElementById('export-preview');
+  if (!pre) return;
+  if (!STATE.portfolio || !STATE.stocks.length) {
+    pre.textContent = 'Charge les stocks + un portefeuille pour générer l\'export.';
+    return;
+  }
+  pre.textContent = generateExportMarkdown().slice(0, 5000) + '\n\n... [tronqué pour preview — l\'export complet sera téléchargé]';
+}
+
+// =============================================================================
 // VIEW 2 — COMPARATIF TOP NATIFS
 // =============================================================================
 function renderCompare() {
@@ -1114,10 +1374,12 @@ function renderETFs() {
 // =============================================================================
 function refresh() {
   renderPortfolio();
+  renderCategories();
   renderCompare();
   renderActions();
   renderBonds();
   renderETFs();
+  renderExportPreview();
 }
 
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
@@ -1157,6 +1419,20 @@ document.querySelectorAll('#etfs-table th[data-col]').forEach(th => th.addEventL
 ['search-etfs','filter-etf-cat','filter-etf-presence'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderETFs);
   document.getElementById(id).addEventListener('change', renderETFs);
+});
+
+// Export buttons
+document.getElementById('btn-export').addEventListener('click', () => {
+  if (!STATE.portfolio || !STATE.stocks.length) { alert('Charge stocks + portefeuille avant export.'); return; }
+  const md = generateExportMarkdown();
+  const date = new Date().toISOString().split('T')[0];
+  downloadFile(`portfolio_audit_${date}.md`, md);
+});
+document.getElementById('btn-export-copy').addEventListener('click', async () => {
+  if (!STATE.portfolio || !STATE.stocks.length) { alert('Charge stocks + portefeuille avant export.'); return; }
+  const md = generateExportMarkdown();
+  try { await navigator.clipboard.writeText(md); alert('✓ Copié dans le presse-papier — colle dans Claude ou un éditeur'); }
+  catch(e) { alert('Erreur clipboard : ' + e); }
 });
 
 autoLoad();
