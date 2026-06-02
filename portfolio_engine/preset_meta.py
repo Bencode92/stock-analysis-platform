@@ -966,7 +966,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "de_ratio_max": 2.0,        # FIX v5.2.0-Q: D/E max
             "quality_score_min": 40,    # v4.15: filtre qualité complémentaire au moat
             "quality_coverage_min": 70, # v5.3.1: éjecte actions avec données manquantes (SBIN 63%)
-            "perf_3y_min": -10.0,       # v5.4.0 (Sélection-2): exclut MC (-43%), NESN (-27%), SAN (-20%)
+            "perf_3y_min": -40.0,       # v5.7.0 (Sélection-7): -10→-40% pour ne plus filtrer ACN/INTU/ADBE/PYPL (Tech US, perf_3y -16/-36% mais Buf 100, en comeback)
         },
         "equity_min_weight": 0.40,
         "equity_max_weight": 0.60,
@@ -2122,14 +2122,16 @@ def select_equities_for_profile(
     for eq in eq_hard:
         eq["_profile_score"] = score_equity_for_profile(eq, profile, universe_dists)
 
-    # === Sélection-4 + Sélection-5: Profile-native boost ===
-    # Sélection-4 : boost ×1.25 / penalty ×0.85 (timide — NOVN finit Stable)
-    # Sélection-5 : boost ×1.40 / penalty ×0.70 + HARD-EXCLUDE si fit_native
-    #   très élevé (≥ 0.95) et profil ≠ native. Un stock collé à 95%+ à un
-    #   autre profil (NOVN fit_M=0.97) n'a rien à faire ailleurs.
+    # === Sélection-4 + Sélection-5 + Sélection-7: Profile-native boost ===
+    # Sélection-4 : boost ×1.25 / penalty ×0.85 (timide — NOVN finissait Stable)
+    # Sélection-5 : boost ×1.40 / penalty ×0.70 + HARD-EXCLUDE si fit_native ≥ 0.95
+    # Sélection-7 : threshold abaissé 0.95 → 0.85 (audit a montré que HEROMOTOCO
+    #   fit_M=0.99, EXPD 0.97, ITRK 0.95 finissaient en Agressif car le threshold
+    #   trop strict ne les excluait pas). Avec 0.85, ACN/INTU/ADBE/REGN/CPRT
+    #   ont fit_M proche de 0.85+ et resteront forcés en Modéré natif.
     _NATIVE_BOOST = 1.40
     _NON_NATIVE_PENALTY = 0.70
-    _STRICT_NATIVE_THRESHOLD = 0.95
+    _STRICT_NATIVE_THRESHOLD = 0.85  # v5.7.0 (Sélection-7): 0.95 → 0.85
     _native_boosted = 0
     _native_penalized = 0
     _native_excluded = 0

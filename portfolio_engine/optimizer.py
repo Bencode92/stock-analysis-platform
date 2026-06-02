@@ -4108,7 +4108,7 @@ class PortfolioOptimizer:
                     if _sd.get("_profile_native") == profile.name:
                         _native_fit_array[_i] = float(_sd.get(_fit_key, 0) or 0)
                         _native_count += 1
-            _NATIVE_FIT_LAMBDA = 3.0
+            _NATIVE_FIT_LAMBDA = 6.0  # Sélection-7: 3→6 (audit data-driven a montré que 3.0 insuffisant pour forcer top Buf 100 natifs)
             if _native_count:
                 logger.info(
                     f"[Sélection-6] {profile.name}: {_native_count} natifs dans pool, "
