@@ -80,6 +80,12 @@
     <div id="content"><div class="empty">Chargement…</div></div>
   </div>
 
+  <h2 style="margin:30px 0 4px;font-size:20px">💼 Portefeuille généré</h2>
+  <p id="pfmeta" style="color:var(--muted);font-size:13px;margin:0 0 12px"></p>
+  <div class="card">
+    <div id="portfolio"><div class="empty">Chargement…</div></div>
+  </div>
+
   <footer>
     Données : Quiver Quantitative · Score = régularité (médiane annuelle + constance + diversité + échantillon) ·
     Entrée horodatée sur la date de déclaration (anti look-ahead).
@@ -177,6 +183,44 @@ fetch(DATA_URL, {cache:"no-store"})
 
 document.getElementById("q").addEventListener("input", render);
 document.getElementById("onlyEligible").addEventListener("change", render);
+
+// ---- Portefeuille (etage 3) ----
+function renderPortfolio(p){
+  const holdings = p.holdings || [];
+  const meta = p.meta || {};
+  const elMeta = document.getElementById("pfmeta");
+  if(!holdings.length){
+    document.getElementById("portfolio").innerHTML =
+      `<div class="empty">Pas encore de portefeuille. Il est généré apr&egrave;s le classement (étage 3 du pipeline).</div>`;
+    elMeta.textContent = "";
+    return;
+  }
+  const pr = meta.params || {};
+  elMeta.innerHTML = `Top ${pr.top_k_politicians} performers · achats des ${pr.lookback_days} derniers jours · `
+    + `pondération ${pr.weighting} · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne · ${holdings.length} lignes`;
+  const maxW = Math.max(...holdings.map(h=>h.weight));
+  let html = `<table><thead><tr>
+      <th>Ticker</th><th class="num">Poids</th><th class="num">Acheteurs</th><th>Performers (rationale)</th>
+    </tr></thead><tbody>`;
+  for(const h of holdings){
+    const top = (h.buyers||[]).slice(0,3).map(b=>`${esc(b.representative)} (${b.regularity_score})`).join(", ");
+    html += `<tr>
+      <td><span class="name">${esc(h.ticker)}</span></td>
+      <td class="num"><span class="score">${(h.weight*100).toFixed(1)}%</span>
+          <div class="bar"><i style="width:${Math.round(100*h.weight/maxW)}%"></i></div></td>
+      <td class="num">${h.n_buyers}</td>
+      <td style="color:var(--muted);font-size:13px">${top}${(h.buyers||[]).length>3?` +${h.buyers.length-3}`:""}</td>
+    </tr>`;
+  }
+  html += "</tbody></table>";
+  document.getElementById("portfolio").innerHTML = html;
+}
+
+fetch("data/congress_portfolio.json", {cache:"no-store"})
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(renderPortfolio)
+  .catch(()=>{ document.getElementById("portfolio").innerHTML =
+      `<div class="empty">Portefeuille pas encore généré (lance le pipeline).</div>`; });
 </script>
 </body>
 </html>
