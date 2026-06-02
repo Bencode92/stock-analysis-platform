@@ -1,0 +1,325 @@
+{
+  "timestamp": "2026-06-02T09:35:09.545900",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-02",
+    "brent_usd": 92.89,
+    "brent_usd_avg5d": 93.07028559999999,
+    "gold_usd": 4527.26519,
+    "silver_usd": 76.37855,
+    "vix": 22.0,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": 0.0,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 274.0,
+    "sp500_level": 7599.96,
+    "sp500_change_1d_pct": 1.6925203419562769,
+    "hyg_change_1d_pct": -0.08759854836690424,
+    "lqd_change_1d_pct": 0.5167481775399116,
+    "trade_weighted_usd": 118.8783,
+    "eurusd": 1.16436,
+    "nasdaq_change_1d_pct": 0.60001797,
+    "xlu_perf_1d_pct": -2.97163,
+    "xle_perf_1d_pct": 1.79428,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4523.41934,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 15.147945885067573,
+    "cpi_yoy_pct": 2.4,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.88,
+    "favored_sectors": "information-technology, energy, materials, industrials",
+    "avoided_sectors": "financials",
+    "favored_regions": "asie, japan, turkey, united-states",
+    "avoided_regions": "india",
+    "key_trends": "Secteur leader: information-technology (+29.2% YTD) | Région leader: south-korea (+111.7% YTD) | 5 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+61.6% sur 12 mois) | 6M leader: information-technology (+29.7% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, consumer-discretionary, financials | Régions en difficulté: india | 3 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "communication-services(neutral,b=1.2,d=2.3%), utilities(neutral,b=0.37,d=-0.53%), consumer-staples(neutral,b=0.24,d=-0.22%), healthcare(neutral,b=0.53,d=-1.13%), materials(favored,b=0.81,d=-0.49%), real-estate(neutral,b=0.43,d=-1.61%), industrials(favored,b=0.96,d=-0.43%), energy(favored,b=-0.15,d=1.78%), consumer-discretionary(neutral,b=1.22,d=-2.21%), information-technology(favored,b=1.52,d=2.02%), financials(avoided,b=0.91,d=-0.48%)"
+  },
+  "ai_response": {
+    "regime": "neutral",
+    "regime_confidence": 3,
+    "regime_rationale": "Brent élevé ($93) mais CPI contenu (2.4%), Fed en pause (0 delta 6m), VIX à 22 (légèrement tendu mais pas stress), spreads IG/HY raisonnables — pas de signal directionnel fort. Le marché hésite entre risk-on (equity momentum IT +29% YTD, S&P solide) et des signaux de prudence (or en forte hausse malgré DD 15%, pétrole élevé, VIX >20, dollar faible).",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer energy/oil sur Brent élevé et momentum sectoriel favorable",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Brent à $93 avec momentum energy positif (+1.8% daily, RADAR favored) soutient le secteur, mais pas assez extrême pour un pari majeur."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Maintenir surpondération semi/AI sur momentum IT dominant",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif"
+        ],
+        "conviction": 3,
+        "rationale": "IT leader absolu (+29% YTD, +62% 52W) mais QQQ daily +0.6% sous-performe S&P +1.7% aujourd'hui — rotation possible, conviction limitée."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire healthcare sur momentum dégradé",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 2,
+        "rationale": "Healthcare en difficulté selon RADAR (daily -1.1%, 6M négatif probable), sous-performance relative claire."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Renforcer gold comme hedge géopolitique et dollar faible",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Or à $4527 malgré DD 15% de l'ATH signale une demande structurelle massive (banques centrales, dédollarisation); dollar faible (DTWEXBGS 118.9 < 120) renforce le cas — le DD est une opportunité d'accumulation, pas un signal de faiblesse."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Préférer duration courte à intermédiaire, éviter HY en Stable",
+        "params": {
+          "action": "shorten_duration",
+          "max_dur": 4.0,
+          "fund_types": []
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Sans visibilité sur la courbe (10Y/2Y N/A) et avec Brent élevé créant un risque inflationniste latent, la prudence sur la duration est justifiée pour le profil Stable."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Préférer TIPS sur risque inflation pétrole",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 6.0,
+          "fund_types": []
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Brent $93 + CPI 2.4% = inflation maîtrisée MAIS risque asymétrique à la hausse si pétrole persiste; TIPS offrent une assurance bon marché."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Légère surpondération dividend_value sur rotation défensives",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 2,
+        "rationale": "XLU -3% aujourd'hui crée un point d'entrée potentiel sur les défensives pour les profils conservateurs, mais conviction faible car le mouvement peut continuer."
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Maintenir cash tactique modéré sur VIX >20 et incertitude",
+        "params": {},
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX à 22 avec régime neutre justifie une poche de flexibilité pour acheter un éventuel dip, au-delà des T-bills productifs déjà en portefeuille."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Régime neutre avec biais inflationniste latent (Brent $93): mix TIPS + treasury court, IG acceptable, HY toléré en Agressif uniquement, duration contenue.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 6.0
+    },
+    "cash_allocation": {
+      "Agressif": 3,
+      "Modéré": 5,
+      "Stable": 4,
+      "rationale": "VIX 22 + régime neutre = garder une option d'achat sur la volatilité; les T-bills (CLTL, VGSH) déjà en portefeuille servent de cash productif, ce cash additionnel est pour la flexibilité tactique pure."
+    },
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0,
+      "rationale": "Régime neutre avec dollar faible est modérément favorable aux cryptos, mais VIX >20 et absence de risk-on clair limitent l'exposition; pas de pari agressif."
+    },
+    "warnings": [
+      "PÉTROLE → INFLATION: Brent $93 persistant peut pousser CPI au-dessus de 2.5% d'ici 2-3 mois, forçant la Fed à repousser les baisses — surveiller CPI juin/juillet",
+      "ROTATION SECTORIELLE EN COURS: S&P +1.7% mais QQQ +0.6% et XLU -3% — possible rotation value/cycliques hors tech, à confirmer sur plusieurs jours",
+      "OR DD 15%: Si l'or casse sous $4300, le signal technique se dégrade et le hedge perd en efficacité — surveiller le support",
+      "FINANCIALS AVOIDED PAR RADAR: Sous-performance financières + spreads IG 135bps (pas serrés) peut signaler un stress bancaire latent non encore visible dans le VIX",
+      "DONNÉES MANQUANTES CRITIQUES: 10Y yield, 2s10s, PCE, breakevens tous N/A — la stratégie duration est construite avec une visibilité réduite, ajuster dès que les données reviennent"
+    ],
+    "market_interpretation": {
+      "geopolitical_risk": "Brent $93 sans choc visible suggère des tensions d'offre persistantes (OPEC+ discipline ou risque Moyen-Orient latent); l'or à $4527 confirme une prime géopolitique structurelle élevée.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 5,
+      "sentiment_estimate": "neutral",
+      "dollar_assessment": "weak"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "ai_infra": {
+        "Agressif": 2
+      },
+      "healthcare": {
+        "Agressif": -2,
+        "Modéré": -2
+      },
+      "dividend_value": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 2,
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 6.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 6.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_neutral"
+    ],
+    "cash_tactical": {
+      "Agressif": 3,
+      "Modéré": 5,
+      "Stable": 4
+    },
+    "cash_tactical_rationale": "VIX 22 + régime neutre = garder une option d'achat sur la volatilité; les T-bills (CLTL, VGSH) déjà en portefeuille servent de cash productif, ce cash additionnel est pour la flexibilité tactique pure.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0
+    },
+    "ai_regime": "neutral",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "PÉTROLE → INFLATION: Brent $93 persistant peut pousser CPI au-dessus de 2.5% d'ici 2-3 mois, forçant la Fed à repousser les baisses — surveiller CPI juin/juillet",
+      "ROTATION SECTORIELLE EN COURS: S&P +1.7% mais QQQ +0.6% et XLU -3% — possible rotation value/cycliques hors tech, à confirmer sur plusieurs jours",
+      "OR DD 15%: Si l'or casse sous $4300, le signal technique se dégrade et le hedge perd en efficacité — surveiller le support",
+      "FINANCIALS AVOIDED PAR RADAR: Sous-performance financières + spreads IG 135bps (pas serrés) peut signaler un stress bancaire latent non encore visible dans le VIX",
+      "DONNÉES MANQUANTES CRITIQUES: 10Y yield, 2s10s, PCE, breakevens tous N/A — la stratégie duration est construite avec une visibilité réduite, ajuster dès que les données reviennent"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Régime neutre avec biais inflationniste latent (Brent $93): mix TIPS + treasury court, IG acceptable, HY toléré en Agressif uniquement, duration contenue.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 6.0
+    }
+  },
+  "regime": "neutral",
+  "regime_rationale": "Brent élevé ($93) mais CPI contenu (2.4%), Fed en pause (0 delta 6m), VIX à 22 (légèrement tendu mais pas stress), spreads IG/HY raisonnables — pas de signal directionnel fort. Le marché hésite entre risk-on (equity momentum IT +29% YTD, S&P solide) et des signaux de prudence (or en forte hausse malgré DD 15%, pétrole élevé, VIX >20, dollar faible).",
+  "market_interpretation": {
+    "geopolitical_risk": "Brent $93 sans choc visible suggère des tensions d'offre persistantes (OPEC+ discipline ou risque Moyen-Orient latent); l'or à $4527 confirme une prime géopolitique structurelle élevée.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 5,
+    "sentiment_estimate": "neutral",
+    "dollar_assessment": "weak"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Régime neutre avec biais inflationniste latent (Brent $93): mix TIPS + treasury court, IG acceptable, HY toléré en Agressif uniquement, duration contenue.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": false,
+    "avoid_securitized": false,
+    "avoid_em_bonds": false,
+    "max_duration_stable": 4.0,
+    "max_duration_moderate": 6.0
+  },
+  "warnings": [
+    "PÉTROLE → INFLATION: Brent $93 persistant peut pousser CPI au-dessus de 2.5% d'ici 2-3 mois, forçant la Fed à repousser les baisses — surveiller CPI juin/juillet",
+    "ROTATION SECTORIELLE EN COURS: S&P +1.7% mais QQQ +0.6% et XLU -3% — possible rotation value/cycliques hors tech, à confirmer sur plusieurs jours",
+    "OR DD 15%: Si l'or casse sous $4300, le signal technique se dégrade et le hedge perd en efficacité — surveiller le support",
+    "FINANCIALS AVOIDED PAR RADAR: Sous-performance financières + spreads IG 135bps (pas serrés) peut signaler un stress bancaire latent non encore visible dans le VIX",
+    "DONNÉES MANQUANTES CRITIQUES: 10Y yield, 2s10s, PCE, breakevens tous N/A — la stratégie duration est construite avec une visibilité réduite, ajuster dès que les données reviennent"
+  ]
+}
