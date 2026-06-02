@@ -274,7 +274,9 @@ function renderBT(){
 
 // ---- Load ----
 function load(url, set, render, emptyEl, emptyHtml){
-  fetch(url,{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status))
+  fetch(url,{cache:"no-store"}).then(r=>r.ok?r.text():Promise.reject(r.status))
+    // NaN/Infinity sont du JSON invalide pour JSON.parse -> on les neutralise.
+    .then(t=>JSON.parse(t.replace(/\bNaN\b/g,"null").replace(/-?\bInfinity\b/g,"null")))
     .then(d=>{set(d);render();updateKPIs();})
     .catch(()=>{document.getElementById(emptyEl).innerHTML=emptyHtml;});
 }

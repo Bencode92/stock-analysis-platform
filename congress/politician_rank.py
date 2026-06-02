@@ -91,6 +91,17 @@ def per_year_table(g: pd.DataFrame) -> list[dict]:
     return sorted(rows, key=lambda r: r["year"])
 
 
+def _nan_to_none(o):
+    """Remplace les NaN/inf (NaN = JSON invalide cote navigateur) par None, recursivement."""
+    if isinstance(o, float):
+        return o if (o == o and o not in (float("inf"), float("-inf"))) else None
+    if isinstance(o, dict):
+        return {k: _nan_to_none(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_nan_to_none(v) for v in o]
+    return o
+
+
 def _safe_float(v) -> float | None:
     if v is None or (isinstance(v, float) and np.isnan(v)):
         return None
@@ -173,7 +184,7 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
     frame = frame.sort_values(["eligible", "regularity_score"], ascending=[False, False]).reset_index(drop=True)
     frame["rank"] = frame.index + 1
 
-    ranking = frame.to_dict(orient="records")
+    ranking = _nan_to_none(frame.to_dict(orient="records"))
     return {
         "meta": {
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
