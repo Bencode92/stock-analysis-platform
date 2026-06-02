@@ -66,6 +66,8 @@
   @media (max-width: 1400px) { .pf-grid { grid-template-columns: 1fr; } }
   .pf-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
   .pf-card.proposal { border-color: var(--accent); background: linear-gradient(180deg, rgba(79,195,247,0.04), var(--panel)); }
+  .pf-card.diag { border-color: var(--orange); background: linear-gradient(180deg, rgba(255,183,77,0.05), var(--panel)); margin-bottom: 12px; }
+  .pf-card.diag h3 { color: var(--orange); }
   .pf-card h3 { color: var(--accent); margin: 0 0 6px; font-size: 13px; }
   .pf-card .pf-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; }
   .pf-card .pf-section-title { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin: 10px 0 4px; letter-spacing: 0.5px; display: flex; justify-content: space-between; font-weight: 600; }
@@ -764,12 +766,90 @@ function renderPortfolio() {
       propBody += '</tbody></table>';
     }
 
+    // === SECTION DIAGNOSTIC — "Pourquoi cette proposition ?" ===
+    let diagBody = '';
+
+    // (a) Anomalies dans l'actuel : cross-profil, faible fit
+    const anomalies = [];
+    for (const pos of positions) {
+      if (!pos._stock) continue;
+      const s = pos._stock;
+      const native = s._profile_native;
+      if (native !== prof) {
+        const fitCurrent = s[PROFILE_CFG[prof].fitKey] || 0;
+        const fitNative = s[PROFILE_CFG[native].fitKey] || 0;
+        anomalies.push({
+          ticker: pos.ticker, name: s.name, weight: pos.weight, sector: s.sector,
+          reason: `Natif <strong>${native}</strong> (fit ${fitNative.toFixed(2)}) mais alloué ici (fit ${fitCurrent.toFixed(2)}). Écart ${(fitNative-fitCurrent).toFixed(2)}.`,
+          fix: `Migrer vers ${native}`,
+          delta: fitNative - fitCurrent,
+        });
+      }
+    }
+    anomalies.sort((a,b) => b.delta - a.delta);
+
+    // (b) Top natifs absents du portefeuille GLOBAL (pas que ce profil)
+    const cfg = PROFILE_CFG[prof];
+    const topAbsent = STATE.stocks
+      .filter(s => s._profile_native === prof)
+      .filter(s => {
+        const buf = num(s.buffett_score), qual = num(s.quality_score);
+        if (!(buf >= cfg.buf_min && qual >= cfg.qual_min)) return false;
+        const vol = num(s.volatility_3y || s.vol_3y_pct);
+        if (vol < cfg.vol_min || vol > cfg.vol_max) return false;
+        if (num(s.roe) < cfg.roe_min) return false;
+        const sec = (s.sector||'').toLowerCase();
+        if (AVOIDED_SECTORS_FR.some(av => sec.includes(av))) return false;
+        // ABSENT du portefeuille global
+        const tk = s.ticker || s.symbol || '';
+        if (!tk || allActualTickers.has(tk)) return false;
+        return (s[cfg.fitKey] || 0) >= 0.85;
+      })
+      .sort((a,b) => (b[cfg.fitKey]||0) - (a[cfg.fitKey]||0))
+      .slice(0, 8);
+
+    if (anomalies.length || topAbsent.length) {
+      diagBody = '<div class="pf-card diag"><h3>🔍 Pourquoi cette proposition ?</h3>';
+      if (anomalies.length) {
+        diagBody += `<div class="pf-section-title"><span>Anomalies dans l'actuel — ${anomalies.length} cross-profils</span><span></span></div>`;
+        diagBody += `<table class="pf-table"><thead><tr><th>Tk</th><th>Nom</th><th class="num">Poids</th><th>Diagnostic</th><th>Action</th></tr></thead><tbody>`;
+        for (const a of anomalies) {
+          diagBody += `<tr><td class="tk">${a.ticker}</td><td title="${a.name}">${(a.name||'').slice(0,22)}</td><td class="num">${fmt(a.weight,1)}%</td><td>${a.reason}</td><td><span class="badge orange">${a.fix}</span></td></tr>`;
+        }
+        diagBody += '</tbody></table>';
+      }
+      if (topAbsent.length) {
+        diagBody += `<div class="pf-section-title"><span>Top natifs ${prof} ABSENTS du portefeuille global</span><span>fit ≥ 0.85, filtres S1-S5 OK</span></div>`;
+        diagBody += `<table class="pf-table"><thead><tr><th>Tk</th><th>Nom</th><th class="num">Buf</th><th class="num">ROE</th><th class="num">Vol</th><th class="num">Div</th><th class="num">fit</th><th>Pourquoi devrait être là</th></tr></thead><tbody>`;
+        for (const s of topAbsent) {
+          const tk = s.ticker || s.symbol || '';
+          const buf = num(s.buffett_score);
+          const roe = num(s.roe);
+          const vol2 = num(s.volatility_3y||s.vol_3y_pct);
+          const div = num(s.dividend_yield);
+          const fit = s[cfg.fitKey] || 0;
+          // Raison auto
+          let why = [];
+          if (buf >= 90) why.push(`Buf élite (${buf.toFixed(0)})`);
+          else if (buf >= 80) why.push(`Buf fort (${buf.toFixed(0)})`);
+          if (roe >= 25) why.push(`ROE élevé ${roe.toFixed(0)}%`);
+          if (div >= 3) why.push(`Div ${div.toFixed(1)}%`);
+          if (fit >= 0.95) why.push('fit ≥ 0.95');
+          if (vol2 >= cfg.vol_min && vol2 <= cfg.vol_max) why.push(`vol ${vol2.toFixed(0)}% dans band`);
+          diagBody += `<tr class="new-pick"><td class="tk">${tk}</td><td title="${s.name}">${(s.name||'').slice(0,22)}</td><td class="num">${buf.toFixed(0)}</td><td class="num">${roe.toFixed(0)}</td><td class="num">${vol2.toFixed(0)}</td><td class="num">${div.toFixed(1)}</td><td class="num">${fit.toFixed(2)}</td><td>${why.join(' · ')}</td></tr>`;
+        }
+        diagBody += '</tbody></table>';
+      }
+      diagBody += '</div>';
+    }
+
     rowsHtml += `<div class="profile-row">
       <h2>${profBadge(prof)} ${prof}</h2>
       <div class="pf-grid">
         <div class="pf-card"><h3>📊 Actuel</h3>${actualBody}</div>
         <div class="pf-card proposal"><h3>💡 Proposition data-driven</h3>${propBody}</div>
       </div>
+      ${diagBody}
     </div>`;
   }
   root.innerHTML = rowsHtml;
