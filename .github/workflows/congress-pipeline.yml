@@ -75,7 +75,7 @@ jobs:
 
       - name: Etage 3 - Construire le portefeuille (conviction)
         env:
-          TOP_K: "15"
+          TOP_K: "5"             # sweep : concentrer sur le Top 5 = meilleur Sharpe + alpha positif vs QQQ
           WINDOW_DAYS: "180"
           MAX_WEIGHT: "0.15"
           MAX_HOLDINGS: "30"
@@ -91,7 +91,7 @@ jobs:
           TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
           TWELVE_DATA_RATE: "600"
           BT_START: "2019-01-01"
-          TOP_K: "15"
+          TOP_K: "5"             # config retenue d'apres le sweep (a confirmer en forward)
           WINDOW_DAYS: "180"
           MAX_HOLDINGS: "30"
           MAX_WEIGHT: "0.15"
