@@ -3884,28 +3884,57 @@ class PortfolioOptimizer:
         if total_weight > 0:
             factor = 100 / total_weight
             allocation = {k: round(float(v * factor), 2) for k, v in allocation.items()}
-        
+
+        # === [SÉLECTION-12 TRACE] traque NOVN/GD/KO/PG en Stable ===
+        # Helper qui log les tickers cibles présents dans allocation à chaque étape.
+        # Au prochain run, les logs CI montreront PRÉCISÉMENT à quelle étape ces
+        # tickers entrent dans Stable, ce qui a échappé aux 4 fixes précédents.
+        _TRACE_TICKERS = {"NOVN", "GD", "KO", "PG"}
+        _cand_by_id_trace = {c.id: c for c in candidates}
+        def _trace_stable(stage_label):
+            if profile.name != "Stable":
+                return
+            present = []
+            for k, v in allocation.items():
+                a = _cand_by_id_trace.get(k)
+                if a and a.category == "Actions":
+                    tk = (a.ticker or a.symbol or "")
+                    if tk in _TRACE_TICKERS:
+                        present.append(f"{tk}={v:.2f}%")
+            if present:
+                logger.info(f"[TRACE-Stable @{stage_label}] cross-profil présents : {', '.join(present)}")
+            else:
+                logger.info(f"[TRACE-Stable @{stage_label}] aucun cross-profil ✓")
+
+        _trace_stable("post-normalize")
+
         # === Ajuster pour vol_target ===
         allocation = self._adjust_for_vol_target(allocation, candidates, profile, cov)
-       # === P1 FIX v6.19: Enforce sector caps post-normalization ===
+        _trace_stable("post-vol_target")
+        # === P1 FIX v6.19: Enforce sector caps post-normalization ===
         allocation = self._enforce_sector_caps(allocation, candidates, profile)
-        
-        # === P1 FIX v6.21: FORCE BONDS MINIMUM (après toutes modifications) ===
+        _trace_stable("post-sector_caps")
+
+        # === P1 FIX v6.21: FORCE BONDS MINIMUM ===
         allocation = self._enforce_bonds_minimum(allocation, candidates, profile)
-       # AJOUTER JUSTE APRÈS:
+        _trace_stable("post-bonds_min")
         # === P0 FIX v6.22: FORCE CRYPTO CAP ===
         allocation = self._enforce_crypto_cap(allocation, candidates, profile)
-       
+        _trace_stable("post-crypto_cap")
+
         # === v3.1: FORCE MINIMUM ETF COUNT (Stable: 3 min) ===
         allocation = self._enforce_min_etf_count(allocation, candidates, profile)
+        _trace_stable("post-min_etf")
 
-       # === v6.23: Appliquer Core/Satellite crypto ===
+        # === v6.23: Appliquer Core/Satellite crypto ===
         allocation = self._apply_crypto_core_satellite(allocation, candidates, profile)
-        
+        _trace_stable("post-crypto_core_sat")
+
         # === v6.24: POST-PROCESSOR UNIFIÉ ===
         allocation = self._post_process_allocation(
             allocation, candidates, profile, prev_weights
         )
+        _trace_stable("post-process_unified")
 
         # Phase1.5: SLSQP n'a pas tourné — la contrainte turnover n'a pas été appliquée.
         # On force ici le respect via un blend vers prev_weights.
@@ -3961,10 +3990,13 @@ class PortfolioOptimizer:
             allocation = self._blend_to_max_turnover(
                 allocation, filtered_prev, profile.max_turnover, candidates
             )
+        _trace_stable("post-blend_turnover")
 
         # Phase Convexité-1 — cap-corrélation appliquée aussi en fallback (Stable).
         # Le fallback n'a pas vu les contraintes SLSQP, on enforce ici.
         allocation = self._enforce_correlation_clusters(allocation, candidates, profile)
+        _trace_stable("post-correlation_clusters")
+        _trace_stable("FINAL_RETURN_fallback")
 
         # Cap déplacé dans optimize() comme FINAL GUARD (après tout post-processing)
         return allocation
