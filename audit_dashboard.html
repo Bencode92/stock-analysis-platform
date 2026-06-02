@@ -382,18 +382,54 @@ bind('f-portfolio', t => { try { STATE.portfolio=JSON.parse(t); extractPositions
 function extractPositions() {
   STATE.portfolioPositions = {};
   STATE.bondStrategy = null;
+  STATE.portfolioFormat = null;
+  STATE.portfolioByProfile = {};  // {profile: [{ticker, name, weight, category}]}
   if (!STATE.portfolio) return;
 
-  const portfolios = STATE.portfolio.portfolios || {};
-  // bond strategy à la racine (Sélection-5 le persiste éventuellement) — sinon dernier MI
+  // === Détection format ===
+  // Format A (portfolios_v4_*.json) : { portfolios: { Agressif: { allocation, assets } } }
+  // Format B (portfolios.json) : { Agressif: { Actions, ETF, _tickers_meta } }
+  let portfolios = STATE.portfolio.portfolios;
+  let format = 'A';
+  if (!portfolios) {
+    // Format B : profils à la racine
+    const profiles = ['Agressif','Modéré','Stable'];
+    if (profiles.some(p => STATE.portfolio[p] && typeof STATE.portfolio[p] === 'object')) {
+      portfolios = {};
+      for (const p of profiles) if (STATE.portfolio[p]) portfolios[p] = STATE.portfolio[p];
+      format = 'B';
+    }
+  }
+  if (!portfolios) return;
+  STATE.portfolioFormat = format;
+
   if (STATE.portfolio.bond_strategy_full) STATE.bondStrategy = STATE.portfolio.bond_strategy_full;
 
   for (const [prof, p] of Object.entries(portfolios)) {
     if (!p || typeof p !== 'object') continue;
+    STATE.portfolioByProfile[prof] = [];
+
+    // === FORMAT B : _tickers_meta direct ===
+    if (format === 'B' && p._tickers_meta) {
+      for (const [tk, meta] of Object.entries(p._tickers_meta)) {
+        const weight = (meta.weight || 0) * 100; // fraction → %
+        const name = meta.name || tk;
+        const cat = meta.category || '';
+        const pos = { profile: prof, weight, name, ticker: tk, category: cat };
+        STATE.portfolioByProfile[prof].push(pos);
+        // index par ticker + name + uppercase
+        for (const k of [tk, name, name.toUpperCase()]) {
+          if (!k) continue;
+          if (!STATE.portfolioPositions[k]) STATE.portfolioPositions[k] = [];
+          STATE.portfolioPositions[k].push(pos);
+        }
+      }
+      continue;
+    }
+
+    // === FORMAT A : allocation + assets ===
     const alloc = p.allocation || {};
     const assets = p.assets || [];
-
-    // Build id → {name, ticker} map depuis assets
     const idMap = {};
     for (const a of assets) {
       if (typeof a === 'string') {
@@ -401,34 +437,33 @@ function extractPositions() {
         const nmM = a.match(/name='([^']+)'/);
         const tkM = a.match(/ticker='([^']+)'/);
         const symM = a.match(/symbol='([^']+)'/);
-        if (idM) idMap[idM[1]] = { name: nmM?nmM[1]:'', ticker: (tkM||symM)?(tkM||symM)[1]:'' };
-        if (nmM) idMap[nmM[1]] = { name: nmM[1], ticker: (tkM||symM)?(tkM||symM)[1]:'' };
+        const catM = a.match(/category='([^']+)'/);
+        const tk = tkM ? tkM[1] : (symM ? symM[1] : '');
+        const nm = nmM ? nmM[1] : '';
+        const cat = catM ? catM[1] : '';
+        if (idM) idMap[idM[1]] = { name: nm, ticker: tk, category: cat };
+        if (nm) idMap[nm] = { name: nm, ticker: tk, category: cat };
       } else if (a && typeof a === 'object') {
-        const id = a.id||''; const nm = a.name||''; const tk = a.ticker || a.symbol || '';
-        if (id) idMap[id] = {name: nm, ticker: tk};
-        if (nm) idMap[nm] = {name: nm, ticker: tk};
+        const id = a.id||''; const nm = a.name||''; const tk = a.ticker || a.symbol || ''; const cat = a.category || '';
+        if (id) idMap[id] = {name: nm, ticker: tk, category: cat};
+        if (nm) idMap[nm] = {name: nm, ticker: tk, category: cat};
       }
     }
-
     for (const [key, weight] of Object.entries(alloc)) {
       const w = typeof weight==='number' ? weight : parseFloat(weight);
-      // Résolution name → ticker via stocks index
-      let resolvedTicker = '';
-      let resolvedName = key;
-      if (idMap[key]) { resolvedTicker = idMap[key].ticker; resolvedName = idMap[key].name || key; }
-      if (!resolvedTicker) {
-        const upper = (resolvedName || key).toUpperCase().trim();
-        const stk = STATE.byNameUpper[upper];
-        if (stk) resolvedTicker = stk.ticker || stk.symbol || '';
+      let rTicker = '', rName = key, rCat = '';
+      if (idMap[key]) { rTicker = idMap[key].ticker; rName = idMap[key].name || key; rCat = idMap[key].category; }
+      if (!rTicker) {
+        const stk = STATE.byNameUpper[(rName||key).toUpperCase().trim()];
+        if (stk) { rTicker = stk.ticker || stk.symbol || ''; rCat = 'Actions'; }
       }
-      // Clés indexées : ticker, name (uppercase pour ETF/bonds), id brut
+      const pos = { profile: prof, weight: w, name: rName, ticker: rTicker, key, category: rCat };
+      STATE.portfolioByProfile[prof].push(pos);
       const keys = [];
-      if (resolvedTicker) keys.push(resolvedTicker);
-      keys.push(key); // raw key (ETF/bond by name)
-      if (resolvedName) keys.push(resolvedName);
-      keys.push((resolvedName || key).toUpperCase());
-
-      const pos = { profile: prof, weight: w, name: resolvedName, ticker: resolvedTicker, key };
+      if (rTicker) keys.push(rTicker);
+      keys.push(key);
+      if (rName) keys.push(rName);
+      keys.push((rName||key).toUpperCase());
       for (const k of keys) {
         if (!STATE.portfolioPositions[k]) STATE.portfolioPositions[k] = [];
         STATE.portfolioPositions[k].push(pos);
@@ -458,64 +493,35 @@ function renderPortfolio() {
   const root = document.getElementById('portfolio-cards');
   const statsEl = document.getElementById('portfolio-stats');
   if (!STATE.portfolio) {
-    root.innerHTML = '<div class="panel" style="grid-column: 1/-1"><p class="dim">Charge un portfolios_v4_*.json pour commencer.</p></div>';
+    root.innerHTML = '<div class="panel" style="grid-column: 1/-1"><p class="dim">Charge un portfolios.json ou portfolios_v4_*.json.</p></div>';
     statsEl.innerHTML = '';
     return;
   }
-  const portfolios = STATE.portfolio.portfolios || {};
   let totalStocks=0, crossProfile=0, okNative=0;
-
   let cards = '';
+
   for (const prof of ['Agressif','Modéré','Stable']) {
-    const p = portfolios[prof];
-    if (!p) continue;
-    const alloc = p.allocation || {};
-    const com = p.comment || '';
+    const positions = STATE.portfolioByProfile[prof] || [];
+    if (!positions.length) continue;
+    const rawProf = (STATE.portfolio.portfolios && STATE.portfolio.portfolios[prof]) || STATE.portfolio[prof] || {};
+    const com = rawProf.comment || rawProf.Commentaire || '';
     const volM = com.match(/de (\d+\.\d+)%/);
     const linesM = com.match(/(\d+) lignes/);
     const vol = volM ? volM[1]+'%' : '?';
-    const nLines = linesM ? linesM[1] : Object.keys(alloc).length;
+    const nLines = linesM ? linesM[1] : positions.length;
 
-    // Build positions resolved
-    const entries = [];
-    for (const [key, w] of Object.entries(alloc)) {
-      const upper = key.toUpperCase().trim();
-      const stk = STATE.byNameUpper[upper];
-      // chercher dans assets
-      const assets = p.assets || [];
-      let assetMeta = null;
-      for (const a of assets) {
-        if (typeof a === 'string') {
-          if (a.includes(`id='${key}'`) || a.includes(`name='${key}'`)) {
-            const nmM = a.match(/name='([^']+)'/);
-            const tkM = a.match(/ticker='([^']+)'/);
-            const symM = a.match(/symbol='([^']+)'/);
-            const catM = a.match(/category='([^']+)'/);
-            assetMeta = { name: nmM?nmM[1]:key, ticker: (tkM||symM)?(tkM||symM)[1]:'', category: catM?catM[1]:'' };
-            break;
-          }
-        }
-      }
-      const stockMatch = stk || (assetMeta && STATE.byNameUpper[(assetMeta.name||'').toUpperCase().trim()]);
-      entries.push({
-        key, name: stockMatch ? stockMatch.name : (assetMeta ? assetMeta.name : key),
-        ticker: stockMatch ? (stockMatch.ticker || stockMatch.symbol) : (assetMeta ? assetMeta.ticker : ''),
-        category: assetMeta ? assetMeta.category : (stockMatch ? 'Actions' : 'ETF/Bond'),
-        weight: typeof w==='number'?w:parseFloat(w),
-        stock: stockMatch,
-      });
-    }
-    entries.sort((a,b)=>b.weight-a.weight);
-
-    // 3 sections : Actions / ETF / Obligations
     const sections = { 'Actions': [], 'ETF': [], 'Obligations': [], 'Crypto': [] };
-    for (const e of entries) {
-      const cat = (e.category || '').trim();
+    for (const e of positions) {
+      const tk = e.ticker || '';
+      const stock = tk ? STATE.byTicker[tk] : null;
+      e._stock = stock;
+      const cat = e.category;
       if (cat === 'Actions') sections.Actions.push(e);
       else if (cat === 'Obligations' || cat === 'bond') sections.Obligations.push(e);
       else if (cat === 'Crypto') sections.Crypto.push(e);
       else sections.ETF.push(e);
     }
+    for (const k of Object.keys(sections)) sections[k].sort((a,b)=>b.weight-a.weight);
 
     let body = `<div class="pf-meta"><strong style="color:var(--accent)">${nLines} lignes</strong> · Vol ${vol}</div>`;
     for (const [sec, items] of Object.entries(sections)) {
@@ -524,31 +530,27 @@ function renderPortfolio() {
       body += `<div class="pf-section-title">${sec} (${total.toFixed(1)}%)</div>`;
       for (const e of items) {
         let alertHtml = '<span class="badge gray">—</span>';
-        if (e.stock) {
+        if (e._stock) {
           totalStocks++;
-          const native = e.stock._profile_native;
+          const native = e._stock._profile_native;
           if (native === prof) { alertHtml = `<span class="badge green">✓ natif</span>`; okNative++; }
-          else { alertHtml = `<span class="badge red">cross-profil → ${native}</span>`; crossProfile++; }
+          else { alertHtml = `<span class="badge red">→ ${native}</span>`; crossProfile++; }
         }
         body += `<div class="pos">
           <div class="nm"><span class="tk">${e.ticker || '—'}</span></div>
-          <div class="nm">${(e.name||'').slice(0,28)}<div class="sub">${(e.stock?.sector||'').slice(0,18)}</div></div>
+          <div class="nm">${(e.name||'').slice(0,28)}<div class="sub">${(e._stock?.sector||'').slice(0,18)}</div></div>
           <div class="alert">${alertHtml}</div>
           <div class="w">${fmt(e.weight,2)}%</div>
         </div>`;
       }
     }
-
-    cards += `<div class="pf-card">
-      <h3>${profBadge(prof)} ${prof}</h3>
-      ${body}
-    </div>`;
+    cards += `<div class="pf-card"><h3>${profBadge(prof)} ${prof}</h3>${body}</div>`;
   }
   root.innerHTML = cards;
 
-  // Stats globales
+  const fmtFmt = STATE.portfolioFormat ? `<span class="badge blue">format ${STATE.portfolioFormat}</span>` : '';
   statsEl.innerHTML = `
-    <div class="stat-card"><div class="value">${totalStocks}</div><div class="label">Actions identifiées</div></div>
+    <div class="stat-card"><div class="value">${totalStocks}</div><div class="label">Actions identifiées ${fmtFmt}</div></div>
     <div class="stat-card"><div class="value" style="color:var(--green)">${okNative}</div><div class="label">✓ Profil natif</div></div>
     <div class="stat-card"><div class="value" style="color:var(--red)">${crossProfile}</div><div class="label">✗ Cross-profil</div></div>
     <div class="stat-card"><div class="value">${totalStocks?Math.round(okNative*100/totalStocks):0}%</div><div class="label">Cohérence native</div></div>
