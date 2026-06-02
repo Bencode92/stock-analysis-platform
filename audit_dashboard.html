@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portfolio Audit Dashboard — Sélection-5</title>
+<title>Portfolio Audit — Sélection-5</title>
 <style>
   :root {
     --bg: #0f1419;
     --panel: #1a1f2e;
+    --panel2: #232938;
     --border: #2a3142;
     --text: #d6e2f5;
     --text-dim: #8a96a8;
@@ -18,27 +19,26 @@
     --purple: #b388ff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: var(--bg); color: var(--text); padding: 20px; font-size: 13px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; font-size: 13px; }
   h1 { color: var(--accent); margin-bottom: 8px; font-size: 22px; }
+  h2 { color: var(--accent); margin-bottom: 12px; font-size: 16px; }
+  h3 { color: var(--text); font-size: 14px; margin: 14px 0 8px; }
   .subtitle { color: var(--text-dim); margin-bottom: 20px; font-size: 13px; }
 
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-  .tab { padding: 10px 20px; cursor: pointer; background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: 14px; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; }
+  .tab { padding: 10px 18px; cursor: pointer; background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: 13px; }
   .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-bottom: 16px; }
-  .panel h2 { color: var(--accent); margin-bottom: 12px; font-size: 16px; }
-  .panel h3 { color: var(--text); margin-bottom: 8px; font-size: 14px; margin-top: 14px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
 
-  .file-loaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .file-loaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
   .file-loader { background: var(--bg); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); }
   .file-loader label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 4px; }
-  .file-loader input[type=file] { width: 100%; color: var(--text); font-size: 11px; }
-  .status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 6px; }
+  .file-loader input { width: 100%; color: var(--text); font-size: 11px; }
+  .status { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10px; margin-left: 6px; }
   .status.ok { background: rgba(110, 212, 127, 0.2); color: var(--green); }
-  .status.warn { background: rgba(255, 183, 77, 0.2); color: var(--orange); }
   .status.err { background: rgba(240, 107, 107, 0.2); color: var(--red); }
 
   .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 4px; }
@@ -47,23 +47,37 @@
 
   table { width: 100%; border-collapse: collapse; font-size: 11px; }
   th { background: var(--bg); padding: 8px 6px; text-align: left; color: var(--accent); border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; position: sticky; top: 0; }
-  th:hover { color: var(--text); }
   th.sort-asc::after { content: ' ▲'; font-size: 9px; }
   th.sort-desc::after { content: ' ▼'; font-size: 9px; }
-  td { padding: 6px; border-bottom: 1px solid #232938; }
+  td { padding: 6px; border-bottom: 1px solid var(--panel2); }
   tr:hover td { background: rgba(79, 195, 247, 0.05); }
 
-  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; white-space: nowrap; }
   .badge.green { background: rgba(110, 212, 127, 0.2); color: var(--green); }
   .badge.orange { background: rgba(255, 183, 77, 0.2); color: var(--orange); }
   .badge.red { background: rgba(240, 107, 107, 0.2); color: var(--red); }
   .badge.purple { background: rgba(179, 136, 255, 0.2); color: var(--purple); }
   .badge.gray { background: rgba(138, 150, 168, 0.2); color: var(--text-dim); }
+  .badge.blue { background: rgba(79, 195, 247, 0.2); color: var(--accent); }
 
   .table-wrap { max-height: 70vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; }
-  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
-  .stat-card { background: var(--bg); padding: 12px; border-radius: 4px; border: 1px solid var(--border); }
-  .stat-card .value { font-size: 20px; color: var(--accent); font-weight: 500; }
+
+  .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+  .pf-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+  .pf-card h3 { color: var(--accent); margin: 0 0 8px; display: flex; align-items: center; gap: 10px; }
+  .pf-card .pf-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
+  .pf-card .pos { display: grid; grid-template-columns: 70px 1fr 60px 70px; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--panel2); font-size: 12px; align-items: center; }
+  .pf-card .pos:last-child { border-bottom: none; }
+  .pf-card .pos .nm { color: var(--text); }
+  .pf-card .pos .nm .tk { color: var(--accent); font-weight: 600; margin-right: 5px; }
+  .pf-card .pos .nm .sub { color: var(--text-dim); font-size: 10px; }
+  .pf-card .pos .w { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .pf-card .pos .alert { font-size: 9px; }
+  .pf-card .pf-section-title { font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin: 10px 0 4px; letter-spacing: 0.5px; }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: var(--bg); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); }
+  .stat-card .value { font-size: 22px; color: var(--accent); font-weight: 500; }
   .stat-card .label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
 
   .phase-block { border-left: 3px solid var(--accent); padding-left: 14px; margin-bottom: 14px; }
@@ -71,123 +85,100 @@
   .phase-block p { color: var(--text-dim); font-size: 12px; line-height: 1.5; }
   code { background: var(--bg); padding: 1px 5px; border-radius: 3px; color: var(--purple); font-size: 11px; }
 
+  .compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .compare-col h3 { text-align: center; padding: 8px; border-radius: 4px; color: var(--bg); margin-bottom: 8px; }
+  .compare-col.stable h3 { background: var(--green); }
+  .compare-col.modere h3 { background: var(--orange); }
+  .compare-col.agressif h3 { background: var(--purple); }
+  .compare-row { display: grid; grid-template-columns: 24px 60px 1fr 50px; gap: 6px; padding: 4px 6px; font-size: 11px; align-items: center; border-bottom: 1px solid var(--panel2); }
+  .compare-row .ok { color: var(--green); font-weight: bold; }
+  .compare-row .ko { color: var(--red); font-weight: bold; }
+  .compare-row .tk { color: var(--accent); font-weight: 600; }
+  .compare-row .fit { color: var(--text-dim); text-align: right; font-variant-numeric: tabular-nums; }
+
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .dim { color: var(--text-dim); }
+  .help { font-size: 11px; color: var(--text-dim); margin: 4px 0 10px; }
 </style>
 </head>
 <body>
   <h1>📊 Portfolio Audit Dashboard</h1>
-  <p class="subtitle">Audit data-driven du pipeline de sélection — Phases Sélection-1 à 5 — <a href="javascript:location.reload()" style="color: var(--accent)">⟳ reload</a></p>
+  <p class="subtitle">Vérifier que les meilleurs candidats sont bien dans le portefeuille final — Phases Sélection-1 à 5</p>
+
+  <!-- Chargement global -->
+  <div class="panel">
+    <h2>📁 Charger les fichiers <span id="global-status"></span></h2>
+    <p class="help">Si tu sers via <code>python3 -m http.server</code>, tout se charge automatiquement. Sinon, glisse les fichiers dans les champs ci-dessous.</p>
+    <div class="file-loaders">
+      <div class="file-loader"><label>stocks_us.json <span id="st-us-status"></span></label><input type="file" id="f-stocks-us" accept=".json"></div>
+      <div class="file-loader"><label>stocks_europe.json <span id="st-eu-status"></span></label><input type="file" id="f-stocks-eu" accept=".json"></div>
+      <div class="file-loader"><label>stocks_asia.json <span id="st-asia-status"></span></label><input type="file" id="f-stocks-asia" accept=".json"></div>
+      <div class="file-loader"><label>combined_bonds.csv <span id="bd-csv-status"></span></label><input type="file" id="f-bonds-csv" accept=".csv"></div>
+      <div class="file-loader"><label>combined_etfs.csv <span id="etf-csv-status"></span></label><input type="file" id="f-etfs-csv" accept=".csv"></div>
+      <div class="file-loader"><label>portfolios_v4_*.json (dernier) <span id="pf-status"></span></label><input type="file" id="f-portfolio" accept=".json"></div>
+    </div>
+  </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="phases">Phases & Récap</button>
-    <button class="tab" data-tab="actions">Actions</button>
-    <button class="tab" data-tab="bonds">Obligations</button>
-    <button class="tab" data-tab="etfs">ETFs</button>
+    <button class="tab active" data-tab="portfolio">📊 Mon Portefeuille</button>
+    <button class="tab" data-tab="compare">🎯 Comparatif Top Natifs</button>
+    <button class="tab" data-tab="actions">📋 Toutes Actions</button>
+    <button class="tab" data-tab="bonds">💵 Obligations</button>
+    <button class="tab" data-tab="etfs">📈 ETFs</button>
+    <button class="tab" data-tab="phases">🔧 Phases Sélection</button>
   </div>
 
-  <!-- =================== PHASES =================== -->
-  <div class="tab-content active" id="tab-phases">
+  <!-- =================== MON PORTEFEUILLE =================== -->
+  <div class="tab-content active" id="tab-portfolio">
     <div class="panel">
-      <h2>Phases Sélection livrées</h2>
+      <h2>Vue d'ensemble</h2>
+      <p class="help">Composition actuelle des 3 portefeuilles. Pour chaque ligne : <span class="badge green">✓ natif</span> = bon match, <span class="badge red">cross-profil</span> = pris dans le mauvais profil, <span class="badge gray">—</span> = pas de _fit calculé (ETF/bond).</p>
+      <div class="stat-cards" id="portfolio-stats"></div>
+    </div>
+    <div class="pf-grid" id="portfolio-cards"></div>
+  </div>
 
-      <div class="phase-block">
-        <h4>Phase Sélection-1 — Modéré vol + liquidité + cov gate</h4>
-        <p>Renforcement des hard filters Modéré : volatility band 12-45%, ROE min, D/E max, quality_coverage min 70.</p>
-      </div>
-
-      <div class="phase-block">
-        <h4>Phase Sélection-2 — buffett_score absolu + perf_3y_min + bump min_buffett</h4>
-        <p>Ajout du poids <code>buffett_score: 0.15-0.20</code> dans score_weights Modéré/Stable (Roche, Buffett 100, n'était pas favorisé sans). Filtre <code>perf_3y_min: -10%</code>. Min Buffett Modéré 60→65, Stable 60→70.</p>
-      </div>
-
-      <div class="phase-block">
-        <h4>Phase Sélection-3 — Gate AND + ETF dedup + SLSQP barbell bonds</h4>
-        <p>Gate Buffett+Quality passe en logique AND pour Modéré/Stable (PEG Buffett 50 ne peut plus rescue par quality 65). MAX_ETF_PER_EXPOSURE_GROUP : dividend Modéré 2→1. SLSQP Modéré : contrainte min 5% Treasury intermédiaire (barbell convexité).</p>
-      </div>
-
-      <div class="phase-block">
-        <h4>Phase Sélection-4 — Coherence-driven profile assignment</h4>
-        <p>Nouveau module <code>profile_assignment.py</code> : pour chaque action, fit_score Stable/Modéré/Agressif. <code>_profile_native</code> = profil au fit max. Sélection : boost ×1.25 si natif, ×0.85 sinon. Résultat : AAPL/MSFT/GOOG routés vers leur profil naturel.</p>
-      </div>
-
-      <div class="phase-block">
-        <h4>Phase Sélection-5 — Bonds macro tilt + native boost renforcé</h4>
-        <p>Bonds : <code>select_bonds_for_profile</code> lit <code>bond_strategy_full</code> du MI. Filtres dynamiques : <code>avoid_securitized</code> exclut CLO/MBS/ABS, <code>avoid_em_bonds</code>, <code>prefer_tips</code> force 1 TIPS. Actions : boost natif ×1.40, penalty ×0.70, hard-exclude si fit_native ≥ 0.95 et profil ≠ native (NOVN ne peut plus finir en Stable).</p>
-      </div>
-
-      <h3>Verdict actuel — goulot identifié</h3>
-      <p style="color: var(--text-dim); line-height: 1.6">
-        Le pool de sélection Modéré est désormais excellent (35 candidats incluant PG/NOVN/GGG/ROP/CHD). Mais l'<strong style="color: var(--orange)">optimizer SLSQP final</strong> sparsifie à 5 actions par profil et écarte les meilleurs candidats (PG ps=1.01, NOVN ps=0.96) au profit de combinaisons covariance-favorables (NATURGY, CF, ITX). <strong>Phase Sélection-6 envisagée</strong> : injecter <code>_profile_native</code> dans SLSQP (min_weight floor sur top 10 native).
-      </p>
+  <!-- =================== COMPARATIF NATIFS =================== -->
+  <div class="tab-content" id="tab-compare">
+    <div class="panel">
+      <h2>Top natifs par profil — présence dans le portefeuille</h2>
+      <p class="help">Top 20 actions par fit_score natif de chaque profil. ✓ = présente dans le portefeuille du profil correspondant, ✗ = absente. <strong>Une colonne avec beaucoup de ✗ haut dans la liste = SLSQP rate les meilleurs candidats.</strong></p>
+      <div class="compare-grid" id="compare-grid"></div>
     </div>
   </div>
 
-  <!-- =================== ACTIONS =================== -->
+  <!-- =================== ACTIONS DÉTAIL =================== -->
   <div class="tab-content" id="tab-actions">
     <div class="panel">
-      <h2>Chargement des données <span id="actions-status"></span></h2>
-      <div class="file-loaders">
-        <div class="file-loader">
-          <label>stocks_us.json <span id="st-us-status"></span></label>
-          <input type="file" id="f-stocks-us" accept=".json">
-        </div>
-        <div class="file-loader">
-          <label>stocks_europe.json <span id="st-eu-status"></span></label>
-          <input type="file" id="f-stocks-eu" accept=".json">
-        </div>
-        <div class="file-loader">
-          <label>stocks_asia.json <span id="st-asia-status"></span></label>
-          <input type="file" id="f-stocks-asia" accept=".json">
-        </div>
-        <div class="file-loader">
-          <label>portfolios_v4_*.json (dernier) <span id="pf-status"></span></label>
-          <input type="file" id="f-portfolio" accept=".json">
-        </div>
-        <div class="file-loader">
-          <label>selection_audit.json (optionnel) <span id="audit-status"></span></label>
-          <input type="file" id="f-audit" accept=".json">
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Stats globales</h2>
-      <div class="stat-cards" id="actions-stats"></div>
-    </div>
-
-    <div class="panel">
-      <h2>Tableau d'audit</h2>
+      <h2>Tableau exhaustif</h2>
       <div class="filters">
-        <div><label>Recherche</label><br><input type="text" id="search-actions" placeholder="ticker / nom / secteur..."></div>
+        <div><label>Recherche</label><br><input type="text" id="search-actions" placeholder="ticker / nom / secteur"></div>
         <div><label>Region</label><br><select id="filter-region"><option value="">Toutes</option></select></div>
         <div><label>Profil natif</label><br><select id="filter-native"><option value="">Tous</option><option value="Stable">Stable</option><option value="Modéré">Modéré</option><option value="Agressif">Agressif</option></select></div>
-        <div><label>Présence portefeuille</label><br><select id="filter-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option><option value="top-out">Top score mais absente</option></select></div>
+        <div><label>Présence</label><br><select id="filter-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option><option value="topout">Top natif (fit≥0.85) absente</option></select></div>
         <div><label>Buffett min</label><br><input type="number" id="filter-buffett" value="0" min="0" max="100" step="5" style="width: 70px"></div>
       </div>
       <div class="table-wrap">
         <table id="actions-table">
-          <thead>
-            <tr>
-              <th data-col="ticker">Ticker</th>
-              <th data-col="name">Nom</th>
-              <th data-col="country">Pays</th>
-              <th data-col="sector">Secteur</th>
-              <th data-col="buffett_score" class="num">Buf</th>
-              <th data-col="quality_score" class="num">Qual</th>
-              <th data-col="volatility_3y" class="num">Vol3y</th>
-              <th data-col="roe" class="num">ROE</th>
-              <th data-col="dividend_yield" class="num">Div%</th>
-              <th data-col="perf_3y" class="num">Perf3y</th>
-              <th data-col="fit_S" class="num">fit_S</th>
-              <th data-col="fit_M" class="num">fit_M</th>
-              <th data-col="fit_A" class="num">fit_A</th>
-              <th data-col="native">Natif</th>
-              <th data-col="in_profile">Portefeuille</th>
-              <th data-col="weight" class="num">Poids</th>
-              <th data-col="diagnostic">Diagnostic</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th data-col="ticker">Ticker</th>
+            <th data-col="name">Nom</th>
+            <th data-col="country">Pays</th>
+            <th data-col="sector">Secteur</th>
+            <th data-col="buffett_score" class="num">Buf</th>
+            <th data-col="quality_score" class="num">Qual</th>
+            <th data-col="volatility_3y" class="num">Vol3y</th>
+            <th data-col="roe" class="num">ROE</th>
+            <th data-col="dividend_yield" class="num">Div%</th>
+            <th data-col="perf_3y" class="num">Perf3y</th>
+            <th data-col="fit_S" class="num">fit_S</th>
+            <th data-col="fit_M" class="num">fit_M</th>
+            <th data-col="fit_A" class="num">fit_A</th>
+            <th data-col="native">Natif</th>
+            <th data-col="in_profile">Portefeuille</th>
+            <th data-col="weight" class="num">Poids</th>
+            <th data-col="diagnostic">Diagnostic</th>
+          </tr></thead>
           <tbody id="actions-tbody"></tbody>
         </table>
       </div>
@@ -197,43 +188,26 @@
   <!-- =================== BONDS =================== -->
   <div class="tab-content" id="tab-bonds">
     <div class="panel">
-      <h2>Chargement</h2>
-      <div class="file-loaders">
-        <div class="file-loader">
-          <label>combined_bonds.csv <span id="bd-csv-status"></span></label>
-          <input type="file" id="f-bonds-csv" accept=".csv">
-        </div>
-        <div class="file-loader">
-          <label>portefeuille (partagé avec onglet Actions)</label>
-          <input type="text" id="pf-shared-bonds" disabled value="utiliser onglet Actions">
-        </div>
-      </div>
-      <div id="bond-strategy-info" style="margin-top: 10px;"></div>
-    </div>
-
-    <div class="panel">
-      <h2>Tableau Obligations</h2>
+      <h2>Obligations <span id="bond-strategy-info"></span></h2>
       <div class="filters">
-        <div><label>Recherche</label><br><input type="text" id="search-bonds" placeholder="symbol / nom / fund_type..."></div>
+        <div><label>Recherche</label><br><input type="text" id="search-bonds" placeholder="symbol / nom / fund_type"></div>
         <div><label>Fund type</label><br><select id="filter-bond-ft"><option value="">Tous</option></select></div>
         <div><label>Présence</label><br><select id="filter-bond-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option></select></div>
       </div>
       <div class="table-wrap">
         <table id="bonds-table">
-          <thead>
-            <tr>
-              <th data-col="symbol">Symbol</th>
-              <th data-col="name">Nom</th>
-              <th data-col="fund_type">Fund type</th>
-              <th data-col="bond_avg_duration" class="num">Dur</th>
-              <th data-col="bond_credit_score" class="num">Credit</th>
-              <th data-col="yield_ttm" class="num">Yield</th>
-              <th data-col="aum_usd" class="num">AUM</th>
-              <th data-col="in_profile">Portefeuille</th>
-              <th data-col="weight" class="num">Poids</th>
-              <th data-col="diagnostic">Diagnostic</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th data-col="symbol">Symbol</th>
+            <th data-col="name">Nom</th>
+            <th data-col="fund_type">Fund type</th>
+            <th data-col="bond_avg_duration" class="num">Dur</th>
+            <th data-col="bond_credit_score" class="num">Credit</th>
+            <th data-col="yield_ttm" class="num">Yield</th>
+            <th data-col="aum_usd" class="num">AUM</th>
+            <th data-col="in_profile">Portefeuille</th>
+            <th data-col="weight" class="num">Poids</th>
+            <th data-col="diagnostic">Diagnostic vs MI</th>
+          </tr></thead>
           <tbody id="bonds-tbody"></tbody>
         </table>
       </div>
@@ -243,548 +217,542 @@
   <!-- =================== ETFs =================== -->
   <div class="tab-content" id="tab-etfs">
     <div class="panel">
-      <h2>Chargement</h2>
-      <div class="file-loaders">
-        <div class="file-loader">
-          <label>all_etf.json <span id="etf-json-status"></span></label>
-          <input type="file" id="f-etfs-json" accept=".json">
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Tableau ETFs</h2>
+      <h2>ETFs</h2>
       <div class="filters">
-        <div><label>Recherche</label><br><input type="text" id="search-etfs" placeholder="symbol / nom..."></div>
-        <div><label>Catégorie</label><br><select id="filter-etf-cat"><option value="">Toutes</option></select></div>
+        <div><label>Recherche</label><br><input type="text" id="search-etfs" placeholder="symbol / nom"></div>
+        <div><label>Fund type</label><br><select id="filter-etf-cat"><option value="">Tous</option></select></div>
         <div><label>Présence</label><br><select id="filter-etf-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option></select></div>
       </div>
       <div class="table-wrap">
         <table id="etfs-table">
-          <thead>
-            <tr>
-              <th data-col="symbol">Symbol</th>
-              <th data-col="name">Nom</th>
-              <th data-col="category">Catégorie</th>
-              <th data-col="region">Region</th>
-              <th data-col="ter" class="num">TER</th>
-              <th data-col="aum" class="num">AUM</th>
-              <th data-col="ytd" class="num">YTD</th>
-              <th data-col="in_profile">Portefeuille</th>
-              <th data-col="weight" class="num">Poids</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th data-col="symbol">Symbol</th>
+            <th data-col="name">Nom</th>
+            <th data-col="fund_type">Fund type</th>
+            <th data-col="region">Region</th>
+            <th data-col="aum_usd" class="num">AUM</th>
+            <th data-col="total_expense_ratio" class="num">TER</th>
+            <th data-col="ytd" class="num">YTD</th>
+            <th data-col="in_profile">Portefeuille</th>
+            <th data-col="weight" class="num">Poids</th>
+          </tr></thead>
           <tbody id="etfs-tbody"></tbody>
         </table>
       </div>
     </div>
   </div>
 
+  <!-- =================== PHASES =================== -->
+  <div class="tab-content" id="tab-phases">
+    <div class="panel">
+      <h2>Phases Sélection livrées</h2>
+      <div class="phase-block"><h4>Sélection-1 — Modéré vol + liquidité + cov gate</h4><p>Hard filters Modéré : volatility band 12-45%, ROE min, D/E max, quality_coverage min 70.</p></div>
+      <div class="phase-block"><h4>Sélection-2 — buffett_score absolu + perf_3y_min</h4><p>Ajout du poids <code>buffett_score: 0.15-0.20</code> dans score_weights Modéré/Stable. Filtre <code>perf_3y_min: -10%</code>. Min Buffett Modéré 60→65, Stable 60→70.</p></div>
+      <div class="phase-block"><h4>Sélection-3 — Gate AND + ETF dedup + SLSQP barbell bonds</h4><p>Gate Buffett+Quality logique AND pour Modéré/Stable. MAX_ETF_PER_EXPOSURE_GROUP dividend Modéré 2→1. SLSQP Modéré : min 5% Treasury intermédiaire.</p></div>
+      <div class="phase-block"><h4>Sélection-4 — Coherence-driven profile assignment</h4><p>Nouveau module <code>profile_assignment.py</code> : fit_score Stable/Modéré/Agressif par action. <code>_profile_native</code> = profil au fit max. Sélection : boost ×1.25 / penalty ×0.85.</p></div>
+      <div class="phase-block"><h4>Sélection-5 — Bonds macro tilt + native boost renforcé</h4><p>Bonds : <code>avoid_securitized</code>, <code>avoid_em_bonds</code>, <code>prefer_tips</code> appliqués dynamiquement depuis le MI. Actions : boost natif ×1.40, penalty ×0.70, hard-exclude si fit_native ≥ 0.95 et profil ≠ native.</p></div>
+      <h3>Verdict actuel</h3>
+      <p class="help">Pool de sélection Modéré désormais excellent (35 candidats incluant PG/NOVN/GGG/ROP/CHD). <strong style="color: var(--orange)">Goulot identifié : SLSQP final ne garde que 5 actions par profil</strong> et écarte les meilleurs candidats au profit de combinaisons covariance-favorables (NATURGY, CF, ITX). Phase Sélection-6 envisagée : injecter <code>_profile_native</code> dans SLSQP (min_weight floor sur top natifs).</p>
+    </div>
+  </div>
+
 <script>
 // =============================================================================
-// STATE
-// =============================================================================
 const STATE = {
-  stocks: [],          // tous stocks US+EU+Asia annotés avec fits
-  portfolio: null,     // dernier portfolios_v4 chargé
-  audit: null,         // selection_audit.json chargé
-  bonds: [],           // combined_bonds.csv parsé
-  etfs: [],            // all_etf.json
-  portfolioPositions: {},   // ticker → {profile, weight}
-  bondStrategy: null,  // bond_strategy_full extrait du portefeuille
-  sort: { actions: {col: 'buffett_score', dir: 'desc'}, bonds: {col: 'yield_ttm', dir: 'desc'}, etfs: {col: 'aum', dir: 'desc'}},
+  stocks: [], byTicker: {}, byNameUpper: {},
+  portfolio: null,
+  bonds: [], etfs: [],
+  portfolioPositions: {},  // ticker OR name → [{profile, weight}]
+  bondStrategy: null,
+  sort: { actions: {col: 'buffett_score', dir: 'desc'}, bonds: {col: 'yield_ttm', dir: 'desc'}, etfs: {col: 'aum_usd', dir: 'desc'}},
 };
 
-// =============================================================================
-// FIT SCORE — Port du Python profile_assignment.py
-// =============================================================================
-function safeNum(v, def=0) {
-  if (v === null || v === undefined || v === '') return def;
-  const n = parseFloat(v);
-  return isNaN(n) ? def : n;
-}
-function normHigh(v, target, cap=1.0) {
-  if (target <= 0) return 0.5;
-  if (v <= 0) return 0;
-  return Math.min(cap, v / target);
-}
-function normLow(v, target, max, cap=1.0) {
-  if (v <= target) return cap;
-  if (v >= max) return 0;
-  return Math.max(0, cap * (max - v) / (max - target));
-}
-function normBand(v, low, high) {
-  if (v >= low && v <= high) return 1;
-  if (v < low) return v <= 0 ? 0 : Math.max(0, v/low);
-  if (v >= high + high) return 0;
-  return Math.max(0, 1 - (v - high)/high);
-}
-function fitStable(s) {
-  const vol = safeNum(s.volatility_3y || s.vol_3y_pct, 50);
-  const dy = safeNum(s.dividend_yield);
-  const dc = safeNum(s.dividend_coverage);
-  const buf = safeNum(s.buffett_score);
-  const safety = safeNum(s.quality_safety_sub, 50);
-  const perf3y = safeNum(s.perf_3y);
-  const payout = safeNum(s.payout_ratio);
-  return Math.min(1, Math.max(0,
-    0.25 * normBand(vol, 12, 22) +
-    0.20 * normHigh(dy, 3.5) +
-    0.15 * normHigh(dc, 2.0) +
-    0.15 * normHigh(buf, 85) +
-    0.10 * normHigh(safety, 80) +
-    0.10 * normBand(perf3y, 0, 50) +
-    0.05 * normLow(payout, 50, 100)
-  ));
-}
-function fitModere(s) {
-  const vol = safeNum(s.volatility_3y || s.vol_3y_pct, 50);
-  const buf = safeNum(s.buffett_score);
-  const qual = safeNum(s.quality_score);
-  const roe = safeNum(s.roe);
-  const roic = safeNum(s.roic);
-  const perf1y = safeNum(s.perf_1y);
-  const perf3y = safeNum(s.perf_3y);
-  const qg = safeNum(s.quality_growth_sub, 50);
-  return Math.min(1, Math.max(0,
-    0.25 * normHigh(buf, 90) +
-    0.15 * normHigh(qual, 80) +
-    0.15 * normHigh(roe, 25) +
-    0.10 * normHigh(roic, 15) +
-    0.15 * normBand(vol, 18, 32) +
-    0.10 * normBand(perf1y, 10, 60) +
-    0.05 * normBand(perf3y, 20, 150) +
-    0.05 * normHigh(qg, 70)
-  ));
-}
-function fitAgressif(s) {
-  const vol = safeNum(s.volatility_3y || s.vol_3y_pct, 0);
-  const buf = safeNum(s.buffett_score);
-  const qual = safeNum(s.quality_score);
-  const perf1y = safeNum(s.perf_1y);
-  const perf3y = safeNum(s.perf_3y);
-  const epsg = safeNum(s.eps_growth_forecast_5y);
-  const epsSurp = safeNum(s.eps_surprise_last);
-  return Math.min(1, Math.max(0,
-    0.25 * normHigh(perf1y, 80) +
-    0.20 * normHigh(perf3y, 200) +
-    0.20 * normBand(vol, 30, 65) +
-    0.15 * normHigh(epsg, 15) +
-    0.10 * normHigh(qual, 70) +
-    0.05 * normHigh(buf, 70) +
-    0.05 * normHigh(epsSurp, 15)
-  ));
-}
-function annotateStock(s) {
-  s._fit_S = fitStable(s);
-  s._fit_M = fitModere(s);
-  s._fit_A = fitAgressif(s);
-  const fits = {Stable: s._fit_S, 'Modéré': s._fit_M, Agressif: s._fit_A};
-  let max = -1, best = '?';
-  for (const [k,v] of Object.entries(fits)) {
-    if (v > max) { max = v; best = k; }
-  }
-  s._profile_native = best;
+// === FIT SCORE (port profile_assignment.py) =================================
+function num(v, d=0) { if (v==null||v==='') return d; const n=parseFloat(v); return isNaN(n)?d:n; }
+function nHigh(v,t,cap=1){ if(t<=0)return .5; if(v<=0)return 0; return Math.min(cap,v/t); }
+function nLow(v,t,m,cap=1){ if(v<=t)return cap; if(v>=m)return 0; return Math.max(0,cap*(m-v)/(m-t)); }
+function nBand(v,l,h){ if(v>=l&&v<=h)return 1; if(v<l)return v<=0?0:Math.max(0,v/l); if(v>=h+h)return 0; return Math.max(0,1-(v-h)/h); }
+
+function fitS(s){const v=num(s.volatility_3y||s.vol_3y_pct,50),d=num(s.dividend_yield),dc=num(s.dividend_coverage),b=num(s.buffett_score),sa=num(s.quality_safety_sub,50),p3=num(s.perf_3y),po=num(s.payout_ratio);
+  return Math.min(1,Math.max(0, 0.25*nBand(v,12,22)+0.2*nHigh(d,3.5)+0.15*nHigh(dc,2)+0.15*nHigh(b,85)+0.1*nHigh(sa,80)+0.1*nBand(p3,0,50)+0.05*nLow(po,50,100)));}
+function fitM(s){const v=num(s.volatility_3y||s.vol_3y_pct,50),b=num(s.buffett_score),q=num(s.quality_score),r=num(s.roe),ri=num(s.roic),p1=num(s.perf_1y),p3=num(s.perf_3y),qg=num(s.quality_growth_sub,50);
+  return Math.min(1,Math.max(0, 0.25*nHigh(b,90)+0.15*nHigh(q,80)+0.15*nHigh(r,25)+0.1*nHigh(ri,15)+0.15*nBand(v,18,32)+0.1*nBand(p1,10,60)+0.05*nBand(p3,20,150)+0.05*nHigh(qg,70)));}
+function fitA(s){const v=num(s.volatility_3y||s.vol_3y_pct,0),b=num(s.buffett_score),q=num(s.quality_score),p1=num(s.perf_1y),p3=num(s.perf_3y),eg=num(s.eps_growth_forecast_5y),es=num(s.eps_surprise_last);
+  return Math.min(1,Math.max(0, 0.25*nHigh(p1,80)+0.2*nHigh(p3,200)+0.2*nBand(v,30,65)+0.15*nHigh(eg,15)+0.1*nHigh(q,70)+0.05*nHigh(b,70)+0.05*nHigh(es,15)));}
+
+function annotate(s){
+  s._fit_S=fitS(s); s._fit_M=fitM(s); s._fit_A=fitA(s);
+  const f={Stable:s._fit_S,'Modéré':s._fit_M,Agressif:s._fit_A};
+  let mx=-1, best='?';
+  for (const [k,v] of Object.entries(f)) if (v>mx) { mx=v; best=k; }
+  s._profile_native=best;
+  s._fit_native=mx;
   return s;
 }
 
-// =============================================================================
-// LOADERS
-// =============================================================================
-async function tryFetch(path) {
-  try {
-    const r = await fetch(path);
-    if (!r.ok) return null;
-    return await r.json();
-  } catch (e) { return null; }
-}
-async function tryFetchText(path) {
-  try {
-    const r = await fetch(path);
-    if (!r.ok) return null;
-    return await r.text();
-  } catch (e) { return null; }
+function indexStocks() {
+  STATE.byTicker = {}; STATE.byNameUpper = {};
+  for (const s of STATE.stocks) {
+    const tk = s.ticker || s.symbol || '';
+    const nm = (s.name || '').toUpperCase().trim();
+    if (tk) STATE.byTicker[tk] = s;
+    if (nm) STATE.byNameUpper[nm] = s;
+  }
 }
 
-function parseStockList(json) {
-  if (!json) return [];
-  if (Array.isArray(json)) return json;
-  if (json.stocks && Array.isArray(json.stocks)) return json.stocks;
-  return [];
-}
+// === CSV PARSER (gérer quotes) ==============================================
 function parseCSV(text) {
   if (!text) return [];
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const lines = text.split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = splitLine(lines[0]).map(h=>h.trim());
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    // CSV simple split (assume pas de virgule dans quotes)
-    const cells = splitCSVLine(lines[i]);
+  for (let i=1; i<lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cells = splitLine(lines[i]);
     const row = {};
-    headers.forEach((h, idx) => row[h] = cells[idx] || '');
+    headers.forEach((h,idx) => row[h] = (cells[idx]||'').trim());
     rows.push(row);
   }
   return rows;
 }
-function splitCSVLine(line) {
-  const result = [];
-  let cur = '';
-  let inQ = false;
-  for (let i = 0; i < line.length; i++) {
+function splitLine(line) {
+  const r = []; let cur=''; let inQ=false;
+  for (let i=0; i<line.length; i++) {
     const c = line[i];
-    if (c === '"') { inQ = !inQ; continue; }
-    if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    if (c === '"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else { inQ=!inQ; } continue; }
+    if (c===',' && !inQ) { r.push(cur); cur=''; continue; }
     cur += c;
   }
-  result.push(cur);
-  return result;
+  r.push(cur);
+  return r;
 }
 
-function setStatus(elId, ok, msg) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  el.innerHTML = `<span class="status ${ok ? 'ok' : 'err'}">${msg}</span>`;
+// === LOADERS ================================================================
+async function tryFetch(path, asText=false) {
+  try { const r = await fetch(path); if (!r.ok) return null; return asText ? await r.text() : await r.json(); }
+  catch(e) { return null; }
+}
+function parseStockList(j) { if (!j) return []; if (Array.isArray(j)) return j; if (j.stocks) return j.stocks; return []; }
+
+function setStatus(id, ok, msg) {
+  const el = document.getElementById(id); if (!el) return;
+  el.innerHTML = `<span class="status ${ok?'ok':'err'}">${msg}</span>`;
 }
 
 async function autoLoad() {
-  // Stocks
   const stUS = await tryFetch('data/stocks_us.json');
   const stEU = await tryFetch('data/stocks_europe.json');
-  const stAsia = await tryFetch('data/stocks_asia.json');
-  if (stUS) { setStatus('st-us-status', true, `${parseStockList(stUS).length} stocks`); STATE.stocks.push(...parseStockList(stUS).map(annotateStock)); }
-  if (stEU) { setStatus('st-eu-status', true, `${parseStockList(stEU).length} stocks`); STATE.stocks.push(...parseStockList(stEU).map(annotateStock)); }
-  if (stAsia) { setStatus('st-asia-status', true, `${parseStockList(stAsia).length} stocks`); STATE.stocks.push(...parseStockList(stAsia).map(annotateStock)); }
-
-  // Bonds CSV
-  const bdsTxt = await tryFetchText('data/combined_bonds.csv');
-  if (bdsTxt) {
-    STATE.bonds = parseCSV(bdsTxt);
-    setStatus('bd-csv-status', true, `${STATE.bonds.length} bonds`);
-  }
-  // ETFs
-  const etfs = await tryFetch('data/all_etf.json');
-  if (etfs) {
-    STATE.etfs = Array.isArray(etfs) ? etfs : (etfs.etfs || []);
-    setStatus('etf-json-status', true, `${STATE.etfs.length} ETFs`);
-  }
-
+  const stAS = await tryFetch('data/stocks_asia.json');
+  if (stUS) { const a=parseStockList(stUS); STATE.stocks.push(...a.map(annotate)); setStatus('st-us-status', true, `${a.length}`); }
+  if (stEU) { const a=parseStockList(stEU); STATE.stocks.push(...a.map(annotate)); setStatus('st-eu-status', true, `${a.length}`); }
+  if (stAS) { const a=parseStockList(stAS); STATE.stocks.push(...a.map(annotate)); setStatus('st-asia-status', true, `${a.length}`); }
+  const bdT = await tryFetch('data/combined_bonds.csv', true);
+  if (bdT) { STATE.bonds = parseCSV(bdT); setStatus('bd-csv-status', true, `${STATE.bonds.length}`); }
+  const etfT = await tryFetch('data/combined_etfs.csv', true);
+  if (etfT) { STATE.etfs = parseCSV(etfT); setStatus('etf-csv-status', true, `${STATE.etfs.length}`); }
+  indexStocks();
   refresh();
 }
 
-// File picker handlers
-function bindFile(id, cb) {
-  const inp = document.getElementById(id);
-  if (!inp) return;
-  inp.addEventListener('change', async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const txt = await f.text();
-    cb(txt, f.name);
+function bind(id, cb) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const t = await f.text(); cb(t, f.name);
   });
 }
-bindFile('f-stocks-us', (t) => { try {
-  const arr = parseStockList(JSON.parse(t));
-  STATE.stocks = STATE.stocks.filter(s => s._region_load !== 'US');
-  arr.forEach(s => { s._region_load = 'US'; annotateStock(s); STATE.stocks.push(s); });
-  setStatus('st-us-status', true, `${arr.length} stocks`); refresh();
-} catch(e) { setStatus('st-us-status', false, 'JSON invalide'); } });
-bindFile('f-stocks-eu', (t) => { try {
-  const arr = parseStockList(JSON.parse(t));
-  STATE.stocks = STATE.stocks.filter(s => s._region_load !== 'EU');
-  arr.forEach(s => { s._region_load = 'EU'; annotateStock(s); STATE.stocks.push(s); });
-  setStatus('st-eu-status', true, `${arr.length} stocks`); refresh();
-} catch(e) { setStatus('st-eu-status', false, 'JSON invalide'); } });
-bindFile('f-stocks-asia', (t) => { try {
-  const arr = parseStockList(JSON.parse(t));
-  STATE.stocks = STATE.stocks.filter(s => s._region_load !== 'Asia');
-  arr.forEach(s => { s._region_load = 'Asia'; annotateStock(s); STATE.stocks.push(s); });
-  setStatus('st-asia-status', true, `${arr.length} stocks`); refresh();
-} catch(e) { setStatus('st-asia-status', false, 'JSON invalide'); } });
-bindFile('f-portfolio', (t) => { try {
-  STATE.portfolio = JSON.parse(t);
-  extractPositions();
-  setStatus('pf-status', true, `Loaded`);
-  refresh();
-} catch(e) { setStatus('pf-status', false, 'JSON invalide'); } });
-bindFile('f-audit', (t) => { try {
-  STATE.audit = JSON.parse(t);
-  setStatus('audit-status', true, `Loaded`);
-  refresh();
-} catch(e) { setStatus('audit-status', false, 'JSON invalide'); } });
-bindFile('f-bonds-csv', (t) => {
-  STATE.bonds = parseCSV(t);
-  setStatus('bd-csv-status', true, `${STATE.bonds.length} bonds`);
-  refresh();
-});
-bindFile('f-etfs-json', (t) => { try {
-  const j = JSON.parse(t);
-  STATE.etfs = Array.isArray(j) ? j : (j.etfs || []);
-  setStatus('etf-json-status', true, `${STATE.etfs.length} ETFs`);
-  refresh();
-} catch(e) { setStatus('etf-json-status', false, 'JSON invalide'); } });
+function reindexAndExtract() {
+  indexStocks();
+  if (STATE.portfolio) extractPositions();
+}
+bind('f-stocks-us', t => { try { const a=parseStockList(JSON.parse(t)); STATE.stocks = STATE.stocks.filter(s=>s._reg!=='US'); a.forEach(s=>{s._reg='US';annotate(s);STATE.stocks.push(s);}); setStatus('st-us-status',true,`${a.length}`); reindexAndExtract(); refresh(); } catch(e){setStatus('st-us-status',false,'invalide');} });
+bind('f-stocks-eu', t => { try { const a=parseStockList(JSON.parse(t)); STATE.stocks = STATE.stocks.filter(s=>s._reg!=='EU'); a.forEach(s=>{s._reg='EU';annotate(s);STATE.stocks.push(s);}); setStatus('st-eu-status',true,`${a.length}`); reindexAndExtract(); refresh(); } catch(e){setStatus('st-eu-status',false,'invalide');} });
+bind('f-stocks-asia', t => { try { const a=parseStockList(JSON.parse(t)); STATE.stocks = STATE.stocks.filter(s=>s._reg!=='AS'); a.forEach(s=>{s._reg='AS';annotate(s);STATE.stocks.push(s);}); setStatus('st-asia-status',true,`${a.length}`); reindexAndExtract(); refresh(); } catch(e){setStatus('st-asia-status',false,'invalide');} });
+bind('f-bonds-csv', t => { STATE.bonds=parseCSV(t); setStatus('bd-csv-status',true,`${STATE.bonds.length}`); refresh(); });
+bind('f-etfs-csv', t => { STATE.etfs=parseCSV(t); setStatus('etf-csv-status',true,`${STATE.etfs.length}`); refresh(); });
+bind('f-portfolio', t => { try { STATE.portfolio=JSON.parse(t); extractPositions(); setStatus('pf-status',true,'OK'); refresh(); } catch(e){setStatus('pf-status',false,'invalide');} });
 
-// =============================================================================
-// PORTFOLIO POSITIONS extraction
-// =============================================================================
+// === PORTFOLIO POSITIONS ===================================================
+// Stratégie: pour chaque alloc (name complet OU EQ_id), résoudre vers le ticker.
+// 1. Si la clé matche un name connu (uppercase) → ticker = stock matched
+// 2. Sinon parse les `assets[]` (string Asset(id='..',name='..',...)) pour obtenir name → on remappe via stocks
+// 3. Sinon utiliser la clé brute (cas ETF/bond où la clé EST le nom complet)
 function extractPositions() {
   STATE.portfolioPositions = {};
   STATE.bondStrategy = null;
   if (!STATE.portfolio) return;
+
   const portfolios = STATE.portfolio.portfolios || {};
+  // bond strategy à la racine (Sélection-5 le persiste éventuellement) — sinon dernier MI
+  if (STATE.portfolio.bond_strategy_full) STATE.bondStrategy = STATE.portfolio.bond_strategy_full;
+
   for (const [prof, p] of Object.entries(portfolios)) {
     if (!p || typeof p !== 'object') continue;
     const alloc = p.allocation || {};
     const assets = p.assets || [];
-    // map name → ticker via assets
-    const nameToTicker = {};
+
+    // Build id → {name, ticker} map depuis assets
+    const idMap = {};
     for (const a of assets) {
       if (typeof a === 'string') {
         const idM = a.match(/id='([^']+)'/);
+        const nmM = a.match(/name='([^']+)'/);
         const tkM = a.match(/ticker='([^']+)'/);
-        const nameM = a.match(/name='([^']+)'/);
         const symM = a.match(/symbol='([^']+)'/);
-        if (idM && (tkM || symM)) nameToTicker[idM[1]] = (tkM || symM)[1];
-        if (nameM && (tkM || symM)) nameToTicker[nameM[1]] = (tkM || symM)[1];
+        if (idM) idMap[idM[1]] = { name: nmM?nmM[1]:'', ticker: (tkM||symM)?(tkM||symM)[1]:'' };
+        if (nmM) idMap[nmM[1]] = { name: nmM[1], ticker: (tkM||symM)?(tkM||symM)[1]:'' };
       } else if (a && typeof a === 'object') {
-        const id = a.id || '';
-        const tk = a.ticker || a.symbol || '';
-        const nm = a.name || '';
-        if (id && tk) nameToTicker[id] = tk;
-        if (nm && tk) nameToTicker[nm] = tk;
+        const id = a.id||''; const nm = a.name||''; const tk = a.ticker || a.symbol || '';
+        if (id) idMap[id] = {name: nm, ticker: tk};
+        if (nm) idMap[nm] = {name: nm, ticker: tk};
       }
     }
-    for (const [name, weight] of Object.entries(alloc)) {
-      const tk = nameToTicker[name] || name;
-      const w = typeof weight === 'number' ? weight : parseFloat(weight);
-      if (!STATE.portfolioPositions[tk]) STATE.portfolioPositions[tk] = [];
-      STATE.portfolioPositions[tk].push({ profile: prof, weight: w, name });
-      // Add also by name as key for bonds/ETFs
-      if (name !== tk) {
-        if (!STATE.portfolioPositions[name]) STATE.portfolioPositions[name] = [];
-        STATE.portfolioPositions[name].push({ profile: prof, weight: w, name });
+
+    for (const [key, weight] of Object.entries(alloc)) {
+      const w = typeof weight==='number' ? weight : parseFloat(weight);
+      // Résolution name → ticker via stocks index
+      let resolvedTicker = '';
+      let resolvedName = key;
+      if (idMap[key]) { resolvedTicker = idMap[key].ticker; resolvedName = idMap[key].name || key; }
+      if (!resolvedTicker) {
+        const upper = (resolvedName || key).toUpperCase().trim();
+        const stk = STATE.byNameUpper[upper];
+        if (stk) resolvedTicker = stk.ticker || stk.symbol || '';
+      }
+      // Clés indexées : ticker, name (uppercase pour ETF/bonds), id brut
+      const keys = [];
+      if (resolvedTicker) keys.push(resolvedTicker);
+      keys.push(key); // raw key (ETF/bond by name)
+      if (resolvedName) keys.push(resolvedName);
+      keys.push((resolvedName || key).toUpperCase());
+
+      const pos = { profile: prof, weight: w, name: resolvedName, ticker: resolvedTicker, key };
+      for (const k of keys) {
+        if (!STATE.portfolioPositions[k]) STATE.portfolioPositions[k] = [];
+        STATE.portfolioPositions[k].push(pos);
       }
     }
   }
-  // Bond strategy
-  if (STATE.portfolio.bond_strategy_full) STATE.bondStrategy = STATE.portfolio.bond_strategy_full;
+}
+
+function getPosForStock(s) {
+  const tk = s.ticker || s.symbol || '';
+  if (STATE.portfolioPositions[tk] && STATE.portfolioPositions[tk].length) return STATE.portfolioPositions[tk][0];
+  const nm = (s.name||'').toUpperCase().trim();
+  if (STATE.portfolioPositions[nm] && STATE.portfolioPositions[nm].length) return STATE.portfolioPositions[nm][0];
+  return null;
+}
+
+function profBadge(p) {
+  const c = {Stable:'green','Modéré':'orange',Agressif:'purple'}[p]||'gray';
+  return `<span class="badge ${c}">${p}</span>`;
+}
+function fmt(n, d=2) { if (n==null||isNaN(n)) return ''; return parseFloat(n).toFixed(d); }
+
+// =============================================================================
+// VIEW 1 — MON PORTEFEUILLE
+// =============================================================================
+function renderPortfolio() {
+  const root = document.getElementById('portfolio-cards');
+  const statsEl = document.getElementById('portfolio-stats');
+  if (!STATE.portfolio) {
+    root.innerHTML = '<div class="panel" style="grid-column: 1/-1"><p class="dim">Charge un portfolios_v4_*.json pour commencer.</p></div>';
+    statsEl.innerHTML = '';
+    return;
+  }
+  const portfolios = STATE.portfolio.portfolios || {};
+  let totalStocks=0, crossProfile=0, okNative=0;
+
+  let cards = '';
+  for (const prof of ['Agressif','Modéré','Stable']) {
+    const p = portfolios[prof];
+    if (!p) continue;
+    const alloc = p.allocation || {};
+    const com = p.comment || '';
+    const volM = com.match(/de (\d+\.\d+)%/);
+    const linesM = com.match(/(\d+) lignes/);
+    const vol = volM ? volM[1]+'%' : '?';
+    const nLines = linesM ? linesM[1] : Object.keys(alloc).length;
+
+    // Build positions resolved
+    const entries = [];
+    for (const [key, w] of Object.entries(alloc)) {
+      const upper = key.toUpperCase().trim();
+      const stk = STATE.byNameUpper[upper];
+      // chercher dans assets
+      const assets = p.assets || [];
+      let assetMeta = null;
+      for (const a of assets) {
+        if (typeof a === 'string') {
+          if (a.includes(`id='${key}'`) || a.includes(`name='${key}'`)) {
+            const nmM = a.match(/name='([^']+)'/);
+            const tkM = a.match(/ticker='([^']+)'/);
+            const symM = a.match(/symbol='([^']+)'/);
+            const catM = a.match(/category='([^']+)'/);
+            assetMeta = { name: nmM?nmM[1]:key, ticker: (tkM||symM)?(tkM||symM)[1]:'', category: catM?catM[1]:'' };
+            break;
+          }
+        }
+      }
+      const stockMatch = stk || (assetMeta && STATE.byNameUpper[(assetMeta.name||'').toUpperCase().trim()]);
+      entries.push({
+        key, name: stockMatch ? stockMatch.name : (assetMeta ? assetMeta.name : key),
+        ticker: stockMatch ? (stockMatch.ticker || stockMatch.symbol) : (assetMeta ? assetMeta.ticker : ''),
+        category: assetMeta ? assetMeta.category : (stockMatch ? 'Actions' : 'ETF/Bond'),
+        weight: typeof w==='number'?w:parseFloat(w),
+        stock: stockMatch,
+      });
+    }
+    entries.sort((a,b)=>b.weight-a.weight);
+
+    // 3 sections : Actions / ETF / Obligations
+    const sections = { 'Actions': [], 'ETF': [], 'Obligations': [], 'Crypto': [] };
+    for (const e of entries) {
+      const cat = (e.category || '').trim();
+      if (cat === 'Actions') sections.Actions.push(e);
+      else if (cat === 'Obligations' || cat === 'bond') sections.Obligations.push(e);
+      else if (cat === 'Crypto') sections.Crypto.push(e);
+      else sections.ETF.push(e);
+    }
+
+    let body = `<div class="pf-meta"><strong style="color:var(--accent)">${nLines} lignes</strong> · Vol ${vol}</div>`;
+    for (const [sec, items] of Object.entries(sections)) {
+      if (!items.length) continue;
+      const total = items.reduce((a,b)=>a+b.weight, 0);
+      body += `<div class="pf-section-title">${sec} (${total.toFixed(1)}%)</div>`;
+      for (const e of items) {
+        let alertHtml = '<span class="badge gray">—</span>';
+        if (e.stock) {
+          totalStocks++;
+          const native = e.stock._profile_native;
+          if (native === prof) { alertHtml = `<span class="badge green">✓ natif</span>`; okNative++; }
+          else { alertHtml = `<span class="badge red">cross-profil → ${native}</span>`; crossProfile++; }
+        }
+        body += `<div class="pos">
+          <div class="nm"><span class="tk">${e.ticker || '—'}</span></div>
+          <div class="nm">${(e.name||'').slice(0,28)}<div class="sub">${(e.stock?.sector||'').slice(0,18)}</div></div>
+          <div class="alert">${alertHtml}</div>
+          <div class="w">${fmt(e.weight,2)}%</div>
+        </div>`;
+      }
+    }
+
+    cards += `<div class="pf-card">
+      <h3>${profBadge(prof)} ${prof}</h3>
+      ${body}
+    </div>`;
+  }
+  root.innerHTML = cards;
+
+  // Stats globales
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="value">${totalStocks}</div><div class="label">Actions identifiées</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--green)">${okNative}</div><div class="label">✓ Profil natif</div></div>
+    <div class="stat-card"><div class="value" style="color:var(--red)">${crossProfile}</div><div class="label">✗ Cross-profil</div></div>
+    <div class="stat-card"><div class="value">${totalStocks?Math.round(okNative*100/totalStocks):0}%</div><div class="label">Cohérence native</div></div>
+  `;
 }
 
 // =============================================================================
-// TABLE RENDER (ACTIONS)
+// VIEW 2 — COMPARATIF TOP NATIFS
 // =============================================================================
-function profileBadge(prof) {
-  const cls = {Stable: 'green', 'Modéré': 'orange', 'Agressif': 'purple'}[prof] || 'gray';
-  return `<span class="badge ${cls}">${prof}</span>`;
-}
-function nativeBadge(prof) { return profileBadge(prof); }
+function renderCompare() {
+  const root = document.getElementById('compare-grid');
+  if (!STATE.stocks.length) { root.innerHTML = '<p class="dim">Charge les stocks pour voir le comparatif.</p>'; return; }
+  if (!STATE.portfolio) { root.innerHTML = '<p class="dim">Charge un portefeuille pour voir le comparatif.</p>'; return; }
 
-function getStockTicker(s) {
-  return s.ticker || s.symbol || '';
+  let html = '';
+  const profMap = { 'Stable':'stable', 'Modéré':'modere', 'Agressif':'agressif' };
+  const fitKey = { 'Stable':'_fit_S', 'Modéré':'_fit_M', 'Agressif':'_fit_A' };
+
+  for (const prof of ['Stable','Modéré','Agressif']) {
+    // Top 20 natifs de ce profil
+    const natifs = STATE.stocks
+      .filter(s => s._profile_native === prof)
+      .sort((a,b) => (b[fitKey[prof]]||0) - (a[fitKey[prof]]||0))
+      .slice(0, 20);
+
+    // Stats colonne
+    const inProf = natifs.filter(s => {
+      const pos = getPosForStock(s);
+      return pos && pos.profile === prof;
+    });
+    const crossProf = natifs.filter(s => {
+      const pos = getPosForStock(s);
+      return pos && pos.profile !== prof;
+    });
+
+    let rows = '';
+    for (const s of natifs) {
+      const pos = getPosForStock(s);
+      const inThis = pos && pos.profile === prof;
+      const inOther = pos && pos.profile !== prof;
+      const tk = s.ticker || s.symbol || '?';
+      const fit = s[fitKey[prof]] || 0;
+      const nm = (s.name||'').slice(0,18);
+      let mark;
+      if (inThis) mark = `<span class="ok">✓</span>`;
+      else if (inOther) mark = `<span class="ko">→${pos.profile.slice(0,3)}</span>`;
+      else mark = `<span class="ko">✗</span>`;
+      rows += `<div class="compare-row">
+        <div>${mark}</div>
+        <div class="tk">${tk}</div>
+        <div>${nm}</div>
+        <div class="fit">${fmt(fit,2)}</div>
+      </div>`;
+    }
+    html += `<div class="compare-col ${profMap[prof]}">
+      <h3>${prof}</h3>
+      <div class="stat-cards" style="grid-template-columns: 1fr 1fr; margin-bottom: 8px;">
+        <div class="stat-card"><div class="value" style="color:var(--green)">${inProf.length}</div><div class="label">Natifs dans pf</div></div>
+        <div class="stat-card"><div class="value" style="color:var(--red)">${20 - inProf.length}</div><div class="label">Top 20 absents</div></div>
+      </div>
+      ${rows}
+    </div>`;
+  }
+  root.innerHTML = html;
 }
 
-function getStockProfile(tk) {
-  const pos = STATE.portfolioPositions[tk] || [];
-  if (!pos.length) return null;
-  return pos[0]; // {profile, weight}
-}
-
-function refreshActions() {
+// =============================================================================
+// VIEW 3 — TABLEAU ACTIONS
+// =============================================================================
+function renderActions() {
   const tbody = document.getElementById('actions-tbody');
   const regSel = document.getElementById('filter-region');
-  const natSel = document.getElementById('filter-native');
-  const presSel = document.getElementById('filter-presence');
-  const search = document.getElementById('search-actions').value.toLowerCase();
-  const bufMin = parseFloat(document.getElementById('filter-buffett').value) || 0;
-  const filtRegion = regSel.value;
-  const filtNative = natSel.value;
-  const filtPres = presSel.value;
-
-  // Build region filter options
-  if (regSel.options.length <= 1) {
-    const regs = [...new Set(STATE.stocks.map(s => s.country || s.region).filter(Boolean))].sort();
+  if (regSel.options.length <= 1 && STATE.stocks.length) {
+    const regs = [...new Set(STATE.stocks.map(s=>s.country||s.region).filter(Boolean))].sort();
     for (const r of regs) regSel.appendChild(new Option(r, r));
   }
+  const search = document.getElementById('search-actions').value.toLowerCase();
+  const fReg = regSel.value;
+  const fNat = document.getElementById('filter-native').value;
+  const fPres = document.getElementById('filter-presence').value;
+  const fBuf = parseFloat(document.getElementById('filter-buffett').value) || 0;
 
-  // Sort stocks
-  const sortCol = STATE.sort.actions.col;
-  const sortDir = STATE.sort.actions.dir;
+  const sCol = STATE.sort.actions.col, sDir = STATE.sort.actions.dir;
   const sorted = [...STATE.stocks].sort((a,b) => {
-    const va = getCol(a, sortCol);
-    const vb = getCol(b, sortCol);
-    if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
-    return sortDir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    const va = getColAction(a, sCol), vb = getColAction(b, sCol);
+    if (typeof va==='number' && typeof vb==='number') return sDir==='asc'?va-vb:vb-va;
+    return sDir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
   });
 
-  let inPort = 0, total = 0, topOut = 0, topIn = 0;
   let rows = '';
   for (const s of sorted) {
-    const tk = getStockTicker(s);
-    const buf = safeNum(s.buffett_score);
-    if (buf < bufMin) continue;
+    const tk = s.ticker || s.symbol || '';
+    const buf = num(s.buffett_score);
+    if (buf < fBuf) continue;
     const country = s.country || s.region || '';
-    if (filtRegion && country !== filtRegion) continue;
-    if (filtNative && s._profile_native !== filtNative) continue;
-    const pos = getStockProfile(tk);
+    if (fReg && country !== fReg) continue;
+    if (fNat && s._profile_native !== fNat) continue;
+    const pos = getPosForStock(s);
     const inP = !!pos;
-    if (filtPres === 'in' && !inP) continue;
-    if (filtPres === 'out' && inP) continue;
-    if (filtPres === 'top-out' && (inP || buf < 70)) continue;
-
-    const nm = (s.name || '').toLowerCase();
-    if (search && !tk.toLowerCase().includes(search) && !nm.includes(search) && !(s.sector||'').toLowerCase().includes(search)) continue;
-
-    total++;
-    if (inP) {
-      inPort++;
-      if (buf >= 80) topIn++;
-    } else if (buf >= 80) topOut++;
-
-    // Diagnostic auto
-    let diag = '';
+    if (fPres==='in' && !inP) continue;
+    if (fPres==='out' && inP) continue;
+    if (fPres==='topout' && (inP || (s._fit_native||0)<0.85)) continue;
+    if (search) {
+      const haystack = (tk+' '+(s.name||'')+' '+(s.sector||'')).toLowerCase();
+      if (!haystack.includes(search)) continue;
+    }
+    let diag;
     if (!inP) {
-      if (buf < 50) diag = `<span class="dim">Buffett bas</span>`;
-      else if (s._profile_native && buf >= 80) diag = `<span class="badge orange">Top score absent — natif ${s._profile_native}</span>`;
-      else diag = '<span class="dim">Hors top</span>';
+      if (s._fit_native >= 0.85) diag = `<span class="badge orange">Top fit ${s._profile_native} absent</span>`;
+      else if (buf < 50) diag = `<span class="dim">Buf bas</span>`;
+      else diag = `<span class="dim">Hors top</span>`;
     } else {
-      const fitProf = pos.profile === 'Modéré' ? s._fit_M : pos.profile === 'Stable' ? s._fit_S : s._fit_A;
-      if (s._profile_native !== pos.profile && s._profile_native) {
-        diag = `<span class="badge red">Non-natif (devrait être ${s._profile_native})</span>`;
-      } else {
-        diag = `<span class="badge green">OK natif</span>`;
-      }
+      if (pos.profile === s._profile_native) diag = `<span class="badge green">✓ natif</span>`;
+      else diag = `<span class="badge red">cross → devrait être ${s._profile_native}</span>`;
     }
 
     rows += `<tr>
       <td><strong>${tk}</strong></td>
-      <td>${(s.name||'?').slice(0,30)}</td>
+      <td>${(s.name||'').slice(0,28)}</td>
       <td>${country}</td>
-      <td>${(s.sector||'').slice(0,20)}</td>
+      <td>${(s.sector||'').slice(0,18)}</td>
       <td class="num">${fmt(buf,0)}</td>
-      <td class="num">${fmt(safeNum(s.quality_score),0)}</td>
-      <td class="num">${fmt(safeNum(s.volatility_3y || s.vol_3y_pct),1)}</td>
-      <td class="num">${fmt(safeNum(s.roe),1)}</td>
-      <td class="num">${fmt(safeNum(s.dividend_yield),2)}</td>
-      <td class="num">${fmt(safeNum(s.perf_3y),1)}</td>
+      <td class="num">${fmt(num(s.quality_score),0)}</td>
+      <td class="num">${fmt(num(s.volatility_3y||s.vol_3y_pct),1)}</td>
+      <td class="num">${fmt(num(s.roe),1)}</td>
+      <td class="num">${fmt(num(s.dividend_yield),2)}</td>
+      <td class="num">${fmt(num(s.perf_3y),1)}</td>
       <td class="num">${fmt(s._fit_S,2)}</td>
       <td class="num">${fmt(s._fit_M,2)}</td>
       <td class="num">${fmt(s._fit_A,2)}</td>
-      <td>${s._profile_native ? nativeBadge(s._profile_native) : '-'}</td>
-      <td>${inP ? profileBadge(pos.profile) : '<span class="badge gray">—</span>'}</td>
-      <td class="num">${inP ? fmt(pos.weight,2)+'%' : ''}</td>
+      <td>${profBadge(s._profile_native||'?')}</td>
+      <td>${inP?profBadge(pos.profile):'<span class="badge gray">—</span>'}</td>
+      <td class="num">${inP?fmt(pos.weight,2)+'%':''}</td>
       <td>${diag}</td>
     </tr>`;
   }
   tbody.innerHTML = rows;
-
-  // Stats
-  const totalUni = STATE.stocks.length;
-  const totalInPort = Object.keys(STATE.portfolioPositions).filter(k => STATE.stocks.some(s => getStockTicker(s) === k)).length;
-  const statsHTML = `
-    <div class="stat-card"><div class="value">${totalUni}</div><div class="label">Univers actions</div></div>
-    <div class="stat-card"><div class="value">${totalInPort}</div><div class="label">Dans portefeuille</div></div>
-    <div class="stat-card"><div class="value">${total}</div><div class="label">Visibles (filtres)</div></div>
-    <div class="stat-card"><div class="value">${topIn}</div><div class="label">Top Buf ≥ 80 dans pf</div></div>
-    <div class="stat-card"><div class="value" style="color: ${topOut>10?'var(--red)':'var(--accent)'}">${topOut}</div><div class="label">Top Buf ≥ 80 absentes</div></div>
-  `;
-  document.getElementById('actions-stats').innerHTML = statsHTML;
 }
 
-function getCol(s, col) {
-  if (col === 'fit_S') return s._fit_S || 0;
-  if (col === 'fit_M') return s._fit_M || 0;
-  if (col === 'fit_A') return s._fit_A || 0;
-  if (col === 'native') return s._profile_native || '';
-  if (col === 'in_profile') {
-    const pos = getStockProfile(getStockTicker(s));
-    return pos ? pos.profile : '';
-  }
-  if (col === 'weight') {
-    const pos = getStockProfile(getStockTicker(s));
-    return pos ? pos.weight : 0;
-  }
+function getColAction(s, col) {
+  if (col === 'fit_S') return s._fit_S||0;
+  if (col === 'fit_M') return s._fit_M||0;
+  if (col === 'fit_A') return s._fit_A||0;
+  if (col === 'native') return s._profile_native||'';
+  if (col === 'in_profile') { const p=getPosForStock(s); return p?p.profile:''; }
+  if (col === 'weight') { const p=getPosForStock(s); return p?p.weight:0; }
   const v = s[col];
-  if (typeof v === 'string') {
-    const n = parseFloat(v);
-    if (!isNaN(n)) return n;
-  }
+  if (typeof v === 'string') { const n=parseFloat(v); if(!isNaN(n))return n; }
   return v ?? 0;
 }
 
-function fmt(n, dec=2) {
-  if (n === null || n === undefined || isNaN(n)) return '';
-  return parseFloat(n).toFixed(dec);
-}
-
 // =============================================================================
-// BONDS
+// VIEW 4 — BONDS
 // =============================================================================
-function refreshBonds() {
+function renderBonds() {
   const tbody = document.getElementById('bonds-tbody');
-  if (!tbody) return;
   const ftSel = document.getElementById('filter-bond-ft');
-  if (ftSel.options.length <= 1) {
-    const fts = [...new Set(STATE.bonds.map(b => b.fund_type).filter(Boolean))].sort();
+  if (ftSel.options.length <= 1 && STATE.bonds.length) {
+    const fts = [...new Set(STATE.bonds.map(b=>b.fund_type).filter(Boolean))].sort();
     for (const f of fts) ftSel.appendChild(new Option(f, f));
   }
   const search = document.getElementById('search-bonds').value.toLowerCase();
-  const ftFilt = ftSel.value;
-  const presFilt = document.getElementById('filter-bond-presence').value;
+  const fFt = ftSel.value;
+  const fPres = document.getElementById('filter-bond-presence').value;
 
-  // Bond strategy info
   const bs = STATE.bondStrategy;
   const bsDiv = document.getElementById('bond-strategy-info');
-  if (bs && bsDiv) {
-    bsDiv.innerHTML = `<div style="font-size: 11px; color: var(--text-dim)">
-      Bond strategy MI: prefer_tips=<strong>${bs.prefer_tips}</strong> · avoid_hy=<strong>${bs.avoid_hy}</strong> ·
-      avoid_securitized=<strong style="color: ${bs.avoid_securitized?'var(--red)':'var(--green)'}">${bs.avoid_securitized}</strong> ·
-      avoid_em=<strong>${bs.avoid_em_bonds}</strong> · max_dur_Stable=${bs.max_duration_stable}y
-    </div>`;
+  if (bsDiv) {
+    if (bs) {
+      bsDiv.innerHTML = `<span style="font-size:11px;color:var(--text-dim);font-weight:normal;margin-left:10px">MI: prefer_tips=<strong>${bs.prefer_tips}</strong>, avoid_hy=<strong>${bs.avoid_hy}</strong>, avoid_securitized=<strong style="color:${bs.avoid_securitized?'var(--red)':'var(--green)'}">${bs.avoid_securitized}</strong>, avoid_em=<strong>${bs.avoid_em_bonds}</strong></span>`;
+    } else {
+      bsDiv.innerHTML = '';
+    }
   }
 
-  // Sort
-  const sortCol = STATE.sort.bonds.col;
-  const sortDir = STATE.sort.bonds.dir;
-  const sorted = [...STATE.bonds].sort((a,b) => {
-    const va = parseFloat(a[sortCol]) || 0;
-    const vb = parseFloat(b[sortCol]) || 0;
-    return sortDir === 'asc' ? va - vb : vb - va;
-  });
+  const sCol = STATE.sort.bonds.col, sDir = STATE.sort.bonds.dir;
+  const sorted = [...STATE.bonds].sort((a,b)=>{const va=parseFloat(a[sCol])||0,vb=parseFloat(b[sCol])||0;return sDir==='asc'?va-vb:vb-va;});
 
   let rows = '';
   for (const b of sorted) {
-    const sym = b.symbol || '';
-    const nm = b.name || '';
-    const ft = b.fund_type || '';
-    if (search && !sym.toLowerCase().includes(search) && !nm.toLowerCase().includes(search) && !ft.toLowerCase().includes(search)) continue;
-    if (ftFilt && ft !== ftFilt) continue;
-
-    const pos = STATE.portfolioPositions[sym] || STATE.portfolioPositions[nm];
+    const sym = b.symbol||''; const nm = b.name||''; const ft = b.fund_type||'';
+    if (search && !((sym+' '+nm+' '+ft).toLowerCase().includes(search))) continue;
+    if (fFt && ft !== fFt) continue;
+    const pos = STATE.portfolioPositions[sym]?.[0] || STATE.portfolioPositions[nm]?.[0] || STATE.portfolioPositions[nm.toUpperCase()]?.[0];
     const inP = !!pos;
-    if (presFilt === 'in' && !inP) continue;
-    if (presFilt === 'out' && inP) continue;
+    if (fPres==='in' && !inP) continue;
+    if (fPres==='out' && inP) continue;
 
-    // Diagnostic
     let diag = '';
     const ftL = ft.toLowerCase();
-    if (bs && bs.avoid_securitized && (ftL.includes('securit') || ftL.includes('clo') || ftL.includes('mbs'))) {
-      diag = `<span class="badge red">Securitized (avoid_securitized=true)</span>`;
-    } else if (bs && bs.prefer_tips && (ftL.includes('tips') || ftL.includes('inflation'))) {
-      diag = `<span class="badge green">TIPS preferred</span>`;
-    } else if (bs && bs.avoid_hy && (b.objective||'').toLowerCase().includes('high yield')) {
-      diag = `<span class="badge red">HY (avoid_hy=true)</span>`;
-    }
+    if (bs && bs.avoid_securitized && (ftL.includes('securit')||ftL.includes('clo')||ftL.includes('mbs'))) diag = `<span class="badge red">CLO/MBS interdit</span>`;
+    else if (bs && bs.prefer_tips && (ftL.includes('tips')||ftL.includes('inflation'))) diag = `<span class="badge green">TIPS preferred</span>`;
+    else if (bs && bs.avoid_hy && (b.objective||'').toLowerCase().includes('high yield')) diag = `<span class="badge red">HY interdit</span>`;
 
     rows += `<tr>
       <td><strong>${sym}</strong></td>
       <td>${nm.slice(0,40)}</td>
-      <td>${ft.slice(0,30)}</td>
+      <td>${ft.slice(0,28)}</td>
       <td class="num">${fmt(parseFloat(b.bond_avg_duration),1)}</td>
       <td class="num">${fmt(parseFloat(b.bond_credit_score),0)}</td>
       <td class="num">${fmt(parseFloat(b.yield_ttm),2)}</td>
-      <td class="num">${b.aum_usd ? (parseFloat(b.aum_usd)/1e9).toFixed(1)+'B' : ''}</td>
-      <td>${inP ? pos[0]?profileBadge(pos[0].profile):'' : '<span class="badge gray">—</span>'}</td>
-      <td class="num">${inP && pos[0] ? fmt(pos[0].weight,2)+'%' : ''}</td>
+      <td class="num">${b.aum_usd?(parseFloat(b.aum_usd)/1e9).toFixed(1)+'B':''}</td>
+      <td>${inP?profBadge(pos.profile):'<span class="badge gray">—</span>'}</td>
+      <td class="num">${inP?fmt(pos.weight,2)+'%':''}</td>
       <td>${diag}</td>
     </tr>`;
   }
@@ -792,111 +760,97 @@ function refreshBonds() {
 }
 
 // =============================================================================
-// ETFs
+// VIEW 5 — ETFs
 // =============================================================================
-function refreshETFs() {
+function renderETFs() {
   const tbody = document.getElementById('etfs-tbody');
-  if (!tbody) return;
   const catSel = document.getElementById('filter-etf-cat');
-  if (catSel.options.length <= 1) {
-    const cats = [...new Set(STATE.etfs.map(e => e.category || e.fund_type || '').filter(Boolean))].sort();
-    for (const c of cats) catSel.appendChild(new Option(c, c));
+  if (catSel.options.length <= 1 && STATE.etfs.length) {
+    const cs = [...new Set(STATE.etfs.map(e=>e.fund_type||e.category||'').filter(Boolean))].sort();
+    for (const c of cs) catSel.appendChild(new Option(c, c));
   }
   const search = document.getElementById('search-etfs').value.toLowerCase();
-  const catFilt = catSel.value;
-  const presFilt = document.getElementById('filter-etf-presence').value;
+  const fCat = catSel.value;
+  const fPres = document.getElementById('filter-etf-presence').value;
 
-  const sortCol = STATE.sort.etfs.col;
-  const sortDir = STATE.sort.etfs.dir;
-  const sorted = [...STATE.etfs].sort((a,b) => {
-    const va = parseFloat(a[sortCol] || a.aum_usd) || 0;
-    const vb = parseFloat(b[sortCol] || b.aum_usd) || 0;
-    return sortDir === 'asc' ? va - vb : vb - va;
-  });
+  const sCol = STATE.sort.etfs.col, sDir = STATE.sort.etfs.dir;
+  const sorted = [...STATE.etfs].sort((a,b)=>{const va=parseFloat(a[sCol])||0,vb=parseFloat(b[sCol])||0;return sDir==='asc'?va-vb:vb-va;});
 
   let rows = '';
   for (const e of sorted) {
-    const sym = e.symbol || e.ticker || '';
-    const nm = e.name || '';
-    if (search && !sym.toLowerCase().includes(search) && !nm.toLowerCase().includes(search)) continue;
-    const cat = e.category || e.fund_type || '';
-    if (catFilt && cat !== catFilt) continue;
-
-    const pos = STATE.portfolioPositions[sym] || STATE.portfolioPositions[nm];
+    const sym = e.symbol || e.ticker || ''; const nm = e.name || ''; const ft = e.fund_type || e.category || '';
+    if (search && !((sym+' '+nm+' '+ft).toLowerCase().includes(search))) continue;
+    if (fCat && ft !== fCat) continue;
+    const pos = STATE.portfolioPositions[sym]?.[0] || STATE.portfolioPositions[nm]?.[0] || STATE.portfolioPositions[nm.toUpperCase()]?.[0];
     const inP = !!pos;
-    if (presFilt === 'in' && !inP) continue;
-    if (presFilt === 'out' && inP) continue;
+    if (fPres==='in' && !inP) continue;
+    if (fPres==='out' && inP) continue;
 
     rows += `<tr>
       <td><strong>${sym}</strong></td>
       <td>${nm.slice(0,40)}</td>
-      <td>${cat.slice(0,25)}</td>
+      <td>${ft.slice(0,25)}</td>
       <td>${e.region || e.country || ''}</td>
-      <td class="num">${fmt(parseFloat(e.total_expense_ratio || e.ter),2)}</td>
-      <td class="num">${e.aum_usd ? (parseFloat(e.aum_usd)/1e9).toFixed(1)+'B' : ''}</td>
-      <td class="num">${fmt(parseFloat(e.ytd || e.perf_ytd),1)}</td>
-      <td>${inP && pos[0] ? profileBadge(pos[0].profile) : '<span class="badge gray">—</span>'}</td>
-      <td class="num">${inP && pos[0] ? fmt(pos[0].weight,2)+'%' : ''}</td>
+      <td class="num">${e.aum_usd?(parseFloat(e.aum_usd)/1e9).toFixed(1)+'B':''}</td>
+      <td class="num">${fmt(parseFloat(e.total_expense_ratio),2)}</td>
+      <td class="num">${fmt(parseFloat(e.ytd||e.perf_ytd),1)}</td>
+      <td>${inP?profBadge(pos.profile):'<span class="badge gray">—</span>'}</td>
+      <td class="num">${inP?fmt(pos.weight,2)+'%':''}</td>
     </tr>`;
   }
   tbody.innerHTML = rows;
 }
 
 // =============================================================================
-// UI WIRING
+// REFRESH ALL + WIRING
 // =============================================================================
 function refresh() {
-  refreshActions();
-  refreshBonds();
-  refreshETFs();
+  renderPortfolio();
+  renderCompare();
+  renderActions();
+  renderBonds();
+  renderETFs();
 }
 
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
-  });
-});
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+}));
 
-// Sort handlers
-document.querySelectorAll('#actions-table th[data-col]').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    const cur = STATE.sort.actions;
-    cur.dir = (cur.col === col && cur.dir === 'desc') ? 'asc' : 'desc';
-    cur.col = col;
-    document.querySelectorAll('#actions-table th').forEach(t => { t.classList.remove('sort-asc','sort-desc'); });
-    th.classList.add('sort-' + cur.dir);
-    refreshActions();
-  });
-});
-document.querySelectorAll('#bonds-table th[data-col]').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    const cur = STATE.sort.bonds;
-    cur.dir = (cur.col === col && cur.dir === 'desc') ? 'asc' : 'desc';
-    cur.col = col;
-    refreshBonds();
-  });
-});
+// Sort
+document.querySelectorAll('#actions-table th[data-col]').forEach(th => th.addEventListener('click', () => {
+  const col = th.dataset.col; const c = STATE.sort.actions;
+  c.dir = (c.col===col && c.dir==='desc') ? 'asc' : 'desc'; c.col = col;
+  document.querySelectorAll('#actions-table th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
+  th.classList.add('sort-'+c.dir); renderActions();
+}));
+document.querySelectorAll('#bonds-table th[data-col]').forEach(th => th.addEventListener('click', () => {
+  const col = th.dataset.col; const c = STATE.sort.bonds;
+  c.dir = (c.col===col && c.dir==='desc') ? 'asc' : 'desc'; c.col = col;
+  renderBonds();
+}));
+document.querySelectorAll('#etfs-table th[data-col]').forEach(th => th.addEventListener('click', () => {
+  const col = th.dataset.col; const c = STATE.sort.etfs;
+  c.dir = (c.col===col && c.dir==='desc') ? 'asc' : 'desc'; c.col = col;
+  renderETFs();
+}));
 
 // Filters
 ['search-actions','filter-region','filter-native','filter-presence','filter-buffett'].forEach(id => {
-  document.getElementById(id).addEventListener('input', refreshActions);
-  document.getElementById(id).addEventListener('change', refreshActions);
+  document.getElementById(id).addEventListener('input', renderActions);
+  document.getElementById(id).addEventListener('change', renderActions);
 });
 ['search-bonds','filter-bond-ft','filter-bond-presence'].forEach(id => {
-  document.getElementById(id).addEventListener('input', refreshBonds);
-  document.getElementById(id).addEventListener('change', refreshBonds);
+  document.getElementById(id).addEventListener('input', renderBonds);
+  document.getElementById(id).addEventListener('change', renderBonds);
 });
 ['search-etfs','filter-etf-cat','filter-etf-presence'].forEach(id => {
-  document.getElementById(id).addEventListener('input', refreshETFs);
-  document.getElementById(id).addEventListener('change', refreshETFs);
+  document.getElementById(id).addEventListener('input', renderETFs);
+  document.getElementById(id).addEventListener('change', renderETFs);
 });
 
-// Boot
 autoLoad();
 </script>
 </body>
