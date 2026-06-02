@@ -3895,8 +3895,41 @@ class PortfolioOptimizer:
         # Phase1.5: SLSQP n'a pas tourné — la contrainte turnover n'a pas été appliquée.
         # On force ici le respect via un blend vers prev_weights.
         if prev_weights:
+            # Sélection-10: filtrer prev_weights pour exclure les cross-profil
+            # selon _profile_native. Sinon le blend turnover réinjecte
+            # NOVN/GD/KO/PG en Stable malgré filtrage Sélection-8/9.
+            filtered_prev = prev_weights
+            if profile.name == "Stable":
+                cand_by_id = {c.id: c for c in candidates}
+                excluded = []
+                filtered_prev = {}
+                for k, v in prev_weights.items():
+                    asset = cand_by_id.get(k)
+                    if asset is None or asset.category != "Actions":
+                        filtered_prev[k] = v
+                        continue
+                    sd = getattr(asset, 'source_data', None) or {}
+                    _nat = sd.get('_profile_native')
+                    if not _nat or _nat == "Stable":
+                        filtered_prev[k] = v
+                        continue
+                    _fit_S = sd.get('_fit_stable', 0) or 0
+                    _fit_nat = max(
+                        sd.get('_fit_stable', 0) or 0,
+                        sd.get('_fit_modere', 0) or 0,
+                        sd.get('_fit_agressif', 0) or 0,
+                    )
+                    if _fit_nat >= 0.85 or (_fit_nat - _fit_S) > 0.05:
+                        excluded.append((asset.ticker or asset.symbol or k, _nat, v))
+                        continue
+                    filtered_prev[k] = v
+                if excluded:
+                    logger.info(
+                        f"[Sélection-10 turnover Stable] {len(excluded)} prev positions "
+                        f"cross-profil exclues : {[(t, n, f'{w:.1f}%') for t,n,w in excluded[:6]]}"
+                    )
             allocation = self._blend_to_max_turnover(
-                allocation, prev_weights, profile.max_turnover, candidates
+                allocation, filtered_prev, profile.max_turnover, candidates
             )
 
         # Phase Convexité-1 — cap-corrélation appliquée aussi en fallback (Stable).
