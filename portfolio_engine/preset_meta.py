@@ -977,7 +977,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
             # (VICI peer-relative US REITs Q89 battait Roche peer-relative EU pharma Q67
             #  alors que Buffett absolu Roche=100 vs VICI=67).
             # Maintenant : Buffett (absolu) pèse 15%, peer-relative réduit.
-            "buffett_score":       0.15,   # ★ NEW v5.4.0 — qualité Buffett absolue
+            "buffett_score":       0.22,   # ★ Sélection-8 : 0.15→0.22 (boost qualité absolue)
             # Quality subscores — RÉDUITS (38% du score, vs 50% avant)
             "quality_quality_sub": 0.10,   # ROE+ROIC+margin (peer-relative) — 0.15→0.10
             "quality_safety_sub":  0.12,   # D/E+payout (peer-relative) — 0.15→0.12
@@ -987,8 +987,8 @@ PROFILE_POLICY: Dict[str, Dict] = {
             "eps_growth_forecast_5y": 0.08, # Croissance future
             # v7.3: EPS Surprise — PEAD
             "eps_surprise":        0.05,   # Avg surprise 2 derniers trimestres
-            # Income
-            "dividend_yield":      0.10,   # Rendement courant
+            # Income — Sélection-8 : 0.10→0.03 (libère ACN/INTU/ADBE/CPRT div<1.5%)
+            "dividend_yield":      0.03,   # Rendement (réduit pour ne pas filtrer Tech US Buf 100)
             # Risque — PÈSE LOURD (20%)
             "volatility_3y":      -0.10,   # Vol pénalisée
             "max_drawdown_3y":    -0.10,   # Drawdown très pénalisé
@@ -2135,6 +2135,9 @@ def select_equities_for_profile(
     _native_boosted = 0
     _native_penalized = 0
     _native_excluded = 0
+    # Sélection-8: routing exclusif si écart de fit > 5pp entre native et profil courant
+    _FIT_GAP_EXCLUSION = 0.05
+    _fit_key_current = {"Stable": "_fit_stable", "Modéré": "_fit_modere", "Agressif": "_fit_agressif"}.get(profile, "")
     for eq in eq_hard:
         _native = eq.get("_profile_native")
         if not _native:
@@ -2148,7 +2151,10 @@ def select_equities_for_profile(
                 eq.get("_fit_modere", 0) or 0,
                 eq.get("_fit_agressif", 0) or 0,
             )
-            if _fit_native >= _STRICT_NATIVE_THRESHOLD:
+            _fit_current = eq.get(_fit_key_current, 0) or 0
+            _fit_gap = _fit_native - _fit_current
+            # Hard-exclude si fit_native ≥ seuil absolu OR écart > 5pp
+            if _fit_native >= _STRICT_NATIVE_THRESHOLD or _fit_gap > _FIT_GAP_EXCLUSION:
                 eq["_profile_score"] = 0.0
                 _native_excluded += 1
             else:
