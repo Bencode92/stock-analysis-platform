@@ -121,15 +121,15 @@ jobs:
               with open(f) as fh:
                   data = json.load(fh)
               regime = data.get("regime", "?")
-              ai = data.get("ai_response", {})
-              n_adj = len(ai.get("adjustments", []))
+              ai = data.get("ai_response") or {}
+              n_adj = len(ai.get("adjustments") or [])
               conf = ai.get("regime_confidence", "?")
-              md = data.get("market_data_input", {})
+              md = data.get("market_data_input") or {}
               n_fields = sum(1 for v in md.values() if v and str(v) != "N/A" and str(v) != "None")
               print(f"   Regime: {regime} (confidence {conf}/5)")
               print(f"   Adjustments: {n_adj}")
               print(f"   Market data fields filled: {n_fields}/{len(md)}")
-              for w in ai.get("warnings", []):
+              for w in (ai.get("warnings") or []):
                   print(f"   ⚠️ {w}")
           EOF
           else
