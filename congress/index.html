@@ -275,6 +275,24 @@ function renderBacktest(bt){
   if(a!=null) html+=`<div style="padding:12px 14px;border-top:1px solid var(--line);font-size:14px">
     Alpha stratégie vs QQQ : <b class="${a>0?'pos':'neg'}">${a>0?'+':''}${a} pts</b> de CAGR
     — ${a>0?'la stratégie bat le Nasdaq 🎯':'la stratégie ne bat pas QQQ : autant acheter l\\'ETF'}.</div>`;
+
+  // Tableau par ere politique
+  const segs = bt.segments || [];
+  if(segs.length){
+    html += `<div style="padding:14px;border-top:1px solid var(--line)">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">CAGR par ère politique (le marché change selon l'administration)</div>
+      <table><thead><tr><th>Période</th><th class="num">Stratégie</th><th class="num">QQQ</th>
+        <th class="num">SPY</th><th class="num">NANC</th><th class="num">Alpha/QQQ</th></tr></thead><tbody>`;
+    for(const s of segs){
+      const sm=s.metrics||{}; const g=k=>sm[k]?sm[k].cagr:null;
+      const al=sm.strategy?sm.strategy.alpha_vs_qqq:null;
+      const c=v=>v==null?'—':`<span class="${v>0?'pos':'neg'}">${v}%</span>`;
+      html += `<tr><td>${esc(s.name)}</td><td class="num">${c(g('strategy'))}</td>
+        <td class="num">${c(g('QQQ'))}</td><td class="num">${c(g('SPY'))}</td><td class="num">${c(g('NANC'))}</td>
+        <td class="num"><b class="${al>0?'pos':'neg'}">${al==null?'—':(al>0?'+':'')+al}</b></td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
   document.getElementById("backtest").innerHTML=html;
 }
 

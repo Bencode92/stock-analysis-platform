@@ -238,12 +238,41 @@ def main() -> None:
     n_years = (datetime.strptime(dates_kept[-1], "%Y-%m-%d")
                - datetime.strptime(dates_kept[0], "%Y-%m-%d")).days / 365.25
 
-    met = {"strategy": metrics(eq["strategy"], rets["strategy"], n_years)}
-    for name in bench_series:
-        met[name] = metrics(eq[name], rets[name], n_years)
-    met["strategy"]["alpha_vs_qqq"] = (
-        round(met["strategy"]["cagr"] - met.get("QQQ", {}).get("cagr", 0), 1)
-        if "QQQ" in met else None)
+    series_names = ["strategy"] + list(bench_series)
+
+    def metrics_for(lo: str, hi: str) -> dict:
+        """Metriques re-chainees sur les mois dont le debut est dans [lo, hi)."""
+        idx = [i for i in range(len(rets["strategy"])) if lo <= dates_kept[i] < hi]
+        if len(idx) < 2:
+            return {}
+        ny = (datetime.strptime(dates_kept[idx[-1] + 1], "%Y-%m-%d")
+              - datetime.strptime(dates_kept[idx[0]], "%Y-%m-%d")).days / 365.25
+        res = {}
+        for name in series_names:
+            sub = [rets[name][i] for i in idx]
+            e = [1.0]
+            for r in sub:
+                e.append(e[-1] * (1 + r))
+            res[name] = metrics(e, sub, ny)
+        if "QQQ" in res and res.get("strategy"):
+            res["strategy"]["alpha_vs_qqq"] = round(res["strategy"]["cagr"] - res["QQQ"]["cagr"], 1)
+        return res
+
+    met = metrics_for(dates_kept[0], "9999")
+
+    # Decomposition par ere politique (le marche change selon l'administration).
+    SEG_DEFS = [
+        ("Trump 1.0 (2019-21)", P["start"], "2021-01-20"),
+        ("Biden (2021-25)", "2021-01-20", "2025-01-20"),
+        ("Trump 2.0 (2025+)", "2025-01-20", "9999"),
+    ]
+    segments = []
+    for name, lo, hi in SEG_DEFS:
+        lo = max(lo, dates_kept[0])
+        sm = metrics_for(lo, hi)
+        if sm:
+            segments.append({"name": name, "start": lo, "end": (hi if hi != "9999" else dates_kept[-1]),
+                             "metrics": sm})
 
     curve = [{"date": d, **{k: round(eq[k][j], 4) for k in eq}} for j, d in enumerate(dates_kept)]
     out = {
@@ -257,6 +286,7 @@ def main() -> None:
                     "Friction COST_BPS par rebalancing. Couverture limitee par les prix dispo.",
         },
         "metrics": met,
+        "segments": segments,
         "equity": curve,
     }
     OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -268,7 +298,15 @@ def main() -> None:
         m = met[name]
         _log(f"{name:12}{m.get('cagr',0):>7}%{m.get('sharpe',0):>8}{m.get('max_drawdown',0):>7}%{m.get('total_return',0):>8}%")
     _log(f"\nAlpha strategie vs QQQ : {met['strategy'].get('alpha_vs_qqq')} pts de CAGR")
-    _log(f"Periode {out['meta']['period']} | {out['meta']['n_rebalances']} rebalancings | "
+
+    _log("\n=== PAR ERE POLITIQUE (CAGR) ===")
+    _log(f"{'Periode':22}{'Strat':>8}{'QQQ':>8}{'SPY':>8}{'NANC':>8}{'Alpha/QQQ':>11}")
+    for seg in segments:
+        sm = seg["metrics"]
+        g = lambda k: sm.get(k, {}).get("cagr", "—")
+        _log(f"{seg['name']:22}{str(g('strategy')):>7}%{str(g('QQQ')):>7}%{str(g('SPY')):>7}%"
+             f"{str(g('NANC')):>7}%{str(sm.get('strategy',{}).get('alpha_vs_qqq','—')):>10} ")
+    _log(f"\nPeriode {out['meta']['period']} | {out['meta']['n_rebalances']} rebalancings | "
          f"~{out['meta']['avg_holdings']} lignes/moy -> {OUT_PATH}")
 
 
