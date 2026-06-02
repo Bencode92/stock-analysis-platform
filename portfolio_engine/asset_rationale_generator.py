@@ -275,8 +275,14 @@ def _build_asset_lookup(assets: List) -> Dict:
 
 
 def _enrich_details(asset_details: List[Dict], assets_data: List[Dict]) -> List[Dict]:
-    """Enrichit les détails LLM avec les données originales."""
+    """Enrichit les détails LLM avec les données originales.
+
+    Defaults weight_pct=0 et category='Actions' si pas de match pour
+    respecter le schéma (champs required par AssetDetail).
+    """
+    unmatched = []
     for detail in asset_details:
+        matched = False
         for asset_data in assets_data:
             if asset_data["ticker"] == detail.get("ticker") or asset_data["name"] == detail.get("name"):
                 detail["weight_pct"] = asset_data["weight_pct"]
@@ -291,7 +297,15 @@ def _enrich_details(asset_details: List[Dict], assets_data: List[Dict]) -> List[
                     "volatility": asset_data.get("volatility"),
                     "buffett_score": asset_data.get("buffett_score"),
                 }
+                matched = True
                 break
+        if not matched:
+            # Schema requires weight_pct + category — fallback sûr
+            detail.setdefault("weight_pct", 0.0)
+            detail.setdefault("category", "Actions")
+            unmatched.append(detail.get("ticker") or detail.get("name", "?"))
+    if unmatched:
+        logger.warning(f"_enrich_details: {len(unmatched)} details non matchés → defaults appliqués ({unmatched[:5]})")
     return asset_details
 
 
