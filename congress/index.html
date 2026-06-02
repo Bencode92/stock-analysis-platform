@@ -277,7 +277,7 @@ function renderBacktest(bt){
   const a=met.strategy&&met.strategy.alpha_vs_qqq;
   if(a!=null) html+=`<div style="padding:12px 14px;border-top:1px solid var(--line);font-size:14px">
     Alpha stratégie vs QQQ : <b class="${a>0?'pos':'neg'}">${a>0?'+':''}${a} pts</b> de CAGR
-    — ${a>0?'la stratégie bat le Nasdaq 🎯':'la stratégie ne bat pas QQQ : autant acheter l\\'ETF'}.</div>`;
+    — ${a>0?'la stratégie bat le Nasdaq 🎯':'la stratégie ne bat pas QQQ : autant acheter l’ETF'}.</div>`;
 
   // Tableau par ere politique
   const segs = bt.segments || [];
