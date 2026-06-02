@@ -59,32 +59,43 @@ def _cap_and_normalize(weights: dict[str, float], cap: float) -> dict[str, float
 
 
 def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict:
-    # 1. Top K politiciens ELIGIBLES (Congres), tries par score.
-    eligibles = [r for r in leaderboard["ranking"]
-                 if r.get("eligible") and r.get("branch") == "Congress"]
-    eligibles = sorted(eligibles, key=lambda r: r["regularity_score"], reverse=True)
-    top = eligibles[:params["top_k"]]
-    score_by_pid = {r["pid"]: r["regularity_score"] for r in top}
-    name_by_pid = {r["pid"]: r["representative"] for r in top}
-    top_pids = set(score_by_pid)
-
-    # 2. Fenetre recente : cutoff = dernier report_date - WINDOW jours.
     def _pid(t):
         b = t.get("bioguide_id")
         return b if isinstance(b, str) and b.strip() else t.get("representative")
 
-    buys = [t for t in trades
-            if t.get("transaction") == "buy" and t.get("ticker") and t.get("report_date")
-            and _pid(t) in top_pids]
-    if not buys:
-        return {"meta": {"error": "aucun achat recent des top performers"}, "holdings": []}
+    # Eligibles (Congres) tries par score.
+    eligibles = [r for r in leaderboard["ranking"]
+                 if r.get("eligible") and r.get("branch") == "Congress"]
+    eligibles = sorted(eligibles, key=lambda r: r["regularity_score"], reverse=True)
 
-    last = max(t["report_date"] for t in buys)
-    last_dt = datetime.strptime(last, "%Y-%m-%d")
-    cutoff = (last_dt - timedelta(days=params["window_days"])).strftime("%Y-%m-%d")
-    recent = [t for t in buys if t["report_date"] >= cutoff]
-    if not recent:
-        recent = buys  # fenetre trop courte : on garde tout plutot que rien
+    # 1. Fenetre recente : cutoff = derniere declaration du DATASET - WINDOW jours.
+    all_buys = [t for t in trades
+                if t.get("transaction") == "buy" and t.get("ticker") and t.get("report_date")]
+    if not all_buys:
+        return {"meta": {"error": "aucun achat dans le dataset"}, "holdings": []}
+    last = max(t["report_date"] for t in all_buys)
+    cutoff = (datetime.strptime(last, "%Y-%m-%d")
+              - timedelta(days=params["window_days"])).strftime("%Y-%m-%d")
+
+    # 2. Achats recents par politicien -> ne retenir que les performers ACTIFS.
+    #    (un performer historique retraité ne trade plus -> non investable)
+    recent_by_pid = defaultdict(list)
+    for t in all_buys:
+        if t["report_date"] >= cutoff:
+            recent_by_pid[_pid(t)].append(t)
+
+    top_by_score = eligibles[:params["top_k"]]
+    inactive_top = [r["representative"] for r in top_by_score if r["pid"] not in recent_by_pid]
+
+    active = [r for r in eligibles if r["pid"] in recent_by_pid]
+    top = active[:params["top_k"]]
+    if not top:
+        return {"meta": {"error": "aucun performer actif sur la fenetre"}, "holdings": []}
+    score_by_pid = {r["pid"]: r["regularity_score"] for r in top}
+    name_by_pid = {r["pid"]: r["representative"] for r in top}
+    top_pids = set(score_by_pid)
+
+    recent = [t for pid in top_pids for t in recent_by_pid[pid]]
 
     # 3. Conviction par titre = somme des scores des performers acheteurs (1 fois/pid).
     raw = defaultdict(float)
@@ -131,9 +142,15 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
                 "side_filter": "buy",
             },
             "n_holdings": len(holdings),
+            "n_eligible": len(eligibles),
+            "n_active": len(active),
+            "n_selected": len(top),
             "top_performers": [{"representative": name_by_pid[p], "score": round(s, 2)}
                                for p, s in sorted(score_by_pid.items(), key=lambda kv: kv[1], reverse=True)],
-            "note": "PEA/CTO indicatif (actions US = CTO). Tilt fondamental/macro = overlay etage 3bis.",
+            "inactive_top_performers": inactive_top,
+            "note": ("Selection = top performers ACTIFS sur la fenetre (les retraités, "
+                     "alpha passé mais 0 trade recent, sont ecartes). PEA/CTO indicatif "
+                     "(actions US = CTO). Tilt fondamental/macro = overlay etage 3bis."),
         },
         "holdings": holdings,
     }

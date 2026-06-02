@@ -196,8 +196,9 @@ function renderPortfolio(p){
     return;
   }
   const pr = meta.params || {};
-  elMeta.innerHTML = `Top ${pr.top_k_politicians} performers · achats des ${pr.lookback_days} derniers jours · `
-    + `pondération ${pr.weighting} · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne · ${holdings.length} lignes`;
+  const act = meta.n_active!=null ? ` · ${meta.n_selected}/${meta.n_active} actifs retenus (sur ${meta.n_eligible} éligibles)` : "";
+  elMeta.innerHTML = `Top ${pr.top_k_politicians} performers <b>actifs</b> · achats des ${pr.lookback_days} derniers jours · `
+    + `pondération ${pr.weighting} · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne · ${holdings.length} lignes${act}`;
   const maxW = Math.max(...holdings.map(h=>h.weight));
   let html = `<table><thead><tr>
       <th>Ticker</th><th class="num">Poids</th><th class="num">Acheteurs</th><th>Performers (rationale)</th>
