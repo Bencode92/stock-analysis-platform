@@ -13,30 +13,48 @@
   *{box-sizing:border-box}
   body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#1a2030 0%,var(--bg) 60%);
        color:var(--txt);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-       min-height:100vh;padding:32px 16px}
-  .wrap{max-width:1100px;margin:0 auto}
-  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
-  h1{font-size:26px;margin:0;letter-spacing:-.4px}
+       min-height:100vh;padding:28px 16px 60px}
+  .wrap{max-width:1080px;margin:0 auto}
+  a{color:var(--accent2)}
+  h1{font-size:24px;margin:0;letter-spacing:-.4px}
   h1 .sub{display:block;font-size:13px;color:var(--muted);font-weight:400;margin-top:4px}
+  header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
   .badge{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
          border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted);text-decoration:none}
   .badge img{height:18px;display:block}
-  .meta{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0 22px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-width:130px}
-  .stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-  .stat .v{font-size:20px;font-weight:600;margin-top:2px}
-  .controls{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-  .controls label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
+
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+  @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+       border-radius:16px;padding:14px 16px}
+  .kpi .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .kpi .v{font-size:22px;font-weight:700;margin-top:6px;line-height:1.15}
+  .kpi .s{font-size:12px;color:var(--muted);margin-top:3px}
+
+  /* Tabs */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+  .tab{background:none;border:none;color:var(--muted);font:inherit;font-weight:600;font-size:15px;
+       padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab:hover{color:var(--txt)}
+  .tab.active{color:var(--txt);border-bottom-color:var(--accent)}
+  .view{display:none}
+  .view.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}
   input[type=search]{background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--txt);
          padding:8px 12px;font-size:14px;outline:none;min-width:200px}
-  .card{background:linear-gradient(180deg,var(--card) 0%,var(--card2) 100%);border:1px solid var(--line);
-        border-radius:18px;overflow:hidden;backdrop-filter:blur(8px)}
+  label.chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+
+  .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+        border-radius:18px;overflow:hidden}
   table{width:100%;border-collapse:collapse;font-size:14px}
   th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);cursor:pointer;user-select:none;position:sticky;top:0;background:var(--card)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);cursor:pointer;user-select:none;position:sticky;top:0;background:var(--card)}
   th:hover{color:var(--txt)}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  tr:hover td{background:rgba(255,255,255,.025)}
+  tbody tr:hover td{background:rgba(255,255,255,.025)}
   .rank{color:var(--muted);font-variant-numeric:tabular-nums}
   .name{font-weight:600}
   .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
@@ -45,265 +63,226 @@
   .pill.Independent{background:rgba(185,139,255,.15);color:var(--ind)}
   .pill.exec{background:rgba(255,207,91,.15);color:var(--warn);font-weight:700}
   tr.execrow td{background:rgba(255,207,91,.06)}
-  tr.execrow:hover td{background:rgba(255,207,91,.10)}
   .score{font-weight:700}
-  .bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:4px;width:80px}
+  .bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:4px;width:70px}
   .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent))}
   .pos{color:var(--accent)} .neg{color:var(--rep)}
-  .empty{padding:48px;text-align:center;color:var(--muted)}
+  .empty{padding:46px;text-align:center;color:var(--muted)}
   .empty b{color:var(--txt)}
   .empty code{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--accent)}
-  footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center}
-  a{color:var(--accent2)}
+  .meta-line{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .verdict{padding:14px 16px;border-top:1px solid var(--line);font-size:14px}
+  .section-h{font-size:13px;color:var(--muted);padding:14px 14px 0}
+  footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center;line-height:1.6}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header class="top">
     <h1>🏛️ Smart Politician Portfolio
-      <span class="sub">Classement des politiciens par régularité — pipeline Congress (Quiver)</span>
+      <span class="sub">Copier les meilleurs performers du Congrès — données Quiver + Twelve Data</span>
     </h1>
     <a class="badge" href="https://github.com/Bencode92/stock-analysis-platform/actions/workflows/congress-pipeline.yml" target="_blank" rel="noopener">
-      Pipeline
-      <img alt="status" src="https://github.com/Bencode92/stock-analysis-platform/actions/workflows/congress-pipeline.yml/badge.svg" />
+      Pipeline <img alt="status" src="https://github.com/Bencode92/stock-analysis-platform/actions/workflows/congress-pipeline.yml/badge.svg" />
     </a>
   </header>
 
-  <div id="meta" class="meta"></div>
-
-  <div class="controls">
-    <input id="q" type="search" placeholder="Filtrer un politicien…" />
-    <label><input id="onlyEligible" type="checkbox" checked /> Éligibles seulement</label>
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="k">Top performer</div><div class="v" id="kpi-top">—</div><div class="s" id="kpi-top-s"></div></div>
+    <div class="kpi"><div class="k">Portefeuille</div><div class="v" id="kpi-pf">—</div><div class="s" id="kpi-pf-s"></div></div>
+    <div class="kpi"><div class="k">Alpha vs QQQ · global</div><div class="v" id="kpi-alpha">—</div><div class="s">2019→aujourd'hui</div></div>
+    <div class="kpi"><div class="k">Alpha vs QQQ · Trump 2.0</div><div class="v" id="kpi-trump">—</div><div class="s">depuis janv. 2025</div></div>
   </div>
 
-  <div class="card">
-    <div id="content"><div class="empty">Chargement…</div></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="rank">🏆 Classement</button>
+    <button class="tab" data-tab="pf">💼 Portefeuille</button>
+    <button class="tab" data-tab="bt">📈 Backtest</button>
   </div>
 
-  <h2 style="margin:30px 0 4px;font-size:20px">💼 Portefeuille généré</h2>
-  <p id="pfmeta" style="color:var(--muted);font-size:13px;margin:0 0 12px"></p>
-  <div class="card">
-    <div id="portfolio"><div class="empty">Chargement…</div></div>
-  </div>
+  <!-- CLASSEMENT -->
+  <section class="view active" id="view-rank">
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Filtrer un politicien…" />
+      <label class="chk"><input id="onlyEligible" type="checkbox" checked /> Éligibles seulement</label>
+      <span id="rankmeta"></span>
+    </div>
+    <div class="card"><div id="content"><div class="empty">Chargement…</div></div></div>
+    <p class="meta-line" style="margin-top:10px">Score = performance pure (médiane d'excès vs SPY + constance). Entrée horodatée sur la date de déclaration (anti look-ahead). « % gagnants » = part des trades qui battent le SPY.</p>
+  </section>
 
-  <h2 style="margin:30px 0 4px;font-size:20px">📈 Backtest vs marché</h2>
-  <p id="btmeta" style="color:var(--muted);font-size:13px;margin:0 0 12px"></p>
-  <div class="card">
-    <div id="backtest"><div class="empty">Chargement…</div></div>
-  </div>
+  <!-- PORTEFEUILLE -->
+  <section class="view" id="view-pf">
+    <p class="meta-line" id="pfmeta"></p>
+    <div class="card"><div id="portfolio"><div class="empty">Chargement…</div></div></div>
+  </section>
+
+  <!-- BACKTEST -->
+  <section class="view" id="view-bt">
+    <p class="meta-line" id="btmeta"></p>
+    <div class="card"><div id="backtest"><div class="empty">Chargement…</div></div></div>
+  </section>
 
   <footer>
-    Données : Quiver Quantitative · Score = régularité (médiane annuelle + constance + diversité + échantillon) ·
-    Entrée horodatée sur la date de déclaration (anti look-ahead).
+    Données publiques (STOCK Act via Quiver) · cours Twelve Data · backtest point-in-time, friction incluse.<br>
+    Outil d'analyse — pas un conseil en investissement. Trump affiché « à part » (régime déclaratif OGE, hors classement).
   </footer>
 </div>
 
 <script>
-const DATA_URL = "data/politician_leaderboard.json";
-let ROWS = [], META = {}, sortKey = "rank", sortDir = 1;
+let LB={}, PF={}, BT={};
+let sortKey="rank", sortDir=1;
 
 const fmtPct = v => v==null ? "—" : (v>0?"+":"") + Number(v).toFixed(1) + "%";
 const fmtNum = v => v==null ? "—" : Number(v).toLocaleString("fr-FR");
+const esc = s => (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const partyFr = p => ({Democrat:"Démocrate",Republican:"Républicain",Independent:"Indépendant"}[p]||p);
+const cls = v => v>0?"pos":v<0?"neg":"";
 
-function render(){
-  const q = document.getElementById("q").value.trim().toLowerCase();
-  const onlyEl = document.getElementById("onlyEligible").checked;
-  // L'executif (Trump) reste toujours visible, meme avec le filtre "eligibles".
-  let rows = ROWS.filter(r => (!onlyEl || r.eligible || r.branch === "Executive") &&
-        (!q || (r.representative||"").toLowerCase().includes(q)));
+// ---- Tabs ----
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+b.dataset.tab));
+});
 
-  rows.sort((a,b)=>{
-    let x=a[sortKey], y=b[sortKey];
-    x = x==null?-Infinity:x; y = y==null?-Infinity:y;
-    if(typeof x==="string") return sortDir*x.localeCompare(y);
-    return sortDir*(x-y);
-  });
-
-  const maxScore = Math.max(1, ...ROWS.map(r=>r.regularity_score||0));
-  const cols = [
-    ["rank","#","num"],["representative","Politicien",""],["party","Parti",""],
-    ["regularity_score","Score","num"],["median_annual_excess_return","Médiane excès/SPY","num"],
-    ["win_rate","% gagnants","num"],["n_trades","Trades","num"],["n_distinct_tickers","Titres","num"],["n_active_years","Années","num"]
-  ];
-
-  if(!rows.length){
-    document.getElementById("content").innerHTML = emptyState();
-    return;
+// ---- KPIs ----
+function updateKPIs(){
+  if(LB.ranking){
+    const elig=(LB.ranking||[]).filter(r=>r.eligible);
+    const top=elig[0];
+    if(top){ document.getElementById("kpi-top").textContent=top.representative;
+      document.getElementById("kpi-top-s").textContent=`médiane ${fmtPct(top.median_annual_excess_return)} · ${top.win_rate??"—"}% gagnants`; }
+    document.getElementById("rankmeta").textContent=`${LB.meta?.eligible_count??"—"} éligibles sur ${LB.meta?.universe_size??"—"}`;
   }
-  let html = "<table><thead><tr>";
-  for(const [k,label,cls] of cols)
-    html += `<th class="${cls}" data-k="${k}">${label}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`;
-  html += "</tr></thead><tbody>";
+  if(PF.meta){ document.getElementById("kpi-pf").textContent=(PF.meta.n_holdings??"—")+" lignes";
+    document.getElementById("kpi-pf-s").textContent=`Top ${PF.meta.params?.top_k_politicians} performers actifs`; }
+  if(BT.metrics){
+    const a=BT.metrics.strategy?.alpha_vs_qqq;
+    const el=document.getElementById("kpi-alpha");
+    el.textContent=a==null?"—":(a>0?"+":"")+a+" pts"; el.className="v "+cls(a);
+    const seg=(BT.segments||[]).find(s=>/Trump 2\.0/.test(s.name));
+    const at=seg?.metrics?.strategy?.alpha_vs_qqq;
+    const et=document.getElementById("kpi-trump");
+    et.textContent=at==null?"—":(at>0?"+":"")+at+" pts"; et.className="v "+cls(at);
+  }
+}
+
+// ---- Classement ----
+function renderRank(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  const onlyEl=document.getElementById("onlyEligible").checked;
+  let rows=(LB.ranking||[]).filter(r=>(!onlyEl||r.eligible||r.branch==="Executive") &&
+        (!q||(r.representative||"").toLowerCase().includes(q)));
+  rows.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];x=x==null?-Infinity:x;y=y==null?-Infinity:y;
+    return typeof x==="string"?sortDir*x.localeCompare(y):sortDir*(x-y);});
+  if(!rows.length){ document.getElementById("content").innerHTML=emptyRank(); return; }
+  const maxS=Math.max(1,...(LB.ranking||[]).map(r=>r.regularity_score||0));
+  const cols=[["rank","#"],["representative","Politicien"],["party","Parti"],["regularity_score","Score"],
+    ["median_annual_excess_return","Médiane vs SPY"],["win_rate","% gagnants"],["n_trades","Trades"],
+    ["n_distinct_tickers","Titres"],["n_active_years","Années"]];
+  let h="<table><thead><tr>";
+  for(const [k,l] of cols){const n=!["representative","party"].includes(k);
+    h+=`<th class="${n?'num':''}" data-k="${k}">${l}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`;}
+  h+="</tr></thead><tbody>";
   for(const r of rows){
-    const med = r.median_annual_excess_return;
-    const isExec = r.branch === "Executive";
-    const houseLbl = r.house==="Senate" ? "Sénat" : r.house==="Representatives" ? "Chambre" : "";
-    html += `<tr class="${isExec?"execrow":""}">
-      <td class="num rank">${isExec?"—":r.rank}</td>
-      <td><span class="name">${esc(r.representative)}</span>${isExec?` <span class="pill exec">Exécutif · hors-classement</span>`:(houseLbl?` <span style="color:var(--muted);font-size:12px">· ${houseLbl}</span>`:"")}</td>
+    const med=r.median_annual_excess_return, ex=r.branch==="Executive";
+    const house=r.house==="Senate"?"Sénat":r.house==="Representatives"?"Chambre":"";
+    h+=`<tr class="${ex?'execrow':''}">
+      <td class="num rank">${ex?"—":r.rank}</td>
+      <td><span class="name">${esc(r.representative)}</span>${ex?` <span class="pill exec">Exécutif</span>`:(house?` <span style="color:var(--muted);font-size:12px">· ${house}</span>`:"")}</td>
       <td>${r.party?`<span class="pill ${r.party}">${partyFr(r.party)}</span>`:"—"}</td>
-      <td class="num"><span class="score">${r.regularity_score?.toFixed(1) ?? "—"}</span>
-          <div class="bar"><i style="width:${Math.round(100*(r.regularity_score||0)/maxScore)}%"></i></div></td>
-      <td class="num ${med>0?"pos":med<0?"neg":""}">${fmtPct(med)}</td>
+      <td class="num"><span class="score">${r.regularity_score?.toFixed(1)??"—"}</span><div class="bar"><i style="width:${Math.round(100*(r.regularity_score||0)/maxS)}%"></i></div></td>
+      <td class="num ${cls(med)}">${fmtPct(med)}</td>
       <td class="num">${r.win_rate!=null?r.win_rate+"%":"—"}</td>
       <td class="num">${fmtNum(r.n_trades)}</td>
       <td class="num">${fmtNum(r.n_distinct_tickers)}</td>
-      <td class="num">${fmtNum(r.n_active_years)}</td>
-    </tr>`;
+      <td class="num">${fmtNum(r.n_active_years)}</td></tr>`;
   }
-  html += "</tbody></table>";
-  document.getElementById("content").innerHTML = html;
-  document.querySelectorAll("th").forEach(th=>th.onclick=()=>{
-    const k=th.dataset.k; if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir = k==="representative"?1:-1;}
-    if(k==="rank") sortDir=1;
-    render();
-  });
+  h+="</tbody></table>";
+  document.getElementById("content").innerHTML=h;
+  document.querySelectorAll("#view-rank th").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=k==="representative"?1:-1;}
+    if(k==="rank")sortDir=1; renderRank();});
 }
+const emptyRank=()=>`<div class="empty"><p>📭 <b>Pas encore de données.</b></p>
+  <p>Lance <b>Actions → Congress Portfolio Pipeline → Run workflow</b> ou attends le cron quotidien.</p></div>`;
 
-function emptyState(){
-  return `<div class="empty">
-    <p>📭 <b>Pas encore de données.</b></p>
-    <p>Le pipeline n'a pas encore généré <code>data/politician_leaderboard.json</code>.</p>
-    <p>Lance-le : <b>Actions → Congress Portfolio Pipeline → Run workflow</b><br>
-    (ou attends le cron quotidien de 06:00 UTC).</p>
-  </div>`;
-}
-function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
-function partyFr(p){return {Democrat:"Démocrate",Republican:"Républicain",Independent:"Indépendant"}[p]||p;}
-
-function renderMeta(){
-  const m = META;
-  const el = document.getElementById("meta");
-  if(!m.generated_at){ el.innerHTML=""; return; }
-  const d = new Date(m.generated_at).toLocaleString("fr-FR");
-  el.innerHTML = `
-    <div class="stat"><div class="k">Éligibles</div><div class="v">${m.eligible_count ?? "—"}</div></div>
-    <div class="stat"><div class="k">Univers</div><div class="v">${m.universe_size ?? "—"}</div></div>
-    <div class="stat"><div class="k">Min. trades</div><div class="v">${m.params?.min_trades ?? "—"}</div></div>
-    <div class="stat"><div class="k">Généré le</div><div class="v" style="font-size:14px">${d}</div></div>`;
-}
-
-fetch(DATA_URL, {cache:"no-store"})
-  .then(r => r.ok ? r.json() : Promise.reject(r.status))
-  .then(data => { ROWS = data.ranking||[]; META = data.meta||{}; renderMeta(); render(); })
-  .catch(()=>{ document.getElementById("content").innerHTML = emptyState(); });
-
-document.getElementById("q").addEventListener("input", render);
-document.getElementById("onlyEligible").addEventListener("change", render);
-
-// ---- Portefeuille (etage 3) ----
-function renderPortfolio(p){
-  const holdings = p.holdings || [];
-  const meta = p.meta || {};
-  const elMeta = document.getElementById("pfmeta");
-  if(!holdings.length){
-    document.getElementById("portfolio").innerHTML =
-      `<div class="empty">Pas encore de portefeuille. Il est généré apr&egrave;s le classement (étage 3 du pipeline).</div>`;
-    elMeta.textContent = "";
-    return;
+// ---- Portefeuille ----
+function renderPF(){
+  const hold=PF.holdings||[], m=PF.meta||{}, pr=m.params||{};
+  if(!hold.length){ document.getElementById("portfolio").innerHTML=`<div class="empty">Portefeuille pas encore généré.</div>`;
+    document.getElementById("pfmeta").textContent=""; return; }
+  const act=m.n_active!=null?` · ${m.n_selected}/${m.n_active} actifs (sur ${m.n_eligible} éligibles)`:"";
+  const size=pr.size_mode==="amount"?` · pondéré <b>taille de trade</b> (≥ ${Math.round((pr.min_amount||0)/1000)}k$)`:"";
+  const sells=m.positions_dropped_by_sell?` · ${m.positions_dropped_by_sell} sortie(s) exclue(s)`:"";
+  document.getElementById("pfmeta").innerHTML=`Top ${pr.top_k_politicians} performers actifs · achats ${pr.lookback_days}j${size} · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne${act}${sells}`;
+  const maxW=Math.max(...hold.map(h=>h.weight));
+  let h=`<table><thead><tr><th>Ticker</th><th class="num">Poids</th><th class="num">$ investis</th><th class="num">Acheteurs</th><th>Performers</th></tr></thead><tbody>`;
+  for(const x of hold){
+    const top=(x.buyers||[]).slice(0,3).map(b=>esc(b.representative)).join(", ");
+    h+=`<tr><td><span class="name">${esc(x.ticker)}</span></td>
+      <td class="num"><span class="score">${(x.weight*100).toFixed(1)}%</span><div class="bar"><i style="width:${Math.round(100*x.weight/maxW)}%"></i></div></td>
+      <td class="num">${x.total_amount_usd?"~"+Math.round(x.total_amount_usd/1000)+"k$":"—"}</td>
+      <td class="num">${x.n_buyers}</td>
+      <td style="color:var(--muted);font-size:13px">${top}${(x.buyers||[]).length>3?" +"+(x.buyers.length-3):""}</td></tr>`;
   }
-  const pr = meta.params || {};
-  const act = meta.n_active!=null ? ` · ${meta.n_selected}/${meta.n_active} actifs retenus (sur ${meta.n_eligible} éligibles)` : "";
-  const size = pr.size_mode==="amount" ? ` · pondéré par <b>taille de trade</b> (≥ ${Math.round((pr.min_amount||0)/1000)}k$)` : "";
-  const sells = meta.positions_dropped_by_sell ? ` · ${meta.positions_dropped_by_sell} sortie(s) exclue(s) (ventes)` : "";
-  elMeta.innerHTML = `Top ${pr.top_k_politicians} performers <b>actifs</b> · achats des ${pr.lookback_days} derniers jours${size}`
-    + ` · plafond ${Math.round((pr.max_weight||0)*100)}%/ligne · ${holdings.length} lignes${act}${sells}`;
-  const maxW = Math.max(...holdings.map(h=>h.weight));
-  let html = `<table><thead><tr>
-      <th>Ticker</th><th class="num">Poids</th><th class="num">Acheteurs</th><th>Performers (rationale)</th>
-    </tr></thead><tbody>`;
-  for(const h of holdings){
-    const top = (h.buyers||[]).slice(0,3).map(b=>`${esc(b.representative)} (${b.regularity_score})`).join(", ");
-    html += `<tr>
-      <td><span class="name">${esc(h.ticker)}</span></td>
-      <td class="num"><span class="score">${(h.weight*100).toFixed(1)}%</span>
-          <div class="bar"><i style="width:${Math.round(100*h.weight/maxW)}%"></i></div></td>
-      <td class="num">${h.n_buyers}</td>
-      <td style="color:var(--muted);font-size:13px">${top}${(h.buyers||[]).length>3?` +${h.buyers.length-3}`:""}</td>
-    </tr>`;
-  }
-  html += "</tbody></table>";
-  document.getElementById("portfolio").innerHTML = html;
+  document.getElementById("portfolio").innerHTML=h+"</tbody></table>";
 }
 
-fetch("data/congress_portfolio.json", {cache:"no-store"})
-  .then(r => r.ok ? r.json() : Promise.reject(r.status))
-  .then(renderPortfolio)
-  .catch(()=>{ document.getElementById("portfolio").innerHTML =
-      `<div class="empty">Portefeuille pas encore généré (lance le pipeline).</div>`; });
-
-// ---- Backtest (etage 4) ----
-const SERIES_COLORS = {strategy:"#34d8a4", QQQ:"#5b8cff", SPY:"#8b93a7", NANC:"#ff6b6b"};
-const SERIES_LABEL = {strategy:"Stratégie", QQQ:"QQQ", SPY:"SPY", NANC:"NANC"};
-
-function sparkSVG(equity){
-  const keys = Object.keys(SERIES_COLORS).filter(k => equity[0] && equity[0][k]!=null);
-  const W=820, H=240, pad=8;
-  let lo=Infinity, hi=-Infinity;
-  for(const p of equity) for(const k of keys){ lo=Math.min(lo,p[k]); hi=Math.max(hi,p[k]); }
-  const x=i=>pad+(W-2*pad)*i/(equity.length-1);
-  const y=v=>H-pad-(H-2*pad)*(v-lo)/((hi-lo)||1);
-  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">`;
-  for(const k of keys){
-    const d=equity.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join(" ");
-    svg+=`<path d="${d}" fill="none" stroke="${SERIES_COLORS[k]}" stroke-width="${k==="strategy"?2.5:1.3}" opacity="${k==="strategy"?1:.8}"/>`;
-  }
-  svg+=`</svg>`;
-  const legend=keys.map(k=>`<span style="color:${SERIES_COLORS[k]};font-weight:600">● ${SERIES_LABEL[k]}</span>`).join("  ");
-  return `<div style="padding:14px">${svg}<div style="margin-top:8px;font-size:13px">${legend}</div></div>`;
+// ---- Backtest ----
+const COL={strategy:"#34d8a4",QQQ:"#5b8cff",SPY:"#8b93a7",NANC:"#ff6b6b"};
+const LBL={strategy:"Stratégie",QQQ:"QQQ",SPY:"SPY",NANC:"NANC"};
+function spark(eq){
+  const keys=Object.keys(COL).filter(k=>eq[0]&&eq[0][k]!=null);
+  const W=820,H=240,p=10; let lo=Infinity,hi=-Infinity;
+  for(const pt of eq)for(const k of keys){lo=Math.min(lo,pt[k]);hi=Math.max(hi,pt[k]);}
+  const x=i=>p+(W-2*p)*i/(eq.length-1), y=v=>H-p-(H-2*p)*(v-lo)/((hi-lo)||1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">`;
+  for(const k of keys){const d=eq.map((pt,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(pt[k]).toFixed(1)}`).join(" ");
+    s+=`<path d="${d}" fill="none" stroke="${COL[k]}" stroke-width="${k==="strategy"?2.5:1.3}" opacity="${k==="strategy"?1:.8}"/>`;}
+  s+=`</svg>`;
+  const lg=keys.map(k=>`<span style="color:${COL[k]};font-weight:600">● ${LBL[k]}</span>`).join("  ");
+  return `<div style="padding:14px">${s}<div style="margin-top:8px;font-size:13px">${lg}</div></div>`;
 }
-
-function renderBacktest(bt){
-  const met=bt.metrics||{}, eq=bt.equity||[], m=bt.meta||{};
+function renderBT(){
+  const met=BT.metrics||{}, eq=BT.equity||[], m=BT.meta||{};
   if(!eq.length){ document.getElementById("backtest").innerHTML=`<div class="empty">Backtest pas encore généré.</div>`; return; }
-  const p=m.period||[]; const pr=m.params||{};
-  document.getElementById("btmeta").innerHTML =
-    `${p[0]} → ${p[1]} · ${m.n_rebalances} rebalancings mensuels · friction ${pr.cost_bps}bps · `
-    + `point-in-time (anti look-ahead) · entrée = date de déclaration`;
-  const rows=["strategy","QQQ","SPY","NANC"].filter(k=>met[k]);
-  let html=sparkSVG(eq);
-  html+=`<table><thead><tr><th>Série</th><th class="num">CAGR</th><th class="num">Sharpe</th>
-    <th class="num">Max DD</th><th class="num">Total</th></tr></thead><tbody>`;
-  for(const k of rows){
-    const x=met[k]; const isStrat=k==="strategy";
-    html+=`<tr${isStrat?' style="font-weight:700"':''}>
-      <td><span style="color:${SERIES_COLORS[k]}">●</span> ${SERIES_LABEL[k]}</td>
-      <td class="num ${x.cagr>0?'pos':'neg'}">${x.cagr}%</td>
-      <td class="num">${x.sharpe}</td>
-      <td class="num neg">${x.max_drawdown}%</td>
-      <td class="num">${x.total_return}%</td></tr>`;
-  }
-  html+=`</tbody></table>`;
-  const a=met.strategy&&met.strategy.alpha_vs_qqq;
-  if(a!=null) html+=`<div style="padding:12px 14px;border-top:1px solid var(--line);font-size:14px">
-    Alpha stratégie vs QQQ : <b class="${a>0?'pos':'neg'}">${a>0?'+':''}${a} pts</b> de CAGR
-    — ${a>0?'la stratégie bat le Nasdaq 🎯':'la stratégie ne bat pas QQQ : autant acheter l’ETF'}.</div>`;
-
-  // Tableau par ere politique
-  const segs = bt.segments || [];
+  const p=m.period||[], pr=m.params||{};
+  document.getElementById("btmeta").innerHTML=`${p[0]} → ${p[1]} · ${m.n_rebalances} rebalancings mensuels · friction ${pr.cost_bps}bps · point-in-time (anti look-ahead)`;
+  let h=spark(eq);
+  const order=["strategy","QQQ","SPY","NANC"].filter(k=>met[k]);
+  h+=`<table><thead><tr><th>Série</th><th class="num">CAGR</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Total</th></tr></thead><tbody>`;
+  for(const k of order){const x=met[k];
+    h+=`<tr${k==="strategy"?' style="font-weight:700"':''}><td><span style="color:${COL[k]}">●</span> ${LBL[k]}</td>
+      <td class="num ${cls(x.cagr)}">${x.cagr}%</td><td class="num">${x.sharpe}</td>
+      <td class="num neg">${x.max_drawdown}%</td><td class="num">${x.total_return}%</td></tr>`;}
+  h+="</tbody></table>";
+  const a=met.strategy?.alpha_vs_qqq;
+  if(a!=null) h+=`<div class="verdict">Alpha global vs QQQ : <b class="${cls(a)}">${a>0?"+":""}${a} pts</b> de CAGR — ${a>0?"la stratégie bat le Nasdaq 🎯":"sur la durée, QQQ reste devant"}.</div>`;
+  const segs=BT.segments||[];
   if(segs.length){
-    html += `<div style="padding:14px;border-top:1px solid var(--line)">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">CAGR par ère politique (le marché change selon l'administration)</div>
-      <table><thead><tr><th>Période</th><th class="num">Stratégie</th><th class="num">QQQ</th>
-        <th class="num">SPY</th><th class="num">NANC</th><th class="num">Alpha/QQQ</th></tr></thead><tbody>`;
-    for(const s of segs){
-      const sm=s.metrics||{}; const g=k=>sm[k]?sm[k].cagr:null;
-      const al=sm.strategy?sm.strategy.alpha_vs_qqq:null;
-      const c=v=>v==null?'—':`<span class="${v>0?'pos':'neg'}">${v}%</span>`;
-      html += `<tr><td>${esc(s.name)}</td><td class="num">${c(g('strategy'))}</td>
-        <td class="num">${c(g('QQQ'))}</td><td class="num">${c(g('SPY'))}</td><td class="num">${c(g('NANC'))}</td>
-        <td class="num"><b class="${al>0?'pos':'neg'}">${al==null?'—':(al>0?'+':'')+al}</b></td></tr>`;
-    }
-    html += `</tbody></table></div>`;
+    h+=`<div class="section-h">CAGR par ère politique</div><table><thead><tr><th>Période</th><th class="num">Stratégie</th><th class="num">QQQ</th><th class="num">SPY</th><th class="num">NANC</th><th class="num">Alpha/QQQ</th></tr></thead><tbody>`;
+    for(const s of segs){const sm=s.metrics||{},g=k=>sm[k]?sm[k].cagr:null,al=sm.strategy?sm.strategy.alpha_vs_qqq:null;
+      const c=v=>v==null?"—":`<span class="${cls(v)}">${v}%</span>`;
+      h+=`<tr><td>${esc(s.name)}</td><td class="num">${c(g('strategy'))}</td><td class="num">${c(g('QQQ'))}</td>
+        <td class="num">${c(g('SPY'))}</td><td class="num">${c(g('NANC'))}</td>
+        <td class="num"><b class="${cls(al)}">${al==null?"—":(al>0?"+":"")+al}</b></td></tr>`;}
+    h+="</tbody></table>";
   }
-  document.getElementById("backtest").innerHTML=html;
+  document.getElementById("backtest").innerHTML=h;
 }
 
-fetch("data/congress_backtest.json", {cache:"no-store"})
-  .then(r => r.ok ? r.json() : Promise.reject(r.status))
-  .then(renderBacktest)
-  .catch(()=>{ document.getElementById("backtest").innerHTML =
-      `<div class="empty">Backtest pas encore généré (lance le pipeline).</div>`; });
+// ---- Load ----
+function load(url, set, render, emptyEl, emptyHtml){
+  fetch(url,{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(r.status))
+    .then(d=>{set(d);render();updateKPIs();})
+    .catch(()=>{document.getElementById(emptyEl).innerHTML=emptyHtml;});
+}
+load("data/politician_leaderboard.json", d=>LB=d, renderRank, "content", emptyRank());
+load("data/congress_portfolio.json", d=>PF=d, renderPF, "portfolio", `<div class="empty">Portefeuille pas encore généré.</div>`);
+load("data/congress_backtest.json", d=>BT=d, renderBT, "backtest", `<div class="empty">Backtest pas encore généré.</div>`);
+document.getElementById("q").addEventListener("input", renderRank);
+document.getElementById("onlyEligible").addEventListener("change", renderRank);
 </script>
 </body>
 </html>
