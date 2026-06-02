@@ -114,7 +114,11 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
                 "report_date": t["report_date"],
             }
 
-    weights = _cap_and_normalize(dict(raw), params["max_weight"])
+    # Anti-dilution : ne garder que les N titres a plus forte conviction (les
+    # hyperactifs type Khanna inondent sinon le portefeuille de mono-acheteurs).
+    n_candidates = len(raw)
+    ranked = sorted(raw.items(), key=lambda kv: kv[1], reverse=True)[:params["max_holdings"]]
+    weights = _cap_and_normalize(dict(ranked), params["max_weight"])
 
     holdings = []
     for tk, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
@@ -139,9 +143,11 @@ def build_portfolio(leaderboard: dict, trades: list[dict], params: dict) -> dict
                 "lookback_days": params["window_days"],
                 "weighting": params["weighting"],
                 "max_weight": params["max_weight"],
+                "max_holdings": params["max_holdings"],
                 "side_filter": "buy",
             },
             "n_holdings": len(holdings),
+            "n_candidates": n_candidates,
             "n_eligible": len(eligibles),
             "n_active": len(active),
             "n_selected": len(top),
@@ -164,6 +170,7 @@ def main() -> None:
     p.add_argument("--top-k", type=int, default=int(os.environ.get("TOP_K", "15")))
     p.add_argument("--window", type=int, default=int(os.environ.get("WINDOW_DAYS", "180")))
     p.add_argument("--max-weight", type=float, default=float(os.environ.get("MAX_WEIGHT", "0.15")))
+    p.add_argument("--max-holdings", type=int, default=int(os.environ.get("MAX_HOLDINGS", "30")))
     p.add_argument("--weighting", default=os.environ.get("WEIGHTING", "conviction"),
                    choices=["conviction", "equal"])
     args = p.parse_args()
@@ -171,7 +178,8 @@ def main() -> None:
     leaderboard = json.loads(Path(args.leaderboard).read_text(encoding="utf-8"))
     trades = json.loads(Path(args.trades).read_text(encoding="utf-8"))["trades"]
     params = {"top_k": args.top_k, "window_days": args.window,
-              "max_weight": args.max_weight, "weighting": args.weighting}
+              "max_weight": args.max_weight, "max_holdings": args.max_holdings,
+              "weighting": args.weighting}
 
     portfolio = build_portfolio(leaderboard, trades, params)
     Path(args.out).write_text(json.dumps(portfolio, ensure_ascii=False, indent=2), encoding="utf-8")
