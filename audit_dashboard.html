@@ -62,18 +62,24 @@
 
   .table-wrap { max-height: 70vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; }
 
-  .pf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
-  .pf-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
-  .pf-card h3 { color: var(--accent); margin: 0 0 8px; display: flex; align-items: center; gap: 10px; }
-  .pf-card .pf-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
-  .pf-card .pos { display: grid; grid-template-columns: 70px 1fr 60px 70px; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--panel2); font-size: 12px; align-items: center; }
+  .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 1200px) { .pf-grid { grid-template-columns: 1fr; } }
+  .pf-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+  .pf-card.proposal { border-color: var(--accent); background: linear-gradient(180deg, rgba(79,195,247,0.04), var(--panel)); }
+  .pf-card h3 { color: var(--accent); margin: 0 0 8px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .pf-card .pf-meta { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; }
+  .pf-card .pos { display: grid; grid-template-columns: 60px 1fr 80px 60px; gap: 6px; padding: 4px 0; border-bottom: 1px dashed var(--panel2); font-size: 11px; align-items: center; }
   .pf-card .pos:last-child { border-bottom: none; }
   .pf-card .pos .nm { color: var(--text); }
   .pf-card .pos .nm .tk { color: var(--accent); font-weight: 600; margin-right: 5px; }
   .pf-card .pos .nm .sub { color: var(--text-dim); font-size: 10px; }
-  .pf-card .pos .w { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
-  .pf-card .pos .alert { font-size: 9px; }
-  .pf-card .pf-section-title { font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin: 10px 0 4px; letter-spacing: 0.5px; }
+  .pf-card .pos .w { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; font-size: 11px; }
+  .pf-card .pos .alert { font-size: 9px; text-align: center; }
+  .pf-card .pos.new-pick { background: rgba(110,212,127,0.07); border-left: 3px solid var(--green); padding-left: 4px; }
+  .pf-card .pos.already-in { opacity: 0.85; }
+  .pf-card .pf-section-title { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin: 10px 0 4px; letter-spacing: 0.5px; display: flex; justify-content: space-between; }
+  .profile-row { margin-bottom: 24px; }
+  .profile-row > h2 { background: var(--bg); padding: 8px 14px; border-radius: 4px; margin-bottom: 10px; font-size: 14px; }
 
   .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
   .stat-card { background: var(--bg); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); }
@@ -131,11 +137,11 @@
   <!-- =================== MON PORTEFEUILLE =================== -->
   <div class="tab-content active" id="tab-portfolio">
     <div class="panel">
-      <h2>Vue d'ensemble</h2>
-      <p class="help">Composition actuelle des 3 portefeuilles. Pour chaque ligne : <span class="badge green">✓ natif</span> = bon match, <span class="badge red">cross-profil</span> = pris dans le mauvais profil, <span class="badge gray">—</span> = pas de _fit calculé (ETF/bond).</p>
+      <h2>Actuel vs Proposition data-driven</h2>
+      <p class="help">À gauche : ton portefeuille actuel. À droite : ma proposition basée sur tous les filtres Sélection-1 à 5 (Buffett, fit_native, vol band, gate AND, sector tilt RADAR, dividend, ROE). <span class="badge green">⭐ nouveau</span> = à ajouter, <span class="badge gray">✓ déjà</span> = déjà présent.</p>
       <div class="stat-cards" id="portfolio-stats"></div>
     </div>
-    <div class="pf-grid" id="portfolio-cards"></div>
+    <div id="portfolio-rows"></div>
   </div>
 
   <!-- =================== COMPARATIF NATIFS =================== -->
@@ -489,20 +495,149 @@ function fmt(n, d=2) { if (n==null||isNaN(n)) return ''; return parseFloat(n).to
 // =============================================================================
 // VIEW 1 — MON PORTEFEUILLE
 // =============================================================================
+// === PROPOSITION DATA-DRIVEN ===
+// Applique tous les filtres Sélection-1 à 5 + fit_native pour proposer le top par profil.
+const PROFILE_CFG = {
+  'Stable':   { buf_min: 70, qual_min: 70, vol_min: 12, vol_max: 22, roe_min: 8,  div_min: 1.5, top_n: 10, fitKey: '_fit_S' },
+  'Modéré':   { buf_min: 65, qual_min: 70, vol_min: 12, vol_max: 45, roe_min: 8,  div_min: 0,   top_n: 10, fitKey: '_fit_M' },
+  'Agressif': { buf_min: 50, qual_min: 55, vol_min: 22, vol_max: 75, roe_min: 0,  div_min: 0,   top_n: 12, fitKey: '_fit_A' },
+};
+
+// Avoided sectors (configurable depuis MI/RADAR — défaut stagflation)
+const AVOIDED_SECTORS_FR = ['finance','financial services'];
+
+function buildProposalActions(profile) {
+  const cfg = PROFILE_CFG[profile];
+  if (!cfg || !STATE.stocks.length) return [];
+
+  const filtered = STATE.stocks.filter(s => {
+    if (s._profile_native !== profile) return false;
+    const buf = num(s.buffett_score);
+    const qual = num(s.quality_score);
+    // Gate AND (Sélection-3)
+    if (!(buf >= cfg.buf_min && qual >= cfg.qual_min)) return false;
+    const vol = num(s.volatility_3y || s.vol_3y_pct);
+    if (vol < cfg.vol_min || vol > cfg.vol_max) return false;
+    const roe = num(s.roe);
+    if (roe < cfg.roe_min) return false;
+    const div = num(s.dividend_yield);
+    if (div < cfg.div_min) return false;
+    // Sector tilt — exclude Financials (RADAR avoided)
+    const sec = (s.sector||'').toLowerCase();
+    if (AVOIDED_SECTORS_FR.some(av => sec.includes(av))) return false;
+    return true;
+  });
+  // Tri par fit_score natif descendant
+  filtered.sort((a,b) => (b[cfg.fitKey]||0) - (a[cfg.fitKey]||0));
+
+  // Dedup intra-industry (max 2 par industrie, comme Sélection-3 corr penalty)
+  const byInd = {};
+  const result = [];
+  for (const s of filtered) {
+    const ind = (s.industry||'').toLowerCase() || '_';
+    if (!byInd[ind]) byInd[ind] = 0;
+    if (byInd[ind] >= 2) continue;
+    byInd[ind]++;
+    result.push(s);
+    if (result.length >= cfg.top_n) break;
+  }
+  return result;
+}
+
+// Bonds : appliquer macro tilt MI (avoid_securitized, prefer_tips)
+function buildProposalBonds(profile) {
+  if (!STATE.bonds.length) return [];
+  const bs = STATE.bondStrategy || {};
+  const durMax = profile === 'Stable' ? (bs.max_duration_stable || 4) : (bs.max_duration_moderate || 5);
+  const filtered = STATE.bonds.filter(b => {
+    const ft = (b.fund_type||'').toLowerCase();
+    const obj = (b.objective||'').toLowerCase();
+    if (bs.avoid_securitized && (ft.includes('securit')||ft.includes('clo')||ft.includes('mbs'))) return false;
+    if (bs.avoid_em_bonds && (ft.includes('emerging')||obj.includes('emerging'))) return false;
+    if (bs.avoid_hy && obj.includes('high yield')) return false;
+    const d = parseFloat(b.bond_avg_duration);
+    if (!isNaN(d) && d > durMax * 1.2) return false;
+    return true;
+  });
+  // Score : prefer TIPS si actif, score yield ajusté
+  filtered.forEach(b => {
+    const ft = (b.fund_type||'').toLowerCase();
+    let score = parseFloat(b.yield_ttm) || 0;
+    if (bs.prefer_tips && (ft.includes('tips')||ft.includes('inflation'))) score += 0.02;
+    if (bs.prefer_treasury && (ft.includes('treasury')||ft.includes('government'))) score += 0.005;
+    const credit = parseFloat(b.bond_credit_score) || 0;
+    score += (credit / 100) * 0.01; // small kicker for credit
+    b._proposal_score = score;
+  });
+  filtered.sort((a,b) => (b._proposal_score||0) - (a._proposal_score||0));
+  // Dedup par fund_type (max 1)
+  const seen = {};
+  const result = [];
+  for (const b of filtered) {
+    const ft = (b.fund_type||'').toLowerCase();
+    if (seen[ft]) continue;
+    seen[ft] = true;
+    result.push(b);
+    if (result.length >= (profile==='Stable'?5:profile==='Modéré'?4:2)) break;
+  }
+  return result;
+}
+
+// ETF : heuristique par profil — fund_type alignés
+const ETF_HEURISTIC = {
+  'Stable':   ['Large Value', 'Dividend', 'Large Blend', 'Low Volatility', 'Defensive', 'Conservative', 'Allocation'],
+  'Modéré':   ['Foreign Large', 'Large Blend', 'Dividend', 'World Allocation', 'Mid-Cap', 'Commodities', 'Natural Resources'],
+  'Agressif': ['Technology', 'Semiconductor', 'Emerging', 'Growth', 'Small Growth', 'Mid-Cap Growth', 'Energy', 'Healthcare', 'China', 'India', 'Korea', 'Solar', 'Biotech', 'Clean Energy', 'Sector', 'Thematic'],
+};
+
+function buildProposalETFs(profile) {
+  if (!STATE.etfs.length) return [];
+  const heur = ETF_HEURISTIC[profile] || [];
+  const matched = STATE.etfs.filter(e => {
+    const ft = (e.fund_type||'').toLowerCase();
+    return heur.some(h => ft.includes(h.toLowerCase()));
+  });
+  // Score : AUM (size) + perf YTD
+  matched.forEach(e => {
+    const aum = parseFloat(e.aum_usd) || 0;
+    const ytd = parseFloat(e.ytd_return_pct) || 0;
+    e._proposal_score = Math.log10(Math.max(aum, 1)) * 1.0 + ytd * 0.3;
+  });
+  matched.sort((a,b) => (b._proposal_score||0) - (a._proposal_score||0));
+  // Dedup fund_type (max 1 par type)
+  const seen = {};
+  const result = [];
+  for (const e of matched) {
+    const ft = (e.fund_type||'').toLowerCase();
+    if (seen[ft]) continue;
+    seen[ft] = true;
+    result.push(e);
+    if (result.length >= (profile==='Stable'?6:profile==='Modéré'?6:8)) break;
+  }
+  return result;
+}
+
+// === RENDER MAIN ===
 function renderPortfolio() {
-  const root = document.getElementById('portfolio-cards');
+  const root = document.getElementById('portfolio-rows');
   const statsEl = document.getElementById('portfolio-stats');
   if (!STATE.portfolio) {
-    root.innerHTML = '<div class="panel" style="grid-column: 1/-1"><p class="dim">Charge un portfolios.json ou portfolios_v4_*.json.</p></div>';
+    root.innerHTML = '<div class="panel"><p class="dim">Charge un portfolios.json ou portfolios_v4_*.json.</p></div>';
     statsEl.innerHTML = '';
     return;
   }
   let totalStocks=0, crossProfile=0, okNative=0;
-  let cards = '';
+  let allActualTickers = new Set();
+  for (const positions of Object.values(STATE.portfolioByProfile)) {
+    for (const p of positions) if (p.ticker) allActualTickers.add(p.ticker);
+  }
 
+  let rowsHtml = '';
   for (const prof of ['Agressif','Modéré','Stable']) {
     const positions = STATE.portfolioByProfile[prof] || [];
-    if (!positions.length) continue;
+    if (!positions.length && !STATE.stocks.length) continue;
+
+    // Méta du profil
     const rawProf = (STATE.portfolio.portfolios && STATE.portfolio.portfolios[prof]) || STATE.portfolio[prof] || {};
     const com = rawProf.comment || rawProf.Commentaire || '';
     const volM = com.match(/de (\d+\.\d+)%/);
@@ -510,11 +645,11 @@ function renderPortfolio() {
     const vol = volM ? volM[1]+'%' : '?';
     const nLines = linesM ? linesM[1] : positions.length;
 
+    // === COLONNE GAUCHE — ACTUEL ===
     const sections = { 'Actions': [], 'ETF': [], 'Obligations': [], 'Crypto': [] };
     for (const e of positions) {
       const tk = e.ticker || '';
-      const stock = tk ? STATE.byTicker[tk] : null;
-      e._stock = stock;
+      e._stock = tk ? STATE.byTicker[tk] : null;
       const cat = e.category;
       if (cat === 'Actions') sections.Actions.push(e);
       else if (cat === 'Obligations' || cat === 'bond') sections.Obligations.push(e);
@@ -523,30 +658,93 @@ function renderPortfolio() {
     }
     for (const k of Object.keys(sections)) sections[k].sort((a,b)=>b.weight-a.weight);
 
-    let body = `<div class="pf-meta"><strong style="color:var(--accent)">${nLines} lignes</strong> · Vol ${vol}</div>`;
+    let actualBody = `<div class="pf-meta"><strong style="color:var(--accent)">${nLines} lignes</strong> · Vol ${vol}</div>`;
     for (const [sec, items] of Object.entries(sections)) {
       if (!items.length) continue;
       const total = items.reduce((a,b)=>a+b.weight, 0);
-      body += `<div class="pf-section-title">${sec} (${total.toFixed(1)}%)</div>`;
+      actualBody += `<div class="pf-section-title"><span>${sec}</span><span>${total.toFixed(1)}%</span></div>`;
       for (const e of items) {
-        let alertHtml = '<span class="badge gray">—</span>';
+        let alert = '<span class="badge gray">—</span>';
         if (e._stock) {
           totalStocks++;
           const native = e._stock._profile_native;
-          if (native === prof) { alertHtml = `<span class="badge green">✓ natif</span>`; okNative++; }
-          else { alertHtml = `<span class="badge red">→ ${native}</span>`; crossProfile++; }
+          if (native === prof) { alert = `<span class="badge green">✓</span>`; okNative++; }
+          else { alert = `<span class="badge red">→${native.slice(0,3)}</span>`; crossProfile++; }
         }
-        body += `<div class="pos">
+        actualBody += `<div class="pos">
           <div class="nm"><span class="tk">${e.ticker || '—'}</span></div>
-          <div class="nm">${(e.name||'').slice(0,28)}<div class="sub">${(e._stock?.sector||'').slice(0,18)}</div></div>
-          <div class="alert">${alertHtml}</div>
-          <div class="w">${fmt(e.weight,2)}%</div>
+          <div class="nm">${(e.name||'').slice(0,24)}<div class="sub">${(e._stock?.sector||'').slice(0,18)}</div></div>
+          <div class="alert">${alert}</div>
+          <div class="w">${fmt(e.weight,1)}%</div>
         </div>`;
       }
     }
-    cards += `<div class="pf-card"><h3>${profBadge(prof)} ${prof}</h3>${body}</div>`;
+
+    // === COLONNE DROITE — PROPOSITION ===
+    const propStocks = buildProposalActions(prof);
+    const propBonds = buildProposalBonds(prof);
+    const propEtfs = buildProposalETFs(prof);
+
+    let propBody = `<div class="pf-meta">Top ${propStocks.length} actions natives · ${propEtfs.length} ETFs · ${propBonds.length} bonds (filtres S1-S5)</div>`;
+    if (propStocks.length) {
+      propBody += `<div class="pf-section-title"><span>Actions — top fit ${prof}</span><span>Buf ≥ ${PROFILE_CFG[prof].buf_min}</span></div>`;
+      for (const s of propStocks) {
+        const tk = s.ticker || s.symbol || '';
+        const already = allActualTickers.has(tk);
+        const fit = s[PROFILE_CFG[prof].fitKey] || 0;
+        const buf = num(s.buffett_score);
+        const tagClass = already ? 'already-in' : 'new-pick';
+        const tag = already ? `<span class="badge gray">✓ déjà</span>` : `<span class="badge green">⭐ nouveau</span>`;
+        propBody += `<div class="pos ${tagClass}">
+          <div class="nm"><span class="tk">${tk}</span></div>
+          <div class="nm">${(s.name||'').slice(0,22)}<div class="sub">Buf ${buf.toFixed(0)} · vol ${num(s.volatility_3y||s.vol_3y_pct).toFixed(0)}% · div ${num(s.dividend_yield).toFixed(1)}%</div></div>
+          <div class="alert">${tag}</div>
+          <div class="w">fit ${fit.toFixed(2)}</div>
+        </div>`;
+      }
+    }
+    if (propEtfs.length) {
+      propBody += `<div class="pf-section-title"><span>ETFs proposés</span><span></span></div>`;
+      for (const e of propEtfs) {
+        const sym = e.symbol || '';
+        const already = sections.ETF.some(x => x.ticker === sym || (x.name||'').toUpperCase() === (e.name||'').toUpperCase());
+        const tagClass = already ? 'already-in' : 'new-pick';
+        const tag = already ? `<span class="badge gray">✓</span>` : `<span class="badge green">⭐</span>`;
+        const ytd = parseFloat(e.ytd_return_pct);
+        propBody += `<div class="pos ${tagClass}">
+          <div class="nm"><span class="tk">${sym}</span></div>
+          <div class="nm">${(e.name||'').slice(0,24)}<div class="sub">${(e.fund_type||'').slice(0,22)}</div></div>
+          <div class="alert">${tag}</div>
+          <div class="w">${isNaN(ytd)?'':ytd.toFixed(1)+'%'}</div>
+        </div>`;
+      }
+    }
+    if (propBonds.length) {
+      propBody += `<div class="pf-section-title"><span>Obligations proposées</span><span>dur≤${prof==='Stable'?4:5}y</span></div>`;
+      for (const b of propBonds) {
+        const sym = b.symbol || '';
+        const already = sections.Obligations.some(x => x.ticker === sym || (x.name||'').toUpperCase() === (b.name||'').toUpperCase());
+        const tagClass = already ? 'already-in' : 'new-pick';
+        const tag = already ? `<span class="badge gray">✓</span>` : `<span class="badge green">⭐</span>`;
+        const yld = parseFloat(b.yield_ttm);
+        propBody += `<div class="pos ${tagClass}">
+          <div class="nm"><span class="tk">${sym}</span></div>
+          <div class="nm">${(b.name||'').slice(0,24)}<div class="sub">${(b.fund_type||'').slice(0,22)} · dur ${b.bond_avg_duration||'?'}</div></div>
+          <div class="alert">${tag}</div>
+          <div class="w">${isNaN(yld)?'':(yld*100).toFixed(2)+'%'}</div>
+        </div>`;
+      }
+    }
+
+    rowsHtml += `<div class="profile-row">
+      <h2>${profBadge(prof)} ${prof}</h2>
+      <div class="pf-grid">
+        <div class="pf-card"><h3>📊 Actuel</h3>${actualBody}</div>
+        <div class="pf-card proposal"><h3>💡 Proposition data-driven</h3>${propBody}</div>
+      </div>
+    </div>`;
   }
-  root.innerHTML = cards;
+  root.innerHTML = rowsHtml;
 
   const fmtFmt = STATE.portfolioFormat ? `<span class="badge blue">format ${STATE.portfolioFormat}</span>` : '';
   statsEl.innerHTML = `
