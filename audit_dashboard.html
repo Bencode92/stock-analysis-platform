@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Audit Dashboard — Sélection-5</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a1f2e;
+    --border: #2a3142;
+    --text: #d6e2f5;
+    --text-dim: #8a96a8;
+    --accent: #4fc3f7;
+    --green: #6ed47f;
+    --orange: #ffb74d;
+    --red: #f06b6b;
+    --purple: #b388ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: var(--bg); color: var(--text); padding: 20px; font-size: 13px; }
+  h1 { color: var(--accent); margin-bottom: 8px; font-size: 22px; }
+  .subtitle { color: var(--text-dim); margin-bottom: 20px; font-size: 13px; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { padding: 10px 20px; cursor: pointer; background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: 14px; }
+  .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-bottom: 16px; }
+  .panel h2 { color: var(--accent); margin-bottom: 12px; font-size: 16px; }
+  .panel h3 { color: var(--text); margin-bottom: 8px; font-size: 14px; margin-top: 14px; }
+
+  .file-loaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .file-loader { background: var(--bg); padding: 10px 12px; border-radius: 4px; border: 1px solid var(--border); }
+  .file-loader label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  .file-loader input[type=file] { width: 100%; color: var(--text); font-size: 11px; }
+  .status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 6px; }
+  .status.ok { background: rgba(110, 212, 127, 0.2); color: var(--green); }
+  .status.warn { background: rgba(255, 183, 77, 0.2); color: var(--orange); }
+  .status.err { background: rgba(240, 107, 107, 0.2); color: var(--red); }
+
+  .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 4px; }
+  .filters label { font-size: 11px; color: var(--text-dim); }
+  .filters input, .filters select { background: var(--panel); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 3px; font-family: inherit; font-size: 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: var(--bg); padding: 8px 6px; text-align: left; color: var(--accent); border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; position: sticky; top: 0; }
+  th:hover { color: var(--text); }
+  th.sort-asc::after { content: ' ▲'; font-size: 9px; }
+  th.sort-desc::after { content: ' ▼'; font-size: 9px; }
+  td { padding: 6px; border-bottom: 1px solid #232938; }
+  tr:hover td { background: rgba(79, 195, 247, 0.05); }
+
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; }
+  .badge.green { background: rgba(110, 212, 127, 0.2); color: var(--green); }
+  .badge.orange { background: rgba(255, 183, 77, 0.2); color: var(--orange); }
+  .badge.red { background: rgba(240, 107, 107, 0.2); color: var(--red); }
+  .badge.purple { background: rgba(179, 136, 255, 0.2); color: var(--purple); }
+  .badge.gray { background: rgba(138, 150, 168, 0.2); color: var(--text-dim); }
+
+  .table-wrap { max-height: 70vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; }
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: var(--bg); padding: 12px; border-radius: 4px; border: 1px solid var(--border); }
+  .stat-card .value { font-size: 20px; color: var(--accent); font-weight: 500; }
+  .stat-card .label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
+
+  .phase-block { border-left: 3px solid var(--accent); padding-left: 14px; margin-bottom: 14px; }
+  .phase-block h4 { color: var(--accent); font-size: 13px; margin-bottom: 4px; }
+  .phase-block p { color: var(--text-dim); font-size: 12px; line-height: 1.5; }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 3px; color: var(--purple); font-size: 11px; }
+
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .dim { color: var(--text-dim); }
+</style>
+</head>
+<body>
+  <h1>📊 Portfolio Audit Dashboard</h1>
+  <p class="subtitle">Audit data-driven du pipeline de sélection — Phases Sélection-1 à 5 — <a href="javascript:location.reload()" style="color: var(--accent)">⟳ reload</a></p>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="phases">Phases & Récap</button>
+    <button class="tab" data-tab="actions">Actions</button>
+    <button class="tab" data-tab="bonds">Obligations</button>
+    <button class="tab" data-tab="etfs">ETFs</button>
+  </div>
+
+  <!-- =================== PHASES =================== -->
+  <div class="tab-content active" id="tab-phases">
+    <div class="panel">
+      <h2>Phases Sélection livrées</h2>
+
+      <div class="phase-block">
+        <h4>Phase Sélection-1 — Modéré vol + liquidité + cov gate</h4>
+        <p>Renforcement des hard filters Modéré : volatility band 12-45%, ROE min, D/E max, quality_coverage min 70.</p>
+      </div>
+
+      <div class="phase-block">
+        <h4>Phase Sélection-2 — buffett_score absolu + perf_3y_min + bump min_buffett</h4>
+        <p>Ajout du poids <code>buffett_score: 0.15-0.20</code> dans score_weights Modéré/Stable (Roche, Buffett 100, n'était pas favorisé sans). Filtre <code>perf_3y_min: -10%</code>. Min Buffett Modéré 60→65, Stable 60→70.</p>
+      </div>
+
+      <div class="phase-block">
+        <h4>Phase Sélection-3 — Gate AND + ETF dedup + SLSQP barbell bonds</h4>
+        <p>Gate Buffett+Quality passe en logique AND pour Modéré/Stable (PEG Buffett 50 ne peut plus rescue par quality 65). MAX_ETF_PER_EXPOSURE_GROUP : dividend Modéré 2→1. SLSQP Modéré : contrainte min 5% Treasury intermédiaire (barbell convexité).</p>
+      </div>
+
+      <div class="phase-block">
+        <h4>Phase Sélection-4 — Coherence-driven profile assignment</h4>
+        <p>Nouveau module <code>profile_assignment.py</code> : pour chaque action, fit_score Stable/Modéré/Agressif. <code>_profile_native</code> = profil au fit max. Sélection : boost ×1.25 si natif, ×0.85 sinon. Résultat : AAPL/MSFT/GOOG routés vers leur profil naturel.</p>
+      </div>
+
+      <div class="phase-block">
+        <h4>Phase Sélection-5 — Bonds macro tilt + native boost renforcé</h4>
+        <p>Bonds : <code>select_bonds_for_profile</code> lit <code>bond_strategy_full</code> du MI. Filtres dynamiques : <code>avoid_securitized</code> exclut CLO/MBS/ABS, <code>avoid_em_bonds</code>, <code>prefer_tips</code> force 1 TIPS. Actions : boost natif ×1.40, penalty ×0.70, hard-exclude si fit_native ≥ 0.95 et profil ≠ native (NOVN ne peut plus finir en Stable).</p>
+      </div>
+
+      <h3>Verdict actuel — goulot identifié</h3>
+      <p style="color: var(--text-dim); line-height: 1.6">
+        Le pool de sélection Modéré est désormais excellent (35 candidats incluant PG/NOVN/GGG/ROP/CHD). Mais l'<strong style="color: var(--orange)">optimizer SLSQP final</strong> sparsifie à 5 actions par profil et écarte les meilleurs candidats (PG ps=1.01, NOVN ps=0.96) au profit de combinaisons covariance-favorables (NATURGY, CF, ITX). <strong>Phase Sélection-6 envisagée</strong> : injecter <code>_profile_native</code> dans SLSQP (min_weight floor sur top 10 native).
+      </p>
+    </div>
+  </div>
+
+  <!-- =================== ACTIONS =================== -->
+  <div class="tab-content" id="tab-actions">
+    <div class="panel">
+      <h2>Chargement des données <span id="actions-status"></span></h2>
+      <div class="file-loaders">
+        <div class="file-loader">
+          <label>stocks_us.json <span id="st-us-status"></span></label>
+          <input type="file" id="f-stocks-us" accept=".json">
+        </div>
+        <div class="file-loader">
+          <label>stocks_europe.json <span id="st-eu-status"></span></label>
+          <input type="file" id="f-stocks-eu" accept=".json">
+        </div>
+        <div class="file-loader">
+          <label>stocks_asia.json <span id="st-asia-status"></span></label>
+          <input type="file" id="f-stocks-asia" accept=".json">
+        </div>
+        <div class="file-loader">
+          <label>portfolios_v4_*.json (dernier) <span id="pf-status"></span></label>
+          <input type="file" id="f-portfolio" accept=".json">
+        </div>
+        <div class="file-loader">
+          <label>selection_audit.json (optionnel) <span id="audit-status"></span></label>
+          <input type="file" id="f-audit" accept=".json">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Stats globales</h2>
+      <div class="stat-cards" id="actions-stats"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Tableau d'audit</h2>
+      <div class="filters">
+        <div><label>Recherche</label><br><input type="text" id="search-actions" placeholder="ticker / nom / secteur..."></div>
+        <div><label>Region</label><br><select id="filter-region"><option value="">Toutes</option></select></div>
+        <div><label>Profil natif</label><br><select id="filter-native"><option value="">Tous</option><option value="Stable">Stable</option><option value="Modéré">Modéré</option><option value="Agressif">Agressif</option></select></div>
+        <div><label>Présence portefeuille</label><br><select id="filter-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option><option value="top-out">Top score mais absente</option></select></div>
+        <div><label>Buffett min</label><br><input type="number" id="filter-buffett" value="0" min="0" max="100" step="5" style="width: 70px"></div>
+      </div>
+      <div class="table-wrap">
+        <table id="actions-table">
+          <thead>
+            <tr>
+              <th data-col="ticker">Ticker</th>
+              <th data-col="name">Nom</th>
+              <th data-col="country">Pays</th>
+              <th data-col="sector">Secteur</th>
+              <th data-col="buffett_score" class="num">Buf</th>
+              <th data-col="quality_score" class="num">Qual</th>
+              <th data-col="volatility_3y" class="num">Vol3y</th>
+              <th data-col="roe" class="num">ROE</th>
+              <th data-col="dividend_yield" class="num">Div%</th>
+              <th data-col="perf_3y" class="num">Perf3y</th>
+              <th data-col="fit_S" class="num">fit_S</th>
+              <th data-col="fit_M" class="num">fit_M</th>
+              <th data-col="fit_A" class="num">fit_A</th>
+              <th data-col="native">Natif</th>
+              <th data-col="in_profile">Portefeuille</th>
+              <th data-col="weight" class="num">Poids</th>
+              <th data-col="diagnostic">Diagnostic</th>
+            </tr>
+          </thead>
+          <tbody id="actions-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== BONDS =================== -->
+  <div class="tab-content" id="tab-bonds">
+    <div class="panel">
+      <h2>Chargement</h2>
+      <div class="file-loaders">
+        <div class="file-loader">
+          <label>combined_bonds.csv <span id="bd-csv-status"></span></label>
+          <input type="file" id="f-bonds-csv" accept=".csv">
+        </div>
+        <div class="file-loader">
+          <label>portefeuille (partagé avec onglet Actions)</label>
+          <input type="text" id="pf-shared-bonds" disabled value="utiliser onglet Actions">
+        </div>
+      </div>
+      <div id="bond-strategy-info" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Tableau Obligations</h2>
+      <div class="filters">
+        <div><label>Recherche</label><br><input type="text" id="search-bonds" placeholder="symbol / nom / fund_type..."></div>
+        <div><label>Fund type</label><br><select id="filter-bond-ft"><option value="">Tous</option></select></div>
+        <div><label>Présence</label><br><select id="filter-bond-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option></select></div>
+      </div>
+      <div class="table-wrap">
+        <table id="bonds-table">
+          <thead>
+            <tr>
+              <th data-col="symbol">Symbol</th>
+              <th data-col="name">Nom</th>
+              <th data-col="fund_type">Fund type</th>
+              <th data-col="bond_avg_duration" class="num">Dur</th>
+              <th data-col="bond_credit_score" class="num">Credit</th>
+              <th data-col="yield_ttm" class="num">Yield</th>
+              <th data-col="aum_usd" class="num">AUM</th>
+              <th data-col="in_profile">Portefeuille</th>
+              <th data-col="weight" class="num">Poids</th>
+              <th data-col="diagnostic">Diagnostic</th>
+            </tr>
+          </thead>
+          <tbody id="bonds-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== ETFs =================== -->
+  <div class="tab-content" id="tab-etfs">
+    <div class="panel">
+      <h2>Chargement</h2>
+      <div class="file-loaders">
+        <div class="file-loader">
+          <label>all_etf.json <span id="etf-json-status"></span></label>
+          <input type="file" id="f-etfs-json" accept=".json">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Tableau ETFs</h2>
+      <div class="filters">
+        <div><label>Recherche</label><br><input type="text" id="search-etfs" placeholder="symbol / nom..."></div>
+        <div><label>Catégorie</label><br><select id="filter-etf-cat"><option value="">Toutes</option></select></div>
+        <div><label>Présence</label><br><select id="filter-etf-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option></select></div>
+      </div>
+      <div class="table-wrap">
+        <table id="etfs-table">
+          <thead>
+            <tr>
+              <th data-col="symbol">Symbol</th>
+              <th data-col="name">Nom</th>
+              <th data-col="category">Catégorie</th>
+              <th data-col="region">Region</th>
+              <th data-col="ter" class="num">TER</th>
+              <th data-col="aum" class="num">AUM</th>
+              <th data-col="ytd" class="num">YTD</th>
+              <th data-col="in_profile">Portefeuille</th>
+              <th data-col="weight" class="num">Poids</th>
+            </tr>
+          </thead>
+          <tbody id="etfs-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+// =============================================================================
+// STATE
+// =============================================================================
+const STATE = {
+  stocks: [],          // tous stocks US+EU+Asia annotés avec fits
+  portfolio: null,     // dernier portfolios_v4 chargé
+  audit: null,         // selection_audit.json chargé
+  bonds: [],           // combined_bonds.csv parsé
+  etfs: [],            // all_etf.json
+  portfolioPositions: {},   // ticker → {profile, weight}
+  bondStrategy: null,  // bond_strategy_full extrait du portefeuille
+  sort: { actions: {col: 'buffett_score', dir: 'desc'}, bonds: {col: 'yield_ttm', dir: 'desc'}, etfs: {col: 'aum', dir: 'desc'}},
+};
+
+// =============================================================================
+// FIT SCORE — Port du Python profile_assignment.py
+// =============================================================================
+function safeNum(v, def=0) {
+  if (v === null || v === undefined || v === '') return def;
+  const n = parseFloat(v);
+  return isNaN(n) ? def : n;
+}
+function normHigh(v, target, cap=1.0) {
+  if (target <= 0) return 0.5;
+  if (v <= 0) return 0;
+  return Math.min(cap, v / target);
+}
+function normLow(v, target, max, cap=1.0) {
+  if (v <= target) return cap;
+  if (v >= max) return 0;
+  return Math.max(0, cap * (max - v) / (max - target));
+}
+function normBand(v, low, high) {
+  if (v >= low && v <= high) return 1;
+  if (v < low) return v <= 0 ? 0 : Math.max(0, v/low);
+  if (v >= high + high) return 0;
+  return Math.max(0, 1 - (v - high)/high);
+}
+function fitStable(s) {
+  const vol = safeNum(s.volatility_3y || s.vol_3y_pct, 50);
+  const dy = safeNum(s.dividend_yield);
+  const dc = safeNum(s.dividend_coverage);
+  const buf = safeNum(s.buffett_score);
+  const safety = safeNum(s.quality_safety_sub, 50);
+  const perf3y = safeNum(s.perf_3y);
+  const payout = safeNum(s.payout_ratio);
+  return Math.min(1, Math.max(0,
+    0.25 * normBand(vol, 12, 22) +
+    0.20 * normHigh(dy, 3.5) +
+    0.15 * normHigh(dc, 2.0) +
+    0.15 * normHigh(buf, 85) +
+    0.10 * normHigh(safety, 80) +
+    0.10 * normBand(perf3y, 0, 50) +
+    0.05 * normLow(payout, 50, 100)
+  ));
+}
+function fitModere(s) {
+  const vol = safeNum(s.volatility_3y || s.vol_3y_pct, 50);
+  const buf = safeNum(s.buffett_score);
+  const qual = safeNum(s.quality_score);
+  const roe = safeNum(s.roe);
+  const roic = safeNum(s.roic);
+  const perf1y = safeNum(s.perf_1y);
+  const perf3y = safeNum(s.perf_3y);
+  const qg = safeNum(s.quality_growth_sub, 50);
+  return Math.min(1, Math.max(0,
+    0.25 * normHigh(buf, 90) +
+    0.15 * normHigh(qual, 80) +
+    0.15 * normHigh(roe, 25) +
+    0.10 * normHigh(roic, 15) +
+    0.15 * normBand(vol, 18, 32) +
+    0.10 * normBand(perf1y, 10, 60) +
+    0.05 * normBand(perf3y, 20, 150) +
+    0.05 * normHigh(qg, 70)
+  ));
+}
+function fitAgressif(s) {
+  const vol = safeNum(s.volatility_3y || s.vol_3y_pct, 0);
+  const buf = safeNum(s.buffett_score);
+  const qual = safeNum(s.quality_score);
+  const perf1y = safeNum(s.perf_1y);
+  const perf3y = safeNum(s.perf_3y);
+  const epsg = safeNum(s.eps_growth_forecast_5y);
+  const epsSurp = safeNum(s.eps_surprise_last);
+  return Math.min(1, Math.max(0,
+    0.25 * normHigh(perf1y, 80) +
+    0.20 * normHigh(perf3y, 200) +
+    0.20 * normBand(vol, 30, 65) +
+    0.15 * normHigh(epsg, 15) +
+    0.10 * normHigh(qual, 70) +
+    0.05 * normHigh(buf, 70) +
+    0.05 * normHigh(epsSurp, 15)
+  ));
+}
+function annotateStock(s) {
+  s._fit_S = fitStable(s);
+  s._fit_M = fitModere(s);
+  s._fit_A = fitAgressif(s);
+  const fits = {Stable: s._fit_S, 'Modéré': s._fit_M, Agressif: s._fit_A};
+  let max = -1, best = '?';
+  for (const [k,v] of Object.entries(fits)) {
+    if (v > max) { max = v; best = k; }
+  }
+  s._profile_native = best;
+  return s;
+}
+
+// =============================================================================
+// LOADERS
+// =============================================================================
+async function tryFetch(path) {
+  try {
+    const r = await fetch(path);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+async function tryFetchText(path) {
+  try {
+    const r = await fetch(path);
+    if (!r.ok) return null;
+    return await r.text();
+  } catch (e) { return null; }
+}
+
+function parseStockList(json) {
+  if (!json) return [];
+  if (Array.isArray(json)) return json;
+  if (json.stocks && Array.isArray(json.stocks)) return json.stocks;
+  return [];
+}
+function parseCSV(text) {
+  if (!text) return [];
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    // CSV simple split (assume pas de virgule dans quotes)
+    const cells = splitCSVLine(lines[i]);
+    const row = {};
+    headers.forEach((h, idx) => row[h] = cells[idx] || '');
+    rows.push(row);
+  }
+  return rows;
+}
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+function setStatus(elId, ok, msg) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = `<span class="status ${ok ? 'ok' : 'err'}">${msg}</span>`;
+}
+
+async function autoLoad() {
+  // Stocks
+  const stUS = await tryFetch('data/stocks_us.json');
+  const stEU = await tryFetch('data/stocks_europe.json');
+  const stAsia = await tryFetch('data/stocks_asia.json');
+  if (stUS) { setStatus('st-us-status', true, `${parseStockList(stUS).length} stocks`); STATE.stocks.push(...parseStockList(stUS).map(annotateStock)); }
+  if (stEU) { setStatus('st-eu-status', true, `${parseStockList(stEU).length} stocks`); STATE.stocks.push(...parseStockList(stEU).map(annotateStock)); }
+  if (stAsia) { setStatus('st-asia-status', true, `${parseStockList(stAsia).length} stocks`); STATE.stocks.push(...parseStockList(stAsia).map(annotateStock)); }
+
+  // Bonds CSV
+  const bdsTxt = await tryFetchText('data/combined_bonds.csv');
+  if (bdsTxt) {
+    STATE.bonds = parseCSV(bdsTxt);
+    setStatus('bd-csv-status', true, `${STATE.bonds.length} bonds`);
+  }
+  // ETFs
+  const etfs = await tryFetch('data/all_etf.json');
+  if (etfs) {
+    STATE.etfs = Array.isArray(etfs) ? etfs : (etfs.etfs || []);
+    setStatus('etf-json-status', true, `${STATE.etfs.length} ETFs`);
+  }
+
+  refresh();
+}
+
+// File picker handlers
+function bindFile(id, cb) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  inp.addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const txt = await f.text();
+    cb(txt, f.name);
+  });
+}
+bindFile('f-stocks-us', (t) => { try {
+  const arr = parseStockList(JSON.parse(t));
+  STATE.stocks = STATE.stocks.filter(s => s._region_load !== 'US');
+  arr.forEach(s => { s._region_load = 'US'; annotateStock(s); STATE.stocks.push(s); });
+  setStatus('st-us-status', true, `${arr.length} stocks`); refresh();
+} catch(e) { setStatus('st-us-status', false, 'JSON invalide'); } });
+bindFile('f-stocks-eu', (t) => { try {
+  const arr = parseStockList(JSON.parse(t));
+  STATE.stocks = STATE.stocks.filter(s => s._region_load !== 'EU');
+  arr.forEach(s => { s._region_load = 'EU'; annotateStock(s); STATE.stocks.push(s); });
+  setStatus('st-eu-status', true, `${arr.length} stocks`); refresh();
+} catch(e) { setStatus('st-eu-status', false, 'JSON invalide'); } });
+bindFile('f-stocks-asia', (t) => { try {
+  const arr = parseStockList(JSON.parse(t));
+  STATE.stocks = STATE.stocks.filter(s => s._region_load !== 'Asia');
+  arr.forEach(s => { s._region_load = 'Asia'; annotateStock(s); STATE.stocks.push(s); });
+  setStatus('st-asia-status', true, `${arr.length} stocks`); refresh();
+} catch(e) { setStatus('st-asia-status', false, 'JSON invalide'); } });
+bindFile('f-portfolio', (t) => { try {
+  STATE.portfolio = JSON.parse(t);
+  extractPositions();
+  setStatus('pf-status', true, `Loaded`);
+  refresh();
+} catch(e) { setStatus('pf-status', false, 'JSON invalide'); } });
+bindFile('f-audit', (t) => { try {
+  STATE.audit = JSON.parse(t);
+  setStatus('audit-status', true, `Loaded`);
+  refresh();
+} catch(e) { setStatus('audit-status', false, 'JSON invalide'); } });
+bindFile('f-bonds-csv', (t) => {
+  STATE.bonds = parseCSV(t);
+  setStatus('bd-csv-status', true, `${STATE.bonds.length} bonds`);
+  refresh();
+});
+bindFile('f-etfs-json', (t) => { try {
+  const j = JSON.parse(t);
+  STATE.etfs = Array.isArray(j) ? j : (j.etfs || []);
+  setStatus('etf-json-status', true, `${STATE.etfs.length} ETFs`);
+  refresh();
+} catch(e) { setStatus('etf-json-status', false, 'JSON invalide'); } });
+
+// =============================================================================
+// PORTFOLIO POSITIONS extraction
+// =============================================================================
+function extractPositions() {
+  STATE.portfolioPositions = {};
+  STATE.bondStrategy = null;
+  if (!STATE.portfolio) return;
+  const portfolios = STATE.portfolio.portfolios || {};
+  for (const [prof, p] of Object.entries(portfolios)) {
+    if (!p || typeof p !== 'object') continue;
+    const alloc = p.allocation || {};
+    const assets = p.assets || [];
+    // map name → ticker via assets
+    const nameToTicker = {};
+    for (const a of assets) {
+      if (typeof a === 'string') {
+        const idM = a.match(/id='([^']+)'/);
+        const tkM = a.match(/ticker='([^']+)'/);
+        const nameM = a.match(/name='([^']+)'/);
+        const symM = a.match(/symbol='([^']+)'/);
+        if (idM && (tkM || symM)) nameToTicker[idM[1]] = (tkM || symM)[1];
+        if (nameM && (tkM || symM)) nameToTicker[nameM[1]] = (tkM || symM)[1];
+      } else if (a && typeof a === 'object') {
+        const id = a.id || '';
+        const tk = a.ticker || a.symbol || '';
+        const nm = a.name || '';
+        if (id && tk) nameToTicker[id] = tk;
+        if (nm && tk) nameToTicker[nm] = tk;
+      }
+    }
+    for (const [name, weight] of Object.entries(alloc)) {
+      const tk = nameToTicker[name] || name;
+      const w = typeof weight === 'number' ? weight : parseFloat(weight);
+      if (!STATE.portfolioPositions[tk]) STATE.portfolioPositions[tk] = [];
+      STATE.portfolioPositions[tk].push({ profile: prof, weight: w, name });
+      // Add also by name as key for bonds/ETFs
+      if (name !== tk) {
+        if (!STATE.portfolioPositions[name]) STATE.portfolioPositions[name] = [];
+        STATE.portfolioPositions[name].push({ profile: prof, weight: w, name });
+      }
+    }
+  }
+  // Bond strategy
+  if (STATE.portfolio.bond_strategy_full) STATE.bondStrategy = STATE.portfolio.bond_strategy_full;
+}
+
+// =============================================================================
+// TABLE RENDER (ACTIONS)
+// =============================================================================
+function profileBadge(prof) {
+  const cls = {Stable: 'green', 'Modéré': 'orange', 'Agressif': 'purple'}[prof] || 'gray';
+  return `<span class="badge ${cls}">${prof}</span>`;
+}
+function nativeBadge(prof) { return profileBadge(prof); }
+
+function getStockTicker(s) {
+  return s.ticker || s.symbol || '';
+}
+
+function getStockProfile(tk) {
+  const pos = STATE.portfolioPositions[tk] || [];
+  if (!pos.length) return null;
+  return pos[0]; // {profile, weight}
+}
+
+function refreshActions() {
+  const tbody = document.getElementById('actions-tbody');
+  const regSel = document.getElementById('filter-region');
+  const natSel = document.getElementById('filter-native');
+  const presSel = document.getElementById('filter-presence');
+  const search = document.getElementById('search-actions').value.toLowerCase();
+  const bufMin = parseFloat(document.getElementById('filter-buffett').value) || 0;
+  const filtRegion = regSel.value;
+  const filtNative = natSel.value;
+  const filtPres = presSel.value;
+
+  // Build region filter options
+  if (regSel.options.length <= 1) {
+    const regs = [...new Set(STATE.stocks.map(s => s.country || s.region).filter(Boolean))].sort();
+    for (const r of regs) regSel.appendChild(new Option(r, r));
+  }
+
+  // Sort stocks
+  const sortCol = STATE.sort.actions.col;
+  const sortDir = STATE.sort.actions.dir;
+  const sorted = [...STATE.stocks].sort((a,b) => {
+    const va = getCol(a, sortCol);
+    const vb = getCol(b, sortCol);
+    if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
+    return sortDir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  });
+
+  let inPort = 0, total = 0, topOut = 0, topIn = 0;
+  let rows = '';
+  for (const s of sorted) {
+    const tk = getStockTicker(s);
+    const buf = safeNum(s.buffett_score);
+    if (buf < bufMin) continue;
+    const country = s.country || s.region || '';
+    if (filtRegion && country !== filtRegion) continue;
+    if (filtNative && s._profile_native !== filtNative) continue;
+    const pos = getStockProfile(tk);
+    const inP = !!pos;
+    if (filtPres === 'in' && !inP) continue;
+    if (filtPres === 'out' && inP) continue;
+    if (filtPres === 'top-out' && (inP || buf < 70)) continue;
+
+    const nm = (s.name || '').toLowerCase();
+    if (search && !tk.toLowerCase().includes(search) && !nm.includes(search) && !(s.sector||'').toLowerCase().includes(search)) continue;
+
+    total++;
+    if (inP) {
+      inPort++;
+      if (buf >= 80) topIn++;
+    } else if (buf >= 80) topOut++;
+
+    // Diagnostic auto
+    let diag = '';
+    if (!inP) {
+      if (buf < 50) diag = `<span class="dim">Buffett bas</span>`;
+      else if (s._profile_native && buf >= 80) diag = `<span class="badge orange">Top score absent — natif ${s._profile_native}</span>`;
+      else diag = '<span class="dim">Hors top</span>';
+    } else {
+      const fitProf = pos.profile === 'Modéré' ? s._fit_M : pos.profile === 'Stable' ? s._fit_S : s._fit_A;
+      if (s._profile_native !== pos.profile && s._profile_native) {
+        diag = `<span class="badge red">Non-natif (devrait être ${s._profile_native})</span>`;
+      } else {
+        diag = `<span class="badge green">OK natif</span>`;
+      }
+    }
+
+    rows += `<tr>
+      <td><strong>${tk}</strong></td>
+      <td>${(s.name||'?').slice(0,30)}</td>
+      <td>${country}</td>
+      <td>${(s.sector||'').slice(0,20)}</td>
+      <td class="num">${fmt(buf,0)}</td>
+      <td class="num">${fmt(safeNum(s.quality_score),0)}</td>
+      <td class="num">${fmt(safeNum(s.volatility_3y || s.vol_3y_pct),1)}</td>
+      <td class="num">${fmt(safeNum(s.roe),1)}</td>
+      <td class="num">${fmt(safeNum(s.dividend_yield),2)}</td>
+      <td class="num">${fmt(safeNum(s.perf_3y),1)}</td>
+      <td class="num">${fmt(s._fit_S,2)}</td>
+      <td class="num">${fmt(s._fit_M,2)}</td>
+      <td class="num">${fmt(s._fit_A,2)}</td>
+      <td>${s._profile_native ? nativeBadge(s._profile_native) : '-'}</td>
+      <td>${inP ? profileBadge(pos.profile) : '<span class="badge gray">—</span>'}</td>
+      <td class="num">${inP ? fmt(pos.weight,2)+'%' : ''}</td>
+      <td>${diag}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = rows;
+
+  // Stats
+  const totalUni = STATE.stocks.length;
+  const totalInPort = Object.keys(STATE.portfolioPositions).filter(k => STATE.stocks.some(s => getStockTicker(s) === k)).length;
+  const statsHTML = `
+    <div class="stat-card"><div class="value">${totalUni}</div><div class="label">Univers actions</div></div>
+    <div class="stat-card"><div class="value">${totalInPort}</div><div class="label">Dans portefeuille</div></div>
+    <div class="stat-card"><div class="value">${total}</div><div class="label">Visibles (filtres)</div></div>
+    <div class="stat-card"><div class="value">${topIn}</div><div class="label">Top Buf ≥ 80 dans pf</div></div>
+    <div class="stat-card"><div class="value" style="color: ${topOut>10?'var(--red)':'var(--accent)'}">${topOut}</div><div class="label">Top Buf ≥ 80 absentes</div></div>
+  `;
+  document.getElementById('actions-stats').innerHTML = statsHTML;
+}
+
+function getCol(s, col) {
+  if (col === 'fit_S') return s._fit_S || 0;
+  if (col === 'fit_M') return s._fit_M || 0;
+  if (col === 'fit_A') return s._fit_A || 0;
+  if (col === 'native') return s._profile_native || '';
+  if (col === 'in_profile') {
+    const pos = getStockProfile(getStockTicker(s));
+    return pos ? pos.profile : '';
+  }
+  if (col === 'weight') {
+    const pos = getStockProfile(getStockTicker(s));
+    return pos ? pos.weight : 0;
+  }
+  const v = s[col];
+  if (typeof v === 'string') {
+    const n = parseFloat(v);
+    if (!isNaN(n)) return n;
+  }
+  return v ?? 0;
+}
+
+function fmt(n, dec=2) {
+  if (n === null || n === undefined || isNaN(n)) return '';
+  return parseFloat(n).toFixed(dec);
+}
+
+// =============================================================================
+// BONDS
+// =============================================================================
+function refreshBonds() {
+  const tbody = document.getElementById('bonds-tbody');
+  if (!tbody) return;
+  const ftSel = document.getElementById('filter-bond-ft');
+  if (ftSel.options.length <= 1) {
+    const fts = [...new Set(STATE.bonds.map(b => b.fund_type).filter(Boolean))].sort();
+    for (const f of fts) ftSel.appendChild(new Option(f, f));
+  }
+  const search = document.getElementById('search-bonds').value.toLowerCase();
+  const ftFilt = ftSel.value;
+  const presFilt = document.getElementById('filter-bond-presence').value;
+
+  // Bond strategy info
+  const bs = STATE.bondStrategy;
+  const bsDiv = document.getElementById('bond-strategy-info');
+  if (bs && bsDiv) {
+    bsDiv.innerHTML = `<div style="font-size: 11px; color: var(--text-dim)">
+      Bond strategy MI: prefer_tips=<strong>${bs.prefer_tips}</strong> · avoid_hy=<strong>${bs.avoid_hy}</strong> ·
+      avoid_securitized=<strong style="color: ${bs.avoid_securitized?'var(--red)':'var(--green)'}">${bs.avoid_securitized}</strong> ·
+      avoid_em=<strong>${bs.avoid_em_bonds}</strong> · max_dur_Stable=${bs.max_duration_stable}y
+    </div>`;
+  }
+
+  // Sort
+  const sortCol = STATE.sort.bonds.col;
+  const sortDir = STATE.sort.bonds.dir;
+  const sorted = [...STATE.bonds].sort((a,b) => {
+    const va = parseFloat(a[sortCol]) || 0;
+    const vb = parseFloat(b[sortCol]) || 0;
+    return sortDir === 'asc' ? va - vb : vb - va;
+  });
+
+  let rows = '';
+  for (const b of sorted) {
+    const sym = b.symbol || '';
+    const nm = b.name || '';
+    const ft = b.fund_type || '';
+    if (search && !sym.toLowerCase().includes(search) && !nm.toLowerCase().includes(search) && !ft.toLowerCase().includes(search)) continue;
+    if (ftFilt && ft !== ftFilt) continue;
+
+    const pos = STATE.portfolioPositions[sym] || STATE.portfolioPositions[nm];
+    const inP = !!pos;
+    if (presFilt === 'in' && !inP) continue;
+    if (presFilt === 'out' && inP) continue;
+
+    // Diagnostic
+    let diag = '';
+    const ftL = ft.toLowerCase();
+    if (bs && bs.avoid_securitized && (ftL.includes('securit') || ftL.includes('clo') || ftL.includes('mbs'))) {
+      diag = `<span class="badge red">Securitized (avoid_securitized=true)</span>`;
+    } else if (bs && bs.prefer_tips && (ftL.includes('tips') || ftL.includes('inflation'))) {
+      diag = `<span class="badge green">TIPS preferred</span>`;
+    } else if (bs && bs.avoid_hy && (b.objective||'').toLowerCase().includes('high yield')) {
+      diag = `<span class="badge red">HY (avoid_hy=true)</span>`;
+    }
+
+    rows += `<tr>
+      <td><strong>${sym}</strong></td>
+      <td>${nm.slice(0,40)}</td>
+      <td>${ft.slice(0,30)}</td>
+      <td class="num">${fmt(parseFloat(b.bond_avg_duration),1)}</td>
+      <td class="num">${fmt(parseFloat(b.bond_credit_score),0)}</td>
+      <td class="num">${fmt(parseFloat(b.yield_ttm),2)}</td>
+      <td class="num">${b.aum_usd ? (parseFloat(b.aum_usd)/1e9).toFixed(1)+'B' : ''}</td>
+      <td>${inP ? pos[0]?profileBadge(pos[0].profile):'' : '<span class="badge gray">—</span>'}</td>
+      <td class="num">${inP && pos[0] ? fmt(pos[0].weight,2)+'%' : ''}</td>
+      <td>${diag}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = rows;
+}
+
+// =============================================================================
+// ETFs
+// =============================================================================
+function refreshETFs() {
+  const tbody = document.getElementById('etfs-tbody');
+  if (!tbody) return;
+  const catSel = document.getElementById('filter-etf-cat');
+  if (catSel.options.length <= 1) {
+    const cats = [...new Set(STATE.etfs.map(e => e.category || e.fund_type || '').filter(Boolean))].sort();
+    for (const c of cats) catSel.appendChild(new Option(c, c));
+  }
+  const search = document.getElementById('search-etfs').value.toLowerCase();
+  const catFilt = catSel.value;
+  const presFilt = document.getElementById('filter-etf-presence').value;
+
+  const sortCol = STATE.sort.etfs.col;
+  const sortDir = STATE.sort.etfs.dir;
+  const sorted = [...STATE.etfs].sort((a,b) => {
+    const va = parseFloat(a[sortCol] || a.aum_usd) || 0;
+    const vb = parseFloat(b[sortCol] || b.aum_usd) || 0;
+    return sortDir === 'asc' ? va - vb : vb - va;
+  });
+
+  let rows = '';
+  for (const e of sorted) {
+    const sym = e.symbol || e.ticker || '';
+    const nm = e.name || '';
+    if (search && !sym.toLowerCase().includes(search) && !nm.toLowerCase().includes(search)) continue;
+    const cat = e.category || e.fund_type || '';
+    if (catFilt && cat !== catFilt) continue;
+
+    const pos = STATE.portfolioPositions[sym] || STATE.portfolioPositions[nm];
+    const inP = !!pos;
+    if (presFilt === 'in' && !inP) continue;
+    if (presFilt === 'out' && inP) continue;
+
+    rows += `<tr>
+      <td><strong>${sym}</strong></td>
+      <td>${nm.slice(0,40)}</td>
+      <td>${cat.slice(0,25)}</td>
+      <td>${e.region || e.country || ''}</td>
+      <td class="num">${fmt(parseFloat(e.total_expense_ratio || e.ter),2)}</td>
+      <td class="num">${e.aum_usd ? (parseFloat(e.aum_usd)/1e9).toFixed(1)+'B' : ''}</td>
+      <td class="num">${fmt(parseFloat(e.ytd || e.perf_ytd),1)}</td>
+      <td>${inP && pos[0] ? profileBadge(pos[0].profile) : '<span class="badge gray">—</span>'}</td>
+      <td class="num">${inP && pos[0] ? fmt(pos[0].weight,2)+'%' : ''}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = rows;
+}
+
+// =============================================================================
+// UI WIRING
+// =============================================================================
+function refresh() {
+  refreshActions();
+  refreshBonds();
+  refreshETFs();
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+// Sort handlers
+document.querySelectorAll('#actions-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    const cur = STATE.sort.actions;
+    cur.dir = (cur.col === col && cur.dir === 'desc') ? 'asc' : 'desc';
+    cur.col = col;
+    document.querySelectorAll('#actions-table th').forEach(t => { t.classList.remove('sort-asc','sort-desc'); });
+    th.classList.add('sort-' + cur.dir);
+    refreshActions();
+  });
+});
+document.querySelectorAll('#bonds-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    const cur = STATE.sort.bonds;
+    cur.dir = (cur.col === col && cur.dir === 'desc') ? 'asc' : 'desc';
+    cur.col = col;
+    refreshBonds();
+  });
+});
+
+// Filters
+['search-actions','filter-region','filter-native','filter-presence','filter-buffett'].forEach(id => {
+  document.getElementById(id).addEventListener('input', refreshActions);
+  document.getElementById(id).addEventListener('change', refreshActions);
+});
+['search-bonds','filter-bond-ft','filter-bond-presence'].forEach(id => {
+  document.getElementById(id).addEventListener('input', refreshBonds);
+  document.getElementById(id).addEventListener('change', refreshBonds);
+});
+['search-etfs','filter-etf-cat','filter-etf-presence'].forEach(id => {
+  document.getElementById(id).addEventListener('input', refreshETFs);
+  document.getElementById(id).addEventListener('change', refreshETFs);
+});
+
+// Boot
+autoLoad();
+</script>
+</body>
+</html>
