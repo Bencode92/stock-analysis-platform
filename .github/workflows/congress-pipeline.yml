@@ -87,10 +87,25 @@ jobs:
         run: python congress/congress_portfolio.py
 
       - name: Etage 5 - Alertes d'achat (nouveaux achats des performers suivis)
+        id: alerts
         env:
           MIN_MEDIAN: "5"
           ALERT_DAYS: "21"
         run: python congress/alerts.py
+
+      - name: Notifier par email (si nouveaux achats)
+        if: steps.alerts.outputs.new != '0' && steps.alerts.outputs.new != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: Congress Alerts <${{ secrets.MAIL_USERNAME }}>
+          to: ${{ secrets.MAIL_TO }}
+          subject: "🔔 ${{ steps.alerts.outputs.new }} nouvel(s) achat(s) — Smart Politician Portfolio"
+          body: file://congress/data/alert_email.txt
 
       - name: Etage 4 - Backtest (vs SPY/QQQ/NANC)
         env:

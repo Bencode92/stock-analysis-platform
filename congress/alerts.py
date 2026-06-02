@@ -115,13 +115,24 @@ def main() -> None:
         "alerts": all_alerts,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # Corps d'email + signal pour l'etape de notification.
+    def _line(a):
+        amt = f"~{round(a['amount_usd']/1000)}k$" if a["amount_usd"] else "montant n/a"
+        return f"• {a['report_date']} — {a['representative']} ACHETE {a['ticker']} ({amt}, mediane {a['median_excess']}%, win {a.get('win_rate')}%)"
+    body = ("Nouveaux achats des performers suivis :\n\n" + "\n".join(_line(a) for a in pushed)
+            + f"\n\nPage : https://bencode92.github.io/stock-analysis-platform/congress/index.html") if pushed else "Aucun nouvel achat."
+    (DATA / "alert_email.txt").write_text(body, encoding="utf-8")
+    go = os.environ.get("GITHUB_OUTPUT")
+    if go:
+        with open(go, "a", encoding="utf-8") as f:
+            f.write(f"new={len(pushed)}\n")
+
     if first_run:
         print(f"1er run : {len(new_alerts)} achats amorces (pas d'alerte poussee).")
     else:
         print(f"{len(pushed)} NOUVELLE(S) alerte(s) d'achat :")
         for a in pushed[:15]:
-            amt = f"~{round(a['amount_usd']/1000)}k$" if a["amount_usd"] else "n/a"
-            print(f"  🔔 {a['report_date']} {a['representative']} -> {a['ticker']} ({amt}, méd {a['median_excess']}%)")
+            print("  🔔 " + _line(a))
 
 
 if __name__ == "__main__":
