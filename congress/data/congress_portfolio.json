@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-06-02T09:25:34+00:00",
+    "generated_at": "2026-06-02T09:49:23+00:00",
     "as_of": "2026-05-31",
     "params": {
       "top_k_politicians": 15,
@@ -8,10 +8,13 @@
       "weighting": "conviction",
       "max_weight": 0.15,
       "max_holdings": 30,
+      "size_mode": "amount",
+      "min_amount": 50000.0,
       "side_filter": "buy"
     },
     "n_holdings": 30,
-    "n_candidates": 594,
+    "n_candidates": 388,
+    "positions_dropped_by_sell": 278,
     "n_eligible": 49,
     "n_active": 11,
     "n_selected": 11,
@@ -79,391 +82,107 @@
   },
   "holdings": [
     {
-      "ticker": "NVDA",
-      "weight": 0.0564,
-      "n_buyers": 5,
-      "buyers": [
-        {
-          "representative": "Nancy Pelosi",
-          "regularity_score": 52.2,
-          "report_date": "2026-01-23"
-        },
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Dwight Evans",
-          "regularity_score": 35.21,
-          "report_date": "2025-12-19"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-04-07"
-        }
-      ],
-      "rationale": "Achete par 5 performer(s) du Top 15 sur 180j (ex. Nancy Pelosi, score 52.2).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "AMZN",
-      "weight": 0.0466,
-      "n_buyers": 4,
-      "buyers": [
-        {
-          "representative": "Nancy Pelosi",
-          "regularity_score": 52.2,
-          "report_date": "2026-01-23"
-        },
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-05-08"
-        }
-      ],
-      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j (ex. Nancy Pelosi, score 52.2).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "GOOGL",
-      "weight": 0.0466,
-      "n_buyers": 4,
-      "buyers": [
-        {
-          "representative": "Nancy Pelosi",
-          "regularity_score": 52.2,
-          "report_date": "2026-01-23"
-        },
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-04-07"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
-        }
-      ],
-      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j (ex. Nancy Pelosi, score 52.2).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "AAPL",
-      "weight": 0.0466,
-      "n_buyers": 4,
-      "buyers": [
-        {
-          "representative": "Nancy Pelosi",
-          "regularity_score": 52.2,
-          "report_date": "2026-01-23"
-        },
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-03-09"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
-        }
-      ],
-      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j (ex. Nancy Pelosi, score 52.2).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "UNH",
-      "weight": 0.041,
-      "n_buyers": 4,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-03-10"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-05-08"
-        },
-        {
-          "representative": "Josh Gottheimer",
-          "regularity_score": 31.84,
-          "report_date": "2026-03-16"
-        }
-      ],
-      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
       "ticker": "MSFT",
-      "weight": 0.041,
-      "n_buyers": 4,
+      "weight": 0.1171,
+      "n_buyers": 2,
+      "total_amount_usd": 1675001,
       "buyers": [
         {
           "representative": "Markwayne Mullin",
           "regularity_score": 45.81,
+          "amount_usd": 175000,
           "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-04-07"
         },
         {
           "representative": "Josh Gottheimer",
           "regularity_score": 31.84,
+          "amount_usd": 1500001,
           "report_date": "2026-04-08"
         }
       ],
-      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~1675k$ investis (ex. Markwayne Mullin, score 45.81).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "MA",
-      "weight": 0.0402,
-      "n_buyers": 4,
+      "ticker": "ACI",
+      "weight": 0.0586,
+      "n_buyers": 1,
+      "total_amount_usd": 800000,
       "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 800000,
           "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
-        },
-        {
-          "representative": "Shelley Moore Capito",
-          "regularity_score": 29.22,
-          "report_date": "2026-04-12"
         }
       ],
-      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~800k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "LLY",
-      "weight": 0.0321,
-      "n_buyers": 3,
+      "ticker": "CART",
+      "weight": 0.0513,
+      "n_buyers": 1,
+      "total_amount_usd": 700000,
       "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
-          "report_date": "2026-02-06"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-05-08"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "ADBE",
-      "weight": 0.0321,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-03-02"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-05-08"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "BSX",
-      "weight": 0.0321,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-03-09"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "HD",
-      "weight": 0.0321,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-02-13"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "ISRG",
-      "weight": 0.0321,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
+          "amount_usd": 700000,
           "report_date": "2026-04-07"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-02-13"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~700k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "COST",
-      "weight": 0.0321,
-      "n_buyers": 3,
+      "ticker": "GENI",
+      "weight": 0.0403,
+      "n_buyers": 1,
+      "total_amount_usd": 550000,
       "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
-          "report_date": "2026-03-09"
+          "amount_usd": 550000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~550k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "FDS",
+      "weight": 0.0402,
+      "n_buyers": 2,
+      "total_amount_usd": 550000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 500000,
+          "report_date": "2026-05-11"
         },
         {
           "representative": "Gilbert Cisneros",
           "regularity_score": 34.52,
-          "report_date": "2026-02-13"
+          "amount_usd": 50000,
+          "report_date": "2025-12-15"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~550k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -471,80 +190,55 @@
     },
     {
       "ticker": "COF",
-      "weight": 0.0321,
-      "n_buyers": 3,
+      "weight": 0.04,
+      "n_buyers": 2,
+      "total_amount_usd": 500001,
       "buyers": [
         {
           "representative": "Markwayne Mullin",
           "regularity_score": 45.81,
+          "amount_usd": 150001,
           "report_date": "2026-01-16"
         },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 350000,
           "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-02-13"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~500k$ investis (ex. Markwayne Mullin, score 45.81).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "CAT",
-      "weight": 0.0321,
+      "ticker": "NVDA",
+      "weight": 0.0388,
       "n_buyers": 3,
+      "total_amount_usd": 475000,
       "buyers": [
         {
           "representative": "Markwayne Mullin",
           "regularity_score": 45.81,
+          "amount_usd": 175000,
           "report_date": "2026-01-16"
         },
         {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-02-06"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "MCK",
-      "weight": 0.0321,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-03-02"
+          "representative": "Dwight Evans",
+          "regularity_score": 35.21,
+          "amount_usd": 50000,
+          "report_date": "2025-12-19"
         },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
-          "report_date": "2026-03-09"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
+          "amount_usd": 250000,
+          "report_date": "2026-05-11"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j, ~475k$ investis (ex. Markwayne Mullin, score 45.81).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -552,188 +246,173 @@
     },
     {
       "ticker": "JPM",
-      "weight": 0.0321,
+      "weight": 0.0365,
       "n_buyers": 3,
+      "total_amount_usd": 475000,
       "buyers": [
         {
           "representative": "Markwayne Mullin",
           "regularity_score": 45.81,
+          "amount_usd": 75000,
           "report_date": "2026-01-16"
         },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 350000,
           "report_date": "2026-05-11"
         },
         {
           "representative": "Gilbert Cisneros",
           "regularity_score": 34.52,
+          "amount_usd": 50000,
           "report_date": "2025-12-15"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j, ~475k$ investis (ex. Markwayne Mullin, score 45.81).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "NOW",
-      "weight": 0.0313,
-      "n_buyers": 3,
+      "ticker": "UNH",
+      "weight": 0.0361,
+      "n_buyers": 4,
+      "total_amount_usd": 475000,
       "buyers": [
         {
           "representative": "Markwayne Mullin",
           "regularity_score": 45.81,
-          "report_date": "2026-01-16"
+          "amount_usd": 75000,
+          "report_date": "2026-03-10"
         },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Josh Gottheimer",
-          "regularity_score": 31.84,
-          "report_date": "2026-04-08"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "ICE",
-      "weight": 0.0313,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Josh Gottheimer",
-          "regularity_score": 31.84,
-          "report_date": "2026-02-26"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "AXP",
-      "weight": 0.0306,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-05-11"
-        },
-        {
-          "representative": "Shelley Moore Capito",
-          "regularity_score": 29.22,
-          "report_date": "2026-04-04"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "META",
-      "weight": 0.0305,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.81,
-          "report_date": "2026-01-16"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-02-13"
-        },
-        {
-          "representative": "Shelley Moore Capito",
-          "regularity_score": 29.22,
-          "report_date": "2025-12-04"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "AMD",
-      "weight": 0.0282,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
+          "amount_usd": 250000,
           "report_date": "2026-05-11"
         },
         {
           "representative": "Gilbert Cisneros",
           "regularity_score": 34.52,
-          "report_date": "2026-05-08"
-        },
-        {
-          "representative": "Josh Gottheimer",
-          "regularity_score": 31.84,
-          "report_date": "2026-05-19"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "MRK",
-      "weight": 0.0282,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
+          "amount_usd": 100000,
           "report_date": "2026-04-07"
         },
         {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-01-12"
-        },
-        {
           "representative": "Josh Gottheimer",
           "regularity_score": 31.84,
+          "amount_usd": 50000,
           "report_date": "2026-03-16"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
+      "rationale": "Achete par 4 performer(s) du Top 15 sur 180j, ~475k$ investis (ex. Markwayne Mullin, score 45.81).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "DECK",
+      "weight": 0.0329,
+      "n_buyers": 2,
+      "total_amount_usd": 450000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 400000,
+          "report_date": "2026-05-11"
+        },
+        {
+          "representative": "Gilbert Cisneros",
+          "regularity_score": 34.52,
+          "amount_usd": 50000,
+          "report_date": "2025-12-15"
+        }
+      ],
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~450k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "MA",
+      "weight": 0.0328,
+      "n_buyers": 3,
+      "total_amount_usd": 425000,
+      "buyers": [
+        {
+          "representative": "Markwayne Mullin",
+          "regularity_score": 45.81,
+          "amount_usd": 75000,
+          "report_date": "2026-01-16"
+        },
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
+          "report_date": "2026-05-11"
+        },
+        {
+          "representative": "Gilbert Cisneros",
+          "regularity_score": 34.52,
+          "amount_usd": 50000,
+          "report_date": "2025-12-15"
+        }
+      ],
+      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j, ~425k$ investis (ex. Markwayne Mullin, score 45.81).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "AMZN",
+      "weight": 0.0315,
+      "n_buyers": 2,
+      "total_amount_usd": 375000,
+      "buyers": [
+        {
+          "representative": "Markwayne Mullin",
+          "regularity_score": 45.81,
+          "amount_usd": 175000,
+          "report_date": "2026-01-16"
+        },
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 200000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~375k$ investis (ex. Markwayne Mullin, score 45.81).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "PANW",
+      "weight": 0.0292,
+      "n_buyers": 2,
+      "total_amount_usd": 400000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 350000,
+          "report_date": "2026-05-11"
+        },
+        {
+          "representative": "Gilbert Cisneros",
+          "regularity_score": 34.52,
+          "amount_usd": 50000,
+          "report_date": "2026-04-07"
+        }
+      ],
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~400k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -741,178 +420,358 @@
     },
     {
       "ticker": "LIN",
-      "weight": 0.0275,
+      "weight": 0.0286,
       "n_buyers": 3,
+      "total_amount_usd": 400000,
       "buyers": [
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 250000,
           "report_date": "2026-05-11"
         },
         {
           "representative": "Gilbert Cisneros",
           "regularity_score": 34.52,
+          "amount_usd": 100000,
           "report_date": "2026-02-13"
         },
         {
           "representative": "Thomas H. Kean Jr",
           "regularity_score": 29.38,
-          "report_date": "2026-04-13"
+          "amount_usd": 50000,
+          "report_date": "2026-03-18"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
+      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j, ~400k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "ABT",
-      "weight": 0.0275,
-      "n_buyers": 3,
+      "ticker": "ORCL",
+      "weight": 0.0256,
+      "n_buyers": 1,
+      "total_amount_usd": 350000,
       "buyers": [
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
-          "report_date": "2026-04-07"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
-        },
-        {
-          "representative": "Thomas H. Kean Jr",
-          "regularity_score": 29.38,
-          "report_date": "2026-02-19"
+          "amount_usd": 350000,
+          "report_date": "2026-05-11"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "AMCR",
-      "weight": 0.0275,
-      "n_buyers": 3,
+      "ticker": "DIS",
+      "weight": 0.0256,
+      "n_buyers": 1,
+      "total_amount_usd": 350000,
       "buyers": [
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
-          "report_date": "2026-04-07"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2025-12-15"
-        },
-        {
-          "representative": "Thomas H. Kean Jr",
-          "regularity_score": 29.38,
-          "report_date": "2026-04-13"
+          "amount_usd": 350000,
+          "report_date": "2026-05-11"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "AVGO",
-      "weight": 0.0275,
-      "n_buyers": 3,
+      "ticker": "MET",
+      "weight": 0.0256,
+      "n_buyers": 1,
+      "total_amount_usd": 350000,
       "buyers": [
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 350000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "SBUX",
+      "weight": 0.0256,
+      "n_buyers": 1,
+      "total_amount_usd": 350000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 350000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "CPRT",
+      "weight": 0.0256,
+      "n_buyers": 1,
+      "total_amount_usd": 350000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 350000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "PINS",
+      "weight": 0.0256,
+      "n_buyers": 1,
+      "total_amount_usd": 350000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 350000,
+          "report_date": "2026-03-09"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "HD",
+      "weight": 0.0255,
+      "n_buyers": 2,
+      "total_amount_usd": 350000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 250000,
           "report_date": "2026-05-11"
         },
         {
           "representative": "Gilbert Cisneros",
           "regularity_score": 34.52,
+          "amount_usd": 100000,
+          "report_date": "2026-02-13"
+        }
+      ],
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "SYK",
+      "weight": 0.0255,
+      "n_buyers": 2,
+      "total_amount_usd": 350000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 250000,
+          "report_date": "2026-05-11"
+        },
+        {
+          "representative": "Gilbert Cisneros",
+          "regularity_score": 34.52,
+          "amount_usd": 100000,
           "report_date": "2026-01-12"
-        },
-        {
-          "representative": "Shelley Moore Capito",
-          "regularity_score": 29.22,
-          "report_date": "2026-03-04"
         }
       ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "VST",
-      "weight": 0.0243,
+      "ticker": "APD",
+      "weight": 0.0253,
       "n_buyers": 2,
+      "total_amount_usd": 350000,
       "buyers": [
-        {
-          "representative": "Nancy Pelosi",
-          "regularity_score": 52.2,
-          "report_date": "2026-01-23"
-        },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 300000,
           "report_date": "2026-05-11"
+        },
+        {
+          "representative": "Josh Gottheimer",
+          "regularity_score": 31.84,
+          "amount_usd": 50000,
+          "report_date": "2026-04-08"
         }
       ],
-      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j (ex. Nancy Pelosi, score 52.2).",
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~350k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
       }
     },
     {
-      "ticker": "VZ",
-      "weight": 0.0236,
-      "n_buyers": 3,
-      "buyers": [
-        {
-          "representative": "Ro Khanna",
-          "regularity_score": 34.89,
-          "report_date": "2026-02-06"
-        },
-        {
-          "representative": "Gilbert Cisneros",
-          "regularity_score": 34.52,
-          "report_date": "2026-05-08"
-        },
-        {
-          "representative": "Tim Moore",
-          "regularity_score": 15.45,
-          "report_date": "2025-12-19"
-        }
-      ],
-      "rationale": "Achete par 3 performer(s) du Top 15 sur 180j (ex. Ro Khanna, score 34.89).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "C",
-      "weight": 0.0225,
+      "ticker": "GOOGL",
+      "weight": 0.0241,
       "n_buyers": 2,
+      "total_amount_usd": 275000,
       "buyers": [
         {
           "representative": "Markwayne Mullin",
           "regularity_score": 45.81,
-          "report_date": "2026-03-02"
+          "amount_usd": 175000,
+          "report_date": "2026-01-16"
         },
         {
           "representative": "Ro Khanna",
           "regularity_score": 34.89,
+          "amount_usd": 100000,
+          "report_date": "2026-04-07"
+        }
+      ],
+      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j, ~275k$ investis (ex. Markwayne Mullin, score 45.81).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "HOOD",
+      "weight": 0.022,
+      "n_buyers": 1,
+      "total_amount_usd": 300000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
           "report_date": "2026-05-11"
         }
       ],
-      "rationale": "Achete par 2 performer(s) du Top 15 sur 180j (ex. Markwayne Mullin, score 45.81).",
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~300k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "IBM",
+      "weight": 0.022,
+      "n_buyers": 1,
+      "total_amount_usd": 300000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~300k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "WFC",
+      "weight": 0.022,
+      "n_buyers": 1,
+      "total_amount_usd": 300000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~300k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "LULU",
+      "weight": 0.022,
+      "n_buyers": 1,
+      "total_amount_usd": 300000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~300k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "KKR",
+      "weight": 0.022,
+      "n_buyers": 1,
+      "total_amount_usd": 300000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~300k$ investis (ex. Ro Khanna, score 34.89).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "CVNA",
+      "weight": 0.022,
+      "n_buyers": 1,
+      "total_amount_usd": 300000,
+      "buyers": [
+        {
+          "representative": "Ro Khanna",
+          "regularity_score": 34.89,
+          "amount_usd": 300000,
+          "report_date": "2026-05-11"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 15 sur 180j, ~300k$ investis (ex. Ro Khanna, score 34.89).",
       "eligibility": {
         "pea": false,
         "cto": true
