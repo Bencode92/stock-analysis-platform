@@ -914,8 +914,12 @@ RELAX_PROFILE_LIMITS: Dict[str, Dict[str, float]] = {
 
 PROFILE_POLICY: Dict[str, Dict] = {
     "Agressif": {
-        # v7.2.1: ajouté "defensif" — filet de sécurité, naturellement sous-pondéré par scoring (div_yield=-0.05)
-        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_premium", "quality_high_vol", "defensif"},
+        # v5.8.0 (Sélection-14) : retiré "quality_premium" pour vraie séparation
+        # Agressif/Modéré. Les Buf 100 stables (ADBE/REGN/CPRT/CTSH/SNA/VLTO)
+        # qui matchent quality_premium routent désormais EXCLUSIVEMENT vers
+        # Modéré. Agressif garde momentum/croissance/recovery pure.
+        # v7.2.1: ajouté "defensif" — filet de sécurité
+        "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_high_vol", "defensif"},
         "min_buffett_score": 50,
          "min_quality_gate": 55,     # v4.15: OR gate — quality rescue pour secteurs à moat structurellement bas
         "hard_filters": {
@@ -955,6 +959,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "expected_equity_overlap_with_stable": 0.25,
     },
     "Modéré": {
+        # v5.8.0 (Sélection-14) : preserve presets larges Modéré pour
+        # éviter qu'un Modéré natif via fit (GALP, NOVN, EXPD) tombe
+        # entre les chaises faute d'un preset autorisé.
         "allowed_equity_presets": {"quality_premium", "value_dividend", "croissance", "momentum_trend", "defensif", "low_volatility", "rendement"},
         "min_buffett_score": 65,     # v5.4.0 (Sélection-2): 60→65, exclut PEG (50), AZN (33)
         "min_quality_gate": 65,      # v4.15: gate (Modéré: AND)
@@ -1003,6 +1010,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "expected_equity_overlap_with_stable": 0.45,
     },
     "Stable": {
+        # v5.8.0 (Sélection-14) : presets larges préservés ; le filtre
+        # Stable est déjà strict via whitelist Sélection-13 (cross-profil
+        # connus exclus du fallback) + gate Buffett ≥ 70 + Quality ≥ 62.
         "allowed_equity_presets": {"defensif", "low_volatility", "rendement", "value_dividend", "quality_premium"},
         "min_buffett_score": 70,  # v5.4.0 (Sélection-2): 60→70 — élite uniquement pour Stable
         "min_quality_gate": 62,   # v5.3.3: was 65 — slight relaxation, TTE quality=62 is legitimate
