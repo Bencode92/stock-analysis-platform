@@ -30,14 +30,15 @@ OUT_PATH = DATA_DIR / "politician_leaderboard.json"
 
 # ---- Parametres du score (traces dans le JSON pour reproductibilite) ----
 DEFAULTS = {
-    "min_trades": 20,           # echantillon minimum
-    "min_distinct_tickers": 8,  # anti-concentration
-    "min_active_years": 2,      # anti one-shot
-    "weights": {
-        "median_return": 0.45,  # le coeur: surperf mediane annuelle
-        "consistency": 0.30,    # faible variance entre annees
-        "diversity": 0.15,      # nb titres distincts
-        "sample": 0.10,         # taille d'echantillon
+    "min_trades": 20,            # echantillon minimum
+    "min_distinct_tickers": 8,   # anti-concentration
+    "min_active_years": 2,       # anti one-shot
+    "require_positive_median": True,  # on ne copie pas qui sous-performe le SPY
+    "weights": {                 # calibrage "performance pure"
+        "median_return": 0.65,   # le coeur: surperf mediane annuelle
+        "consistency": 0.25,     # faible variance entre annees
+        "diversity": 0.05,       # nb titres distincts (anti-concentration residuel)
+        "sample": 0.05,          # taille d'echantillon
     },
 }
 
@@ -114,14 +115,18 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
         n_tickers = int(g["ticker"].nunique())
         n_years = int(g["year"].nunique())
         branch = "Executive" if (g["branch"] == "Executive").any() else "Congress"
+        med_val = _safe_float(annual.median()) if not annual.empty else None
 
         # L'executif (Trump) est montre "a part" : historique trop court / recent pour
         # un score de regularite valable -> on le garde dans le tableau mais hors classement.
+        # Calibrage "performance pure" : on exige une mediane d'exces STRICTEMENT positive
+        # (on ne copie pas qui sous-performe le SPY) + assez d'echantillon/diversite/annees.
         eligible = (
             branch != "Executive"
             and n_trades >= params["min_trades"]
             and n_tickers >= params["min_distinct_tickers"]
             and n_years >= params["min_active_years"]
+            and (not params.get("require_positive_median") or (med_val is not None and med_val > 0))
         )
         universe.append({
             "representative": str(g["representative"].iloc[0]),
@@ -131,7 +136,7 @@ def build_leaderboard(df: pd.DataFrame, params: dict) -> dict:
             "party": (g["party"].dropna().iloc[0] if g["party"].notna().any() else None),
             "house": (g["house"].dropna().iloc[0] if g["house"].notna().any() else None),
             "eligible": bool(eligible),
-            "median_annual_excess_return": _safe_float(annual.median()) if not annual.empty else None,
+            "median_annual_excess_return": med_val,
             "annual_return_std": _safe_float(annual.std(ddof=0)) if len(annual) > 1 else None,
             "n_trades": n_trades,
             "n_distinct_tickers": n_tickers,
