@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-06-02-13-39-13",
-    "git_sha": "96aa6a732",
-    "git_sha_full": "96aa6a732e0f1babeb23680c3002f67e3065f5a9",
+    "run_id": "2026-06-02-14-39-48",
+    "git_sha": "fcdf9398e",
+    "git_sha_full": "fcdf9398e745343d92ec841eeeb22886b6dae61e",
     "config_hash": "d87156a6",
     "universe_asof": "2026-06-02",
-    "timestamp_utc": "2026-06-02T13:39:13.220704+00:00",
+    "timestamp_utc": "2026-06-02T14:39:48.729885+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 722.43
+    "total_duration_sec": 526.66
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -43,51 +43,51 @@
     },
     "5_selection_equity_Agressif": {
       "name": "selection_equity",
-      "before": 350,
-      "after": 350,
+      "before": 278,
+      "after": 278,
       "rejected": 0,
       "category": "equity",
       "profile": "Agressif",
       "top_k": [
         {
-          "ticker": "2059",
-          "score": 1.1711
+          "ticker": "000660",
+          "score": 1.1573
         },
         {
-          "ticker": "000660",
-          "score": 1.1552
+          "ticker": "2059",
+          "score": 1.15
         },
         {
           "ticker": "FIX",
-          "score": 1.1235
-        },
-        {
-          "ticker": "NVDA",
-          "score": 1.117
+          "score": 1.1086
         },
         {
           "ticker": "2345",
-          "score": 1.1072
+          "score": 1.0921
         },
         {
-          "ticker": "GOOGL",
-          "score": 1.0992
+          "ticker": "NVDA",
+          "score": 1.0759
         },
         {
           "ticker": "CDE",
-          "score": 1.0864
+          "score": 1.0749
         },
         {
-          "ticker": "PLTR",
-          "score": 1.0512
+          "ticker": "GOOGL",
+          "score": 1.0441
         },
         {
           "ticker": "3653",
-          "score": 1.0495
+          "score": 1.0364
         },
         {
           "ticker": "ANET",
-          "score": 1.0482
+          "score": 1.0135
+        },
+        {
+          "ticker": "2383",
+          "score": 1.0133
         }
       ]
     },
@@ -3384,8 +3384,15 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 0.0,
-    "details": {}
+    "has_drift": true,
+    "drift_pct": 20.57,
+    "details": {
+      "5_selection_equity_Agressif.after": {
+        "current": 278,
+        "previous": 350,
+        "delta": -72,
+        "pct_change": 20.57
+      }
+    }
   }
 }
