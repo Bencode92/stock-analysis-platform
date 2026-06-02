@@ -250,6 +250,8 @@ def main() -> None:
         res = {}
         for name in series_names:
             sub = [rets[name][i] for i in idx]
+            if not any(abs(r) > 1e-9 for r in sub):
+                continue  # serie absente sur la fenetre (ex. NANC avant 2023) -> pas un vrai 0%
             e = [1.0]
             for r in sub:
                 e.append(e[-1] * (1 + r))
