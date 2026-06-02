@@ -170,7 +170,7 @@ def main() -> None:
         yr = int(rd[:4])
         by_pid_completed[_pid(t)].append((cd, yr, t.get("excess_return")))
     for pid in by_pid_completed:
-        by_pid_completed[pid].sort()
+        by_pid_completed[pid].sort(key=lambda x: (x[0], x[1]))  # (completion_date, year) ; pas l'excess (peut etre None)
 
     client = make_client()
     _log("Benchmarks...")
