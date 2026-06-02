@@ -4090,12 +4090,37 @@ class PortfolioOptimizer:
                 _ridx = [i for i, a in enumerate(candidates) if a.role == _role]
                 if _ridx:
                     _role_idx[_role] = np.array(_ridx)
-            
+
+            # === Phase Sélection-6: bonus fit_native dans objective SLSQP ===
+            # Diagnostic data-driven a montré que SLSQP rate 90% des top Buffett/quality
+            # car il privilégie covariance/Sharpe sur 90j. On ajoute un bonus
+            # proportionnel à fit_native du profil pour forcer le pool natif.
+            # Lambda = 3.0 : bonus significatif (+0.24 pour 8% sur fit 0.95)
+            # sans dominer le Sharpe.
+            _fit_key = {"Stable": "_fit_S", "Modéré": "_fit_M", "Agressif": "_fit_A"}.get(profile.name)
+            _native_fit_array = np.zeros(n)
+            _native_count = 0
+            if _fit_key:
+                for _i, _c in enumerate(candidates):
+                    if _c.category != "Actions":
+                        continue
+                    _sd = _c.source_data or {}
+                    if _sd.get("_profile_native") == profile.name:
+                        _native_fit_array[_i] = float(_sd.get(_fit_key, 0) or 0)
+                        _native_count += 1
+            _NATIVE_FIT_LAMBDA = 3.0
+            if _native_count:
+                logger.info(
+                    f"[Sélection-6] {profile.name}: {_native_count} natifs dans pool, "
+                    f"fit moyen={_native_fit_array[_native_fit_array>0].mean():.3f}, "
+                    f"bonus lambda={_NATIVE_FIT_LAMBDA}"
+                )
+
             def objective(w):
                 port_score = np.dot(w, scores)
                 port_var = np.dot(w, np.dot(cov, w))
                 port_vol = np.sqrt(max(port_var, 0))
-                
+
                 # Pénalité vol asymétrique
                 vol_diff = port_vol - vol_target
                 if vol_diff < 0:  # Sous la cible
@@ -4104,14 +4129,14 @@ class PortfolioOptimizer:
                     # FIX v8.5: Agressif tolère plus de vol pour plus de score
                     _vol_above_lambda = {"Agressif": 2.5, "Modéré": 10.0, "Stable": 8.0}.get(profile.name, 3.0)  # v7.2.1: Modéré 3→10 (Sharpe +3%, A/B tested)
                     vol_penalty = _vol_above_lambda * vol_diff ** 2
-                
+
                 # P0 PARTNER: Pénalité turnover (v6.23 P0 FIX: 0.5× cohérent avec contrainte)
                 if has_prev_weights:
                     turnover = 0.5 * np.sum(np.abs(w - prev_weights_array))
                     turnover_penalty = profile.turnover_penalty * turnover
                 else:
                     turnover_penalty = 0.0
-                
+
                 # v7.0: Bucket penalty soft (CORE / DEFENSIVE / SATELLITE)
                 bucket_penalty = 0.0
                 if _bucket_targets and _bucket_lambda > 0:
@@ -4123,14 +4148,17 @@ class PortfolioOptimizer:
                         below = max(0.0, _mn - role_w)
                         above = max(0.0, role_w - _mx)
                         bucket_penalty += _bucket_lambda * (below ** 2 + above ** 2)
-                
+
                 # FIX v8.5: Pénalité concentration (HHI)
                 hhi = float(np.sum(w ** 2))
                 hhi_equal = 1.0 / n
                 _hhi_lambda = {"Agressif": 8.0, "Modéré": 4.0, "Stable": 2.0}.get(profile.name, 3.0)
                 hhi_penalty = _hhi_lambda * (hhi - hhi_equal)
-                
-                return -(port_score - vol_penalty - turnover_penalty - bucket_penalty - hhi_penalty)
+
+                # Sélection-6: bonus fit_native (récompense les natifs forts du profil)
+                native_bonus = _NATIVE_FIT_LAMBDA * float(np.dot(w, _native_fit_array))
+
+                return -(port_score - vol_penalty - turnover_penalty - bucket_penalty - hhi_penalty + native_bonus)
             
             constraints = self._build_constraints(candidates, profile, cov)
             bounds = []
