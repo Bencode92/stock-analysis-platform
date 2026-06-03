@@ -32,7 +32,8 @@ DEFAULT_CORE_FILLER = {
     "Modéré":   [("VWCE.DE", 0.50), ("AGGH.AS", 0.15), ("IBCI.AS", 0.05),
                  ("IBGS.AS", 0.05), ("SGLN.AS", 0.05)],
     # Agressif (sat 25 %, cœur 75 %) — equity broad très majoritaire, β cible 0.80
-    "Agressif": [("VWCE.DE", 0.50), ("IWDA.AS", 0.10), ("IBGS.AS", 0.10),
+    # IBGS plafonné à 5% par profil (cap max_single_bond=5% pour Agressif)
+    "Agressif": [("VWCE.DE", 0.50), ("IWDA.AS", 0.15), ("IBGS.AS", 0.05),
                  ("SGLN.AS", 0.05)],
 }
 
@@ -45,6 +46,30 @@ BROAD_CORE_ETFS = {
     "TIP", "STIP", "SCHP", "IBCI", "IBCI.AS",
     "GLD", "SGLN", "SGLN.AS", "IAU",
 }
+
+# Bond ETF tickers — pour catégoriser dans "Obligations" (pas "ETF")
+# Permet à la validation business rules de compter correctement les bonds.
+BOND_ETF_TICKERS = {
+    # Agrégés
+    "AGG", "BND", "AGGH", "AGGH.AS", "BNDX", "IAGG",
+    # Treasuries / Govt courts
+    "SHY", "VGSH", "SCHO", "BSV", "BIL", "SGOV", "SHV", "TBIL", "USFR", "FLOT",
+    "IBGS", "IBGS.AS", "GOVT", "VTIP",
+    # Intermediate / Long Treasuries
+    "IEF", "VGIT", "SCHR", "SCHZ", "TLT", "VGLT", "EDV", "ZROZ",
+    # TIPS (inflation-linked)
+    "TIP", "STIP", "SCHP", "IBCI", "IBCI.AS",
+    # Corporate / Credit
+    "LQD", "VCIT", "VCSH", "HYG", "JNK", "USIG", "MBB",
+    # Autres
+    "MUB", "EMB", "EMLC", "CLTL", "VRIG", "ICLO", "PAAA", "TDTT",
+    "BINC", "CARY", "CGCP", "CGMS", "DRSK", "PGF",
+}
+
+
+def _is_bond_etf(ticker: str) -> bool:
+    """Identifie un ETF bond (à classer dans 'Obligations' pour la validation)."""
+    return (ticker or "").upper() in BOND_ETF_TICKERS
 
 
 def _is_broad_core(ticker: str, meta: Dict) -> bool:
@@ -178,10 +203,12 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
         w_frac = w_pct / 100.0
         cat_raw = (p.get("category") or "").lower()
 
+        # v6.0.2 : un ETF bond doit aller dans "Obligations", pas "ETF"
+        # — sinon la validation business rules compte 0% de bonds.
         if cat_raw in ("actions", "stock", "equity"):
             cat_display = "Actions"
             actions[f"{name} ({tk})"] = f"{w_pct:.1f}%"
-        elif cat_raw in ("obligations", "bond"):
+        elif cat_raw in ("obligations", "bond") or _is_bond_etf(tk):
             cat_display = "Obligations"
             obligations[f"{name} ({tk})"] = f"{w_pct:.1f}%"
         else:

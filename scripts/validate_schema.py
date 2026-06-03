@@ -53,7 +53,32 @@ KNOWN_BOND_TICKERS = {
     "MUB", "TIP", "BNDX", "IAGG", "EMB", "EMLC",
     # Active bond ETFs
     "BINC", "CARY", "CGCP", "CGMS", "DRSK", "PGF",
+    # v6.0.2 (2026-06-03) : équivalents européens du cœur broad
+    "AGGH", "AGGH.AS",     # Global Aggregate Bond
+    "IBCI", "IBCI.AS",     # Inflation-linked Govt EUR (équivalent TIPS)
+    "IBGS", "IBGS.AS",     # Govt EUR 1-3y (équivalent SHY/VGSH)
+    "STIP", "SCHP",        # TIPS courts/long
+    "CLTL", "PAAA", "TDTT", "VRIG", "ICLO",  # actifs court terme/CLO/floating
 }
+
+# v6.0.2 (2026-06-03) : ETF broad-world (diversifiés en interne sur 1000+ titres).
+# Exemptés du cap 15%/position car ils sont par construction NON concentrés —
+# VWCE = 3700 titres, IWDA = 1500 titres. Le cap 15% est pour des positions
+# single-name concentrées, pas pour un fonds indiciel monde.
+BROAD_WORLD_ETF_TICKERS = {
+    # All-World / Global
+    "VT", "ACWI", "URTH", "VWCE", "VWCE.DE", "IWDA", "IWDA.AS",
+    # Emerging Markets broad
+    "IEMG", "EMIM", "EMIM.AS", "VWO", "EEM", "SCHE",
+    # Min-vol broad
+    "ACWV", "USMV", "EFAV", "EEMV",
+    # Sector-broad (large basket multi-stock)
+    "SCHD", "DGRO", "VIG", "FNDF", "FNDX",
+}
+
+# Cap pour broad-world : 60% (un World ETF peut légitimement être 50-60% d'un
+# portefeuille car il EST déjà diversifié globalement).
+BROAD_WORLD_CAP_PCT = 60
 
 
 def load_schema() -> dict:
@@ -177,18 +202,25 @@ def validate_business_rules(data: dict) -> List[str]:
                     f"(expected ~1.0, diff = {abs(total_weight - 1.0):.4f})"
                 )
             
-            # Check max single position with different limits for bonds
+            # Check max single position with different limits per asset type
             for ticker, weight in tickers.items():
-                # v2.2.0: Use known bond tickers list
+                tk_upper = ticker.upper()
                 is_bond = is_bond_ticker(ticker)
-                
-                if is_bond:
+                # v6.0.2 (2026-06-03) : broad-world ETF exempté du cap 15%
+                # (un World ETF est diversifié sur 1000+ titres en interne,
+                #  le cap single-name de 15% n'a aucun sens pour lui).
+                is_broad_world = tk_upper in BROAD_WORLD_ETF_TICKERS
+
+                if is_broad_world:
+                    max_allowed = BROAD_WORLD_CAP_PCT / 100
+                    asset_type = "broad-world ETF"
+                elif is_bond:
                     max_allowed = profile_constraints["max_single_bond"] / 100
                     asset_type = "bond"
                 else:
                     max_allowed = profile_constraints["max_single_position"] / 100
                     asset_type = "position"
-                
+
                 # v2.3.0: Use consistent tolerance
                 if weight > max_allowed + WEIGHT_TOLERANCE:
                     errors.append(
