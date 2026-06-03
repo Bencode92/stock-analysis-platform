@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-06-02-14-39-48",
-    "git_sha": "fcdf9398e",
-    "git_sha_full": "fcdf9398e745343d92ec841eeeb22886b6dae61e",
+    "run_id": "2026-06-03-06-37-54",
+    "git_sha": "ddd6e1af9",
+    "git_sha_full": "ddd6e1af9df8470318754f8ebfb3df93d16d95a7",
     "config_hash": "d87156a6",
-    "universe_asof": "2026-06-02",
-    "timestamp_utc": "2026-06-02T14:39:48.729885+00:00",
+    "universe_asof": "2026-06-03",
+    "timestamp_utc": "2026-06-03T06:37:54.971285+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 526.66
+    "total_duration_sec": 547.51
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -22,18 +22,18 @@
   "pipeline_stages": {
     "1_initial": {
       "name": "initial_universe",
-      "before": 3244,
-      "after": 3244,
+      "before": 3238,
+      "after": 3238,
       "rejected": 0,
-      "equity": 1083,
+      "equity": 1077,
       "etf": 1406,
       "crypto": 322,
       "bond": 433
     },
     "hard_filters_equity": {
       "name": "hard_filters",
-      "before": 1083,
-      "after": 1042,
+      "before": 1077,
+      "after": 1036,
       "rejected": 41,
       "category": "equity",
       "reason_counts": {
@@ -51,50 +51,50 @@
       "top_k": [
         {
           "ticker": "000660",
-          "score": 1.1573
+          "score": 1.1571
         },
         {
           "ticker": "2059",
-          "score": 1.15
+          "score": 1.1505
         },
         {
           "ticker": "FIX",
-          "score": 1.1086
+          "score": 1.1121
         },
         {
           "ticker": "2345",
-          "score": 1.0921
+          "score": 1.0928
         },
         {
           "ticker": "NVDA",
-          "score": 1.0759
+          "score": 1.0816
         },
         {
           "ticker": "CDE",
-          "score": 1.0749
-        },
-        {
-          "ticker": "GOOGL",
-          "score": 1.0441
+          "score": 1.0776
         },
         {
           "ticker": "3653",
-          "score": 1.0364
+          "score": 1.0349
+        },
+        {
+          "ticker": "VRT",
+          "score": 1.02
         },
         {
           "ticker": "ANET",
-          "score": 1.0135
+          "score": 1.0185
         },
         {
-          "ticker": "2383",
-          "score": 1.0133
+          "ticker": "FSLR",
+          "score": 1.0145
         }
       ]
     },
     "5_selection_etf_Agressif": {
       "name": "selection_etf",
-      "before": 14,
-      "after": 14,
+      "before": 17,
+      "after": 17,
       "rejected": 0,
       "category": "etf",
       "profile": "Agressif",
@@ -117,27 +117,27 @@
         },
         {
           "ticker": "PICK",
-          "score": 98.97
+          "score": 99.32
         },
         {
           "ticker": "COPX",
-          "score": 98.63
+          "score": 98.86
         },
         {
           "ticker": "ICLN",
-          "score": 98.17
+          "score": 98.18
         },
         {
           "ticker": "TDIV",
-          "score": 92.57
+          "score": 92.05
         },
         {
           "ticker": "DTCR",
-          "score": 91.77
+          "score": 91.83
         },
         {
-          "ticker": "TDVI",
-          "score": 84.57
+          "ticker": "GRID",
+          "score": 86.61
         }
       ]
     },
@@ -151,11 +151,11 @@
       "top_k": [
         {
           "ticker": "BNB/USD",
-          "score": 96.51
+          "score": 98.83
         },
         {
           "ticker": "XLM/USD",
-          "score": 88.61
+          "score": 90.14
         },
         {
           "ticker": "TRX/USD",
@@ -163,11 +163,11 @@
         },
         {
           "ticker": "QNT/USD",
-          "score": 95.31
+          "score": 97.61
         },
         {
           "ticker": "OKB/USD",
-          "score": 89.73
+          "score": 92.25
         }
       ]
     },
@@ -185,7 +185,7 @@
         },
         {
           "ticker": "PSH",
-          "score": 98.09
+          "score": 98.06
         },
         {
           "ticker": "ICLO",
@@ -197,15 +197,15 @@
         },
         {
           "ticker": "CLOX",
-          "score": 95.76
+          "score": 95.67
         },
         {
           "ticker": "EMHC",
-          "score": 90.66
+          "score": 90.63
         },
         {
           "ticker": "MTBA",
-          "score": 90.38
+          "score": 90.44
         },
         {
           "ticker": "SEIX",
@@ -213,7 +213,7 @@
         },
         {
           "ticker": "NCLO",
-          "score": 89.72
+          "score": 89.69
         },
         {
           "ticker": "FLRT",
@@ -223,58 +223,58 @@
     },
     "5_selection_equity_Modéré": {
       "name": "selection_equity",
-      "before": 218,
-      "after": 218,
+      "before": 214,
+      "after": 214,
       "rejected": 0,
       "category": "equity",
       "profile": "Modéré",
       "top_k": [
         {
           "ticker": "BMED",
-          "score": 1.0145
+          "score": 1.0098
         },
         {
           "ticker": "ITX",
-          "score": 0.9505
+          "score": 0.9473
         },
         {
           "ticker": "LUPIN",
-          "score": 0.8701
+          "score": 0.8669
         },
         {
           "ticker": "CF",
-          "score": 0.8378
-        },
-        {
-          "ticker": "FOX",
-          "score": 0.8294
+          "score": 0.8468
         },
         {
           "ticker": "CPRT",
-          "score": 0.8292
+          "score": 0.8261
         },
         {
-          "ticker": "EXPD",
-          "score": 0.8098
+          "ticker": "FOX",
+          "score": 0.8213
         },
         {
           "ticker": "HEROMOTOCO",
-          "score": 0.8053
+          "score": 0.8065
         },
         {
-          "ticker": "RMD",
-          "score": 0.7964
+          "ticker": "EXPD",
+          "score": 0.8037
         },
         {
           "ticker": "GALP",
-          "score": 0.7666
+          "score": 0.7693
+        },
+        {
+          "ticker": "EDV",
+          "score": 0.7583
         }
       ]
     },
     "5_selection_etf_Modéré": {
       "name": "selection_etf",
-      "before": 9,
-      "after": 9,
+      "before": 11,
+      "after": 11,
       "rejected": 0,
       "category": "etf",
       "profile": "Modéré",
@@ -289,31 +289,35 @@
         },
         {
           "ticker": "SCHD",
-          "score": 99.03
+          "score": 99.22
+        },
+        {
+          "ticker": "VT",
+          "score": 98.83
+        },
+        {
+          "ticker": "SPYV",
+          "score": 97.28
         },
         {
           "ticker": "GPIQ",
-          "score": 57.48
+          "score": 59.34
         },
         {
           "ticker": "QQQM",
-          "score": 51.26
+          "score": 49.61
         },
         {
           "ticker": "NFRA",
-          "score": 44.39
+          "score": 43.42
         },
         {
           "ticker": "IGF",
-          "score": 35.92
-        },
-        {
-          "ticker": "CERY",
-          "score": 34.76
+          "score": 37.55
         },
         {
           "ticker": "GUNR",
-          "score": 29.51
+          "score": 37.35
         }
       ]
     },
@@ -327,11 +331,11 @@
       "top_k": [
         {
           "ticker": "BNB/USD",
-          "score": 87.8
+          "score": 89.64
         },
         {
           "ticker": "PAXG/USD",
-          "score": 86.36
+          "score": 87.54
         },
         {
           "ticker": "TRX/USD",
@@ -339,7 +343,7 @@
         },
         {
           "ticker": "BNT/USD",
-          "score": 91.08
+          "score": 87.15
         }
       ]
     },
@@ -373,7 +377,7 @@
         },
         {
           "ticker": "TBIL",
-          "score": 83.71
+          "score": 83.84
         },
         {
           "ticker": "TDTT",
@@ -395,51 +399,51 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 199,
-      "after": 199,
+      "before": 196,
+      "after": 196,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "CS",
-          "score": 1.0439
+          "score": 1.0417
         },
         {
           "ticker": "SCHP",
-          "score": 1.0248
-        },
-        {
-          "ticker": "SNA",
-          "score": 1.0173
+          "score": 1.0246
         },
         {
           "ticker": "PG",
-          "score": 1.0052
+          "score": 1.0095
         },
         {
           "ticker": "NOVN",
-          "score": 0.9655
-        },
-        {
-          "ticker": "VICI",
-          "score": 0.9394
+          "score": 0.9601
         },
         {
           "ticker": "GGG",
-          "score": 0.9379
+          "score": 0.9472
+        },
+        {
+          "ticker": "VICI",
+          "score": 0.9399
         },
         {
           "ticker": "GD",
-          "score": 0.9337
+          "score": 0.9302
         },
         {
           "ticker": "KO",
-          "score": 0.9126
+          "score": 0.9147
         },
         {
-          "ticker": "RO",
-          "score": 0.851
+          "ticker": "BVI",
+          "score": 0.8305
+        },
+        {
+          "ticker": "NTGY",
+          "score": 0.8229
         }
       ]
     },
@@ -456,11 +460,11 @@
           "score": 100.0
         },
         {
-          "ticker": "IUSV",
+          "ticker": "SCHD",
           "score": 98.77
         },
         {
-          "ticker": "SCHD",
+          "ticker": "IUSV",
           "score": 97.53
         },
         {
@@ -515,23 +519,23 @@
         },
         {
           "ticker": "VGSH",
-          "score": 94.41
+          "score": 94.45
         },
         {
           "ticker": "VTIP",
-          "score": 83.66
+          "score": 83.77
         },
         {
           "ticker": "GMMF",
-          "score": 80.39
+          "score": 80.37
         },
         {
           "ticker": "JAAA",
-          "score": 79.42
+          "score": 79.59
         },
         {
           "ticker": "BSV",
-          "score": 78.06
+          "score": 78.22
         }
       ]
     },
@@ -577,7 +581,7 @@
   "top10_by_preset": {
     "equity": {
       "agressif": {
-        "count": 43,
+        "count": 40,
         "criteria": {
           "vol_min": 35
         },
@@ -590,9 +594,9 @@
             "roe": 9.5,
             "div_yield": 1.0,
             "payout": 17.0,
-            "perf_ytd": 0.2,
-            "perf_1y": -10.8,
-            "mcap": "14.4B",
+            "perf_ytd": 1.0,
+            "perf_1y": -9.3,
+            "mcap": "14.6B",
             "sector": "Finance"
           },
           {
@@ -619,19 +623,6 @@
             "sector": "Finance"
           },
           {
-            "ticker": "UBER",
-            "name": "UBER TECHNOLOGIES INC",
-            "buffett": 67.0,
-            "vol": 37.0,
-            "roe": 39.9,
-            "div_yield": 0.0,
-            "payout": 0.0,
-            "perf_ytd": -9.7,
-            "perf_1y": -12.5,
-            "mcap": "150.2B",
-            "sector": "Industries"
-          },
-          {
             "ticker": "ABNB",
             "name": "AIRBNB INC CLASS A",
             "buffett": 67.0,
@@ -639,9 +630,9 @@
             "roe": 30.2,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 1.6,
-            "perf_1y": 7.4,
-            "mcap": "81.8B",
+            "perf_ytd": -1.0,
+            "perf_1y": 4.2,
+            "mcap": "79.7B",
             "sector": "Biens de consommatio"
           },
           {
@@ -769,42 +760,29 @@
             "sector": "Biens de consommatio"
           },
           {
-            "ticker": "SNPS",
-            "name": "SYNOPSYS INC",
-            "buffett": 50.0,
-            "vol": 45.9,
-            "roe": 7.1,
-            "div_yield": 0.0,
-            "payout": 0.0,
-            "perf_ytd": 4.8,
-            "perf_1y": 8.2,
-            "mcap": "94.3B",
-            "sector": "Technologie de l'inf"
-          },
-          {
             "ticker": "RCL",
             "name": "ROYAL CARIBBEAN GROUP LTD",
             "buffett": 50.0,
             "vol": 40.8,
             "roe": 47.7,
-            "div_yield": 1.04,
+            "div_yield": 1.03,
             "payout": 26.0,
-            "perf_ytd": 3.6,
-            "perf_1y": 13.6,
-            "mcap": "77.5B",
+            "perf_ytd": 4.3,
+            "perf_1y": 13.2,
+            "mcap": "78.0B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "CCL",
             "name": "CARNIVAL CORP",
             "buffett": 50.0,
-            "vol": 47.2,
+            "vol": 47.1,
             "roe": 25.6,
-            "div_yield": 2.18,
+            "div_yield": 2.17,
             "payout": 7.0,
-            "perf_ytd": -9.9,
-            "perf_1y": 18.8,
-            "mcap": "38.1B",
+            "perf_ytd": -9.5,
+            "perf_1y": 19.0,
+            "mcap": "38.3B",
             "sector": "Biens de consommatio"
           },
           {
@@ -813,11 +791,11 @@
             "buffett": 50.0,
             "vol": 35.4,
             "roe": 6.2,
-            "div_yield": 1.33,
+            "div_yield": 1.35,
             "payout": 37.0,
-            "perf_ytd": -2.5,
-            "perf_1y": -0.5,
-            "mcap": "20.6B",
+            "perf_ytd": -4.3,
+            "perf_1y": -2.1,
+            "mcap": "20.3B",
             "sector": "Finance"
           },
           {
@@ -828,44 +806,57 @@
             "roe": 11.7,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 2.9,
-            "perf_1y": -14.5,
-            "mcap": "11.9B",
+            "perf_ytd": 4.8,
+            "perf_1y": -12.2,
+            "mcap": "12.1B",
             "sector": "Technologie de l'inf"
+          },
+          {
+            "ticker": "LSEG",
+            "name": "LONDON STOCK EXCHANGE GROUP PL",
+            "buffett": 50.0,
+            "vol": 46.9,
+            "roe": 6.4,
+            "div_yield": 1.05,
+            "payout": 57.0,
+            "perf_ytd": -0.3,
+            "perf_1y": -20.6,
+            "mcap": "43.7B",
+            "sector": "Finance"
+          },
+          {
+            "ticker": "HOLN",
+            "name": "HOLCIM LTD AG",
+            "buffett": 50.0,
+            "vol": 38.4,
+            "roe": 60.2,
+            "div_yield": 2.22,
+            "payout": 200.0,
+            "perf_ytd": -1.4,
+            "perf_1y": -19.6,
+            "mcap": "42.4B",
+            "sector": "Matériaux"
           }
         ]
       },
       "croissance": {
-        "count": 38,
+        "count": 36,
         "criteria": {
           "vol_min": 20,
           "perf_1y_min": 10
         },
         "top_10": [
           {
-            "ticker": "PHM",
-            "name": "PULTEGROUP INC",
-            "buffett": 83.0,
-            "vol": 32.8,
-            "roe": 17.7,
-            "div_yield": 0.82,
-            "payout": 9.0,
-            "perf_ytd": 0.4,
-            "perf_1y": 19.4,
-            "mcap": "22.4B",
-            "sector": "Biens de consommatio"
-          },
-          {
             "ticker": "CDW",
             "name": "CDW CORP",
             "buffett": 83.0,
             "vol": 32.8,
             "roe": 43.0,
-            "div_yield": 1.78,
+            "div_yield": 1.8,
             "payout": 31.0,
-            "perf_ytd": 3.5,
-            "perf_1y": -22.7,
-            "mcap": "18.0B",
+            "perf_ytd": 2.6,
+            "perf_1y": -22.5,
+            "mcap": "17.8B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -874,11 +865,11 @@
             "buffett": 67.0,
             "vol": 34.1,
             "roe": 9.0,
-            "div_yield": 1.18,
+            "div_yield": 1.19,
             "payout": 12.0,
-            "perf_ytd": 3.1,
-            "perf_1y": -0.2,
-            "mcap": "34.6B",
+            "perf_ytd": 2.0,
+            "perf_1y": -0.8,
+            "mcap": "34.2B",
             "sector": "Energie"
           },
           {
@@ -889,8 +880,8 @@
             "roe": 14.4,
             "div_yield": 4.8,
             "payout": 98.0,
-            "perf_ytd": 0.6,
-            "perf_1y": -26.4,
+            "perf_ytd": 0.4,
+            "perf_1y": -27.4,
             "mcap": "33.3B",
             "sector": "Biens de consommatio"
           },
@@ -898,13 +889,13 @@
             "ticker": "TXT",
             "name": "TEXTRON INC",
             "buffett": 67.0,
-            "vol": 26.0,
+            "vol": 26.1,
             "roe": 12.2,
             "div_yield": 0.09,
             "payout": 2.0,
-            "perf_ytd": 2.8,
-            "perf_1y": 21.1,
-            "mcap": "15.6B",
+            "perf_ytd": 4.8,
+            "perf_1y": 23.4,
+            "mcap": "15.9B",
             "sector": "Industries"
           },
           {
@@ -913,23 +904,23 @@
             "buffett": 67.0,
             "vol": 30.7,
             "roe": 39.9,
-            "div_yield": 1.8,
+            "div_yield": 1.82,
             "payout": 32.0,
-            "perf_ytd": 2.1,
-            "perf_1y": -0.9,
-            "mcap": "16.7B",
+            "perf_ytd": 1.2,
+            "perf_1y": -3.3,
+            "mcap": "16.6B",
             "sector": "Technologie de l'inf"
           },
           {
             "ticker": "STMN",
             "name": "STRAUMANN HOLDING AG",
             "buffett": 67.0,
-            "vol": 31.7,
+            "vol": 31.6,
             "roe": 17.0,
-            "div_yield": 1.05,
+            "div_yield": 1.06,
             "payout": 43.0,
-            "perf_ytd": 1.8,
-            "perf_1y": -11.7,
+            "perf_ytd": 0.8,
+            "perf_1y": -12.5,
             "mcap": "15.0B",
             "sector": "Santé"
           },
@@ -939,11 +930,11 @@
             "buffett": 67.0,
             "vol": 31.9,
             "roe": 15.3,
-            "div_yield": 0.73,
+            "div_yield": 0.72,
             "payout": 15.0,
-            "perf_ytd": 2.8,
-            "perf_1y": 2.9,
-            "mcap": "13.7B",
+            "perf_ytd": 4.2,
+            "perf_1y": 4.2,
+            "mcap": "14.0B",
             "sector": "Industries"
           },
           {
@@ -954,9 +945,9 @@
             "roe": 10.4,
             "div_yield": 0.92,
             "payout": 26.0,
-            "perf_ytd": 27.9,
-            "perf_1y": 46.2,
-            "mcap": "12.5B",
+            "perf_ytd": 28.0,
+            "perf_1y": 46.3,
+            "mcap": "12.6B",
             "sector": "Santé"
           },
           {
@@ -986,42 +977,42 @@
             "sector": "Immobilier"
           },
           {
-            "ticker": "EBS",
-            "name": "ERSTE GROUP BANK AG",
-            "buffett": 60.0,
-            "vol": 26.5,
-            "div_yield": 0.73,
-            "payout": 35.0,
-            "perf_ytd": 0.2,
-            "perf_1y": 46.1,
-            "mcap": "36.6B",
-            "sector": "Finance"
-          },
-          {
             "ticker": "CTVA",
             "name": "CORTEVA INC",
             "buffett": 50.0,
             "vol": 26.8,
             "roe": 4.6,
-            "div_yield": 0.91,
+            "div_yield": 0.7,
             "payout": 38.0,
-            "perf_ytd": 15.9,
-            "perf_1y": 11.4,
-            "mcap": "52.0B",
+            "perf_ytd": 15.7,
+            "perf_1y": 9.6,
+            "mcap": "51.9B",
             "sector": "Matériaux"
           },
           {
-            "ticker": "GWW",
-            "name": "WW GRAINGER INC",
+            "ticker": "DOV",
+            "name": "DOVER CORP",
             "buffett": 50.0,
-            "vol": 22.8,
-            "roe": 46.1,
-            "div_yield": 0.75,
-            "payout": 24.0,
-            "perf_ytd": 23.2,
-            "perf_1y": 14.5,
-            "mcap": "58.7B",
+            "vol": 23.9,
+            "roe": 15.2,
+            "div_yield": 0.98,
+            "payout": 26.0,
+            "perf_ytd": 8.5,
+            "perf_1y": 19.2,
+            "mcap": "28.5B",
             "sector": "Industries"
+          },
+          {
+            "ticker": "AMRZ",
+            "name": "AMRIZE AG",
+            "buffett": 50.0,
+            "vol": 34.9,
+            "roe": 8.9,
+            "div_yield": 1.01,
+            "payout": 0.0,
+            "perf_ytd": 0.5,
+            "mcap": "30.1B",
+            "sector": "Matériaux"
           },
           {
             "ticker": "CASY",
@@ -1029,11 +1020,11 @@
             "buffett": 50.0,
             "vol": 26.8,
             "roe": 16.8,
-            "div_yield": 0.31,
+            "div_yield": 0.3,
             "payout": 13.0,
-            "perf_ytd": 34.9,
-            "perf_1y": 69.2,
-            "mcap": "27.6B",
+            "perf_ytd": 36.5,
+            "perf_1y": 72.3,
+            "mcap": "28.0B",
             "sector": "Biens de consommatio"
           },
           {
@@ -1044,8 +1035,8 @@
             "roe": 27.3,
             "div_yield": 0.21,
             "payout": 3.0,
-            "perf_ytd": 12.7,
-            "perf_1y": 34.8,
+            "perf_ytd": 12.5,
+            "perf_1y": 34.6,
             "mcap": "3.2T",
             "sector": "Matériaux"
           },
@@ -1057,9 +1048,9 @@
             "roe": 12.9,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 7.2,
-            "perf_1y": -0.5,
-            "mcap": "2.7T",
+            "perf_ytd": 7.3,
+            "perf_1y": -0.4,
+            "mcap": "2.6T",
             "sector": "Biens de consommatio"
           },
           {
@@ -1099,6 +1090,19 @@
             "perf_1y": -4.8,
             "mcap": "949.3B",
             "sector": "Santé"
+          },
+          {
+            "ticker": "SBAC",
+            "name": "SBA COMMUNICATIONS REIT CORP C",
+            "buffett": 40.0,
+            "vol": 28.9,
+            "roe": -21.4,
+            "div_yield": 2.41,
+            "payout": 48.0,
+            "perf_ytd": 1.4,
+            "perf_1y": -15.4,
+            "mcap": "20.8B",
+            "sector": "Immobilier"
           }
         ]
       },
@@ -1118,8 +1122,8 @@
             "roe": 19.9,
             "div_yield": 1.54,
             "payout": 37.0,
-            "perf_ytd": -9.8,
-            "perf_1y": -12.7,
+            "perf_ytd": -9.7,
+            "perf_1y": -12.5,
             "mcap": "12.3B",
             "sector": "Industries"
           },
@@ -1127,13 +1131,13 @@
             "ticker": "JKHY",
             "name": "JACK HENRY AND ASSOCIATES INC",
             "buffett": 100.0,
-            "vol": 21.9,
+            "vol": 22.0,
             "roe": 22.9,
-            "div_yield": 1.7,
+            "div_yield": 1.75,
             "payout": 33.0,
-            "perf_ytd": -23.2,
-            "perf_1y": -22.1,
-            "mcap": "10.0B",
+            "perf_ytd": -25.4,
+            "perf_1y": -24.9,
+            "mcap": "9.7B",
             "sector": "Finance"
           },
           {
@@ -1142,24 +1146,24 @@
             "buffett": 83.0,
             "vol": 19.7,
             "roe": 52.1,
-            "div_yield": 0.81,
+            "div_yield": 0.82,
             "payout": 22.0,
-            "perf_ytd": -8.0,
-            "perf_1y": -10.9,
-            "mcap": "613.8B",
+            "perf_ytd": -9.5,
+            "perf_1y": -13.1,
+            "mcap": "603.5B",
             "sector": "Finance"
           },
           {
             "ticker": "SYK",
             "name": "STRYKER CORP",
             "buffett": 83.0,
-            "vol": 21.5,
+            "vol": 21.6,
             "roe": 15.1,
-            "div_yield": 1.15,
+            "div_yield": 1.17,
             "payout": 40.0,
-            "perf_ytd": -14.8,
-            "perf_1y": -21.7,
-            "mcap": "114.8B",
+            "perf_ytd": -16.6,
+            "perf_1y": -23.4,
+            "mcap": "112.4B",
             "sector": "Santé"
           },
           {
@@ -1170,9 +1174,9 @@
             "roe": 17.7,
             "div_yield": 1.8,
             "payout": 38.0,
-            "perf_ytd": 0.8,
-            "perf_1y": 23.3,
-            "mcap": "91.7B",
+            "perf_ytd": 0.3,
+            "perf_1y": 21.2,
+            "mcap": "91.3B",
             "sector": "Industries"
           },
           {
@@ -1181,11 +1185,11 @@
             "buffett": 83.0,
             "vol": 21.3,
             "roe": 20.7,
-            "div_yield": 1.52,
+            "div_yield": 1.51,
             "payout": 13.0,
-            "perf_ytd": -0.4,
-            "perf_1y": 5.3,
-            "mcap": "61.4B",
+            "perf_ytd": 0.6,
+            "perf_1y": 5.9,
+            "mcap": "62.1B",
             "sector": "Finance"
           },
           {
@@ -1194,11 +1198,11 @@
             "buffett": 83.0,
             "vol": 19.9,
             "roe": 21.7,
-            "div_yield": 1.77,
+            "div_yield": 1.35,
             "payout": 16.0,
-            "perf_ytd": -8.2,
-            "perf_1y": -2.8,
-            "mcap": "34.7B",
+            "perf_ytd": -7.7,
+            "perf_1y": -2.1,
+            "mcap": "34.9B",
             "sector": "Finance"
           },
           {
@@ -1207,11 +1211,11 @@
             "buffett": 83.0,
             "vol": 19.9,
             "roe": 17.6,
-            "div_yield": 1.27,
+            "div_yield": 1.25,
             "payout": 39.0,
-            "perf_ytd": 13.7,
-            "perf_1y": -2.9,
-            "mcap": "22.6B",
+            "perf_ytd": 14.7,
+            "perf_1y": -2.2,
+            "mcap": "22.8B",
             "sector": "Biens de consommatio"
           },
           {
@@ -1220,11 +1224,11 @@
             "buffett": 83.0,
             "vol": 21.8,
             "roe": 19.7,
-            "div_yield": 1.55,
+            "div_yield": 1.53,
             "payout": 8.0,
-            "perf_ytd": -8.2,
-            "perf_1y": -13.0,
-            "mcap": "24.0B",
+            "perf_ytd": -7.0,
+            "perf_1y": -12.7,
+            "mcap": "24.3B",
             "sector": "Finance"
           },
           {
@@ -1233,11 +1237,11 @@
             "buffett": 83.0,
             "vol": 20.4,
             "roe": 15.4,
-            "div_yield": 0.85,
+            "div_yield": 0.86,
             "payout": 55.0,
-            "perf_ytd": 2.8,
-            "perf_1y": -2.8,
-            "mcap": "68.0B",
+            "perf_ytd": 2.1,
+            "perf_1y": -3.4,
+            "mcap": "67.5B",
             "sector": "Industries"
           },
           {
@@ -1246,11 +1250,11 @@
             "buffett": 83.0,
             "vol": 19.3,
             "roe": 18.2,
-            "div_yield": 1.69,
+            "div_yield": 1.73,
             "payout": 36.0,
-            "perf_ytd": 11.2,
-            "perf_1y": -11.6,
-            "mcap": "45.2B",
+            "perf_ytd": 8.2,
+            "perf_1y": -13.9,
+            "mcap": "44.1B",
             "sector": "Finance"
           },
           {
@@ -1272,11 +1276,11 @@
             "buffett": 83.0,
             "vol": 18.6,
             "roe": 16.4,
-            "div_yield": 0.89,
+            "div_yield": 0.9,
             "payout": 15.0,
-            "perf_ytd": -8.4,
-            "perf_1y": -14.4,
-            "mcap": "8.9T",
+            "perf_ytd": -8.7,
+            "perf_1y": -14.3,
+            "mcap": "8.8T",
             "sector": "Finance"
           },
           {
@@ -1287,22 +1291,9 @@
             "roe": 12.9,
             "div_yield": 1.49,
             "payout": 26.0,
-            "perf_ytd": 22.9,
+            "perf_ytd": 22.8,
             "perf_1y": 60.1,
             "mcap": "97.9B",
-            "sector": "Finance"
-          },
-          {
-            "ticker": "KBANK.R",
-            "name": "KASIKORNBANK PUBLIC NON-VOTING",
-            "buffett": 80.0,
-            "vol": 14.1,
-            "roe": 8.5,
-            "div_yield": 1.96,
-            "payout": 47.0,
-            "perf_ytd": 14.7,
-            "perf_1y": 24.7,
-            "mcap": "453.7B",
             "sector": "Finance"
           },
           {
@@ -1311,37 +1302,37 @@
             "buffett": 67.0,
             "vol": 21.6,
             "roe": 21.9,
-            "div_yield": 0.84,
+            "div_yield": 0.85,
             "payout": 34.0,
-            "perf_ytd": 2.9,
-            "perf_1y": 18.0,
-            "mcap": "913.5B",
+            "perf_ytd": 1.5,
+            "perf_1y": 14.5,
+            "mcap": "901.2B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "COST",
             "name": "COSTCO WHOLESALE CORP",
             "buffett": 67.0,
-            "vol": 20.0,
+            "vol": 19.9,
             "roe": 30.7,
-            "div_yield": 0.57,
+            "div_yield": 0.56,
             "payout": 27.0,
-            "perf_ytd": 9.7,
-            "perf_1y": -6.2,
-            "mcap": "419.6B",
+            "perf_ytd": 10.7,
+            "perf_1y": -8.3,
+            "mcap": "423.2B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "MA",
             "name": "MASTERCARD INC CLASS A",
             "buffett": 67.0,
-            "vol": 19.8,
+            "vol": 19.9,
             "roe": 209.9,
-            "div_yield": 0.66,
+            "div_yield": 0.68,
             "payout": 18.0,
-            "perf_ytd": -13.2,
-            "perf_1y": -14.3,
-            "mcap": "437.6B",
+            "perf_ytd": -16.3,
+            "perf_1y": -18.4,
+            "mcap": "422.1B",
             "sector": "Finance"
           },
           {
@@ -1350,11 +1341,11 @@
             "buffett": 67.0,
             "vol": 17.5,
             "roe": 59.1,
-            "div_yield": 1.15,
+            "div_yield": 1.14,
             "payout": 33.0,
-            "perf_ytd": -0.6,
-            "perf_1y": 20.2,
-            "mcap": "168.9B",
+            "perf_ytd": 0.1,
+            "perf_1y": 21.1,
+            "mcap": "170.0B",
             "sector": "Biens de consommatio"
           },
           {
@@ -1363,11 +1354,24 @@
             "buffett": 67.0,
             "vol": 18.8,
             "roe": 14.3,
-            "div_yield": 1.18,
+            "div_yield": 1.17,
             "payout": 14.0,
-            "perf_ytd": -0.8,
-            "perf_1y": 5.3,
-            "mcap": "120.2B",
+            "perf_ytd": 0.1,
+            "perf_1y": 5.1,
+            "mcap": "121.1B",
+            "sector": "Finance"
+          },
+          {
+            "ticker": "CME",
+            "name": "CME GROUP INC CLASS A",
+            "buffett": 67.0,
+            "vol": 18.9,
+            "roe": 14.8,
+            "div_yield": 2.0,
+            "payout": 43.0,
+            "perf_ytd": -8.3,
+            "perf_1y": -13.3,
+            "mcap": "90.5B",
             "sector": "Finance"
           }
         ]
@@ -1380,6 +1384,19 @@
         },
         "top_10": [
           {
+            "ticker": "REGN",
+            "name": "REGENERON PHARMACEUTICALS INC",
+            "buffett": 100.0,
+            "vol": 31.5,
+            "roe": 14.9,
+            "div_yield": 0.6,
+            "payout": 9.0,
+            "perf_ytd": -21.9,
+            "perf_1y": 23.0,
+            "mcap": "63.2B",
+            "sector": "Santé"
+          },
+          {
             "ticker": "FSLR",
             "name": "FIRST SOLAR INC",
             "buffett": 100.0,
@@ -1387,9 +1404,9 @@
             "roe": 17.4,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 16.0,
-            "perf_1y": 94.3,
-            "mcap": "32.6B",
+            "perf_ytd": 19.1,
+            "perf_1y": 96.7,
+            "mcap": "33.4B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -1398,10 +1415,10 @@
             "buffett": 100.0,
             "vol": 34.4,
             "roe": 23.4,
-            "div_yield": 1.77,
+            "div_yield": 1.76,
             "payout": 18.0,
-            "perf_ytd": 46.5,
-            "perf_1y": 25.7,
+            "perf_ytd": 46.7,
+            "perf_1y": 25.1,
             "mcap": "17.4B",
             "sector": "Matériaux"
           },
@@ -1409,12 +1426,12 @@
             "ticker": "GALP",
             "name": "GALP ENERGIA SGPS SA CLASS B",
             "buffett": 100.0,
-            "vol": 29.6,
+            "vol": 29.5,
             "roe": 23.7,
-            "div_yield": 3.42,
+            "div_yield": 3.37,
             "payout": 63.0,
-            "perf_ytd": 27.9,
-            "perf_1y": 27.6,
+            "perf_ytd": 29.9,
+            "perf_1y": 29.6,
             "mcap": "15.3B",
             "sector": "Energie"
           },
@@ -1435,13 +1452,13 @@
             "ticker": "SLB",
             "name": "SLB NV",
             "buffett": 83.0,
-            "vol": 32.2,
+            "vol": 32.3,
             "roe": 13.9,
-            "div_yield": 2.1,
+            "div_yield": 2.03,
             "payout": 51.0,
-            "perf_ytd": 42.6,
-            "perf_1y": 62.6,
-            "mcap": "81.9B",
+            "perf_ytd": 47.4,
+            "perf_1y": 71.1,
+            "mcap": "84.6B",
             "sector": "Energie"
           },
           {
@@ -1450,11 +1467,11 @@
             "buffett": 83.0,
             "vol": 31.9,
             "roe": 24.2,
-            "div_yield": 1.51,
+            "div_yield": 1.49,
             "payout": 25.0,
-            "perf_ytd": 59.0,
-            "perf_1y": 61.7,
-            "mcap": "75.5B",
+            "perf_ytd": 61.8,
+            "perf_1y": 63.7,
+            "mcap": "76.8B",
             "sector": "Energie"
           },
           {
@@ -1465,9 +1482,9 @@
             "roe": 33.8,
             "div_yield": 6.02,
             "payout": 106.0,
-            "perf_ytd": 9.9,
-            "perf_1y": 11.1,
-            "mcap": "92.7B",
+            "perf_ytd": 9.8,
+            "perf_1y": 11.7,
+            "mcap": "92.6B",
             "sector": "Industries"
           },
           {
@@ -1476,11 +1493,11 @@
             "buffett": 83.0,
             "vol": 30.9,
             "roe": 14.6,
-            "div_yield": 1.46,
+            "div_yield": 1.43,
             "payout": 29.0,
-            "perf_ytd": 38.3,
-            "perf_1y": 68.5,
-            "mcap": "62.5B",
+            "perf_ytd": 41.7,
+            "perf_1y": 74.2,
+            "mcap": "64.0B",
             "sector": "Energie"
           },
           {
@@ -1489,25 +1506,12 @@
             "buffett": 83.0,
             "vol": 34.4,
             "roe": 14.3,
-            "div_yield": 1.19,
+            "div_yield": 1.18,
             "payout": 16.0,
-            "perf_ytd": 2.0,
-            "perf_1y": 24.3,
-            "mcap": "41.7B",
+            "perf_ytd": 2.7,
+            "perf_1y": 25.3,
+            "mcap": "41.9B",
             "sector": "Biens de consommatio"
-          },
-          {
-            "ticker": "UTHR",
-            "name": "UNITED THERAPEUTICS CORP",
-            "buffett": 83.0,
-            "vol": 35.9,
-            "roe": 19.7,
-            "div_yield": 0.0,
-            "payout": 0.0,
-            "perf_ytd": 11.8,
-            "perf_1y": 70.0,
-            "mcap": "23.1B",
-            "sector": "Santé"
           },
           {
             "ticker": "SYF",
@@ -1517,22 +1521,35 @@
             "roe": 21.3,
             "div_yield": 1.69,
             "payout": 12.0,
-            "perf_ytd": -15.1,
-            "perf_1y": 21.6,
-            "mcap": "23.8B",
+            "perf_ytd": -14.9,
+            "perf_1y": 23.1,
+            "mcap": "23.9B",
             "sector": "Finance"
+          },
+          {
+            "ticker": "PHM",
+            "name": "PULTEGROUP INC",
+            "buffett": 83.0,
+            "vol": 32.8,
+            "roe": 17.7,
+            "div_yield": 0.82,
+            "payout": 9.0,
+            "perf_ytd": 0.4,
+            "perf_1y": 20.1,
+            "mcap": "22.4B",
+            "sector": "Biens de consommatio"
           },
           {
             "ticker": "ZM",
             "name": "ZOOM COMMUNICATIONS INC CLASS ",
             "buffett": 83.0,
-            "vol": 34.7,
+            "vol": 34.6,
             "roe": 20.3,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 29.4,
-            "perf_1y": 39.6,
-            "mcap": "32.7B",
+            "perf_ytd": 29.7,
+            "perf_1y": 37.7,
+            "mcap": "32.8B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -1541,37 +1558,50 @@
             "buffett": 83.0,
             "vol": 33.7,
             "roe": 32.9,
-            "div_yield": 1.39,
+            "div_yield": 1.4,
             "payout": 51.0,
-            "perf_ytd": 11.9,
-            "perf_1y": 87.2,
-            "mcap": "21.2B",
+            "perf_ytd": 11.1,
+            "perf_1y": 86.0,
+            "mcap": "21.0B",
             "sector": "Industries"
           },
           {
             "ticker": "FFIV",
             "name": "F5 INC",
             "buffett": 83.0,
-            "vol": 28.7,
+            "vol": 28.8,
             "roe": 20.6,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 55.0,
-            "perf_1y": 41.0,
-            "mcap": "22.3B",
+            "perf_ytd": 60.3,
+            "perf_1y": 43.4,
+            "mcap": "23.1B",
             "sector": "Technologie de l'inf"
           },
           {
             "ticker": "NBIX",
             "name": "NEUROCRINE BIOSCIENCES INC",
             "buffett": 83.0,
-            "vol": 33.7,
+            "vol": 33.8,
             "roe": 16.4,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 13.5,
-            "perf_1y": 30.2,
-            "mcap": "16.2B",
+            "perf_ytd": 9.2,
+            "perf_1y": 25.9,
+            "mcap": "15.6B",
+            "sector": "Santé"
+          },
+          {
+            "ticker": "INCY",
+            "name": "INCYTE CORP",
+            "buffett": 83.0,
+            "vol": 30.5,
+            "roe": 29.9,
+            "div_yield": 0.0,
+            "payout": 0.0,
+            "perf_ytd": -6.6,
+            "perf_1y": 41.8,
+            "mcap": "18.4B",
             "sector": "Santé"
           },
           {
@@ -1580,11 +1610,11 @@
             "buffett": 83.0,
             "vol": 30.1,
             "roe": 18.7,
-            "div_yield": 3.42,
+            "div_yield": 3.38,
             "payout": 98.0,
-            "perf_ytd": 6.7,
-            "perf_1y": -19.4,
-            "mcap": "14.6B",
+            "perf_ytd": 8.0,
+            "perf_1y": -18.0,
+            "mcap": "14.8B",
             "sector": "Industries"
           },
           {
@@ -1595,9 +1625,9 @@
             "roe": 18.3,
             "div_yield": 3.2,
             "payout": 40.0,
-            "perf_ytd": -0.1,
-            "perf_1y": 51.7,
-            "mcap": "110.4B",
+            "perf_ytd": -0.3,
+            "perf_1y": 51.4,
+            "mcap": "111.3B",
             "sector": "Finance"
           },
           {
@@ -1608,35 +1638,9 @@
             "roe": 19.7,
             "div_yield": 0.02,
             "payout": 0.0,
-            "perf_ytd": 6.8,
-            "mcap": "23.6B",
+            "perf_ytd": 6.7,
+            "mcap": "23.5B",
             "sector": "Industries"
-          },
-          {
-            "ticker": "LOGN",
-            "name": "LOGITECH INTERNATIONAL SA",
-            "buffett": 83.0,
-            "vol": 32.6,
-            "roe": 32.8,
-            "div_yield": 1.23,
-            "payout": 33.0,
-            "perf_ytd": 25.3,
-            "perf_1y": 44.6,
-            "mcap": "14.0B",
-            "sector": "Technologie de l'inf"
-          },
-          {
-            "ticker": "2379",
-            "name": "REALTEK SEMICONDUCTOR CORP",
-            "buffett": 83.0,
-            "vol": 33.3,
-            "roe": 28.1,
-            "div_yield": 3.91,
-            "payout": 91.0,
-            "perf_ytd": 33.5,
-            "perf_1y": 24.4,
-            "mcap": "334.9B",
-            "sector": "Technologie de l'inf"
           }
         ]
       },
@@ -1648,13 +1652,13 @@
             "ticker": "NXT",
             "name": "NEXT PLC",
             "buffett": 100.0,
-            "vol": 62.2,
+            "vol": 62.1,
             "roe": 50.8,
-            "div_yield": 1.72,
+            "div_yield": 1.73,
             "payout": 33.0,
-            "perf_ytd": -3.3,
-            "perf_1y": 2.4,
-            "mcap": "14.7B",
+            "perf_ytd": -3.8,
+            "perf_1y": 1.9,
+            "mcap": "15.0B",
             "sector": "Biens de consommatio"
           },
           {
@@ -1665,9 +1669,9 @@
             "roe": 34.5,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 12.8,
-            "perf_1y": -11.8,
-            "mcap": "28.9B",
+            "perf_ytd": 10.7,
+            "perf_1y": -14.4,
+            "mcap": "28.3B",
             "sector": "Santé"
           },
           {
@@ -1689,17 +1693,17 @@
             "buffett": 83.0,
             "vol": 55.3,
             "roe": 48.0,
-            "div_yield": 1.35,
+            "div_yield": 1.34,
             "payout": 28.0,
-            "perf_ytd": 22.1,
-            "perf_1y": 133.5,
+            "perf_ytd": 23.1,
+            "perf_1y": 135.9,
             "mcap": "1.0T",
             "sector": "Technologie de l'inf"
           }
         ]
       },
       "quality_premium": {
-        "count": 197,
+        "count": 193,
         "criteria": {
           "vol_max": 35,
           "roe_min": 15,
@@ -1710,13 +1714,13 @@
             "ticker": "ACN",
             "name": "ACCENTURE PLC CLASS A",
             "buffett": 100.0,
-            "vol": 28.7,
+            "vol": 28.8,
             "roe": 25.5,
-            "div_yield": 3.01,
+            "div_yield": 3.18,
             "payout": 51.0,
-            "perf_ytd": -26.7,
-            "perf_1y": -38.1,
-            "mcap": "121.0B",
+            "perf_ytd": -30.6,
+            "perf_1y": -41.2,
+            "mcap": "114.6B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -1727,35 +1731,22 @@
             "roe": 55.4,
             "div_yield": 0.01,
             "payout": 0.0,
-            "perf_ytd": -21.7,
-            "perf_1y": -33.7,
-            "mcap": "110.8B",
+            "perf_ytd": -25.1,
+            "perf_1y": -36.9,
+            "mcap": "105.9B",
             "sector": "Technologie de l'inf"
-          },
-          {
-            "ticker": "REGN",
-            "name": "REGENERON PHARMACEUTICALS INC",
-            "buffett": 100.0,
-            "vol": 31.5,
-            "roe": 14.9,
-            "div_yield": 0.61,
-            "payout": 9.0,
-            "perf_ytd": -22.2,
-            "perf_1y": -0.8,
-            "mcap": "63.0B",
-            "sector": "Santé"
           },
           {
             "ticker": "CPRT",
             "name": "COPART INC",
             "buffett": 100.0,
-            "vol": 23.7,
+            "vol": 23.8,
             "roe": 18.5,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -17.4,
-            "perf_1y": -37.1,
-            "mcap": "29.9B",
+            "perf_ytd": -21.2,
+            "perf_1y": -40.0,
+            "mcap": "28.6B",
             "sector": "Industries"
           },
           {
@@ -1764,24 +1755,24 @@
             "buffett": 100.0,
             "vol": 23.1,
             "roe": 41.8,
-            "div_yield": 4.32,
+            "div_yield": 4.4,
             "payout": 95.0,
-            "perf_ytd": -8.7,
-            "perf_1y": -34.9,
-            "mcap": "36.7B",
+            "perf_ytd": -10.2,
+            "perf_1y": -36.2,
+            "mcap": "36.1B",
             "sector": "Industries"
           },
           {
             "ticker": "CTSH",
             "name": "COGNIZANT TECHNOLOGY SOLUTIONS",
             "buffett": 100.0,
-            "vol": 26.2,
+            "vol": 26.3,
             "roe": 15.2,
-            "div_yield": 2.24,
+            "div_yield": 2.32,
             "payout": 27.0,
-            "perf_ytd": -31.1,
-            "perf_1y": -29.1,
-            "mcap": "27.0B",
+            "perf_ytd": -33.6,
+            "perf_1y": -31.9,
+            "mcap": "26.1B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -1790,24 +1781,24 @@
             "buffett": 100.0,
             "vol": 43.1,
             "roe": 51.5,
-            "div_yield": 1.36,
+            "div_yield": 1.34,
             "payout": 31.0,
-            "perf_ytd": 13.2,
-            "perf_1y": 22.9,
-            "mcap": "23.8B",
+            "perf_ytd": 14.1,
+            "perf_1y": 26.0,
+            "mcap": "24.0B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "TROW",
             "name": "T ROWE PRICE GROUP INC",
             "buffett": 100.0,
-            "vol": 26.2,
+            "vol": 26.1,
             "roe": 18.8,
-            "div_yield": 4.92,
+            "div_yield": 4.9,
             "payout": 55.0,
-            "perf_ytd": 1.5,
-            "perf_1y": 10.2,
-            "mcap": "22.3B",
+            "perf_ytd": 1.9,
+            "perf_1y": 11.4,
+            "mcap": "22.4B",
             "sector": "Finance"
           },
           {
@@ -1816,36 +1807,23 @@
             "buffett": 100.0,
             "vol": 23.6,
             "roe": 36.5,
-            "div_yield": 0.57,
+            "div_yield": 0.58,
             "payout": 12.0,
-            "perf_ytd": -16.2,
-            "perf_1y": -17.4,
-            "mcap": "20.5B",
-            "sector": "Industries"
-          },
-          {
-            "ticker": "SNA",
-            "name": "SNAP ON INC",
-            "buffett": 100.0,
-            "vol": 23.0,
-            "roe": 18.3,
-            "div_yield": 2.58,
-            "payout": 47.0,
-            "perf_ytd": 6.3,
-            "perf_1y": 13.7,
-            "mcap": "19.0B",
+            "perf_ytd": -17.4,
+            "perf_1y": -18.4,
+            "mcap": "20.2B",
             "sector": "Industries"
           },
           {
             "ticker": "DECK",
             "name": "DECKERS OUTDOOR CORP",
             "buffett": 100.0,
-            "vol": 45.9,
+            "vol": 45.8,
             "roe": 40.9,
             "div_yield": 0.0,
             "payout": 0.0,
             "perf_ytd": 6.9,
-            "perf_1y": 3.3,
+            "perf_1y": 5.0,
             "mcap": "15.4B",
             "sector": "Biens de consommatio"
           },
@@ -1853,13 +1831,13 @@
             "ticker": "BBY",
             "name": "BEST BUY INC",
             "buffett": 100.0,
-            "vol": 37.0,
+            "vol": 36.9,
             "roe": 37.0,
-            "div_yield": 5.08,
+            "div_yield": 5.23,
             "payout": 71.0,
-            "perf_ytd": 12.0,
-            "perf_1y": 13.1,
-            "mcap": "15.8B",
+            "perf_ytd": 8.7,
+            "perf_1y": 9.8,
+            "mcap": "15.3B",
             "sector": "Biens de consommatio"
           },
           {
@@ -1868,11 +1846,11 @@
             "buffett": 100.0,
             "vol": 27.4,
             "roe": 17.6,
-            "div_yield": 1.47,
+            "div_yield": 1.46,
             "payout": 26.0,
-            "perf_ytd": -32.0,
-            "perf_1y": -28.9,
-            "mcap": "11.4B",
+            "perf_ytd": -31.6,
+            "perf_1y": -28.1,
+            "mcap": "11.5B",
             "sector": "Industries"
           },
           {
@@ -1881,10 +1859,10 @@
             "buffett": 100.0,
             "vol": 24.5,
             "roe": 36.1,
-            "div_yield": 1.47,
+            "div_yield": 1.48,
             "payout": 28.0,
-            "perf_ytd": -18.2,
-            "perf_1y": -9.2,
+            "perf_ytd": -18.4,
+            "perf_1y": -9.0,
             "mcap": "11.2B",
             "sector": "Industries"
           },
@@ -1894,11 +1872,11 @@
             "buffett": 100.0,
             "vol": 25.7,
             "roe": 19.6,
-            "div_yield": 0.84,
+            "div_yield": 0.85,
             "payout": 15.0,
-            "perf_ytd": -8.6,
-            "perf_1y": 22.0,
-            "mcap": "28.1B",
+            "perf_ytd": -10.1,
+            "perf_1y": 19.6,
+            "mcap": "27.6B",
             "sector": "La communication"
           },
           {
@@ -1907,11 +1885,11 @@
             "buffett": 100.0,
             "vol": 25.4,
             "roe": 19.6,
-            "div_yield": 0.94,
+            "div_yield": 0.95,
             "payout": 15.0,
-            "perf_ytd": -7.8,
-            "perf_1y": 19.3,
-            "mcap": "25.1B",
+            "perf_ytd": -9.7,
+            "perf_1y": 16.6,
+            "mcap": "24.6B",
             "sector": "La communication"
           },
           {
@@ -1920,11 +1898,11 @@
             "buffett": 100.0,
             "vol": 23.8,
             "roe": 26.9,
-            "div_yield": 2.28,
+            "div_yield": 2.33,
             "payout": 47.0,
-            "perf_ytd": -11.5,
-            "perf_1y": -25.3,
-            "mcap": "24.0B",
+            "perf_ytd": -13.3,
+            "perf_1y": -26.8,
+            "mcap": "23.5B",
             "sector": "Biens de consommatio"
           },
           {
@@ -1933,11 +1911,11 @@
             "buffett": 100.0,
             "vol": 35.4,
             "roe": 25.2,
-            "div_yield": 0.35,
+            "div_yield": 0.36,
             "payout": 68.0,
-            "perf_ytd": 3.1,
-            "perf_1y": -89.8,
-            "mcap": "36.2B",
+            "perf_ytd": 1.0,
+            "perf_1y": -90.0,
+            "mcap": "36.1B",
             "sector": "Industries"
           },
           {
@@ -1946,10 +1924,10 @@
             "buffett": 100.0,
             "vol": 28.4,
             "roe": 54.8,
-            "div_yield": 5.55,
+            "div_yield": 5.6,
             "payout": 87.0,
-            "perf_ytd": -15.6,
-            "perf_1y": -24.0,
+            "perf_ytd": -16.4,
+            "perf_1y": -24.8,
             "mcap": "21.2B",
             "sector": "Finance"
           },
@@ -1959,17 +1937,43 @@
             "buffett": 100.0,
             "vol": 22.4,
             "roe": 37.3,
-            "div_yield": 3.38,
+            "div_yield": 3.42,
             "payout": 60.0,
-            "perf_ytd": -4.7,
-            "perf_1y": 14.1,
-            "mcap": "257.9B",
+            "perf_ytd": -5.8,
+            "perf_1y": 12.7,
+            "mcap": "251.3B",
             "sector": "Santé"
+          },
+          {
+            "ticker": "ITRK",
+            "name": "INTERTEK GROUP PLC",
+            "buffett": 100.0,
+            "vol": 26.1,
+            "roe": 28.2,
+            "div_yield": 2.13,
+            "payout": 74.0,
+            "perf_ytd": 16.1,
+            "perf_1y": 13.0,
+            "mcap": "8.2B",
+            "sector": "Industries"
+          },
+          {
+            "ticker": "AUTO",
+            "name": "AUTOTRADER GROUP PLC",
+            "buffett": 100.0,
+            "vol": 24.7,
+            "roe": 50.4,
+            "div_yield": 4.2,
+            "payout": 32.0,
+            "perf_ytd": -23.6,
+            "perf_1y": -44.0,
+            "mcap": "3.6B",
+            "sector": "La communication"
           }
         ]
       },
       "recovery": {
-        "count": 74,
+        "count": 77,
         "criteria": {
           "vol_min": 35,
           "perf_ytd_max": -10
@@ -1981,25 +1985,12 @@
             "buffett": 100.0,
             "vol": 37.9,
             "roe": 25.7,
-            "div_yield": 1.24,
+            "div_yield": 1.26,
             "payout": 5.0,
-            "perf_ytd": -22.6,
-            "perf_1y": -36.3,
-            "mcap": "39.9B",
+            "perf_ytd": -23.7,
+            "perf_1y": -36.6,
+            "mcap": "39.3B",
             "sector": "Finance"
-          },
-          {
-            "ticker": "ULTA",
-            "name": "ULTA BEAUTY INC",
-            "buffett": 83.0,
-            "vol": 35.4,
-            "roe": 43.6,
-            "div_yield": 0.0,
-            "payout": 0.0,
-            "perf_ytd": -17.2,
-            "perf_1y": 18.7,
-            "mcap": "21.9B",
-            "sector": "Biens de consommatio"
           },
           {
             "ticker": "LULU",
@@ -2009,22 +2000,22 @@
             "roe": 34.0,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -36.4,
-            "perf_1y": -58.3,
-            "mcap": "15.8B",
+            "perf_ytd": -39.1,
+            "perf_1y": -60.1,
+            "mcap": "15.1B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "TTD",
             "name": "TRADE DESK INC CLASS A",
             "buffett": 83.0,
-            "vol": 61.7,
+            "vol": 61.9,
             "roe": 16.3,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -38.8,
-            "perf_1y": -69.0,
-            "mcap": "10.9B",
+            "perf_ytd": -44.4,
+            "perf_1y": -72.0,
+            "mcap": "9.9B",
             "sector": "La communication"
           },
           {
@@ -2033,25 +2024,38 @@
             "buffett": 83.0,
             "vol": 69.3,
             "roe": 19.1,
-            "div_yield": 3.63,
+            "div_yield": 3.67,
             "payout": 15.0,
-            "perf_ytd": -33.4,
-            "perf_1y": -46.7,
-            "mcap": "22.1B",
+            "perf_ytd": -34.0,
+            "perf_1y": -47.2,
+            "mcap": "21.9B",
             "sector": "Finance"
           },
           {
             "ticker": "CRM",
             "name": "SALESFORCE INC",
             "buffett": 67.0,
-            "vol": 35.2,
+            "vol": 35.3,
             "roe": 12.4,
-            "div_yield": 0.81,
+            "div_yield": 0.84,
             "payout": 20.0,
-            "perf_ytd": -20.9,
-            "perf_1y": -21.5,
-            "mcap": "171.7B",
+            "perf_ytd": -24.2,
+            "perf_1y": -24.3,
+            "mcap": "164.5B",
             "sector": "Technologie de l'inf"
+          },
+          {
+            "ticker": "UBER",
+            "name": "UBER TECHNOLOGIES INC",
+            "buffett": 67.0,
+            "vol": 37.0,
+            "roe": 39.9,
+            "div_yield": 0.0,
+            "payout": 0.0,
+            "perf_ytd": -12.3,
+            "perf_1y": -14.9,
+            "mcap": "145.8B",
+            "sector": "Industries"
           },
           {
             "ticker": "FISV",
@@ -2061,9 +2065,9 @@
             "roe": 13.1,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -12.1,
-            "perf_1y": -63.3,
-            "mcap": "31.5B",
+            "perf_ytd": -15.9,
+            "perf_1y": -64.6,
+            "mcap": "30.1B",
             "sector": "Finance"
           },
           {
@@ -2072,24 +2076,24 @@
             "buffett": 67.0,
             "vol": 43.2,
             "roe": 19.0,
-            "div_yield": 2.15,
+            "div_yield": 2.22,
             "payout": 34.0,
-            "perf_ytd": -17.2,
-            "perf_1y": 13.2,
-            "mcap": "24.2B",
+            "perf_ytd": -20.0,
+            "perf_1y": 9.3,
+            "mcap": "23.4B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "VEEV",
             "name": "VEEVA SYSTEMS INC CLASS A",
             "buffett": 67.0,
-            "vol": 35.8,
+            "vol": 35.9,
             "roe": 13.9,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -15.5,
-            "perf_1y": -32.4,
-            "mcap": "30.8B",
+            "perf_ytd": -18.1,
+            "perf_1y": -34.6,
+            "mcap": "29.9B",
             "sector": "Santé"
           },
           {
@@ -2100,9 +2104,9 @@
             "roe": 28.7,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -31.7,
-            "perf_1y": -64.0,
-            "mcap": "20.1B",
+            "perf_ytd": -32.8,
+            "perf_1y": -64.6,
+            "mcap": "19.8B",
             "sector": "La communication"
           },
           {
@@ -2113,8 +2117,8 @@
             "roe": 10.6,
             "div_yield": 0.65,
             "payout": 13.0,
-            "perf_ytd": -14.3,
-            "perf_1y": -13.8,
+            "perf_ytd": -14.0,
+            "perf_1y": -13.9,
             "mcap": "14.2B",
             "sector": "Industries"
           },
@@ -2122,39 +2126,39 @@
             "ticker": "IT",
             "name": "GARTNER INC",
             "buffett": 67.0,
-            "vol": 38.0,
+            "vol": 38.1,
             "roe": 86.9,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": -28.8,
-            "perf_1y": -58.8,
-            "mcap": "12.0B",
+            "perf_ytd": -32.4,
+            "perf_1y": -60.9,
+            "mcap": "11.4B",
             "sector": "Technologie de l'inf"
           },
           {
             "ticker": "PRX",
             "name": "PROSUS NV CLASS N",
             "buffett": 67.0,
-            "vol": 42.8,
+            "vol": 42.9,
             "roe": 26.8,
             "div_yield": 0.2,
             "payout": 2.0,
-            "perf_ytd": -19.7,
-            "perf_1y": -10.4,
-            "mcap": "83.0B",
+            "perf_ytd": -19.4,
+            "perf_1y": -10.1,
+            "mcap": "90.8B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "EXPN",
             "name": "EXPERIAN PLC",
             "buffett": 67.0,
-            "vol": 47.9,
+            "vol": 48.0,
             "roe": 24.0,
-            "div_yield": 1.72,
+            "div_yield": 1.76,
             "payout": 40.0,
-            "perf_ytd": -21.3,
-            "perf_1y": -27.9,
-            "mcap": "23.9B",
+            "perf_ytd": -23.0,
+            "perf_1y": -29.5,
+            "mcap": "23.1B",
             "sector": "Industries"
           },
           {
@@ -2163,11 +2167,11 @@
             "buffett": 67.0,
             "vol": 47.7,
             "roe": 9.3,
-            "div_yield": 2.26,
+            "div_yield": 2.25,
             "payout": 47.0,
-            "perf_ytd": -13.8,
-            "perf_1y": -10.2,
-            "mcap": "12.7B",
+            "perf_ytd": -13.4,
+            "perf_1y": -9.8,
+            "mcap": "12.9B",
             "sector": "Biens de consommatio"
           },
           {
@@ -2176,24 +2180,24 @@
             "buffett": 67.0,
             "vol": 54.2,
             "roe": 6.2,
-            "div_yield": 1.64,
+            "div_yield": 1.65,
             "payout": 25.0,
-            "perf_ytd": -14.5,
-            "perf_1y": -11.1,
-            "mcap": "6.3B",
+            "perf_ytd": -14.9,
+            "perf_1y": -11.6,
+            "mcap": "6.2B",
             "sector": "Santé"
           },
           {
             "ticker": "EVD",
             "name": "CTS EVENTIM AG",
             "buffett": 67.0,
-            "vol": 35.1,
+            "vol": 35.3,
             "roe": 31.9,
-            "div_yield": 2.41,
+            "div_yield": 2.49,
             "payout": 56.0,
-            "perf_ytd": -23.9,
-            "perf_1y": -44.3,
-            "mcap": "5.9B",
+            "perf_ytd": -26.4,
+            "perf_1y": -46.1,
+            "mcap": "5.5B",
             "sector": "La communication"
           },
           {
@@ -2202,10 +2206,10 @@
             "buffett": 67.0,
             "vol": 37.8,
             "roe": 51.5,
-            "div_yield": 1.46,
+            "div_yield": 1.47,
             "payout": 0.0,
-            "perf_ytd": -19.0,
-            "perf_1y": -1.1,
+            "perf_ytd": -18.7,
+            "perf_1y": 0.2,
             "mcap": "19.7B",
             "sector": "Technologie de l'inf"
           },
@@ -2217,9 +2221,9 @@
             "roe": 13.1,
             "div_yield": 1.04,
             "payout": 22.0,
-            "perf_ytd": -21.5,
-            "perf_1y": -2.4,
-            "mcap": "5.8B",
+            "perf_ytd": -21.8,
+            "perf_1y": -2.9,
+            "mcap": "5.7B",
             "sector": "Industries"
           },
           {
@@ -2237,7 +2241,7 @@
         ]
       },
       "rendement": {
-        "count": 112,
+        "count": 113,
         "criteria": {
           "vol_max": 28,
           "div_yield_min": 1.5
@@ -2249,37 +2253,37 @@
             "buffett": 100.0,
             "vol": 17.3,
             "roe": 31.2,
-            "div_yield": 3.04,
+            "div_yield": 3.03,
             "payout": 62.0,
-            "perf_ytd": -2.1,
-            "perf_1y": -16.8,
-            "mcap": "326.7B",
+            "perf_ytd": -1.7,
+            "perf_1y": -17.1,
+            "mcap": "327.9B",
             "sector": "Biens de consommatio"
           },
           {
             "ticker": "BR",
             "name": "BROADRIDGE FINANCIAL SOLUTIONS",
             "buffett": 100.0,
-            "vol": 21.8,
+            "vol": 21.9,
             "roe": 34.8,
-            "div_yield": 2.38,
+            "div_yield": 2.46,
             "payout": 41.0,
-            "perf_ytd": -28.3,
-            "perf_1y": -33.3,
-            "mcap": "18.5B",
+            "perf_ytd": -30.6,
+            "perf_1y": -36.2,
+            "mcap": "17.9B",
             "sector": "Industries"
           },
           {
             "ticker": "NOVN",
             "name": "NOVARTIS AG",
             "buffett": 100.0,
-            "vol": 19.4,
+            "vol": 19.5,
             "roe": 34.6,
-            "div_yield": 3.25,
+            "div_yield": 3.27,
             "payout": 66.0,
-            "perf_ytd": 3.8,
-            "perf_1y": 21.3,
-            "mcap": "217.3B",
+            "perf_ytd": 3.1,
+            "perf_1y": 20.5,
+            "mcap": "215.6B",
             "sector": "Santé"
           },
           {
@@ -2288,11 +2292,11 @@
             "buffett": 100.0,
             "vol": 21.2,
             "roe": 37.3,
-            "div_yield": 3.12,
+            "div_yield": 3.16,
             "payout": 60.0,
-            "perf_ytd": -4.5,
-            "perf_1y": 19.5,
-            "mcap": "252.5B",
+            "perf_ytd": -5.6,
+            "perf_1y": 18.0,
+            "mcap": "246.4B",
             "sector": "Santé"
           },
           {
@@ -2301,11 +2305,11 @@
             "buffett": 100.0,
             "vol": 20.9,
             "roe": 23.4,
-            "div_yield": 2.52,
+            "div_yield": 2.54,
             "payout": 61.0,
-            "perf_ytd": -9.2,
-            "perf_1y": -30.9,
-            "mcap": "26.3B",
+            "perf_ytd": -10.0,
+            "perf_1y": -31.5,
+            "mcap": "26.1B",
             "sector": "Matériaux"
           },
           {
@@ -2314,10 +2318,10 @@
             "buffett": 100.0,
             "vol": 21.9,
             "roe": 23.4,
-            "div_yield": 2.63,
+            "div_yield": 2.64,
             "payout": 58.0,
-            "perf_ytd": 5.1,
-            "perf_1y": -3.4,
+            "perf_ytd": 4.5,
+            "perf_1y": -4.0,
             "mcap": "10.1B",
             "sector": "Santé"
           },
@@ -2327,11 +2331,11 @@
             "buffett": 83.0,
             "vol": 15.4,
             "roe": 43.3,
-            "div_yield": 2.62,
+            "div_yield": 2.63,
             "payout": 65.0,
-            "perf_ytd": 12.5,
-            "perf_1y": 10.0,
-            "mcap": "338.3B",
+            "perf_ytd": 12.2,
+            "perf_1y": 8.8,
+            "mcap": "337.4B",
             "sector": "Biens de consommatio"
           },
           {
@@ -2340,11 +2344,11 @@
             "buffett": 83.0,
             "vol": 19.4,
             "roe": 42.9,
-            "div_yield": 4.02,
+            "div_yield": 4.01,
             "payout": 89.0,
-            "perf_ytd": -1.4,
-            "perf_1y": 7.3,
-            "mcap": "193.4B",
+            "perf_ytd": -1.1,
+            "perf_1y": 8.0,
+            "mcap": "194.1B",
             "sector": "Biens de consommatio"
           },
           {
@@ -2353,11 +2357,11 @@
             "buffett": 83.0,
             "vol": 18.9,
             "roe": 29.4,
-            "div_yield": 2.21,
+            "div_yield": 2.23,
             "payout": 44.0,
-            "perf_ytd": -12.4,
-            "perf_1y": -29.8,
-            "mcap": "78.3B",
+            "perf_ytd": -13.0,
+            "perf_1y": -30.9,
+            "mcap": "77.8B",
             "sector": "Finance"
           },
           {
@@ -2366,11 +2370,11 @@
             "buffett": 83.0,
             "vol": 20.8,
             "roe": 76.0,
-            "div_yield": 2.77,
+            "div_yield": 2.8,
             "payout": 60.0,
-            "perf_ytd": -9.1,
-            "perf_1y": -27.9,
-            "mcap": "93.4B",
+            "perf_ytd": -10.1,
+            "perf_1y": -29.0,
+            "mcap": "92.4B",
             "sector": "Industries"
           },
           {
@@ -2379,11 +2383,11 @@
             "buffett": 83.0,
             "vol": 19.7,
             "roe": 93.7,
-            "div_yield": 2.58,
+            "div_yield": 2.55,
             "payout": 59.0,
-            "perf_ytd": -0.2,
-            "perf_1y": 0.0,
-            "mcap": "70.7B",
+            "perf_ytd": 0.9,
+            "perf_1y": 1.4,
+            "mcap": "71.5B",
             "sector": "Industries"
           },
           {
@@ -2392,11 +2396,11 @@
             "buffett": 83.0,
             "vol": 21.6,
             "roe": 30.2,
-            "div_yield": 2.42,
+            "div_yield": 2.39,
             "payout": 42.0,
-            "perf_ytd": -14.5,
-            "perf_1y": -13.4,
-            "mcap": "11.9B",
+            "perf_ytd": -13.7,
+            "perf_1y": -11.6,
+            "mcap": "12.0B",
             "sector": "Matériaux"
           },
           {
@@ -2405,11 +2409,11 @@
             "buffett": 83.0,
             "vol": 18.2,
             "roe": 17.6,
-            "div_yield": 6.67,
+            "div_yield": 6.73,
             "payout": 98.0,
-            "perf_ytd": 4.7,
-            "perf_1y": 1.3,
-            "mcap": "13.3B",
+            "perf_ytd": 3.8,
+            "perf_1y": -0.7,
+            "mcap": "13.1B",
             "sector": "Immobilier"
           },
           {
@@ -2420,9 +2424,9 @@
             "roe": 17.5,
             "div_yield": 4.54,
             "payout": 50.0,
-            "perf_ytd": -3.6,
-            "perf_1y": 7.3,
-            "mcap": "142.2B",
+            "perf_ytd": -3.5,
+            "perf_1y": 7.4,
+            "mcap": "142.9B",
             "sector": "Finance"
           },
           {
@@ -2431,11 +2435,11 @@
             "buffett": 83.0,
             "vol": 17.5,
             "roe": 49.9,
-            "div_yield": 3.85,
+            "div_yield": 3.88,
             "payout": 79.0,
-            "perf_ytd": -14.8,
-            "perf_1y": -16.4,
-            "mcap": "89.5B",
+            "perf_ytd": -15.5,
+            "perf_1y": -17.1,
+            "mcap": "88.9B",
             "sector": "Biens de consommatio"
           },
           {
@@ -2444,11 +2448,11 @@
             "buffett": 83.0,
             "vol": 19.4,
             "roe": 19.6,
-            "div_yield": 5.85,
+            "div_yield": 5.83,
             "payout": 63.0,
-            "perf_ytd": -3.2,
-            "perf_1y": -6.8,
-            "mcap": "80.5B",
+            "perf_ytd": -2.9,
+            "perf_1y": -6.4,
+            "mcap": "80.9B",
             "sector": "Finance"
           },
           {
@@ -2459,9 +2463,9 @@
             "roe": 42.4,
             "div_yield": 2.56,
             "payout": 71.0,
-            "perf_ytd": -18.6,
-            "perf_1y": -16.3,
-            "mcap": "16.5B",
+            "perf_ytd": -18.8,
+            "perf_1y": -16.4,
+            "mcap": "16.6B",
             "sector": "Industries"
           },
           {
@@ -2470,11 +2474,11 @@
             "buffett": 83.0,
             "vol": 20.7,
             "roe": 20.8,
-            "div_yield": 5.53,
+            "div_yield": 5.55,
             "payout": 29.0,
-            "perf_ytd": -15.0,
-            "perf_1y": -19.4,
-            "mcap": "27.4B",
+            "perf_ytd": -15.4,
+            "perf_1y": -19.8,
+            "mcap": "27.2B",
             "sector": "Finance"
           },
           {
@@ -2483,11 +2487,11 @@
             "buffett": 83.0,
             "vol": 18.9,
             "roe": 21.1,
-            "div_yield": 2.6,
+            "div_yield": 2.61,
             "payout": 63.0,
-            "perf_ytd": -12.7,
-            "perf_1y": -13.1,
-            "mcap": "27.9B",
+            "perf_ytd": -12.8,
+            "perf_1y": -13.2,
+            "mcap": "27.8B",
             "sector": "Industries"
           },
           {
@@ -2496,17 +2500,17 @@
             "buffett": 83.0,
             "vol": 20.8,
             "roe": 17.0,
-            "div_yield": 2.37,
+            "div_yield": 2.4,
             "payout": 45.0,
-            "perf_ytd": -5.3,
-            "perf_1y": -7.8,
-            "mcap": "8.9B",
+            "perf_ytd": -6.3,
+            "perf_1y": -8.8,
+            "mcap": "8.8B",
             "sector": "Industries"
           }
         ]
       },
       "value_dividend": {
-        "count": 196,
+        "count": 195,
         "criteria": {
           "vol_max": 30,
           "roe_min": 8
@@ -2518,11 +2522,11 @@
             "buffett": 100.0,
             "vol": 33.0,
             "roe": 25.9,
-            "div_yield": 1.29,
+            "div_yield": 1.31,
             "payout": 22.0,
-            "perf_ytd": -22.6,
-            "perf_1y": -23.9,
-            "mcap": "27.0B",
+            "perf_ytd": -24.1,
+            "perf_1y": -25.3,
+            "mcap": "26.5B",
             "sector": "Santé"
           },
           {
@@ -2531,11 +2535,11 @@
             "buffett": 83.0,
             "vol": 30.6,
             "roe": 66.0,
-            "div_yield": 2.66,
+            "div_yield": 2.7,
             "payout": 33.0,
-            "perf_ytd": -38.4,
-            "perf_1y": -53.6,
-            "mcap": "32.5B",
+            "perf_ytd": -39.3,
+            "perf_1y": -54.7,
+            "mcap": "32.0B",
             "sector": "Santé"
           },
           {
@@ -2544,11 +2548,11 @@
             "buffett": 83.0,
             "vol": 31.0,
             "roe": 25.4,
-            "div_yield": 1.68,
+            "div_yield": 1.7,
             "payout": 21.0,
-            "perf_ytd": -15.3,
-            "perf_1y": 5.4,
-            "mcap": "25.4B",
+            "perf_ytd": -16.4,
+            "perf_1y": 4.0,
+            "mcap": "25.7B",
             "sector": "Industries"
           },
           {
@@ -2557,24 +2561,24 @@
             "buffett": 83.0,
             "vol": 31.0,
             "roe": 33.8,
-            "div_yield": 2.71,
+            "div_yield": 2.69,
             "payout": 63.0,
-            "perf_ytd": -13.6,
-            "perf_1y": -29.7,
-            "mcap": "35.8B",
+            "perf_ytd": -13.2,
+            "perf_1y": -29.4,
+            "mcap": "35.4B",
             "sector": "La communication"
           },
           {
             "ticker": "CAP",
             "name": "CAPGEMINI",
             "buffett": 83.0,
-            "vol": 29.5,
+            "vol": 29.8,
             "roe": 13.7,
-            "div_yield": 3.24,
+            "div_yield": 3.37,
             "payout": 37.0,
-            "perf_ytd": -26.3,
-            "perf_1y": -28.9,
-            "mcap": "18.2B",
+            "perf_ytd": -29.1,
+            "perf_1y": -31.6,
+            "mcap": "16.8B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -2583,12 +2587,25 @@
             "buffett": 83.0,
             "vol": 24.7,
             "roe": 9.5,
-            "div_yield": 1.27,
+            "div_yield": 1.28,
             "payout": 27.0,
-            "perf_ytd": -36.0,
-            "perf_1y": -41.4,
-            "mcap": "8.4B",
+            "perf_ytd": -36.5,
+            "perf_1y": -41.8,
+            "mcap": "8.3B",
             "sector": "Santé"
+          },
+          {
+            "ticker": "NEM",
+            "name": "NEMETSCHEK",
+            "buffett": 83.0,
+            "vol": 33.5,
+            "roe": 23.1,
+            "div_yield": 1.04,
+            "payout": 27.0,
+            "perf_ytd": -29.5,
+            "perf_1y": -45.9,
+            "mcap": "7.5B",
+            "sector": "Technologie de l'inf"
           },
           {
             "ticker": "CVC",
@@ -2596,10 +2613,10 @@
             "buffett": 83.0,
             "vol": 32.9,
             "roe": 60.3,
-            "div_yield": 3.42,
+            "div_yield": 3.43,
             "payout": 58.0,
-            "perf_ytd": -4.0,
-            "perf_1y": -15.3,
+            "perf_ytd": -4.1,
+            "perf_1y": -15.4,
             "mcap": "14.4B",
             "sector": "Finance"
           },
@@ -2609,11 +2626,11 @@
             "buffett": 83.0,
             "vol": 30.7,
             "roe": 18.5,
-            "div_yield": 2.38,
+            "div_yield": 2.39,
             "payout": 60.0,
-            "perf_ytd": -14.4,
-            "perf_1y": -6.8,
-            "mcap": "456.1B",
+            "perf_ytd": -14.5,
+            "perf_1y": -6.7,
+            "mcap": "455.6B",
             "sector": "Technologie de l'inf"
           },
           {
@@ -2622,11 +2639,11 @@
             "buffett": 80.0,
             "vol": 24.8,
             "roe": 10.2,
-            "div_yield": 2.14,
+            "div_yield": 2.1,
             "payout": 27.0,
-            "perf_ytd": -6.3,
-            "perf_1y": 16.4,
-            "mcap": "365.5B",
+            "perf_ytd": -4.6,
+            "perf_1y": 18.9,
+            "mcap": "372.4B",
             "sector": "Finance"
           },
           {
@@ -2635,11 +2652,11 @@
             "buffett": 80.0,
             "vol": 27.9,
             "roe": 11.7,
-            "div_yield": 2.33,
+            "div_yield": 2.27,
             "payout": 27.0,
-            "perf_ytd": -17.2,
-            "perf_1y": 3.6,
-            "mcap": "236.2B",
+            "perf_ytd": -14.8,
+            "perf_1y": 6.2,
+            "mcap": "243.1B",
             "sector": "Finance"
           },
           {
@@ -2648,11 +2665,11 @@
             "buffett": 80.0,
             "vol": 25.0,
             "roe": 12.2,
-            "div_yield": 3.15,
+            "div_yield": 3.08,
             "payout": 39.0,
-            "perf_ytd": 3.5,
-            "perf_1y": 23.4,
-            "mcap": "86.8B",
+            "perf_ytd": 5.9,
+            "perf_1y": 27.1,
+            "mcap": "88.7B",
             "sector": "Finance"
           },
           {
@@ -2661,24 +2678,11 @@
             "buffett": 80.0,
             "vol": 27.7,
             "roe": 12.2,
-            "div_yield": 3.85,
+            "div_yield": 3.77,
             "payout": 43.0,
-            "perf_ytd": 0.4,
-            "perf_1y": 22.4,
-            "mcap": "83.1B",
-            "sector": "Finance"
-          },
-          {
-            "ticker": "TFC",
-            "name": "TRUIST FINANCIAL CORP",
-            "buffett": 80.0,
-            "vol": 28.7,
-            "roe": 8.2,
-            "div_yield": 4.44,
-            "payout": 52.0,
-            "perf_ytd": -4.8,
-            "perf_1y": 18.4,
-            "mcap": "58.4B",
+            "perf_ytd": 2.3,
+            "perf_1y": 25.3,
+            "mcap": "84.8B",
             "sector": "Finance"
           },
           {
@@ -2689,9 +2693,9 @@
             "roe": 9.8,
             "div_yield": 2.76,
             "payout": 33.0,
-            "perf_ytd": 5.0,
-            "perf_1y": 15.7,
-            "mcap": "31.0B",
+            "perf_ytd": 7.8,
+            "perf_1y": 19.0,
+            "mcap": "31.8B",
             "sector": "Finance"
           },
           {
@@ -2700,11 +2704,11 @@
             "buffett": 80.0,
             "vol": 24.2,
             "roe": 11.4,
-            "div_yield": 5.47,
+            "div_yield": 5.35,
             "payout": 56.0,
-            "perf_ytd": -11.0,
-            "perf_1y": -3.7,
-            "mcap": "34.9B",
+            "perf_ytd": -9.0,
+            "perf_1y": -1.1,
+            "mcap": "35.7B",
             "sector": "Finance"
           },
           {
@@ -2716,7 +2720,7 @@
             "div_yield": 2.05,
             "payout": 33.0,
             "perf_ytd": 23.9,
-            "perf_1y": 64.7,
+            "perf_1y": 66.0,
             "mcap": "44.2B",
             "sector": "Finance"
           },
@@ -2726,11 +2730,11 @@
             "buffett": 80.0,
             "vol": 29.1,
             "roe": 10.1,
-            "div_yield": 3.92,
+            "div_yield": 3.82,
             "payout": 48.0,
-            "perf_ytd": -8.8,
-            "perf_1y": 0.7,
-            "mcap": "32.1B",
+            "perf_ytd": -6.5,
+            "perf_1y": 3.8,
+            "mcap": "32.9B",
             "sector": "Finance"
           },
           {
@@ -2739,11 +2743,11 @@
             "buffett": 80.0,
             "vol": 27.6,
             "roe": 13.5,
-            "div_yield": 1.87,
+            "div_yield": 1.86,
             "payout": 33.0,
-            "perf_ytd": 23.2,
-            "perf_1y": 56.9,
-            "mcap": "31.2B",
+            "perf_ytd": 24.3,
+            "perf_1y": 59.1,
+            "mcap": "31.4B",
             "sector": "Finance"
           },
           {
@@ -2752,24 +2756,24 @@
             "buffett": 80.0,
             "vol": 24.1,
             "roe": 10.5,
-            "div_yield": 3.84,
+            "div_yield": 3.09,
             "payout": 45.0,
-            "perf_ytd": 16.6,
-            "perf_1y": 31.0,
-            "mcap": "22.2B",
+            "perf_ytd": 17.1,
+            "perf_1y": 32.6,
+            "mcap": "22.3B",
             "sector": "Finance"
           },
           {
             "ticker": "HSBA",
             "name": "HSBC HOLDINGS PLC",
             "buffett": 80.0,
-            "vol": 23.5,
+            "vol": 23.6,
             "roe": 11.6,
-            "div_yield": 2.15,
+            "div_yield": 2.12,
             "payout": 61.0,
-            "perf_ytd": 18.9,
-            "perf_1y": 59.3,
-            "mcap": "237.1B",
+            "perf_ytd": 20.1,
+            "perf_1y": 61.0,
+            "mcap": "241.8B",
             "sector": "Finance"
           }
         ]
@@ -2781,24 +2785,24 @@
         "perf_1y_min": 0
       },
       "total": 1406,
-      "passed": 1206,
+      "passed": 1207,
       "top_20": [
         {
           "ticker": "VTI",
           "name": "VANGUARD TOTAL STOCK MKT ETF",
           "ter": 0.0,
           "aum": "2.1T",
-          "perf_ytd": 11.0,
-          "perf_1y": 28.7,
-          "vol": 15.3
+          "perf_ytd": 11.2,
+          "perf_1y": 29.0,
+          "vol": 15.2
         },
         {
           "ticker": "VOO",
           "name": "Vanguard S&P 500 ETF",
           "ter": 0.0,
           "aum": "1.5T",
-          "perf_ytd": 11.0,
-          "perf_1y": 28.6,
+          "perf_ytd": 11.1,
+          "perf_1y": 28.8,
           "vol": 14.7
         },
         {
@@ -2807,7 +2811,7 @@
           "ter": 0.0,
           "aum": "750.7B",
           "perf_ytd": 11.1,
-          "perf_1y": 28.6,
+          "perf_1y": 28.8,
           "vol": 14.8
         },
         {
@@ -2815,8 +2819,8 @@
           "name": "SPDR S&P 500 ETF Trust",
           "ter": 0.0,
           "aum": "698.3B",
-          "perf_ytd": 11.0,
-          "perf_1y": 28.7,
+          "perf_ytd": 11.1,
+          "perf_1y": 28.1,
           "vol": 15.1
         },
         {
@@ -2824,8 +2828,8 @@
           "name": "Vanguard Total International Stock ",
           "ter": 0.0,
           "aum": "636.7B",
-          "perf_ytd": 12.8,
-          "perf_1y": 28.6,
+          "perf_ytd": 13.5,
+          "perf_1y": 29.7,
           "vol": 15.1
         },
         {
@@ -2833,8 +2837,8 @@
           "name": "Invesco QQQ Trust",
           "ter": 0.0,
           "aum": "395.0B",
-          "perf_ytd": 21.1,
-          "perf_1y": 42.9,
+          "perf_ytd": 21.4,
+          "perf_1y": 43.4,
           "vol": 19.6
         },
         {
@@ -2842,8 +2846,8 @@
           "name": "Vanguard Growth ETF",
           "ter": 0.0,
           "aum": "335.9B",
-          "perf_ytd": 11.4,
-          "perf_1y": 31.0,
+          "perf_ytd": 10.9,
+          "perf_1y": 30.6,
           "vol": 19.3
         },
         {
@@ -2851,8 +2855,8 @@
           "name": "VANGUARD FTSE DEVELOPED MARKETS ETF",
           "ter": 0.0,
           "aum": "307.3B",
-          "perf_ytd": 13.7,
-          "perf_1y": 29.5,
+          "perf_ytd": 14.2,
+          "perf_1y": 29.9,
           "vol": 15.4
         },
         {
@@ -2860,8 +2864,8 @@
           "name": "Vanguard Value ETF",
           "ter": 0.0,
           "aum": "238.5B",
-          "perf_ytd": 9.7,
-          "perf_1y": 23.6,
+          "perf_ytd": 10.6,
+          "perf_1y": 24.4,
           "vol": 12.3
         },
         {
@@ -2869,8 +2873,8 @@
           "name": "Vanguard Mid-Cap ETF",
           "ter": 0.0,
           "aum": "210.3B",
-          "perf_ytd": 8.2,
-          "perf_1y": 17.4,
+          "perf_ytd": 9.2,
+          "perf_1y": 18.2,
           "vol": 14.7
         },
         {
@@ -2878,8 +2882,8 @@
           "name": "Vanguard Small-Cap ETF",
           "ter": 0.0,
           "aum": "173.8B",
-          "perf_ytd": 12.1,
-          "perf_1y": 28.0,
+          "perf_ytd": 12.9,
+          "perf_1y": 29.4,
           "vol": 18.9
         },
         {
@@ -2887,8 +2891,8 @@
           "name": "Vanguard FTSE Emerging Markets ETF",
           "ter": 0.0,
           "aum": "158.4B",
-          "perf_ytd": 10.0,
-          "perf_1y": 27.1,
+          "perf_ytd": 11.3,
+          "perf_1y": 30.1,
           "vol": 16.2
         },
         {
@@ -2896,8 +2900,8 @@
           "name": "Vanguard Information Technology ETF",
           "ter": 0.0,
           "aum": "126.5B",
-          "perf_ytd": 31.4,
-          "perf_1y": 63.1,
+          "perf_ytd": 32.5,
+          "perf_1y": 65.2,
           "vol": 23.4
         },
         {
@@ -2905,8 +2909,8 @@
           "name": "Vanguard Dividend Appreciation ETF",
           "ter": 0.0,
           "aum": "123.8B",
-          "perf_ytd": 6.2,
-          "perf_1y": 18.7,
+          "perf_ytd": 6.9,
+          "perf_1y": 19.1,
           "vol": 12.2
         },
         {
@@ -2923,8 +2927,8 @@
           "name": "iShares Russell 1000 Growth ETF",
           "ter": 0.0,
           "aum": "116.5B",
-          "perf_ytd": 9.2,
-          "perf_1y": 28.8,
+          "perf_ytd": 8.6,
+          "perf_1y": 28.3,
           "vol": 19.1
         },
         {
@@ -2941,26 +2945,26 @@
           "name": "Vanguard High Dividend Yield ETF",
           "ter": 0.0,
           "aum": "92.3B",
-          "perf_ytd": 10.0,
-          "perf_1y": 23.6,
-          "vol": 12.6
+          "perf_ytd": 11.3,
+          "perf_1y": 24.9,
+          "vol": 12.7
         },
         {
           "ticker": "RSP",
           "name": "Invesco S&P 500 Equal Weight ETF",
           "ter": 0.0,
           "aum": "90.7B",
-          "perf_ytd": 8.5,
-          "perf_1y": 18.5,
-          "vol": 13.9
+          "perf_ytd": 8.8,
+          "perf_1y": 19.0,
+          "vol": 13.8
         },
         {
           "ticker": "VEU",
           "name": "Vanguard FTSE All-World ex-US ETF",
           "ter": 0.0,
           "aum": "90.6B",
-          "perf_ytd": 13.0,
-          "perf_1y": 29.1,
+          "perf_ytd": 13.6,
+          "perf_1y": 30.1,
           "vol": 15.1
         }
       ]
@@ -2975,42 +2979,32 @@
         {
           "ticker": "INJ/USD",
           "name": "Injective Protocol",
-          "vol": 108.8,
-          "perf_1d": 1.2,
-          "perf_7d": 24.6,
-          "perf_30d": 86.2,
-          "perf_ytd": 56.0,
-          "sharpe": 7.69
+          "vol": 109.2,
+          "perf_1d": -0.7,
+          "perf_7d": 22.2,
+          "perf_30d": 82.6,
+          "perf_ytd": 52.9,
+          "sharpe": 7.44
         },
         {
           "ticker": "NEAR/USD",
           "name": "NEAR Protocol",
-          "vol": 128.8,
-          "perf_1d": 1.5,
-          "perf_7d": 4.9,
-          "perf_30d": 106.0,
-          "perf_ytd": 64.6,
-          "sharpe": 7.67
+          "vol": 130.9,
+          "perf_1d": -4.1,
+          "perf_7d": -0.9,
+          "perf_30d": 94.6,
+          "perf_ytd": 55.5,
+          "sharpe": 7.02
         },
         {
           "ticker": "WLD/USD",
           "name": "Worldcoin",
-          "vol": 160.4,
-          "perf_1d": -5.6,
-          "perf_7d": 9.9,
-          "perf_30d": 70.0,
-          "perf_ytd": -20.7,
-          "sharpe": 4.99
-        },
-        {
-          "ticker": "FET/USD",
-          "name": "Fetch",
-          "vol": 93.7,
-          "perf_1d": -0.5,
-          "perf_7d": 8.9,
-          "perf_30d": 31.5,
-          "perf_ytd": 27.9,
-          "sharpe": 4.09
+          "vol": 160.7,
+          "perf_1d": -6.1,
+          "perf_7d": 9.4,
+          "perf_30d": 69.1,
+          "perf_ytd": -21.1,
+          "sharpe": 4.94
         },
         {
           "ticker": "WEMIX/USD",
@@ -3023,154 +3017,164 @@
           "sharpe": 3.8
         },
         {
+          "ticker": "FET/USD",
+          "name": "Fetch",
+          "vol": 95.4,
+          "perf_1d": -4.2,
+          "perf_7d": 4.9,
+          "perf_30d": 26.6,
+          "perf_ytd": 23.1,
+          "sharpe": 3.54
+        },
+        {
           "ticker": "XLM/EUR",
           "name": "Stellar",
-          "vol": 154.1,
-          "perf_1d": -5.0,
-          "perf_7d": 55.6,
-          "perf_30d": 44.7,
-          "perf_ytd": 11.2,
-          "sharpe": 3.71
+          "vol": 156.2,
+          "perf_1d": -8.3,
+          "perf_7d": 50.2,
+          "perf_30d": 39.8,
+          "perf_ytd": 7.4,
+          "sharpe": 3.4
         },
         {
           "ticker": "TON/USD",
           "name": "Toncoin",
-          "vol": 167.1,
-          "perf_1d": -3.3,
-          "perf_7d": 4.5,
-          "perf_30d": 50.8,
-          "perf_ytd": 19.7,
-          "sharpe": 3.7
+          "vol": 169.2,
+          "perf_1d": -7.3,
+          "perf_7d": 0.1,
+          "perf_30d": 44.6,
+          "perf_ytd": 14.7,
+          "sharpe": 3.37
         },
         {
           "ticker": "XLM/USD",
           "name": "Stellar",
-          "vol": 154.0,
-          "perf_1d": -5.3,
-          "perf_7d": 55.7,
-          "perf_30d": 43.9,
-          "perf_ytd": 10.2,
-          "sharpe": 3.65
-        },
-        {
-          "ticker": "RENDER/USD",
-          "name": "Render Token",
-          "vol": 73.2,
-          "perf_1d": 4.0,
-          "perf_7d": -3.6,
-          "perf_30d": 23.9,
-          "perf_ytd": 59.6,
-          "sharpe": 3.49
+          "vol": 156.3,
+          "perf_1d": -8.6,
+          "perf_7d": 50.3,
+          "perf_30d": 38.9,
+          "perf_ytd": 6.4,
+          "sharpe": 3.35
         },
         {
           "ticker": "ICP/USD",
           "name": "Internet Computer",
-          "vol": 130.0,
-          "perf_1d": 4.1,
-          "perf_7d": 15.8,
-          "perf_30d": 30.2,
-          "perf_ytd": 2.4,
-          "sharpe": 3.13
-        },
-        {
-          "ticker": "SEI/USD",
-          "name": "Sei",
-          "vol": 77.8,
-          "perf_1d": -5.0,
-          "perf_7d": 3.6,
-          "perf_30d": 15.2,
-          "perf_ytd": -41.3,
-          "sharpe": 2.73
-        },
-        {
-          "ticker": "BNB/EUR",
-          "name": "Binance Coin",
-          "vol": 48.7,
-          "perf_1d": -2.3,
-          "perf_7d": 3.2,
-          "perf_30d": 10.3,
-          "perf_ytd": -20.8,
-          "sharpe": 2.68
-        },
-        {
-          "ticker": "AKT/USD",
-          "name": "Akash Network",
-          "vol": 118.7,
-          "perf_1d": 2.5,
-          "perf_7d": -13.6,
-          "perf_30d": 34.6,
-          "perf_ytd": 106.5,
-          "sharpe": 2.66
-        },
-        {
-          "ticker": "QNT/USD",
-          "name": "Quant",
-          "vol": 58.7,
-          "perf_1d": 6.7,
-          "perf_7d": 1.3,
-          "perf_30d": 11.4,
-          "perf_ytd": 1.0,
-          "sharpe": 2.63
-        },
-        {
-          "ticker": "BNB/USD",
-          "name": "Binance Coin",
-          "vol": 49.2,
-          "perf_1d": -1.9,
-          "perf_7d": 3.5,
-          "perf_30d": 9.9,
-          "perf_ytd": -21.4,
-          "sharpe": 2.57
+          "vol": 130.5,
+          "perf_1d": 5.7,
+          "perf_7d": 17.6,
+          "perf_30d": 32.2,
+          "perf_ytd": 4.0,
+          "sharpe": 3.26
         },
         {
           "ticker": "ONDO/USD",
           "name": "Ondo",
-          "vol": 147.3,
-          "perf_1d": 0.8,
-          "perf_7d": -11.3,
-          "perf_30d": 26.8,
-          "perf_ytd": -7.0,
-          "sharpe": 2.51
-        },
-        {
-          "ticker": "TWT/USD",
-          "name": "Trust Wallet Token",
-          "vol": 44.1,
-          "perf_1d": 2.8,
-          "perf_7d": 2.3,
-          "perf_30d": 9.3,
-          "perf_ytd": -47.8,
-          "sharpe": 2.3
-        },
-        {
-          "ticker": "HEROm/USD",
-          "name": "Metahero",
-          "vol": 93.8,
+          "vol": 147.9,
           "perf_1d": 4.7,
-          "perf_7d": 9.6,
-          "perf_30d": 8.7,
-          "perf_ytd": -24.5,
-          "sharpe": 2.22
+          "perf_7d": -7.9,
+          "perf_30d": 31.7,
+          "perf_ytd": -3.5,
+          "sharpe": 2.82
+        },
+        {
+          "ticker": "RENDER/USD",
+          "name": "Render Token",
+          "vol": 72.5,
+          "perf_1d": -1.2,
+          "perf_7d": -8.4,
+          "perf_30d": 17.7,
+          "perf_ytd": 51.7,
+          "sharpe": 2.66
+        },
+        {
+          "ticker": "BNB/EUR",
+          "name": "Binance Coin",
+          "vol": 49.6,
+          "perf_1d": -3.4,
+          "perf_7d": 2.0,
+          "perf_30d": 9.1,
+          "perf_ytd": -21.7,
+          "sharpe": 2.36
+        },
+        {
+          "ticker": "SEI/USD",
+          "name": "Sei",
+          "vol": 80.3,
+          "perf_1d": -7.3,
+          "perf_7d": 1.0,
+          "perf_30d": 12.4,
+          "perf_ytd": -42.8,
+          "sharpe": 2.29
+        },
+        {
+          "ticker": "BNB/USD",
+          "name": "Binance Coin",
+          "vol": 50.3,
+          "perf_1d": -3.4,
+          "perf_7d": 2.0,
+          "perf_30d": 8.3,
+          "perf_ytd": -22.6,
+          "sharpe": 2.15
         },
         {
           "ticker": "DYDX/USD",
           "name": "dYdX",
-          "vol": 139.5,
-          "perf_1d": -1.0,
-          "perf_7d": 3.8,
-          "perf_30d": 14.3,
-          "perf_ytd": -5.6,
-          "sharpe": 2.13
+          "vol": 139.8,
+          "perf_1d": -2.1,
+          "perf_7d": 2.6,
+          "perf_30d": 13.0,
+          "perf_ytd": -6.6,
+          "sharpe": 2.03
         },
         {
           "ticker": "MANTA/USD",
           "name": "Manta Network",
-          "vol": 81.0,
-          "perf_1d": -3.4,
+          "vol": 81.1,
+          "perf_1d": -3.7,
+          "perf_7d": 0.8,
+          "perf_30d": 10.3,
+          "perf_ytd": -4.7,
+          "sharpe": 2.02
+        },
+        {
+          "ticker": "TWT/USD",
+          "name": "Trust Wallet Token",
+          "vol": 43.4,
+          "perf_1d": 1.7,
           "perf_7d": 1.1,
-          "perf_30d": 10.6,
-          "perf_ytd": -4.5,
-          "sharpe": 2.07
+          "perf_30d": 8.1,
+          "perf_ytd": -48.4,
+          "sharpe": 2.01
+        },
+        {
+          "ticker": "AKT/USD",
+          "name": "Akash Network",
+          "vol": 119.8,
+          "perf_1d": -4.2,
+          "perf_7d": -19.3,
+          "perf_30d": 25.7,
+          "perf_ytd": 92.8,
+          "sharpe": 1.95
+        },
+        {
+          "ticker": "QNT/USD",
+          "name": "Quant",
+          "vol": 54.4,
+          "perf_1d": 1.4,
+          "perf_7d": -3.7,
+          "perf_30d": 5.9,
+          "perf_ytd": -4.0,
+          "sharpe": 1.66
+        },
+        {
+          "ticker": "NOT/USDT",
+          "name": "Notcoin",
+          "vol": 142.7,
+          "perf_1d": -7.6,
+          "perf_7d": -2.4,
+          "perf_30d": 13.4,
+          "perf_ytd": -21.2,
+          "sharpe": 1.54
         }
       ]
     },
@@ -3385,13 +3389,49 @@
   },
   "drift_vs_previous": {
     "has_drift": true,
-    "drift_pct": 20.57,
+    "drift_pct": 22.22,
     "details": {
-      "5_selection_equity_Agressif.after": {
-        "current": 278,
-        "previous": 350,
-        "delta": -72,
-        "pct_change": 20.57
+      "1_initial.after": {
+        "current": 3238,
+        "previous": 3244,
+        "delta": -6,
+        "pct_change": 0.18
+      },
+      "1_initial.equity": {
+        "current": 1077,
+        "previous": 1083,
+        "delta": -6,
+        "pct_change": 0.55
+      },
+      "hard_filters_equity.after": {
+        "current": 1036,
+        "previous": 1042,
+        "delta": -6,
+        "pct_change": 0.58
+      },
+      "5_selection_etf_Agressif.after": {
+        "current": 17,
+        "previous": 14,
+        "delta": 3,
+        "pct_change": 21.43
+      },
+      "5_selection_equity_Modéré.after": {
+        "current": 214,
+        "previous": 218,
+        "delta": -4,
+        "pct_change": 1.83
+      },
+      "5_selection_etf_Modéré.after": {
+        "current": 11,
+        "previous": 9,
+        "delta": 2,
+        "pct_change": 22.22
+      },
+      "5_selection_equity_Stable.after": {
+        "current": 196,
+        "previous": 199,
+        "delta": -3,
+        "pct_change": 1.51
       }
     }
   }
