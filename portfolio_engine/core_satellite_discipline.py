@@ -158,20 +158,18 @@ def _build_disciplined_positions(profile: str, v4_meta: Dict) -> List[Dict]:
 
 
 def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
-    """Convertit les positions disciplinées en Format B (compatible audit_dashboard.html).
+    """Convertit les positions disciplinées en Format B (compatible schemas/portfolio_output.json).
 
-    Format B per profile attendu par le HTML dashboard :
-      {
-        "Actions": {"NAME (TK)": "X.X%"},
-        "ETF": {"NAME (TK)": "X.X%"},
-        "Obligations": {"NAME (TK)": "X.X%"},
-        "Crypto": {},
-        "_tickers_meta": {tk: {weight, category, name, industry, beta, role}},
-        "Commentaire": "...",
-      }
+    Schema requis :
+      - Commentaire (str 50-5000 chars)
+      - Actions, ETF, Obligations, Crypto (AllocationMap : "NAME (TK)" → "X.X%")
+      - _tickers (TickerWeights : ticker → decimal 0-1)
+      - _tickers_meta (optionnel mais consommé par HTML)
+    additionalProperties: false — seules les clés du schema sont autorisées.
     """
     actions, etf, obligations = {}, {}, {}
     tickers_meta = {}
+    tickers = {}  # _tickers : ticker → decimal weight (requis par schema)
 
     for p in positions:
         tk = p["ticker"]
@@ -190,6 +188,8 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
             cat_display = "ETF"
             etf[f"{name} ({tk})"] = f"{w_pct:.1f}%"
 
+        tickers[tk] = round(w_frac, 4)
+
         tickers_meta[tk] = {
             "weight": w_frac,
             "category": cat_display,
@@ -200,24 +200,32 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
             "role": p["role"],
         }
 
+    # Commentaire min 50 chars (sinon schema fail)
+    commentaire = (
+        f"Portefeuille {profile} — discipline Core-Satellite v6.0. "
+        f"Cœur ETF UCITS broad calibré pour β cible "
+        f"(Stable 0.22 / Modéré 0.61 / Agressif 0.80) + satellite fondamental "
+        f"capé à 5%/nom, budget {int(SAT_BUDGET.get(profile, 0)*100)}%. "
+        f"Σ = 100% par construction. RADAR sectoriel neutralisé "
+        f"(walk-forward strict a montré Δ Sharpe -0.11 OOS sur timing factoriel)."
+    )
+
     return {
         "Actions": actions,
         "ETF": etf,
         "Obligations": obligations,
         "Crypto": {},
+        "_tickers": tickers,
         "_tickers_meta": tickers_meta,
-        "Commentaire": (
-            f"Portefeuille {profile} — discipline Core-Satellite v6.0. "
-            f"Cœur UCITS broad (β cible) + satellite fondamental capé à 5%/nom. "
-            f"Σ = 100% par construction. RADAR neutralisé."
-        ),
-        "_discipline_applied": {
-            "version": "core_satellite_v6.0",
-            "sat_budget_pct": SAT_BUDGET.get(profile, 0) * 100,
-            "cap_per_name_pct": CAP_PER_NAME * 100,
-            "cap_per_core_etf_pct": CAP_PER_CORE_ETF * 100,
-        },
+        "Commentaire": commentaire,
     }
+
+
+# Champs du profil qu'on remplace (les autres champs v4 sont préservés tels quels)
+_DISCIPLINE_OVERRIDE_KEYS = {
+    "Actions", "ETF", "Obligations", "Crypto",
+    "_tickers", "_tickers_meta", "Commentaire",
+}
 
 
 def apply_to_portfolios_dict(portfolios_data: Dict) -> Dict:
@@ -228,24 +236,35 @@ def apply_to_portfolios_dict(portfolios_data: Dict) -> Dict:
                          Chaque profil doit avoir un `_tickers_meta` populé.
 
     Returns:
-        Nouveau dict avec les 3 profils principaux disciplinés en Format B.
-        Les autres clés (Dividende-PEA, Dividende-CTO, _meta) sont préservées.
+        Nouveau dict avec les 3 profils principaux disciplinés. Les champs
+        v4 non-discipline (_optimization, _exposures, risk_analysis, _alternates,
+        _constraint_report, _limitations, etc.) sont PRÉSERVÉS tels quels.
+        Les autres clés top-level (Dividende-PEA, Dividende-CTO, _meta) sont
+        préservées telles quelles.
     """
     output = {}
-    # Préserve les clés non-Core-Satellite (dividendes, _meta, etc.)
+    # Préserve les clés top-level non-Core-Satellite (dividendes, _meta, etc.)
     for k, v in portfolios_data.items():
         if k not in ("Stable", "Modéré", "Agressif"):
             output[k] = v
 
-    # Applique la discipline aux 3 profils principaux
+    # Pour chaque profil principal : on MERGE le résultat discipline sur le profil v4
+    # → les champs Actions/ETF/Obligations/Crypto/_tickers/_tickers_meta/Commentaire
+    #   sont remplacés par la version disciplinée
+    # → tous les autres champs v4 (_optimization, _exposures, risk_analysis, etc.)
+    #   sont préservés tels quels
     for profile in ("Stable", "Modéré", "Agressif"):
-        prof_data = portfolios_data.get(profile, {})
-        v4_meta = prof_data.get("_tickers_meta", {})
+        prof_v4 = portfolios_data.get(profile, {})
+        v4_meta = prof_v4.get("_tickers_meta", {})
         if not v4_meta:
-            output[profile] = prof_data  # rien à discipliner
+            output[profile] = prof_v4  # rien à discipliner
             continue
         positions = _build_disciplined_positions(profile, v4_meta)
-        output[profile] = positions_to_format_b(positions, profile)
+        disciplined = positions_to_format_b(positions, profile)
+        # Merge : profil v4 + override des clés discipline
+        merged = dict(prof_v4)  # copie shallow du profil v4
+        merged.update(disciplined)  # écrase les clés discipline
+        output[profile] = merged
 
     return output
 

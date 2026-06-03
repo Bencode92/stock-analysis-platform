@@ -7573,20 +7573,42 @@ def sanity_check_portfolios(v1_data: dict) -> bool:
         else:
             logger.info(f"   ✅ {profile} _tickers sum={s_t:.4f} OK")
         
-        # 2) v5.4.2 FIX: max_single aligned with allocation_rules_engine position cap (15%)
-        # The engine may redistribute weights up to 15% (especially bonds in Stable),
-        # so the sanity check must not flag these as errors.
+        # 2) v6.0 (2026-06-03) : max_single check tient compte du rôle Core-Satellite.
+        # Les ETF cœur broad (role="core" dans _tickers_meta) peuvent être ≤ 50%
+        # par construction (VWCE 50% Modéré/Agressif, STIP/VGSH 25% Stable cœur).
+        # Les positions satellite (role="satellite") sont capées à 5% par le module
+        # core_satellite_discipline. Le cap 15% legacy ne s'applique qu'aux positions
+        # sans rôle explicite (pipeline v5 et antérieur).
         profile_config = PROFILES.get(profile)
         _profile_max = getattr(profile_config, "max_single_position", 15.0)
-        max_single_limit = max(_profile_max, 15.0) + 0.2  # At least 15% (engine cap)
-        
-        # v4.15.0 FIX: Vérifier sur _tickers (actifs individuels), pas _numeric_weights
-        biggest = (max(tickers.values()) * 100) if tickers else 0.0
-        if biggest > max_single_limit:
-            logger.error(f"   ❌ {profile} max position={biggest:.1f}% > {max_single_limit:.1f}%")
+        legacy_cap = max(_profile_max, 15.0) + 0.2
+        CORE_BROAD_CAP = 55.0    # cœur UCITS broad ETF peut atteindre 50% by design
+        SATELLITE_CAP = 5.5      # satellite individuel capé à 5%
+
+        meta = p.get("_tickers_meta", {}) or {}
+        biggest = 0.0
+        biggest_ticker = None
+        violations = []
+        for tk, w in tickers.items():
+            w_pct = w * 100
+            role = (meta.get(tk, {}) or {}).get("role", "")
+            if role == "core":
+                effective_cap = CORE_BROAD_CAP
+            elif role == "satellite":
+                effective_cap = SATELLITE_CAP
+            else:
+                effective_cap = legacy_cap
+            if w_pct > biggest:
+                biggest = w_pct
+                biggest_ticker = tk
+            if w_pct > effective_cap:
+                violations.append(f"{tk}({role or 'unknown'})={w_pct:.1f}%>{effective_cap:.1f}%")
+
+        if violations:
+            logger.error(f"   ❌ {profile} cap violations: {', '.join(violations[:3])}")
             all_ok = False
         else:
-            logger.info(f"   ✅ {profile} max position={biggest:.1f}% <= {max_single_limit:.1f}% OK")
+            logger.info(f"   ✅ {profile} max position={biggest:.1f}% ({biggest_ticker}) within role-aware caps")
         
         # 3) readable somme ~ 100 (via _numeric_weights pour info)
         nw = p.get("_numeric_weights", {})
