@@ -8,10 +8,20 @@ Applique en dur les règles décidées le 2026-06-03 après 7 tours de débat :
   - β cible par profil (Stable 0.22 / Modéré 0.61 / Agressif 0.80)
   - Σ = 100.00 % exact, par construction
 
+v6.2 (2026-06-03) — BYPASS SLSQP POUR LE SATELLITE
+  Le satellite est désormais peuplé directement par les top natifs (fit_score
+  via profile_assignment.py), équipondéré, capé. Le SLSQP ne touche plus au
+  satellite — il ne décide que du cœur ETF.
+  Raison : le dashboard audit avait identifié le goulet (cf. audit_dashboard.html
+  l. 289) : "SLSQP final ne garde que 5 actions par profil et écarte les
+  meilleurs candidats au profit de combinaisons covariance-favorables". Cette
+  Phase Sélection-6 prévue n'avait jamais été codée.
+
 Appelé par generate_portfolios_v4.py après l'optimizer, avant l'écriture JSON.
-Opère sur la structure ticker-keyed du portfolio final (post asset_id → ticker mapping).
 """
-from typing import Dict, List, Tuple
+import json
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 import copy
 
 # ─── PARAMÈTRES (figés conversation 2026-06-03) ─────────────────────────────
@@ -72,6 +82,73 @@ def _is_bond_etf(ticker: str) -> bool:
     return (ticker or "").upper() in BOND_ETF_TICKERS
 
 
+# ─── v6.2 : SATELLITE NATIF PAR FIT_SCORE ───────────────────────────────────
+# Bypass SLSQP : le satellite stocks est peuplé directement par les top natifs
+# (les actions dont _profile_native == profile, triées par _fit_<profile>).
+# Voir profile_assignment.py pour fit_score_stable/modere/agressif.
+
+_FIT_KEY_BY_PROFILE = {
+    "Stable":   "_fit_stable",
+    "Modéré":   "_fit_modere",
+    "Agressif": "_fit_agressif",
+}
+
+
+def _load_all_stocks() -> List[Dict]:
+    """Charge l'univers complet d'actions (US + EU + Asia)."""
+    root = Path(__file__).parent.parent / "data"
+    all_stocks = []
+    for fname in ("stocks_us.json", "stocks_europe.json", "stocks_asia.json"):
+        path = root / fname
+        if not path.exists():
+            continue
+        try:
+            data = json.load(open(path))
+            stocks = data.get("stocks", []) if isinstance(data, dict) else data
+            all_stocks.extend(stocks)
+        except Exception:
+            pass
+    return all_stocks
+
+
+def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
+    """Retourne les top-N actions natives d'un profil, triées par fit_score.
+
+    Utilise profile_assignment.annotate_universe_with_fits pour calculer les
+    fit_scores ET _profile_native, puis filtre sur _profile_native == profile
+    et trie par fit décroissant.
+    """
+    try:
+        from portfolio_engine.profile_assignment import annotate_universe_with_fits
+    except ImportError:
+        try:
+            from .profile_assignment import annotate_universe_with_fits
+        except ImportError:
+            return []
+
+    all_stocks = _load_all_stocks()
+    if not all_stocks:
+        return []
+    annotate_universe_with_fits(all_stocks)
+
+    fit_key = _FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
+    natives = [s for s in all_stocks if s.get("_profile_native") == profile]
+    natives.sort(key=lambda s: -(s.get(fit_key) or 0))
+
+    # Dédup par industry (max 2 par industrie pour diversification sectorielle)
+    by_industry: Dict[str, int] = {}
+    deduped = []
+    for s in natives:
+        ind = (s.get("industry") or "_").lower()
+        if by_industry.get(ind, 0) >= 2:
+            continue
+        by_industry[ind] = by_industry.get(ind, 0) + 1
+        deduped.append(s)
+        if len(deduped) >= n_target:
+            break
+    return deduped
+
+
 def _is_broad_core(ticker: str, meta: Dict) -> bool:
     """Identifie un ETF cœur broad — exige catégorie ETF/Obligations ET ticker connu."""
     if ticker not in BROAD_CORE_ETFS:
@@ -82,6 +159,10 @@ def _is_broad_core(ticker: str, meta: Dict) -> bool:
 
 def _build_disciplined_positions(profile: str, v4_meta: Dict) -> List[Dict]:
     """Reconstruit les positions disciplinées à partir du _tickers_meta v4.
+
+    v6.2 : Le satellite stocks est désormais peuplé par les TOP NATIFS du score
+    fit (profile_assignment.py), équipondéré et capé. Le SLSQP ne touche plus
+    au satellite — il ne décide que du cœur ETF.
 
     Args:
         profile: "Stable" | "Modéré" | "Agressif"
@@ -94,35 +175,68 @@ def _build_disciplined_positions(profile: str, v4_meta: Dict) -> List[Dict]:
     sat_used = 0.0
     cap_budget = SAT_BUDGET.get(profile, 0.20)
 
-    # Tri par poids v4 décroissant pour prioriser les meilleures convictions
-    sorted_items = sorted(v4_meta.items(), key=lambda x: -(x[1].get("weight") or 0))
+    # ─── PHASE 1 v6.2 : Satellite = TOP NATIFS par fit_score, équipondéré ──
+    # n_max = budget / cap (Stable 10/5=2, Modéré 20/5=4, Agressif 25/5=5)
+    n_max_satellite = int(round(cap_budget / CAP_PER_NAME))
+    top_natives = _get_top_natives_for_profile(profile, n_target=n_max_satellite)
 
-    # ─── PHASE 1 : Satellite (capé 5 %/nom, ≤ budget total) ───────────────
-    for tk, meta in sorted_items:
-        if _is_broad_core(tk, meta):
-            continue  # géré en Phase 2
-        w_v4 = meta.get("weight") or 0
-        if w_v4 <= 0:
-            continue
-        w_capped = min(w_v4, CAP_PER_NAME)
-        remaining = cap_budget - sat_used
-        if remaining <= 0.001:
-            break  # budget satellite épuisé
-        w_final = min(w_capped, remaining)
-        if w_final < 0.005:
-            continue  # < 0.5 % = bruit, ignore
-        positions.append({
-            "ticker": tk,
-            "name": (meta.get("name") or "")[:80],
-            "category": meta.get("category", ""),
-            "industry": meta.get("industry", ""),
-            "weight_pct": round(w_final * 100, 2),
-            "weight": w_final,
-            "role": "satellite",
-            "asset_ids": meta.get("asset_ids", [tk]),
-            "beta": meta.get("beta"),
-        })
-        sat_used += w_final
+    if top_natives:
+        # Construit le satellite à partir des natifs (bypass SLSQP)
+        weight_per_name = cap_budget / len(top_natives) if top_natives else 0
+        weight_per_name = min(weight_per_name, CAP_PER_NAME)
+        fit_key = _FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
+
+        for s in top_natives:
+            tk = s.get("ticker") or s.get("symbol") or s.get("resolved_symbol")
+            if not tk:
+                continue
+            name = (s.get("name") or s.get("name_api") or tk)[:80]
+            positions.append({
+                "ticker": tk,
+                "name": name,
+                "category": "Actions",
+                "industry": s.get("industry", ""),
+                "weight_pct": round(weight_per_name * 100, 2),
+                "weight": weight_per_name,
+                "role": "satellite",
+                "asset_ids": [tk],
+                "beta": s.get("beta"),
+                "buffett_score": s.get("buffett_score"),
+                "fit_score": s.get(fit_key),
+                "_source": "top_natifs_v6.2",
+            })
+            sat_used += weight_per_name
+
+    else:
+        # FALLBACK v6.0 si profile_assignment indisponible : ancienne logique
+        # (prend les positions v4 par poids décroissant)
+        sorted_items = sorted(v4_meta.items(), key=lambda x: -(x[1].get("weight") or 0))
+        for tk, meta in sorted_items:
+            if _is_broad_core(tk, meta):
+                continue
+            w_v4 = meta.get("weight") or 0
+            if w_v4 <= 0:
+                continue
+            w_capped = min(w_v4, CAP_PER_NAME)
+            remaining = cap_budget - sat_used
+            if remaining <= 0.001:
+                break
+            w_final = min(w_capped, remaining)
+            if w_final < 0.005:
+                continue
+            positions.append({
+                "ticker": tk,
+                "name": (meta.get("name") or "")[:80],
+                "category": meta.get("category", ""),
+                "industry": meta.get("industry", ""),
+                "weight_pct": round(w_final * 100, 2),
+                "weight": w_final,
+                "role": "satellite",
+                "asset_ids": meta.get("asset_ids", [tk]),
+                "beta": meta.get("beta"),
+                "_source": "v4_fallback",
+            })
+            sat_used += w_final
 
     # ─── PHASE 2 : Cœur UCITS broad (filler canonique) ─────────────────────
     target_core = 1.0 - sat_used
