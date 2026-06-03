@@ -2479,22 +2479,31 @@ const PRESETS = {
     label: '🚀 Agressif',
     shortLabel: 'Agressif',
     icon: '🚀',
-    description: 'Momentum fort • Croissance rapide • Tech/Biotech',
-    tooltip: 'Dynamique et volatil',
+    description: 'Fondamentaux solides • Croissance EPS • Risque maîtrisé',
+    tooltip: 'Qualité majoritaire, performance en exclusion',
     color: '#FF5722',
     mode: 'lexico',
     sort: useSort('agressif'),
     coverage_target: [60,100],
-    metrics: ['ytd','perf_1y','perf_3y','eps_surprise','volatility_3y','max_drawdown_3y'],
-    // v9.0.1: Différencié de momentum — focus YTD + 1Y + 3Y (multi-horizons), accepte vol
-    // PAS de Quality (vraiment risk-on, accepte les pump justifiés par les earnings)
+    metrics: ['buffett_score','roe','quality_score','eps_surprise','eps_growth_forecast_5y','ytd','perf_1y','perf_3y','volatility_3y','max_drawdown_3y'],
+    // v10.0 (S-16): Fondamentaux 65% + Performance 15% + Risque 20%
+    // Reason: walk-forward strict a montré que la sélection sur perf récente seule
+    // ne génère pas d'edge OOS (Δ Sharpe vs 60/40 = -0.11). Perf rétrogradée en
+    // critère d'exclusion, fondamentaux promus en pilote principal.
     weights: {
-      ytd:             0.25,
-      perf_1y:         0.20,
-      perf_3y:         0.20,
-      eps_surprise:    0.20,
-      max_drawdown_3y: 0.10,
-      volatility_3y:   0.05
+      // FONDAMENTAUX 65%
+      buffett_score:          0.20,
+      roe:                    0.15,
+      quality_score:          0.10,
+      eps_surprise:           0.10,
+      eps_growth_forecast_5y: 0.10,
+      // PERFORMANCE 15% (exclusion only)
+      ytd:                    0.05,
+      perf_1y:                0.05,
+      perf_3y:                0.05,
+      // RISQUE 20%
+      volatility_3y:          0.10,
+      max_drawdown_3y:        0.10,
     },
     filters: { regions:['US','ASIA'], countries:[], sectors:['Technologie de l\'information','Santé','La communication'] },
     criteria: [

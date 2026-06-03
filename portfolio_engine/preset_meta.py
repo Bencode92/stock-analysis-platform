@@ -932,29 +932,30 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "equity_max_weight": 0.75,
         "min_equity_positions": 12,
         "score_weights": {
-            # ═══ v5.3.0: SCORING v3 — 0 REDONDANCE ═══
-            # Quality subscores (peer-relative, capturent ROE/ROIC/D-E/P-E/FCF/EPS)
-            "quality_quality_sub": 0.10,   # ROE+ROIC+margin peer-relative
-            "quality_safety_sub":  0.05,   # D/E+payout peer-relative
-            "quality_value_sub":   0.05,   # P/E+FCF peer-relative
-            "quality_growth_sub":  0.15,   # EPS+revenue growth peer-relative
-            # Forward-looking (ABSENT du quality score!)
-            "eps_growth_forecast_5y": 0.10, # Prévision EPS 5 ans (était 0.15, -0.05 pour eps_surprise)
-            # v7.3: EPS Surprise — PEAD (orthogonal au momentum prix)
-            "eps_surprise":        0.08,   # ★ Avg surprise 2 derniers trimestres
-            # Momentum (indépendant du quality score)
-            # v7.2.1: perf_1y renforcé (+0.05), perf_3m réduit (-0.05) — 3m trop bruité
-            "perf_1y":             0.17,   # Momentum 1 an (était 0.20, -0.03 pour eps_surprise)
-            "perf_3m":             0.05,   # Momentum court terme
-            # Risque (indépendant)
-            "volatility_3y":       0.05,   # Vol positive = upside potential
-            "max_drawdown_3y":    -0.05,   # Drawdown pénalisé
-            # Income
-            "dividend_yield":     -0.05,   # Négatif: growth > income
-            # SUPPRIMÉS (déjà dans subscores):
-            # roe, buffett_score, eps_growth_5y, fcf_yield, de_ratio
+            # ═══ v6.0 (post walk-forward 23y) : INVERSION fondamental/momentum ═══
+            # Walk-forward strict a montré Δ Sharpe -0.11 OOS pour timing factoriel/momentum.
+            # Conclusion : la sélection sur perf récente ne génère pas d'edge réel.
+            # Fondamental promu en pilote principal, momentum résiduel en exclusion seulement.
+            # Source : decision conversation 2026-06-03 (Core-Satellite finalisation).
+            # Fondamental ABSOLU (55%) — pilote principal
+            "buffett_score":          0.20,   # ★ NEW v6.0 : qualité Buffett absolue (était ABSENT)
+            "quality_quality_sub":    0.10,   # ROE+ROIC+margin peer-relative
+            "quality_safety_sub":     0.05,   # D/E+payout
+            "quality_value_sub":      0.10,   # P/E+FCF
+            "quality_growth_sub":     0.10,   # EPS+revenue growth
+            # Forward-looking (20%) — anticipation rentable
+            "eps_growth_forecast_5y": 0.10,   # Prévision EPS 5 ans
+            "eps_surprise":           0.10,   # PEAD (orthogonal au momentum prix)
+            # Momentum RÉSIDUEL (10%) — filtre d'exclusion seulement, plus pilote
+            "perf_1y":                0.07,   # was 0.17 → 0.07
+            "perf_3m":                0.03,   # was 0.05 → 0.03
+            # Risque (-5%) — Agressif tolère vol, mais pénalise drawdown
+            "volatility_3y":          0.00,   # was +0.05 (vol comme upside) → neutre
+            "max_drawdown_3y":       -0.05,
+            # Income neutre (was -0.05, n'utilise plus le yield comme anti-signal)
+            "dividend_yield":         0.00,
         },
-        "description": "Profil orienté croissance/momentum, tolère la volatilité",
+        "description": "Profil croissance fondamentale (v6.0 — fondamental majoritaire, momentum exclusion only)",
         "expected_vol_range": (15, 22),
         "expected_equity_overlap_with_stable": 0.25,
     },
@@ -1840,12 +1841,27 @@ def select_equities_for_profile(
     market_context: Optional[Dict] = None,
     target_n: int = 25,
 ) -> Tuple[List[Dict], Dict]:
-    """v5.1.0: Sélection avec PRESET_RULES validation + relaxation progressive."""
+    """v6.0 (2026-06-03) : RADAR neutralisé. Sélection 100% fondamentale."""
+    # ═══════════════════════════════════════════════════════════════════════
+    # v6.0 RADAR NEUTRALISATION
+    # ─────────────────────────────────────────────────────────────────────
+    # Walk-forward strict 23y a montré que le timing factoriel/sectoriel ne
+    # génère pas d'edge OOS (Δ Sharpe -0.11 vs 60/40). Garder favored/avoided
+    # sectors réintroduit ce timing par la porte de derrière + casse la
+    # reproductibilité des backtests (signal recalculé à chaque run).
+    # Décision conversation 2026-06-03 : neutralisation totale.
+    # Les 3 blocs RADAR plus bas (cumul_avoided / hard limit avoided /
+    # favored sector guarantee) sont gracieusement skippés via market_context=None.
+    # Le scoring fondamental (Buffett + Quality + Forward) est désormais le
+    # seul pilote de sélection.
+    market_context = None
+    # ═══════════════════════════════════════════════════════════════════════
+
     logger.info(f"\n{'='*50}")
-    logger.info(f"[{profile}] Sélection depuis {len(equities)} équités")
-    
+    logger.info(f"[{profile}] Sélection depuis {len(equities)} équités (RADAR neutralisé v6.0)")
+
     policy = get_profile_policy(profile)
-    meta = {"profile": profile, "stages": {}}
+    meta = {"profile": profile, "stages": {}, "radar_neutralized": True}
     
     # v5.1.0: Assign presets avec validation des règles
     rule_fail = 0

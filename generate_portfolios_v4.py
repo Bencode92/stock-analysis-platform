@@ -170,6 +170,11 @@ except ImportError:
 # 4.4: Import du chargeur de contexte marché
 from portfolio_engine.market_context import load_market_context
 
+# v6.0 (2026-06-03) : Core-Satellite Discipline — couche obligatoire post-optimizer
+# Applique caps satellite ≤ 20-25 %, cap 5 %/nom, cœur UCITS broad, Σ=100 % par construction.
+# Voir portfolio_engine/core_satellite_discipline.py pour les paramètres figés.
+from portfolio_engine.core_satellite_discipline import apply_to_portfolios_dict as _apply_core_satellite_discipline
+
 # v4.8.1 P0-2: Import vérification contraintes post-arrondi
 # v4.8.2 P0-4: Import check_feasibility pour test ex-ante
 from portfolio_engine.constraints import (
@@ -6945,9 +6950,29 @@ def save_portfolios(portfolios: Dict, assets: list):
     # Phase 2-B4: garde-fou turnover final (lit le prev AVANT l'écrasement)
     _enforce_final_turnover(v1_data, v1_path)
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # v6.0 (2026-06-03) — CORE-SATELLITE DISCIPLINE
+    # ─────────────────────────────────────────────────────────────────────
+    # Avant écriture finale, applique la discipline obligatoire :
+    #   - Satellite ≤ 10/20/25 % (Stable/Modéré/Agressif)
+    #   - Cap 5 %/nom satellite, 50 %/ETF cœur
+    #   - Cœur UCITS broad imposé (VWCE.DE, AGGH.AS, IBCI.AS, IBGS.AS, SGLN.AS, IWDA.AS)
+    #   - Σ = 100 % par construction (fix le bug historique 102-112 %)
+    # Décision conversation 2026-06-03 après walk-forward strict + analyse risque.
+    # ═══════════════════════════════════════════════════════════════════════
+    logger.info("\n=== CORE-SATELLITE DISCIPLINE v6.0 ===")
+    _v1_pre_discipline = v1_data
+    v1_data = _apply_core_satellite_discipline(_v1_pre_discipline)
+    for _p in ("Stable", "Modéré", "Agressif"):
+        _prof = v1_data.get(_p, {})
+        _meta = _prof.get("_tickers_meta", {})
+        _total = sum(m.get("weight", 0) for m in _meta.values())
+        _sat = sum(m.get("weight", 0) for m in _meta.values() if m.get("role") == "satellite")
+        logger.info(f"   [{_p}] Σ={_total*100:.2f}%, satellite={_sat*100:.1f}%, {len(_meta)} positions")
+
     with open(v1_path, "w", encoding="utf-8") as f:
         json.dump(v1_data, f, ensure_ascii=False, indent=2)
-    logger.info(f"✅ Sauvegardé: {v1_path}")
+    logger.info(f"✅ Sauvegardé (disciplinné): {v1_path}")
     
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     archive_path = f"{CONFIG['history_dir']}/portfolios_v4_{ts}.json"
