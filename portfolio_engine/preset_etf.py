@@ -625,6 +625,7 @@ MAX_ETF_PER_EXPOSURE_GROUP: Dict[str, Dict[str, int]] = {
         "dividend": 2,
         "allocation": 1,
         "healthcare": 1,
+        "defensive_equity": 1, # Sélection-15: max 1 parmi SPLV/ACWV/SPYV (recouvrement ~30%)
         "default": 2,
     },
     "Modéré": {
@@ -673,6 +674,19 @@ EXPOSURE_TO_GROUP = {
     "healthcare": "healthcare", "pharma": "healthcare", "biotech": "healthcare",
     "genomics": "healthcare", "medical_devices": "healthcare",
     "healthcare_sub": "healthcare",
+
+    # Sélection-15 — defensive_equity (min_vol + value + global_equity)
+    # Fix recouvrements Stable : SPLV+ACWV+SPYV+XLV se chevauchent ~30%
+    # AUM ; cluster 28.8% dans diag DR. On force max 1 ETF defensive
+    # equity broad pour Stable. Healthcare reste séparé.
+    "min_vol": "defensive_equity",
+    "low_vol": "defensive_equity",
+    "low_volatility": "defensive_equity",
+    "sp500_value": "defensive_equity",
+    "large_value": "defensive_equity",
+    "us_large_value": "defensive_equity",
+    "global_equity": "defensive_equity",  # ACWV = MSCI Global Min Vol
+    "global_min_vol": "defensive_equity",
     
     # Tech
     "tech": "tech", "semiconductor": "tech", "nasdaq100": "tech",

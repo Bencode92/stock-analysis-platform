@@ -1858,7 +1858,7 @@ TICKER_TO_EXPOSURE = {
     "sphd": "sp500",
     "sphq": "sp500",
     "splg": "sp500",
-    "splv": "sp500",
+    "splv": "min_vol",  # Sélection-15: SPLV = Invesco S&P 500 Low Vol → min_vol (était mal mappé sp500)
     "spmo": "sp500",
     "spmv": "sp500",
     "spvm": "sp500",
