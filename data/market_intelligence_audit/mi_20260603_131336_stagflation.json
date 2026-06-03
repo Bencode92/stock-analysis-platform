@@ -1,0 +1,361 @@
+{
+  "timestamp": "2026-06-03T13:13:36.584753",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-03",
+    "brent_usd": 98.07,
+    "brent_usd_avg5d": 94.636448,
+    "gold_usd": 4464.30448,
+    "silver_usd": 74.36062,
+    "vix": 22.0,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": 0.0,
+    "ig_spread_bps": 135.0,
+    "breakeven_5y": 2.52,
+    "sp500_level": 7609.78,
+    "sp500_change_1d_pct": 1.20572620200236,
+    "hyg_change_1d_pct": -0.3492142678972326,
+    "lqd_change_1d_pct": 0.12870012870012923,
+    "eurusd": 1.16018,
+    "nasdaq_change_1d_pct": 0.46045493,
+    "xlu_perf_1d_pct": 1.85616,
+    "xle_perf_1d_pct": 1.15183,
+    "vix_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4464.53287,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 16.252561124891297,
+    "cpi_yoy_pct": 2.4,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.88,
+    "favored_sectors": "information-technology, energy, materials, industrials, utilities",
+    "avoided_sectors": "financials, healthcare",
+    "favored_regions": "asie, netherlands, japan, china",
+    "avoided_regions": "india",
+    "key_trends": "Secteur leader: information-technology (+30.2% YTD) | Région leader: south-korea (+122.9% YTD) | 2 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+62.8% sur 12 mois) | 6M leader: information-technology (+29.4% sur 6 mois)",
+    "risks": "Secteurs en difficulté: healthcare, consumer-discretionary, financials | Régions en difficulté: india, south-africa | 3 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "consumer-staples(neutral,b=0.24,d=-0.32%), healthcare(avoided,b=0.53,d=-1.14%), consumer-discretionary(neutral,b=1.21,d=-0.51%), utilities(favored,b=0.37,d=0.16%), energy(favored,b=-0.15,d=1.15%), financials(avoided,b=0.91,d=0.0%), materials(favored,b=0.8,d=1.18%), communication-services(neutral,b=1.21,d=-1.38%), industrials(favored,b=0.96,d=1.04%), real-estate(neutral,b=0.42,d=0.51%), information-technology(favored,b=1.52,d=0.76%)"
+  },
+  "ai_response": {
+    "regime": "stagflation",
+    "regime_confidence": 3,
+    "regime_rationale": "Brent à $98 proche de $100 avec CPI à 2.4% mais breakeven 5Y à 2.52% signalent des pressions inflationnistes latentes, tandis que la Fed en pause (0 delta 6m) et le VIX à 22 indiquent une croissance qui ralentit sans effondrement. Le dollar faible (EUR/USD 1.16) amplifie l'inflation importée et le risque stagflationniste, même si le CPI headline reste modéré pour l'instant — c'est un régime de stagflation naissante, pas encore confirmée.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer energy/oil sur Brent élevé et momentum sectoriel favorable",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 4,
+        "rationale": "Brent à $98 avec XLE +1.15% daily et energy favorisé par RADAR — couverture naturelle contre l'inflation énergétique."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer precious metals comme hedge inflation + dollar faible",
+        "params": {
+          "theme": "precious_metals",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold en drawdown de 16% depuis ATH offre un point d'entrée attractif avec dollar faible (EUR/USD 1.16) et breakevens élevés."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Augmenter gold comme hedge stagflation",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold drawdown 16% = opportunité de renforcement dans un contexte de dollar faible et inflation latente."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Préférer TIPS et raccourcir duration, éviter HY",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 4.0,
+          "fund_types": [
+            "High Yield Bond"
+          ]
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Breakeven 5Y à 2.52% justifie les TIPS, duration courte protège si la Fed doit resserrer face à l'inflation importée (pétrole + dollar faible)."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Éviter EM bonds sur dollar faible mais risque de reversal",
+        "params": {
+          "action": "avoid_fund_types",
+          "fund_types": [
+            "Emerging-Markets Bond"
+          ]
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "EMHC en portefeuille Agressif est risqué — IG spreads à 135bps montrent un stress crédit modéré et HYG en baisse aujourd'hui signale un écartement des spreads HY."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire légèrement AI/semi malgré momentum RADAR favorable",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif"
+        ],
+        "conviction": 3,
+        "rationale": "IT leader à +30% YTD mais beta 1.52 = vulnérable si le pétrole pousse l'inflation plus haut et force la Fed à agir — prise de profit partielle prudente."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer dividend/value comme rotation défensive",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Utilities +1.86% daily et favorisées par RADAR — rotation vers le value/dividendes cohérente avec un régime de stagflation naissante."
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Augmenter floor obligataire pour Stable",
+        "params": {
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Portefeuille Stable à 37% bonds est bas pour un régime de stress montant — renforcer la protection via treasury court et TIPS."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Duration courte (max 4y) avec préférence TIPS pour capturer l'inflation latente, treasury court comme ancrage, éviter HY et EM bonds sur écartement des spreads.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 5.0
+    },
+    "cash_allocation": {
+      "Agressif": 3,
+      "Modéré": 5,
+      "Stable": 4,
+      "rationale": "VIX à 22 avec Brent proche de $100 crée un risque de spike — cash modéré comme option d'achat sur la volatilité, mais pas excessif car les T-bills en portefeuille (CLTL, VGSH) font déjà office de cash productif."
+    },
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0,
+      "rationale": "Crypto corrélé risk assets mais dollar faible est un tailwind — cap réduit vs risk-on car VIX à 22 et spreads en écartement limitent l'appétit pour le risque spéculatif."
+    },
+    "warnings": [
+      "Brent à $98 — un franchissement de $100 pourrait déclencher un choc inflationniste de second ordre (CPI headline → core → anticipations → Fed forced tightening)",
+      "Gold en drawdown de 16% depuis ATH — peut signaler une liquidation forcée ou un repositionnement; surveiller si le drawdown s'accélère au-delà de 20%",
+      "HYG en baisse (-0.35%) alors que le S&P monte (+1.2%) — divergence crédit/equity classique de pré-stress, souvent un leading indicator de correction equity à 2-4 semaines",
+      "EUR/USD à 1.16 = dollar très faible — risque de reversal brutal si la Fed signale un hawkish pivot, ce qui écraserait gold/EM/commodities simultanément",
+      "IG spreads à 135bps au-dessus de la médiane historique — pas encore alarmant mais la direction compte plus que le niveau; surveiller un franchissement de 150bps",
+      "ICLO et EMHC dans le portefeuille Agressif sont des positions à risque de liquidité en cas de stress — envisager une sortie progressive"
+    ],
+    "market_interpretation": {
+      "geopolitical_risk": "Brent à $98 sans choc d'offre identifié suggère des tensions géopolitiques latentes (Moyen-Orient/OPEC+) ou une demande résiliente malgré le ralentissement — le pétrole est le canari dans la mine.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 15,
+      "sentiment_estimate": "neutral",
+      "dollar_assessment": "weak"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "precious_metals": {
+        "Agressif": 2,
+        "Modéré": 2,
+        "Stable": 2
+      },
+      "ai_infra": {
+        "Agressif": -2
+      },
+      "dividend_value": {
+        "Modéré": 3,
+        "Stable": 3
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "max_dur": null,
+        "fund_types": [
+          "Emerging-Markets Bond"
+        ],
+        "rule_id": "ai_stagflation"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_stagflation"
+    ],
+    "bond_floor_deltas": {
+      "Stable": 3
+    },
+    "cash_tactical": {
+      "Agressif": 3,
+      "Modéré": 5,
+      "Stable": 4
+    },
+    "cash_tactical_rationale": "VIX à 22 avec Brent proche de $100 crée un risque de spike — cash modéré comme option d'achat sur la volatilité, mais pas excessif car les T-bills en portefeuille (CLTL, VGSH) font déjà office de cash productif.",
+    "crypto_allocation": {
+      "Agressif": 3,
+      "Modéré": 1,
+      "Stable": 0
+    },
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "Brent à $98 — un franchissement de $100 pourrait déclencher un choc inflationniste de second ordre (CPI headline → core → anticipations → Fed forced tightening)",
+      "Gold en drawdown de 16% depuis ATH — peut signaler une liquidation forcée ou un repositionnement; surveiller si le drawdown s'accélère au-delà de 20%",
+      "HYG en baisse (-0.35%) alors que le S&P monte (+1.2%) — divergence crédit/equity classique de pré-stress, souvent un leading indicator de correction equity à 2-4 semaines",
+      "EUR/USD à 1.16 = dollar très faible — risque de reversal brutal si la Fed signale un hawkish pivot, ce qui écraserait gold/EM/commodities simultanément",
+      "IG spreads à 135bps au-dessus de la médiane historique — pas encore alarmant mais la direction compte plus que le niveau; surveiller un franchissement de 150bps",
+      "ICLO et EMHC dans le portefeuille Agressif sont des positions à risque de liquidité en cas de stress — envisager une sortie progressive"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Duration courte (max 4y) avec préférence TIPS pour capturer l'inflation latente, treasury court comme ancrage, éviter HY et EM bonds sur écartement des spreads.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 4.0,
+      "max_duration_moderate": 5.0
+    }
+  },
+  "regime": "stagflation",
+  "regime_rationale": "Brent à $98 proche de $100 avec CPI à 2.4% mais breakeven 5Y à 2.52% signalent des pressions inflationnistes latentes, tandis que la Fed en pause (0 delta 6m) et le VIX à 22 indiquent une croissance qui ralentit sans effondrement. Le dollar faible (EUR/USD 1.16) amplifie l'inflation importée et le risque stagflationniste, même si le CPI headline reste modéré pour l'instant — c'est un régime de stagflation naissante, pas encore confirmée.",
+  "market_interpretation": {
+    "geopolitical_risk": "Brent à $98 sans choc d'offre identifié suggère des tensions géopolitiques latentes (Moyen-Orient/OPEC+) ou une demande résiliente malgré le ralentissement — le pétrole est le canari dans la mine.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 15,
+    "sentiment_estimate": "neutral",
+    "dollar_assessment": "weak"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Duration courte (max 4y) avec préférence TIPS pour capturer l'inflation latente, treasury court comme ancrage, éviter HY et EM bonds sur écartement des spreads.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": true,
+    "avoid_securitized": false,
+    "avoid_em_bonds": true,
+    "max_duration_stable": 4.0,
+    "max_duration_moderate": 5.0
+  },
+  "warnings": [
+    "Brent à $98 — un franchissement de $100 pourrait déclencher un choc inflationniste de second ordre (CPI headline → core → anticipations → Fed forced tightening)",
+    "Gold en drawdown de 16% depuis ATH — peut signaler une liquidation forcée ou un repositionnement; surveiller si le drawdown s'accélère au-delà de 20%",
+    "HYG en baisse (-0.35%) alors que le S&P monte (+1.2%) — divergence crédit/equity classique de pré-stress, souvent un leading indicator de correction equity à 2-4 semaines",
+    "EUR/USD à 1.16 = dollar très faible — risque de reversal brutal si la Fed signale un hawkish pivot, ce qui écraserait gold/EM/commodities simultanément",
+    "IG spreads à 135bps au-dessus de la médiane historique — pas encore alarmant mais la direction compte plus que le niveau; surveiller un franchissement de 150bps",
+    "ICLO et EMHC dans le portefeuille Agressif sont des positions à risque de liquidité en cas de stress — envisager une sortie progressive"
+  ]
+}
