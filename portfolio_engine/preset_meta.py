@@ -932,30 +932,33 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "equity_max_weight": 0.75,
         "min_equity_positions": 12,
         "score_weights": {
-            # ═══ v6.0 (post walk-forward 23y) : INVERSION fondamental/momentum ═══
-            # Walk-forward strict a montré Δ Sharpe -0.11 OOS pour timing factoriel/momentum.
-            # Conclusion : la sélection sur perf récente ne génère pas d'edge réel.
-            # Fondamental promu en pilote principal, momentum résiduel en exclusion seulement.
-            # Source : decision conversation 2026-06-03 (Core-Satellite finalisation).
-            # Fondamental ABSOLU (55%) — pilote principal
-            "buffett_score":          0.20,   # ★ NEW v6.0 : qualité Buffett absolue (était ABSENT)
-            "quality_quality_sub":    0.10,   # ROE+ROIC+margin peer-relative
-            "quality_safety_sub":     0.05,   # D/E+payout
-            "quality_value_sub":      0.10,   # P/E+FCF
-            "quality_growth_sub":     0.10,   # EPS+revenue growth
-            # Forward-looking (20%) — anticipation rentable
-            "eps_growth_forecast_5y": 0.10,   # Prévision EPS 5 ans
-            "eps_surprise":           0.10,   # PEAD (orthogonal au momentum prix)
-            # Momentum RÉSIDUEL (10%) — filtre d'exclusion seulement, plus pilote
-            "perf_1y":                0.07,   # was 0.17 → 0.07
-            "perf_3m":                0.03,   # was 0.05 → 0.03
-            # Risque (-5%) — Agressif tolère vol, mais pénalise drawdown
-            "volatility_3y":          0.00,   # was +0.05 (vol comme upside) → neutre
+            # ═══ v6.1 (2026-06-03) : Calibration anti-value-trap, momentum 5% ═══
+            # v6.0 (10% momentum) a vu l'optimizer privilégier FSLR/BKR/NEM
+            # (cyclique en hausse) au lieu de ACN/INTU/ADBE (qualité en correction).
+            # v6.1 réduit le momentum à 5% : niveau "anti-value-trap" sans laisser
+            # le momentum dominer. Le 0% pur achèterait les value-traps (qualité
+            # en chute -41% type ACN sans signal de retournement), le 10% laisse
+            # trop de poids au cyclique. 5% = milieu prudent.
+            # Walk-forward Buffett-quintile non testable (historique < 1 an dispo) :
+            # par défaut, on prend le compromis robuste.
+            # Fondamental ABSOLU (60%) — pilote principal renforcé
+            "buffett_score":          0.22,   # 0.20 → 0.22 (récupère 2% du momentum)
+            "quality_quality_sub":    0.12,   # 0.10 → 0.12
+            "quality_safety_sub":     0.06,   # 0.05 → 0.06
+            "quality_value_sub":      0.10,
+            "quality_growth_sub":     0.10,
+            # Forward-looking (21%) — anticipation rentable
+            "eps_growth_forecast_5y": 0.11,   # 0.10 → 0.11
+            "eps_surprise":           0.10,
+            # Momentum RÉSIDUEL (5%) — anti-value-trap, plus pilote
+            "perf_1y":                0.03,   # 0.07 → 0.03 (était 0.17 en v5)
+            "perf_3m":                0.02,   # 0.03 → 0.02
+            # Risque (-5%)
+            "volatility_3y":          0.00,
             "max_drawdown_3y":       -0.05,
-            # Income neutre (was -0.05, n'utilise plus le yield comme anti-signal)
             "dividend_yield":         0.00,
         },
-        "description": "Profil croissance fondamentale (v6.0 — fondamental majoritaire, momentum exclusion only)",
+        "description": "Profil croissance fondamentale (v6.1 — fondamental dominant, momentum 5% anti-value-trap)",
         "expected_vol_range": (15, 22),
         "expected_equity_overlap_with_stable": 0.25,
     },
