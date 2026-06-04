@@ -571,13 +571,63 @@ THEMATIQUE_CORE = {
 }  # total = 0.80
 
 
-def _build_agressif_thematique(satellite_positions: List[Dict]) -> Dict:
+# v6.12 : Satellite thématique pur — 5 "crocs" multi-pays (max 2/pays)
+# Remplace l'héritage des actions qualité du Principal (HERO/EXPD/CF/ITX/LUPIN).
+# Ces actions-là sont défensives — incohérentes avec un Agressif-Thematique
+# poussé. Ici on met les vrais paris IA/semis/transition énergie.
+#
+# Garde-fous appliqués :
+#   1. MAX 2 actions par pays → mélange KR + NL + TW + US×2 (pas 5 asiatiques)
+#   2. Note overlap avec cœur ETF : SK Hynix et TSMC sont dans IEMG (15%)
+#      à respectivement ~2% et ~5% → exposition réelle = (4% sat + ETF poids)
+#      Acceptable car le satellite est petit et le double-comptage limité.
+THEMATIQUE_SATELLITE = [
+    {
+        "ticker": "000660.KS",
+        "name": "SK Hynix",
+        "industry": "Memory semiconductors (HBM, AI)",
+        "country": "KR",
+        "thesis": "AI memory leader, HBM dominant",
+    },
+    {
+        "ticker": "2330.TW",
+        "name": "Taiwan Semiconductor (TSMC)",
+        "industry": "Foundry — leading-edge chip manufacturing",
+        "country": "TW",
+        "thesis": "Monopole foundry avancée AI/HPC",
+    },
+    {
+        "ticker": "ASML.AS",
+        "name": "ASML Holding",
+        "industry": "Semi capex — EUV lithography monopoly",
+        "country": "NL",
+        "thesis": "Monopole EUV mondial",
+    },
+    {
+        "ticker": "FSLR",
+        "name": "First Solar",
+        "industry": "Solar utility-scale",
+        "country": "US",
+        "thesis": "Solaire US utility-scale, IRA bénéficiaire",
+    },
+    {
+        "ticker": "ANET",
+        "name": "Arista Networks",
+        "industry": "Networking — AI data centers",
+        "country": "US",
+        "thesis": "Réseaux ultra-low-latency AI data centers",
+    },
+]
+
+
+def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
     """Construit le profil Agressif-Thematique en Format B.
 
-    Cœur 80 % = ETFs thématiques diversifiés (QQQ/IEMG/VGT/CGXU/VBK/VOT/XLE/SGLN/EWT).
-    Satellite 20 % = mêmes 5 actions que l'Agressif Principal (continuité).
-    Le satellite garde son rôle d'identifier la qualité ; le cœur change pour pousser
-    sur les facteurs Growth/Tech/EM/Small/Mid au lieu du World broad UCITS.
+    v6.12 : Cœur 80 % ETFs thématiques + satellite 20 % = 5 actions
+    thématiques pures (SK Hynix, TSMC, ASML, FSLR, ANET), multi-pays
+    (KR/TW/NL/US×2, max 2/pays).
+    Le paramètre satellite_positions_unused est conservé pour la signature
+    mais ignoré — le satellite Thematique a son propre univers.
     """
     positions = []
 
@@ -598,26 +648,21 @@ def _build_agressif_thematique(satellite_positions: List[Dict]) -> Dict:
             "currency": info.get("currency"),
         })
 
-    # Satellite : on reprend les 5 actions du satellite Principal, mais à 4 % chacune
-    # (5 stocks × 4 % = 20 %)
-    if satellite_positions:
-        sat_total_target = 0.20
-        weight_per_stock = sat_total_target / len(satellite_positions)
-        weight_per_stock = min(weight_per_stock, CAP_PER_NAME)
-        for sp in satellite_positions:
-            positions.append({
-                "ticker": sp["ticker"],
-                "name": sp["name"],
-                "category": "Actions",
-                "industry": sp.get("industry", ""),
-                "weight_pct": round(weight_per_stock * 100, 2),
-                "weight": weight_per_stock,
-                "role": "satellite",
-                "asset_ids": [sp["ticker"]],
-                "beta": sp.get("beta"),
-                "buffett_score": sp.get("buffett_score"),
-                "fit_score": sp.get("fit_score"),
-            })
+    # Satellite : 5 actions thématiques pures à 4 % chacune (= 20 % total)
+    for stock in THEMATIQUE_SATELLITE:
+        positions.append({
+            "ticker": stock["ticker"],
+            "name": stock["name"],
+            "category": "Actions",
+            "industry": stock["industry"],
+            "weight_pct": 4.0,
+            "weight": 0.04,
+            "role": "satellite",
+            "asset_ids": [stock["ticker"]],
+            "beta": None,
+            "country": stock.get("country"),
+            "_thesis": stock.get("thesis"),
+        })
 
     return positions_to_format_b(positions, "Agressif-Thematique")
 
