@@ -427,7 +427,7 @@ function extractPositions() {
   let format = 'A';
   if (!portfolios) {
     // Format B : profils à la racine
-    const profiles = ['Agressif','Modéré','Stable'];
+    const profiles = ['Agressif','Modéré','Stable','Agressif-Thematique'];
     if (profiles.some(p => STATE.portfolio[p] && typeof STATE.portfolio[p] === 'object')) {
       portfolios = {};
       for (const p of profiles) if (STATE.portfolio[p]) portfolios[p] = STATE.portfolio[p];
@@ -515,7 +515,7 @@ function getPosForStock(s) {
 }
 
 function profBadge(p) {
-  const c = {Stable:'green','Modéré':'orange',Agressif:'purple'}[p]||'gray';
+  const c = {Stable:'green','Modéré':'orange',Agressif:'purple','Agressif-Thematique':'red'}[p]||'gray';
   return `<span class="badge ${c}">${p}</span>`;
 }
 function fmt(n, d=2) { if (n==null||isNaN(n)) return ''; return parseFloat(n).toFixed(d); }
@@ -529,6 +529,7 @@ const PROFILE_CFG = {
   'Stable':   { buf_min: 70, qual_min: 70, vol_min: 12, vol_max: 22, roe_min: 8,  div_min: 1.5, top_n: 10, fitKey: '_fit_S' },
   'Modéré':   { buf_min: 65, qual_min: 70, vol_min: 12, vol_max: 45, roe_min: 8,  div_min: 0,   top_n: 10, fitKey: '_fit_M' },
   'Agressif': { buf_min: 50, qual_min: 55, vol_min: 22, vol_max: 75, roe_min: 0,  div_min: 0,   top_n: 12, fitKey: '_fit_A' },
+  'Agressif-Thematique': { buf_min: 50, qual_min: 55, vol_min: 22, vol_max: 75, roe_min: 0, div_min: 0, top_n: 12, fitKey: '_fit_A' },
 };
 
 // Avoided sectors (configurable depuis MI/RADAR — défaut stagflation)
@@ -691,7 +692,7 @@ function renderPortfolio() {
   }
 
   let rowsHtml = '';
-  for (const prof of ['Agressif','Modéré','Stable']) {
+  for (const prof of ['Agressif','Modéré','Stable','Agressif-Thematique']) {
     const positions = STATE.portfolioByProfile[prof] || [];
     if (!positions.length && !STATE.stocks.length) continue;
 
@@ -1050,7 +1051,7 @@ function generateExportMarkdown() {
   push('## 3. 🎯 Composition portefeuille par profil (cartes d\'identité)');
   push('');
   let totalStocks=0, crossProfile=0, okNative=0;
-  for (const prof of ['Agressif','Modéré','Stable']) {
+  for (const prof of ['Agressif','Modéré','Stable','Agressif-Thematique']) {
     const positions = STATE.portfolioByProfile[prof] || [];
     if (!positions.length) continue;
     const rawProf = (STATE.portfolio.portfolios && STATE.portfolio.portfolios[prof]) || STATE.portfolio[prof] || {};
@@ -1091,7 +1092,7 @@ function generateExportMarkdown() {
   // ===== 4. MÉTRIQUES AGRÉGÉES PAR PROFIL =====
   push('## 4. 📊 Métriques agrégées par profil');
   push('');
-  for (const prof of ['Agressif','Modéré','Stable']) {
+  for (const prof of ['Agressif','Modéré','Stable','Agressif-Thematique']) {
     const positions = STATE.portfolioByProfile[prof] || [];
     if (!positions.length) continue;
     const cats = { Actions: 0, ETF: 0, Obligations: 0, Crypto: 0 };
@@ -1146,7 +1147,7 @@ function generateExportMarkdown() {
 
   // ===== 6. ANOMALIES =====
   push('## 6. ⚠️ Anomalies cross-profil détectées');
-  for (const prof of ['Agressif','Modéré','Stable']) {
+  for (const prof of ['Agressif','Modéré','Stable','Agressif-Thematique']) {
     const positions = STATE.portfolioByProfile[prof] || [];
     const anomalies = [];
     for (const pos of positions) {
@@ -1173,7 +1174,7 @@ function generateExportMarkdown() {
   push('## 7. 🚫 Top natifs absents du portefeuille global');
   const allTk = new Set();
   for (const positions of Object.values(STATE.portfolioByProfile)) for (const p of positions) if (p.ticker) allTk.add(p.ticker);
-  for (const prof of ['Agressif','Modéré','Stable']) {
+  for (const prof of ['Agressif','Modéré','Stable','Agressif-Thematique']) {
     const cfg = PROFILE_CFG[prof];
     const absents = STATE.stocks
       .filter(s => s._profile_native === prof)
@@ -1628,14 +1629,29 @@ function renderETFs() {
     if (fPres==='in' && !inP) continue;
     if (fPres==='out' && inP) continue;
 
+    // v6.10 : Region dérivée de mic_code (CSV n'a pas de colonne dédiée)
+    const MIC_TO_REGION = {
+      'ARCX':'US','XNYS':'US','XNGS':'US','XNAS':'US','BATS':'US','XASE':'US',
+      'XETR':'EU-DE','XPAR':'EU-FR','XAMS':'EU-NL','XMIL':'EU-IT','XMAD':'EU-ES',
+      'XLON':'UK','XSWX':'CH','XSTO':'EU-SE',
+      'XHKG':'HK','XTKS':'JP','XKRX':'KR','XTSE':'CA','XASX':'AU',
+    };
+    const region = e.region || MIC_TO_REGION[(e.mic_code||'').toUpperCase()] || (e.currency==='USD'?'US':e.currency||'');
+    // v6.10 : TER multiplié par 100 (CSV stocke 0.0018, affiche "0.18%")
+    const terRaw = parseFloat(e.total_expense_ratio);
+    const terDisplay = isNaN(terRaw) ? '' : (terRaw * 100).toFixed(2) + '%';
+    // v6.10 : YTD utilise le vrai champ ytd_return_pct du CSV
+    const ytdRaw = parseFloat(e.ytd_return_pct ?? e.ytd ?? e.perf_ytd);
+    const ytdDisplay = isNaN(ytdRaw) ? '' : ytdRaw.toFixed(1) + '%';
+
     rows += `<tr>
       <td><strong>${sym}</strong></td>
-      <td>${nm.slice(0,40)}</td>
+      <td title="${nm}">${nm.slice(0,40)}</td>
       <td>${ft.slice(0,25)}</td>
-      <td>${e.region || e.country || ''}</td>
+      <td>${region}</td>
       <td class="num">${e.aum_usd?(parseFloat(e.aum_usd)/1e9).toFixed(1)+'B':''}</td>
-      <td class="num">${fmt(parseFloat(e.total_expense_ratio),2)}</td>
-      <td class="num">${fmt(parseFloat(e.ytd||e.perf_ytd),1)}</td>
+      <td class="num">${terDisplay}</td>
+      <td class="num">${ytdDisplay}</td>
       <td>${inP?profBadge(pos.profile):'<span class="badge gray">—</span>'}</td>
       <td class="num">${inP?fmt(pos.weight,2)+'%':''}</td>
     </tr>`;
