@@ -450,15 +450,26 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
         if p.get("buffett_score") is not None:
             tickers_meta[tk]["buffett_score"] = p["buffett_score"]
 
-    # Commentaire min 50 chars (sinon schema fail)
-    commentaire = (
-        f"Portefeuille {profile} — discipline Core-Satellite v6.0. "
-        f"Cœur ETF UCITS broad calibré pour β cible "
-        f"(Stable 0.22 / Modéré 0.61 / Agressif 0.80) + satellite fondamental "
-        f"capé à 5%/nom, budget {int(SAT_BUDGET.get(profile, 0)*100)}%. "
-        f"Σ = 100% par construction. RADAR sectoriel neutralisé "
-        f"(walk-forward strict a montré Δ Sharpe -0.11 OOS sur timing factoriel)."
-    )
+    # Commentaire min 50 chars (schema requirement) — adapté au profil
+    if profile == "Agressif-Thematique":
+        commentaire = (
+            "Portefeuille Agressif-Thematique (v6.9) — variante POUSSÉE pour comparaison. "
+            "Cœur 80% en ETFs thématiques diversifiés Growth/EM/Tech/SmallCap/MidCap/"
+            "International/Énergie (QQQ + IEMG + VGT + CGXU + VBK + VOT + XLE + or + EWT). "
+            "Satellite 20% = mêmes 5 actions qualité que l'Agressif Principal (continuité). "
+            "Σ = 100% par construction. β attendu ~1.1, MaxDD historique -60 à -75% sur "
+            "fenêtre complète 2000-2026 (incluant dotcom + GFC). À COMPARER dans le "
+            "dashboard avec l'Agressif Principal — pas optimisation, pari thématique assumé."
+        )
+    else:
+        commentaire = (
+            f"Portefeuille {profile} (v6.9) — discipline Core-Satellite. "
+            f"Cœur ETF UCITS broad calibré pour β cible "
+            f"(Stable 0.22 / Modéré 0.61 / Agressif 0.80) + satellite fondamental "
+            f"capé à 5%/nom, budget {int(SAT_BUDGET.get(profile, 0)*100)}%. "
+            f"Σ = 100% par construction. RADAR sectoriel neutralisé "
+            f"(walk-forward strict a montré Δ Sharpe -0.11 OOS sur timing factoriel)."
+        )
 
     return {
         "Actions": actions,
