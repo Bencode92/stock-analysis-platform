@@ -27,7 +27,7 @@
         "asset_ids": [
           "EQ_650"
         ],
-        "industry": "Oil & Gas E&P",
+        "industry": "Advertising Agencies",
         "beta": 0.73
       },
       "LI": {
@@ -406,7 +406,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-06-04T12:25:08.929190+00:00",
+      "timestamp": "2026-06-04T12:45:41.332782+00:00",
       "profile": "Dividende-PEA",
       "data_limits": {
         "data_window": "short_window",
@@ -614,7 +614,7 @@
     }
   },
   "Dividende-CTO": {
-    "Commentaire": "Ce portefeuille Dividende CTO complète le sleeve PEA en exposant aux dividend payers US, UK et suisses non-éligibles PEA. Mêmes filtres qualité que le PEA (payout, ROE, FCF) avec exceptions sectorielles (banques, REITs). Détention en compte-titres ordinaire personne physique : PFU 30% sur dividendes et plus-values (12.8% IR + 17.2% PS). Buy-and-hold privilégié pour éviter la friction fiscale de rotation. Risques : sensibilité au taux de change EUR/USD, concentration sur quelques marchés matures, retenue à la source variable selon pays. Ce portefeuille compte 2 lignes avec une volatilité estimée de 16.96%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille Dividende CTO complète le sleeve PEA en exposant aux dividend payers US, UK et suisses non-éligibles PEA. Mêmes filtres qualité que le PEA (payout, ROE, FCF) avec exceptions sectorielles (banques, REITs). Détention en compte-titres ordinaire personne physique : PFU 30% sur dividendes et plus-values (12.8% IR + 17.2% PS). Buy-and-hold privilégié pour éviter la friction fiscale de rotation. Risques : sensibilité au taux de change EUR/USD, concentration sur quelques marchés matures, retenue à la source variable selon pays. Ce portefeuille compte 2 lignes avec une volatilité estimée de 16.95%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "VICI PPTYS INC (VICI)": "16.5%",
       "AUTOTRADER GROUP PLC (AUTO)": "16.5%"
@@ -661,7 +661,7 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 16.96,
+      "vol_realized": 16.95,
       "vol_target": 11.0,
       "covariance_trustworthy": false,
       "returns_coverage_pct": 0.0,
@@ -695,15 +695,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 11.0,
-            "observed": 16.96,
-            "slack": -1.96,
+            "observed": 16.95,
+            "slack": -1.95,
             "binding": false,
             "status": "VIOLATED",
             "details": {
               "tolerance": 4.0,
               "range_min": 7.0,
               "range_max": 15.0,
-              "diff_from_target": 5.96
+              "diff_from_target": 5.95
             }
           },
           {
@@ -833,7 +833,7 @@
         },
         "quality_score": 65.0,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 2.0% — reduce exposure",
+          "🟠 VIOLATED: volatility exceeded by 1.9% — reduce exposure",
           "🟡 BINDING: max_single_position at 60.0% (cap=60.0%) — monitor closely",
           "🔴 CRITICAL: max_region violated by 10.0% — immediate action required",
           "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
@@ -972,12 +972,12 @@
     },
     "_limitations": [
       "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Dividende-CTO sont incompatibles avec l'optimisation Markowitz classique.",
-      "Volatilité réalisée (17.0%) éloignée de la cible (11.0%) - écart de 6.0%.",
+      "Volatilité réalisée (16.9%) éloignée de la cible (11.0%) - écart de 5.9%.",
       "Faisabilité limitée: Min available vol 19% > target 11.0% + 4.0%"
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-06-04T12:25:09.773084+00:00",
+      "timestamp": "2026-06-04T12:45:42.163860+00:00",
       "profile": "Dividende-CTO",
       "data_limits": {
         "data_window": "short_window",
@@ -1160,7 +1160,7 @@
     }
   },
   "_meta": {
-    "generated_at": "2026-06-04T14:25:09.921325",
+    "generated_at": "2026-06-04T14:45:42.303973",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 50,
@@ -1194,7 +1194,7 @@
     "Commentaire": "Portefeuille Stable — discipline Core-Satellite v6.0. Cœur ETF UCITS broad calibré pour β cible (Stable 0.22 / Modéré 0.61 / Agressif 0.80) + satellite fondamental capé à 5%/nom, budget 10%. Σ = 100% par construction. RADAR sectoriel neutralisé (walk-forward strict a montré Δ Sharpe -0.11 OOS sur timing factoriel).",
     "Actions": {
       "ADMIRAL GROUP PLC (ADM)": "5.0%",
-      "HANNOVER RUECK (HNR1)": "5.0%"
+      "SWISS RE AG (SREN)": "5.0%"
     },
     "ETF": {
       "Vanguard FTSE All-World UCITS Acc EUR (VWCE.DE)": "20.0%",
@@ -1213,7 +1213,7 @@
       "IBGS.AS": 0.15,
       "SGLN.AS": 0.1,
       "ADM": 0.05,
-      "HNR1": 0.05
+      "SREN": 0.05
     },
     "_tickers_meta": {
       "AGGH.AS": {
@@ -1296,20 +1296,20 @@
         "industry": "Insurance - Property & Casualty",
         "beta": 0.45,
         "role": "satellite",
-        "fit_score": 0.954,
+        "fit_score": 0.9539,
         "buffett_score": 83
       },
-      "HNR1": {
+      "SREN": {
         "weight": 0.05,
         "category": "Actions",
-        "name": "HANNOVER RUECK",
+        "name": "SWISS RE AG",
         "asset_ids": [
-          "HNR1"
+          "SREN"
         ],
         "industry": "Insurance - Reinsurance",
-        "beta": 0.42,
+        "beta": 0.58,
         "role": "satellite",
-        "fit_score": 0.9515,
+        "fit_score": 0.9523,
         "buffett_score": 83
       }
     },
@@ -1353,12 +1353,12 @@
       "JAAA": 0.08,
       "CLTL": 0.08,
       "ACWV": 0.07,
-      "SCHD": 0.07,
       "SPYV": 0.07,
+      "SCHD": 0.07,
       "KO": 0.06,
+      "SCHN": 0.06,
       "NTGY": 0.06,
       "VICI": 0.06,
-      "SCHN": 0.06,
       "PG": 0.06,
       "CHD": 0.05,
       "CS": 0.05,
@@ -1371,12 +1371,12 @@
       "Obligations:Vanguard Short-Term Bond ETF (BSV)": 11.7,
       "Obligations:Invesco Treasury Collateral ETF (CLTL)": 14.0,
       "ETF:iShares MSCI Global Minimum Volatility ETF (ACWV)": 4.8,
-      "ETF:Schwab U.S. Dividend Equity ETF (SCHD)": 4.8,
       "ETF:SPDR Portfolio S&P 500 Value ETF (SPYV)": 4.8,
+      "ETF:Schwab U.S. Dividend Equity ETF (SCHD)": 4.8,
       "Actions:COCA-COLA (KO)": 4.1,
+      "Actions:SCHINDLER HOLDING AG (SCHN)": 4.1,
       "Actions:NATURGY ENERGY GROUP SA (NTGY)": 4.1,
       "Actions:VICI PPTYS INC": 4.1,
-      "Actions:SCHINDLER HOLDING AG (SCHN)": 4.1,
       "Actions:PROCTER & GAMBLE (PG)": 4.4,
       "Actions:CHURCH AND DWIGHT INC (CHD)": 4.9,
       "Actions:AXA SA (CS)": 4.9,
@@ -1447,20 +1447,20 @@
             "name": "max_single_position",
             "constraint_type": "max",
             "cap": 13.0,
-            "observed": 85.42,
-            "slack": -72.42,
+            "observed": 85.37,
+            "slack": -72.37,
             "binding": false,
             "status": "CRITICAL",
             "details": {
               "largest_position": {
                 "id": "EQ_664",
                 "name": "HANNOVER RUECK",
-                "weight": 85.42
+                "weight": 85.37
               },
               "positions_above_10pct": [
                 {
                   "id": "EQ_664",
-                  "weight": 85.42
+                  "weight": 85.37
                 }
               ]
             }
@@ -1469,30 +1469,30 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 30.0,
-            "observed": 86.39,
-            "slack": -56.39,
+            "observed": 86.35,
+            "slack": -56.35,
             "binding": false,
             "status": "CRITICAL",
             "details": {
               "most_concentrated": "Finance",
               "counts_in_max_sector": {
-                "Finance": 86.39,
-                "Biens de consommation de base": 2.55,
+                "Finance": 86.35,
+                "Biens de consommation de base": 2.56,
                 "Diversified": 2.31,
-                "Services publics": 0.97,
-                "Santé": 0.97,
-                "Immobilier": 0.97,
-                "Industries": 0.97
+                "Industries": 0.98,
+                "Services publics": 0.98,
+                "Santé": 0.98,
+                "Immobilier": 0.98
               },
               "all_sectors": {
-                "Finance": 86.39,
+                "Finance": 86.35,
                 "Bonds": 4.83,
-                "Biens de consommation de base": 2.55,
+                "Biens de consommation de base": 2.56,
                 "Diversified": 2.31,
-                "Services publics": 0.97,
-                "Santé": 0.97,
-                "Immobilier": 0.97,
-                "Industries": 0.97
+                "Industries": 0.98,
+                "Services publics": 0.98,
+                "Santé": 0.98,
+                "Immobilier": 0.98
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -1501,29 +1501,29 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 85.42,
-            "slack": -35.42,
+            "observed": 85.37,
+            "slack": -35.37,
             "binding": false,
             "status": "CRITICAL",
             "details": {
               "most_concentrated": "Allemagne",
               "counts_in_max_region": {
-                "Allemagne": 85.42,
-                "Etats-Unis": 3.52,
+                "Allemagne": 85.37,
+                "Etats-Unis": 3.54,
                 "Global": 2.31,
-                "France": 0.97,
-                "Espagne": 0.97,
-                "Inde": 0.97,
-                "Suisse": 0.97
+                "Suisse": 0.98,
+                "Espagne": 0.98,
+                "France": 0.98,
+                "Inde": 0.98
               },
               "all_regions": {
-                "Allemagne": 85.42,
+                "Allemagne": 85.37,
                 "Global": 7.14,
-                "Etats-Unis": 3.52,
-                "France": 0.97,
-                "Espagne": 0.97,
-                "Inde": 0.97,
-                "Suisse": 0.97
+                "Etats-Unis": 3.54,
+                "Suisse": 0.98,
+                "Espagne": 0.98,
+                "France": 0.98,
+                "Inde": 0.98
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -1586,15 +1586,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 85.0,
-            "observed": 93.83,
-            "slack": -8.83,
+            "observed": 93.84,
+            "slack": -8.84,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 50.0,
               "range_max": 85.0,
-              "slack_from_min": 43.83,
-              "slack_from_max": -8.83,
+              "slack_from_min": 43.84,
+              "slack_from_max": -8.84,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1650,47 +1650,47 @@
         ],
         "exposures": {
           "by_category": {
-            "Actions": 92.82,
-            "ETF": 2.31,
-            "Obligations": 4.83
+            "Actions": 92.83,
+            "Obligations": 4.83,
+            "ETF": 2.31
           },
           "by_sector": {
-            "Finance": 86.39,
-            "Biens de consommation de base": 2.55,
+            "Finance": 86.35,
+            "Biens de consommation de base": 2.56,
             "Diversified": 2.31,
-            "Services publics": 0.97,
-            "Santé": 0.97,
-            "Immobilier": 0.97,
-            "Industries": 0.97
+            "Industries": 0.98,
+            "Services publics": 0.98,
+            "Santé": 0.98,
+            "Immobilier": 0.98
           },
           "by_region": {
-            "Allemagne": 85.42,
+            "Allemagne": 85.37,
             "Global": 7.14,
-            "Etats-Unis": 3.52,
-            "France": 0.97,
-            "Espagne": 0.97,
-            "Inde": 0.97,
-            "Suisse": 0.97
+            "Etats-Unis": 3.54,
+            "Suisse": 0.98,
+            "Espagne": 0.98,
+            "France": 0.98,
+            "Inde": 0.98
           },
           "by_risk_bucket": {
-            "equity_like": 95.13,
+            "equity_like": 95.14,
             "bond_like": 4.83
           },
           "by_role": {
             "core": 6.13,
             "satellite": 0.0,
-            "defensive": 93.83,
+            "defensive": 93.84,
             "lottery": 0.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 7313.0,
+            "hhi": 7305.0,
             "hhi_interpretation": "highly_concentrated",
             "effective_n": 1.37,
             "n_positions": 15,
-            "top_5_weight": 91.26,
-            "top_10_weight": 96.15,
-            "largest_position": 85.42,
+            "top_5_weight": 91.21,
+            "top_10_weight": 96.14,
+            "largest_position": 85.37,
             "smallest_position": 0.57,
             "thresholds": {
               "well_diversified": "HHI < 1000",
@@ -1706,7 +1706,7 @@
             "id": "EQ_664",
             "ticker": "HNR1",
             "name": "HANNOVER RUECK",
-            "weight_pct": 85.42,
+            "weight_pct": 85.37,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Finance",
@@ -1747,17 +1747,6 @@
             "exchange": null
           },
           {
-            "id": "iShares MSCI Global Minimum Volatility ETF",
-            "ticker": "ACWV",
-            "name": "iShares MSCI Global Minimum Volatility ETF",
-            "weight_pct": 1.01,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
-            "region": "Global",
-            "exchange": null
-          },
-          {
             "id": "EQ_29",
             "ticker": "KO",
             "name": "COCA-COLA",
@@ -1769,65 +1758,21 @@
             "exchange": null
           },
           {
-            "id": "EQ_559",
-            "ticker": "CS",
-            "name": "AXA SA",
-            "weight_pct": 0.97,
-            "category": "Actions",
+            "id": "iShares MSCI Global Minimum Volatility ETF",
+            "ticker": "ACWV",
+            "name": "iShares MSCI Global Minimum Volatility ETF",
+            "weight_pct": 1.01,
+            "category": "ETF",
             "risk_bucket": "equity_like",
-            "sector": "Finance",
-            "region": "France",
-            "exchange": null
-          },
-          {
-            "id": "EQ_746",
-            "ticker": "NTGY",
-            "name": "NATURGY ENERGY GROUP SA",
-            "weight_pct": 0.97,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Services publics",
-            "region": "Espagne",
-            "exchange": null
-          },
-          {
-            "id": "EQ_849",
-            "ticker": "SUNPHARMA",
-            "name": "SUN PHARMACEUTICAL INDUSTRIES LTD",
-            "weight_pct": 0.97,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Santé",
-            "region": "Inde",
-            "exchange": null
-          },
-          {
-            "id": "EQ_370",
-            "ticker": "CHD",
-            "name": "CHURCH AND DWIGHT INC",
-            "weight_pct": 0.97,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation de base",
-            "region": "Etats-Unis",
-            "exchange": null
-          },
-          {
-            "id": "EQ_316",
-            "ticker": "VICI",
-            "name": "VICI PPTYS INC",
-            "weight_pct": 0.97,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Immobilier",
-            "region": "Etats-Unis",
+            "sector": "Diversified",
+            "region": "Global",
             "exchange": null
           },
           {
             "id": "EQ_765",
             "ticker": "SCHN",
             "name": "SCHINDLER HOLDING AG",
-            "weight_pct": 0.97,
+            "weight_pct": 0.98,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Industries",
@@ -1835,9 +1780,64 @@
             "exchange": null
           },
           {
-            "id": "Schwab U.S. Dividend Equity ETF",
-            "ticker": "SCHD",
-            "name": "Schwab U.S. Dividend Equity ETF",
+            "id": "EQ_746",
+            "ticker": "NTGY",
+            "name": "NATURGY ENERGY GROUP SA",
+            "weight_pct": 0.98,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Services publics",
+            "region": "Espagne",
+            "exchange": null
+          },
+          {
+            "id": "EQ_370",
+            "ticker": "CHD",
+            "name": "CHURCH AND DWIGHT INC",
+            "weight_pct": 0.98,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Biens de consommation de base",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_559",
+            "ticker": "CS",
+            "name": "AXA SA",
+            "weight_pct": 0.98,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Finance",
+            "region": "France",
+            "exchange": null
+          },
+          {
+            "id": "EQ_851",
+            "ticker": "SUNPHARMA",
+            "name": "SUN PHARMACEUTICAL INDUSTRIES LTD",
+            "weight_pct": 0.98,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Santé",
+            "region": "Inde",
+            "exchange": null
+          },
+          {
+            "id": "EQ_316",
+            "ticker": "VICI",
+            "name": "VICI PPTYS INC",
+            "weight_pct": 0.98,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Immobilier",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "SPDR Portfolio S&P 500 Value ETF",
+            "ticker": "SPYV",
+            "name": "SPDR Portfolio S&P 500 Value ETF",
             "weight_pct": 0.65,
             "category": "ETF",
             "risk_bucket": "equity_like",
@@ -1846,9 +1846,9 @@
             "exchange": null
           },
           {
-            "id": "SPDR Portfolio S&P 500 Value ETF",
-            "ticker": "SPYV",
-            "name": "SPDR Portfolio S&P 500 Value ETF",
+            "id": "Schwab U.S. Dividend Equity ETF",
+            "ticker": "SCHD",
+            "name": "Schwab U.S. Dividend Equity ETF",
             "weight_pct": 0.65,
             "category": "ETF",
             "risk_bucket": "equity_like",
@@ -1872,7 +1872,7 @@
           "n_positions": 15,
           "n_exchanges": 0,
           "exchanges": [],
-          "total_weight": 99.96,
+          "total_weight": 99.97,
           "missing_isin": 9,
           "missing_ticker": 0,
           "data_quality": {
@@ -1885,47 +1885,47 @@
     },
     "_exposures": {
       "by_category": {
-        "Actions": 92.82,
-        "ETF": 2.31,
-        "Obligations": 4.83
+        "Actions": 92.83,
+        "Obligations": 4.83,
+        "ETF": 2.31
       },
       "by_sector": {
-        "Finance": 86.39,
-        "Biens de consommation de base": 2.55,
+        "Finance": 86.35,
+        "Biens de consommation de base": 2.56,
         "Diversified": 2.31,
-        "Services publics": 0.97,
-        "Santé": 0.97,
-        "Immobilier": 0.97,
-        "Industries": 0.97
+        "Industries": 0.98,
+        "Services publics": 0.98,
+        "Santé": 0.98,
+        "Immobilier": 0.98
       },
       "by_region": {
-        "Allemagne": 85.42,
+        "Allemagne": 85.37,
         "Global": 7.14,
-        "Etats-Unis": 3.52,
-        "France": 0.97,
-        "Espagne": 0.97,
-        "Inde": 0.97,
-        "Suisse": 0.97
+        "Etats-Unis": 3.54,
+        "Suisse": 0.98,
+        "Espagne": 0.98,
+        "France": 0.98,
+        "Inde": 0.98
       },
       "by_risk_bucket": {
-        "equity_like": 95.13,
+        "equity_like": 95.14,
         "bond_like": 4.83
       },
       "by_role": {
         "core": 6.13,
         "satellite": 0.0,
-        "defensive": 93.83,
+        "defensive": 93.84,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 7313.0,
+        "hhi": 7305.0,
         "hhi_interpretation": "highly_concentrated",
         "effective_n": 1.37,
         "n_positions": 15,
-        "top_5_weight": 91.26,
-        "top_10_weight": 96.15,
-        "largest_position": 85.42,
+        "top_5_weight": 91.21,
+        "top_10_weight": 96.14,
+        "largest_position": 85.37,
         "smallest_position": 0.57,
         "thresholds": {
           "well_diversified": "HHI < 1000",
@@ -1940,7 +1940,7 @@
       "n_positions": 15,
       "n_exchanges": 0,
       "exchanges": [],
-      "total_weight": 99.96,
+      "total_weight": 99.97,
       "missing_isin": 9,
       "missing_ticker": 0,
       "data_quality": {
@@ -1955,7 +1955,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-06-04T12:25:47.817994+00:00",
+      "timestamp": "2026-06-04T12:46:21.804863+00:00",
       "profile": "Stable",
       "data_limits": {
         "data_window": "short_window",
@@ -2012,17 +2012,22 @@
               "weight_pct": 7.0
             },
             {
-              "ticker": "SCHD",
-              "category": "ETF",
-              "weight_pct": 7.0
-            },
-            {
               "ticker": "SPYV",
               "category": "ETF",
               "weight_pct": 7.0
             },
             {
+              "ticker": "SCHD",
+              "category": "ETF",
+              "weight_pct": 7.0
+            },
+            {
               "ticker": "KO",
+              "category": "Actions",
+              "weight_pct": 6.0
+            },
+            {
+              "ticker": "SCHN",
               "category": "Actions",
               "weight_pct": 6.0
             },
@@ -2033,11 +2038,6 @@
             },
             {
               "ticker": "VICI",
-              "category": "Actions",
-              "weight_pct": 6.0
-            },
-            {
-              "ticker": "SCHN",
               "category": "Actions",
               "weight_pct": 6.0
             },
@@ -2164,16 +2164,6 @@
             ]
           },
           {
-            "ticker": "SCHD",
-            "name": "Schwab U.S. Dividend Equity ETF",
-            "category": "ETF",
-            "weight": 0.07,
-            "weight_pct": 7.000000000000001,
-            "asset_ids": [
-              "Schwab U.S. Dividend Equity ETF"
-            ]
-          },
-          {
             "ticker": "SPYV",
             "name": "SPDR Portfolio S&P 500 Value ETF",
             "category": "ETF",
@@ -2184,6 +2174,16 @@
             ]
           },
           {
+            "ticker": "SCHD",
+            "name": "Schwab U.S. Dividend Equity ETF",
+            "category": "ETF",
+            "weight": 0.07,
+            "weight_pct": 7.000000000000001,
+            "asset_ids": [
+              "Schwab U.S. Dividend Equity ETF"
+            ]
+          },
+          {
             "ticker": "KO",
             "name": "COCA-COLA",
             "category": "Actions",
@@ -2191,6 +2191,16 @@
             "weight_pct": 6.0,
             "asset_ids": [
               "EQ_29"
+            ]
+          },
+          {
+            "ticker": "SCHN",
+            "name": "SCHINDLER HOLDING AG",
+            "category": "Actions",
+            "weight": 0.06,
+            "weight_pct": 6.0,
+            "asset_ids": [
+              "EQ_765"
             ]
           },
           {
@@ -2211,16 +2221,6 @@
             "weight_pct": 6.0,
             "asset_ids": [
               "EQ_316"
-            ]
-          },
-          {
-            "ticker": "SCHN",
-            "name": "SCHINDLER HOLDING AG",
-            "category": "Actions",
-            "weight": 0.06,
-            "weight_pct": 6.0,
-            "asset_ids": [
-              "EQ_765"
             ]
           },
           {
@@ -2260,7 +2260,7 @@
             "weight": 0.05,
             "weight_pct": 5.0,
             "asset_ids": [
-              "EQ_849"
+              "EQ_851"
             ]
           },
           {
@@ -2318,7 +2318,7 @@
       "CLTL": 0.0999
     },
     "_yield_metrics": {
-      "weighted_yield": 1.84,
+      "weighted_yield": 1.83,
       "n_positions": 15
     },
     "_alternates": {
@@ -2326,7 +2326,7 @@
         {
           "ticker": "GD",
           "name": "GENERAL DYNAMICS CORP",
-          "score": 98.58,
+          "score": 98.84,
           "category": "Actions",
           "sector": "Industries",
           "industry": "Aerospace & Defense",
@@ -2337,18 +2337,18 @@
         {
           "ticker": "NOVN",
           "name": "NOVARTIS AG",
-          "score": 95.78,
+          "score": 96.36,
           "category": "Actions",
           "sector": "Santé",
           "industry": "Drug Manufacturers - General",
           "region": "Suisse",
-          "vol_annual": 19.46,
+          "vol_annual": 19.42,
           "exposure_family": "sector_healthcare"
         },
         {
           "ticker": "ALV",
           "name": "ALLIANZ",
-          "score": 94.0,
+          "score": 92.56,
           "category": "Actions",
           "sector": "Finance",
           "industry": "Insurance - Diversified",
@@ -2357,31 +2357,42 @@
           "exposure_family": "sector_financials"
         },
         {
-          "ticker": "ROP",
-          "name": "ROCHE PS PAR AG",
-          "score": 84.93,
+          "ticker": "RO",
+          "name": "ROCHE HOLDING AG",
+          "score": 84.92,
           "category": "Actions",
           "sector": "Santé",
           "industry": "Drug Manufacturers - General",
           "region": "Suisse",
-          "vol_annual": 21.24,
+          "vol_annual": 22.46,
           "exposure_family": "sector_healthcare"
         },
         {
-          "ticker": "G",
-          "name": "ASSICURAZIONI GENERALI",
-          "score": 79.28,
+          "ticker": "SREN",
+          "name": "SWISS RE AG",
+          "score": 84.19,
           "category": "Actions",
           "sector": "Finance",
-          "industry": "Insurance - Diversified",
-          "region": "Italie",
-          "vol_annual": 17.97,
+          "industry": "Insurance - Reinsurance",
+          "region": "Suisse",
+          "vol_annual": 22.26,
           "exposure_family": "sector_financials"
+        },
+        {
+          "ticker": "ROP",
+          "name": "ROCHE PS PAR AG",
+          "score": 80.4,
+          "category": "Actions",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - General",
+          "region": "Suisse",
+          "vol_annual": 21.27,
+          "exposure_family": "sector_healthcare"
         },
         {
           "ticker": "UNI",
           "name": "UNIPOL ASSICURAZIONI SPA",
-          "score": 78.42,
+          "score": 78.48,
           "category": "Actions",
           "sector": "Finance",
           "industry": "Insurance - Property & Casualty",
@@ -2392,29 +2403,18 @@
         {
           "ticker": "IG",
           "name": "ITALGAS",
-          "score": 78.13,
+          "score": 78.09,
           "category": "Actions",
           "sector": "Services publics",
           "industry": "Utilities - Regulated Gas",
           "region": "Italie",
-          "vol_annual": 19.42,
+          "vol_annual": 19.43,
           "exposure_family": "sector_utilities"
-        },
-        {
-          "ticker": "HIG",
-          "name": "HARTFORD INSURANCE GROUP INC",
-          "score": 77.1,
-          "category": "Actions",
-          "sector": "Finance",
-          "industry": "Insurance - Diversified",
-          "region": "Etats-Unis",
-          "vol_annual": 19.94,
-          "exposure_family": "sector_financials"
         },
         {
           "ticker": "DB1",
           "name": "DEUTSCHE BOERSE AG",
-          "score": 76.9,
+          "score": 77.27,
           "category": "Actions",
           "sector": "Finance",
           "industry": "Financial Data & Stock Exchanges",
@@ -2423,15 +2423,15 @@
           "exposure_family": "sector_financials"
         },
         {
-          "ticker": "BVI",
-          "name": "BUREAU VERITAS SA",
-          "score": 74.66,
+          "ticker": "HIG",
+          "name": "HARTFORD INSURANCE GROUP INC",
+          "score": 77.23,
           "category": "Actions",
-          "sector": "Industries",
-          "industry": "Consulting Services",
-          "region": "France",
-          "vol_annual": 21.26,
-          "exposure_family": null
+          "sector": "Finance",
+          "industry": "Insurance - Diversified",
+          "region": "Etats-Unis",
+          "vol_annual": 19.94,
+          "exposure_family": "sector_financials"
         }
       ],
       "ETF": [
@@ -2454,7 +2454,7 @@
           "sector": "Diversified",
           "industry": null,
           "region": "Global",
-          "vol_annual": 12.62,
+          "vol_annual": 12.63,
           "exposure_family": "intl_equity"
         },
         {
@@ -2520,10 +2520,10 @@
       {
         "name": "AGGH.AS",
         "ticker": "AGGH.AS",
-        "rationale": "Cet ETF obligataire global offre une stabilité recherchée dans un environnement neutre, fournissant des revenus réguliers essentiels pour un profil stable. Sa pondération de 25% reflète son rôle d'ancrage défensif du portefeuille, particulièrement adapté dans un contexte où les secteurs financials sont évités. L'exposition obligataire globale permet de bénéficier de la diversification géographique tout en maintenant une volatilité maîtrisée.",
+        "rationale": "ETF obligataire global offrant une stabilité et des revenus réguliers, parfaitement adapté au profil conservateur recherchant la préservation du capital. Cette allocation de 25% constitue l'ancrage défensif du portefeuille, générant des flux de revenus prévisibles avec une volatilité maîtrisée. La diversification géographique des obligations limite l'exposition à un marché spécifique.",
         "role": "core",
-        "risk_note": "Risque de taux d'intérêt et sensibilité aux variations des spreads de crédit",
-        "market_context_link": "Complément défensif dans un régime neutre où la prudence est de mise",
+        "risk_note": "Risque de taux d'intérêt et risque de crédit sur les émetteurs obligataires",
+        "market_context_link": "null",
         "weight_pct": 25.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2540,10 +2540,10 @@
       {
         "name": "VWCE.DE",
         "ticker": "VWCE.DE",
-        "rationale": "ETF actions monde développé offrant une exposition diversifiée aux marchés globaux avec un biais vers les secteurs technologiques performants (+59.3% sur 12 mois). Cette allocation de 20% capture la croissance mondiale tout en bénéficiant des régions favorisées comme le Japon. L'approche large marché limite les risques de concentration sectorielle dans un environnement où plusieurs secteurs montrent des signaux de refroidissement.",
+        "rationale": "ETF actions mondiales diversifié offrant une exposition large aux marchés développés et émergents, avec des frais réduits et une excellente liquidité. Cette position de 20% permet de capturer la croissance mondiale tout en maintenant un niveau de risque modéré grâce à la diversification sectorielle et géographique. L'exposition aux secteurs favorisés comme l'energy et materials via ce véhicule diversifié limite la concentration de risque.",
         "role": "core",
-        "risk_note": "Volatilité élevée et exposition aux secteurs en difficulté comme healthcare et consumer-discretionary",
-        "market_context_link": "Exposition aux régions favorisées (Japon) et aux secteurs leaders (information-technology)",
+        "risk_note": "Volatilité des marchés actions et risque de change sur les positions internationales",
+        "market_context_link": "Exposition indirecte aux secteurs favorisés (energy, materials) et aux régions performantes (Japan, China)",
         "weight_pct": 20.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2560,10 +2560,10 @@
       {
         "name": "IBCI.AS",
         "ticker": "IBCI.AS",
-        "rationale": "ETF obligataire corporate investment grade apportant un rendement supérieur aux obligations d'État tout en conservant une qualité de crédit élevée. Cette allocation de 20% répond au besoin de revenus réguliers du profil stable while maintenant un niveau de risque modéré. Dans le contexte actuel neutre, cette classe d'actifs offre un équilibre optimal entre rendement et préservation du capital.",
-        "role": "income",
-        "risk_note": "Risque de crédit et d'élargissement des spreads en cas de stress financier",
-        "market_context_link": "Positionnement défensif adapté au régime neutre et à l'évitement du secteur financials",
+        "rationale": "ETF obligataire corporate international apportant un rendement supérieur aux obligations souveraines tout en préservant la qualité crédit. Cette allocation de 20% complète la partie obligataire du portefeuille en diversifiant les sources de revenus et en optimisant le couple rendement/risque. La sélection d'obligations d'entreprises de qualité investment grade maintient la philosophie conservative du portefeuille.",
+        "role": "core",
+        "risk_note": "Risque de crédit corporate et sensibilité aux conditions de financement des entreprises",
+        "market_context_link": "null",
         "weight_pct": 20.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2580,10 +2580,10 @@
       {
         "name": "IBGS.AS",
         "ticker": "IBGS.AS",
-        "rationale": "ETF obligataire gouvernemental offrant la plus haute sécurité de crédit et servant de hedge contre les tensions de marché. Avec 15% d'allocation, il constitue l'ancrage sécuritaire du portefeuille, particulièrement justifié dans un environnement où 3 secteurs montrent un momentum moyen-terme dégradé. Cette exposition gouvernementale pure protège contre les risques de crédit tout en fournissant de la liquidité.",
+        "rationale": "ETF obligataire gouvernemental offrant la sécurité maximale et une protection contre les phases de stress de marché. Cette position de 15% renforce l'ancrage défensif du portefeuille et fournit un coussin de sécurité en cas de turbulences. Les obligations souveraines de qualité constituent une réserve de valeur liquide et stable, essentielle pour un profil conservateur.",
         "role": "hedge",
-        "risk_note": "Risque de duration et de performance limitée en cas de remontée des taux",
-        "market_context_link": "Protection contre l'instabilité sectorielle observée (6 secteurs avec momentum 6M négatif)",
+        "risk_note": "Risque de taux et potentiel rendement réel négatif en période d'inflation",
+        "market_context_link": "null",
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2600,10 +2600,10 @@
       {
         "name": "SGLN.AS",
         "ticker": "SGLN.AS",
-        "rationale": "ETF or physique servant de couverture contre l'inflation et les incertitudes géopolitiques, particulièrement pertinent avec l'outperformance du secteur energy (+31.3% YTD) qui suggère des pressions inflationnistes. L'allocation de 10% offre une diversification non-corrélée aux actifs traditionnels. Dans un régime neutre, l'or apporte une assurance supplémentaire contre les retournements de marché.",
+        "rationale": "ETF or physique servant de couverture contre l'inflation et la dévaluation monétaire, particulièrement pertinent dans le contexte actuel de tensions géopolitiques. Cette allocation de 10% offre une diversification non corrélée aux actifs traditionnels et constitue une réserve de valeur historiquement reconnue. L'or complète parfaitement un portefeuille conservateur en période d'incertitude.",
         "role": "hedge",
-        "risk_note": "Volatilité des prix des métaux précieux et absence de revenus",
-        "market_context_link": "Hedge contre les tensions inflationnistes signalées par la performance du secteur energy",
+        "risk_note": "Absence de rendement et volatilité des prix des métaux précieux",
+        "market_context_link": "Cohérent avec la surpondération du secteur materials recommandée par l'analyse RADAR",
         "weight_pct": 10.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2620,10 +2620,10 @@
       {
         "name": "ADM",
         "ticker": "ADM",
-        "rationale": "Position satellite de 5% offrant une exposition spécialisée complémentaire aux allocations principales. Cette faible pondération permet d'explorer des opportunités spécifiques tout en limitant l'impact sur la volatilité globale du portefeuille. Le positionnement satellite est cohérent avec l'approche prudente du profil stable.",
+        "rationale": "Position satellite dans une entreprise du secteur agroalimentaire offrant une exposition aux matières premières agricoles et bénéficiant de la demande mondiale croissante. Cette allocation de 5% apporte une diversification sectorielle spécifique et un potentiel de croissance modéré. L'entreprise présente des fondamentaux solides dans un secteur défensif.",
         "role": "satellite",
-        "risk_note": "Concentration sectorielles et liquidité potentiellement limitée",
-        "market_context_link": null,
+        "risk_note": "Volatilité des prix des commodités agricoles et risque réglementaire",
+        "market_context_link": "Aligné avec la surpondération du secteur materials et la tendance positive de l'energy",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2638,12 +2638,12 @@
         }
       },
       {
-        "name": "HNR1",
-        "ticker": "HNR1",
-        "rationale": "Allocation satellite de 5% complétant la diversification du portefeuille avec une exposition spécialisée. Cette position marginale permet d'affiner l'allocation tout en respectant les contraintes de volatilité du profil stable. Le faible poids limite les risques tout en offrant des opportunités de performance additionnelle.",
+        "name": "SREN",
+        "ticker": "SREN",
+        "rationale": "Position satellite dans le secteur des énergies renouvelables offrant une exposition à la transition énergétique et aux enjeux ESG. Cette allocation de 5% permet de capter les opportunités de croissance long terme dans l'énergie propre tout en restant mesurée. Le secteur bénéficie de politiques de soutien gouvernementales et de la demande croissante en solutions durables.",
         "role": "satellite",
-        "risk_note": "Risques spécifiques liés à la stratégie sous-jacente et liquidité",
-        "market_context_link": null,
+        "risk_note": "Volatilité réglementaire et dépendance aux subventions gouvernementales",
+        "market_context_link": "Bénéficie de la surpondération recommandée du secteur energy et utilities par l'analyse RADAR",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -2740,7 +2740,7 @@
         "industry": "Drug Manufacturers - General",
         "beta": 0.66,
         "role": "satellite",
-        "fit_score": 0.9707,
+        "fit_score": 0.9726,
         "buffett_score": 100
       },
       "EXPD": {
@@ -2815,7 +2815,7 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 21.29,
+      "vol_realized": 21.3,
       "vol_target": 11.0,
       "covariance_trustworthy": false,
       "returns_coverage_pct": 0.0,
@@ -2830,11 +2830,11 @@
       "VGSH": 0.06,
       "PAAA": 0.06,
       "JAAA": 0.06,
+      "FNDF": 0.05,
+      "VT": 0.05,
+      "EEMV": 0.05,
       "SCHD": 0.05,
       "ITX": 0.05,
-      "EEMV": 0.05,
-      "VT": 0.05,
-      "FNDF": 0.05,
       "HEROMOTOCO": 0.05,
       "SPYV": 0.05,
       "ZM": 0.05,
@@ -2850,11 +2850,11 @@
       "Obligations:US Treasury 3 Month Bill ETF (TBIL)": 6.0,
       "Obligations:Vanguard Short-Term Treasury Fund (VGSH)": 6.0,
       "Obligations:PGIM AAA CLO ETF (PAAA)": 9.0,
+      "ETF:Schwab Fundamental International Large Company Index ETF (FNDF)": 5.2,
+      "ETF:Vanguard Total World Stock ETF (VT)": 5.2,
+      "ETF:iShares MSCI Emerging Markets Minimum Volatility Factor ETF (EEMV)": 5.2,
       "ETF:Schwab U.S. Dividend Equity ETF (SCHD)": 5.2,
       "Actions:INDUSTRIA DE DISENO TEXTIL SA (ITX)": 4.0,
-      "ETF:iShares MSCI Emerging Markets Minimum Volatility Factor ETF (EEMV)": 5.2,
-      "ETF:Vanguard Total World Stock ETF (VT)": 5.2,
-      "ETF:Schwab Fundamental International Large Company Index ETF (FNDF)": 5.2,
       "Actions:HERO MOTOCORP LTD (HEROMOTOCO)": 4.0,
       "ETF:SPDR Portfolio S&P 500 Value ETF (SPYV)": 5.2,
       "Actions:ZOOM COMMUNICATIONS INC CLASS A (ZM)": 5.2,
@@ -2880,15 +2880,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 11.0,
-            "observed": 21.29,
-            "slack": -7.29,
+            "observed": 21.3,
+            "slack": -7.3,
             "binding": false,
             "status": "CRITICAL",
             "details": {
               "tolerance": 3.0,
               "range_min": 8.0,
               "range_max": 14.0,
-              "diff_from_target": 10.29
+              "diff_from_target": 10.3
             }
           },
           {
@@ -2903,14 +2903,14 @@
               "count": 5,
               "breakdown": [
                 {
+                  "id": "US Treasury 3 Month Bill ETF",
+                  "name": "US Treasury 3 Month Bill ETF",
+                  "weight": 2.11
+                },
+                {
                   "id": "Vanguard Short-Term Treasury Fund",
                   "name": "Vanguard Short-Term Treasury F",
                   "weight": 2.06
-                },
-                {
-                  "id": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
-                  "name": "FlexShares iBoxx 3-Year Target",
-                  "weight": 2.16
                 },
                 {
                   "id": "PGIM AAA CLO ETF",
@@ -2918,14 +2918,14 @@
                   "weight": 2.06
                 },
                 {
-                  "id": "US Treasury 3 Month Bill ETF",
-                  "name": "US Treasury 3 Month Bill ETF",
-                  "weight": 2.11
-                },
-                {
                   "id": "Janus Henderson AAA CLO ETF",
                   "name": "Janus Henderson AAA CLO ETF",
                   "weight": 2.06
+                },
+                {
+                  "id": "FlexShares iBoxx 3-Year Target Duration TIPS Index Fund",
+                  "name": "FlexShares iBoxx 3-Year Target",
+                  "weight": 2.16
                 }
               ]
             }
@@ -2958,12 +2958,12 @@
               },
               "positions_above_10pct": [
                 {
-                  "id": "EQ_934",
-                  "weight": 24.34
-                },
-                {
                   "id": "EQ_405",
                   "weight": 26.31
+                },
+                {
+                  "id": "EQ_936",
+                  "weight": 24.34
                 },
                 {
                   "id": "EQ_425",
@@ -3214,7 +3214,7 @@
             "exchange": null
           },
           {
-            "id": "EQ_934",
+            "id": "EQ_936",
             "ticker": "HEROMOTOCO",
             "name": "HERO MOTOCORP LTD",
             "weight_pct": 24.34,
@@ -3302,31 +3302,9 @@
             "exchange": null
           },
           {
-            "id": "Schwab U.S. Dividend Equity ETF",
-            "ticker": "SCHD",
-            "name": "Schwab U.S. Dividend Equity ETF",
-            "weight_pct": 1.69,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "EQ_567",
-            "ticker": "ITX",
-            "name": "INDUSTRIA DE DISENO TEXTIL SA",
-            "weight_pct": 1.69,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Biens de consommation cycliques",
-            "region": "Espagne",
-            "exchange": null
-          },
-          {
-            "id": "iShares MSCI Emerging Markets Minimum Volatility Factor ETF",
-            "ticker": "EEMV",
-            "name": "iShares MSCI Emerging Markets Minimum Volatility Factor ETF",
+            "id": "Schwab Fundamental International Large Company Index ETF",
+            "ticker": "FNDF",
+            "name": "Schwab Fundamental International Large Company Index ETF",
             "weight_pct": 1.69,
             "category": "ETF",
             "risk_bucket": "equity_like",
@@ -3346,14 +3324,36 @@
             "exchange": null
           },
           {
-            "id": "Schwab Fundamental International Large Company Index ETF",
-            "ticker": "FNDF",
-            "name": "Schwab Fundamental International Large Company Index ETF",
+            "id": "iShares MSCI Emerging Markets Minimum Volatility Factor ETF",
+            "ticker": "EEMV",
+            "name": "iShares MSCI Emerging Markets Minimum Volatility Factor ETF",
             "weight_pct": 1.69,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
             "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Schwab U.S. Dividend Equity ETF",
+            "ticker": "SCHD",
+            "name": "Schwab U.S. Dividend Equity ETF",
+            "weight_pct": 1.69,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_567",
+            "ticker": "ITX",
+            "name": "INDUSTRIA DE DISENO TEXTIL SA",
+            "weight_pct": 1.69,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Biens de consommation cycliques",
+            "region": "Espagne",
             "exchange": null
           },
           {
@@ -3379,7 +3379,7 @@
             "exchange": null
           },
           {
-            "id": "EQ_940",
+            "id": "EQ_942",
             "ticker": "LUPIN",
             "name": "LUPIN LTD",
             "weight_pct": 0.99,
@@ -3475,7 +3475,7 @@
     ],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-06-04T12:25:36.543887+00:00",
+      "timestamp": "2026-06-04T12:46:10.534278+00:00",
       "profile": "Modéré",
       "data_limits": {
         "data_window": "short_window",
@@ -3547,17 +3547,7 @@
               "weight_pct": 6.0
             },
             {
-              "ticker": "SCHD",
-              "category": "ETF",
-              "weight_pct": 5.0
-            },
-            {
-              "ticker": "ITX",
-              "category": "Actions",
-              "weight_pct": 5.0
-            },
-            {
-              "ticker": "EEMV",
+              "ticker": "FNDF",
               "category": "ETF",
               "weight_pct": 5.0
             },
@@ -3567,8 +3557,18 @@
               "weight_pct": 5.0
             },
             {
-              "ticker": "FNDF",
+              "ticker": "EEMV",
               "category": "ETF",
+              "weight_pct": 5.0
+            },
+            {
+              "ticker": "SCHD",
+              "category": "ETF",
+              "weight_pct": 5.0
+            },
+            {
+              "ticker": "ITX",
+              "category": "Actions",
               "weight_pct": 5.0
             },
             {
@@ -3734,6 +3734,36 @@
             ]
           },
           {
+            "ticker": "FNDF",
+            "name": "Schwab Fundamental International Large Company Index ETF",
+            "category": "ETF",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "Schwab Fundamental International Large Company Index ETF"
+            ]
+          },
+          {
+            "ticker": "VT",
+            "name": "Vanguard Total World Stock ETF",
+            "category": "ETF",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "Vanguard Total World Stock ETF"
+            ]
+          },
+          {
+            "ticker": "EEMV",
+            "name": "iShares MSCI Emerging Markets Minimum Volatility Factor ETF",
+            "category": "ETF",
+            "weight": 0.05,
+            "weight_pct": 5.0,
+            "asset_ids": [
+              "iShares MSCI Emerging Markets Minimum Volatility Factor ETF"
+            ]
+          },
+          {
             "ticker": "SCHD",
             "name": "Schwab U.S. Dividend Equity ETF",
             "category": "ETF",
@@ -3754,43 +3784,13 @@
             ]
           },
           {
-            "ticker": "EEMV",
-            "name": "iShares MSCI Emerging Markets Minimum Volatility Factor ETF",
-            "category": "ETF",
-            "weight": 0.05,
-            "weight_pct": 5.0,
-            "asset_ids": [
-              "iShares MSCI Emerging Markets Minimum Volatility Factor ETF"
-            ]
-          },
-          {
-            "ticker": "VT",
-            "name": "Vanguard Total World Stock ETF",
-            "category": "ETF",
-            "weight": 0.05,
-            "weight_pct": 5.0,
-            "asset_ids": [
-              "Vanguard Total World Stock ETF"
-            ]
-          },
-          {
-            "ticker": "FNDF",
-            "name": "Schwab Fundamental International Large Company Index ETF",
-            "category": "ETF",
-            "weight": 0.05,
-            "weight_pct": 5.0,
-            "asset_ids": [
-              "Schwab Fundamental International Large Company Index ETF"
-            ]
-          },
-          {
             "ticker": "HEROMOTOCO",
             "name": "HERO MOTOCORP LTD",
             "category": "Actions",
             "weight": 0.05,
             "weight_pct": 5.0,
             "asset_ids": [
-              "EQ_934"
+              "EQ_936"
             ]
           },
           {
@@ -3820,7 +3820,7 @@
             "weight": 0.04,
             "weight_pct": 4.0,
             "asset_ids": [
-              "EQ_940"
+              "EQ_942"
             ]
           },
           {
@@ -3885,7 +3885,7 @@
         {
           "ticker": "FOX",
           "name": "FOX CORP CLASS B",
-          "score": 81.74,
+          "score": 82.07,
           "category": "Actions",
           "sector": "La communication",
           "industry": "Entertainment",
@@ -3896,7 +3896,7 @@
         {
           "ticker": "BKT",
           "name": "BANKINTER SA",
-          "score": 77.12,
+          "score": 76.75,
           "category": "Actions",
           "sector": "Finance",
           "industry": "Banks - Regional",
@@ -3905,9 +3905,20 @@
           "exposure_family": "sector_financials"
         },
         {
+          "ticker": "EDV",
+          "name": "ENDEAVOUR MINING",
+          "score": 76.16,
+          "category": "Actions",
+          "sector": "Matériaux",
+          "industry": "Gold",
+          "region": "Royaume-Uni",
+          "vol_annual": 39.71,
+          "exposure_family": "sector_materials"
+        },
+        {
           "ticker": "ZYDUSLIFE",
           "name": "ZYDUS LIFESCIENCES LTD",
-          "score": 76.13,
+          "score": 76.16,
           "category": "Actions",
           "sector": "Santé",
           "industry": "Drug Manufacturers - Specialty & Generic",
@@ -3918,7 +3929,7 @@
         {
           "ticker": "EICHERMOT",
           "name": "EICHER MOTORS LTD",
-          "score": 75.91,
+          "score": 76.06,
           "category": "Actions",
           "sector": "Biens de consommation cycliques",
           "industry": "Auto Manufacturers",
@@ -3929,7 +3940,7 @@
         {
           "ticker": "MNST",
           "name": "MONSTER BEVERAGE CORP",
-          "score": 75.32,
+          "score": 75.41,
           "category": "Actions",
           "sector": "Biens de consommation de base",
           "industry": "Beverages - Non-Alcoholic",
@@ -3940,7 +3951,7 @@
         {
           "ticker": "JPM",
           "name": "JPMORGAN CHASE & CO",
-          "score": 74.16,
+          "score": 74.36,
           "category": "Actions",
           "sector": "Finance",
           "industry": "Banks - Diversified",
@@ -3951,7 +3962,7 @@
         {
           "ticker": "REGN",
           "name": "REGENERON PHARMACEUTICALS INC",
-          "score": 74.08,
+          "score": 74.02,
           "category": "Actions",
           "sector": "Santé",
           "industry": "Biotechnology",
@@ -3960,20 +3971,9 @@
           "exposure_family": "sector_healthcare"
         },
         {
-          "ticker": "META",
-          "name": "META PLATFORMS INC CLASS A",
-          "score": 72.49,
-          "category": "Actions",
-          "sector": "La communication",
-          "industry": "Internet Content & Information",
-          "region": "Etats-Unis",
-          "vol_annual": 35.71,
-          "exposure_family": null
-        },
-        {
           "ticker": "WSM",
           "name": "WILLIAMS SONOMA INC",
-          "score": 72.46,
+          "score": 72.84,
           "category": "Actions",
           "sector": "Biens de consommation cycliques",
           "industry": "Specialty Retail",
@@ -3999,7 +3999,7 @@
         {
           "ticker": "GPIQ",
           "name": "Nasdaq 100 Core Premium Income ETF",
-          "score": 58.56,
+          "score": 59.34,
           "category": "ETF",
           "sector": "Diversified",
           "industry": null,
@@ -4026,10 +4026,10 @@
       {
         "name": "VWCE.DE",
         "ticker": "VWCE.DE",
-        "rationale": "ETF monde all-cap offrant une exposition diversifiée aux marchés développés et émergents, constituant l'épine dorsale du portefeuille avec sa large diversification sectorielle et géographique. Sa pondération de 50% reflète une approche core-satellite équilibrée, adaptée au profil modéré de l'investisseur. L'actif bénéficie indirectement de la surperformance du secteur technologique (+59.3% sur 12 mois) via ses positions dans les grandes capitalisations mondiales.",
+        "rationale": "ETF monde développé et émergent offrant une exposition diversifiée à plus de 3000 actions globales. Représente la base du portefeuille avec une approche passive et des frais très faibles (0.22%). Position de cœur idéale pour un profil modéré cherchant une diversification maximale.",
         "role": "core",
-        "risk_note": "Risque de concentration géographique sur les marchés développés et sensibilité aux corrections des grandes capitalisations technologiques",
-        "market_context_link": "Bénéficie du momentum positif de 8/11 secteurs et de la surperformance technologique, mais exposition limitée aux secteurs favorisés (energy, materials)",
+        "risk_note": "Exposition importante aux marchés développés américains, sensible aux variations de change EUR/USD",
+        "market_context_link": "Bénéficie de l'exposition aux secteurs favorisés (energy, materials) et aux régions leaders (japan, china) via sa diversification globale",
         "weight_pct": 50.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4046,10 +4046,10 @@
       {
         "name": "AGGH.AS",
         "ticker": "AGGH.AS",
-        "rationale": "ETF obligataire global offrant une diversification géographique des obligations gouvernementales et corporatives, apportant stabilité et protection défensive au portefeuille. Sa pondération de 15% correspond à une allocation obligataire modérée, appropriée pour un profil équilibré dans un contexte de régime neutre. L'actif joue un rôle de stabilisateur de volatilité face aux 21.3% de volatilité cible du portefeuille.",
+        "rationale": "ETF obligataire global couvrant les obligations gouvernementales et corporate investment grade mondiales. Apporte de la stabilité et une décorrélation avec les actions dans un contexte de régime neutral. Couverture de change EUR pour réduire la volatilité.",
         "role": "diversification",
-        "risk_note": "Risque de taux d'intérêt et de change sur les obligations internationales",
-        "market_context_link": "Position défensive adaptée au régime neutre actuel, offrant une protection contre la volatilité des secteurs cycliques favorisés",
+        "risk_note": "Sensibilité aux variations de taux d'intérêt et risque de crédit sur les obligations corporate",
+        "market_context_link": "null",
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4066,10 +4066,10 @@
       {
         "name": "HEROMOTOCO",
         "ticker": "HEROMOTOCO",
-        "rationale": "Hero MotoCorp, leader indien des deux-roues, offre une exposition au marché indien des transports personnels en croissance malgré les difficultés régionales identifiées. Cette position de 5% constitue un pari contrarian sur la reprise du marché indien, actuellement évité par l'analyse RADAR. L'entreprise bénéficie d'une position dominante sur son marché domestique et d'une expansion internationale progressive.",
+        "rationale": "Constructeur indien de deux-roues, leader sur son marché domestique avec une forte position concurrentielle. Exposition au marché indien malgré sa classification en région évitée, justifiée par les fondamentaux solides de l'entreprise. Position satellite pour diversifier géographiquement.",
         "role": "satellite",
-        "risk_note": "Exposition concentrée au marché indien actuellement en difficulté et volatilité spécifique au secteur automobile",
-        "market_context_link": "Position contrarian sur l'Inde (région évitée), pari sur une éventuelle rotation favorable des capitaux vers cette région",
+        "risk_note": "Exposition concentrée au marché indien identifié comme région en difficulté par l'analyse RADAR",
+        "market_context_link": "Va à l'encontre des recommandations RADAR qui évitent l'Inde - position contrarian sur fondamentaux",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4086,10 +4086,10 @@
       {
         "name": "NOVN",
         "ticker": "NOVN",
-        "rationale": "Novartis, géant pharmaceutique suisse, apporte une exposition défensive au secteur healthcare malgré ses récentes difficultés (-2.0% sur 3 mois). Cette position de 5% mise sur la résilience du modèle pharmaceutique et le potentiel de retournement du secteur, offrant des dividendes réguliers et une protection en cas de ralentissement économique. La qualité du management et le pipeline d'innovation justifient cette allocation malgré le momentum défavorable.",
+        "rationale": "Géant pharmaceutique suisse avec un pipeline solide et une position défensive. Malgré l'évitement du secteur healthcare par RADAR, NOVN offre une qualité exceptionnelle et des revenus récurrents. Position contrarian justifiée par la solidité bilancielle et les dividendes réguliers.",
         "role": "satellite",
-        "risk_note": "Secteur healthcare actuellement en difficulté avec un momentum dégradé sur 6 mois",
-        "market_context_link": "Position contrarian sur le secteur healthcare (identifié en difficulté), pari sur un retournement cyclique",
+        "risk_note": "Secteur healthcare identifié en difficulté, pression réglementaire sur les prix des médicaments",
+        "market_context_link": "Position contrarian face à l'évitement du secteur healthcare - pari sur la qualité long terme",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4106,10 +4106,10 @@
       {
         "name": "EXPD",
         "ticker": "EXPD",
-        "rationale": "Expeditors International, spécialiste de la logistique et du transport de marchandises, bénéficie directement de la surpondération du secteur industrials (+15%) recommandée par l'analyse RADAR. Cette allocation de 5% capitalise sur la reprise du commerce mondial et l'efficacité opérationnelle de l'entreprise dans un secteur cyclique favorable. La société offre une exposition pure au secteur industriel sans la volatilité des constructeurs d'équipements lourds.",
+        "rationale": "Leader américain de la logistique et du transport, bénéficiant directement de la surpondération des industrials recommandée par RADAR. Modèle économique asset-light avec des marges élevées et une croissance soutenue du e-commerce. Exposition au secteur industriel favorisé.",
         "role": "satellite",
-        "risk_note": "Sensibilité aux cycles économiques mondiaux et aux tensions commerciales internationales",
-        "market_context_link": "Alignement direct avec la surpondération recommandée du secteur industrials (+15%)",
+        "risk_note": "Sensible aux cycles économiques et à la demande de transport, concurrence accrue dans la logistique",
+        "market_context_link": "Aligné avec la surpondération RADAR du secteur industrials (+15%)",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4126,10 +4126,10 @@
       {
         "name": "CF",
         "ticker": "CF",
-        "rationale": "CF Industries, producteur d'engrais azotés, s'aligne parfaitement avec la stratégie de surpondération des secteurs materials (+15%) et energy, bénéficiant de la dynamique favorable des matières premières. Cette allocation de 5% exploite le momentum exceptionnel du secteur energy (+31.3% YTD) et la demande soutenue en fertilisants agricoles. L'entreprise présente des fondamentaux solides avec des marges élevées dans un cycle favorable des commodités.",
+        "rationale": "Producteur américain d'engrais azotés, bénéficiant de la surpondération materials selon RADAR. Positionnement avantageux avec accès privilégié au gaz naturel bas coût et demande agricole structurelle. Exposition aux matières premières favorisées et au secteur energy via les intrants énergétiques.",
         "role": "satellite",
-        "risk_note": "Volatilité cyclique des prix des commodités et sensibilité aux politiques agricoles",
-        "market_context_link": "Alignement optimal avec les secteurs favorisés materials et energy, capitalisant sur le momentum exceptionnel (+31.3% YTD)",
+        "risk_note": "Cyclicité des prix agricoles et volatilité du gaz naturel, dépendance aux conditions météorologiques",
+        "market_context_link": "Doublement aligné avec les recommandations RADAR : secteurs materials et energy surpondérés",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4146,10 +4146,10 @@
       {
         "name": "IBCI.AS",
         "ticker": "IBCI.AS",
-        "rationale": "ETF iShares Core MSCI China offrant une exposition ciblée au marché chinois, en parfaite adéquation avec la recommandation de surpondération de la Chine dans l'analyse RADAR. Cette allocation de 5% capitalise sur le potentiel de reprise économique chinoise et la valorisation attractive après les récentes corrections. L'actif diversifie géographiquement le portefeuille vers une région stratégiquement favorisée.",
-        "role": "satellite",
-        "risk_note": "Risques géopolitiques sino-américains et volatilité réglementaire du marché chinois",
-        "market_context_link": "Alignement direct avec la région China favorisée par l'analyse RADAR",
+        "rationale": "ETF iShares exposé aux obligations corporate investment grade de la zone euro. Complète l'allocation obligataire avec un focus européen et apporte un rendement potentiellement plus élevé que les obligations gouvernementales. Position de diversification pour lisser la volatilité actions.",
+        "role": "diversification",
+        "risk_note": "Risque de crédit corporate et sensibilité aux taux BCE, duration plus longue que les obligations gouvernementales",
+        "market_context_link": "null",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4166,10 +4166,10 @@
       {
         "name": "IBGS.AS",
         "ticker": "IBGS.AS",
-        "rationale": "ETF iShares Core Government Bond offrant une exposition aux obligations gouvernementales européennes, complétant la diversification obligataire avec un focus sur la qualité crédit souveraine. Cette position de 5% renforce la composante défensive du portefeuille dans un contexte de régime neutre, apportant stabilité et prévisibilité des revenus. L'allocation modérée reflète une approche prudente face aux incertitudes sur les taux d'intérêt européens.",
-        "role": "diversification",
-        "risk_note": "Risque de duration et sensibilité aux politiques monétaires de la BCE",
-        "market_context_link": "Complément défensif adapté au régime neutre, protection contre la volatilité des secteurs cycliques surpondérés",
+        "rationale": "ETF obligataire gouvernemental zone euro de court terme, offrant une protection contre la volatilité avec une duration faible. Complément défensif à l'allocation obligataire avec un risque de taux limité. Position de stabilité dans un contexte de régime neutral.",
+        "role": "hedge",
+        "risk_note": "Rendement potentiellement faible en environnement de taux bas, risque de réinvestissement",
+        "market_context_link": "null",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4186,10 +4186,10 @@
       {
         "name": "SGLN.AS",
         "ticker": "SGLN.AS",
-        "rationale": "ETF or physique apportant une diversification anti-corrélée aux actifs financiers traditionnels, jouant un rôle de couverture dans un portefeuille équilibré. Cette allocation de 5% offre une protection contre l'inflation et les risques géopolitiques, particulièrement pertinente dans un contexte où plusieurs secteurs montrent des signes de faiblesse. L'or constitue traditionnellement une réserve de valeur en période d'incertitude macroéconomique.",
+        "rationale": "ETF physique or, traditionnelle couverture contre l'inflation et l'incertitude géopolitique. Dans un régime neutral, l'or apporte une diversification précieuse face aux actifs financiers traditionnels. Position de hedge pour préserver le pouvoir d'achat et réduire la corrélation globale du portefeuille.",
         "role": "hedge",
-        "risk_note": "Volatilité liée aux variations du dollar américain et absence de rendement courant",
-        "market_context_link": "Couverture contre les risques identifiés dans 3 secteurs à momentum dégradé et protection anti-inflation",
+        "risk_note": "Aucun rendement intrinsèque, volatilité liée aux sentiment de risque et aux politiques monétaires",
+        "market_context_link": "null",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -4312,7 +4312,7 @@
         "industry": "Apparel Retail",
         "beta": 0.94,
         "role": "satellite",
-        "fit_score": 0.5555,
+        "fit_score": 0.5597,
         "buffett_score": 83
       },
       "LUPIN": {
@@ -4360,7 +4360,7 @@
     "_optimization": {
       "mode": "slsqp",
       "is_heuristic": false,
-      "vol_realized": 23.95,
+      "vol_realized": 24.7,
       "vol_target": 24.0,
       "covariance_trustworthy": false,
       "returns_coverage_pct": 0.0,
@@ -4369,37 +4369,41 @@
     "_tickers_pricing": {
       "BKR": 0.1,
       "402340": 0.1,
-      "FSLR": 0.1,
-      "FLKR": 0.09,
-      "SOXX": 0.08,
+      "FLKR": 0.08,
+      "SOXX": 0.07,
+      "NEM": 0.06,
+      "XLK": 0.06,
       "FLTR": 0.06,
       "FLRN": 0.06,
-      "XLK": 0.06,
-      "PICK": 0.06,
       "XCEM": 0.06,
-      "COPX": 0.06,
-      "ICLN": 0.04,
-      "NVDA": 0.03,
-      "NEM": 0.1
+      "PICK": 0.06,
+      "COPX": 0.05,
+      "NVDA": 0.04,
+      "BNB/USD": 0.04,
+      "ICLN": 0.03,
+      "WST": 0.02,
+      "FSLR": 0.11
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Actions:BAKER HUGHES CLASS A (BKR)": 4.3,
-      "Actions:SK SQUARE LTD (402340)": 8.4,
-      "Actions:FIRST SOLAR INC (FSLR)": 7.3,
-      "ETF:Franklin FTSE South Korea ETF (FLKR)": 7.7,
-      "ETF:iShares Semiconductor ETF (SOXX)": 9.2,
-      "Obligations:VanEck IG Floating Rate ETF (FLTR)": 6.1,
-      "Obligations:SPDR Bloomberg Investment Grade Floating Rate ETF (FLRN)": 6.1,
-      "ETF:State Street Technology Select Sector SPDR ETF (XLK)": 5.1,
-      "ETF:iShares MSCI Global Metals & Mining Producers ETF (PICK)": 6.9,
-      "ETF:Columbia EM Core ex-China ETF (XCEM)": 6.9,
-      "ETF:Global X Copper Miners ETF (COPX)": 6.9,
-      "ETF:iShares Global Clean Energy ETF (ICLN)": 2.9,
-      "Actions:NVIDIA CORP (NVDA)": 2.6,
-      "Actions:NEWMONT (NEM)": 9.4,
-      "ETF:SPDR Gold Shares (GLD)": 7.1,
+      "Actions:BAKER HUGHES CLASS A (BKR)": 4.4,
+      "Actions:SK SQUARE LTD (402340)": 6.4,
+      "ETF:Franklin FTSE South Korea ETF (FLKR)": 7.0,
+      "ETF:iShares Semiconductor ETF (SOXX)": 8.3,
+      "Actions:NEWMONT (NEM)": 7.0,
+      "ETF:State Street Technology Select Sector SPDR ETF (XLK)": 5.2,
+      "Obligations:VanEck IG Floating Rate ETF (FLTR)": 6.3,
+      "Obligations:SPDR Bloomberg Investment Grade Floating Rate ETF (FLRN)": 6.3,
+      "ETF:Columbia EM Core ex-China ETF (XCEM)": 7.1,
+      "ETF:iShares MSCI Global Metals & Mining Producers ETF (PICK)": 7.1,
+      "ETF:Global X Copper Miners ETF (COPX)": 5.9,
+      "Actions:NVIDIA CORP (NVDA)": 3.4,
+      "Crypto:BNB/USD": 2.4,
+      "ETF:iShares Global Clean Energy ETF (ICLN)": 2.4,
+      "Actions:WEST PHARMACEUTICAL SERVICES INC (WST)": 2.3,
+      "Actions:FIRST SOLAR INC (FSLR)": 8.0,
+      "ETF:SPDR Gold Shares (GLD)": 7.3,
       "ETF:SPDR S&P Biotech ETF (XBI)": 3.1
     },
     "_constraint_report": {
@@ -4419,15 +4423,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 24.0,
-            "observed": 23.95,
-            "slack": 5.95,
+            "observed": 24.7,
+            "slack": 5.3,
             "binding": false,
             "status": "OK",
             "details": {
               "tolerance": 6.0,
               "range_min": 18.0,
               "range_max": 30.0,
-              "diff_from_target": -0.05
+              "diff_from_target": 0.7
             }
           },
           {
@@ -4458,12 +4462,23 @@
             "name": "crypto_max",
             "constraint_type": "max",
             "cap": 10.0,
-            "observed": 0.0,
-            "slack": 10.0,
+            "observed": 3.52,
+            "slack": 6.48,
             "binding": false,
             "status": "OK",
             "details": {
-              "breakdown": []
+              "breakdown": [
+                {
+                  "id": "XLM/USD",
+                  "name": "XLM/USD",
+                  "weight": 0.53
+                },
+                {
+                  "id": "BNB/USD",
+                  "name": "BNB/USD",
+                  "weight": 2.99
+                }
+              ]
             }
           },
           {
@@ -4476,13 +4491,13 @@
             "status": "BINDING",
             "details": {
               "largest_position": {
-                "id": "EQ_829",
+                "id": "EQ_831",
                 "name": "SK SQUARE LTD",
                 "weight": 13.0
               },
               "positions_above_10pct": [
                 {
-                  "id": "EQ_829",
+                  "id": "EQ_831",
                   "weight": 13.0
                 },
                 {
@@ -4492,10 +4507,6 @@
                 {
                   "id": "EQ_176",
                   "weight": 13.0
-                },
-                {
-                  "id": "EQ_546",
-                  "weight": 11.98
                 }
               ]
             }
@@ -4504,26 +4515,27 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 35.0,
-            "observed": 35.01,
-            "slack": -0.01,
-            "binding": false,
-            "status": "VIOLATED",
+            "observed": 35.0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "most_concentrated": "Diversified",
               "counts_in_max_sector": {
-                "Diversified": 35.01,
-                "Technologie de l'information": 17.01,
+                "Diversified": 35.0,
+                "Technologie de l'information": 19.24,
                 "Industries": 13.0,
                 "Energie": 13.0,
-                "Finance": 11.98
+                "Finance": 6.24
               },
               "all_sectors": {
-                "Diversified": 35.01,
-                "Technologie de l'information": 17.01,
+                "Diversified": 35.0,
+                "Technologie de l'information": 19.24,
                 "Industries": 13.0,
                 "Energie": 13.0,
-                "Finance": 11.98,
-                "Bonds": 10.0
+                "Bonds": 10.0,
+                "Finance": 6.24,
+                "Crypto": 3.52
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -4532,25 +4544,25 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 35.01,
-            "slack": 14.99,
+            "observed": 35.0,
+            "slack": 15.0,
             "binding": false,
             "status": "OK",
             "details": {
               "most_concentrated": "Global",
               "counts_in_max_region": {
-                "Global": 35.01,
-                "Etats-Unis": 29.12,
+                "Global": 35.0,
+                "Etats-Unis": 30.24,
                 "Corée": 13.0,
-                "Espagne": 11.98,
-                "Taïwan": 0.89
+                "Espagne": 6.24,
+                "Taïwan": 2.0
               },
               "all_regions": {
-                "Global": 45.01,
-                "Etats-Unis": 29.12,
+                "Global": 48.52,
+                "Etats-Unis": 30.24,
                 "Corée": 13.0,
-                "Espagne": 11.98,
-                "Taïwan": 0.89
+                "Espagne": 6.24,
+                "Taïwan": 2.0
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -4559,8 +4571,8 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 15,
-            "slack": 5,
+            "observed": 17,
+            "slack": 7,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -4569,8 +4581,8 @@
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 15,
-            "slack": 3,
+            "observed": 17,
+            "slack": 1,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -4579,15 +4591,15 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 50.0,
-            "observed": 35.57,
-            "slack": 5.57,
+            "observed": 34.89,
+            "slack": 4.89,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 30.0,
               "range_max": 50.0,
-              "slack_from_min": 5.57,
-              "slack_from_max": 14.43,
+              "slack_from_min": 4.89,
+              "slack_from_max": 15.11,
               "outside_range": false,
               "is_indicator": true
             }
@@ -4596,15 +4608,15 @@
             "name": "bucket_satellite",
             "constraint_type": "range",
             "cap": 55.0,
-            "observed": 64.43,
-            "slack": -9.43,
+            "observed": 61.59,
+            "slack": -6.59,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 35.0,
               "range_max": 55.0,
-              "slack_from_min": 29.43,
-              "slack_from_max": -9.43,
+              "slack_from_min": 26.59,
+              "slack_from_max": -6.59,
               "outside_range": true,
               "is_indicator": true
             }
@@ -4630,15 +4642,15 @@
             "name": "bucket_lottery",
             "constraint_type": "range",
             "cap": 5.0,
-            "observed": 0,
-            "slack": 0.0,
-            "binding": true,
-            "status": "BINDING",
+            "observed": 3.52,
+            "slack": 1.48,
+            "binding": false,
+            "status": "OK",
             "details": {
               "range_min": 0.0,
               "range_max": 5.0,
-              "slack_from_min": 0.0,
-              "slack_from_max": 5.0,
+              "slack_from_min": 3.52,
+              "slack_from_max": 1.48,
               "outside_range": false,
               "is_indicator": true
             }
@@ -4673,55 +4685,58 @@
         "summary": {
           "total": 14,
           "ok": 11,
-          "binding": 2,
-          "violated": 1,
+          "binding": 3,
+          "violated": 0,
           "critical": 0
         },
-        "quality_score": 90.0,
+        "quality_score": 95.7,
         "recommendations": [
           "🟡 BINDING: max_single_position at 13.0% (cap=13.0%) — monitor closely",
-          "🟠 VIOLATED: max_sector exceeded by 0.0% — reduce exposure"
+          "🟡 BINDING: max_sector at 35.0% (cap=35.0%) — monitor closely",
+          "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
         ],
         "exposures": {
           "by_category": {
-            "Actions": 54.99,
+            "Actions": 51.48,
             "Obligations": 10.0,
-            "ETF": 35.01
+            "ETF": 35.0,
+            "Crypto": 3.52
           },
           "by_sector": {
-            "Diversified": 35.01,
-            "Technologie de l'information": 17.01,
+            "Diversified": 35.0,
+            "Technologie de l'information": 19.24,
             "Industries": 13.0,
             "Energie": 13.0,
-            "Finance": 11.98
+            "Finance": 6.24
           },
           "by_region": {
-            "Global": 45.01,
-            "Etats-Unis": 29.12,
+            "Global": 48.52,
+            "Etats-Unis": 30.24,
             "Corée": 13.0,
-            "Espagne": 11.98,
-            "Taïwan": 0.89
+            "Espagne": 6.24,
+            "Taïwan": 2.0
           },
           "by_risk_bucket": {
-            "equity_like": 90.0,
-            "bond_like": 10.0
+            "equity_like": 86.48,
+            "bond_like": 10.0,
+            "crypto": 3.52
           },
           "by_role": {
-            "core": 35.57,
-            "satellite": 64.43,
+            "core": 34.89,
+            "satellite": 61.59,
             "defensive": 0.0,
-            "lottery": 0.0,
+            "lottery": 3.52,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 898.0,
+            "hhi": 814.0,
             "hhi_interpretation": "well_diversified",
-            "effective_n": 11.13,
-            "n_positions": 15,
-            "top_5_weight": 58.18,
-            "top_10_weight": 84.16,
+            "effective_n": 12.28,
+            "n_positions": 17,
+            "top_5_weight": 52.39,
+            "top_10_weight": 78.74,
             "largest_position": 13.0,
-            "smallest_position": 0.89,
+            "smallest_position": 0.53,
             "thresholds": {
               "well_diversified": "HHI < 1000",
               "diversified": "HHI 1000-1500",
@@ -4733,7 +4748,7 @@
         },
         "ticker_mapping": [
           {
-            "id": "EQ_829",
+            "id": "EQ_831",
             "ticker": "402340",
             "name": "SK SQUARE LTD",
             "weight_pct": 13.0,
@@ -4766,21 +4781,10 @@
             "exchange": null
           },
           {
-            "id": "EQ_546",
-            "ticker": "BBVA",
-            "name": "BANCO BILBAO VIZCAYA ARGENTARIA SA",
-            "weight_pct": 11.98,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Finance",
-            "region": "Espagne",
-            "exchange": null
-          },
-          {
             "id": "Franklin FTSE South Korea ETF",
             "ticker": "FLKR",
             "name": "Franklin FTSE South Korea ETF",
-            "weight_pct": 7.2,
+            "weight_pct": 7.12,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -4791,7 +4795,29 @@
             "id": "iShares Semiconductor ETF",
             "ticker": "SOXX",
             "name": "iShares Semiconductor ETF",
-            "weight_pct": 6.38,
+            "weight_pct": 6.27,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_546",
+            "ticker": "BBVA",
+            "name": "BANCO BILBAO VIZCAYA ARGENTARIA SA",
+            "weight_pct": 6.24,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Finance",
+            "region": "Espagne",
+            "exchange": null
+          },
+          {
+            "id": "State Street Technology Select Sector SPDR ETF",
+            "ticker": "XLK",
+            "name": "State Street Technology Select Sector SPDR ETF",
+            "weight_pct": 5.19,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -4821,10 +4847,10 @@
             "exchange": null
           },
           {
-            "id": "State Street Technology Select Sector SPDR ETF",
-            "ticker": "XLK",
-            "name": "State Street Technology Select Sector SPDR ETF",
-            "weight_pct": 4.86,
+            "id": "Columbia EM Core ex-China ETF",
+            "ticker": "XCEM",
+            "name": "Columbia EM Core ex-China ETF",
+            "weight_pct": 4.92,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -4835,29 +4861,7 @@
             "id": "iShares MSCI Global Metals & Mining Producers ETF",
             "ticker": "PICK",
             "name": "iShares MSCI Global Metals & Mining Producers ETF",
-            "weight_pct": 4.74,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "Columbia EM Core ex-China ETF",
-            "ticker": "XCEM",
-            "name": "Columbia EM Core ex-China ETF",
-            "weight_pct": 4.58,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "Global X Copper Miners ETF",
-            "ticker": "COPX",
-            "name": "Global X Copper Miners ETF",
-            "weight_pct": 4.45,
+            "weight_pct": 4.66,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -4868,7 +4872,7 @@
             "id": "EQ_1",
             "ticker": "NVDA",
             "name": "NVIDIA CORP",
-            "weight_pct": 3.12,
+            "weight_pct": 4.24,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Technologie de l'information",
@@ -4876,10 +4880,10 @@
             "exchange": null
           },
           {
-            "id": "iShares Global Clean Energy ETF",
-            "ticker": "ICLN",
-            "name": "iShares Global Clean Energy ETF",
-            "weight_pct": 2.8,
+            "id": "Global X Copper Miners ETF",
+            "ticker": "COPX",
+            "name": "Global X Copper Miners ETF",
+            "weight_pct": 4.09,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -4887,26 +4891,59 @@
             "exchange": null
           },
           {
-            "id": "EQ_876",
+            "id": "BNB/USD",
+            "ticker": "BNB/USD",
+            "name": "BNB/USD",
+            "weight_pct": 2.99,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "iShares Global Clean Energy ETF",
+            "ticker": "ICLN",
+            "name": "iShares Global Clean Energy ETF",
+            "weight_pct": 2.75,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_878",
             "ticker": "6669",
             "name": "WIWYNN CORPORATION CORP",
-            "weight_pct": 0.89,
+            "weight_pct": 2.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Technologie de l'information",
             "region": "Taïwan",
             "exchange": null
+          },
+          {
+            "id": "XLM/USD",
+            "ticker": "XLM/USD",
+            "name": "XLM/USD",
+            "weight_pct": 0.53,
+            "category": "Crypto",
+            "risk_bucket": "crypto",
+            "sector": "Crypto",
+            "region": "Global",
+            "exchange": null
           }
         ],
         "execution_summary": {
-          "n_positions": 15,
+          "n_positions": 17,
           "n_exchanges": 0,
           "exchanges": [],
           "total_weight": 100.0,
-          "missing_isin": 6,
+          "missing_isin": 8,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 60.0,
+            "isin_coverage": 52.9,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -4915,44 +4952,46 @@
     },
     "_exposures": {
       "by_category": {
-        "Actions": 54.99,
+        "Actions": 51.48,
         "Obligations": 10.0,
-        "ETF": 35.01
+        "ETF": 35.0,
+        "Crypto": 3.52
       },
       "by_sector": {
-        "Diversified": 35.01,
-        "Technologie de l'information": 17.01,
+        "Diversified": 35.0,
+        "Technologie de l'information": 19.24,
         "Industries": 13.0,
         "Energie": 13.0,
-        "Finance": 11.98
+        "Finance": 6.24
       },
       "by_region": {
-        "Global": 45.01,
-        "Etats-Unis": 29.12,
+        "Global": 48.52,
+        "Etats-Unis": 30.24,
         "Corée": 13.0,
-        "Espagne": 11.98,
-        "Taïwan": 0.89
+        "Espagne": 6.24,
+        "Taïwan": 2.0
       },
       "by_risk_bucket": {
-        "equity_like": 90.0,
-        "bond_like": 10.0
+        "equity_like": 86.48,
+        "bond_like": 10.0,
+        "crypto": 3.52
       },
       "by_role": {
-        "core": 35.57,
-        "satellite": 64.43,
+        "core": 34.89,
+        "satellite": 61.59,
         "defensive": 0.0,
-        "lottery": 0.0,
+        "lottery": 3.52,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 898.0,
+        "hhi": 814.0,
         "hhi_interpretation": "well_diversified",
-        "effective_n": 11.13,
-        "n_positions": 15,
-        "top_5_weight": 58.18,
-        "top_10_weight": 84.16,
+        "effective_n": 12.28,
+        "n_positions": 17,
+        "top_5_weight": 52.39,
+        "top_10_weight": 78.74,
         "largest_position": 13.0,
-        "smallest_position": 0.89,
+        "smallest_position": 0.53,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -4963,14 +5002,14 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 15,
+      "n_positions": 17,
       "n_exchanges": 0,
       "exchanges": [],
       "total_weight": 100.0,
-      "missing_isin": 6,
+      "missing_isin": 8,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 60.0,
+        "isin_coverage": 52.9,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
@@ -4978,7 +5017,7 @@
     "_limitations": [],
     "risk_analysis": {
       "version": "1.2.7",
-      "timestamp": "2026-06-04T12:25:23.671303+00:00",
+      "timestamp": "2026-06-04T12:45:57.638426+00:00",
       "profile": "Agressif",
       "data_limits": {
         "data_window": "short_window",
@@ -5003,12 +5042,18 @@
         "allocation_breakdown": {
           "by_category": {
             "Actions": 43.0,
-            "ETF": 55.0,
-            "Obligations": 12.0
+            "ETF": 51.0,
+            "Obligations": 12.0,
+            "Crypto": 4.0
           },
           "total_weight_pct": 110.0,
-          "n_positions": 16,
+          "n_positions": 18,
           "top_positions": [
+            {
+              "ticker": "FSLR",
+              "category": "Actions",
+              "weight_pct": 11.0
+            },
             {
               "ticker": "BKR",
               "category": "Actions",
@@ -5020,29 +5065,29 @@
               "weight_pct": 10.0
             },
             {
-              "ticker": "FSLR",
-              "category": "Actions",
-              "weight_pct": 10.0
-            },
-            {
-              "ticker": "NEM",
-              "category": "Actions",
-              "weight_pct": 10.0
-            },
-            {
               "ticker": "FLKR",
               "category": "ETF",
-              "weight_pct": 9.0
+              "weight_pct": 8.0
             },
             {
               "ticker": "SOXX",
               "category": "ETF",
-              "weight_pct": 8.0
+              "weight_pct": 7.0
             },
             {
               "ticker": "GLD",
               "category": "ETF",
               "weight_pct": 7.0
+            },
+            {
+              "ticker": "NEM",
+              "category": "Actions",
+              "weight_pct": 6.0
+            },
+            {
+              "ticker": "XLK",
+              "category": "ETF",
+              "weight_pct": 6.0
             },
             {
               "ticker": "FLTR",
@@ -5055,7 +5100,7 @@
               "weight_pct": 6.0
             },
             {
-              "ticker": "XLK",
+              "ticker": "XCEM",
               "category": "ETF",
               "weight_pct": 6.0
             },
@@ -5065,29 +5110,34 @@
               "weight_pct": 6.0
             },
             {
-              "ticker": "XCEM",
-              "category": "ETF",
-              "weight_pct": 6.0
-            },
-            {
               "ticker": "COPX",
               "category": "ETF",
-              "weight_pct": 6.0
-            },
-            {
-              "ticker": "ICLN",
-              "category": "ETF",
-              "weight_pct": 4.0
+              "weight_pct": 5.0
             },
             {
               "ticker": "NVDA",
               "category": "Actions",
+              "weight_pct": 4.0
+            },
+            {
+              "ticker": "BNB/USD",
+              "category": "Crypto",
+              "weight_pct": 4.0
+            },
+            {
+              "ticker": "ICLN",
+              "category": "ETF",
               "weight_pct": 3.0
             },
             {
               "ticker": "XBI",
               "category": "ETF",
               "weight_pct": 3.0
+            },
+            {
+              "ticker": "WST",
+              "category": "Actions",
+              "weight_pct": 2.0
             }
           ],
           "source": "tickers_meta"
@@ -5131,7 +5181,7 @@
         "portfolio_score": 50.0,
         "illiquid_weight_pct": 0.0,
         "days_to_liquidate_95pct": 1.0,
-        "concentration_risk": "medium",
+        "concentration_risk": "low",
         "details": {}
       },
       "alerts": [
@@ -5168,25 +5218,15 @@
             "weight": 0.1,
             "weight_pct": 10.0,
             "asset_ids": [
-              "EQ_829"
-            ]
-          },
-          {
-            "ticker": "FSLR",
-            "name": "FIRST SOLAR INC",
-            "category": "Actions",
-            "weight": 0.1,
-            "weight_pct": 10.0,
-            "asset_ids": [
-              "EQ_390"
+              "EQ_831"
             ]
           },
           {
             "ticker": "FLKR",
             "name": "Franklin FTSE South Korea ETF",
             "category": "ETF",
-            "weight": 0.09,
-            "weight_pct": 9.0,
+            "weight": 0.08,
+            "weight_pct": 8.0,
             "asset_ids": [
               "Franklin FTSE South Korea ETF"
             ]
@@ -5195,10 +5235,30 @@
             "ticker": "SOXX",
             "name": "iShares Semiconductor ETF",
             "category": "ETF",
-            "weight": 0.08,
-            "weight_pct": 8.0,
+            "weight": 0.07,
+            "weight_pct": 7.000000000000001,
             "asset_ids": [
               "iShares Semiconductor ETF"
+            ]
+          },
+          {
+            "ticker": "NEM",
+            "name": "NEWMONT",
+            "category": "Actions",
+            "weight": 0.06,
+            "weight_pct": 6.0,
+            "asset_ids": [
+              "EQ_89"
+            ]
+          },
+          {
+            "ticker": "XLK",
+            "name": "State Street Technology Select Sector SPDR ETF",
+            "category": "ETF",
+            "weight": 0.06,
+            "weight_pct": 6.0,
+            "asset_ids": [
+              "State Street Technology Select Sector SPDR ETF"
             ]
           },
           {
@@ -5222,13 +5282,13 @@
             ]
           },
           {
-            "ticker": "XLK",
-            "name": "State Street Technology Select Sector SPDR ETF",
+            "ticker": "XCEM",
+            "name": "Columbia EM Core ex-China ETF",
             "category": "ETF",
             "weight": 0.06,
             "weight_pct": 6.0,
             "asset_ids": [
-              "State Street Technology Select Sector SPDR ETF"
+              "Columbia EM Core ex-China ETF"
             ]
           },
           {
@@ -5242,53 +5302,63 @@
             ]
           },
           {
-            "ticker": "XCEM",
-            "name": "Columbia EM Core ex-China ETF",
-            "category": "ETF",
-            "weight": 0.06,
-            "weight_pct": 6.0,
-            "asset_ids": [
-              "Columbia EM Core ex-China ETF"
-            ]
-          },
-          {
             "ticker": "COPX",
             "name": "Global X Copper Miners ETF",
             "category": "ETF",
-            "weight": 0.06,
-            "weight_pct": 6.0,
+            "weight": 0.05,
+            "weight_pct": 5.0,
             "asset_ids": [
               "Global X Copper Miners ETF"
-            ]
-          },
-          {
-            "ticker": "ICLN",
-            "name": "iShares Global Clean Energy ETF",
-            "category": "ETF",
-            "weight": 0.04,
-            "weight_pct": 4.0,
-            "asset_ids": [
-              "iShares Global Clean Energy ETF"
             ]
           },
           {
             "ticker": "NVDA",
             "name": "NVIDIA CORP",
             "category": "Actions",
-            "weight": 0.03,
-            "weight_pct": 3.0,
+            "weight": 0.04,
+            "weight_pct": 4.0,
             "asset_ids": [
               "EQ_1"
             ]
           },
           {
-            "ticker": "NEM",
-            "name": "NEWMONT",
-            "category": "Actions",
-            "weight": 0.1,
-            "weight_pct": 10.0,
+            "ticker": "BNB/USD",
+            "name": "BNB/USD",
+            "category": "Crypto",
+            "weight": 0.04,
+            "weight_pct": 4.0,
             "asset_ids": [
-              "EQ_89"
+              "BNB/USD"
+            ]
+          },
+          {
+            "ticker": "ICLN",
+            "name": "iShares Global Clean Energy ETF",
+            "category": "ETF",
+            "weight": 0.03,
+            "weight_pct": 3.0,
+            "asset_ids": [
+              "iShares Global Clean Energy ETF"
+            ]
+          },
+          {
+            "ticker": "WST",
+            "name": "WEST PHARMACEUTICAL SERVICES INC",
+            "category": "Actions",
+            "weight": 0.02,
+            "weight_pct": 2.0,
+            "asset_ids": [
+              "EQ_410"
+            ]
+          },
+          {
+            "ticker": "FSLR",
+            "name": "FIRST SOLAR INC",
+            "category": "Actions",
+            "weight": 0.11,
+            "weight_pct": 11.0,
+            "asset_ids": [
+              "EQ_390"
             ]
           },
           {
@@ -5323,10 +5393,10 @@
       "COPX": 0.038,
       "ICLN": 0.029500000000000002,
       "GLE": 0.1027,
-      "FLRN": 0.0255,
+      "FLRN": 0.026099999999999998,
       "000270": 0.13,
       "CFG": 0.0746,
-      "EMHC": 0.0245
+      "EMHC": 0.0239
     },
     "_yield_metrics": {
       "weighted_yield": 1.98,
@@ -5342,7 +5412,7 @@
         {
           "ticker": "SLB",
           "name": "SLB NV",
-          "score": 92.31,
+          "score": 92.4,
           "category": "Actions",
           "sector": "Energie",
           "industry": "Oil & Gas Equipment & Services",
@@ -5351,20 +5421,9 @@
           "exposure_family": null
         },
         {
-          "ticker": "CUMMINSIND",
-          "name": "CUMMINS INDIA LTD",
-          "score": 91.85,
-          "category": "Actions",
-          "sector": "Industries",
-          "industry": "Specialty Industrial Machinery",
-          "region": "Inde",
-          "vol_annual": 31.01,
-          "exposure_family": null
-        },
-        {
           "ticker": "2345",
           "name": "ACCTON TECHNOLOGY CORP",
-          "score": 91.82,
+          "score": 91.64,
           "category": "Actions",
           "sector": "Technologie de l'information",
           "industry": "Communication Equipment",
@@ -5373,9 +5432,20 @@
           "exposure_family": "sector_tech"
         },
         {
+          "ticker": "CUMMINSIND",
+          "name": "CUMMINS INDIA LTD",
+          "score": 91.61,
+          "category": "Actions",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "region": "Inde",
+          "vol_annual": 31.01,
+          "exposure_family": null
+        },
+        {
           "ticker": "GOOG",
           "name": "ALPHABET INC CLASS C",
-          "score": 91.2,
+          "score": 90.85,
           "category": "Actions",
           "sector": "La communication",
           "industry": "Internet Content & Information",
@@ -5386,7 +5456,7 @@
         {
           "ticker": "FIX",
           "name": "COMFORT SYSTEMS USA INC",
-          "score": 90.04,
+          "score": 89.92,
           "category": "Actions",
           "sector": "Industries",
           "industry": "Engineering & Construction",
@@ -5397,18 +5467,18 @@
         {
           "ticker": "ASML",
           "name": "ASML HOLDING NV",
-          "score": 87.9,
+          "score": 87.65,
           "category": "Actions",
           "sector": "Technologie de l'information",
           "industry": "Semiconductor Equipment & Materials",
           "region": "Pays-Bas",
-          "vol_annual": 38.37,
+          "vol_annual": 38.38,
           "exposure_family": "sector_tech"
         },
         {
           "ticker": "SOLARINDS",
           "name": "SOLAR INDUSTRIES INDIA LTD",
-          "score": 86.57,
+          "score": 86.47,
           "category": "Actions",
           "sector": "Matériaux",
           "industry": "Specialty Chemicals",
@@ -5419,7 +5489,7 @@
         {
           "ticker": "3653",
           "name": "JENTECH PRECISION INDUSTRIAL LTD",
-          "score": 85.91,
+          "score": 85.74,
           "category": "Actions",
           "sector": "Technologie de l'information",
           "industry": "Electronic Components",
@@ -5430,7 +5500,7 @@
         {
           "ticker": "3443",
           "name": "GLOBAL UNICHIP CORP",
-          "score": 85.84,
+          "score": 85.66,
           "category": "Actions",
           "sector": "Technologie de l'information",
           "industry": "Semiconductors",
@@ -5441,7 +5511,7 @@
         {
           "ticker": "2059",
           "name": "KING SLIDE WORKS LTD",
-          "score": 84.22,
+          "score": 84.3,
           "category": "Actions",
           "sector": "Technologie de l'information",
           "industry": "Furnishings, Fixtures & Appliances",
@@ -5454,37 +5524,13 @@
         {
           "ticker": "TDIV",
           "name": "FT NASDAQ Technology Dividend Index Fund",
-          "score": 92.4,
+          "score": 92.52,
           "category": "ETF",
           "sector": "Diversified",
           "industry": null,
           "region": "Global",
           "vol_annual": 20.02,
           "exposure_family": "factor_dividend"
-        }
-      ],
-      "Crypto": [
-        {
-          "ticker": "XLM/USD",
-          "name": "XLM/USD",
-          "score": 93.91,
-          "category": "Crypto",
-          "sector": "Crypto",
-          "industry": null,
-          "region": "Global",
-          "vol_annual": 80.0,
-          "exposure_family": null
-        },
-        {
-          "ticker": "BNB/USD",
-          "name": "BNB/USD",
-          "score": 93.36,
-          "category": "Crypto",
-          "sector": "Crypto",
-          "industry": null,
-          "region": "Global",
-          "vol_annual": 80.0,
-          "exposure_family": null
         }
       ],
       "Obligations": [
@@ -5516,10 +5562,10 @@
       {
         "name": "VWCE.DE",
         "ticker": "VWCE.DE",
-        "rationale": "ETF global diversifié offrant une exposition large aux marchés développés et émergents, idéal pour un profil agressif recherchant une croissance à long terme. Sa large diversification géographique et sectorielle en fait une base solide pour le portefeuille. L'allocation de 50% reflète son rôle de pierre angulaire dans une stratégie de croissance agressive.",
+        "rationale": "ETF global diversifié constituant le socle du portefeuille avec exposition aux marchés développés et émergents. Son allocation géographique équilibrée permet de capturer les opportunités mondiales tout en limitant le risque de concentration. Parfaitement adapté au profil agressif avec sa large diversification sectorielle incluant les secteurs favorisés par RADAR.",
         "role": "core",
-        "risk_note": "Volatilité élevée liée à l'exposition globale et aux marchés émergents",
-        "market_context_link": "Bénéficie de l'exposition aux régions favorisées (Japon, Chine) tout en diluant l'exposition à l'Inde défavorisée",
+        "risk_note": "Risque de change et volatilité des marchés émergents",
+        "market_context_link": "Exposition aux secteurs energy et materials favorisés par RADAR, ainsi qu'aux régions Japan et China recommandées",
         "weight_pct": 50.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5536,10 +5582,10 @@
       {
         "name": "IWDA.AS",
         "ticker": "IWDA.AS",
-        "rationale": "ETF World complémentaire focalisé sur les marchés développés, apportant une stabilité relative au portefeuille tout en maintenant une exposition croissance. Cette allocation de 15% renforce la base diversifiée tout en réduisant légèrement le risque des marchés émergents. Excellent complément au VWCE pour un portefeuille agressif équilibré.",
+        "rationale": "ETF monde développé complétant VWCE avec une exposition concentrée sur les marchés matures de qualité. Apporte stabilité relative et qualité des entreprises dans un portefeuille agressif. Son allocation géographique privilégie les régions développées avec une surpondération naturelle du Japon favorisé par RADAR.",
         "role": "core",
-        "risk_note": "Concentration sur les marchés développés peut limiter le potentiel de croissance",
-        "market_context_link": "Exposition réduite aux régions émergentes évitées, focus sur les marchés développés stables",
+        "risk_note": "Concentration sur les marchés développés et sensibilité aux taux d'intérêt",
+        "market_context_link": "Exposition significative au Japon (région favorisée) et au secteur information-technology (52W leader +58.7%)",
         "weight_pct": 15.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5556,10 +5602,10 @@
       {
         "name": "HEROMOTOCO",
         "ticker": "HEROMOTOCO",
-        "rationale": "Titre individuel indien dans le secteur automobile/industriel, offrant une exposition directe à un marché émergent à fort potentiel de croissance. Malgré la région Inde étant défavorisée par RADAR, ce titre peut bénéficier de dynamiques spécifiques locales. L'allocation limitée de 5% contrôle le risque tout en maintenant une exposition opportuniste.",
+        "rationale": "Position satellite contradictoire avec les recommandations RADAR qui évitent l'Inde. Cette allocation semble incohérente avec le contexte macro défavorable à la région indienne. Potentiel de diversification sectorielle mais exposition géographique à contre-courant.",
         "role": "satellite",
-        "risk_note": "Exposition à l'Inde défavorisée par RADAR et risque de concentration sur un titre individuel",
-        "market_context_link": "Va à l'encontre de la recommandation RADAR d'éviter l'Inde, justifié par des fondamentaux spécifiques",
+        "risk_note": "Exposition à l'Inde (région évitée par RADAR) et risque de change INR",
+        "market_context_link": "Contraire aux recommandations RADAR qui évitent l'Inde (région en difficulté)",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5576,10 +5622,10 @@
       {
         "name": "EXPD",
         "ticker": "EXPD",
-        "rationale": "Exposition au secteur logistique/industriel, alignée avec la recommandation RADAR de surpondérer les industrials (+15%). Ce secteur bénéficie des tendances de mondialisation et d'e-commerce. L'allocation de 5% permet de capturer cette thématique sectorielle prometteuse tout en maintenant une diversification appropriée.",
+        "rationale": "Titre du secteur industrials/logistique parfaitement aligné avec les recommandations RADAR favorisant les industrials (+15% surpondération). Bénéficie du momentum sectoriel positif et de la reprise des échanges commerciaux mondiaux. Position satellite opportuniste sur un secteur cyclique en phase de reprise.",
         "role": "satellite",
-        "risk_note": "Sensibilité aux cycles économiques et à la volatilité du commerce international",
-        "market_context_link": "Parfaitement aligné avec la surpondération recommandée du secteur industrials (+15%)",
+        "risk_note": "Cyclicité du secteur logistique et sensibilité au commerce international",
+        "market_context_link": "Secteur industrials favorisé par RADAR avec surpondération +15% recommandée",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5596,10 +5642,10 @@
       {
         "name": "CF",
         "ticker": "CF",
-        "rationale": "Exposition au secteur des matériaux/chimie, en phase avec la recommandation RADAR de favoriser materials (+15%). Les engrais et produits chimiques bénéficient des tendances agricoles et industrielles mondiales. Cette allocation tactique de 5% capitalise sur le momentum sectoriel identifié par l'analyse RADAR.",
+        "rationale": "Exposition au secteur materials/chimie parfaitement cohérente avec RADAR qui favorise les materials (+15% surpondération). Position tactique sur un secteur cyclique bénéficiant du rebond des matières premières et de l'inflation. Diversification sectorielle ciblée pour un profil agressif.",
         "role": "satellite",
-        "risk_note": "Volatilité des prix des matières premières et cycles agricoles",
-        "market_context_link": "Aligné avec la surpondération recommandée du secteur materials (+15%)",
+        "risk_note": "Volatilité des prix des matières premières et cyclicité sectorielle",
+        "market_context_link": "Secteur materials favorisé par RADAR avec surpondération +15% recommandée",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5616,10 +5662,10 @@
       {
         "name": "ITX",
         "ticker": "ITX",
-        "rationale": "Inditex représente une exposition au secteur consumer discretionary, actuellement en difficulté selon RADAR mais offrant un potentiel de rebond pour un profil agressif. Le leader mondial de la fast fashion peut bénéficier d'une reprise du secteur. L'allocation limitée de 5% reflète cette approche contrarian calculée.",
+        "rationale": "Position retail/textile dans le consumer discretionary, secteur actuellement en difficulté selon RADAR. Cette allocation semble contraire aux recommandations macro et expose à un secteur sous-performant. Risque de momentum négatif malgré la qualité intrinsèque d'Inditex.",
         "role": "satellite",
-        "risk_note": "Secteur consumer discretionary identifié en difficulté par RADAR",
-        "market_context_link": "Position contrarian dans un secteur actuellement défavorisé mais avec potentiel de retournement",
+        "risk_note": "Exposition au consumer discretionary (secteur en difficulté selon RADAR)",
+        "market_context_link": "Secteur consumer-discretionary identifié en difficulté par RADAR",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5636,10 +5682,10 @@
       {
         "name": "LUPIN",
         "ticker": "LUPIN",
-        "rationale": "Exposition au secteur pharmaceutique indien, secteur healthcare actuellement en difficulté selon RADAR mais avec potentiel de rebond. Lupin offre une exposition à la croissance pharmaceutique émergente malgré les difficultés sectorielles. Cette allocation de 5% représente un pari contrarian sur la reprise du secteur santé.",
+        "rationale": "Double exposition défavorable : secteur healthcare en difficulté selon RADAR et région indienne évitée. Cette position semble totalement à contre-courant des recommandations macro actuelles. Risque élevé de sous-performance dans un contexte défavorable pour les deux dimensions.",
         "role": "satellite",
-        "risk_note": "Double exposition négative : secteur healthcare en difficulté et région Inde défavorisée",
-        "market_context_link": "Position contrarian dans un secteur et une région actuellement défavorisés par RADAR",
+        "risk_note": "Double exposition défavorable : healthcare (secteur en difficulté) et Inde (région évitée)",
+        "market_context_link": "Contraire aux recommandations RADAR : healthcare en difficulté et Inde région évitée",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5656,10 +5702,10 @@
       {
         "name": "IBGS.AS",
         "ticker": "IBGS.AS",
-        "rationale": "ETF obligataire gouvernemental offrant une diversification par classe d'actifs dans un portefeuille autrement très orienté actions. Cette allocation de 5% apporte une stabilité relative et une protection en cas de volatilité accrue des marchés actions. Essentiel pour un portefeuille agressif mais équilibré.",
-        "role": "diversification",
-        "risk_note": "Risque de taux d'intérêt et potentiel de sous-performance en environnement inflationniste",
-        "market_context_link": null,
+        "rationale": "ETF secteur energy parfaitement aligné avec RADAR qui identifie l'energy comme secteur leader (+31.3% YTD) et recommande une surpondération +15%. Position tactique capitalisant sur le momentum exceptionnel du secteur énergétique. Cohérence totale avec l'analyse macro favorable.",
+        "role": "satellite",
+        "risk_note": "Volatilité des prix énergétiques et risque de retournement cyclique",
+        "market_context_link": "Energy = secteur leader RADAR (+31.3% YTD) avec surpondération +15% recommandée",
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5676,10 +5722,10 @@
       {
         "name": "SGLN.AS",
         "ticker": "SGLN.AS",
-        "rationale": "ETF or physique servant de hedge contre l'inflation et l'instabilité géopolitique, particulièrement pertinent dans un contexte de volatilité macroéconomique. Cette allocation de 5% offre une protection du pouvoir d'achat et une décorrélation avec les actifs financiers traditionnels. Complément défensif pour un portefeuille agressif.",
+        "rationale": "ETF or physique servant de hedge défensif dans un portefeuille agressif. Apporte diversification face aux risques d'inflation et de volatilité des marchés actions. Protection contre les risques géopolitiques et monétaires, particulièrement pertinente dans un contexte d'incertitudes macro.",
         "role": "hedge",
-        "risk_note": "Volatilité du prix de l'or et absence de rendement courant",
-        "market_context_link": "Protection contre les risques macroéconomiques dans un environnement de marché neutral",
+        "risk_note": "Pas de rendement et sensibilité aux taux réels",
+        "market_context_link": null,
         "weight_pct": 5.0,
         "category": "ETF",
         "sector": "Non spécifié",
@@ -5694,5 +5740,221 @@
         }
       }
     ]
+  },
+  "Agressif-Thematique": {
+    "Actions": {
+      "HERO MOTOCORP LTD (HEROMOTOCO)": "4.0%",
+      "EXPEDITORS INTERNATIONAL OF WASHIN (EXPD)": "4.0%",
+      "CF INDUSTRIES HOLDINGS INC (CF)": "4.0%",
+      "INDUSTRIA DE DISENO TEXTIL SA (ITX)": "4.0%",
+      "LUPIN LTD (LUPIN)": "4.0%"
+    },
+    "ETF": {
+      "Invesco QQQ Trust (Nasdaq 100) (QQQ)": "20.0%",
+      "iShares Core MSCI EM IMI (IEMG)": "15.0%",
+      "Vanguard Information Technology ETF (VGT)": "10.0%",
+      "Capital Group International Focus Eq (CGXU)": "10.0%",
+      "Vanguard Small-Cap Growth ETF (VBK)": "8.0%",
+      "Vanguard Mid-Cap Growth ETF (VOT)": "5.0%",
+      "Energy Select Sector SPDR (XLE)": "5.0%",
+      "iShares Physical Gold ETC (SGLN.AS)": "5.0%",
+      "iShares MSCI Taiwan ETF (EWT)": "2.0%"
+    },
+    "Obligations": {},
+    "Crypto": {},
+    "_tickers": {
+      "QQQ": 0.2,
+      "IEMG": 0.15,
+      "VGT": 0.1,
+      "CGXU": 0.1,
+      "VBK": 0.08,
+      "VOT": 0.05,
+      "XLE": 0.05,
+      "SGLN.AS": 0.05,
+      "EWT": 0.02,
+      "HEROMOTOCO": 0.04,
+      "EXPD": 0.04,
+      "CF": 0.04,
+      "ITX": 0.04,
+      "LUPIN": 0.04
+    },
+    "_tickers_meta": {
+      "QQQ": {
+        "weight": 0.2,
+        "category": "ETF",
+        "name": "Invesco QQQ Trust (Nasdaq 100)",
+        "asset_ids": [
+          "QQQ"
+        ],
+        "industry": "Large Growth Tech-heavy",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "IEMG": {
+        "weight": 0.15,
+        "category": "ETF",
+        "name": "iShares Core MSCI EM IMI",
+        "asset_ids": [
+          "IEMG"
+        ],
+        "industry": "Emerging Markets diversified",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "VGT": {
+        "weight": 0.1,
+        "category": "ETF",
+        "name": "Vanguard Information Technology ETF",
+        "asset_ids": [
+          "VGT"
+        ],
+        "industry": "US Tech sector broad",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "CGXU": {
+        "weight": 0.1,
+        "category": "ETF",
+        "name": "Capital Group International Focus Eq",
+        "asset_ids": [
+          "CGXU"
+        ],
+        "industry": "Foreign Large Growth",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "VBK": {
+        "weight": 0.08,
+        "category": "ETF",
+        "name": "Vanguard Small-Cap Growth ETF",
+        "asset_ids": [
+          "VBK"
+        ],
+        "industry": "US Small-Cap Growth",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "VOT": {
+        "weight": 0.05,
+        "category": "ETF",
+        "name": "Vanguard Mid-Cap Growth ETF",
+        "asset_ids": [
+          "VOT"
+        ],
+        "industry": "US Mid-Cap Growth",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "XLE": {
+        "weight": 0.05,
+        "category": "ETF",
+        "name": "Energy Select Sector SPDR",
+        "asset_ids": [
+          "XLE"
+        ],
+        "industry": "US Energy",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "SGLN.AS": {
+        "weight": 0.05,
+        "category": "ETF",
+        "name": "iShares Physical Gold ETC",
+        "asset_ids": [
+          "SGLN.AS"
+        ],
+        "industry": "Gold hedge",
+        "beta": null,
+        "role": "core",
+        "isin": "IE00B4ND3602",
+        "ter": 0.0012,
+        "currency": "EUR"
+      },
+      "EWT": {
+        "weight": 0.02,
+        "category": "ETF",
+        "name": "iShares MSCI Taiwan ETF",
+        "asset_ids": [
+          "EWT"
+        ],
+        "industry": "Taiwan (high vol, small tilt)",
+        "beta": null,
+        "role": "core",
+        "currency": "USD"
+      },
+      "HEROMOTOCO": {
+        "weight": 0.04,
+        "category": "Actions",
+        "name": "HERO MOTOCORP LTD",
+        "asset_ids": [
+          "HEROMOTOCO"
+        ],
+        "industry": "Auto Manufacturers",
+        "beta": 0.71,
+        "role": "satellite",
+        "fit_score": 0.4865,
+        "buffett_score": 100
+      },
+      "EXPD": {
+        "weight": 0.04,
+        "category": "Actions",
+        "name": "EXPEDITORS INTERNATIONAL OF WASHIN",
+        "asset_ids": [
+          "EXPD"
+        ],
+        "industry": "Integrated Freight & Logistics",
+        "beta": 1.02,
+        "role": "satellite",
+        "fit_score": 0.5531,
+        "buffett_score": 83
+      },
+      "CF": {
+        "weight": 0.04,
+        "category": "Actions",
+        "name": "CF INDUSTRIES HOLDINGS INC",
+        "asset_ids": [
+          "CF"
+        ],
+        "industry": "Agricultural Inputs",
+        "beta": 0.61,
+        "role": "satellite",
+        "fit_score": 0.5648,
+        "buffett_score": 100
+      },
+      "ITX": {
+        "weight": 0.04,
+        "category": "Actions",
+        "name": "INDUSTRIA DE DISENO TEXTIL SA",
+        "asset_ids": [
+          "ITX"
+        ],
+        "industry": "Apparel Retail",
+        "beta": 0.94,
+        "role": "satellite",
+        "fit_score": 0.5597,
+        "buffett_score": 83
+      },
+      "LUPIN": {
+        "weight": 0.04,
+        "category": "Actions",
+        "name": "LUPIN LTD",
+        "asset_ids": [
+          "LUPIN"
+        ],
+        "industry": "Drug Manufacturers - Specialty & Generic",
+        "beta": 0.48,
+        "role": "satellite",
+        "fit_score": 0.7316,
+        "buffett_score": 83
+      }
+    },
+    "Commentaire": "Portefeuille Agressif-Thematique — discipline Core-Satellite v6.0. Cœur ETF UCITS broad calibré pour β cible (Stable 0.22 / Modéré 0.61 / Agressif 0.80) + satellite fondamental capé à 5%/nom, budget 0%. Σ = 100% par construction. RADAR sectoriel neutralisé (walk-forward strict a montré Δ Sharpe -0.11 OOS sur timing factoriel)."
   }
 }

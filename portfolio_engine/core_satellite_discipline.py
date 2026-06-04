@@ -503,6 +503,7 @@ def apply_to_portfolios_dict(portfolios_data: Dict) -> Dict:
     #   sont remplacés par la version disciplinée
     # → tous les autres champs v4 (_optimization, _exposures, risk_analysis, etc.)
     #   sont préservés tels quels
+    agressif_satellite_positions = None  # pour réutiliser dans Agressif-Thematique
     for profile in ("Stable", "Modéré", "Agressif"):
         prof_v4 = portfolios_data.get(profile, {})
         v4_meta = prof_v4.get("_tickers_meta", {})
@@ -516,7 +517,98 @@ def apply_to_portfolios_dict(portfolios_data: Dict) -> Dict:
         merged.update(disciplined)  # écrase les clés discipline
         output[profile] = merged
 
+        # Pour Agressif : capture le satellite pour le réutiliser dans Agressif-Thematique
+        if profile == "Agressif":
+            agressif_satellite_positions = [p for p in positions if p.get("role") == "satellite"]
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # v6.9 (2026-06-04) — PROFIL SUPPLÉMENTAIRE : AGRESSIF-THEMATIQUE
+    # ─────────────────────────────────────────────────────────────────────
+    # Génère un 4e profil dans portfolios.json pour COMPARAISON dans le dashboard.
+    # Même satellite que l'Agressif Principal (continuité), cœur thématique pure
+    # ETF Growth/EM/Tech/SmallCap/MidCap/International/Énergie.
+    # Schema CI : "Agressif-Thematique" ajouté comme propriété optionnelle.
+    # ═══════════════════════════════════════════════════════════════════════
+    if agressif_satellite_positions:
+        thematique = _build_agressif_thematique(agressif_satellite_positions)
+        output["Agressif-Thematique"] = thematique
+
     return output
+
+
+# ─── Profil Agressif-Thematique (v6.9) ────────────────────────────────────
+THEMATIQUE_CORE = {
+    "QQQ":     {"weight": 0.20, "name": "Invesco QQQ Trust (Nasdaq 100)",
+                "fund_type": "Large Growth Tech-heavy", "currency": "USD"},
+    "IEMG":    {"weight": 0.15, "name": "iShares Core MSCI EM IMI",
+                "fund_type": "Emerging Markets diversified", "currency": "USD"},
+    "VGT":     {"weight": 0.10, "name": "Vanguard Information Technology ETF",
+                "fund_type": "US Tech sector broad", "currency": "USD"},
+    "CGXU":    {"weight": 0.10, "name": "Capital Group International Focus Eq",
+                "fund_type": "Foreign Large Growth", "currency": "USD"},
+    "VBK":     {"weight": 0.08, "name": "Vanguard Small-Cap Growth ETF",
+                "fund_type": "US Small-Cap Growth", "currency": "USD"},
+    "VOT":     {"weight": 0.05, "name": "Vanguard Mid-Cap Growth ETF",
+                "fund_type": "US Mid-Cap Growth", "currency": "USD"},
+    "XLE":     {"weight": 0.05, "name": "Energy Select Sector SPDR",
+                "fund_type": "US Energy", "currency": "USD"},
+    "SGLN.AS": {"weight": 0.05, "name": "iShares Physical Gold ETC",
+                "fund_type": "Gold hedge", "isin": "IE00B4ND3602",
+                "ter": 0.0012, "currency": "EUR"},
+    "EWT":     {"weight": 0.02, "name": "iShares MSCI Taiwan ETF",
+                "fund_type": "Taiwan (high vol, small tilt)", "currency": "USD"},
+}  # total = 0.80
+
+
+def _build_agressif_thematique(satellite_positions: List[Dict]) -> Dict:
+    """Construit le profil Agressif-Thematique en Format B.
+
+    Cœur 80 % = ETFs thématiques diversifiés (QQQ/IEMG/VGT/CGXU/VBK/VOT/XLE/SGLN/EWT).
+    Satellite 20 % = mêmes 5 actions que l'Agressif Principal (continuité).
+    Le satellite garde son rôle d'identifier la qualité ; le cœur change pour pousser
+    sur les facteurs Growth/Tech/EM/Small/Mid au lieu du World broad UCITS.
+    """
+    positions = []
+
+    # Cœur thématique (80 %)
+    for tk, info in THEMATIQUE_CORE.items():
+        positions.append({
+            "ticker": tk,
+            "name": info["name"][:80],
+            "category": "ETF",
+            "industry": info.get("fund_type", ""),
+            "weight_pct": round(info["weight"] * 100, 2),
+            "weight": info["weight"],
+            "role": "core",
+            "asset_ids": [tk],
+            "beta": None,
+            "isin": info.get("isin"),
+            "ter": info.get("ter"),
+            "currency": info.get("currency"),
+        })
+
+    # Satellite : on reprend les 5 actions du satellite Principal, mais à 4 % chacune
+    # (5 stocks × 4 % = 20 %)
+    if satellite_positions:
+        sat_total_target = 0.20
+        weight_per_stock = sat_total_target / len(satellite_positions)
+        weight_per_stock = min(weight_per_stock, CAP_PER_NAME)
+        for sp in satellite_positions:
+            positions.append({
+                "ticker": sp["ticker"],
+                "name": sp["name"],
+                "category": "Actions",
+                "industry": sp.get("industry", ""),
+                "weight_pct": round(weight_per_stock * 100, 2),
+                "weight": weight_per_stock,
+                "role": "satellite",
+                "asset_ids": [sp["ticker"]],
+                "beta": sp.get("beta"),
+                "buffett_score": sp.get("buffett_score"),
+                "fit_score": sp.get("fit_score"),
+            })
+
+    return positions_to_format_b(positions, "Agressif-Thematique")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
