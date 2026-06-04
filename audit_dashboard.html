@@ -131,6 +131,7 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="portfolio">📊 Mon Portefeuille</button>
+    <button class="tab" data-tab="smart-picks" style="background: rgba(255,193,7,0.1); color: #ffc107;">⭐ Smart Picks</button>
     <button class="tab" data-tab="categories">🎯 Tops par catégorie</button>
     <button class="tab" data-tab="compare">🔀 Comparatif Natifs</button>
     <button class="tab" data-tab="actions">📋 Toutes Actions</button>
@@ -138,6 +139,27 @@
     <button class="tab" data-tab="etfs">📈 ETFs</button>
     <button class="tab" data-tab="phases">🔧 Phases</button>
     <button class="tab" data-tab="export" style="margin-left: auto; background: rgba(110,212,127,0.1); color: var(--green); border-radius: 4px;">📥 Export pour expert</button>
+  </div>
+
+  <!-- =================== SMART PICKS (NEW v6.13) =================== -->
+  <div class="tab-content" id="tab-smart-picks">
+    <div class="panel">
+      <h2>⭐ Smart Picks — Top Actions & ETFs influencés par le RADAR sectoriel du jour</h2>
+      <p class="help">
+        Combine les <strong>critères fondamentaux du pipeline</strong> (Buffett, ROE, vol band par profil)
+        + le <strong>RADAR sectoriel évolutif</strong> (<code>data/market_context.json</code> : favored/avoided
+        sectors et régions du jour). <strong>Informatif uniquement</strong> — le pipeline principal reste
+        RADAR-neutralisé (cohérent avec walk-forward strict). Cette vue te dit "qu'est-ce que ton
+        scoring + le contexte macro suggèrent comme top picks" — sans s'imposer dans <code>portfolios.json</code>.
+      </p>
+      <div id="market-context-banner" style="background: var(--bg); padding: 12px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 16px; font-size: 12px;"></div>
+      <div style="margin: 14px 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <button id="btn-smart-export" style="background: var(--accent); color: var(--bg); border: none; padding: 10px 24px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer;">📋 Export Markdown pour Claude</button>
+        <button id="btn-smart-refresh" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 10px 24px; border-radius: 4px; font-size: 13px; cursor: pointer;">🔄 Recalculer</button>
+        <label style="font-size: 12px;">Bonus secteur favorisé : <input type="number" id="smart-sector-bonus" value="20" min="0" max="100" style="width: 60px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px;"/> %</label>
+      </div>
+    </div>
+    <div id="smart-picks-content"></div>
   </div>
 
   <!-- =================== CATEGORIES (Tops par axe fondamental) =================== -->
@@ -393,6 +415,12 @@ async function autoLoad() {
   if (bdT) { STATE.bonds = parseCSV(bdT); setStatus('bd-csv-status', true, `${STATE.bonds.length}`); }
   const etfT = await tryFetch('data/combined_etfs.csv', true);
   if (etfT) { STATE.etfs = parseCSV(etfT); setStatus('etf-csv-status', true, `${STATE.etfs.length}`); }
+  // v6.13 : charge market_context.json (informatif, pour Smart Picks)
+  const mc = await tryFetch('data/market_context.json');
+  if (mc) { STATE.marketContext = mc; }
+  // v6.13 : charge portfolios.json automatiquement aussi
+  const pf = await tryFetch('data/portfolios.json');
+  if (pf) { STATE.portfolio = pf; extractPositions(); setStatus('pf-status', true, 'auto-loaded'); }
   indexStocks();
   refresh();
 }
@@ -1705,6 +1733,286 @@ function renderETFs() {
 }
 
 // =============================================================================
+// v6.13 — SMART PICKS (RADAR sectoriel évolutif → suggestions actions+ETF)
+// =============================================================================
+// Mapping sector dashboard → sector RADAR (cf. preset_meta.py _SEC_TO_RADAR)
+const SEC_TO_RADAR_JS = {
+  "technologie de l'information":"information-technology","information technology":"information-technology",
+  "technology":"information-technology",
+  "santé":"healthcare","health care":"healthcare","healthcare":"healthcare",
+  "finance":"financials","financials":"financials","financial services":"financials",
+  "industrie":"industrials","industrials":"industrials",
+  "matériaux":"materials","materials":"materials","basic materials":"materials",
+  "la communication":"communication-services","communication services":"communication-services",
+  "biens de consommation cycliques":"consumer-discretionary","consumer cyclical":"consumer-discretionary",
+  "biens de consommation de base":"consumer-staples","consumer defensive":"consumer-staples",
+  "immobilier":"real-estate","real estate":"real-estate",
+  "energie":"energy","énergie":"energy","energy":"energy",
+  "services publics":"utilities","utilities":"utilities",
+};
+const COUNTRY_TO_RADAR_JS = {
+  "etats-unis":"united-states","united states":"united-states",
+  "japon":"japan","japan":"japan","chine":"china","china":"china",
+  "allemagne":"germany","germany":"germany","france":"france",
+  "royaume-uni":"united-kingdom","united kingdom":"united-kingdom",
+  "espagne":"spain","spain":"spain","italie":"italy","italy":"italy",
+  "pays-bas":"netherlands","netherlands":"netherlands",
+  "suisse":"switzerland","switzerland":"switzerland",
+  "corée du sud":"south-korea","south korea":"south-korea",
+  "taïwan":"taiwan","taiwan":"taiwan","inde":"india","india":"india",
+};
+
+function _normSector(s) { return SEC_TO_RADAR_JS[(s||'').toLowerCase().trim()] || (s||'').toLowerCase(); }
+function _normCountry(c) { return COUNTRY_TO_RADAR_JS[(c||'').toLowerCase().trim()] || (c||'').toLowerCase(); }
+
+function _sectorBonus(secRadar, countryRadar, mc, bonusPct) {
+  if (!mc) return 0;
+  const fs = new Set(mc.macro_tilts?.favored_sectors || []);
+  const as = new Set(mc.macro_tilts?.avoided_sectors || []);
+  const fr = new Set(mc.macro_tilts?.favored_regions || []);
+  const ar = new Set(mc.macro_tilts?.avoided_regions || []);
+  let bonus = 0;
+  if (fs.has(secRadar)) bonus += bonusPct;
+  if (as.has(secRadar)) bonus -= bonusPct;
+  if (fr.has(countryRadar)) bonus += bonusPct / 2;
+  if (ar.has(countryRadar)) bonus -= bonusPct / 2;
+  return bonus;
+}
+
+function renderSmartPicks() {
+  const root = document.getElementById('smart-picks-content');
+  if (!root) return;
+  const mc = STATE.marketContext;
+  const bonusPct = parseFloat(document.getElementById('smart-sector-bonus')?.value) || 20;
+
+  // Banner avec contexte du jour
+  const banner = document.getElementById('market-context-banner');
+  if (mc) {
+    const t = mc.macro_tilts || {};
+    const dateStr = mc.as_of ? new Date(mc.as_of).toLocaleDateString('fr-FR') : '?';
+    const conf = mc.confidence || '?';
+    const reg = mc.market_regime || '?';
+    banner.innerHTML = `
+      <strong>📡 RADAR macro du jour</strong> — ${dateStr}, régime <em>${reg}</em>, confiance ${conf}/5<br>
+      <span class="badge green">Favorisés secteurs</span> ${(t.favored_sectors||[]).join(', ') || '—'}<br>
+      <span class="badge red">Évités secteurs</span> ${(t.avoided_sectors||[]).join(', ') || '—'}<br>
+      <span class="badge green">Favorisés régions</span> ${(t.favored_regions||[]).join(', ') || '—'}<br>
+      <span class="badge red">Évités régions</span> ${(t.avoided_regions||[]).join(', ') || '—'}<br>
+      <small style="color: var(--text-dim); margin-top: 8px; display: block;">
+        <strong>Note importante</strong> : ce RADAR est <em>neutralisé</em> dans le pipeline principal
+        (walk-forward strict a montré Δ Sharpe -0.11 OOS). Cette vue est <strong>informative</strong>,
+        pour aider à comprendre quels noms le RADAR mettrait en avant aujourd'hui — pas pour décider
+        l'allocation finale.
+      </small>
+    `;
+  } else {
+    banner.innerHTML = '<em>data/market_context.json non chargé — Smart Picks utilise uniquement les critères pipeline (sans tilts secteurs)</em>';
+  }
+
+  // 4 profils côte à côte
+  const profilesList = ['Stable','Modéré','Agressif','Agressif-Thematique'];
+  let html = '';
+  for (const prof of profilesList) {
+    const cfg = PROFILE_CFG[prof];
+    if (!cfg) continue;
+    const fitKey = cfg.fitKey;
+    // Filtre actions selon profil + bonus sectoriel
+    const candidates = STATE.stocks.filter(s => {
+      const buf = parseFloat(s.buffett_score)||0;
+      const qual = parseFloat(s.quality_score)||0;
+      const vol = parseFloat(s.volatility_3y)||0;
+      const roe = parseFloat(s.roe)||0;
+      const div = parseFloat(s.dividend_yield)||0;
+      if (buf < cfg.buf_min) return false;
+      if (qual < cfg.qual_min) return false;
+      if (vol < cfg.vol_min || vol > cfg.vol_max) return false;
+      if (roe < cfg.roe_min) return false;
+      if (div < cfg.div_min) return false;
+      return true;
+    }).map(s => {
+      const fit = parseFloat(s[fitKey]) || 0;
+      const secRadar = _normSector(s.sector || s.sector_api);
+      const countryRadar = _normCountry(s.country);
+      const bonus = _sectorBonus(secRadar, countryRadar, mc, bonusPct) / 100;
+      const score = fit + bonus;
+      return {...s, _score: score, _bonus: bonus, _secRadar: secRadar, _countryRadar: countryRadar};
+    }).sort((a,b) => b._score - a._score).slice(0, 15);
+
+    // ETF candidats : exclure leveraged, AUM minimum, filtrer par fund_type pertinent
+    const etfCands = STATE.etfs.filter(e => {
+      const lev = parseFloat(e.leverage) || 1;
+      if (lev > 1) return false;
+      const aum = parseFloat(e.aum_usd) || 0;
+      if (aum < 1e8) return false; // min 100M
+      return true;
+    }).map(e => {
+      const aum = parseFloat(e.aum_usd) || 0;
+      const ter = parseFloat(e.total_expense_ratio) || 0.005;
+      const ytd = Math.max(-20, Math.min(parseFloat(e.ytd_return_pct) || 0, 30));
+      const sectorTop = (e.sector_top || '').toLowerCase();
+      const secRadar = _normSector(sectorTop);
+      const bonus = _sectorBonus(secRadar, '', mc, bonusPct) / 100;
+      // Score : log(AUM) (taille/liquidité) + YTD - TER + bonus secteur
+      const score = Math.log10(Math.max(aum, 1e8)) / 5 + ytd / 100 - ter * 5 + bonus;
+      return {...e, _score: score, _bonus: bonus, _secRadar: secRadar};
+    }).sort((a,b) => b._score - a._score).slice(0, 8);
+
+    // Build HTML for this profile
+    const portTickers = new Set();
+    for (const arr of Object.values(STATE.portfolioByProfile || {})) {
+      for (const p of arr) portTickers.add(p.ticker);
+    }
+
+    html += `<div class="panel" style="margin-bottom: 16px;">
+      <h2>${profBadge(prof)} ${prof} — Smart Picks</h2>
+      <p class="help">Critères: Buffett ≥ ${cfg.buf_min}, Quality ≥ ${cfg.qual_min}, Vol ${cfg.vol_min}-${cfg.vol_max}%, ROE ≥ ${cfg.roe_min}%, Div ≥ ${cfg.div_min}%. <strong>Bonus secteur favorisé +${bonusPct}%, malus avoided -${bonusPct}%.</strong></p>
+      <h3 style="color: var(--accent); margin-top: 16px;">📋 Top 15 ACTIONS</h3>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Tk</th><th>Nom</th><th>Pays</th><th>Secteur</th>
+          <th class="num">Buf</th><th class="num">ROE</th><th class="num">Vol</th>
+          <th class="num">Fit</th><th class="num">Bonus</th><th class="num">Score</th><th>Statut</th>
+        </tr></thead>
+        <tbody>
+          ${candidates.map(s => {
+            const inP = portTickers.has(s.ticker);
+            const statusBadge = inP ? '<span class="badge green">✓ in</span>' : (s._bonus > 0 ? '<span class="badge orange">★ à ajouter</span>' : '<span class="badge gray">—</span>');
+            return `<tr>
+              <td><strong>${s.ticker||''}</strong></td>
+              <td title="${s.name||''}">${(s.name||'').slice(0,30)}</td>
+              <td>${(s.country||'').slice(0,10)}</td>
+              <td title="${s.sector||''}">${(s.sector||'').slice(0,18)}</td>
+              <td class="num">${(parseFloat(s.buffett_score)||0).toFixed(0)}</td>
+              <td class="num">${(parseFloat(s.roe)||0).toFixed(0)}</td>
+              <td class="num">${(parseFloat(s.volatility_3y)||0).toFixed(0)}</td>
+              <td class="num">${(parseFloat(s[fitKey])||0).toFixed(2)}</td>
+              <td class="num" style="color:${s._bonus>0?'#6ed47f':s._bonus<0?'#ff6b6b':'#888'}">${(s._bonus*100).toFixed(0)}%</td>
+              <td class="num"><strong>${s._score.toFixed(2)}</strong></td>
+              <td>${statusBadge}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+      <h3 style="color: var(--accent); margin-top: 16px;">📈 Top 8 ETFs (leveraged exclus, AUM ≥ 100M)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Tk</th><th>Nom</th><th>Fund type</th><th>Top secteur</th>
+          <th class="num">AUM</th><th class="num">TER</th><th class="num">Vol</th>
+          <th class="num">YTD</th><th class="num">Bonus</th><th class="num">Score</th><th>Statut</th>
+        </tr></thead>
+        <tbody>
+          ${etfCands.map(e => {
+            const sym = e.symbol || '';
+            const inP = portTickers.has(sym);
+            const statusBadge = inP ? '<span class="badge green">✓ in</span>' : (e._bonus > 0 ? '<span class="badge orange">★ à ajouter</span>' : '<span class="badge gray">—</span>');
+            const aumB = (parseFloat(e.aum_usd)||0)/1e9;
+            const terPct = (parseFloat(e.total_expense_ratio)||0)*100;
+            const vol = parseFloat(e.vol_3y_pct||e.vol_pct);
+            const ytd = parseFloat(e.ytd_return_pct);
+            return `<tr>
+              <td><strong>${sym}</strong></td>
+              <td title="${e.name||''}">${(e.name||'').slice(0,28)}</td>
+              <td>${(e.fund_type||'').slice(0,20)}</td>
+              <td title="${e.sector_top||''}">${(e.sector_top||'').slice(0,16)}</td>
+              <td class="num">${aumB.toFixed(1)}B</td>
+              <td class="num">${terPct.toFixed(2)}%</td>
+              <td class="num">${isNaN(vol)?'':vol.toFixed(0)+'%'}</td>
+              <td class="num">${isNaN(ytd)?'':ytd.toFixed(1)+'%'}</td>
+              <td class="num" style="color:${e._bonus>0?'#6ed47f':e._bonus<0?'#ff6b6b':'#888'}">${(e._bonus*100).toFixed(0)}%</td>
+              <td class="num"><strong>${e._score.toFixed(2)}</strong></td>
+              <td>${statusBadge}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+  root.innerHTML = html;
+}
+
+function exportSmartPicksMarkdown() {
+  const mc = STATE.marketContext || {};
+  const t = mc.macro_tilts || {};
+  let md = `# Smart Picks — ${new Date().toLocaleDateString('fr-FR')}\n\n`;
+  md += `## RADAR macro du jour\n\n`;
+  md += `- **Date données** : ${mc.as_of || '?'}\n`;
+  md += `- **Régime** : ${mc.market_regime || '?'} (confiance ${mc.confidence || '?'}/5)\n`;
+  md += `- **Secteurs favorisés** : ${(t.favored_sectors||[]).join(', ') || 'aucun'}\n`;
+  md += `- **Secteurs évités** : ${(t.avoided_sectors||[]).join(', ') || 'aucun'}\n`;
+  md += `- **Régions favorisées** : ${(t.favored_regions||[]).join(', ') || 'aucune'}\n`;
+  md += `- **Régions évitées** : ${(t.avoided_regions||[]).join(', ') || 'aucune'}\n\n`;
+  if (t.rationale) md += `**Rationale** : ${t.rationale}\n\n`;
+  md += `> ⚠️ Note : ce RADAR est neutralisé dans le pipeline (walk-forward a rejeté le timing factoriel). Vue informative uniquement.\n\n`;
+  md += `## Configuration scoring\n\n`;
+  for (const prof of ['Stable','Modéré','Agressif','Agressif-Thematique']) {
+    const c = PROFILE_CFG[prof];
+    if (!c) continue;
+    md += `- **${prof}** : Buffett ≥ ${c.buf_min}, Quality ≥ ${c.qual_min}, Vol ${c.vol_min}-${c.vol_max}%, ROE ≥ ${c.roe_min}%, Div ≥ ${c.div_min}%\n`;
+  }
+  md += `\n## Top picks par profil (top 10 actions + top 5 ETFs, bonus secteur appliqué)\n\n`;
+  const bonusPct = parseFloat(document.getElementById('smart-sector-bonus')?.value) || 20;
+  const portTickers = new Set();
+  for (const arr of Object.values(STATE.portfolioByProfile || {})) {
+    for (const p of arr) portTickers.add(p.ticker);
+  }
+  for (const prof of ['Stable','Modéré','Agressif','Agressif-Thematique']) {
+    const cfg = PROFILE_CFG[prof];
+    if (!cfg) continue;
+    const fitKey = cfg.fitKey;
+    const cands = STATE.stocks.filter(s => {
+      const buf = parseFloat(s.buffett_score)||0;
+      const qual = parseFloat(s.quality_score)||0;
+      const vol = parseFloat(s.volatility_3y)||0;
+      const roe = parseFloat(s.roe)||0;
+      const div = parseFloat(s.dividend_yield)||0;
+      return buf>=cfg.buf_min && qual>=cfg.qual_min && vol>=cfg.vol_min && vol<=cfg.vol_max && roe>=cfg.roe_min && div>=cfg.div_min;
+    }).map(s => {
+      const fit = parseFloat(s[fitKey])||0;
+      const bonus = _sectorBonus(_normSector(s.sector||s.sector_api), _normCountry(s.country), mc, bonusPct)/100;
+      return {...s, _score: fit + bonus, _bonus: bonus};
+    }).sort((a,b)=>b._score-a._score).slice(0, 10);
+
+    md += `### ${prof}\n\n#### Actions\n\n`;
+    md += `| Tk | Nom | Pays | Secteur | Buf | ROE | Vol | Fit | Bonus | Score | Statut |\n`;
+    md += `|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    for (const s of cands) {
+      const inP = portTickers.has(s.ticker);
+      const statut = inP ? '✓ in' : (s._bonus > 0 ? '★ à ajouter' : '—');
+      md += `| ${s.ticker||''} | ${(s.name||'').slice(0,28)} | ${(s.country||'').slice(0,8)} | ${(s.sector||'').slice(0,15)} | ${(parseFloat(s.buffett_score)||0).toFixed(0)} | ${(parseFloat(s.roe)||0).toFixed(0)} | ${(parseFloat(s.volatility_3y)||0).toFixed(0)} | ${(parseFloat(s[fitKey])||0).toFixed(2)} | ${(s._bonus*100).toFixed(0)}% | ${s._score.toFixed(2)} | ${statut} |\n`;
+    }
+    md += `\n#### ETFs\n\n`;
+    const etfCands = STATE.etfs.filter(e => (parseFloat(e.leverage)||1)<=1 && (parseFloat(e.aum_usd)||0)>=1e8)
+      .map(e => {
+        const aum = parseFloat(e.aum_usd)||0;
+        const ter = parseFloat(e.total_expense_ratio)||0.005;
+        const ytd = Math.max(-20, Math.min(parseFloat(e.ytd_return_pct)||0, 30));
+        const bonus = _sectorBonus(_normSector(e.sector_top), '', mc, bonusPct)/100;
+        return {...e, _score: Math.log10(Math.max(aum,1e8))/5 + ytd/100 - ter*5 + bonus, _bonus: bonus};
+      }).sort((a,b)=>b._score-a._score).slice(0, 5);
+    md += `| Tk | Nom | Fund type | Top sect | AUM | TER | YTD | Bonus | Score |\n`;
+    md += `|---|---|---|---|---|---|---|---|---|\n`;
+    for (const e of etfCands) {
+      const aumB = ((parseFloat(e.aum_usd)||0)/1e9).toFixed(1);
+      md += `| ${e.symbol||''} | ${(e.name||'').slice(0,25)} | ${(e.fund_type||'').slice(0,15)} | ${(e.sector_top||'').slice(0,12)} | ${aumB}B | ${((parseFloat(e.total_expense_ratio)||0)*100).toFixed(2)}% | ${(parseFloat(e.ytd_return_pct)||0).toFixed(1)}% | ${(e._bonus*100).toFixed(0)}% | ${e._score.toFixed(2)} |\n`;
+    }
+    md += `\n`;
+  }
+  md += `\n## Demande à Claude\n\n`;
+  md += `Voici la situation : portefeuille principal RADAR-neutralisé (walk-forward strict valide), mais ce dashboard montre ce que le RADAR du jour suggérerait. Que penses-tu de :\n`;
+  md += `1. Les top picks proposés sont-ils cohérents avec le contexte macro ?\n`;
+  md += `2. Y a-t-il des noms surprenants en ★ "à ajouter" qui mériteraient un test live dans la poche explore ?\n`;
+  md += `3. Le bonus secteur de ${bonusPct}% est-il bien calibré ou trop fort/faible ?\n\n`;
+  // Copy to clipboard
+  navigator.clipboard.writeText(md).then(() => {
+    alert('✅ Smart Picks Markdown copié dans le presse-papier ! Tu peux le coller dans Claude.');
+  }).catch(() => {
+    // Fallback : ouvre une nouvelle fenêtre avec le contenu
+    const w = window.open('', '_blank');
+    w.document.write('<pre>' + md.replace(/</g,'&lt;') + '</pre>');
+  });
+}
+
+// =============================================================================
 // REFRESH ALL + WIRING
 // =============================================================================
 function refresh() {
@@ -1714,6 +2022,7 @@ function refresh() {
   renderActions();
   renderBonds();
   renderETFs();
+  renderSmartPicks();
   renderExportPreview();
 }
 
@@ -1769,6 +2078,17 @@ document.getElementById('btn-export-copy').addEventListener('click', async () =>
   try { await navigator.clipboard.writeText(md); alert('✓ Copié dans le presse-papier — colle dans Claude ou un éditeur'); }
   catch(e) { alert('Erreur clipboard : ' + e); }
 });
+
+// v6.13 — Smart Picks wiring
+const _btnSmartExport = document.getElementById('btn-smart-export');
+if (_btnSmartExport) _btnSmartExport.addEventListener('click', () => {
+  if (!STATE.stocks.length) { alert('Charge stocks avant export.'); return; }
+  exportSmartPicksMarkdown();
+});
+const _btnSmartRefresh = document.getElementById('btn-smart-refresh');
+if (_btnSmartRefresh) _btnSmartRefresh.addEventListener('click', renderSmartPicks);
+const _smartSectorBonus = document.getElementById('smart-sector-bonus');
+if (_smartSectorBonus) _smartSectorBonus.addEventListener('change', renderSmartPicks);
 
 autoLoad();
 </script>
