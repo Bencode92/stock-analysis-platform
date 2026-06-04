@@ -175,6 +175,16 @@ from portfolio_engine.market_context import load_market_context
 # Voir portfolio_engine/core_satellite_discipline.py pour les paramètres figés.
 from portfolio_engine.core_satellite_discipline import apply_to_portfolios_dict as _apply_core_satellite_discipline
 
+# v6.15 (2026-06-04) : Archivage scores datés + journal de décision
+# Priorités #1 et #4 de Claude externe — construire la donnée point-in-time
+# que le pipeline n'a pas encore (besoin 2-3 ans pour walk-forward score qualité).
+try:
+    from portfolio_engine.score_archiver import archive_scores
+    from portfolio_engine.decision_log import log_decision
+    _HAS_AUDIT_TOOLS = True
+except ImportError:
+    _HAS_AUDIT_TOOLS = False
+
 # v4.8.1 P0-2: Import vérification contraintes post-arrondi
 # v4.8.2 P0-4: Import check_feasibility pour test ex-ante
 from portfolio_engine.constraints import (
@@ -7015,6 +7025,37 @@ def save_portfolios(portfolios: Dict, assets: list):
     # injecté DIRECTEMENT dans portfolios.json par core_satellite_discipline.py
     # (plus de fichier séparé portfolios_alternative.json). Le dashboard voit
     # maintenant les 4 profils dans le même fichier.
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # v6.15 (2026-06-04) — ARCHIVAGE SCORES DATÉS + JOURNAL DÉCISION
+    # Priorités #1 et #4 de Claude externe : construire l'historique
+    # point-in-time pour permettre dans 2-3 ans un walk-forward réel du
+    # score qualité, et logger les décisions pour juger sa propre compétence.
+    # ═══════════════════════════════════════════════════════════════════════
+    if _HAS_AUDIT_TOOLS:
+        try:
+            # Charge l'univers annoté pour archiver les fit_scores
+            from portfolio_engine.profile_assignment import annotate_universe_with_fits
+            _all_stocks_archive = []
+            for _fname in ("stocks_us.json", "stocks_europe.json", "stocks_asia.json"):
+                _p = os.path.join("data", _fname)
+                if os.path.exists(_p):
+                    with open(_p) as _f:
+                        _d = json.load(_f)
+                        _stocks_list = _d.get("stocks", []) if isinstance(_d, dict) else _d
+                        _all_stocks_archive.extend(_stocks_list)
+            if _all_stocks_archive:
+                annotate_universe_with_fits(_all_stocks_archive)
+                _archive_path = archive_scores(_all_stocks_archive)
+                logger.info(f"📸 Score archive : {_archive_path}")
+        except Exception as _e_arch:
+            logger.warning(f"⚠️ Score archive failed (non-bloquant): {_e_arch}")
+
+        try:
+            _log_path = log_decision(v1_data, pipeline_version="v6.15")
+            logger.info(f"📔 Decision log : {_log_path}")
+        except Exception as _e_log:
+            logger.warning(f"⚠️ Decision log failed (non-bloquant): {_e_log}")
     
     # === v5.3.3: Expert Lineup Regression Test ===
     # Compare produced portfolios against expert consensus targets.
