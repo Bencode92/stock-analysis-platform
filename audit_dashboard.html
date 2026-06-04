@@ -253,9 +253,11 @@
     <div class="panel">
       <h2>ETFs</h2>
       <div class="filters">
-        <div><label>Recherche</label><br><input type="text" id="search-etfs" placeholder="symbol / nom"></div>
+        <div><label>Recherche</label><br><input type="text" id="search-etfs" placeholder="symbol / nom / sector / country"></div>
         <div><label>Fund type</label><br><select id="filter-etf-cat"><option value="">Tous</option></select></div>
         <div><label>Présence</label><br><select id="filter-etf-presence"><option value="">Toutes</option><option value="in">Dans portefeuille</option><option value="out">Absente</option></select></div>
+        <div><label>Levier</label><br><select id="filter-etf-leverage"><option value="exclude">Exclure ×2/×3</option><option value="">Tous</option><option value="leveraged">Leveraged seulement</option></select></div>
+        <div><label>AUM min</label><br><select id="filter-etf-aum"><option value="0">Tous</option><option value="100000000">≥ 100M</option><option value="1000000000">≥ 1B</option><option value="10000000000">≥ 10B</option></select></div>
       </div>
       <div class="table-wrap">
         <table id="etfs-table">
@@ -266,7 +268,13 @@
             <th data-col="region">Region</th>
             <th data-col="aum_usd" class="num">AUM</th>
             <th data-col="total_expense_ratio" class="num">TER</th>
-            <th data-col="ytd" class="num">YTD</th>
+            <th data-col="vol_3y_pct" class="num">Vol 3y</th>
+            <th data-col="beta" class="num">β</th>
+            <th data-col="one_year_return_pct" class="num">Perf 1y</th>
+            <th data-col="ytd_return_pct" class="num">YTD</th>
+            <th data-col="yield_ttm" class="num">Yield</th>
+            <th data-col="sector_top">Top secteur</th>
+            <th data-col="leverage">Levier</th>
             <th data-col="in_profile">Portefeuille</th>
             <th data-col="weight" class="num">Poids</th>
           </tr></thead>
@@ -1615,6 +1623,8 @@ function renderETFs() {
   const search = document.getElementById('search-etfs').value.toLowerCase();
   const fCat = catSel.value;
   const fPres = document.getElementById('filter-etf-presence').value;
+  const fLev = document.getElementById('filter-etf-leverage').value;
+  const fAum = parseFloat(document.getElementById('filter-etf-aum').value) || 0;
 
   const sCol = STATE.sort.etfs.col, sDir = STATE.sort.etfs.dir;
   const sorted = [...STATE.etfs].sort((a,b)=>{const va=parseFloat(a[sCol])||0,vb=parseFloat(b[sCol])||0;return sDir==='asc'?va-vb:vb-va;});
@@ -1622,36 +1632,71 @@ function renderETFs() {
   let rows = '';
   for (const e of sorted) {
     const sym = e.symbol || e.ticker || ''; const nm = e.name || ''; const ft = e.fund_type || e.category || '';
-    if (search && !((sym+' '+nm+' '+ft).toLowerCase().includes(search))) continue;
+    const sectorTop = e.sector_top || '';
+    const countryTop = e.country_top || '';
+    if (search && !((sym+' '+nm+' '+ft+' '+sectorTop+' '+countryTop).toLowerCase().includes(search))) continue;
     if (fCat && ft !== fCat) continue;
     const pos = STATE.portfolioPositions[sym]?.[0] || STATE.portfolioPositions[nm]?.[0] || STATE.portfolioPositions[nm.toUpperCase()]?.[0];
     const inP = !!pos;
     if (fPres==='in' && !inP) continue;
     if (fPres==='out' && inP) continue;
+    // Leverage filter — défaut = exclure ×2/×3 (la hard rule du user)
+    const leverage = parseFloat(e.leverage) || 1;
+    if (fLev === 'exclude' && leverage > 1) continue;
+    if (fLev === 'leveraged' && leverage <= 1) continue;
+    // AUM filter
+    if (fAum > 0 && (parseFloat(e.aum_usd) || 0) < fAum) continue;
 
     // v6.10 : Region dérivée de mic_code (CSV n'a pas de colonne dédiée)
     const MIC_TO_REGION = {
       'ARCX':'US','XNYS':'US','XNGS':'US','XNAS':'US','BATS':'US','XASE':'US',
       'XETR':'EU-DE','XPAR':'EU-FR','XAMS':'EU-NL','XMIL':'EU-IT','XMAD':'EU-ES',
-      'XLON':'UK','XSWX':'CH','XSTO':'EU-SE',
-      'XHKG':'HK','XTKS':'JP','XKRX':'KR','XTSE':'CA','XASX':'AU',
+      'XLON':'UK','XSWX':'CH','XSTO':'EU-SE','XBRU':'EU-BE','XLIS':'EU-PT',
+      'XHKG':'HK','XTKS':'JP','XKRX':'KR','XTSE':'CA','XASX':'AU','XSHE':'CN','XSHG':'CN',
     };
     const region = e.region || MIC_TO_REGION[(e.mic_code||'').toUpperCase()] || (e.currency==='USD'?'US':e.currency||'');
-    // v6.10 : TER multiplié par 100 (CSV stocke 0.0018, affiche "0.18%")
+    // v6.11 : nouvelles colonnes critiques
     const terRaw = parseFloat(e.total_expense_ratio);
     const terDisplay = isNaN(terRaw) ? '' : (terRaw * 100).toFixed(2) + '%';
-    // v6.10 : YTD utilise le vrai champ ytd_return_pct du CSV
     const ytdRaw = parseFloat(e.ytd_return_pct ?? e.ytd ?? e.perf_ytd);
     const ytdDisplay = isNaN(ytdRaw) ? '' : ytdRaw.toFixed(1) + '%';
+    const vol = parseFloat(e.vol_3y_pct ?? e.vol_pct);
+    const volDisplay = isNaN(vol) ? '' : vol.toFixed(1) + '%';
+    const beta = parseFloat(e.beta);
+    const betaDisplay = isNaN(beta) ? '' : beta.toFixed(2);
+    const perf1y = parseFloat(e.one_year_return_pct);
+    const perf1yDisplay = isNaN(perf1y) ? '' : perf1y.toFixed(1) + '%';
+    const yield_ = parseFloat(e.yield_ttm);
+    const yieldDisplay = isNaN(yield_) || yield_ === 0 ? '' : (yield_ * (yield_ < 1 ? 100 : 1)).toFixed(2) + '%';
+    const sectorTopShort = (sectorTop || '').slice(0, 18);
+    const sectorWeight = parseFloat(e.sector_top_weight);
+    const sectorTitle = sectorWeight > 0 ? `${sectorTop} (${sectorWeight.toFixed(0)}%) | Top: ${countryTop}` : (sectorTop || '');
+    // Leverage badge
+    let leverageBadge = '';
+    if (leverage > 1) {
+      const cls = leverage >= 3 ? 'red' : 'orange';
+      leverageBadge = `<span class="badge ${cls}">×${leverage}</span>`;
+    } else {
+      leverageBadge = '<span class="badge gray">×1</span>';
+    }
+    // Top holding tooltip on name
+    const topHolding = e.holding_top || '';
+    const nameTitle = topHolding ? `${nm}\nTop holding: ${topHolding}` : nm;
 
     rows += `<tr>
       <td><strong>${sym}</strong></td>
-      <td title="${nm}">${nm.slice(0,40)}</td>
+      <td title="${nameTitle.replace(/"/g,'&quot;')}">${nm.slice(0,40)}</td>
       <td>${ft.slice(0,25)}</td>
       <td>${region}</td>
       <td class="num">${e.aum_usd?(parseFloat(e.aum_usd)/1e9).toFixed(1)+'B':''}</td>
       <td class="num">${terDisplay}</td>
+      <td class="num">${volDisplay}</td>
+      <td class="num">${betaDisplay}</td>
+      <td class="num">${perf1yDisplay}</td>
       <td class="num">${ytdDisplay}</td>
+      <td class="num">${yieldDisplay}</td>
+      <td title="${sectorTitle.replace(/"/g,'&quot;')}">${sectorTopShort}</td>
+      <td>${leverageBadge}</td>
       <td>${inP?profBadge(pos.profile):'<span class="badge gray">—</span>'}</td>
       <td class="num">${inP?fmt(pos.weight,2)+'%':''}</td>
     </tr>`;
@@ -1706,7 +1751,7 @@ document.querySelectorAll('#etfs-table th[data-col]').forEach(th => th.addEventL
   document.getElementById(id).addEventListener('input', renderBonds);
   document.getElementById(id).addEventListener('change', renderBonds);
 });
-['search-etfs','filter-etf-cat','filter-etf-presence'].forEach(id => {
+['search-etfs','filter-etf-cat','filter-etf-presence','filter-etf-leverage','filter-etf-aum'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderETFs);
   document.getElementById(id).addEventListener('change', renderETFs);
 });
