@@ -1,52 +1,66 @@
 {
-  "version": "explore_v1",
+  "version": "explore_v2",
   "created": "2026-06-04",
   "capital_allocation_pct": 10,
-  "thesis": "Pari thématique IA capex + transition énergie + commodités + or hedge. Hors pipeline Core-Satellite. Pari ASSUMÉ non prouvé.",
+  "thesis": "Pari thématique World-broad + tilts sectoriels (AI/semis/énergie/or). Hors pipeline Core-Satellite. Aucun levier (×2 historique = Sharpe inférieur au ×1 sur World, -84% MaxDD en GFC).",
   "positions": {
-    "000660.KS": {
-      "weight_pct": 25,
+    "VT": {
+      "weight_pct": 30,
       "entry_date": "2026-06-04",
       "entry_price": null,
-      "name": "SK Hynix",
-      "thesis": "AI memory leader, HBM dominant"
+      "name": "Vanguard Total World Stock ETF",
+      "thesis": "Cœur de la poche — World broad sans levier, comme témoin"
     },
-    "FSLR": {
+    "SOXX": {
       "weight_pct": 20,
       "entry_date": "2026-06-04",
       "entry_price": null,
-      "name": "First Solar",
-      "thesis": "Solaire utility-scale US, marges supérieures"
+      "name": "iShares Semiconductor ETF",
+      "thesis": "Pari AI capex — semis broad, exposition pure au thème"
     },
-    "3653.TW": {
+    "ICLN": {
       "weight_pct": 15,
       "entry_date": "2026-06-04",
       "entry_price": null,
-      "name": "Jentech Precision",
-      "thesis": "Semis Taiwan, AI server cooling"
+      "name": "iShares Global Clean Energy ETF",
+      "thesis": "Transition énergétique — solaire/éolien/hydrogène"
     },
     "COPX": {
-      "weight_pct": 20,
+      "weight_pct": 15,
       "entry_date": "2026-06-04",
       "entry_price": null,
-      "name": "Global X Copper Miners",
-      "thesis": "Électrification, déficit structurel cuivre"
+      "name": "Global X Copper Miners ETF",
+      "thesis": "Cuivre — déficit structurel + électrification"
     },
     "NEM": {
-      "weight_pct": 20,
+      "weight_pct": 10,
       "entry_date": "2026-06-04",
       "entry_price": null,
       "name": "Newmont Mining",
       "thesis": "Or — hedge inflation/crise"
+    },
+    "XBI": {
+      "weight_pct": 10,
+      "entry_date": "2026-06-04",
+      "entry_price": null,
+      "name": "SPDR S&P Biotech ETF",
+      "thesis": "Biotech innovation small/mid cap"
     }
   },
   "benchmark": {
-    "ticker": "SOXX",
-    "name": "iShares Semiconductor ETF",
-    "rationale": "Le thème dominant de la poche est l'AI/semis. Battre SOXX acheté-tenu = ma sélection apporte un edge réel. Ne pas le battre = j'aurais dû indexer."
+    "ticker": "VT",
+    "name": "Vanguard Total World Stock ETF",
+    "rationale": "World broad acheté-tenu. Si mes tilts thématiques (semis/énergie/cuivre/or/biotech) battent VT sur 3 ans → edge thématique. Sinon → indexer (VT seul)."
   },
   "review_date": "2029-06-04",
   "review_horizon_years": 3,
-  "rule": "REVUE INFORMATIVE UNIQUEMENT. Aucune réduction automatique. Pas de trigger 'si perf<0 réduire' = ça serait du momentum-chasing déguisé sur un sleeve qui fait ±50%/an (bruit pur sur 1 an). À 2029, comparer perf cumul poche vs benchmark SOXX acheté-tenu : si poche bat le bench net frais → edge de sélection prouvé, je peux assumer le pari ; sinon → j'indexe (SOXX direct, ou je ferme la poche). Décision manuelle.",
-  "no_auto_actions": true
+  "rule": "REVUE INFORMATIVE UNIQUEMENT. Aucune réduction automatique. Pas de trigger sur < 3 ans (bruit pur sur sleeves volatils). À 2029, comparer perf cumul poche vs VT acheté-tenu. Si poche > VT net frais → edge thématique prouvé, je peux maintenir/augmenter. Sinon → indexer ou fermer.",
+  "no_auto_actions": true,
+  "leverage_decision": {
+    "tested": "World ×2 daily reset sur 2008-2025",
+    "result": "CAGR +10.8% vs +8.0% (World ×1), MAIS Sharpe 0.20 vs 0.27 → ×2 inférieur en risk-adjusted",
+    "max_dd": "World ×2 = -84% en GFC vs -56% pour ×1",
+    "incompatibility": "Incompatible avec tolérance MaxDD -30% déclarée",
+    "conclusion": "Pas de levier ×2 dans la poche. Si test futur, ≤ 2.5% capital total, jamais en cœur."
+  }
 }
