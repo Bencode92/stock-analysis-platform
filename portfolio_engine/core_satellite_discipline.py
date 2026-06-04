@@ -571,67 +571,78 @@ THEMATIQUE_CORE = {
 }  # total = 0.80
 
 
-# v6.12 : Satellite thématique pur — 5 "crocs" multi-pays (max 2/pays)
-# Remplace l'héritage des actions qualité du Principal (HERO/EXPD/CF/ITX/LUPIN).
-# Ces actions-là sont défensives — incohérentes avec un Agressif-Thematique
-# poussé. Ici on met les vrais paris IA/semis/transition énergie.
-#
-# Garde-fous appliqués :
-#   1. MAX 2 actions par pays → mélange KR + NL + TW + US×2 (pas 5 asiatiques)
-#   2. Note overlap avec cœur ETF : SK Hynix et TSMC sont dans IEMG (15%)
-#      à respectivement ~2% et ~5% → exposition réelle = (4% sat + ETF poids)
-#      Acceptable car le satellite est petit et le double-comptage limité.
-THEMATIQUE_SATELLITE = [
-    {
-        "ticker": "000660.KS",
-        "name": "SK Hynix",
-        "industry": "Memory semiconductors (HBM, AI)",
-        "country": "KR",
-        "thesis": "AI memory leader, HBM dominant",
-    },
-    {
-        "ticker": "2330.TW",
-        "name": "Taiwan Semiconductor (TSMC)",
-        "industry": "Foundry — leading-edge chip manufacturing",
-        "country": "TW",
-        "thesis": "Monopole foundry avancée AI/HPC",
-    },
-    {
-        "ticker": "ASML.AS",
-        "name": "ASML Holding",
-        "industry": "Semi capex — EUV lithography monopoly",
-        "country": "NL",
-        "thesis": "Monopole EUV mondial",
-    },
-    {
-        "ticker": "FSLR",
-        "name": "First Solar",
-        "industry": "Solar utility-scale",
-        "country": "US",
-        "thesis": "Solaire US utility-scale, IRA bénéficiaire",
-    },
-    {
-        "ticker": "ANET",
-        "name": "Arista Networks",
-        "industry": "Networking — AI data centers",
-        "country": "US",
-        "thesis": "Réseaux ultra-low-latency AI data centers",
-    },
-]
+# v6.14 : Satellite thématique DYNAMISÉ (plus d'actions en dur).
+# Sélectionné via fit_score_agressif (qui privilégie haute vol + momentum +
+# EPS growth — les caractéristiques des actions thématiques par construction).
+# PAS de bonus RADAR sectoriel ici — le RADAR est neutralisé au pipeline et
+# le réintroduire ici réouvrirait le timing factoriel rejeté OOS (-0.11 Sharpe).
+# Garde-fous structurels :
+#   - max 2 actions par pays (sinon le scoring remonte 5 semis Corée-Taïwan)
+#   - max 2 actions par industry (sinon 5 clones d'un même secteur)
+#   - Buffett ≥ 70 (qualité minimum, exclut les small-caps spéculatifs)
+#   - vol_3y ≥ 30% (pool thématique = haute vol par définition)
+
+def _get_top_thematic_satellite(n_target: int = 5) -> List[Dict]:
+    """Sélectionne dynamiquement le top-N actions thématiques.
+
+    Score = fit_score_agressif (fondamental, pas sectoriel macro).
+    Diversification forcée : max 2 par pays ET max 2 par industry.
+    Pool restreint à haute vol + qualité minimum pour rester thématique.
+    """
+    try:
+        from portfolio_engine.profile_assignment import annotate_universe_with_fits
+    except ImportError:
+        try:
+            from .profile_assignment import annotate_universe_with_fits
+        except ImportError:
+            return []
+
+    all_stocks = _load_all_stocks()
+    if not all_stocks:
+        return []
+    annotate_universe_with_fits(all_stocks)
+
+    # Pool thématique : haute vol + qualité minimum (Buffett ≥ 70)
+    # PAS de filtre sectoriel — on laisse fit_agressif faire son boulot
+    candidates = [
+        s for s in all_stocks
+        if (s.get("volatility_3y") or 0) >= 30.0
+        and (s.get("buffett_score") or 0) >= 70
+    ]
+
+    # Tri par fit_agressif décroissant (le score qui privilégie thématique)
+    candidates.sort(key=lambda s: -(s.get("_fit_agressif") or 0))
+
+    # Diversification dure : max 2 par pays + max 2 par industry
+    by_country: Dict[str, int] = {}
+    by_industry: Dict[str, int] = {}
+    selected = []
+    for s in candidates:
+        country = (s.get("country") or "_").lower()
+        industry = (s.get("industry") or "_").lower()
+        if by_country.get(country, 0) >= 2:
+            continue
+        if by_industry.get(industry, 0) >= 2:
+            continue
+        by_country[country] = by_country.get(country, 0) + 1
+        by_industry[industry] = by_industry.get(industry, 0) + 1
+        selected.append(s)
+        if len(selected) >= n_target:
+            break
+
+    return selected
 
 
 def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
     """Construit le profil Agressif-Thematique en Format B.
 
-    v6.12 : Cœur 80 % ETFs thématiques + satellite 20 % = 5 actions
-    thématiques pures (SK Hynix, TSMC, ASML, FSLR, ANET), multi-pays
-    (KR/TW/NL/US×2, max 2/pays).
+    v6.14 : Satellite DYNAMISÉ via fit_score_agressif + max 2/pays + max 2/industry.
     Le paramètre satellite_positions_unused est conservé pour la signature
-    mais ignoré — le satellite Thematique a son propre univers.
+    mais ignoré — le satellite Thematique a son propre univers (scored dynamiquement).
     """
     positions = []
 
-    # Cœur thématique (80 %)
+    # Cœur thématique (80 %) — reste en dur (ticker stable, contenu vivant)
     for tk, info in THEMATIQUE_CORE.items():
         positions.append({
             "ticker": tk,
@@ -648,20 +659,42 @@ def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
             "currency": info.get("currency"),
         })
 
-    # Satellite : 5 actions thématiques pures à 4 % chacune (= 20 % total)
-    for stock in THEMATIQUE_SATELLITE:
+    # Satellite : top 5 dynamique via fit_score_agressif (20 % total, 4 % par nom)
+    n_satellite = 5
+    weight_per = 0.20 / n_satellite  # = 0.04
+    top_thematic = _get_top_thematic_satellite(n_target=n_satellite)
+
+    # Log pour vérification de la diversification (max 2/pays appliqué)
+    if top_thematic:
+        countries = [s.get("country", "?") for s in top_thematic]
+        industries = [s.get("industry", "?") for s in top_thematic]
+        try:
+            import logging
+            log = logging.getLogger("portfolio_engine.core_satellite_discipline")
+            log.info(f"[Agressif-Thematique] Satellite dynamique : "
+                     f"{[s.get('ticker') for s in top_thematic]}")
+            log.info(f"  Pays : {countries}  (max 2/pays ✓)")
+            log.info(f"  Industries : {industries}  (max 2/industry ✓)")
+        except Exception:
+            pass
+
+    for s in top_thematic:
+        tk = s.get("ticker") or s.get("symbol") or s.get("resolved_symbol", "")
+        if not tk:
+            continue
         positions.append({
-            "ticker": stock["ticker"],
-            "name": stock["name"],
+            "ticker": tk,
+            "name": (s.get("name") or tk)[:80],
             "category": "Actions",
-            "industry": stock["industry"],
-            "weight_pct": 4.0,
-            "weight": 0.04,
+            "industry": s.get("industry", ""),
+            "weight_pct": round(weight_per * 100, 2),
+            "weight": weight_per,
             "role": "satellite",
-            "asset_ids": [stock["ticker"]],
-            "beta": None,
-            "country": stock.get("country"),
-            "_thesis": stock.get("thesis"),
+            "asset_ids": [tk],
+            "beta": s.get("beta"),
+            "country": s.get("country"),
+            "buffett_score": s.get("buffett_score"),
+            "fit_score": s.get("_fit_agressif"),
         })
 
     return positions_to_format_b(positions, "Agressif-Thematique")
