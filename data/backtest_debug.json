@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-06-04T10:59:27.776272",
+    "generated_at": "2026-06-04T13:17:38.505952",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -37,10 +37,10 @@
       "CF",
       "EXPD",
       "HEROMOTOCO",
-      "HNR1",
       "ITX",
       "LUPIN",
-      "NOVN"
+      "NOVN",
+      "SREN"
     ],
     "ETF": [],
     "Bond_ETF": [],
@@ -290,7 +290,7 @@
       "first_price": 5766.0,
       "last_price": 4882.2998,
       "total_return_pct": -15.33,
-      "volatility_annual_pct": 30.8,
+      "volatility_annual_pct": 30.79,
       "weights_by_profile": {
         "Agressif": 5.0,
         "Modéré": 5.0
@@ -332,66 +332,9 @@
           "date": "2026-06-04",
           "close": 4882.2998,
           "prev_date": "2026-06-03",
-          "prev_close": 4838.7002,
-          "daily_return_pct": 0.9011,
-          "formula": "(4882.2998 / 4838.7002) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "HNR1": {
-      "ticker": "HNR1",
-      "type": "Action",
-      "n_days_data": 86,
-      "first_date": "2026-02-05",
-      "last_date": "2026-06-04",
-      "first_price": 248.2,
-      "last_price": 224.4,
-      "total_return_pct": -9.59,
-      "volatility_annual_pct": 24.4,
-      "weights_by_profile": {
-        "Stable": 5.0
-      },
-      "price_samples": [
-        {
-          "date": "2026-02-05",
-          "close": 248.2,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-03-06",
-          "close": 248.8,
-          "prev_date": "2026-03-05",
-          "prev_close": 252.0,
-          "daily_return_pct": -1.2698,
-          "formula": "(248.8000 / 252.0000) - 1"
-        },
-        {
-          "date": "2026-04-07",
-          "close": 272.0,
-          "prev_date": "2026-04-06",
-          "prev_close": 269.8,
-          "daily_return_pct": 0.8154,
-          "formula": "(272.0000 / 269.8000) - 1"
-        },
-        {
-          "date": "2026-05-06",
-          "close": 260.4,
-          "prev_date": "2026-05-05",
-          "prev_close": 255.6,
-          "daily_return_pct": 1.8779,
-          "formula": "(260.4000 / 255.6000) - 1"
-        },
-        {
-          "date": "2026-06-04",
-          "close": 224.4,
-          "prev_date": "2026-06-03",
-          "prev_close": 224.4,
-          "daily_return_pct": 0.0,
-          "formula": "(224.4000 / 224.4000) - 1"
+          "prev_close": 4840.8999,
+          "daily_return_pct": 0.8552,
+          "formula": "(4882.2998 / 4840.8999) - 1"
         }
       ],
       "is_benchmark": false
@@ -677,6 +620,63 @@
       ],
       "is_benchmark": true
     },
+    "SREN": {
+      "ticker": "SREN",
+      "type": "Action",
+      "n_days_data": 86,
+      "first_date": "2026-02-05",
+      "last_date": "2026-06-04",
+      "first_price": 127.6,
+      "last_price": 114.5,
+      "total_return_pct": -10.27,
+      "volatility_annual_pct": 22.08,
+      "weights_by_profile": {
+        "Stable": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2026-02-05",
+          "close": 127.6,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2026-03-06",
+          "close": 127.1,
+          "prev_date": "2026-03-05",
+          "prev_close": 129.05,
+          "daily_return_pct": -1.511,
+          "formula": "(127.1000 / 129.0500) - 1"
+        },
+        {
+          "date": "2026-04-07",
+          "close": 132.3,
+          "prev_date": "2026-04-06",
+          "prev_close": 132.3,
+          "daily_return_pct": 0.0,
+          "formula": "(132.3000 / 132.3000) - 1"
+        },
+        {
+          "date": "2026-05-06",
+          "close": 128.4,
+          "prev_date": "2026-05-05",
+          "prev_close": 124.75,
+          "daily_return_pct": 2.9258,
+          "formula": "(128.4000 / 124.7500) - 1"
+        },
+        {
+          "date": "2026-06-04",
+          "close": 114.5,
+          "prev_date": "2026-06-03",
+          "prev_close": 114.5,
+          "daily_return_pct": 0.0,
+          "formula": "(114.5000 / 114.5000) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "URTH": {
       "ticker": "URTH",
       "type": "Benchmark",
@@ -743,10 +743,10 @@
           "ticker": "HEROMOTOCO",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 4838.7002,
+          "price_prev": 4840.8999,
           "price_today": 4882.2998,
-          "return_pct": 0.9011,
-          "contribution_pct": 0.0451
+          "return_pct": 0.8552,
+          "contribution_pct": 0.0428
         },
         {
           "ticker": "EXPD",
@@ -785,7 +785,7 @@
           "contribution_pct": -0.0252
         }
       ],
-      "total_portfolio_return_pct": 0.0198,
+      "total_portfolio_return_pct": 0.0176,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -935,13 +935,13 @@
       "excess_return_pct": -9.96
     },
     "Stable": {
-      "gross_return_pct": 0.79,
-      "net_return_pct": 0.79,
-      "volatility_pct": 2.15,
-      "max_drawdown_pct": -0.95,
+      "gross_return_pct": 0.77,
+      "net_return_pct": 0.77,
+      "volatility_pct": 1.88,
+      "max_drawdown_pct": -0.66,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -1.62,
-      "excess_return_pct": 2.4
+      "excess_return_pct": 2.39
     }
   },
   "uniformity_proof": {

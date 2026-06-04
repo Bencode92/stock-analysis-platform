@@ -1,240 +1,183 @@
 {
   "_meta": {
-    "generated": "2026-06-04T10:59:23",
-    "portfolio_generated": "2026-06-04T10:56:32.068615",
+    "generated": "2026-06-04T13:17:34",
+    "portfolio_generated": "2026-06-04T13:14:15.060111",
     "n_assets": 14,
-    "n_with_returns": 6,
-    "covariance_method": "structured",
-    "condition_number": 108.71,
+    "n_with_returns": 7,
+    "covariance_method": "hybrid_shrunk",
+    "condition_number": 91.38,
     "pca_factors": 3
   },
   "profiles": {
     "Agressif": {
       "n_assets": 9,
-      "weighted_avg_correlation": 0.3718,
+      "weighted_avg_correlation": 0.247,
       "most_correlated": [
-        {
-          "t1": "VWCE.DE",
-          "t2": "IWDA.AS",
-          "corr": 0.7465,
-          "w1": 50.0,
-          "w2": 15.0,
-          "combined_weight": 65.0
-        },
-        {
-          "t1": "VWCE.DE",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 50.0,
-          "w2": 5.0,
-          "combined_weight": 55.0
-        },
-        {
-          "t1": "IWDA.AS",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 15.0,
-          "w2": 5.0,
-          "combined_weight": 20.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "LUPIN",
-          "corr": 0.5269,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "ITX",
-          "corr": 0.4973,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "ITX",
-          "t2": "LUPIN",
-          "corr": 0.4636,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "HEROMOTOCO",
-          "t2": "CF",
-          "corr": 0.4517,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "CF",
-          "t2": "ITX",
-          "corr": 0.4468,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "CF",
-          "t2": "LUPIN",
-          "corr": 0.4455,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "CF",
-          "corr": 0.4383,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        }
-      ],
-      "least_correlated": [
-        {
-          "t1": "HEROMOTOCO",
-          "t2": "IBGS.AS",
-          "corr": 0.0503,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "IBGS.AS",
-          "corr": 0.0503,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "CF",
-          "t2": "IBGS.AS",
-          "corr": 0.0503,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "ITX",
-          "t2": "IBGS.AS",
-          "corr": 0.0503,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "LUPIN",
-          "t2": "IBGS.AS",
-          "corr": 0.0503,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        }
-      ],
-      "high_corr_high_weight": [
-        {
-          "t1": "VWCE.DE",
-          "t2": "IWDA.AS",
-          "corr": 0.7465,
-          "w1": 50.0,
-          "w2": 15.0,
-          "combined_weight": 65.0
-        },
-        {
-          "t1": "VWCE.DE",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 50.0,
-          "w2": 5.0,
-          "combined_weight": 55.0
-        },
-        {
-          "t1": "IWDA.AS",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 15.0,
-          "w2": 5.0,
-          "combined_weight": 20.0
-        }
-      ]
-    },
-    "Mod\u00e9r\u00e9": {
-      "n_assets": 9,
-      "weighted_avg_correlation": 0.1948,
-      "most_correlated": [
-        {
-          "t1": "VWCE.DE",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 50.0,
-          "w2": 5.0,
-          "combined_weight": 55.0
-        },
-        {
-          "t1": "HEROMOTOCO",
-          "t2": "NOVN",
-          "corr": 0.4581,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "HEROMOTOCO",
-          "t2": "CF",
-          "corr": 0.4517,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "NOVN",
-          "t2": "CF",
-          "corr": 0.4501,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "CF",
-          "corr": 0.4383,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "NOVN",
-          "t2": "EXPD",
-          "corr": 0.4161,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "HEROMOTOCO",
-          "t2": "EXPD",
-          "corr": 0.3758,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
         {
           "t1": "VWCE.DE",
           "t2": "HEROMOTOCO",
-          "corr": 0.2,
+          "corr": 0.4524,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
         },
         {
+          "t1": "IWDA.AS",
+          "t2": "HEROMOTOCO",
+          "corr": 0.4524,
+          "w1": 15.0,
+          "w2": 5.0,
+          "combined_weight": 20.0
+        },
+        {
+          "t1": "HEROMOTOCO",
+          "t2": "SGLN.AS",
+          "corr": 0.4524,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "HEROMOTOCO",
+          "t2": "EXPD",
+          "corr": 0.4429,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "HEROMOTOCO",
+          "t2": "LUPIN",
+          "corr": 0.3997,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
           "t1": "VWCE.DE",
+          "t2": "IWDA.AS",
+          "corr": 0.3205,
+          "w1": 50.0,
+          "w2": 15.0,
+          "combined_weight": 65.0
+        },
+        {
+          "t1": "VWCE.DE",
+          "t2": "SGLN.AS",
+          "corr": 0.3205,
+          "w1": 50.0,
+          "w2": 5.0,
+          "combined_weight": 55.0
+        },
+        {
+          "t1": "IWDA.AS",
+          "t2": "SGLN.AS",
+          "corr": 0.3205,
+          "w1": 15.0,
+          "w2": 5.0,
+          "combined_weight": 20.0
+        },
+        {
+          "t1": "VWCE.DE",
+          "t2": "EXPD",
+          "corr": 0.3072,
+          "w1": 50.0,
+          "w2": 5.0,
+          "combined_weight": 55.0
+        },
+        {
+          "t1": "IWDA.AS",
+          "t2": "EXPD",
+          "corr": 0.3072,
+          "w1": 15.0,
+          "w2": 5.0,
+          "combined_weight": 20.0
+        }
+      ],
+      "least_correlated": [
+        {
+          "t1": "CF",
+          "t2": "ITX",
+          "corr": 0.0367,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "CF",
+          "t2": "LUPIN",
+          "corr": 0.0328,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "ITX",
+          "t2": "IBGS.AS",
+          "corr": 0.0304,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "CF",
+          "t2": "IBGS.AS",
+          "corr": 0.0288,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "ITX",
+          "t2": "LUPIN",
+          "corr": -0.0002,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        }
+      ],
+      "high_corr_high_weight": []
+    },
+    "Mod\u00e9r\u00e9": {
+      "n_assets": 9,
+      "weighted_avg_correlation": 0.1583,
+      "most_correlated": [
+        {
+          "t1": "VWCE.DE",
+          "t2": "HEROMOTOCO",
+          "corr": 0.4524,
+          "w1": 50.0,
+          "w2": 5.0,
+          "combined_weight": 55.0
+        },
+        {
+          "t1": "HEROMOTOCO",
+          "t2": "SGLN.AS",
+          "corr": 0.4524,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "HEROMOTOCO",
+          "t2": "EXPD",
+          "corr": 0.4429,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "HEROMOTOCO",
           "t2": "NOVN",
-          "corr": 0.2,
+          "corr": 0.3723,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "VWCE.DE",
+          "t2": "SGLN.AS",
+          "corr": 0.3205,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
@@ -242,17 +185,49 @@
         {
           "t1": "VWCE.DE",
           "t2": "EXPD",
-          "corr": 0.2,
+          "corr": 0.3072,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
+        },
+        {
+          "t1": "EXPD",
+          "t2": "SGLN.AS",
+          "corr": 0.3072,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "VWCE.DE",
+          "t2": "NOVN",
+          "corr": 0.2711,
+          "w1": 50.0,
+          "w2": 5.0,
+          "combined_weight": 55.0
+        },
+        {
+          "t1": "NOVN",
+          "t2": "SGLN.AS",
+          "corr": 0.2711,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "NOVN",
+          "t2": "EXPD",
+          "corr": 0.2405,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
         }
       ],
       "least_correlated": [
         {
           "t1": "CF",
           "t2": "IBCI.AS",
-          "corr": 0.0503,
+          "corr": 0.0288,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -260,7 +235,7 @@
         {
           "t1": "CF",
           "t2": "IBGS.AS",
-          "corr": 0.0503,
+          "corr": 0.0288,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -268,7 +243,7 @@
         {
           "t1": "AGGH.AS",
           "t2": "IBCI.AS",
-          "corr": 0.0261,
+          "corr": 0.0153,
           "w1": 15.0,
           "w2": 5.0,
           "combined_weight": 20.0
@@ -276,7 +251,7 @@
         {
           "t1": "AGGH.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0261,
+          "corr": 0.0153,
           "w1": 15.0,
           "w2": 5.0,
           "combined_weight": 20.0
@@ -284,79 +259,70 @@
         {
           "t1": "IBCI.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0261,
+          "corr": 0.0153,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
         }
       ],
-      "high_corr_high_weight": [
-        {
-          "t1": "VWCE.DE",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 50.0,
-          "w2": 5.0,
-          "combined_weight": 55.0
-        }
-      ]
+      "high_corr_high_weight": []
     },
     "Stable": {
       "n_assets": 7,
-      "weighted_avg_correlation": 0.1293,
+      "weighted_avg_correlation": 0.0799,
       "most_correlated": [
         {
           "t1": "VWCE.DE",
           "t2": "SGLN.AS",
-          "corr": 0.7465,
+          "corr": 0.3205,
           "w1": 20.0,
           "w2": 10.0,
           "combined_weight": 30.0
         },
         {
+          "t1": "VWCE.DE",
+          "t2": "SREN",
+          "corr": 0.293,
+          "w1": 20.0,
+          "w2": 5.0,
+          "combined_weight": 25.0
+        },
+        {
+          "t1": "SGLN.AS",
+          "t2": "SREN",
+          "corr": 0.293,
+          "w1": 10.0,
+          "w2": 5.0,
+          "combined_weight": 15.0
+        },
+        {
+          "t1": "VWCE.DE",
+          "t2": "ADM",
+          "corr": 0.2426,
+          "w1": 20.0,
+          "w2": 5.0,
+          "combined_weight": 25.0
+        },
+        {
+          "t1": "SGLN.AS",
+          "t2": "ADM",
+          "corr": 0.2426,
+          "w1": 10.0,
+          "w2": 5.0,
+          "combined_weight": 15.0
+        },
+        {
           "t1": "ADM",
-          "t2": "HNR1",
-          "corr": 0.4296,
+          "t2": "SREN",
+          "corr": 0.1766,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
-        },
-        {
-          "t1": "VWCE.DE",
-          "t2": "ADM",
-          "corr": 0.2,
-          "w1": 20.0,
-          "w2": 5.0,
-          "combined_weight": 25.0
-        },
-        {
-          "t1": "VWCE.DE",
-          "t2": "HNR1",
-          "corr": 0.2,
-          "w1": 20.0,
-          "w2": 5.0,
-          "combined_weight": 25.0
-        },
-        {
-          "t1": "SGLN.AS",
-          "t2": "ADM",
-          "corr": 0.2,
-          "w1": 10.0,
-          "w2": 5.0,
-          "combined_weight": 15.0
-        },
-        {
-          "t1": "SGLN.AS",
-          "t2": "HNR1",
-          "corr": 0.2,
-          "w1": 10.0,
-          "w2": 5.0,
-          "combined_weight": 15.0
         },
         {
           "t1": "AGGH.AS",
           "t2": "VWCE.DE",
-          "corr": 0.1385,
+          "corr": 0.0699,
           "w1": 25.0,
           "w2": 20.0,
           "combined_weight": 45.0
@@ -364,7 +330,7 @@
         {
           "t1": "AGGH.AS",
           "t2": "SGLN.AS",
-          "corr": 0.1385,
+          "corr": 0.0699,
           "w1": 25.0,
           "w2": 10.0,
           "combined_weight": 35.0
@@ -372,7 +338,7 @@
         {
           "t1": "VWCE.DE",
           "t2": "IBCI.AS",
-          "corr": 0.1385,
+          "corr": 0.0699,
           "w1": 20.0,
           "w2": 20.0,
           "combined_weight": 40.0
@@ -380,7 +346,7 @@
         {
           "t1": "VWCE.DE",
           "t2": "IBGS.AS",
-          "corr": 0.1385,
+          "corr": 0.0699,
           "w1": 20.0,
           "w2": 15.0,
           "combined_weight": 35.0
@@ -388,17 +354,17 @@
       ],
       "least_correlated": [
         {
-          "t1": "IBGS.AS",
+          "t1": "IBCI.AS",
           "t2": "ADM",
-          "corr": 0.0503,
-          "w1": 15.0,
+          "corr": 0.0546,
+          "w1": 20.0,
           "w2": 5.0,
-          "combined_weight": 20.0
+          "combined_weight": 25.0
         },
         {
           "t1": "IBGS.AS",
-          "t2": "HNR1",
-          "corr": 0.0503,
+          "t2": "ADM",
+          "corr": 0.0546,
           "w1": 15.0,
           "w2": 5.0,
           "combined_weight": 20.0
@@ -406,7 +372,7 @@
         {
           "t1": "AGGH.AS",
           "t2": "IBCI.AS",
-          "corr": 0.0261,
+          "corr": 0.0153,
           "w1": 25.0,
           "w2": 20.0,
           "combined_weight": 45.0
@@ -414,7 +380,7 @@
         {
           "t1": "AGGH.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0261,
+          "corr": 0.0153,
           "w1": 25.0,
           "w2": 15.0,
           "combined_weight": 40.0
@@ -422,29 +388,128 @@
         {
           "t1": "IBCI.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0261,
+          "corr": 0.0153,
           "w1": 20.0,
           "w2": 15.0,
           "combined_weight": 35.0
         }
       ],
-      "high_corr_high_weight": [
-        {
-          "t1": "VWCE.DE",
-          "t2": "SGLN.AS",
-          "corr": 0.7465,
-          "w1": 20.0,
-          "w2": 10.0,
-          "combined_weight": 30.0
-        }
-      ]
+      "high_corr_high_weight": []
     }
   },
   "all_pairs_top_30": [
     {
+      "t1": "ADM",
+      "t2": "CF",
+      "corr_hybrid": 0.4597,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HEROMOTOCO",
+      "t2": "IWDA.AS",
+      "corr_hybrid": 0.4524,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HEROMOTOCO",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.4524,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HEROMOTOCO",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.4524,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "EXPD",
+      "t2": "HEROMOTOCO",
+      "corr_hybrid": 0.4429,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HEROMOTOCO",
+      "t2": "LUPIN",
+      "corr_hybrid": 0.3997,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HEROMOTOCO",
+      "t2": "SREN",
+      "corr_hybrid": 0.3868,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HEROMOTOCO",
+      "t2": "NOVN",
+      "corr_hybrid": 0.3723,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "ADM",
+      "t2": "HEROMOTOCO",
+      "corr_hybrid": 0.3718,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
       "t1": "IWDA.AS",
       "t2": "SGLN.AS",
-      "corr_hybrid": 0.7465,
+      "corr_hybrid": 0.3205,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "ETF",
@@ -456,7 +521,7 @@
     {
       "t1": "IWDA.AS",
       "t2": "VWCE.DE",
-      "corr_hybrid": 0.7465,
+      "corr_hybrid": 0.3205,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "ETF",
@@ -468,7 +533,7 @@
     {
       "t1": "SGLN.AS",
       "t2": "VWCE.DE",
-      "corr_hybrid": 0.7465,
+      "corr_hybrid": 0.3205,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "ETF",
@@ -478,12 +543,168 @@
       "fam2": null
     },
     {
-      "t1": "HEROMOTOCO",
-      "t2": "HNR1",
-      "corr_hybrid": 0.5296,
+      "t1": "EXPD",
+      "t2": "IWDA.AS",
+      "corr_hybrid": 0.3072,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "EXPD",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.3072,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "EXPD",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.3072,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "LUPIN",
+      "t2": "SREN",
+      "corr_hybrid": 0.3038,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "IWDA.AS",
+      "t2": "LUPIN",
+      "corr_hybrid": 0.2931,
+      "corr_structured": null,
+      "cat1": "ETF",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "LUPIN",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.2931,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "LUPIN",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.2931,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "IWDA.AS",
+      "t2": "SREN",
+      "corr_hybrid": 0.293,
+      "corr_structured": null,
+      "cat1": "ETF",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "SGLN.AS",
+      "t2": "SREN",
+      "corr_hybrid": 0.293,
+      "corr_structured": null,
+      "cat1": "ETF",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "SREN",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.293,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "NOVN",
+      "t2": "SREN",
+      "corr_hybrid": 0.2807,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "IWDA.AS",
+      "t2": "NOVN",
+      "corr_hybrid": 0.2711,
+      "corr_structured": null,
+      "cat1": "ETF",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "NOVN",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.2711,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "NOVN",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.2711,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -492,199 +713,7 @@
     {
       "t1": "EXPD",
       "t2": "LUPIN",
-      "corr_hybrid": 0.5269,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "EXPD",
-      "t2": "ITX",
-      "corr_hybrid": 0.4973,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "HNR1",
-      "t2": "NOVN",
-      "corr_hybrid": 0.485,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "EXPD",
-      "corr_hybrid": 0.466,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ITX",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.4636,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "HNR1",
-      "corr_hybrid": 0.4603,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "HEROMOTOCO",
-      "t2": "NOVN",
-      "corr_hybrid": 0.4581,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.454,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "ITX",
-      "corr_hybrid": 0.452,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "HEROMOTOCO",
-      "corr_hybrid": 0.4517,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "NOVN",
-      "corr_hybrid": 0.4501,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "CF",
-      "corr_hybrid": 0.448,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "ITX",
-      "corr_hybrid": 0.4468,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "NOVN",
-      "corr_hybrid": 0.4465,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.4455,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "HEROMOTOCO",
-      "corr_hybrid": 0.4438,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ITX",
-      "t2": "NOVN",
-      "corr_hybrid": 0.4425,
+      "corr_hybrid": 0.2653,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -696,55 +725,7 @@
     {
       "t1": "LUPIN",
       "t2": "NOVN",
-      "corr_hybrid": 0.4388,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "EXPD",
-      "corr_hybrid": 0.4383,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "HEROMOTOCO",
-      "t2": "ITX",
-      "corr_hybrid": 0.4349,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "ADM",
-      "t2": "HNR1",
-      "corr_hybrid": 0.4296,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "HEROMOTOCO",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.4264,
+      "corr_hybrid": 0.2653,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -755,20 +736,8 @@
     },
     {
       "t1": "EXPD",
-      "t2": "NOVN",
-      "corr_hybrid": 0.4161,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "HNR1",
-      "t2": "ITX",
-      "corr_hybrid": 0.3949,
+      "t2": "SREN",
+      "corr_hybrid": 0.2515,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -779,20 +748,8 @@
     },
     {
       "t1": "EXPD",
-      "t2": "HEROMOTOCO",
-      "corr_hybrid": 0.3758,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "HNR1",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.362,
+      "t2": "ITX",
+      "corr_hybrid": 0.2452,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -804,9 +761,57 @@
   ],
   "all_pairs_bottom_10": [
     {
-      "t1": "HNR1",
-      "t2": "IBGS.AS",
-      "corr_hybrid": 0.0503,
+      "t1": "AGGH.AS",
+      "t2": "ITX",
+      "corr_hybrid": 0.0304,
+      "corr_structured": null,
+      "cat1": "Obl",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "IBCI.AS",
+      "t2": "ITX",
+      "corr_hybrid": 0.0304,
+      "corr_structured": null,
+      "cat1": "Obl",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "IBGS.AS",
+      "t2": "ITX",
+      "corr_hybrid": 0.0304,
+      "corr_structured": null,
+      "cat1": "Obl",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "AGGH.AS",
+      "t2": "CF",
+      "corr_hybrid": 0.0288,
+      "corr_structured": null,
+      "cat1": "Obl",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "CF",
+      "t2": "IBCI.AS",
+      "corr_hybrid": 0.0288,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Obl",
@@ -816,72 +821,12 @@
       "fam2": null
     },
     {
-      "t1": "IBCI.AS",
-      "t2": "ITX",
-      "corr_hybrid": 0.0503,
+      "t1": "CF",
+      "t2": "IBGS.AS",
+      "corr_hybrid": 0.0288,
       "corr_structured": null,
-      "cat1": "Obl",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "IBCI.AS",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.0503,
-      "corr_structured": null,
-      "cat1": "Obl",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "IBCI.AS",
-      "t2": "NOVN",
-      "corr_hybrid": 0.0503,
-      "corr_structured": null,
-      "cat1": "Obl",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "IBGS.AS",
-      "t2": "ITX",
-      "corr_hybrid": 0.0503,
-      "corr_structured": null,
-      "cat1": "Obl",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "IBGS.AS",
-      "t2": "LUPIN",
-      "corr_hybrid": 0.0503,
-      "corr_structured": null,
-      "cat1": "Obl",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "IBGS.AS",
-      "t2": "NOVN",
-      "corr_hybrid": 0.0503,
-      "corr_structured": null,
-      "cat1": "Obl",
-      "cat2": "Act",
+      "cat1": "Act",
+      "cat2": "Obl",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -890,7 +835,7 @@
     {
       "t1": "AGGH.AS",
       "t2": "IBCI.AS",
-      "corr_hybrid": 0.0261,
+      "corr_hybrid": 0.0153,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Obl",
@@ -902,7 +847,7 @@
     {
       "t1": "AGGH.AS",
       "t2": "IBGS.AS",
-      "corr_hybrid": 0.0261,
+      "corr_hybrid": 0.0153,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Obl",
@@ -914,10 +859,22 @@
     {
       "t1": "IBCI.AS",
       "t2": "IBGS.AS",
-      "corr_hybrid": 0.0261,
+      "corr_hybrid": 0.0153,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Obl",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "ITX",
+      "t2": "LUPIN",
+      "corr_hybrid": -0.0002,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -931,7 +888,6 @@
       "CF",
       "EXPD",
       "HEROMOTOCO",
-      "HNR1",
       "IBCI.AS",
       "IBGS.AS",
       "ITX",
@@ -939,231 +895,232 @@
       "LUPIN",
       "NOVN",
       "SGLN.AS",
+      "SREN",
       "VWCE.DE"
     ],
     "matrix": [
       [
         1.0,
-        0.0503,
-        0.448,
-        0.466,
-        0.4438,
-        0.4296,
-        0.0503,
-        0.0503,
-        0.452,
-        0.2,
-        0.454,
-        0.4465,
-        0.2,
-        0.2
+        0.0546,
+        0.4597,
+        0.2281,
+        0.3718,
+        0.0546,
+        0.0546,
+        0.0476,
+        0.2426,
+        0.1995,
+        0.2107,
+        0.2426,
+        0.1766,
+        0.2426
       ],
       [
-        0.0503,
+        0.0546,
         1.0,
-        0.0503,
-        0.0503,
-        0.0503,
-        0.0503,
-        0.0261,
-        0.0261,
-        0.0503,
-        0.1385,
-        0.0503,
-        0.0503,
-        0.1385,
-        0.1385
+        0.0288,
+        0.0675,
+        0.0993,
+        0.0153,
+        0.0153,
+        0.0304,
+        0.0699,
+        0.0631,
+        0.0586,
+        0.0699,
+        0.0624,
+        0.0699
       ],
       [
-        0.448,
-        0.0503,
+        0.4597,
+        0.0288,
         1.0,
-        0.4383,
-        0.4517,
-        0.4603,
-        0.0503,
-        0.0503,
-        0.4468,
-        0.2,
-        0.4455,
-        0.4501,
-        0.2,
-        0.2
+        0.1102,
+        0.2378,
+        0.0288,
+        0.0288,
+        0.0367,
+        0.111,
+        0.0328,
+        0.0912,
+        0.111,
+        -0.0357,
+        0.111
       ],
       [
-        0.466,
-        0.0503,
-        0.4383,
+        0.2281,
+        0.0675,
+        0.1102,
         1.0,
-        0.3758,
-        0.1651,
-        0.0503,
-        0.0503,
-        0.4973,
-        0.2,
-        0.5269,
-        0.4161,
-        0.2,
-        0.2
+        0.4429,
+        0.0675,
+        0.0675,
+        0.2452,
+        0.3072,
+        0.2653,
+        0.2405,
+        0.3072,
+        0.2515,
+        0.3072
       ],
       [
-        0.4438,
-        0.0503,
-        0.4517,
-        0.3758,
+        0.3718,
+        0.0993,
+        0.2378,
+        0.4429,
         1.0,
-        0.5296,
-        0.0503,
-        0.0503,
-        0.4349,
-        0.2,
-        0.4264,
-        0.4581,
-        0.2,
-        0.2
+        0.0993,
+        0.0993,
+        0.2398,
+        0.4524,
+        0.3997,
+        0.3723,
+        0.4524,
+        0.3868,
+        0.4524
       ],
       [
-        0.4296,
-        0.0503,
-        0.4603,
-        0.1651,
-        0.5296,
+        0.0546,
+        0.0153,
+        0.0288,
+        0.0675,
+        0.0993,
         1.0,
-        0.0503,
-        0.0503,
-        0.3949,
-        0.2,
-        0.362,
-        0.485,
-        0.2,
-        0.2
+        0.0153,
+        0.0304,
+        0.0699,
+        0.0631,
+        0.0586,
+        0.0699,
+        0.0624,
+        0.0699
       ],
       [
-        0.0503,
-        0.0261,
-        0.0503,
-        0.0503,
-        0.0503,
-        0.0503,
+        0.0546,
+        0.0153,
+        0.0288,
+        0.0675,
+        0.0993,
+        0.0153,
         1.0,
-        0.0261,
-        0.0503,
-        0.1385,
-        0.0503,
-        0.0503,
-        0.1385,
-        0.1385
+        0.0304,
+        0.0699,
+        0.0631,
+        0.0586,
+        0.0699,
+        0.0624,
+        0.0699
       ],
       [
-        0.0503,
-        0.0261,
-        0.0503,
-        0.0503,
-        0.0503,
-        0.0503,
-        0.0261,
+        0.0476,
+        0.0304,
+        0.0367,
+        0.2452,
+        0.2398,
+        0.0304,
+        0.0304,
         1.0,
-        0.0503,
-        0.1385,
-        0.0503,
-        0.0503,
-        0.1385,
-        0.1385
+        0.1235,
+        -0.0002,
+        -0.0383,
+        0.1235,
+        -0.0993,
+        0.1235
       ],
       [
-        0.452,
-        0.0503,
-        0.4468,
-        0.4973,
-        0.4349,
-        0.3949,
-        0.0503,
-        0.0503,
+        0.2426,
+        0.0699,
+        0.111,
+        0.3072,
+        0.4524,
+        0.0699,
+        0.0699,
+        0.1235,
         1.0,
-        0.2,
-        0.4636,
-        0.4425,
-        0.2,
-        0.2
+        0.2931,
+        0.2711,
+        0.3205,
+        0.293,
+        0.3205
       ],
       [
-        0.2,
-        0.1385,
-        0.2,
-        0.2,
-        0.2,
-        0.2,
-        0.1385,
-        0.1385,
-        0.2,
+        0.1995,
+        0.0631,
+        0.0328,
+        0.2653,
+        0.3997,
+        0.0631,
+        0.0631,
+        -0.0002,
+        0.2931,
         1.0,
-        0.2,
-        0.2,
-        0.7465,
-        0.7465
+        0.2653,
+        0.2931,
+        0.3038,
+        0.2931
       ],
       [
-        0.454,
-        0.0503,
-        0.4455,
-        0.5269,
-        0.4264,
-        0.362,
-        0.0503,
-        0.0503,
-        0.4636,
-        0.2,
+        0.2107,
+        0.0586,
+        0.0912,
+        0.2405,
+        0.3723,
+        0.0586,
+        0.0586,
+        -0.0383,
+        0.2711,
+        0.2653,
         1.0,
-        0.4388,
-        0.2,
-        0.2
+        0.2711,
+        0.2807,
+        0.2711
       ],
       [
-        0.4465,
-        0.0503,
-        0.4501,
-        0.4161,
-        0.4581,
-        0.485,
-        0.0503,
-        0.0503,
-        0.4425,
-        0.2,
-        0.4388,
+        0.2426,
+        0.0699,
+        0.111,
+        0.3072,
+        0.4524,
+        0.0699,
+        0.0699,
+        0.1235,
+        0.3205,
+        0.2931,
+        0.2711,
         1.0,
-        0.2,
-        0.2
+        0.293,
+        0.3205
       ],
       [
-        0.2,
-        0.1385,
-        0.2,
-        0.2,
-        0.2,
-        0.2,
-        0.1385,
-        0.1385,
-        0.2,
-        0.7465,
-        0.2,
-        0.2,
+        0.1766,
+        0.0624,
+        -0.0357,
+        0.2515,
+        0.3868,
+        0.0624,
+        0.0624,
+        -0.0993,
+        0.293,
+        0.3038,
+        0.2807,
+        0.293,
         1.0,
-        0.7465
+        0.293
       ],
       [
-        0.2,
-        0.1385,
-        0.2,
-        0.2,
-        0.2,
-        0.2,
-        0.1385,
-        0.1385,
-        0.2,
-        0.7465,
-        0.2,
-        0.2,
-        0.7465,
+        0.2426,
+        0.0699,
+        0.111,
+        0.3072,
+        0.4524,
+        0.0699,
+        0.0699,
+        0.1235,
+        0.3205,
+        0.2931,
+        0.2711,
+        0.3205,
+        0.293,
         1.0
       ]
     ]
