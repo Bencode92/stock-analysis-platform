@@ -112,11 +112,16 @@ def _load_all_stocks() -> List[Dict]:
 
 
 def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
-    """Retourne les top-N actions natives d'un profil, triées par fit_score.
+    """Retourne les top-N actions de qualité pour le satellite d'un profil.
 
-    Utilise profile_assignment.annotate_universe_with_fits pour calculer les
-    fit_scores ET _profile_native, puis filtre sur _profile_native == profile
-    et trie par fit décroissant.
+    v6.3 (2026-06-04) — POOL ÉLARGI POUR AGRESSIF
+    Pour Stable et Modéré : pool = _profile_native == profile, trié par _fit_<profile>.
+    Pour Agressif : pool élargi à Modéré-natives + Agressif-natives, vol ≥ 20%,
+        trié par _fit_modere (quality measure). Raison : fit_score_agressif a une
+        vol band 30-65% qui EXCLUT mécaniquement les vraies qualités (NOVN vol 19,
+        REGN 15, ADP 21). L'agressivité du profil vient du β cœur (0.80 via VWCE
+        50% + IWDA 15%), pas de la vol des actions individuelles. Le satellite
+        doit refléter la qualité, pas la haute vol.
     """
     try:
         from portfolio_engine.profile_assignment import annotate_universe_with_fits
@@ -131,14 +136,25 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
         return []
     annotate_universe_with_fits(all_stocks)
 
-    fit_key = _FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
-    natives = [s for s in all_stocks if s.get("_profile_native") == profile]
-    natives.sort(key=lambda s: -(s.get(fit_key) or 0))
+    if profile == "Agressif":
+        # Pool élargi : qualité quel que soit le profil natif, vol >= 20
+        candidates = [
+            s for s in all_stocks
+            if s.get("_profile_native") in ("Agressif", "Modéré")
+            and (s.get("volatility_3y") or 0) >= 20.0
+            and (s.get("buffett_score") or 0) >= 70  # qualité minimum
+        ]
+        # Tri par fit_modere (qualité réelle), pas fit_agressif (momentum-weighted)
+        candidates.sort(key=lambda s: -(s.get("_fit_modere") or 0))
+    else:
+        fit_key = _FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
+        candidates = [s for s in all_stocks if s.get("_profile_native") == profile]
+        candidates.sort(key=lambda s: -(s.get(fit_key) or 0))
 
     # Dédup par industry (max 2 par industrie pour diversification sectorielle)
     by_industry: Dict[str, int] = {}
     deduped = []
-    for s in natives:
+    for s in candidates:
         ind = (s.get("industry") or "_").lower()
         if by_industry.get(ind, 0) >= 2:
             continue
