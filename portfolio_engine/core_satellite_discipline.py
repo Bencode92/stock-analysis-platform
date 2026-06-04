@@ -57,6 +57,69 @@ BROAD_CORE_ETFS = {
     "GLD", "SGLN", "SGLN.AS", "IAU",
 }
 
+# v6.4 — Métadonnées des ETF UCITS du cœur (pour affichage dashboard)
+# Sans ces infos, le dashboard affiche "Cœur broad UCITS" générique. Avec, il
+# affiche le vrai nom, l'ISIN, et le TER. Données publiques iShares/Vanguard.
+UCITS_CORE_META = {
+    "VWCE.DE": {
+        "name": "Vanguard FTSE All-World UCITS Acc EUR",
+        "isin": "IE00BK5BQT80",
+        "ter": 0.0022,  # 0.22%
+        "category": "ETF",
+        "fund_type": "Global Equity (All-World)",
+        "currency": "EUR",
+    },
+    "IWDA.AS": {
+        "name": "iShares Core MSCI World UCITS Acc",
+        "isin": "IE00B4L5Y983",
+        "ter": 0.0020,  # 0.20%
+        "category": "ETF",
+        "fund_type": "Developed Markets Equity",
+        "currency": "EUR",
+    },
+    "EMIM.AS": {
+        "name": "iShares Core MSCI EM IMI UCITS Acc",
+        "isin": "IE00BKM4GZ66",
+        "ter": 0.0018,  # 0.18%
+        "category": "ETF",
+        "fund_type": "Emerging Markets Equity",
+        "currency": "EUR",
+    },
+    "AGGH.AS": {
+        "name": "iShares Core Global Aggregate Bond UCITS EUR Hedged",
+        "isin": "IE00BDBRDM35",
+        "ter": 0.0010,  # 0.10%
+        "category": "Obligations",
+        "fund_type": "Global Aggregate Bond (EUR hedged)",
+        "currency": "EUR",
+    },
+    "IBCI.AS": {
+        "name": "iShares EUR Inflation Linked Govt Bond UCITS",
+        "isin": "IE00B0M62X26",
+        "ter": 0.0009,  # 0.09%
+        "category": "Obligations",
+        "fund_type": "EUR Inflation-Linked Govt Bond",
+        "currency": "EUR",
+    },
+    "IBGS.AS": {
+        "name": "iShares EUR Govt Bond 1-3yr UCITS",
+        "isin": "IE00B14X4Q57",
+        "ter": 0.0020,  # 0.20%
+        "category": "Obligations",
+        "fund_type": "EUR Govt Bond Short (1-3y)",
+        "currency": "EUR",
+    },
+    "SGLN.AS": {
+        "name": "iShares Physical Gold ETC",
+        "isin": "IE00B4ND3602",
+        "ter": 0.0012,  # 0.12%
+        "category": "ETF",
+        "fund_type": "Physical Gold",
+        "currency": "EUR",
+    },
+}
+
+
 # Bond ETF tickers — pour catégoriser dans "Obligations" (pas "ETF")
 # Permet à la validation business rules de compter correctement les bonds.
 BOND_ETF_TICKERS = {
@@ -257,6 +320,21 @@ def _build_disciplined_positions(profile: str, v4_meta: Dict) -> List[Dict]:
     # ─── PHASE 2 : Cœur UCITS broad (filler canonique) ─────────────────────
     target_core = 1.0 - sat_used
     filler = DEFAULT_CORE_FILLER.get(profile, DEFAULT_CORE_FILLER["Modéré"])
+    # v6.4 : enrichit chaque filler avec ses vraies métadonnées (nom, ISIN, TER)
+    # pour que le dashboard et les consommateurs en aval voient le vrai produit.
+    def _get_filler_meta(tk: str) -> Dict:
+        m = UCITS_CORE_META.get(tk)
+        if m:
+            return {
+                "name": m["name"],
+                "category": m["category"],
+                "isin": m["isin"],
+                "ter": m["ter"],
+                "fund_type": m["fund_type"],
+                "currency": m["currency"],
+            }
+        return {"name": f"Cœur broad UCITS ({tk})", "category": "ETF"}
+
     filler_meta = {"name": "Cœur broad UCITS", "category": "ETF"}
     core_dict = {}  # ticker -> weight
 
@@ -296,16 +374,20 @@ def _build_disciplined_positions(profile: str, v4_meta: Dict) -> List[Dict]:
         passes += 1
 
     for tk, w in core_dict.items():
+        meta = _get_filler_meta(tk)
         positions.append({
             "ticker": tk,
-            "name": filler_meta["name"],
-            "category": filler_meta["category"],
-            "industry": "",
+            "name": meta["name"],
+            "category": meta["category"],
+            "industry": meta.get("fund_type", ""),
             "weight_pct": round(w * 100, 2),
             "weight": w,
             "role": "core",
             "asset_ids": [tk],
             "beta": None,
+            "isin": meta.get("isin"),
+            "ter": meta.get("ter"),
+            "currency": meta.get("currency"),
         })
 
     positions.sort(key=lambda p: -p["weight_pct"])
@@ -356,6 +438,17 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
             "beta": p.get("beta"),
             "role": p["role"],
         }
+        # v6.4 : pour les ETF cœur UCITS, propage ISIN/TER/currency au dashboard
+        if p.get("isin"):
+            tickers_meta[tk]["isin"] = p["isin"]
+        if p.get("ter") is not None:
+            tickers_meta[tk]["ter"] = p["ter"]
+        if p.get("currency"):
+            tickers_meta[tk]["currency"] = p["currency"]
+        if p.get("fit_score") is not None:
+            tickers_meta[tk]["fit_score"] = p["fit_score"]
+        if p.get("buffett_score") is not None:
+            tickers_meta[tk]["buffett_score"] = p["buffett_score"]
 
     # Commentaire min 50 chars (sinon schema fail)
     commentaire = (
