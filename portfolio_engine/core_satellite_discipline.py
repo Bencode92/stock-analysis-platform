@@ -156,6 +156,36 @@ _FIT_KEY_BY_PROFILE = {
     "Agressif": "_fit_agressif",
 }
 
+# v6.16 — Sticky bonus LÉGER (priorité #3 Claude externe)
+# Filtre le bruit : un stock déjà en portefeuille reçoit un petit bonus de fit
+# pour éviter qu'il sorte sur une variation marginale (±0.5). Trop fort = gelée.
+# Trop faible = clignotement run-à-run. 0.03 = juste assez pour ignorer le bruit
+# du recalcul fit_score, pas assez pour retenir un nom devenu clairement inférieur.
+STICKY_BONUS = 0.03
+
+def _load_previous_satellite_tickers() -> Dict[str, set]:
+    """Lit la composition satellite PRÉCÉDENTE depuis data/portfolios.json.
+
+    Retourne : {profile_name: set(tickers in current satellite)}
+    Si le fichier n'existe pas (premier run), retourne dict vide → pas de sticky.
+    """
+    pf_path = Path(__file__).parent.parent / "data" / "portfolios.json"
+    if not pf_path.exists():
+        return {}
+    try:
+        with open(pf_path) as f:
+            data = json.load(f)
+    except Exception:
+        return {}
+    result: Dict[str, set] = {}
+    for profile in ("Stable", "Modéré", "Agressif", "Agressif-Thematique"):
+        prof = data.get(profile, {})
+        meta = prof.get("_tickers_meta", {})
+        sat_tickers = {tk for tk, m in meta.items() if m.get("role") == "satellite"}
+        if sat_tickers:
+            result[profile] = sat_tickers
+    return result
+
 
 def _load_all_stocks() -> List[Dict]:
     """Charge l'univers complet d'actions (US + EU + Asia)."""
@@ -199,6 +229,11 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
         return []
     annotate_universe_with_fits(all_stocks)
 
+    # v6.16 : sticky bonus — un stock déjà en portefeuille reçoit un petit
+    # bonus de fit pour filtrer le bruit (sortir sur ±0.005 = clignotement)
+    prev_sats = _load_previous_satellite_tickers()
+    prev_for_profile = prev_sats.get(profile, set())
+
     if profile == "Agressif":
         # Pool élargi : qualité quel que soit le profil natif, vol >= 20
         candidates = [
@@ -207,12 +242,20 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
             and (s.get("volatility_3y") or 0) >= 20.0
             and (s.get("buffett_score") or 0) >= 70  # qualité minimum
         ]
-        # Tri par fit_modere (qualité réelle), pas fit_agressif (momentum-weighted)
-        candidates.sort(key=lambda s: -(s.get("_fit_modere") or 0))
+        # Tri par fit_modere + sticky bonus si dans portefeuille précédent
+        def _score(s):
+            base = s.get("_fit_modere") or 0
+            tk = s.get("ticker") or s.get("symbol") or ""
+            return base + (STICKY_BONUS if tk in prev_for_profile else 0)
+        candidates.sort(key=_score, reverse=True)
     else:
         fit_key = _FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
         candidates = [s for s in all_stocks if s.get("_profile_native") == profile]
-        candidates.sort(key=lambda s: -(s.get(fit_key) or 0))
+        def _score(s):
+            base = s.get(fit_key) or 0
+            tk = s.get("ticker") or s.get("symbol") or ""
+            return base + (STICKY_BONUS if tk in prev_for_profile else 0)
+        candidates.sort(key=_score, reverse=True)
 
     # Dédup par industry (max 2 par industrie pour diversification sectorielle)
     by_industry: Dict[str, int] = {}
@@ -610,8 +653,16 @@ def _get_top_thematic_satellite(n_target: int = 5) -> List[Dict]:
         and (s.get("buffett_score") or 0) >= 70
     ]
 
-    # Tri par fit_agressif décroissant (le score qui privilégie thématique)
-    candidates.sort(key=lambda s: -(s.get("_fit_agressif") or 0))
+    # v6.16 : sticky bonus léger pour filtrer le bruit
+    prev_sats = _load_previous_satellite_tickers()
+    prev_for_thematique = prev_sats.get("Agressif-Thematique", set())
+
+    # Tri par fit_agressif décroissant + sticky bonus
+    def _score(s):
+        base = s.get("_fit_agressif") or 0
+        tk = s.get("ticker") or s.get("symbol") or ""
+        return base + (STICKY_BONUS if tk in prev_for_thematique else 0)
+    candidates.sort(key=_score, reverse=True)
 
     # Diversification dure : max 2 par pays + max 2 par industry
     by_country: Dict[str, int] = {}
