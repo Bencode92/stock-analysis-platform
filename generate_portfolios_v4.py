@@ -7010,6 +7010,27 @@ def save_portfolios(portfolios: Dict, assets: list):
     # v4.14.0 R13: Sanity check automatique
     logger.info("\n=== SANITY CHECK v4.14.0 ===")
     sanity_check_portfolios(v1_data)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # v6.8 (2026-06-04) — GÉNÉRATION AUTO du PORTEFEUILLE ALTERNATIVE
+    # ─────────────────────────────────────────────────────────────────────
+    # En une seule commande, on produit aussi data/portfolios_alternative.json
+    # avec l'Agressif Thématique Poussé (Force 7), pour comparaison dashboard
+    # avec le Principal (Force 6).
+    # ═══════════════════════════════════════════════════════════════════════
+    try:
+        logger.info("\n=== GÉNÉRATION ALTERNATIVE (Force 7 / Prédateur Thématique) ===")
+        import subprocess
+        result = subprocess.run(
+            ["python3", "scripts/generate_portfolio_alternative.py"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            logger.info("✅ data/portfolios_alternative.json généré (Force 7)")
+        else:
+            logger.warning(f"⚠️ Alternative gen warning : {result.stderr[-500:]}")
+    except Exception as _e_alt:
+        logger.warning(f"⚠️ Alternative gen failed (non-bloquant): {_e_alt}")
     
     # === v5.3.3: Expert Lineup Regression Test ===
     # Compare produced portfolios against expert consensus targets.

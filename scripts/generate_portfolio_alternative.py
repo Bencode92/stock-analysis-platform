@@ -26,92 +26,103 @@ SOURCE = ROOT / "data" / "portfolios.json"
 OUTPUT = ROOT / "data" / "portfolios_alternative.json"
 
 
-# ─── COMPOSITION ALTERNATIVE AGRESSIF — Prédateur Thématique Poussé ───────
-# Cœur "thématique poussé" — ETF concentrés sur AI/semis/clean energy/biotech
+# ─── COMPOSITION ALTERNATIVE AGRESSIF — Prédateur Thématique Équilibré ───
+# v6.8 : Refactorisée avec les ETFs hard-exclude leveraged que le user a listés.
+# DIFFÉRENCE avec v6.7 : plus de mono-secteur ultra-volatil (SMH/SOXX),
+# remplacé par un mix DIVERSIFIÉ Growth/Tech/EM/Small-cap/Mid-cap/Énergie.
+# Vol panier ~17-19% (vs 23% précédent), MaxDD attendu plus modéré.
 ALT_AGRESSIF_CORE = {
-    "VWCE.DE": {
-        "weight": 0.25,
-        "name": "Vanguard FTSE All-World UCITS",
-        "fund_type": "Global Equity (anchor)",
-        "isin": "IE00BK5BQT80", "ter": 0.0022, "currency": "EUR",
-    },
-    "SMH": {
-        "weight": 0.15,
-        "name": "VanEck Semiconductor ETF",
-        "fund_type": "US Semiconductors — AI capex play",
+    "QQQ": {
+        "weight": 0.20,
+        "name": "Invesco QQQ Trust (Nasdaq 100)",
+        "fund_type": "Large Growth / Tech-heavy",
         "currency": "USD",
     },
-    "XLK": {
+    "VGT": {
         "weight": 0.10,
-        "name": "Technology Select Sector SPDR",
-        "fund_type": "US Tech large cap",
+        "name": "Vanguard Information Technology ETF",
+        "fund_type": "US Tech sector broad",
         "currency": "USD",
     },
-    "ICLN": {
-        "weight": 0.05,
-        "name": "iShares Global Clean Energy ETF",
-        "fund_type": "Energy transition theme",
+    "IEMG": {
+        "weight": 0.15,
+        "name": "iShares Core MSCI EM IMI",
+        "fund_type": "Emerging Markets diversified",
         "currency": "USD",
     },
-    "COPX": {
-        "weight": 0.05,
-        "name": "Global X Copper Miners ETF",
-        "fund_type": "Copper / electrification",
+    "VBK": {
+        "weight": 0.08,
+        "name": "Vanguard Small-Cap Growth ETF",
+        "fund_type": "US Small-Cap Growth (Russell 2000 ish)",
         "currency": "USD",
     },
-    "XBI": {
+    "VOT": {
         "weight": 0.05,
-        "name": "SPDR S&P Biotech ETF",
-        "fund_type": "Biotech innovation small/mid",
+        "name": "Vanguard Mid-Cap Growth ETF",
+        "fund_type": "US Mid-Cap Growth",
+        "currency": "USD",
+    },
+    "CGXU": {
+        "weight": 0.10,
+        "name": "Capital Group International Focus Eq",
+        "fund_type": "Foreign Large Growth (intl developed)",
+        "currency": "USD",
+    },
+    "XLE": {
+        "weight": 0.05,
+        "name": "Energy Select Sector SPDR",
+        "fund_type": "US Energy (oil & gas)",
+        "currency": "USD",
+    },
+    "EWT": {
+        "weight": 0.02,
+        "name": "iShares MSCI Taiwan ETF",
+        "fund_type": "Taiwan (very high vol, small tilt)",
         "currency": "USD",
     },
     "SGLN.AS": {
         "weight": 0.05,
         "name": "iShares Physical Gold ETC",
-        "fund_type": "Gold hedge",
+        "fund_type": "Gold hedge (crisis protection)",
         "isin": "IE00B4ND3602", "ter": 0.0012, "currency": "EUR",
     },
-}  # total = 0.70
+}  # total = 0.80
 
-# Satellite : 6 actions thématiques haut β (les vraies "crocs")
+# Satellite : actions de qualité hors-tech pour DIVERSIFIER vs cœur tech-heavy.
+# Réutilise les top natifs Agressif du pipeline v4 (HEROMOTOCO/EXPD/CF/ITX/LUPIN)
+# pour CONTINUITÉ avec le Principal (les 2 portefeuilles partagent le satellite).
 ALT_AGRESSIF_SATELLITE = {
-    "NVDA": {
-        "weight": 0.05,
-        "name": "NVIDIA CORP",
-        "industry": "Semiconductors — AI",
+    "HEROMOTOCO": {
+        "weight": 0.04,
+        "name": "HERO MOTOCORP LTD",
+        "industry": "Auto Manufacturers",
         "category": "Actions",
     },
-    "000660": {
-        "weight": 0.05,
-        "name": "SK Hynix",
-        "industry": "Memory semiconductors",
+    "EXPD": {
+        "weight": 0.04,
+        "name": "EXPEDITORS INTERNATIONAL",
+        "industry": "Integrated Freight & Logistics",
         "category": "Actions",
     },
-    "TSM": {
-        "weight": 0.05,
-        "name": "Taiwan Semiconductor Manufacturing",
-        "industry": "Foundry / chip manufacturing",
+    "CF": {
+        "weight": 0.04,
+        "name": "CF INDUSTRIES HOLDINGS",
+        "industry": "Agricultural Inputs",
         "category": "Actions",
     },
-    "FSLR": {
-        "weight": 0.05,
-        "name": "FIRST SOLAR INC",
-        "industry": "Solar / clean energy",
+    "ITX": {
+        "weight": 0.04,
+        "name": "INDUSTRIA DE DISENO TEXTIL",
+        "industry": "Apparel Retail",
         "category": "Actions",
     },
-    "ANET": {
-        "weight": 0.05,
-        "name": "ARISTA NETWORKS INC",
-        "industry": "Networking — AI data centers",
+    "LUPIN": {
+        "weight": 0.04,
+        "name": "LUPIN LTD",
+        "industry": "Drug Manufacturers — Specialty",
         "category": "Actions",
     },
-    "ASML.AS": {
-        "weight": 0.05,
-        "name": "ASML Holding",
-        "industry": "Semiconductor lithography (EUV)",
-        "category": "Actions",
-    },
-}  # total = 0.30
+}  # total = 0.20
 
 
 def build_format_b_profile(core: dict, satellite: dict, profile_name: str) -> dict:
