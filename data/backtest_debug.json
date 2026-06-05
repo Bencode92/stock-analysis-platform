@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-06-05T08:57:41.448342",
+    "generated_at": "2026-06-05T11:10:23.655156",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -404,9 +404,9 @@
       "first_date": "2026-02-06",
       "last_date": "2026-06-05",
       "first_price": 5753.5,
-      "last_price": 4854.5,
-      "total_return_pct": -15.63,
-      "volatility_annual_pct": 30.8,
+      "last_price": 4833.0,
+      "total_return_pct": -16.0,
+      "volatility_annual_pct": 30.82,
       "weights_by_profile": {
         "Agressif": 5.0,
         "Modéré": 5.0
@@ -446,11 +446,11 @@
         },
         {
           "date": "2026-06-05",
-          "close": 4854.5,
+          "close": 4833.0,
           "prev_date": "2026-06-04",
           "prev_close": 4882.2998,
-          "daily_return_pct": -0.5694,
-          "formula": "(4854.5000 / 4882.2998) - 1"
+          "daily_return_pct": -1.0098,
+          "formula": "(4833.0000 / 4882.2998) - 1"
         }
       ],
       "is_benchmark": false
@@ -519,9 +519,9 @@
       "first_date": "2026-02-06",
       "last_date": "2026-06-05",
       "first_price": 2173.7,
-      "last_price": 2270.7,
-      "total_return_pct": 4.46,
-      "volatility_annual_pct": 20.05,
+      "last_price": 2265.0,
+      "total_return_pct": 4.2,
+      "volatility_annual_pct": 20.04,
       "weights_by_profile": {
         "Agressif": 5.0
       },
@@ -560,11 +560,11 @@
         },
         {
           "date": "2026-06-05",
-          "close": 2270.7,
+          "close": 2265.0,
           "prev_date": "2026-06-04",
-          "prev_close": 2252.0,
-          "daily_return_pct": 0.8304,
-          "formula": "(2270.7000 / 2252.0000) - 1"
+          "prev_close": 2249.8,
+          "daily_return_pct": 0.6756,
+          "formula": "(2265.0000 / 2249.8000) - 1"
         }
       ],
       "is_benchmark": false
@@ -860,9 +860,9 @@
           "type": "Action",
           "weight_pct": 5.0,
           "price_prev": 4882.2998,
-          "price_today": 4854.5,
-          "return_pct": -0.5694,
-          "contribution_pct": -0.0285
+          "price_today": 4833.0,
+          "return_pct": -1.0098,
+          "contribution_pct": -0.0505
         },
         {
           "ticker": "EXPD",
@@ -886,10 +886,10 @@
           "ticker": "LUPIN",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 2252.0,
-          "price_today": 2270.7,
-          "return_pct": 0.8304,
-          "contribution_pct": 0.0415
+          "price_prev": 2249.8,
+          "price_today": 2265.0,
+          "return_pct": 0.6756,
+          "contribution_pct": 0.0338
         },
         {
           "ticker": "LOGN",
@@ -901,7 +901,7 @@
           "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": 0.013,
+      "total_portfolio_return_pct": -0.0167,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1033,22 +1033,22 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 2.79,
-      "net_return_pct": 2.79,
+      "gross_return_pct": 2.76,
+      "net_return_pct": 2.76,
       "volatility_pct": 4.11,
       "max_drawdown_pct": -1.14,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": 21.86,
-      "excess_return_pct": -19.07
+      "excess_return_pct": -19.1
     },
     "Modéré": {
-      "gross_return_pct": 1.04,
-      "net_return_pct": 1.04,
+      "gross_return_pct": 1.02,
+      "net_return_pct": 1.02,
       "volatility_pct": 3.6,
       "max_drawdown_pct": -1.05,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 10.31,
-      "excess_return_pct": -9.27
+      "excess_return_pct": -9.29
     },
     "Stable": {
       "gross_return_pct": 0.67,
