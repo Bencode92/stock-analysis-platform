@@ -1,0 +1,1551 @@
+{
+  "version": "decision_log_v1",
+  "pipeline_version": "v6.15",
+  "timestamp_iso": "2026-06-05T11:10:08.091350",
+  "run_id": "20260605_111008",
+  "decision_log": {
+    "rationale_global": "Pipeline RADAR-neutralisé (walk-forward strict -0.11 OOS validé). Cœur UCITS broad statique pour stabilité β cible. Satellite dynamique par fit_score qualité (max 2/industry pour Principal, max 2/pays + 2/industry pour Agressif-Thematique). Décision Core-Satellite : timing factoriel rejeté, indexation cœur + pari assumé sur qualité satellite.",
+    "key_constraints": {
+      "MaxDD_tolere_user": "-30% à -40% selon definition (pire annee vs MaxDD intra)",
+      "beta_cible_par_profil": {
+        "Stable": 0.22,
+        "Modéré": 0.61,
+        "Agressif": 0.8
+      },
+      "satellite_budget_pct": {
+        "Stable": 10,
+        "Modéré": 20,
+        "Agressif": 25,
+        "Agressif-Thematique": 20
+      },
+      "cap_per_name_pct": 5,
+      "cap_per_core_etf_pct": 50
+    },
+    "regles_de_selection_4_tiers": {
+      "tier_1_qualite_absolue": "Buffett ≥ 60-70 selon profil (Stable 70 / Modéré 65 / Agressif 60)",
+      "tier_2_qualite_relative": "Quality ≥ 60",
+      "tier_3_risk_alignment": "Vol_3y dans la band du profil",
+      "tier_4_diversification": "Max 1 secteur GICS L1 pour Stable, max 2 pour autres",
+      "doctrine": "Buffett+Quality sont des FILTRES, pas une thèse. La diversification (tier 4) décide quoi va ensemble."
+    },
+    "regle_or_n3_rebalance_checklist": {
+      "principe": "À l'entrée : ANTI-MOMENTUM (achète qualité même en baisse, en solde). À la sortie : VÉRIFICATION DU FONDAMENTAL (pas vente automatique sur la perf).",
+      "checklist_rebalance_annuel": [
+        "1. Pour chaque ligne du portefeuille, regarder la perf 1 an actuelle.",
+        "2. Si perf < -30% sur 1 an : DÉCLENCHE une vérification du Buffett/Quality.",
+        "3. Comparer Buffett_actuel vs Buffett à l'entrée (consulter data/score_history/scores_<entrée>.json).",
+        "4. Si Buffett a chuté de >15 points OU si Quality < 50 désormais : le fondamental a CASSÉ → SORTIR.",
+        "5. Si Buffett/Quality tiennent (chute mineure ou stable) : l'action est en SOLDE → GARDER (achat additionnel si DCA).",
+        "6. La perf seule n'est JAMAIS un signal de vente — elle déclenche une vérification du fondamental."
+      ],
+      "exception": "Si une action a fait > +200% sur 1 an, vérifier qu'elle ne dépasse pas le cap satellite 5%. Sinon, écrêter (vente partielle pour ramener à 5%) sans vendre tout."
+    }
+  },
+  "profiles": {
+    "Stable": {
+      "profile": "Stable",
+      "n_positions": 9,
+      "n_core": 5,
+      "n_satellite": 4,
+      "weight_core_pct": 90.0,
+      "weight_satellite_pct": 10.0,
+      "total_weight_pct": 100.0,
+      "core_positions": [
+        {
+          "ticker": "AGGH.AS",
+          "name": "iShares Core Global Aggregate Bond UCITS",
+          "weight_pct": 25.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "VWCE.DE",
+          "name": "Vanguard FTSE All-World UCITS Acc EUR",
+          "weight_pct": 20.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IBCI.AS",
+          "name": "iShares EUR Inflation Linked Govt Bond U",
+          "weight_pct": 20.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IBGS.AS",
+          "name": "iShares EUR Govt Bond 1-3yr UCITS",
+          "weight_pct": 15.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "SGLN.AS",
+          "name": "iShares Physical Gold ETC",
+          "weight_pct": 10.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        }
+      ],
+      "satellite_positions": [
+        {
+          "ticker": "ADM",
+          "name": "ADMIRAL GROUP PLC",
+          "weight_pct": 2.5,
+          "country": "Royaume-Uni",
+          "sector": "Finance",
+          "industry": "Insurance - Property & Casualty",
+          "buffett_score": 83,
+          "quality_score": 72,
+          "volatility_3y": 22.46,
+          "perf_1y": -2.8,
+          "dividend_yield": 6.28,
+          "roe": 52.75,
+          "fit_score": 0.9537,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 70"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 72",
+              "threshold": "≥ 70"
+            },
+            "tier_3_risk_alignment": {
+              "ok": false,
+              "actual": "Vol 22%",
+              "threshold": "12-22%"
+            }
+          }
+        },
+        {
+          "ticker": "AD",
+          "name": "KONINKLIJKE AHOLD DELHAIZE NV",
+          "weight_pct": 2.5,
+          "country": "Pays-Bas",
+          "sector": "Biens de consommation de base",
+          "industry": "Grocery Stores",
+          "buffett_score": 67,
+          "quality_score": 61,
+          "volatility_3y": 18.3,
+          "perf_1y": -2.28,
+          "dividend_yield": 3.52,
+          "roe": 15.27,
+          "fit_score": 0.9307,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": false,
+              "actual": "Buffett 67",
+              "threshold": "≥ 70"
+            },
+            "tier_2_qualite_relative": {
+              "ok": false,
+              "actual": "Quality 61",
+              "threshold": "≥ 70"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 18%",
+              "threshold": "12-22%"
+            }
+          }
+        },
+        {
+          "ticker": "SHEL",
+          "name": "SHELL PLC",
+          "weight_pct": 2.5,
+          "country": "Royaume-Uni",
+          "sector": "Energie",
+          "industry": "Oil & Gas Integrated",
+          "buffett_score": 67,
+          "quality_score": 62,
+          "volatility_3y": 20.3,
+          "perf_1y": 30.27,
+          "dividend_yield": 3.42,
+          "roe": 11.79,
+          "fit_score": 0.9262,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": false,
+              "actual": "Buffett 67",
+              "threshold": "≥ 70"
+            },
+            "tier_2_qualite_relative": {
+              "ok": false,
+              "actual": "Quality 62",
+              "threshold": "≥ 70"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 20%",
+              "threshold": "12-22%"
+            }
+          }
+        },
+        {
+          "ticker": "FGR",
+          "name": "EIFFAGE SA",
+          "weight_pct": 2.5,
+          "country": "France",
+          "sector": "Industries",
+          "industry": "Engineering & Construction",
+          "buffett_score": 67,
+          "quality_score": 71,
+          "volatility_3y": 22.63,
+          "perf_1y": 3.29,
+          "dividend_yield": 3.88,
+          "roe": 17.3,
+          "fit_score": 0.9236,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": false,
+              "actual": "Buffett 67",
+              "threshold": "≥ 70"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 71",
+              "threshold": "≥ 70"
+            },
+            "tier_3_risk_alignment": {
+              "ok": false,
+              "actual": "Vol 23%",
+              "threshold": "12-22%"
+            }
+          }
+        }
+      ],
+      "alternatives_non_retenues": [
+        {
+          "ticker": "HNR1",
+          "name": "HANNOVER RUECK",
+          "country": "Allemagne",
+          "sector": "Finance",
+          "industry": "Insurance - Reinsurance",
+          "buffett_score": 83,
+          "quality_score": 73,
+          "volatility_3y": 20.7,
+          "roe": 20.79,
+          "dividend_yield": 5.56,
+          "perf_1y": -19.47,
+          "fit_score": 0.9515,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "BVI",
+          "name": "BUREAU VERITAS SA",
+          "country": "France",
+          "sector": "Industries",
+          "industry": "Consulting Services",
+          "buffett_score": 83,
+          "quality_score": 74,
+          "volatility_3y": 21.31,
+          "roe": 32.17,
+          "dividend_yield": 7.06,
+          "perf_1y": -14.16,
+          "fit_score": 0.9222,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "NOVN",
+          "name": "NOVARTIS AG",
+          "country": "Suisse",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - General",
+          "buffett_score": 100,
+          "quality_score": 73,
+          "volatility_3y": 19.45,
+          "roe": 34.56,
+          "dividend_yield": 3.19,
+          "perf_1y": 24.92,
+          "fit_score": 0.9058,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "BR",
+          "name": "BROADRIDGE FINANCIAL SOLUTIONS INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Information Technology Service",
+          "buffett_score": 100,
+          "quality_score": 79,
+          "volatility_3y": 21.85,
+          "roe": 34.81,
+          "dividend_yield": 2.47,
+          "perf_1y": -36.85,
+          "fit_score": 0.9036,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "NTGY",
+          "name": "NATURGY ENERGY GROUP SA",
+          "country": "Espagne",
+          "sector": "Services publics",
+          "industry": "Utilities - Regulated Gas",
+          "buffett_score": 83,
+          "quality_score": 75,
+          "volatility_3y": 21.71,
+          "roe": 20.72,
+          "dividend_yield": 6.18,
+          "perf_1y": 9.15,
+          "fit_score": 0.9027,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "G1A",
+          "name": "GEA GROUP AG",
+          "country": "Allemagne",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 83,
+          "quality_score": 71,
+          "volatility_3y": 20.83,
+          "roe": 16.98,
+          "dividend_yield": 2.42,
+          "perf_1y": -9.96,
+          "fit_score": 0.895,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "ADP",
+          "name": "AUTOMATIC DATA PROCESSING INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Software - Application",
+          "buffett_score": 83,
+          "quality_score": 79,
+          "volatility_3y": 20.81,
+          "roe": 76,
+          "dividend_yield": 2.8,
+          "perf_1y": -29.16,
+          "fit_score": 0.8935,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "REC",
+          "name": "RECORDATI INDUSTRIA CHIMICA E FARM",
+          "country": "Italie",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - General",
+          "buffett_score": 100,
+          "quality_score": 75,
+          "volatility_3y": 21.89,
+          "roe": 23.37,
+          "dividend_yield": 2.65,
+          "perf_1y": -3.71,
+          "fit_score": 0.8907,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "ITW",
+          "name": "ILLINOIS TOOL INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 83,
+          "quality_score": 73,
+          "volatility_3y": 19.64,
+          "roe": 93.72,
+          "dividend_yield": 2.52,
+          "perf_1y": 2.39,
+          "fit_score": 0.8805,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "SCHN",
+          "name": "SCHINDLER HOLDING AG",
+          "country": "Suisse",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 83,
+          "quality_score": 74,
+          "volatility_3y": 18.77,
+          "roe": 21.05,
+          "dividend_yield": 2.66,
+          "perf_1y": -10.35,
+          "fit_score": 0.866,
+          "_profile_native": "Stable",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        }
+      ]
+    },
+    "Modéré": {
+      "profile": "Modéré",
+      "n_positions": 9,
+      "n_core": 5,
+      "n_satellite": 4,
+      "weight_core_pct": 80.0,
+      "weight_satellite_pct": 20.0,
+      "total_weight_pct": 100.0,
+      "core_positions": [
+        {
+          "ticker": "VWCE.DE",
+          "name": "Vanguard FTSE All-World UCITS Acc EUR",
+          "weight_pct": 50.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "AGGH.AS",
+          "name": "iShares Core Global Aggregate Bond UCITS",
+          "weight_pct": 15.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IBCI.AS",
+          "name": "iShares EUR Inflation Linked Govt Bond U",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IBGS.AS",
+          "name": "iShares EUR Govt Bond 1-3yr UCITS",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "SGLN.AS",
+          "name": "iShares Physical Gold ETC",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        }
+      ],
+      "satellite_positions": [
+        {
+          "ticker": "HEROMOTOCO",
+          "name": "HERO MOTOCORP LTD",
+          "weight_pct": 5.0,
+          "country": "Inde",
+          "sector": "Biens de consommation cycliques",
+          "industry": "Auto Manufacturers",
+          "buffett_score": 100,
+          "quality_score": 86,
+          "volatility_3y": 26.12,
+          "perf_1y": 11.29,
+          "dividend_yield": 3.62,
+          "roe": 28.03,
+          "fit_score": 0.9857,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 100",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 86",
+              "threshold": "≥ 65"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 26%",
+              "threshold": "12-45%"
+            }
+          }
+        },
+        {
+          "ticker": "NOVN",
+          "name": "NOVARTIS AG",
+          "weight_pct": 5.0,
+          "country": "Suisse",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - General",
+          "buffett_score": 100,
+          "quality_score": 73,
+          "volatility_3y": 19.45,
+          "perf_1y": 24.92,
+          "dividend_yield": 3.19,
+          "roe": 34.56,
+          "fit_score": 0.9726,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 100",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 73",
+              "threshold": "≥ 65"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 19%",
+              "threshold": "12-45%"
+            }
+          }
+        },
+        {
+          "ticker": "EXPD",
+          "name": "EXPEDITORS INTERNATIONAL OF WASHIN",
+          "weight_pct": 5.0,
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Integrated Freight & Logistics",
+          "buffett_score": 83,
+          "quality_score": 80,
+          "volatility_3y": 25.75,
+          "perf_1y": 43.28,
+          "dividend_yield": 0.99,
+          "roe": 35.43,
+          "fit_score": 0.9663,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 80",
+              "threshold": "≥ 65"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 26%",
+              "threshold": "12-45%"
+            }
+          }
+        },
+        {
+          "ticker": "CF",
+          "name": "CF INDUSTRIES HOLDINGS INC",
+          "weight_pct": 5.0,
+          "country": "Etats-Unis",
+          "sector": "Matériaux",
+          "industry": "Agricultural Inputs",
+          "buffett_score": 100,
+          "quality_score": 86,
+          "volatility_3y": 34.43,
+          "perf_1y": 27.3,
+          "dividend_yield": 1.7,
+          "roe": 23.4,
+          "fit_score": 0.9647,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 100",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 86",
+              "threshold": "≥ 65"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 34%",
+              "threshold": "12-45%"
+            }
+          }
+        }
+      ],
+      "alternatives_non_retenues": [
+        {
+          "ticker": "ITX",
+          "name": "INDUSTRIA DE DISENO TEXTIL SA",
+          "country": "Espagne",
+          "sector": "Biens de consommation cycliques",
+          "industry": "Apparel Retail",
+          "buffett_score": 83,
+          "quality_score": 78,
+          "volatility_3y": 23.19,
+          "roe": 31.05,
+          "dividend_yield": 3.17,
+          "perf_1y": 11.07,
+          "fit_score": 0.9625,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "CBOE",
+          "name": "CBOE GLOBAL MARKETS INC",
+          "country": "Etats-Unis",
+          "sector": "Finance",
+          "industry": "Financial Data & Stock Exchang",
+          "buffett_score": 100,
+          "quality_score": 72,
+          "volatility_3y": 23.33,
+          "roe": 23.36,
+          "dividend_yield": 0.88,
+          "perf_1y": 25.85,
+          "fit_score": 0.9609,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "LUPIN",
+          "name": "LUPIN LTD",
+          "country": "Inde",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - Specialty",
+          "buffett_score": 83,
+          "quality_score": 84,
+          "volatility_3y": 24.97,
+          "roe": 26.91,
+          "dividend_yield": 0.53,
+          "perf_1y": 14.11,
+          "fit_score": 0.9571,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "LOGN",
+          "name": "LOGITECH INTERNATIONAL SA",
+          "country": "Suisse",
+          "sector": "Technologie de l'information",
+          "industry": "Computer Hardware",
+          "buffett_score": 83,
+          "quality_score": 75,
+          "volatility_3y": 32.7,
+          "roe": 32.78,
+          "dividend_yield": 1.35,
+          "perf_1y": 33.68,
+          "fit_score": 0.9536,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "ITRK",
+          "name": "INTERTEK GROUP PLC",
+          "country": "Royaume-Uni",
+          "sector": "Industries",
+          "industry": "Specialty Business Services",
+          "buffett_score": 100,
+          "quality_score": 69,
+          "volatility_3y": 26.05,
+          "roe": 28.24,
+          "dividend_yield": 2.13,
+          "perf_1y": 13.43,
+          "fit_score": 0.9444,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "FOX",
+          "name": "FOX CORP CLASS B",
+          "country": "Etats-Unis",
+          "sector": "La communication",
+          "industry": "Entertainment",
+          "buffett_score": 100,
+          "quality_score": 74,
+          "volatility_3y": 25.45,
+          "roe": 19.59,
+          "dividend_yield": 0.95,
+          "perf_1y": 15.79,
+          "fit_score": 0.9385,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "ROP",
+          "name": "ROCHE PS PAR AG",
+          "country": "Suisse",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - General",
+          "buffett_score": 100,
+          "quality_score": 67,
+          "volatility_3y": 21.37,
+          "roe": 37.27,
+          "dividend_yield": 3.02,
+          "perf_1y": 24.75,
+          "fit_score": 0.9385,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "FOXA",
+          "name": "FOX CORP CLASS A",
+          "country": "Etats-Unis",
+          "sector": "La communication",
+          "industry": "Entertainment",
+          "buffett_score": 100,
+          "quality_score": 70,
+          "volatility_3y": 25.79,
+          "roe": 19.59,
+          "dividend_yield": 0.85,
+          "perf_1y": 18.58,
+          "fit_score": 0.931,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "GALP",
+          "name": "GALP ENERGIA SGPS SA CLASS B",
+          "country": "Portugal",
+          "sector": "Energie",
+          "industry": "Oil & Gas Integrated",
+          "buffett_score": 100,
+          "quality_score": 66,
+          "volatility_3y": 29.56,
+          "roe": 23.66,
+          "dividend_yield": 3.35,
+          "perf_1y": 25.16,
+          "fit_score": 0.9282,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "RO",
+          "name": "ROCHE HOLDING AG",
+          "country": "Suisse",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - General",
+          "buffett_score": 100,
+          "quality_score": 68,
+          "volatility_3y": 22.54,
+          "roe": 37.27,
+          "dividend_yield": 3.26,
+          "perf_1y": 19.42,
+          "fit_score": 0.9274,
+          "_profile_native": "Modéré",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        }
+      ]
+    },
+    "Agressif": {
+      "profile": "Agressif",
+      "n_positions": 9,
+      "n_core": 4,
+      "n_satellite": 5,
+      "weight_core_pct": 75.0,
+      "weight_satellite_pct": 25.0,
+      "total_weight_pct": 100.0,
+      "core_positions": [
+        {
+          "ticker": "VWCE.DE",
+          "name": "Vanguard FTSE All-World UCITS Acc EUR",
+          "weight_pct": 50.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IWDA.AS",
+          "name": "iShares Core MSCI World UCITS Acc",
+          "weight_pct": 15.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IBGS.AS",
+          "name": "iShares EUR Govt Bond 1-3yr UCITS",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "SGLN.AS",
+          "name": "iShares Physical Gold ETC",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        }
+      ],
+      "satellite_positions": [
+        {
+          "ticker": "HEROMOTOCO",
+          "name": "HERO MOTOCORP LTD",
+          "weight_pct": 5.0,
+          "country": "Inde",
+          "sector": "Biens de consommation cycliques",
+          "industry": "Auto Manufacturers",
+          "buffett_score": 100,
+          "quality_score": 86,
+          "volatility_3y": 26.12,
+          "perf_1y": 11.29,
+          "dividend_yield": 3.62,
+          "roe": 28.03,
+          "fit_score": 0.478,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 100",
+              "threshold": "≥ 60"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 86",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 26%",
+              "threshold": "22-75%"
+            }
+          }
+        },
+        {
+          "ticker": "EXPD",
+          "name": "EXPEDITORS INTERNATIONAL OF WASHIN",
+          "weight_pct": 5.0,
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Integrated Freight & Logistics",
+          "buffett_score": 83,
+          "quality_score": 80,
+          "volatility_3y": 25.75,
+          "perf_1y": 43.28,
+          "dividend_yield": 0.99,
+          "roe": 35.43,
+          "fit_score": 0.5554,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 60"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 80",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 26%",
+              "threshold": "22-75%"
+            }
+          }
+        },
+        {
+          "ticker": "CF",
+          "name": "CF INDUSTRIES HOLDINGS INC",
+          "weight_pct": 5.0,
+          "country": "Etats-Unis",
+          "sector": "Matériaux",
+          "industry": "Agricultural Inputs",
+          "buffett_score": 100,
+          "quality_score": 86,
+          "volatility_3y": 34.43,
+          "perf_1y": 27.3,
+          "dividend_yield": 1.7,
+          "roe": 23.4,
+          "fit_score": 0.5721,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 100",
+              "threshold": "≥ 60"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 86",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 34%",
+              "threshold": "22-75%"
+            }
+          }
+        },
+        {
+          "ticker": "LUPIN",
+          "name": "LUPIN LTD",
+          "weight_pct": 5.0,
+          "country": "Inde",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - Specialty & Generic",
+          "buffett_score": 83,
+          "quality_score": 84,
+          "volatility_3y": 24.97,
+          "perf_1y": 14.11,
+          "dividend_yield": 0.53,
+          "roe": 26.91,
+          "fit_score": 0.738,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 60"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 84",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 25%",
+              "threshold": "22-75%"
+            }
+          }
+        },
+        {
+          "ticker": "LOGN",
+          "name": "LOGITECH INTERNATIONAL SA",
+          "weight_pct": 5.0,
+          "country": "Suisse",
+          "sector": "Technologie de l'information",
+          "industry": "Computer Hardware",
+          "buffett_score": 83,
+          "quality_score": 75,
+          "volatility_3y": 32.7,
+          "perf_1y": 33.68,
+          "dividend_yield": 1.35,
+          "roe": 32.78,
+          "fit_score": 0.5835,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 60"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 75",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 33%",
+              "threshold": "22-75%"
+            }
+          }
+        }
+      ],
+      "alternatives_non_retenues": [
+        {
+          "ticker": "FIX",
+          "name": "COMFORT SYSTEMS USA INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Engineering & Construction",
+          "buffett_score": 67,
+          "quality_score": 71,
+          "volatility_3y": 50.13,
+          "roe": 49.24,
+          "dividend_yield": 0.09,
+          "perf_1y": 285.41,
+          "fit_score": 0.9979,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "3653",
+          "name": "JENTECH PRECISION INDUSTRIAL LTD",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 77,
+          "volatility_3y": 59.04,
+          "roe": 28.15,
+          "dividend_yield": 0.4,
+          "perf_1y": 179.62,
+          "fit_score": 0.9965,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "TER",
+          "name": "TERADYNE INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductor Equipment & Mate",
+          "buffett_score": 67,
+          "quality_score": 69,
+          "volatility_3y": 52.66,
+          "roe": 19.73,
+          "dividend_yield": 0.12,
+          "perf_1y": 399.52,
+          "fit_score": 0.9964,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "GOOGL",
+          "name": "ALPHABET INC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "La communication",
+          "industry": "Internet Content & Information",
+          "buffett_score": 67,
+          "quality_score": 79,
+          "volatility_3y": 29.6,
+          "roe": 35.7,
+          "dividend_yield": 0.23,
+          "perf_1y": 123.97,
+          "fit_score": 0.9937,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "FRES",
+          "name": "FRESNILLO PLC",
+          "country": "Royaume-Uni",
+          "sector": "Matériaux",
+          "industry": "Other Precious Metals & Mining",
+          "buffett_score": 83,
+          "quality_score": 76,
+          "volatility_3y": 44.39,
+          "roe": 33.9,
+          "dividend_yield": 0.31,
+          "perf_1y": 140.3,
+          "fit_score": 0.9904,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "6669",
+          "name": "WIWYNN CORPORATION CORP",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Computer Hardware",
+          "buffett_score": 83,
+          "quality_score": 59,
+          "volatility_3y": 55.26,
+          "roe": 48.03,
+          "dividend_yield": 1.31,
+          "perf_1y": 138.61,
+          "fit_score": 0.9843,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "3443",
+          "name": "GLOBAL UNICHIP CORP",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductors",
+          "buffett_score": 67,
+          "quality_score": 59,
+          "volatility_3y": 57.13,
+          "roe": 31.14,
+          "dividend_yield": 0.36,
+          "perf_1y": 296.86,
+          "fit_score": 0.9821,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "EME",
+          "name": "EMCOR GROUP INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Engineering & Construction",
+          "buffett_score": 67,
+          "quality_score": 77,
+          "volatility_3y": 36.69,
+          "roe": 38.49,
+          "dividend_yield": 0.15,
+          "perf_1y": 74.76,
+          "fit_score": 0.9815,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "2368",
+          "name": "GOLD CIRCUIT ELECTRONICS LTD",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 63,
+          "volatility_3y": 54.9,
+          "roe": 35.06,
+          "dividend_yield": 0.36,
+          "perf_1y": 443.21,
+          "fit_score": 0.9815,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "2345",
+          "name": "ACCTON TECHNOLOGY CORP",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Communication Equipment",
+          "buffett_score": 67,
+          "quality_score": 81,
+          "volatility_3y": 51.54,
+          "roe": 56.02,
+          "dividend_yield": 0.44,
+          "perf_1y": 244.57,
+          "fit_score": 0.9731,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        }
+      ]
+    },
+    "Agressif-Thematique": {
+      "profile": "Agressif-Thematique",
+      "n_positions": 14,
+      "n_core": 9,
+      "n_satellite": 5,
+      "weight_core_pct": 80.0,
+      "weight_satellite_pct": 20.0,
+      "total_weight_pct": 100.0,
+      "core_positions": [
+        {
+          "ticker": "QQQ",
+          "name": "Invesco QQQ Trust (Nasdaq 100)",
+          "weight_pct": 20.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "IEMG",
+          "name": "iShares Core MSCI EM IMI",
+          "weight_pct": 15.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "VGT",
+          "name": "Vanguard Information Technology ETF",
+          "weight_pct": 10.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "CGXU",
+          "name": "Capital Group International Focus Eq",
+          "weight_pct": 10.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "VBK",
+          "name": "Vanguard Small-Cap Growth ETF",
+          "weight_pct": 8.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "VOT",
+          "name": "Vanguard Mid-Cap Growth ETF",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "XLE",
+          "name": "Energy Select Sector SPDR",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "SGLN.AS",
+          "name": "iShares Physical Gold ETC",
+          "weight_pct": 5.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        },
+        {
+          "ticker": "EWT",
+          "name": "iShares MSCI Taiwan ETF",
+          "weight_pct": 2.0,
+          "source": "core_filler_canonique",
+          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
+        }
+      ],
+      "satellite_positions": [
+        {
+          "ticker": "3653",
+          "name": "JENTECH PRECISION INDUSTRIAL LTD",
+          "weight_pct": 4.0,
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 77,
+          "volatility_3y": 59.04,
+          "perf_1y": 179.62,
+          "dividend_yield": 0.4,
+          "roe": 28.15,
+          "fit_score": 0.9965,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 67",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 77",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 59%",
+              "threshold": "30-90%"
+            }
+          }
+        },
+        {
+          "ticker": "FRES",
+          "name": "FRESNILLO PLC",
+          "weight_pct": 4.0,
+          "country": "Royaume-Uni",
+          "sector": "Matériaux",
+          "industry": "Other Precious Metals & Mining",
+          "buffett_score": 83,
+          "quality_score": 76,
+          "volatility_3y": 44.39,
+          "perf_1y": 140.3,
+          "dividend_yield": 0.31,
+          "roe": 33.9,
+          "fit_score": 0.9904,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 76",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 44%",
+              "threshold": "30-90%"
+            }
+          }
+        },
+        {
+          "ticker": "6669",
+          "name": "WIWYNN CORPORATION CORP",
+          "weight_pct": 4.0,
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Computer Hardware",
+          "buffett_score": 83,
+          "quality_score": 59,
+          "volatility_3y": 55.26,
+          "perf_1y": 138.61,
+          "dividend_yield": 1.31,
+          "roe": 48.03,
+          "fit_score": 0.9843,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 83",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 59",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 55%",
+              "threshold": "30-90%"
+            }
+          }
+        },
+        {
+          "ticker": "EME",
+          "name": "EMCOR GROUP INC",
+          "weight_pct": 4.0,
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Engineering & Construction",
+          "buffett_score": 67,
+          "quality_score": 77,
+          "volatility_3y": 36.69,
+          "perf_1y": 74.76,
+          "dividend_yield": 0.15,
+          "roe": 38.49,
+          "fit_score": 0.9815,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 67",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 77",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 37%",
+              "threshold": "30-90%"
+            }
+          }
+        },
+        {
+          "ticker": "ANET",
+          "name": "ARISTA NETWORKS INC",
+          "weight_pct": 4.0,
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Computer Hardware",
+          "buffett_score": 67,
+          "quality_score": 90,
+          "volatility_3y": 50.31,
+          "perf_1y": 75.67,
+          "dividend_yield": 0,
+          "roe": 31.4,
+          "fit_score": 0.959,
+          "source": null,
+          "rationale": "top fit_score parmi les candidats après hard filters",
+          "tier_compliance": {
+            "tier_1_qualite_absolue": {
+              "ok": true,
+              "actual": "Buffett 67",
+              "threshold": "≥ 65"
+            },
+            "tier_2_qualite_relative": {
+              "ok": true,
+              "actual": "Quality 90",
+              "threshold": "≥ 55"
+            },
+            "tier_3_risk_alignment": {
+              "ok": true,
+              "actual": "Vol 50%",
+              "threshold": "30-90%"
+            }
+          }
+        }
+      ],
+      "alternatives_non_retenues": [
+        {
+          "ticker": "FIX",
+          "name": "COMFORT SYSTEMS USA INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Engineering & Construction",
+          "buffett_score": 67,
+          "quality_score": 71,
+          "volatility_3y": 50.13,
+          "roe": 49.24,
+          "dividend_yield": 0.09,
+          "perf_1y": 285.41,
+          "fit_score": 0.9979,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "TER",
+          "name": "TERADYNE INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductor Equipment & Mate",
+          "buffett_score": 67,
+          "quality_score": 69,
+          "volatility_3y": 52.66,
+          "roe": 19.73,
+          "dividend_yield": 0.12,
+          "perf_1y": 399.52,
+          "fit_score": 0.9964,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "3443",
+          "name": "GLOBAL UNICHIP CORP",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductors",
+          "buffett_score": 67,
+          "quality_score": 59,
+          "volatility_3y": 57.13,
+          "roe": 31.14,
+          "dividend_yield": 0.36,
+          "perf_1y": 296.86,
+          "fit_score": 0.9821,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "2368",
+          "name": "GOLD CIRCUIT ELECTRONICS LTD",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 63,
+          "volatility_3y": 54.9,
+          "roe": 35.06,
+          "dividend_yield": 0.36,
+          "perf_1y": 443.21,
+          "fit_score": 0.9815,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "2345",
+          "name": "ACCTON TECHNOLOGY CORP",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Communication Equipment",
+          "buffett_score": 67,
+          "quality_score": 81,
+          "volatility_3y": 51.54,
+          "roe": 56.02,
+          "dividend_yield": 0.44,
+          "perf_1y": 244.57,
+          "fit_score": 0.9731,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "3017",
+          "name": "ASIA VITAL COMPONENTS LTD",
+          "country": "Taïwan",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 79,
+          "volatility_3y": 58.62,
+          "roe": 49.86,
+          "dividend_yield": 0.38,
+          "perf_1y": 329.52,
+          "fit_score": 0.9636,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "LRCX",
+          "name": "LAM RESEARCH CORP",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductor Equipment & Mate",
+          "buffett_score": 67,
+          "quality_score": 62,
+          "volatility_3y": 45.94,
+          "roe": 58.24,
+          "dividend_yield": 0.3,
+          "perf_1y": 302.12,
+          "fit_score": 0.9634,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "CUMMINSIND",
+          "name": "CUMMINS INDIA LTD",
+          "country": "Inde",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 67,
+          "quality_score": 81,
+          "volatility_3y": 31,
+          "roe": 29.45,
+          "dividend_yield": 0.31,
+          "perf_1y": 72.48,
+          "fit_score": 0.958,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "NEM",
+          "name": "NEWMONT",
+          "country": "Etats-Unis",
+          "sector": "Matériaux",
+          "industry": "Gold",
+          "buffett_score": 67,
+          "quality_score": 73,
+          "volatility_3y": 39.97,
+          "roe": 22.34,
+          "dividend_yield": 0.94,
+          "perf_1y": 95.75,
+          "fit_score": 0.9552,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        },
+        {
+          "ticker": "POWERINDIA",
+          "name": "HITACHI ENERGY INDIA LTD",
+          "country": "Inde",
+          "sector": "Industries",
+          "industry": "Electrical Equipment & Parts",
+          "buffett_score": 67,
+          "quality_score": 67,
+          "volatility_3y": 47.33,
+          "roe": 21.04,
+          "dividend_yield": 0.01,
+          "perf_1y": 103.3,
+          "fit_score": 0.9516,
+          "_profile_native": "Agressif",
+          "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)"
+        }
+      ]
+    }
+  },
+  "cross_profile_overlaps": {
+    "Stable∩Modéré": [
+      "AGGH.AS",
+      "IBCI.AS",
+      "IBGS.AS",
+      "SGLN.AS",
+      "VWCE.DE"
+    ],
+    "Stable∩Agressif": [
+      "IBGS.AS",
+      "SGLN.AS",
+      "VWCE.DE"
+    ],
+    "Stable∩Agressif-Thematique": [
+      "SGLN.AS"
+    ],
+    "Modéré∩Agressif": [
+      "CF",
+      "EXPD",
+      "HEROMOTOCO",
+      "IBGS.AS",
+      "SGLN.AS",
+      "VWCE.DE"
+    ],
+    "Modéré∩Agressif-Thematique": [
+      "SGLN.AS"
+    ],
+    "Agressif∩Agressif-Thematique": [
+      "SGLN.AS"
+    ]
+  },
+  "extra_meta": {}
+}

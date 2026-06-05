@@ -39,20 +39,30 @@ def _summarize_profile(profile: str, positions: List[Dict],
     core_total = sum(p.get("weight", 0) for p in core)
     sat_total = sum(p.get("weight", 0) for p in sat)
 
-    # Détail satellite : fit_score, pourquoi sélectionné
+    # Détail satellite : fit_score + tier_compliance (v6.20) + tout le contexte
     satellite_detail = []
     for p in sat:
-        satellite_detail.append({
+        entry = {
             "ticker": p.get("ticker"),
             "name": (p.get("name") or "")[:40],
             "weight_pct": round(p.get("weight", 0) * 100, 2),
             "country": p.get("country"),
+            "sector": p.get("sector"),
             "industry": p.get("industry", ""),
             "buffett_score": p.get("buffett_score"),
+            "quality_score": p.get("quality_score"),
+            "volatility_3y": p.get("volatility_3y"),
+            "perf_1y": p.get("perf_1y"),
+            "dividend_yield": p.get("dividend_yield"),
+            "roe": p.get("roe"),
             "fit_score": p.get("fit_score"),
             "source": p.get("_source", "top_natifs"),
             "rationale": "top fit_score parmi les candidats après hard filters",
-        })
+        }
+        # Propage tier_compliance si présent (v6.20)
+        if p.get("tier_compliance"):
+            entry["tier_compliance"] = p["tier_compliance"]
+        satellite_detail.append(entry)
 
     # Détail cœur : juste ticker + poids + source (filler vs v4)
     core_detail = []
@@ -83,6 +93,114 @@ def _summarize_profile(profile: str, positions: List[Dict],
     return summary
 
 
+PROFILE_FILTERS = {
+    "Stable":   {"buf_min": 70, "qual_min": 70, "vol_min": 12, "vol_max": 22, "roe_min": 8,  "div_min": 1.5},
+    "Modéré":   {"buf_min": 65, "qual_min": 65, "vol_min": 12, "vol_max": 45, "roe_min": 8,  "div_min": 0.0},
+    "Agressif": {"buf_min": 60, "qual_min": 55, "vol_min": 22, "vol_max": 75, "roe_min": 0,  "div_min": 0.0},
+    "Agressif-Thematique": {"buf_min": 65, "qual_min": 55, "vol_min": 30, "vol_max": 90, "roe_min": 0, "div_min": 0.0},
+}
+
+FIT_KEY_BY_PROFILE = {
+    "Stable":   "_fit_stable",
+    "Modéré":   "_fit_modere",
+    "Agressif": "_fit_agressif",
+    "Agressif-Thematique": "_fit_agressif",
+}
+
+
+def _check_tier_compliance(stock: Dict, profile: str) -> Dict:
+    """Renvoie un dict {tier_1: bool/why, tier_2: ..., tier_3: ..., tier_4: ...}
+    expliquant pourquoi cette action passe (ou pas) les 4 tiers du profil."""
+    flt = PROFILE_FILTERS.get(profile, PROFILE_FILTERS["Modéré"])
+    buf = stock.get("buffett_score") or 0
+    qual = stock.get("quality_score") or 0
+    vol = stock.get("volatility_3y") or 0
+    return {
+        "tier_1_qualite_absolue": {
+            "ok": buf >= flt["buf_min"],
+            "actual": f"Buffett {buf:.0f}",
+            "threshold": f"≥ {flt['buf_min']}",
+        },
+        "tier_2_qualite_relative": {
+            "ok": qual >= flt["qual_min"],
+            "actual": f"Quality {qual:.0f}",
+            "threshold": f"≥ {flt['qual_min']}",
+        },
+        "tier_3_risk_alignment": {
+            "ok": flt["vol_min"] <= vol <= flt["vol_max"],
+            "actual": f"Vol {vol:.0f}%",
+            "threshold": f"{flt['vol_min']}-{flt['vol_max']}%",
+        },
+        # Tier 4 = diversification, vérifié au niveau panier (pas par stock)
+    }
+
+
+def _load_universe_for_alternatives() -> List[Dict]:
+    """Charge et annote l'univers complet pour calculer les alternatives non prises."""
+    try:
+        from portfolio_engine.profile_assignment import annotate_universe_with_fits
+    except ImportError:
+        from .profile_assignment import annotate_universe_with_fits
+    all_stocks = []
+    root = Path(__file__).parent.parent
+    for fname in ("stocks_us.json", "stocks_europe.json", "stocks_asia.json"):
+        p = root / "data" / fname
+        if not p.exists():
+            continue
+        try:
+            d = json.load(open(p))
+            s_list = d.get("stocks", []) if isinstance(d, dict) else d
+            all_stocks.extend(s_list)
+        except Exception:
+            pass
+    if all_stocks:
+        annotate_universe_with_fits(all_stocks)
+    return all_stocks
+
+
+def _get_alternatives_for_profile(profile: str, retained_tickers: set,
+                                    all_stocks: List[Dict], n_alternatives: int = 10) -> List[Dict]:
+    """Pour un profil, retourne les top N candidats qui PASSENT les filtres
+    mais N'ONT PAS été retenus. Permet d'expliquer 'pourquoi pas X'."""
+    flt = PROFILE_FILTERS.get(profile, PROFILE_FILTERS["Modéré"])
+    fit_key = FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
+
+    candidates = []
+    for s in all_stocks:
+        tk = s.get("ticker") or s.get("symbol")
+        if not tk or tk in retained_tickers:
+            continue
+        buf = s.get("buffett_score") or 0
+        qual = s.get("quality_score") or 0
+        vol = s.get("volatility_3y") or 0
+        # Tier 1+2+3 doivent passer pour être une "alternative valide"
+        if buf < flt["buf_min"] or qual < flt["qual_min"]:
+            continue
+        if vol < flt["vol_min"] or vol > flt["vol_max"]:
+            continue
+        candidates.append({
+            "ticker": tk,
+            "name": (s.get("name") or "")[:40],
+            "country": s.get("country") or "",
+            "sector": s.get("sector") or "",
+            "industry": (s.get("industry") or "")[:30],
+            "buffett_score": buf,
+            "quality_score": qual,
+            "volatility_3y": vol,
+            "roe": s.get("roe"),
+            "dividend_yield": s.get("dividend_yield"),
+            "perf_1y": s.get("perf_1y"),
+            "fit_score": s.get(fit_key),
+            "_profile_native": s.get("_profile_native"),
+            # Raison probable du rejet (sera affinée par le dashboard avec contexte secteur)
+            "rejection_reason": "fit_score plus bas que les retenus OU secteur déjà saturé (max 1-2 par secteur GICS)",
+        })
+
+    # Tri par fit_score décroissant
+    candidates.sort(key=lambda x: -(x.get("fit_score") or 0))
+    return candidates[:n_alternatives]
+
+
 def log_decision(portfolios_data: Dict,
                  pipeline_version: str = "v6.15",
                  extra_meta: Optional[Dict] = None) -> str:
@@ -103,27 +221,55 @@ def log_decision(portfolios_data: Dict,
     profile_summaries = {}
     all_tickers_by_profile = {}
 
+    # v6.20 : charge l'univers une fois pour calculer les alternatives
+    all_stocks_universe = _load_universe_for_alternatives()
+    universe_by_ticker = {
+        (s.get("ticker") or s.get("symbol")): s
+        for s in all_stocks_universe
+        if (s.get("ticker") or s.get("symbol"))
+    }
+
     for profile in ("Stable", "Modéré", "Agressif", "Agressif-Thematique"):
         prof = portfolios_data.get(profile, {})
         meta = prof.get("_tickers_meta", {})
         if not meta:
             continue
-        # Reconstruct positions list from _tickers_meta
+        # Reconstruct positions list from _tickers_meta + ajoute tier_compliance
         positions = []
         for tk, m in meta.items():
-            positions.append({
+            # Récupère les vraies données depuis l'univers (tier_compliance détaillé)
+            universe_data = universe_by_ticker.get(tk, {})
+            pos = {
                 "ticker": tk,
                 "name": m.get("name"),
                 "weight": m.get("weight", 0),
                 "role": m.get("role"),
                 "industry": m.get("industry"),
-                "country": m.get("country"),
-                "buffett_score": m.get("buffett_score"),
+                "country": m.get("country") or universe_data.get("country"),
+                "sector": universe_data.get("sector") or universe_data.get("sector_api"),
+                "buffett_score": m.get("buffett_score") or universe_data.get("buffett_score"),
+                "quality_score": universe_data.get("quality_score"),
+                "volatility_3y": universe_data.get("volatility_3y"),
+                "roe": universe_data.get("roe"),
+                "dividend_yield": universe_data.get("dividend_yield"),
+                "perf_1y": universe_data.get("perf_1y"),
                 "fit_score": m.get("fit_score"),
                 "_source": m.get("_source"),
-            })
+            }
+            # Tier compliance — seulement pour actions (pas ETF)
+            if m.get("category") == "Actions" and universe_data:
+                pos["tier_compliance"] = _check_tier_compliance(universe_data, profile)
+            positions.append(pos)
         profile_summaries[profile] = _summarize_profile(profile, positions)
         all_tickers_by_profile[profile] = set(meta.keys())
+
+        # v6.20 : alternatives non retenues pour ce profil
+        if all_stocks_universe:
+            retained = set(meta.keys())
+            alternatives = _get_alternatives_for_profile(
+                profile, retained, all_stocks_universe, n_alternatives=10
+            )
+            profile_summaries[profile]["alternatives_non_retenues"] = alternatives
 
     # Overlap entre profils (utile si user cumule)
     overlaps = {}
@@ -188,6 +334,15 @@ def log_decision(portfolios_data: Dict,
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
+
+    # v6.20 : copie aussi vers latest.json pour que le dashboard puisse le charger
+    # automatiquement sans avoir besoin de lister le dossier côté serveur.
+    latest_path = LOG_DIR / "latest.json"
+    try:
+        with open(latest_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.warning(f"[decision_log] latest.json copy failed: {e}")
 
     logger.info(f"[decision_log] Run {ts} loggé → {output_path}")
     return str(output_path)
