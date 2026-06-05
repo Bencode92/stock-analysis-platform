@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "version": "1.1",
+    "purpose": "Portefeuille cible figé (baseline) pour les profils Dividende-PEA et Dividende-CTO. Évite que l'optimizer remplace des titres entre deux runs (turnover doit être proche de zéro pour une stratégie buy-and-hold dividende).",
+    "rebalance_policy": "Le baseline N'EST modifié QUE dans 3 cas : (1) flag CONFIG['force_dividende_rebalance']=True, (2) trigger auto si un titre devient toxique (quality<40, payout>100%, dividend_growth_3y<-20%, ou ticker disparu), (3) édition manuelle de ce fichier (PR git).",
+    "between_rebalances": "Mêmes tickers, seuls les poids peuvent fluctuer de ±2-3pp selon le marché. Aucune entrée/sortie.",
+    "last_rebalance_date": "2026-05-21",
+    "last_rebalance_trigger": "expert_v5_final_GO_scenario_A",
+    "usage_in_code": "Chargé par generate_portfolios_v4.py via _load_dividende_baseline(). Si présent, restreint l'univers candidats Dividende à ces tickers.",
+    "v1.1_changes": "Concentration 13→9 PEA (drop HNR1/ACA/AGS, garde BMED), drop ADM du CTO. Recos expert v3.",
+    "v1.2_changes": "Ajout IG (Italgas) sur donnée yield 8.3% du composer UI — RÉTRACTÉ ensuite (donnée fausse).",
+    "v1.3_changes": "RETRAIT IG (Italgas) — yield_regular réel 3.56%, cash payout 151%, dette massive post-acquisition.",
+    "v1.4_changes": "GO FINAL expert (scénario A) : drop ACN (incohérent Income à 3.5% yield) + drop BMED (overweight Finance avec EEI 36%) + drop SAN (payout 99%) + drop G1A/HEN/ITX/IBE (trop bas yield ou marginaux). Ajout PUB (Publicis, qual 78, yield 4.32%, secteur Communication) et CS (AXA, yield 5.75%, qual 67). Final 4 picks PEA : LI + TTE + PUB + CS. Exécution mardi 26 mai 2026 (Pentecôte lundi 25)."
+  },
+  "holdings": {
+    "Dividende-PEA": [
+      "LI", "TTE", "PUB", "CS"
+    ],
+    "Dividende-CTO": [
+      "VICI", "AUTO"
+    ],
+    "_etf_foundation": {
+      "PEA": "Amundi MSCI EU High Dividend (LU1812092168) — 70% du PEA",
+      "CTO": "SCHD Schwab US Dividend Equity (US8085246083) — 67% du CTO"
+    }
+  }
+}

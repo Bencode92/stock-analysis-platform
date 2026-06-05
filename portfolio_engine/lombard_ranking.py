@@ -268,8 +268,27 @@ def generate_lombard_ranking(
         # Trier par lombard_score décroissant
         scored.sort(key=lambda x: x["lombard_score"], reverse=True)
 
-        # Garder le top N et ajouter les rangs
-        top = scored[:max_positions]
+        # v6.23 — Cap secteur : max ~25% du top par secteur GICS L1.
+        # Sans cap, le top Lombard tend vers 60-70% Finance/RE (yield élevé +
+        # quality + low beta concentrés là). Ce cluster s'effondre PILE quand
+        # le crédit se durcit (récession → financières chutent + spreads
+        # s'écartent + carry s'effondre simultanément). On force la
+        # diversification du collatéral pour ne pas concentrer le risque.
+        # Justification doctrine : règle T4 (max secteur) appliquée même
+        # sur un sleeve income, parce qu'un collatéral concentré est un
+        # cluster de risque corrélé, peu importe son yield individuel.
+        max_per_sector = max(2, max_positions // 6)  # ~17% du top max par secteur (cap strict anti-cluster)
+        by_sector: Dict[str, int] = {}
+        top = []
+        for s in scored:
+            sec = (s.get("sector") or "_").lower()
+            if by_sector.get(sec, 0) >= max_per_sector:
+                continue
+            by_sector[sec] = by_sector.get(sec, 0) + 1
+            top.append(s)
+            if len(top) >= max_positions:
+                break
+
         for i, s in enumerate(top):
             s["rank"] = i + 1
         

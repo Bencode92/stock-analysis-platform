@@ -1131,13 +1131,20 @@ def _make_dividende_policy(envelope_label: str, fiscal_notes: str,
         "score_weights": {
             # v8.x: rééquilibrage post-feedback expert — parité yield/growth pour
             # privilégier le yield-on-cost long terme vs le yield brut instantané.
-            # Income (35%) — yield ET growth à parité (Diageo/P&G/Hershey beats high-yield)
-            "dividend_yield":         0.18,   # ↓ 0.25 → 0.18
-            "dividend_growth_3y":     0.17,   # ↑ 0.10 → 0.17  (presque parité)
+            # v6.23 (2026-06-05): rebalance T1>yield pour aligner sur doctrine
+            # T1 (qualité) prime, cohérent avec fix v6.22 sur Stable. L'objectif
+            # déclaré du sleeve est DIVIDEND GROWTH long terme (10-20 ans,
+            # réinvestissement), pas income immédiat — donc la qualité doit
+            # peser plus que le yield brut. "Payeuse Buffett 100 yield 2.6%
+            # qui croît 8%/an bat TTE yield 5% figé qui peut couper (2020)" est
+            # vrai AVANT tout backtest = doctrine légitime, pas overfitting.
+            # Income (30%) — yield et growth réduits, growth privilégié
+            "dividend_yield":         0.12,   # ↓ 0.18 → 0.12 (v6.23)
+            "dividend_growth_3y":     0.17,   # parité (inchangé)
             "dividend_coverage":      0.05,   # NEW: récompense FCF coverage > 1.5x
-            # Quality (32%) — anti value-trap, légèrement renforcée
+            # Quality (38%) — renforcement de la qualité absolue
             "quality_safety_sub":     0.20,   # bilan solide + payout sain
-            "quality_quality_sub":    0.12,   # ↑ 0.10 → 0.12 (ROE+ROIC+marge)
+            "quality_quality_sub":    0.18,   # ↑ 0.12 → 0.18 (v6.23) — Buffett pèse plus
             "quality_value_sub":      0.05,   # ne pas surpayer
             # Risk pénalité (20%)
             "volatility_3y":         -0.10,

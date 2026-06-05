@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-05T12:03:41.159039",
+  "generated_at": "2026-06-05T16:18:43.197275",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -201,8 +201,8 @@
   },
   "summary": {
     "total_universe": 1073,
-    "total_selected": 27,
-    "selection_rate": "2.5%",
+    "total_selected": 36,
+    "selection_rate": "3.4%",
     "by_region": {
       "US": {
         "universe": 522,
@@ -210,7 +210,7 @@
       },
       "Europe": {
         "universe": 282,
-        "in_top_20_selected": 3
+        "in_top_20_selected": 2
       },
       "Asia": {
         "universe": 267,
@@ -220,27 +220,27 @@
     "category_totals": {
       "equity": {
         "candidates": 100,
-        "selected": 14
+        "selected": 10
       }
     }
   },
   "sectors_distribution": {
     "Industries": {
-      "selected_count": 4,
+      "selected_count": 5,
       "selected_names": [
         "SK SQUARE LTD",
         "EXPEDITORS INTERNATIONAL ",
+        "EIFFAGE SA",
         "BUREAU VERITAS SA",
         "SCHINDLER HOLDING AG"
       ]
     },
     "Energie": {
-      "selected_count": 4,
+      "selected_count": 3,
       "selected_names": [
         "BAKER HUGHES CLASS A",
         "GALP ENERGIA SGPS SA CLAS",
-        "SHELL PLC",
-        "TOTALENERGIES"
+        "SHELL PLC"
       ]
     },
     "Technologie de l'information": {
@@ -253,10 +253,19 @@
       ]
     },
     "Matériaux": {
-      "selected_count": 2,
+      "selected_count": 3,
       "selected_names": [
         "NEWMONT",
-        "CF INDUSTRIES HOLDINGS IN"
+        "CF INDUSTRIES HOLDINGS IN",
+        "AKZO NOBEL NV"
+      ]
+    },
+    "Finance": {
+      "selected_count": 3,
+      "selected_names": [
+        "BANCA MEDIOLANUM",
+        "T ROWE PRICE GROUP INC",
+        "UNIPOL ASSICURAZIONI SPA"
       ]
     },
     "Biens de consommation cycliques": {
@@ -267,44 +276,44 @@
       ]
     },
     "Santé": {
-      "selected_count": 2,
+      "selected_count": 3,
       "selected_names": [
         "LUPIN LTD",
-        "SUN PHARMACEUTICAL INDUST"
+        "SUN PHARMACEUTICAL INDUST",
+        "RECORDATI INDUSTRIA CHIMI"
       ]
     },
     "Biens de consommation de base": {
-      "selected_count": 3,
+      "selected_count": 5,
       "selected_names": [
         "PROCTER & GAMBLE",
         "COCA-COLA",
-        "CHURCH AND DWIGHT INC"
-      ]
-    },
-    "Immobilier": {
-      "selected_count": 2,
-      "selected_names": [
-        "VICI PPTYS INC",
-        "KLEPIERRE REIT SA"
-      ]
-    },
-    "Finance": {
-      "selected_count": 1,
-      "selected_names": [
-        "AXA SA"
+        "CHURCH AND DWIGHT INC",
+        "IMPERIAL BRANDS PLC",
+        "KONINKLIJKE AHOLD DELHAIZ"
       ]
     },
     "La communication": {
-      "selected_count": 2,
+      "selected_count": 3,
       "selected_names": [
+        "VERIZON COMMUNICATIONS IN",
         "PUBLICIS GROUPE SA",
         "AUTOTRADER GROUP PLC"
       ]
     },
-    "Services publics": {
-      "selected_count": 1,
+    "Immobilier": {
+      "selected_count": 3,
       "selected_names": [
-        "NATURGY ENERGY GROUP SA"
+        "VICI PPTYS INC",
+        "GAMING AND LEISURE PROPER",
+        "KLEPIERRE REIT SA"
+      ]
+    },
+    "Services publics": {
+      "selected_count": 2,
+      "selected_names": [
+        "NATURGY ENERGY GROUP SA",
+        "ITALGAS"
       ]
     }
   },
@@ -639,12 +648,19 @@
           "sector": "Biens de consommation de base",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.050, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Biens de consommation de base: 5/4), score 0.601 < seuil 0.565",
           "details": {
-            "profile_score": 0.05,
-            "composite_score": 0.601,
             "sector": "Biens de consommation de base",
-            "matched_preset": "defensif"
+            "sector_quota": "5/4",
+            "your_score": 0.601,
+            "min_selected_score": 0.565,
+            "selected_in_sector": [
+              "PROCTER & GAMBLE",
+              "COCA-COLA",
+              "CHURCH AND DWIGHT IN",
+              "IMPERIAL BRANDS PLC",
+              "KONINKLIJKE AHOLD DE"
+            ]
           },
           "buffett_score": 67.0,
           "composite_score": 0.601,
@@ -841,8 +857,8 @@
     "Europe": {
       "total_in_universe": 282,
       "top_20_analyzed": 20,
-      "selected_in_top_20": 3,
-      "rejection_rate_top_20": "85%",
+      "selected_in_top_20": 2,
+      "rejection_rate_top_20": "90%",
       "stocks": [
         {
           "rank": 1,
@@ -989,14 +1005,16 @@
           "sector": "Biens de consommation cycliques",
           "country": "France",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.523)",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.000, quota atteint)",
           "details": {
+            "profile_score": 0.0,
             "composite_score": 0.523,
             "sector": "Biens de consommation cycliques",
             "matched_preset": "quality_premium"
           },
           "buffett_score": 83.0,
           "composite_score": 0.523,
+          "profile_score": 0.0,
           "matched_preset": "quality_premium",
           "roe": 16.24,
           "de_ratio": 0.53,
@@ -1064,15 +1082,16 @@
           "sector": "Industries",
           "country": "Allemagne",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 4/4), score 0.559 < seuil 0.609",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.559 < seuil 0.561",
           "details": {
             "sector": "Industries",
-            "sector_quota": "4/4",
+            "sector_quota": "5/4",
             "your_score": 0.559,
-            "min_selected_score": 0.609,
+            "min_selected_score": 0.561,
             "selected_in_sector": [
               "SK SQUARE LTD",
               "EXPEDITORS INTERNATI",
+              "EIFFAGE SA",
               "BUREAU VERITAS SA",
               "SCHINDLER HOLDING AG"
             ]
@@ -1122,12 +1141,19 @@
           "sector": "Biens de consommation de base",
           "country": "France",
           "selected": false,
-          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.587, quota atteint)",
+          "status": "❌ Quota sectoriel atteint (Biens de consommation de base: 5/4), score 0.580 < seuil 0.565",
           "details": {
-            "profile_score": 0.587,
-            "composite_score": 0.58,
             "sector": "Biens de consommation de base",
-            "matched_preset": "quality_premium"
+            "sector_quota": "5/4",
+            "your_score": 0.58,
+            "min_selected_score": 0.565,
+            "selected_in_sector": [
+              "PROCTER & GAMBLE",
+              "COCA-COLA",
+              "CHURCH AND DWIGHT IN",
+              "IMPERIAL BRANDS PLC",
+              "KONINKLIJKE AHOLD DE"
+            ]
           },
           "buffett_score": 67.0,
           "composite_score": 0.58,
@@ -1148,11 +1174,19 @@
           "sector": "Biens de consommation de base",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Score composite insuffisant (0.635)",
+          "status": "❌ Quota sectoriel atteint (Biens de consommation de base: 5/4), score 0.635 < seuil 0.565",
           "details": {
-            "composite_score": 0.635,
             "sector": "Biens de consommation de base",
-            "matched_preset": "rendement"
+            "sector_quota": "5/4",
+            "your_score": 0.635,
+            "min_selected_score": 0.565,
+            "selected_in_sector": [
+              "PROCTER & GAMBLE",
+              "COCA-COLA",
+              "CHURCH AND DWIGHT IN",
+              "IMPERIAL BRANDS PLC",
+              "KONINKLIJKE AHOLD DE"
+            ]
           },
           "buffett_score": 67.0,
           "composite_score": 0.635,
@@ -1209,7 +1243,7 @@
           },
           "buffett_score": 67.0,
           "composite_score": 0.576,
-          "profile_score": 0.669,
+          "profile_score": 0.0,
           "matched_preset": "rendement",
           "roe": 11.79,
           "de_ratio": 0.43,
@@ -1225,14 +1259,17 @@
           "market_cap_billions": 171.9,
           "sector": "Energie",
           "country": "France",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.568, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.568,
+            "composite_score": 0.595,
+            "sector": "Energie",
+            "matched_preset": "rendement"
           },
           "buffett_score": 50.0,
           "composite_score": 0.595,
-          "profile_score": 0.0,
+          "profile_score": 0.568,
           "matched_preset": "rendement",
           "roe": 12.22,
           "de_ratio": 0.51,
@@ -1298,15 +1335,16 @@
           "sector": "Industries",
           "country": "France",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 4/4), score 0.549 < seuil 0.609",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.549 < seuil 0.561",
           "details": {
             "sector": "Industries",
-            "sector_quota": "4/4",
+            "sector_quota": "5/4",
             "your_score": 0.549,
-            "min_selected_score": 0.609,
+            "min_selected_score": 0.561,
             "selected_in_sector": [
               "SK SQUARE LTD",
               "EXPEDITORS INTERNATI",
+              "EIFFAGE SA",
               "BUREAU VERITAS SA",
               "SCHINDLER HOLDING AG"
             ]
@@ -1356,15 +1394,16 @@
           "sector": "Industries",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Industries: 4/4), score 0.718 < seuil 0.609",
+          "status": "❌ Quota sectoriel atteint (Industries: 5/4), score 0.718 < seuil 0.561",
           "details": {
             "sector": "Industries",
-            "sector_quota": "4/4",
+            "sector_quota": "5/4",
             "your_score": 0.718,
-            "min_selected_score": 0.609,
+            "min_selected_score": 0.561,
             "selected_in_sector": [
               "SK SQUARE LTD",
               "EXPEDITORS INTERNATI",
+              "EIFFAGE SA",
               "BUREAU VERITAS SA",
               "SCHINDLER HOLDING AG"
             ]
@@ -1958,26 +1997,6 @@
       },
       {
         "rank": 3,
-        "name": "PROCTER & GAMBLE",
-        "ticker": "PG",
-        "sort_score": 1.0085,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "composite_score": 0.6965,
-        "profile_score": 1.0085,
-        "buffett_score": 100.0,
-        "volatility": 17.2,
-        "ytd": "-1.77%",
-        "sector": "Biens de consommation de base",
-        "country": "Etats-Unis",
-        "matched_preset": "rendement",
-        "roe": 31.24,
-        "de_ratio": 0.68,
-        "market_cap": "327820164122",
-        "dividend_yield": 3.03
-      },
-      {
-        "rank": 4,
         "name": "SCHINDLER HOLDING PAR AG",
         "ticker": "SCHP",
         "sort_score": 1.007,
@@ -1998,7 +2017,7 @@
         "dividend_yield": 2.56
       },
       {
-        "rank": 5,
+        "rank": 4,
         "name": "GENERAL DYNAMICS CORP",
         "ticker": "GD",
         "sort_score": 0.9865,
@@ -2017,6 +2036,27 @@
         "de_ratio": 0.38,
         "market_cap": "92351908860",
         "dividend_yield": 1.78
+      },
+      {
+        "rank": 5,
+        "name": "AXA SA",
+        "ticker": "CS",
+        "sort_score": 0.9707,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.612,
+        "profile_score": 0.9707,
+        "buffett_score": 83.0,
+        "volatility": 19.5,
+        "ytd": "-3.52%",
+        "sector": "Finance",
+        "country": "France",
+        "matched_preset": "rendement",
+        "rejection_reason": "Score composite (0.971) insuffisant pour le quota",
+        "roe": 19.56,
+        "de_ratio": 1.22,
+        "market_cap": "80229774997",
+        "dividend_yield": 5.87
       },
       {
         "rank": 6,
@@ -2143,26 +2183,6 @@
       },
       {
         "rank": 12,
-        "name": "SCHINDLER HOLDING AG",
-        "ticker": "SCHN",
-        "sort_score": 0.9067,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "composite_score": 0.6093,
-        "profile_score": 0.9067,
-        "buffett_score": 83.0,
-        "volatility": 18.8,
-        "ytd": "-9.06%",
-        "sector": "Industries",
-        "country": "Suisse",
-        "matched_preset": "rendement",
-        "roe": 21.05,
-        "de_ratio": 0.13,
-        "market_cap": "27698106030",
-        "dividend_yield": 2.66
-      },
-      {
-        "rank": 13,
         "name": "KEYCORP",
         "ticker": "KEY",
         "sort_score": 0.9053,
@@ -2183,7 +2203,7 @@
         "dividend_yield": 2.84
       },
       {
-        "rank": 14,
+        "rank": 13,
         "name": "COMFORT SYSTEMS USA INC",
         "ticker": "FIX",
         "sort_score": 0.8989,
@@ -2204,7 +2224,7 @@
         "dividend_yield": 0.09
       },
       {
-        "rank": 15,
+        "rank": 14,
         "name": "GRACO INC",
         "ticker": "GGG",
         "sort_score": 0.8979,
@@ -2225,7 +2245,7 @@
         "dividend_yield": 1.53
       },
       {
-        "rank": 16,
+        "rank": 15,
         "name": "HANNOVER RUECK",
         "ticker": "HNR1",
         "sort_score": 0.8886,
@@ -2246,7 +2266,7 @@
         "dividend_yield": 5.51
       },
       {
-        "rank": 17,
+        "rank": 16,
         "name": "SOLAR INDUSTRIES INDIA LTD",
         "ticker": "SOLARINDS",
         "sort_score": 0.8643,
@@ -2267,7 +2287,7 @@
         "dividend_yield": 0.05
       },
       {
-        "rank": 18,
+        "rank": 17,
         "name": "CHURCH AND DWIGHT INC",
         "ticker": "CHD",
         "sort_score": 0.8626,
@@ -2287,7 +2307,7 @@
         "dividend_yield": 1.28
       },
       {
-        "rank": 19,
+        "rank": 18,
         "name": "GLOBAL UNICHIP CORP",
         "ticker": "3443",
         "sort_score": 0.8595,
@@ -2308,7 +2328,7 @@
         "dividend_yield": 0.36
       },
       {
-        "rank": 20,
+        "rank": 19,
         "name": "CF INDUSTRIES HOLDINGS INC",
         "ticker": "CF",
         "sort_score": 0.8544,
@@ -2328,7 +2348,7 @@
         "dividend_yield": 1.7
       },
       {
-        "rank": 21,
+        "rank": 20,
         "name": "JENTECH PRECISION INDUSTRIAL LTD",
         "ticker": "3653",
         "sort_score": 0.8541,
@@ -2349,7 +2369,7 @@
         "dividend_yield": 0.4
       },
       {
-        "rank": 22,
+        "rank": 21,
         "name": "ROCHE HOLDING AG",
         "ticker": "RO",
         "sort_score": 0.8495,
@@ -2370,7 +2390,7 @@
         "dividend_yield": 3.25
       },
       {
-        "rank": 23,
+        "rank": 22,
         "name": "SWISS RE AG",
         "ticker": "SREN",
         "sort_score": 0.8412,
@@ -2391,7 +2411,7 @@
         "dividend_yield": 5.32
       },
       {
-        "rank": 24,
+        "rank": 23,
         "name": "KING SLIDE WORKS LTD",
         "ticker": "2059",
         "sort_score": 0.8377,
@@ -2412,7 +2432,7 @@
         "dividend_yield": 0.3
       },
       {
-        "rank": 25,
+        "rank": 24,
         "name": "WOORI FINANCIAL GROUP INC",
         "ticker": "316140",
         "sort_score": 0.836,
@@ -2433,7 +2453,7 @@
         "dividend_yield": 2.56
       },
       {
-        "rank": 26,
+        "rank": 25,
         "name": "SUN PHARMACEUTICAL INDUSTRIES LTD",
         "ticker": "SUNPHARMA",
         "sort_score": 0.8333,
@@ -2453,7 +2473,7 @@
         "dividend_yield": 0.93
       },
       {
-        "rank": 27,
+        "rank": 26,
         "name": "COPART INC",
         "ticker": "CPRT",
         "sort_score": 0.8327,
@@ -2474,7 +2494,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 28,
+        "rank": 27,
         "name": "HARTFORD INSURANCE GROUP INC",
         "ticker": "HIG",
         "sort_score": 0.831,
@@ -2495,7 +2515,7 @@
         "dividend_yield": 1.82
       },
       {
-        "rank": 29,
+        "rank": 28,
         "name": "ASIA VITAL COMPONENTS LTD",
         "ticker": "3017",
         "sort_score": 0.8248,
@@ -2516,7 +2536,7 @@
         "dividend_yield": 0.38
       },
       {
-        "rank": 30,
+        "rank": 29,
         "name": "ARISTA NETWORKS INC",
         "ticker": "ANET",
         "sort_score": 0.823,
@@ -2537,7 +2557,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 31,
+        "rank": 30,
         "name": "BANCO SANTANDER SA",
         "ticker": "SAN",
         "sort_score": 0.8225,
@@ -2558,7 +2578,7 @@
         "dividend_yield": 2.22
       },
       {
-        "rank": 32,
+        "rank": 31,
         "name": "SANOFI SA",
         "ticker": "SAN",
         "sort_score": 0.8225,
@@ -2579,7 +2599,7 @@
         "dividend_yield": 5.32
       },
       {
-        "rank": 33,
+        "rank": 32,
         "name": "HITACHI ENERGY INDIA LTD",
         "ticker": "POWERINDIA",
         "sort_score": 0.8222,
@@ -2600,7 +2620,7 @@
         "dividend_yield": 0.01
       },
       {
-        "rank": 34,
+        "rank": 33,
         "name": "TERADYNE INC",
         "ticker": "TER",
         "sort_score": 0.8209,
@@ -2621,7 +2641,7 @@
         "dividend_yield": 0.12
       },
       {
-        "rank": 35,
+        "rank": 34,
         "name": "HOWMET AEROSPACE INC",
         "ticker": "HWM",
         "sort_score": 0.8201,
@@ -2642,7 +2662,7 @@
         "dividend_yield": 0.19
       },
       {
-        "rank": 36,
+        "rank": 35,
         "name": "COEUR MINING INC",
         "ticker": "CDE",
         "sort_score": 0.8191,
@@ -2663,7 +2683,7 @@
         "dividend_yield": 0.11
       },
       {
-        "rank": 37,
+        "rank": 36,
         "name": "RESMED INC",
         "ticker": "RMD",
         "sort_score": 0.8173,
@@ -2684,27 +2704,7 @@
         "dividend_yield": 1.24
       },
       {
-        "rank": 38,
-        "name": "NATURGY ENERGY GROUP SA",
-        "ticker": "NTGY",
-        "sort_score": 0.8157,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "composite_score": 0.6485,
-        "profile_score": 0.8157,
-        "buffett_score": 83.0,
-        "volatility": 21.7,
-        "ytd": "11.19%",
-        "sector": "Services publics",
-        "country": "Espagne",
-        "matched_preset": "rendement",
-        "roe": 20.72,
-        "de_ratio": 1.47,
-        "market_cap": "26513384002",
-        "dividend_yield": 6.14
-      },
-      {
-        "rank": 39,
+        "rank": 37,
         "name": "ROPER TECHNOLOGIES INC",
         "ticker": "ROP",
         "sort_score": 0.8015,
@@ -2725,7 +2725,7 @@
         "dividend_yield": 1.05
       },
       {
-        "rank": 40,
+        "rank": 38,
         "name": "ROCHE PS PAR AG",
         "ticker": "ROP",
         "sort_score": 0.8015,
@@ -2746,7 +2746,7 @@
         "dividend_yield": 3.0
       },
       {
-        "rank": 41,
+        "rank": 39,
         "name": "CME GROUP INC CLASS A",
         "ticker": "CME",
         "sort_score": 0.7968,
@@ -2767,7 +2767,7 @@
         "dividend_yield": 1.95
       },
       {
-        "rank": 42,
+        "rank": 40,
         "name": "LAM RESEARCH CORP",
         "ticker": "LRCX",
         "sort_score": 0.7933,
@@ -2788,7 +2788,7 @@
         "dividend_yield": 0.3
       },
       {
-        "rank": 43,
+        "rank": 41,
         "name": "SLB NV",
         "ticker": "SLB",
         "sort_score": 0.7855,
@@ -2809,7 +2809,7 @@
         "dividend_yield": 2.49
       },
       {
-        "rank": 44,
+        "rank": 42,
         "name": "ZOOM COMMUNICATIONS INC CLASS A",
         "ticker": "ZM",
         "sort_score": 0.7855,
@@ -2829,7 +2829,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 45,
+        "rank": 43,
         "name": "SK HYNIX INC",
         "ticker": "000660",
         "sort_score": 0.7835,
@@ -2850,28 +2850,7 @@
         "dividend_yield": 0.07
       },
       {
-        "rank": 46,
-        "name": "ITALGAS",
-        "ticker": "IG",
-        "sort_score": 0.7803,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "composite_score": 0.6084,
-        "profile_score": 0.7803,
-        "buffett_score": 67.0,
-        "volatility": 19.5,
-        "ytd": "7.62%",
-        "sector": "Services publics",
-        "country": "Italie",
-        "matched_preset": "rendement",
-        "rejection_reason": "Score composite (0.780) insuffisant pour le quota",
-        "roe": 20.28,
-        "de_ratio": 2.74,
-        "market_cap": "10694857801",
-        "dividend_yield": 4.22
-      },
-      {
-        "rank": 47,
+        "rank": 44,
         "name": "CINCINNATI FINANCIAL CORP",
         "ticker": "CINF",
         "sort_score": 0.7801,
@@ -2892,7 +2871,7 @@
         "dividend_yield": 2.21
       },
       {
-        "rank": 48,
+        "rank": 45,
         "name": "LOTES LTD",
         "ticker": "3533",
         "sort_score": 0.776,
@@ -2913,7 +2892,7 @@
         "dividend_yield": 1.08
       },
       {
-        "rank": 49,
+        "rank": 46,
         "name": "VISA INC CLASS A",
         "ticker": "V",
         "sort_score": 0.7742,
@@ -2934,28 +2913,7 @@
         "dividend_yield": 0.81
       },
       {
-        "rank": 50,
-        "name": "T ROWE PRICE GROUP INC",
-        "ticker": "TROW",
-        "sort_score": 0.7731,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "composite_score": 0.6284,
-        "profile_score": 0.7731,
-        "buffett_score": 100.0,
-        "volatility": 26.1,
-        "ytd": "4.47%",
-        "sector": "Finance",
-        "country": "Etats-Unis",
-        "matched_preset": "quality_premium",
-        "rejection_reason": "Score composite (0.773) insuffisant pour le quota",
-        "roe": 18.79,
-        "de_ratio": 0.04,
-        "market_cap": "22917956177",
-        "dividend_yield": 4.78
-      },
-      {
-        "rank": 51,
+        "rank": 47,
         "name": "DEUTSCHE BOERSE AG",
         "ticker": "DB1",
         "sort_score": 0.7707,
@@ -2976,7 +2934,7 @@
         "dividend_yield": 1.68
       },
       {
-        "rank": 52,
+        "rank": 48,
         "name": "TRAVELERS COMPANIES INC",
         "ticker": "TRV",
         "sort_score": 0.7662,
@@ -2997,7 +2955,7 @@
         "dividend_yield": 1.5
       },
       {
-        "rank": 53,
+        "rank": 49,
         "name": "APR LTD",
         "ticker": "278470",
         "sort_score": 0.7642,
@@ -3018,7 +2976,7 @@
         "dividend_yield": 1.31
       },
       {
-        "rank": 54,
+        "rank": 50,
         "name": "ZYDUS LIFESCIENCES LTD",
         "ticker": "ZYDUSLIFE",
         "sort_score": 0.7641,
@@ -3039,7 +2997,7 @@
         "dividend_yield": 0.41
       },
       {
-        "rank": 55,
+        "rank": 51,
         "name": "HYUNDAI-ROTEM",
         "ticker": "064350",
         "sort_score": 0.7633,
@@ -3060,7 +3018,7 @@
         "dividend_yield": 0.08
       },
       {
-        "rank": 56,
+        "rank": 52,
         "name": "ENDEAVOUR MINING",
         "ticker": "EDV",
         "sort_score": 0.7601,
@@ -3081,7 +3039,7 @@
         "dividend_yield": 1.46
       },
       {
-        "rank": 57,
+        "rank": 53,
         "name": "MONSTER BEVERAGE CORP",
         "ticker": "MNST",
         "sort_score": 0.7561,
@@ -3102,7 +3060,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 58,
+        "rank": 54,
         "name": "MARSH INC",
         "ticker": "MRSH",
         "sort_score": 0.7559,
@@ -3123,7 +3081,7 @@
         "dividend_yield": 2.23
       },
       {
-        "rank": 59,
+        "rank": 55,
         "name": "ICICI BANK LTD",
         "ticker": "ICICIBANK",
         "sort_score": 0.7549,
@@ -3144,7 +3102,7 @@
         "dividend_yield": 0.87
       },
       {
-        "rank": 60,
+        "rank": 56,
         "name": "GALP ENERGIA SGPS SA CLASS B",
         "ticker": "GALP",
         "sort_score": 0.7549,
@@ -3164,7 +3122,7 @@
         "dividend_yield": 3.33
       },
       {
-        "rank": 61,
+        "rank": 57,
         "name": "PRINCIPAL FINANCIAL GROUP INC",
         "ticker": "PFG",
         "sort_score": 0.7519,
@@ -3185,27 +3143,7 @@
         "dividend_yield": 3.08
       },
       {
-        "rank": 62,
-        "name": "BUREAU VERITAS SA",
-        "ticker": "BVI",
-        "sort_score": 0.7503,
-        "sort_score_source": "_profile_score",
-        "selected": true,
-        "composite_score": 0.6571,
-        "profile_score": 0.7503,
-        "buffett_score": 83.0,
-        "volatility": 21.3,
-        "ytd": "-4.53%",
-        "sector": "Industries",
-        "country": "France",
-        "matched_preset": "rendement",
-        "roe": 32.17,
-        "de_ratio": 1.76,
-        "market_cap": "11444086324",
-        "dividend_yield": 7.01
-      },
-      {
-        "rank": 63,
+        "rank": 58,
         "name": "SAMSUNG ELECTRONICS NON VOTING PRE",
         "ticker": "005935",
         "sort_score": 0.7455,
@@ -3226,7 +3164,7 @@
         "dividend_yield": 0.79
       },
       {
-        "rank": 64,
+        "rank": 59,
         "name": "REGENERON PHARMACEUTICALS INC",
         "ticker": "REGN",
         "sort_score": 0.7452,
@@ -3247,7 +3185,7 @@
         "dividend_yield": 0.58
       },
       {
-        "rank": 65,
+        "rank": 60,
         "name": "UNILEVER PLC",
         "ticker": "ULVR",
         "sort_score": 0.7418,
@@ -3268,7 +3206,7 @@
         "dividend_yield": 3.85
       },
       {
-        "rank": 66,
+        "rank": 61,
         "name": "PARTNERS GROUP HOLDING AG",
         "ticker": "PGHN",
         "sort_score": 0.7409,
@@ -3289,7 +3227,7 @@
         "dividend_yield": 6.38
       },
       {
-        "rank": 67,
+        "rank": 62,
         "name": "JOHNSON & JOHNSON",
         "ticker": "JNJ",
         "sort_score": 0.7385,
@@ -3310,7 +3248,7 @@
         "dividend_yield": 2.3
       },
       {
-        "rank": 68,
+        "rank": 63,
         "name": "PRUDENTIAL FINANCIAL INC",
         "ticker": "PRU",
         "sort_score": 0.7372,
@@ -3331,7 +3269,7 @@
         "dividend_yield": 5.32
       },
       {
-        "rank": 69,
+        "rank": 64,
         "name": "PRUDENTIAL PLC",
         "ticker": "PRU",
         "sort_score": 0.7372,
@@ -3352,7 +3290,7 @@
         "dividend_yield": 1.18
       },
       {
-        "rank": 70,
+        "rank": 65,
         "name": "DIXON TECHNOLOGIES (INDIA) LTD",
         "ticker": "DIXON",
         "sort_score": 0.7367,
@@ -3373,7 +3311,7 @@
         "dividend_yield": 0.04
       },
       {
-        "rank": 71,
+        "rank": 66,
         "name": "FORTINET INC",
         "ticker": "FTNT",
         "sort_score": 0.7363,
@@ -3394,7 +3332,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 72,
+        "rank": 67,
         "name": "SNAM",
         "ticker": "SRG",
         "sort_score": 0.7302,
@@ -3415,7 +3353,7 @@
         "dividend_yield": 4.69
       },
       {
-        "rank": 73,
+        "rank": 68,
         "name": "PALANTIR TECHNOLOGIES INC CLASS A",
         "ticker": "PLTR",
         "sort_score": 0.7284,
@@ -3436,7 +3374,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 74,
+        "rank": 69,
         "name": "HD HYUNDAI ELECTRIC LTD",
         "ticker": "267260",
         "sort_score": 0.7277,
@@ -3457,7 +3395,7 @@
         "dividend_yield": 0.13
       },
       {
-        "rank": 75,
+        "rank": 70,
         "name": "META PLATFORMS INC CLASS A",
         "ticker": "META",
         "sort_score": 0.7274,
@@ -3478,28 +3416,7 @@
         "dividend_yield": 0.33
       },
       {
-        "rank": 76,
-        "name": "KONINKLIJKE AHOLD DELHAIZE NV",
-        "ticker": "AD",
-        "sort_score": 0.7271,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "composite_score": 0.5646,
-        "profile_score": 0.7271,
-        "buffett_score": 67.0,
-        "volatility": 18.3,
-        "ytd": "1.86%",
-        "sector": "Biens de consommation de base",
-        "country": "Pays-Bas",
-        "matched_preset": "rendement",
-        "rejection_reason": "Score composite (0.727) insuffisant pour le quota",
-        "roe": 15.27,
-        "de_ratio": 1.3,
-        "market_cap": "31013996923",
-        "dividend_yield": 3.49
-      },
-      {
-        "rank": 77,
+        "rank": 71,
         "name": "DOLLAR GENERAL CORP",
         "ticker": "DG",
         "sort_score": 0.7241,
@@ -3520,7 +3437,7 @@
         "dividend_yield": 2.28
       },
       {
-        "rank": 78,
+        "rank": 72,
         "name": "VINCI SA",
         "ticker": "DG",
         "sort_score": 0.7241,
@@ -3541,7 +3458,7 @@
         "dividend_yield": 0.84
       },
       {
-        "rank": 79,
+        "rank": 73,
         "name": "INTESA SANPAOLO",
         "ticker": "ISP",
         "sort_score": 0.7238,
@@ -3562,7 +3479,7 @@
         "dividend_yield": 6.6
       },
       {
-        "rank": 80,
+        "rank": 74,
         "name": "SOCIETE GENERALE SA",
         "ticker": "GLE",
         "sort_score": 0.7233,
@@ -3583,7 +3500,7 @@
         "dividend_yield": 2.67
       },
       {
-        "rank": 81,
+        "rank": 75,
         "name": "AFLAC INC",
         "ticker": "AFL",
         "sort_score": 0.7232,
@@ -3604,7 +3521,7 @@
         "dividend_yield": 2.06
       },
       {
-        "rank": 82,
+        "rank": 76,
         "name": "REXEL SA",
         "ticker": "RXL",
         "sort_score": 0.723,
@@ -3625,7 +3542,7 @@
         "dividend_yield": 3.24
       },
       {
-        "rank": 83,
+        "rank": 77,
         "name": "SYSCO CORP",
         "ticker": "SYY",
         "sort_score": 0.7208,
@@ -3646,7 +3563,7 @@
         "dividend_yield": 2.91
       },
       {
-        "rank": 84,
+        "rank": 78,
         "name": "BARCLAYS PLC",
         "ticker": "BARC",
         "sort_score": 0.7204,
@@ -3667,7 +3584,7 @@
         "dividend_yield": 1.86
       },
       {
-        "rank": 85,
+        "rank": 79,
         "name": "ADVANCED INFO SERVICE NON-VOTING D",
         "ticker": "ADVANC.R",
         "sort_score": 0.7184,
@@ -3687,7 +3604,7 @@
         "dividend_yield": 2.7
       },
       {
-        "rank": 86,
+        "rank": 80,
         "name": "WILLIAMS SONOMA INC",
         "ticker": "WSM",
         "sort_score": 0.718,
@@ -3708,7 +3625,7 @@
         "dividend_yield": 1.32
       },
       {
-        "rank": 87,
+        "rank": 81,
         "name": "TRACTOR SUPPLY",
         "ticker": "TSCO",
         "sort_score": 0.7118,
@@ -3729,7 +3646,7 @@
         "dividend_yield": 3.2
       },
       {
-        "rank": 88,
+        "rank": 82,
         "name": "TESCO PLC",
         "ticker": "TSCO",
         "sort_score": 0.7118,
@@ -3750,7 +3667,7 @@
         "dividend_yield": 3.19
       },
       {
-        "rank": 89,
+        "rank": 83,
         "name": "ZURICH INSURANCE GROUP AG",
         "ticker": "ZURN",
         "sort_score": 0.7112,
@@ -3771,7 +3688,7 @@
         "dividend_yield": 5.46
       },
       {
-        "rank": 90,
+        "rank": 84,
         "name": "INTERTEK GROUP PLC",
         "ticker": "ITRK",
         "sort_score": 0.7094,
@@ -3792,7 +3709,7 @@
         "dividend_yield": 2.11
       },
       {
-        "rank": 91,
+        "rank": 85,
         "name": "ASSICURAZIONI GENERALI",
         "ticker": "G",
         "sort_score": 0.7092,
@@ -3813,49 +3730,7 @@
         "dividend_yield": 4.24
       },
       {
-        "rank": 92,
-        "name": "UNIPOL ASSICURAZIONI SPA",
-        "ticker": "UNI",
-        "sort_score": 0.7062,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "composite_score": 0.5641,
-        "profile_score": 0.7062,
-        "buffett_score": 80.0,
-        "volatility": 26.7,
-        "ytd": "1.65%",
-        "sector": "Finance",
-        "country": "Italie",
-        "matched_preset": "quality_premium",
-        "rejection_reason": "Score composite (0.706) insuffisant pour le quota",
-        "roe": 15.04,
-        "de_ratio": 0.47,
-        "market_cap": "14749097552",
-        "dividend_yield": 5.36
-      },
-      {
-        "rank": 93,
-        "name": "RECORDATI INDUSTRIA CHIMICA E FARM",
-        "ticker": "REC",
-        "sort_score": 0.7054,
-        "sort_score_source": "_profile_score",
-        "selected": false,
-        "composite_score": 0.664,
-        "profile_score": 0.7054,
-        "buffett_score": 100.0,
-        "volatility": 21.9,
-        "ytd": "4.86%",
-        "sector": "Santé",
-        "country": "Italie",
-        "matched_preset": "rendement",
-        "rejection_reason": "Score composite (0.705) insuffisant pour le quota",
-        "roe": 23.37,
-        "de_ratio": 1.29,
-        "market_cap": "10077307843",
-        "dividend_yield": 2.63
-      },
-      {
-        "rank": 94,
+        "rank": 86,
         "name": "HALLIBURTON",
         "ticker": "HAL",
         "sort_score": 0.7041,
@@ -3876,7 +3751,7 @@
         "dividend_yield": 2.06
       },
       {
-        "rank": 95,
+        "rank": 87,
         "name": "STRYKER CORP",
         "ticker": "SYK",
         "sort_score": 0.7031,
@@ -3897,7 +3772,7 @@
         "dividend_yield": 1.14
       },
       {
-        "rank": 96,
+        "rank": 88,
         "name": "COGNIZANT TECHNOLOGY SOLUTIONS COR",
         "ticker": "CTSH",
         "sort_score": 0.7025,
@@ -3918,7 +3793,7 @@
         "dividend_yield": 2.4
       },
       {
-        "rank": 97,
+        "rank": 89,
         "name": "INCYTE CORP",
         "ticker": "INCY",
         "sort_score": 0.7015,
@@ -3939,7 +3814,7 @@
         "dividend_yield": 0.0
       },
       {
-        "rank": 98,
+        "rank": 90,
         "name": "WR BERKLEY CORP",
         "ticker": "WRB",
         "sort_score": 0.7008,
@@ -3960,7 +3835,7 @@
         "dividend_yield": 1.51
       },
       {
-        "rank": 99,
+        "rank": 91,
         "name": "GE VERNOVA T&D INDIA LTD",
         "ticker": "GVT&D",
         "sort_score": 0.7004,
@@ -3981,7 +3856,7 @@
         "dividend_yield": 0.1
       },
       {
-        "rank": 100,
+        "rank": 92,
         "name": "MIRAE ASSET SECURITIES CO LTD",
         "ticker": "006800",
         "sort_score": 0.6987,
@@ -4000,6 +3875,173 @@
         "de_ratio": 3.01,
         "market_cap": "32813174888400",
         "dividend_yield": 0.53
+      },
+      {
+        "rank": 93,
+        "name": "MORGAN STANLEY",
+        "ticker": "MS",
+        "sort_score": 0.6986,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.5994,
+        "profile_score": 0.6986,
+        "buffett_score": 60.0,
+        "volatility": 28.3,
+        "ytd": "22.95%",
+        "sector": "Finance",
+        "country": "Etats-Unis",
+        "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.699) insuffisant pour le quota",
+        "roe": 15.61,
+        "de_ratio": 3.29,
+        "market_cap": "344273957006",
+        "dividend_yield": 1.83
+      },
+      {
+        "rank": 94,
+        "name": "PULTEGROUP INC",
+        "ticker": "PHM",
+        "sort_score": 0.6971,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.5509,
+        "profile_score": 0.6971,
+        "buffett_score": 83.0,
+        "volatility": 32.8,
+        "ytd": "0.82%",
+        "sector": "Biens de consommation cycliques",
+        "country": "Etats-Unis",
+        "matched_preset": "croissance",
+        "rejection_reason": "Score composite (0.697) insuffisant pour le quota",
+        "roe": 17.67,
+        "de_ratio": 0.18,
+        "market_cap": "22519296651",
+        "dividend_yield": 0.81
+      },
+      {
+        "rank": 95,
+        "name": "BUZZI",
+        "ticker": "BZU",
+        "sort_score": 0.6959,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.4892,
+        "profile_score": 0.6959,
+        "buffett_score": 67.0,
+        "volatility": 32.8,
+        "ytd": "-14.0%",
+        "sector": "Matériaux",
+        "country": "Italie",
+        "matched_preset": "value_dividend",
+        "rejection_reason": "Score composite (0.696) insuffisant pour le quota",
+        "roe": 13.45,
+        "de_ratio": 0.06,
+        "market_cap": "9576216099",
+        "dividend_yield": 1.57
+      },
+      {
+        "rank": 96,
+        "name": "GOLD CIRCUIT ELECTRONICS LTD",
+        "ticker": "2368",
+        "sort_score": 0.6916,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.7119,
+        "profile_score": 0.6916,
+        "buffett_score": 67.0,
+        "volatility": 54.9,
+        "ytd": "91.41%",
+        "sector": "Technologie de l'information",
+        "country": "Taïwan",
+        "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.692) insuffisant pour le quota",
+        "roe": 35.06,
+        "de_ratio": 0.54,
+        "market_cap": "664572070000",
+        "dividend_yield": 0.36
+      },
+      {
+        "rank": 97,
+        "name": "WESTERN DIGITAL CORP",
+        "ticker": "WDC",
+        "sort_score": 0.6902,
+        "sort_score_source": "_composite_score",
+        "selected": false,
+        "composite_score": 0.6902,
+        "buffett_score": 33.0,
+        "volatility": 50.4,
+        "ytd": "234.07%",
+        "sector": "Technologie de l'information",
+        "country": "Etats-Unis",
+        "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.690) insuffisant pour le quota",
+        "roe": 22.78,
+        "de_ratio": 0.85,
+        "market_cap": "198364566390",
+        "dividend_yield": 0.08
+      },
+      {
+        "rank": 98,
+        "name": "ELI LILLY",
+        "ticker": "LLY",
+        "sort_score": 0.6901,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.586,
+        "profile_score": 0.6901,
+        "buffett_score": 33.0,
+        "volatility": 35.6,
+        "ytd": "4.71%",
+        "sector": "Santé",
+        "country": "Etats-Unis",
+        "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.690) insuffisant pour le quota",
+        "roe": 101.16,
+        "de_ratio": 1.6,
+        "market_cap": "1003449869764",
+        "dividend_yield": 0.57
+      },
+      {
+        "rank": 99,
+        "name": "ELITE MATERIAL LTD",
+        "ticker": "2383",
+        "sort_score": 0.6899,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.7462,
+        "profile_score": 0.6899,
+        "buffett_score": 67.0,
+        "volatility": 54.5,
+        "ytd": "196.96%",
+        "sector": "Technologie de l'information",
+        "country": "Taïwan",
+        "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.690) insuffisant pour le quota",
+        "roe": 34.25,
+        "de_ratio": 0.4,
+        "market_cap": "1750398085000",
+        "dividend_yield": 0.19
+      },
+      {
+        "rank": 100,
+        "name": "WEST PHARMACEUTICAL SERVICES INC",
+        "ticker": "WST",
+        "sort_score": 0.685,
+        "sort_score_source": "_profile_score",
+        "selected": false,
+        "composite_score": 0.5305,
+        "profile_score": 0.685,
+        "buffett_score": 67.0,
+        "volatility": 46.1,
+        "ytd": "15.33%",
+        "sector": "Santé",
+        "country": "Etats-Unis",
+        "matched_preset": "momentum_trend",
+        "rejection_reason": "Score composite (0.685) insuffisant pour le quota",
+        "roe": 16.85,
+        "de_ratio": 0.1,
+        "market_cap": "22417895551",
+        "dividend_yield": 0.27
       }
     ]
   },

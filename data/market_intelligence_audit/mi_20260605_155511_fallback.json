@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-06-05T15:55:11.183602",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-05",
+    "brent_usd": 98.29,
+    "brent_usd_avg5d": 98.29,
+    "gold_usd": 4468.90921,
+    "silver_usd": 72.90004,
+    "vix": 15.65,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": -0.02,
+    "cpi_yoy_pct": 3.95,
+    "cpi_index": 332.407,
+    "ig_spread_bps": 93.0,
+    "hy_spread_bps": 275.0,
+    "us_10y_yield": 4.49,
+    "us_2y_yield": 4.08,
+    "yield_curve_2s10s": 41.0,
+    "breakeven_5y": 2.48,
+    "sp500_level": 757.090027,
+    "sp500_change_1d_pct": 0.37786867,
+    "hyg_change_1d_pct": -0.4985666209647335,
+    "lqd_change_1d_pct": -0.3752516932088695,
+    "trade_weighted_usd": 118.8783,
+    "eurusd": 1.16412,
+    "nasdaq_change_1d_pct": -0.48373934,
+    "xlu_perf_1d_pct": 0.52619434,
+    "xle_perf_1d_pct": 0.068133054,
+    "cpi_core_mom_pct": 0.38,
+    "pce_yoy_pct": 3.77,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "radar_regime": "neutral",
+    "radar_confidence": 0.88,
+    "favored_sectors": "energy, information-technology, materials, industrials",
+    "avoided_sectors": "financials",
+    "favored_regions": "israel, netherlands, japan, china",
+    "avoided_regions": "india",
+    "key_trends": "Secteur leader: energy (+31.3% YTD) | Région leader: south-korea (+119.0% YTD) | 2 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+58.7% sur 12 mois) | 6M leader: information-technology (+27.7% sur 6 mois)",
+    "risks": "Secteurs en difficulté: financials, consumer-discretionary, healthcare | Régions en difficulté: chile, india, south-africa | 3 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "financials(avoided,b=0.91,d=2.79%), consumer-discretionary(neutral,b=1.21,d=0.44%), energy(favored,b=-0.16,d=0.13%), utilities(neutral,b=0.75,d=-1.07%), materials(favored,b=0.8,d=0.03%), healthcare(neutral,b=0.52,d=2.81%), consumer-staples(neutral,b=0.24,d=0.11%), industrials(favored,b=0.95,d=1.27%), real-estate(neutral,b=0.42,d=1.46%), information-technology(favored,b=1.52,d=0.06%), communication-services(neutral,b=1.21,d=0.38%)"
+  },
+  "ai_response": null,
+  "adjustments_output": {
+    "thematic_cap_deltas": {},
+    "hedge_deltas": {},
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "rule_id": "fallback_stagflation"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.0,
+        "rule_id": "fallback_stagflation"
+      }
+    ],
+    "active_rules": [
+      "fallback_stagflation"
+    ],
+    "ai_regime": "stagflation",
+    "ai_regime_confidence": 2,
+    "ai_warnings": [
+      "AI unavailable — fallback regime: stagflation"
+    ],
+    "cash_tactical": {
+      "Agressif": 5,
+      "Modéré": 7
+    },
+    "cash_tactical_rationale": "Fallback stagflation: moderate cash (oil shock + inflation)"
+  },
+  "regime": "fallback",
+  "regime_rationale": null,
+  "market_interpretation": null,
+  "bond_strategy_full": null,
+  "warnings": []
+}
