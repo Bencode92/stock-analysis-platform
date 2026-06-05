@@ -920,7 +920,7 @@ PROFILE_POLICY: Dict[str, Dict] = {
         # Modéré. Agressif garde momentum/croissance/recovery pure.
         # v7.2.1: ajouté "defensif" — filet de sécurité
         "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_high_vol", "defensif"},
-        "min_buffett_score": 50,
+        "min_buffett_score": 60,    # v6.18 (Fix E) : 50→60 — filet anti pari-pourri
          "min_quality_gate": 55,     # v4.15: OR gate — quality rescue pour secteurs à moat structurellement bas
         "hard_filters": {
             "volatility_3y_min": 22.0,

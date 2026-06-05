@@ -156,6 +156,22 @@ _FIT_KEY_BY_PROFILE = {
     "Agressif": "_fit_agressif",
 }
 
+# v6.18 — Diversification structurelle par profil
+# Fix A : cap par SECTEUR (pas juste par industry, car "Insurance—P&C" et
+# "Insurance—Reinsurance" sont 2 industries mais 1 cluster de risque).
+# Stable : 1/secteur (évite 2 financières comme ADM+SREN dans les mêmes 2 lignes).
+MAX_PER_SECTOR_BY_PROFILE = {
+    "Stable":   1,
+    "Modéré":   2,
+    "Agressif": 2,
+}
+# Fix B : n_target élargi pour Stable (de 2 → 4) — meilleure diversification visible
+N_TARGET_SATELLITE_BY_PROFILE = {
+    "Stable":   4,
+    "Modéré":   4,
+    "Agressif": 5,
+}
+
 # v6.16 — Sticky bonus LÉGER (priorité #3 Claude externe)
 # Filtre le bruit : un stock déjà en portefeuille reçoit un petit bonus de fit
 # pour éviter qu'il sorte sur une variation marginale (±0.5). Trop fort = gelée.
@@ -257,17 +273,50 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
             return base + (STICKY_BONUS if tk in prev_for_profile else 0)
         candidates.sort(key=_score, reverse=True)
 
-    # Dédup par industry (max 2 par industrie pour diversification sectorielle)
+    # v6.18 — Diversification dure : par industry ET par SECTEUR GICS L1
+    # Fix A : Stable concentré ADM+SREN venait du dédup industry seul —
+    # "Insurance—P&C" et "Insurance—Reinsurance" sont 2 industries mais
+    # 1 cluster de risque (corr 0.65 en GFC). Cap par secteur paramétrable.
+    max_per_sector = MAX_PER_SECTOR_BY_PROFILE.get(profile, 2)
     by_industry: Dict[str, int] = {}
+    by_sector: Dict[str, int] = {}
     deduped = []
     for s in candidates:
         ind = (s.get("industry") or "_").lower()
+        sec = (s.get("sector") or s.get("sector_api") or "_").lower()
         if by_industry.get(ind, 0) >= 2:
             continue
+        if by_sector.get(sec, 0) >= max_per_sector:
+            continue
         by_industry[ind] = by_industry.get(ind, 0) + 1
+        by_sector[sec] = by_sector.get(sec, 0) + 1
         deduped.append(s)
         if len(deduped) >= n_target:
             break
+
+    # v6.18 Fix D : différencier visuellement Agressif vs Modéré
+    # Force au moins 2/N stocks Agressif-natifs (vol ≥ 30%) dans Agressif satellite
+    # pour qu'il ne soit pas un clone visuel du Modéré.
+    if profile == "Agressif":
+        high_vol_count = sum(1 for s in deduped if (s.get("volatility_3y") or 0) >= 30)
+        if high_vol_count < 2:
+            # Cherche dans le reste des candidats les vol ≥ 30 non-déjà-pris
+            extra_high_vol = [
+                s for s in candidates
+                if s not in deduped
+                and (s.get("volatility_3y") or 0) >= 30
+            ]
+            n_to_swap = min(2 - high_vol_count, len(extra_high_vol))
+            for i in range(n_to_swap):
+                # Trouve la position la plus calme à remplacer (vol minimale)
+                low_vol_positions = sorted(
+                    range(len(deduped)),
+                    key=lambda idx: deduped[idx].get("volatility_3y") or 0
+                )
+                if low_vol_positions:
+                    idx_remove = low_vol_positions[0]
+                    deduped[idx_remove] = extra_high_vol[i]
+
     return deduped
 
 
@@ -299,7 +348,12 @@ def _build_disciplined_positions(profile: str, v4_meta: Dict) -> List[Dict]:
 
     # ─── PHASE 1 v6.2 : Satellite = TOP NATIFS par fit_score, équipondéré ──
     # n_max = budget / cap (Stable 10/5=2, Modéré 20/5=4, Agressif 25/5=5)
-    n_max_satellite = int(round(cap_budget / CAP_PER_NAME))
+    # v6.18 Fix B : n_target élargi pour Stable (4 au lieu de 2)
+    # Permet 4 actions diversifiées par secteur au lieu de 2 financières concentrées.
+    # Cap automatique : 10% budget / 4 stocks = 2.5%/nom (toujours sous cap 5%).
+    n_max_satellite = N_TARGET_SATELLITE_BY_PROFILE.get(
+        profile, int(round(cap_budget / CAP_PER_NAME))
+    )
     top_natives = _get_top_natives_for_profile(profile, n_target=n_max_satellite)
 
     if top_natives:
@@ -645,21 +699,36 @@ def _get_top_thematic_satellite(n_target: int = 5) -> List[Dict]:
         return []
     annotate_universe_with_fits(all_stocks)
 
-    # Pool thématique : haute vol + qualité minimum (Buffett ≥ 70)
-    # PAS de filtre sectoriel — on laisse fit_agressif faire son boulot
+    # v6.18 Fix C : Pool thématique DÉSATURÉ
+    # - Buffett ≥ 65 (baissé de 70 — laisse passer plus de qualité semi mid-cap)
+    # - vol_3y ≥ 30% (inchangé — pool thématique haute vol)
+    # - PERF_1Y ≤ 300% (exclut SK SQUARE +1168%, fusées spéculatives pures)
+    #   raisonnement : un stock qui a fait +1000%/an est probablement au sommet,
+    #   pas un "pari thématique de qualité". Cap à 300% = filtre les extremes
+    #   tout en gardant les vrais leaders thématiques (+50 à +250%).
     candidates = [
         s for s in all_stocks
         if (s.get("volatility_3y") or 0) >= 30.0
-        and (s.get("buffett_score") or 0) >= 70
+        and (s.get("buffett_score") or 0) >= 65
+        and (s.get("perf_1y") or 0) < 300.0
     ]
 
     # v6.16 : sticky bonus léger pour filtrer le bruit
     prev_sats = _load_previous_satellite_tickers()
     prev_for_thematique = prev_sats.get("Agressif-Thematique", set())
 
-    # Tri par fit_agressif décroissant + sticky bonus
+    # v6.18 Fix C : tri par fit_agressif DÉSATURÉ
+    # On garde fit_agressif (= reflète bien le thème) mais on plafonne sa
+    # contribution momentum extrême. Concrètement : si _fit_agressif est saturé
+    # par perf_1y +1000%, on le ramène vers une valeur plus normale en pénalisant
+    # les stocks avec perf_1y > 200% (qui ont déjà explosé).
     def _score(s):
         base = s.get("_fit_agressif") or 0
+        perf_1y = s.get("perf_1y") or 0
+        # Pénalité progressive si perf_1y > 200% (déjà au sommet)
+        if perf_1y > 200:
+            penalty = min((perf_1y - 200) / 1000, 0.15)  # max -15% sur fit
+            base = base - penalty
         tk = s.get("ticker") or s.get("symbol") or ""
         return base + (STICKY_BONUS if tk in prev_for_thematique else 0)
     candidates.sort(key=_score, reverse=True)
