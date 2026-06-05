@@ -363,7 +363,7 @@ class PortfolioManagerV3 {
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:0.5rem;">
                 ${ticker ? `<span style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:${catColor};font-weight:700;min-width:40px;">${ticker}</span>` : ''}
-                <span style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${a.name.replace(` (${ticker})`, '').replace(ticker, '').trim() || a.name}</span>
+                <span style="font-size:0.85rem;font-weight:600;line-height:1.3;word-break:break-word;flex:1;min-width:0;" title="${a.name.replace(/"/g, '&quot;')}">${a.name.replace(` (${ticker})`, '').replace(ticker, '').trim() || a.name}</span>
                 ${roleBadge}
                 ${isNew ? '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:rgba(76,175,80,0.2);color:#4caf50;font-weight:700;">NEW</span>' : ''}
                 ${hasDetail ? '<i class="fas fa-chevron-down" style="font-size:0.5rem;color:rgba(255,255,255,0.25);margin-left:auto;"></i>' : ''}

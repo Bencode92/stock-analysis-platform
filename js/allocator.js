@@ -14,7 +14,7 @@
 (function () {
   'use strict';
 
-  const PROFILES = ['Agressif', 'Modéré', 'Stable'];
+  const PROFILES = ['Agressif', 'Agressif-Thematique', 'Modéré', 'Stable', 'Dividende-PEA', 'Dividende-CTO'];
   const BUCKETS = ['Actions', 'ETF', 'Obligations', 'Crypto'];
   const PRIO = { EXIT: 0, TRIM: 1, BUY: 2 };
 
