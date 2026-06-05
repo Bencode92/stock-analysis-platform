@@ -155,6 +155,31 @@ def log_decision(portfolios_data: Dict,
                 "cap_per_name_pct": 5,
                 "cap_per_core_etf_pct": 50,
             },
+            # v6.19 (2026-06-05) — Règles d'or à appliquer à chaque rebalance
+            # Hiérarchie en 4 tiers (filtres + construction) ET règle de surveillance
+            # Si jamais ce log est consulté dans 2-3 ans, ces règles doivent rester appliquées.
+            "regles_de_selection_4_tiers": {
+                "tier_1_qualite_absolue": "Buffett ≥ 60-70 selon profil (Stable 70 / Modéré 65 / Agressif 60)",
+                "tier_2_qualite_relative": "Quality ≥ 60",
+                "tier_3_risk_alignment": "Vol_3y dans la band du profil",
+                "tier_4_diversification": "Max 1 secteur GICS L1 pour Stable, max 2 pour autres",
+                "doctrine": "Buffett+Quality sont des FILTRES, pas une thèse. La diversification (tier 4) décide quoi va ensemble.",
+            },
+            "regle_or_n3_rebalance_checklist": {
+                "principe": (
+                    "À l'entrée : ANTI-MOMENTUM (achète qualité même en baisse, en solde). "
+                    "À la sortie : VÉRIFICATION DU FONDAMENTAL (pas vente automatique sur la perf)."
+                ),
+                "checklist_rebalance_annuel": [
+                    "1. Pour chaque ligne du portefeuille, regarder la perf 1 an actuelle.",
+                    "2. Si perf < -30% sur 1 an : DÉCLENCHE une vérification du Buffett/Quality.",
+                    "3. Comparer Buffett_actuel vs Buffett à l'entrée (consulter data/score_history/scores_<entrée>.json).",
+                    "4. Si Buffett a chuté de >15 points OU si Quality < 50 désormais : le fondamental a CASSÉ → SORTIR.",
+                    "5. Si Buffett/Quality tiennent (chute mineure ou stable) : l'action est en SOLDE → GARDER (achat additionnel si DCA).",
+                    "6. La perf seule n'est JAMAIS un signal de vente — elle déclenche une vérification du fondamental.",
+                ],
+                "exception": "Si une action a fait > +200% sur 1 an, vérifier qu'elle ne dépasse pas le cap satellite 5%. Sinon, écrêter (vente partielle pour ramener à 5%) sans vendre tout.",
+            },
         },
         "profiles": profile_summaries,
         "cross_profile_overlaps": overlaps,
