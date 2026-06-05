@@ -275,8 +275,37 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
             return base + (STICKY_BONUS if tk in prev_for_profile else 0)
         candidates.sort(key=_score, reverse=True)
     else:
+        # v6.22 — T1 (qualité absolue) PRIME sur T4 (diversification)
+        # Le profile_assignment annote _profile_native par fit_score sans
+        # forcément appliquer le min_buffett_score du profil. Conséquence
+        # observée : Stable a retenu AD/SHEL/FGR (Buffett 67) alors que
+        # min_buffett_score=70 pour Stable. La diversification sectorielle
+        # (max 1/secteur) écrasait silencieusement T1 quand il n'y avait
+        # pas de Buffett≥70 dans un secteur donné.
+        # Fix : filtrer explicitement par Buffett/Quality du profil AVANT
+        # la diversification. Si après filtre il reste < n_target candidats
+        # dans n secteurs distincts, on accepte une compo plus courte plutôt
+        # que de dégrader la qualité — la hiérarchie des tiers (T1 > T4)
+        # est une règle de doctrine.
         fit_key = _FIT_KEY_BY_PROFILE.get(profile, "_fit_modere")
-        candidates = [s for s in all_stocks if s.get("_profile_native") == profile]
+        try:
+            from portfolio_engine.preset_meta import PROFILE_POLICY
+        except ImportError:
+            from .preset_meta import PROFILE_POLICY
+        policy = PROFILE_POLICY.get(profile, {})
+        min_buf = policy.get("min_buffett_score", 0)
+        min_qual = policy.get("min_quality_gate", 0)
+        gate = (policy.get("gate_logic") or "or").lower()
+        def _passes_qa(s):
+            b = s.get("buffett_score") or 0
+            q = s.get("quality_score") or 0
+            if gate == "and":
+                return b >= min_buf and q >= min_qual
+            return b >= min_buf or q >= min_qual
+        candidates = [
+            s for s in all_stocks
+            if s.get("_profile_native") == profile and _passes_qa(s)
+        ]
         def _score(s):
             base = s.get(fit_key) or 0
             tk = s.get("ticker") or s.get("symbol") or ""
