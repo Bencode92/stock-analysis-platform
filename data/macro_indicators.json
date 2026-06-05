@@ -1,11 +1,11 @@
 {
   "_market_data_flat": {
     "date": "2026-06-05",
-    "brent_usd": 94.93,
-    "brent_usd_avg5d": 95.75,
-    "gold_usd": 4466.7224,
-    "silver_usd": 72.84059,
-    "vix": 15.62,
+    "brent_usd": 98.29,
+    "brent_usd_avg5d": 98.29,
+    "gold_usd": 4468.90921,
+    "silver_usd": 72.90004,
+    "vix": 15.65,
     "fed_funds_rate": 3.62,
     "fed_funds_rate_delta_6m": -0.02,
     "cpi_yoy_pct": 3.95,
@@ -16,12 +16,12 @@
     "us_2y_yield": 4.08,
     "yield_curve_2s10s": 41.0,
     "breakeven_5y": 2.48,
-    "sp500_level": 7584.31,
-    "sp500_change_1d_pct": 0.2734136915740232,
+    "sp500_level": 757.090027,
+    "sp500_change_1d_pct": 0.37786867,
     "hyg_change_1d_pct": -0.4985666209647335,
     "lqd_change_1d_pct": -0.3752516932088695,
     "trade_weighted_usd": 118.8783,
-    "eurusd": 1.16401,
+    "eurusd": 1.16412,
     "nasdaq_change_1d_pct": -0.48373934,
     "xlu_perf_1d_pct": 0.52619434,
     "xle_perf_1d_pct": 0.068133054,
@@ -33,36 +33,34 @@
   },
   "macro_environment": {
     "brent": {
-      "price": 94.93,
-      "source": "yahoo_BZ=F",
-      "date": "2026-06-05",
-      "avg_5d": 95.75,
-      "_fred_price": 98.29,
-      "_fred_date": "2026-06-01"
+      "price": 98.29,
+      "source": "fred_DCOILBRENTEU",
+      "date": "2026-06-01",
+      "avg_5d": 98.29
     },
     "gold": {
-      "price": 4466.7224,
-      "change_1d_pct": -0.2065123,
+      "price": 4468.90921,
+      "change_1d_pct": -0.15765558,
       "datetime": "2026-06-05"
     },
     "silver": {
-      "price": 72.84059,
-      "change_1d_pct": -1.41935
+      "price": 72.90004,
+      "change_1d_pct": -1.33889
     },
     "trade_weighted_usd": {
       "value": 118.8783,
       "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130."
     },
     "sp500": {
-      "level": 7584.31,
-      "change_1d_pct": 0.2734136915740232,
-      "source": "yahoo_^GSPC",
-      "date": "2026-06-04 20:47"
+      "level": 757.090027,
+      "change_1d_pct": 0.37786867,
+      "source": "twelve_data_SPY_etf_proxy",
+      "_warning": "SPY ETF price, NOT S&P index level"
     },
     "vix": {
-      "value": 15.62,
-      "date": "2026-06-05 10:46",
-      "change": -2.679127725856707,
+      "value": 15.65,
+      "date": "2026-06-05 11:43",
+      "change": -2.4922118380062326,
       "source": "yahoo_^VIX",
       "_fred_value": 16.06,
       "_fred_date": "2026-06-03",
@@ -121,8 +119,8 @@
       "date": "2026-06-04"
     },
     "eurusd": {
-      "price": 1.16401,
-      "change_1d_pct": 0.25148783
+      "price": 1.16412,
+      "change_1d_pct": 0.26096168
     },
     "nasdaq": {
       "level": 740.60999,
@@ -147,14 +145,14 @@
       "date": "2026-04-01"
     },
     "_flags": [],
-    "_updated": "2026-06-05T11:01:39.461573",
+    "_updated": "2026-06-05T11:58:50.774137",
     "_sources": [
       "twelve_data",
       "fred"
     ]
   },
   "_meta": {
-    "updated": "2026-06-05T11:01:39.462298",
+    "updated": "2026-06-05T11:58:50.774784",
     "sources": [
       "twelve_data",
       "fred"
