@@ -269,6 +269,9 @@
                     <button class="portfolio-tab active" data-target="portfolio-agressif" data-original-type="Agressif">
                         <i class="fas fa-rocket" style="margin-right:4px;"></i> Agressif
                     </button>
+                    <button class="portfolio-tab" data-target="portfolio-agressif-thematique" data-original-type="Agressif-Thematique">
+                        <i class="fas fa-fire" style="margin-right:4px;"></i> Agressif Thématique
+                    </button>
                     <button class="portfolio-tab" data-target="portfolio-modere" data-original-type="Modéré">
                         <i class="fas fa-balance-scale" style="margin-right:4px;"></i> Modéré
                     </button>
@@ -487,7 +490,7 @@
 
             // Active profile tab
             const activeTab = document.querySelector('.portfolio-tab.active');
-            const profileMap = {'portfolio-agressif':'Agressif','portfolio-modere':'Modéré','portfolio-stable':'Stable','portfolio-dividende-pea':'Dividende-PEA','portfolio-dividende-cto':'Dividende-CTO'};
+            const profileMap = {'portfolio-agressif':'Agressif','portfolio-agressif-thematique':'Agressif-Thematique','portfolio-modere':'Modéré','portfolio-stable':'Stable','portfolio-dividende-pea':'Dividende-PEA','portfolio-dividende-cto':'Dividende-CTO'};
             let activeProfile = 'Agressif';
             if (activeTab) activeProfile = profileMap[activeTab.dataset.target] || 'Agressif';
 
