@@ -1790,10 +1790,13 @@ function renderSmartPicks() {
   if (mc) {
     const t = mc.macro_tilts || {};
     const dateStr = mc.as_of ? new Date(mc.as_of).toLocaleDateString('fr-FR') : '?';
-    const conf = mc.confidence || '?';
+    const confRaw = parseFloat(mc.confidence);
+    // v6.17 fix : confidence est 0-1 (pas 0-5), affichage en %
+    const confDisplay = isNaN(confRaw) ? '?' : (confRaw <= 1 ? (confRaw*100).toFixed(0) + '%' : confRaw.toFixed(2));
     const reg = mc.market_regime || '?';
+    const smoothed = mc._meta?.smoothing_applied ? ' <span class="badge green">smoothed</span>' : ' <span class="badge orange">no smoothing</span>';
     banner.innerHTML = `
-      <strong>📡 RADAR macro du jour</strong> — ${dateStr}, régime <em>${reg}</em>, confiance ${conf}/5<br>
+      <strong>📡 RADAR macro du jour</strong> — ${dateStr}, régime <em>${reg}</em>, confiance ${confDisplay}${smoothed}<br>
       <span class="badge green">Favorisés secteurs</span> ${(t.favored_sectors||[]).join(', ') || '—'}<br>
       <span class="badge red">Évités secteurs</span> ${(t.avoided_sectors||[]).join(', ') || '—'}<br>
       <span class="badge green">Favorisés régions</span> ${(t.favored_regions||[]).join(', ') || '—'}<br>

@@ -888,10 +888,27 @@ def maybe_smooth_context(old_ctx: Optional[Dict[str, Any]], new_ctx: Dict[str, A
 
 
 def _is_radar_context(ctx: Optional[Dict[str, Any]]) -> bool:
+    """v1.6.2 (2026-06-05) : accepte les contextes structurellement compatibles.
+
+    Avant : exigeait strictement model.startswith("radar_") — bloquait le smoothing
+    quand l'ancien contexte venait du MI Claude API (model="claude-*").
+    Conséquence : smoothing désactivé en permanence si jamais l'ancien != RADAR.
+
+    Maintenant : OK si model="radar_*" OU si la structure macro_tilts a les bons
+    champs (favored_sectors + avoided_sectors présents). Ça permet au smoothing
+    de tourner en cross-format aussi.
+    """
     if not ctx:
         return False
     model = ctx.get("_meta", {}).get("model", "")
-    return str(model).startswith("radar_")
+    if str(model).startswith("radar_"):
+        return True
+    # Fallback structurel : si l'ancien a un macro_tilts utilisable, OK pour smooth
+    tilts = ctx.get("macro_tilts", {})
+    if isinstance(tilts, dict):
+        if "favored_sectors" in tilts and "avoided_sectors" in tilts:
+            return True
+    return False
 
 
 # -------------------- Public API --------------------
