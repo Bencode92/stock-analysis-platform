@@ -40,6 +40,18 @@ UCITS_TO_US = {
     "IBGS.AS": "VGSH", "IBGS": "VGSH",
     "IBCI.AS": "STIP", "IBCI": "STIP",
     "SGLN.AS": "GLD", "SGLN": "GLD",
+    # v6.22 fix : tickers stocks régionaux qui ont besoin du suffixe yfinance
+    "BVI": "BVI.PA",
+    "PUB": "PUB.PA",
+    "FGR": "FGR.PA",
+    "AD": "AD.AS",
+    "SHEL": "SHEL.L",
+    "ADM": "ADM.L",
+    "NTGY": "NTGY.MC",
+    "FRES": "FRES.L",
+    "3653": "3653.TW",
+    "6669": "6669.TW",
+    "3443": "3443.TW",
 }
 
 # Décomposition des ETF broad pour métriques DR/PC1.
@@ -179,7 +191,7 @@ def main():
                 profiles[prof] = weights
         else:
             # Format portfolios.json — _tickers_meta par profil
-            for prof in ["Stable", "Modéré", "Agressif"]:
+            for prof in ["Stable", "Modéré", "Agressif", "Agressif-Thematique"]:
                 p = d.get(prof) or d.get("portfolios", {}).get(prof) or {}
                 meta = p.get("_tickers_meta") or {}
                 if meta:
@@ -214,7 +226,7 @@ def main():
     all_tickers = list(all_tickers)
 
     print(f"📊 Téléchargement {len(all_tickers)} tickers...")
-    raw = yf.download(all_tickers, period="5y", auto_adjust=True, progress=False)
+    raw = yf.download(all_tickers, period="10y", auto_adjust=True, progress=False)
     px = raw["Close"] if "Close" in raw.columns.get_level_values(0) else raw
     px = px.dropna(axis=1, how="all")
     rets_full = px.pct_change().dropna(how="all")
@@ -282,10 +294,15 @@ def main():
                 for f, b in betas.items():
                     betas_port[f] += w * b
 
-        # 5. Stress 2022
+        # 5. Stress 2022 (Fed hike Jan-Oct)
         s22 = port_ret.loc["2022-01-03":"2022-10-14"]
         stress_2022 = (1 + s22).prod() - 1 if len(s22) > 1 else None
         mdd_2022 = ((1+s22).cumprod() / (1+s22).cumprod().cummax() - 1).min() if len(s22) > 1 else None
+
+        # 5b. Stress Q4 2018 (Fed-induced selloff Sep-Dec)
+        s18 = port_ret.loc["2018-09-20":"2018-12-24"]
+        stress_2018 = (1 + s18).prod() - 1 if len(s18) > 1 else None
+        mdd_2018 = ((1+s18).cumprod() / (1+s18).cumprod().cummax() - 1).min() if len(s18) > 1 else None
 
         # === SORTIE ===
         print(f"\n  [Composition]  {len(resolved)} positions, total {sum(resolved.values())*100:.1f}%")
@@ -313,6 +330,9 @@ def main():
         if stress_2022 is not None:
             print(f"\n  [Stress 2022 Fed hike Jan-Oct]")
             print(f"    Perf cumul : {stress_2022*100:+.1f}%   MaxDD : {mdd_2022*100:.1f}%")
+        if stress_2018 is not None:
+            print(f"  [Stress Q4 2018 Fed selloff Sep-Dec]")
+            print(f"    Perf cumul : {stress_2018*100:+.1f}%   MaxDD : {mdd_2018*100:.1f}%")
 
         # === VERDICT ===
         print(f"\n  [VERDICT]")
