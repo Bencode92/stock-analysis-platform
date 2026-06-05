@@ -1,36 +1,26 @@
 {
   "_meta": {
-    "version": "1.5",
+    "version": "1.6",
     "purpose": "Portefeuille cible figé (baseline) pour les profils Dividende-PEA et Dividende-CTO. Évite que l'optimizer remplace des titres entre deux runs (turnover doit être proche de zéro pour une stratégie buy-and-hold dividende).",
     "rebalance_policy": "Le baseline N'EST modifié QUE dans 3 cas : (1) flag CONFIG['force_dividende_rebalance']=True, (2) trigger auto si un titre devient toxique (quality<40, payout>100%, dividend_growth_3y<-20%, ou ticker disparu), (3) édition manuelle de ce fichier (PR git).",
     "between_rebalances": "Mêmes tickers, seuls les poids peuvent fluctuer de ±2-3pp selon le marché. Aucune entrée/sortie.",
     "last_rebalance_date": "2026-06-05",
-    "last_rebalance_trigger": "v1.5_doctrine_t1_qualite_prime_post_v6.22",
+    "last_rebalance_trigger": "v1.6_simplification_5_convictions_uniques_anti_doublon_CD9",
     "usage_in_code": "Chargé par generate_portfolios_v4.py via _load_dividende_baseline(). Si présent, restreint l'univers candidats Dividende à ces tickers.",
     "v1.1_changes": "Concentration 13→9 PEA (drop HNR1/ACA/AGS, garde BMED), drop ADM du CTO. Recos expert v3.",
     "v1.2_changes": "Ajout IG (Italgas) sur donnée yield 8.3% du composer UI — RÉTRACTÉ ensuite (donnée fausse).",
     "v1.3_changes": "RETRAIT IG (Italgas) — yield_regular réel 3.56%, cash payout 151%, dette massive post-acquisition.",
     "v1.4_changes": "GO FINAL expert (scénario A) : drop ACN (incohérent Income à 3.5% yield) + drop BMED (overweight Finance avec EEI 36%) + drop SAN (payout 99%) + drop G1A/HEN/ITX/IBE (trop bas yield ou marginaux). Ajout PUB (Publicis, qual 78, yield 4.32%, secteur Communication) et CS (AXA, yield 5.75%, qual 67). Final 4 picks PEA : LI + TTE + PUB + CS. Exécution mardi 26 mai 2026 (Pentecôte lundi 25).",
-    "v1.5_changes": "Rebalance complet post-v6.22 (doctrine T1 qualité prime sur T4). Sleeve dividende = REINVESTISSEMENT long terme (compounding 10-20 ans, pas income immédiat) → Buffett doit peser plus que yield brut. PEA passe de 4 à 16 positions (target_holdings), CTO de 2 à 10. Sortants PEA : TTE (Buffett 50, risque coupe 2020-style), CS (Finance saturé). Entrants PEA : 14 stocks selon scoring rebalancé yield 0.12 / quality 0.18 (REC Buf 100 Santé, GALP Buf 100 Energie, BMED/A5G/UNI Finance, NTGY/IG Utilities, BVI/FGR/WKL Industries, ITX/AD/MC Conso, AKZA Matériaux). CTO conserve VICI+AUTO + ajoute 8 positions (TROW Buf 100 Finance, PG Buf 100 Conso, ADM, GLPI, IMB, VZ, SHEL, SCHN). Buffett moy PEA 70.8→78.8 (+8), Quality 68→72 (+4), yield 4.90%→4.44% (-0.46 acceptable), 9 secteurs (vs 4). Source : scripts/audit_dividend_delta.py scénario C."
+    "v1.5_changes": "Rebalance complet post-v6.22 (doctrine T1 qualité prime sur T4). Sleeve dividende = REINVESTISSEMENT long terme (compounding 10-20 ans, pas income immédiat) → Buffett doit peser plus que yield brut. PEA passe de 4 à 16 positions (target_holdings), CTO de 2 à 10. Sortants PEA : TTE (Buffett 50, risque coupe 2020-style), CS (Finance saturé). Entrants PEA : 14 stocks selon scoring rebalancé yield 0.12 / quality 0.18 (REC Buf 100 Santé, GALP Buf 100 Energie, BMED/A5G/UNI Finance, NTGY/IG Utilities, BVI/FGR/WKL Industries, ITX/AD/MC Conso, AKZA Matériaux). CTO conserve VICI+AUTO + ajoute 8 positions (TROW Buf 100 Finance, PG Buf 100 Conso, ADM, GLPI, IMB, VZ, SHEL, SCHN). Buffett moy PEA 70.8→78.8 (+8), Quality 68→72 (+4), yield 4.90%→4.44% (-0.46 acceptable), 9 secteurs (vs 4). Source : scripts/audit_dividend_delta.py scénario C.",
+    "v1.6_changes": "Simplification PEA 12→5 convictions (anti-doublon CD9). Constat : 6-8 des 12 actions précédentes étaient déjà dans CD9 (AD/ITX/NTGY/PUB/BVI/AKZA/FGR), donc tilt redondant pour 12 ordres et 12 frais. Logique : un satellite n'a de sens que s'il AJOUTE au cœur ETF ; les doublons sont du bruit. Picks Option C (diversification pure) = 5 vraies convictions absentes de CD9, 1 par pays + 1 par secteur : REC (Italie, Pharma, Buf 100), GALP (Portugal, Energie, Buf 100), HNR1 (Allemagne, Finance/Réassurance, Buf 83), WKL (Pays-Bas, Industries, Buf 67), CAP (France, Tech, Buf 83). Buffett moy 86, yield 3.73%, 5 pays / 5 secteurs distincts. Choix éditorial du user : préférer diversification stricte au yield maximum (option C vs A 2-Finance, B REIT mais 2-FR). CTO inchangé v1.5 (9 lignes effectives sur 10 baseline). NOTE BUG: GALP a été rejetée par le pipeline car _profile_native=None dans data/stocks_europe.json. Compo live actuelle = 4 lignes (REC/HNR1/WKL/CAP) à 9% chacune + CD9 64% = 100%. À investiguer : pourquoi GALP n'a pas de profil natif assigné par profile_assignment.py malgré Buffett 100, yield 3.33%, FCF yield 10.46%, vol 29.55% — possiblement à cause de quality_score 66 borderline ou perf_1y manquant."
   },
   "holdings": {
     "Dividende-PEA": [
-      "BMED",
-      "LI",
-      "A5G",
-      "UNI",
-      "NTGY",
-      "IG",
-      "GALP",
       "REC",
-      "FGR",
-      "AD",
-      "ITX",
-      "BVI",
-      "PUB",
-      "AKZA",
+      "GALP",
+      "HNR1",
       "WKL",
-      "MC"
+      "CAP"
     ],
     "Dividende-CTO": [
       "ADM",
