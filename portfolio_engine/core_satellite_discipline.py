@@ -252,11 +252,21 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
 
     if profile == "Agressif":
         # Pool élargi : qualité quel que soit le profil natif, vol >= 20
+        # v6.21 — Cap perf_1y ≤ 300% par COHÉRENCE DE DOCTRINE avec le
+        # Thématique (ligne 713), pas pour optimiser un Sharpe historique.
+        # Justification logique, vraie AVANT tout backtest : une action qui
+        # a fait +400%/an est un pari sur la queue de distribution, pas une
+        # qualité reproductible. Le filtre vire les fusées spéculatives
+        # absurdes sans toucher aux vrais leaders (qui plafonnent à
+        # ~150-250% sur les meilleurs cycles).
+        # NE PAS modifier ce seuil sur la base d'un backtest a posteriori
+        # (overfitting) : c'est une règle anti-spéculative de principe.
         candidates = [
             s for s in all_stocks
             if s.get("_profile_native") in ("Agressif", "Modéré")
             and (s.get("volatility_3y") or 0) >= 20.0
             and (s.get("buffett_score") or 0) >= 70  # qualité minimum
+            and (s.get("perf_1y") or 0) < 300.0      # v6.21 anti-spéculatif
         ]
         # Tri par fit_modere + sticky bonus si dans portefeuille précédent
         def _score(s):
