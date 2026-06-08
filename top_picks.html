@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>🏆 Top picks — classement actions individuelles</title>
+<style>
+  body { background:#0a0e14;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:24px;line-height:1.5; }
+  h1 { font-size:1.5rem;color:#64b5f6;margin-bottom:8px; }
+  .intro { background:rgba(33,150,243,0.08);border-left:3px solid #64b5f6;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:0.88rem;color:#bbdefb; }
+  .filter-bar { display:flex;gap:0.6rem;margin-bottom:14px;align-items:center;flex-wrap:wrap; }
+  .filter-bar input, .filter-bar select { background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:6px 10px;border-radius:4px;font-size:0.85rem; }
+  .filter-bar input[type="text"] { width:220px; }
+  .filter-bar input[type="number"] { width:80px; }
+  .filter-bar label { font-size:0.78rem;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:4px; }
+  .stats-bar { background:rgba(255,255,255,0.04);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.82rem;display:flex;gap:1.5rem;flex-wrap:wrap; }
+  .stat { color:rgba(255,255,255,0.7); }
+  .stat strong { color:#fff; }
+  table { width:100%;border-collapse:collapse;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;overflow:hidden; }
+  th { background:rgba(255,255,255,0.06);padding:10px 12px;text-align:left;font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.85);cursor:pointer;user-select:none;border-bottom:1px solid rgba(255,255,255,0.08); }
+  th:hover { background:rgba(255,255,255,0.1); }
+  th .sort-arrow { font-size:0.7rem;color:#64b5f6;margin-left:3px; }
+  td { padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.85rem; }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+  tr.blocked td { opacity:0.5; }
+  .ticker { font-family:'JetBrains Mono',monospace;font-weight:700;color:#64b5f6; }
+  .num { text-align:right;font-family:'JetBrains Mono',monospace; }
+  .access-ok { color:#4caf50;font-size:1.1rem; }
+  .access-no { color:#ef5350;font-size:1.1rem; }
+  .chip { display:inline-block;padding:1px 7px;border-radius:3px;font-size:0.72rem;font-weight:700;font-family:'JetBrains Mono',monospace; }
+  .buf-100 { background:rgba(76,175,80,0.2);color:#81c784; }
+  .buf-80 { background:rgba(76,175,80,0.12);color:#81c784; }
+  .buf-60 { background:rgba(255,193,7,0.15);color:#ffc107; }
+  .buf-low { background:rgba(244,67,54,0.12);color:#ef5350; }
+  .q-high { background:rgba(33,150,243,0.18);color:#64b5f6; }
+  .q-mid { background:rgba(33,150,243,0.10);color:rgba(100,181,246,0.75); }
+  .q-low { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.45); }
+  .perf-pos { color:#4caf50; }
+  .perf-neg { color:#ef5350; }
+  .yahoo-link { color:#64b5f6;text-decoration:none; }
+  .yahoo-link:hover { text-decoration:underline; }
+  .help { color:rgba(255,255,255,0.5);font-size:0.78rem;margin-top:8px; }
+  .pagination { display:flex;justify-content:center;gap:6px;margin-top:14px; }
+  button { background:rgba(33,150,243,0.2);color:#64b5f6;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:0.82rem;font-weight:600; }
+  button.active { background:#26c281;color:#0a1410; }
+  button:disabled { opacity:0.4;cursor:not-allowed; }
+  .detail-panel { margin-top:6px;padding:10px 14px;background:rgba(255,165,0,0.04);border-left:3px solid #ffb74d;border-radius:4px;font-size:0.78rem;color:rgba(255,255,255,0.75); }
+</style>
+</head>
+<body>
+
+<h1>🏆 Top picks — classement actions individuelles</h1>
+
+<div class="intro">
+  <strong>Pour les achats ponctuels d'une seule action.</strong> Univers complet (US + Europe + Asie). Filtre par accès broker (selon ta config <code>broker_access.json</code>), pays, secteur, score min. Tri par défaut : Buffett + Quality combiné ↓. Clique sur l'en-tête d'une colonne pour trier autrement, clique sur un ticker pour ouvrir Yahoo Finance.
+</div>
+
+<div class="filter-bar">
+  <input type="text" id="filter-search" placeholder="🔍 Ticker ou nom…" oninput="debouncedRender()" />
+  <select id="filter-region" onchange="render()">
+    <option value="">Toutes régions</option>
+    <option value="US">🇺🇸 US</option>
+    <option value="EU">🇪🇺 Europe</option>
+    <option value="ASIA">🌏 Asie</option>
+  </select>
+  <select id="filter-country" onchange="render()">
+    <option value="">Tous pays</option>
+  </select>
+  <select id="filter-sector" onchange="render()">
+    <option value="">Tous secteurs</option>
+  </select>
+  <label>Buf min <input type="number" id="filter-buf-min" value="60" min="0" max="100" step="5" oninput="debouncedRender()" /></label>
+  <label>Q min <input type="number" id="filter-q-min" value="60" min="0" max="100" step="5" oninput="debouncedRender()" /></label>
+  <label>Div min <input type="number" id="filter-div-min" value="0" min="0" max="20" step="0.5" oninput="debouncedRender()" /></label>
+  <select id="filter-access" onchange="render()">
+    <option value="">Accès broker : tous</option>
+    <option value="ok">✓ Accessibles seulement</option>
+  </select>
+</div>
+
+<div class="stats-bar">
+  <span class="stat">Univers : <strong id="stat-total">0</strong></span>
+  <span class="stat">Filtrés : <strong id="stat-filtered">0</strong></span>
+  <span class="stat">Affichés : <strong id="stat-shown">0</strong></span>
+  <span class="stat">Page <strong id="stat-page">1</strong> / <strong id="stat-pages">1</strong></span>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th onclick="setSort('ticker')">Ticker <span class="sort-arrow" id="arrow-ticker"></span></th>
+      <th onclick="setSort('name')">Nom <span class="sort-arrow" id="arrow-name"></span></th>
+      <th onclick="setSort('country')">Pays <span class="sort-arrow" id="arrow-country"></span></th>
+      <th onclick="setSort('sector')">Secteur <span class="sort-arrow" id="arrow-sector"></span></th>
+      <th class="num" onclick="setSort('buffett_score')">Buf <span class="sort-arrow" id="arrow-buffett_score">↓</span></th>
+      <th class="num" onclick="setSort('quality_score')">Quality <span class="sort-arrow" id="arrow-quality_score"></span></th>
+      <th class="num" onclick="setSort('combined')">Buf+Q <span class="sort-arrow" id="arrow-combined"></span></th>
+      <th class="num" onclick="setSort('dividend_yield')">Div % <span class="sort-arrow" id="arrow-dividend_yield"></span></th>
+      <th class="num" onclick="setSort('perf_1y')">Perf 1y <span class="sort-arrow" id="arrow-perf_1y"></span></th>
+      <th class="num" onclick="setSort('volatility_3y')">Vol <span class="sort-arrow" id="arrow-volatility_3y"></span></th>
+      <th>Accès</th>
+    </tr>
+  </thead>
+  <tbody id="stocks-tbody"><tr><td colspan="11" style="padding:20px;text-align:center;color:rgba(255,255,255,0.5);">Chargement…</td></tr></tbody>
+</table>
+
+<div class="pagination" id="pagination"></div>
+
+<p class="help">Données <code>data/stocks_*.json</code> + accessibilité <code>config/broker_access.json</code>. Pas de recommandation — uniquement un filtre + classement de qualité.</p>
+
+<script>
+let allStocks = [];
+let access = {};
+let sortKey = 'buffett_score';
+let sortDir = 'desc';
+let currentPage = 1;
+const PAGE_SIZE = 50;
+
+async function load() {
+  // Charger les 3 univers en parallèle
+  const paths = ['data/stocks_us.json', 'data/stocks_europe.json', 'data/stocks_asia.json'];
+  const fallback = path => [path, './' + path, '/stock-analysis-platform/' + path, `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/${path}`];
+
+  async function tryLoad(p) {
+    for (const path of fallback(p)) {
+      try {
+        const r = await fetch(path + '?_=' + Date.now());
+        if (r.ok) return await r.json();
+      } catch(e) { /* try next */ }
+    }
+    return null;
+  }
+
+  const [dUS, dEU, dAS] = await Promise.all(paths.map(tryLoad));
+  for (const [d, region] of [[dUS, 'US'], [dEU, 'EU'], [dAS, 'ASIA']]) {
+    if (d && Array.isArray(d.stocks)) {
+      for (const s of d.stocks) {
+        if (s.ticker) {
+          s._region = region;
+          allStocks.push(s);
+        }
+      }
+    }
+  }
+  console.log(`✓ Univers chargé : ${allStocks.length} stocks`);
+
+  // Charger broker_access
+  try {
+    for (const path of fallback('config/broker_access.json')) {
+      try {
+        const r = await fetch(path + '?_=' + Date.now());
+        if (r.ok) { const d = await r.json(); access = d.access || {}; break; }
+      } catch(e) { /* try next */ }
+    }
+  } catch(e) { console.warn('broker_access not loaded:', e); }
+
+  // Populate filters
+  const countries = [...new Set(allStocks.map(s => s.country).filter(Boolean))].sort();
+  const cSel = document.getElementById('filter-country');
+  for (const c of countries) { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; cSel.appendChild(opt); }
+  const sectors = [...new Set(allStocks.map(s => s.sector).filter(Boolean))].sort();
+  const sSel = document.getElementById('filter-sector');
+  for (const sec of sectors) { const opt = document.createElement('option'); opt.value = sec; opt.textContent = sec; sSel.appendChild(opt); }
+
+  document.getElementById('stat-total').textContent = allStocks.length;
+  render();
+}
+
+let renderTimer = null;
+function debouncedRender() {
+  if (renderTimer) clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => { currentPage = 1; render(); }, 200);
+}
+
+function setSort(key) {
+  if (sortKey === key) {
+    sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    sortKey = key;
+    sortDir = ['ticker','name','country','sector'].includes(key) ? 'asc' : 'desc';
+  }
+  currentPage = 1;
+  render();
+}
+
+function isAccessible(tk, region) {
+  // Si stock asia et tagué false → bloqué. Sinon accessible par défaut.
+  if (region === 'ASIA') return access[tk] !== false;
+  return true; // US/EU toujours accessibles (broker européen standard)
+}
+
+function render() {
+  const search = (document.getElementById('filter-search').value || '').toLowerCase();
+  const region = document.getElementById('filter-region').value;
+  const country = document.getElementById('filter-country').value;
+  const sector = document.getElementById('filter-sector').value;
+  const bufMin = parseFloat(document.getElementById('filter-buf-min').value) || 0;
+  const qMin = parseFloat(document.getElementById('filter-q-min').value) || 0;
+  const divMin = parseFloat(document.getElementById('filter-div-min').value) || 0;
+  const accFilter = document.getElementById('filter-access').value;
+
+  // Filtre
+  let filtered = allStocks.filter(s => {
+    if (region && s._region !== region) return false;
+    if (country && s.country !== country) return false;
+    if (sector && s.sector !== sector) return false;
+    if ((s.buffett_score || 0) < bufMin) return false;
+    if ((s.quality_score || 0) < qMin) return false;
+    if (divMin > 0 && (s.dividend_yield || 0) < divMin) return false;
+    if (accFilter === 'ok' && !isAccessible(s.ticker, s._region)) return false;
+    if (search) {
+      const hay = ((s.ticker || '') + ' ' + (s.name || '') + ' ' + (s.stock_name || '')).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Tri
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortKey === 'combined') {
+      av = (a.buffett_score || 0) + (a.quality_score || 0);
+      bv = (b.buffett_score || 0) + (b.quality_score || 0);
+    } else {
+      av = a[sortKey]; bv = b[sortKey];
+    }
+    if (typeof av === 'string' || typeof bv === 'string') {
+      av = (av || '').toString(); bv = (bv || '').toString();
+      return sortDir === 'desc' ? bv.localeCompare(av) : av.localeCompare(bv);
+    }
+    av = av == null ? (sortDir === 'desc' ? -9e9 : 9e9) : av;
+    bv = bv == null ? (sortDir === 'desc' ? -9e9 : 9e9) : bv;
+    return sortDir === 'desc' ? (bv - av) : (av - bv);
+  });
+
+  // Mise à jour des flèches
+  for (const k of ['ticker','name','country','sector','buffett_score','quality_score','combined','dividend_yield','perf_1y','volatility_3y']) {
+    document.getElementById('arrow-' + k).textContent = (k === sortKey) ? (sortDir === 'desc' ? '↓' : '↑') : '';
+  }
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = 1;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+
+  // Stats
+  document.getElementById('stat-filtered').textContent = filtered.length;
+  document.getElementById('stat-shown').textContent = page.length;
+  document.getElementById('stat-page').textContent = currentPage;
+  document.getElementById('stat-pages').textContent = totalPages;
+
+  // Render rows
+  const tbody = document.getElementById('stocks-tbody');
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="padding:20px;text-align:center;color:rgba(255,255,255,0.5);">Aucune action ne correspond aux filtres.</td></tr>';
+  } else {
+    tbody.innerHTML = page.map(s => {
+      const tk = s.ticker;
+      const acc = isAccessible(tk, s._region);
+      const buf = s.buffett_score;
+      const q = s.quality_score;
+      const div = s.dividend_yield;
+      const perf = s.perf_1y;
+      const vol = s.volatility_3y;
+      const combined = (buf || 0) + (q || 0);
+      const yahooSuffix = { ASIA: { 'Inde': '.NS', 'Taïwan': '.TW', 'Corée': '.KS', 'Chine': '.SS', 'Thaïlande': '.BK', 'Philippines': '.PS' }, EU: { 'France': '.PA', 'Allemagne': '.DE', 'Pays-Bas': '.AS', 'Espagne': '.MC', 'Italie': '.MI', 'Belgique': '.BR', 'Royaume-Uni': '.L', 'Suisse': '.SW', 'Suède': '.ST', 'Finlande': '.HE', 'Danemark': '.CO', 'Norvège': '.OL', 'Irlande': '.IR', 'Portugal': '.LS' } };
+      const sfx = (yahooSuffix[s._region] || {})[s.country] || '';
+      const yhTicker = tk + sfx;
+      const bufCls = buf >= 100 ? 'buf-100' : buf >= 80 ? 'buf-80' : buf >= 60 ? 'buf-60' : 'buf-low';
+      const qCls = q >= 75 ? 'q-high' : q >= 60 ? 'q-mid' : 'q-low';
+      return `
+      <tr class="${acc ? '' : 'blocked'}">
+        <td><a href="https://finance.yahoo.com/quote/${yhTicker}" target="_blank" class="ticker yahoo-link">${tk}</a></td>
+        <td>${(s.name || s.stock_name || '').slice(0,32)}</td>
+        <td>${(s.country || '').slice(0,12)}</td>
+        <td>${(s.sector || '').slice(0,20)}</td>
+        <td class="num"><span class="chip ${bufCls}">${buf ?? '—'}</span></td>
+        <td class="num"><span class="chip ${qCls}">${q ?? '—'}</span></td>
+        <td class="num"><strong>${combined || '—'}</strong></td>
+        <td class="num">${div != null ? div.toFixed(2) + '%' : '—'}</td>
+        <td class="num ${perf > 0 ? 'perf-pos' : perf < 0 ? 'perf-neg' : ''}">${perf != null ? (perf >= 0 ? '+' : '') + perf.toFixed(1) + '%' : '—'}</td>
+        <td class="num">${vol != null ? vol.toFixed(0) + '%' : '—'}</td>
+        <td>${acc ? '<span class="access-ok" title="Accessible via ton broker">✓</span>' : '<span class="access-no" title="Pas accessible — voir broker_access.html">✗</span>'}</td>
+      </tr>
+      `;
+    }).join('');
+  }
+
+  // Pagination buttons
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+  const pages = [];
+  pages.push(`<button onclick="goPage(1)" ${currentPage===1?'disabled':''}>«</button>`);
+  pages.push(`<button onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`);
+  const around = 2;
+  for (let p = Math.max(1, currentPage-around); p <= Math.min(totalPages, currentPage+around); p++) {
+    pages.push(`<button class="${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`);
+  }
+  pages.push(`<button onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`);
+  pages.push(`<button onclick="goPage(${totalPages})" ${currentPage===totalPages?'disabled':''}>»</button>`);
+  pg.innerHTML = pages.join('');
+}
+
+function goPage(p) { currentPage = p; render(); window.scrollTo(0, 0); }
+
+load();
+</script>
+
+</body>
+</html>
