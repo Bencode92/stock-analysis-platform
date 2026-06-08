@@ -2,170 +2,391 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>🎯 Top picks curated — généré par le pipeline</title>
+<title>🎯 Top picks curated</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0e14;
-    --bg-elev: #0d1218;
-    --bg-card: rgba(255,255,255,0.025);
-    --border: rgba(255,255,255,0.07);
-    --border-hover: rgba(255,255,255,0.14);
-    --text: #e6edf3;
-    --text-mute: rgba(255,255,255,0.55);
+    --bg: #07090d;
+    --bg-elev: rgba(255,255,255,0.025);
+    --bg-card: rgba(255,255,255,0.03);
+    --bg-card-hover: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.12);
+    --text: #f0f4f8;
+    --text-mute: rgba(255,255,255,0.6);
     --text-dim: rgba(255,255,255,0.35);
-    --accent: #64b5f6;
-    --accent-warm: #ffb74d;
-    --accent-green: #81c784;
-    --accent-red: #ef5350;
+    --accent: #7dd3fc;
+    --accent-warm: #fbbf24;
+    --accent-green: #86efac;
+    --accent-red: #f87171;
+    --accent-purple: #c4b5fd;
+    --gradient-1: linear-gradient(135deg, #7dd3fc15 0%, #c4b5fd15 100%);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+    --radius: 12px;
+    --radius-sm: 8px;
   }
+
   * { box-sizing: border-box; }
-  body { background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;margin:0;padding:0;line-height:1.5;font-size:14px; }
-  .wrap { max-width:1400px;margin:0 auto;padding:24px 32px 48px; }
+  html, body { margin:0; padding:0; }
+  body {
+    background: radial-gradient(ellipse at top, rgba(125,211,252,0.04) 0%, var(--bg) 50%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.55;
+    font-size: 14px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 32px 64px; }
 
   /* === NAV === */
-  .nav-bar { display:flex;gap:18px;margin-bottom:20px;align-items:center;font-size:13px;color:var(--text-mute); }
-  .nav-bar a { color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;background:rgba(100,181,246,0.08);transition:background 0.15s; }
-  .nav-bar a:hover { background:rgba(100,181,246,0.16); }
+  .nav-bar {
+    display: flex; gap: 8px; margin-bottom: 24px; align-items: center;
+    padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); width: fit-content;
+  }
+  .nav-bar a {
+    color: var(--text-mute); text-decoration: none; padding: 7px 14px;
+    border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 7px; transition: all 0.15s;
+  }
+  .nav-bar a:hover { background: var(--bg-card-hover); color: var(--text); }
 
-  /* === HEADER === */
-  .hero { background:linear-gradient(180deg, rgba(100,181,246,0.05) 0%, transparent 100%);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:20px; }
-  .hero h1 { margin:0 0 4px 0;font-size:24px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px; }
-  .hero .sub { color:var(--text-mute);font-size:13px;margin-top:4px;line-height:1.6; }
-  .hero code { background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:11.5px;color:var(--accent-warm); }
+  /* === HERO === */
+  .hero {
+    background: var(--gradient-1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px 32px; margin-bottom: 24px;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; top: 0; right: 0; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(125,211,252,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    margin: 0 0 6px; font-size: 28px; font-weight: 700; color: #fff;
+    letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px;
+  }
+  .hero .emoji { font-size: 28px; }
+  .hero .sub { color: var(--text-mute); font-size: 14px; max-width: 800px; }
+  .hero code {
+    background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 5px;
+    font-size: 12px; color: var(--accent-warm); font-family: 'JetBrains Mono', monospace;
+  }
 
   /* === WARNING === */
-  .warning { background:rgba(255,193,7,0.06);border:1px solid rgba(255,193,7,0.25);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#ffd54f;line-height:1.65; }
-  .warning .lbl { font-weight:700;color:#ffc107; }
-  .warning ul { margin:8px 0 6px 0;padding-left:20px; }
-  .warning strong { color:#fff; }
+  .warning {
+    background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2);
+    border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px;
+    font-size: 13px; color: #fde68a; line-height: 1.65;
+  }
+  .warning .lbl { font-weight: 700; color: var(--accent-warm); display:flex; align-items:center; gap:6px; margin-bottom: 8px; }
+  .warning ul { margin: 8px 0 6px 0; padding-left: 24px; }
+  .warning ul li { margin: 4px 0; }
+  .warning strong { color: #fff; font-weight: 600; }
 
-  /* === CONTEXT BAR === */
-  .context-grid { display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:14px;margin-bottom:20px; }
-  .ctx-card { background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px; }
-  .ctx-label { font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:6px; }
-  .ctx-value { font-size:18px;font-weight:700;color:#fff; }
-  .ctx-sub { font-size:12px;color:var(--text-mute);margin-top:3px; }
-  .badge-fav { display:inline-block;padding:3px 9px;border-radius:5px;background:rgba(76,175,80,0.18);color:var(--accent-green);font-size:12px;margin:2px 3px 0 0;font-weight:600; }
-  .badge-avoid { display:inline-block;padding:3px 9px;border-radius:5px;background:rgba(244,67,54,0.15);color:var(--accent-red);font-size:12px;margin:2px 3px 0 0;font-weight:600; }
+  /* === CONTEXT GRID === */
+  .ctx-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-bottom: 28px;
+  }
+  .ctx-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; transition: all 0.2s;
+  }
+  .ctx-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .ctx-label {
+    font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 600; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ctx-value { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .ctx-sub { font-size: 12px; color: var(--text-mute); margin-top: 4px; }
+  .pill {
+    display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px;
+    margin: 2px 4px 2px 0; font-weight: 600;
+  }
+  .pill-fav { background: rgba(134,239,172,0.15); color: var(--accent-green); }
+  .pill-avo { background: rgba(248,113,113,0.12); color: var(--accent-red); }
 
-  /* === FILTERS === */
-  .filters { background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:20px;position:sticky;top:0;z-index:10;backdrop-filter:blur(10px); }
-  .filter-label { font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-right:10px;font-weight:600; }
-  .region-tabs { display:flex;gap:6px;flex-wrap:wrap; }
-  .region-btn { background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-mute);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px; }
-  .region-btn:hover { border-color:var(--border-hover);color:var(--text); }
-  .region-btn.active { background:rgba(100,181,246,0.15);border-color:var(--accent);color:var(--accent); }
-  .region-btn .count { background:rgba(255,255,255,0.08);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700; }
-  .region-btn.active .count { background:rgba(100,181,246,0.25);color:var(--accent); }
+  /* === TABS (Top 25 / Pays / Secteur / Industrie) === */
+  .tabs-wrap { position: sticky; top: 0; z-index: 50; padding-top: 8px; margin-bottom: 18px;
+               background: linear-gradient(180deg, var(--bg) 70%, transparent); backdrop-filter: blur(12px); }
+  .tabs {
+    display: flex; gap: 4px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px; width: fit-content;
+  }
+  .tab-btn {
+    background: transparent; border: none; color: var(--text-mute);
+    padding: 9px 16px; border-radius: var(--radius-sm); cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 7px; font-family: inherit;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--bg-card-hover); }
+  .tab-btn.active {
+    background: rgba(125,211,252,0.12); color: var(--accent);
+    box-shadow: inset 0 0 0 1px rgba(125,211,252,0.25);
+  }
+  .tab-btn .count {
+    background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; min-width: 22px; text-align: center;
+  }
+  .tab-btn.active .count { background: rgba(125,211,252,0.2); color: var(--accent); }
 
-  /* === SECTIONS === */
-  .section-title { font-size:16px;font-weight:700;color:#fff;margin:24px 0 12px 0;display:flex;align-items:center;gap:8px; }
-  .section-title .accent { color:var(--accent-warm); }
+  /* === FILTERS (région) === */
+  .filters-bar {
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px;
+  }
+  .filter-label {
+    font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 600; margin-right: 4px;
+  }
+  .region-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .region-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-mute); padding: 7px 14px; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+  }
+  .region-btn:hover { border-color: var(--border-strong); color: var(--text); background: var(--bg-card-hover); }
+  .region-btn.active {
+    background: rgba(125,211,252,0.12); border-color: rgba(125,211,252,0.4);
+    color: var(--accent);
+  }
+  .region-btn .num { color: var(--text-dim); font-size: 11px; font-weight: 600; margin-left: 2px; }
+  .region-btn.active .num { color: var(--accent); }
 
-  .picks-grid { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden; }
-  .pick-row { display:grid;grid-template-columns:50px 110px 1fr 200px 180px 80px 36px;align-items:center;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;gap:14px;cursor:pointer;transition:background 0.12s; }
-  .pick-row:hover { background:rgba(255,255,255,0.025); }
-  .pick-row.favored { border-left:3px solid var(--accent-green);padding-left:13px; }
-  .pick-row.avoided { border-left:3px solid var(--accent-red);padding-left:13px;opacity:0.7; }
+  /* === SECTION TITLE === */
+  .section-title {
+    font-size: 18px; font-weight: 700; color: #fff; margin: 32px 0 14px;
+    display: flex; align-items: center; gap: 10px; letter-spacing: -0.3px;
+  }
+  .section-title .ic { color: var(--accent-warm); }
+  .section-title .meta { color: var(--text-dim); font-size: 12px; font-weight: 500; margin-left: 8px; }
 
-  .rank { font-family:'JetBrains Mono', monospace;color:var(--text-dim);font-weight:600;font-size:12px;text-align:right; }
-  .ticker { font-family:'JetBrains Mono', monospace;color:var(--accent);font-weight:700;font-size:14px; }
-  .ticker a { color:inherit;text-decoration:none; }
-  .ticker a:hover { text-decoration:underline; }
-  .pick-name { color:#fff;font-weight:500; }
-  .pick-meta { font-size:12px;color:var(--text-mute); }
-  .pick-scores { display:flex;gap:6px;flex-wrap:wrap; }
-  .chip { padding:2px 8px;border-radius:5px;font-size:11.5px;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:-0.2px; }
-  .buf-100, .buf-90 { background:rgba(76,175,80,0.22);color:var(--accent-green); }
-  .buf-80 { background:rgba(76,175,80,0.14);color:var(--accent-green); }
-  .buf-60 { background:rgba(255,193,7,0.16);color:#ffc107; }
-  .buf-low { background:rgba(244,67,54,0.13);color:var(--accent-red); }
-  .q-high { background:rgba(33,150,243,0.18);color:var(--accent); }
-  .q-mid { background:rgba(33,150,243,0.10);color:rgba(100,181,246,0.75); }
-  .q-low { background:rgba(255,255,255,0.06);color:var(--text-mute); }
-  .perf-pos { color:var(--accent-green);font-weight:600; }
-  .perf-neg { color:var(--accent-red);font-weight:600; }
-  .composite { color:var(--accent-warm);font-weight:700;font-family:'JetBrains Mono',monospace;text-align:right;font-size:14px; }
-  .fav-marker { color:var(--accent-green);text-align:center; }
-  .avo-marker { color:var(--accent-red);text-align:center; }
+  /* === PICK ROW === */
+  .picks-list {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .pick {
+    display: grid;
+    grid-template-columns: 44px 95px 1fr 200px 200px 75px 32px;
+    align-items: center; gap: 14px; padding: 12px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer; transition: background 0.12s;
+    font-size: 13px;
+  }
+  .pick:last-child { border-bottom: none; }
+  .pick:hover { background: var(--bg-card-hover); }
+  .pick.favored { border-left: 3px solid var(--accent-green); padding-left: 15px; }
+  .pick.avoided { border-left: 3px solid var(--accent-red); padding-left: 15px; opacity: 0.7; }
+
+  .pick .rank {
+    font-family: 'JetBrains Mono', monospace; color: var(--text-dim);
+    font-weight: 600; font-size: 11px; text-align: right;
+  }
+  .pick .ticker {
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    font-size: 14px; letter-spacing: -0.3px;
+  }
+  .pick .ticker a {
+    color: var(--accent); text-decoration: none;
+    padding: 3px 8px; border-radius: 5px;
+    background: rgba(125,211,252,0.08); transition: background 0.15s;
+  }
+  .pick .ticker a:hover { background: rgba(125,211,252,0.18); }
+  .pick .name { color: #fff; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick .meta { font-size: 12px; color: var(--text-mute); }
+  .pick .scores { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .chip {
+    padding: 2px 8px; border-radius: 5px; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  .buf-100, .buf-90 { background: rgba(134,239,172,0.22); color: var(--accent-green); }
+  .buf-80 { background: rgba(134,239,172,0.13); color: var(--accent-green); }
+  .buf-60 { background: rgba(251,191,36,0.16); color: var(--accent-warm); }
+  .buf-low { background: rgba(248,113,113,0.13); color: var(--accent-red); }
+  .q-high { background: rgba(125,211,252,0.18); color: var(--accent); }
+  .q-mid { background: rgba(125,211,252,0.10); color: rgba(125,211,252,0.75); }
+  .q-low { background: rgba(255,255,255,0.05); color: var(--text-mute); }
+  .perf-pos { color: var(--accent-green); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .perf-neg { color: var(--accent-red); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .perf-null { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  .pick .composite {
+    color: var(--accent-warm); font-weight: 700;
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    text-align: right; letter-spacing: -0.3px;
+  }
+  .pick .marker { text-align: center; font-size: 13px; }
 
   /* === DETAIL PANEL === */
-  .detail-panel { background:rgba(255,165,0,0.04);border-left:3px solid var(--accent-warm);padding:16px 22px;font-size:12.5px;display:none; }
-  .detail-panel.open { display:block; }
-  .detail-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:12px; }
-  .detail-block h4 { margin:0 0 8px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700; }
-  .detail-block.fund h4 { color:var(--accent); }
-  .detail-block.div h4 { color:var(--accent-green); }
-  .detail-block.risk h4 { color:var(--accent-warm); }
-  .detail-block.score h4 { color:#ef9a9a; }
-  .detail-block .row { padding:3px 0; }
-  .detail-block strong { color:#fff; }
-  .detail-actions { display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06); }
-  .detail-actions button, .detail-actions a { background:rgba(33,150,243,0.16);color:var(--accent);border:none;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px; }
-  .detail-actions a.yh { background:rgba(76,175,80,0.16);color:var(--accent-green); }
-  .detail-actions span.note { color:var(--text-dim);font-size:11px;align-self:center;margin-left:auto; }
+  .detail {
+    display: none; padding: 18px 24px;
+    background: linear-gradient(180deg, rgba(251,191,36,0.04), rgba(251,191,36,0.01));
+    border-left: 3px solid var(--accent-warm); border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .detail.open { display: block; }
+  .detail-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 22px; margin-bottom: 16px;
+  }
+  .detail-block h4 {
+    margin: 0 0 10px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+  }
+  .detail-block.fund h4 { color: var(--accent); }
+  .detail-block.div h4 { color: var(--accent-green); }
+  .detail-block.risk h4 { color: var(--accent-warm); }
+  .detail-block.score h4 { color: var(--accent-purple); }
+  .detail-block .row { padding: 4px 0; font-size: 12.5px; color: var(--text-mute); }
+  .detail-block strong { color: #fff; font-weight: 600; }
+  .detail-actions {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
+    align-items: center;
+  }
+  .detail-actions button, .detail-actions a.btn {
+    background: rgba(125,211,252,0.14); color: var(--accent); border: none;
+    border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer;
+    font-size: 12px; font-weight: 600; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 7px; font-family: inherit;
+    transition: background 0.15s;
+  }
+  .detail-actions button:hover, .detail-actions a.btn:hover { background: rgba(125,211,252,0.22); }
+  .detail-actions a.btn.yh { background: rgba(134,239,172,0.14); color: var(--accent-green); }
+  .detail-actions a.btn.yh:hover { background: rgba(134,239,172,0.22); }
+  .detail-actions .note { color: var(--text-dim); font-size: 11.5px; align-self: center; margin-left: auto; }
 
-  /* === COLLAPSIBLE === */
-  details.section { background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden; }
-  details.section summary { padding:13px 18px;font-weight:600;font-size:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none;transition:background 0.15s; }
-  details.section summary:hover { background:rgba(255,255,255,0.03); }
-  details.section summary::-webkit-details-marker { display:none; }
-  details.section summary .left { display:flex;align-items:center;gap:8px; }
-  details.section summary .count-badge { color:var(--text-dim);font-size:12px;font-weight:500; }
-  details.section summary .toggle::before { content:'▸';margin-right:8px;display:inline-block;transition:transform 0.15s;color:var(--text-dim); }
-  details[open].section summary .toggle::before { transform:rotate(90deg); }
-  details.section.favored summary { background:rgba(76,175,80,0.04); }
-  details.section.favored summary .left::before { content:'⭐';font-size:14px; }
-  details.section.avoided summary { background:rgba(244,67,54,0.04); }
+  /* === COLLAPSIBLES === */
+  details.acc {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 10px; overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  details.acc:hover { border-color: var(--border-strong); }
+  details.acc[open] { background: var(--bg-elev); }
+  details.acc summary {
+    padding: 14px 20px; font-weight: 600; font-size: 14px; color: #fff;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; list-style: none; transition: background 0.15s;
+  }
+  details.acc summary:hover { background: rgba(255,255,255,0.02); }
+  details.acc summary::-webkit-details-marker { display: none; }
+  details.acc summary .left { display: flex; align-items: center; gap: 10px; }
+  details.acc summary .count-badge {
+    color: var(--text-dim); font-size: 12px; font-weight: 500;
+    background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 12px;
+  }
+  details.acc summary .toggle::before {
+    content: '▸'; margin-right: 10px; display: inline-block;
+    transition: transform 0.2s; color: var(--text-dim); font-size: 12px;
+  }
+  details[open].acc summary .toggle::before { transform: rotate(90deg); }
+  details.acc.favored summary { background: rgba(134,239,172,0.04); }
+  details.acc.favored summary .left::before { content: '⭐'; font-size: 14px; }
 
-  .help { color:var(--text-dim);font-size:12px;margin-top:14px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px; }
-  code.snippet { background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:11.5px;color:var(--accent-warm);font-family:'JetBrains Mono',monospace; }
+  /* === PANES === */
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .empty {
+    padding: 32px; text-align: center; color: var(--text-mute);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 13px;
+  }
+
+  .help {
+    color: var(--text-dim); font-size: 12px; margin-top: 24px;
+    padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  code.snippet {
+    background: rgba(255,255,255,0.05); padding: 2px 7px; border-radius: 4px;
+    font-size: 11.5px; color: var(--accent-warm); font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .pick { grid-template-columns: 30px 80px 1fr 130px 60px 28px; gap: 8px; padding: 10px 12px; }
+    .pick .meta { display: none; }
+    .hero h1 { font-size: 22px; }
+    .wrap { padding: 20px 16px 40px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <div class="nav-bar">
-  <a href="portefeuille.html"><i class="fas fa-arrow-left"></i> Retour portefeuille</a>
+  <a href="portefeuille.html"><i class="fas fa-arrow-left"></i> Portefeuille</a>
   <a href="top_picks.html"><i class="fas fa-trophy"></i> Screener manuel</a>
   <a href="broker_access.html"><i class="fas fa-globe-asia"></i> Accès broker</a>
 </div>
 
 <div class="hero">
-  <h1>🎯 Top picks curated</h1>
-  <div class="sub">Classement généré par le pipeline · scoring <code>40% Buffett · 30% Quality · 15% Perf · 15% RADAR contextuel</code> · filtre accessibilité broker</div>
+  <h1><span class="emoji">🎯</span> Top picks curated</h1>
+  <div class="sub">Classement généré par le pipeline · scoring <code>40% Buffett · 30% Quality · 15% Perf · 15% RADAR</code> · filtre accessibilité broker</div>
 </div>
 
 <div class="warning">
-  <div class="lbl">⚠️ Système non backtesté — outil de recherche personnelle</div>
+  <div class="lbl"><i class="fas fa-exclamation-triangle"></i> Système non backtesté — outil de recherche personnelle</div>
   <ul>
-    <li>Corrélation Buffett ↔ Quality = <strong>0,76</strong> → redondance confirmée (les deux scores capturent largement le même signal)</li>
-    <li>Concentration sectorielle du Top 25 = <strong>67 %</strong> sur Tech + Industries + Finance → risque de diversification</li>
+    <li>Corrélation Buffett ↔ Quality = <strong>0,76</strong> → redondance confirmée (les deux scores capturent largement le même signal).</li>
+    <li>Concentration sectorielle Top 25 = <strong>67 %</strong> sur Tech + Industries + Finance → risque de diversification.</li>
   </ul>
-  Le <strong>pouvoir prédictif n'est pas encore mesurable</strong> : seulement 3 snapshots point-in-time archivés. Un test propre demanderait ≥ 12-18 mois de cross-sections + rendements forward alignés. <strong>Usage défendable : filtre d'exclusion ("Buffett ≥ 60"), pas classement prédictif.</strong> Recommandations nominatives à des tiers = statut CIF (art. L.541-1 CMF). Fais ta propre analyse.
+  Le <strong>pouvoir prédictif n'est pas encore mesurable</strong> (3 snapshots PIT seulement). Un test propre demanderait ≥ 12-18 mois de cross-sections + rendements forward alignés. <strong>Usage défendable : filtre d'exclusion ("Buffett ≥ 60"), pas classement prédictif.</strong> Les recommandations nominatives à des tiers relèvent du statut CIF (art. L.541-1 CMF).
 </div>
 
-<div class="context-grid" id="context-grid"></div>
+<div class="ctx-grid" id="ctx-grid"></div>
 
-<div class="filters">
-  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-    <span class="filter-label"><i class="fas fa-globe"></i> Région</span>
-    <div class="region-tabs" id="region-tabs"></div>
+<!-- Filtres région -->
+<div class="filters-bar">
+  <span class="filter-label"><i class="fas fa-globe"></i> Région</span>
+  <div class="region-tabs" id="region-tabs"></div>
+</div>
+
+<!-- Tabs : Top 25 / Pays / Secteur / Industrie -->
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-btn active" data-pane="pane-top" onclick="setTab('top')"><i class="fas fa-star"></i> Top 25 <span class="count" id="cnt-top">0</span></button>
+    <button class="tab-btn" data-pane="pane-country" onclick="setTab('country')"><i class="fas fa-flag"></i> Par pays <span class="count" id="cnt-country">0</span></button>
+    <button class="tab-btn" data-pane="pane-sector" onclick="setTab('sector')"><i class="fas fa-layer-group"></i> Par secteur <span class="count" id="cnt-sector">0</span></button>
+    <button class="tab-btn" data-pane="pane-industry" onclick="setTab('industry')"><i class="fas fa-industry"></i> Par industrie <span class="count" id="cnt-industry">0</span></button>
   </div>
 </div>
 
-<div class="section-title">🌟 <span class="accent">Top 25 global</span></div>
-<div class="picks-grid" id="global-top"><div style="padding:24px;text-align:center;color:var(--text-mute);">Chargement…</div></div>
+<div class="pane active" id="pane-top">
+  <div class="section-title"><span class="ic">🌟</span> Top 25 global <span class="meta" id="top-region-label"></span></div>
+  <div class="picks-list" id="global-top"><div class="empty">Chargement…</div></div>
+</div>
 
-<div class="section-title">🗺 Par pays</div>
-<div id="by-country"></div>
+<div class="pane" id="pane-country">
+  <div class="section-title"><span class="ic">🗺</span> Par pays <span class="meta">cliquez pour déplier</span></div>
+  <div id="by-country"></div>
+</div>
 
-<div class="section-title">📂 Par secteur <span style="font-weight:400;font-size:12px;color:var(--text-mute);margin-left:8px;">(secteurs favorisés RADAR ouverts par défaut)</span></div>
-<div id="by-sector"></div>
+<div class="pane" id="pane-sector">
+  <div class="section-title"><span class="ic">📂</span> Par secteur <span class="meta">secteurs favorisés RADAR ⭐ ouverts par défaut</span></div>
+  <div id="by-sector"></div>
+</div>
+
+<div class="pane" id="pane-industry">
+  <div class="section-title"><span class="ic">🏭</span> Par industrie <span class="meta">GICS niveau 2 — granularité fine</span></div>
+  <div id="by-industry"></div>
+</div>
 
 <div class="help">
-  <i class="fas fa-info-circle" style="color:var(--accent);"></i> Mis à jour à chaque <code class="snippet">generate_portfolios_v4.py</code> via <code class="snippet">scripts/build_top_picks_curated.py</code>. Snapshots PIT archivés dans <code class="snippet">data/score_history/scores_YYYY-MM-DD.json</code>.
+  <i class="fas fa-info-circle" style="color:var(--accent);"></i> Mis à jour à chaque <code class="snippet">generate_portfolios_v4.py</code> via <code class="snippet">scripts/build_top_picks_curated.py</code>. Snapshots PIT archivés dans <code class="snippet">data/score_history/</code> et rendements forward dans <code class="snippet">data/forward_returns/</code> (pour backtest futur).
 </div>
 
 </div>
@@ -177,69 +398,62 @@ async function tryFetch(paths) {
   }
   return null;
 }
-
-function fmt(v, suffix = '', decimals = 1) {
-  if (v == null) return '—';
-  if (typeof v !== 'number') return String(v);
-  return v.toFixed(decimals) + suffix;
-}
-function fmtPct(v, decimals = 1) {
-  if (v == null) return '—';
-  const s = v >= 0 ? '+' : '';
-  return s + v.toFixed(decimals) + '%';
-}
-function chipBuf(v) {
-  if (v == null) return '<span class="chip q-low">—</span>';
-  const cls = v >= 100 ? 'buf-100' : v >= 80 ? 'buf-80' : v >= 60 ? 'buf-60' : 'buf-low';
-  return `<span class="chip ${cls}">Buf ${v}</span>`;
-}
-function chipQ(v) {
-  if (v == null) return '<span class="chip q-low">—</span>';
-  const cls = v >= 75 ? 'q-high' : v >= 60 ? 'q-mid' : 'q-low';
-  return `<span class="chip ${cls}">Q ${v}</span>`;
-}
-function perfTxt(p) {
-  if (p == null) return '<span style="color:var(--text-dim);">—</span>';
-  const sign = p >= 0 ? '+' : '';
-  return `<span class="${p >= 0 ? 'perf-pos' : 'perf-neg'}">${sign}${p.toFixed(0)}%</span>`;
-}
+function fmt(v, suffix='', decimals=1) { if (v == null) return '—'; if (typeof v !== 'number') return String(v); return v.toFixed(decimals) + suffix; }
+function fmtPct(v, decimals=1) { if (v == null) return '—'; const s = v >= 0 ? '+' : ''; return s + v.toFixed(decimals) + '%'; }
+function chipBuf(v) { if (v == null) return '<span class="chip q-low">—</span>'; const cls = v >= 100 ? 'buf-100' : v >= 80 ? 'buf-80' : v >= 60 ? 'buf-60' : 'buf-low'; return `<span class="chip ${cls}">Buf ${v}</span>`; }
+function chipQ(v) { if (v == null) return '<span class="chip q-low">—</span>'; const cls = v >= 75 ? 'q-high' : v >= 60 ? 'q-mid' : 'q-low'; return `<span class="chip ${cls}">Q ${v}</span>`; }
+function perfTxt(p) { if (p == null) return '<span class="perf-null">—</span>'; const sign = p >= 0 ? '+' : ''; return `<span class="${p >= 0 ? 'perf-pos' : 'perf-neg'}">${sign}${p.toFixed(0)}%</span>`; }
 function yahooUrl(ticker, country, region) {
-  const sfx = { ASIA: { 'Inde': '.NS', 'Taïwan': '.TW', 'Corée': '.KS', 'Chine': '.SS', 'Thaïlande': '.BK', 'Philippines': '.PS' }, EU: { 'France': '.PA', 'Allemagne': '.DE', 'Pays-Bas': '.AS', 'Espagne': '.MC', 'Italie': '.MI', 'Belgique': '.BR', 'Royaume-Uni': '.L', 'Suisse': '.SW', 'Suède': '.ST', 'Finlande': '.HE', 'Danemark': '.CO', 'Norvège': '.OL', 'Irlande': '.IR', 'Portugal': '.LS' } };
+  const sfx = { ASIA: { 'Inde':'.NS','Taïwan':'.TW','Corée':'.KS','Chine':'.SS','Thaïlande':'.BK','Philippines':'.PS' }, EU: { 'France':'.PA','Allemagne':'.DE','Pays-Bas':'.AS','Espagne':'.MC','Italie':'.MI','Belgique':'.BR','Royaume-Uni':'.L','Suisse':'.SW','Suède':'.ST','Finlande':'.HE','Danemark':'.CO','Norvège':'.OL','Irlande':'.IR','Portugal':'.LS' } };
   const s = (sfx[region] || {})[country] || '';
   return `https://finance.yahoo.com/quote/${ticker}${s}`;
 }
 
+let CURRENT_REGION = '';
+let CURRENT_TAB = 'top';
 let rowId = 0;
-function renderRow(e, rank) {
+let DATA = null;
+
+const COUNTRY_TO_REGION = {
+  'Etats-Unis':'US','Royaume-Uni':'EU','Suisse':'EU','France':'EU','Allemagne':'EU','Pays-Bas':'EU','Espagne':'EU','Italie':'EU','Belgique':'EU','Portugal':'EU','Suède':'EU','Finlande':'EU','Danemark':'EU','Norvège':'EU','Irlande':'EU','Autriche':'EU','Pologne':'EU',
+  'Inde':'ASIA','Taïwan':'ASIA','Corée':'ASIA','Chine':'ASIA','Thaïlande':'ASIA','Philippines':'ASIA','Japon':'ASIA','Hong Kong':'ASIA'
+};
+
+function filterByRegion(stocks) {
+  if (!CURRENT_REGION) return stocks;
+  return stocks.filter(s => s.region === CURRENT_REGION);
+}
+
+function renderPick(e, rank) {
   const meta = `${e.country || '?'} · ${e.sector_normalized || e.sector || '?'}${e.market_cap_str ? ' · '+e.market_cap_str : ''}`;
   const favCls = e.is_favored_sector ? 'favored' : (e.is_avoided_sector ? 'avoided' : '');
-  const favMarker = e.is_favored_sector ? '<span class="fav-marker" title="Secteur favorisé RADAR">⭐</span>' : (e.is_avoided_sector ? '<span class="avo-marker" title="Secteur évité RADAR">🔻</span>' : '');
-  const id = `det-${e.ticker}-${rowId++}`;
+  const favMarker = e.is_favored_sector ? '<span style="color:var(--accent-green);" title="Secteur favorisé RADAR">⭐</span>' : (e.is_avoided_sector ? '<span style="color:var(--accent-red);" title="Secteur évité RADAR">🔻</span>' : '');
+  const id = `d-${e.ticker}-${rowId++}`;
   const bd = e.composite_breakdown || {};
   return `
-  <div class="pick-row ${favCls}" onclick="(function(){const p=document.getElementById('${id}');p.classList.toggle('open');})()">
+  <div class="pick ${favCls}" onclick="(function(){document.getElementById('${id}').classList.toggle('open');})()">
     <div class="rank">#${rank}</div>
     <div class="ticker"><a href="${yahooUrl(e.ticker, e.country, e.region)}" target="_blank" onclick="event.stopPropagation()">${e.ticker}</a></div>
-    <div><div class="pick-name">${e.name}</div></div>
-    <div class="pick-meta">${meta}</div>
-    <div class="pick-scores">${chipBuf(e.buffett_score)} ${chipQ(e.quality_score)} ${perfTxt(e.perf_1y)}</div>
+    <div class="name" title="${e.name}">${e.name}</div>
+    <div class="meta">${meta}</div>
+    <div class="scores">${chipBuf(e.buffett_score)} ${chipQ(e.quality_score)} ${perfTxt(e.perf_1y)}</div>
     <div class="composite">${e.composite_score.toFixed(3)}</div>
-    <div>${favMarker}</div>
+    <div class="marker">${favMarker}</div>
   </div>
-  <div id="${id}" class="detail-panel">
+  <div id="${id}" class="detail">
     <div class="detail-grid">
       <div class="detail-block fund">
-        <h4>📊 Fondamentaux</h4>
+        <h4><i class="fas fa-chart-line"></i> Fondamentaux</h4>
         <div class="row">P/E : <strong>${fmt(e.pe_ratio)}</strong></div>
         <div class="row">ROE : <strong>${fmt(e.roe, '%')}</strong> · ROIC : <strong>${fmt(e.roic, '%')}</strong></div>
         <div class="row">Marge nette : <strong>${fmt(e.net_margin, '%')}</strong></div>
         <div class="row">FCF yield : <strong>${fmt(e.fcf_yield, '%')}</strong></div>
         <div class="row">D/E : <strong>${fmt(e.de_ratio, '', 2)}</strong></div>
         <div class="row">Croissance CA 3y : <strong>${fmtPct(e.revenue_growth_3y)}</strong></div>
-        <div class="row">EPS 5y : <strong>${fmtPct(e.eps_growth_5y)}</strong> · forecast : <strong>${fmtPct(e.eps_growth_forecast_5y)}</strong></div>
+        <div class="row">EPS 5y : <strong>${fmtPct(e.eps_growth_5y)}</strong></div>
       </div>
       <div class="detail-block div">
-        <h4>💰 Dividende</h4>
+        <h4><i class="fas fa-coins"></i> Dividende</h4>
         <div class="row">Yield : <strong>${fmt(e.dividend_yield, '%', 2)}</strong></div>
         <div class="row">TTM : <strong>${fmt(e.dividend_yield_ttm, '%', 2)}</strong></div>
         <div class="row">Croissance 3y : <strong>${fmtPct(e.dividend_growth_3y)}</strong></div>
@@ -247,9 +461,8 @@ function renderRow(e, rank) {
         <div class="row">Payout : <strong>${fmt((e.payout_ratio_ttm||0)*100, '%', 0)}</strong></div>
       </div>
       <div class="detail-block risk">
-        <h4>⚠️ Risque & Perf</h4>
-        <div class="row">Vol 3y : <strong>${fmt(e.volatility_3y, '%')}</strong></div>
-        <div class="row">β : <strong>${fmt(e.beta, '', 2)}</strong></div>
+        <h4><i class="fas fa-shield-alt"></i> Risque & Perf</h4>
+        <div class="row">Vol 3y : <strong>${fmt(e.volatility_3y, '%')}</strong> · β : <strong>${fmt(e.beta, '', 2)}</strong></div>
         <div class="row">MaxDD 3y : <strong>${fmt(e.max_drawdown_3y, '%')}</strong></div>
         <div class="row">Perf 1m : <strong>${fmtPct(e.perf_1m)}</strong> · 3m : <strong>${fmtPct(e.perf_3m)}</strong></div>
         <div class="row">YTD : <strong>${fmtPct(e.perf_ytd)}</strong> · 1y : <strong>${fmtPct(e.perf_1y)}</strong></div>
@@ -257,17 +470,17 @@ function renderRow(e, rank) {
         <div class="row">vs 52w high : <strong>${fmtPct(e.distance_52w_high)}</strong></div>
       </div>
       <div class="detail-block score">
-        <h4>🎯 Composite breakdown</h4>
+        <h4><i class="fas fa-bullseye"></i> Composite breakdown</h4>
         <div class="row">Buffett (${e.buffett_score}) → <strong>${(bd.buffett_contribution||0).toFixed(3)}</strong></div>
         <div class="row">Quality (${e.quality_score}) → <strong>${(bd.quality_contribution||0).toFixed(3)}</strong></div>
         <div class="row">Perf 1y (${fmtPct(e.perf_1y)}) → <strong>${(bd.perf_contribution||0).toFixed(3)}</strong></div>
         <div class="row">RADAR ${e.is_favored_sector ? '⭐' : (e.is_avoided_sector ? '🔻' : '·')} → <strong>${(bd.radar_contribution||0).toFixed(3)}</strong></div>
-        <div class="row" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">Total : <strong style="color:var(--accent-warm);font-size:15px;">${e.composite_score.toFixed(3)}</strong></div>
+        <div class="row" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">Total : <strong style="color:var(--accent-warm);font-size:16px;">${e.composite_score.toFixed(3)}</strong></div>
       </div>
     </div>
     <div class="detail-actions">
       <button onclick="copyForClaude('${e.ticker}', ${rank}); event.stopPropagation();"><i class="fas fa-clipboard"></i> Copier détail pour Claude</button>
-      <a class="yh" href="${yahooUrl(e.ticker, e.country, e.region)}" target="_blank" onclick="event.stopPropagation()"><i class="fas fa-external-link-alt"></i> Yahoo Finance</a>
+      <a class="btn yh" href="${yahooUrl(e.ticker, e.country, e.region)}" target="_blank" onclick="event.stopPropagation()"><i class="fas fa-external-link-alt"></i> Yahoo Finance</a>
       <span class="note">Industry : ${e.industry || '—'} · Quality peer rank ${e.quality_peer_global_rank ?? '—'}/${e.quality_peer_size ?? '—'}</span>
     </div>
   </div>
@@ -275,114 +488,124 @@ function renderRow(e, rank) {
 }
 
 function copyForClaude(ticker, rank) {
-  const allEntries = [...(window._DATA.global_top_25 || []),
-    ...Object.values(window._DATA.by_country || {}).flat(),
-    ...Object.values(window._DATA.by_sector || {}).flat()];
-  const e = allEntries.find(x => x.ticker === ticker);
+  const all = [...(DATA.global_top_25 || []), ...Object.values(DATA.by_country || {}).flat(), ...Object.values(DATA.by_sector || {}).flat(), ...Object.values(DATA.by_industry || {}).flat()];
+  const e = all.find(x => x.ticker === ticker);
   if (!e) { alert('Stock introuvable'); return; }
-  const ctx = window._DATA.context || {};
-  const brief = `# Analyse demandée — ${e.ticker} (${e.name})
+  const ctx = DATA.context || {};
+  const brief = `# Analyse — ${e.ticker} (${e.name})
 
 ## Identité
-- **Ticker**: ${e.ticker} | **Exchange**: ${e.exchange || '?'} | **Pays**: ${e.country} | **Région**: ${e.region}
-- **Secteur**: ${e.sector} (${e.sector_normalized}) | **Industry**: ${e.industry}
-- **Market cap**: ${e.market_cap_str || '?'} | **Prix**: ${e.price ? e.price.toFixed(2)+' '+(e.data_currency||'') : '?'} | **Range 52w**: ${e.range_52w || '?'}
+- **Ticker**: ${e.ticker} | **Pays**: ${e.country} | **Région**: ${e.region}
+- **Secteur**: ${e.sector_normalized} | **Industry**: ${e.industry}
+- **Market cap**: ${e.market_cap_str || '?'} | **Prix**: ${e.price ? e.price.toFixed(2)+' '+(e.data_currency||'') : '?'}
 
-## Score composite ${e.composite_score.toFixed(3)} (rang #${rank} top picks curated)
-- Buffett ${e.buffett_score} (${e.buffett_grade || '?'}) → ${(e.composite_breakdown?.buffett_contribution || 0).toFixed(3)}
-- Quality ${e.quality_score} (${e.quality_grade || '?'}, rank ${e.quality_peer_global_rank ?? '?'}/${e.quality_peer_size ?? '?'} dans son peer group) → ${(e.composite_breakdown?.quality_contribution || 0).toFixed(3)}
+## Score composite ${e.composite_score.toFixed(3)} (rang #${rank})
+- Buffett ${e.buffett_score} → ${(e.composite_breakdown?.buffett_contribution || 0).toFixed(3)}
+- Quality ${e.quality_score} (peer rank ${e.quality_peer_global_rank ?? '?'}/${e.quality_peer_size ?? '?'}) → ${(e.composite_breakdown?.quality_contribution || 0).toFixed(3)}
 - Perf 1y ${fmtPct(e.perf_1y)} → ${(e.composite_breakdown?.perf_contribution || 0).toFixed(3)}
-- RADAR contextuel ${e.is_favored_sector ? '⭐ favorisé' : (e.is_avoided_sector ? '🔻 évité' : 'neutre')} → ${(e.composite_breakdown?.radar_contribution || 0).toFixed(3)}
+- RADAR ${e.is_favored_sector ? '⭐' : (e.is_avoided_sector ? '🔻' : 'neutre')} → ${(e.composite_breakdown?.radar_contribution || 0).toFixed(3)}
 
 ## Fondamentaux
-- **P/E**: ${fmt(e.pe_ratio)} | **ROE**: ${fmt(e.roe, '%')} | **ROIC**: ${fmt(e.roic, '%')}
-- **Marge nette**: ${fmt(e.net_margin, '%')} | **FCF yield**: ${fmt(e.fcf_yield, '%')}
-- **D/E**: ${fmt(e.de_ratio, '', 2)}
-- **Croissance CA 3y**: ${fmtPct(e.revenue_growth_3y)} | **EPS 5y**: ${fmtPct(e.eps_growth_5y)} | **EPS forecast 5y**: ${fmtPct(e.eps_growth_forecast_5y)}
+- P/E ${fmt(e.pe_ratio)} | ROE ${fmt(e.roe,'%')} | ROIC ${fmt(e.roic,'%')}
+- Marge nette ${fmt(e.net_margin,'%')} | FCF yield ${fmt(e.fcf_yield,'%')}
+- D/E ${fmt(e.de_ratio,'',2)} | Croissance CA 3y ${fmtPct(e.revenue_growth_3y)} | EPS 5y ${fmtPct(e.eps_growth_5y)}
 
 ## Dividende
-- **Yield**: ${fmt(e.dividend_yield, '%', 2)} (TTM: ${fmt(e.dividend_yield_ttm, '%', 2)})
-- **Croissance div 3y**: ${fmtPct(e.dividend_growth_3y)}
-- **Coverage**: ${fmt(e.dividend_coverage, 'x')} | **Payout**: ${fmt((e.payout_ratio_ttm||0)*100, '%', 0)}
+- Yield ${fmt(e.dividend_yield,'%',2)} · Croissance 3y ${fmtPct(e.dividend_growth_3y)}
+- Coverage ${fmt(e.dividend_coverage,'x')} · Payout ${fmt((e.payout_ratio_ttm||0)*100,'%',0)}
 
 ## Risque
-- **Vol 3y**: ${fmt(e.volatility_3y, '%')} | **β**: ${fmt(e.beta, '', 2)}
-- **MaxDD 3y**: ${fmt(e.max_drawdown_3y, '%')}
-- **Distance 52w high**: ${fmtPct(e.distance_52w_high)} | **52w low**: ${fmtPct(e.distance_52w_low)}
+- Vol 3y ${fmt(e.volatility_3y,'%')} | β ${fmt(e.beta,'',2)} | MaxDD 3y ${fmt(e.max_drawdown_3y,'%')}
+- Distance 52w high ${fmtPct(e.distance_52w_high)}
 
 ## Performance
-- 1m: ${fmtPct(e.perf_1m)} | 3m: ${fmtPct(e.perf_3m)} | YTD: ${fmtPct(e.perf_ytd)}
-- 1y: ${fmtPct(e.perf_1y)} | 3y: ${fmtPct(e.perf_3y)}
+- 1m ${fmtPct(e.perf_1m)} | 3m ${fmtPct(e.perf_3m)} | YTD ${fmtPct(e.perf_ytd)} | 1y ${fmtPct(e.perf_1y)} | 3y ${fmtPct(e.perf_3y)}
 
-## Contexte marché (RADAR)
-- **Régime**: ${ctx.regime || '?'} (confidence ${((ctx.confidence||0)*100).toFixed(0)}%)
-- **Secteurs favorisés**: ${(ctx.favored_sectors || []).join(', ') || '—'}
-- **Secteurs évités**: ${(ctx.avoided_sectors || []).join(', ') || '—'}
-- **Régions favorisées**: ${(ctx.favored_regions || []).join(', ') || '—'}
+## RADAR
+- Régime ${ctx.regime || '?'} (conf ${((ctx.confidence||0)*100).toFixed(0)}%)
+- Secteurs favorisés : ${(ctx.favored_sectors||[]).join(', ') || '—'}
+- Secteurs évités : ${(ctx.avoided_sectors||[]).join(', ') || '—'}
 
----
-
-**Question pour toi (Claude) :**
-Cette action sort #${rank} dans mon classement curated (40% Buffett + 30% Quality + 15% Perf + 15% RADAR). J'envisage un achat ponctuel. À la lumière des fondamentaux et du contexte ci-dessus :
-1. Est-ce une bonne idée à ce niveau de prix (vs 52w high/low) ?
-2. Y a-t-il des signaux que mon scoring rate (P/E vs peers, dette, payout, dilution, etc.) ?
-3. Risque sectoriel/géopolitique spécifique à cette ligne ?
-4. Une autre action de qualité équivalente plus alignée avec le contexte RADAR actuel ?`;
-  navigator.clipboard.writeText(brief).then(
-    () => { alert('✓ Brief copié — colle-le dans Claude'); },
-    (e) => { alert('Erreur copie: ' + e.message); }
-  );
+**Questions :**
+1. Bonne idée à ce niveau de prix (vs 52w) ?
+2. Signaux ratés par mon scoring (P/E vs peers, dette, payout, dilution) ?
+3. Risque sectoriel/géopolitique spécifique ?
+4. Une autre action de qualité équivalente plus alignée avec le contexte RADAR ?`;
+  navigator.clipboard.writeText(brief).then(() => alert('✓ Brief copié — colle-le dans Claude'), e => alert('Erreur: ' + e.message));
 }
 
-let CURRENT_REGION = '';
+function setTab(t) {
+  CURRENT_TAB = t;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.pane === 'pane-' + t));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + t));
+}
 
-function filterByRegion(stocks) {
-  if (!CURRENT_REGION) return stocks;
-  return stocks.filter(s => s.region === CURRENT_REGION);
+function setRegion(r) {
+  CURRENT_REGION = r;
+  document.querySelectorAll('.region-btn').forEach(b => b.classList.toggle('active', b.dataset.region === r));
+  renderAll();
 }
 
 function renderAll() {
-  const d = window._DATA;
-  if (!d) return;
-  const ctx = d.context || {};
+  if (!DATA) return;
+  const ctx = DATA.context || {};
 
-  // Global top
-  const globalFiltered = filterByRegion(d.global_top_25 || []);
+  // Top 25
+  const globalFiltered = filterByRegion(DATA.global_top_25 || []);
   document.getElementById('global-top').innerHTML = globalFiltered.length
-    ? globalFiltered.map((e,i) => renderRow(e, i+1)).join('')
-    : '<div style="padding:24px;text-align:center;color:var(--text-mute);">Aucune action dans cette région pour le top 25 global.</div>';
+    ? globalFiltered.map((e,i) => renderPick(e, i+1)).join('')
+    : '<div class="empty">Aucune action dans cette région pour le top 25 global.</div>';
+  document.getElementById('cnt-top').textContent = globalFiltered.length;
+  document.getElementById('top-region-label').textContent = CURRENT_REGION ? `· ${{US:'🇺🇸 États-Unis', EU:'🇪🇺 Europe', ASIA:'🌏 Asie'}[CURRENT_REGION]}` : '';
 
-  // By country (filter regions if needed)
-  const COUNTRY_TO_REGION = {
-    'Etats-Unis':'US','Royaume-Uni':'EU','Suisse':'EU','France':'EU','Allemagne':'EU','Pays-Bas':'EU','Espagne':'EU','Italie':'EU','Belgique':'EU','Portugal':'EU','Suède':'EU','Finlande':'EU','Danemark':'EU','Norvège':'EU','Irlande':'EU','Autriche':'EU','Pologne':'EU',
-    'Inde':'ASIA','Taïwan':'ASIA','Corée':'ASIA','Chine':'ASIA','Thaïlande':'ASIA','Philippines':'ASIA','Japon':'ASIA','Hong Kong':'ASIA'
-  };
-  const byCountry = d.by_country || {};
-  const countriesFiltered = Object.entries(byCountry).filter(([country]) => !CURRENT_REGION || COUNTRY_TO_REGION[country] === CURRENT_REGION);
-  document.getElementById('by-country').innerHTML = countriesFiltered.length
-    ? countriesFiltered.map(([country, stocks]) => `
-      <details class="section">
+  // Par pays
+  const byC = DATA.by_country || {};
+  const cFiltered = Object.entries(byC).filter(([c]) => !CURRENT_REGION || COUNTRY_TO_REGION[c] === CURRENT_REGION);
+  document.getElementById('by-country').innerHTML = cFiltered.length
+    ? cFiltered.map(([country, stocks]) => `
+      <details class="acc">
         <summary><span class="left"><span class="toggle"></span>${country}</span><span class="count-badge">${stocks.length} top</span></summary>
-        <div>${stocks.map((e,i)=>renderRow(e, i+1)).join('')}</div>
+        <div class="picks-list" style="border:none;border-radius:0;">${stocks.map((e,i)=>renderPick(e, i+1)).join('')}</div>
       </details>
     `).join('')
-    : '<div style="padding:18px;color:var(--text-mute);">Aucun pays correspondant à la région sélectionnée.</div>';
+    : '<div class="empty">Aucun pays correspondant.</div>';
+  document.getElementById('cnt-country').textContent = cFiltered.length;
 
-  // By sector (filter selon region des stocks)
-  const bySector = d.by_sector || {};
-  document.getElementById('by-sector').innerHTML = Object.entries(bySector).map(([sec, stocks]) => {
-    const filtered = filterByRegion(stocks);
-    if (!filtered.length) return '';
+  // Par secteur
+  const byS = DATA.by_sector || {};
+  const sectionsS = Object.entries(byS).map(([sec, stocks]) => {
+    const f = filterByRegion(stocks);
+    if (!f.length) return null;
     const isFav = (ctx.favored_sectors || []).includes(sec);
     const isAvo = (ctx.avoided_sectors || []).includes(sec);
-    const cls = isFav ? 'favored' : (isAvo ? 'avoided' : '');
-    return `
-    <details class="section ${cls}" ${isFav ? 'open' : ''}>
-      <summary><span class="left"><span class="toggle"></span>${sec}</span><span class="count-badge">${filtered.length} top</span></summary>
-      <div>${filtered.map((e,i)=>renderRow(e, i+1)).join('')}</div>
-    </details>
-    `;
-  }).filter(s=>s).join('') || '<div style="padding:18px;color:var(--text-mute);">Aucun secteur correspondant à la région sélectionnée.</div>';
+    return { sec, stocks: f, isFav, isAvo };
+  }).filter(x => x);
+  document.getElementById('by-sector').innerHTML = sectionsS.length
+    ? sectionsS.map(({sec, stocks, isFav, isAvo}) => `
+      <details class="acc ${isFav ? 'favored' : ''}" ${isFav ? 'open' : ''}>
+        <summary><span class="left"><span class="toggle"></span>${sec}${isAvo ? ' 🔻' : ''}</span><span class="count-badge">${stocks.length} top</span></summary>
+        <div class="picks-list" style="border:none;border-radius:0;">${stocks.map((e,i)=>renderPick(e, i+1)).join('')}</div>
+      </details>
+    `).join('')
+    : '<div class="empty">Aucun secteur correspondant.</div>';
+  document.getElementById('cnt-sector').textContent = sectionsS.length;
+
+  // Par industrie
+  const byI = DATA.by_industry || {};
+  const sectionsI = Object.entries(byI).map(([ind, stocks]) => {
+    const f = filterByRegion(stocks);
+    if (f.length < 2) return null;  // au moins 2 stocks après filtre
+    return { ind, stocks: f };
+  }).filter(x => x);
+  document.getElementById('by-industry').innerHTML = sectionsI.length
+    ? sectionsI.map(({ind, stocks}) => `
+      <details class="acc">
+        <summary><span class="left"><span class="toggle"></span>${ind}</span><span class="count-badge">${stocks.length} top</span></summary>
+        <div class="picks-list" style="border:none;border-radius:0;">${stocks.map((e,i)=>renderPick(e, i+1)).join('')}</div>
+      </details>
+    `).join('')
+    : '<div class="empty">Aucune industrie correspondante.</div>';
+  document.getElementById('cnt-industry').textContent = sectionsI.length;
 }
 
 async function load() {
@@ -392,65 +615,46 @@ async function load() {
     'https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/top_picks_curated.json'
   ]);
   if (!d) {
-    document.getElementById('global-top').innerHTML = '<div style="padding:24px;color:var(--accent-red);">data/top_picks_curated.json introuvable. Relance <code>generate_portfolios_v4.py</code> ou <code>python3 scripts/build_top_picks_curated.py</code>.</div>';
+    document.getElementById('global-top').innerHTML = '<div class="empty" style="color:var(--accent-red);">data/top_picks_curated.json introuvable. Lance <code class="snippet">python3 scripts/build_top_picks_curated.py</code>.</div>';
     return;
   }
-  window._DATA = d;
+  DATA = d;
   const ctx = d.context || {};
 
   // Context cards
   const cards = [];
   cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-tachometer-alt"></i> Régime marché</div><div class="ctx-value">${ctx.regime || 'n/a'}</div><div class="ctx-sub">Confidence ${((ctx.confidence||0)*100).toFixed(0)}%</div></div>`);
   if ((ctx.favored_sectors||[]).length || (ctx.avoided_sectors||[]).length) {
-    const fav = (ctx.favored_sectors || []).map(s => `<span class="badge-fav">⭐ ${s}</span>`).join('');
-    const avo = (ctx.avoided_sectors || []).map(s => `<span class="badge-avoid">🔻 ${s}</span>`).join('');
-    cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-layer-group"></i> Secteurs RADAR</div><div>${fav}${avo || ''}</div></div>`);
+    const fav = (ctx.favored_sectors || []).map(s => `<span class="pill pill-fav">⭐ ${s}</span>`).join('');
+    const avo = (ctx.avoided_sectors || []).map(s => `<span class="pill pill-avo">🔻 ${s}</span>`).join('');
+    cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-layer-group"></i> Secteurs RADAR</div><div>${fav}${avo}</div></div>`);
   }
   if ((ctx.favored_regions||[]).length || (ctx.avoided_regions||[]).length) {
-    const fav = (ctx.favored_regions || []).map(s => `<span class="badge-fav">${s}</span>`).join('');
-    const avo = (ctx.avoided_regions || []).map(s => `<span class="badge-avoid">${s}</span>`).join('');
+    const fav = (ctx.favored_regions || []).map(s => `<span class="pill pill-fav">${s}</span>`).join('');
+    const avo = (ctx.avoided_regions || []).map(s => `<span class="pill pill-avo">${s}</span>`).join('');
     cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-globe"></i> Régions RADAR</div><div>${fav}${avo}</div></div>`);
   }
-  cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-database"></i> Univers</div><div class="ctx-value">${d._meta?.universe_size || '?'}</div><div class="ctx-sub">${d._meta?.accessible_count || '?'} accessibles & quality OK</div></div>`);
-  cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-clock"></i> Généré</div><div class="ctx-value" style="font-size:13px;font-weight:500;">${d._meta?.generated_at ? d._meta.generated_at.split('T')[0] : '—'}</div><div class="ctx-sub">${d._meta?.generated_at ? d._meta.generated_at.split('T')[1]?.substr(0,5) : ''}</div></div>`);
-  document.getElementById('context-grid').innerHTML = cards.join('');
+  cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-database"></i> Univers</div><div class="ctx-value">${d._meta?.universe_size || '?'}</div><div class="ctx-sub">${d._meta?.accessible_count || '?'} accessibles · quality OK</div></div>`);
+  cards.push(`<div class="ctx-card"><div class="ctx-label"><i class="fas fa-clock"></i> Généré</div><div class="ctx-value" style="font-size:15px;font-weight:600;">${d._meta?.generated_at ? d._meta.generated_at.split('T')[0] : '—'}</div><div class="ctx-sub">${d._meta?.generated_at ? d._meta.generated_at.split('T')[1]?.substr(0,5) : ''}</div></div>`);
+  document.getElementById('ctx-grid').innerHTML = cards.join('');
 
-  // Region tabs — count by region
-  const counts = { '': d.global_top_25.length, 'US': 0, 'EU': 0, 'ASIA': 0 };
-  for (const e of d.global_top_25) {
-    if (counts[e.region] !== undefined) counts[e.region]++;
-  }
-  // Inclure aussi le total par région depuis by_country
-  const COUNTRY_TO_REGION = {
-    'Etats-Unis':'US','Royaume-Uni':'EU','Suisse':'EU','France':'EU','Allemagne':'EU','Pays-Bas':'EU','Espagne':'EU','Italie':'EU','Belgique':'EU','Portugal':'EU','Suède':'EU','Finlande':'EU','Danemark':'EU','Norvège':'EU','Irlande':'EU','Autriche':'EU','Pologne':'EU',
-    'Inde':'ASIA','Taïwan':'ASIA','Corée':'ASIA','Chine':'ASIA','Thaïlande':'ASIA','Philippines':'ASIA','Japon':'ASIA','Hong Kong':'ASIA'
-  };
-  const totalsByRegion = { 'US': 0, 'EU': 0, 'ASIA': 0 };
+  // Region tabs avec counts
+  const totals = { 'US': 0, 'EU': 0, 'ASIA': 0 };
   for (const [country, stocks] of Object.entries(d.by_country || {})) {
     const reg = COUNTRY_TO_REGION[country];
-    if (reg) totalsByRegion[reg] += stocks.length;
+    if (reg) totals[reg] += stocks.length;
   }
-  const totalAll = totalsByRegion.US + totalsByRegion.EU + totalsByRegion.ASIA;
-
-  const regionBtns = [
-    { val: '', label: '🌍 Tous', count: totalAll },
-    { val: 'US', label: '🇺🇸 États-Unis', count: totalsByRegion.US },
-    { val: 'EU', label: '🇪🇺 Europe', count: totalsByRegion.EU },
-    { val: 'ASIA', label: '🌏 Asie', count: totalsByRegion.ASIA },
+  const totalAll = totals.US + totals.EU + totals.ASIA;
+  const btns = [
+    { v:'', label:'🌍 Tous', count:totalAll },
+    { v:'US', label:'🇺🇸 US', count:totals.US },
+    { v:'EU', label:'🇪🇺 Europe', count:totals.EU },
+    { v:'ASIA', label:'🌏 Asie', count:totals.ASIA },
   ];
-  document.getElementById('region-tabs').innerHTML = regionBtns.map(b =>
-    `<button class="region-btn ${CURRENT_REGION === b.val ? 'active' : ''}" onclick="setRegion('${b.val}')">${b.label} <span class="count">${b.count}</span></button>`
+  document.getElementById('region-tabs').innerHTML = btns.map(b =>
+    `<button class="region-btn ${CURRENT_REGION === b.v ? 'active' : ''}" data-region="${b.v}" onclick="setRegion('${b.v}')">${b.label} <span class="num">(${b.count})</span></button>`
   ).join('');
 
-  renderAll();
-}
-
-function setRegion(r) {
-  CURRENT_REGION = r;
-  // Re-render filter buttons (update active state)
-  document.querySelectorAll('.region-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.includes({'':'Tous','US':'États-Unis','EU':'Europe','ASIA':'Asie'}[r]));
-  });
   renderAll();
 }
 

@@ -279,6 +279,14 @@ def main():
         if len(by_sector[sec]) < 10:  # top 10 par secteur
             by_sector[sec].append(stock_entry(s, sc, context))
 
+    # === Section 4: par industrie (GICS L2 — niveau plus fin) ===
+    by_industry = defaultdict(list)
+    for s, sc in scored:
+        ind = (s.get('industry') or '').strip()
+        if not ind: continue
+        if len(by_industry[ind]) < 8:  # top 8 par industrie
+            by_industry[ind].append(stock_entry(s, sc, context))
+
     # === Output ===
     output = {
         '_meta': {
@@ -297,14 +305,16 @@ def main():
         'global_top_25': global_top,
         'by_country': {c: top for c, top in sorted(by_country.items(), key=lambda x: -len(x[1]))},
         'by_sector': dict(by_sector),
+        'by_industry': {i: top for i, top in sorted(by_industry.items(), key=lambda x: -len(x[1])) if len(top) >= 3},
     }
 
     out_path = ROOT / 'data' / 'top_picks_curated.json'
     out_path.write_text(json.dumps(output, indent=2, ensure_ascii=False))
     print(f"✓ Sauvé : {out_path}")
     print(f"  Global top 25 — pays représentés : {len(set(e['country'] for e in global_top if e.get('country')))}")
-    print(f"  By country : {len(by_country)} pays")
-    print(f"  By sector  : {len(by_sector)} secteurs")
+    print(f"  By country  : {len(by_country)} pays")
+    print(f"  By sector   : {len(by_sector)} secteurs")
+    print(f"  By industry : {sum(1 for v in by_industry.values() if len(v) >= 3)} industries (≥ 3 stocks)")
     if context.get('favored_sectors'):
         print(f"  RADAR favored : {context['favored_sectors']}")
     if context.get('avoided_sectors'):
