@@ -56,6 +56,10 @@
   <strong>Pour les achats ponctuels d'une seule action.</strong> Univers complet (US + Europe + Asie). Filtre par accès broker (selon ta config <code>broker_access.json</code>), pays, secteur, score min. Tri par défaut : Buffett + Quality combiné ↓. Clique sur l'en-tête d'une colonne pour trier autrement, clique sur un ticker pour ouvrir Yahoo Finance.
 </div>
 
+<div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.3);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:0.82rem;color:#ffd54f;line-height:1.5;">
+  ⚠️ <strong>Outil de recherche personnelle — pas un conseil d'investissement.</strong> Buffett et Quality sont des scores fondamentaux <strong>non backtestés</strong> sur ton historique. Les utiliser comme <strong>filtre d'exclusion</strong> ("écarter les pièges Buffett &lt; 60") est défendable ; les utiliser comme <strong>classement prédictif</strong> ne l'est pas tant qu'un test point-in-time n'a pas validé leur pouvoir. Les recommandations nominatives à des tiers relèvent du CIF en France.
+</div>
+
 <div class="filter-bar">
   <input type="text" id="filter-search" placeholder="🔍 Ticker ou nom…" oninput="debouncedRender()" />
   <select id="filter-region" onchange="render()">
