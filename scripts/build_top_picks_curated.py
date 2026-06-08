@@ -153,27 +153,90 @@ def score_stock(s, context):
     return score
 
 
+def fmt_market_cap(mc):
+    """Convertit market cap en string lisible (B/M)."""
+    if mc is None: return None
+    try:
+        mc = float(mc)
+        if mc >= 1e12: return f"{mc/1e12:.1f}T"
+        if mc >= 1e9: return f"{mc/1e9:.1f}B"
+        if mc >= 1e6: return f"{mc/1e6:.0f}M"
+        return f"{mc:.0f}"
+    except: return str(mc)
+
+
 def stock_entry(s, score, context):
     sec_norm = normalize_sector(s.get('sector'))
     is_favored = sec_norm in (context.get('favored_sectors') or [])
     is_avoided = sec_norm in (context.get('avoided_sectors') or [])
+
+    # Décomposition du score composite
+    buf = s.get('buffett_score') or 0
+    q = s.get('quality_score') or 0
+    perf = s.get('perf_1y') or 0
+    perf_n = max(-1.0, min(1.0, perf / 100.0))
+    radar_n = 1.0 if is_favored else (-0.5 if is_avoided else 0.0)
+    score_breakdown = {
+        'buffett_contribution': round(W_BUFFETT * (buf/100.0), 4),
+        'quality_contribution': round(W_QUALITY * (q/100.0), 4),
+        'perf_contribution': round(W_PERF * perf_n, 4),
+        'radar_contribution': round(W_RADAR * radar_n, 4),
+    }
+
     return {
+        # Identité
         'ticker': s.get('ticker'),
         'name': (s.get('name') or s.get('stock_name') or '')[:50],
         'country': s.get('country'),
         'region': s.get('_region'),
+        'exchange': s.get('exchange'),
         'sector': s.get('sector'),
         'sector_normalized': sec_norm,
         'industry': s.get('industry'),
+        # Scores
         'buffett_score': s.get('buffett_score'),
+        'buffett_grade': s.get('buffett_grade'),
         'quality_score': s.get('quality_score'),
-        'volatility_3y': s.get('volatility_3y'),
+        'quality_grade': s.get('quality_grade'),
+        'quality_peer_global_rank': s.get('quality_peer_global_rank'),
+        'quality_peer_size': s.get('quality_peer_size'),
+        # Fondamentaux
+        'pe_ratio': s.get('pe_ratio'),
+        'roe': s.get('roe'),
+        'roic': s.get('roic'),
+        'net_margin': s.get('net_margin'),
+        'fcf_yield': s.get('fcf_yield'),
+        'de_ratio': s.get('de_ratio'),
+        'revenue_growth_3y': s.get('revenue_growth_3y'),
+        'eps_growth_5y': s.get('eps_growth_5y'),
+        'eps_growth_forecast_5y': s.get('eps_growth_forecast_5y'),
+        # Dividende
         'dividend_yield': s.get('dividend_yield'),
-        'perf_1y': s.get('perf_1y'),
+        'dividend_yield_ttm': s.get('dividend_yield_ttm'),
+        'dividend_growth_3y': s.get('dividend_growth_3y'),
+        'dividend_coverage': s.get('dividend_coverage'),
+        'payout_ratio_ttm': s.get('payout_ratio_ttm'),
+        # Risque
+        'volatility_3y': s.get('volatility_3y'),
+        'beta': s.get('beta'),
+        'max_drawdown_3y': s.get('max_drawdown_3y'),
+        # Performance
+        'perf_1m': s.get('perf_1m'),
+        'perf_3m': s.get('perf_3m'),
         'perf_ytd': s.get('perf_ytd'),
+        'perf_1y': s.get('perf_1y'),
+        'perf_3y': s.get('perf_3y'),
+        'distance_52w_high': s.get('distance_52w_high'),
+        'distance_52w_low': s.get('distance_52w_low'),
+        # Cours et taille
         'price': s.get('price'),
-        'market_cap_str': s.get('market_cap_str') or s.get('market_cap'),
+        'data_currency': s.get('data_currency'),
+        'market_cap': s.get('market_cap'),
+        'market_cap_str': fmt_market_cap(s.get('market_cap')),
+        'range_52w': s.get('range_52w'),
+        # Composite
         'composite_score': round(score, 4),
+        'composite_breakdown': score_breakdown,
         'is_favored_sector': is_favored,
         'is_avoided_sector': is_avoided,
     }

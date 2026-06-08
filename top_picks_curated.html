@@ -106,21 +106,139 @@ function yahooUrl(ticker, country, region) {
   return `https://finance.yahoo.com/quote/${ticker}${s}`;
 }
 
+function fmt(v, suffix = '', decimals = 1) {
+  if (v == null) return '—';
+  if (typeof v !== 'number') return String(v);
+  return v.toFixed(decimals) + suffix;
+}
+function fmtPct(v, decimals = 1) {
+  if (v == null) return '—';
+  const s = v >= 0 ? '+' : '';
+  return s + v.toFixed(decimals) + '%';
+}
+
+let rowCounter = 0;
 function renderRow(e, rank) {
   const meta = `${e.country || '?'} · ${e.sector_normalized || e.sector || '?'}`;
   const favCls = e.is_favored_sector ? 'favored' : '';
   const favMarker = e.is_favored_sector ? '<span class="fav-marker" title="Secteur favorisé RADAR">⭐</span>' : (e.is_avoided_sector ? '<span class="avo-marker" title="Secteur évité RADAR">🔻</span>' : '');
+  const id = `det-${e.ticker}-${rowCounter++}`;
+
+  // Détail enrichi pour le panel
+  const bd = e.composite_breakdown || {};
   return `
-  <div class="stock-row ${favCls}">
+  <div class="stock-row ${favCls}" onclick="(function(){const p=document.getElementById('${id}');p.style.display=p.style.display==='block'?'none':'block';})()" style="cursor:pointer;">
     <div class="rank">${rank}.</div>
-    <div class="ticker"><a href="${yahooUrl(e.ticker, e.country, e.region)}" target="_blank">${e.ticker}</a></div>
+    <div class="ticker"><a href="${yahooUrl(e.ticker, e.country, e.region)}" target="_blank" onclick="event.stopPropagation()">${e.ticker}</a></div>
     <div class="name">${e.name}</div>
-    <div class="meta-info">${meta}</div>
+    <div class="meta-info">${meta}${e.market_cap_str ? ' · '+e.market_cap_str : ''}</div>
     <div class="scores">${chipBuf(e.buffett_score)} ${chipQ(e.quality_score)} ${perfTxt(e.perf_1y)}</div>
     <div class="composite">${e.composite_score.toFixed(3)}</div>
     <div style="min-width:24px;text-align:center;">${favMarker}</div>
   </div>
+  <div id="${id}" class="detail-panel" style="display:none;">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.78rem;">
+      <div style="flex:1;min-width:240px;">
+        <h4 style="margin:0 0 6px 0;color:#64b5f6;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;">Fondamentaux</h4>
+        <div>P/E : <strong>${fmt(e.pe_ratio)}</strong> · ROE : <strong>${fmt(e.roe, '%')}</strong> · ROIC : <strong>${fmt(e.roic, '%')}</strong></div>
+        <div>Marge nette : <strong>${fmt(e.net_margin, '%')}</strong> · FCF yield : <strong>${fmt(e.fcf_yield, '%')}</strong></div>
+        <div>D/E : <strong>${fmt(e.de_ratio, '', 2)}</strong> · Croissance CA 3y : <strong>${fmtPct(e.revenue_growth_3y)}</strong></div>
+        <div>EPS croissance 5y : <strong>${fmtPct(e.eps_growth_5y)}</strong> · forecast : <strong>${fmtPct(e.eps_growth_forecast_5y)}</strong></div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <h4 style="margin:0 0 6px 0;color:#81c784;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;">Dividende</h4>
+        <div>Yield : <strong>${fmt(e.dividend_yield, '%', 2)}</strong> (TTM : ${fmt(e.dividend_yield_ttm, '%', 2)})</div>
+        <div>Croissance 3y : <strong>${fmtPct(e.dividend_growth_3y)}</strong></div>
+        <div>Coverage : <strong>${fmt(e.dividend_coverage, 'x', 1)}</strong> · Payout : <strong>${fmt((e.payout_ratio_ttm||0)*100, '%', 0)}</strong></div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <h4 style="margin:0 0 6px 0;color:#ffb74d;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;">Risque & Perf</h4>
+        <div>Vol 3y : <strong>${fmt(e.volatility_3y, '%')}</strong> · β : <strong>${fmt(e.beta, '', 2)}</strong></div>
+        <div>MaxDD 3y : <strong>${fmt(e.max_drawdown_3y, '%')}</strong></div>
+        <div>Perf 1m : <strong>${fmtPct(e.perf_1m)}</strong> · 3m : <strong>${fmtPct(e.perf_3m)}</strong> · YTD : <strong>${fmtPct(e.perf_ytd)}</strong></div>
+        <div>Perf 1y : <strong>${fmtPct(e.perf_1y)}</strong> · 3y : <strong>${fmtPct(e.perf_3y)}</strong></div>
+        <div>vs 52w high : <strong>${fmtPct(e.distance_52w_high)}</strong></div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <h4 style="margin:0 0 6px 0;color:#ef9a9a;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.5px;">Scoring composite</h4>
+        <div>Buffett (${e.buffett_score}) → <strong>${(bd.buffett_contribution||0).toFixed(3)}</strong></div>
+        <div>Quality (${e.quality_score}) → <strong>${(bd.quality_contribution||0).toFixed(3)}</strong></div>
+        <div>Perf 1y (${fmtPct(e.perf_1y)}) → <strong>${(bd.perf_contribution||0).toFixed(3)}</strong></div>
+        <div>RADAR ${e.is_favored_sector ? '⭐' : (e.is_avoided_sector ? '🔻' : '·')} → <strong>${(bd.radar_contribution||0).toFixed(3)}</strong></div>
+        <div style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;">Total : <strong style="color:#ffb74d;font-size:1rem;">${e.composite_score.toFixed(3)}</strong></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="copyForClaude('${e.ticker}', ${rank}); event.stopPropagation();" style="background:rgba(33,150,243,0.2);color:#64b5f6;border:none;border-radius:5px;padding:5px 12px;cursor:pointer;font-size:0.78rem;font-weight:600;">📋 Copier détail pour Claude</button>
+      <a href="${yahooUrl(e.ticker, e.country, e.region)}" target="_blank" style="background:rgba(76,175,80,0.15);color:#81c784;border:none;border-radius:5px;padding:5px 12px;text-decoration:none;font-size:0.78rem;font-weight:600;" onclick="event.stopPropagation()">↗ Yahoo Finance</a>
+      <span style="color:rgba(255,255,255,0.4);font-size:0.72rem;align-self:center;">Industry : ${e.industry || '—'} · Quality rank ${e.quality_peer_global_rank ?? '—'}/${e.quality_peer_size ?? '—'} dans son peer group</span>
+    </div>
+  </div>
   `;
+}
+
+function copyForClaude(ticker, rank) {
+  // Cherche le stock dans toutes les sections
+  const allEntries = [...(window._DATA.global_top_25 || []),
+    ...Object.values(window._DATA.by_country || {}).flat(),
+    ...Object.values(window._DATA.by_sector || {}).flat()];
+  const e = allEntries.find(x => x.ticker === ticker);
+  if (!e) { alert('Stock introuvable'); return; }
+
+  const ctx = window._DATA.context || {};
+  const brief = `# Analyse demandée — ${e.ticker} (${e.name})
+
+## Identité
+- **Ticker**: ${e.ticker} | **Exchange**: ${e.exchange || '?'} | **Pays**: ${e.country} | **Région**: ${e.region}
+- **Secteur**: ${e.sector} (${e.sector_normalized}) | **Industry**: ${e.industry}
+- **Market cap**: ${e.market_cap_str || '?'} | **Prix**: ${e.price ? e.price.toFixed(2)+' '+(e.data_currency||'') : '?'} | **Range 52w**: ${e.range_52w || '?'}
+
+## Score composite ${e.composite_score.toFixed(3)} (rang #${rank} top picks curated)
+- Buffett ${e.buffett_score} (${e.buffett_grade || '?'}) → ${(e.composite_breakdown?.buffett_contribution || 0).toFixed(3)}
+- Quality ${e.quality_score} (${e.quality_grade || '?'}, rank ${e.quality_peer_global_rank ?? '?'}/${e.quality_peer_size ?? '?'} dans son peer group) → ${(e.composite_breakdown?.quality_contribution || 0).toFixed(3)}
+- Perf 1y ${fmtPct(e.perf_1y)} → ${(e.composite_breakdown?.perf_contribution || 0).toFixed(3)}
+- RADAR contextuel ${e.is_favored_sector ? '⭐ favorisé' : (e.is_avoided_sector ? '🔻 évité' : 'neutre')} → ${(e.composite_breakdown?.radar_contribution || 0).toFixed(3)}
+
+## Fondamentaux
+- **P/E**: ${fmt(e.pe_ratio)} | **ROE**: ${fmt(e.roe, '%')} | **ROIC**: ${fmt(e.roic, '%')}
+- **Marge nette**: ${fmt(e.net_margin, '%')} | **FCF yield**: ${fmt(e.fcf_yield, '%')}
+- **D/E**: ${fmt(e.de_ratio, '', 2)}
+- **Croissance CA 3y**: ${fmtPct(e.revenue_growth_3y)} | **EPS 5y**: ${fmtPct(e.eps_growth_5y)} | **EPS forecast 5y**: ${fmtPct(e.eps_growth_forecast_5y)}
+
+## Dividende
+- **Yield**: ${fmt(e.dividend_yield, '%', 2)} (TTM: ${fmt(e.dividend_yield_ttm, '%', 2)})
+- **Croissance div 3y**: ${fmtPct(e.dividend_growth_3y)}
+- **Coverage**: ${fmt(e.dividend_coverage, 'x')} | **Payout**: ${fmt((e.payout_ratio_ttm||0)*100, '%', 0)}
+
+## Risque
+- **Vol 3y**: ${fmt(e.volatility_3y, '%')} | **β**: ${fmt(e.beta, '', 2)}
+- **MaxDD 3y**: ${fmt(e.max_drawdown_3y, '%')}
+- **Distance 52w high**: ${fmtPct(e.distance_52w_high)} | **52w low**: ${fmtPct(e.distance_52w_low)}
+
+## Performance
+- 1m: ${fmtPct(e.perf_1m)} | 3m: ${fmtPct(e.perf_3m)} | YTD: ${fmtPct(e.perf_ytd)}
+- 1y: ${fmtPct(e.perf_1y)} | 3y: ${fmtPct(e.perf_3y)}
+
+## Contexte marché (RADAR)
+- **Régime**: ${ctx.regime || '?'} (confidence ${((ctx.confidence||0)*100).toFixed(0)}%)
+- **Secteurs favorisés**: ${(ctx.favored_sectors || []).join(', ') || '—'}
+- **Secteurs évités**: ${(ctx.avoided_sectors || []).join(', ') || '—'}
+- **Régions favorisées**: ${(ctx.favored_regions || []).join(', ') || '—'}
+${ctx.rationale ? `- **Rationale RADAR**: ${ctx.rationale}` : ''}
+
+---
+
+**Question pour toi (Claude) :**
+Cette action sort #${rank} dans mon classement curated qui combine Buffett (40%) + Quality (30%) + Perf 1y (15%) + RADAR contextuel (15%). J'envisage un achat ponctuel d'une seule ligne. À la lumière des fondamentaux et du contexte ci-dessus :
+1. Est-ce une bonne idée à ce niveau de prix (vs 52w high/low) ?
+2. Y a-t-il des signaux que mon scoring rate (P/E vs peers, dette, payout, dilution, etc.) ?
+3. Risque sectoriel/géopolitique spécifique à cette ligne ?
+4. Recommanderais-tu une autre action de qualité équivalente plus alignée avec le contexte RADAR actuel ?`;
+
+  navigator.clipboard.writeText(brief).then(
+    () => { alert('✓ Brief copié — colle-le dans Claude'); },
+    (e) => { alert('Erreur copie: ' + e.message + '\\n\\nCopie manuelle :\\n' + brief.substring(0,300) + '...'); }
+  );
 }
 
 async function load() {
@@ -133,6 +251,7 @@ async function load() {
     document.getElementById('global-top').innerHTML = '<p style="padding:16px;color:#ef5350;">data/top_picks_curated.json introuvable. Relance <code>generate_portfolios_v4.py</code> ou <code>python3 scripts/build_top_picks_curated.py</code>.</p>';
     return;
   }
+  window._DATA = d;
 
   // Context banner
   const ctx = d.context || {};
