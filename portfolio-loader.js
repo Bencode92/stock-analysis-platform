@@ -58,6 +58,15 @@ class PortfolioManagerV3 {
     for (const k of Object.keys(data)) { if (!k.startsWith('_')) this.portfolios[k] = data[k]; }
     this.lastUpdate = this.meta.generated_at ? new Date(this.meta.generated_at) : new Date();
 
+    // v6.24: charge asian_alternatives.json pour le panel "comment acheter" sur actions asiatiques
+    const asianPaths = [
+      'data/asian_alternatives.json', './data/asian_alternatives.json',
+      '/stock-analysis-platform/data/asian_alternatives.json',
+      `https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/asian_alternatives.json`
+    ];
+    const asianData = await this.fetchJSON(asianPaths);
+    this.asianAlternatives = asianData ? (asianData.stocks || {}) : {};
+
     // Try loading previous version for turnover
     const prev = await this.fetchJSON(prevPaths);
     if (prev) {
@@ -353,7 +362,9 @@ class PortfolioManagerV3 {
         if (metrics.buffett_score) chips.push(`Buffett ${Math.round(metrics.buffett_score)}`);
         if (metrics.volatility) chips.push(`Vol ${metrics.volatility.toFixed(0)}%`);
 
-        const hasDetail = rationale || chips.length > 0;
+        // v6.24: mapping asiatique (ADR/alternatives ACTION/ETF dernier recours)
+        const asianMapping = this.asianAlternatives?.[ticker];
+        const hasDetail = rationale || chips.length > 0 || asianMapping;
         const detailId = `detail-${ticker || a.name.replace(/[^a-zA-Z0-9]/g, '')}`;
 
         html += `
@@ -387,6 +398,38 @@ class PortfolioManagerV3 {
               ${chips.map(c => `<span style="font-size:0.65rem;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);font-family:'JetBrains Mono',monospace;">${c}</span>`).join('')}
             </div>` : ''}
             ${sector || country ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.35);margin-top:0.4rem;">${[sector, country].filter(Boolean).join(' · ')}</div>` : ''}
+            ${asianMapping ? `
+            <div style="margin-top:0.8rem;padding:0.8rem;background:rgba(255,165,0,0.06);border:1px solid rgba(255,165,0,0.18);border-radius:8px;">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                <i class="fas fa-globe-asia" style="color:#ffb74d;font-size:0.8rem;"></i>
+                <span style="font-size:0.75rem;font-weight:700;color:#ffb74d;text-transform:uppercase;letter-spacing:0.5px;">Action asiatique — comment l'acheter</span>
+              </div>
+              <div style="font-size:0.72rem;color:rgba(255,255,255,0.7);line-height:1.5;margin-bottom:0.5rem;">
+                <div><strong style="color:rgba(255,255,255,0.85);">1. Ticker complet :</strong> <code style="background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:4px;color:#ffd54f;font-family:'JetBrains Mono',monospace;">${asianMapping.yahoo_ticker}</code> sur ${asianMapping.exchange} — <a href="${asianMapping.yahoo_url}" target="_blank" style="color:#64b5f6;text-decoration:none;"><i class="fas fa-external-link-alt" style="font-size:0.6rem;"></i> Yahoo Finance</a></div>
+                ${asianMapping.adr_us ? `<div style="margin-top:0.3rem;"><strong style="color:#4caf50;">2. ADR US dispo :</strong> <code style="background:rgba(76,175,80,0.15);padding:1px 6px;border-radius:4px;color:#81c784;">${asianMapping.adr_us}</code> = la MÊME action cotée NY (substitut parfait)</div>` : `<div style="margin-top:0.3rem;color:rgba(255,255,255,0.5);"><strong>2. ADR US :</strong> ❌ pas d'ADR US listé</div>`}
+                ${asianMapping.parent_company ? `<div style="margin-top:0.3rem;font-size:0.68rem;color:rgba(255,193,7,0.85);"><i class="fas fa-info-circle" style="margin-right:3px;"></i>${asianMapping.parent_company}</div>` : ''}
+                ${asianMapping.notes ? `<div style="margin-top:0.3rem;font-size:0.66rem;color:rgba(255,255,255,0.45);font-style:italic;">${asianMapping.notes}</div>` : ''}
+              </div>
+              ${asianMapping.alternative_actions && asianMapping.alternative_actions.length ? `
+                <div style="margin-top:0.6rem;">
+                  <div style="font-size:0.7rem;font-weight:600;color:rgba(255,255,255,0.75);margin-bottom:0.3rem;">3. Alternatives ACTION achetables (mêmes secteur/qualité — pas un indice) :</div>
+                  ${asianMapping.alternative_actions.map(alt => `
+                    <div style="font-size:0.7rem;padding:4px 8px;background:rgba(33,150,243,0.08);border-left:2px solid #64b5f6;margin:0.25rem 0;border-radius:4px;">
+                      <strong style="color:#64b5f6;font-family:'JetBrains Mono',monospace;">${alt.ticker}</strong>
+                      <span style="color:rgba(255,255,255,0.8);">${alt.name}</span>
+                      <span style="color:rgba(255,255,255,0.5);font-size:0.65rem;">— ${alt.country}, ${alt.industry}, Buf ${alt.buffett_score}/Q ${alt.quality_score}${alt.match_level === 'industry' ? ' <span style="color:#4caf50;">[match industry]</span>' : ' <span style="color:#ff9800;">[match secteur]</span>'}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              ${asianMapping.etf_last_resort ? `
+                <div style="margin-top:0.6rem;padding:6px 10px;background:rgba(244,67,54,0.08);border-left:2px solid #ef5350;border-radius:4px;">
+                  <div style="font-size:0.65rem;color:#ef9a9a;"><strong>⚠️ 4. ETF dernier recours :</strong> ${asianMapping.etf_last_resort.ticker} (${asianMapping.etf_last_resort.name})</div>
+                  <div style="font-size:0.62rem;color:rgba(255,255,255,0.45);font-style:italic;margin-top:2px;">${asianMapping.etf_last_resort.warning} — préfère une alternative ACTION ci-dessus</div>
+                </div>
+              ` : ''}
+            </div>
+            ` : ''}
           </div>` : ''}
         </div>`;
       }

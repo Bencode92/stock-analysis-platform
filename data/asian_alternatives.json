@@ -1,0 +1,568 @@
+{
+  "_meta": {
+    "purpose": "Mapping actions asiatiques → ADR US / alternatives ACTIONS / proxy ETF dernier recours",
+    "doctrine": "1. Ticker complet (test broker) → 2. ADR US si dispo (= même action) → 3. Alternative ACTION individuelle même secteur/qualité accessible → 4. Proxy ETF en dernier recours, flagged comme dilutant"
+  },
+  "stocks": {
+    "HEROMOTOCO": {
+      "ticker": "HEROMOTOCO",
+      "name": "HERO MOTOCORP LTD",
+      "country": "Inde",
+      "sector": "Biens de consommation cycliques",
+      "industry": "Auto Manufacturers",
+      "buffett_score": 100,
+      "quality_score": 86,
+      "dividend_yield": 3.62,
+      "yahoo_ticker": "HEROMOTOCO.NS",
+      "exchange": "NSE (National Stock Exchange of India)",
+      "yahoo_url": "https://finance.yahoo.com/quote/HEROMOTOCO.NS",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Pas d'ADR US. Achat via broker avec accès NSE direct (peu de brokers EU).",
+      "alternative_actions": [
+        {
+          "ticker": "DECK",
+          "name": "DECKERS OUTDOOR CORP",
+          "country": "Etats-Unis",
+          "sector": "Biens de consommation cycliques",
+          "industry": "Footwear & Accessories",
+          "buffett_score": 100,
+          "quality_score": 99,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "WSM",
+          "name": "WILLIAMS SONOMA INC",
+          "country": "Etats-Unis",
+          "sector": "Biens de consommation cycliques",
+          "industry": "Specialty Retail",
+          "buffett_score": 100,
+          "quality_score": 79,
+          "dividend_yield": 1.32,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "AMS",
+          "name": "AMADEUS IT GROUP SA",
+          "country": "Espagne",
+          "sector": "Biens de consommation cycliques",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 73,
+          "dividend_yield": 2.33,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "INDA",
+        "name": "iShares MSCI India ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "LUPIN": {
+      "ticker": "LUPIN",
+      "name": "LUPIN LTD",
+      "country": "Inde",
+      "sector": "Santé",
+      "industry": "Drug Manufacturers - Specialty & Generic",
+      "buffett_score": 83,
+      "quality_score": 84,
+      "dividend_yield": 0.53,
+      "yahoo_ticker": "LUPIN.NS",
+      "exchange": "NSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/LUPIN.NS",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Pas d'ADR US. Cotée uniquement BSE/NSE.",
+      "alternative_actions": [
+        {
+          "ticker": "ZTS",
+          "name": "ZOETIS INC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Santé",
+          "industry": "Drug Manufacturers - Specialty & Generic",
+          "buffett_score": 83,
+          "quality_score": 77,
+          "dividend_yield": 2.59,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "RMD",
+          "name": "RESMED INC",
+          "country": "Etats-Unis",
+          "sector": "Santé",
+          "industry": "Medical Instruments & Supplies",
+          "buffett_score": 100,
+          "quality_score": 91,
+          "dividend_yield": 1.24,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "REGN",
+          "name": "REGENERON PHARMACEUTICALS INC",
+          "country": "Etats-Unis",
+          "sector": "Santé",
+          "industry": "Biotechnology",
+          "buffett_score": 100,
+          "quality_score": 84,
+          "dividend_yield": 0.58,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "INDA",
+        "name": "iShares MSCI India ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "CUMMINSIND": {
+      "ticker": "CUMMINSIND",
+      "name": "CUMMINS INDIA LTD",
+      "country": "Inde",
+      "sector": "Industries",
+      "industry": "Specialty Industrial Machinery",
+      "buffett_score": 67,
+      "quality_score": 81,
+      "dividend_yield": 0.31,
+      "yahoo_ticker": "CUMMINSIND.NS",
+      "exchange": "NSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/CUMMINSIND.NS",
+      "adr_us": null,
+      "parent_company": "CMI (Cummins Inc, NYSE) — société mère cotée US, ATTENTION : pas la même action que Cummins India",
+      "notes": "Société mère CMI cotée NYSE. Note : Cummins Inc et Cummins India ne sont pas identiques (Inc = global, India = filiale Inde) mais corrélation forte.",
+      "alternative_actions": [
+        {
+          "ticker": "GGG",
+          "name": "GRACO INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 1.53,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "PNR",
+          "name": "PENTAIR",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 100,
+          "quality_score": 79,
+          "dividend_yield": 1.43,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "SCHP",
+          "name": "SCHINDLER HOLDING PAR AG",
+          "country": "Suisse",
+          "sector": "Industries",
+          "industry": "Specialty Industrial Machinery",
+          "buffett_score": 83,
+          "quality_score": 74,
+          "dividend_yield": 2.56,
+          "match_level": "industry"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "INDA",
+        "name": "iShares MSCI India ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "POWERINDIA": {
+      "ticker": "POWERINDIA",
+      "name": "HITACHI ENERGY INDIA LTD",
+      "country": "Inde",
+      "sector": "Industries",
+      "industry": "Electrical Equipment & Parts",
+      "buffett_score": 67,
+      "quality_score": 67,
+      "dividend_yield": 0.01,
+      "yahoo_ticker": "POWERINDIA.NS",
+      "exchange": "NSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/POWERINDIA.NS",
+      "adr_us": null,
+      "parent_company": "Hitachi Energy = ABB spin-off + Hitachi JV. Possible proxy : ABBN.SW (ABB Ltd, Suisse)",
+      "notes": "Filiale du JV Hitachi Energy. ABBN.SW (ABB, Suisse, EUR/CHF) est le proxy industrie le plus proche, achetable depuis broker EU.",
+      "alternative_actions": [
+        {
+          "ticker": "ABBN",
+          "name": "ABB LTD",
+          "country": "Suisse",
+          "sector": "Industries",
+          "industry": "Electrical Equipment & Parts",
+          "buffett_score": 67,
+          "quality_score": 70,
+          "dividend_yield": 1.12,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "HUBB",
+          "name": "HUBBELL INC",
+          "country": "Etats-Unis",
+          "sector": "Industries",
+          "industry": "Electrical Equipment & Parts",
+          "buffett_score": 67,
+          "quality_score": 67,
+          "dividend_yield": 1.15,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "LR",
+          "name": "LEGRAND SA",
+          "country": "France",
+          "sector": "Industries",
+          "industry": "Electrical Equipment & Parts",
+          "buffett_score": 67,
+          "quality_score": 66,
+          "dividend_yield": 1.62,
+          "match_level": "industry"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "INDA",
+        "name": "iShares MSCI India ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "2345": {
+      "ticker": "2345",
+      "name": "ACCTON TECHNOLOGY CORP",
+      "country": "Taïwan",
+      "sector": "Technologie de l'information",
+      "industry": "Communication Equipment",
+      "buffett_score": 67,
+      "quality_score": 81,
+      "dividend_yield": 0.44,
+      "yahoo_ticker": "2345.TW",
+      "exchange": "TWSE (Taiwan Stock Exchange)",
+      "yahoo_url": "https://finance.yahoo.com/quote/2345.TW",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Accton Technology — pas d'ADR US. Achat via broker avec accès TWSE.",
+      "alternative_actions": [
+        {
+          "ticker": "FSLR",
+          "name": "FIRST SOLAR INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Solar",
+          "buffett_score": 100,
+          "quality_score": 85,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "ACN",
+          "name": "ACCENTURE PLC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 3.31,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "CTSH",
+          "name": "COGNIZANT TECHNOLOGY SOLUTIONS COR",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 2.4,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "EWT",
+        "name": "iShares MSCI Taiwan ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "2368": {
+      "ticker": "2368",
+      "name": "GOLD CIRCUIT ELECTRONICS LTD",
+      "country": "Taïwan",
+      "sector": "Technologie de l'information",
+      "industry": "Electronic Components",
+      "buffett_score": 67,
+      "quality_score": 63,
+      "dividend_yield": 0.36,
+      "yahoo_ticker": "2368.TW",
+      "exchange": "TWSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/2368.TW",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Gold Circuit Electronics — pas d'ADR US.",
+      "alternative_actions": [
+        {
+          "ticker": "APH",
+          "name": "AMPHENOL CORP CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 78,
+          "dividend_yield": 0.57,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "FSLR",
+          "name": "FIRST SOLAR INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Solar",
+          "buffett_score": 100,
+          "quality_score": 85,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "ACN",
+          "name": "ACCENTURE PLC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 3.31,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "EWT",
+        "name": "iShares MSCI Taiwan ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "3017": {
+      "ticker": "3017",
+      "name": "ASIA VITAL COMPONENTS LTD",
+      "country": "Taïwan",
+      "sector": "Technologie de l'information",
+      "industry": "Electronic Components",
+      "buffett_score": 67,
+      "quality_score": 79,
+      "dividend_yield": 0.38,
+      "yahoo_ticker": "3017.TW",
+      "exchange": "TWSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/3017.TW",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Asia Vital Components — pas d'ADR US.",
+      "alternative_actions": [
+        {
+          "ticker": "APH",
+          "name": "AMPHENOL CORP CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 78,
+          "dividend_yield": 0.57,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "FSLR",
+          "name": "FIRST SOLAR INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Solar",
+          "buffett_score": 100,
+          "quality_score": 85,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "ACN",
+          "name": "ACCENTURE PLC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 3.31,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "EWT",
+        "name": "iShares MSCI Taiwan ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "3443": {
+      "ticker": "3443",
+      "name": "GLOBAL UNICHIP CORP",
+      "country": "Taïwan",
+      "sector": "Technologie de l'information",
+      "industry": "Semiconductors",
+      "buffett_score": 67,
+      "quality_score": 59,
+      "dividend_yield": 0.36,
+      "yahoo_ticker": "3443.TW",
+      "exchange": "TWSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/3443.TW",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Global Unichip Corp — pas d'ADR US. Filiale TSMC (TSM US disponible comme proxy semis Taiwan).",
+      "alternative_actions": [
+        {
+          "ticker": "NVDA",
+          "name": "NVIDIA CORP",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductors",
+          "buffett_score": 67,
+          "quality_score": 96,
+          "dividend_yield": 0.02,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "QCOM",
+          "name": "QUALCOMM INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Semiconductors",
+          "buffett_score": 67,
+          "quality_score": 62,
+          "dividend_yield": 1.85,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "FSLR",
+          "name": "FIRST SOLAR INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Solar",
+          "buffett_score": 100,
+          "quality_score": 85,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "EWT",
+        "name": "iShares MSCI Taiwan ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "3653": {
+      "ticker": "3653",
+      "name": "JENTECH PRECISION INDUSTRIAL LTD",
+      "country": "Taïwan",
+      "sector": "Technologie de l'information",
+      "industry": "Electronic Components",
+      "buffett_score": 67,
+      "quality_score": 77,
+      "dividend_yield": 0.4,
+      "yahoo_ticker": "3653.TW",
+      "exchange": "TWSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/3653.TW",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Jentech Precision Industrial — pas d'ADR US.",
+      "alternative_actions": [
+        {
+          "ticker": "APH",
+          "name": "AMPHENOL CORP CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Electronic Components",
+          "buffett_score": 67,
+          "quality_score": 78,
+          "dividend_yield": 0.57,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "FSLR",
+          "name": "FIRST SOLAR INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Solar",
+          "buffett_score": 100,
+          "quality_score": 85,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "ACN",
+          "name": "ACCENTURE PLC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 3.31,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "EWT",
+        "name": "iShares MSCI Taiwan ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    },
+    "6669": {
+      "ticker": "6669",
+      "name": "WIWYNN CORPORATION CORP",
+      "country": "Taïwan",
+      "sector": "Technologie de l'information",
+      "industry": "Computer Hardware",
+      "buffett_score": 83,
+      "quality_score": 59,
+      "dividend_yield": 1.31,
+      "yahoo_ticker": "6669.TW",
+      "exchange": "TWSE",
+      "yahoo_url": "https://finance.yahoo.com/quote/6669.TW",
+      "adr_us": null,
+      "parent_company": null,
+      "notes": "Wiwynn Corp (server AI infra) — pas d'ADR US. Proxy AI server : SMCI US, DELL US.",
+      "alternative_actions": [
+        {
+          "ticker": "LOGN",
+          "name": "LOGITECH INTERNATIONAL SA",
+          "country": "Suisse",
+          "sector": "Technologie de l'information",
+          "industry": "Computer Hardware",
+          "buffett_score": 83,
+          "quality_score": 75,
+          "dividend_yield": 1.36,
+          "match_level": "industry"
+        },
+        {
+          "ticker": "FSLR",
+          "name": "FIRST SOLAR INC",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Solar",
+          "buffett_score": 100,
+          "quality_score": 85,
+          "dividend_yield": 0,
+          "match_level": "sector"
+        },
+        {
+          "ticker": "ACN",
+          "name": "ACCENTURE PLC CLASS A",
+          "country": "Etats-Unis",
+          "sector": "Technologie de l'information",
+          "industry": "Information Technology Services",
+          "buffett_score": 100,
+          "quality_score": 83,
+          "dividend_yield": 3.31,
+          "match_level": "sector"
+        }
+      ],
+      "etf_last_resort": {
+        "ticker": "EWT",
+        "name": "iShares MSCI Taiwan ETF",
+        "warning": "Indice entier — dilue la conviction"
+      }
+    }
+  }
+}

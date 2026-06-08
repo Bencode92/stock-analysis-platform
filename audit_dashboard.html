@@ -444,6 +444,9 @@ async function autoLoad() {
   // v6.20 : charge decision_log latest pour l'onglet Rationale
   const dl = await tryFetch('data/decision_log/latest.json');
   if (dl) { STATE.decisionLog = dl; }
+  // v6.24 : charge mapping ADR/alternatives ACTION pour actions asiatiques
+  const aa = await tryFetch('data/asian_alternatives.json');
+  if (aa) { STATE.asianAlternatives = aa.stocks || {}; }
   indexStocks();
   refresh();
 }
@@ -1866,8 +1869,12 @@ function renderRationale() {
           <th>Natif</th>
         </tr></thead>
         <tbody>
-        ${(p.alternatives_non_retenues || []).slice(0, 10).map(a => `<tr>
-          <td><strong>${a.ticker||''}</strong></td>
+        ${(p.alternatives_non_retenues || []).slice(0, 10).map(a => {
+          const asian = (STATE.asianAlternatives || {})[a.ticker];
+          const asianBtnId = `asianbtn-${prof.replace(/[^a-zA-Z0-9]/g,'')}-${a.ticker}`;
+          const asianPanelId = `asianpanel-${prof.replace(/[^a-zA-Z0-9]/g,'')}-${a.ticker}`;
+          return `<tr>
+          <td><strong>${a.ticker||''}</strong>${asian ? ` <button onclick="(function(){const p=document.getElementById('${asianPanelId}');p.style.display=p.style.display==='none'?'table-row':'none';})()" title="Action asiatique — voir alternatives ACTION achetables" style="background:rgba(255,165,0,0.15);border:1px solid rgba(255,165,0,0.3);color:#ffb74d;border-radius:4px;padding:1px 5px;font-size:0.65rem;cursor:pointer;margin-left:4px;">🌏</button>` : ''}</td>
           <td title="${a.name||''}">${(a.name||'').slice(0,28)}</td>
           <td>${(a.country||'').slice(0,10)}</td>
           <td>${(a.sector||'').slice(0,18)}</td>
@@ -1878,7 +1885,20 @@ function renderRationale() {
           <td class="num">${a.perf_1y !== null && a.perf_1y !== undefined ? (a.perf_1y).toFixed(0)+'%' : ''}</td>
           <td class="num">${a.fit_score ? a.fit_score.toFixed(2) : ''}</td>
           <td>${a._profile_native || ''}</td>
-        </tr>`).join('')}
+        </tr>${asian ? `<tr id="${asianPanelId}" style="display:none;"><td colspan="11" style="background:rgba(255,165,0,0.04);border-left:3px solid #ffb74d;padding:10px 14px;">
+          <div style="font-size:0.75rem;font-weight:700;color:#ffb74d;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;"><i class="fas fa-globe-asia"></i> Comment acheter ${a.ticker} — cascade</div>
+          <div style="font-size:0.72rem;line-height:1.6;color:var(--text-secondary);">
+            <div><strong>1. Ticker complet :</strong> <code style="background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:4px;color:#ffd54f;">${asian.yahoo_ticker}</code> sur ${asian.exchange} — <a href="${asian.yahoo_url}" target="_blank" style="color:#64b5f6;">Yahoo ↗</a></div>
+            ${asian.adr_us ? `<div style="margin-top:3px;"><strong style="color:#4caf50;">2. ADR US :</strong> ${asian.adr_us} (= MÊME action, substitut parfait)</div>` : `<div style="margin-top:3px;color:rgba(255,255,255,0.45);"><strong>2. ADR US :</strong> ❌ aucun</div>`}
+            ${asian.parent_company ? `<div style="margin-top:3px;color:#ffc107;font-size:0.68rem;"><i class="fas fa-info-circle"></i> ${asian.parent_company}</div>` : ''}
+            ${asian.notes ? `<div style="margin-top:3px;color:rgba(255,255,255,0.45);font-style:italic;font-size:0.66rem;">${asian.notes}</div>` : ''}
+            ${asian.alternative_actions && asian.alternative_actions.length ? `<div style="margin-top:6px;"><strong>3. Alternatives ACTION achetables (pas un indice) :</strong>
+              ${asian.alternative_actions.map(alt => `<div style="font-size:0.7rem;padding:3px 7px;background:rgba(33,150,243,0.08);border-left:2px solid #64b5f6;margin:3px 0;border-radius:3px;"><strong style="color:#64b5f6;">${alt.ticker}</strong> ${alt.name} <span style="color:rgba(255,255,255,0.5);">— ${alt.country}, ${alt.industry}, Buf ${alt.buffett_score}/Q ${alt.quality_score} ${alt.match_level==='industry'?'<span style="color:#4caf50;">[match industry]</span>':'<span style="color:#ff9800;">[match secteur]</span>'}</span></div>`).join('')}
+            </div>` : ''}
+            ${asian.etf_last_resort ? `<div style="margin-top:6px;padding:5px 9px;background:rgba(244,67,54,0.08);border-left:2px solid #ef5350;border-radius:3px;font-size:0.66rem;color:#ef9a9a;"><strong>⚠️ 4. ETF dernier recours :</strong> ${asian.etf_last_resort.ticker} — ${asian.etf_last_resort.warning}</div>` : ''}
+          </div>
+        </td></tr>` : ''}`;
+        }).join('')}
         </tbody>
       </table></div>
     </div>`;
