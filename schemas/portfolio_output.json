@@ -120,6 +120,22 @@
           "$ref": "#/definitions/AssetDetailsList",
           "description": "v4.11.0: LLM-generated rationales for each asset with RADAR context"
         },
+        "_broker_substitutions": {
+          "type": "array",
+          "description": "v6.24: log des substitutions appliquées par apply_broker_access_substitution() pour les actions asiatiques inaccessibles via le broker user",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "from_ticker": { "type": "string" },
+              "from_name": { "type": "string" },
+              "to_ticker": { "type": "string" },
+              "to_name": { "type": "string" },
+              "reason": { "type": "string" },
+              "weight_pct": { "type": ["number", "string"] }
+            }
+          }
+        },
         "risk_analysis": {
           "type": ["object", "null"],
           "description": "v5.2.1: Export risk analysis (may evolve)",
