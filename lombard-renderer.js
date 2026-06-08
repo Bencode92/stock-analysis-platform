@@ -588,7 +588,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pfContent) pfContent.style.display = isSpecial ? 'none' : 'block';
       if (corrSection) corrSection.style.display = isSpecial ? 'none' : 'block';
       if (panel) panel.style.display = isLombard ? 'block' : 'none';
-      if (topPicksPanel) topPicksPanel.style.display = isTopPicks ? 'block' : 'none';
+      if (topPicksPanel) {
+        topPicksPanel.style.display = isTopPicks ? 'block' : 'none';
+        // v6.34: charge l'iframe à la demande avec cache-busting pour éviter
+        // de servir une version cachée après update du HTML
+        if (isTopPicks) {
+          const iframe = document.getElementById('top-picks-iframe');
+          if (iframe && !iframe.dataset.loaded) {
+            iframe.src = 'top_picks_curated.html?_=' + Date.now();
+            iframe.dataset.loaded = '1';
+          }
+        }
+      }
       if (isLombard && !LombardRenderer.state.rankings) {
         LombardRenderer.init();
       }
