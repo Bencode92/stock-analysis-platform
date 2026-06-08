@@ -142,14 +142,41 @@ def score_stock(s, context):
     buf_n = buf / 100.0
     q_n = q / 100.0
     perf_n = max(-1.0, min(1.0, perf / 100.0))  # cap [-100, +100] → [-1, 1]
-    # RADAR bonus
+    # RADAR bonus sectoriel (favored_sectors / avoided_sectors)
     sec_norm = normalize_sector(s.get('sector'))
     radar_n = 0.0
     if context.get('favored_sectors') and sec_norm in context['favored_sectors']:
         radar_n = 1.0
     elif context.get('avoided_sectors') and sec_norm in context['avoided_sectors']:
         radar_n = -0.5
-    score = W_BUFFETT * buf_n + W_QUALITY * q_n + W_PERF * perf_n + W_RADAR * radar_n
+
+    # v6.38: RADAR malus régional (avoided_regions / favored_regions)
+    # Le RADAR liste des régions évitées (ex: 'india', 'south-africa') mais
+    # jusqu'ici elles étaient juste affichées sans effet sur le scoring.
+    # Maintenant : malus -0.5 si pays mappé vers région évitée, bonus +0.5
+    # si favorisé. C'est un MALUS (option 3 demandée user), pas un filtre
+    # dur : une action excellente peut survivre au malus.
+    country = (s.get('country') or '').lower()
+    COUNTRY_TO_RADAR_REGION = {
+        'inde': 'india', 'india': 'india',
+        'afrique du sud': 'south-africa', 'south africa': 'south-africa',
+        'chine': 'china', 'china': 'china',
+        'taïwan': 'taiwan', 'taiwan': 'taiwan',
+        'corée': 'korea', 'korea': 'korea', 'south korea': 'korea',
+        'japon': 'japan', 'japan': 'japan',
+        'pays-bas': 'netherlands', 'netherlands': 'netherlands',
+        'israël': 'israel', 'israel': 'israel',
+    }
+    radar_region_key = COUNTRY_TO_RADAR_REGION.get(country)
+    region_modifier = 0.0
+    if radar_region_key:
+        if radar_region_key in (context.get('favored_regions') or []):
+            region_modifier = 0.5
+        elif radar_region_key in (context.get('avoided_regions') or []):
+            region_modifier = -0.5
+
+    score = (W_BUFFETT * buf_n + W_QUALITY * q_n + W_PERF * perf_n
+             + W_RADAR * radar_n + W_RADAR * region_modifier)
     return score
 
 
