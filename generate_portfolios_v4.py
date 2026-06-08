@@ -7410,6 +7410,22 @@ def main():
     except Exception as _bk_e:
         logger.warning(f"⚠️ Échec substitution broker access: {_bk_e}")
 
+    # v6.26: top picks curated (meilleures actions pour achats ponctuels)
+    # Génère data/top_picks_curated.json — top 25 global + top 10/pays + top 10/secteur
+    # avec scoring composite Buffett + Quality + Perf + RADAR contextuel
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["python3", "scripts/build_top_picks_curated.py"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            logger.info("   ✓ Top picks curated généré : data/top_picks_curated.json")
+        else:
+            logger.warning(f"⚠️ Top picks curated stderr: {result.stderr[:300]}")
+    except Exception as _tp_e:
+        logger.warning(f"⚠️ Échec top picks curated: {_tp_e}")
+
     # === v7.4: Génération des justifications LLM APRÈS save_portfolios ===
     # Rationales must be generated on the FINAL tickers (post-dedup, post-cap, post-round)
     # Otherwise tickers mismatch: rationale for EMHC but portfolio has SLV after dedup
