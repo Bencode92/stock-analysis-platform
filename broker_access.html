@@ -315,7 +315,7 @@ function render() {
       <div class="stock-ticker">${tk}</div>
       <div class="stock-name">${name}</div>
       <div class="stock-meta">${meta}</div>
-      <div class="stock-substitute">${!isAcc && firstAlt ? `→ <strong style="color:#64b5f6;">${firstAlt.ticker}</strong> ${(firstAlt.name||'').slice(0,18)}` : (!isAcc ? '<em>Pas d\\'alternative</em>' : '')}</div>
+      <div class="stock-substitute">${!isAcc && firstAlt ? `→ <strong style="color:#64b5f6;">${firstAlt.ticker}</strong> ${(firstAlt.name||'').slice(0,18)}` : (!isAcc ? "<em>Pas d'alternative</em>" : '')}</div>
     </div>
     `;
   }).join('');
