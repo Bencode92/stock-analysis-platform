@@ -177,6 +177,62 @@
   }
   .preset-chip .ic { font-size: 13px; }
 
+  /* === NATURAL SEARCH === */
+  .natural-search {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px;
+    position: relative;
+  }
+  .natural-search label {
+    font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .natural-search .search-input-wrap {
+    position: relative; display: flex; align-items: center; gap: 10px;
+  }
+  .natural-search input {
+    flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    color: var(--text); padding: 12px 16px 12px 42px; border-radius: var(--radius-sm);
+    font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s;
+  }
+  .natural-search input:focus { border-color: var(--accent); background: rgba(0,0,0,0.4); }
+  .natural-search input::placeholder { color: var(--text-dim); }
+  .natural-search .search-icon {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-size: 16px;
+  }
+  .natural-search .examples {
+    color: var(--text-dim); font-size: 11.5px; margin-top: 8px;
+  }
+  .natural-search .examples .ex {
+    display: inline-block; padding: 2px 7px; margin-right: 5px;
+    background: rgba(255,255,255,0.04); border-radius: 4px;
+    cursor: pointer; transition: background 0.15s; color: var(--accent);
+  }
+  .natural-search .examples .ex:hover { background: rgba(125,211,252,0.12); }
+  .detected-filters {
+    margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    min-height: 24px;
+  }
+  .detected-filters .lbl {
+    font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-right: 4px;
+  }
+  .detected-tag {
+    background: rgba(125,211,252,0.14); color: var(--accent); padding: 3px 9px;
+    border-radius: 5px; font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .detected-tag .x {
+    cursor: pointer; opacity: 0.6; padding: 0 2px; transition: opacity 0.15s;
+  }
+  .detected-tag .x:hover { opacity: 1; }
+  .results-count {
+    font-size: 12px; color: var(--text-mute); margin-left: auto;
+  }
+  .results-count strong { color: var(--accent-warm); font-weight: 700; }
+
   /* === SECTION TITLE === */
   .section-title {
     font-size: 18px; font-weight: 700; color: #fff; margin: 32px 0 14px;
@@ -364,6 +420,28 @@
 
 <div class="ctx-grid" id="ctx-grid"></div>
 
+<!-- Recherche naturelle -->
+<div class="natural-search">
+  <label><i class="fas fa-magic"></i> Décris ce que tu cherches</label>
+  <div class="search-input-wrap">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" id="natural-input" placeholder="ex: europe défensive rendement IA US large cap qualité..." autocomplete="off">
+  </div>
+  <div class="examples">
+    Exemples cliquables :
+    <span class="ex" onclick="setNatural('europe défensive rendement')">europe défensive rendement</span>
+    <span class="ex" onclick="setNatural('IA US large cap')">IA US large cap</span>
+    <span class="ex" onclick="setNatural('santé croissance qualité')">santé croissance qualité</span>
+    <span class="ex" onclick="setNatural('value finance')">value finance</span>
+    <span class="ex" onclick="setNatural('faible risque dividende')">faible risque dividende</span>
+  </div>
+  <div class="detected-filters" id="detected-filters">
+    <span class="lbl">Filtres détectés :</span>
+    <span style="color:var(--text-dim);font-style:italic;font-size:12px;">aucun (tape pour filtrer)</span>
+    <span class="results-count" id="results-count"></span>
+  </div>
+</div>
+
 <!-- Filtres région -->
 <div class="filters-bar">
   <span class="filter-label"><i class="fas fa-globe"></i> Région</span>
@@ -526,6 +604,128 @@ function updatePresetChipsUI() {
   });
 }
 
+// ============= RECHERCHE NATURELLE — parse les mots-clés en presets actifs =============
+const NATURAL_LEXICON = {
+  // Régions (mappe vers CURRENT_REGION, pas vers un preset)
+  region_EU:   ['europe', 'européen', 'europeen', 'européens', 'européenne', 'européennes', 'ue', 'eu', 'pays-bas', 'allemand', 'francais', 'français', 'italien', 'italienne', 'espagnol', 'espagnole'],
+  region_US:   ['us', 'usa', 'amérique', 'amerique', 'américain', 'americain', 'américaine', 'americaine', 'états-unis', 'etats-unis', 'us-only', 'us-listed'],
+  region_ASIA: ['asie', 'asiatique', 'asiatiques', 'indien', 'indienne', 'taiwan', 'taïwan', 'coréen', 'corée', 'coreen', 'coree', 'japon', 'japonais', 'chinois', 'chine'],
+
+  // Stratégie
+  quality_abs:    ['qualité', 'qualite', 'quality', 'buffett', 'top quality', 'top buffett', 'qualité absolue', 'meilleurs', 'meilleures', 'top', 'excellent', 'excellente'],
+  yield:          ['rendement', 'dividende', 'dividend', 'div', 'yield', 'payeur', 'payeurs', 'income'],
+  growth:         ['croissance', 'growth', 'forte croissance', 'grandir', 'expanding'],
+  defensive:      ['défensif', 'defensif', 'défensive', 'defensive', 'safe', 'sûr', 'sur', 'stable', 'low beta', 'beta bas'],
+  momentum:       ['momentum', 'élan', 'elan', 'hot', 'haute perf', 'haute performance', 'haut momentum', 'hot stocks'],
+  value:          ['value', 'valeur', 'sous-évalué', 'sous-evalue', 'pas cher', 'bon marché', 'bon marche', 'cheap', 'discount', 'décoté', 'decote'],
+  low_risk:       ['faible risque', 'low risk', 'peu risqué', 'peu risque', 'safe haven', 'low vol', 'faible volatilité', 'faible volatilite'],
+
+  // Thèmes
+  ai:             ['ia', 'ai', 'intelligence artificielle', 'semi', 'semiconducteur', 'semi-conducteur', 'semiconductors', 'tech ai', 'nvidia', 'asml', 'tech', 'tech us', 'software'],
+  finance:        ['finance', 'banque', 'banques', 'banks', 'assurance', 'assurances', 'asset management', 'bank', 'insurance'],
+  health:         ['santé', 'sante', 'pharma', 'biotech', 'médical', 'medical', 'healthcare', 'pharmaceutique', 'drug', 'médicament'],
+  energy_mat:     ['énergie', 'energie', 'energy', 'matières', 'matieres', 'matériaux', 'materiaux', 'materials', 'mines', 'oil', 'gas', 'pétrole', 'gaz'],
+  utilities_reit: ['utilities', 'real estate', 'reit', 'reits', 'immobilier', 'services publics', 'utility', 'realty'],
+  consumer:       ['consommation', 'conso', 'consumer', 'biens consommation', 'luxe', 'luxury', 'retail'],
+  industrials:    ['industrie', 'industriel', 'industriels', 'industries', 'industrial', 'industrials', 'manufacturing'],
+
+  // Taille
+  large_cap:      ['large cap', 'large-cap', 'grosse cap', 'grosse capitalisation', 'blue chip', 'blue-chip', 'mega cap', 'mega-cap', 'big cap'],
+  mid_cap:        ['mid cap', 'mid-cap', 'moyenne cap', 'moyenne capitalisation', 'midcap'],
+  small_cap:      ['small cap', 'small-cap', 'petite cap', 'petite capitalisation', 'smallcap'],
+};
+
+function parseNaturalSearch(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return { presets: [], region: '' };
+  const detected = { presets: [], region: '' };
+  for (const [key, keywords] of Object.entries(NATURAL_LEXICON)) {
+    for (const kw of keywords) {
+      if (q.includes(kw)) {
+        if (key.startsWith('region_')) {
+          detected.region = key.replace('region_', '');
+        } else {
+          if (!detected.presets.includes(key)) detected.presets.push(key);
+        }
+        break; // un seul match suffit par groupe
+      }
+    }
+  }
+  return detected;
+}
+
+function setNatural(text) {
+  document.getElementById('natural-input').value = text;
+  applyNaturalSearch();
+}
+
+function applyNaturalSearch() {
+  const input = document.getElementById('natural-input');
+  const q = input.value;
+  const { presets, region } = parseNaturalSearch(q);
+
+  // Update active presets
+  ACTIVE_PRESETS = new Set(presets);
+  if (region !== undefined) CURRENT_REGION = region;
+
+  // Update region tabs UI
+  document.querySelectorAll('.region-btn').forEach(b => b.classList.toggle('active', b.dataset.region === CURRENT_REGION));
+
+  // Update preset chips UI
+  updatePresetChipsUI();
+  document.getElementById('clear-presets').style.display = ACTIVE_PRESETS.size > 0 ? 'inline-flex' : 'none';
+
+  // Update detected filters display
+  renderDetectedFilters();
+
+  // Re-render
+  renderAll();
+}
+
+function renderDetectedFilters() {
+  const cont = document.getElementById('detected-filters');
+  const tags = [];
+  if (CURRENT_REGION) {
+    const lbl = { US:'🇺🇸 États-Unis', EU:'🇪🇺 Europe', ASIA:'🌏 Asie' }[CURRENT_REGION];
+    tags.push(`<span class="detected-tag">${lbl} <span class="x" onclick="removeRegion()">×</span></span>`);
+  }
+  for (const id of ACTIVE_PRESETS) {
+    const p = PRESETS[id];
+    if (p) tags.push(`<span class="detected-tag">${p.label} <span class="x" onclick="removePreset('${id}')">×</span></span>`);
+  }
+  if (!tags.length) {
+    cont.innerHTML = '<span class="lbl">Filtres détectés :</span><span style="color:var(--text-dim);font-style:italic;font-size:12px;">aucun (tape pour filtrer)</span><span class="results-count" id="results-count"></span>';
+  } else {
+    cont.innerHTML = '<span class="lbl">Filtres :</span>' + tags.join('') + '<span class="results-count" id="results-count"></span>';
+  }
+}
+
+function removeRegion() {
+  CURRENT_REGION = '';
+  // Maj input pour retirer les mots région
+  const input = document.getElementById('natural-input');
+  let q = input.value;
+  for (const kw of [...NATURAL_LEXICON.region_EU, ...NATURAL_LEXICON.region_US, ...NATURAL_LEXICON.region_ASIA]) {
+    q = q.replace(new RegExp('\\b' + kw.replace(/[-\\.]/g, '\\$&') + '\\b', 'gi'), '').trim();
+  }
+  q = q.replace(/\s+/g, ' ').trim();
+  input.value = q;
+  applyNaturalSearch();
+}
+
+function removePreset(id) {
+  ACTIVE_PRESETS.delete(id);
+  // Maj input pour retirer les mots du preset
+  const input = document.getElementById('natural-input');
+  let q = input.value;
+  for (const kw of (NATURAL_LEXICON[id] || [])) {
+    q = q.replace(new RegExp('\\b' + kw.replace(/[-\\.]/g, '\\$&') + '\\b', 'gi'), '').trim();
+  }
+  q = q.replace(/\s+/g, ' ').trim();
+  input.value = q;
+  applyNaturalSearch();
+}
+
 function renderPresetChips() {
   const byCat = { strategy:[], theme:[], size:[] };
   for (const [id, p] of Object.entries(PRESETS)) byCat[p.cat].push({id, ...p});
@@ -686,6 +886,9 @@ function renderAll() {
     : '<div class="empty">Aucune action dans cette région pour le top 25 global.</div>';
   document.getElementById('cnt-top').textContent = globalFiltered.length;
   document.getElementById('top-region-label').textContent = CURRENT_REGION ? `· ${{US:'🇺🇸 États-Unis', EU:'🇪🇺 Europe', ASIA:'🌏 Asie'}[CURRENT_REGION]}` : '';
+  // Update results count in detected filters
+  const rc = document.getElementById('results-count');
+  if (rc) rc.innerHTML = `<strong>${globalFiltered.length}</strong> action${globalFiltered.length > 1 ? 's' : ''} (Top 25 filtré)`;
 
   // Par pays
   const byC = DATA.by_country || {};
@@ -792,6 +995,13 @@ async function load() {
 
 renderPresetChips();
 load();
+
+// Bind natural search input
+document.getElementById('natural-input').addEventListener('input', () => {
+  // Debounce 250ms
+  clearTimeout(window._naturalSearchTimer);
+  window._naturalSearchTimer = setTimeout(applyNaturalSearch, 250);
+});
 </script>
 
 </body>
