@@ -149,34 +149,12 @@ def score_stock(s, context):
         radar_n = 1.0
     elif context.get('avoided_sectors') and sec_norm in context['avoided_sectors']:
         radar_n = -0.5
-
-    # v6.38: RADAR malus régional (avoided_regions / favored_regions)
-    # Le RADAR liste des régions évitées (ex: 'india', 'south-africa') mais
-    # jusqu'ici elles étaient juste affichées sans effet sur le scoring.
-    # Maintenant : malus -0.5 si pays mappé vers région évitée, bonus +0.5
-    # si favorisé. C'est un MALUS (option 3 demandée user), pas un filtre
-    # dur : une action excellente peut survivre au malus.
-    country = (s.get('country') or '').lower()
-    COUNTRY_TO_RADAR_REGION = {
-        'inde': 'india', 'india': 'india',
-        'afrique du sud': 'south-africa', 'south africa': 'south-africa',
-        'chine': 'china', 'china': 'china',
-        'taïwan': 'taiwan', 'taiwan': 'taiwan',
-        'corée': 'korea', 'korea': 'korea', 'south korea': 'korea',
-        'japon': 'japan', 'japan': 'japan',
-        'pays-bas': 'netherlands', 'netherlands': 'netherlands',
-        'israël': 'israel', 'israel': 'israel',
-    }
-    radar_region_key = COUNTRY_TO_RADAR_REGION.get(country)
-    region_modifier = 0.0
-    if radar_region_key:
-        if radar_region_key in (context.get('favored_regions') or []):
-            region_modifier = 0.5
-        elif radar_region_key in (context.get('avoided_regions') or []):
-            region_modifier = -0.5
-
-    score = (W_BUFFETT * buf_n + W_QUALITY * q_n + W_PERF * perf_n
-             + W_RADAR * radar_n + W_RADAR * region_modifier)
+    # v6.39 : RADAR régional NON utilisé pour scorer (décision user 2026-06-08).
+    # Les avoided_regions / favored_regions sont gérés ailleurs (broker_access,
+    # filtres pipeline core_satellite_discipline), pas dans le scoring composite.
+    # Ne PAS appliquer de malus régional ici — cohérent avec doctrine "RADAR
+    # neutralisé dans le pipeline" (walk-forward strict Δ Sharpe -0.11 OOS).
+    score = W_BUFFETT * buf_n + W_QUALITY * q_n + W_PERF * perf_n + W_RADAR * radar_n
     return score
 
 
