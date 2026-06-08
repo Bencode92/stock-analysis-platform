@@ -635,19 +635,38 @@ const NATURAL_LEXICON = {
   small_cap:      ['small cap', 'small-cap', 'petite cap', 'petite capitalisation', 'smallcap'],
 };
 
+// Échappe les caractères regex spéciaux d'un mot-clé
+function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// Match un mot-clé dans une phrase avec word boundaries pour éviter
+// "us" qui matche "focus" ou "ai" qui matche "ainsi"
+function matchKeyword(text, keyword) {
+  // Pour les expressions composées (avec espace ou trait d'union), on cherche
+  // une sous-chaîne avec boundaries en début/fin
+  // Pour les mots simples, on utilise \b strict
+  const esc = escRegex(keyword.toLowerCase());
+  // Boundary élargie : début/fin de string OU caractère non-alphanumérique
+  // (gère bien les accents : "européen" suivi de virgule ou espace)
+  const pattern = new RegExp('(?:^|[^a-zàâäéèêëïîôöùûüÿçñ0-9])' + esc + '(?:$|[^a-zàâäéèêëïîôöùûüÿçñ0-9])', 'i');
+  return pattern.test(text);
+}
+
 function parseNaturalSearch(query) {
   const q = query.toLowerCase().trim();
   if (!q) return { presets: [], region: '' };
+  // Padding pour que les regex boundary fonctionnent en début/fin
+  const padded = ' ' + q + ' ';
   const detected = { presets: [], region: '' };
   for (const [key, keywords] of Object.entries(NATURAL_LEXICON)) {
     for (const kw of keywords) {
-      if (q.includes(kw)) {
+      if (matchKeyword(padded, kw)) {
         if (key.startsWith('region_')) {
-          detected.region = key.replace('region_', '');
+          // Premier match région gagne (ordre lexicon = ordre priorité)
+          if (!detected.region) detected.region = key.replace('region_', '');
         } else {
           if (!detected.presets.includes(key)) detected.presets.push(key);
         }
-        break; // un seul match suffit par groupe
+        break; // un seul match suffit par groupe de keywords
       }
     }
   }
@@ -700,29 +719,30 @@ function renderDetectedFilters() {
   }
 }
 
-function removeRegion() {
-  CURRENT_REGION = '';
-  // Maj input pour retirer les mots région
+function stripKeywordsFromInput(keywords) {
   const input = document.getElementById('natural-input');
   let q = input.value;
-  for (const kw of [...NATURAL_LEXICON.region_EU, ...NATURAL_LEXICON.region_US, ...NATURAL_LEXICON.region_ASIA]) {
-    q = q.replace(new RegExp('\\b' + kw.replace(/[-\\.]/g, '\\$&') + '\\b', 'gi'), '').trim();
+  // Trier par longueur desc pour retirer les expressions composées d'abord
+  const sorted = [...keywords].sort((a,b) => b.length - a.length);
+  for (const kw of sorted) {
+    const esc = escRegex(kw);
+    // Word boundary (lookbehind + lookahead non-alphanum)
+    const re = new RegExp('(^|[^a-zàâäéèêëïîôöùûüÿçñ0-9])' + esc + '($|[^a-zàâäéèêëïîôöùûüÿçñ0-9])', 'gi');
+    q = q.replace(re, (m, before, after) => before + after);
   }
-  q = q.replace(/\s+/g, ' ').trim();
+  q = q.replace(/\s+/g, ' ').replace(/^[\s,;.]+|[\s,;.]+$/g, '').trim();
   input.value = q;
+}
+
+function removeRegion() {
+  CURRENT_REGION = '';
+  stripKeywordsFromInput([...NATURAL_LEXICON.region_EU, ...NATURAL_LEXICON.region_US, ...NATURAL_LEXICON.region_ASIA]);
   applyNaturalSearch();
 }
 
 function removePreset(id) {
   ACTIVE_PRESETS.delete(id);
-  // Maj input pour retirer les mots du preset
-  const input = document.getElementById('natural-input');
-  let q = input.value;
-  for (const kw of (NATURAL_LEXICON[id] || [])) {
-    q = q.replace(new RegExp('\\b' + kw.replace(/[-\\.]/g, '\\$&') + '\\b', 'gi'), '').trim();
-  }
-  q = q.replace(/\s+/g, ' ').trim();
-  input.value = q;
+  stripKeywordsFromInput(NATURAL_LEXICON[id] || []);
   applyNaturalSearch();
 }
 
