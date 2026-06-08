@@ -148,6 +148,42 @@ def find_replacements(target, all_stocks, n=2):
     return candidates[:n]
 
 
+COUNTRY_SUFFIX_MAP = {
+    "Inde": ".NS",
+    "Taïwan": ".TW", "Taiwan": ".TW",
+    "Corée": ".KS", "Korea": ".KS",
+    "Chine": ".SS", "China": ".SS",
+    "Thaïlande": ".BK", "Thailand": ".BK",
+    "Philippines": ".PS",
+    "Japon": ".T", "Japan": ".T",
+    "Hong Kong": ".HK", "HongKong": ".HK",
+    "Singapour": ".SI",
+    "Indonésie": ".JK",
+    "Malaisie": ".KL",
+}
+
+COUNTRY_EXCHANGE_NAME = {
+    "Inde": "NSE (National Stock Exchange of India)",
+    "Taïwan": "TWSE (Taiwan Stock Exchange)",
+    "Corée": "KRX (Korea Exchange)",
+    "Chine": "SSE (Shanghai Stock Exchange)",
+    "Thaïlande": "SET (Stock Exchange of Thailand)",
+    "Philippines": "PSE (Philippine Stock Exchange)",
+    "Japon": "TSE (Tokyo Stock Exchange)",
+    "Hong Kong": "HKEX (Hong Kong Stock Exchange)",
+}
+
+
+def _build_yahoo_ticker(ticker: str, country: str) -> str:
+    """Construit le ticker yfinance à partir du ticker et pays."""
+    sfx = COUNTRY_SUFFIX_MAP.get(country, "")
+    if not sfx:
+        return ticker
+    if ticker.endswith(sfx):
+        return ticker
+    return ticker + sfx
+
+
 def main():
     # Charger univers
     stocks_all = {}
@@ -159,20 +195,47 @@ def main():
         except Exception as e:
             print(f"Warn: {f} : {e}")
 
+    # Récupère TOUS les stocks asia
+    asia_tickers = []
+    asia_path = ROOT / 'data' / 'stocks_asia.json'
+    if asia_path.exists():
+        for s in json.load(open(asia_path)).get('stocks', []):
+            tk = s.get('ticker')
+            if tk:
+                asia_tickers.append(tk)
+    print(f"Total stocks asia chargés : {len(asia_tickers)}")
+
     output = {
         "_meta": {
             "purpose": "Mapping actions asiatiques → ADR US / alternatives ACTIONS / proxy ETF dernier recours",
             "doctrine": "1. Ticker complet (test broker) → 2. ADR US si dispo (= même action) → 3. Alternative ACTION individuelle même secteur/qualité accessible → 4. Proxy ETF en dernier recours, flagged comme dilutant",
+            "coverage": f"Couvre tous les {len(asia_tickers)} stocks asia. ADR/parent_company renseignés manuellement pour ~10 stocks dans ASIAN_MAP, null pour le reste.",
         },
         "stocks": {}
     }
 
-    for tk, asian_meta in ASIAN_MAP.items():
+    # Tous les stocks asia (algorithme automatique)
+    for tk in asia_tickers:
         target = stocks_all.get(tk)
         if not target:
-            print(f"⚠️  {tk} non trouvé dans l'univers, skip")
             continue
         target["ticker"] = tk
+
+        # Mapping manuel prioritaire si présent
+        if tk in ASIAN_MAP:
+            asian_meta = ASIAN_MAP[tk]
+        else:
+            # Auto-generated mapping
+            country = target.get('country')
+            yahoo_ticker = _build_yahoo_ticker(tk, country)
+            exchange = COUNTRY_EXCHANGE_NAME.get(country, country or "?")
+            asian_meta = {
+                "yahoo_ticker": yahoo_ticker,
+                "exchange": exchange,
+                "adr_us": None,
+                "parent_company": None,
+                "notes": f"Coté {exchange}. Vérifier accès broker pour ce marché.",
+            }
 
         # Alternatives ACTION individuelles
         replacements = find_replacements(target, stocks_all, n=3)

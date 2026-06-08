@@ -6,36 +6,43 @@
 <style>
   body { background:#0a0e14;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:24px;line-height:1.5; }
   h1 { font-size:1.5rem;color:#64b5f6;margin-bottom:8px; }
-  .intro { background:rgba(33,150,243,0.08);border-left:3px solid #64b5f6;padding:12px 16px;border-radius:6px;margin-bottom:24px;font-size:0.9rem;color:#bbdefb; }
-  .stock-card { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:16px;margin-bottom:14px; }
-  .stock-header { display:flex;justify-content:space-between;align-items:flex-start;gap:1rem; }
-  .stock-info { flex:1; }
-  .stock-title { font-size:1rem;font-weight:700;color:#fff; }
-  .stock-meta { font-size:0.78rem;color:rgba(255,255,255,0.55);margin-top:2px; }
-  .stock-toggle { display:flex;align-items:center;gap:0.5rem; }
-  .toggle-switch { position:relative;width:50px;height:26px;background:#444;border-radius:13px;cursor:pointer;transition:background 0.2s; }
+  .intro { background:rgba(33,150,243,0.08);border-left:3px solid #64b5f6;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:0.88rem;color:#bbdefb; }
+  .pat-setup { background:rgba(255,193,7,0.08);border-left:3px solid #ffc107;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:0.85rem; }
+  .pat-setup input { background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:6px 10px;border-radius:4px;width:300px;font-family:monospace;font-size:0.78rem; }
+  .pat-setup button { margin-left:8px; }
+  .filter-bar { display:flex;gap:0.8rem;margin-bottom:14px;align-items:center;flex-wrap:wrap; }
+  .filter-bar input, .filter-bar select { background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:6px 10px;border-radius:4px;font-size:0.85rem; }
+  .filter-bar input { width:240px; }
+  .stats-bar { background:rgba(255,255,255,0.04);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.82rem;display:flex;gap:1.5rem;flex-wrap:wrap; }
+  .stat { color:rgba(255,255,255,0.7); }
+  .stat strong { color:#fff; }
+  .stat.accessible strong { color:#4caf50; }
+  .stat.blocked strong { color:#ef5350; }
+  .stock-row { display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.85rem;gap:0.8rem; }
+  .stock-row:hover { background:rgba(255,255,255,0.03); }
+  .stock-row.blocked { background:rgba(244,67,54,0.04); }
+  .stock-ticker { font-family:'JetBrains Mono',monospace;font-weight:700;color:#64b5f6;min-width:90px; }
+  .stock-name { flex:1;color:rgba(255,255,255,0.9); }
+  .stock-meta { font-size:0.72rem;color:rgba(255,255,255,0.5);min-width:200px; }
+  .stock-substitute { font-size:0.72rem;color:#ffb74d;min-width:200px; }
+  .toggle-switch { position:relative;width:46px;height:24px;background:#444;border-radius:12px;cursor:pointer;transition:background 0.15s;flex-shrink:0; }
   .toggle-switch.on { background:#4caf50; }
   .toggle-switch.off { background:#ef5350; }
-  .toggle-knob { position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.2s; }
-  .toggle-switch.on .toggle-knob { left:27px; }
-  .toggle-label { font-size:0.85rem;font-weight:600;min-width:80px; }
-  .toggle-label.on { color:#4caf50; }
-  .toggle-label.off { color:#ef5350; }
-  .alternatives { margin-top:12px;padding-top:12px;border-top:1px dashed rgba(255,255,255,0.1); }
-  .alternatives-title { font-size:0.72rem;font-weight:700;color:#ffb74d;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px; }
-  .alt-row { font-size:0.78rem;padding:5px 10px;background:rgba(33,150,243,0.06);border-left:2px solid #64b5f6;margin:4px 0;border-radius:3px; }
-  .alt-ticker { color:#64b5f6;font-family:'JetBrains Mono',monospace;font-weight:700; }
-  .alt-meta { color:rgba(255,255,255,0.55);font-size:0.7rem;margin-top:2px; }
-  .badge-substitute { display:inline-block;font-size:0.65rem;padding:2px 8px;border-radius:4px;background:rgba(76,175,80,0.15);color:#81c784;font-weight:600;margin-left:6px; }
-  .actions-bar { display:flex;gap:0.8rem;margin-top:24px;padding:16px;background:rgba(255,255,255,0.04);border-radius:8px;flex-wrap:wrap; }
-  button { background:#26c281;color:#0a1410;border:none;border-radius:6px;padding:8px 16px;font-weight:600;cursor:pointer;font-size:0.85rem; }
+  .toggle-knob { position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.15s; }
+  .toggle-switch.on .toggle-knob { left:24px; }
+  .actions-bar { display:flex;gap:0.8rem;margin:14px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:8px;flex-wrap:wrap;align-items:center; }
+  button { background:#26c281;color:#0a1410;border:none;border-radius:6px;padding:7px 14px;font-weight:600;cursor:pointer;font-size:0.85rem; }
   button.secondary { background:rgba(33,150,243,0.2);color:#64b5f6; }
   button.danger { background:rgba(244,67,54,0.2);color:#ef5350; }
-  .status { padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:6px;font-size:0.8rem;color:rgba(255,255,255,0.6); }
+  .status { padding:6px 10px;background:rgba(255,255,255,0.05);border-radius:6px;font-size:0.78rem;color:rgba(255,255,255,0.6); }
+  .status.success { background:rgba(76,175,80,0.12);color:#81c784; }
+  .status.error { background:rgba(244,67,54,0.12);color:#ef5350; }
+  .badge-saved { display:inline-block;font-size:0.65rem;padding:1px 6px;border-radius:3px;background:rgba(76,175,80,0.18);color:#4caf50;margin-left:6px; }
   .yahoo-link { color:#64b5f6;text-decoration:none;font-size:0.7rem; }
   .yahoo-link:hover { text-decoration:underline; }
-  code { background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:3px;color:#ffd54f;font-family:'JetBrains Mono',monospace;font-size:0.85rem; }
-  .pipeline-info { margin-top:20px;padding:16px;background:rgba(255,165,0,0.06);border:1px solid rgba(255,165,0,0.18);border-radius:8px;font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.6; }
+  code { background:rgba(0,0,0,0.4);padding:1px 5px;border-radius:3px;color:#ffd54f;font-family:'JetBrains Mono',monospace;font-size:0.78rem; }
+  .help { color:rgba(255,255,255,0.5);font-size:0.78rem;margin-top:8px; }
+  a { color:#64b5f6; }
 </style>
 </head>
 <body>
@@ -43,146 +50,266 @@
 <h1>🌏 Mes accès broker — actions asiatiques</h1>
 
 <div class="intro">
-  <strong>Coche pour chaque action si tu peux l'acheter via ton broker.</strong> Si une action est marquée "❌ pas d'accès", le pipeline la substituera automatiquement par la 1ère alternative ACTION achetable du mapping (même secteur, qualité comparable). Tu gardes l'esprit de la conviction, juste sur un titre que tu peux réellement acheter.
+  <strong>Par défaut, toutes les actions sont marquées ✓ accessible.</strong> Clique pour passer en ✗ inaccessible si ton broker ne te permet pas cette action. Quand tu cliques, c'est <strong>sauvegardé direct sur GitHub</strong> via l'API (aucune manipulation locale). Le pipeline substituera les actions inaccessibles par la 1ère alternative ACTION du mapping au prochain run.
 </div>
 
-<div id="stocks-container">Chargement...</div>
+<div class="pat-setup" id="pat-setup-block">
+  <strong>🔐 GitHub Personal Access Token (one-time setup)</strong><br>
+  Pour pouvoir sauvegarder direct sur GitHub depuis ici, tu dois créer un PAT GitHub avec les droits <code>Contents: Read & Write</code> sur ce repo.<br>
+  <ol style="font-size:0.82rem;margin:8px 0;line-height:1.7;">
+    <li>Va sur <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a></li>
+    <li>Resource owner : ton compte. Repository access : <strong>Only select repositories</strong> → <code>Bencode92/stock-analysis-platform</code></li>
+    <li>Repository permissions : <strong>Contents → Read and write</strong></li>
+    <li>Generate token → copie-le et colle ci-dessous (stocké en localStorage, ne quitte pas ton navigateur)</li>
+  </ol>
+  <input type="password" id="github-pat" placeholder="github_pat_xxxxxxxxxxxxxxxx" />
+  <button onclick="savePAT()">💾 Sauvegarder PAT</button>
+  <button class="danger" onclick="clearPAT()" style="margin-left:6px;">🗑 Effacer</button>
+</div>
+
+<div class="filter-bar">
+  <input type="text" id="filter-search" placeholder="Recherche ticker ou nom…" oninput="render()" />
+  <select id="filter-country" onchange="render()">
+    <option value="">Tous pays</option>
+  </select>
+  <select id="filter-status" onchange="render()">
+    <option value="">Tous statuts</option>
+    <option value="accessible">✓ Accessible seulement</option>
+    <option value="blocked">✗ Inaccessible seulement</option>
+  </select>
+</div>
+
+<div class="stats-bar">
+  <span class="stat">Total : <strong id="stat-total">0</strong></span>
+  <span class="stat accessible">Accessible : <strong id="stat-accessible">0</strong></span>
+  <span class="stat blocked">Inaccessible : <strong id="stat-blocked">0</strong></span>
+  <span class="stat">Affiché : <strong id="stat-displayed">0</strong></span>
+</div>
 
 <div class="actions-bar">
-  <button onclick="saveAndDownload()">💾 Sauvegarder + Télécharger broker_access.json</button>
   <button class="secondary" onclick="resetToAll(true)">✓ Tout marquer accessible</button>
   <button class="danger" onclick="resetToAll(false)">✗ Tout marquer inaccessible</button>
   <span class="status" id="save-status"></span>
 </div>
 
-<div class="pipeline-info">
-  <strong>Comment c'est pris en compte par le pipeline :</strong><br>
-  1. Télécharge le JSON ci-dessus et place-le dans <code>config/broker_access.json</code><br>
-  2. Lance <code>python3 generate_portfolios_v4.py</code> — le pipeline lit ce fichier au démarrage<br>
-  3. Pour chaque action satellite marquée <code>access:false</code>, le pipeline substitue par la 1ère <code>alternative_actions</code> du mapping <code>data/asian_alternatives.json</code> et logge le swap<br>
-  4. Si aucune alternative dispo, l'action est skippée et son poids redistribué prorata sur les autres satellites du profil
-</div>
+<div id="stocks-container" style="background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid rgba(255,255,255,0.06);max-height:60vh;overflow-y:auto;">Chargement...</div>
+
+<p class="help">Une fois ton PAT configuré, chaque clic sur un toggle commit automatiquement <code>config/broker_access.json</code> sur GitHub. Le prochain <code>generate_portfolios_v4.py</code> lira ce fichier et substituera les actions ✗ inaccessibles par leur 1ère alternative ACTION.</p>
 
 <script>
-const STORAGE_KEY = 'broker_access_v1';
-let asianMap = {};
-let access = {};
+const REPO_OWNER = 'Bencode92';
+const REPO_NAME = 'stock-analysis-platform';
+const CONFIG_PATH = 'config/broker_access.json';
+const PAT_STORAGE_KEY = 'github_pat_v1';
+
+let allStocks = [];           // tous les stocks asia
+let asianMap = {};             // mapping alternatives
+let access = {};               // état accès par ticker
+let currentSha = null;         // sha actuel du fichier sur GitHub
+
+function logErr(msg, e) {
+  console.error('[broker_access]', msg, e);
+  setStatus(`❌ ${msg} : ${e?.message || e}`, 'error');
+}
 
 async function load() {
-  // Try localStorage first
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    access = saved;
-  } catch(e) { access = {}; }
+    // 1. PAT
+    const pat = localStorage.getItem(PAT_STORAGE_KEY);
+    if (pat) document.getElementById('github-pat').value = pat;
 
-  // Load asian_alternatives.json
-  try {
-    const r = await fetch('data/asian_alternatives.json?_=' + Date.now());
-    const d = await r.json();
-    asianMap = d.stocks || {};
-  } catch(e) {
-    document.getElementById('stocks-container').innerHTML = '<p style="color:#ef5350;">Erreur chargement data/asian_alternatives.json — relance le pipeline pour le générer.</p>';
-    return;
-  }
+    // 2. Charge stocks_asia.json (liste complète)
+    const ra = await fetch('data/stocks_asia.json?_=' + Date.now());
+    if (!ra.ok) throw new Error('stocks_asia.json HTTP ' + ra.status);
+    const dataAsia = await ra.json();
+    allStocks = dataAsia.stocks || [];
 
-  // Try server config too — overrides localStorage if newer
-  try {
-    const r = await fetch('config/broker_access.json?_=' + Date.now());
-    const d = await r.json();
-    if (d.access) {
-      // merge: server is the source of truth on first load
-      Object.assign(access, d.access);
+    // 3. Charge asian_alternatives.json (mapping alternatives)
+    try {
+      const rm = await fetch('data/asian_alternatives.json?_=' + Date.now());
+      if (rm.ok) {
+        const dataMap = await rm.json();
+        asianMap = dataMap.stocks || {};
+      }
+    } catch(e) { console.warn('asian_alternatives.json not loaded:', e); }
+
+    // 4. Charge config/broker_access.json depuis GitHub (pour le sha + état)
+    await loadConfigFromGitHub();
+
+    // 5. Init missing tickers à true (accessible par défaut)
+    for (const s of allStocks) {
+      if (!(s.ticker in access)) access[s.ticker] = true;
     }
-  } catch(e) {}
 
-  // Init missing keys to false (par défaut prudent)
-  for (const tk of Object.keys(asianMap)) {
-    if (!(tk in access)) access[tk] = false;
+    // Populate countries filter
+    const countries = [...new Set(allStocks.map(s => s.country).filter(Boolean))].sort();
+    const sel = document.getElementById('filter-country');
+    for (const c of countries) {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    }
+
+    render();
+  } catch(e) {
+    logErr('Chargement initial échoué', e);
+    document.getElementById('stocks-container').innerHTML = `<p style="color:#ef5350;padding:16px;">${e.message}</p>`;
+  }
+}
+
+async function loadConfigFromGitHub() {
+  try {
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${CONFIG_PATH}`;
+    const r = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
+    if (!r.ok) { console.warn('Config GitHub fetch HTTP', r.status); return; }
+    const data = await r.json();
+    currentSha = data.sha;
+    const content = atob(data.content.replace(/\n/g,''));
+    const parsed = JSON.parse(content);
+    access = parsed.access || {};
+  } catch(e) {
+    console.warn('Config GitHub load failed:', e);
+  }
+}
+
+async function saveConfigToGitHub() {
+  const pat = localStorage.getItem(PAT_STORAGE_KEY);
+  if (!pat) {
+    setStatus('⚠️ Configure ton PAT GitHub d\'abord (en haut de la page)', 'error');
+    return false;
   }
 
+  const config = {
+    "_meta": {
+      "version": "1.1",
+      "purpose": "Accès broker par action asiatique. Si false → substitution auto par alternative ACTION dans pipeline.",
+      "usage": "Édité via broker_access.html (save direct GitHub via API). Le pipeline generate_portfolios_v4.py lit ce fichier à chaque run.",
+      "last_updated": new Date().toISOString().slice(0,10),
+      "substitution_policy": "Si access=false : substitution par 1ère alternative_actions du mapping data/asian_alternatives.json. Si aucune dispo : skip et redistribuer prorata."
+    },
+    "access": access
+  };
+  const contentB64 = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+
+  try {
+    setStatus('💾 Sauvegarde GitHub en cours…', '');
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${CONFIG_PATH}`;
+    const body = {
+      message: `Update broker_access.json (${new Date().toISOString().slice(0,16)})`,
+      content: contentB64,
+    };
+    if (currentSha) body.sha = currentSha;
+    const r = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const errData = await r.json().catch(() => ({}));
+      throw new Error(`HTTP ${r.status} — ${errData.message || ''}`);
+    }
+    const result = await r.json();
+    currentSha = result.content.sha;
+    setStatus(`✓ Sauvegardé sur GitHub (${result.commit.sha.slice(0,7)})`, 'success');
+    return true;
+  } catch(e) {
+    logErr('Save GitHub failed', e);
+    return false;
+  }
+}
+
+let pendingSaveTimer = null;
+function debouncedSave() {
+  if (pendingSaveTimer) clearTimeout(pendingSaveTimer);
+  pendingSaveTimer = setTimeout(saveConfigToGitHub, 800); // 800ms après dernière action
+}
+
+function toggle(ticker) {
+  access[ticker] = !access[ticker];
   render();
+  debouncedSave();
 }
 
 function render() {
+  const search = (document.getElementById('filter-search').value || '').toLowerCase();
+  const country = document.getElementById('filter-country').value;
+  const status = document.getElementById('filter-status').value;
+
+  const filtered = allStocks.filter(s => {
+    if (country && s.country !== country) return false;
+    const isAcc = access[s.ticker] !== false;
+    if (status === 'accessible' && !isAcc) return false;
+    if (status === 'blocked' && isAcc) return false;
+    if (search) {
+      const hay = ((s.ticker||'')+' '+(s.name||'')+' '+(s.stock_name||'')).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Tri par ticker
+  filtered.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||''));
+
+  // Stats
+  const total = allStocks.length;
+  const nAcc = Object.values(access).filter(v => v !== false).length + (total - Object.keys(access).length);
+  const nBlocked = total - nAcc;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-accessible').textContent = nAcc;
+  document.getElementById('stat-blocked').textContent = nBlocked;
+  document.getElementById('stat-displayed').textContent = filtered.length;
+
   const container = document.getElementById('stocks-container');
-  const tickers = Object.keys(asianMap).sort();
-  container.innerHTML = tickers.map(tk => {
-    const s = asianMap[tk];
-    const has = access[tk] !== false;
-    const firstAlt = (s.alternative_actions || [])[0];
+  if (!filtered.length) { container.innerHTML = '<p style="padding:16px;color:rgba(255,255,255,0.4);">Aucune action ne correspond aux filtres.</p>'; return; }
+
+  container.innerHTML = filtered.map(s => {
+    const tk = s.ticker;
+    const isAcc = access[tk] !== false;
+    const mapping = asianMap[tk];
+    const firstAlt = mapping?.alternative_actions?.[0];
+    const name = s.name || s.stock_name || tk;
+    const meta = `${s.country || '?'} · ${(s.sector || '').slice(0,18)}`;
     return `
-    <div class="stock-card">
-      <div class="stock-header">
-        <div class="stock-info">
-          <div class="stock-title">${s.name || tk} <span style="color:rgba(255,255,255,0.4);font-size:0.85rem;">(${tk})</span></div>
-          <div class="stock-meta">
-            ${s.country} · ${s.industry} · Buf ${s.buffett_score}/Q ${s.quality_score}
-            · <a class="yahoo-link" href="${s.yahoo_url}" target="_blank"><code>${s.yahoo_ticker}</code> ↗</a>
-            ${s.exchange ? ` · ${s.exchange}` : ''}
-          </div>
-        </div>
-        <div class="stock-toggle">
-          <span class="toggle-label ${has ? 'on' : 'off'}" id="lbl-${tk}">${has ? '✓ J\\'ai accès' : '✗ Pas d\\'accès'}</span>
-          <div class="toggle-switch ${has ? 'on' : 'off'}" onclick="toggle('${tk}')" id="sw-${tk}">
-            <div class="toggle-knob"></div>
-          </div>
-        </div>
-      </div>
-      ${!has && firstAlt ? `
-      <div class="alternatives">
-        <div class="alternatives-title">→ Le pipeline substituera par :</div>
-        <div class="alt-row">
-          <span class="alt-ticker">${firstAlt.ticker}</span> <strong>${firstAlt.name}</strong>
-          <span class="badge-substitute">SUBSTITUT</span>
-          <div class="alt-meta">${firstAlt.country} · ${firstAlt.industry} · Buf ${firstAlt.buffett_score}/Q ${firstAlt.quality_score} · ${firstAlt.match_level === 'industry' ? '✅ match industry' : '⚠️ match secteur'}</div>
-        </div>
-      </div>
-      ` : ''}
+    <div class="stock-row ${isAcc ? '' : 'blocked'}">
+      <div class="toggle-switch ${isAcc ? 'on' : 'off'}" onclick="toggle('${tk}')"><div class="toggle-knob"></div></div>
+      <div class="stock-ticker">${tk}</div>
+      <div class="stock-name">${name}</div>
+      <div class="stock-meta">${meta}</div>
+      <div class="stock-substitute">${!isAcc && firstAlt ? `→ <strong style="color:#64b5f6;">${firstAlt.ticker}</strong> ${(firstAlt.name||'').slice(0,18)}` : (!isAcc ? '<em>Pas d\\'alternative</em>' : '')}</div>
     </div>
     `;
   }).join('');
 }
 
-function toggle(tk) {
-  access[tk] = !(access[tk] !== false);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(access));
+async function resetToAll(value) {
+  if (!confirm(`Marquer toutes les ${allStocks.length} actions comme ${value ? 'ACCESSIBLES (✓)' : 'INACCESSIBLES (✗)'} ?`)) return;
+  for (const s of allStocks) access[s.ticker] = value;
   render();
-  setStatus('💾 Sauvé localement (clique Télécharger pour l\'envoyer au pipeline)');
+  await saveConfigToGitHub();
 }
 
-function resetToAll(value) {
-  if (!confirm(`Marquer toutes les ${Object.keys(asianMap).length} actions comme ${value ? 'ACCESSIBLES' : 'INACCESSIBLES'} ?`)) return;
-  for (const tk of Object.keys(asianMap)) access[tk] = value;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(access));
-  render();
-  setStatus(`✓ ${Object.keys(asianMap).length} actions mises à ${value ? 'accessible' : 'inaccessible'}`);
+function savePAT() {
+  const v = document.getElementById('github-pat').value.trim();
+  if (!v) { setStatus('⚠️ PAT vide', 'error'); return; }
+  localStorage.setItem(PAT_STORAGE_KEY, v);
+  setStatus('✓ PAT sauvegardé (localStorage)', 'success');
 }
 
-function saveAndDownload() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(access));
-  const config = {
-    "_meta": {
-      "version": "1.0",
-      "purpose": "Marque pour chaque action asiatique si l'user a accès via son broker. Si false, le pipeline substitue automatiquement par la première alternative ACTION du mapping data/asian_alternatives.json.",
-      "usage": "Édité via broker_access.html. Le pipeline generate_portfolios_v4.py lit ce fichier à chaque run.",
-      "last_updated": new Date().toISOString().slice(0,10),
-      "substitution_policy": "Si access=false et l'action est satellite : substituer par la 1ère alternative_actions du mapping. Si aucune alternative dispo : skip l'action et redistribuer son poids sur les autres satellites du profil."
-    },
-    "access": access
-  };
-  const blob = new Blob([JSON.stringify(config, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'broker_access.json';
-  link.click();
-  URL.revokeObjectURL(url);
-  setStatus('📥 broker_access.json téléchargé — place-le dans config/ et relance le pipeline');
+function clearPAT() {
+  localStorage.removeItem(PAT_STORAGE_KEY);
+  document.getElementById('github-pat').value = '';
+  setStatus('PAT effacé', '');
 }
 
-function setStatus(msg) {
-  document.getElementById('save-status').textContent = msg;
-  setTimeout(() => { document.getElementById('save-status').textContent = ''; }, 5000);
+function setStatus(msg, kind) {
+  const el = document.getElementById('save-status');
+  el.textContent = msg;
+  el.className = 'status ' + (kind || '');
+  if (kind === 'success') setTimeout(() => { el.textContent = ''; el.className = 'status'; }, 4000);
 }
 
 load();

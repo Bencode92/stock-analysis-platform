@@ -1,21 +1,11 @@
 {
   "_meta": {
-    "version": "1.0",
-    "purpose": "Marque pour chaque action asiatique (ou autre marché peu accessible) si l'user a accès via son broker. Si false, le pipeline substitue automatiquement par la première alternative ACTION du mapping data/asian_alternatives.json.",
-    "usage": "Éditer via la page broker_access.html (sauve via localStorage + download JSON à placer ici), ou éditer manuellement. Le pipeline generate_portfolios_v4.py lit ce fichier à chaque run.",
-    "last_updated": "2026-06-05",
-    "substitution_policy": "Si access=false et l'action est satellite : substituer par la 1ère alternative_actions du mapping. Si aucune alternative dispo : skip l'action et redistribuer son poids sur les autres satellites du profil."
+    "version": "1.1",
+    "purpose": "Accès broker par action asiatique. Si false → substitution auto par alternative ACTION dans pipeline.",
+    "usage": "Édité via broker_access.html (save direct GitHub via API). Le pipeline generate_portfolios_v4.py lit ce fichier à chaque run.",
+    "last_updated": "2026-06-08",
+    "substitution_policy": "Si access=false : substitution par 1ère alternative_actions du mapping data/asian_alternatives.json. Si aucune dispo : skip et redistribuer prorata.",
+    "default_policy": "Tous accessibles par défaut. Le user marque false uniquement les actions qu'il ne peut PAS acheter via son broker."
   },
-  "access": {
-    "HEROMOTOCO": false,
-    "LUPIN": false,
-    "CUMMINSIND": false,
-    "POWERINDIA": false,
-    "2345": false,
-    "2368": false,
-    "3017": false,
-    "3443": false,
-    "3653": false,
-    "6669": false
-  }
+  "access": {}
 }
