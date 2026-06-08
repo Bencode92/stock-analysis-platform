@@ -260,8 +260,22 @@ def main():
     scored = [(s, score_stock(s, context)) for s in accessible]
     scored.sort(key=lambda x: -x[1])
 
-    # === Section 1: Global top 25 ===
-    global_top = [stock_entry(s, sc, context) for s, sc in scored[:25]]
+    # === Section 1: Global top 25 — avec cap secteur ===
+    # Doctrine : T4 (diversification) appliqué aussi sur le top global.
+    # Sans cap : 67% du top sur Tech + Industries + Finance (mesuré 2026-06-08).
+    # Avec cap 5/secteur : forcer la diversification structurelle.
+    MAX_PER_SECTOR_TOP = 5
+    global_top_raw = []
+    sec_count = defaultdict(int)
+    for s, sc in scored:
+        sec = normalize_sector(s.get('sector')) or '_'
+        if sec_count[sec] >= MAX_PER_SECTOR_TOP:
+            continue
+        sec_count[sec] += 1
+        global_top_raw.append((s, sc))
+        if len(global_top_raw) >= 25:
+            break
+    global_top = [stock_entry(s, sc, context) for s, sc in global_top_raw]
 
     # === Section 2: par pays ===
     by_country = defaultdict(list)

@@ -412,10 +412,10 @@
 <div class="warning">
   <div class="lbl"><i class="fas fa-exclamation-triangle"></i> Système non backtesté — outil de recherche personnelle</div>
   <ul>
-    <li>Corrélation Buffett ↔ Quality = <strong>0,76</strong> → redondance confirmée (les deux scores capturent largement le même signal).</li>
-    <li>Concentration sectorielle Top 25 = <strong>67 %</strong> sur Tech + Industries + Finance → risque de diversification.</li>
+    <li>Corrélation Buffett ↔ Quality = <strong>0,76</strong> → redondance partielle. Quality reste utilisé car ~42% variance non partagée avec Buffett (positionnement peer-group). Repondération gelée jusqu'à backtest PIT (Claude externe).</li>
+    <li><strong>Cap diversification appliqué v6.34 :</strong> max 5 actions par secteur dans le Top 25. Concentration Top 3 secteurs ramenée à <strong>~44 %</strong> (vs 67 % avant cap). 9 secteurs représentés.</li>
   </ul>
-  Le <strong>pouvoir prédictif n'est pas encore mesurable</strong> (3 snapshots PIT seulement). Un test propre demanderait ≥ 12-18 mois de cross-sections + rendements forward alignés. <strong>Usage défendable : filtre d'exclusion ("Buffett ≥ 60"), pas classement prédictif.</strong> Les recommandations nominatives à des tiers relèvent du statut CIF (art. L.541-1 CMF).
+  Le <strong>pouvoir prédictif n'est pas encore mesurable</strong> (3 snapshots PIT seulement). Test propre demande ≥ 12-18 mois de cross-sections + rendements forward (infra déjà en place, voir <code class="snippet">data/forward_returns/</code>). <strong>Usage défendable : filtre d'exclusion ("Buffett ≥ 60"), pas classement prédictif.</strong> Les recommandations nominatives à des tiers relèvent du statut CIF (art. L.541-1 CMF).
 </div>
 
 <div class="ctx-grid" id="ctx-grid"></div>
