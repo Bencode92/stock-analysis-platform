@@ -572,6 +572,108 @@ ETF_FOUNDATION_DIVIDENDE = {
 }
 
 
+def apply_broker_access_substitution(portfolios_path: str = "data/portfolios.json",
+                                     broker_config_path: str = "config/broker_access.json",
+                                     asian_map_path: str = "data/asian_alternatives.json"):
+    """v6.24: post-process portfolios.json pour substituer les actions
+    asiatiques non-accessibles via le broker du user par leur première
+    alternative ACTION (même secteur/qualité, bourse accessible).
+
+    Lit config/broker_access.json (édité via broker_access.html) :
+      - {"access": {"HEROMOTOCO": false, "3653": true, ...}}
+
+    Pour chaque action satellite dont access=false :
+      - Cherche la 1ère alternative_actions dans data/asian_alternatives.json
+      - Remplace l'entrée dans Actions (label + ticker dans label) avec
+        le poids inchangé
+      - Renomme la clé dans _tickers_meta
+      - Logge le swap pour traçabilité
+
+    Si aucune alternative disponible : log warning, laisse l'action en place
+    (le user devra décider manuellement).
+    """
+    if not os.path.exists(broker_config_path) or not os.path.exists(asian_map_path):
+        return  # silently skip si fichiers absents
+
+    try:
+        with open(broker_config_path, "r", encoding="utf-8") as f:
+            broker = json.load(f).get("access", {})
+        with open(asian_map_path, "r", encoding="utf-8") as f:
+            asian_map = json.load(f).get("stocks", {})
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"⚠️ Échec lecture broker_access ou asian_alternatives: {e}")
+        return
+
+    # Aucun blocage déclaré => skip
+    blocked_tickers = {tk for tk, ok in broker.items() if ok is False}
+    if not blocked_tickers:
+        return
+
+    if not os.path.exists(portfolios_path):
+        return
+
+    with open(portfolios_path, "r", encoding="utf-8") as f:
+        portfolios = json.load(f)
+
+    n_swaps = 0
+    for prof_name, prof in portfolios.items():
+        if prof_name.startswith("_") or not isinstance(prof, dict):
+            continue
+        actions = prof.get("Actions") or {}
+        if not actions:
+            continue
+
+        new_actions = {}
+        swap_log = []
+        for label, weight in actions.items():
+            # Extraire ticker du label "NOM (TICKER)"
+            if "(" in label and label.endswith(")"):
+                ticker = label.rsplit("(", 1)[1].rstrip(")").strip()
+            else:
+                ticker = label.strip()
+
+            if ticker in blocked_tickers:
+                asian_info = asian_map.get(ticker, {})
+                alts = asian_info.get("alternative_actions", [])
+                if alts:
+                    alt = alts[0]
+                    new_ticker = alt.get("ticker")
+                    new_name = alt.get("name") or new_ticker
+                    new_label = f"{new_name} ({new_ticker})"
+                    new_actions[new_label] = weight
+                    swap_log.append({
+                        "from_ticker": ticker,
+                        "from_name": asian_info.get("name", ""),
+                        "to_ticker": new_ticker,
+                        "to_name": new_name,
+                        "reason": f"broker_access=false → substitué par 1ère alternative ACTION ({alt.get('match_level','?')} match)",
+                        "weight_pct": weight,
+                    })
+                    n_swaps += 1
+                else:
+                    logger.warning(f"   [{prof_name}] ⚠️ {ticker} bloqué mais aucune alternative dispo — gardé en place")
+                    new_actions[label] = weight
+            else:
+                new_actions[label] = weight
+
+        if swap_log:
+            prof["Actions"] = new_actions
+            prof["_broker_substitutions"] = swap_log
+            # Sync _tickers_meta : renommer les clés
+            meta = prof.get("_tickers_meta") or {}
+            for swap in swap_log:
+                if swap["from_ticker"] in meta:
+                    meta[swap["to_ticker"]] = meta.pop(swap["from_ticker"])
+            logger.info(f"   [{prof_name}] 🌏 Broker substitutions : {len(swap_log)} swap(s)")
+            for s in swap_log:
+                logger.info(f"      • {s['from_ticker']} → {s['to_ticker']} ({s['to_name'][:30]}) at {s['weight_pct']}")
+
+    if n_swaps > 0:
+        with open(portfolios_path, "w", encoding="utf-8") as f:
+            json.dump(portfolios, f, ensure_ascii=False, indent=2)
+        logger.info(f"   🌏 Broker access : {n_swaps} action(s) asiatique(s) substituée(s) au total")
+
+
 def inject_etf_foundation_dividende(portfolios_path: str = "data/portfolios.json"):
     """v8.x.5: Post-process portfolios.json pour injecter les ETFs Foundation
     dans les profils Dividende. Le pipeline produit les picks ; on ajoute ETF
@@ -7300,6 +7402,13 @@ def main():
         inject_etf_foundation_dividende(CONFIG.get("output_path", "data/portfolios.json"))
     except Exception as _etf_e:
         logger.warning(f"⚠️ Échec injection ETF Foundation Dividende: {_etf_e}")
+
+    # v6.24: substitution actions asiatiques non-accessibles via broker user
+    # Lit config/broker_access.json (édité via broker_access.html)
+    try:
+        apply_broker_access_substitution(CONFIG.get("output_path", "data/portfolios.json"))
+    except Exception as _bk_e:
+        logger.warning(f"⚠️ Échec substitution broker access: {_bk_e}")
 
     # === v7.4: Génération des justifications LLM APRÈS save_portfolios ===
     # Rationales must be generated on the FINAL tickers (post-dedup, post-cap, post-round)
