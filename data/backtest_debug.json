@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-06-08T08:30:24.377653",
+    "generated_at": "2026-06-08T08:54:58.343120",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -347,9 +347,9 @@
       "first_date": "2026-02-09",
       "last_date": "2026-06-08",
       "first_price": 5756.5,
-      "last_price": 4794.0,
-      "total_return_pct": -16.72,
-      "volatility_annual_pct": 30.84,
+      "last_price": 4797.3999,
+      "total_return_pct": -16.66,
+      "volatility_annual_pct": 30.83,
       "weights_by_profile": {
         "Agressif": 5.0,
         "Modéré": 5.0
@@ -389,11 +389,11 @@
         },
         {
           "date": "2026-06-08",
-          "close": 4794.0,
+          "close": 4797.3999,
           "prev_date": "2026-06-05",
           "prev_close": 4835.0,
-          "daily_return_pct": -0.848,
-          "formula": "(4794.0000 / 4835.0000) - 1"
+          "daily_return_pct": -0.7777,
+          "formula": "(4797.3999 / 4835.0000) - 1"
         }
       ],
       "is_benchmark": false
@@ -874,13 +874,22 @@
           "contribution_pct": 0.0
         },
         {
+          "ticker": "ITX",
+          "type": "Action",
+          "weight_pct": 5.0,
+          "price_prev": 55.0,
+          "price_today": 55.0,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
+        },
+        {
           "ticker": "HEROMOTOCO",
           "type": "Action",
           "weight_pct": 5.0,
           "price_prev": 4835.0,
-          "price_today": 4794.0,
-          "return_pct": -0.848,
-          "contribution_pct": -0.0424
+          "price_today": 4797.3999,
+          "return_pct": -0.7777,
+          "contribution_pct": -0.0389
         },
         {
           "ticker": "LOGN",
@@ -890,18 +899,9 @@
           "price_today": 91.48,
           "return_pct": 0.0,
           "contribution_pct": 0.0
-        },
-        {
-          "ticker": "ITX",
-          "type": "Action",
-          "weight_pct": 5.0,
-          "price_prev": 55.0,
-          "price_today": 55.0,
-          "return_pct": 0.0,
-          "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": -0.0424,
+      "total_portfolio_return_pct": -0.0389,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -961,7 +961,7 @@
           5.0
         ],
         [
-          "HEROMOTOCO",
+          "ITX",
           5.0
         ]
       ]
@@ -1033,8 +1033,8 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 2.73,
-      "net_return_pct": 2.73,
+      "gross_return_pct": 2.74,
+      "net_return_pct": 2.74,
       "volatility_pct": 4.16,
       "max_drawdown_pct": -1.25,
       "benchmark_symbol": "QQQ",
@@ -1048,7 +1048,7 @@
       "max_drawdown_pct": -1.05,
       "benchmark_symbol": "URTH",
       "benchmark_return_pct": 7.52,
-      "excess_return_pct": -6.52
+      "excess_return_pct": -6.51
     },
     "Stable": {
       "gross_return_pct": 1.72,
