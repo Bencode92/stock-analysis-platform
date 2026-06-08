@@ -665,13 +665,24 @@ jobs:
           # En cas de conflit pendant le rebase (autre workflow CI ayant régénéré
           # data/macro_indicators.json ou data/market_context.json), on garde la
           # version locale fraichement régénérée (-X theirs en sémantique rebase).
+          # v6.32: stash auto avant rebase (sinon "cannot pull with rebase: unstaged changes")
+          # quand le pipeline a regen des fichiers APRÈS le commit (artefacts post-commit).
           for attempt in 1 2 3 4 5; do
             if git push; then
               echo "✅ Push OK (tentative $attempt)"
               break
             fi
             echo "⚠️ Push rejeté, rebase auto-résolutif (tentative $attempt)..."
+            # Stash les modifs non-stagées qui empêcheraient le rebase
+            STASH_NEEDED=0
+            if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+              git stash push -u -m "auto-stash-attempt-$attempt" 2>/dev/null && STASH_NEEDED=1
+            fi
             git pull --rebase --strategy-option=theirs origin main || git rebase --abort 2>/dev/null || true
+            # Restaure le stash (drop si conflit, on perd ces modifs intermédiaires)
+            if [ "$STASH_NEEDED" = "1" ]; then
+              git stash pop 2>/dev/null || git stash drop 2>/dev/null || true
+            fi
             if [ "$attempt" = "5" ]; then
               echo "❌ Push impossible après 5 tentatives"
               exit 1
