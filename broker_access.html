@@ -23,8 +23,19 @@
   .stock-row.blocked { background:rgba(244,67,54,0.04); }
   .stock-ticker { font-family:'JetBrains Mono',monospace;font-weight:700;color:#64b5f6;min-width:90px; }
   .stock-name { flex:1;color:rgba(255,255,255,0.9); }
-  .stock-meta { font-size:0.72rem;color:rgba(255,255,255,0.5);min-width:200px; }
-  .stock-substitute { font-size:0.72rem;color:#ffb74d;min-width:200px; }
+  .stock-meta { font-size:0.72rem;color:rgba(255,255,255,0.5);min-width:160px; }
+  .stock-scores { font-size:0.72rem;display:flex;gap:6px;min-width:200px;flex-shrink:0; }
+  .score-chip { padding:1px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-weight:600; }
+  .score-buf-high { background:rgba(76,175,80,0.18);color:#81c784; }
+  .score-buf-mid { background:rgba(255,193,7,0.15);color:#ffc107; }
+  .score-buf-low { background:rgba(244,67,54,0.15);color:#ef5350; }
+  .score-q-high { background:rgba(33,150,243,0.18);color:#64b5f6; }
+  .score-q-mid { background:rgba(33,150,243,0.10);color:rgba(100,181,246,0.7); }
+  .score-q-low { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.45); }
+  .score-perf-pos { background:rgba(76,175,80,0.15);color:#4caf50; }
+  .score-perf-neg { background:rgba(244,67,54,0.15);color:#ef5350; }
+  .score-perf-null { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.4); }
+  .stock-substitute { font-size:0.72rem;color:#ffb74d;min-width:180px; }
   .toggle-switch { position:relative;width:46px;height:24px;background:#444;border-radius:12px;cursor:pointer;transition:background 0.15s;flex-shrink:0; }
   .toggle-switch.on { background:#4caf50; }
   .toggle-switch.off { background:#ef5350; }
@@ -76,6 +87,13 @@
     <option value="">Tous statuts</option>
     <option value="accessible">✓ Accessible seulement</option>
     <option value="blocked">✗ Inaccessible seulement</option>
+  </select>
+  <select id="filter-sort" onchange="render()">
+    <option value="buffett">📊 Tri : Buffett ↓ (meilleurs en haut)</option>
+    <option value="quality">📊 Tri : Quality ↓</option>
+    <option value="perf_1y">📊 Tri : Perf 1y ↓</option>
+    <option value="combined">📊 Tri : Buffett + Quality ↓</option>
+    <option value="ticker">A→Z Ticker</option>
   </select>
 </div>
 
@@ -287,8 +305,19 @@ function render() {
     return true;
   });
 
-  // Tri par ticker
-  filtered.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||''));
+  // Tri configurable
+  const sortMode = document.getElementById('filter-sort').value;
+  if (sortMode === 'ticker') {
+    filtered.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||''));
+  } else if (sortMode === 'buffett') {
+    filtered.sort((a,b) => (b.buffett_score||0) - (a.buffett_score||0));
+  } else if (sortMode === 'quality') {
+    filtered.sort((a,b) => (b.quality_score||0) - (a.quality_score||0));
+  } else if (sortMode === 'perf_1y') {
+    filtered.sort((a,b) => (b.perf_1y||-9999) - (a.perf_1y||-9999));
+  } else if (sortMode === 'combined') {
+    filtered.sort((a,b) => ((b.buffett_score||0)+(b.quality_score||0)) - ((a.buffett_score||0)+(a.quality_score||0)));
+  }
 
   // Stats
   const total = allStocks.length;
@@ -309,12 +338,27 @@ function render() {
     const firstAlt = mapping?.alternative_actions?.[0];
     const name = s.name || s.stock_name || tk;
     const meta = `${s.country || '?'} · ${(s.sector || '').slice(0,18)}`;
+
+    // Score chips
+    const buf = s.buffett_score;
+    const q = s.quality_score;
+    const perf = s.perf_1y;
+    const bufCls = buf == null ? 'score-q-low' : (buf >= 80 ? 'score-buf-high' : (buf >= 60 ? 'score-buf-mid' : 'score-buf-low'));
+    const qCls = q == null ? 'score-q-low' : (q >= 75 ? 'score-q-high' : (q >= 60 ? 'score-q-mid' : 'score-q-low'));
+    const perfCls = perf == null ? 'score-perf-null' : (perf > 0 ? 'score-perf-pos' : 'score-perf-neg');
+    const perfTxt = perf == null ? '—' : (perf >= 0 ? '+' : '') + perf.toFixed(0) + '%';
+
     return `
     <div class="stock-row ${isAcc ? '' : 'blocked'}">
       <div class="toggle-switch ${isAcc ? 'on' : 'off'}" onclick="toggle('${tk}')"><div class="toggle-knob"></div></div>
       <div class="stock-ticker">${tk}</div>
       <div class="stock-name">${name}</div>
       <div class="stock-meta">${meta}</div>
+      <div class="stock-scores">
+        <span class="score-chip ${bufCls}" title="Buffett score">Buf ${buf ?? '—'}</span>
+        <span class="score-chip ${qCls}" title="Quality score">Q ${q ?? '—'}</span>
+        <span class="score-chip ${perfCls}" title="Perf 1 an">${perfTxt}</span>
+      </div>
       <div class="stock-substitute">${!isAcc && firstAlt ? `→ <strong style="color:#64b5f6;">${firstAlt.ticker}</strong> ${(firstAlt.name||'').slice(0,18)}` : (!isAcc ? "<em>Pas d'alternative</em>" : '')}</div>
     </div>
     `;
