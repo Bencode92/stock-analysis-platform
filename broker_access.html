@@ -112,49 +112,85 @@ function logErr(msg, e) {
   setStatus(`❌ ${msg} : ${e?.message || e}`, 'error');
 }
 
+function showStatus(msg) {
+  // Affiche un statut visible (debug + UX)
+  document.getElementById('stocks-container').innerHTML = `<p style="padding:16px;color:rgba(255,255,255,0.6);">${msg}</p>`;
+}
+
 async function load() {
-  try {
-    // 1. PAT
-    const pat = localStorage.getItem(PAT_STORAGE_KEY);
-    if (pat) document.getElementById('github-pat').value = pat;
+  showStatus('🔄 Chargement initial…');
 
-    // 2. Charge stocks_asia.json (liste complète)
-    const ra = await fetch('data/stocks_asia.json?_=' + Date.now());
-    if (!ra.ok) throw new Error('stocks_asia.json HTTP ' + ra.status);
-    const dataAsia = await ra.json();
-    allStocks = dataAsia.stocks || [];
+  // 1. PAT
+  const pat = localStorage.getItem(PAT_STORAGE_KEY);
+  if (pat) document.getElementById('github-pat').value = pat;
 
-    // 3. Charge asian_alternatives.json (mapping alternatives)
+  // 2. Charge stocks_asia.json — essai en cascade
+  showStatus('🔄 Chargement stocks_asia.json…');
+  const stocksPaths = [
+    'data/stocks_asia.json',
+    './data/stocks_asia.json',
+    '/stock-analysis-platform/data/stocks_asia.json',
+    'https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/stocks_asia.json',
+  ];
+  let dataAsia = null;
+  let lastErr = null;
+  for (const p of stocksPaths) {
     try {
-      const rm = await fetch('data/asian_alternatives.json?_=' + Date.now());
-      if (rm.ok) {
-        const dataMap = await rm.json();
-        asianMap = dataMap.stocks || {};
-      }
-    } catch(e) { console.warn('asian_alternatives.json not loaded:', e); }
-
-    // 4. Charge config/broker_access.json depuis GitHub (pour le sha + état)
-    await loadConfigFromGitHub();
-
-    // 5. Init missing tickers à true (accessible par défaut)
-    for (const s of allStocks) {
-      if (!(s.ticker in access)) access[s.ticker] = true;
-    }
-
-    // Populate countries filter
-    const countries = [...new Set(allStocks.map(s => s.country).filter(Boolean))].sort();
-    const sel = document.getElementById('filter-country');
-    for (const c of countries) {
-      const opt = document.createElement('option');
-      opt.value = c; opt.textContent = c;
-      sel.appendChild(opt);
-    }
-
-    render();
-  } catch(e) {
-    logErr('Chargement initial échoué', e);
-    document.getElementById('stocks-container').innerHTML = `<p style="color:#ef5350;padding:16px;">${e.message}</p>`;
+      const r = await fetch(p + '?_=' + Date.now());
+      if (!r.ok) { lastErr = `HTTP ${r.status} sur ${p}`; continue; }
+      dataAsia = await r.json();
+      console.log('✓ stocks_asia.json chargé depuis', p, '— stocks:', (dataAsia.stocks||[]).length);
+      break;
+    } catch(e) { lastErr = e.message; continue; }
   }
+  if (!dataAsia) {
+    showStatus(`❌ stocks_asia.json introuvable : ${lastErr}. Recharge la page ou vérifie GitHub Pages.`);
+    return;
+  }
+  allStocks = Array.isArray(dataAsia.stocks) ? dataAsia.stocks.filter(s => s && s.ticker) : [];
+  if (!allStocks.length) {
+    showStatus(`❌ stocks_asia.json est vide ou mal formaté (type: ${typeof dataAsia.stocks}, length: ${(dataAsia.stocks||[]).length})`);
+    return;
+  }
+
+  // 3. Charge asian_alternatives.json
+  showStatus(`🔄 ${allStocks.length} stocks chargés. Chargement du mapping…`);
+  for (const p of [
+    'data/asian_alternatives.json',
+    './data/asian_alternatives.json',
+    'https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/data/asian_alternatives.json',
+  ]) {
+    try {
+      const r = await fetch(p + '?_=' + Date.now());
+      if (r.ok) {
+        const dm = await r.json();
+        asianMap = dm.stocks || {};
+        console.log('✓ asian_alternatives.json chargé —', Object.keys(asianMap).length, 'mappings');
+        break;
+      }
+    } catch(e) { /* try next */ }
+  }
+
+  // 4. Charge config/broker_access.json (lecture pour état initial + sha)
+  showStatus(`🔄 Chargement config GitHub…`);
+  await loadConfigFromGitHub();
+
+  // 5. Init missing tickers à true (accessible par défaut)
+  for (const s of allStocks) {
+    if (!(s.ticker in access)) access[s.ticker] = true;
+  }
+
+  // 6. Populate countries filter
+  const countries = [...new Set(allStocks.map(s => s.country).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-country');
+  for (const c of countries) {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  }
+
+  // 7. Render
+  render();
 }
 
 async function loadConfigFromGitHub() {
