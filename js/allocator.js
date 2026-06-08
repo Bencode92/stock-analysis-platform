@@ -27,7 +27,7 @@
       // L'utilisateur peut activer le mode "budget turnover" via le toggle Avancé.
       this.maxTurnover = Infinity;
       this.minTradeWeight = 0.005;
-      this.minNotional = 50;
+      this.minNotional = 25; // v6.37: baissé de 50 à 25 pour ne pas rater les positions ≥1% sur petits NAV (ex EWT 2% × 2474€ = 49.48€)
       this.currentPositions = [];
       this.nav = 0;
       this.skipped = new Set();
