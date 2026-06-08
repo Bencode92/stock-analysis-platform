@@ -580,11 +580,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.portfolio-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const isLombard = tab.dataset.target === 'portfolio-lombard';
+      const isTopPicks = tab.dataset.target === 'portfolio-top-picks';
+      const isSpecial = isLombard || isTopPicks;
       const pfContent = document.querySelector('.portfolio-content');
       const corrSection = document.getElementById('correlation-section');
-      if (pfContent) pfContent.style.display = isLombard ? 'none' : 'block';
-      if (corrSection) corrSection.style.display = isLombard ? 'none' : 'block';
+      const topPicksPanel = document.getElementById('top-picks-panel');
+      if (pfContent) pfContent.style.display = isSpecial ? 'none' : 'block';
+      if (corrSection) corrSection.style.display = isSpecial ? 'none' : 'block';
       if (panel) panel.style.display = isLombard ? 'block' : 'none';
+      if (topPicksPanel) topPicksPanel.style.display = isTopPicks ? 'block' : 'none';
       if (isLombard && !LombardRenderer.state.rankings) {
         LombardRenderer.init();
       }

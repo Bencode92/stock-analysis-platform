@@ -290,6 +290,9 @@
                     <button class="portfolio-tab" data-target="portfolio-lombard" data-original-type="Lombard">
                         <i class="fas fa-university" style="margin-right:4px;"></i> Lombard
                     </button>
+                    <button class="portfolio-tab" data-target="portfolio-top-picks" data-original-type="Top-Picks">
+                        <i class="fas fa-star" style="margin-right:4px;"></i> Top Picks
+                    </button>
                 </div>
 
                 <!-- Dynamic content (rendered by portfolio-loader.js v3.0) -->
@@ -300,6 +303,11 @@
 
                 <!-- Lombard panel (shown when Lombard tab active) -->
                 <div id="lombard-panel" style="display:none;"></div>
+
+                <!-- Top Picks panel (shown when Top Picks tab active) -->
+                <div id="top-picks-panel" style="display:none;">
+                    <iframe src="top_picks_curated.html" style="width:100%;height:80vh;border:none;border-radius:8px;background:#0a0e14;" loading="lazy"></iframe>
+                </div>
             </div>
         </section>
 
