@@ -20,7 +20,7 @@ Output : 3 sections
 from __future__ import annotations
 import json
 from pathlib import Path
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -301,6 +301,44 @@ def main():
         if len(by_industry[ind]) < 8:  # top 8 par industrie
             by_industry[ind].append(stock_entry(s, sc, context))
 
+    # === Section 5: Focus régional précomputé pour le frontend ===
+    # Mapping country → region
+    COUNTRY_TO_REGION = {
+        'Etats-Unis':'US','Royaume-Uni':'EU','Suisse':'EU','France':'EU','Allemagne':'EU','Pays-Bas':'EU','Espagne':'EU','Italie':'EU','Belgique':'EU','Portugal':'EU','Suède':'EU','Finlande':'EU','Danemark':'EU','Norvège':'EU','Irlande':'EU','Autriche':'EU','Pologne':'EU',
+        'Inde':'ASIA','Taïwan':'ASIA','Corée':'ASIA','Chine':'ASIA','Thaïlande':'ASIA','Philippines':'ASIA','Japon':'ASIA','Hong Kong':'ASIA',
+    }
+
+    regional_focus = {}
+    for region_code in ('US', 'EU', 'ASIA'):
+        # Toutes les actions de cette région (depuis le scoring complet)
+        region_stocks = [(s, sc) for s, sc in scored if COUNTRY_TO_REGION.get(s.get('country')) == region_code]
+        if not region_stocks:
+            continue
+        # Top 50 de la région
+        top_50 = [stock_entry(s, sc, context) for s, sc in region_stocks[:50]]
+        # Distribution sectorielle
+        sec_dist = Counter(normalize_sector(s.get('sector')) for s, _ in region_stocks if s.get('sector'))
+        sec_dist = [{'sector': sec, 'count': n} for sec, n in sec_dist.most_common(10) if sec]
+        # Distribution industrie (≥ 2 stocks)
+        ind_dist = Counter(s.get('industry') for s, _ in region_stocks if s.get('industry'))
+        ind_dist = [{'industry': ind, 'count': n} for ind, n in ind_dist.most_common(15) if ind and n >= 2]
+        # Intersection RADAR avec la région
+        radar_favored = [s_['sector'] for s_ in sec_dist if s_['sector'] in (context.get('favored_sectors') or [])]
+        radar_avoided = [s_['sector'] for s_ in sec_dist if s_['sector'] in (context.get('avoided_sectors') or [])]
+        # Top pays dans la région (granularité utile pour Europe / Asie)
+        country_dist = Counter(s.get('country') for s, _ in region_stocks if s.get('country'))
+        country_dist = [{'country': c, 'count': n} for c, n in country_dist.most_common(10)]
+
+        regional_focus[region_code] = {
+            'n_accessible': len(region_stocks),
+            'top_50': top_50,
+            'top_sectors': sec_dist,
+            'top_industries': ind_dist,
+            'top_countries': country_dist,
+            'radar_favored_in_region': radar_favored,
+            'radar_avoided_in_region': radar_avoided,
+        }
+
     # === Output ===
     output = {
         '_meta': {
@@ -320,6 +358,7 @@ def main():
         'by_country': {c: top for c, top in sorted(by_country.items(), key=lambda x: -len(x[1]))},
         'by_sector': dict(by_sector),
         'by_industry': {i: top for i, top in sorted(by_industry.items(), key=lambda x: -len(x[1])) if len(top) >= 3},
+        'regional_focus': regional_focus,
     }
 
     out_path = ROOT / 'data' / 'top_picks_curated.json'
