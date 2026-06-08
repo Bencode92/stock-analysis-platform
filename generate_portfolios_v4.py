@@ -664,6 +664,20 @@ def apply_broker_access_substitution(portfolios_path: str = "data/portfolios.jso
             for swap in swap_log:
                 if swap["from_ticker"] in meta:
                     meta[swap["to_ticker"]] = meta.pop(swap["from_ticker"])
+            # v6.37.2: Sync _tickers (source de vérité pour l'allocator JS frontend)
+            # Bug précédent : _tickers gardait 3653/6669/POWERINDIA après substitution,
+            # donc l'allocator achetait toujours les inaccessibles au lieu d'APH/LOGN/ABBN.
+            tickers_raw = prof.get("_tickers") or {}
+            for swap in swap_log:
+                if swap["from_ticker"] in tickers_raw:
+                    tickers_raw[swap["to_ticker"]] = tickers_raw.pop(swap["from_ticker"])
+            # Sync également _numeric_weights, _tickers_pricing si présents
+            for key in ("_numeric_weights", "_tickers_pricing"):
+                d_inner = prof.get(key) or {}
+                if isinstance(d_inner, dict):
+                    for swap in swap_log:
+                        if swap["from_ticker"] in d_inner:
+                            d_inner[swap["to_ticker"]] = d_inner.pop(swap["from_ticker"])
             logger.info(f"   [{prof_name}] 🌏 Broker substitutions : {len(swap_log)} swap(s)")
             for s in swap_log:
                 logger.info(f"      • {s['from_ticker']} → {s['to_ticker']} ({s['to_name'][:30]}) at {s['weight_pct']}")
