@@ -34,6 +34,27 @@
       this.substitutions = {};
       this.unmappedExits = new Set();
       this.preserveLosses = true; // Don't propose SELL/TRIM on positions at unrealized loss
+      // v6.37: nouveaux modes post-feedback Claude externe
+      this.taxAwareNetting = true; // Compense MV/PV avant flagger un "coût fiscal"
+      this.preservePV = false;     // Préserve aussi les positions en plus-value (rarement utile si tax-aware ON)
+      this.skipMinPct = 1.0;       // Skip les positions cibles qui finissent < 1% du NAV (au lieu de booster)
+    }
+
+    /**
+     * v6.37: Calcule le P&L net réalisable si on vend les positions hors-cible.
+     * En France CTO, MV imputables sur PV de même nature (instruments financiers).
+     * Retourne {pv: total_pv, mv: total_mv, net: pv+mv, fiscal_cost: max(0, net*0.314)}
+     */
+    _taxAwareNetting(positionsToSell) {
+      let pv = 0, mv = 0;
+      for (const p of positionsToSell) {
+        if (p.pnl > 0) pv += p.pnl;
+        else if (p.pnl < 0) mv += p.pnl; // négatif
+      }
+      const net = pv + mv;
+      // PFU 30% (12.8% IR + 17.2% PS) — clamp à 0 si imputation absorbe tout
+      const fiscalCost = Math.max(0, net * 0.314);
+      return { pv: +pv.toFixed(2), mv: +mv.toFixed(2), net: +net.toFixed(2), fiscal_cost: +fiscalCost.toFixed(2) };
     }
 
     // ───────────────────────────── data loading
@@ -108,7 +129,8 @@
           quantity: qty,
           invested,
           pnl: result,
-          at_loss: result < 0
+          at_loss: result < 0,
+          at_gain: result > 0,  // v6.37: nécessaire pour tax-aware netting
         });
       }
       return positions;
@@ -277,13 +299,48 @@
       if (total > 0 && Math.abs(total - 1) > 1e-6) {
         for (const t of Object.keys(adj)) adj[t] /= total;
       }
+
+      // v6.37: SKIP MIN PCT — droppe les cibles dont le poids final < seuil
+      // (au lieu de les booster artificiellement). Évite les positions
+      // résiduelles parasites à 0.3% du portefeuille.
+      const minWeight = (this.skipMinPct || 0) / 100;
+      if (minWeight > 0) {
+        const dropped = [];
+        for (const t of Object.keys(adj)) {
+          if (adj[t] > 0 && adj[t] < minWeight) {
+            dropped.push(t);
+          }
+        }
+        if (dropped.length) {
+          let droppedSum = 0;
+          for (const t of dropped) {
+            droppedSum += adj[t];
+            adj[t] = 0;
+          }
+          // Redistribue prorata sur les cibles non droppées
+          const keep = Object.keys(adj).filter(t => adj[t] > 0);
+          const keepSum = keep.reduce((s, t) => s + adj[t], 0);
+          if (keepSum > 0) {
+            for (const t of keep) adj[t] += droppedSum * (adj[t] / keepSum);
+          }
+        }
+      }
+
+      total = Object.values(adj).reduce((s, v) => s + v, 0);
+      if (total > 0 && Math.abs(total - 1) > 1e-6) {
+        for (const t of Object.keys(adj)) adj[t] /= total;
+      }
       return adj;
     }
 
     _currentWeights() {
       const cw = {};
       for (const p of this.currentPositions) {
-        const t = p.target_ticker || p.ticker_raw;
+        // v6.37: PROXIES STRICT — seuls 'exact' et 'equivalent' (≡) comptent
+        // vers la cible. Les 'proxy' (≈) sont traités comme hors-cible
+        // pour éviter la concentration cachée.
+        const isEquiv = (p.similarity === 'exact' || p.similarity === 'equivalent');
+        const t = (isEquiv && p.target_ticker) ? p.target_ticker : p.ticker_raw;
         cw[t] = (cw[t] || 0) + (this.nav > 0 ? p.value / this.nav : 0);
       }
       return cw;
@@ -512,7 +569,13 @@
             <input type="file" data-allocator-csv accept=".csv,text/csv" style="margin-left:6px;color:var(--text-secondary);">
           </label>
           <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;" title="Ne propose aucun SELL ni TRIM sur les positions en moins-value latente. Les BUYs (renforcement DCA) restent autorisés.">
-            <input type="checkbox" data-allocator-preserve-losses checked> Préserver MV (ne pas vendre les positions en perte)
+            <input type="checkbox" data-allocator-preserve-losses checked> Préserver MV
+          </label>
+          <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;" title="v6.37: Compense automatiquement MV/PV de l'année (CTO français). Affiche le coût fiscal NET dans le résumé. Si MV ≥ PV → 0€ PFU.">
+            <input type="checkbox" data-allocator-tax-aware checked> Tax-aware netting
+          </label>
+          <label style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;" title="v6.37: Skip les cibles dont le poids final est < ce seuil (en %). Au lieu de booster artificiellement à 1%, on retire la ligne et redistribue prorata.">
+            Skip min <input type="number" data-allocator-skip-min value="1" min="0" max="5" step="0.5" style="width:50px;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:4px;padding:2px 6px;"> %
           </label>
           <button data-allocator-compute style="background:var(--accent,#26c281);color:#0a1410;border:none;border-radius:6px;padding:6px 14px;font-weight:600;cursor:pointer;">
             <i class="fas fa-bolt" style="margin-right:4px;"></i>Calculer arbitrages
@@ -580,6 +643,14 @@
         advancedPanel.style.display = visible ? 'none' : 'block';
         advancedBtn.style.background = visible ? 'transparent' : 'var(--surface-2,#0e1622)';
       });
+      // v6.37: bind nouveaux toggles
+      const taxToggle = this.root.querySelector('[data-allocator-tax-aware]');
+      if (taxToggle) taxToggle.addEventListener('change', (e) => { this.alloc.taxAwareNetting = e.target.checked; });
+      const skipMin = this.root.querySelector('[data-allocator-skip-min]');
+      if (skipMin) skipMin.addEventListener('change', (e) => {
+        this.alloc.skipMinPct = Math.max(0, parseFloat(e.target.value) || 0);
+      });
+
       this.root.querySelector('[data-allocator-preserve-losses]').addEventListener('change', (e) => {
         this.alloc.preserveLosses = e.target.checked;
         this._renderTargetPanel();
@@ -856,6 +927,26 @@
       const cashColor = Math.abs(cash) < 1 ? '#4caf50' : '#ffb300';
       const totalAll = this._lastResult ? this._lastResult.trades.length : 0;
       const vetoCount = this._vetoedTrades.size;
+
+      // v6.37: TAX-AWARE NETTING — calcule le P&L net des positions effectivement vendues
+      let taxBlock = '';
+      if (this.alloc.taxAwareNetting) {
+        const sellTickers = new Set(trades.filter(t => t.side === 'SELL').map(t => t.ticker_target));
+        const positionsSold = this.alloc.currentPositions.filter(p => {
+          const isEquiv = (p.similarity === 'exact' || p.similarity === 'equivalent');
+          const tk = (isEquiv && p.target_ticker) ? p.target_ticker : p.ticker_raw;
+          return sellTickers.has(tk);
+        });
+        const net = this.alloc._taxAwareNetting(positionsSold);
+        const fiscalColor = net.fiscal_cost === 0 ? '#4caf50' : '#ffb300';
+        const sign = net.net >= 0 ? '+' : '';
+        taxBlock = `
+          <span title="Tax-aware netting v6.37 : MV imputables sur PV de même nature (CTO français). Si MV ≥ PV → 0€ PFU.">
+            🧮 Tax net : <strong style="font-family:var(--font-mono);color:${fiscalColor};">${sign}${net.net.toFixed(2)} €</strong>
+            <span style="color:var(--text-muted);font-size:0.72rem;">(MV ${net.mv.toFixed(2)} · PV +${net.pv.toFixed(2)} · PFU ≈ ${net.fiscal_cost.toFixed(2)} €)</span>
+          </span>`;
+      }
+
       el.innerHTML = `
         <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--surface-2,#0e1622);border-radius:8px;">
           <span>Ordres actifs : <strong style="font-family:var(--font-mono);">${trades.length}/${totalAll}${vetoCount ? ` (${vetoCount} vetoés)` : ''}</strong></span>
@@ -863,6 +954,7 @@
           <span>Achats : <strong style="color:#4caf50;font-family:var(--font-mono);">${totalBuy.toFixed(2)} €</strong></span>
           <span title="Différence sells - buys après les ordres actifs. >0 = cash en attente d'investissement.">Cash résiduel : <strong style="font-family:var(--font-mono);color:${cashColor};">${cash >= 0 ? '+' : ''}${cash.toFixed(2)} €</strong></span>
           <span>Turnover : <strong style="font-family:var(--font-mono);">${(turnover*100).toFixed(1)} %</strong> one-way</span>
+          ${taxBlock}
         </div>
       `;
     }
