@@ -162,6 +162,21 @@
   .region-btn .num { color: var(--text-dim); font-size: 11px; font-weight: 600; margin-left: 2px; }
   .region-btn.active .num { color: var(--accent); }
 
+  /* === PRESET CHIPS === */
+  .preset-chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .preset-chip {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-mute); padding: 5px 12px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 5px; font-family: inherit;
+  }
+  .preset-chip:hover { border-color: var(--border-strong); color: var(--text); background: var(--bg-card-hover); }
+  .preset-chip.active {
+    background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.4);
+    color: var(--accent-warm);
+  }
+  .preset-chip .ic { font-size: 13px; }
+
   /* === SECTION TITLE === */
   .section-title {
     font-size: 18px; font-weight: 700; color: #fff; margin: 32px 0 14px;
@@ -355,6 +370,23 @@
   <div class="region-tabs" id="region-tabs"></div>
 </div>
 
+<!-- Présets thématiques (chips) -->
+<div class="filters-bar" style="flex-direction:column;align-items:flex-start;gap:10px;">
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;">
+    <span class="filter-label"><i class="fas fa-bolt"></i> Stratégie</span>
+    <div class="preset-chips" id="presets-strategy"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;">
+    <span class="filter-label"><i class="fas fa-tags"></i> Thème</span>
+    <div class="preset-chips" id="presets-theme"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;">
+    <span class="filter-label"><i class="fas fa-ruler"></i> Taille</span>
+    <div class="preset-chips" id="presets-size"></div>
+    <button id="clear-presets" style="background:transparent;border:1px solid var(--border);color:var(--text-mute);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;display:none;margin-left:auto;" onclick="clearPresets()"><i class="fas fa-times"></i> Tout effacer</button>
+  </div>
+</div>
+
 <!-- Tabs : Top 25 / Pays / Secteur / Industrie -->
 <div class="tabs-wrap">
   <div class="tabs">
@@ -411,8 +443,101 @@ function yahooUrl(ticker, country, region) {
 
 let CURRENT_REGION = '';
 let CURRENT_TAB = 'top';
+let ACTIVE_PRESETS = new Set();   // ids des presets actifs
 let rowId = 0;
 let DATA = null;
+
+// ============= PRÉSETS THÉMATIQUES =============
+const PRESETS = {
+  // === STRATÉGIE ===
+  quality_abs:    { cat:'strategy', label:'💎 Qualité absolue', desc:'Buffett ≥ 90 ET Quality ≥ 80', test: e => (e.buffett_score||0) >= 90 && (e.quality_score||0) >= 80 },
+  yield:          { cat:'strategy', label:'💰 Rendement',       desc:'Dividend yield ≥ 4%', test: e => (e.dividend_yield||0) >= 4 },
+  growth:         { cat:'strategy', label:'🌱 Croissance',      desc:'EPS 5y ≥ 15% ou CA 3y ≥ 15%', test: e => (e.eps_growth_5y||0) >= 15 || (e.revenue_growth_3y||0) >= 15 },
+  defensive:      { cat:'strategy', label:'🛡 Défensif',        desc:'Vol ≤ 20% ET β ≤ 0.8', test: e => (e.volatility_3y!=null && e.volatility_3y <= 20) && (e.beta!=null && e.beta <= 0.8) },
+  momentum:       { cat:'strategy', label:'🚀 Momentum',        desc:'Perf 1y ≥ 30%', test: e => (e.perf_1y||0) >= 30 },
+  value:          { cat:'strategy', label:'⚖️ Value',           desc:'P/E ≤ 15 ET ROE ≥ 15%', test: e => (e.pe_ratio!=null && e.pe_ratio > 0 && e.pe_ratio <= 15) && (e.roe||0) >= 15 },
+  low_risk:       { cat:'strategy', label:'📉 Faible risque',   desc:'Vol ≤ 15% ET MaxDD 3y ≥ -20%', test: e => (e.volatility_3y!=null && e.volatility_3y <= 15) && (e.max_drawdown_3y==null || e.max_drawdown_3y >= -20) },
+
+  // === THÈME (industries / secteurs) ===
+  ai:             { cat:'theme', label:'🤖 IA & Semi', desc:'Tech : Semis, Software, Hardware, Comm Eq', test: e => {
+    const ind = (e.industry||'').toLowerCase();
+    return ['semiconductor','software','computer hardware','communication equipment','electronic components','technology'].some(k => ind.includes(k));
+  }},
+  finance:        { cat:'theme', label:'🏦 Finance', desc:'Banques, Assurance, Asset Mgmt', test: e => (e.sector_normalized||'') === 'Finance' },
+  health:         { cat:'theme', label:'🏥 Santé', desc:'Pharma, Biotech, Medical', test: e => (e.sector_normalized||'') === 'Santé' },
+  energy_mat:     { cat:'theme', label:'⛏ Énergie & Matières', desc:'Énergie, Matériaux, Mines', test: e => ['Energie','Matériaux'].includes(e.sector_normalized||'') },
+  utilities_reit: { cat:'theme', label:'🏢 Utilities & REIT ⭐', desc:'Secteurs favorisés RADAR actuels', test: e => ['Utilities','Immobilier'].includes(e.sector_normalized||'') },
+  consumer:       { cat:'theme', label:'🛒 Consommation', desc:'Conso cyclique + staples', test: e => (e.sector_normalized||'').startsWith('Conso') },
+  industrials:    { cat:'theme', label:'🏗 Industries', desc:'Industries & manufacturing', test: e => (e.sector_normalized||'') === 'Industries' },
+
+  // === TAILLE (market cap) ===
+  large_cap:      { cat:'size', label:'🏛 Large cap', desc:'Market cap ≥ 50B', test: e => parseMarketCap(e.market_cap_str) >= 50e9 },
+  mid_cap:        { cat:'size', label:'💼 Mid cap', desc:'Market cap 2B – 50B', test: e => {
+    const mc = parseMarketCap(e.market_cap_str);
+    return mc >= 2e9 && mc < 50e9;
+  }},
+  small_cap:      { cat:'size', label:'🔬 Small cap', desc:'Market cap < 2B', test: e => {
+    const mc = parseMarketCap(e.market_cap_str);
+    return mc > 0 && mc < 2e9;
+  }},
+};
+
+function parseMarketCap(s) {
+  if (s == null) return 0;
+  const str = String(s);
+  const num = parseFloat(str);
+  if (isNaN(num)) return 0;
+  if (str.endsWith('T')) return num * 1e12;
+  if (str.endsWith('B')) return num * 1e9;
+  if (str.endsWith('M')) return num * 1e6;
+  return num;
+}
+
+function applyPresets(stocks) {
+  if (ACTIVE_PRESETS.size === 0) return stocks;
+  // Intersection : un stock doit passer TOUS les presets actifs
+  return stocks.filter(e => {
+    for (const id of ACTIVE_PRESETS) {
+      const preset = PRESETS[id];
+      if (preset && !preset.test(e)) return false;
+    }
+    return true;
+  });
+}
+
+function togglePreset(id) {
+  if (ACTIVE_PRESETS.has(id)) ACTIVE_PRESETS.delete(id);
+  else ACTIVE_PRESETS.add(id);
+  updatePresetChipsUI();
+  document.getElementById('clear-presets').style.display = ACTIVE_PRESETS.size > 0 ? 'inline-flex' : 'none';
+  renderAll();
+}
+
+function clearPresets() {
+  ACTIVE_PRESETS.clear();
+  updatePresetChipsUI();
+  document.getElementById('clear-presets').style.display = 'none';
+  renderAll();
+}
+
+function updatePresetChipsUI() {
+  document.querySelectorAll('.preset-chip').forEach(c => {
+    c.classList.toggle('active', ACTIVE_PRESETS.has(c.dataset.preset));
+  });
+}
+
+function renderPresetChips() {
+  const byCat = { strategy:[], theme:[], size:[] };
+  for (const [id, p] of Object.entries(PRESETS)) byCat[p.cat].push({id, ...p});
+
+  for (const cat of ['strategy', 'theme', 'size']) {
+    const cont = document.getElementById('presets-' + cat);
+    if (!cont) continue;
+    cont.innerHTML = byCat[cat].map(p =>
+      `<button class="preset-chip ${ACTIVE_PRESETS.has(p.id) ? 'active' : ''}" data-preset="${p.id}" onclick="togglePreset('${p.id}')" title="${p.desc}">${p.label}</button>`
+    ).join('');
+  }
+}
 
 const COUNTRY_TO_REGION = {
   'Etats-Unis':'US','Royaume-Uni':'EU','Suisse':'EU','France':'EU','Allemagne':'EU','Pays-Bas':'EU','Espagne':'EU','Italie':'EU','Belgique':'EU','Portugal':'EU','Suède':'EU','Finlande':'EU','Danemark':'EU','Norvège':'EU','Irlande':'EU','Autriche':'EU','Pologne':'EU',
@@ -422,6 +547,10 @@ const COUNTRY_TO_REGION = {
 function filterByRegion(stocks) {
   if (!CURRENT_REGION) return stocks;
   return stocks.filter(s => s.region === CURRENT_REGION);
+}
+
+function applyAllFilters(stocks) {
+  return applyPresets(filterByRegion(stocks));
 }
 
 function renderPick(e, rank) {
@@ -551,7 +680,7 @@ function renderAll() {
   const ctx = DATA.context || {};
 
   // Top 25
-  const globalFiltered = filterByRegion(DATA.global_top_25 || []);
+  const globalFiltered = applyAllFilters(DATA.global_top_25 || []);
   document.getElementById('global-top').innerHTML = globalFiltered.length
     ? globalFiltered.map((e,i) => renderPick(e, i+1)).join('')
     : '<div class="empty">Aucune action dans cette région pour le top 25 global.</div>';
@@ -560,7 +689,10 @@ function renderAll() {
 
   // Par pays
   const byC = DATA.by_country || {};
-  const cFiltered = Object.entries(byC).filter(([c]) => !CURRENT_REGION || COUNTRY_TO_REGION[c] === CURRENT_REGION);
+  const cFiltered = Object.entries(byC)
+    .filter(([c]) => !CURRENT_REGION || COUNTRY_TO_REGION[c] === CURRENT_REGION)
+    .map(([c, stocks]) => [c, applyPresets(stocks)])
+    .filter(([c, stocks]) => stocks.length > 0);
   document.getElementById('by-country').innerHTML = cFiltered.length
     ? cFiltered.map(([country, stocks]) => `
       <details class="acc">
@@ -574,7 +706,7 @@ function renderAll() {
   // Par secteur
   const byS = DATA.by_sector || {};
   const sectionsS = Object.entries(byS).map(([sec, stocks]) => {
-    const f = filterByRegion(stocks);
+    const f = applyAllFilters(stocks);
     if (!f.length) return null;
     const isFav = (ctx.favored_sectors || []).includes(sec);
     const isAvo = (ctx.avoided_sectors || []).includes(sec);
@@ -593,7 +725,7 @@ function renderAll() {
   // Par industrie
   const byI = DATA.by_industry || {};
   const sectionsI = Object.entries(byI).map(([ind, stocks]) => {
-    const f = filterByRegion(stocks);
+    const f = applyAllFilters(stocks);
     if (f.length < 2) return null;  // au moins 2 stocks après filtre
     return { ind, stocks: f };
   }).filter(x => x);
@@ -658,6 +790,7 @@ async function load() {
   renderAll();
 }
 
+renderPresetChips();
 load();
 </script>
 
