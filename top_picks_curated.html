@@ -233,6 +233,45 @@
   }
   .results-count strong { color: var(--accent-warm); font-weight: 700; }
 
+  /* === FOCUS RÉGIONAL === */
+  .region-focus {
+    display: none;
+    background: linear-gradient(135deg, rgba(125,211,252,0.06), rgba(196,181,253,0.04));
+    border: 1px solid rgba(125,211,252,0.18);
+    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
+  }
+  .region-focus.visible { display: block; }
+  .region-focus .focus-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .region-focus .focus-title {
+    font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -0.2px;
+  }
+  .region-focus .focus-subtitle {
+    color: var(--text-mute); font-size: 11.5px;
+  }
+  .region-focus .focus-row {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0;
+  }
+  .region-focus .focus-label {
+    font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.8px; font-weight: 600; min-width: 80px;
+  }
+  .focus-pill {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 11px; border-radius: 5px;
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+  }
+  .focus-pill:hover { background: rgba(125,211,252,0.12); border-color: rgba(125,211,252,0.3); }
+  .focus-pill .ic { color: var(--accent-warm); font-size: 11px; }
+  .focus-pill .cnt {
+    background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 8px;
+    font-size: 10px; font-weight: 700; color: var(--text-mute);
+  }
+  .focus-pill.radar { border-color: rgba(134,239,172,0.3); }
+  .focus-pill.radar .ic { color: var(--accent-green); }
+
   /* === SECTION TITLE === */
   .section-title {
     font-size: 18px; font-weight: 700; color: #fff; margin: 32px 0 14px;
@@ -441,6 +480,9 @@
     <span class="results-count" id="results-count"></span>
   </div>
 </div>
+
+<!-- Focus régional contextuel (apparaît quand une région est sélectionnée) -->
+<div class="region-focus" id="region-focus"></div>
 
 <!-- Filtres région -->
 <div class="filters-bar">
@@ -697,6 +739,9 @@ function applyNaturalSearch() {
   // Update detected filters display
   renderDetectedFilters();
 
+  // Focus régional contextuel
+  renderRegionFocus();
+
   // Re-render
   renderAll();
 }
@@ -892,7 +937,119 @@ function setTab(t) {
 function setRegion(r) {
   CURRENT_REGION = r;
   document.querySelectorAll('.region-btn').forEach(b => b.classList.toggle('active', b.dataset.region === r));
+  renderRegionFocus();
   renderAll();
+}
+
+// Mapping pour activer le bon preset thème depuis un secteur
+const SECTOR_TO_PRESET = {
+  'Tech': 'ai',
+  'Finance': 'finance',
+  'Santé': 'health',
+  'Energie': 'energy_mat',
+  'Matériaux': 'energy_mat',
+  'Utilities': 'utilities_reit',
+  'Immobilier': 'utilities_reit',
+  'Conso cyclique': 'consumer',
+  'Conso staples': 'consumer',
+  'Industries': 'industrials',
+  'Communication': null,  // pas de preset dédié
+};
+
+const REGION_LABELS = {
+  'US': '🇺🇸 États-Unis',
+  'EU': '🇪🇺 Europe',
+  'ASIA': '🌏 Asie',
+};
+
+function renderRegionFocus() {
+  const box = document.getElementById('region-focus');
+  if (!box || !DATA) return;
+  if (!CURRENT_REGION) { box.classList.remove('visible'); return; }
+
+  // Calcule les top secteurs/industries présents dans cette région
+  const stocksRegion = (DATA.global_top_25 || []).filter(s => s.region === CURRENT_REGION);
+  // Si pas assez dans Top 25, élargir au by_country de cette région
+  let extended = stocksRegion;
+  if (extended.length < 5) {
+    const allRegion = Object.entries(DATA.by_country || {})
+      .filter(([c]) => COUNTRY_TO_REGION[c] === CURRENT_REGION)
+      .flatMap(([_, st]) => st);
+    extended = allRegion;
+  }
+  if (!extended.length) { box.classList.remove('visible'); return; }
+
+  // Compter par secteur
+  const sectorCount = {};
+  for (const s of extended) {
+    const sec = s.sector_normalized || s.sector;
+    if (sec) sectorCount[sec] = (sectorCount[sec] || 0) + 1;
+  }
+  const topSectors = Object.entries(sectorCount).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+  // Compter par industrie
+  const indCount = {};
+  for (const s of extended) {
+    const ind = s.industry;
+    if (ind) indCount[ind] = (indCount[ind] || 0) + 1;
+  }
+  const topIndustries = Object.entries(indCount).filter(([_, n]) => n >= 2).sort((a,b) => b[1] - a[1]).slice(0, 6);
+
+  // RADAR favorisés (intersection avec présents dans cette région)
+  const ctx = DATA.context || {};
+  const favoredHere = (ctx.favored_sectors || []).filter(s => sectorCount[s]);
+  const avoidedHere = (ctx.avoided_sectors || []).filter(s => sectorCount[s]);
+
+  const lbl = REGION_LABELS[CURRENT_REGION] || CURRENT_REGION;
+
+  let html = `
+    <div class="focus-header">
+      <span style="font-size:18px;">🎯</span>
+      <div>
+        <div class="focus-title">Focus ${lbl}</div>
+        <div class="focus-subtitle">${extended.length} actions accessibles · cliquez sur un thème pour pré-filtrer</div>
+      </div>
+    </div>`;
+
+  if (favoredHere.length || avoidedHere.length) {
+    html += `<div class="focus-row">
+      <span class="focus-label">RADAR</span>`;
+    for (const sec of favoredHere) {
+      const presetId = SECTOR_TO_PRESET[sec];
+      const action = presetId ? `togglePreset('${presetId}')` : '';
+      html += `<button class="focus-pill radar" onclick="${action}"><span class="ic">⭐</span> ${sec} <span class="cnt">${sectorCount[sec]}</span></button>`;
+    }
+    for (const sec of avoidedHere) {
+      const presetId = SECTOR_TO_PRESET[sec];
+      const action = presetId ? `togglePreset('${presetId}')` : '';
+      html += `<button class="focus-pill" style="border-color:rgba(248,113,113,0.3);" onclick="${action}"><span class="ic" style="color:var(--accent-red);">🔻</span> ${sec} <span class="cnt">${sectorCount[sec]}</span></button>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `<div class="focus-row">
+    <span class="focus-label">Top secteurs</span>`;
+  for (const [sec, n] of topSectors) {
+    if (favoredHere.includes(sec) || avoidedHere.includes(sec)) continue;  // déjà affiché en RADAR
+    const presetId = SECTOR_TO_PRESET[sec];
+    const action = presetId ? `togglePreset('${presetId}')` : '';
+    const cursor = presetId ? '' : 'cursor:default;opacity:0.7;';
+    html += `<button class="focus-pill" style="${cursor}" onclick="${action}">${sec} <span class="cnt">${n}</span></button>`;
+  }
+  html += `</div>`;
+
+  if (topIndustries.length) {
+    html += `<div class="focus-row">
+      <span class="focus-label">Industries</span>`;
+    for (const [ind, n] of topIndustries) {
+      const indShort = ind.length > 32 ? ind.substring(0, 32) + '…' : ind;
+      html += `<button class="focus-pill" style="cursor:default;opacity:0.85;" title="${ind}">${indShort} <span class="cnt">${n}</span></button>`;
+    }
+    html += `</div>`;
+  }
+
+  box.innerHTML = html;
+  box.classList.add('visible');
 }
 
 function renderAll() {
