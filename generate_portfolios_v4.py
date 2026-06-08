@@ -7426,6 +7426,27 @@ def main():
     except Exception as _tp_e:
         logger.warning(f"⚠️ Échec top picks curated: {_tp_e}")
 
+    # v6.30: archive rendements forward propres pour backtest futur
+    # Vérifie quelles fenêtres (1m/3m/6m/12m) se ferment aujourd'hui et archive
+    # les rendements correspondants avec corrections : devise EUR, total return
+    # (div inclus), délisting (-100% au lieu de NaN), tagging fenêtres pour
+    # dédup non-overlap au moment du test.
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["python3", "scripts/forward_returns_archiver.py"],
+            capture_output=True, text=True, timeout=120,
+        )
+        if result.returncode == 0:
+            logger.info("   ✓ Forward returns archiver tourné")
+            if result.stdout:
+                for line in result.stdout.strip().split("\n")[-3:]:
+                    logger.info(f"      {line}")
+        else:
+            logger.warning(f"⚠️ Forward returns stderr: {result.stderr[:300]}")
+    except Exception as _fr_e:
+        logger.warning(f"⚠️ Échec forward returns archiver: {_fr_e}")
+
     # === v7.4: Génération des justifications LLM APRÈS save_portfolios ===
     # Rationales must be generated on the FINAL tickers (post-dedup, post-cap, post-round)
     # Otherwise tickers mismatch: rationale for EMHC but portfolio has SLV after dedup

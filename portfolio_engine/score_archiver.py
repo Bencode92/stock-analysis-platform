@@ -68,6 +68,7 @@ def _compact_stock_snapshot(s: Dict) -> Dict:
         "perf_ytd": gf("perf_ytd"),
         # Income
         "dividend_yield": gf("dividend_yield"),
+        "dividend_yield_ttm": gf("dividend_yield_ttm"),  # v6.30: pour total return
         # Forward
         "eps_growth_forecast_5y": gf("eps_growth_forecast_5y"),
         "eps_surprise_last": gf("eps_surprise_last"),
@@ -77,8 +78,21 @@ def _compact_stock_snapshot(s: Dict) -> Dict:
         "_fit_agressif": gf("_fit_agressif"),
         "_profile_native": s.get("_profile_native"),
         "_coherence": gf("_coherence"),
-        # Prix (pour calculer le rendement futur quand on testera)
+        # === v6.30: Données critiques pour backtest forward propre ===
+        # Prix natif + devise native (pas de conversion à ce stade pour éviter
+        # un FX rate qui change rétroactivement — la conversion EUR se fait au
+        # moment du calcul forward avec un FX rate PIT séparément stocké)
         "last_close": gf("price") or gf("last_close"),
+        "currency_native": s.get("data_currency") or s.get("currency"),
+        "exchange": s.get("data_exchange") or s.get("exchange"),
+        "mic": s.get("data_mic"),
+        # Identifiants pérennes pour gérer délisting (si ticker change, isin
+        # reste — utile pour M&A renaming)
+        "isin": s.get("isin"),
+        "figi": s.get("figi") or s.get("composite_figi"),
+        # Status pour détecter futurs délistings (à comparer entre snapshots)
+        "is_delisted": s.get("is_delisted", False),
+        "data_last_updated": s.get("last_updated"),
     }
 
 
