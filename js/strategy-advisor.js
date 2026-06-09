@@ -666,8 +666,9 @@ const StrategyAdvisor = (() => {
                                 explain: '<strong>Étape 1 :</strong> ' + esc(donor.nom) + ' donne la NP à ' + esc(inter.nom) + ' (' + formatLien(lienDonorInter) + ', abat. ' + fmt(abatDI) + ') → droits : ' + fmt(droits1) + '.<br>' +
                                     '<strong>Étape 2 :</strong> ' + esc(inter.nom) + ' redonne la NP à ' + esc(ben.prenom || ben.nom) + ' (' + formatLien(lienInterBen) + ', abat. ' + fmt(abatIBRestant) + (interDonAnt > 0 ? ' — ' + fmt(interDonAnt) + ' déjà donné' : '') + ') → droits : ' + fmt(droits2) + '.<br>' +
                                     '<strong>Total :</strong> ' + fmt(totalDroits) + ' de droits (vs ' + fmt(droitsNP) + ' en direct). <strong>Économie : ' + fmt(droitsNP - totalDroits) + '</strong>.',
-                                risks: [esc(inter.nom) + ' consomme ' + fmt(Math.min(npVal2, abatIBRestant)) + ' de son abattement ' + formatLien(lienInterBen), '2 actes notariés → frais doublés', esc(inter.nom) + ' est nu-propriétaire temporaire'],
-                                advantages: ['Cumul de 2 abattements en ligne directe', 'Économie de ' + fmt(droitsNP - totalDroits) + ' vs donation directe', esc(donor.nom) + ' conserve l\'usufruit'],
+                                risks: ['⚠️ ABUS DE DROIT : deux dons rapprochés vers le même bénéficiaire final = donation déguisée (art. L64 LPF, 40–80% de pénalités). À sécuriser : espacer les actes (≥ ' + (FISC.rappelFiscalAns || 15) + ' ans) et intention libérale réelle de ' + esc(inter.nom) + ' (aucune obligation de redonner).', esc(inter.nom) + ' consomme ' + fmt(Math.min(npVal2, abatIBRestant)) + ' de son abattement ' + formatLien(lienInterBen), '2 actes notariés → frais doublés', esc(inter.nom) + ' est nu-propriétaire temporaire'],
+                                advantages: ['Cumul de 2 abattements en ligne directe (sous réserve de licéité — voir risque)', 'Économie de ' + fmt(droitsNP - totalDroits) + ' vs donation directe', esc(donor.nom) + ' conserve l\'usufruit'],
+                                abusDroit: true,
                                 isBest: false, isWorst: false
                             });
                         }

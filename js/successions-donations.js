@@ -3252,6 +3252,13 @@ const SD = (() => {
     function getAbattement(lien, isSuccession) {
         const a = FISCAL.abattements;
         if (lien === 'conjoint_pacs') return isSuccession ? Infinity : a.conjoint_pacs_donation;
+        // En SUCCESSION directe (hors représentation), petit-enfant / arrière-petit-enfant
+        // n'ont PAS l'abattement de donation (790 B : 31 865 / 5 310 €). Ils relèvent de
+        // l'abattement résiduel de 1 594 € (art. 788 IV CGI). La représentation d'un parent
+        // prédécédé (abattement enfant 100 000 €) est gérée séparément (inheritance-rules).
+        if (isSuccession && (lien === 'petit_enfant' || lien === 'arriere_petit_enfant')) {
+            return a.tiers || 1594;
+        }
         return a[lien] || a.tiers;
     }
 

@@ -631,6 +631,8 @@ const PathOptimizer = (() => {
                     complexity: 2,
                     delaiAns: 0, // idéalement attendre 15 ans entre les deux
                     delaiOptimal: ABATTEMENTS.rappel_fiscal_ans,
+                    abusDroit: true,
+                    risqueAbus: 'Donation en chaîne immédiate (délai 0) : risque de donation déguisée / abus de droit (art. L64 LPF — 40 à 80 % de pénalités). Pour être licite, espacer les deux dons (idéalement ≥ ' + ABATTEMENTS.rappel_fiscal_ans + ' ans) et démontrer l\'intention libérale réelle de l\'intermédiaire (pas de charge de redonner).',
                     risqueAge: donor.age > 75 ? 'élevé' : 'moyen',
                     donor, intermediaire, target: targetBeneficiary
                 });
@@ -655,6 +657,8 @@ const PathOptimizer = (() => {
                     complexity: 2,
                     delaiAns: 0,
                     delaiOptimal: ABATTEMENTS.rappel_fiscal_ans,
+                    abusDroit: true,
+                    risqueAbus: 'Donation en chaîne immédiate via démembrement : risque de donation déguisée / abus de droit (art. L64 LPF — 40 à 80 % de pénalités). Espacer les dons (≥ ' + ABATTEMENTS.rappel_fiscal_ans + ' ans) et justifier l\'intention libérale réelle de l\'intermédiaire.',
                     risqueAge: donor.age > 75 ? 'élevé' : 'moyen',
                     donor, intermediaire, target: targetBeneficiary,
                     note: `NP ${Math.round(getNP(donor.age) * 100)}% au 1er saut`
@@ -740,9 +744,11 @@ const PathOptimizer = (() => {
         // Tri par net final décroissant (le plus avantageux en premier)
         paths.sort((a, b) => b.netFinal - a.netFinal);
 
-        // Tag best, best simple, best with delay
-        const best = paths[0];
-        const bestSimple = paths.find(p => p.complexity === 1) || best;
+        // Le "best" RECOMMANDÉ exclut les montages en chaîne immédiate (abus de droit) :
+        // ils restent listés (flaggés ⚠️) mais ne sont jamais mis en avant par défaut.
+        const licites = paths.filter(p => !p.abusDroit);
+        const best = licites[0] || paths[0];
+        const bestSimple = paths.find(p => p.complexity === 1 && !p.abusDroit) || best;
         const bestWithDelay = paths.find(p => p.type === 'indirect' && p.delaiOptimal) || null;
 
         return {
@@ -1485,9 +1491,11 @@ const PathOptimizer = (() => {
 
             // Show top 6 paths
             result.all.slice(0, 6).forEach((p, i) => {
-                const isBest = i === 0;
-                const rowStyle = isBest ? 'background:rgba(16,185,129,.06);' : '';
-                const badge = isBest ? '<span style="color:var(--accent-green);font-weight:700;"> ★</span>' : '';
+                const isBest = p === result.best;
+                const rowStyle = isBest ? 'background:rgba(16,185,129,.06);' : (p.abusDroit ? 'background:rgba(239,68,68,.05);' : '');
+                const badge = isBest
+                    ? '<span style="color:var(--accent-green);font-weight:700;"> ★</span>'
+                    : (p.abusDroit ? '<span style="color:var(--accent-coral);font-weight:700;" title="Risque abus de droit"> ⚠️</span>' : '');
 
                 html += `<tr style="${rowStyle}">
                     <td style="text-align:left;font-weight:${isBest ? '700' : '500'};">${esc(p.label)}${badge}</td>
@@ -1499,6 +1507,14 @@ const PathOptimizer = (() => {
                     <td>${'●'.repeat(p.complexity)}${'○'.repeat(3 - p.complexity)}</td>
                     <td><span style="color:${p.risqueAge === 'élevé' ? 'var(--accent-coral)' : p.risqueAge === 'moyen' ? 'var(--accent-amber)' : 'var(--accent-green)'};">${p.risqueAge}</span></td>
                 </tr>`;
+
+                // Avertissement abus de droit sur les montages en chaîne immédiate
+                if (p.abusDroit && p.risqueAbus) {
+                    html += `<tr style="background:rgba(239,68,68,.06);">
+                        <td colspan="8" style="text-align:left;font-size:.65rem;color:var(--accent-coral);padding:4px 8px;">
+                        ⚠️ <strong>Abus de droit :</strong> ${esc(p.risqueAbus)}</td>
+                    </tr>`;
+                }
 
                 // Show hop details for indirect paths
                 if (p.hops.length > 1) {

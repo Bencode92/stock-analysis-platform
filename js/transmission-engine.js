@@ -783,30 +783,38 @@ const TransmissionEngine = (() => {
 
         // ─── 8. DON MANUEL + DON FAMILIAL ARGENT ────────────────
         if (partFin > 0 && ['enfant', 'petit_enfant', 'arriere_petit_enfant', 'neveu_niece'].includes(lien)) {
-            var donFamMax = FISC.abattements.don_familial_argent;
-            var donTotal = Math.min(partFin, abatRestant + donFamMax);
-            var donDroits = donTotal <= (abatRestant + donFamMax) ? 0 : calcDroits(donTotal - abatRestant - donFamMax, bareme);
+            // Don familial de sommes d'argent (art. 790 G) : conditionné à un donateur de MOINS de 80 ans.
+            // Au-delà, seul l'abattement de parenté classique s'applique (pas le bonus de 31 865 €).
+            var donFamEligible = donorAge < 80;
+            var donFamMax = donFamEligible ? FISC.abattements.don_familial_argent : 0;
+            var abatDispo = abatRestant + donFamMax;
+            var donTotal = Math.min(partFin, abatDispo);
+            var donDroits = donTotal <= abatDispo ? 0 : calcDroits(donTotal - abatDispo, bareme);
             channels.push({
-                id: 'don_manuel', name: 'Don manuel + familial',
+                id: 'don_manuel', name: donFamEligible ? 'Don manuel + familial' : 'Don manuel',
                 icon: '💵', timing: 'Maintenant', color: '#22c55e',
-                assiette: donTotal, abattement: abatRestant + donFamMax,
-                base_taxable: Math.max(0, donTotal - abatRestant - donFamMax), droits: donDroits, frais: 0,
+                assiette: donTotal, abattement: abatDispo,
+                base_taxable: Math.max(0, donTotal - abatDispo), droits: donDroits, frais: 0,
                 net: donTotal - donDroits,
                 taux_effectif: 0,
                 fraisAn: 0,
                 advantages: [
-                    'Cumul abattement ' + formatLien(lien) + ' (' + fmt(abat) + (donAnterieures > 0 ? ', reste ' + fmt(abatRestant) : '') + ') + don familial (' + fmt(donFamMax) + ')',
-                    'Total exonéré disponible : ' + fmt(abatRestant + donFamMax) + ' par donateur',
+                    donFamEligible
+                        ? 'Cumul abattement ' + formatLien(lien) + ' (' + fmt(abat) + (donAnterieures > 0 ? ', reste ' + fmt(abatRestant) : '') + ') + don familial (' + fmt(donFamMax) + ')'
+                        : 'Abattement ' + formatLien(lien) + ' (' + fmt(abat) + (donAnterieures > 0 ? ', reste ' + fmt(abatRestant) : '') + ')',
+                    'Total exonéré disponible : ' + fmt(abatDispo) + ' par donateur',
                     donDroits === 0 ? '0 € de droits' : null,
                     'Déclaration en ligne obligatoire (depuis 01/2026)'
-                ],
+                ].filter(Boolean),
                 risks: [
                     'Limité aux sommes d\'argent',
-                    'Don familial : donateur < 80 ans, donataire majeur',
+                    donFamEligible
+                        ? 'Don familial : donataire majeur (donateur < 80 ans : OK)'
+                        : '⚠️ Don familial 790 G indisponible : donateur ≥ 80 ans (' + donorAge + ' ans)',
                     'Rappel fiscal 15 ans'
                 ],
                 objectives: ['minimiser'],
-                details: 'Abattement restant : ' + fmt(abatRestant) + ' + don familial ' + fmt(donFamMax) + ' = ' + fmt(abatRestant + donFamMax) + ' exonéré.' + (donAnterieures > 0 ? ' Donations antérieures : ' + fmt(donAnterieures) + ' (rappel 15 ans).' : '')
+                details: 'Abattement restant : ' + fmt(abatRestant) + (donFamEligible ? ' + don familial ' + fmt(donFamMax) : ' (don familial 790 G indisponible : donateur ≥ 80 ans)') + ' = ' + fmt(abatDispo) + ' exonéré.' + (donAnterieures > 0 ? ' Donations antérieures : ' + fmt(donAnterieures) + ' (rappel 15 ans).' : '')
             });
         }
 

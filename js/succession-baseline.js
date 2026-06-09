@@ -102,10 +102,22 @@
         var droitsAV = 0;
         var avRegime = '';
         if (totalAV > 0) {
+            // Donateurs PathOptimizer (pour resoudre le lien reel de chaque beneficiaire)
+            var poDonorsAV = (PO && PO.getDonors) ? PO.getDonors().filter(function(d) { return d._isDonor; }) : [];
+            var listBenAV = beneficiaires.length > 0 ? beneficiaires : [{ lien: 'enfant', id: null }];
+            function lienReel(ben) {
+                if (PO && PO.getEffectiveLien && poDonorsAV.length > 0 && ben.id) {
+                    return PO.getEffectiveLien(poDonorsAV[0].id, ben.id, poDonorsAV[0].role, ben.lien) || 'enfant';
+                }
+                return ben.lien || 'enfant';
+            }
             if (totalPrimesAv70 > 0) {
-                // Art. 990 I : 152 500/beneficiaire
-                var nbBenAV = Math.max(1, beneficiaires.length);
-                var parBen990I = totalPrimesAv70 / nbBenAV;
+                // Art. 990 I : abat. 152 500 PAR beneficiaire, sur le CAPITAL transmis
+                // (primes avant 70 + produits/gains correspondants), pas sur les primes seules.
+                var nbBenAV = listBenAV.length;
+                var basePrimesAV = totalPrimesAv70 + totalPrimesAp70;
+                var capital990I = basePrimesAV > 0 ? totalAV * (totalPrimesAv70 / basePrimesAV) : totalPrimesAv70;
+                var parBen990I = capital990I / nbBenAV;
                 var base990I = Math.max(0, parBen990I - FISCAL.av990I.abattement);
                 var seuil = FISCAL.av990I.seuil2 - FISCAL.av990I.abattement;
                 var tr1 = Math.min(base990I, seuil);
@@ -114,17 +126,15 @@
                 avRegime = '990 I';
             }
             if (totalPrimesAp70 > 0) {
-                // Art. 757 B : abat. global 30 500, puis bareme DMTG
-                var baseAp70 = Math.max(0, totalPrimesAp70 - FISCAL.av757B.abattementGlobal);
-                // Taxe au bareme du lien beneficiaire (pas heritier legal)
-                var lienBenAV = 'enfant';
-                if (PO && PO.getDonors && PO.getEffectiveLien && beneficiaires.length > 0) {
-                    var rd = PO.getDonors().filter(function(d) { return d._isDonor; });
-                    if (rd.length > 0) lienBenAV = PO.getEffectiveLien(rd[0].id, beneficiaires[0].id, rd[0].role, beneficiaires[0].lien) || 'enfant';
-                }
-                var nbBen757B = Math.max(1, beneficiaires.length);
-                var parBen757B = baseAp70 / nbBen757B;
-                droitsAV += SD._fiscal.calcDroits(parBen757B, SD._fiscal.getBareme(lienBenAV)) * nbBen757B;
+                // Art. 757 B : abattement GLOBAL 30 500 reparti au prorata entre beneficiaires,
+                // puis CHAQUE beneficiaire taxe au bareme de SON propre lien (progressivite respectee).
+                var nbBen757B = listBenAV.length;
+                var abatParBen757B = FISCAL.av757B.abattementGlobal / nbBen757B;
+                var partPrimes757B = totalPrimesAp70 / nbBen757B;
+                listBenAV.forEach(function(ben) {
+                    var base757B = Math.max(0, partPrimes757B - abatParBen757B);
+                    droitsAV += SD._fiscal.calcDroits(base757B, SD._fiscal.getBareme(lienReel(ben)));
+                });
                 avRegime = avRegime ? avRegime + ' + 757 B' : '757 B';
             }
         }

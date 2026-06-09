@@ -319,12 +319,15 @@ const FiscalOptimizations = (function() {
         // 5. AV exagérées
         var avCheck = detectAVExagerees();
         if (avCheck && avCheck.isExagere) {
-            var droitsReintegration = calcDroitsReintegrationAV(avCheck.depassement, bens, nbDonors);
+            // La réintégration L132-13 porte sur le CONTRAT ENTIER (à la demande des réservataires),
+            // pas sur le seul dépassement du seuil de 35 % qui n'est qu'un INDICE d'alerte.
+            var avTotalContrat = avCheck.depassement + avCheck.seuilMax; // = capital AV total
+            var droitsReintegration = calcDroitsReintegrationAV(avTotalContrat, bens, nbDonors);
             optimisations.push({
                 id: 'av_exagerees', label: 'AV exagérées — Risque réintégration', icon: 'fa-exclamation-triangle', color: 'var(--accent-coral)',
                 reduction: 0, risque: droitsReintegration,
-                detail: 'AV = ' + Math.round(avCheck.ratio * 100) + '% patrimoine (seuil 35%). Dépassement ' + fmt(avCheck.depassement),
-                conseil: 'Réduire l\'AV à ' + fmt(avCheck.seuilMax) + ' max. Réallouer vers donation NP, SCI, ou GFV.',
+                detail: 'AV = ' + Math.round(avCheck.ratio * 100) + '% du patrimoine (seuil d\'alerte 35%). En cas de requalification, c\'est le contrat ENTIER (' + fmt(avTotalContrat) + ') qui est réintégré, pas le seul dépassement.',
+                conseil: 'Risque chiffré = droits dus si réintégration totale. Réduire l\'AV sous ' + fmt(avCheck.seuilMax) + ', ou réallouer vers donation NP, SCI, GFV.',
                 article: 'L132-13 Code assurances — Cass. 2ème civ.'
             });
         }
@@ -405,7 +408,10 @@ const FiscalOptimizations = (function() {
             brut: { assiette: totalBrut, droits: droitsBrut },
             optimise: { assiette: assietteCorrigee, droits: droitsOptimises },
             economieDroits: economieDroits,
-            economieTotale: economieDroits + economieConcubin,
+            // Pas d'addition avec economieConcubin : la SCI croisée porte sur les MÊMES biens immo
+            // déjà optimisés dans l'assiette (double comptage). Affichée séparément (scénario alternatif).
+            economieTotale: economieDroits,
+            economieConcubin: economieConcubin,
             optimisations: optimisations,
             nbEnfants: nbEnfants,
             nbDonors: nbDonors,
@@ -436,10 +442,12 @@ const FiscalOptimizations = (function() {
         return total;
     }
 
-    function calcDroitsReintegrationAV(depassement, bens, nbDonors) {
+    // montantReintegre = capital AV réintégré dans la succession (contrat entier en cas de
+    // requalification pour primes manifestement exagérées, art. L132-13 C. assurances).
+    function calcDroitsReintegrationAV(montantReintegre, bens, nbDonors) {
         var bensEnfants = bens.filter(function(b) { return b.lien === 'enfant'; });
         if (bensEnfants.length === 0) return 0;
-        return calcDroitsForBens(depassement, bensEnfants, nbDonors, true, false);
+        return calcDroitsForBens(montantReintegre, bensEnfants, nbDonors, true, false);
     }
 
     // ============================================================
@@ -463,6 +471,7 @@ const FiscalOptimizations = (function() {
             html += '<div style="font-size:1.8rem;font-weight:900;color:var(--accent-green);">' + fmt(result.economieTotale) + '</div>';
             html += '<div style="font-size:.75rem;color:var(--text-secondary);margin-top:4px;">Droits bruts ' + fmt(result.brut.droits) + ' → optimisés ' + fmt(result.optimise.droits) + '</div>';
             if (result.donFamilialInclus) html += '<div style="font-size:.68rem;color:var(--accent-cyan);margin-top:4px;">✅ Don familial 31 865€ inclus (art. 790 G CGI)</div>';
+            if (result.economieConcubin > 0) html += '<div style="font-size:.68rem;color:var(--accent-purple);margin-top:4px;">+ Scénario alternatif SCI croisée concubin : ' + fmt(result.economieConcubin) + ' (porte sur les mêmes biens immo — non cumulable avec ci-dessus)</div>';
             html += '</div>';
         }
 
