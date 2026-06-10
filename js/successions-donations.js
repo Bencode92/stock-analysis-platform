@@ -1534,7 +1534,30 @@ const SD = (() => {
         const ds = FamilyGraph.getDonors().length;
         const bs = FamilyGraph.getBeneficiaries().length;
 
-        container.innerHTML = `
+        // === Auto-suggestion : descendants en LIGNE DIRECTE d'un donateur, pas encore bénéficiaires ===
+        // (un donateur peut mobiliser un abattement par lien : enfant 100k, petit-enfant 31 865, etc.)
+        const lienLbl = { enfant: 'Ligne directe 100k', petit_enfant: 'Petit-enfant 31 865', arriere_petit_enfant: 'Arr. petit-enfant 5 310' };
+        const suggMap = {};
+        FamilyGraph.getDonors().forEach(don => {
+            [].concat(FamilyGraph.children(don.id), FamilyGraph.grandchildren(don.id), FamilyGraph.greatGrandchildren(don.id))
+              .forEach(pers => {
+                if (!pers || pers.isBeneficiary || pers.isDonor || suggMap[pers.id]) return;
+                const lien = FamilyGraph.computeFiscalLien(don.id, pers.id);
+                if (lienLbl[lien]) suggMap[pers.id] = { nom: pers.nom || '?', lien, via: don.nom || '?' };
+            });
+        });
+        const suggs = Object.entries(suggMap);
+        let suggBanner = '';
+        if (suggs.length > 0) {
+            const ids = suggs.map(([id]) => id).join(',');
+            const list = suggs.map(([, s]) => `<strong>${esc(s.nom)}</strong> <span style="opacity:.7;">(${lienLbl[s.lien]})</span>`).join(', ');
+            suggBanner = `<div style="margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);font-size:.7rem;line-height:1.5;color:var(--text-secondary);">
+                ✨ <strong>Abattement(s) non mobilisé(s) :</strong> ce(s) donateur(s) peu(ven)t aussi donner en ligne directe à ${list}.
+                <button onclick="SD.addSuggestedBeneficiaries('${ids}')" style="margin-left:6px;font-size:.66rem;padding:3px 10px;border-radius:6px;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);color:var(--accent-amber);cursor:pointer;white-space:nowrap;">+ Les ajouter comme bénéficiaires</button>
+            </div>`;
+        }
+
+        container.innerHTML = suggBanner + `
         <div class="ft-roles-grid">
             <div class="ft-roles-hdr">Personne</div><div class="ft-roles-hdr">Lien</div><div class="ft-roles-hdr">💰</div><div class="ft-roles-hdr">🎯</div>
             ${sorted.map(p => {
@@ -1547,6 +1570,15 @@ const SD = (() => {
             }).join('')}
         </div>
         <div style="font-size:.58rem;color:var(--text-muted);margin-top:4px;">💰 ${ds} donateur(s) · 🎯 ${bs} bénéficiaire(s)</div>`;
+    }
+
+    // Coche 🎁 bénéficiaire pour les descendants suggérés (depuis le bandeau d'auto-suggestion)
+    function addSuggestedBeneficiaries(idsCsv) {
+        String(idsCsv).split(',').forEach(function(s) {
+            var id = parseInt(s, 10);
+            if (!isNaN(id)) FamilyGraph.toggleRole(id, 'beneficiary', true);
+        });
+        renderFamilyTree();
     }
 
     // === ALIASES for backward compat ===
@@ -4209,7 +4241,7 @@ const SD = (() => {
             getState: function() { return state; }
         },
         // Family graph UI
-        renderFamilyTree, renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles,
+        renderFamilyTree, renderFamilyAll, renderFamilyPersons, renderFamilyRelations, renderFamilyRoles, addSuggestedBeneficiaries,
         addFamilyPerson, addFamilyRelation, updateFamilyRelation, removeFamilyRelation,
         addRelative, addRootPerson, onNodeClick, editNode, showContextMenu, closeCtx, drawFamilyLinks,
         applyFamilyPreset, syncGraphToStep2,
