@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 """
+[DEPRECATED — phase 2.2, 2026-06-11]
+
+Le mapping data/asian_alternatives.json n'est plus utilisé par le pipeline
+principal : apply_broker_access_substitution() est dépréciée et remplacée par
+le pré-filtrage broker EN AMONT (portfolio_engine/broker_filter.py).
+
+Le fichier généré par ce script est archivé sous
+data/archive/asian_alternatives.deprecated_phase2.json. Script conservé pour
+permettre une régénération si la doctrine change à nouveau, mais aucune partie
+du pipeline ne lit son output aujourd'hui.
+
+──────────────────────────────────────────────────────────────────────────────
 Construit data/asian_alternatives.json — mapping pour chaque action asiatique
 du pipeline vers : ADR US si dispo, alternatives ACTIONS individuelles
 (même secteur + qualité ≥ buf-10 + pays accessible), et proxy ETF en

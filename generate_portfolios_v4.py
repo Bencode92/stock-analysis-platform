@@ -575,23 +575,24 @@ ETF_FOUNDATION_DIVIDENDE = {
 def apply_broker_access_substitution(portfolios_path: str = "data/portfolios.json",
                                      broker_config_path: str = "config/broker_access.json",
                                      asian_map_path: str = "data/asian_alternatives.json"):
-    """v6.24: post-process portfolios.json pour substituer les actions
-    asiatiques non-accessibles via le broker du user par leur première
-    alternative ACTION (même secteur/qualité, bourse accessible).
+    """[DEPRECATED — phase 2.2, 2026-06-11] Substitution post-hoc remplacée par
+    le pré-filtrage broker en amont (portfolio_engine/broker_filter.py).
 
-    Lit config/broker_access.json (édité via broker_access.html) :
-      - {"access": {"HEROMOTOCO": false, "3653": true, ...}}
+    Raison du retrait : la fonction prenait alts[0] aveuglément sans re-valider
+    les hard_filters du profil (vol band, min_buffett, min_quality). C'est ce
+    qui avait introduit le bug DECK Modéré (HEROMOTOCO bloqué → DECK pris comme
+    alt[0] avec vol 45.74 > band max 45.0).
 
-    Pour chaque action satellite dont access=false :
-      - Cherche la 1ère alternative_actions dans data/asian_alternatives.json
-      - Remplace l'entrée dans Actions (label + ticker dans label) avec
-        le poids inchangé
-      - Renomme la clé dans _tickers_meta
-      - Logge le swap pour traçabilité
-
-    Si aucune alternative disponible : log warning, laisse l'action en place
-    (le user devra décider manuellement).
+    Conservée pour rétro-compatibilité éventuelle ; émet un DeprecationWarning
+    si appelée. Le pipeline principal ne l'invoque plus.
     """
+    import warnings
+    warnings.warn(
+        "apply_broker_access_substitution() est dépréciée (phase 2.2). "
+        "Utilisez portfolio_engine.broker_filter.filter_broker_accessible() en amont.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if not os.path.exists(broker_config_path) or not os.path.exists(asian_map_path):
         return  # silently skip si fichiers absents
 
@@ -7430,12 +7431,14 @@ def main():
     except Exception as _etf_e:
         logger.warning(f"⚠️ Échec injection ETF Foundation Dividende: {_etf_e}")
 
-    # v6.24: substitution actions asiatiques non-accessibles via broker user
-    # Lit config/broker_access.json (édité via broker_access.html)
-    try:
-        apply_broker_access_substitution(CONFIG.get("output_path", "data/portfolios.json"))
-    except Exception as _bk_e:
-        logger.warning(f"⚠️ Échec substitution broker access: {_bk_e}")
+    # Phase 2.2 (2026-06-11) : apply_broker_access_substitution() supprimée.
+    # Remplacée par le pré-filtrage broker EN AMONT (phase 2.1) via
+    # portfolio_engine/broker_filter.py appliqué dans :
+    #   - core_satellite_discipline._load_all_stocks() (couvre satellites natifs
+    #     et thématiques),
+    #   - select_equities_for_profile() (couvre profils principaux + Dividende).
+    # La fonction apply_broker_access_substitution() est conservée pour
+    # rétro-compatibilité mais émet un DeprecationWarning si appelée.
 
     # v6.26: top picks curated (meilleures actions pour achats ponctuels)
     # Génère data/top_picks_curated.json — top 25 global + top 10/pays + top 10/secteur
