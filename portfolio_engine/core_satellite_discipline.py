@@ -260,16 +260,27 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
     prev_for_profile = prev_sats.get(profile, set())
 
     if profile == "Agressif":
-        # Pool élargi : qualité quel que soit le profil natif, vol >= 20
+        # ═══════════════════════════════════════════════════════════════════
+        # Phase 2.3 (2026-06-11) — DOCTRINE EXPLICITE : Agressif = Modéré + β cœur
+        # ───────────────────────────────────────────────────────────────────
+        # Le profil Agressif ne pioche PAS dans `_fit_agressif`. Le pool ici
+        # est `_profile_native ∈ {Agressif, Modéré}` filtré vol ≥ 20 et trié
+        # par `_fit_modere`. Conséquence assumée : Modéré et Agressif partagent
+        # majoritairement les mêmes satellites stocks.
+        #
+        # L'agressivité du profil vient EXCLUSIVEMENT de l'allocation cœur
+        # (β cible 0.80 via VWCE 50 % + IWDA 15 %), jamais de la sélection
+        # satellite. Voir docs/PHASE2_EXPECTED_DIFF.md § Option A.
+        #
+        # PROFILE_POLICY["Agressif"] (preset_meta.py) définit les poids du
+        # `_fit_agressif` qui sert au **profil Thematique** uniquement
+        # (_get_top_thematic_satellite). Ne pas refactor ces poids sans
+        # auditer Thematique en parallèle.
+        # ═══════════════════════════════════════════════════════════════════
         # v6.21 — Cap perf_1y ≤ 300% par COHÉRENCE DE DOCTRINE avec le
-        # Thématique (ligne 713), pas pour optimiser un Sharpe historique.
-        # Justification logique, vraie AVANT tout backtest : une action qui
-        # a fait +400%/an est un pari sur la queue de distribution, pas une
-        # qualité reproductible. Le filtre vire les fusées spéculatives
-        # absurdes sans toucher aux vrais leaders (qui plafonnent à
-        # ~150-250% sur les meilleurs cycles).
-        # NE PAS modifier ce seuil sur la base d'un backtest a posteriori
-        # (overfitting) : c'est une règle anti-spéculative de principe.
+        # Thématique (ligne 713) : un stock qui a fait +400%/an est un pari
+        # sur la queue de distribution, pas une qualité reproductible.
+        # NE PAS modifier ce seuil sur la base d'un backtest a posteriori.
         candidates = [
             s for s in all_stocks
             if s.get("_profile_native") in ("Agressif", "Modéré")

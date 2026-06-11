@@ -913,6 +913,23 @@ RELAX_PROFILE_LIMITS: Dict[str, Dict[str, float]] = {
 # ============ PROFILE POLICY v5.0.0 ============
 
 PROFILE_POLICY: Dict[str, Dict] = {
+    # ═══════════════════════════════════════════════════════════════════════
+    # ATTENTION — DOUBLE USAGE de PROFILE_POLICY["Agressif"]
+    # (clarifié phase 2.3, 2026-06-11)
+    # ───────────────────────────────────────────────────────────────────────
+    # Les hard_filters et score_weights de "Agressif" ci-dessous définissent :
+    #   1. Les pondérations utilisées pour calculer `_fit_agressif` sur tout
+    #      l'univers (annotate_universe_with_fits) → utilisé par le profil
+    #      **Agressif-Thematique** (vol ≥ 30, vrai high-vol).
+    #   2. Les hard_filters utilisés par select_equities_for_profile_v2()
+    #      quand profile="Agressif" (sélection préliminaire avant le
+    #      satellite final).
+    #
+    # En revanche, le satellite final du profil **Agressif** n'utilise PAS
+    # ces poids : il pioche dans le pool _fit_modere (cf.
+    # core_satellite_discipline._get_top_natives_for_profile() ligne ~262).
+    # → Modifier ces poids/filtres impacte d'abord Thematique, pas Agressif.
+    # ═══════════════════════════════════════════════════════════════════════
     "Agressif": {
         # v5.8.0 (Sélection-14) : retiré "quality_premium" pour vraie séparation
         # Agressif/Modéré. Les Buf 100 stables (ADBE/REGN/CPRT/CTSH/SNA/VLTO)
