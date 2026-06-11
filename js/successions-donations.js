@@ -1542,7 +1542,7 @@ const SD = (() => {
             [].concat(FamilyGraph.children(don.id), FamilyGraph.grandchildren(don.id), FamilyGraph.greatGrandchildren(don.id))
               .forEach(pers => {
                 if (!pers || pers.isBeneficiary || pers.isDonor || suggMap[pers.id]) return;
-                const lien = FamilyGraph.computeFiscalLien(don.id, pers.id);
+                const lien = (FamilyGraph.computeFiscalLien(don.id, pers.id) || '').replace(/-/g, '_');
                 if (lienLbl[lien]) suggMap[pers.id] = { nom: pers.nom || '?', lien, via: don.nom || '?' };
             });
         });

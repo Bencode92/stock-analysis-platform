@@ -857,6 +857,14 @@ const PathOptimizer = (() => {
         renderDonorList();
     }
 
+    // Ajoute un descendant en ligne directe comme bénéficiaire, depuis l'Étape 2.
+    // Passe par la synchro canonique FamilyGraph → state.beneficiaries (syncGraphToStep2).
+    function addDescendantAsBen(graphDescId) {
+        if (typeof FamilyGraph !== 'undefined') FamilyGraph.toggleRole(graphDescId, 'beneficiary', true);
+        if (typeof SD !== 'undefined' && SD.syncGraphToStep2) SD.syncGraphToStep2();
+        renderDonorList();
+    }
+
     function toggleLinkedBen(donorId, benId, isLinked) {
         const d = donors.find(d => d.id === +donorId);
         if (!d) return;
@@ -1041,6 +1049,32 @@ const PathOptimizer = (() => {
                         }).join('')}
                     </div>
                 </div>`;
+            }
+
+            // === SUGGESTION : descendants en ligne directe pas encore bénéficiaires ===
+            // (le grand-parent/parent peut mobiliser un abattement par lien : enfant 100k, petit-enfant 31 865…)
+            let addDescHtml = '';
+            if (typeof FamilyGraph !== 'undefined' && d._graphId !== undefined) {
+                const lblDesc = { enfant: 'Ligne directe 100k', petit_enfant: 'Petit-enfant 31 865', arriere_petit_enfant: 'Arr. petit-enfant 5 310' };
+                const seenDesc = {};
+                const descItems = [].concat(
+                    FamilyGraph.children(d._graphId),
+                    FamilyGraph.grandchildren(d._graphId),
+                    FamilyGraph.greatGrandchildren(d._graphId)
+                ).filter(p => {
+                    if (!p || p.isBeneficiary || p.isDonor || seenDesc[p.id]) return false;
+                    seenDesc[p.id] = true;
+                    p._suggLien = (FamilyGraph.computeFiscalLien(d._graphId, p.id) || '').replace(/-/g, '_');
+                    return !!lblDesc[p._suggLien];
+                });
+                if (descItems.length > 0) {
+                    addDescHtml = `<div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);font-size:.66rem;line-height:1.5;color:var(--text-secondary);">
+                        ✨ <strong>${esc(d.nom)}</strong> peut aussi donner en ligne directe (abattement non mobilisé) à :
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                            ${descItems.map(p => `<button onclick="PathOptimizer.addDescendantAsBen(${p.id})" style="font-size:.64rem;padding:3px 9px;border-radius:6px;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.35);color:var(--accent-amber);cursor:pointer;white-space:nowrap;">+ ${esc(p.nom || '?')} <span style="opacity:.7;">(${lblDesc[p._suggLien]})</span></button>`).join('')}
+                        </div>
+                    </div>`;
+                }
             }
 
             // Per-beneficiary donation rows
@@ -1236,6 +1270,7 @@ const PathOptimizer = (() => {
                     </div>
                 </div>
                 ${linkedBensHtml}
+                ${addDescHtml}
                 ${donBenHtml}
                 ${donRecvHtml}
                 
@@ -1589,6 +1624,7 @@ const PathOptimizer = (() => {
         applyDonorPreset,
         buildGraph, findAllPaths, optimizeAll,
         renderDonorList, updateMatrix, renderPathResults, refreshBenDonSummaries,
+        addDescendantAsBen,
         getBeneficiaries, fmt
     };
 
