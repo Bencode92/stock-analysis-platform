@@ -204,7 +204,16 @@ def _load_previous_satellite_tickers() -> Dict[str, set]:
 
 
 def _load_all_stocks() -> List[Dict]:
-    """Charge l'univers complet d'actions (US + EU + Asia)."""
+    """Charge l'univers complet d'actions (US + EU + Asia).
+
+    Phase 2.1 (2026-06-11) : applique le pré-filtrage broker AVANT toute
+    sélection. Un ticker `access: false` ne peut donc pas remonter dans
+    _get_top_natives_for_profile() ni _get_top_thematic_satellite(). Remplace
+    l'ancienne substitution post-hoc apply_broker_access_substitution() qui
+    ne re-validait pas T1-T3 sur les alternatives.
+    """
+    from portfolio_engine.broker_filter import filter_broker_accessible
+
     root = Path(__file__).parent.parent / "data"
     all_stocks = []
     for fname in ("stocks_us.json", "stocks_europe.json", "stocks_asia.json"):
@@ -217,7 +226,7 @@ def _load_all_stocks() -> List[Dict]:
             all_stocks.extend(stocks)
         except Exception:
             pass
-    return all_stocks
+    return filter_broker_accessible(all_stocks, log_label="core_satellite")
 
 
 def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:

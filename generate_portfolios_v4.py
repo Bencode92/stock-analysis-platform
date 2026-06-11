@@ -2295,6 +2295,19 @@ def select_equities_for_profile(
     Returns:
         (equities_selected, selection_meta)
     """
+    # Phase 2.1 (2026-06-11) : pré-filtrage broker AVANT tous les autres gates.
+    # Un ticker `access: false` ne peut pas remonter dans la sélection.
+    # Couvre Modéré/Stable/Agressif + sleeves Dividende-PEA/CTO (toutes via cette
+    # fonction). Le satellite de core_satellite_discipline est filtré en parallèle
+    # dans _load_all_stocks().
+    try:
+        from portfolio_engine.broker_filter import filter_broker_accessible
+        _before_broker = len(eq_filtered)
+        eq_filtered = filter_broker_accessible(eq_filtered, log_label=profile)
+        _broker_removed = _before_broker - len(eq_filtered)
+    except ImportError:
+        _broker_removed = 0
+
     # Phase Sélection-1 (#1) : hard gate liquidité par profil
     _before = len(eq_filtered)
     eq_filtered, _liq_stats = _apply_liquidity_gate(eq_filtered, profile)
