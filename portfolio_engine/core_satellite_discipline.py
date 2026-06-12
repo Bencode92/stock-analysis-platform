@@ -703,28 +703,34 @@ def apply_to_portfolios_dict(portfolios_data: Dict) -> Dict:
     return output
 
 
-# ─── Profil Agressif-Thematique (v6.9) ────────────────────────────────────
+# ─── Profil Agressif-Thematique (v6.9, refonte phase 3B 2026-06-12) ─────────
+# Phase 3B (2026-06-12) — DOCTRINE : Thematique = ETF-only.
+# Justification : le sleeve actions thématique avait les filtres les plus
+# laxistes (gate OR, vol ≥ 30), nécessitait une toxicity renforcée, et
+# majoritairement substitué avant la phase 2. Le 20% satellite est désormais
+# redistribué sur le cœur ETF en anti-concentration (réduit PC1 ~5pts vs
+# prorata aveugle qui aurait surconcentré tech US).
+# EWT supprimé : redondant avec IEMG (Taiwan déjà ~13% des holdings IEMG),
+# micro-ligne de 2% sans bénéfice de diversification.
 THEMATIQUE_CORE = {
     "QQQ":     {"weight": 0.20, "name": "Invesco QQQ Trust (Nasdaq 100)",
                 "fund_type": "Large Growth Tech-heavy", "currency": "USD"},
-    "IEMG":    {"weight": 0.15, "name": "iShares Core MSCI EM IMI",
+    "IEMG":    {"weight": 0.25, "name": "iShares Core MSCI EM IMI",
                 "fund_type": "Emerging Markets diversified", "currency": "USD"},
     "VGT":     {"weight": 0.10, "name": "Vanguard Information Technology ETF",
                 "fund_type": "US Tech sector broad", "currency": "USD"},
     "CGXU":    {"weight": 0.10, "name": "Capital Group International Focus Eq",
                 "fund_type": "Foreign Large Growth", "currency": "USD"},
-    "VBK":     {"weight": 0.08, "name": "Vanguard Small-Cap Growth ETF",
+    "VBK":     {"weight": 0.12, "name": "Vanguard Small-Cap Growth ETF",
                 "fund_type": "US Small-Cap Growth", "currency": "USD"},
     "VOT":     {"weight": 0.05, "name": "Vanguard Mid-Cap Growth ETF",
                 "fund_type": "US Mid-Cap Growth", "currency": "USD"},
-    "XLE":     {"weight": 0.05, "name": "Energy Select Sector SPDR",
+    "XLE":     {"weight": 0.10, "name": "Energy Select Sector SPDR",
                 "fund_type": "US Energy", "currency": "USD"},
-    "SGLN.AS": {"weight": 0.05, "name": "iShares Physical Gold ETC",
+    "SGLN.AS": {"weight": 0.08, "name": "iShares Physical Gold ETC",
                 "fund_type": "Gold hedge", "isin": "IE00B4ND3602",
                 "ter": 0.0012, "currency": "EUR"},
-    "EWT":     {"weight": 0.02, "name": "iShares MSCI Taiwan ETF",
-                "fund_type": "Taiwan (high vol, small tilt)", "currency": "USD"},
-}  # total = 0.80
+}  # total = 1.00 exactement, 8 lignes, pas de satellite stocks
 
 
 # v6.14 : Satellite thématique DYNAMISÉ (plus d'actions en dur).
@@ -739,12 +745,23 @@ THEMATIQUE_CORE = {
 #   - vol_3y ≥ 30% (pool thématique = haute vol par définition)
 
 def _get_top_thematic_satellite(n_target: int = 5) -> List[Dict]:
-    """Sélectionne dynamiquement le top-N actions thématiques.
+    """[DEPRECATED phase 3B, 2026-06-12] Non appelée depuis _build_agressif_thematique.
+
+    Conservée pour rétro-compat et instrumentation diagnostique (ex: comparer
+    ce que la sélection thématique stocks AURAIT proposé hors politique ETF-only).
+    Émet un DeprecationWarning si appelée en prod.
 
     Score = fit_score_agressif (fondamental, pas sectoriel macro).
     Diversification forcée : max 2 par pays ET max 2 par industry.
     Pool restreint à haute vol + qualité minimum pour rester thématique.
     """
+    import warnings
+    warnings.warn(
+        "_get_top_thematic_satellite() est dépréciée (phase 3B). "
+        "Le profil Agressif-Thematique est ETF-only depuis 2026-06-12.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         from portfolio_engine.profile_assignment import annotate_universe_with_fits
     except ImportError:
@@ -815,13 +832,20 @@ def _get_top_thematic_satellite(n_target: int = 5) -> List[Dict]:
 def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
     """Construit le profil Agressif-Thematique en Format B.
 
-    v6.14 : Satellite DYNAMISÉ via fit_score_agressif + max 2/pays + max 2/industry.
+    Phase 3B (2026-06-12) — DOCTRINE ETF-ONLY :
+    Le satellite stocks est SUPPRIMÉ. THEMATIQUE_CORE totalise désormais 100%
+    (8 lignes ETF, allocation anti-concentration). Raison : filtres laxistes
+    + vol haute + sleeve majoritairement substitué = profil le plus fragile
+    du système. La simplification supprime le besoin de toxicity renforcée
+    sur ce sleeve et neutralise la dette _fit_agressif côté Thematique
+    (calculé mais inutilisé pour la sélection).
+
     Le paramètre satellite_positions_unused est conservé pour la signature
-    mais ignoré — le satellite Thematique a son propre univers (scored dynamiquement).
+    mais ignoré.
     """
     positions = []
 
-    # Cœur thématique (80 %) — reste en dur (ticker stable, contenu vivant)
+    # Cœur thématique (100 %) — 8 ETF, anti-concentration vs prorata aveugle
     for tk, info in THEMATIQUE_CORE.items():
         positions.append({
             "ticker": tk,
@@ -836,44 +860,6 @@ def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
             "isin": info.get("isin"),
             "ter": info.get("ter"),
             "currency": info.get("currency"),
-        })
-
-    # Satellite : top 5 dynamique via fit_score_agressif (20 % total, 4 % par nom)
-    n_satellite = 5
-    weight_per = 0.20 / n_satellite  # = 0.04
-    top_thematic = _get_top_thematic_satellite(n_target=n_satellite)
-
-    # Log pour vérification de la diversification (max 2/pays appliqué)
-    if top_thematic:
-        countries = [s.get("country", "?") for s in top_thematic]
-        industries = [s.get("industry", "?") for s in top_thematic]
-        try:
-            import logging
-            log = logging.getLogger("portfolio_engine.core_satellite_discipline")
-            log.info(f"[Agressif-Thematique] Satellite dynamique : "
-                     f"{[s.get('ticker') for s in top_thematic]}")
-            log.info(f"  Pays : {countries}  (max 2/pays ✓)")
-            log.info(f"  Industries : {industries}  (max 2/industry ✓)")
-        except Exception:
-            pass
-
-    for s in top_thematic:
-        tk = s.get("ticker") or s.get("symbol") or s.get("resolved_symbol", "")
-        if not tk:
-            continue
-        positions.append({
-            "ticker": tk,
-            "name": (s.get("name") or tk)[:80],
-            "category": "Actions",
-            "industry": s.get("industry", ""),
-            "weight_pct": round(weight_per * 100, 2),
-            "weight": weight_per,
-            "role": "satellite",
-            "asset_ids": [tk],
-            "beta": s.get("beta"),
-            "country": s.get("country"),
-            "buffett_score": s.get("buffett_score"),
-            "fit_score": s.get("_fit_agressif"),
         })
 
     return positions_to_format_b(positions, "Agressif-Thematique")
