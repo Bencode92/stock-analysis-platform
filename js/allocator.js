@@ -38,6 +38,72 @@
       this.taxAwareNetting = true; // Compense MV/PV avant flagger un "coût fiscal"
       this.preservePV = false;     // Préserve aussi les positions en plus-value (rarement utile si tax-aware ON)
       this.skipMinPct = 1.0;       // Skip les positions cibles qui finissent < 1% du NAV (au lieu de booster)
+
+      // Phase 3C.3 (2026-06-12) — Bandes de drift pour signal de rebalance.
+      // Doctrine Fabre v4-v5 : tableau de bord, pas automate. L'user décide.
+      this.driftBandBuiltin = 0.20;     // ≤ ±20% relatif → IN_BAND (ne rien faire)
+      this.driftBandWarning = 0.50;     // ≤ ±50% relatif → DRIFT (à surveiller)
+                                         // > ±50%               → REBALANCE (rouge)
+    }
+
+    /**
+     * Phase 3C.3 — Calcule le drift d'une position vs sa cible.
+     *
+     * @param {number} currentW poids effectif courant (0..1)
+     * @param {number} targetW  poids cible (0..1)
+     * @returns {{drift: number, status: 'NEW'|'IN_BAND'|'DRIFT'|'REBALANCE'|'EXIT'}}
+     *
+     * Sémantique :
+     *  - target === 0 et current > 0 → EXIT (position à liquider)
+     *  - target > 0 et current === 0 → NEW (position à acheter)
+     *  - drift = (current - target) / target ∈ [-1, +∞[
+     *  - |drift| ≤ driftBandBuiltin → IN_BAND
+     *  - |drift| ≤ driftBandWarning → DRIFT
+     *  - sinon → REBALANCE
+     */
+    computeDriftStatus(currentW, targetW) {
+      const c = Number(currentW) || 0;
+      const t = Number(targetW) || 0;
+      if (t === 0 && c > 0) return { drift: Infinity, status: 'EXIT' };
+      if (t > 0 && c === 0) return { drift: -1, status: 'NEW' };
+      if (t === 0) return { drift: 0, status: 'IN_BAND' };
+      const drift = (c - t) / t;
+      const abs = Math.abs(drift);
+      let status;
+      if (abs <= this.driftBandBuiltin) status = 'IN_BAND';
+      else if (abs <= this.driftBandWarning) status = 'DRIFT';
+      else status = 'REBALANCE';
+      return { drift, status };
+    }
+
+    /**
+     * Phase 3C.3 — Retourne le rapport de drift pour TOUTES les positions
+     * (cibles + détenues hors-cible). Utilisé par l'UI pour afficher le
+     * tableau de bord rebalance.
+     *
+     * @returns {Array<{ticker, current_pct, target_pct, drift_pct, status}>}
+     */
+    getDriftReport() {
+      const target = this.buildAdjustedTarget();
+      const current = this._currentWeights();
+      const tickers = new Set([...Object.keys(target), ...Object.keys(current)]);
+      const rows = [];
+      for (const t of tickers) {
+        const c = current[t] || 0;
+        const tg = target[t] || 0;
+        const { drift, status } = this.computeDriftStatus(c, tg);
+        rows.push({
+          ticker: t,
+          current_pct: +(c * 100).toFixed(2),
+          target_pct: +(tg * 100).toFixed(2),
+          drift_pct: Number.isFinite(drift) ? +(drift * 100).toFixed(1) : null,
+          status,
+        });
+      }
+      // Ordonner par sévérité (REBALANCE > DRIFT > EXIT > NEW > IN_BAND)
+      const order = { REBALANCE: 0, DRIFT: 1, EXIT: 2, NEW: 3, IN_BAND: 4 };
+      rows.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+      return rows;
     }
 
     /**
