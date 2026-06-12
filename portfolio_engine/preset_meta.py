@@ -619,6 +619,16 @@ CRYPTO_PRESET_PRIORITY = [
 # ============ v5.3.0: CRYPTO DYNAMIC CORE/SATELLITE ============
 # Remplace le hardcoding BTC/ETH dans optimizer.py CRYPTO_CORE_SATELLITE
 # Le core = top N cryptos par score composite, PAS par convention.
+#
+# [DEPRECATED phase 3B, 2026-06-12] Doctrine actée : Crypto OFF.
+# Le scoring momentum quotidien (sharpe 0.30 + ret_90d 0.25 + ret_1y 0.10
+# = 65% du score pour Agressif) est incompatible avec la gouvernance de
+# turnover léger adoptée pour les actions. Le sleeve réel était de toute
+# façon quasi-vide (BCH/BNB intermittents sur fenêtre 30 jours observée).
+# Pour réactiver : `CONFIG["enable_crypto"] = True` dans
+# generate_portfolios_v4.py + run pipeline.
+# Les structures ci-dessous restent en place pour rétro-compat mais ne sont
+# plus alimentées en production (crypto_data = [] en amont).
 
 CRYPTO_RANKING_WEIGHTS: Dict[str, Dict[str, float]] = {
     "Agressif": {

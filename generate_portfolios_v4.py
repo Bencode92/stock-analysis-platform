@@ -423,6 +423,10 @@ CONFIG = {
     "etf_csv": "data/combined_etfs.csv",
     "bonds_csv": "data/combined_bonds.csv",
     "crypto_csv": "data/filtered/Crypto_filtered_volatility.csv",
+    # Phase 3B (2026-06-12) — Crypto OFF par doctrine. Voir bloc chargement
+    # ligne ~2604. Mettre True pour réactiver (jamais utilisé en pratique
+    # depuis l'audit Fabre v4).
+    "enable_crypto": False,
     "brief_paths": ["brief_ia.json", "./brief_ia.json", "data/brief_ia.json"],
     "output_path": "data/portfolios.json",
     "history_dir": "data/portfolio_history",
@@ -2601,13 +2605,21 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
         except Exception as e:
             logger.warning(f"Impossible de charger Bonds: {e}")
     
-    if Path(CONFIG["crypto_csv"]).exists():
+    # Phase 3B (2026-06-12) — Crypto OFF.
+    # Doctrine : le sleeve crypto utilisait un scoring momentum quotidien
+    # (sharpe + ret_90d + ret_1y = 65% du score), incompatible avec la
+    # gouvernance de turnover léger actée pour les actions. Le sleeve réel
+    # était de toute façon quasi-vide (BCH/BNB intermittents sur 30j).
+    # Pour réactiver : flag CONFIG["enable_crypto"] = True + run pipeline.
+    if CONFIG.get("enable_crypto", False) and Path(CONFIG["crypto_csv"]).exists():
         try:
             df = pd.read_csv(CONFIG["crypto_csv"])
             crypto_data = df.to_dict('records')
             logger.info(f"Crypto: {CONFIG['crypto_csv']} ({len(crypto_data)} entrées)")
         except Exception as e:
             logger.warning(f"Impossible de charger crypto: {e}")
+    else:
+        logger.info("Crypto: désactivé (phase 3B doctrine, voir CONFIG['enable_crypto'])")
            
     # v5.1.3: Créer etf_data (list de dicts) pour compatibilité audit/fusion
     # Le scoring utilise etf_df_master.copy() pour préserver les types numériques
