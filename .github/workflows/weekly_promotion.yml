@@ -1,0 +1,80 @@
+name: Weekly Promotion (Phase 3C.2 — cadence hebdo)
+
+# Phase 3C.2 (2026-06-12) — Cadence hebdo doctrinalement actée mais
+# déploiement opt-in pour ne pas casser le pipeline existant.
+#
+# Mécanique cible (à activer quand prêt) :
+#   1. Le workflow generate_portfolios.yml quotidien écrit data/portfolios.json
+#      comme aujourd'hui (cible "preview" implicite côté frontend si tu n'es
+#      pas lundi).
+#   2. Ce workflow weekly_promotion (lundi 8h UTC) :
+#      - lance les tests d'acceptation,
+#      - si PASS : marque le run comme promu (tag git + commit metadata),
+#      - si FAIL : ouvre une issue + ne marque rien.
+#
+# État au commit : trigger workflow_dispatch UNIQUEMENT (manuel). Pour
+# activer la promotion auto le lundi, décommenter le bloc schedule ci-dessous
+# et tester sur une branche dédiée d'abord.
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Raison de la promotion manuelle"
+        required: false
+        default: "ad-hoc check"
+  # schedule:
+  #   - cron: "0 8 * * 1"   # lundi 8h UTC — décommenter pour activer
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest jsonschema
+
+      - name: ✅ Tests d'acceptation
+        id: tests
+        run: |
+          python -m pytest tests/test_no_blocked_in_pools.py -v
+          echo "tests_passed=true" >> "$GITHUB_OUTPUT"
+
+      - name: 🏷️  Tag commit comme promu
+        if: steps.tests.outputs.tests_passed == 'true'
+        run: |
+          DATE=$(date -u +%Y%m%d)
+          TAG="weekly-promotion-$DATE"
+          git tag "$TAG" || echo "tag déjà existant"
+          git push origin "$TAG" || echo "push tag déjà existant"
+          echo "✅ Promotion semaine $DATE validée"
+
+      - name: 🚨 Ouvrir une issue si tests fail
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().slice(0,10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Weekly promotion ${date} — tests d'acceptation en échec`,
+              body: `Le workflow weekly_promotion a échoué le ${date}.\n\nLe portfolios.json courant n'a pas été marqué comme promu. Investiguer avant rebascule manuelle.\n\nWorkflow run : ${context.runId}`,
+              labels: ['phase3c', 'weekly-promotion-fail']
+            });
