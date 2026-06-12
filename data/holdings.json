@@ -1,0 +1,131 @@
+{
+  "_meta": {
+    "updated": "2026-06-12",
+    "version": 1,
+    "source": "manual",
+    "ticker_convention": "tickers du PIPELINE (data/portfolios.json), pas du relevé Trading 212. Pour cotations Asie : symbole local (2330 pour TSMC Taipei, pas TSM ADR US). Pour UCITS substitutes : voir data/ticker_mapping_ucits.json.",
+    "instructions": [
+      "1. Ouvrir relevé Trading 212 à côté.",
+      "2. Pour chaque position détenue, vérifier ligne par ligne contre ce fichier.",
+      "3. Passer 'verified' de false à true UNE FOIS la ligne validée.",
+      "4. Corriger ou supprimer les lignes présumées qui ne correspondent pas.",
+      "5. Ajouter les positions manquantes (ex: ETF non listés).",
+      "6. Mettre à jour _meta.updated à la date du jour.",
+      "Note : la re-validation 3A.1 affichera un avertissement bloquant tant que verified=false reste sur des positions."
+    ],
+    "freshness_rule": "Si _meta.updated > 30 jours, le rapport de re-validation affiche un warning. Au-delà de 45 jours, l'audit est considéré comme stale et certaines règles (plancher 3 mois) peuvent être suspendues.",
+    "schema": {
+      "ticker": "ticker du pipeline (string)",
+      "profile": "Stable / Modéré / Agressif / Agressif-Thematique / Dividende-PEA / Dividende-CTO",
+      "entry_date": "YYYY-MM-DD — date d'achat initial réelle (sert au plancher 3 mois de la règle 3.8)",
+      "qty_approx": "quantité approximative pour cohérence visuelle (pas critique pour la validation, peut être 0)",
+      "verified": "true si vérifié contre relevé T212, false sinon (présumé)",
+      "notes": "champ libre — ex: 'détenu via ADR TSM au lieu de 2330'"
+    }
+  },
+  "positions": [
+    {
+      "_section": "──── STABLE (Actions) ─── cibles actuelles présumées détenues",
+      "ticker": "ADM", "profile": "Stable",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "Admiral Group PLC — présumé à partir des cibles courantes"
+    },
+    { "ticker": "BVI", "profile": "Stable", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Bureau Veritas SA" },
+    { "ticker": "PUB", "profile": "Stable", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Publicis Groupe" },
+    { "ticker": "NTGY", "profile": "Stable", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Naturgy Energy" },
+
+    {
+      "_section": "──── MODÉRÉ (Actions) ─── cibles + orphelin DECK",
+      "ticker": "NOVN", "profile": "Modéré",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "Novartis"
+    },
+    { "ticker": "EXPD", "profile": "Modéré", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Expeditors International" },
+    { "ticker": "CF", "profile": "Modéré", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "CF Industries Holdings" },
+    { "ticker": "LOGN", "profile": "Modéré", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Logitech (nouvelle cible post-phase2)" },
+    {
+      "ticker": "DECK", "profile": "Modéré",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "ORPHELIN phase 2 — sortie cible Modéré le 2026-06-11 (vol 45.74 > band 45). Présumé détenu. À CONFIRMER : ce DECK est-il dans la sleeve Modéré ou Agressif de ton compte ?"
+    },
+
+    {
+      "_section": "──── AGRESSIF (Actions) ─── cibles + orphelin DECK",
+      "ticker": "LOGN", "profile": "Agressif",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "Logitech (double profil Modéré+Agressif sous Option A)"
+    },
+    { "ticker": "EXPD", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Expeditors (double profil)" },
+    { "ticker": "CF", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "CF Industries (double profil)" },
+    { "ticker": "ITX", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Inditex" },
+    { "ticker": "CBOE", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "CBOE Global Markets (nouvelle cible post-phase2)" },
+    {
+      "ticker": "DECK", "profile": "Agressif",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "ORPHELIN phase 2 — Si tu ne possèdes qu'UNE seule ligne DECK physique, supprimer une des deux entrées (Modéré OU Agressif), pas les deux."
+    },
+
+    {
+      "_section": "──── AGRESSIF-THEMATIQUE ─── politique ETF-only actée 2026-06-12 ; actions détenues = orphelines, grandfathering",
+      "ticker": "FRES", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "Fresnillo PLC — était dans la cible avant ETF-only"
+    },
+    { "ticker": "EME", "profile": "Agressif-Thematique", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Emcor Group" },
+    {
+      "ticker": "APH", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "ORPHELIN phase 2 — Amphenol, présumé détenu (confirmé par utilisateur en chat). Sera orphelin DÉFINITIF après ETF-only."
+    },
+    {
+      "ticker": "ABBN", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "ORPHELIN phase 2 — ABB Ltd, présumé détenu (confirmé par utilisateur en chat). Sera orphelin DÉFINITIF après ETF-only."
+    },
+    {
+      "ticker": "LOGN", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "ORPHELIN phase 2 — Logitech, présumé détenu (confirmé par utilisateur). Sera orphelin DÉFINITIF après ETF-only. ATTENTION : si tu n'as qu'une seule ligne LOGN physique, supprimer les doublons Modéré/Agressif/Thematique."
+    },
+    {
+      "ticker": "FIX", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "Comfort Systems — nouveau dans la cible post-phase2. À CONFIRMER : as-tu déjà acheté ou non ?"
+    },
+    {
+      "ticker": "2330", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "TSMC cotation Taipei — nouveau dans la cible post-phase2. À CONFIRMER : as-tu acheté via 2330 (Taipei) ou TSM (ADR US) ?"
+    },
+    {
+      "ticker": "ASML", "profile": "Agressif-Thematique",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "ASML — nouveau dans la cible post-phase2. À CONFIRMER."
+    },
+
+    {
+      "_section": "──── DIVIDENDE-PEA (Actions) ─── cibles présumées détenues",
+      "ticker": "WKL", "profile": "Dividende-PEA",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "Wolters Kluwer"
+    },
+    { "ticker": "CAP", "profile": "Dividende-PEA", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Capgemini" },
+    { "ticker": "REC", "profile": "Dividende-PEA", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Recordati" },
+    { "ticker": "HNR1", "profile": "Dividende-PEA", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Hannover Rück" },
+
+    {
+      "_section": "──── DIVIDENDE-CTO (Actions) ─── cibles présumées détenues",
+      "ticker": "VICI", "profile": "Dividende-CTO",
+      "entry_date": "TBD", "qty_approx": 0, "verified": false,
+      "notes": "VICI Properties"
+    },
+    { "ticker": "VZ", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Verizon" },
+    { "ticker": "IMB", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Imperial Brands" },
+    { "ticker": "GLPI", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Gaming and Leisure Properties" },
+    { "ticker": "PG", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Procter & Gamble" },
+    { "ticker": "AUTO", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Auto Trader Group" },
+    { "ticker": "SHEL", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Shell PLC" },
+    { "ticker": "SCHN", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Schindler Holding" },
+    { "ticker": "TROW", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "T Rowe Price" }
+  ]
+}
