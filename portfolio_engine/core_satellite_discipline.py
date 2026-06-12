@@ -179,6 +179,116 @@ N_TARGET_SATELLITE_BY_PROFILE = {
 # du recalcul fit_score, pas assez pour retenir un nom devenu clairement inférieur.
 STICKY_BONUS = 0.03
 
+# Phase 3C.1 (2026-06-12) — Budget mensuel de remplacement satellite.
+# Doctrine actée Fabre v4-v5 :
+#   "Au max 1 remplacement satellite par profil par mois."
+# Exception : un ticker bloqué broker (access:false) est exclu de la
+# restauration (la phase 2 garantit que ces tickers ne reviennent jamais
+# dans aucun pool). Les autres exceptions (toxicity, violations hard_filter
+# strictes) seront ajoutées en phase 3D.
+MAX_SWAPS_PER_RUN_BY_PROFILE: Dict[str, int] = {
+    "Stable":   1,
+    "Modéré":   1,
+    "Agressif": 1,
+}
+
+
+def _apply_monthly_swap_budget(
+    profile: str,
+    new_selection: List[Dict],
+    prev_satellite_tickers: set,
+    all_stocks_universe: List[Dict],
+    max_swaps: int = 1,
+) -> Tuple[List[Dict], Dict]:
+    """Limite les changements satellite à max_swaps par run.
+
+    Si plus de max_swaps entrées détectées dans new_selection vs
+    prev_satellite_tickers, garde les meilleures (premières dans
+    new_selection, déjà triées par score) et restaure les sorties
+    correspondantes depuis l'univers `all_stocks_universe` (déjà
+    broker-filtré).
+
+    Returns:
+        (selection_throttled, meta_dict)
+    """
+    new_tickers = {s.get("ticker") for s in new_selection if s.get("ticker")}
+    entered = new_tickers - prev_satellite_tickers
+    exited = prev_satellite_tickers - new_tickers
+
+    if len(entered) <= max_swaps:
+        return new_selection, {
+            "limit": max_swaps,
+            "throttled": False,
+            "n_swaps": len(entered),
+        }
+
+    # Garder les `max_swaps` premières entries (déjà triées par score décroissant)
+    kept_entries: List[Dict] = []
+    rejected_entries: set = set()
+    n_kept = 0
+    for s in new_selection:
+        tk = s.get("ticker")
+        if tk in entered:
+            if n_kept < max_swaps:
+                kept_entries.append(s)
+                n_kept += 1
+            else:
+                rejected_entries.add(tk)
+
+    # Positions stables (présentes dans new ET prev)
+    stable_positions = [
+        s for s in new_selection
+        if s.get("ticker") not in entered
+    ]
+
+    # Pour chaque entry rejetée, restaurer une exit depuis l'univers.
+    # Un exit absent de l'univers (= broker-filtré) est skippé : pas de retour.
+    n_to_restore = len(rejected_entries)
+    univ_by_ticker = {s.get("ticker"): s for s in all_stocks_universe}
+    restored: List[Dict] = []
+    for tk in sorted(exited):  # ordre déterministe
+        if len(restored) >= n_to_restore:
+            break
+        if tk in univ_by_ticker:
+            restored.append(univ_by_ticker[tk])
+
+    final_selection = stable_positions + kept_entries + restored
+
+    meta = {
+        "limit": max_swaps,
+        "throttled": True,
+        "n_swaps_proposed": len(entered),
+        "n_swaps_applied": len(kept_entries),
+        "entered_kept": [s.get("ticker") for s in kept_entries],
+        "entered_rejected": sorted(rejected_entries),
+        "exited_restored": [s.get("ticker") for s in restored],
+        "exited_not_restored": sorted(exited - {s.get("ticker") for s in restored}),
+    }
+    return final_selection, meta
+
+
+def _load_previous_satellite_tickers_by_profile() -> Dict[str, set]:
+    """Lit data/portfolios_previous.json (snapshot N-1) et retourne les
+    tickers satellites par profil. Utilisé par le budget mensuel.
+    """
+    p = Path(__file__).parent.parent / "data" / "portfolios_previous.json"
+    if not p.exists():
+        return {}
+    try:
+        data = json.load(open(p))
+    except Exception:
+        return {}
+    out: Dict[str, set] = {}
+    for profile in ("Stable", "Modéré", "Agressif"):
+        prof_data = data.get(profile, {})
+        if not isinstance(prof_data, dict):
+            continue
+        meta = prof_data.get("_tickers_meta", {}) or {}
+        sat = {tk for tk, m in meta.items()
+               if isinstance(m, dict) and m.get("role") == "satellite"}
+        out[profile] = sat
+    return out
+
 def _load_previous_satellite_tickers() -> Dict[str, set]:
     """Lit la composition satellite PRÉCÉDENTE depuis data/portfolios.json.
 
@@ -375,6 +485,35 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
                 if low_vol_positions:
                     idx_remove = low_vol_positions[0]
                     deduped[idx_remove] = extra_high_vol[i]
+
+    # Phase 3C.1 (2026-06-12) — Budget mensuel de remplacement satellite.
+    # Limite les changements à MAX_SWAPS_PER_RUN par profil. Si dépassé,
+    # garde les meilleures entrées (score décroissant) et restaure les
+    # positions précédentes correspondantes (depuis l'univers déjà broker-filtré).
+    max_swaps = MAX_SWAPS_PER_RUN_BY_PROFILE.get(profile, 1)
+    prev_sat_by_profile = _load_previous_satellite_tickers_by_profile()
+    prev_for_profile_sat = prev_sat_by_profile.get(profile, set())
+    if prev_for_profile_sat:
+        deduped, swap_meta = _apply_monthly_swap_budget(
+            profile=profile,
+            new_selection=deduped,
+            prev_satellite_tickers=prev_for_profile_sat,
+            all_stocks_universe=all_stocks,
+            max_swaps=max_swaps,
+        )
+        if swap_meta.get("throttled"):
+            try:
+                import logging
+                log = logging.getLogger("portfolio_engine.core_satellite_discipline")
+                log.info(
+                    f"[{profile}] 🚦 Budget mensuel : "
+                    f"{swap_meta['n_swaps_proposed']} swaps proposés → "
+                    f"{swap_meta['n_swaps_applied']} appliqués (limite {max_swaps}). "
+                    f"Restaurés : {swap_meta['exited_restored']}. "
+                    f"Rejetés : {swap_meta['entered_rejected']}."
+                )
+            except Exception:
+                pass
 
     return deduped
 
