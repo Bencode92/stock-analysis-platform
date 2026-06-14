@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-13T10:27:01.168961",
+  "timestamp": "2026-06-14T10:50:13.230672",
   "period_days": 90,
   "frequency": "M",
   "platform_fee_annual_bp": 0.0,
@@ -27,22 +27,23 @@
       "resolver_version": "1.0.0"
     },
     "calendar_report": {
-      "original_dates": 85,
-      "aligned_dates": 86,
-      "removed_dates": -1,
-      "nan_before_avg_pct": 2.66,
-      "nan_after_reindex_avg_pct": 3.79,
-      "nan_after_ffill_avg_pct": 0.0,
+      "original_dates": 84,
+      "aligned_dates": 84,
+      "removed_dates": 0,
+      "nan_before_avg_pct": 2.69,
+      "nan_after_reindex_avg_pct": 3.84,
+      "nan_after_ffill_avg_pct": 0.74,
       "symbols_excluded": [],
       "alignment_method": "NYSE_business_days",
       "ffill_limit": 3,
       "ffill_applied": true,
       "warnings": [
-        "ffill(limit=3): 62 values filled"
+        "ffill(limit=3): 50 values filled",
+        "Dropped 1 rows with remaining NaN"
       ]
     },
     "quality_report": {
-      "timestamp": "2026-06-13T10:27:01.093736",
+      "timestamp": "2026-06-14T10:50:13.151165",
       "passed": true,
       "n_symbols_checked": 19,
       "n_symbols_passed": 19,
@@ -72,10 +73,10 @@
         "VT": 0.0
       },
       "return_stats": {
-        "mean_daily_pct": 0.1141,
+        "mean_daily_pct": 0.1128,
         "max_daily_pct": 13.21,
         "min_daily_pct": -10.59,
-        "std_daily_pct": 1.4426
+        "std_daily_pct": 1.4551
       }
     },
     "benchmark_coverage": {
@@ -133,10 +134,10 @@
         "cash_allocation": {
           "cash_weight_pct": 75.0,
           "missing_symbols": [
-            "VWCE.DE",
             "IWDA.AS",
+            "SGLN.AS",
             "IBGS.AS",
-            "SGLN.AS"
+            "VWCE.DE"
           ],
           "n_missing": 4,
           "cash_rate_annual_pct": 4.5,
@@ -185,7 +186,7 @@
         "n_assets_with_data": 5,
         "n_assets_total": 9,
         "benchmark_symbol": "QQQ",
-        "benchmark_return_pct": 20.14,
+        "benchmark_return_pct": 20.15,
         "benchmark_metadata": {
           "symbol": "QQQ",
           "name": "Invesco QQQ Trust (Nasdaq-100)",
@@ -195,7 +196,7 @@
         "benchmark_volatility_pct": 21.95,
         "excess_return_pct": -17.25,
         "tracking_error_pct": 22.53,
-        "information_ratio": -3.01,
+        "information_ratio": -3.02,
         "beta": -0.01,
         "alpha_pct": 3.11,
         "upside_capture_pct": 2.8,
@@ -295,11 +296,11 @@
         "cash_allocation": {
           "cash_weight_pct": 80.0,
           "missing_symbols": [
-            "IBCI.AS",
             "AGGH.AS",
             "SGLN.AS",
             "VWCE.DE",
-            "IBGS.AS"
+            "IBGS.AS",
+            "IBCI.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -458,11 +459,11 @@
         "cash_allocation": {
           "cash_weight_pct": 90.0,
           "missing_symbols": [
-            "IBCI.AS",
             "AGGH.AS",
             "SGLN.AS",
             "VWCE.DE",
-            "IBGS.AS"
+            "IBGS.AS",
+            "IBCI.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -620,10 +621,10 @@
       "cash_allocation": {
         "cash_weight_pct": 75.0,
         "missing_symbols": [
-          "VWCE.DE",
           "IWDA.AS",
+          "SGLN.AS",
           "IBGS.AS",
-          "SGLN.AS"
+          "VWCE.DE"
         ],
         "n_missing": 4,
         "cash_rate_annual_pct": 4.5,
@@ -672,7 +673,7 @@
       "n_assets_with_data": 5,
       "n_assets_total": 9,
       "benchmark_symbol": "QQQ",
-      "benchmark_return_pct": 20.14,
+      "benchmark_return_pct": 20.15,
       "benchmark_metadata": {
         "symbol": "QQQ",
         "name": "Invesco QQQ Trust (Nasdaq-100)",
@@ -682,7 +683,7 @@
       "benchmark_volatility_pct": 21.95,
       "excess_return_pct": -17.25,
       "tracking_error_pct": 22.53,
-      "information_ratio": -3.01,
+      "information_ratio": -3.02,
       "beta": -0.01,
       "alpha_pct": 3.11,
       "upside_capture_pct": 2.8,
@@ -711,11 +712,11 @@
       "cash_allocation": {
         "cash_weight_pct": 80.0,
         "missing_symbols": [
-          "IBCI.AS",
           "AGGH.AS",
           "SGLN.AS",
           "VWCE.DE",
-          "IBGS.AS"
+          "IBGS.AS",
+          "IBCI.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -803,11 +804,11 @@
       "cash_allocation": {
         "cash_weight_pct": 90.0,
         "missing_symbols": [
-          "IBCI.AS",
           "AGGH.AS",
           "SGLN.AS",
           "VWCE.DE",
-          "IBGS.AS"
+          "IBGS.AS",
+          "IBCI.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
