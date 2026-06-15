@@ -1,0 +1,328 @@
+{
+  "timestamp": "2026-06-15T13:52:10.243063",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-15",
+    "brent_usd": 83.04,
+    "brent_usd_avg5d": 89.07502199999999,
+    "gold_usd": 4363.41358,
+    "silver_usd": 71.08128,
+    "vix": 22.0,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "cpi_index": 333.979,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 278.0,
+    "us_10y_yield": 4.45,
+    "us_2y_yield": 4.05,
+    "yield_curve_2s10s": 40.0,
+    "breakeven_5y": 2.39,
+    "sp500_level": 7541.86,
+    "sp500_change_1d_pct": 1.838171253880443,
+    "hyg_change_1d_pct": 0.7606235856172866,
+    "lqd_change_1d_pct": 1.1336294651119694,
+    "trade_weighted_usd": 120.0831,
+    "eurusd": 1.16204,
+    "nasdaq_change_1d_pct": 2.59239,
+    "xlu_perf_1d_pct": -0.38176237,
+    "xle_perf_1d_pct": -3.84014,
+    "cpi_core_mom_pct": 0.21,
+    "pce_yoy_pct": 3.77,
+    "vix_trend": "Falling",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4360.79953,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 18.19843134332713,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.86,
+    "favored_sectors": "energy, information-technology, utilities, materials, industrials",
+    "avoided_sectors": "",
+    "favored_regions": "asie, netherlands, israel, japan",
+    "avoided_regions": "india",
+    "key_trends": "Secteur leader: energy (+27.8% YTD) | Région leader: south-korea (+104.6% YTD) | 52W leader: information-technology (+46.8% sur 12 mois) | 6M leader: energy (+25.5% sur 6 mois)",
+    "risks": "Secteurs en difficulté: communication-services, financials, healthcare | Régions en difficulté: germany, india, south-africa | 4 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "information-technology(favored,b=1.57,d=0.68%), consumer-staples(neutral,b=0.22,d=0.44%), communication-services(neutral,b=1.21,d=-0.25%), financials(neutral,b=0.86,d=1.39%), real-estate(favored,b=0.37,d=0.78%), industrials(favored,b=0.97,d=0.62%), energy(favored,b=-0.17,d=0.92%), materials(favored,b=0.82,d=1.98%), healthcare(neutral,b=0.49,d=-0.18%), consumer-discretionary(neutral,b=1.18,d=-0.06%), utilities(favored,b=0.37,d=0.3%)"
+  },
+  "ai_response": {
+    "regime": "neutral",
+    "regime_confidence": 3,
+    "regime_rationale": "Mixed signals: PCE at 3.77% runs hot but CPI at 2.4% and breakevens at 2.39% suggest inflation moderating; VIX 22 falling, positive yield curve (40bps), HY spreads tight at 278bps, and strong equity momentum (S&P +1.8% today) offset by Fed on hold and elevated real rates. No clear directional regime — leaning slightly risk-on but PCE divergence and gold at $4363 signal lingering uncertainty.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Increase energy cap on strong momentum and elevated Brent",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Energy is sector leader (+27.8% YTD, +25.5% 6M) with Brent at $83; despite today's XLE -3.8% pullback, momentum remains strong and oil supports inflation hedge."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Modestly increase AI/semi cap on tech momentum",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif"
+        ],
+        "conviction": 3,
+        "rationale": "IT is 52W leader (+46.8%) and QQQ +2.6% today; positive yield curve and falling VIX support growth/duration assets, but PCE divergence caps conviction."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Maintain gold allocation despite 18% drawdown from ATH",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 0
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 2,
+        "rationale": "Gold at $4363 is 18% off ATH — the drawdown itself is not a buy signal given no crisis regime, but PCE/CPI divergence and geopolitical uncertainty warrant holding current allocation as insurance."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Reduce healthcare cap given weak momentum",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 2,
+        "rationale": "Healthcare flagged as struggling sector by RADAR with negative daily performance; no defensive need in current non-recessionary environment."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Maintain short-to-intermediate duration, slight TIPS tilt given PCE divergence",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 5.0
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "PCE at 3.77% vs CPI 2.4% signals sticky services inflation; TIPS protect against upside inflation surprise while 5Y breakevens at 2.39% make TIPS fairly priced."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Avoid high yield given tight spreads offering poor risk/reward",
+        "params": {
+          "action": "avoid_fund_types",
+          "fund_types": [
+            "High Yield Bond"
+          ]
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "HY spreads at 278bps are historically tight — asymmetric downside risk if growth slows; carry doesn't compensate for tail risk in Stable profile."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Add modest dividend/value tilt",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 2,
+        "rationale": "Financials +1.39% today and materials +1.98% show value rotation; dividend stocks provide income buffer if growth decelerates with PCE staying elevated."
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Maintain modest tactical cash given VIX 22 and mixed signals",
+        "params": {
+          "pct_agressif": 3,
+          "pct_modere": 4,
+          "pct_stable": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX at 22 (above calm but falling) with no clear regime = keep dry powder for potential dip-buying; T-bills at ~4% yield make cash productive, not punitive."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Neutral regime with PCE/CPI divergence favors short-to-intermediate duration with TIPS tilt; IG credit acceptable but HY offers poor risk/reward at 278bps spreads.",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 4.5,
+      "max_duration_moderate": 6.0
+    },
+    "cash_allocation": {
+      "Agressif": 3,
+      "Modéré": 4,
+      "Stable": 3,
+      "rationale": "VIX 22 falling + mixed macro signals = modest cash as optionality; T-bills yielding ~4% make this productive positioning, not drag — ready to deploy on clarity or correction."
+    },
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0,
+      "rationale": "Falling VIX and risk-on equity momentum support crypto exposure in Agressif; capped below max given PCE uncertainty and neutral regime lacking full conviction."
+    },
+    "warnings": [
+      "PCE at 3.77% vs CPI 2.4% divergence is unusual — if PCE proves leading, Fed may turn hawkish despite market pricing no moves, creating a rates shock risk",
+      "HY spreads at 278bps are near cycle tights — any growth scare could trigger rapid widening (300-400bps) with outsized losses given low starting spread",
+      "Gold 18% off ATH could signal either healthy correction or early risk-off rotation — monitor if gold rebounds while equities stay flat (divergence = warning)",
+      "XLE -3.8% today despite Brent at $83 may signal sector rotation out of energy or demand concern — watch for follow-through",
+      "S&P at 7541 with strong daily moves (+1.8%) in a VIX 22 environment suggests positioning-driven rally — vulnerable to reversal on negative catalyst",
+      "EUR/USD at 1.162 with DTWEXBGS at 120 = dollar neutral-to-weak; further dollar weakness would boost EM and commodities but hurt US-centric portfolios"
+    ],
+    "market_interpretation": {
+      "geopolitical_risk": "Moderate — Brent at $83 (down from 5d avg $89) suggests no acute energy shock, but gold at $4363 and VIX 22 indicate markets pricing some tail risk from unresolved geopolitical tensions.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 8,
+      "sentiment_estimate": "neutral",
+      "dollar_assessment": "neutral"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "ai_infra": {
+        "Agressif": 2
+      },
+      "healthcare": {
+        "Agressif": -2,
+        "Modéré": -2
+      },
+      "dividend_value": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "hedge_deltas": {},
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": null,
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 4.5,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 6.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_neutral"
+    ],
+    "cash_tactical": {
+      "Agressif": 3,
+      "Modéré": 4,
+      "Stable": 3
+    },
+    "cash_tactical_rationale": "VIX 22 falling + mixed macro signals = modest cash as optionality; T-bills yielding ~4% make this productive positioning, not drag — ready to deploy on clarity or correction.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0
+    },
+    "ai_regime": "neutral",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "PCE at 3.77% vs CPI 2.4% divergence is unusual — if PCE proves leading, Fed may turn hawkish despite market pricing no moves, creating a rates shock risk",
+      "HY spreads at 278bps are near cycle tights — any growth scare could trigger rapid widening (300-400bps) with outsized losses given low starting spread",
+      "Gold 18% off ATH could signal either healthy correction or early risk-off rotation — monitor if gold rebounds while equities stay flat (divergence = warning)",
+      "XLE -3.8% today despite Brent at $83 may signal sector rotation out of energy or demand concern — watch for follow-through",
+      "S&P at 7541 with strong daily moves (+1.8%) in a VIX 22 environment suggests positioning-driven rally — vulnerable to reversal on negative catalyst",
+      "EUR/USD at 1.162 with DTWEXBGS at 120 = dollar neutral-to-weak; further dollar weakness would boost EM and commodities but hurt US-centric portfolios"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Neutral regime with PCE/CPI divergence favors short-to-intermediate duration with TIPS tilt; IG credit acceptable but HY offers poor risk/reward at 278bps spreads.",
+      "prefer_tips": true,
+      "prefer_treasury": false,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 4.5,
+      "max_duration_moderate": 6.0
+    }
+  },
+  "regime": "neutral",
+  "regime_rationale": "Mixed signals: PCE at 3.77% runs hot but CPI at 2.4% and breakevens at 2.39% suggest inflation moderating; VIX 22 falling, positive yield curve (40bps), HY spreads tight at 278bps, and strong equity momentum (S&P +1.8% today) offset by Fed on hold and elevated real rates. No clear directional regime — leaning slightly risk-on but PCE divergence and gold at $4363 signal lingering uncertainty.",
+  "market_interpretation": {
+    "geopolitical_risk": "Moderate — Brent at $83 (down from 5d avg $89) suggests no acute energy shock, but gold at $4363 and VIX 22 indicate markets pricing some tail risk from unresolved geopolitical tensions.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 8,
+    "sentiment_estimate": "neutral",
+    "dollar_assessment": "neutral"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Neutral regime with PCE/CPI divergence favors short-to-intermediate duration with TIPS tilt; IG credit acceptable but HY offers poor risk/reward at 278bps spreads.",
+    "prefer_tips": true,
+    "prefer_treasury": false,
+    "avoid_hy": true,
+    "avoid_securitized": false,
+    "avoid_em_bonds": false,
+    "max_duration_stable": 4.5,
+    "max_duration_moderate": 6.0
+  },
+  "warnings": [
+    "PCE at 3.77% vs CPI 2.4% divergence is unusual — if PCE proves leading, Fed may turn hawkish despite market pricing no moves, creating a rates shock risk",
+    "HY spreads at 278bps are near cycle tights — any growth scare could trigger rapid widening (300-400bps) with outsized losses given low starting spread",
+    "Gold 18% off ATH could signal either healthy correction or early risk-off rotation — monitor if gold rebounds while equities stay flat (divergence = warning)",
+    "XLE -3.8% today despite Brent at $83 may signal sector rotation out of energy or demand concern — watch for follow-through",
+    "S&P at 7541 with strong daily moves (+1.8%) in a VIX 22 environment suggests positioning-driven rally — vulnerable to reversal on negative catalyst",
+    "EUR/USD at 1.162 with DTWEXBGS at 120 = dollar neutral-to-weak; further dollar weakness would boost EM and commodities but hurt US-centric portfolios"
+  ]
+}
