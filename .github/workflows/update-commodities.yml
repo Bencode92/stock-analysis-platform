@@ -1,36 +1,29 @@
 name: Update Commodity Correlations
 
 on:
-  workflow_run:
-    workflows: ["Update Themes Data"]
-    types:
-      - completed
-  workflow_dispatch:
-  schedule:
-    - cron: '30 */4 * * *'  # 30 minutes après l'update des news
+  workflow_dispatch:  # Exécution manuelle uniquement
 
 jobs:
   correlate-commodities:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests
-          
+
       - name: Run commodity correlation
         run: python scripts/commodity_correlator.py
-        
+
       - name: Verify output
         run: |
           if [ -f "data/commodities.json" ]; then
@@ -46,7 +39,7 @@ jobs:
             echo "❌ Error: commodities.json not found"
             exit 1
           fi
-        
+
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
@@ -66,3 +59,4 @@ jobs:
             git push
             echo "✅ Commodity data updated and published"
           fi
+
