@@ -32,15 +32,57 @@
 - Quality + subscores prennent tout le scoring fin
 - Libère 0.22 de poids redistribué sur eps_growth + perf relative
 
-### Test biais régional Buffett (Fabre v7)
-**Justification** : seuils Tech US et Tech EU identiques (ROE > 12%) alors que ROE médian est structurellement plus haut US (~15%) > EU (~10%) > EM (~8%). Hypothèse : le filtre Buffett pénalise les bonnes boîtes EU/EM juste parce qu'elles vivent dans un régime de ROE plus bas.
+### Audit cohérence scoring — ORDRE FABRE v7-final (2026-06-17)
 
-**3 mesures empiriques** :
-1. Buffett médian par (secteur × région) — si US >> EU >> EM, biais confirmé
-2. Faux négatifs régionaux : stocks qui échouent `roe_consistent` mais sont au-dessus de la médiane de LEUR région
-3. Skew US en sortie des portfolios Modéré/Agressif vs poids US de l'univers éligible
+L'audit empirique du 17 juin a RÉFUTÉ l'hypothèse initiale (US > EU > EM) et révélé 3 trouvailles qui imposent un ordre de priorité différent :
 
-**Si 3/3 pointent même direction** : calibrer Buffett en percentile intra-(secteur, région) comme Quality. Sinon : biais théorique, on n'y touche pas.
+#### Priorité 1 — Chiffrer les faux 50 (trous data EM/Asie) — **AVANT toute conclusion régionale**
+
+**Mesure du 17 juin** :
+- US : 0.2% des stocks ont ≥2 fondamentaux None
+- EU : 4.3%
+- **EM : 20.7% (55 stocks sur 266)** ← critique
+
+**Conséquence** : Tencent et 54 autres EM sont notés 50 par défaut sur 2-3 critères évalués au lieu de 6. Ce ne sont PAS des "médiocres" — ce sont des "je ne sais pas" déguisés en "médiocres". Ces faux 50 polluent toutes les médianes régionales par secteur.
+
+**Action 3D** :
+- Auditer la source : pourquoi 20% des EM ont ROE/ROIC/D/E manquants ? (provider FMP/yfinance ? mapping ticker ? données comptables non-IFRS ?)
+- Pour les stocks avec ≥2 gaps, marquer score Buffett comme `quality_coverage_insufficient` au lieu de 50 par défaut
+- Re-mesurer ensuite les médianes régionales SANS ces faux 50
+
+**On ne tranche le biais régional QU'APRÈS** ce nettoyage data.
+
+#### Priorité 2 — Vérifier bug CS/finance (5/5 vs 5/6)
+
+**Hypothèse Fabre** : si `roic_skipped: True` pour finance, le dénominateur devrait être 5 et CS devrait sortir à 5/5 = 100, pas 5/6 = 83. Le fait qu'il sorte 83 suggère que ROIC compte vraiment dans le score.
+
+**Conséquence si confirmé** : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA...) perdent ~17 points injustement. Classement finance faussé vers le bas.
+
+**Test d'une ligne** : prendre une banque qui passe les 5 autres critères et vérifier si elle sort 100 ou 83.
+
+#### Priorité 3 — Trancher α vs β sur `valuation_ok`
+
+**Diagnostic clarifié (Fabre v7-final)** : la "contradiction" NVDA Buffett 67 / Quality 96 n'est PAS une incohérence. Les deux scores mesurent des choses différentes (qualité absolue vs qualité+value). Le VRAI problème est qu'ils sont **fusionnés** dans `fit_score` (Buf 0.22 + Quality 0.38), ce qui réinjecte le P/E deux fois.
+
+**Option α — Garder `valuation_ok` dans Buffett** :
+- Doctrine Munger "wonderful business at a fair price" assumée
+- Tilt value/non-US permanent assumé
+- Renommer le score "quality+value", pas juste "quality"
+- Acter "short US-growth méga-caps à vie" par écrit
+- **Acceptable SI tu l'écris**, pas acceptable comme statu quo non documenté
+
+**Option β — Sortir `valuation_ok` du Buffett** :
+- Buffett devient pur qualité (ROE/ROIC/D/E/FCF/moat)
+- NVDA passerait à 83-100
+- Score value séparé pour piloter le tilt value explicitement et de manière sizée
+- Cohérent avec doctrine "user décide ligne par ligne"
+- **Recommandation Fabre**
+
+**Décision à prendre en juillet à froid, après chiffrage P1 et fix P2.**
+
+#### Bugs cosmétiques détectés en audit du 17 juin (pas critiques mais à logger)
+- buffett_criteria affiche ROIC failed pour banques (devrait être skipped) — voir P2 ci-dessus
+- LUPIN Inde Buf 83 OK → le malus EM n'est PAS uniforme, il vient des stocks avec trous data (P1)
 
 ### Calibration sticky bonus (n=15+ snapshots)
 - Mesurer σ run-to-run effectivement (besoin 15 snapshots PIT)
