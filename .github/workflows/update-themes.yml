@@ -2,14 +2,12 @@ name: Update Themes Data
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GÈRE: Thèmes et actualités avec FinBERT
-# HORAIRE: 1x/jour à 03:00 Paris (02:00 UTC) - heure creuse
+# HORAIRE: MANUEL uniquement (déclenchement automatique désactivé)
 # DURÉE: ~55 minutes
 # ═══════════════════════════════════════════════════════════════════════════════
 
 on:
-  schedule:
-    - cron: '0 2 * * *'  # 03:00 Paris (02:00 UTC hiver) - 1 seule fois/jour
-  workflow_dispatch:  # Permet l'exécution manuelle
+  workflow_dispatch:  # Exécution manuelle uniquement
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Groupe de concurrence SÉPARÉ pour ne pas bloquer les autres workflows
@@ -25,13 +23,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'  # Cache des dépendances pip
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -44,11 +42,11 @@ jobs:
           pip install transformers torch psutil
           # Dépendances optionnelles (ignore les erreurs)
           pip install tenacity structlog orjson || echo "⚠️ Dépendances optionnelles ignorées"
-          
+
       - name: Create required directories
         run: |
           mkdir -p data models
-          
+
       - name: Update themes data
         env:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
@@ -62,7 +60,7 @@ jobs:
           TP_LOG_LEVEL: INFO
         timeout-minutes: 200  # 🔧 AUGMENTÉ de 20 à 40 minutes
         run: python scripts/fmp_news_updater.py
-        
+
       - name: Verify output files
         run: |
           if [ -f "data/themes.json" ] && [ -f "data/news.json" ]; then
@@ -93,7 +91,7 @@ jobs:
             echo "❌ Erreur: fichiers manquants"
             exit 1
           fi
-          
+
       - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
