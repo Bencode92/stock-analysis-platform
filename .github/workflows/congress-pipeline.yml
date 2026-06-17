@@ -136,7 +136,7 @@ jobs:
           # on rebase sur la derniere version puis on pousse, avec retry anti-course.
           for i in 1 2 3 4 5; do
             git fetch origin main
-            git rebase origin/main && git push origin HEAD:main && { echo "push OK (tentative $i)"; exit 0; }
+            git rebase -X theirs origin/main && git push origin HEAD:main && { echo "push OK (tentative $i)"; exit 0; }
             echo "Course detectee, nouvelle tentative ($i)…"
             git rebase --abort 2>/dev/null || true
             sleep 5

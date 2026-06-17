@@ -149,7 +149,7 @@ jobs:
           
           BRANCH="${GITHUB_REF_NAME:-main}"
           for i in 1 2 3 4 5; do
-            git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
+            git fetch origin && git rebase -X theirs "origin/$BRANCH" || git rebase --abort || true
             git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
             sleep $((RANDOM%5+2))
           done
