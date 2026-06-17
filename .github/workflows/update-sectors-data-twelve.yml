@@ -35,7 +35,9 @@ on:
     - cron: '35 21 * * 1-5'
 
 concurrency:
-  group: repo-writes-global
+  # Un groupe PAR workflow : les workflows ne s'annulent plus entre eux.
+  # La sécurité anti-conflit de push est assurée par le rebase+retry ci-dessous.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -147,7 +149,7 @@ jobs:
           git commit -m "$EMOJI Sectors [$SESSION] - $TS [skip ci]"
           
           BRANCH="${GITHUB_REF_NAME:-main}"
-          for i in 1 2 3; do
+          for i in 1 2 3 4 5; do
             git fetch origin && git rebase "origin/$BRANCH" || git rebase --abort || true
             git push origin "HEAD:$BRANCH" && echo "✅ Push OK" && exit 0
             sleep $((RANDOM%5+2))

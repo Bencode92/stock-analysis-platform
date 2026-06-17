@@ -34,6 +34,18 @@ Si un seul échoue → pas d'ajout. Le briefing l'écrit noir sur blanc (« bloq
 - **Taille** : 3-5 % du sleeve, financé par réduction du cœur stable, **pas** par rotation entre thèmes existants.
 - **Hurdle after-tax explicite** : chaque édition de `THEMATIQUE_CORE` réalise des PV taxées à 31,4 % (PFU 2026, compte-titres). Le briefing chiffre le coût fiscal estimé de l'arbitrage de financement, et exige que la thèse le justifie. Pas de hurdle quantitatif magique — la friction est rendue *visible* pour casser l'impulsion.
 
+### 3.bis Règle de financement (précisée Fabre v6 — trou révélé par run Q2 2026)
+
+**Définitions** :
+- **Cœur stable du sleeve Thematique** = exposition broad/diversifiée non thématique. Dans la composition actuelle : aucun ligne n'est strictement "cœur stable" car tout est tilté factor → on prend la convention que **VWCE.DE / IWDA.AS / AGGH.AS / IBGS.AS** (s'ils sont présents) sont les véhicules de financement légitimes.
+- **Sleeve thématique** = QQQ / IEMG / VGT / CGXU / VBK / VOT / XLE / SGLN.AS / les nouveaux sleeves structurels ajoutés. CHAQUE ligne est un pari factoriel/thématique distinct.
+
+**Règles** :
+1. **Financement par réduction prorata du cœur stable** : la voie par défaut. Tu réduis VWCE/IWDA/AGGH prorata pour libérer les 3-5% d'allocation, tu ajoutes le nouveau sleeve. Pas d'arbitrage sleeve-à-sleeve.
+2. **Si aucun cœur stable significatif dans le sleeve concerné** (cas Thematique post-3B qui est 100% factor-tilted) : alors la décision devient un **arbitrage explicite conviction-vs-conviction**. Tu déclares dans le journal de décision : « je réduis VBK 3% parce que je crois MOINS en small-cap growth qu'en uranium ». Ne le déguise pas en « financement neutre ». L'écriture force l'honnêteté.
+3. **Interdit** : prélever sur un thème performant pour financer un nouveau thème performant (= rotation momentum déguisée).
+4. **Le briefing doit afficher l'option de financement par défaut** (cœur prorata si dispo) et exiger une justification explicite si l'utilisateur veut financer autrement.
+
 ## 4. Format du briefing — deux sections étanches
 
 ```

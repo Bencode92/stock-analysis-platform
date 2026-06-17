@@ -1,7 +1,7 @@
 # Thematic Review — 2026-Q2
 
-**Généré le** : 2026-06-17 10:50
-**Source** : `data/market_context.json` (généré le 2026-06-12 — fraîcheur : 5 jours, OK)
+**Généré le** : 2026-06-17 11:16
+**Source** : `data/market_context.json` (généré le 2026-06-16 — fraîcheur : 1 jours, OK)
 **Doctrine** : `docs/PHASE3E_DOCTRINE.md`
 **Compteur ajouts** : 0/2 cette année
 
@@ -13,7 +13,7 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
 
 ### Défense — réarmement structurel
 
-**Thèse structurelle** : Budgets de défense OTAN >2% PIB (engagement 2014 revu à 3% post-2024). Cycle d'investissement pluriannuel des États (programmes 10-20 ans). Driver indépendant de la performance boursière de court terme.
+**Thèse structurelle** : Budgets de défense OTAN engagements relevés au-delà de 2% PIB (vers 3% post-2024). Cycle d'investissement pluriannuel des États sur programmes 10-20 ans. Driver pluriannuel décorrélé du cycle boursier de court terme.
 
 **ETF candidats** :
   - `ITA` (iShares U.S. Aerospace & Defense) — TER 0.004, AUM ≥ 5000M€
@@ -22,13 +22,13 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
 
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
-  ❌ 2_thesis: thèse contient des termes de performance (interdit)
-  ✅ 3_no_overheat: pas en surchauffe
+  ✅ 2_thesis: thèse structurelle OK
+  ❌ 3_no_overheat: YTD inconnu dans market_context — règle 3 échec par prudence
   ✅ 4_liquidity: ITA AUM≥200M€
   ✅ 5_budget: budget 0/2
 
 **Verdict** : BLOQUÉ
-  → bloqué par : 2_thesis
+  → bloqué par : 3_no_overheat
 
 ---
 
@@ -44,11 +44,12 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
   ✅ 2_thesis: thèse structurelle OK
-  ✅ 3_no_overheat: pas en surchauffe
+  ❌ 3_no_overheat: YTD inconnu dans market_context — règle 3 échec par prudence
   ✅ 4_liquidity: URNU AUM≥200M€
   ✅ 5_budget: budget 0/2
 
-**Verdict** : ÉLIGIBLE sous thèse
+**Verdict** : BLOQUÉ
+  → bloqué par : 3_no_overheat
 
 ---
 
@@ -62,12 +63,12 @@ Thèmes déjà couverts dans THEMATIQUE_CORE. Pur monitoring.
 | ETF | Poids | Secteur GICS | Statut macro | Overheat? |
 |---|---:|---|---|---|
 | `QQQ` | 20% | information-technology | 🟢 favored | ⚠️ leader YTD |
-| `IEMG` | 25% | — | ⚪ neutral / diversifié | ⚠️ leader YTD |
+| `IEMG` | 25% | — | ⚪ neutral / diversifié | — |
 | `VGT` | 10% | information-technology | 🟢 favored | ⚠️ leader YTD |
-| `CGXU` | 10% | — | ⚪ neutral / diversifié | ⚠️ leader YTD |
-| `VBK` | 12% | — | ⚪ neutral / diversifié | ⚠️ leader YTD |
-| `VOT` | 5% | — | ⚪ neutral / diversifié | ⚠️ leader YTD |
-| `XLE` | 10% | energy | ⚪ neutral / diversifié | ⚠️ leader YTD |
-| `SGLN.AS` | 8% | — | ⚪ neutral / diversifié | ⚠️ leader YTD |
+| `CGXU` | 10% | — | ⚪ neutral / diversifié | — |
+| `VBK` | 12% | — | ⚪ neutral / diversifié | — |
+| `VOT` | 5% | — | ⚪ neutral / diversifié | — |
+| `XLE` | 10% | energy | ⚪ neutral / diversifié | — |
+| `SGLN.AS` | 8% | — | ⚪ neutral / diversifié | — |
 
 **Rappel doctrine** : la présence d'un leader/favored/avoided dans cette table ne justifie AUCUNE action. Re-pondérer = sortir du cadre validé.

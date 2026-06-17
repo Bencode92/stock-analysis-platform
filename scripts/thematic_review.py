@@ -86,12 +86,38 @@ def _additions_this_year() -> int:
     return n
 
 
-def _is_overheat(theme_key: str, market_ctx: dict) -> bool:
-    """Vrai si le thème est en surchauffe (YTD > 50%) selon market_context.
-    Pour les thèmes du catalogue ABSENTS de market_context (defense, uranium),
-    overheat retourne False par défaut — on ne peut pas mesurer ce qu'on n'a pas.
+def _is_overheat(theme_key: str, theme_data: dict, market_ctx: dict) -> Tuple[bool, str]:
+    """Vrai si le thème est en surchauffe.
+
+    Cherche le YTD dans market_context.json pour le thème ou ses ETF candidats.
+    Si data absente → renvoie (None, 'inconnu') — la règle 3 considère ça
+    comme un échec (on n'agit pas sans information).
     """
-    return False  # absence de signal = non-surchauffe (à raffiner si data ajoutée)
+    # Tickers candidats
+    tickers = [c.get("ticker") for c in theme_data.get("etf_candidates", [])]
+
+    # Chercher dans region_risk_profile / sector_risk_profile pour YTD
+    # Format clé : "uranium", "defense", etc. — pas standardisé, donc on cherche
+    # via key_trends qui contient les leaders YTD chiffrés
+    key_trends = market_ctx.get("key_trends", [])
+    label = theme_data.get("label", "").lower()
+    keywords = [theme_key.lower()] + [w for w in label.split() if len(w) > 3]
+
+    for trend in key_trends:
+        t_low = trend.lower()
+        # Match strict : un keyword du thème doit apparaître DANS le trend
+        if any(kw in t_low for kw in keywords if kw not in ("structurel", "civil", "global", "cycle")):
+            # Extraire le % YTD
+            import re
+            m = re.search(r"\+(\d+(?:\.\d+)?)\s*%", trend)
+            if m:
+                pct = float(m.group(1))
+                if pct > OVERHEAT_YTD_THRESHOLD:
+                    return True, f"YTD {pct:.1f}% > {OVERHEAT_YTD_THRESHOLD}%"
+                return False, f"YTD {pct:.1f}% < seuil {OVERHEAT_YTD_THRESHOLD}%"
+
+    # Aucune information trouvée dans market_context pour ce thème
+    return None, "YTD inconnu dans market_context"
 
 
 def _has_coverage_in_core(theme_data: dict, thematique_core: Dict[str, float]) -> bool:
@@ -110,13 +136,22 @@ def _has_coverage_in_core(theme_data: dict, thematique_core: Dict[str, float]) -
 
 
 def _evaluate_rule_2_thesis(theme_data: dict) -> Tuple[bool, str]:
-    """Règle 2 : thèse structurelle écrite (pas de performance récente)."""
+    """Règle 2 : thèse structurelle écrite (pas une thèse-performance).
+
+    Bug v1 : regex naïf détectait "performance" en faux positif (ex: "indépendant
+    de la performance boursière"). Fix Fabre : champ explicite no_perf_argument
+    + jugement humain à la rédaction du catalog.
+    """
     thesis = (theme_data.get("thesis_structural") or "").strip()
     if not thesis or len(thesis) < 50:
-        return False, "thèse manquante ou trop courte"
-    perf_words = ["+", "%", "perf", "ytd", "1y", "performance", "rendement"]
-    if any(w in thesis.lower() for w in perf_words):
-        return False, "thèse contient des termes de performance (interdit)"
+        return False, "thèse manquante ou trop courte (<50 chars)"
+    no_perf = theme_data.get("no_perf_argument")
+    if no_perf is not True:
+        return False, "champ no_perf_argument:true manquant dans le catalog"
+    # Garde-fou : signaux de momentum directs (chiffres YTD/1Y)
+    import re
+    if re.search(r"\+\d+(?:\.\d+)?\s*%", thesis):
+        return False, "thèse contient un % chiffré (interdit — c'est du momentum)"
     return True, "thèse structurelle OK"
 
 
@@ -147,9 +182,13 @@ def evaluate_discovery_theme(
     # Règle 2 : thèse structurelle écrite
     rules["2_thesis"] = _evaluate_rule_2_thesis(theme_data)
 
-    # Règle 3 : pas en surchauffe
-    overheat = _is_overheat(theme_key, market_ctx)
-    rules["3_no_overheat"] = (not overheat, "pas en surchauffe" if not overheat else "SURCHAUFFE YTD > 50%")
+    # Règle 3 : pas en surchauffe — fix doctrine, absence d'info = échec
+    overheat, overheat_msg = _is_overheat(theme_key, theme_data, market_ctx)
+    if overheat is None:
+        # Pas d'info → on n'agit pas (doctrine : on n'agit pas sans information)
+        rules["3_no_overheat"] = (False, f"{overheat_msg} — règle 3 échec par prudence")
+    else:
+        rules["3_no_overheat"] = (not overheat, overheat_msg)
 
     # Règle 4 : liquidité
     rules["4_liquidity"] = _evaluate_rule_4_liquidity(theme_data)
@@ -265,8 +304,16 @@ def build_diagnostic_section(
             status = "🔴 avoided"
         else:
             status = "⚪ neutral / diversifié"
-        # Overheat : flag textuel uniquement, pas de suggestion d'action
-        is_leader = any(tk in t or (sector or "") in t.lower() for t in key_trends if "+" in t)
+        # Overheat : match STRICT — ticker exact ou secteur exact (pas sous-match)
+        # Bug v1 : (sector or "") en "" matchait toute string → tout en leader
+        def _trend_matches(t: str) -> bool:
+            t_low = t.lower()
+            if f" {tk.lower()} " in f" {t_low} " or f" {tk.lower()}:" in t_low:
+                return True
+            if sector and f" {sector} " in f" {t_low} ":
+                return True
+            return False
+        is_leader = any(_trend_matches(t) for t in key_trends if "+" in t)
         overheat = "⚠️ leader YTD" if is_leader else "—"
         lines.append(f"| `{tk}` | {w*100:.0f}% | {sector or '—'} | {status} | {overheat} |")
 
