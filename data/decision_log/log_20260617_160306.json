@@ -1,8 +1,8 @@
 {
   "version": "decision_log_v1",
   "pipeline_version": "v6.15",
-  "timestamp_iso": "2026-06-17T16:09:18.446638",
-  "run_id": "20260617_160918",
+  "timestamp_iso": "2026-06-17T16:03:06.581645",
+  "run_id": "20260617_160306",
   "decision_log": {
     "rationale_global": "Pipeline RADAR-neutralisé (walk-forward strict -0.11 OOS validé). Cœur UCITS broad statique pour stabilité β cible. Satellite dynamique par fit_score qualité (max 2/industry pour Principal, max 2/pays + 2/industry pour Agressif-Thematique). Décision Core-Satellite : timing factoriel rejeté, indexation cœur + pari assumé sur qualité satellite.",
     "key_constraints": {
@@ -736,8 +736,8 @@
     },
     "Agressif": {
       "profile": "Agressif",
-      "n_positions": 9,
-      "n_core": 4,
+      "n_positions": 8,
+      "n_core": 3,
       "n_satellite": 5,
       "weight_core_pct": 75.0,
       "weight_satellite_pct": 25.0,
@@ -751,16 +751,9 @@
           "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
         },
         {
-          "ticker": "IEMG",
-          "name": "Cœur broad UCITS (IEMG)",
-          "weight_pct": 15.0,
-          "source": "core_filler_canonique",
-          "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
-        },
-        {
           "ticker": "IBGS.AS",
           "name": "iShares EUR Govt Bond 1-3yr UCITS",
-          "weight_pct": 5.0,
+          "weight_pct": 20.0,
           "source": "core_filler_canonique",
           "rationale": "cœur UCITS broad canonique, hardcoded pour stabilité β cible"
         },
@@ -1366,7 +1359,6 @@
       "SGLN.AS"
     ],
     "Agressif∩Agressif-Thematique": [
-      "IEMG",
       "SGLN.AS"
     ]
   },

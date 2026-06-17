@@ -41,9 +41,30 @@ DEFAULT_CORE_FILLER = {
     # Modéré (sat 20 %, cœur 80 %) — equity broad dominant, β cible 0.61
     "Modéré":   [("VWCE.DE", 0.50), ("AGGH.AS", 0.15), ("IBCI.AS", 0.05),
                  ("IBGS.AS", 0.05), ("SGLN.AS", 0.05)],
-    # Agressif (sat 25 %, cœur 75 %) — equity broad très majoritaire, β cible 0.80
-    # IBGS plafonné à 5% par profil (cap max_single_bond=5% pour Agressif)
-    "Agressif": [("VWCE.DE", 0.50), ("IWDA.AS", 0.15), ("IBGS.AS", 0.05),
+    # Agressif (sat 25 %, cœur 75 %) — equity broad + tilt EM, β cible 0.80-0.85
+    #
+    # ═══════════════════════════════════════════════════════════════════
+    # DÉCISION DOCTRINALE 2026-06-17 (Fabre v7-final) — Agressif : +15% EM via IEMG
+    # ───────────────────────────────────────────────────────────────────
+    # Origine : audit doctrinal a révélé un doublon structurel VWCE 50% + IWDA 15%
+    # (overlap ~90%, IWDA = sous-ensemble DM de VWCE). Le 15% IWDA ne diversifiait
+    # pas, il réduisait juste l'expo EM.
+    #
+    # Tentative initiale : VWCE 65% seul → bloqué par CAP_PER_CORE_ETF = 0.50,
+    # surplus redistribué automatiquement sur IBGS (bond court), β chuté à ~0.65.
+    # Inattendu et indésiré : Agressif est devenu MOINS agressif.
+    #
+    # Décision finale : remplacer IWDA par IEMG 15% (Emerging Markets).
+    # - EM est ADDITIF à VWCE (qui ne contient que ~10% EM)
+    # - Expo EM totale ~20-25% du sleeve large, vs ~10% avant
+    # - β estimé restauré à ~0.85 (EM β > 1)
+    # - Diversification réelle hors-US/DM
+    #
+    # Risque ASSUMÉ : EM ajoute risque pays/devise/gouvernance + queues plus épaisses.
+    # Ce n'est PAS une correction technique : c'est un choix d'allocation à part
+    # entière. À reconnaître comme tel dans le journal de décision.
+    # ═══════════════════════════════════════════════════════════════════
+    "Agressif": [("VWCE.DE", 0.50), ("IEMG", 0.15), ("IBGS.AS", 0.05),
                  ("SGLN.AS", 0.05)],
 }
 
