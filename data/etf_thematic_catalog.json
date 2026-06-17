@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "version": 1,
+    "created": "2026-06-17",
+    "doctrine": "docs/PHASE3E_DOCTRINE.md",
+    "principle": "Catalogue délibérément PETIT. Bar haut à l'entrée. Un thème entre ici UNIQUEMENT sur thèse structurelle écrite, jamais 'parce qu'il existe un ETF'. Toute proposition d'ajout au catalogue doit être débattue.",
+    "rejected_themes_note": "AI Infrastructure, Cybersecurity, Robotics, Clean Energy, Water, Cloud, Genomics — NON inclus volontairement. Trop de tentation, thèses souvent dérivées de momentum récent. Réévaluer dans 12 mois si signaux structurels persistants.",
+    "discovery_section_only": "Ce catalogue alimente UNIQUEMENT la Section 1 (Découverte). Les thèmes déjà couverts par THEMATIQUE_CORE (tech US, EM, energy, gold, small/mid growth) n'apparaissent PAS ici — ils sont en Section 2 du briefing (lecture seule)."
+  },
+  "themes": {
+    "defense_global": {
+      "label": "Défense — réarmement structurel",
+      "thesis_structural": "Budgets de défense OTAN >2% PIB (engagement 2014 revu à 3% post-2024). Cycle d'investissement pluriannuel des États (programmes 10-20 ans). Driver indépendant de la performance boursière de court terme.",
+      "etf_candidates": [
+        {"ticker": "ITA", "name": "iShares U.S. Aerospace & Defense", "region": "US", "ter": 0.0040, "aum_eur_m_min": 5000},
+        {"ticker": "NATO", "name": "Future of Defence UCITS", "region": "Global", "ter": 0.0049, "aum_eur_m_min": 800},
+        {"ticker": "EUAD", "name": "VanEck Defense UCITS", "region": "Europe-tilt", "ter": 0.0055, "aum_eur_m_min": 500}
+      ],
+      "coverage_test": {
+        "overlap_with_THEMATIQUE_CORE": "negligible — aerospace/defense est ~1.5% de QQQ, ~2% de VGT, absent IEMG/XLE",
+        "ruling": "structurellement absent"
+      }
+    },
+    "nuclear_uranium": {
+      "label": "Nucléaire / Uranium — cycle capex civil + SMR",
+      "thesis_structural": "Renaissance nucléaire : 32 pays signataires de la déclaration COP28 pour tripler la capacité d'ici 2050. Cycle capex sur 10-15 ans (construction réacteurs, redémarrage centrales, SMR). Décorrélé du cycle économique court.",
+      "etf_candidates": [
+        {"ticker": "URNU", "name": "HANetf Sprott Uranium Miners UCITS", "region": "Global", "ter": 0.0065, "aum_eur_m_min": 400},
+        {"ticker": "URA", "name": "Global X Uranium", "region": "US", "ter": 0.0069, "aum_eur_m_min": 3000},
+        {"ticker": "URNM", "name": "Sprott Uranium Miners", "region": "US", "ter": 0.0083, "aum_eur_m_min": 2500}
+      ],
+      "coverage_test": {
+        "overlap_with_THEMATIQUE_CORE": "zéro — uranium absent de tous les ETF actuels (XLE = O&G, pas nuclear)",
+        "ruling": "structurellement absent"
+      }
+    }
+  },
+  "_decision_journal_path": "docs/thematic_decisions.log",
+  "_max_additions_per_year": 2,
+  "_min_aum_eur_m": 200,
+  "_overheat_ytd_threshold": 50.0,
+  "_freshness_max_days": 30
+}

@@ -1,131 +1,89 @@
 {
   "_meta": {
     "updated": "2026-06-12",
-    "version": 1,
-    "source": "manual",
-    "ticker_convention": "tickers du PIPELINE (data/portfolios.json), pas du relevé Trading 212. Pour cotations Asie : symbole local (2330 pour TSMC Taipei, pas TSM ADR US). Pour UCITS substitutes : voir data/ticker_mapping_ucits.json.",
-    "instructions": [
-      "1. Ouvrir relevé Trading 212 à côté.",
-      "2. Pour chaque position détenue, vérifier ligne par ligne contre ce fichier.",
-      "3. Passer 'verified' de false à true UNE FOIS la ligne validée.",
-      "4. Corriger ou supprimer les lignes présumées qui ne correspondent pas.",
-      "5. Ajouter les positions manquantes (ex: ETF non listés).",
-      "6. Mettre à jour _meta.updated à la date du jour.",
-      "Note : la re-validation 3A.1 affichera un avertissement bloquant tant que verified=false reste sur des positions."
-    ],
-    "freshness_rule": "Si _meta.updated > 30 jours, le rapport de re-validation affiche un warning. Au-delà de 45 jours, l'audit est considéré comme stale et certaines règles (plancher 3 mois) peuvent être suspendues.",
+    "version": 2,
+    "source": "trading212_csv_export",
+    "csv_modere": "Modère--2026-06-12T16-11-48.991Z.csv",
+    "csv_aggressive": "Aggressive--2026-06-12T16-12-05.902Z.csv",
+    "nav_modere_eur": 6054.48,
+    "nav_thematique_eur": 2496.54,
+    "ticker_convention": "tickers du PIPELINE (data/portfolios.json), pas du relevé Trading 212. Mapping T212→pipeline appliqué via T212_TO_PIPELINE dans le rapport drift.",
+    "structure_note": "Le compte Trading 212 'Aggressive' est traité comme profil Agressif-Thematique. Le profil 'Agressif' pur (cible LOGN/EXPD/CF/ITX/CBOE) n'est pas implémenté en réel — pas d'allocation T212 séparée.",
+    "freshness_rule": "Si _meta.updated > 30 jours, warning. > 45 jours = stale.",
     "schema": {
-      "ticker": "ticker du pipeline (string)",
-      "profile": "Stable / Modéré / Agressif / Agressif-Thematique / Dividende-PEA / Dividende-CTO",
-      "entry_date": "YYYY-MM-DD — date d'achat initial réelle (sert au plancher 3 mois de la règle 3.8)",
-      "qty_approx": "quantité approximative pour cohérence visuelle (pas critique pour la validation, peut être 0)",
-      "verified": "true si vérifié contre relevé T212, false sinon (présumé)",
-      "notes": "champ libre — ex: 'détenu via ADR TSM au lieu de 2330'"
+      "ticker": "ticker du pipeline",
+      "profile": "Stable | Modéré | Agressif-Thematique | Dividende-PEA | Dividende-CTO",
+      "ticker_t212": "ticker tel qu'affiché dans le compte Trading 212",
+      "value_eur": "valeur courante en € au moment du CSV",
+      "qty_real": "quantité réelle détenue (depuis CSV)",
+      "entry_date": "YYYY-MM-DD ou TBD si inconnue",
+      "verified": "true si vérifié contre relevé T212",
+      "status": "TARGET | ORPHAN_PHASE2 | ORPHAN_PHASE3B | OFF_TARGET | LEGACY",
+      "notes": "champ libre"
     }
   },
   "positions": [
     {
-      "_section": "──── STABLE (Actions) ─── cibles actuelles présumées détenues",
-      "ticker": "ADM", "profile": "Stable",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "Admiral Group PLC — présumé à partir des cibles courantes"
+      "_section": "──── STABLE — pas de CSV fourni, présomption ────"
     },
-    { "ticker": "BVI", "profile": "Stable", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Bureau Veritas SA" },
-    { "ticker": "PUB", "profile": "Stable", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Publicis Groupe" },
-    { "ticker": "NTGY", "profile": "Stable", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Naturgy Energy" },
+    { "ticker": "ADM", "profile": "Stable", "ticker_t212": "ADM", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Admiral Group PLC — présumé, pas de CSV" },
+    { "ticker": "BVI", "profile": "Stable", "ticker_t212": "BVI", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Bureau Veritas — présumé" },
+    { "ticker": "PUB", "profile": "Stable", "ticker_t212": "PUB", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Publicis — présumé" },
+    { "ticker": "NTGY", "profile": "Stable", "ticker_t212": "NTGY", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Naturgy — présumé" },
 
     {
-      "_section": "──── MODÉRÉ (Actions) ─── cibles + orphelin DECK",
-      "ticker": "NOVN", "profile": "Modéré",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "Novartis"
+      "_section": "──── MODÉRÉ — NAV 6054.48€ — CSV T212 vérifié ────"
     },
-    { "ticker": "EXPD", "profile": "Modéré", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Expeditors International" },
-    { "ticker": "CF", "profile": "Modéré", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "CF Industries Holdings" },
-    { "ticker": "LOGN", "profile": "Modéré", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Logitech (nouvelle cible post-phase2)" },
-    {
-      "ticker": "DECK", "profile": "Modéré",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "ORPHELIN phase 2 — sortie cible Modéré le 2026-06-11 (vol 45.74 > band 45). Présumé détenu. À CONFIRMER : ce DECK est-il dans la sleeve Modéré ou Agressif de ton compte ?"
-    },
+    { "ticker": "VWCE.DE", "profile": "Modéré", "ticker_t212": "VWCE", "value_eur": 2363.77, "qty_real": 14.55, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Cœur world UCITS — cible 50%, effectif 39.04%, drift -21.9% → DRIFT (sous-pondéré)" },
+    { "ticker": "AGGH.AS", "profile": "Modéré", "ticker_t212": "EUNU", "value_eur": 906.65, "qty_real": 238.86, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Bond global agg — cible 15%, IN_BAND" },
+    { "ticker": "LVWC", "profile": "Modéré", "ticker_t212": "LVWC", "value_eur": 668.01, "qty_real": 128.44, "entry_date": "TBD", "verified": true, "status": "OFF_TARGET", "notes": "Amundi MSCI World 2X Leveraged — PAS DANS LA CIBLE. Pari personnel hors doctrine. Effectif 11.03%, à décider : vendre OU acter explicitement comme exception" },
+    { "ticker": "CF", "profile": "Modéré", "ticker_t212": "CF", "value_eur": 283.72, "qty_real": 3.0, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "CF Industries — cible 5%, IN_BAND" },
+    { "ticker": "NOVN", "profile": "Modéré", "ticker_t212": "NOVN", "value_eur": 310.98, "qty_real": 2.35, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Novartis — cible 5%, IN_BAND" },
+    { "ticker": "SGLN.AS", "profile": "Modéré", "ticker_t212": "SGLN", "value_eur": 292.96, "qty_real": 4.14, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Or physique — cible 5%, IN_BAND" },
+    { "ticker": "IBCI.AS", "profile": "Modéré", "ticker_t212": "IBCI", "value_eur": 302.42, "qty_real": 1.27, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Bond EUR inflation-linked — cible 5%, IN_BAND" },
+    { "ticker": "IBGS.AS", "profile": "Modéré", "ticker_t212": "CSBGE3", "value_eur": 302.45, "qty_real": 2.60, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Bond EUR 1-3yr — cible 5%, IN_BAND" },
+    { "ticker": "DECK", "profile": "Modéré", "ticker_t212": "DECK", "value_eur": 314.75, "qty_real": 3.18, "entry_date": "TBD", "verified": true, "status": "ORPHAN_PHASE2", "notes": "ORPHELIN phase 2 — sorti de la cible Modéré (vol 45.74 > band 45). Cible actuelle = LOGN. Politique grandfathering : tient tant qu'il passe les filtres ; vol l'expulse au prochain check mensuel" },
+    { "ticker": "EXPD", "profile": "Modéré", "ticker_t212": "EXPD", "value_eur": 308.77, "qty_real": 2.16, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Expeditors — cible 5%, IN_BAND" },
+    { "ticker": "LOGN", "profile": "Modéré", "ticker_t212": null, "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Cible Modéré 5% — PAS ENCORE ACHETÉ. Action recommandée : achat ~302€ pour matcher la cible (remplace DECK si tu le vends)" },
 
     {
-      "_section": "──── AGRESSIF (Actions) ─── cibles + orphelin DECK",
-      "ticker": "LOGN", "profile": "Agressif",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "Logitech (double profil Modéré+Agressif sous Option A)"
+      "_section": "──── AGRESSIF-THEMATIQUE — NAV 2496.54€ — CSV T212 'Aggressive' vérifié ────"
     },
-    { "ticker": "EXPD", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Expeditors (double profil)" },
-    { "ticker": "CF", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "CF Industries (double profil)" },
-    { "ticker": "ITX", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Inditex" },
-    { "ticker": "CBOE", "profile": "Agressif", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "CBOE Global Markets (nouvelle cible post-phase2)" },
-    {
-      "ticker": "DECK", "profile": "Agressif",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "ORPHELIN phase 2 — Si tu ne possèdes qu'UNE seule ligne DECK physique, supprimer une des deux entrées (Modéré OU Agressif), pas les deux."
-    },
+    { "ticker": "QQQ", "profile": "Agressif-Thematique", "ticker_t212": "EQGB", "value_eur": 500.81, "qty_real": 0.77, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Nasdaq 100 via Invesco EQQQ UCITS — cible 20%, IN_BAND" },
+    { "ticker": "IEMG", "profile": "Agressif-Thematique", "ticker_t212": "IS3N", "value_eur": 383.38, "qty_real": 8.01, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "EM IMI — cible 25%, effectif 15.36%, drift -38.6% → DRIFT (très sous-pondéré)" },
+    { "ticker": "IWDA.AS", "profile": "Agressif-Thematique", "ticker_t212": "IWRD", "value_eur": 248.91, "qty_real": 2.81, "entry_date": "TBD", "verified": true, "status": "LEGACY", "notes": "iShares MSCI World — héritage cœur Agressif pre-3B. PAS DANS LA CIBLE Thematique ETF-only. Effectif 9.97%. À liquider pour redéployer sur cibles manquantes" },
+    { "ticker": "VGT", "profile": "Agressif-Thematique", "ticker_t212": "QDVE", "value_eur": 244.88, "qty_real": 5.73, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "S&P 500 IT via iShares QDVE UCITS — cible 10%, IN_BAND" },
+    { "ticker": "VBK", "profile": "Agressif-Thematique", "ticker_t212": "ZPRS", "value_eur": 204.27, "qty_real": 1.60, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "MSCI World Small Cap via SPDR ZPRS UCITS — cible 12%, effectif 8.18%, drift -31.8% → DRIFT" },
+    { "ticker": "SGLN.AS", "profile": "Agressif-Thematique", "ticker_t212": "SGLN", "value_eur": 120.95, "qty_real": 1.71, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Or — cible 8%, effectif 4.84%, drift -39.4% → DRIFT" },
+    { "ticker": "XLE", "profile": "Agressif-Thematique", "ticker_t212": "XLES", "value_eur": 123.64, "qty_real": 0.18, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Énergie US via Invesco XLES UCITS — cible 10%, effectif 4.95%, drift -50.5% → REBALANCE (très sous-pondéré)" },
+    { "ticker": "VOT", "profile": "Agressif-Thematique", "ticker_t212": "SPY4", "value_eur": 127.26, "qty_real": 1.25, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Mid cap US via SPDR SPY4 UCITS — cible 5%, IN_BAND" },
+    { "ticker": "LOGN", "profile": "Agressif-Thematique", "ticker_t212": "LOGN", "value_eur": 96.43, "qty_real": 1.01, "entry_date": "TBD", "verified": true, "status": "ORPHAN_PHASE3B", "notes": "ORPHELIN phase 3B — Thematique est ETF-only depuis 2026-06-12. Grandfathering : peut tenir, mais ne sera jamais re-sélectionné. À liquider à terme pour redéployer" },
+    { "ticker": "FRES", "profile": "Agressif-Thematique", "ticker_t212": "FRES", "value_eur": 100.05, "qty_real": 2.88, "entry_date": "TBD", "verified": true, "status": "ORPHAN_PHASE3B", "notes": "ORPHELIN phase 3B — voir LOGN" },
+    { "ticker": "EME", "profile": "Agressif-Thematique", "ticker_t212": "EME", "value_eur": 98.18, "qty_real": 0.14, "entry_date": "TBD", "verified": true, "status": "ORPHAN_PHASE3B", "notes": "ORPHELIN phase 3B — voir LOGN" },
+    { "ticker": "ABBN", "profile": "Agressif-Thematique", "ticker_t212": "ABBN", "value_eur": 97.93, "qty_real": 1.11, "entry_date": "TBD", "verified": true, "status": "ORPHAN_PHASE3B", "notes": "ORPHELIN phase 3B — voir LOGN" },
+    { "ticker": "LVWC", "profile": "Agressif-Thematique", "ticker_t212": "LVWC", "value_eur": 49.99, "qty_real": 9.61, "entry_date": "TBD", "verified": true, "status": "OFF_TARGET", "notes": "Amundi 2X Leveraged — hors cible. Position secondaire (2%). Même décision que LVWC Modéré : vendre OU acter exception" },
+    { "ticker": "EWT", "profile": "Agressif-Thematique", "ticker_t212": "ITWN", "value_eur": 99.86, "qty_real": 0.59, "entry_date": "TBD", "verified": true, "status": "ORPHAN_PHASE3B", "notes": "ORPHELIN phase 3B — EWT supprimé du cœur Thematique (redondant avec IEMG). À liquider pour redéployer sur IEMG / SGLN / XLE qui sont sous-pondérés" },
+    { "ticker": "CGXU", "profile": "Agressif-Thematique", "ticker_t212": null, "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": true, "status": "TARGET", "notes": "Cible Thematique 10% — PAS ENCORE ACHETÉ. Capital Group International Focus. Action recommandée : achat ~250€ pour matcher la cible (équivalent UCITS à vérifier sur T212)" },
 
     {
-      "_section": "──── AGRESSIF-THEMATIQUE ─── politique ETF-only actée 2026-06-12 ; actions détenues = orphelines, grandfathering",
-      "ticker": "FRES", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "Fresnillo PLC — était dans la cible avant ETF-only"
+      "_section": "──── DIVIDENDE-PEA — pas de CSV fourni, présomption ────"
     },
-    { "ticker": "EME", "profile": "Agressif-Thematique", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Emcor Group" },
-    {
-      "ticker": "APH", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "ORPHELIN phase 2 — Amphenol, présumé détenu (confirmé par utilisateur en chat). Sera orphelin DÉFINITIF après ETF-only."
-    },
-    {
-      "ticker": "ABBN", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "ORPHELIN phase 2 — ABB Ltd, présumé détenu (confirmé par utilisateur en chat). Sera orphelin DÉFINITIF après ETF-only."
-    },
-    {
-      "ticker": "LOGN", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "ORPHELIN phase 2 — Logitech, présumé détenu (confirmé par utilisateur). Sera orphelin DÉFINITIF après ETF-only. ATTENTION : si tu n'as qu'une seule ligne LOGN physique, supprimer les doublons Modéré/Agressif/Thematique."
-    },
-    {
-      "ticker": "FIX", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "Comfort Systems — nouveau dans la cible post-phase2. À CONFIRMER : as-tu déjà acheté ou non ?"
-    },
-    {
-      "ticker": "2330", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "TSMC cotation Taipei — nouveau dans la cible post-phase2. À CONFIRMER : as-tu acheté via 2330 (Taipei) ou TSM (ADR US) ?"
-    },
-    {
-      "ticker": "ASML", "profile": "Agressif-Thematique",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "ASML — nouveau dans la cible post-phase2. À CONFIRMER."
-    },
+    { "ticker": "WKL", "profile": "Dividende-PEA", "ticker_t212": "WKL", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Wolters Kluwer — présumé" },
+    { "ticker": "CAP", "profile": "Dividende-PEA", "ticker_t212": "CAP", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Capgemini — présumé" },
+    { "ticker": "REC", "profile": "Dividende-PEA", "ticker_t212": "REC", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Recordati — présumé" },
+    { "ticker": "HNR1", "profile": "Dividende-PEA", "ticker_t212": "HNR1", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Hannover Rück — présumé" },
 
     {
-      "_section": "──── DIVIDENDE-PEA (Actions) ─── cibles présumées détenues",
-      "ticker": "WKL", "profile": "Dividende-PEA",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "Wolters Kluwer"
+      "_section": "──── DIVIDENDE-CTO — pas de CSV fourni, présomption ────"
     },
-    { "ticker": "CAP", "profile": "Dividende-PEA", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Capgemini" },
-    { "ticker": "REC", "profile": "Dividende-PEA", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Recordati" },
-    { "ticker": "HNR1", "profile": "Dividende-PEA", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Hannover Rück" },
-
-    {
-      "_section": "──── DIVIDENDE-CTO (Actions) ─── cibles présumées détenues",
-      "ticker": "VICI", "profile": "Dividende-CTO",
-      "entry_date": "TBD", "qty_approx": 0, "verified": false,
-      "notes": "VICI Properties"
-    },
-    { "ticker": "VZ", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Verizon" },
-    { "ticker": "IMB", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Imperial Brands" },
-    { "ticker": "GLPI", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Gaming and Leisure Properties" },
-    { "ticker": "PG", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Procter & Gamble" },
-    { "ticker": "AUTO", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Auto Trader Group" },
-    { "ticker": "SHEL", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Shell PLC" },
-    { "ticker": "SCHN", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "Schindler Holding" },
-    { "ticker": "TROW", "profile": "Dividende-CTO", "entry_date": "TBD", "qty_approx": 0, "verified": false, "notes": "T Rowe Price" }
+    { "ticker": "VICI", "profile": "Dividende-CTO", "ticker_t212": "VICI", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "VICI Properties — présumé" },
+    { "ticker": "VZ", "profile": "Dividende-CTO", "ticker_t212": "VZ", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Verizon — présumé" },
+    { "ticker": "IMB", "profile": "Dividende-CTO", "ticker_t212": "IMB", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Imperial Brands — présumé" },
+    { "ticker": "GLPI", "profile": "Dividende-CTO", "ticker_t212": "GLPI", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Gaming and Leisure Properties — présumé" },
+    { "ticker": "PG", "profile": "Dividende-CTO", "ticker_t212": "PG", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Procter & Gamble — présumé" },
+    { "ticker": "AUTO", "profile": "Dividende-CTO", "ticker_t212": "AUTO", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Auto Trader — présumé" },
+    { "ticker": "SHEL", "profile": "Dividende-CTO", "ticker_t212": "SHEL", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Shell — présumé" },
+    { "ticker": "SCHN", "profile": "Dividende-CTO", "ticker_t212": "SCHN", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "Schindler — présumé" },
+    { "ticker": "TROW", "profile": "Dividende-CTO", "ticker_t212": "TROW", "value_eur": 0, "qty_real": 0, "entry_date": "TBD", "verified": false, "status": "TARGET", "notes": "T Rowe Price — présumé" }
   ]
 }
