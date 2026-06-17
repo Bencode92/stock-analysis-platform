@@ -97,20 +97,26 @@ def _load_ytd_manual() -> dict:
 def _is_overheat(theme_key: str, theme_data: dict, market_ctx: dict, ytd_manual: dict) -> Tuple[Optional[bool], str]:
     """Vrai si le thème est en surchauffe.
 
+    Fix v4 (Fabre v6.3) : la règle 3 utilise max(YTD_now, YTD_peak_2026)
+    pour détecter les thèmes qui ont chauffé puis corrigé. Un thème à
+    +38% peak en janvier puis +5% aujourd'hui est STRUCTURELLEMENT instable.
+
     Source 1 : data/thematic_ytd_manual.json (enrichissement symétrique
                via fetch yfinance — règle anti-cherry-pick §3.ter).
     Source 2 : key_trends de market_context.json (radar GICS classique).
     Si rien trouvé → (None, 'inconnu') — la règle 3 considère ça
     comme un échec (on n'agit pas sans information).
     """
-    # Source 1 : thematic_ytd_manual
+    # Source 1 : thematic_ytd_manual avec max(now, peak)
     manual = ytd_manual.get(theme_key)
     if manual:
-        max_ytd = manual.get("max_ytd_pct")
-        if isinstance(max_ytd, (int, float)):
-            if max_ytd > OVERHEAT_YTD_THRESHOLD:
-                return True, f"max YTD {max_ytd:.1f}% > {OVERHEAT_YTD_THRESHOLD}% (source: thematic_ytd_manual)"
-            return False, f"max YTD {max_ytd:.1f}% < seuil {OVERHEAT_YTD_THRESHOLD}% (source: thematic_ytd_manual)"
+        max_now = manual.get("max_ytd_pct")
+        max_peak = manual.get("max_ytd_peak_pct", max_now)
+        if isinstance(max_now, (int, float)) and isinstance(max_peak, (int, float)):
+            effective_ytd = max(max_now, max_peak)
+            if effective_ytd > OVERHEAT_YTD_THRESHOLD:
+                return True, f"max(YTD_now={max_now:.1f}%, YTD_peak={max_peak:.1f}%) > {OVERHEAT_YTD_THRESHOLD}%"
+            return False, f"max(YTD_now={max_now:.1f}%, YTD_peak={max_peak:.1f}%) < seuil {OVERHEAT_YTD_THRESHOLD}%"
 
     # Source 2 : key_trends radar GICS
     key_trends = market_ctx.get("key_trends", [])
@@ -242,6 +248,9 @@ def build_discovery_section(
         lines.append("(catalogue vide — aucun thème à évaluer)")
         return lines
 
+    # Charger ytd_manual pour les stats stabilité
+    ytd_manual_themes = _load_ytd_manual()
+
     for key, theme_data in themes.items():
         label = theme_data.get("label", key)
         thesis = theme_data.get("thesis_structural", "")
@@ -254,6 +263,18 @@ def build_discovery_section(
         for c in theme_data.get("etf_candidates", []):
             lines.append(f"  - `{c['ticker']}` ({c.get('name','?')}) — TER {c.get('ter','?')}, AUM ≥ {c.get('aum_eur_m_min','?')}M€")
         lines.append("")
+
+        # Stats stabilité (peak + drawdown) si dispo dans thematic_ytd_manual
+        manual = ytd_manual_themes.get(key)
+        if manual:
+            lines.append("**Stats stabilité 2026** :")
+            lines.append(f"  - YTD courant max : {manual.get('max_ytd_pct','?')}%")
+            lines.append(f"  - YTD pic 2026    : {manual.get('max_ytd_peak_pct','?')}%")
+            lines.append(f"  - Drawdown depuis pic (médian) : {manual.get('median_drawdown_from_peak_pct','?')}%")
+            if manual.get("stability_warning"):
+                lines.append("  - ⚠️ **STABILITY WARNING** : pic > 30% ET drawdown médian > 15% → thème volatil. Lis la thèse avec scepticisme.")
+            lines.append("")
+
         lines.append("**Test des 5 règles** :")
         for rname in ("1_absence", "2_thesis", "3_no_overheat", "4_liquidity", "5_budget"):
             lines.append(_format_rule(rname, result["rules"][rname]))

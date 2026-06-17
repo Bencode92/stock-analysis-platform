@@ -1,6 +1,6 @@
 # Thematic Review — 2026-Q2
 
-**Généré le** : 2026-06-17 11:30
+**Généré le** : 2026-06-17 11:37
 **Source** : `data/market_context.json` (généré le 2026-06-16 — fraîcheur : 1 jours, OK)
 **Doctrine** : `docs/PHASE3E_DOCTRINE.md`
 **Compteur ajouts** : 0/2 cette année
@@ -20,10 +20,15 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
   - `NATO` (Future of Defence UCITS) — TER 0.0049, AUM ≥ 800M€
   - `EUAD` (VanEck Defense UCITS) — TER 0.0055, AUM ≥ 500M€
 
+**Stats stabilité 2026** :
+  - YTD courant max : 11.1%
+  - YTD pic 2026    : 15.1%
+  - Drawdown depuis pic (médian) : -3.5%
+
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
   ✅ 2_thesis: thèse structurelle OK
-  ✅ 3_no_overheat: max YTD 11.1% < seuil 50.0% (source: thematic_ytd_manual)
+  ✅ 3_no_overheat: max(YTD_now=11.1%, YTD_peak=15.1%) < seuil 50.0%
   ✅ 4_liquidity: ITA AUM≥200M€
   ✅ 5_budget: budget 0/2
 
@@ -40,10 +45,16 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
   - `URA` (Global X Uranium) — TER 0.0069, AUM ≥ 3000M€
   - `URNM` (Sprott Uranium Miners) — TER 0.0083, AUM ≥ 2500M€
 
+**Stats stabilité 2026** :
+  - YTD courant max : 5.2%
+  - YTD pic 2026    : 38.9%
+  - Drawdown depuis pic (médian) : -22.6%
+  - ⚠️ **STABILITY WARNING** : pic > 30% ET drawdown médian > 15% → thème volatil. Lis la thèse avec scepticisme.
+
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
   ✅ 2_thesis: thèse structurelle OK
-  ✅ 3_no_overheat: max YTD 5.2% < seuil 50.0% (source: thematic_ytd_manual)
+  ✅ 3_no_overheat: max(YTD_now=5.2%, YTD_peak=38.9%) < seuil 50.0%
   ✅ 4_liquidity: URNU AUM≥200M€
   ✅ 5_budget: budget 0/2
 
@@ -60,10 +71,15 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
   - `COPM.L` (HANetf Copper Miners UCITS) — TER 0.006, AUM ≥ 200M€
   - `SLVP` (iShares Silver Miners) — TER 0.0039, AUM ≥ 250M€
 
+**Stats stabilité 2026** :
+  - YTD courant max : 22.9%
+  - YTD pic 2026    : 40.0%
+  - Drawdown depuis pic (médian) : -6.2%
+
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
   ✅ 2_thesis: thèse structurelle OK
-  ✅ 3_no_overheat: max YTD 22.9% < seuil 50.0% (source: thematic_ytd_manual)
+  ✅ 3_no_overheat: max(YTD_now=22.9%, YTD_peak=40.0%) < seuil 50.0%
   ✅ 4_liquidity: COPX AUM≥200M€
   ✅ 5_budget: budget 0/2
 
