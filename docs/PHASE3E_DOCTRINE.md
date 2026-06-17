@@ -34,6 +34,14 @@ Si un seul échoue → pas d'ajout. Le briefing l'écrit noir sur blanc (« bloq
 - **Taille** : 3-5 % du sleeve, financé par réduction du cœur stable, **pas** par rotation entre thèmes existants.
 - **Hurdle after-tax explicite** : chaque édition de `THEMATIQUE_CORE` réalise des PV taxées à 31,4 % (PFU 2026, compte-titres). Le briefing chiffre le coût fiscal estimé de l'arbitrage de financement, et exige que la thèse le justifie. Pas de hurdle quantitatif magique — la friction est rendue *visible* pour casser l'impulsion.
 
+### 3.ter Règle anti-cherry-pick (Fabre v6.2)
+
+**Interdiction de l'enrichissement asymétrique.** Si tu enrichis manuellement le catalogue ou les data macro pour un thème (fetch YTD URNU par exemple), tu dois le faire pour **le set complet des candidats comparables**, pas pour un thème isolé.
+
+**Raison** : enrichir uranium seul = tordre le briefing pour qu'il puisse statuer sur uranium UNIQUEMENT. Tu réintroduis la subjectivité que la doctrine cherche à éliminer.
+
+**Application** : quand un nouveau thème entre au catalogue, ses pairs comparables doivent y entrer aussi (même si tu ne comptes les acter). La règle 1 (absence) et la règle 3 (overheat) doivent pouvoir comparer plusieurs candidats à armes égales.
+
 ### 3.bis Règle de financement (précisée Fabre v6 — trou révélé par run Q2 2026)
 
 **Définitions** :

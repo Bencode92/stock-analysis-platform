@@ -1,6 +1,6 @@
 # Thematic Review — 2026-Q2
 
-**Généré le** : 2026-06-17 11:16
+**Généré le** : 2026-06-17 11:30
 **Source** : `data/market_context.json` (généré le 2026-06-16 — fraîcheur : 1 jours, OK)
 **Doctrine** : `docs/PHASE3E_DOCTRINE.md`
 **Compteur ajouts** : 0/2 cette année
@@ -23,12 +23,11 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
   ✅ 2_thesis: thèse structurelle OK
-  ❌ 3_no_overheat: YTD inconnu dans market_context — règle 3 échec par prudence
+  ✅ 3_no_overheat: max YTD 11.1% < seuil 50.0% (source: thematic_ytd_manual)
   ✅ 4_liquidity: ITA AUM≥200M€
   ✅ 5_budget: budget 0/2
 
-**Verdict** : BLOQUÉ
-  → bloqué par : 3_no_overheat
+**Verdict** : ÉLIGIBLE sous thèse
 
 ---
 
@@ -44,12 +43,31 @@ Thèmes structurels ABSENTS de THEMATIQUE_CORE, candidats à un sleeve neuf.
 **Test des 5 règles** :
   ✅ 1_absence: absent THEMATIQUE_CORE
   ✅ 2_thesis: thèse structurelle OK
-  ❌ 3_no_overheat: YTD inconnu dans market_context — règle 3 échec par prudence
+  ✅ 3_no_overheat: max YTD 5.2% < seuil 50.0% (source: thematic_ytd_manual)
   ✅ 4_liquidity: URNU AUM≥200M€
   ✅ 5_budget: budget 0/2
 
-**Verdict** : BLOQUÉ
-  → bloqué par : 3_no_overheat
+**Verdict** : ÉLIGIBLE sous thèse
+
+---
+
+### Métaux transition énergétique — cuivre + argent
+
+**Thèse structurelle** : Électrification structurelle (transport, réseau, ER) augmente la demande cuivre 2-3× d'ici 2035 (AIE, S&P Global). Argent : double usage industriel solaire + monétaire. Offre minière contrainte (déclin grades, capex sous-investi 2015-2022). Cycle capex multi-décennal côté offre.
+
+**ETF candidats** :
+  - `COPX` (Global X Copper Miners) — TER 0.0065, AUM ≥ 2500M€
+  - `COPM.L` (HANetf Copper Miners UCITS) — TER 0.006, AUM ≥ 200M€
+  - `SLVP` (iShares Silver Miners) — TER 0.0039, AUM ≥ 250M€
+
+**Test des 5 règles** :
+  ✅ 1_absence: absent THEMATIQUE_CORE
+  ✅ 2_thesis: thèse structurelle OK
+  ✅ 3_no_overheat: max YTD 22.9% < seuil 50.0% (source: thematic_ytd_manual)
+  ✅ 4_liquidity: COPX AUM≥200M€
+  ✅ 5_budget: budget 0/2
+
+**Verdict** : ÉLIGIBLE sous thèse
 
 ---
 

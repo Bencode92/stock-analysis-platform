@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "purpose": "Enrichissement manuel symétrique des YTD pour les thèmes hors-GICS du etf_thematic_catalog.json. Le radar (market_context.json) ne couvre que les 11 secteurs GICS classiques + régions ; ce fichier comble le trou pour defense, uranium, transition_metals, etc.",
+    "anti_cherry_pick_rule": "Doctrine PHASE3E §3.ter : enrichissement = set candidat COMPLET, jamais un thème seul. Si un thème entre, tous ses pairs comparables aussi.",
+    "fetched": "2026-06-17",
+    "source": "yfinance, YTD = (close[today] / close[2026-01-01] - 1)",
+    "fetched_via": "scripts internes (yfinance fetch manuel — non automatisé)"
+  },
+  "themes": {
+    "defense_global": {
+      "ytd_pct_by_ticker": {
+        "ITA": 8.0,
+        "NATO.L": 11.1
+      },
+      "max_ytd_pct": 11.1,
+      "median_ytd_pct": 9.6,
+      "overheat_status": "below_50pct_threshold"
+    },
+    "nuclear_uranium": {
+      "ytd_pct_by_ticker": {
+        "URA": 3.9,
+        "URNM": -4.5,
+        "URNU.L": 5.2
+      },
+      "max_ytd_pct": 5.2,
+      "median_ytd_pct": 3.9,
+      "overheat_status": "below_50pct_threshold"
+    },
+    "transition_metals": {
+      "ytd_pct_by_ticker": {
+        "COPX": 22.9,
+        "SLVP": 4.4
+      },
+      "max_ytd_pct": 22.9,
+      "median_ytd_pct": 13.6,
+      "overheat_status": "below_50pct_threshold"
+    }
+  }
+}

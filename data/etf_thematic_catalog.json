@@ -35,6 +35,20 @@
         "overlap_with_THEMATIQUE_CORE": "zéro — uranium absent de tous les ETF actuels (XLE = O&G, pas nuclear)",
         "ruling": "structurellement absent"
       }
+    },
+    "transition_metals": {
+      "label": "Métaux transition énergétique — cuivre + argent",
+      "no_perf_argument": true,
+      "thesis_structural": "Électrification structurelle (transport, réseau, ER) augmente la demande cuivre 2-3× d'ici 2035 (AIE, S&P Global). Argent : double usage industriel solaire + monétaire. Offre minière contrainte (déclin grades, capex sous-investi 2015-2022). Cycle capex multi-décennal côté offre.",
+      "etf_candidates": [
+        {"ticker": "COPX", "name": "Global X Copper Miners", "region": "US", "ter": 0.0065, "aum_eur_m_min": 2500},
+        {"ticker": "COPM.L", "name": "HANetf Copper Miners UCITS", "region": "Global", "ter": 0.0060, "aum_eur_m_min": 200},
+        {"ticker": "SLVP", "name": "iShares Silver Miners", "region": "US", "ter": 0.0039, "aum_eur_m_min": 250}
+      ],
+      "coverage_test": {
+        "overlap_with_THEMATIQUE_CORE": "très faible — copper/silver miners ~3-4% de XLE? Non, XLE est O&G pur. Absent VBK/VOT. SGLN couvre seulement l'or physique. Recouvrement matériel négligeable.",
+        "ruling": "structurellement absent"
+      }
     }
   },
   "_decision_journal_path": "docs/thematic_decisions.log",

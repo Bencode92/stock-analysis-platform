@@ -30,6 +30,7 @@ from typing import Dict, List, Optional, Tuple
 ROOT = Path(__file__).parent.parent
 MARKET_CONTEXT_PATH = ROOT / "data" / "market_context.json"
 CATALOG_PATH = ROOT / "data" / "etf_thematic_catalog.json"
+YTD_MANUAL_PATH = ROOT / "data" / "thematic_ytd_manual.json"
 DECISION_LOG = ROOT / "docs" / "thematic_decisions.log"
 
 FRESHNESS_MAX_DAYS = 30
@@ -86,38 +87,48 @@ def _additions_this_year() -> int:
     return n
 
 
-def _is_overheat(theme_key: str, theme_data: dict, market_ctx: dict) -> Tuple[bool, str]:
+def _load_ytd_manual() -> dict:
+    """Charge l'enrichissement manuel YTD (Fabre §3.ter anti-cherry-pick)."""
+    if not YTD_MANUAL_PATH.exists():
+        return {}
+    return json.loads(YTD_MANUAL_PATH.read_text(encoding="utf-8")).get("themes", {})
+
+
+def _is_overheat(theme_key: str, theme_data: dict, market_ctx: dict, ytd_manual: dict) -> Tuple[Optional[bool], str]:
     """Vrai si le thème est en surchauffe.
 
-    Cherche le YTD dans market_context.json pour le thème ou ses ETF candidats.
-    Si data absente → renvoie (None, 'inconnu') — la règle 3 considère ça
+    Source 1 : data/thematic_ytd_manual.json (enrichissement symétrique
+               via fetch yfinance — règle anti-cherry-pick §3.ter).
+    Source 2 : key_trends de market_context.json (radar GICS classique).
+    Si rien trouvé → (None, 'inconnu') — la règle 3 considère ça
     comme un échec (on n'agit pas sans information).
     """
-    # Tickers candidats
-    tickers = [c.get("ticker") for c in theme_data.get("etf_candidates", [])]
+    # Source 1 : thematic_ytd_manual
+    manual = ytd_manual.get(theme_key)
+    if manual:
+        max_ytd = manual.get("max_ytd_pct")
+        if isinstance(max_ytd, (int, float)):
+            if max_ytd > OVERHEAT_YTD_THRESHOLD:
+                return True, f"max YTD {max_ytd:.1f}% > {OVERHEAT_YTD_THRESHOLD}% (source: thematic_ytd_manual)"
+            return False, f"max YTD {max_ytd:.1f}% < seuil {OVERHEAT_YTD_THRESHOLD}% (source: thematic_ytd_manual)"
 
-    # Chercher dans region_risk_profile / sector_risk_profile pour YTD
-    # Format clé : "uranium", "defense", etc. — pas standardisé, donc on cherche
-    # via key_trends qui contient les leaders YTD chiffrés
+    # Source 2 : key_trends radar GICS
     key_trends = market_ctx.get("key_trends", [])
     label = theme_data.get("label", "").lower()
     keywords = [theme_key.lower()] + [w for w in label.split() if len(w) > 3]
 
     for trend in key_trends:
         t_low = trend.lower()
-        # Match strict : un keyword du thème doit apparaître DANS le trend
         if any(kw in t_low for kw in keywords if kw not in ("structurel", "civil", "global", "cycle")):
-            # Extraire le % YTD
             import re
             m = re.search(r"\+(\d+(?:\.\d+)?)\s*%", trend)
             if m:
                 pct = float(m.group(1))
                 if pct > OVERHEAT_YTD_THRESHOLD:
-                    return True, f"YTD {pct:.1f}% > {OVERHEAT_YTD_THRESHOLD}%"
-                return False, f"YTD {pct:.1f}% < seuil {OVERHEAT_YTD_THRESHOLD}%"
+                    return True, f"YTD {pct:.1f}% > {OVERHEAT_YTD_THRESHOLD}% (source: radar)"
+                return False, f"YTD {pct:.1f}% < seuil {OVERHEAT_YTD_THRESHOLD}% (source: radar)"
 
-    # Aucune information trouvée dans market_context pour ce thème
-    return None, "YTD inconnu dans market_context"
+    return None, "YTD inconnu (ni dans thematic_ytd_manual, ni dans radar)"
 
 
 def _has_coverage_in_core(theme_data: dict, thematique_core: Dict[str, float]) -> bool:
@@ -183,7 +194,8 @@ def evaluate_discovery_theme(
     rules["2_thesis"] = _evaluate_rule_2_thesis(theme_data)
 
     # Règle 3 : pas en surchauffe — fix doctrine, absence d'info = échec
-    overheat, overheat_msg = _is_overheat(theme_key, theme_data, market_ctx)
+    ytd_manual = _load_ytd_manual()
+    overheat, overheat_msg = _is_overheat(theme_key, theme_data, market_ctx, ytd_manual)
     if overheat is None:
         # Pas d'info → on n'agit pas (doctrine : on n'agit pas sans information)
         rules["3_no_overheat"] = (False, f"{overheat_msg} — règle 3 échec par prudence")
