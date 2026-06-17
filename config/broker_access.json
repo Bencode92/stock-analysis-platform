@@ -3,7 +3,7 @@
     "version": "1.1",
     "purpose": "Accès broker par action asiatique. Si false → substitution auto par alternative ACTION dans pipeline.",
     "usage": "Édité via broker_access.html (save direct GitHub via API). Le pipeline generate_portfolios_v4.py lit ce fichier à chaque run.",
-    "last_updated": "2026-06-08",
+    "last_updated": "2026-06-17",
     "substitution_policy": "Si access=false : substitution par 1ère alternative_actions du mapping data/asian_alternatives.json. Si aucune dispo : skip et redistribuer prorata."
   },
   "access": {
@@ -110,8 +110,8 @@
     "402340": false,
     "443060": false,
     "005930": false,
-    "0700": false,
-    "000660": false,
+    "0700": true,
+    "000660": true,
     "HDFCBANK": false,
     "RELIANCE": false,
     "ICICIBANK": true,
