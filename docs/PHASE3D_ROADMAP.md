@@ -32,57 +32,69 @@
 - Quality + subscores prennent tout le scoring fin
 - Libère 0.22 de poids redistribué sur eps_growth + perf relative
 
-### Audit cohérence scoring — ORDRE FABRE v7-final (2026-06-17)
+### Audit cohérence scoring — ORDRE FABRE v7-final-final (2026-06-17)
 
-L'audit empirique du 17 juin a RÉFUTÉ l'hypothèse initiale (US > EU > EM) et révélé 3 trouvailles qui imposent un ordre de priorité différent :
+L'audit du 17 juin a tué 3 hypothèses successives et révélé que **le « biais EM » est un BUG DATA, pas un biais de modèle**. Le bug est asymétrique par bourse, pas par région. Ordre corrigé en conséquence :
 
-#### Priorité 1 — Chiffrer les faux 50 (trous data EM/Asie) — **AVANT toute conclusion régionale**
+#### Mesure clé du 17 juin
 
-**Mesure du 17 juin** :
-- US : 0.2% des stocks ont ≥2 fondamentaux None
-- EU : 4.3%
-- **EM : 20.7% (55 stocks sur 266)** ← critique
+| Région | % stocks avec ≥2 fondamentaux None | Polluants par pays |
+|---|---:|---|
+| US | 0.2% (1/515) | FERG seul |
+| EU | 4.3% (12/278) | 5 autrichiens, 2 italiens, autres |
+| EM | **20.7% (55/266)** | **Chine 52/52 (100%)** + Inde 3/98 (3%) |
 
-**Conséquence** : Tencent et 54 autres EM sont notés 50 par défaut sur 2-3 critères évalués au lieu de 6. Ce ne sont PAS des "médiocres" — ce sont des "je ne sais pas" déguisés en "médiocres". Ces faux 50 polluent toutes les médianes régionales par secteur.
+**Diagnostic** : ZÉRO chinoise propre dans la base. Les 52 chinoises sont scotchées à Buf 60 par défaut (4/6 critères évalués), incapables d'atteindre 70+ par data quality. L'Autriche présente le même symptôme à plus petite échelle (5/12 EU polluants).
 
-**Action 3D** :
-- Auditer la source : pourquoi 20% des EM ont ROE/ROIC/D/E manquants ? (provider FMP/yfinance ? mapping ticker ? données comptables non-IFRS ?)
-- Pour les stocks avec ≥2 gaps, marquer score Buffett comme `quality_coverage_insufficient` au lieu de 50 par défaut
-- Re-mesurer ensuite les médianes régionales SANS ces faux 50
+→ **Le bug n'est pas "EM" mais "couverture par bourse"** (Vienne + Milan + Shanghai/HK touchées).
 
-**On ne tranche le biais régional QU'APRÈS** ce nettoyage data.
+#### Priorité 1 — Détecteur générique de couverture par bourse
 
-#### Priorité 2 — Vérifier bug CS/finance (5/5 vs 5/6)
+Pas un fix par région, un fix par **complétude data** :
+```
+Si count(critères Buffett où value=None) ≥ seuil
+  → marquer quality_coverage_insufficient
+  → SORTIR du pool de sélection
+  (au lieu de coller un faux 60)
+```
 
-**Hypothèse Fabre** : si `roic_skipped: True` pour finance, le dénominateur devrait être 5 et CS devrait sortir à 5/5 = 100, pas 5/6 = 83. Le fait qu'il sorte 83 suggère que ROIC compte vraiment dans le score.
+Détection automatique de la Chine + Autriche + Italie d'un coup, sans liste noire de pays.
 
-**Conséquence si confirmé** : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA...) perdent ~17 points injustement. Classement finance faussé vers le bas.
+#### Priorité 2 — Re-run audit régional APRÈS nettoyage
 
-**Test d'une ligne** : prendre une banque qui passe les 5 autres critères et vérifier si elle sort 100 ou 83.
+Les médianes régionales par secteur du 17 juin sont **polluées par les 55 EM polluants et 12 EU polluants**. La conclusion "EU > US > EM sur Buffett" est en partie un artefact data. Re-faire l'audit **après** P1 avant de toucher à quoi que ce soit régional.
 
-#### Priorité 3 — Trancher α vs β sur `valuation_ok`
+#### Priorité 3 — Trancher la Chine doctrinalement
 
-**Diagnostic clarifié (Fabre v7-final)** : la "contradiction" NVDA Buffett 67 / Quality 96 n'est PAS une incohérence. Les deux scores mesurent des choses différentes (qualité absolue vs qualité+value). Le VRAI problème est qu'ils sont **fusionnés** dans `fit_score` (Buf 0.22 + Quality 0.38), ce qui réinjecte le P/E deux fois.
+**Recommandation Fabre** : exclusion structurelle assumée, pas enrichissement Bloomberg/Refinitiv. Raisons :
+- Coût Bloomberg/Refinitiv prohibitif pour data complète Chine
+- Fiabilité des états financiers chinois reste problématique même complétés
+- Risque VIE (coquille caïmanaise) inchangé par data
+- Risque réglementaire 2021 (secteurs effacés par décret) inchangé
+- Exclure la Chine d'un portefeuille de conviction est une décision pro-courante
 
-**Option α — Garder `valuation_ok` dans Buffett** :
-- Doctrine Munger "wonderful business at a fair price" assumée
-- Tilt value/non-US permanent assumé
-- Renommer le score "quality+value", pas juste "quality"
-- Acter "short US-growth méga-caps à vie" par écrit
-- **Acceptable SI tu l'écris**, pas acceptable comme statu quo non documenté
+→ Le `coverage_insufficient` règle le problème mécaniquement : pas de chinoises dans le pool **pour la bonne raison** (data non fiable), pas par accident silencieux.
 
-**Option β — Sortir `valuation_ok` du Buffett** :
-- Buffett devient pur qualité (ROE/ROIC/D/E/FCF/moat)
-- NVDA passerait à 83-100
-- Score value séparé pour piloter le tilt value explicitement et de manière sizée
-- Cohérent avec doctrine "user décide ligne par ligne"
-- **Recommandation Fabre**
+#### Priorité 4 — α vs β sur `valuation_ok` (le débat NVDA)
 
-**Décision à prendre en juillet à froid, après chiffrage P1 et fix P2.**
+**Diagnostic confirmé** : NVDA Quality 96 / Buffett 67 = pas une incohérence, c'est le système qui fait son travail (Quality = pur, Buffett = quality+value). Mais leur fusion dans `fit_score` réinjecte le P/E deux fois.
 
-#### Bugs cosmétiques détectés en audit du 17 juin (pas critiques mais à logger)
-- buffett_criteria affiche ROIC failed pour banques (devrait être skipped) — voir P2 ci-dessus
-- LUPIN Inde Buf 83 OK → le malus EM n'est PAS uniforme, il vient des stocks avec trous data (P1)
+- **α** : garder `valuation_ok`, renommer score "quality+value", assumer tilt value/non-US permanent par écrit
+- **β** : sortir `valuation_ok` du Buffett, score value séparé pour piloter le tilt explicitement (**reco Fabre**)
+
+#### Priorité 5 — Bug CS finance (5/5 vs 5/6)
+
+Si `roic_skipped: True` pour finance, CS devrait sortir 5/5 = 100, pas 5/6 = 83. **Test d'une ligne** à faire pour confirmer.
+
+Si confirmé : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA) perdent ~17 pts injustement. Bug à fixer en priorité car classement finance faussé vers le bas.
+
+---
+
+#### Item HORS-3D, ACTIONNABLE MAINTENANT
+
+**Vérifier accès T212 sur INFY / HCLTECH / HEROMOTOCO** : trois indiennes Buf 100, Quality 83-90, ROE 23-31%, D/E < 0.10. Qualité world-class **bloquée par toggle broker_access**, pas par doctrine ni par data. Si dispo T212 → débloquer dans broker_access.html.
+
+C'est le seul item de cette liste qui **améliore réellement la sélection maintenant**.
 
 ### Calibration sticky bonus (n=15+ snapshots)
 - Mesurer σ run-to-run effectivement (besoin 15 snapshots PIT)
