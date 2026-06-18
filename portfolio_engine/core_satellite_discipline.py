@@ -106,6 +106,17 @@ UCITS_CORE_META = {
         "fund_type": "Emerging Markets Equity",
         "currency": "EUR",
     },
+    "IEMG": {
+        # Ticker canonique pipeline. Acheté chez T212 via IS3N (équivalent UCITS
+        # iShares Core MSCI EM IMI Acc — voir ticker_mapping_ucits.json).
+        # Ajouté phase 3E v7-final (2026-06-17) suite à intégration IEMG 15% en Agressif.
+        "name": "iShares Core MSCI EM IMI (UCITS via IS3N)",
+        "isin": "IE00BKM4GZ66",
+        "ter": 0.0018,
+        "category": "ETF",
+        "fund_type": "Emerging Markets Equity",
+        "currency": "EUR",
+    },
     "AGGH.AS": {
         "name": "iShares Core Global Aggregate Bond UCITS EUR Hedged",
         "isin": "IE00BDBRDM35",
