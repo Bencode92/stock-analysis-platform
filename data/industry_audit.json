@@ -3159,6 +3159,20 @@
     ]
   },
   {
+    "ticker": "WISE",
+    "name": "WISE PLC CLASS A",
+    "name_api": "Wise Plc",
+    "sector_csv": "Finance",
+    "sector_api": "Technology",
+    "industry": "Information Technology Services",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 62,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "IG",
     "name": "ITALGAS",
     "name_api": "Italgas S.p.A.",
@@ -3233,14 +3247,17 @@
   {
     "ticker": "AUTO",
     "name": "AUTOTRADER GROUP PLC",
-    "name_api": null,
+    "name_api": "Auto Trader Group Plc",
+    "name_match": "0.7/1 tokens",
     "sector_csv": "La communication",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Communication Services",
+    "industry": "Internet Content & Information",
     "quality_peer": "EUROPE|La communication",
     "quality_score": 84,
     "flags": [
-      "roe_extreme"
+      "sector_mismatch",
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
