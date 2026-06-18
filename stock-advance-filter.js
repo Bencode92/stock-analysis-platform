@@ -315,8 +315,23 @@ class StockAdvanceFilter {
     }
 
     // 2. ROIC moat: avg 3Y >= 10%
+    // Fix Fabre v7 (2026-06-18) : skip ROIC pour vraies banques/assurances
+    // (levier structurel = ROIC non pertinent). PAS skip pour Credit Services
+    // (Visa/MA), Capital Markets (MSCI/CBOE), Asset Management (TROW) — ROIC
+    // y reste pertinent. Avant ce fix : toutes les vraies banques plafonnaient
+    // à 83 (5/6) au lieu de 100.
+    const _sector = (stock.sector || '').toLowerCase();
+    const _industry = (stock.industry || '').toLowerCase();
+    const _isFinanceSector = _sector.includes('financ') || _sector.includes('banque');
+    const _skipRoicForBank = _isFinanceSector && (
+      _industry.includes('bank') ||
+      _industry.includes('insurance') ||
+      _industry.includes('assurance') ||
+      _industry.includes('mortgage') ||
+      _industry.includes('thrifts')
+    );
     const roicAvg = this._parseFloat(stock.roic_avg_3y) ?? this._parseFloat(stock.roic);
-    if (this._validNum(roicAvg)) {
+    if (this._validNum(roicAvg) && !_skipRoicForBank) {
       dataAvailable++;
       criteria.push({ name: 'roic_moat', passed: roicAvg >= 10, value: roicAvg, detail: `${roicAvg.toFixed(1)}%` });
     }
@@ -363,15 +378,14 @@ class StockAdvanceFilter {
     let score = Math.round((passed / criteria.length) * 100);
 
     // Progressive coverage caps — prevents inflation when criteria are missing
-    // 6/6 evaluated = no cap (full data)
-    // 5/6 evaluated = cap 83 (can't get A if moat_expansion missing)
-    // 4/6 = cap 75 (grade B max)
-    // 3/6 = cap 60 (grade C max)
-    // 2/6 = cap 60
+    // Fix Fabre v7 : maxCriteria = 5 si ROIC skippé pour banque, 6 sinon.
+    // Avant : cap fixe à 6 plafonnait les banques 5/5 = 100 à 83 (5/6).
+    const _maxCriteria = _skipRoicForBank ? 5 : 6;
     if (dataAvailable < 3) score = Math.min(score, 60);
     else if (dataAvailable < 4) score = Math.min(score, 60);
-    else if (dataAvailable < 5) score = Math.min(score, 75);
-    else if (dataAvailable < 6) score = Math.min(score, 83);
+    else if (dataAvailable < _maxCriteria - 1) score = Math.min(score, 75);
+    else if (dataAvailable < _maxCriteria) score = Math.min(score, 83);
+    // Si dataAvailable >= maxCriteria : pas de cap (peut atteindre 100)
 
     // Additional penalty if ROE consistency passed with unknown CV (no std data)
     const cvUnknownPasses = criteria.filter(c => c.cv_unknown && c.passed).length;
