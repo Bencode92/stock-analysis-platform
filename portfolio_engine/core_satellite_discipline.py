@@ -403,36 +403,58 @@ def _get_top_natives_for_profile(profile: str, n_target: int) -> List[Dict]:
 
     if profile == "Agressif":
         # ═══════════════════════════════════════════════════════════════════
-        # Phase 2.3 (2026-06-11) — DOCTRINE EXPLICITE : Agressif = Modéré + β cœur
+        # 2026-06-18 — Vision B β-Agressif (L1+L2) DERRIÈRE LE FLAG, DÉSARMÉ
         # ───────────────────────────────────────────────────────────────────
-        # Le profil Agressif ne pioche PAS dans `_fit_agressif`. Le pool ici
-        # est `_profile_native ∈ {Agressif, Modéré}` filtré vol ≥ 20 et trié
-        # par `_fit_modere`. Conséquence assumée : Modéré et Agressif partagent
-        # majoritairement les mêmes satellites stocks.
+        # Deux doctrines coexistent dans le code, pilotées par le flag
+        # PROFILE_POLICY['Agressif']['apply_valuation_ok'] :
         #
-        # L'agressivité du profil vient EXCLUSIVEMENT de l'allocation cœur
-        # (β cible 0.80 via VWCE 50 % + IWDA 15 %), jamais de la sélection
-        # satellite. Voir docs/PHASE2_EXPECTED_DIFF.md § Option A.
+        #   True (DÉFAUT, α) → v6.3 status quo : pool Modéré-like, tri _fit_modere
+        #     Doctrine "satellite = clone Modéré, β vient EXCLUSIVEMENT du cœur"
+        #     (cf. Phase 2.3 2026-06-11)
         #
-        # PROFILE_POLICY["Agressif"] (preset_meta.py) définit les poids du
-        # `_fit_agressif` qui sert au **profil Thematique** uniquement
-        # (_get_top_thematic_satellite). Ne pas refactor ces poids sans
-        # auditer Thematique en parallèle.
+        #   False (β, Vision B) → DOCTRINE_PROFILS.md 2026-06-18
+        #     L1 : gate satellite 70 → 60 (alignement min_buffett_score=60)
+        #     L2 : tri par _fit_agressif (poche actions = moteur, pas clone Modéré)
+        #     NVDA Buf 67 + bascule flag valuation_ok=False → Buf 80 ≥ 60 → passe gate
+        #     + tri _fit_agressif (qui valorise NVDA) → entre dans le top 5
+        #
+        # BASCULE = changement manuel d'une seule ligne dans preset_meta.py
+        # (PROFILE_POLICY['Agressif']['apply_valuation_ok'] = False), APRÈS
+        # validation backtest sur périmètre exact (P7/P8 juillet). Jamais auto.
+        #
+        # AUCUN CHANGEMENT RUNTIME tant que le flag reste True (défaut).
+        # Voir DOCTRINE_PROFILS.md §Cohérence scoring profil-dépendant et
+        # PHASE3D_ROADMAP.md §Implémentation β-Agressif.
         # ═══════════════════════════════════════════════════════════════════
-        # v6.21 — Cap perf_1y ≤ 300% par COHÉRENCE DE DOCTRINE avec le
-        # Thématique (ligne 713) : un stock qui a fait +400%/an est un pari
-        # sur la queue de distribution, pas une qualité reproductible.
-        # NE PAS modifier ce seuil sur la base d'un backtest a posteriori.
+        try:
+            from portfolio_engine.preset_meta import PROFILE_POLICY as _PP_AGGR
+        except ImportError:
+            from .preset_meta import PROFILE_POLICY as _PP_AGGR
+        _agr_policy = _PP_AGGR.get("Agressif", {})
+        # apply_valuation_ok=True (défaut) → α v6.3 ; False → β Vision B
+        _beta_mode = not _agr_policy.get("apply_valuation_ok", True)
+
+        if _beta_mode:
+            # β-Agressif (Vision B, DOCTRINE_PROFILS 2026-06-18)
+            _min_buf_satellite = 60  # L1 : alignement PROFILE_POLICY min_buffett_score=60
+            _fit_key_agr = "_fit_agressif"  # L2 : tri agressif natif
+        else:
+            # α-Agressif (v6.3 status quo)
+            _min_buf_satellite = 70  # gate qualité strict, doctrine "satellite=clone Modéré"
+            _fit_key_agr = "_fit_modere"  # tri Modéré (l'agressivité vient du cœur)
+
+        # v6.21 — Cap perf_1y ≤ 300% maintenu dans LES DEUX modes (anti-spéculatif).
+        # Garde-fou contre les paris de queue de distribution. Ne PAS modifier.
         candidates = [
             s for s in all_stocks
             if s.get("_profile_native") in ("Agressif", "Modéré")
             and (s.get("volatility_3y") or 0) >= 20.0
-            and (s.get("buffett_score") or 0) >= 70  # qualité minimum
-            and (s.get("perf_1y") or 0) < 300.0      # v6.21 anti-spéculatif
+            and (s.get("buffett_score") or 0) >= _min_buf_satellite
+            and (s.get("perf_1y") or 0) < 300.0
         ]
-        # Tri par fit_modere + sticky bonus si dans portefeuille précédent
+        # Tri par fit_key (mode-dépendant) + sticky bonus si dans portefeuille précédent
         def _score(s):
-            base = s.get("_fit_modere") or 0
+            base = s.get(_fit_key_agr) or 0
             tk = s.get("ticker") or s.get("symbol") or ""
             return base + (STICKY_BONUS if tk in prev_for_profile else 0)
         candidates.sort(key=_score, reverse=True)
