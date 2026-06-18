@@ -89,6 +89,24 @@ Les médianes régionales par secteur du 17 juin sont **polluées par les 55 EM 
 
 **Sans réponse à cette question, le système est ambigu** — il prétend être agressif tout en filtrant les vrais agressifs. Cohérent doctrinalement, mais trompeur sur l'attente performance.
 
+#### Priorité 4ter — Resserrement risque Stable (Fabre 2026-06-11)
+
+**Symptôme** : post-fix yield + floor 2%, le pool Stable accueille **HCLTECH** (SSII indienne, vol 25%, risque pays + devise + déflation IA) en #4 et **BMED** (banque italienne, risque souverain périphérique) en #1. Ils passent le floor yield (4.1% et 5.7%) mais trahissent la promesse "je dors la nuit".
+
+**Diagnostic** : le floor yield a réglé le critère *revenu*, pas le critère *risque défensif*. Stable n'a aucun garde-fou sur :
+- vol haute (HCLTECH 25%, BMED 23.5%)
+- risque pays concentré (EM India, périphérique EU)
+- conso cyclique (ITX en #2)
+
+Un dividende qualifié ne fait pas d'une tech EM volatile un titre de préservation.
+
+**Fix proposé** (à chiffrer en 3D — ne pas appliquer ce soir) :
+- `volatility_3y_max: 20%` (vs autres profils ≤ 30-45%)
+- Étudier `exclude_emerging_markets: true` pour Stable uniquement
+- Étudier `exclude_cyclical_consumer: true` pour Stable uniquement
+
+**Protection en attendant** : le budget 1 swap/run rend la transition vers BMED/ITX/PG/HCLTECH progressive. Le resserrement peut être appliqué avant que les titres entrent réellement.
+
 #### Priorité 4bis — Biais yield dans fit_score Stable (Fabre v8 2026-06-18)
 
 **Symptôme** : PG (Buf 100, vol 17%, yield 2.7%) battu en Stable par NTGY (Buf 83, vol 22%, yield ~5%). Le `dividend_yield: 0.15` dans les poids du fit_score Stable fait que le rendement départage 2 candidats qualité, **alors que la doctrine est censée privilégier la qualité**.
@@ -109,6 +127,39 @@ Les médianes régionales par secteur du 17 juin sont **polluées par les 55 EM 
 Si `roic_skipped: True` pour finance, CS devrait sortir 5/5 = 100, pas 5/6 = 83. **Test d'une ligne** à faire pour confirmer.
 
 Si confirmé : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA) perdent ~17 pts injustement. Bug à fixer en priorité car classement finance faussé vers le bas.
+
+---
+
+### Implémentation β-Agressif — DOCTRINE_PROFILS.md 2026-06-18
+
+Direction β retenue ce soir pour Agressif, **réversible** sous validation backtest. Trois étapes ordonnées : implémentation → backtest → calibration coussin.
+
+#### Priorité 6 — Implémentation flag profil-dépendant `apply_valuation_ok`
+
+- Ajouter `apply_valuation_ok: bool` dans `PROFILE_POLICY[profil]`
+- Stable: `True`, Modéré: `True`, Agressif: `False`
+- `evaluateBuffettScore()` lit le flag via profil courant
+- `maxCriteria` devient 5 (au lieu de 6) si flag=False et critère valuation skipped
+- Logger explicitement en sortie : `"valuation_ok skipped for Agressif by doctrine"`
+- Test régression : Stable/Modéré inchangés, Agressif accueille NVDA/MSFT/ASML si quality le justifie
+
+#### Priorité 7 — Backtest β-Agressif sur périmètre EXACT
+
+**NON un backtest global théorique.** Périmètre exact :
+- 25% actions β re-scoré à date (piège look-ahead fermé)
+- Cœur ETF réel (VWCE 50% + IEMG 15% + IBGS 5% + SGLN 5%)
+- Or/bonds tels que pondérés en réalité
+- Output : drawdown agrégé profil, vol agrégée, récupération en mois, CAGR
+
+**C'est ce qui valide ou invalide la direction β.** Si MaxDD > seuil tolérable réel → retour α ou β-amorti. La direction β du doc reste **réversible** explicitement.
+
+#### Priorité 8 — Décision épaisseur coussin Agressif
+
+Avec le backtest P7 sous les yeux, trancher :
+- **β léger** : 10% filet (or 5% + bonds 5%) — punchy, drawdown brut
+- **β amorti** : 15% filet (or 5% + bonds 10%) — moins punchy, drawdown contenu
+
+Décision sur données, pas projection théorique. Updater `DOCTRINE_PROFILS.md` avec l'épaisseur retenue.
 
 ---
 

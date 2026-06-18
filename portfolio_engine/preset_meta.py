@@ -1051,7 +1051,13 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "hard_filters": {
             "volatility_3y_max": 28.0,
             "roe_min": 10.0,
-            "dividend_yield_min": 0.5,
+            "dividend_yield_min": 2.0,  # Fix Fabre v8 (2026-06-18) : 0.5 → 2.0
+                                          # FLOOR DUR sur yield Stable. Sans ce floor,
+                                          # MSFT (0.9%) entrait dans le profil "préservation revenu",
+                                          # contradiction directe avec la promesse signée
+                                          # "revenu attendu ~5-7%/an". Le floor garantit qu'aucune
+                                          # action sleeve Stable n'a yield < 2% — règle hard, pas
+                                          # un poids ajustable. Voir DOCTRINE_PROFILS.md.
             "payout_ratio_max": 85.0,
             "dividend_coverage_min": 1.0,  # v5.3.3: was 1.2 — ROG (0.82) still blocked. 1.0 = earnings cover dividend
             "quality_score_min": 50,    # v4.15: filtre qualité complémentaire au moat
@@ -1065,14 +1071,19 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "score_weights": {
             # ═══ v5.4.0 (Sélection-2): RÉINTRODUCTION buffett_score ABSOLU ═══
             "buffett_score":       0.20,   # ★ NEW v5.4.0 — qualité Buffett absolue (Stable = élite)
-            # Quality subscores — RÉDUITS (30% du score, vs 45% avant)
-            "quality_quality_sub": 0.05,   # 0.10→0.05
-            "quality_safety_sub":  0.20,   # 0.25→0.20 (toujours dominant safety)
-            "quality_value_sub":   0.05,   # 0.10→0.05
+            # Quality subscores — REVALORISÉS Fabre v8 (2026-06-18) : +0.10 libéré du yield
+            # AVANT : Q_quality 0.05 + Q_safety 0.20 + Q_value 0.05 = 0.30
+            # APRÈS : Q_quality 0.09 + Q_safety 0.26 + Q_value 0.05 = 0.40
+            "quality_quality_sub": 0.09,   # 0.05 → 0.09 (+0.04)
+            "quality_safety_sub":  0.26,   # 0.20 → 0.26 (+0.06) — dominant safety renforcé
+            "quality_value_sub":   0.05,
             # Forward-looking
             "eps_growth_forecast_5y": 0.05, # Croissance minimale requise
-            # Income — IMPORTANT (20%)
-            "dividend_yield":      0.15,   # Rendement
+            # Income — FIX FABRE v8 (2026-06-18) : yield = TIE-BREAKER, pas critère principal.
+            # AVANT : dividend_yield 0.15 (PG Buf 100 battu par NTGY Buf 83 — value-piège)
+            # APRÈS : dividend_yield 0.05. Les 0.10 libérés sont allés sur Quality
+            # (PAS sur Buffett — ne pas amplifier la redondance Buf↔Q identifiée P3 3D).
+            "dividend_yield":      0.05,   # Tie-breaker rendement (réduit de 0.15)
             "dividend_growth_3y":  0.05,   # Croissance du dividende
             # Momentum — FILET DE SÉCURITÉ (5%)
             "perf_1y":             0.05,   # Évite de garder une action en chute
