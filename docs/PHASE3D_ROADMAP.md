@@ -132,18 +132,62 @@ Si confirmé : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA) perdent 
 
 ### Implémentation β-Agressif — DOCTRINE_PROFILS.md 2026-06-18
 
-Direction β retenue ce soir pour Agressif, **réversible** sous validation backtest. Trois étapes ordonnées : implémentation → backtest → calibration coussin.
+⚠️ **AVERTISSEMENT POST-TRACE NVDA (2026-06-18 fin de session)** ⚠️
 
-#### Priorité 6 — Implémentation flag profil-dépendant `apply_valuation_ok` (✅ Code C posé 2026-06-18, DÉSARMÉ)
+Le trace NVDA dans le pipeline réel a révélé que **le flag `apply_valuation_ok` SEUL est INERTE pour Agressif satellite**. Le pipeline `_get_top_natives_for_profile` (core_satellite_discipline.py:374-540) filtre Agressif par :
+- ligne 430 : `buffett_score >= 70` → bloque NVDA (Buf 67) avant tout
+- ligne 438 : tri par `_fit_modere` (PAS `_fit_agressif`) — délibéré par doctrine v6.3
 
-**Statut** : code prêt, défaut `True` partout → comportement runtime inchangé. Reste à câbler aux call-sites APRÈS backtest P7.
+**Réaliser β-Agressif exige TROIS changements liés** :
+1. `apply_valuation_ok=False` (flag déjà posé ce soir, désarmé)
+2. **L1** — gate satellite ligne 430 : `>= 70` → `>= 60` (alignement avec PROFILE_POLICY['Agressif']['min_buffett_score']=60)
+3. **L2** — tri ligne 438 : `_fit_modere` → `_fit_agressif` pour Agressif
+
+**Sans L1+L2, le flag basculé ne touche pas le satellite Agressif.** C'est le piège "j'ai armé un levier qui ne commande rien" — à éviter absolument en juillet.
+
+Conflit doctrinal de fond : v6.3 (*"l'agressivité vient EXCLUSIVEMENT du cœur"*) contredit DOCTRINE_PROFILS (*"poche actions moteur"*). À résoudre AVANT toute implémentation.
+
+Trois étapes ordonnées : **résolution doctrinale → implémentation → backtest → calibration coussin**.
+
+#### Priorité 5bis — Résoudre conflit doctrinal v6.3 vs DOCTRINE_PROFILS (PREMIER en juillet)
+
+**Conflit** : v6.3 (`core_satellite_discipline.py:405-420`) acte *"l'agressivité vient EXCLUSIVEMENT du cœur, jamais du satellite"*. DOCTRINE_PROFILS.md (2026-06-18) acte *"Agressif = poche actions moteur"*. Les deux ne peuvent pas coexister.
+
+**Décision attendue** : trancher laquelle gagne (probablement DOCTRINE_PROFILS vu qu'elle est signée ce soir avec raisonnement de construction). Réécrire v6.3 dans le code, ne pas contourner DOCTRINE_PROFILS.
+
+**Sortie** : commentaire v6.4 dans `_get_top_natives_for_profile()` qui acte la nouvelle doctrine. Sans ça, L1/L2 reviennent à modifier du code dont la doctrine encadrante dit le contraire — incohérent à maintenir.
+
+#### Priorité 6 — Implémentation flag `apply_valuation_ok` (✅ Code C posé 2026-06-18, DÉSARMÉ et INERTE)
+
+**Statut** : code prêt, défaut `True` partout → comportement runtime inchangé. **Inerte sur Agressif satellite tant que L1+L2 (P6bis/P6ter) ne sont pas faits.**
 
 - ✅ `apply_valuation_ok: True` ajouté dans `PROFILE_POLICY` Stable/Modéré/Agressif
 - ✅ `evaluateBuffettScore()` calcule `score_no_valuation` (5 critères, valuation_ok exclu)
 - ✅ Sérialisation expose `buffett_score_no_valuation` dans le payload stock
 - ✅ Helper `get_effective_buffett_score(stock, profile)` dans `preset_meta.py`
-- ⏳ **P8 juillet** : remplacer `stock.get("buffett_score")` par `get_effective_buffett_score(stock, profile)` aux call-sites (filtres `min_buffett_score`, score_weights `buffett_score`). À faire **après** validation backtest, jamais avant.
-- ⏳ **Bascule** : changer `Agressif.apply_valuation_ok` de `True` → `False`. **Décision manuelle uniquement.**
+- ⏳ **Câblage** : remplacer `stock.get("buffett_score")` par `get_effective_buffett_score(stock, profile)` aux call-sites (filtres `min_buffett_score`, score_weights `buffett_score`). À faire **après** P6bis/P6ter ET validation backtest.
+
+#### Priorité 6bis — L1 : descendre le gate satellite Agressif 70 → 60
+
+**Levier critique identifié par le trace NVDA (2026-06-18)** :
+- Fichier : `core_satellite_discipline.py` ligne 430
+- Avant : `and (s.get("buffett_score") or 0) >= 70`
+- Après : `and (s.get("buffett_score") or 0) >= 60` pour Agressif uniquement
+- Justification : aligne avec `PROFILE_POLICY['Agressif']['min_buffett_score']=60`. Le 70 en dur est probablement un reliquat incohérent.
+
+Sans L1, NVDA reste filtré qualité même avec apply_valuation_ok basculé.
+
+#### Priorité 6ter — L2 : tri satellite Agressif par `_fit_agressif` (pas `_fit_modere`)
+
+**Levier critique #2 identifié par le trace** :
+- Fichier : `core_satellite_discipline.py` ligne 438 (branche Agressif)
+- Avant : tri par `_fit_modere` même pour Agressif (doctrine v6.3)
+- Après : tri par `_fit_agressif` pour Agressif (cohérent avec DOCTRINE_PROFILS)
+- Effet : NVDA monte du bas (faible _fit_modere) vers le haut (haut _fit_agressif), entre dans le top 5
+
+Sans L2, NVDA passe le filtre L1 mais reste mal classé, donc absent du top 5 → flag inerte.
+
+⚠️ **Les trois (flag + L1 + L2) doivent être appliqués ENSEMBLE.** Aucun seul ne suffit. Tester en local avant tout commit.
 
 #### Priorité 7 — Backtest β-Agressif sur périmètre EXACT
 
@@ -162,6 +206,17 @@ Avec le backtest P7 sous les yeux, trancher :
 - **β amorti** : 15% filet (or 5% + bonds 10%) — moins punchy, drawdown contenu
 
 Décision sur données, pas projection théorique. Updater `DOCTRINE_PROFILS.md` avec l'épaisseur retenue.
+
+#### Priorité 9 — Vérifier contraintes résiduelles post-L1+L2
+
+Une fois flag + L1 + L2 appliqués, **vérifier qu'aucune contrainte aval ne re-filtre NVDA** :
+- `max_per_industry: 2` (Semiconductors saturé par MU/ASML/AMAT ?)
+- `MAX_PER_SECTOR_BY_PROFILE['Agressif']: 2` (tech US saturé par 2 autres ?)
+- Force diversité Agressif (`core_satellite_discipline.py:501-519`) : si NVDA déjà vol≥30, OK ; sinon swap forcé peut le sortir
+- `_enforce_caps()` country cap 0.20 (US déjà saturé via 4 autres US ?)
+- Coverage haircut, corr penalty (NVDA whitelistée ligne 2330)
+
+Sortie attendue : log explicite "NVDA entré en position #X du satellite Agressif" ou "NVDA filtré aval par contrainte Y".
 
 ---
 

@@ -88,6 +88,26 @@ En bear tech -50% : poche actions β ~-45%, cœur ETF ~-30%, or +10%, bonds +2%.
 
 **La bascule β = changement manuel d'une seule ligne** dans `preset_meta.py["Agressif"]["apply_valuation_ok"]` de `True` → `False`, après validation backtest. Pas d'auto-flip, pas de défaut piège.
 
+### ⚠️ CONFLIT DOCTRINAL IDENTIFIÉ 2026-06-18 (trace NVDA + Fabre)
+
+**Le flag `apply_valuation_ok` seul est INERTE pour Agressif satellite.** Le trace NVDA a révélé une contradiction frontale entre ce doc et le code :
+
+**DOCTRINE_PROFILS.md (ce soir, signé)** : *"Agressif = poche actions moteur (β, tech mega-cap éligible) + cœur ETF amortisseur. L'agressivité vient de la sélection."*
+
+**core_satellite_discipline.py v6.3 (2026-06-04)** lignes 405-420, codé en dur :
+> *"Le profil Agressif ne pioche PAS dans `_fit_agressif`. Le pool ici est `_profile_native ∈ {Agressif, Modéré}` filtré vol ≥ 20 et trié par `_fit_modere`. **L'agressivité du profil vient EXCLUSIVEMENT de l'allocation cœur**, jamais de la sélection satellite."*
+
+**Conséquence pratique** : NVDA Buf 67 est filtré ligne 430 par `buffett_score >= 70`. Avec bascule β (Buf 80), NVDA passerait ce filtre — mais resterait trié par `_fit_modere` (logique Modéré), donc mal classé, donc absent du top 5 quand même.
+
+**Pour réaliser RÉELLEMENT la décision β-Agressif, trois changements liés sont nécessaires** :
+1. `apply_valuation_ok=False` sur Agressif (déjà préparé, désarmé)
+2. **L1** : descendre le gate ligne 430 de `>= 70` à `>= 60` (alignement avec `PROFILE_POLICY['Agressif']['min_buffett_score']=60`)
+3. **L2** : remplacer le tri `_fit_modere` par `_fit_agressif` pour Agressif
+
+**Les trois sont nécessaires. Aucun seul ne suffit.**
+
+**Résolution** : ce conflit doit être tranché AVANT toute implémentation. C'est P5bis juillet. DOCTRINE_PROFILS étant signée ce soir, la séquence logique est de **réécrire la doctrine v6.3 dans le code**, pas de contourner DOCTRINE_PROFILS.
+
 ### Conditions de validation juillet
 - **P6** : ✅ implémentation Code C (flag + score_no_valuation + helper) — POSÉ 2026-06-18, désarmé
 - **P7** : backtest sur 25% actions β re-scoré à date + cœur réel + or/bonds (périmètre EXACT, pas global théorique)
