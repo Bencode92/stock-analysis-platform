@@ -78,10 +78,20 @@ En bear tech -50% : poche actions β ~-45%, cœur ETF ~-30%, or +10%, bonds +2%.
 - Ne déguise pas en Agressif un portefeuille de spéculation
 - **Ne pas confondre direction prise avec conviction acquise** — le backtest est juge
 
+### État d'implémentation — Code C (Fabre 2026-06-18)
+
+**Le flag est déjà implémenté ce soir, mais DÉSARMÉ.** Concrètement :
+- `apply_valuation_ok: True` est présent dans `PROFILE_POLICY` pour Stable/Modéré/Agressif (les 3 à `True`)
+- `evaluateBuffettScore()` calcule et expose **les deux scores** : `buffett_score` (6 critères) et `buffett_score_no_valuation` (5 critères)
+- `get_effective_buffett_score(stock, profile)` lit le flag et retourne le bon score
+- **Aucun call-site n'utilise encore le helper** : la sélection actuelle continue de filtrer sur `buffett_score` classique → comportement runtime INCHANGÉ
+
+**La bascule β = changement manuel d'une seule ligne** dans `preset_meta.py["Agressif"]["apply_valuation_ok"]` de `True` → `False`, après validation backtest. Pas d'auto-flip, pas de défaut piège.
+
 ### Conditions de validation juillet
-- **P5** : flag `apply_valuation_ok=False` implémenté pour ce profil uniquement
-- **P6** : backtest sur 25% actions β re-scoré à date + cœur réel + or/bonds (périmètre EXACT, pas global théorique)
-- **P7** : décision épaisseur coussin (10% léger vs 15% amorti) avec backtest sous les yeux
+- **P6** : ✅ implémentation Code C (flag + score_no_valuation + helper) — POSÉ 2026-06-18, désarmé
+- **P7** : backtest sur 25% actions β re-scoré à date + cœur réel + or/bonds (périmètre EXACT, pas global théorique)
+- **P8** : décision épaisseur coussin (10% léger vs 15% amorti) avec backtest sous les yeux + **si validé** : bascule `apply_valuation_ok=False` sur Agressif + remplacement call-sites `buffett_score` par `get_effective_buffett_score()`
 
 ### Honnêteté sur les fondements de la décision
 - ✓ Raisonnement de construction (poche moteur + cœur amortisseur sur profil avec coussin) = **base valide**

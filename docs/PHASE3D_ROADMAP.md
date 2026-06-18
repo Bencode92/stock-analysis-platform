@@ -134,14 +134,16 @@ Si confirmé : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA) perdent 
 
 Direction β retenue ce soir pour Agressif, **réversible** sous validation backtest. Trois étapes ordonnées : implémentation → backtest → calibration coussin.
 
-#### Priorité 6 — Implémentation flag profil-dépendant `apply_valuation_ok`
+#### Priorité 6 — Implémentation flag profil-dépendant `apply_valuation_ok` (✅ Code C posé 2026-06-18, DÉSARMÉ)
 
-- Ajouter `apply_valuation_ok: bool` dans `PROFILE_POLICY[profil]`
-- Stable: `True`, Modéré: `True`, Agressif: `False`
-- `evaluateBuffettScore()` lit le flag via profil courant
-- `maxCriteria` devient 5 (au lieu de 6) si flag=False et critère valuation skipped
-- Logger explicitement en sortie : `"valuation_ok skipped for Agressif by doctrine"`
-- Test régression : Stable/Modéré inchangés, Agressif accueille NVDA/MSFT/ASML si quality le justifie
+**Statut** : code prêt, défaut `True` partout → comportement runtime inchangé. Reste à câbler aux call-sites APRÈS backtest P7.
+
+- ✅ `apply_valuation_ok: True` ajouté dans `PROFILE_POLICY` Stable/Modéré/Agressif
+- ✅ `evaluateBuffettScore()` calcule `score_no_valuation` (5 critères, valuation_ok exclu)
+- ✅ Sérialisation expose `buffett_score_no_valuation` dans le payload stock
+- ✅ Helper `get_effective_buffett_score(stock, profile)` dans `preset_meta.py`
+- ⏳ **P8 juillet** : remplacer `stock.get("buffett_score")` par `get_effective_buffett_score(stock, profile)` aux call-sites (filtres `min_buffett_score`, score_weights `buffett_score`). À faire **après** validation backtest, jamais avant.
+- ⏳ **Bascule** : changer `Agressif.apply_valuation_ok` de `True` → `False`. **Décision manuelle uniquement.**
 
 #### Priorité 7 — Backtest β-Agressif sur périmètre EXACT
 

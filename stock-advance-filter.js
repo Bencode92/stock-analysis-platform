@@ -373,7 +373,7 @@ class StockAdvanceFilter {
       criteria.push({ name: 'moat_expansion', passed: roeOk || roicOk, value: roeN / roeA3, detail: `trend=${((roeN / roeA3 - 1) * 100).toFixed(0)}%` });
     }
 
-    if (dataAvailable < 2) return { score: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
+    if (dataAvailable < 2) return { score: null, score_no_valuation: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
     const passed = criteria.filter(c => c.passed).length;
     let score = Math.round((passed / criteria.length) * 100);
 
@@ -391,8 +391,30 @@ class StockAdvanceFilter {
     const cvUnknownPasses = criteria.filter(c => c.cv_unknown && c.passed).length;
     if (cvUnknownPasses > 0 && score >= 80) score = Math.min(score, 83);
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // Code C (Fabre 2026-06-18) — Score Buffett SANS critère valuation_ok
+    // ═══════════════════════════════════════════════════════════════════════
+    // Doctrine DOCTRINE_PROFILS.md : Agressif passera en β (apply_valuation_ok=False)
+    // après validation backtest juillet (P6/P7/P8). Ce score est CALCULÉ et EXPOSÉ
+    // dès maintenant pour préparer la bascule, mais reste DÉSARMÉ : tous les profils
+    // ont apply_valuation_ok=True par défaut → ce champ n'est lu par aucune sélection.
+    // Bascule = changement manuel d'un seul flag dans preset_meta.py, post-backtest.
+    let scoreNoVal = null;
+    const criteriaNoVal = criteria.filter(c => c.name !== 'valuation_ok');
+    const hasValuationData = criteria.some(c => c.name === 'valuation_ok');
+    const dataAvailableNoVal = dataAvailable - (hasValuationData ? 1 : 0);
+    if (dataAvailableNoVal >= 2 && criteriaNoVal.length > 0) {
+      const passedNoVal = criteriaNoVal.filter(c => c.passed).length;
+      scoreNoVal = Math.round((passedNoVal / criteriaNoVal.length) * 100);
+      const _maxNoVal = _skipRoicForBank ? 4 : 5;
+      if (dataAvailableNoVal < 3) scoreNoVal = Math.min(scoreNoVal, 60);
+      else if (dataAvailableNoVal < _maxNoVal - 1) scoreNoVal = Math.min(scoreNoVal, 75);
+      else if (dataAvailableNoVal < _maxNoVal) scoreNoVal = Math.min(scoreNoVal, 83);
+      if (cvUnknownPasses > 0 && scoreNoVal >= 80) scoreNoVal = Math.min(scoreNoVal, 83);
+    }
+
     const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';
-    return { score, grade, criteria, passed, total: criteria.length, dataAvailable };
+    return { score, score_no_valuation: scoreNoVal, grade, criteria, passed, total: criteria.length, dataAvailable };
   }
 
   /**
@@ -923,7 +945,7 @@ class StockAdvanceFilter {
 
     return {
       ...stockData, ...mergedData,
-      buffett_score: buffett.score, buffett_grade: buffett.grade, buffett_criteria: buffett.criteria,
+      buffett_score: buffett.score, buffett_score_no_valuation: buffett.score_no_valuation, buffett_grade: buffett.grade, buffett_criteria: buffett.criteria,
       buffett_passed: buffett.passed, buffett_total: buffett.total, buffett_flags: buffett.criteria.map(c => `${c.name}:${c.passed ? 'PASS' : 'FAIL'}`),
       quality_profile: profile,
       dividend_yield_ttm: dividendInfo.value, dividend_yield_source: dividendInfo.source, dividend_confidence: dividendInfo.confidence,

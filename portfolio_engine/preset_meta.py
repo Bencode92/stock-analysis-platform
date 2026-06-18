@@ -949,6 +949,14 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "allowed_equity_presets": {"croissance", "momentum_trend", "agressif", "recovery", "quality_high_vol", "defensif"},
         "min_buffett_score": 60,    # v6.18 (Fix E) : 50→60 — filet anti pari-pourri
          "min_quality_gate": 55,     # v4.15: OR gate — quality rescue pour secteurs à moat structurellement bas
+        # ═══ Code C (Fabre 2026-06-18) — Flag β-Agressif DÉSARMÉ ═══
+        # DOCTRINE_PROFILS.md acte la direction β (poche actions moteur sans
+        # filtre valuation_ok → NVDA/MSFT/ASML éligibles si quality le justifie).
+        # MAIS la direction est RÉVERSIBLE sous validation backtest juillet (P7).
+        # Tant que le flag est True : sélection IDENTIQUE à aujourd'hui (α de fait).
+        # Bascule en False = décision MANUELLE post-backtest, jamais auto. Voir
+        # get_effective_buffett_score() et PHASE3D_ROADMAP.md (P6/P7/P8).
+        "apply_valuation_ok": True,
         "hard_filters": {
             "volatility_3y_min": 22.0,
             "volatility_3y_max": 120.0,
@@ -997,6 +1005,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "min_buffett_score": 65,     # v5.4.0 (Sélection-2): 60→65, exclut PEG (50), AZN (33)
         "min_quality_gate": 65,      # v4.15: gate (Modéré: AND)
         "gate_logic": "and",         # v5.5.0 (Sélection-3): AND strict — buffett ET quality requis
+        # Code C (Fabre 2026-06-18) : valuation_ok ACTIF sur Modéré — équilibre quality+value préservé.
+        # Ne PAS basculer en False : doctrinalement Modéré n'est pas un moteur, c'est un équilibre.
+        "apply_valuation_ok": True,
          "hard_filters": {
             "volatility_3y_min": 12.0,
             "volatility_3y_max": 45.0,
@@ -1048,6 +1059,9 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "min_buffett_score": 70,  # v5.4.0 (Sélection-2): 60→70 — élite uniquement pour Stable
         "min_quality_gate": 62,   # v5.3.3: was 65 — slight relaxation, TTE quality=62 is legitimate
         "gate_logic": "and",      # v5.5.0 (Sélection-3): AND strict — Stable veut Buffett haut ET quality OK
+        # Code C (Fabre 2026-06-18) : valuation_ok ACTIF sur Stable — cohérent avec promesse préservation.
+        # Bascule en False = INTERDIT doctrinalement (mega-cap tech sans dividende reviendrait dans Stable).
+        "apply_valuation_ok": True,
         "hard_filters": {
             "volatility_3y_max": 28.0,
             "roe_min": 10.0,
@@ -1262,6 +1276,34 @@ def safe_float(value, default: float = 0.0) -> float:
 
 def get_profile_policy(profile: str) -> Dict:
     return PROFILE_POLICY.get(profile, PROFILE_POLICY["Modéré"])
+
+
+def get_effective_buffett_score(stock: Dict, profile: str) -> Optional[float]:
+    """
+    Code C (Fabre 2026-06-18) — Score Buffett effectif par profil.
+
+    Si le profil a apply_valuation_ok=True (défaut TOUS profils aujourd'hui) :
+        retourne buffett_score classique (6 critères, valuation_ok inclus).
+
+    Si apply_valuation_ok=False (bascule manuelle post-backtest juillet, P7) :
+        retourne buffett_score_no_valuation (5 critères, sans le PE).
+        → Permet à NVDA/MSFT/ASML d'être éligibles dans Agressif (β).
+
+    Fallback : si buffett_score_no_valuation absent du payload (vieux runs),
+    retourne buffett_score classique pour éviter de casser la sélection.
+
+    Cette fonction est PRÊTE mais PAS encore câblée aux call-sites de filtrage
+    (min_buffett_score) ni de scoring (buffett_score weight). P6 juillet consistera
+    à remplacer `stock.get("buffett_score")` par `get_effective_buffett_score(stock, profile)`
+    aux sites concernés, APRÈS validation backtest sur périmètre exact.
+
+    Voir DOCTRINE_PROFILS.md §Cohérence scoring et PHASE3D_ROADMAP.md P6/P7/P8.
+    """
+    policy = PROFILE_POLICY.get(profile, PROFILE_POLICY["Modéré"])
+    if policy.get("apply_valuation_ok", True):
+        return stock.get("buffett_score")
+    no_val = stock.get("buffett_score_no_valuation")
+    return no_val if no_val is not None else stock.get("buffett_score")
 
 
 def get_metric_value(eq: Dict, metric_key: str) -> Optional[float]:
