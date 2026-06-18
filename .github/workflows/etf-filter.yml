@@ -3,7 +3,7 @@ name: 🌙 ETF Heavy Filter
 # ═══════════════════════════════════════════════════════════════════════════════
 # GÈRE: ETF + Bonds - Traitement COMPLET nocturne
 # SCRIPT: etf-advanced-filter.js
-# HORAIRE: 01:00 Paris (nuit, ~5h de traitement)
+# HORAIRE: Samedi nuit (~5h de traitement) — WEEK-END uniquement, trop long pour la semaine
 # ═══════════════════════════════════════════════════════════════════════════════
 
 on:
@@ -22,11 +22,12 @@ on:
 
   schedule:
     # ═══════════════════════════════════════════════════════════════════════════
-    # 🌙 NIGHT HEAVY (01:00 Paris) - ~5h de traitement
-    # été: 23:00 UTC (J-1) | hiver: 00:00 UTC
+    # 🌙 NIGHT HEAVY (~5h de traitement) — WEEK-END UNIQUEMENT
+    # Trop long pour tourner en semaine. Marchés fermés le week-end →
+    # les données ETF ne bougent pas, donc 1 run/semaine suffit pour lundi.
+    # Cron unique (pas de double DST) : samedi 00:00 UTC = 01:00 Paris (hiver) / 02:00 (été)
     # ═══════════════════════════════════════════════════════════════════════════
-    - cron: '0 23 * * 0-4'   # Dim-Jeu soir UTC = Lun-Ven nuit Paris
-    - cron: '0 0 * * 1-5'    # Lun-Ven 00:00 UTC
+    - cron: '0 0 * * 6'      # Samedi 00:00 UTC (nuit de vendredi à samedi)
 
 concurrency:
   group: repo-writes-global
