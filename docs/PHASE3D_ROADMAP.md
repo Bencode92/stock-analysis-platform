@@ -2,6 +2,44 @@
 
 **Statut** : gelé jusqu'à fin juin pour observation régime stable.
 
+---
+
+## ⭐ PRIORITÉ 0 — Fetcher historique fondamental (Fabre 2026-06-18 fin de session)
+
+**Le vrai blocage de l'optimisation de sélection n'est pas le code, c'est la DONNÉE.**
+
+L'étape 0 du diagnostic backtest a confirmé : `fundamentals_cache.json` est écrasé à chaque fetch (uniquement la dernière période). `data/history/` ne remonte qu'à avril 2026 (~2 mois). Twelve Data `/statistics` retourne le snapshot courant uniquement. Pour NVDA 2018/2020/2022 : **on n'a aucune donnée fondamentale historique**.
+
+**Conséquence directe** : tout débat α/β, toute optimisation de seuil (gate 60 vs 70, max_per_sector, _fit weights), toute validation de la "Vision B" reste un **choix doctrinal sans validation empirique possible** tant que ce fetcher n'existe pas. Le commit `3de096ae2` (Vision B désarmée) peut être basculé β en juillet, mais ce sera sur la base d'un raisonnement de construction, pas d'un backtest.
+
+### Cible du fetcher
+
+- **Endpoints Twelve Data** : `/income_statement?period=annual&dp=10y`, `/balance_sheet?period=annual&dp=10y`, `/cash_flow?period=annual&dp=10y`
+- **Univers cible** : 30-50 stocks (mix mega-cap tech US, mega-cap value, EU quality, EM) — pas l'univers complet (rate limits + coût)
+  - Tech US : NVDA, MSFT, AAPL, AMZN, GOOGL, META, AVGO, ORCL, ADBE
+  - Quality value : PG, KO, JNJ, V, MA, COST, WMT
+  - EU quality : ASML, NOVN, ITX, LVMH, NESN
+  - Bench : VWCE/QQQ comme références allocation
+- **Profondeur** : 10 ans annuels minimum, idéalement 15 ans pour couvrir 2008+2020+2022
+- **Output** : `data/fundamentals_history/{ticker}.json` avec ROE/ROIC/FCF/PE/D-E par année fiscale
+
+### Ce que ça débloque
+
+1. **Vrai backtest de sélection point-in-time** : re-scorer NVDA en 2018 avec les fondamentaux 2018, valider que α ou β a un edge réel
+2. **Décision Vision B fondée empiriquement** au lieu de doctrinale
+3. **Calibration des seuils** (gate 60 vs 70 vs autre) sur données vraies
+4. **Détection des value-traps historiques** (boîtes qui semblaient quality un an avant d'imploser)
+
+### Risques à anticiper
+
+- Rate limits Twelve Data : ~30 stocks × 3 endpoints × 10 ans = ~900 calls. Étaler sur 2-3 jours.
+- Coût : vérifier si plan actuel permet historical statements (sinon plan supérieur ponctuel)
+- Normalisation : reformater dates fiscales (NVDA FY janvier ≠ calendar year)
+
+**P0 est le prérequis de P5bis (résolution conflit doctrinal) ET P7 (backtest β-Agressif) ET P4ter (resserrement Stable).** Sans P0, ces priorités restent du jugement doctrinal, pas de la décision validée.
+
+---
+
 ## Items prévus (ordre indicatif)
 
 ### Toxicity actions (haute priorité — comble le trou de sortie)
