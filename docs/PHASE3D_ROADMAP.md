@@ -75,7 +75,29 @@ Les médianes régionales par secteur du 17 juin sont **polluées par les 55 EM 
 
 → Le `coverage_insufficient` règle le problème mécaniquement : pas de chinoises dans le pool **pour la bonne raison** (data non fiable), pas par accident silencieux.
 
-#### Priorité 4 — α vs β sur `valuation_ok` (le débat NVDA)
+#### ⭐ PRIORITÉ 1 DOCTRINALE — α vs β sur `valuation_ok` (remonté Fabre 2026-06-18)
+
+**Pourquoi c'est devenu P1** : c'est la décision qui définit si le système est de la **préservation** ou de la **performance**. Toutes les autres priorités sont secondaires à côté. Fabre v8 :
+
+> "C'est exactement la décision qui décide si ton système est 'préservation' ou 'performance'. Tout le reste est secondaire à côté."
+
+**Constat empirique du 17-18 juin** : la sélection actuelle exclut STRUCTURELLEMENT NVDA, ASML, TSMC, MSFT (déclassé), AAPL, GOOGL, AMZN, META (déclassé) — l'intégralité des moteurs de la performance actions 2015-2024. Le biais value n'a payé que depuis 18 mois (rotation 2025-2026).
+
+**Sous-décision implicite** : quel est l'objectif de chaque profil ?
+- Stable / Modéré / Agressif sont-ils des profils de **préservation** (drawdown contenu, sous-performance en bull acceptée) ?
+- Ou des profils de **performance** (battre le marché, ce qui exige d'accepter les mega-cap tech) ?
+
+**Sans réponse à cette question, le système est ambigu** — il prétend être agressif tout en filtrant les vrais agressifs. Cohérent doctrinalement, mais trompeur sur l'attente performance.
+
+#### Priorité 4bis — Biais yield dans fit_score Stable (Fabre v8 2026-06-18)
+
+**Symptôme** : PG (Buf 100, vol 17%, yield 2.7%) battu en Stable par NTGY (Buf 83, vol 22%, yield ~5%). Le `dividend_yield: 0.15` dans les poids du fit_score Stable fait que le rendement départage 2 candidats qualité, **alors que la doctrine est censée privilégier la qualité**.
+
+**Conséquence cachée** : value-piège introduit par la porte de derrière. NTGY (gaz espagnol endetté, croissance nulle) préféré à PG (moat mondial) parce qu'il paye plus. Aucun gérant qualité ne valide ce choix.
+
+**Fix proposé** : réduire `dividend_yield` de 0.15 → 0.05 dans Stable score_weights, ou utiliser `dividend_yield` comme tie-breaker (pas critère principal). À chiffrer en 3D : qui rentre/qui sort dans Stable post-fix.
+
+#### Priorité 4 (ancienne) — Trancher α vs β sur `valuation_ok` (le débat NVDA)
 
 **Diagnostic confirmé** : NVDA Quality 96 / Buffett 67 = pas une incohérence, c'est le système qui fait son travail (Quality = pur, Buffett = quality+value). Mais leur fusion dans `fit_score` réinjecte le P/E deux fois.
 
