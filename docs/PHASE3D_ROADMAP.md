@@ -12,29 +12,86 @@ L'étape 0 du diagnostic backtest a confirmé : `fundamentals_cache.json` est é
 
 **Conséquence directe** : tout débat α/β, toute optimisation de seuil (gate 60 vs 70, max_per_sector, _fit weights), toute validation de la "Vision B" reste un **choix doctrinal sans validation empirique possible** tant que ce fetcher n'existe pas. Le commit `3de096ae2` (Vision B désarmée) peut être basculé β en juillet, mais ce sera sur la base d'un raisonnement de construction, pas d'un backtest.
 
-### Cible du fetcher
+### Profondeur réelle mesurée (Étape 0-bis/0-ter 2026-06-19)
 
-- **Endpoints Twelve Data** : `/income_statement?period=annual&dp=10y`, `/balance_sheet?period=annual&dp=10y`, `/cash_flow?period=annual&dp=10y`
-- **Univers cible** : 30-50 stocks (mix mega-cap tech US, mega-cap value, EU quality, EM) — pas l'univers complet (rate limits + coût)
-  - Tech US : NVDA, MSFT, AAPL, AMZN, GOOGL, META, AVGO, ORCL, ADBE
-  - Quality value : PG, KO, JNJ, V, MA, COST, WMT
-  - EU quality : ASML, NOVN, ITX, LVMH, NESN
-  - Bench : VWCE/QQQ comme références allocation
-- **Profondeur** : 10 ans annuels minimum, idéalement 15 ans pour couvrir 2008+2020+2022
-- **Output** : `data/fundamentals_history/{ticker}.json` avec ROE/ROIC/FCF/PE/D-E par année fiscale
+Tests sur NVDA / ASML / INFY :
+- `/income_statement` annuel : **6 ans** (2020 → 2026 selon FY)
+- `/balance_sheet` annuel : **6 ans** (structure imbriquée `assets.*` / `liabilities.*` / `equity.*`)
+- `/cash_flow` annuel : **6 ans** + **`free_cash_flow` direct** (bonus, pas à recalculer)
 
-### Ce que ça débloque
+**Périmètre backtest accessible** : 2020 (COVID) + 2022 (bear tech) + 2023-2026 (rotation). Pas 2008, pas dot-com — limite assumée. Suffit pour tester α vs β sur 1 vrai stress + 1 rotation.
 
-1. **Vrai backtest de sélection point-in-time** : re-scorer NVDA en 2018 avec les fondamentaux 2018, valider que α ou β a un edge réel
-2. **Décision Vision B fondée empiriquement** au lieu de doctrinale
-3. **Calibration des seuils** (gate 60 vs 70 vs autre) sur données vraies
-4. **Détection des value-traps historiques** (boîtes qui semblaient quality un an avant d'imploser)
+### Distinction labo (50) vs production (1000) — non négociable
+
+- **Fetcher historique = laboratoire 50 stocks** : valide la RÈGLE de scoring (a-t-elle un edge ? α ou β ?)
+- **Production = univers 1000 stocks** : applique la règle validée sur fondamentaux actuels
+
+Le backtest ne sélectionne PAS les positions. Il valide la méthode. Une fois la méthode validée sur l'échantillon, elle s'applique aux 1000 en production. Si on confond les deux, on demande l'impossible au backtest.
+
+### Univers laboratoire (50 stocks, armé pour les deux camps)
+
+| Catégorie | Tickers | N |
+|---|---|---|
+| Tech US growth | NVDA, MSFT, AAPL, AMZN, GOOGL, META, AVGO, ORCL, ADBE, CRM | 10 |
+| **Compounders chers gagnants (β-armed)** | CDNS, SNPS, LLY, FICO, ANET | 5 |
+| Quality value US | PG, KO, JNJ, V, MA, COST, WMT, JPM | 8 |
+| EU quality | ASML, NOVN, ITX, ROP, CS, NESN, LVMH, SAP | 8 |
+| EM quality | INFY, HCLTECH, TSM, 005930 (Samsung) | 4 |
+| Positions actuelles portefeuilles | ADM, BVI, PUB, NTGY, LOGN, EXPD, CBOE, CF, BMED, RMD | 10 |
+| **Value-traps (α-armed)** | INTC, BABA, T, F, GE | 5 |
+| **TOTAL** | | **50** |
+
+L'univers doit armer les deux camps. Sans compounders chers gagnants → β sous-évalué. Sans value-traps → α sous-évalué.
+
+### Endpoints + stockage
+
+- **Endpoints TD** : `/income_statement` + `/balance_sheet` + `/cash_flow` (period=annual)
+- **Brut INTOUCHABLE** : `data/fundamentals_history/raw/{TICKER}_{endpoint}.json` (snapshot TD fidèle, jamais modifié)
+- **Métriques dérivées** : `data/fundamentals_history/derived/metrics_by_year.csv` (recalculable depuis raw/ sans re-fetch)
+- **Market cap historique** : à reconstruire `shares_outstanding × prix /time_series` à chaque `fiscal_date`
+
+### LE piège méthodologique fermé : lag de publication 90 jours
+
+**Règle non négociable du backtest** : au rebalance T, scoring autorisé uniquement sur fundamentals avec :
+```
+fiscal_date + timedelta(days=90) <= T
+```
+
+Sans ce lag, on utilise des chiffres que personne ne connaissait à la date du rebalance → look-ahead déguisé → toute stratégie est artificiellement gonflée.
+
+Exemple concret : rebalance 1er janvier 2022 → on utilise l'exercice 2020 (publié au printemps 2021), pas l'exercice 2021 (publié au printemps 2022). C'est ce qu'un investisseur réel avait sous la main.
+
+### Paramètres backtest
+
+| Paramètre | Valeur |
+|---|---|
+| Rebalance | annuel (cohérent avec fundamentals annuels) |
+| Frais transaction | 0.15% par trade (T212 + spread) |
+| **PFU sur dividendes** | 31.4% |
+| **PFU sur PV réalisées au rebalance** | 31.4% (pénalise β plus que α via turnover mega-caps) |
+| Sticky bonus | OFF (mesure scoring pur, pas viscosité) |
+| Bench | VWCE seul |
+
+### Modes de backtest (en parallèle, pas séquentiel)
+
+- **Mode 1** : α vs β isolés sur Agressif. La question doctrinale. NVDA/MSFT/ASML éligibles si flag β + L1 + L2 appliqués.
+- **Mode 3 (sanité)** : top 25 Buffett vs panier aléatoire de 25 dans l'univers (100 tirages Monte Carlo, médiane + IC 90%). **Si Mode 3 ne montre pas d'edge significatif → STOP, le débat α/β est vain.** Le scoring n'a pas d'edge même brut → revoir le scoring avant de raffiner.
+
+Les deux modes tournent ensemble. Mode 3 est le test que personne ne fait : vérifier que le scoring vaut quoi que ce soit avant de l'optimiser.
+
+### Séquence d'exécution (5 étapes, jamais sauter)
+
+1. ✅ Correction comptable univers (50 stocks confirmés)
+2. 🟡 Commit spec dans roadmap (ce commit même)
+3. ⏳ Code fetcher (script Python, sans lancer les calls)
+4. ⏳ **Test NVDA + ASML uniquement** + vérif manuelle JSON. Maillon faible : market_cap historique. Si TD ne fournit pas `shares_outstanding` par date, reconstruire via balance_sheet × time_series. Découvrir sur 2 stocks, pas 50.
+5. ⏳ Si NVDA + ASML propres → lance les 48 restants
 
 ### Risques à anticiper
 
-- Rate limits Twelve Data : ~30 stocks × 3 endpoints × 10 ans = ~900 calls. Étaler sur 2-3 jours.
-- Coût : vérifier si plan actuel permet historical statements (sinon plan supérieur ponctuel)
-- Normalisation : reformater dates fiscales (NVDA FY janvier ≠ calendar year)
+- Rate limits Twelve Data Ultra : 600/min, 50 stocks × 3 endpoints = 150 calls historiques + 50 market_cap = 200 calls. ~25-30 sec effectifs. Pas un chantier marathon.
+- Normalisation FY : NVDA janvier ≠ ASML décembre ≠ INFY mars. Lag 90j harmonise.
+- Manque cost_of_revenue (substitut `cost_of_goods`), manque P/E direct (à reconstruire prix × eps).
 
 **P0 est le prérequis de P5bis (résolution conflit doctrinal) ET P7 (backtest β-Agressif) ET P4ter (resserrement Stable).** Sans P0, ces priorités restent du jugement doctrinal, pas de la décision validée.
 
