@@ -79,3 +79,38 @@ C'est l'inverse de l'intuition de départ (β pour battre le marché). Mais c'es
 Test lancé une fois, verdict accepté tel quel, lecture honnête même si contre-intuitive. C'est le but du pré-enregistrement.
 
 **Discipline gravée le 2026-06-19, accord explicite Fabre + Code.**
+
+---
+
+## Addendum 2026-06-19 (post-mesure homogénéité, AVANT backtest)
+
+### Résultat mesuré sur univers élargi 239 stocks
+
+- Homogénéité **AVEC prix** (buffett_score ≥ 83) : **23.2%** (≥ seuil 15%)
+- Homogénéité **SANS prix** (buffett_score_no_valuation ≥ 83) : **13.9%** (< seuil 15%)
+
+### Cas asymétrique non anticipé par la pré-déclaration originelle
+
+L'asymétrie observée est l'**INVERSE** de celle que Fabre redoutait :
+- Cas redouté : avec-prix < 15% mais sans-prix ≥ 25% → "le filtre prix crée une fausse hétérogénéité"
+- Cas mesuré : avec-prix ≥ 15% mais sans-prix < 15% → le filtre prix crée une fausse HOMOGÉNÉITÉ
+
+Mécanisme : S&P 500 PE médian = 25.55 ≈ seuil valuation_ok. ~50% des stocks passent valuation_ok de justesse → s'agglutinent à Buf 83 (5/6 critères). Sans valuation_ok, ils se redispersent (FCF yield > 3% ou moat_expansion échouent souvent sur growth stocks chers).
+
+### Règle de lecture gravée (Fabre 2026-06-19, avant toute lecture de chiffres)
+
+**L'homogénéité qui détermine la validité du contrefactuel est l'homogénéité fondamentale (sans-prix).** Pourquoi : le random pioche dans l'univers sans utiliser le critère prix pour classer. Sa qualité de contrefactuel dépend de la dispersion en fondamentaux, pas du score-avec-prix. Le critère prix affecte **comment le score classe**, pas **comment le random se comporte**.
+
+Donc :
+1. **Le contrefactuel EST validé** par l'homogénéité fondamentale 13.9% < 15%. Test valide pour α ET pour β — tous deux comparés au même random dans le même univers hétérogène-en-fondamentaux.
+2. **Le 23.2% avec-prix est un RÉSULTAT REPORTÉ, pas un critère de validité** : "le buffett_score (avec prix) discrimine mal dans le S&P 500 (effet plafond à 83), donc le top-décile α aura plus d'ex-aequo et un signal plus bruité que β — cette asymétrie de *finesse de classement* est une limite de α, pas un avantage de β". Limite à déclarer, pas à corriger.
+3. **Pas de Russell 3000** : (I) est une sur-réaction sur lecture stricte d'un cas non anticipé. La règle d'origine voulait protéger contre "random pioche que de la qualité" → on protège contre ça via dispersion fondamentale (13.9%), pas via la dispersion d'un score affecté par un seuil arbitraire (PE ≤ 25).
+4. **Verdicts v3 (A/B/C/D/E) inchangés** — jugés sur CAGR + Sharpe + MaxDD vs le même random.
+
+### Test de symétrie logique (anti-rationalisation)
+
+Si les chiffres avaient été inversés (13.9% avec-prix, 23.2% sans-prix = cas anticipé Fabre), la conclusion aurait été : "le filtre prix crée une fausse hétérogénéité, le contrefactuel est suspect". Dans les DEUX cas, la mesure qui compte est la **dispersion fondamentale** car c'est elle qui gouverne le random. La logique est symétrique, pas tordue pour faire passer le test.
+
+### Engagement maintenu
+
+Cet addendum est gravé AVANT la lecture des chiffres du backtest. La règle de lecture est définie a priori sur la base de la logique du contrefactuel, pas du résultat espéré.

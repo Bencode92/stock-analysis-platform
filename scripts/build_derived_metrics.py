@@ -89,6 +89,16 @@ SPLIT_FIX = {
              "reason": "split 4:1 17 juin 2024 — TD a ajusté 2023+ mais pas 2020-2022"},
 }
 
+# ─── Auto-exclusion sur anomalies détectées (univers élargi S&P 500, 2026-06-19) ──
+# Règle déterministe défendable a priori (cohérente pré-déclaration (D)) :
+# - Saut shares > 200% sur une année consécutive = corruption pure type TSM
+#   → exclusion du STOCK entier (les autres années sont inexploitables car
+#     market_cap pollué par les shares fausses)
+# - Saut shares entre 15% et 200% = anomalie année isolée
+#   → exclusion de l'ANNÉE concernée (ticker conservé)
+AUTO_EXCLUSION_THRESHOLD_STOCK = 2.0    # 200% : corruption pure
+AUTO_EXCLUSION_THRESHOLD_YEAR = 0.15    # 15% : seuil détecteur
+
 
 def load_raw(ticker: str, endpoint: str) -> Optional[dict]:
     """Charge un JSON brut. None si absent."""
@@ -123,6 +133,43 @@ def extract_field(stmt: dict, *paths) -> Optional[float]:
         except (KeyError, TypeError, ValueError):
             continue
     return None
+
+
+def extract_shares_outstanding(income_statement_payload: dict) -> dict:
+    """Extrait shares_outstanding (diluted prioritaire) par fiscal_date depuis income_statement."""
+    result = {}
+    for stmt in income_statement_payload.get("income_statement", []) if isinstance(income_statement_payload, dict) else []:
+        fd = stmt.get("fiscal_date")
+        if not fd:
+            continue
+        shares = stmt.get("diluted_shares_outstanding") or stmt.get("basic_shares_outstanding")
+        if shares is not None:
+            result[fd] = float(shares)
+    return result
+
+
+def detect_share_anomalies_for_ticker(shares_by_date: dict, threshold: float = AUTO_EXCLUSION_THRESHOLD_YEAR) -> dict:
+    """Détecte les années avec saut shares > threshold. Retourne {fiscal_date: max_jump}."""
+    sorted_dates = sorted(shares_by_date.keys())
+    anomalies = {}
+    for i in range(1, len(sorted_dates)):
+        fd_prev, fd_curr = sorted_dates[i - 1], sorted_dates[i]
+        s_prev, s_curr = shares_by_date.get(fd_prev), shares_by_date.get(fd_curr)
+        if not s_prev or not s_curr or s_prev <= 0:
+            continue
+        delta = abs(s_curr / s_prev - 1.0)
+        if delta > threshold:
+            anomalies[fd_curr] = max(anomalies.get(fd_curr, 0), delta)
+    return anomalies
+
+
+def is_ticker_corrupted(shares_by_date: dict) -> tuple[bool, Optional[str]]:
+    """Test corruption ticker entier : ≥ 1 saut > AUTO_EXCLUSION_THRESHOLD_STOCK (200%)."""
+    anomalies = detect_share_anomalies_for_ticker(shares_by_date, threshold=AUTO_EXCLUSION_THRESHOLD_STOCK)
+    if anomalies:
+        worst_date, worst_jump = max(anomalies.items(), key=lambda x: x[1])
+        return True, f"TD corruption auto-detected, share jump {worst_jump*100:.0f}% at {worst_date}"
+    return False, None
 
 
 def build_ticker_metrics(ticker: str) -> tuple[list[dict], list[str]]:
@@ -288,10 +335,19 @@ def build_ticker_metrics(ticker: str) -> tuple[list[dict], list[str]]:
         # Ajout métadonnées
         m["ticker"] = ticker
         m["criteria_total"] = n_total
-        # Marquage EXCLUDED_YEARS (Fabre 2026-06-19 — préserve stock, retire l'année)
+        # Marquage EXCLUDED_YEARS manuel (Fabre 2026-06-19 — préserve stock, retire l'année)
         excl_reason = EXCLUDED_YEARS.get((ticker, m["fiscal_date"]))
         m["excluded_year"] = bool(excl_reason)
         m["excluded_year_reason"] = excl_reason or ""
+
+    # Auto-exclusion années avec saut shares > 15% (univers élargi 2026-06-19)
+    auto_anomalies = detect_share_anomalies_for_ticker(shares_by_date)
+    for m in metrics_raw:
+        fd = m["fiscal_date"]
+        if fd in auto_anomalies and not m["excluded_year"]:
+            jump = auto_anomalies[fd] * 100
+            m["excluded_year"] = True
+            m["excluded_year_reason"] = f"AUTO: shares jump {jump:+.1f}% vs année précédente (seuil 15%)"
 
     return metrics_raw, transforms
 
@@ -384,6 +440,16 @@ def main() -> int:
         if ticker in EXCLUDED:
             excluded_rows.append({"ticker": ticker, "exclusion_reason": EXCLUDED[ticker]})
             continue
+
+        # Auto-test corruption ticker entier (saut > 200% sur shares)
+        inc_payload = load_raw(ticker, "income_statement")
+        if inc_payload:
+            shares_pre_check = extract_shares_outstanding(inc_payload)
+            corrupted, corr_reason = is_ticker_corrupted(shares_pre_check)
+            if corrupted:
+                excluded_rows.append({"ticker": ticker, "exclusion_reason": corr_reason})
+                continue
+
         rows, transforms = build_ticker_metrics(ticker)
         if not rows:
             excluded_rows.append({

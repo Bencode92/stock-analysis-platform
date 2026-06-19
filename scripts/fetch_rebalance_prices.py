@@ -103,6 +103,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
                         help="Lance les vraies calls API. Défaut : dry-run.")
+    parser.add_argument("--skip-existing", action="store_true",
+                        help="Saute les (ticker, date) déjà dans prices_at_rebalance.csv.")
     args = parser.parse_args()
 
     api_key = load_env()
@@ -123,11 +125,26 @@ def main():
         print(f"\n→ DRY-RUN : relance avec --live pour exécuter.")
         return 0
 
-    rows = []
+    # Charger l'existant si --skip-existing
+    out_csv = DERIVED_DIR / "prices_at_rebalance.csv"
+    existing = {}
+    if args.skip_existing and out_csv.exists():
+        with out_csv.open() as f:
+            for r in csv.DictReader(f):
+                existing[(r["ticker"], r["rebalance_date"])] = float(r["close"])
+        print(f"\n--skip-existing : {len(existing)} prix (ticker, date) déjà en cache")
+
+    rows = [{"ticker": tk, "rebalance_date": d, "close": p}
+            for (tk, d), p in existing.items()]
     missing = []
     for i, ticker in enumerate(tickers, 1):
+        # Skip si tous les rebalances déjà OK
+        if args.skip_existing and all((ticker, d) in existing for d in REBALANCE_DATES):
+            continue
         print(f"\n[{i}/{len(tickers)}] {ticker}")
         for date in REBALANCE_DATES:
+            if (ticker, date) in existing:
+                continue
             time.sleep(RATE_LIMIT_DELAY)
             price = fetch_price(ticker, date, api_key)
             if price is None:
@@ -138,7 +155,6 @@ def main():
                 print(f"  ✓ {date}: ${price:.2f}")
 
     DERIVED_DIR.mkdir(parents=True, exist_ok=True)
-    out_csv = DERIVED_DIR / "prices_at_rebalance.csv"
     with out_csv.open("w") as f:
         writer = csv.DictWriter(f, fieldnames=["ticker", "rebalance_date", "close"])
         writer.writeheader()
