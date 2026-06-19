@@ -68,8 +68,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_ROOT / "data" / "fundamentals_history" / "raw"
 ENV_PATH = PROJECT_ROOT / ".env"
 
-# Rate limit (Ultra : 600/min = 100ms entre calls, marge ×2 = 200ms)
-RATE_LIMIT_DELAY = 0.2
+# Rate limit (Ultra : 600/min sur time_series, MAIS quota séparé sur fundamentals).
+# Découverte Étape 5 (2026-06-19) : avec delay 0.2s, HTTP 429 après ~30 calls
+# fundamentals. Augmenté à 1.5s pour rester sous le radar.
+RATE_LIMIT_DELAY = 1.5
+
+# Retry sur HTTP 429 : back-off exponentiel (30s, 60s, 120s)
+RETRY_DELAYS = [30, 60, 120]
 
 
 def load_env() -> Optional[str]:
@@ -95,7 +100,13 @@ def all_tickers() -> list[str]:
 
 
 def fetch_endpoint(symbol: str, endpoint: str, api_key: str) -> Optional[dict]:
-    """Fetch un endpoint annual pour un symbole, depuis 2005 (TD borne réelle ~6 ans)."""
+    """Fetch un endpoint annual pour un symbole, depuis 2005 (TD borne réelle ~6 ans).
+
+    Retry exponentiel sur HTTP 429 (Too Many Requests) — découverte Étape 5
+    (2026-06-19) : TD applique un quota séparé sur les endpoints fundamentals,
+    différent du rate limit time_series. Sans retry, on perd 50% des stocks
+    en batch.
+    """
     params = {
         "symbol": symbol,
         "period": "annual",
@@ -103,20 +114,31 @@ def fetch_endpoint(symbol: str, endpoint: str, api_key: str) -> Optional[dict]:
         "apikey": api_key,
     }
     url = f"{TD_BASE}/{endpoint}?{urlencode(params)}"
-    try:
-        with urlopen(url, timeout=30) as resp:
-            payload = json.loads(resp.read())
-    except (HTTPError, URLError) as e:
-        print(f"  ⚠️  {symbol} [{endpoint}] HTTP/URL error: {e}", file=sys.stderr)
-        return None
-    except Exception as e:
-        print(f"  ⚠️  {symbol} [{endpoint}] error: {e}", file=sys.stderr)
-        return None
 
-    if isinstance(payload, dict) and payload.get("status") == "error":
-        print(f"  ⚠️  {symbol} [{endpoint}] API error: {payload.get('message')}", file=sys.stderr)
-        return None
-    return payload
+    for attempt, wait_before in enumerate([0] + RETRY_DELAYS):
+        if wait_before > 0:
+            print(f"  ⏳ {symbol} [{endpoint}] retry {attempt}/{len(RETRY_DELAYS)} dans {wait_before}s...", file=sys.stderr)
+            time.sleep(wait_before)
+        try:
+            with urlopen(url, timeout=30) as resp:
+                payload = json.loads(resp.read())
+        except HTTPError as e:
+            if e.code == 429 and attempt < len(RETRY_DELAYS):
+                continue  # back-off et retry
+            print(f"  ⚠️  {symbol} [{endpoint}] HTTP error: {e}", file=sys.stderr)
+            return None
+        except URLError as e:
+            print(f"  ⚠️  {symbol} [{endpoint}] URL error: {e}", file=sys.stderr)
+            return None
+        except Exception as e:
+            print(f"  ⚠️  {symbol} [{endpoint}] error: {e}", file=sys.stderr)
+            return None
+
+        if isinstance(payload, dict) and payload.get("status") == "error":
+            print(f"  ⚠️  {symbol} [{endpoint}] API error: {payload.get('message')}", file=sys.stderr)
+            return None
+        return payload
+    return None
 
 
 def fetch_time_series_at(symbol: str, date_iso: str, api_key: str,
@@ -351,6 +373,21 @@ def print_completude_report(all_stats: list, completude_log: list) -> None:
     print("\n" + "=" * 70)
 
 
+def has_all_raw_files(ticker: str) -> bool:
+    """Vrai si les 3 endpoints + market_cap sont déjà sur disque pour ce ticker.
+
+    Permet --skip-existing : économise les credits TD sur les re-runs partiels
+    (typiquement après HTTP 429 sur la moitié des stocks).
+    """
+    safe = ticker.replace("/", "_").replace(":", "_")
+    for endpoint in ENDPOINTS:
+        if not (RAW_DIR / f"{safe}_{endpoint}.json").exists():
+            return False
+    if not (RAW_DIR / f"{safe}_market_cap.json").exists():
+        return False
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
@@ -358,6 +395,8 @@ def main() -> int:
     parser.add_argument("--tickers", type=str, default=None,
                         help="Liste de tickers séparés par virgule (ex: NVDA,ASML). "
                              "Par défaut : tout l'univers (50 stocks).")
+    parser.add_argument("--skip-existing", action="store_true",
+                        help="Saute les tickers déjà entièrement fetchés (économie credits TD).")
     args = parser.parse_args()
 
     api_key = load_env()
@@ -378,7 +417,8 @@ def main() -> int:
     print(f"Stockage : {RAW_DIR}")
     n_calls_estim = len(tickers) * (len(ENDPOINTS) + 6)  # 3 endpoints + ~6 time_series par stock
     print(f"Calls API estimés : ~{n_calls_estim}")
-    print(f"Durée estimée @ 0.2s/call : ~{n_calls_estim * RATE_LIMIT_DELAY:.0f}s")
+    print(f"Durée estimée @ {RATE_LIMIT_DELAY}s/call : ~{n_calls_estim * RATE_LIMIT_DELAY:.0f}s "
+          f"({n_calls_estim * RATE_LIMIT_DELAY / 60:.1f} min)")
 
     if not args.live:
         print("\n→ DRY-RUN : aucun call, aucune écriture. Relance avec --live pour exécuter.")
@@ -386,6 +426,16 @@ def main() -> int:
 
     # LIVE
     print(f"\n🚀 LIVE — début fetch")
+    print(f"   Rate limit delay : {RATE_LIMIT_DELAY}s / Retries 429 : {RETRY_DELAYS}")
+    if args.skip_existing:
+        skipped = [t for t in tickers if has_all_raw_files(t)]
+        if skipped:
+            print(f"   --skip-existing : {len(skipped)} ticker(s) déjà complets sautés : {', '.join(skipped[:10])}"
+                  + (f" (+{len(skipped)-10})" if len(skipped) > 10 else ""))
+        tickers = [t for t in tickers if not has_all_raw_files(t)]
+        if not tickers:
+            print(f"\n✓ Tous les tickers sont déjà fetchés. Rien à faire.")
+            return 0
     all_stats = []
     completude_log = []
     for i, ticker in enumerate(tickers, 1):
