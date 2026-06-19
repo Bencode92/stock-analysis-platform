@@ -43,17 +43,17 @@ from typing import Optional
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DERIVED_DIR = PROJECT_ROOT / "data" / "fundamentals_history" / "derived"
 
-# Paramètres backtest (gravés)
+# Paramètres backtest (figés AVANT exécution — voir PREDECLARATION_BACKTEST_MODE3.md)
 REBALANCE_DATES = [
     "2021-04-01", "2022-04-01", "2023-04-01",
     "2024-04-01", "2025-04-01", "2026-04-01",
 ]
 LAG_DAYS = 90
-TOP_N = 25
-TRANSACTION_COST = 0.0015  # 0.15% par trade
-PFU_RATE = 0.314           # 31.4% PV + dividendes (CTO)
-MODE3_N_TRIALS = 100       # Monte Carlo
-EDGE_SIGNIFICANCE_THRESHOLD = 0.02  # Edge ≥ 2 pts CAGR considéré significatif
+TOP_N = 10  # Réformulé Fabre 2026-06-19 : 25 → 10 (correction de construction, 22% sélectivité)
+TRANSACTION_COST = 0.0015
+PFU_RATE = 0.314
+MODE3_N_TRIALS = 100
+HOMOGENEITY_THRESHOLD = 0.25  # médiane % stocks ≥83 sur rebalances ; au-dessus = univers homogène
 
 
 def load_metrics():
@@ -66,7 +66,7 @@ def load_metrics():
     with metrics_csv.open() as f:
         for row in csv.DictReader(f):
             # Parse champs numériques
-            for k in ("buffett_score", "buffett_score_no_valuation"):
+            for k in ("buffett_score", "buffett_score_no_valuation", "market_cap"):
                 v = row.get(k)
                 row[k] = float(v) if v and v != "" else None
             row["excluded_year"] = (row.get("excluded_year") or "").lower() in ("true", "1")
@@ -107,10 +107,18 @@ def eligible_at(metrics, rebalance_date, lag_days=LAG_DAYS):
 
 
 def select_top_by_score(eligible, score_col, n=TOP_N):
-    """Top N par score (None traité comme -∞)."""
-    scored = [(r["ticker"], r.get(score_col)) for r in eligible if r.get(score_col) is not None]
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return [tk for tk, _ in scored[:n]]
+    """Top N par score avec tie-breaker orthogonal market_cap décroissant.
+
+    Fabre 2026-06-19 : éviter de réinjecter les composantes du scoring
+    (roe, fcf_yield qui sont déjà dans buffett_score) comme tie-breaker
+    car ça amplifie le signal qu'on teste. market_cap est neutre vs la
+    thèse qualité.
+    """
+    scored = [(r["ticker"], r.get(score_col), r.get("market_cap") or 0)
+              for r in eligible if r.get(score_col) is not None]
+    # Tri lexicographique : (score, market_cap) décroissant
+    scored.sort(key=lambda x: (x[1], x[2]), reverse=True)
+    return [tk for tk, _, _ in scored[:n]]
 
 
 def select_random(eligible, n=TOP_N, seed=None):
@@ -207,6 +215,15 @@ def compute_metrics(eq_curve, turnover_history, label=""):
 
     avg_turnover = mean(turnover_history) if turnover_history else 0
 
+    # Sharpe annualisé : mean(returns annuels nets) / stdev — sans rf (≈0 sur la fenêtre)
+    period_returns = [r for _, _, r in eq_curve[1:]]  # exclude initial point
+    if len(period_returns) >= 2:
+        mean_r = mean(period_returns)
+        std_r = stdev(period_returns)
+        sharpe = mean_r / std_r if std_r > 0 else 0
+    else:
+        sharpe = 0
+
     return {
         "label": label,
         "CAGR_net": cagr * 100,
@@ -214,8 +231,28 @@ def compute_metrics(eq_curve, turnover_history, label=""):
         "DD_2022": dd_2022 * 100,
         "worst_3y_cum": worst_3y * 100,
         "turnover_per_year": avg_turnover * 100,
+        "Sharpe_ann": sharpe,
         "final_equity": final_equity,
     }
+
+
+def measure_universe_homogeneity(metrics) -> tuple[float, list[float]]:
+    """Médiane sur les rebalances du % stocks éligibles avec buffett_score ≥ 83.
+
+    Si médiane > HOMOGENEITY_THRESHOLD (25%), univers labo trop riche en
+    qualité → un random tire mécaniquement de la qualité → faux négatif
+    possible. Pré-déclaré comme garde-fou anti-faux-négatif (Fabre 2026-06-19).
+    """
+    pct_per_rebalance = []
+    for date in REBALANCE_DATES[:-1]:  # rebalances effectives (sauf la dernière qui sert juste de fin de période)
+        eligible = eligible_at(metrics, date)
+        scored = [r for r in eligible if r.get("buffett_score") is not None]
+        if not scored:
+            continue
+        n_top = sum(1 for r in scored if r["buffett_score"] >= 83)
+        pct_per_rebalance.append(n_top / len(scored))
+    median_pct = median(pct_per_rebalance) if pct_per_rebalance else 0
+    return median_pct, pct_per_rebalance
 
 
 def format_report(results):
@@ -253,50 +290,118 @@ def main():
     print(f"\nMétriques chargées : {len(metrics)} lignes ({len({r['ticker'] for r in metrics})} stocks)")
     print(f"Prix chargés : {len(prices)} (ticker, date)")
 
-    # ─── MODE 3 : SANITÉ ──────────────────────────────────────────────────
+    # ─── MODE 3 REFORMULÉ — voir PREDECLARATION_BACKTEST_MODE3.md ─────────
+    # Verdicts pré-déclarés AVANT exécution (commit 2026-06-19) :
+    #   A  : edge CAGR + edge Sharpe       → scoring robuste, Mode 1
+    #   B  : pas d'edge CAGR + edge Sharpe → scoring défensif confirmé, Mode 1 lu en protection
+    #   C  : pas d'edge ni l'un ni l'autre → vérifier homogénéité univers avant condamner scoring
+    #   D-bis : edge INVERSÉ (buffett < IC90_low) → urgence, scoring anti-sélectionne
     print(f"\n{'='*70}")
-    print(f"MODE 3 — SANITÉ : top 25 buffett vs {args.mode3_trials} tirages random")
+    print(f"MODE 3 — SANITÉ REFORMULÉ : top {TOP_N} buffett vs {args.mode3_trials} random")
+    print(f"  Tie-breaker : market_cap décroissant (orthogonal au scoring)")
+    print(f"  Métriques juge : CAGR + Sharpe annualisé (pré-déclarés)")
     print(f"{'='*70}")
 
     # Stratégie scoring
     eq_curve_scored, to_scored = backtest_strategy(
         metrics, prices, select_top_by_score, score_col="buffett_score"
     )
-    res_scored = compute_metrics(eq_curve_scored, to_scored, label="Buffett-25")
-    print(f"\nBuffett top 25 : CAGR net = {res_scored['CAGR_net']:.2f}%, "
-          f"MaxDD = {res_scored['MaxDD']:.2f}%")
+    res_scored = compute_metrics(eq_curve_scored, to_scored, label=f"Buffett-{TOP_N}")
+    print(f"\nBuffett top {TOP_N} : CAGR net = {res_scored['CAGR_net']:.2f}%, "
+          f"Sharpe = {res_scored['Sharpe_ann']:.3f}, MaxDD = {res_scored['MaxDD']:.2f}%")
 
-    # Random Monte Carlo
+    # Random Monte Carlo — mêmes paramètres (top N tirage aléatoire dans pool éligible)
     random_cagrs = []
+    random_sharpes = []
     for trial in range(args.mode3_trials):
         eq_curve_r, to_r = backtest_strategy(
             metrics, prices, select_random, seed=trial
         )
         res_r = compute_metrics(eq_curve_r, to_r, label=f"Random-{trial}")
         random_cagrs.append(res_r["CAGR_net"])
+        random_sharpes.append(res_r["Sharpe_ann"])
 
-    random_cagrs.sort()
-    median_random = median(random_cagrs)
-    ci90_low = random_cagrs[int(0.05 * len(random_cagrs))]
-    ci90_high = random_cagrs[int(0.95 * len(random_cagrs))]
+    def quantiles(values):
+        s = sorted(values)
+        n = len(s)
+        return {
+            "median": s[n // 2],
+            "ic90_low": s[int(0.05 * n)],
+            "ic90_high": s[int(0.95 * n)],
+        }
 
-    print(f"\nRandom 25 ({args.mode3_trials} tirages) : "
-          f"médiane CAGR = {median_random:.2f}%, IC90 = [{ci90_low:.2f}%, {ci90_high:.2f}%]")
+    cagr_q = quantiles(random_cagrs)
+    sharpe_q = quantiles(random_sharpes)
 
-    edge = res_scored["CAGR_net"] - median_random
-    print(f"\nEdge buffett vs random (médiane) : {edge:+.2f} pts CAGR")
-    print(f"Buffett vs IC90 random : {'AU-DESSUS' if res_scored['CAGR_net'] > ci90_high else 'DANS IC' if res_scored['CAGR_net'] >= ci90_low else 'AU-DESSOUS'}")
+    print(f"\nRandom CAGR  ({args.mode3_trials} tirages) : médiane = {cagr_q['median']:.2f}%, "
+          f"IC90 = [{cagr_q['ic90_low']:.2f}%, {cagr_q['ic90_high']:.2f}%]")
+    print(f"Random Sharpe ({args.mode3_trials} tirages) : médiane = {sharpe_q['median']:.3f}, "
+          f"IC90 = [{sharpe_q['ic90_low']:.3f}, {sharpe_q['ic90_high']:.3f}]")
 
-    mode3_passed = edge >= EDGE_SIGNIFICANCE_THRESHOLD * 100 and res_scored["CAGR_net"] > ci90_low
-    if mode3_passed:
-        print(f"\n✓ MODE 3 PASS — scoring montre un edge ≥ {EDGE_SIGNIFICANCE_THRESHOLD*100:.0f} pts vs aléatoire.")
+    # Classification edge selon pré-déclaration
+    def classify(value, q):
+        if value > q["ic90_high"]:
+            return "edge", "AU-DESSUS IC90"
+        elif value < q["ic90_low"]:
+            return "inversé", "SOUS IC90 (anti-sélection)"
+        else:
+            return "neutre", "DANS IC90"
+
+    cagr_status, cagr_desc = classify(res_scored["CAGR_net"], cagr_q)
+    sharpe_status, sharpe_desc = classify(res_scored["Sharpe_ann"], sharpe_q)
+
+    print(f"\nVerdict CAGR   : Buffett={res_scored['CAGR_net']:.2f}% → {cagr_desc} → '{cagr_status}'")
+    print(f"Verdict Sharpe : Buffett={res_scored['Sharpe_ann']:.3f} → {sharpe_desc} → '{sharpe_status}'")
+
+    # Mesure homogénéité univers (pré-déclarée comme garde-fou faux négatif)
+    homog_median, homog_per_rebalance = measure_universe_homogeneity(metrics)
+    print(f"\nHomogénéité univers (médiane % stocks score≥83) : {homog_median*100:.1f}% "
+          f"(par rebalance : {[f'{p*100:.0f}%' for p in homog_per_rebalance]})")
+    print(f"Seuil pré-déclaré : > {HOMOGENEITY_THRESHOLD*100:.0f}% = univers homogène (faux négatif possible)")
+
+    # Verdict final (ordre : D-bis urgence d'abord, puis A/B/C)
+    print(f"\n{'='*70}")
+    if cagr_status == "inversé" or sharpe_status == "inversé":
+        verdict = "D-bis"
+        msg = (f"Verdict D-bis — EDGE INVERSÉ détecté ({cagr_status=}, {sharpe_status=})\n"
+               f"  → Le scoring anti-sélectionne sur au moins une dimension.\n"
+               f"  → STOP urgent. Diagnostic immédiat AVANT toute autre étape.\n"
+               f"  → Hypothèses : (1) tri inversé, (2) métrique mal définie, (3) doctrine fausse.")
+    elif cagr_status == "edge" and sharpe_status == "edge":
+        verdict = "A"
+        msg = (f"Verdict A — Scoring ROBUSTE sur les 2 dimensions (CAGR edge + Sharpe edge).\n"
+               f"  → Passe à Mode 1 (α vs β).")
+    elif cagr_status == "neutre" and sharpe_status == "edge":
+        verdict = "B"
+        msg = (f"Verdict B — Scoring DÉFENSIF confirmé (pas d'alpha CAGR mais edge Sharpe).\n"
+               f"  → Cohérent avec doctrine : Thematique = moteur perf, Buffett = filtre défensif.\n"
+               f"  → Mode 1 (α vs β) à lire comme 'lequel protège mieux', pas 'lequel rapporte plus'.")
+    elif cagr_status == "neutre" and sharpe_status == "neutre":
+        verdict = "C"
+        if homog_median > HOMOGENEITY_THRESHOLD:
+            msg = (f"Verdict C* — Pas d'edge détecté, MAIS univers homogène ({homog_median*100:.1f}% > "
+                   f"{HOMOGENEITY_THRESHOLD*100:.0f}%).\n"
+                   f"  → Test NON CONCLUANT : random tire mécaniquement de la qualité dans pool présélectionné.\n"
+                   f"  → (D) légitime : élargir univers à 100+ stocks pour vrai contrefactuel.\n"
+                   f"  → Ne PAS condamner le scoring sans cette vérification.")
+        else:
+            msg = (f"Verdict C — Pas d'edge, univers hétérogène ({homog_median*100:.1f}% ≤ "
+                   f"{HOMOGENEITY_THRESHOLD*100:.0f}%).\n"
+                   f"  → Le scoring n'a pas d'edge sur sa propre promesse.\n"
+                   f"  → STOP, retour au design du scoring AVANT de raffiner.\n"
+                   f"  → Pas de 4e config (engagement anti-p-hacking).")
     else:
-        print(f"\n✗ MODE 3 FAIL — scoring sans edge significatif vs aléatoire.")
-        print(f"  → Le débat α vs β est vain tant que le scoring n'a pas d'edge brut.")
-        print(f"  → Action recommandée : retour au design du scoring AVANT de raffiner.")
-        if not args.force_mode1:
-            print(f"\n(Use --force-mode1 to run Mode 1 anyway for debug.)")
-            return 0
+        verdict = "?"
+        msg = f"Verdict NON COUVERT par pré-déclaration : CAGR={cagr_status}, Sharpe={sharpe_status}"
+
+    print(f"VERDICT FINAL : {verdict}")
+    print(msg)
+    print(f"{'='*70}")
+
+    mode3_passed = verdict in ("A", "B")
+    if not mode3_passed and not args.force_mode1:
+        print(f"\n(Mode 1 non lancé — verdict {verdict}. Use --force-mode1 si debug requis.)")
+        return 0
 
     # ─── MODE 1 : α vs β ──────────────────────────────────────────────────
     print(f"\n{'='*70}")
