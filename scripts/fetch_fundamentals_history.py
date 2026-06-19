@@ -34,6 +34,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from urllib.error import HTTPError, URLError
@@ -118,13 +119,25 @@ def fetch_endpoint(symbol: str, endpoint: str, api_key: str) -> Optional[dict]:
     return payload
 
 
-def fetch_time_series_at(symbol: str, date_iso: str, api_key: str) -> Optional[float]:
-    """Récupère le prix de clôture d'un titre à une date donnée (pour reconstruire market_cap)."""
+def fetch_time_series_at(symbol: str, date_iso: str, api_key: str,
+                         lookback_days: int = 10) -> Optional[float]:
+    """Récupère le prix de clôture le plus proche d'une fiscal_date.
+
+    Découverte Étape 4 (2026-06-19) : TD time_series renvoie HTTP 400 si
+    start_date == end_date (range vide). De plus, beaucoup de fiscal_date
+    tombent un week-end ou férié (NVDA 2021-01-31 = dimanche, ASML 2025-12-31
+    = Saint-Sylvestre). Solution : élargir à [date - lookback_days, date]
+    et prendre la dernière valeur retournée (le close le plus proche).
+
+    Ça gère les deux problèmes en une fois.
+    """
+    end = date_iso
+    start = (datetime.fromisoformat(date_iso) - timedelta(days=lookback_days)).date().isoformat()
     params = {
         "symbol": symbol,
         "interval": "1day",
-        "start_date": date_iso,
-        "end_date": date_iso,
+        "start_date": start,
+        "end_date": end,
         "apikey": api_key,
     }
     url = f"{TD_BASE}/time_series?{urlencode(params)}"
@@ -139,47 +152,46 @@ def fetch_time_series_at(symbol: str, date_iso: str, api_key: str) -> Optional[f
     values = payload.get("values", []) if isinstance(payload, dict) else []
     if not values:
         return None
+    # TD renvoie values en ordre antéchronologique (plus récent en premier).
+    # On veut le close le plus proche de date_iso = values[0]["close"].
     try:
         return float(values[0].get("close"))
     except (TypeError, ValueError):
         return None
 
 
-def extract_shares_outstanding(balance_sheet_payload: dict) -> dict[str, Optional[float]]:
-    """Extrait shares_outstanding par fiscal_date depuis balance_sheet.
+def extract_shares_outstanding(income_statement_payload: dict) -> dict[str, Optional[float]]:
+    """Extrait shares_outstanding par fiscal_date depuis income_statement.
 
-    TD stocke souvent dans equity.common_stock_shares_outstanding ou similaire.
+    DÉCOUVERTE Étape 4 (2026-06-19) : TD met basic_shares_outstanding et
+    diluted_shares_outstanding dans income_statement (pas balance_sheet).
+    Vérifié sur NVDA + ASML : champ présent sur les 6 années.
+
+    On prend `diluted_shares_outstanding` par défaut (dilution incluse =
+    estimation prudente du market cap, cohérent avec EPS diluted utilisé par
+    le marché). Fallback sur basic si diluted absent.
+
     Retourne {fiscal_date: shares ou None si introuvable}.
     """
     result = {}
-    statements = balance_sheet_payload.get("balance_sheet", []) if isinstance(balance_sheet_payload, dict) else []
+    statements = income_statement_payload.get("income_statement", []) if isinstance(income_statement_payload, dict) else []
     for stmt in statements:
         fd = stmt.get("fiscal_date")
         if not fd:
             continue
-        # Chercher dans tous les chemins plausibles
-        shares = None
-        equity_block = stmt.get("equity") or {}
-        for key in ("common_stock_shares_outstanding", "shares_outstanding",
-                    "common_stock_outstanding", "ordinary_shares_outstanding"):
-            if key in equity_block and equity_block[key] is not None:
-                shares = equity_block[key]
-                break
-            if key in stmt and stmt[key] is not None:
-                shares = stmt[key]
-                break
+        shares = stmt.get("diluted_shares_outstanding") or stmt.get("basic_shares_outstanding")
         result[fd] = shares
     return result
 
 
-def reconstruct_market_cap(ticker: str, balance_sheet_payload: dict, api_key: str,
+def reconstruct_market_cap(ticker: str, income_statement_payload: dict, api_key: str,
                            completude_log: list) -> dict[str, Optional[float]]:
     """Reconstruit market_cap historique par fiscal_date = shares × prix à la date.
 
     Logge BRUYAMMENT chaque (ticker, fiscal_date) où shares_outstanding ou prix
     est introuvable. Pas de None silencieux.
     """
-    shares_by_date = extract_shares_outstanding(balance_sheet_payload)
+    shares_by_date = extract_shares_outstanding(income_statement_payload)
     market_caps = {}
     for fd, shares in shares_by_date.items():
         if shares is None:
@@ -200,6 +212,44 @@ def reconstruct_market_cap(ticker: str, balance_sheet_payload: dict, api_key: st
     return market_caps
 
 
+def detect_shares_anomalies(ticker: str, shares_by_date: dict,
+                            threshold: float = 0.15) -> list[str]:
+    """Détecte des variations inter-année anormales de shares_outstanding.
+
+    Découverte Étape 4 (Fabre 2026-06-19) : ASML 2024-12-31 = 470M shares vs
+    377M en 2023 et 388M en 2025 → +24% en 1 an, presque certainement une
+    erreur TD (rachats/émissions organiques restent ≤ ~10%/an, splits sont
+    normalement ajustés rétroactivement par TD).
+
+    Le rapport de complétude attrape les ABSENCES, pas les VALEURS PRÉSENTES
+    MAIS FAUSSES. Ce check comble ce trou : il signale les sauts > 15% entre
+    années consécutives pour qu'on les inspecte AVANT de calculer P/E ou FCF
+    yield (qui dépendent du market_cap = shares × prix).
+
+    Seuil 15% : rachats/émissions organiques rarement au-delà. Au-dessus,
+    soit split mal ajusté par TD, soit erreur — dans les deux cas on veut
+    voir avant de scorer.
+    """
+    flags = []
+    # Trier par fiscal_date (chronologique)
+    items = sorted(((fd, s) for fd, s in shares_by_date.items() if s is not None),
+                   key=lambda x: x[0])
+    for i in range(1, len(items)):
+        fd_prev, s_prev = items[i - 1]
+        fd_curr, s_curr = items[i]
+        if s_prev <= 0:
+            continue
+        delta = (s_curr / s_prev) - 1.0
+        if abs(delta) > threshold:
+            sign = "+" if delta > 0 else ""
+            flags.append(
+                f"ANOMALIE shares {ticker} {fd_curr}: {s_curr/1e6:.1f}M vs "
+                f"{s_prev/1e6:.1f}M en {fd_prev} ({sign}{delta*100:.1f}%) — "
+                f"vérifier split manqué ou erreur TD"
+            )
+    return flags
+
+
 def save_raw(ticker: str, endpoint: str, payload: dict) -> Path:
     """Sauvegarde le brut INTOUCHABLE. Jamais modifié après écriture."""
     RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -213,8 +263,9 @@ def save_raw(ticker: str, endpoint: str, payload: dict) -> Path:
 def fetch_ticker(ticker: str, api_key: str, completude_log: list) -> dict:
     """Fetch les 3 endpoints + market_cap pour un ticker. Retourne stats."""
     stats = {"ticker": ticker, "endpoints_ok": [], "endpoints_fail": [],
-             "n_years": {}, "market_cap_years_ok": 0, "market_cap_years_fail": 0}
-    bs_payload = None
+             "n_years": {}, "market_cap_years_ok": 0, "market_cap_years_fail": 0,
+             "shares_anomalies": []}
+    is_payload = None  # income_statement payload (shares_outstanding y est)
     for endpoint in ENDPOINTS:
         time.sleep(RATE_LIMIT_DELAY)
         payload = fetch_endpoint(ticker, endpoint, api_key)
@@ -227,12 +278,17 @@ def fetch_ticker(ticker: str, api_key: str, completude_log: list) -> dict:
         key_in_payload = endpoint  # même nom que l'endpoint
         years = len(payload.get(key_in_payload, [])) if isinstance(payload, dict) else 0
         stats["n_years"][endpoint] = years
-        if endpoint == "balance_sheet":
-            bs_payload = payload
+        if endpoint == "income_statement":
+            is_payload = payload
 
     # Reconstruction market_cap historique (étape critique, maillon faible)
-    if bs_payload is not None:
-        market_caps = reconstruct_market_cap(ticker, bs_payload, api_key, completude_log)
+    # shares_outstanding est dans income_statement, pas balance_sheet (vérifié 2026-06-19)
+    if is_payload is not None:
+        # Détection anomalies inter-année AVANT le market_cap (Fabre 2026-06-19)
+        # ASML 2024 +24% shares = probable erreur TD, à voir avant scoring
+        shares_map = extract_shares_outstanding(is_payload)
+        stats["shares_anomalies"] = detect_shares_anomalies(ticker, shares_map)
+        market_caps = reconstruct_market_cap(ticker, is_payload, api_key, completude_log)
         stats["market_cap_years_ok"] = sum(1 for v in market_caps.values() if v is not None)
         stats["market_cap_years_fail"] = sum(1 for v in market_caps.values() if v is None)
         # Sauvegarde séparée market_cap (dérivé, mais conservé en raw/ car coût API)
@@ -271,6 +327,20 @@ def print_completude_report(all_stats: list, completude_log: list) -> None:
     for s in all_stats:
         if s["market_cap_years_fail"] > 0:
             print(f"  ❌ {s['ticker']}: {s['market_cap_years_ok']} OK / {s['market_cap_years_fail']} trous")
+
+    # Anomalies shares inter-année (Fabre 2026-06-19)
+    print(f"\nAnomalies shares inter-année (seuil 15%) :")
+    n_anomalies = sum(len(s["shares_anomalies"]) for s in all_stats)
+    n_stocks_with_anomalies = sum(1 for s in all_stats if s["shares_anomalies"])
+    if n_anomalies == 0:
+        print(f"  ✓ Aucune anomalie détectée — shares organiques sur tous les stocks")
+    else:
+        print(f"  ⚠️  {n_anomalies} anomalie(s) sur {n_stocks_with_anomalies}/{n_total} stocks :")
+        for s in all_stats:
+            for flag in s["shares_anomalies"]:
+                print(f"    - {flag}")
+        print(f"\n  → À inspecter AVANT calcul des métriques P/E + FCF yield.")
+        print(f"  → Causes possibles : split mal ajusté TD, gross dilution, erreur data.")
 
     if completude_log:
         print(f"\n📋 Détail des trous (à inspecter avant étape 5) :")
