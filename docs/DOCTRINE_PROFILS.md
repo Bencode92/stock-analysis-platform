@@ -52,6 +52,57 @@ Cohérence bornes par construction : MaxDD -22/-28% ↔ vol cible 28-35% ↔ CAG
 
 ---
 
+## SYNTHÈSE EMPIRIQUE 2026-06-19/20 — Ce que le scoring Buffett FAIT et NE FAIT PAS
+
+**Trois verdicts pré-déclarés successifs**, tous trois acceptés tels quels (engagement scientifique) :
+
+| Verdict | Date | Question | Résultat |
+|---|---|---|---|
+| **D** | 2026-06-19 | Edge de SÉLECTION (CAGR/Sharpe/MaxDD) ? | **Pas d'edge mesurable** sur 239 stocks S&P 500 contrefactuel valide |
+| **Neutre** | 2026-06-20 | Edge de PROTECTION sur baisses modérées (-30%) ? | **Pas d'edge au seuil pré-déclaré 2×** (ratio 1.76×, IC95% exclut 0 mais sous seuil) |
+| **Observation non-décisionnelle** | 2026-06-20 | Catastrophes extrêmes (-50%) ? | **Signal réel** (ratio 4.95×, IC95% exclut 0) — mais c'était la métrique secondaire, **PAS le critère opérationnel** → piste pour test futur, pas conclusion |
+
+### Lecture doctrinale juste (Fabre verdict 2026-06-20)
+
+**Ce que le scoring NE FAIT PAS** :
+- Pas générateur d'alpha de sélection (Verdict D)
+- Pas amortisseur de volatilité ordinaire (les -30% arrivent à toute bonne boîte en bear)
+
+**Ce que le scoring FAIT PEUT-ÊTRE** (non encore prouvé au standard fixé) :
+- Évite les **désastres irréversibles** (-50%/-80% qui ne reviennent jamais) : faillites, dilutions massives, modèles cassés type CVNA/BBBY
+- C'est de l'**assurance contre la ruine**, pas un avantage de performance ni de confort
+
+**Implication critique** (Fabre) : *"Un filtre binaire grossier (« exclure FCF négatif persistant + sur-endettées + ROE négatif 3 ans ») ferait probablement le même job d'évitement-des-désastres. La complexité de ton scoring n'est pas justifiée par ce qu'il prouve apporter."*
+
+### Question doctrinale OUVERTE (à froid, future session)
+
+**Le scoring Buffett 6 critères + Quality + 13 paliers est-il sur-conçu pour ce qu'il prouve faire ?**
+
+Hypothèses possibles à explorer (avec pré-déclaration scientifique stricte chacune) :
+1. **Simplification radicale** : filtre binaire d'exclusion désastres remplace le scoring complexe → testable
+2. **Quality vs Buffett** comme filtre de survie : hypothèse distincte à pré-déclarer
+3. **Test signal -50% sur autre fenêtre/univers** : confirmer ou infirmer le ratio 4.95× sans circularité
+
+**Ces tests ne sont PAS pour ce soir.** Sont à conduire chacun avec pré-déclaration séparée, fenêtre/univers différents pour éviter circularité.
+
+### Direction doctrinale immédiate (pas de redesign)
+
+- **Le scoring actuel reste en place** dans la prod (pas de cassure)
+- **Mais on n'attend plus de lui ce qu'il ne prouve pas faire** : ni alpha, ni amortisseur ordinaire
+- **L'énergie va à l'allocation et Thematique** — là où l'edge est empiriquement prouvé (+2.4 pts CAGR vs VT, mentionné en session)
+- **Le débat α vs β reste clos** (Verdict D)
+- **L'éventuelle simplification du scoring** est une question doctrinale, pas un test à courir
+
+### Ce que cette session a empiriquement établi (résumé)
+
+1. ✅ Méthode scientifique tenue : 3 pré-déclarations committées AVANT exécution, 3 verdicts acceptés tels quels, aucune modification post-hoc
+2. ✅ Outils construits : fetcher historique fondamental, build derived, harness backtest tridimensionnel, test survie
+3. ✅ Question principale tranchée : le scoring n'a pas d'edge de sélection ni d'amortissement ordinaire
+4. ✅ Direction doctrinale claire : Thematique = moteur perf, scoring = filtre de structure (et peut-être garde-fou contre la ruine, à confirmer)
+5. 🔓 Hypothèse résiduelle : protection contre catastrophes extrêmes (à tester proprement plus tard, sur autre périmètre)
+
+---
+
 ## AGRESSIF — verdict backtest D (2026-06-19) : β abandonné, α conservé pour structure
 
 ### ⚠️ ADDENDUM 2026-06-19 — Le backtest empirique a tranché
