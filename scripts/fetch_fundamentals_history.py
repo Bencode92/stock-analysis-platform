@@ -395,6 +395,9 @@ def main() -> int:
     parser.add_argument("--tickers", type=str, default=None,
                         help="Liste de tickers séparés par virgule (ex: NVDA,ASML). "
                              "Par défaut : tout l'univers (50 stocks).")
+    parser.add_argument("--tickers-from", type=str, default=None,
+                        help="Lit la liste de tickers depuis un JSON {sample: [...]} "
+                             "(ex: data/fundamentals_history/derived/sp500_sample_200.json)")
     parser.add_argument("--skip-existing", action="store_true",
                         help="Saute les tickers déjà entièrement fetchés (économie credits TD).")
     args = parser.parse_args()
@@ -405,7 +408,15 @@ def main() -> int:
         return 1
 
     # Liste des tickers à traiter
-    if args.tickers:
+    if args.tickers_from:
+        with open(args.tickers_from) as f:
+            payload = json.load(f)
+        tickers = payload.get("sample") or payload.get("tickers") or []
+        if not tickers:
+            print(f"ERREUR: aucun ticker dans {args.tickers_from} (clé 'sample' attendue)", file=sys.stderr)
+            return 1
+        tickers = [t.strip().upper() for t in tickers if t.strip()]
+    elif args.tickers:
         tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
     else:
         tickers = all_tickers()
