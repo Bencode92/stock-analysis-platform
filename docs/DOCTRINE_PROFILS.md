@@ -52,7 +52,52 @@ Cohérence bornes par construction : MaxDD -22/-28% ↔ vol cible 28-35% ↔ CAG
 
 ---
 
-## AGRESSIF — direction β, réversible sous validation backtest
+## AGRESSIF — verdict backtest D (2026-06-19) : β abandonné, α conservé pour structure
+
+### ⚠️ ADDENDUM 2026-06-19 — Le backtest empirique a tranché
+
+**Pré-déclaration scientifique** : `docs/PREDECLARATION_BACKTEST_D.md` (committée AVANT exécution, addendum compris).
+
+**Résultat empirique** sur univers élargi 239 stocks S&P 500 (test contrefactuel hétérogénéité fondamentale 13.9% < 15%) :
+
+```
+Buffett top 10 : CAGR 5.85%    Sharpe 0.642    MaxDD -8.31%
+Random 100 MC  : CAGR IC90 [1.51%, 17.44%]  Sharpe IC90 [0.21, 1.42]  MaxDD IC90 [-16.24%, 0%]
+
+Verdict 3D : CAGR neutre, Sharpe neutre, MaxDD neutre → VERDICT D TERMINAL
+```
+
+**Le scoring Buffett actuel n'a aucun edge mesurable sur cette fenêtre 2021-2026** :
+- Ni en performance (CAGR)
+- Ni en rapport risque/rendement (Sharpe)
+- **Ni en protection** (MaxDD identique à médiane random)
+
+Le MaxDD -4.09% du test labo 45 stocks était un **artefact d'univers homogène en qualité**, pas un edge réel.
+
+### Implications doctrinales (Fabre verdict 2026-06-19)
+
+**β est abandonné comme levier de performance** — pas parce qu'il aurait échoué, mais parce que le débat était mal posé : peu importe le filtre prix si le moteur en amont ne discrimine pas mieux que le hasard. Le commit `(α) Vision B β-Agressif désarmée` (3de096ae2) et le Code C (f094506e7) restent désarmés mais deviennent **caducs comme leviers de perf** — à conserver pour archive doctrinale, à supprimer dans une future cleanup si jamais.
+
+**α est conservé** — non pas parce qu'il génère de l'alpha (le verdict D le contredit), mais parce qu'il structure proprement les profils Stable/Modéré et évite les catastrophes value-trap (TSM/CVNA/BKNG-bug auto-détectés en (D) en sont la preuve). **α sert la discipline défensive, pas la surperformance.**
+
+**La performance vient de Thematique** (seul levier prouvé +2.4 pts CAGR vs VT). Le stock-picking est l'**ossature** des profils, pas leur moteur.
+
+### Limites du verdict (à reporter)
+
+1. **Fenêtre 2021-2026 dominée NVDA ×15** — régime growth extrême défavorable à un filtre value. Sur 2000-2002 ou 2008, l'edge défensif aurait peut-être émergé. Pas testable (pas de données fondamentales historiques pré-2020).
+2. **Random sous-tech de 10-12 pts vs S&P 500** — biais qui FAVORISAIT le scoring (random désavantagé sur la tech gagnante). Verdict D malgré ce vent dans le dos → renforce le signal, ne l'atténue pas.
+3. **Le verdict D tranche "alpha de sélection"**, pas "valeur de garde-fou" — le filtre peut encore exclure le pire (TSLA Buf 17, value-traps) sans avoir d'edge top-décile. Test différent à poser dans une future session (avec sa propre pré-déclaration).
+
+### Question ouverte (à froid, future session)
+
+**Le scoring doit-il viser l'alpha (et alors le redesigner) ou la structure/protection (et alors il fait déjà son job) ?**
+
+Si la réponse est "structure/protection" (probable), le scoring actuel est suffisant et le verdict D ne nécessite **pas** de redesign. La doctrine signée (DOCTRINE_PROFILS) reste cohérente : Thematique = moteur, actions = filet de qualité.
+
+---
+
+## AGRESSIF — section historique (avant verdict D)
+*Conservée pour traçabilité de la décision doctrinale ayant mené au test.*
 
 ### Statut doctrinal
 **Direction retenue ce soir** : Agressif est structuré comme **poche actions moteur (β, `valuation_ok` désactivé, tech mega-cap éligible) + cœur ETF amortisseur (VWCE/IEMG) + or/bonds**.

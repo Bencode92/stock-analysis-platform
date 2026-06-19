@@ -225,7 +225,40 @@ Si confirmé : toutes les financières (ADM, CS, TROW, HNR1, SREN, AXA) perdent 
 
 ---
 
-### Implémentation β-Agressif — DOCTRINE_PROFILS.md 2026-06-18
+### 🛑 VERDICT D BACKTEST 2026-06-19 — P5bis/P6/P7/P8 DEVENUS CADUCS
+
+Le backtest empirique (PREDECLARATION_BACKTEST_D.md + addendum) a abouti au
+**Verdict D terminal** sur univers élargi 239 stocks S&P 500 :
+- CAGR neutre vs random IC90
+- Sharpe neutre vs random IC90
+- **MaxDD neutre** vs random IC90 (médiane Buffett -8.31% ≈ random -8.36%)
+
+Conséquence : **le débat α vs β était mal posé**. Peu importe le filtre prix,
+le scoring Buffett ne discrimine pas mieux que le hasard sur cette fenêtre.
+
+Items rendus caducs par ce verdict (à archiver, pas à exécuter) :
+- ❌ P5bis (résoudre conflit doctrinal v6.3 vs DOCTRINE_PROFILS) :
+  la conclusion converge AVEC v6.3 (« agressivité vient du cœur, pas du
+  satellite ») — pas de réécriture v6.3 nécessaire
+- ❌ P6/P6bis/P6ter (flag β-Agressif + L1 + L2) : caducs comme leviers
+  de performance. Les commits Code C et (α) Vision B désarmée restent en
+  base mais inactifs, à supprimer dans cleanup future si jamais
+- ❌ P7 (backtest β-Agressif) : DÉJÀ FAIT et tranché D
+- ❌ P8 (épaisseur coussin Agressif) : caduc, plus de bascule β à protéger
+
+### Question OUVERTE pour future session (à froid)
+
+**Le scoring doit-il viser l'alpha de sélection (et donc être redesigné)
+ou la structure/protection (et alors il fait déjà son job) ?**
+
+Test différent à poser proprement :
+- "Univers filtré Buf≥X vs univers complet sur le DOWNSIDE extrême"
+- (pas "top 10 vs random sur le CAGR" qui mesure la sélection, pas la protection)
+- Aurait sa propre pré-déclaration scientifique
+
+À garder pour future session reposée, pas une 5e config interdite.
+
+### Implémentation β-Agressif — DOCTRINE_PROFILS.md 2026-06-18 (archivé)
 
 ⚠️ **AVERTISSEMENT POST-TRACE NVDA (2026-06-18 fin de session)** ⚠️
 
