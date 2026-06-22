@@ -52,6 +52,49 @@ Cohérence bornes par construction : MaxDD -22/-28% ↔ vol cible 28-35% ↔ CAG
 
 ---
 
+## CONCLUSION DÉFINITIVE 2026-06-22 — Sélection vs Allocation, où est l'edge prouvable
+
+**Insight final Fabre 2026-06-22** : tout débat sur la sélection (Verdict D, Survie Neutre, micro-edge panier) se heurte au même mur — **ratio variables/observations temporelles catastrophique**. 30+ variables candidates dans le JSON stock, 5 points de rebalance annuels disponibles. Statistiquement, plus on cherche, plus on trouve un faux edge qui s'évaporerait en réel.
+
+**Ce n'est pas que la sélection n'a pas d'edge — c'est qu'on ne peut pas le prouver** avec 6 ans de data, indépendamment de la méthode ou du score utilisé. Une analyse factorielle sur 30 variables avec 5 observations garantit le surapprentissage.
+
+**L'edge prouvable est dans l'allocation, pas la sélection** :
+- Allocation testable sur **25-30 ans** d'indices/ETF longs (dot-com, 2008, COVID, 2022, multiple régimes monétaires)
+- Sélection testable seulement sur les 6 ans de fondamentaux dispo TD
+- Le ratio observations/paramètres requis pour distinguer signal et bruit est respecté **uniquement pour l'allocation**
+
+**Décisions actées 2026-06-22** :
+
+1. **L'énergie va à l'allocation**, où l'edge est mesurable empiriquement (Thematique +2.4 pts CAGR vs VT, à creuser dans une démarche dédiée sur indices longs)
+
+2. **Le scoring actuel reste en place** comme filtre d'admissibilité défensif (rôle de garde-fou contre les ruines extrêmes, signal -50% du test Survie en pointant l'hypothèse). **Pas de redesign.**
+
+3. **Analyse factorielle PREDECLARATION_FACTOR_ANALYSIS.md abandonnée comme programme d'exécution** : la pré-déclaration v5 reste committée pour traçabilité scientifique, mais elle ne sera **pas exécutée** — le ratio variables/observations rend les verdicts non-actionnables (même un facteur "significatif" serait probablement un mirage statistique sur 5 points temporels)
+
+4. **Stabilité de la doctrine signée** : Stable préservation, Modéré capture partielle, Agressif structure (pas moteur), Thematique moteur perf, β-Agressif définitivement abandonné
+
+### Programme de recherche futur (à froid, sessions dédiées)
+
+**Tester sur indices longs (20-30 ans de data publique)** :
+- Sensibilité réelle β cœur Agressif (VWCE 50% + IEMG 15%) sur multi-régimes
+- Confirmation Thematique +2.4 pts vs VT : fenêtre, méthode, IC95%
+- Allocation 4-régimes (bull/bear/stagflation/déflation) testable historiquement
+- Profil Thematique (QQQ/IEMG/VGT/CGXU/VBK/VOT) vs équipondération naïve
+- α + Thematique + cœur ETF : robustesse de la structure sur 25 ans
+
+Chaque question = sa propre pré-déclaration, à froid, comme cette semaine.
+
+### Ce qui s'arrête
+
+- Recherche d'edge de sélection (verdict matériel sur la data, pas méthodologique)
+- Redesign du scoring (suffisant pour son rôle réel : filtre défensif)
+- Micro-edge panier 100 vs random (R1/R2 = 54% recouvrement = test sans pouvoir)
+- Backtest factoriel des 30 variables (overfit garanti vs 5 obs temporelles)
+
+**Insight Fabre gravé** : *"Tu ne manques pas de variables. Tu manques de données dans le temps pour les distinguer du hasard. C'est une limite matérielle de ta data, pas de ta méthode."*
+
+---
+
 ## SYNTHÈSE EMPIRIQUE 2026-06-19/20 — Ce que le scoring Buffett FAIT et NE FAIT PAS
 
 **Trois verdicts pré-déclarés successifs**, tous trois acceptés tels quels (engagement scientifique) :
