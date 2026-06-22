@@ -129,3 +129,47 @@ Pour chaque facteur disponible :
 5. Discipline : test à FROID, prochaine session, pas ce soir
 
 **Discipline gravée 2026-06-20, accord explicite Fabre + Code.**
+
+---
+
+## Addendum 2026-06-22 — précisions Fabre + checks complémentaires
+
+### 1. Quality fragile hors US — **fait de PRODUCTION, pas seulement de backtest**
+
+Le check 0a (peer pools) a révélé : EU Tech = 3 stocks, EU Healthcare = 1, EU Utilities = 1, etc. **Conséquence au-delà du backtest** : en production, le `quality_peer_global_rank` calculé sur 2-3 pairs est déjà du bruit aujourd'hui. À noter dans la doctrine système :
+
+> Le score Quality (peer-relative) n'est fiable que sur les zones où le pool de pairs est dense — typiquement US (cohortes 13-37 stocks). Hors US, s'appuyer sur les facteurs **bruts absolus** (ROE, ROIC, FCF yield), pas sur le rang relatif.
+
+C'est un insight de fiabilité système qui dépasse l'analyse factorielle.
+
+### 2. Earnings surprise — horodatage VÉRIFIÉ ✓
+
+Check 2026-06-22 : le champ `date` de `/earnings` TD est bien la **date d'annonce** (ex. ASML Q1 2026 : `date = 2026-04-15`, soit ~2 semaines après clôture fiscale 31 mars). C'est précisément ce qu'il faut pour PEAD (effet à partir de l'annonce, pas de la fin de trimestre).
+
+**Engagement** : dans l'implémentation du test factor #6, horodater chaque surprise à `e['date']` (date d'annonce), pas à `fiscal_date`. Si la donnée est récupérée depuis income_statement, recroiser avec `/earnings` pour récupérer la date d'annonce correspondante.
+
+### 3. Earnings surprise — promu candidat sérieux (réordonnancement priorités)
+
+Avec la granularité trimestrielle confirmée + l'horodatage à la date d'annonce, le facteur **earnings surprise n'est plus dégradé**. Il rejoint le tier des candidats à mécanisme robuste.
+
+**Priorité interprétative révisée** :
+
+| Tier | Facteurs | Lecture |
+|---|---|---|
+| **Tier 1 — meilleurs candidats** | #1 Stabilité, #2 Momentum 12-1, **#6 Earnings surprise** | Mécanisme robuste, data propre, à lire en priorité |
+| **Tier pivot** | #5 Value (test pivot) | Valide/casse l'hypothèse globale |
+| **Tier secondaire** | #3 Qualité niveau, #4 Croissance | Corrélés au Tier 1, démêler par contrôle multivariate |
+
+Le pivot value reste en priorité interprétative aussi (verdict pivot pour l'hypothèse globale), mais le tier 1 gagne un 3e candidat sérieux.
+
+### 4. Couverture roe_std_3y vérifiée — PAS de biais géographique
+
+Check 2026-06-22 : taux manquant uniforme par région (US 21.4%, EU 20.2%, EM 16.7%, OTHER 22.2%). Les 21% manquants sont **structurels** (3 ans requis pour calculer std + années excluded_year), pas concentrés sur un type de stock. **Pas de limite géographique à reporter pour le test stabilité.**
+
+Cohérent avec la doctrine : on n'attribue pas un biais géographique à des données qui sont uniformément réparties.
+
+### Engagement de cet addendum
+
+Ces 4 précisions sont issues des vérifs techniques 2026-06-22 (checks de fiabilité des inputs), pas d'observations sur les résultats des tests. Elles consolident la pré-déclaration v5 sans modifier les théories ni les protections anti-p-hacking.
+
+**Discipline maintenue 2026-06-22, accord explicite Fabre + Code.**
