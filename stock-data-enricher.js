@@ -443,6 +443,52 @@ async function enrichStocks() {
         });
     }
     
+    // ═══════════════════════════════════════════════════════════════════════
+    // PASS 2 v7.1 (Fabre 2026-06-23) — Activation roic_stable bonus sectoriel
+    // ═══════════════════════════════════════════════════════════════════════
+    // Pourquoi en PASS 2 et pas dans enrichStock() :
+    // - Le critère est RELATIF à la médiane sectorielle MONDIALE
+    // - Nécessite l'univers complet (US + EU + Asia) avant de classifier chaque stock
+    // - Doit tourner AVANT la sauvegarde mais APRÈS enrichissement individuel
+    //
+    // Effet : recalcule buffett_score avec bonus +10 si stock plus stable que
+    // médiane de son secteur (cap 100). Sans ce pass 2, scoring reste v2026
+    // (6 critères pass/fail, sans bonus).
+    //
+    // Voir : docs/PREDECLARATION_BUFFETT_V7_ROIC_STABLE.md + commit f52e32266
+    console.log('\n🔄 Pass 2 v7.1 — Annotation roic_stable sectoriel + recalcul scores...');
+
+    // Construire l'univers complet enrichi (US + EU + Asia, tous stocks valides)
+    const allEnrichedStocks = [];
+    for (const region of ['us', 'europe', 'asia']) {
+        allEnrichedStocks.push(...results[region].stocks);
+    }
+
+    // Annoter roic_stable_pass via médiane sectorielle mondiale
+    const annoStats = scorer.annotateRoicStablePass(allEnrichedStocks);
+    console.log(`  📊 Médianes sectorielles calculées sur ${allEnrichedStocks.length} stocks`);
+    console.log(`  ✅ Annoted: ${annoStats.n_annotated} | Skipped (no roic_std): ${annoStats.n_skipped}`);
+    if (annoStats.sectorMedians) {
+        const summary = Object.entries(annoStats.sectorMedians)
+            .map(([s, info]) => `${s.slice(0,20)}=${info.median.toFixed(2)}(${info.source==='global_fallback'?'fb':info.n})`)
+            .slice(0, 11).join(' | ');
+        console.log(`  📈 Médianes: ${summary}`);
+    }
+
+    // Recalculer buffett_score avec bonus pour chaque stock
+    let n_bonus_applied = 0;
+    for (const stock of allEnrichedStocks) {
+        const newResult = scorer.evaluateBuffettScore(stock);
+        if (newResult.score !== null) {
+            const oldScore = stock.buffett_score;
+            stock.buffett_score = newResult.score;
+            stock.buffett_grade = newResult.grade;
+            stock.roic_stable_pass = stock.roic_stable_pass; // explicite pour clarté JSON
+            if (newResult.score > oldScore) n_bonus_applied++;
+        }
+    }
+    console.log(`  🎁 Bonus appliqué (score augmenté) : ${n_bonus_applied} stocks`);
+
     // Sauvegarder les résultats
     console.log('\n💾 Sauvegarde des résultats...');
     
