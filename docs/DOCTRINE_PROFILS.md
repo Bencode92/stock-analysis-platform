@@ -52,6 +52,38 @@ Cohérence bornes par construction : MaxDD -22/-28% ↔ vol cible 28-35% ↔ CAG
 
 ---
 
+## BUFFETT v7.1 FINAL — bonus sectoriel gradué validé (2026-06-23)
+
+Suite analyse factorielle v6 (6 critères), test v7 roic_stable (edge anti-ruine
+confirmé), mesure d'impact v7 binaire (52% rotation, 6 assureurs entrants =
+musée pro-régulés), refactor v7.1 (bonus sectoriel gradué Fabre 2026-06-23) :
+
+**STRUCTURE FINALE** :
+- 6 critères pass/fail (carte 3 catégories : 3 validés data, 2 paris régime, 1 non soutenu)
+- + bonus +10 si PASS sectoriel (médiane mondiale par secteur, cap 100)
+- Le bonus INCLINE, n'EXCLUT pas
+
+**MESURE D'IMPACT v7.1 (vs v2026)** :
+- Rotation top 25 : 32% (vs 52% en v7 binaire)
+- Diversité sectorielle entrants : Finance 5, Tech 1, Conso 1, Indus 1
+- ASML : 67 → 77 (PASS sectoriel, gagne bonus, pas évincée)
+
+**VÉRIF FABRE 2026-06-23 — Finance entrants par bonus ou critères ?** :
+Les 5 Finance entrants (V, TRV, HIG, ACGL, CINF) ont TOUS un score 100 SANS bonus.
+0/5 portés par le bonus. Tous entrent par leurs 5-6 critères de base.
+→ ✓ SAIN : le bonus modeste +10 ne sur-promeut PAS les assureurs.
+→ La domination Finance dans entrants reflète la qualité Buffett objective
+  des assureurs P&C d'élite en 2026 (taux hauts = investment income +),
+  pas un artefact d'implémentation.
+
+**LEÇON DOCTRINALE GRAVÉE (5 jours)** :
+"Validation factorielle ≠ implémentation : un facteur validé peut être mal mis
+en œuvre". Le test v7 a validé l'edge, v7 binaire l'a mal implémenté, v7.1
+sectoriel gradué l'a correctement traduit. La validation d'un facteur et son
+poids dans le système sont deux décisions séparées.
+
+---
+
 ## CONCLUSION DÉFINITIVE 2026-06-22 — Sélection vs Allocation, où est l'edge prouvable
 
 **Insight final Fabre 2026-06-22** : tout débat sur la sélection (Verdict D, Survie Neutre, micro-edge panier) se heurte au même mur — **ratio variables/observations temporelles catastrophique**. 30+ variables candidates dans le JSON stock, 5 points de rebalance annuels disponibles. Statistiquement, plus on cherche, plus on trouve un faux edge qui s'évaporerait en réel.
