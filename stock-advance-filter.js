@@ -4,7 +4,10 @@
  * Version: 3.0.0
  *
  * v3.0 (mars 2026):
- * - Buffett Score v3.1: 6 critères pass/fail (ROE consistent, ROIC moat, leverage, FCF yield, PE, moat expansion)
+ * - Buffett Score v2026 (2026-06-23): 6 critères pass/fail post-analyse factorielle
+ *   ✓ Validés data (catastrophes -50%) : roe_consistent (6.58×), valuation_ok PE≤30 (11.24×), moat_expansion (4.09×)
+ *   🟡 Paris régime taux hauts : leverage_safe (D/E≤1.0), cash_generation (FCFy>3%)
+ *   ⚠️ Non soutenu data mais conservé doctrine : roic_moat (≥10%, PAS durci à 12%)
  * - Quality Score v2: 5 dimensions (Quality, Safety, Value, Growth, Momentum) + global-adjusted peer scoring
  * - 4 profils sectoriels: FIN, YIELD, TECH, DEFAULT
  * - Payment network reclassification (V, MA, PYPL, AXP → DEFAULT)
@@ -290,11 +293,34 @@ class StockAdvanceFilter {
    * @param {Object} stock - Données enrichies
    * @returns {{ score, grade, criteria[], passed, total, dataAvailable }}
    */
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Buffett v2026 (2026-06-23) — Carte 3 catégories après analyse factorielle
+  // PREDECLARATION_BUFFETT_CRITERIA.md commit 6de649f47 + verdict factoriel
+  //
+  // ✓ VALIDÉS DATA (edge significatif sur catastrophes -50%) :
+  //   - roe_consistent (#1) : ratio 6.58×, IC95% exclut 0
+  //   - valuation_ok (#5)   : ratio 11.24×, IC95% exclut 0
+  //   - moat_expansion (#6) : ratio 4.09×, IC95% exclut 0
+  //
+  // 🟡 PARIS DE RÉGIME (data muette, raisonnement taux hauts 2026) :
+  //   - leverage_safe (#3) : D/E ≤ 1.0 (vs 1.5 avant) — taux 4-5% punissent dette
+  //   - cash_generation (#4) : FCF yield > 3% maintenu, durabilité via filtre amont
+  //
+  // ⚠️ NON SOUTENU PAR DATA (gardé par doctrine coût-du-capital) :
+  //   - roic_moat (#2) : ROIC ≥ 10% MAINTENU (PAS 12%). Data inversée légère,
+  //     durcir un critère que la data ne valide pas réduit l'univers sans bénéfice.
+  //     Correction explicite Fabre 2026-06-23.
+  //
+  // Aucun critère ne génère d'alpha de sélection (Verdict D). Le scoring est
+  // un BOUCLIER anti-ruine, pas une épée. v2026 préserve les 3 protecteurs
+  // validés data + 2 paris de régime étiquetés + 1 critère non soutenu non aggravé.
+  // ═══════════════════════════════════════════════════════════════════════════
   evaluateBuffettScore(stock) {
     const criteria = [];
     let dataAvailable = 0;
 
     // 1. ROE consistant: avg 3Y >= 15% ET CV < 30%
+    // ✓ VALIDÉ DATA v2026 : edge catastrophes -50% ratio 6.58×, IC95% exclut 0
     const roeAvg = this._parseFloat(stock.roe_avg_3y) ?? this._parseFloat(stock.roe);
     const roeStd = this._parseFloat(stock.roe_std_3y);
     if (this._validNum(roeAvg)) {
@@ -315,6 +341,11 @@ class StockAdvanceFilter {
     }
 
     // 2. ROIC moat: avg 3Y >= 10%
+    // ⚠️ NON SOUTENU DATA v2026 : data légèrement inversée (catastrophes ratio 0.55×).
+    // Maintenu à 10% par doctrine coût-du-capital (~7-8% en 2026, marge 2-3 pts).
+    // Correction Fabre 2026-06-23 : NE PAS durcir à 12% — durcir un critère que la
+    // data ne soutient pas réduit l'univers sans bénéfice prouvé.
+    //
     // Fix Fabre v7 (2026-06-18) : skip ROIC pour vraies banques/assurances
     // (levier structurel = ROIC non pertinent). PAS skip pour Credit Services
     // (Visa/MA), Capital Markets (MSCI/CBOE), Asset Management (TROW) — ROIC
@@ -336,28 +367,54 @@ class StockAdvanceFilter {
       criteria.push({ name: 'roic_moat', passed: roicAvg >= 10, value: roicAvg, detail: `${roicAvg.toFixed(1)}%` });
     }
 
-    // 3. Levier raisonnable: 0 <= D/E <= 1.5
+    // 3. Levier raisonnable: 0 <= D/E <= 1.0  (v2026 : 1.5 → 1.0)
+    // 🟡 PARI RÉGIME v2026 (NON CONFIRMÉ DATA, mais raisonnement fort 2026) :
+    // Data muette (catastrophes -50% IC95% borderline). Mécanisme retenu :
+    // taux Fed/BCE 4-5% en 2026 vs 0-2% en 2015 → 1 pt de D/E coûte 4× plus
+    // en intérêts. Une boîte D/E 1.4 paie aujourd'hui ce qu'elle aurait payé
+    // à D/E 5 en 2015. Seuil v1 (≤1.5) trop laxiste pour le régime actuel.
+    //
+    // Modulation par profil (Stable 0.6 / Modéré 1.0 / Agressif 1.0) appliquée
+    // en amont via PROFILE_POLICY.hard_filters.de_ratio_max — pas dans ce score
+    // pour rester cohérent universellement. Le score utilise le seuil universel 1.0.
     const de = this._parseFloat(stock.de_ratio);
     if (this._validNum(de)) {
       dataAvailable++;
-      criteria.push({ name: 'leverage_safe', passed: de >= 0 && de <= 1.5, value: de, detail: `D/E=${de.toFixed(2)}` });
+      criteria.push({ name: 'leverage_safe', passed: de >= 0 && de <= 1.0, value: de, detail: `D/E=${de.toFixed(2)}` });
     }
 
     // 4. Génération de cash: FCF yield > 3%
+    // 🟡 PARI RÉGIME v2026 (NON CONFIRMÉ DATA, mais raisonnement fort) :
+    // Data muette (spread négatif sur la fenêtre, mais IC inclut 0). Mécanisme
+    // retenu : en taux hauts, cash today >> promesse de cash futur. Les boîtes
+    // FCF négatif (CVNA, BBBY type) ont été punies 2022-2023 exactement pour ça.
+    // Seuil 3% maintenu. Durabilité 3 ans visée via filtre amont (hard_filters
+    // dividend_coverage ou FCF positive sur 3 années consécutives).
     const fcfy = this._parseFloat(stock.fcf_yield);
     if (this._validNum(fcfy)) {
       dataAvailable++;
       criteria.push({ name: 'cash_generation', passed: fcfy > 3, value: fcfy, detail: `FCFy=${fcfy.toFixed(1)}%` });
     }
 
-    // 5. Valorisation: 0 < PE <= 25
+    // 5. Valorisation: 0 < PE <= 30  (v2026 : 25 → 30)
+    // ✓ VALIDÉ DATA v2026 : edge catastrophes -50% ratio 11.24×, IC95% exclut 0.
+    // C'est le critère le plus protecteur de tous (boîtes PE > seuil s'effondrent
+    // 11× plus souvent à -50%).
+    // Monté de 25 à 30 par doctrine : PE médian S&P 500 = 25.55 en 2026 → seuil 25
+    // était devenu trivial (excluait la moitié du marché). Seuil 30 = garde-fou
+    // anti-bulle qui préserve la protection sans trivialiser.
+    // Décision explicite : PAS de PEG (prévisions analystes = fragiles, surtout
+    // en changement de régime). PE absolu, simple, robuste.
     const pe = this._parseFloat(stock.pe_ratio);
     if (this._validNum(pe)) {
       dataAvailable++;
-      criteria.push({ name: 'valuation_ok', passed: pe > 0 && pe <= 25, value: pe, detail: `PE=${pe.toFixed(1)}` });
+      criteria.push({ name: 'valuation_ok', passed: pe > 0 && pe <= 30, value: pe, detail: `PE=${pe.toFixed(1)}` });
     }
 
     // 6. Moat durabilité: ROE ou ROIC année N > avg 3Y × 0.90
+    // ✓ VALIDÉ DATA v2026 : edge catastrophes -50% ratio 4.09×, IC95% exclut 0.
+    // Pas décoratif comme suspecté : capture vraiment l'érosion qui précède la ruine.
+    //
     // v7.2.1: seuil 1.10 → 0.90 — tolère normalisation cyclique (-10%)
     // mais rejette les baisses structurelles > 10% (red flag)
     // 190 stocks haute qualité (ITX, RACE, ISRG, ASML) étaient pénalisés
