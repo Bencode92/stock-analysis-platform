@@ -3015,6 +3015,39 @@ async function main() {
     // Statistiques sur les payout ratios
     // ✅ v3.31d: Fix KEEP_ADR logic (était inversé: !KEEP_ADR || !s.is_adr)
     const allStocks = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA].filter(s => KEEP_ADR || !s.is_adr);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PASS 2 v7.1 (Fabre 2026-06-23) — Activation roic_stable bonus sectoriel
+    // ═══════════════════════════════════════════════════════════════════════
+    // Le critère roic_stable est RELATIF à la médiane sectorielle MONDIALE,
+    // donc doit être annoté APRÈS enrichissement individuel (pass 1) mais
+    // AVANT les écritures de fichiers qui dépendent de buffett_score.
+    //
+    // Effet : recalcule buffett_score avec bonus +10 si stock plus stable
+    // que médiane de son secteur (cap 100). Sans ce pass 2, scoring reste
+    // v2026 (6 critères pass/fail, sans bonus).
+    //
+    // Voir : docs/PREDECLARATION_BUFFETT_V7_ROIC_STABLE.md + commit f52e32266
+    console.log('\n🔄 Pass 2 v7.1 — Annotation roic_stable sectoriel + recalcul scores...');
+    const annoStats = scorer.annotateRoicStablePass(allStocks);
+    if (annoStats.sectorMedians) {
+        const summary = Object.entries(annoStats.sectorMedians)
+            .map(([s, info]) => `${(s || '').slice(0,18)}=${info.median.toFixed(2)}(${info.source==='global_fallback'?'fb':info.n})`)
+            .slice(0, 11).join(' | ');
+        console.log(`  📈 Médianes: ${summary}`);
+    }
+    console.log(`  ✅ Annoté: ${annoStats.n_annotated} | Skip (no roic_std): ${annoStats.n_skipped}`);
+    let n_bonus_applied = 0;
+    for (const stock of allStocks) {
+        const newResult = scorer.evaluateBuffettScore(stock);
+        if (newResult.score !== null) {
+            const oldScore = stock.buffett_score;
+            stock.buffett_score = newResult.score;
+            stock.buffett_grade = newResult.grade;
+            if (newResult.score > (oldScore || 0)) n_bonus_applied++;
+        }
+    }
+    console.log(`  🎁 Bonus appliqué (score augmenté) : ${n_bonus_applied} stocks\n`);
     const withPayout = allStocks.filter(s => s.payout_ratio_ttm !== null);
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
