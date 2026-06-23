@@ -316,49 +316,86 @@ class StockAdvanceFilter {
   // validés data + 2 paris de régime étiquetés + 1 critère non soutenu non aggravé.
   // ═══════════════════════════════════════════════════════════════════════════
   /**
-   * Annote un univers de stocks avec le flag `roic_stable_pass` (v7 2026-06-23).
+   * Annote un univers de stocks avec le flag `roic_stable_pass` (v7.1 2026-06-23).
    *
-   * Architecture relative validée par Fabre :
-   * - Calcule Q33 (33e percentile) de roic_std_3y sur l'univers ENTIER
-   * - Marque pass=true pour les stocks du tiers le plus stable (roic_std ≤ Q33)
-   * - Marque pass=false pour les stocks moins stables (roic_std > Q33)
-   * - LAISSE roic_stable_pass UNDEFINED si roic_std_3y manquant → critère neutralisé
-   *   par evaluateBuffettScore() (denominator dynamique)
+   * RÉFACTOR v7.1 (Fabre correction 2026-06-23) suite mesure d'impact v7 :
+   * Le critère absolu sur Q33 univers entier provoquait 52% rotation top 25,
+   * faisait sortir tous les cycliques (semi/industriel) et entrer 6 assureurs
+   * (stables par régulation, pas par moat). Confusion signal/artefact.
    *
-   * IMPORTANT : doit être appelé AVANT filtrage par profil, sur l'univers complet,
-   * pour que le critère ait la même signification pour tous les profils.
+   * Solution Fabre : NEUTRALISER LE SECTEUR via médiane sectorielle MONDIALE.
+   * - Pool dense (11/11 secteurs ≥ 34 stocks dans univers prod 1081)
+   * - Évite le piège du peer-relative Quality (qui mourait sur EU/EM tiny pools)
+   * - ASML comparée à la stabilité-type des semi, assureur à la sienne
    *
-   * @param {Array} stocks - univers complet (typiquement ~1000 stocks)
-   * @returns {Object} { q33, n_annotated, n_skipped }
+   * Architecture :
+   * - Médiane roic_std_3y calculée PAR SECTEUR sur l'univers mondial complet
+   * - Fallback médiane globale si secteur < 10 stocks
+   * - PASS = stock plus stable que sa médiane sectorielle
+   * - LAISSE UNDEFINED si roic_std_3y manquant (critère neutralisé côté score)
+   *
+   * Le score lit le flag et applique un BONUS GRADUÉ MODESTE (+10% si PASS,
+   * cap à 100), PAS un critère binaire pass/fail. Préserve les champions
+   * en croissance (ASML reste sélectionnable, juste un cran sous une boîte
+   * équivalente plus stable).
+   *
+   * Taille du bonus : fixée A PRIORI (~10%, équivalent ~1/7 d'un critère),
+   * JAMAIS optimisée par backtest (engagement anti-p-hacking).
+   *
+   * @param {Array} stocks - univers complet mondial (typiquement ~1000 stocks)
+   * @returns {Object} { sectorMedians, globalMedian, n_annotated, n_skipped }
    */
   annotateRoicStablePass(stocks) {
     if (!Array.isArray(stocks) || stocks.length === 0) {
-      return { q33: null, n_annotated: 0, n_skipped: 0 };
+      return { sectorMedians: {}, globalMedian: null, n_annotated: 0, n_skipped: 0 };
     }
-    const stds = stocks
-      .map(s => this._parseFloat(s.roic_std_3y))
-      .filter(v => this._validNum(v));
-    if (stds.length < 10) {
-      // Pas assez de points pour calculer un quantile fiable
-      return { q33: null, n_annotated: 0, n_skipped: stocks.length };
-    }
-    stds.sort((a, b) => a - b);
-    const q33Idx = Math.floor(stds.length / 3);
-    const q33 = stds[q33Idx];
 
+    // 1. Grouper par secteur et calculer médiane sectorielle mondiale
+    const bySector = {};
+    const allStds = [];
+    for (const stock of stocks) {
+      const std = this._parseFloat(stock.roic_std_3y);
+      if (!this._validNum(std)) continue;
+      const sector = stock.sector || 'Unknown';
+      if (!bySector[sector]) bySector[sector] = [];
+      bySector[sector].push(std);
+      allStds.push(std);
+    }
+    if (allStds.length < 10) {
+      return { sectorMedians: {}, globalMedian: null, n_annotated: 0, n_skipped: stocks.length };
+    }
+
+    // Médiane globale (fallback)
+    allStds.sort((a, b) => a - b);
+    const globalMedian = allStds[Math.floor(allStds.length / 2)];
+
+    // Médianes sectorielles (mondiales) — utilise médiane sectorielle si secteur dense,
+    // sinon retombe sur globale
+    const sectorMedians = {};
+    const MIN_SECTOR_SIZE = 10;
+    for (const [sector, stds] of Object.entries(bySector)) {
+      if (stds.length >= MIN_SECTOR_SIZE) {
+        stds.sort((a, b) => a - b);
+        sectorMedians[sector] = { median: stds[Math.floor(stds.length / 2)], n: stds.length, source: 'sector' };
+      } else {
+        sectorMedians[sector] = { median: globalMedian, n: stds.length, source: 'global_fallback' };
+      }
+    }
+
+    // 2. Annoter chaque stock
     let n_annotated = 0, n_skipped = 0;
     for (const stock of stocks) {
       const std = this._parseFloat(stock.roic_std_3y);
-      if (this._validNum(std)) {
-        stock.roic_stable_pass = std <= q33;
-        n_annotated++;
-      } else {
-        // Pas de roic_std → critère neutralisé (denominator dynamique côté score)
-        // NE PAS assigner false ici (réintroduirait biais couverture)
+      if (!this._validNum(std)) {
         n_skipped++;
+        continue;
       }
+      const sector = stock.sector || 'Unknown';
+      const ref = sectorMedians[sector] || { median: globalMedian };
+      stock.roic_stable_pass = std < ref.median;
+      n_annotated++;
     }
-    return { q33, n_annotated, n_skipped };
+    return { sectorMedians, globalMedian, n_annotated, n_skipped };
   }
 
   evaluateBuffettScore(stock) {
@@ -477,53 +514,38 @@ class StockAdvanceFilter {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 7. roic_stable (v7, 2026-06-23) — Edge anti-ruine confirmé empiriquement
-    // PREDECLARATION_BUFFETT_V7_ROIC_STABLE.md commit cf0890a68 + verdict edge ✓
+    // roic_stable v7.1 (Fabre 2026-06-23) — BONUS GRADUÉ (PAS critère binaire)
     // ═══════════════════════════════════════════════════════════════════════
-    // ✓ VALIDÉ DATA v7 : PASS (tiers stable) = 0% catastrophes -50% sur 269 obs
-    //                    FAIL (instables)    = 1.70% catastrophes -50% sur 530 obs
-    //                    IC99.29% Bonferroni exclut 0
+    // RÉFACTOR suite mesure d'impact v7 (binaire = 52% rotation top 25,
+    // tous cycliques sortent, 6 assureurs entrent → déformation pro-régulés).
     //
-    // Architecture relative (Fabre 2026-06-23) : le critère est relatif au tiers
-    // le plus stable de l'univers SCORÉ. Calculé en AMONT par annotateRoicStablePass()
-    // sur l'univers complet AVANT filtrage par profil. Le score lit juste le flag.
+    // ✓ Edge anti-ruine confirmé empiriquement (PASS=0% vs FAIL=1.70%
+    //   catastrophes -50%, IC99.29% Bonferroni exclut 0)
     //
-    // Graceful fallback : si stock.roic_stable_pass n'est PAS défini (mode test
-    // unitaire, ou stock isolé hors batch), le critère est neutralisé — le stock
-    // est scoré sur les autres critères, denominator dynamique. Cohérent avec
-    // traitement ROIC des banques (skip si non pertinent).
+    // Mais le critère, en binaire, confond SIGNAL (Novy-Marx : moat → ROIC
+    // régulier) et ARTEFACT (assureurs/utilities : régulation → ROIC plat).
     //
-    // Data manquante (roic_std_3y indisponible, ~28% univers) : critère neutralisé
-    // aussi, AUCUN bénéfice ni pénalité. Évite le biais de couverture.
-    if (typeof stock.roic_stable_pass === 'boolean') {
-      dataAvailable++;
-      criteria.push({
-        name: 'roic_stable',
-        passed: stock.roic_stable_pass,
-        value: this._parseFloat(stock.roic_std_3y),
-        detail: stock.roic_std_3y != null
-          ? `roic_std=${this._parseFloat(stock.roic_std_3y).toFixed(2)} (tiers stable univers)`
-          : 'flag relatif univers'
-      });
-    }
+    // Solution v7.1 (Fabre tranché 2026-06-23) :
+    // - Le critère NE rentre PAS dans les 6 critères pass/fail
+    // - À la place : BONUS GRADUÉ MODESTE post-score (+10% si PASS)
+    // - PASS calculé via annotateRoicStablePass() : médiane sectorielle MONDIALE
+    //   (neutralise le secteur, pool dense 34-190/secteur en prod, pas le piège
+    //   peer-relative régional Quality)
+    //
+    // Taille du bonus : +10% FIXÉE A PRIORI (équivalent ~1/7 d'un critère).
+    // JAMAIS optimisée par backtest (engagement anti-p-hacking).
+    //
+    // Score = 6 critères de base. maxCriteria reste 6 (ou 5 banque).
 
     if (dataAvailable < 2) return { score: null, score_no_valuation: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
     const passed = criteria.filter(c => c.passed).length;
     let score = Math.round((passed / criteria.length) * 100);
 
     // Progressive coverage caps — prevents inflation when criteria are missing
-    // v7 (Fabre 2026-06-23) : maxCriteria dynamique selon présence roic_stable
-    //   - 7 si stock.roic_stable_pass défini ET pas banque (ROIC pertinent)
-    //   - 6 si roic_stable_pass défini ET banque (ROIC skip mais roic_stable OK)
-    //   - 6 si roic_stable_pass NON défini ET pas banque
-    //   - 5 si roic_stable_pass NON défini ET banque
-    const _hasRoicStable = (typeof stock.roic_stable_pass === 'boolean');
-    let _maxCriteria;
-    if (_skipRoicForBank) {
-      _maxCriteria = _hasRoicStable ? 6 : 5;
-    } else {
-      _maxCriteria = _hasRoicStable ? 7 : 6;
-    }
+    // Fix Fabre v7 : maxCriteria = 5 si ROIC skippé pour banque, 6 sinon.
+    // v7.1 (Fabre 2026-06-23) : roic_stable est BONUS post-score, pas dans
+    // les 6 critères pass/fail → maxCriteria inchangé (6 ou 5 banque).
+    const _maxCriteria = _skipRoicForBank ? 5 : 6;
     if (dataAvailable < 3) score = Math.min(score, 60);
     else if (dataAvailable < 4) score = Math.min(score, 60);
     else if (dataAvailable < _maxCriteria - 1) score = Math.min(score, 75);
@@ -533,6 +555,25 @@ class StockAdvanceFilter {
     // Additional penalty if ROE consistency passed with unknown CV (no std data)
     const cvUnknownPasses = criteria.filter(c => c.cv_unknown && c.passed).length;
     if (cvUnknownPasses > 0 && score >= 80) score = Math.min(score, 83);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BONUS roic_stable v7.1 (Fabre 2026-06-23) — gradué, +10%, cap 100
+    // ═══════════════════════════════════════════════════════════════════════
+    // Edge anti-ruine prouvé (PASS=0% catastrophes -50%, IC99.29% exclut 0),
+    // mais le critère doit INCLINER le score sans REDESSINER la sélection.
+    // Bonus modeste +10% si PASS sectoriel (sectorMedian comparison via
+    // annotateRoicStablePass), 0 sinon. Capped à 100.
+    //
+    // Taille du bonus fixée a priori, équivalent ~1/7 d'un critère. JAMAIS
+    // optimisée par backtest (engagement anti-p-hacking).
+    //
+    // Graceful fallback : si stock.roic_stable_pass undefined (data manquante
+    // ou annotation pipeline non appliquée), pas de bonus → comportement v2026.
+    const ROIC_STABLE_BONUS = 10; // +10 points si PASS, fixé a priori
+    if (stock.roic_stable_pass === true) {
+      score = Math.min(100, score + ROIC_STABLE_BONUS);
+    }
+    // PASS=false ou undefined : aucun bonus, aucune pénalité
 
     // ═══════════════════════════════════════════════════════════════════════
     // Code C (Fabre 2026-06-18) — Score Buffett SANS critère valuation_ok
