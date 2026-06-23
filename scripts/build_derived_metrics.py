@@ -288,6 +288,9 @@ def build_ticker_metrics(ticker: str) -> tuple[list[dict], list[str]]:
         })
 
     # Rolling 3y ROE et ROIC pour Buffett (avg + std)
+    # v7 (Fabre 2026-06-23) : ajout roic_std_3y pour test 7e critère candidat
+    # (PREDECLARATION_BUFFETT_V7_ROIC_STABLE.md commit cf0890a68).
+    # Calcul POINT-IN-TIME (window past, not future) — même discipline que roe_std_3y.
     for i, m in enumerate(metrics_raw):
         window = metrics_raw[max(0, i - 2): i + 1]
         roe_vals = [w["roe"] for w in window if w["roe"] is not None]
@@ -295,6 +298,7 @@ def build_ticker_metrics(ticker: str) -> tuple[list[dict], list[str]]:
         m["roe_avg_3y"] = mean(roe_vals) if roe_vals else None
         m["roe_std_3y"] = stdev(roe_vals) if len(roe_vals) >= 2 else None
         m["roic_avg_3y"] = mean(roic_vals) if roic_vals else None
+        m["roic_std_3y"] = stdev(roic_vals) if len(roic_vals) >= 2 else None
 
     # Scoring Buffett par année (6 critères + version no_valuation 5 critères)
     for m in metrics_raw:
@@ -501,7 +505,7 @@ def main() -> int:
                   "shares_outstanding", "shares_normalized",
                   "market_cap", "net_income", "total_equity", "total_debt", "free_cash_flow",
                   "operating_income", "roe", "roic", "de_ratio", "fcf_yield", "pe_ratio",
-                  "roe_avg_3y", "roe_std_3y", "roic_avg_3y",
+                  "roe_avg_3y", "roe_std_3y", "roic_avg_3y", "roic_std_3y",
                   "buffett_score", "buffett_score_no_valuation", "criteria_total"]
     with metrics_csv.open("w") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
