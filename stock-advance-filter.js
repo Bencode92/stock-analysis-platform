@@ -315,6 +315,52 @@ class StockAdvanceFilter {
   // un BOUCLIER anti-ruine, pas une épée. v2026 préserve les 3 protecteurs
   // validés data + 2 paris de régime étiquetés + 1 critère non soutenu non aggravé.
   // ═══════════════════════════════════════════════════════════════════════════
+  /**
+   * Annote un univers de stocks avec le flag `roic_stable_pass` (v7 2026-06-23).
+   *
+   * Architecture relative validée par Fabre :
+   * - Calcule Q33 (33e percentile) de roic_std_3y sur l'univers ENTIER
+   * - Marque pass=true pour les stocks du tiers le plus stable (roic_std ≤ Q33)
+   * - Marque pass=false pour les stocks moins stables (roic_std > Q33)
+   * - LAISSE roic_stable_pass UNDEFINED si roic_std_3y manquant → critère neutralisé
+   *   par evaluateBuffettScore() (denominator dynamique)
+   *
+   * IMPORTANT : doit être appelé AVANT filtrage par profil, sur l'univers complet,
+   * pour que le critère ait la même signification pour tous les profils.
+   *
+   * @param {Array} stocks - univers complet (typiquement ~1000 stocks)
+   * @returns {Object} { q33, n_annotated, n_skipped }
+   */
+  annotateRoicStablePass(stocks) {
+    if (!Array.isArray(stocks) || stocks.length === 0) {
+      return { q33: null, n_annotated: 0, n_skipped: 0 };
+    }
+    const stds = stocks
+      .map(s => this._parseFloat(s.roic_std_3y))
+      .filter(v => this._validNum(v));
+    if (stds.length < 10) {
+      // Pas assez de points pour calculer un quantile fiable
+      return { q33: null, n_annotated: 0, n_skipped: stocks.length };
+    }
+    stds.sort((a, b) => a - b);
+    const q33Idx = Math.floor(stds.length / 3);
+    const q33 = stds[q33Idx];
+
+    let n_annotated = 0, n_skipped = 0;
+    for (const stock of stocks) {
+      const std = this._parseFloat(stock.roic_std_3y);
+      if (this._validNum(std)) {
+        stock.roic_stable_pass = std <= q33;
+        n_annotated++;
+      } else {
+        // Pas de roic_std → critère neutralisé (denominator dynamique côté score)
+        // NE PAS assigner false ici (réintroduirait biais couverture)
+        n_skipped++;
+      }
+    }
+    return { q33, n_annotated, n_skipped };
+  }
+
   evaluateBuffettScore(stock) {
     const criteria = [];
     let dataAvailable = 0;
@@ -430,14 +476,54 @@ class StockAdvanceFilter {
       criteria.push({ name: 'moat_expansion', passed: roeOk || roicOk, value: roeN / roeA3, detail: `trend=${((roeN / roeA3 - 1) * 100).toFixed(0)}%` });
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 7. roic_stable (v7, 2026-06-23) — Edge anti-ruine confirmé empiriquement
+    // PREDECLARATION_BUFFETT_V7_ROIC_STABLE.md commit cf0890a68 + verdict edge ✓
+    // ═══════════════════════════════════════════════════════════════════════
+    // ✓ VALIDÉ DATA v7 : PASS (tiers stable) = 0% catastrophes -50% sur 269 obs
+    //                    FAIL (instables)    = 1.70% catastrophes -50% sur 530 obs
+    //                    IC99.29% Bonferroni exclut 0
+    //
+    // Architecture relative (Fabre 2026-06-23) : le critère est relatif au tiers
+    // le plus stable de l'univers SCORÉ. Calculé en AMONT par annotateRoicStablePass()
+    // sur l'univers complet AVANT filtrage par profil. Le score lit juste le flag.
+    //
+    // Graceful fallback : si stock.roic_stable_pass n'est PAS défini (mode test
+    // unitaire, ou stock isolé hors batch), le critère est neutralisé — le stock
+    // est scoré sur les autres critères, denominator dynamique. Cohérent avec
+    // traitement ROIC des banques (skip si non pertinent).
+    //
+    // Data manquante (roic_std_3y indisponible, ~28% univers) : critère neutralisé
+    // aussi, AUCUN bénéfice ni pénalité. Évite le biais de couverture.
+    if (typeof stock.roic_stable_pass === 'boolean') {
+      dataAvailable++;
+      criteria.push({
+        name: 'roic_stable',
+        passed: stock.roic_stable_pass,
+        value: this._parseFloat(stock.roic_std_3y),
+        detail: stock.roic_std_3y != null
+          ? `roic_std=${this._parseFloat(stock.roic_std_3y).toFixed(2)} (tiers stable univers)`
+          : 'flag relatif univers'
+      });
+    }
+
     if (dataAvailable < 2) return { score: null, score_no_valuation: null, grade: null, criteria, passed: 0, total: 0, dataAvailable };
     const passed = criteria.filter(c => c.passed).length;
     let score = Math.round((passed / criteria.length) * 100);
 
     // Progressive coverage caps — prevents inflation when criteria are missing
-    // Fix Fabre v7 : maxCriteria = 5 si ROIC skippé pour banque, 6 sinon.
-    // Avant : cap fixe à 6 plafonnait les banques 5/5 = 100 à 83 (5/6).
-    const _maxCriteria = _skipRoicForBank ? 5 : 6;
+    // v7 (Fabre 2026-06-23) : maxCriteria dynamique selon présence roic_stable
+    //   - 7 si stock.roic_stable_pass défini ET pas banque (ROIC pertinent)
+    //   - 6 si roic_stable_pass défini ET banque (ROIC skip mais roic_stable OK)
+    //   - 6 si roic_stable_pass NON défini ET pas banque
+    //   - 5 si roic_stable_pass NON défini ET banque
+    const _hasRoicStable = (typeof stock.roic_stable_pass === 'boolean');
+    let _maxCriteria;
+    if (_skipRoicForBank) {
+      _maxCriteria = _hasRoicStable ? 6 : 5;
+    } else {
+      _maxCriteria = _hasRoicStable ? 7 : 6;
+    }
     if (dataAvailable < 3) score = Math.min(score, 60);
     else if (dataAvailable < 4) score = Math.min(score, 60);
     else if (dataAvailable < _maxCriteria - 1) score = Math.min(score, 75);
