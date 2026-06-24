@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-24T10:28:39.731830",
+  "generated_at": "2026-06-24T10:43:38.704587",
   "version": "v1.6.0",
   "preset_meta_version": "v5.1.3",
   "selection_pipeline": {
@@ -241,20 +241,11 @@
       ]
     },
     "Energie": {
-      "selected_count": 4,
+      "selected_count": 3,
       "selected_names": [
         "BAKER HUGHES CLASS A",
         "GALP ENERGIA SGPS SA CLAS",
-        "EOG RESOURCES INC",
         "SHELL PLC"
-      ]
-    },
-    "La communication": {
-      "selected_count": 3,
-      "selected_names": [
-        "ALPHABET INC CLASS C",
-        "VERIZON COMMUNICATIONS IN",
-        "AUTOTRADER GROUP PLC"
       ]
     },
     "Finance": {
@@ -270,8 +261,9 @@
       ]
     },
     "Santé": {
-      "selected_count": 5,
+      "selected_count": 6,
       "selected_names": [
+        "ELI LILLY",
         "REGENERON PHARMACEUTICALS",
         "NEUROCRINE BIOSCIENCES IN",
         "STRYKER CORP",
@@ -305,6 +297,14 @@
         "IMPERIAL BRANDS PLC"
       ]
     },
+    "La communication": {
+      "selected_count": 3,
+      "selected_names": [
+        "VERIZON COMMUNICATIONS IN",
+        "PUBLICIS GROUPE SA",
+        "AUTOTRADER GROUP PLC"
+      ]
+    },
     "Immobilier": {
       "selected_count": 2,
       "selected_names": [
@@ -329,17 +329,18 @@
           "sector": "Energie",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Energie: 4/4), score 0.428 < seuil 0.559",
+          "status": "❌ Preset 'recovery' non éligible pour profil Modéré (autorisés: croissance, defensif, low_volatility, momentum_trend, quality_premium, rendement, value_dividend)",
           "details": {
-            "sector": "Energie",
-            "sector_quota": "4/4",
-            "your_score": 0.428,
-            "min_selected_score": 0.559,
-            "selected_in_sector": [
-              "BAKER HUGHES CLASS A",
-              "GALP ENERGIA SGPS SA",
-              "EOG RESOURCES INC",
-              "SHELL PLC"
+            "matched_preset": "recovery",
+            "profile": "Modéré",
+            "allowed_presets": [
+              "croissance",
+              "defensif",
+              "low_volatility",
+              "momentum_trend",
+              "quality_premium",
+              "rendement",
+              "value_dividend"
             ]
           },
           "buffett_score": 77.0,
@@ -438,10 +439,13 @@
           "market_cap_billions": 4223.1,
           "sector": "La communication",
           "country": "Etats-Unis",
-          "selected": true,
-          "status": "✅ SÉLECTIONNÉ",
+          "selected": false,
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.000, quota atteint)",
           "details": {
-            "status": "selected"
+            "profile_score": 0.0,
+            "composite_score": 0.664,
+            "sector": "La communication",
+            "matched_preset": "momentum_trend"
           },
           "buffett_score": 83.0,
           "composite_score": 0.664,
@@ -656,12 +660,10 @@
           "market_cap_billions": 987.2,
           "sector": "Santé",
           "country": "Etats-Unis",
-          "selected": false,
-          "status": "❌ Score Buffett insuffisant (33 < 50)",
+          "selected": true,
+          "status": "✅ SÉLECTIONNÉ",
           "details": {
-            "buffett_score": 33.0,
-            "roe": 101.16,
-            "de_ratio": 1.6
+            "status": "selected"
           },
           "buffett_score": 33.0,
           "composite_score": 0.585,
@@ -862,13 +864,14 @@
           "sector": "Santé",
           "country": "Etats-Unis",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Santé: 5/4), score 0.702 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Santé: 6/4), score 0.702 < seuil 0.523",
           "details": {
             "sector": "Santé",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.702,
             "min_selected_score": 0.523,
             "selected_in_sector": [
+              "ELI LILLY",
               "REGENERON PHARMACEUT",
               "NEUROCRINE BIOSCIENC",
               "STRYKER CORP",
@@ -955,13 +958,14 @@
           "sector": "Santé",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Santé: 5/4), score 0.693 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Santé: 6/4), score 0.693 < seuil 0.523",
           "details": {
             "sector": "Santé",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.693,
             "min_selected_score": 0.523,
             "selected_in_sector": [
+              "ELI LILLY",
               "REGENERON PHARMACEUT",
               "NEUROCRINE BIOSCIENC",
               "STRYKER CORP",
@@ -988,13 +992,14 @@
           "sector": "Santé",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Santé: 5/4), score 0.695 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Santé: 6/4), score 0.695 < seuil 0.523",
           "details": {
             "sector": "Santé",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.695,
             "min_selected_score": 0.523,
             "selected_in_sector": [
+              "ELI LILLY",
               "REGENERON PHARMACEUT",
               "NEUROCRINE BIOSCIENC",
               "STRYKER CORP",
@@ -1082,13 +1087,14 @@
           "sector": "Santé",
           "country": "Suisse",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Santé: 5/4), score 0.724 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Santé: 6/4), score 0.724 < seuil 0.523",
           "details": {
             "sector": "Santé",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.724,
             "min_selected_score": 0.523,
             "selected_in_sector": [
+              "ELI LILLY",
               "REGENERON PHARMACEUT",
               "NEUROCRINE BIOSCIENC",
               "STRYKER CORP",
@@ -1115,13 +1121,14 @@
           "sector": "Santé",
           "country": "Royaume-Uni",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Santé: 5/4), score 0.594 < seuil 0.523",
+          "status": "❌ Quota sectoriel atteint (Santé: 6/4), score 0.594 < seuil 0.523",
           "details": {
             "sector": "Santé",
-            "sector_quota": "5/4",
+            "sector_quota": "6/4",
             "your_score": 0.594,
             "min_selected_score": 0.523,
             "selected_in_sector": [
+              "ELI LILLY",
               "REGENERON PHARMACEUT",
               "NEUROCRINE BIOSCIENC",
               "STRYKER CORP",
@@ -1380,18 +1387,12 @@
           "sector": "Energie",
           "country": "France",
           "selected": false,
-          "status": "❌ Quota sectoriel atteint (Energie: 4/4), score 0.563 < seuil 0.559",
+          "status": "❌ Classement insuffisant pour profil Modéré (profile_score: 0.000, quota atteint)",
           "details": {
+            "profile_score": 0.0,
+            "composite_score": 0.563,
             "sector": "Energie",
-            "sector_quota": "4/4",
-            "your_score": 0.563,
-            "min_selected_score": 0.559,
-            "selected_in_sector": [
-              "BAKER HUGHES CLASS A",
-              "GALP ENERGIA SGPS SA",
-              "EOG RESOURCES INC",
-              "SHELL PLC"
-            ]
+            "matched_preset": "rendement"
           },
           "buffett_score": 60.0,
           "composite_score": 0.563,
@@ -4092,7 +4093,9 @@
       "energy",
       "real-estate"
     ],
-    "avoided_sectors": [],
+    "avoided_sectors": [
+      "communication-services"
+    ],
     "favored_regions": [
       "asie",
       "netherlands",
@@ -4100,7 +4103,8 @@
     ],
     "avoided_regions": [
       "india",
-      "south-africa"
+      "south-africa",
+      "germany"
     ],
     "impact": "Les secteurs/régions favorisés reçoivent +15% sur leur score, les évités -15%"
   }
