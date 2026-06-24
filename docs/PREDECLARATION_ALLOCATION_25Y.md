@@ -129,3 +129,65 @@ Pour chaque profil, **un seul mix retenu** :
 **Test à exécuter à FROID prochaine session, pas ce soir.** Cadrage ce soir, exécution discipline tête reposée. C'est le test qui peut réellement bouger le patrimoine — il mérite la rigueur que les 5 jours de scoring ont prouvée fonctionner.
 
 **Discipline gravée 2026-06-24, accord explicite Fabre + Code.**
+
+---
+
+## Addendum 2026-06-24 (post-gel) — 2 ajustements Fabre verrouillés AVANT exécution
+
+Contexte : la mesure d'impact v2026 → v7.1 a révélé un désalignement massif portefeuille / scoring / doctrine. Décision : gel MAX_SWAPS=0 (commit `9af2995b7`) jusqu'à validation allocation 25 ans, puis reconstruction propre. Avant l'exécution du test, deux précisions Fabre verrouillent le cadre :
+
+### Ajustement 1 — Nommer EXPLICITEMENT le proxy Thematique
+
+Le proxy "**Nasdaq 100 TR**" testé représente **la composante tech-growth concentrée**, PAS la Thematique entière dans la doctrine.
+
+**Implication pour l'interprétation du verdict** :
+- Si Nasdaq 100 TR n'apporte pas +1 pt CAGR OOS vs World seul → on rejette **le pari tech-growth concentré**, pas nécessairement toute la Thematique (qui peut inclure défense, métaux, uranium…)
+- Le verdict de falsification forte s'applique **strictement au bucket tech-growth concentré**, pas à un bucket Thematique multi-thèmes
+
+**Conséquence doctrinale** :
+- Si Nasdaq tombe → tester séparément si d'autres thèmes (XLE énergie, défense via ITA, etc.) tiennent **sur le même test 25 ans** avant d'abandonner totalement le bucket Thematique
+- C'est une **deuxième couche de test**, pré-déclarée, conditionnelle au verdict Nasdaq
+- Mais le proxy Nasdaq 100 reste **le test principal** — c'est lui qui valide ou non l'idée "thématique tech concentrée bat le marché net de frais sur 25 ans"
+
+### Ajustement 2 — Walk-forward DOIT inclure une fenêtre traversant le dot-com
+
+**Problème** : avec windows train 10 ans / test 5 ans, voici les options :
+```
+Train 2000-2009 → Test 2010-2014   ← test PASSE après dot-com
+Train 2005-2014 → Test 2015-2019   ← test PASSE après dot-com
+Train 2010-2019 → Test 2020-2024   ← test passe COVID + bear 2022 mais PAS dot-com
+```
+
+**Aucune fenêtre de test ne traverse 2000-02 (dot-com).** Donc la falsification forte sur Thematique perd sa puissance : Nasdaq aurait pu faire -80% dans le train, mais on ne mesurerait jamais sa perf out-of-sample dans un dot-com.
+
+**Fix Fabre 2026-06-24** : ajouter une fenêtre **rétroactive** :
+```
+Train 1995-1999 → Test 2000-2004   ← test TRAVERSE dot-com ★
+Train 2000-2009 → Test 2010-2014
+Train 2005-2014 → Test 2015-2019
+Train 2010-2019 → Test 2020-2024
+```
+
+**Condition data** : nécessite que les proxies (MSCI World TR, Nasdaq 100 TR, US Agg TR, Gold) aient des données pré-1995. Vérification a priori **AVANT** le fetch. Si pas dispo pré-1995, alors :
+- Soit on relaxe la window train à 5 ans (Train 1998-2002 → Test 2003-2007) — couvre dot-com en partie
+- Soit on accepte que la falsification soit **partiellement testable** sur le dot-com (et on le note honnêtement dans le verdict)
+
+**Engagement** : verdict Thematique = falsifié sur le test 2000-2004 (dot-com) OU sur la majorité OOS (≥ 2/4 windows). Si Nasdaq bat World sur 2010-2024 mais s'effondre 2000-2004, **rejet** — c'était un facteur conditionnel régime, pas un edge structurel.
+
+### Implication globale de ces 2 ajustements
+
+La falsification forte devient **double** :
+1. **Test principal Nasdaq vs World** : ≥ +1 pt CAGR net OOS sur ≥ 2/4 windows (incluant dot-com)
+2. **Test secondaire (si principal tombe)** : autres thèmes (énergie, défense) sur même protocole — pré-déclaré conditionnel
+
+Verdict acceptable :
+- **A** : Nasdaq passe les 2/4 windows (dont dot-com) → bucket tech-growth confirmé
+- **B** : Nasdaq passe 2/4 OOS mais échoue dot-com → bucket conditionnel régime, à exclure
+- **C** : Nasdaq échoue 2/4 OOS → falsification confirmée → tester autres thèmes
+- **D** : aucun thème ne passe → bucket Thematique abandonné, portefeuille = World + coussin
+
+### Discipline maintenue
+
+Ces 2 ajustements **renforcent la rigueur** sans relâcher aucune protection anti-p-hacking. Ils précisent l'interprétation, pas les seuils. Le cadre v8 + addendum est définitif AVANT exécution.
+
+**Verrouillé 2026-06-24, accord explicite Fabre + Code.**
