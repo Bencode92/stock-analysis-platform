@@ -191,3 +191,65 @@ Verdict acceptable :
 Ces 2 ajustements **renforcent la rigueur** sans relâcher aucune protection anti-p-hacking. Ils précisent l'interprétation, pas les seuils. Le cadre v8 + addendum est définitif AVANT exécution.
 
 **Verrouillé 2026-06-24, accord explicite Fabre + Code.**
+
+---
+
+## Addendum 2 — 2026-06-24 (post-vérif data) : Option 3 source alternative
+
+### Constat empirique (test diagnostique TD)
+
+Vérification Twelve Data sur les 4 proxies candidats :
+- URTH (World ETF) : depuis **2012-01** seulement (TD ne va pas plus loin)
+- QQQ (Nasdaq 100) : depuis 1999-03 (juste début dot-com, partiel)
+- AGG (US Agg Bonds) : depuis **2003-09**
+- GLD (Or) : depuis **2007-12**
+- ACWI (backup World) : depuis 2008-03
+- ^IXIC, ^GSPC (indices nus) : 404 TD ne les supporte pas
+
+**Twelve Data plafonne à 2012 pour le proxy World.** Le cadre dot-com prévu (window 1995-99 → 2000-04) est **inexploitable avec TD** comme source.
+
+### Décision : Option 3 — Source alternative pour les indices
+
+**Source pour les 4 indices d'allocation** : Yahoo Finance (`yfinance`) ou Stooq.
+- SPY (proxy S&P 500 TR) : depuis 1993
+- ^IXIC ou QQQ : Nasdaq Composite/100 depuis 1985/1999
+- Indices bond longs (US Treasury TR composé OU AGG depuis 2003)
+- Gold spot (LBMA fixing depuis 1968) ou GLD depuis 2004
+
+**Pipeline stocks (TD) inchangé** — pas de contamination du scoring. Le changement de source concerne uniquement les 4 séries d'indices pour le test d'allocation.
+
+### 3 vérifications impératives AVANT de lancer le walk-forward (Fabre)
+
+#### Vérif 1 — TOTAL RETURN obligatoire pour les 4 buckets
+
+**Piège n°1 du changement de source.** Un indice "prix nu" (^GSPC, ^IXIC) n'inclut pas les dividendes. Si on compare Nasdaq prix-nu à World prix-nu à Bonds, on sous-estime *inégalement* le rendement (World et bonds versent plus de dividendes/coupons que le Nasdaq growth). **Le verdict serait biaisé EN FAVEUR du Nasdaq** (qui "perd" moins en prix nu).
+
+Exigence : pour chaque bucket, utiliser :
+- soit un **ETF accumulant** (TR par construction)
+- soit un **indice Total Return** (versions "TR" / "Net Return")
+- soit **reconstruire le TR** en réinvestissant manuellement les dividendes
+
+**Avant le walk-forward, valider explicitement que chaque série est TR.** Une série longue en prix nu est PIRE qu'une série courte en TR pour ce test.
+
+#### Vérif 2 — Devise alignée
+
+Les 4 indices doivent être dans la **même devise** (ou convertis cohéremment). MSCI World en USD vs bond EUR injecte du risque de change non voulu dans la comparaison de mix.
+
+Convention retenue : **tout en USD** (Yahoo donne par défaut les ETF US en USD). Si on prend des données en EUR, conversion FX à appliquer cohéremment sur les 4 séries.
+
+#### Vérif 3 — Profondeur par bucket (séries spot/longues vs ETF récents)
+
+L'ETF GLD démarre en 2004, AGG en 2003. Pour remonter avant, chercher :
+- **Or spot** : LBMA fixing (depuis 1968), série quotidienne disponible
+- **Bonds** : indice US Treasury Total Return reconstruit (Bloomberg/FRED) OU rendement Trésor 10 ans + accrual
+
+Si la profondeur reste limitée pour le coussin (or/bonds avant 2003-2004), test conditionnel :
+- **Actions (World + Nasdaq)** : pleinement testable sur dot-com (data depuis 1985+)
+- **Coussin (or + bonds)** : possiblement limité aux fenêtres post-2004
+- Verdict adapté : la falsification forte sur Thematique reste valide (actions ok), le dosage exact du coussin est testé sur fenêtres plus courtes mais documenté
+
+### Engagement maintenu
+
+Le cadre v8 + addendum 1 reste verrouillé. Cet addendum 2 ne modifie PAS les seuils, méthodes ou verdicts pré-déclarés — il précise UNIQUEMENT la source des données et les vérifications préalables. Toutes les protections anti-p-hacking sont préservées.
+
+**Verrouillé 2026-06-24, accord explicite Fabre + Code.**
