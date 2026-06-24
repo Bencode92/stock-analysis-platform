@@ -218,10 +218,23 @@ STICKY_BONUS = 0.03
 # restauration (la phase 2 garantit que ces tickers ne reviennent jamais
 # dans aucun pool). Les autres exceptions (toxicity, violations hard_filter
 # strictes) seront ajoutées en phase 3D.
+#
+# 🔒 GEL TEMPORAIRE 2026-06-24 (Fabre) :
+# Découverte critique : le scoring v7.1 a complètement transformé le pool
+# (0 stock commun entre portefeuille actuel et top 5 v7.1 sur les 3 profils),
+# MAIS le pool v7.1 recommanderait NVDA en #3 d'Agressif — ce qui CONTREDIT
+# la doctrine (β abandonné, pas de méga-cap tech chère en satellite).
+# Le sticky_bonus + budget_swap=1 sont des garde-fous qui MASQUENT ce
+# désalignement scoring/doctrine au lieu de le résoudre.
+# Laisser tourner = migrer 5 runs vers un pool qui contredit la doctrine
+# (frais + PFU pour rien).
+# Décision : MAX_SWAPS=0 jusqu'à ce que l'allocation 25 ans (pré-déclaration
+# v8 commit 31befc5fa) tranche et redéfinisse la structure. Puis reconstruire
+# cohérent au lieu d'optimiser une pièce qu'on va remplacer.
 MAX_SWAPS_PER_RUN_BY_PROFILE: Dict[str, int] = {
-    "Stable":   1,
-    "Modéré":   1,
-    "Agressif": 1,
+    "Stable":   0,
+    "Modéré":   0,
+    "Agressif": 0,
 }
 
 
