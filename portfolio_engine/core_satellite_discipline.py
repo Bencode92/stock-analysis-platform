@@ -219,22 +219,39 @@ STICKY_BONUS = 0.03
 # dans aucun pool). Les autres exceptions (toxicity, violations hard_filter
 # strictes) seront ajoutées en phase 3D.
 #
-# 🔒 GEL TEMPORAIRE 2026-06-24 (Fabre) :
-# Découverte critique : le scoring v7.1 a complètement transformé le pool
-# (0 stock commun entre portefeuille actuel et top 5 v7.1 sur les 3 profils),
-# MAIS le pool v7.1 recommanderait NVDA en #3 d'Agressif — ce qui CONTREDIT
-# la doctrine (β abandonné, pas de méga-cap tech chère en satellite).
-# Le sticky_bonus + budget_swap=1 sont des garde-fous qui MASQUENT ce
-# désalignement scoring/doctrine au lieu de le résoudre.
-# Laisser tourner = migrer 5 runs vers un pool qui contredit la doctrine
-# (frais + PFU pour rien).
-# Décision : MAX_SWAPS=0 jusqu'à ce que l'allocation 25 ans (pré-déclaration
-# v8 commit 31befc5fa) tranche et redéfinisse la structure. Puis reconstruire
-# cohérent au lieu d'optimiser une pièce qu'on va remplacer.
+# 🔒 GEL PARTIEL 2026-06-24 (Fabre — révision après instinct utilisateur) :
+# Le gel intégral MAX_SWAPS=0 était trop brutal. Distinction Fabre :
+# - Nettoyage évident (héritages morts) : ne dépend d'aucun scénario futur
+#   → AGIR maintenant via FORCED_EXIT_BY_PROFILE
+# - Reconstruction structurelle (dosages World/Thematique/coussin) : dépend
+#   du test allocation 25 ans → ATTENDRE
+#
+# Le gel reste à MAX_SWAPS=0 pour bloquer la migration scoring → satellite
+# (qui ferait entrer NVDA et autres positions désalignées doctrine).
+# Mais FORCED_EXIT_BY_PROFILE force la sortie de positions évidemment
+# mortes même contre le sticky.
 MAX_SWAPS_PER_RUN_BY_PROFILE: Dict[str, int] = {
     "Stable":   0,
     "Modéré":   0,
     "Agressif": 0,
+}
+
+# 🧹 EXCLUSIONS FORCÉES 2026-06-24 (post-diagnostic méli-mélo) :
+# Positions héritées de logiques disparues que rien ne justifie aujourd'hui,
+# dans aucun scénario futur. Sorties forcées même contre sticky_bonus.
+# Ne dépend pas de l'allocation 25 ans — purement du nettoyage.
+#
+# - NTAP (Agressif) : hors-pool selection_audit, D/E 2.02, héritage ancien
+# - ADM  (Stable)   : Buf 33 (Stable exige ≥ 70), héritage sticky doctrinalement
+#                     infondé. Note : ADM est admissible dans d'autres profils
+#                     (assurance UK solide), mais pas Stable.
+#
+# À LEVER : quand l'allocation 25 ans aura redéfini la structure satellite
+# et que la reconstruction propre aura été faite.
+FORCED_EXIT_BY_PROFILE: Dict[str, set] = {
+    "Stable":   {"ADM"},
+    "Modéré":   set(),
+    "Agressif": {"NTAP"},
 }
 
 
@@ -253,6 +270,13 @@ def _apply_monthly_swap_budget(
     correspondantes depuis l'univers `all_stocks_universe` (déjà
     broker-filtré).
 
+    FORCED_EXIT_BY_PROFILE 2026-06-24 (Fabre) :
+    Les tickers dans FORCED_EXIT_BY_PROFILE[profile] sont FORCÉS À SORTIR
+    même contre sticky / max_swaps=0. Pour chaque exit forcé, on remplace
+    par la meilleure entrée disponible dans new_selection (au-delà du budget
+    normal). C'est une exception ciblée au gel : nettoyage évident des
+    héritages morts qui ne dépendent d'aucun scénario futur.
+
     Returns:
         (selection_throttled, meta_dict)
     """
@@ -260,40 +284,52 @@ def _apply_monthly_swap_budget(
     entered = new_tickers - prev_satellite_tickers
     exited = prev_satellite_tickers - new_tickers
 
-    if len(entered) <= max_swaps:
+    # FORCED_EXIT : tickers dans prev qu'on FORCE à sortir, même si pas dans entered
+    forced_exit_set = FORCED_EXIT_BY_PROFILE.get(profile, set()) & prev_satellite_tickers
+    n_forced = len(forced_exit_set)
+
+    if len(entered) <= max_swaps and n_forced == 0:
         return new_selection, {
             "limit": max_swaps,
             "throttled": False,
             "n_swaps": len(entered),
         }
 
-    # Garder les `max_swaps` premières entries (déjà triées par score décroissant)
+    # Budget effectif = max_swaps + n_forced (les forced exit ouvrent des slots
+    # supplémentaires pour remplacer les héritages morts)
+    effective_swap_budget = max_swaps + n_forced
+
+    # Garder les `effective_swap_budget` premières entries (déjà triées par score)
     kept_entries: List[Dict] = []
     rejected_entries: set = set()
     n_kept = 0
     for s in new_selection:
         tk = s.get("ticker")
         if tk in entered:
-            if n_kept < max_swaps:
+            if n_kept < effective_swap_budget:
                 kept_entries.append(s)
                 n_kept += 1
             else:
                 rejected_entries.add(tk)
 
-    # Positions stables (présentes dans new ET prev)
+    # Positions stables (présentes dans new ET prev) — MAIS exclure forced_exit
     stable_positions = [
         s for s in new_selection
         if s.get("ticker") not in entered
+        and s.get("ticker") not in forced_exit_set
     ]
 
     # Pour chaque entry rejetée, restaurer une exit depuis l'univers.
     # Un exit absent de l'univers (= broker-filtré) est skippé : pas de retour.
+    # FORCED_EXIT : tickers dans forced_exit_set ne sont JAMAIS restaurés.
     n_to_restore = len(rejected_entries)
     univ_by_ticker = {s.get("ticker"): s for s in all_stocks_universe}
     restored: List[Dict] = []
     for tk in sorted(exited):  # ordre déterministe
         if len(restored) >= n_to_restore:
             break
+        if tk in forced_exit_set:
+            continue  # 🧹 NEVER restore forced exits
         if tk in univ_by_ticker:
             restored.append(univ_by_ticker[tk])
 
@@ -301,13 +337,15 @@ def _apply_monthly_swap_budget(
 
     meta = {
         "limit": max_swaps,
+        "effective_budget": effective_swap_budget,
+        "forced_exits": sorted(forced_exit_set),
         "throttled": True,
         "n_swaps_proposed": len(entered),
         "n_swaps_applied": len(kept_entries),
         "entered_kept": [s.get("ticker") for s in kept_entries],
         "entered_rejected": sorted(rejected_entries),
         "exited_restored": [s.get("ticker") for s in restored],
-        "exited_not_restored": sorted(exited - {s.get("ticker") for s in restored}),
+        "exited_not_restored": sorted(exited - {s.get("ticker") for s in restored} - forced_exit_set),
     }
     return final_selection, meta
 
