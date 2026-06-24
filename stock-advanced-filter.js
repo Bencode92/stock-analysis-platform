@@ -2927,11 +2927,52 @@ async function main() {
         }
     }
     
+    // ═══════════════════════════════════════════════════════════════════════
+    // PASS 2 v7.1 (Fabre 2026-06-23) — Activation roic_stable bonus sectoriel
+    // ═══════════════════════════════════════════════════════════════════════
+    // FIX 2026-06-24 : DOIT être AVANT l'écriture des stocks_*.json (boucle ci-dessous).
+    // Avant ce fix, la pass 2 tournait après l'écriture → buffett_score v7.1
+    // calculé mais jamais sauvegardé. Bug détecté par l'absence de roic_stable_pass
+    // dans le payload après plusieurs runs CI.
+    //
+    // Le critère roic_stable est RELATIF à la médiane sectorielle MONDIALE,
+    // donc nécessite l'univers complet (US + EU + Asia) — d'où l'agrégation
+    // byRegion[*] juste avant.
+    //
+    // Effet : recalcule buffett_score avec bonus +10 si stock plus stable que
+    // médiane de son secteur (cap 100). Le champ roic_stable_pass est
+    // sauvegardé dans le payload pour traçabilité.
+    {
+        const allStocksForV71 = [...(byRegion.US || []), ...(byRegion.EUROPE || []), ...(byRegion.ASIA || [])];
+        if (allStocksForV71.length > 0) {
+            console.log('\n🔄 Pass 2 v7.1 — Annotation roic_stable sectoriel + recalcul scores...');
+            const annoStats = scorer.annotateRoicStablePass(allStocksForV71);
+            if (annoStats.sectorMedians) {
+                const summary = Object.entries(annoStats.sectorMedians)
+                    .map(([s, info]) => `${(s || '').slice(0,18)}=${info.median.toFixed(2)}(${info.source==='global_fallback'?'fb':info.n})`)
+                    .slice(0, 11).join(' | ');
+                console.log(`  📈 Médianes: ${summary}`);
+            }
+            console.log(`  ✅ Annoté: ${annoStats.n_annotated} | Skip (no roic_std): ${annoStats.n_skipped}`);
+            let n_bonus_applied = 0;
+            for (const stock of allStocksForV71) {
+                const newResult = scorer.evaluateBuffettScore(stock);
+                if (newResult.score !== null) {
+                    const oldScore = stock.buffett_score;
+                    stock.buffett_score = newResult.score;
+                    stock.buffett_grade = newResult.grade;
+                    if (newResult.score > (oldScore || 0)) n_bonus_applied++;
+                }
+            }
+            console.log(`  🎁 Bonus appliqué (score augmenté) : ${n_bonus_applied} stocks\n`);
+        }
+    }
+
     // ✅ v3.27: Écrire les JSON APRÈS le scoring (quality_score maintenant rempli)
     for (const region of regions) {
         const regionTag = region.name.toUpperCase();
         const enrichedStocks = byRegion[regionTag];
-        
+
         const filepath = path.join(OUT_DIR, `stocks_${region.name}.json`);
         await fs.writeFile(filepath, JSON.stringify({
             region: regionTag,
@@ -3016,38 +3057,9 @@ async function main() {
     // ✅ v3.31d: Fix KEEP_ADR logic (était inversé: !KEEP_ADR || !s.is_adr)
     const allStocks = [...byRegion.US, ...byRegion.EUROPE, ...byRegion.ASIA].filter(s => KEEP_ADR || !s.is_adr);
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // PASS 2 v7.1 (Fabre 2026-06-23) — Activation roic_stable bonus sectoriel
-    // ═══════════════════════════════════════════════════════════════════════
-    // Le critère roic_stable est RELATIF à la médiane sectorielle MONDIALE,
-    // donc doit être annoté APRÈS enrichissement individuel (pass 1) mais
-    // AVANT les écritures de fichiers qui dépendent de buffett_score.
-    //
-    // Effet : recalcule buffett_score avec bonus +10 si stock plus stable
-    // que médiane de son secteur (cap 100). Sans ce pass 2, scoring reste
-    // v2026 (6 critères pass/fail, sans bonus).
-    //
-    // Voir : docs/PREDECLARATION_BUFFETT_V7_ROIC_STABLE.md + commit f52e32266
-    console.log('\n🔄 Pass 2 v7.1 — Annotation roic_stable sectoriel + recalcul scores...');
-    const annoStats = scorer.annotateRoicStablePass(allStocks);
-    if (annoStats.sectorMedians) {
-        const summary = Object.entries(annoStats.sectorMedians)
-            .map(([s, info]) => `${(s || '').slice(0,18)}=${info.median.toFixed(2)}(${info.source==='global_fallback'?'fb':info.n})`)
-            .slice(0, 11).join(' | ');
-        console.log(`  📈 Médianes: ${summary}`);
-    }
-    console.log(`  ✅ Annoté: ${annoStats.n_annotated} | Skip (no roic_std): ${annoStats.n_skipped}`);
-    let n_bonus_applied = 0;
-    for (const stock of allStocks) {
-        const newResult = scorer.evaluateBuffettScore(stock);
-        if (newResult.score !== null) {
-            const oldScore = stock.buffett_score;
-            stock.buffett_score = newResult.score;
-            stock.buffett_grade = newResult.grade;
-            if (newResult.score > (oldScore || 0)) n_bonus_applied++;
-        }
-    }
-    console.log(`  🎁 Bonus appliqué (score augmenté) : ${n_bonus_applied} stocks\n`);
+    // (Pass 2 v7.1 déplacée AVANT l'écriture des stocks_*.json — voir ligne ~2931
+    //  pour le fix du timing 2026-06-24. Avant : pass 2 ici = code mort,
+    //  les fichiers étaient écrits avec scores v2026 avant que pass 2 ne tourne.)
     const withPayout = allStocks.filter(s => s.payout_ratio_ttm !== null);
     const withEPS = allStocks.filter(s => s.eps_ttm !== null);
     const withPE = allStocks.filter(s => s.pe_ratio !== null);
