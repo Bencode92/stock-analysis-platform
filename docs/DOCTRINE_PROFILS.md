@@ -52,6 +52,71 @@ Cohérence bornes par construction : MaxDD -22/-28% ↔ vol cible 28-35% ↔ CAG
 
 ---
 
+## RÉCONCILIATION FINALE 2026-06-25 — Portefeuille en accord avec la doctrine
+
+Après dérive proxy d'indices (Yahoo/Stooq pour test allocation 25 ans), recadrage Fabre : revenir au sujet réel, **mettre le portefeuille en accord avec la doctrine sans dépendre de données externes**. Trois réglages tranchés :
+
+### Réglage 1 — Agressif satellite = clone Modéré, β vient du cœur
+
+Doctrine v6.3 officiellement actée et explicitée :
+
+> **L'Agressif n'a pas de satellites distincts du Modéré. Les deux profils tirent du même pool de sélection. L'agressivité vient EXCLUSIVEMENT du cœur ETF/bonds** :
+> - Modéré : VWCE 50% + bonds 25% + or 5% = β cible ~0.61
+> - Agressif : VWCE 50% + IEMG 20% + bonds 5% + or 5% = β cible ~0.85
+>
+> **Différence structurelle entre les deux** : +20% IEMG / -20% bonds. Pas plus.
+
+**Justification empirique** :
+- Verdict D (sélection sans edge) : peu importe les actions choisies, elles ne génèrent pas d'alpha
+- Donc créer un pool Agressif distinct du Modéré n'aurait aucun fondement empirique
+- Le système avait déjà commencé à pencher dans cette direction (NTAP→IEMG 15→20%)
+- Réglage 1 ne fait qu'**acter la réalité observée** + l'aligner avec la doctrine
+
+**Conséquence acceptée** : Modéré et Agressif partagent les mêmes 4-5 satellites. C'est cohérent. Ils ne sont pas deux profils de sélection, mais un seul moteur de sélection servant deux dosages d'allocation différents.
+
+### Réglage 2 — `score_weights` Agressif = `score_weights` Modéré
+
+Cohérent avec Réglage 1 : même rôle = mêmes poids. Effet :
+- Supprime le push growth/momentum qui faisait remonter NVDA en #3 du pool Agressif
+- NVDA reste exclu (pas dans le pool natif Modéré → pas dans Agressif non plus)
+- Pas de différence de classement entre les deux profils
+- Cohérent doctrine "satellite ≠ moteur, scoring filtre admissibilité"
+
+### Réglage 3 — Dérive lente, pas migration forcée
+
+**MAX_SWAPS_PER_RUN remis à 1** (pas 0 du gel intégral, pas migration de 13 positions).
+
+**Justification Fabre** : v7.1 est validé comme **bouclier anti-ruine** (catastrophes -50% évitées), PAS comme sélecteur de performance. Migrer les 13 satellites actuels (tous sains, vérifiés 11/11) vers le pool v7.1 = remplacer du sans-edge par du sans-edge en payant frais + PFU. Aucun bénéfice de performance prouvé.
+
+Approche retenue : **dérive lente naturelle**.
+- MAX_SWAPS=1/run : le système s'aligne doucement quand un titre sort vraiment du cadre
+- FORCED_EXIT_BY_PROFILE maintenu : nettoyage des héritages évidents (déjà fait pour ADM, NTAP)
+- Pas de remplacement urgent de positions saines juste parce qu'elles ne sont pas dans le top pool
+
+### Dosage Thematique/coussin par profil (non testable, fixé par jugement a priori)
+
+Sans test allocation 25 ans (données Yahoo/Stooq pas suffisamment propres — proxies World TR manquent), le dosage Thematique vs coussin par profil est fixé par **jugement de bon sens** :
+- **Stable** : beaucoup de coussin (bonds 60% + or 10%), peu/pas de Thematique
+- **Modéré** : équilibre (VWCE 50% + bonds 25% + or 5%), pas de Thematique séparé
+- **Agressif** : peu de coussin (bonds 5% + or 5%), Thematique séparé à 30% du patrimoine
+- **Thematique** : moteur perf assumé, ETF thématiques diversifiés
+
+Ce dosage n'est PAS prouvé empiriquement (le test 25 ans aurait répondu, données indisponibles). Il est **fixé par jugement et assumé comme tel**, pas comme un résultat validé.
+
+### État final atteint après ces 3 réglages
+
+- ✓ Sélection clonée Modéré/Agressif (assumée sans-edge, doctrine explicite)
+- ✓ Agressivité par le cœur ETF/bonds, pas par les satellites
+- ✓ Scoring v7.1 anti-ruine actif (les 4 critères validés data + 2 paris régime + bonus stabilité sectorielle)
+- ✓ Héritages morts sortis (ADM, NTAP) via FORCED_EXIT
+- ✓ Pas de méga-cap tech chère en satellite (NVDA exclu par doctrine, pas par sticky)
+- ✓ Dérive lente naturelle (MAX_SWAPS=1, FORCED_EXIT actif)
+- ✓ Dosage Thematique/coussin par profil fixé par jugement (assumé non-prouvé)
+
+**Le portefeuille est enfin en accord avec la discussion complète** (5 jours de tests + 1 jour de recadrage).
+
+---
+
 ## BUFFETT v7.1 FINAL — bonus sectoriel gradué validé (2026-06-23)
 
 Suite analyse factorielle v6 (6 critères), test v7 roic_stable (edge anti-ruine

@@ -967,33 +967,41 @@ PROFILE_POLICY: Dict[str, Dict] = {
         "equity_max_weight": 0.75,
         "min_equity_positions": 12,
         "score_weights": {
-            # ═══ v6.1 (2026-06-03) : Calibration anti-value-trap, momentum 5% ═══
-            # v6.0 (10% momentum) a vu l'optimizer privilégier FSLR/BKR/NEM
-            # (cyclique en hausse) au lieu de ACN/INTU/ADBE (qualité en correction).
-            # v6.1 réduit le momentum à 5% : niveau "anti-value-trap" sans laisser
-            # le momentum dominer. Le 0% pur achèterait les value-traps (qualité
-            # en chute -41% type ACN sans signal de retournement), le 10% laisse
-            # trop de poids au cyclique. 5% = milieu prudent.
-            # Walk-forward Buffett-quintile non testable (historique < 1 an dispo) :
-            # par défaut, on prend le compromis robuste.
-            # Fondamental ABSOLU (60%) — pilote principal renforcé
-            "buffett_score":          0.22,   # 0.20 → 0.22 (récupère 2% du momentum)
-            "quality_quality_sub":    0.12,   # 0.10 → 0.12
-            "quality_safety_sub":     0.06,   # 0.05 → 0.06
-            "quality_value_sub":      0.10,
-            "quality_growth_sub":     0.10,
-            # Forward-looking (21%) — anticipation rentable
-            "eps_growth_forecast_5y": 0.11,   # 0.10 → 0.11
-            "eps_surprise":           0.10,
-            # Momentum RÉSIDUEL (5%) — anti-value-trap, plus pilote
-            "perf_1y":                0.03,   # 0.07 → 0.03 (était 0.17 en v5)
-            "perf_3m":                0.02,   # 0.03 → 0.02
-            # Risque (-5%)
-            "volatility_3y":          0.00,
-            "max_drawdown_3y":       -0.05,
-            "dividend_yield":         0.00,
+            # ═══════════════════════════════════════════════════════════════════
+            # RÉCONCILIATION FINALE 2026-06-25 (Réglage 2 Fabre) — CLONE MODÉRÉ
+            # ═══════════════════════════════════════════════════════════════════
+            # Poids identiques à Modéré, par doctrine v6.3 actée :
+            # "L'Agressif satellite = clone Modéré. L'agressivité vient EXCLUSIVEMENT
+            #  du cœur ETF/bonds (+20% IEMG, -20% bonds vs Modéré)".
+            #
+            # Pourquoi remplacer les anciens poids v6.1 (growth/momentum lourd) :
+            # - Verdict D (2026-06-19) : sélection sans edge → faire un pool
+            #   Agressif "distinct" n'a aucun fondement empirique
+            # - Anciens poids favorisaient eps_growth (0.11) + eps_surprise (0.10)
+            #   + growth_sub (0.10) = push NVDA en #3 du pool Agressif. Contradiction
+            #   avec doctrine "β abandonné, pas de méga-cap tech en satellite".
+            # - Modéré pondère safety_sub 0.12 + vol -0.10 + dividend 0.03 :
+            #   profil "qualité avec garde-fou risque" — exactement ce que doit
+            #   être un satellite Agressif quand l'agressivité vient du cœur.
+            #
+            # Effet attendu :
+            # - NVDA recule dans le pool (moins boosté par growth/momentum)
+            # - Modéré et Agressif partagent le même classement de satellites
+            # - Cohérent avec doctrine "satellite ≠ moteur, agressivité par cœur"
+            "buffett_score":          0.22,
+            "quality_quality_sub":    0.10,   # 0.12 → 0.10 (aligné Modéré)
+            "quality_safety_sub":     0.12,   # 0.06 → 0.12 (aligné Modéré, valorise sécurité)
+            "quality_value_sub":      0.08,   # 0.10 → 0.08 (aligné Modéré)
+            "quality_growth_sub":     0.08,   # 0.10 → 0.08 (aligné Modéré, moins de poids growth)
+            "eps_growth_forecast_5y": 0.08,   # 0.11 → 0.08 (aligné Modéré, retire push growth)
+            "eps_surprise":           0.05,   # 0.10 → 0.05 (aligné Modéré, retire push momentum)
+            "dividend_yield":         0.03,   # 0.00 → 0.03 (aligné Modéré)
+            "volatility_3y":         -0.10,   # 0.00 → -0.10 (aligné Modéré, pénalise vol)
+            "max_drawdown_3y":       -0.10,   # -0.05 → -0.10 (aligné Modéré)
+            "perf_1y":                0.04,   # 0.03 → 0.04 (aligné Modéré)
+            "perf_3m":                0.03,   # 0.02 → 0.03 (aligné Modéré)
         },
-        "description": "Profil croissance fondamentale (v6.1 — fondamental dominant, momentum 5% anti-value-trap)",
+        "description": "Agressif satellite = clone Modéré (Réglage 2 Fabre 2026-06-25). Agressivité vient du cœur ETF (+20% IEMG / -20% bonds), pas du scoring satellite. Verdict D acté : pas d'edge de sélection, donc pas de pool distinct.",
         "expected_vol_range": (15, 22),
         "expected_equity_overlap_with_stable": 0.25,
     },

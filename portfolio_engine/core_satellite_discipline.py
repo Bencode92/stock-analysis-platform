@@ -219,21 +219,29 @@ STICKY_BONUS = 0.03
 # dans aucun pool). Les autres exceptions (toxicity, violations hard_filter
 # strictes) seront ajoutées en phase 3D.
 #
-# 🔒 GEL PARTIEL 2026-06-24 (Fabre — révision après instinct utilisateur) :
-# Le gel intégral MAX_SWAPS=0 était trop brutal. Distinction Fabre :
-# - Nettoyage évident (héritages morts) : ne dépend d'aucun scénario futur
-#   → AGIR maintenant via FORCED_EXIT_BY_PROFILE
-# - Reconstruction structurelle (dosages World/Thematique/coussin) : dépend
-#   du test allocation 25 ans → ATTENDRE
+# RÉCONCILIATION 2026-06-25 (Réglage 3 Fabre) — dérive lente naturelle
+# Évolution :
+# - 2026-06-12 : MAX_SWAPS=1 (budget mensuel original)
+# - 2026-06-24 matin : MAX_SWAPS=0 (gel intégral, trop brutal)
+# - 2026-06-24 soir : MAX_SWAPS=0 + FORCED_EXIT (gel partiel pour héritages morts)
+# - 2026-06-25 : MAX_SWAPS=1 (RETOUR), + FORCED_EXIT MAINTENU
 #
-# Le gel reste à MAX_SWAPS=0 pour bloquer la migration scoring → satellite
-# (qui ferait entrer NVDA et autres positions désalignées doctrine).
-# Mais FORCED_EXIT_BY_PROFILE force la sortie de positions évidemment
-# mortes même contre le sticky.
+# Pourquoi MAX_SWAPS=1 et pas migration forcée vers pool v7.1 :
+# v7.1 est validé comme BOUCLIER ANTI-RUINE (catastrophes -50% évitées via
+# 4 critères validés data), PAS comme sélecteur de performance. Migrer les
+# 13 satellites actuels (tous sains, 11/11 vérifiés) vers le top du pool v7.1
+# = remplacer du sans-edge par du sans-edge en payant frais + PFU. Aucun
+# bénéfice de performance prouvé.
+#
+# Approche retenue : dérive lente NATURELLE.
+# - MAX_SWAPS=1/run : système s'aligne doucement quand un titre sort vraiment du cadre
+# - FORCED_EXIT maintenu : nettoyage des héritages évidents (ADM, NTAP — déjà sortis)
+# - Combiné avec Réglage 2 (poids Agressif = Modéré), le pool ne pousse plus NVDA
+#   → la dérive est sûre, ne déclenche pas de migration vers stocks anti-doctrine
 MAX_SWAPS_PER_RUN_BY_PROFILE: Dict[str, int] = {
-    "Stable":   0,
-    "Modéré":   0,
-    "Agressif": 0,
+    "Stable":   1,
+    "Modéré":   1,
+    "Agressif": 1,
 }
 
 # 🧹 EXCLUSIONS FORCÉES 2026-06-24 (post-diagnostic méli-mélo) :
