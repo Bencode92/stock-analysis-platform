@@ -244,22 +244,32 @@ MAX_SWAPS_PER_RUN_BY_PROFILE: Dict[str, int] = {
     "Agressif": 1,
 }
 
-# 🧹 EXCLUSIONS FORCÉES 2026-06-24 (post-diagnostic méli-mélo) :
-# Positions héritées de logiques disparues que rien ne justifie aujourd'hui,
-# dans aucun scénario futur. Sorties forcées même contre sticky_bonus.
-# Ne dépend pas de l'allocation 25 ans — purement du nettoyage.
+# 🧹 EXCLUSIONS FORCÉES — historique et état actuel :
 #
-# - NTAP (Agressif) : hors-pool selection_audit, D/E 2.02, héritage ancien
-# - ADM  (Stable)   : Buf 33 (Stable exige ≥ 70), héritage sticky doctrinalement
-#                     infondé. Note : ADM est admissible dans d'autres profils
-#                     (assurance UK solide), mais pas Stable.
+# 2026-06-24 (post-diagnostic méli-mélo) :
+#   Initialement : {Stable: {ADM}, Agressif: {NTAP}}
+#   Pour sortir 2 héritages que la mécanique du pool maintenait via sticky.
 #
-# À LEVER : quand l'allocation 25 ans aura redéfini la structure satellite
-# et que la reconstruction propre aura été faite.
+# 2026-06-25 (Fabre, leçon NTAP) :
+#   NTAP retiré du FORCED_EXIT. Pourquoi : il est REVENU naturellement par
+#   le pool après sortie forcée. Cela prouve que FORCED_EXIT ne lutte
+#   efficacement que contre la RESTAURATION sticky, pas contre l'ENTRÉE
+#   naturelle d'un titre que le pool considère légitime. NTAP n'est PAS
+#   une bombe (D/E 2.0 vient des buybacks, ROE 106%, Buf 93, flag stabilité
+#   PASS). Le forcer à sortir = lutter contre la mécanique sans bénéfice.
+#
+# RÈGLE FABRE 2026-06-25 :
+#   FORCED_EXIT réservé aux VRAIES BOMBES (thèse cassée, fondamentaux
+#   pourris, vraie aberration de risque). PAS pour du "je préfère pas
+#   celui-là". Si le pool considère un titre légitime, accepte-le.
+#
+# - ADM (Stable) : MAINTENU. Buf 33 dans Stable (qui exige ≥ 70) = vraie
+#   incohérence doctrinale, pas juste une préférence. À garder hors Stable
+#   tant que son score reste sous le seuil de profil.
 FORCED_EXIT_BY_PROFILE: Dict[str, set] = {
     "Stable":   {"ADM"},
     "Modéré":   set(),
-    "Agressif": {"NTAP"},
+    "Agressif": set(),
 }
 
 

@@ -52,6 +52,64 @@ Cohérence bornes par construction : MaxDD -22/-28% ↔ vol cible 28-35% ↔ CAG
 
 ---
 
+## 🏁 CLÔTURE FINALE 2026-06-25 (post-run + leçon NTAP)
+
+Après le run portefeuille post-réconciliation, deux observations Fabre tranchées :
+
+### NTAP est revenu naturellement par le pool — leçon mécanique
+
+Hier, FORCED_EXIT={Agressif: {NTAP}} a sorti NTAP. Aujourd'hui, le système l'a RÉINTRODUIT via le pool natif Modéré+Agressif (NTAP a Buf 93, flag stabilité PASS, fondamentaux sains malgré D/E 2.0 issu des buybacks).
+
+**Enseignement** : FORCED_EXIT ne bloque que la *restauration* sticky d'un titre sorti, pas l'*entrée naturelle* d'un titre que le pool considère légitime. Donc forcer la sortie d'un titre que la mécanique considère valide = **lutter contre son propre système sans bénéfice**.
+
+**Règle Fabre 2026-06-25** : FORCED_EXIT réservé aux **vraies bombes** (thèse cassée, fondamentaux pourris, aberration de risque), PAS pour des préférences cosmétiques. NTAP n'est pas une bombe → retiré du FORCED_EXIT. Seul ADM reste forcé (Buf 33 dans Stable qui exige ≥ 70 = vraie incohérence doctrinale).
+
+### Overlap Modéré ↔ Agressif à 75% — confirmation verdict D
+
+Modéré et Agressif partagent EXPD/ITX/LOGN (3 stocks). Modéré spécifique : NOVN. Agressif spécifique : CBOE/NTAP.
+
+**Avec poids identiques (Réglage 2), on aurait attendu 100% overlap.** Le 75% n'est PAS une anomalie à corriger — c'est la confirmation empirique du **verdict D** : le scoring sans edge fort ne sépare pas finement le peloton. Les titres en bas du pool sont à égalité statistique, le sticky + contraintes secteur + nombre de positions (5 vs 4) suffisent à créer de petites différences.
+
+**Règle Fabre 2026-06-25** : ne pas optimiser ce bruit. Modéré et Agressif sont "presque identiques aux satellites près" — cohérent avec "même portefeuille, curseur ETF/bonds différent". Pas de tentative de force le 100% overlap.
+
+### État final validé (sujet clos)
+
+Le portefeuille est officiellement **en accord avec 7 jours de discussion** :
+
+```
+SÉLECTION (assumée sans-edge)
+  - Stable      : SREN/BVI/HEN/PUB (4 actions, 10% du profil)
+  - Modéré      : EXPD/ITX/LOGN/NOVN (4 actions, 20% du profil)
+  - Agressif    : EXPD/ITX/LOGN/CBOE/NTAP (5 actions, 25% du profil)
+  - Thematique  : pas d'actions, 100% ETF thématiques
+
+CŒUR (l'edge réel)
+  - Stable      : VWCE 20% + bonds 60% + or 10% (β ~0.22)
+  - Modéré      : VWCE 50% + bonds 25% + or 5%  (β ~0.61)
+  - Agressif    : VWCE 50% + IEMG 15% + or 5% + bonds 5% (β ~0.80)
+  - Thematique  : QQQ/VGT/VBK/CGXU/VOT/XLE/IEMG/or (moteur perf assumé)
+
+DOCTRINE GRAVÉE
+  - Scoring v7.1 anti-ruine actif (4 critères validés data + bonus sectoriel)
+  - β abandonné comme levier satellite (Vision B désarmée définitivement)
+  - Agressivité par le cœur, pas par les satellites
+  - Test allocation 25 ans abandonné (data Yahoo/Stooq insuffisante)
+  - Dosages World/Thematique/coussin par profil = jugement a priori, assumé
+  - FORCED_EXIT réservé aux vraies bombes (ADM oui, NTAP non)
+```
+
+### Ce qui reste à FAIRE (rien d'urgent)
+
+Aucune action requise. Le système est en régime stable :
+- MAX_SWAPS=1/run (dérive lente naturelle quand un titre sort vraiment du cadre)
+- FORCED_EXIT={Stable: {ADM}} maintenu (vraie incohérence doctrinale)
+- Pas de tentative de forcer migration vers pool v7.1
+- Pas d'optimisation cosmétique de l'overlap Modéré/Agressif
+
+**Le sujet "portefeuille en accord avec la discussion" est CLOS le 2026-06-25.**
+
+---
+
 ## RÉCONCILIATION FINALE 2026-06-25 — Portefeuille en accord avec la doctrine
 
 Après dérive proxy d'indices (Yahoo/Stooq pour test allocation 25 ans), recadrage Fabre : revenir au sujet réel, **mettre le portefeuille en accord avec la doctrine sans dépendre de données externes**. Trois réglages tranchés :
