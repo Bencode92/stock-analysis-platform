@@ -1,0 +1,340 @@
+{
+  "timestamp": "2026-06-28T10:22:43.503627",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-06-28",
+    "brent_usd": 72.6,
+    "brent_usd_avg5d": 74.4059492,
+    "gold_usd": 4080.8902,
+    "silver_usd": 58.91983,
+    "vix": 22.0,
+    "fed_funds_rate": 3.63,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "cpi_index": 333.979,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 278.0,
+    "us_10y_yield": 4.4,
+    "us_2y_yield": 4.09,
+    "yield_curve_2s10s": 31.0,
+    "breakeven_5y": 2.21,
+    "sp500_level": 7354.02,
+    "sp500_change_1d_pct": -1.953982225374564,
+    "hyg_change_1d_pct": -0.22497187851519412,
+    "lqd_change_1d_pct": 0.3942422297607104,
+    "trade_weighted_usd": 120.3958,
+    "eurusd": 1.13926,
+    "nasdaq_change_1d_pct": -1.37636,
+    "xlu_perf_1d_pct": 0.7633638,
+    "xle_perf_1d_pct": -0.46219264,
+    "cpi_core_mom_pct": 0.21,
+    "pce_yoy_pct": 4.07,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4080.81913,
+    "gold_ath_120d": 5330.94854,
+    "gold_drawdown_from_ath_pct": 23.45041226002906,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.88,
+    "favored_sectors": "energy, utilities, materials, real-estate",
+    "avoided_sectors": "communication-services",
+    "favored_regions": "turkey",
+    "avoided_regions": "south-africa, india, germany",
+    "key_trends": "Secteur leader: energy (+20.4% YTD) | Région leader: south-korea (+102.9% YTD) | 1 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+39.7% sur 12 mois) | 6M leader: energy (+21.8% sur 6 mois)",
+    "risks": "Secteurs en difficulté: financials, consumer-discretionary, communication-services | Régions en difficulté: germany, france, sweden | 3 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "consumer-staples(neutral,b=0.22,d=1.52%), real-estate(favored,b=0.34,d=1.46%), utilities(favored,b=0.36,d=0.15%), healthcare(neutral,b=0.44,d=3.02%), financials(neutral,b=0.8,d=-0.28%), energy(favored,b=-0.14,d=-0.46%), consumer-discretionary(neutral,b=1.18,d=0.9%), materials(favored,b=0.81,d=-0.46%), information-technology(neutral,b=1.44,d=-1.77%), communication-services(avoided,b=1.2,d=1.23%), industrials(neutral,b=0.97,d=-1.59%)"
+  },
+  "ai_response": {
+    "regime": "neutral",
+    "regime_confidence": 3,
+    "regime_rationale": "Macro mixte: CPI 2.4% maîtrisé mais PCE 4.07% encore élevé, Fed en pause, courbe 2s10s positive (31bps) suggérant pas de récession imminente. VIX 22 modérément élevé avec S&P en baisse de ~2% aujourd'hui — correction tactique plutôt que changement de régime, spreads HY 278bps encore contenus.",
+    "adjustments": [
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer energy sur momentum fort et pétrole stable",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Energy leader YTD (+20.4%) et 6M (+21.8%), Brent stable à $72.6, beta négatif au marché (-0.14) = diversificateur naturel dans un sell-off equity."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire semi/tech exposure après sell-off tech",
+        "params": {
+          "theme": "semi",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "IT daily -1.77%, beta 1.44 élevé, PCE 4.07% persistant implique Fed hawkish-hold prolongé → pression sur duration longue et multiples growth."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Maintenir gold malgré drawdown 23% de l'ATH",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "Gold à $4080 en drawdown 23% de l'ATH offre un point d'entrée attractif; PCE élevé + VIX 22 + sell-off equity = environnement favorable au gold comme hedge inflation et tail risk."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer healthcare sur momentum défensif",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Healthcare daily +3.02% en journée de sell-off large, beta 0.44 défensif — rotation défensive en cours cohérente avec VIX 22 et incertitude macro."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer dividend_value sur rotation défensive",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Consumer staples +1.52%, real estate +1.46%, utilities +0.15% surperforment en sell-off — rotation vers value/income cohérente avec taux réels élevés et PCE persistant."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Préférer TIPS et raccourcir duration modérément",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 5.0,
+          "fund_types": []
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "PCE 4.07% vs breakeven 5Y 2.21% = marché sous-price l'inflation réelle, TIPS offrent une protection asymétrique; duration courte car Fed en pause avec biais hawkish implicite."
+      },
+      {
+        "type": "bond_floor_delta",
+        "action": "Augmenter floor obligataire pour Stable",
+        "params": {
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Stable à seulement 19.4% bonds est sous-pondéré pour un profil conservateur avec VIX 22 et sell-off equity en cours — remonter vers 22-23% minimum."
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Augmenter cash tactique pour option d'achat sur la vol",
+        "params": {},
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "S&P -2% aujourd'hui avec VIX 22 — garder de la poudre sèche pour acheter un éventuel dip plus profond si la correction s'amplifie."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Duration intermédiaire-courte avec biais TIPS: PCE 4.07% bien au-dessus du breakeven 5Y (2.21%) rend les TIPS attractifs, tandis que la Fed en pause à 3.63% avec inflation persistante limite l'intérêt de la duration longue.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    },
+    "cash_allocation": {
+      "Agressif": 4,
+      "Modéré": 5,
+      "Stable": 3,
+      "rationale": "VIX 22 + S&P -2% intraday = garder 3-5% de cash tactique comme option d'achat sur une correction plus profonde; pas plus car T-bills à ~4% dans les portefeuilles font déjà office de cash productif."
+    },
+    "_cash_guidance": "MINIMUM CASH: Agressif 2% si VIX>20 (option d'achat sur la vol), Modéré 3%, Stable 0% (T-bills = cash productif). Le cash est une POSITION, pas une absence de position.",
+    "crypto_allocation": {
+      "Agressif": 4,
+      "Modéré": 2,
+      "Stable": 0,
+      "rationale": "Régime neutral avec VIX 22 — crypto reste un risk asset mais pas en zone de stress; réduire légèrement vs risk-on pur mais pas éliminer."
+    },
+    "warnings": [
+      "DIVERGENCE PCE/CPI CRITIQUE: PCE 4.07% vs CPI 2.4% — écart inhabituellement large, si PCE ne converge pas vers le bas la Fed pourrait reprendre un biais hawkish explicite",
+      "SELL-OFF EQUITY EN COURS: S&P -2% et Nasdaq -1.4% aujourd'hui — surveiller si VIX franchit 25-28 pour passer en risk_off",
+      "GOLD DRAWDOWN 23%: Inhabituel pour un environnement d'inflation élevée — possible liquidation forcée ou rotation; surveiller support $3800",
+      "RÉGIONS À RISQUE: Germany, France, Sweden en difficulté — exposition Europe à surveiller, possible contagion si BCE hawkish",
+      "HY SPREADS 278bps ENCORE SERRÉS: Malgré le sell-off equity, les spreads HY n'ont pas réagi — décorrélation temporaire ou retard qui pourrait se rattraper violemment"
+    ],
+    "market_interpretation": {
+      "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+      "geopolitical_risk": "Risque géopolitique modéré: Brent stable à $72.6 sans prime de risque excessive, mais sell-off equity broad-based suggère un catalyseur macro (possiblement tarifs ou tensions commerciales) plutôt que géopolitique pur.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 10,
+      "sentiment_estimate": "fear",
+      "dollar_assessment": "neutral"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "semi": {
+        "Agressif": -2,
+        "Modéré": -2
+      },
+      "healthcare": {
+        "Modéré": 2,
+        "Stable": 2
+      },
+      "dividend_value": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 2,
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 7.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_neutral"
+    ],
+    "bond_floor_deltas": {
+      "Stable": 3
+    },
+    "cash_tactical": {
+      "Agressif": 4,
+      "Modéré": 5,
+      "Stable": 3
+    },
+    "cash_tactical_rationale": "VIX 22 + S&P -2% intraday = garder 3-5% de cash tactique comme option d'achat sur une correction plus profonde; pas plus car T-bills à ~4% dans les portefeuilles font déjà office de cash productif.",
+    "crypto_allocation": {
+      "Agressif": 4,
+      "Modéré": 2,
+      "Stable": 0
+    },
+    "ai_regime": "neutral",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "DIVERGENCE PCE/CPI CRITIQUE: PCE 4.07% vs CPI 2.4% — écart inhabituellement large, si PCE ne converge pas vers le bas la Fed pourrait reprendre un biais hawkish explicite",
+      "SELL-OFF EQUITY EN COURS: S&P -2% et Nasdaq -1.4% aujourd'hui — surveiller si VIX franchit 25-28 pour passer en risk_off",
+      "GOLD DRAWDOWN 23%: Inhabituel pour un environnement d'inflation élevée — possible liquidation forcée ou rotation; surveiller support $3800",
+      "RÉGIONS À RISQUE: Germany, France, Sweden en difficulté — exposition Europe à surveiller, possible contagion si BCE hawkish",
+      "HY SPREADS 278bps ENCORE SERRÉS: Malgré le sell-off equity, les spreads HY n'ont pas réagi — décorrélation temporaire ou retard qui pourrait se rattraper violemment"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Duration intermédiaire-courte avec biais TIPS: PCE 4.07% bien au-dessus du breakeven 5Y (2.21%) rend les TIPS attractifs, tandis que la Fed en pause à 3.63% avec inflation persistante limite l'intérêt de la duration longue.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    }
+  },
+  "regime": "neutral",
+  "regime_rationale": "Macro mixte: CPI 2.4% maîtrisé mais PCE 4.07% encore élevé, Fed en pause, courbe 2s10s positive (31bps) suggérant pas de récession imminente. VIX 22 modérément élevé avec S&P en baisse de ~2% aujourd'hui — correction tactique plutôt que changement de régime, spreads HY 278bps encore contenus.",
+  "market_interpretation": {
+    "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+    "geopolitical_risk": "Risque géopolitique modéré: Brent stable à $72.6 sans prime de risque excessive, mais sell-off equity broad-based suggère un catalyseur macro (possiblement tarifs ou tensions commerciales) plutôt que géopolitique pur.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 10,
+    "sentiment_estimate": "fear",
+    "dollar_assessment": "neutral"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Duration intermédiaire-courte avec biais TIPS: PCE 4.07% bien au-dessus du breakeven 5Y (2.21%) rend les TIPS attractifs, tandis que la Fed en pause à 3.63% avec inflation persistante limite l'intérêt de la duration longue.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": false,
+    "avoid_securitized": false,
+    "avoid_em_bonds": true,
+    "max_duration_stable": 5.0,
+    "max_duration_moderate": 7.0
+  },
+  "warnings": [
+    "DIVERGENCE PCE/CPI CRITIQUE: PCE 4.07% vs CPI 2.4% — écart inhabituellement large, si PCE ne converge pas vers le bas la Fed pourrait reprendre un biais hawkish explicite",
+    "SELL-OFF EQUITY EN COURS: S&P -2% et Nasdaq -1.4% aujourd'hui — surveiller si VIX franchit 25-28 pour passer en risk_off",
+    "GOLD DRAWDOWN 23%: Inhabituel pour un environnement d'inflation élevée — possible liquidation forcée ou rotation; surveiller support $3800",
+    "RÉGIONS À RISQUE: Germany, France, Sweden en difficulté — exposition Europe à surveiller, possible contagion si BCE hawkish",
+    "HY SPREADS 278bps ENCORE SERRÉS: Malgré le sell-off equity, les spreads HY n'ont pas réagi — décorrélation temporaire ou retard qui pourrait se rattraper violemment"
+  ]
+}

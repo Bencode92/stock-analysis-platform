@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-27T10:00:25.070407",
+  "timestamp": "2026-06-28T10:24:22.235491",
   "period_days": 90,
   "frequency": "M",
   "platform_fee_annual_bp": 0.0,
@@ -26,11 +26,11 @@
       "resolver_version": "1.0.0"
     },
     "calendar_report": {
-      "original_dates": 85,
-      "aligned_dates": 86,
+      "original_dates": 84,
+      "aligned_dates": 85,
       "removed_dates": -1,
-      "nan_before_avg_pct": 2.76,
-      "nan_after_reindex_avg_pct": 3.9,
+      "nan_before_avg_pct": 2.8,
+      "nan_after_reindex_avg_pct": 3.94,
       "nan_after_ffill_avg_pct": 0.0,
       "symbols_excluded": [],
       "alignment_method": "NYSE_business_days",
@@ -41,7 +41,7 @@
       ]
     },
     "quality_report": {
-      "timestamp": "2026-06-27T10:00:24.908355",
+      "timestamp": "2026-06-28T10:24:22.136775",
       "passed": true,
       "n_symbols_checked": 20,
       "n_symbols_passed": 20,
@@ -72,10 +72,10 @@
         "VT": 0.0
       },
       "return_stats": {
-        "mean_daily_pct": 0.0779,
+        "mean_daily_pct": 0.0815,
         "max_daily_pct": 22.39,
         "min_daily_pct": -10.59,
-        "std_daily_pct": 1.5244
+        "std_daily_pct": 1.5235
       }
     },
     "benchmark_coverage": {
@@ -111,9 +111,9 @@
       "profile": "Agressif",
       "success": true,
       "stats": {
-        "net_return_pct": 6.81,
-        "total_return_pct": 6.81,
-        "gross_return_pct": 6.81,
+        "net_return_pct": 6.83,
+        "total_return_pct": 6.83,
+        "gross_return_pct": 6.83,
         "cost_drag_pct": -0.0,
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
@@ -133,9 +133,9 @@
         "cash_allocation": {
           "cash_weight_pct": 60.0,
           "missing_symbols": [
+            "IBGS.AS",
             "SGLN.AS",
-            "VWCE.DE",
-            "IBGS.AS"
+            "VWCE.DE"
           ],
           "n_missing": 3,
           "cash_rate_annual_pct": 4.5,
@@ -143,16 +143,16 @@
           "cash_return_contribution_value": 719.42,
           "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
         },
-        "cagr_pct": 29.12,
-        "gross_cagr_pct": 29.12,
+        "cagr_pct": 29.18,
+        "gross_cagr_pct": 29.18,
         "volatility_pct": 7.34,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
-        "sharpe_computed": 2.96,
+        "sharpe_computed": 2.97,
         "sharpe_display": "Non calculable (période < 1 an)",
         "sharpe_significant": false,
-        "sharpe_daily": 0.1866,
-        "max_drawdown_pct": -2.4,
+        "sharpe_daily": 0.187,
+        "max_drawdown_pct": -2.39,
         "avg_turnover_per_rebal": 100.0,
         "total_turnover_pct": 100.0,
         "turnover_annualized_pct": 387.69,
@@ -192,13 +192,13 @@
           "asset_class": "equity"
         },
         "benchmark_volatility_pct": 23.12,
-        "excess_return_pct": -19.74,
-        "tracking_error_pct": 18.69,
-        "information_ratio": -4.16,
+        "excess_return_pct": -19.73,
+        "tracking_error_pct": 18.7,
+        "information_ratio": -4.15,
         "beta": 0.22,
-        "alpha_pct": 0.88,
+        "alpha_pct": 0.89,
         "upside_capture_pct": 25.8,
-        "downside_capture_pct": 24.3
+        "downside_capture_pct": 24.2
       },
       "equity_curve": {
         "2026-03-30": 99900.0,
@@ -265,16 +265,16 @@
         "2026-06-23": 107016.26,
         "2026-06-24": 106990.44,
         "2026-06-25": 107227.62,
-        "2026-06-26": 106707.62
+        "2026-06-26": 106719.27
       }
     },
     {
       "profile": "Modéré",
       "success": true,
       "stats": {
-        "net_return_pct": 3.1,
-        "total_return_pct": 3.1,
-        "gross_return_pct": 3.1,
+        "net_return_pct": 3.11,
+        "total_return_pct": 3.11,
+        "gross_return_pct": 3.11,
         "cost_drag_pct": 0.0,
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
@@ -294,11 +294,11 @@
         "cash_allocation": {
           "cash_weight_pct": 80.0,
           "missing_symbols": [
+            "IBGS.AS",
             "IBCI.AS",
-            "SGLN.AS",
-            "AGGH.AS",
             "VWCE.DE",
-            "IBGS.AS"
+            "AGGH.AS",
+            "SGLN.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -306,15 +306,15 @@
           "cash_return_contribution_value": 931.07,
           "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
         },
-        "cagr_pct": 12.58,
-        "gross_cagr_pct": 12.58,
+        "cagr_pct": 12.6,
+        "gross_cagr_pct": 12.6,
         "volatility_pct": 2.95,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
-        "sharpe_computed": 2.57,
+        "sharpe_computed": 2.58,
         "sharpe_display": "Non calculable (période < 1 an)",
         "sharpe_significant": false,
-        "sharpe_daily": 0.1618,
+        "sharpe_daily": 0.1623,
         "max_drawdown_pct": -0.84,
         "avg_turnover_per_rebal": 100.0,
         "total_turnover_pct": 100.0,
@@ -359,9 +359,9 @@
         "tracking_error_pct": 14.06,
         "information_ratio": -2.72,
         "beta": 0.07,
-        "alpha_pct": 2.16,
+        "alpha_pct": 2.17,
         "upside_capture_pct": 14.0,
-        "downside_capture_pct": 6.0
+        "downside_capture_pct": 5.9
       },
       "equity_curve": {
         "2026-03-30": 99900.0,
@@ -428,7 +428,7 @@
         "2026-06-23": 103158.04,
         "2026-06-24": 103177.96,
         "2026-06-25": 103254.51,
-        "2026-06-26": 103000.54
+        "2026-06-26": 103005.33
       }
     },
     {
@@ -457,11 +457,11 @@
         "cash_allocation": {
           "cash_weight_pct": 90.0,
           "missing_symbols": [
+            "IBGS.AS",
             "IBCI.AS",
-            "SGLN.AS",
-            "AGGH.AS",
             "VWCE.DE",
-            "IBGS.AS"
+            "AGGH.AS",
+            "SGLN.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -597,9 +597,9 @@
   ],
   "comparison": {
     "Agressif": {
-      "net_return_pct": 6.81,
-      "total_return_pct": 6.81,
-      "gross_return_pct": 6.81,
+      "net_return_pct": 6.83,
+      "total_return_pct": 6.83,
+      "gross_return_pct": 6.83,
       "cost_drag_pct": -0.0,
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
@@ -619,9 +619,9 @@
       "cash_allocation": {
         "cash_weight_pct": 60.0,
         "missing_symbols": [
+          "IBGS.AS",
           "SGLN.AS",
-          "VWCE.DE",
-          "IBGS.AS"
+          "VWCE.DE"
         ],
         "n_missing": 3,
         "cash_rate_annual_pct": 4.5,
@@ -629,16 +629,16 @@
         "cash_return_contribution_value": 719.42,
         "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
       },
-      "cagr_pct": 29.12,
-      "gross_cagr_pct": 29.12,
+      "cagr_pct": 29.18,
+      "gross_cagr_pct": 29.18,
       "volatility_pct": 7.34,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
-      "sharpe_computed": 2.96,
+      "sharpe_computed": 2.97,
       "sharpe_display": "Non calculable (période < 1 an)",
       "sharpe_significant": false,
-      "sharpe_daily": 0.1866,
-      "max_drawdown_pct": -2.4,
+      "sharpe_daily": 0.187,
+      "max_drawdown_pct": -2.39,
       "avg_turnover_per_rebal": 100.0,
       "total_turnover_pct": 100.0,
       "turnover_annualized_pct": 387.69,
@@ -678,18 +678,18 @@
         "asset_class": "equity"
       },
       "benchmark_volatility_pct": 23.12,
-      "excess_return_pct": -19.74,
-      "tracking_error_pct": 18.69,
-      "information_ratio": -4.16,
+      "excess_return_pct": -19.73,
+      "tracking_error_pct": 18.7,
+      "information_ratio": -4.15,
       "beta": 0.22,
-      "alpha_pct": 0.88,
+      "alpha_pct": 0.89,
       "upside_capture_pct": 25.8,
-      "downside_capture_pct": 24.3
+      "downside_capture_pct": 24.2
     },
     "Modéré": {
-      "net_return_pct": 3.1,
-      "total_return_pct": 3.1,
-      "gross_return_pct": 3.1,
+      "net_return_pct": 3.11,
+      "total_return_pct": 3.11,
+      "gross_return_pct": 3.11,
       "cost_drag_pct": 0.0,
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
@@ -709,11 +709,11 @@
       "cash_allocation": {
         "cash_weight_pct": 80.0,
         "missing_symbols": [
+          "IBGS.AS",
           "IBCI.AS",
-          "SGLN.AS",
-          "AGGH.AS",
           "VWCE.DE",
-          "IBGS.AS"
+          "AGGH.AS",
+          "SGLN.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -721,15 +721,15 @@
         "cash_return_contribution_value": 931.07,
         "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
       },
-      "cagr_pct": 12.58,
-      "gross_cagr_pct": 12.58,
+      "cagr_pct": 12.6,
+      "gross_cagr_pct": 12.6,
       "volatility_pct": 2.95,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
-      "sharpe_computed": 2.57,
+      "sharpe_computed": 2.58,
       "sharpe_display": "Non calculable (période < 1 an)",
       "sharpe_significant": false,
-      "sharpe_daily": 0.1618,
+      "sharpe_daily": 0.1623,
       "max_drawdown_pct": -0.84,
       "avg_turnover_per_rebal": 100.0,
       "total_turnover_pct": 100.0,
@@ -774,9 +774,9 @@
       "tracking_error_pct": 14.06,
       "information_ratio": -2.72,
       "beta": 0.07,
-      "alpha_pct": 2.16,
+      "alpha_pct": 2.17,
       "upside_capture_pct": 14.0,
-      "downside_capture_pct": 6.0
+      "downside_capture_pct": 5.9
     },
     "Stable": {
       "net_return_pct": 1.06,
@@ -801,11 +801,11 @@
       "cash_allocation": {
         "cash_weight_pct": 90.0,
         "missing_symbols": [
+          "IBGS.AS",
           "IBCI.AS",
-          "SGLN.AS",
-          "AGGH.AS",
           "VWCE.DE",
-          "IBGS.AS"
+          "AGGH.AS",
+          "SGLN.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
