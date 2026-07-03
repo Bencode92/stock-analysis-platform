@@ -28,6 +28,25 @@ Type : `FIX` (règle existante fausse/incomplète) · `NEW` (levier absent) · `
 | P1.9 | **AV co-souscription (couple) + RM Ciot** | RM Ciot 23/02/2016 ; TEPA 2007 | Absent — AV **mono-titulaire** uniquement | Modéliser : (1) **co-souscription** par époux avec fonds communs ; (2) clause de **dénouement au 1er décès** vs **non-dénouement** (report au 2nd décès, protège le survivant) ; (3) **RM Ciot** : le contrat non dénoué sur fonds communs n'est **plus réintégré fiscalement** au 1er décès → **0 droit pour les enfants** au 1er décès (report au 2nd). Ne concerne que la **communauté** (sous séparation, sans objet). Couplé à P1.8. | NEW |
 | P1.8 | **[F3] Couple = deux décès successifs** | — | Masse combinée en 1 barème | **Décision expert : TRANCHÉ → deux décès**. Modéliser décès 1 → options conjoint (usufruit légal / ¼ PP / DDV) → masse décès 2 (avec 757 B, créances de restitution, rappel 15 ans **propre à chaque parent**). Montrer le contre-exemple communauté universelle + attribution intégrale (0 € au 1er décès mais perte des abattements/tranches basses au 2nd). | DÉCISION → refactor |
 
+## AV couple — spécification validée (addendum n°2, retour expert)
+
+Règles confirmées/corrigées à encoder, **indissociables du refactor F3** :
+
+| # | Règle | Source | Spécification |
+|---|---|---|---|
+| AV.1 | **Ciot = neutralité FISCALE, pas civile** | Cass. 1re civ. 31/03/1992 *Praslicka* ; BOFiP BOI-ENR-DMTG-10-10-20-20 (opposable, L80 A LPF) | Séparer les 2 plans. Au 1er décès : contrat non dénoué (fonds communs) → **0 réintégration fiscale**, MAIS **moitié de la valeur de rachat dans la masse CIVILE** (réserve, partage, indivision/créance enfants). Afficher « 0 taxe ≠ 0 conséquence civile ». |
+| AV.2 | **990 I démembré : abattement du conjoint PERDU** | LFR 2011 ; art. 669 | Usufruitier conjoint exonéré capte sa quote-part (669) des 152 500 € → **perdue**, non reportée sur les enfants NP. Ex. usufruit 40 % → chaque enfant NP n'a que 60 %×152 500 = 91 500 €. Faire basculer la reco selon `capital / (nb_enfants × 152 500 × quote-part_NP)`. |
+| AV.3 | **774 bis : clause AV démembrée HORS champ → déductible, mais CONDITIONNEL** | BOFiP BOI-ENR-DMTG-10-40-20-20 n°200s (26/09/2024) ; CA Toulouse 24/10/2023 n°21/03501 ; art. 773-2° | Créance de restitution déductible au 2nd décès **SI** convention de quasi-usufruit à **date certaine** avant décès usufruitier **ET** pas de remploi requalifiant. Flag : `convention_QU_date_certaine && !remploi → déductible SINON alerte`. Sans ce flag, chiffrage 2nd décès trop optimiste. |
+| AV.4 | **Co-souscription B (dénouement 1er décès) : âge de référence** | Pratique de place (pas de BOFiP tranchant) | Défaut = âge du **plus âgé** des co-adhérents au versement (prudent) ; prémourant si connu ; **afficher l'écart** entre hypothèses. Incertitude moyenne → à faire confirmer. |
+| AV.5 | **Co-souscription C (non-dénouement)** | — | Dénouement au 2nd décès, ventilation <70/>70 selon âge du **survivant** aux versements. **Une seule couche** d'abattements 990 I (vs 2 en contrats croisés). N'a de sens civil qu'en communauté (idéalt universelle + attribution intégrale). |
+| AV.6 | **Plafond 990 I par bénéficiaire ET par ASSURÉ décédé** | art. 990 I | Deux décès successifs de deux assurés → **2 × 152 500 €** pour le même bénéficiaire. Argument quantitatif des **contrats croisés**. |
+| AV.7 | **PER : âge au décès + assiette aggravée** | art. 990 I / 757 B (assiette PER à confirmer BOFiP) | Âge **au décès** départage 990 I (<70) / 757 B (≥70). 757 B-**PER** = **totalité** (versements + gains) taxable, ≠ AV (produits exonérés) → nettement plus pénalisant. Abattement 30 500 € **mutualisé** AV 757 B + PER. Levier : arbitrage liquider/conserver le PER si mauvaise santé approchant 70 ans. |
+| AV.8 | **Récompense communauté** | art. L132-16 C.assur. | **Pas** de récompense si bénéfice attribué au **conjoint** (sauf primes exagérées). Alerte qualitative seulement si `contrat propre + fonds communs`. |
+| AV.9 | **Nouveaux cas couple** | pratique notariale | (1) **Contrats croisés** (2 couches d'abattements, souvent gagnant — comparateur naturel de la co-souscription) ; (2) **clause à options** (conjoint choisit PP/US/mixte au décès) ; (3) **BLOCAGE** : pas de co-souscription dénouement 2nd décès hors communauté (PACS/concubins) ; (4) tontine = hors périmètre. |
+| AV.10 | **Reco cas-type** | expert | Capital moyen → **clause démembrée** (économie nette au 2nd décès via créance déductible). Gros contrats (600 k€+) → **non-dénouement** ou **clause à options** peuvent repasser devant (abattement conjoint perdu devient décisif). Afficher les contre-arguments (formalisme convention QU ~500-2 000 €, risque dilapidation usufruitier). |
+
+**Tests de non-régression (avant refactor F3) :** matrice sur le triplet **clause de dénouement × régime matrimonial × âge aux versements** — c'est là que les bugs se logeront.
+
 ## P2 — Raffinements / robustesse
 
 | # | Règle | Article | Correction | Type |
