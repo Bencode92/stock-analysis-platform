@@ -111,14 +111,19 @@ const FiscalOptimizations = (function() {
         if (valeur <= 0) return { valeurTaxable: valeur, exoneration: 0, economieEstimee: 0, applicable: false };
         var nBen = Math.max(1, nbBeneficiaires || 1), partParBen = valeur / nBen;
         var isForet = type === 'foret' || type === 'gfi';
-        var baseExo = isForet ? partParBen : Math.min(partParBen, FONCIER_RURAL_PLAFOND);
-        var exoParBen = Math.round(baseExo * FONCIER_RURAL_EXONERATION);
+        // Art. 793 bis : forêt/GFI (Monichon) = 75 % sans plafond ; GFV/GFA = 75 % jusqu'au
+        // plafond/bénéficiaire, puis 50 % au-delà (le code ne mettait rien au-delà = sous-estimait).
+        // [VÉRIF BOFiP : montant exact du plafond selon durée d'engagement bail 18/24 ans]
+        var baseExo75 = isForet ? partParBen : Math.min(partParBen, FONCIER_RURAL_PLAFOND);
+        var baseExo50 = isForet ? 0 : Math.max(0, partParBen - FONCIER_RURAL_PLAFOND);
+        var exoParBen = Math.round(baseExo75 * FONCIER_RURAL_EXONERATION + baseExo50 * 0.50);
         var totalExo = exoParBen * nBen, totalTaxable = (partParBen - exoParBen) * nBen;
+        var deuxTiers = baseExo50 > 0;
         var typeLabel = { foret: 'Forêt/GFI', vigne: 'Vigne/GFV', terre_agricole: 'Terre/GFA', gfv: 'GFV', gfa: 'GFA', gfi: 'GFI' };
         return { valeurTaxable: totalTaxable, exoneration: totalExo, economieEstimee: Math.round(totalExo * 0.20),
             applicable: true, type: typeLabel[type] || type, ticketEntree: FONCIER_RURAL_TICKET_ENTREE,
-            explanation: (typeLabel[type] || type) + ' : exo 75%. ' + fmt(valeur) + ' → taxable ' + fmt(totalTaxable),
-            conditions: isForet ? ['Gestion durable 30 ans', 'Pas de plafond'] : ['Bail rural ≥ 18 ans', 'Plafond ' + fmt(FONCIER_RURAL_PLAFOND) + '/bén.', 'Conservation 5 ans min.'] };
+            explanation: (typeLabel[type] || type) + (isForet ? ' : exo 75% (sans plafond).' : ' : exo 75% jusqu\'à ' + fmt(FONCIER_RURAL_PLAFOND) + '/bén.' + (deuxTiers ? ' puis 50% au-delà.' : '.')) + ' ' + fmt(valeur) + ' → taxable ' + fmt(totalTaxable),
+            conditions: isForet ? ['Gestion durable 30 ans', 'Pas de plafond'] : ['Bail rural ≥ 18 ans', 'Exo 75% ≤ ' + fmt(FONCIER_RURAL_PLAFOND) + '/bén., 50% au-delà', 'Conservation 5 ans min.'] };
     }
 
     // ============================================================

@@ -86,6 +86,19 @@
         var bareme = SD._fiscal.getBareme(lienHeritier);
         var isConjointExonere = lienHeritier === 'conjoint_pacs';
 
+        // Abattement RP -20% (art. 764 bis CGI) : SUCCESSION uniquement, et SEULEMENT si la RP est
+        // occupee au deces par le conjoint/partenaire (mariage/PACS) OU un enfant mineur/protege.
+        // Exclue si la RP est detenue via SCI. [VÉRIF BOFiP : occupation reelle / enfant protege majeur]
+        var rpValue = (state.immo || []).reduce(function(s, i) {
+            var isRP = i.usageActuel === 'rp' || i.usage === 'rp' || i.isRP;
+            var inSCI = i.structure && String(i.structure).indexOf('sci') === 0;
+            return s + ((isRP && !inSCI) ? (i.valeur || 0) : 0);
+        }, 0);
+        var rpEligible = rpValue > 0 && (state._unionType === 'mariage' || state._unionType === 'pacs'
+            || enfantsLegaux.some(function(e) { return (e.age || 99) < 18; }));
+        var abattementRP = rpEligible ? Math.round(rpValue * ((FISCAL.abattementRP && FISCAL.abattementRP.taux) || 0.20)) : 0;
+        if (abattementRP > 0) masseSuccessorale = Math.max(0, masseSuccessorale - abattementRP);
+
         // ============================================================
         // CALCUL SUCCESSION (HORS AV)
         // ============================================================
@@ -126,14 +139,27 @@
                 avRegime = '990 I';
             }
             if (totalPrimesAp70 > 0) {
-                // Art. 757 B : abattement GLOBAL 30 500 reparti au prorata entre beneficiaires,
-                // puis CHAQUE beneficiaire taxe au bareme de SON propre lien (progressivite respectee).
-                var nbBen757B = listBenAV.length;
-                var abatParBen757B = FISCAL.av757B.abattementGlobal / nbBen757B;
-                var partPrimes757B = totalPrimesAp70 / nbBen757B;
-                listBenAV.forEach(function(ben) {
+                // Art. 757 B : les primes ap. 70 ans sont REINTEGREES dans la succession et taxees
+                // aux DMTG. Corrections BOFiP :
+                //  (a) l'abattement GLOBAL 30 500 est reparti entre les seuls beneficiaires NON exoneres
+                //      (conjoint/PACS exoneres TEPA sont exclus du prorata ET de la taxation) ;
+                //  (b) la base se CUMULE avec la part successorale de l'heritier (progressivite commune),
+                //      et non taxee isolement depuis 0.
+                function estExonere(l) { return l === 'conjoint_pacs' || l === 'conjoint_pacs_donation'; }
+                var nbAllBen = listBenAV.length;
+                var taxableBens = listBenAV.filter(function(ben) { return !estExonere(lienReel(ben)); });
+                var nbTaxable = Math.max(1, taxableBens.length);
+                var abatParBen757B = FISCAL.av757B.abattementGlobal / nbTaxable;
+                var partPrimes757B = totalPrimesAp70 / Math.max(1, nbAllBen);
+                taxableBens.forEach(function(ben) {
+                    var lb = lienReel(ben);
+                    var bar = SD._fiscal.getBareme(lb);
                     var base757B = Math.max(0, partPrimes757B - abatParBen757B);
-                    droitsAV += SD._fiscal.calcDroits(base757B, SD._fiscal.getBareme(lienReel(ben)));
+                    // Cumul sur la part successorale si le beneficiaire est aussi heritier de meme rang
+                    var succFloor = (lb === lienHeritier) ? baseParHeritier : 0;
+                    var droitsAvec = SD._fiscal.calcDroits(succFloor + base757B, bar);
+                    var droitsSans = SD._fiscal.calcDroits(succFloor, bar);
+                    droitsAV += Math.max(0, droitsAvec - droitsSans);
                 });
                 avRegime = avRegime ? avRegime + ' + 757 B' : '757 B';
             }
@@ -199,6 +225,7 @@
         html += '<div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);">Patrimoine taxable</div>';
         html += '<div style="font-size:1.2rem;font-weight:800;color:var(--text-primary);">' + fmt(masseSuccessorale) + '</div>';
         html += '<div style="font-size:.62rem;color:var(--text-muted);">Immo ' + fmt(pat.immo) + (pat.financier - totalAV > 0 ? ' \u00b7 Fin. (hors AV) ' + fmt(pat.financier - totalAV) : '') + '</div>';
+        if (abattementRP > 0) html += '<div style="font-size:.58rem;color:var(--accent-green);margin-top:2px;">\u2713 Abattement RP -20% appliqu\u00e9 : -' + fmt(abattementRP) + ' (art. 764 bis)</div>';
         html += '</div>';
 
         html += '<div style="padding:14px;border-radius:12px;background:rgba(255,107,107,.04);border:1px solid rgba(255,107,107,.12);text-align:center;">';
