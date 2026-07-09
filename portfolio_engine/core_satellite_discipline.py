@@ -20,6 +20,7 @@ v6.2 (2026-06-03) — BYPASS SLSQP POUR LE SATELLITE
 Appelé par generate_portfolios_v4.py après l'optimizer, avant l'écriture JSON.
 """
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import copy
@@ -889,6 +890,23 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
             f"(walk-forward strict a montré Δ Sharpe -0.11 OOS sur timing factoriel)."
         )
 
+    # FIX 2026-07-09 (audit externe) : ajouter _tickers_pricing pour permettre
+    # au pipeline risk_analysis de calculer vol/covariance/stress tests.
+    # Sans cette clé, risk_analysis.py ligne 2008 récupère {} et échoue
+    # silencieusement → aucun _optimization, aucune vol, aucun risk_analysis.
+    # Cause racine du bug "vol 0.0% sur Thematique" pointé par audit externe.
+    #
+    # Filtre simple : garder les tickers qui ressemblent à des symboles tradables
+    # (pas de nom d'entreprise, format court, alphanumérique + .).
+    # Note: si un ticker est US non-UCITS (QQQ, VGT, etc.), il est structurellement
+    # tradable au sens format — le blocage PRIIPs se joue côté broker, pas ici.
+    tickers_pricing = {}
+    _TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9\.\-]{0,24}$")
+    for tk, weight in tickers.items():
+        tk_str = str(tk).strip().upper()
+        if tk_str and " " not in tk_str and _TICKER_RE.match(tk_str):
+            tickers_pricing[tk_str] = weight
+
     return {
         "Actions": actions,
         "ETF": etf,
@@ -896,6 +914,7 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
         "Crypto": {},
         "_tickers": tickers,
         "_tickers_meta": tickers_meta,
+        "_tickers_pricing": tickers_pricing,  # FIX bug vol 0.0% (audit 2026-07-09)
         "Commentaire": commentaire,
     }
 
