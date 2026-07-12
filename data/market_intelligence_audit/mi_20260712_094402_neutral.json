@@ -1,0 +1,348 @@
+{
+  "timestamp": "2026-07-12T09:44:02.410112",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-07-12",
+    "brent_usd": 76.01,
+    "brent_usd_avg5d": 75.86264259999999,
+    "gold_usd": 4111.53609,
+    "silver_usd": 59.71049,
+    "vix": 22.0,
+    "fed_funds_rate": 3.62,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "cpi_index": 333.979,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 270.0,
+    "us_10y_yield": 4.54,
+    "us_2y_yield": 4.16,
+    "yield_curve_2s10s": 38.0,
+    "breakeven_5y": 2.28,
+    "sp500_level": 7575.39,
+    "sp500_change_1d_pct": 1.231418476488801,
+    "hyg_change_1d_pct": 0.0,
+    "lqd_change_1d_pct": -1.086156111929314,
+    "trade_weighted_usd": 120.6902,
+    "eurusd": 1.14175,
+    "nasdaq_change_1d_pct": 0.30831495,
+    "xlu_perf_1d_pct": 0.62042715,
+    "xle_perf_1d_pct": 0.47428336,
+    "cpi_core_mom_pct": 0.21,
+    "pce_yoy_pct": 4.07,
+    "vix_trend": "Falling",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4111.42963,
+    "gold_ath_120d": 5019.79532,
+    "gold_drawdown_from_ath_pct": 18.0956718769163,
+    "radar_regime": "neutral",
+    "radar_confidence": 0.93,
+    "favored_sectors": "information-technology, energy, utilities, industrials, materials",
+    "avoided_sectors": "",
+    "favored_regions": "asie, netherlands, japan, singapore",
+    "avoided_regions": "india, south-africa, germany",
+    "key_trends": "Secteur leader: information-technology (+25.2% YTD) | Région leader: south-korea (+88.8% YTD) | 2 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: information-technology (+42.3% sur 12 mois) | 6M leader: information-technology (+23.9% sur 6 mois)",
+    "risks": "Secteurs en difficulté: consumer-discretionary | Régions en difficulté: germany, chile, india",
+    "sector_momentum_summary": "industrials(favored,b=0.89,d=0.47%), information-technology(favored,b=1.45,d=0.3%), real-estate(favored,b=0.55,d=0.5%), consumer-staples(neutral,b=0.21,d=1.19%), healthcare(neutral,b=0.49,d=-1.05%), energy(favored,b=0.49,d=0.47%), materials(favored,b=0.79,d=1.25%), consumer-discretionary(neutral,b=1.17,d=0.32%), utilities(favored,b=0.76,d=-0.02%), financials(neutral,b=0.89,d=0.25%), communication-services(neutral,b=1.21,d=0.21%)"
+  },
+  "ai_response": {
+    "regime": "neutral",
+    "regime_confidence": 3,
+    "regime_rationale": "Macro mixte: CPI 2.4% maîtrisé mais PCE 4.07% encore élevé, Fed en pause (0 delta 6m), VIX 22 en baisse, courbe 2s10s positive à +38bps, spreads IG/HY contenus. Pas de signal directionnel fort — croissance résiliente (S&P +1.2% daily, IT +25% YTD) mais tensions sous-jacentes (PCE élevé, 10Y à 4.54%, gold en drawdown de 18% depuis ATH suggérant rotation risk-on récente).",
+    "adjustments": [
+      {
+        "type": "bond_floor_delta",
+        "action": "Remonter significativement le floor obligataire — les 3 portefeuilles sont à 0% bonds, ce qui est dangereusement déséquilibré",
+        "params": {
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 5,
+        "rationale": "0% bonds sur les 3 profils est une anomalie critique: même en risk-on pur, Stable devrait avoir 30%+ bonds et Modéré 15%+; à VIX 22 et 10Y 4.54%, le rendement obligataire est attractif."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Duration intermédiaire, mix treasury + IG, TIPS en complément vu PCE élevé",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 5.0,
+          "fund_types": []
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "PCE à 4.07% vs CPI 2.4% crée un risque d'inflation persistante sous-estimée; TIPS protègent le portefeuille et le breakeven 5Y à 2.28% rend les TIPS attractifs si PCE reste élevé."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Limiter la duration à 5y pour Stable et 7y pour Modéré vu la pentification et le 10Y élevé",
+        "params": {
+          "action": "shorten_duration",
+          "max_dur": 5.0
+        },
+        "profiles": [
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Courbe pentifiée (+38bps 2s10s) avec 10Y à 4.54% et Fed en pause: le risque de duration est asymétrique à la hausse tant que PCE reste à 4%+."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer légèrement le cap AI/semi — momentum IT fort mais ne pas surcharger",
+        "params": {
+          "theme": "ai_infra",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "IT leader à +25% YTD et +42% 52W avec beta 1.45 — momentum fort mais VIX 22 et PCE élevé limitent la conviction; renforcement modéré uniquement."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Maintenir energy neutre — Brent stable à $76, pas de choc",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 0
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 2,
+        "rationale": "Brent à $76 est neutre (ni choc ni effondrement), energy favorisé par RADAR mais beta faible 0.49 — pas de raison de bouger."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Renforcer gold comme hedge — drawdown 18% depuis ATH crée un point d'entrée",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Gold à -18% de l'ATH avec PCE encore à 4% et incertitude macro: le drawdown offre un meilleur point d'entrée pour un hedge inflation/tail risk."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer dividend_value — consumer-staples +1.19% daily, défensif en régime neutre",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "En régime neutre avec VIX 22, les dividendes/value offrent du carry et de la protection; staples et utilities montrent du momentum positif."
+      },
+      {
+        "type": "cash_tactical",
+        "action": "Cash modéré — VIX 22 en baisse mais régime incertain, garder de la poudre sèche",
+        "params": {},
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "VIX 22 en baisse mais PCE/CPI divergent et Fed en pause: garder du cash tactique pour acheter un éventuel dip si le PCE force la Fed à redevenir hawkish."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Régime neutre avec inflation sous-jacente élevée (PCE 4%): privilégier TIPS + treasury court/intermédiaire, IG acceptable, éviter HY en surpondération et EM bonds.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    },
+    "cash_allocation": {
+      "Agressif": 3,
+      "Modéré": 5,
+      "Stable": 5,
+      "rationale": "VIX 22 en baisse justifie un cash modéré (pas élevé); la divergence CPI/PCE crée un risque de repricing Fed qui pourrait offrir des opportunités d'achat."
+    },
+    "_cash_guidance": "MINIMUM CASH: Agressif 2% si VIX>20 (option d'achat sur la vol), Modéré 3%, Stable 0% (T-bills = cash productif). Le cash est une POSITION, pas une absence de position.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0,
+      "rationale": "Régime neutre avec risk-on modéré (S&P en hausse, VIX en baisse): crypto acceptable en Agressif mais pas max vu l'incertitude PCE/Fed."
+    },
+    "warnings": [
+      "ALERTE CRITIQUE: Les 3 portefeuilles sont à 0% bonds — Stable à 94.6% equity est une anomalie majeure qui expose à un drawdown sévère en cas de choc",
+      "Divergence CPI (2.4%) vs PCE (4.07%) inhabituelle — si PCE ne converge pas vers le bas, la Fed pourrait reprendre les hausses, créant un choc obligataire",
+      "LQD -1.09% aujourd'hui alors que equity monte: signal de stress crédit naissant à surveiller, possible début de rotation bonds→equity qui pourrait s'inverser violemment",
+      "Gold à -18% de l'ATH malgré inflation élevée: soit le marché price un soft landing parfait, soit c'est un excès de complaisance — tail risk si géopolitique se dégrade",
+      "Consumer-discretionary en difficulté (RADAR) + PCE élevé = consommateur sous pression — risque de révisions bénéficiaires Q3"
+    ],
+    "market_interpretation": {
+      "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+      "geopolitical_risk": "Risque géopolitique modéré: Brent stable à $76 sans prime de risque excessive, VIX 22 en baisse — pas de crise aiguë mais vigilance sur le Moyen-Orient et tensions commerciales (régions évitées: Germany, India).",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 15,
+      "sentiment_estimate": "neutral",
+      "dollar_assessment": "neutral"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "ai_infra": {
+        "Agressif": 2,
+        "Modéré": 2
+      },
+      "dividend_value": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 2,
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "fund_types": [],
+        "rule_id": "ai_neutral"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "fund_types": [
+          "Emerging Markets Bond"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 7.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_neutral"
+    ],
+    "bond_floor_deltas": {
+      "Agressif": 5,
+      "Modéré": 5,
+      "Stable": 5
+    },
+    "cash_tactical": {
+      "Agressif": 3,
+      "Modéré": 5,
+      "Stable": 5
+    },
+    "cash_tactical_rationale": "VIX 22 en baisse justifie un cash modéré (pas élevé); la divergence CPI/PCE crée un risque de repricing Fed qui pourrait offrir des opportunités d'achat.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0
+    },
+    "ai_regime": "neutral",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "ALERTE CRITIQUE: Les 3 portefeuilles sont à 0% bonds — Stable à 94.6% equity est une anomalie majeure qui expose à un drawdown sévère en cas de choc",
+      "Divergence CPI (2.4%) vs PCE (4.07%) inhabituelle — si PCE ne converge pas vers le bas, la Fed pourrait reprendre les hausses, créant un choc obligataire",
+      "LQD -1.09% aujourd'hui alors que equity monte: signal de stress crédit naissant à surveiller, possible début de rotation bonds→equity qui pourrait s'inverser violemment",
+      "Gold à -18% de l'ATH malgré inflation élevée: soit le marché price un soft landing parfait, soit c'est un excès de complaisance — tail risk si géopolitique se dégrade",
+      "Consumer-discretionary en difficulté (RADAR) + PCE élevé = consommateur sous pression — risque de révisions bénéficiaires Q3"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Régime neutre avec inflation sous-jacente élevée (PCE 4%): privilégier TIPS + treasury court/intermédiaire, IG acceptable, éviter HY en surpondération et EM bonds.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": false,
+      "avoid_securitized": false,
+      "avoid_em_bonds": true,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    }
+  },
+  "regime": "neutral",
+  "regime_rationale": "Macro mixte: CPI 2.4% maîtrisé mais PCE 4.07% encore élevé, Fed en pause (0 delta 6m), VIX 22 en baisse, courbe 2s10s positive à +38bps, spreads IG/HY contenus. Pas de signal directionnel fort — croissance résiliente (S&P +1.2% daily, IT +25% YTD) mais tensions sous-jacentes (PCE élevé, 10Y à 4.54%, gold en drawdown de 18% depuis ATH suggérant rotation risk-on récente).",
+  "market_interpretation": {
+    "_doc": "Champs interprétatifs dérivés des données brutes. L'AI déduit ce que les API ne fournissent pas.",
+    "geopolitical_risk": "Risque géopolitique modéré: Brent stable à $76 sans prime de risque excessive, VIX 22 en baisse — pas de crise aiguë mais vigilance sur le Moyen-Orient et tensions commerciales (régions évitées: Germany, India).",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 15,
+    "sentiment_estimate": "neutral",
+    "dollar_assessment": "neutral"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Régime neutre avec inflation sous-jacente élevée (PCE 4%): privilégier TIPS + treasury court/intermédiaire, IG acceptable, éviter HY en surpondération et EM bonds.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": false,
+    "avoid_securitized": false,
+    "avoid_em_bonds": true,
+    "max_duration_stable": 5.0,
+    "max_duration_moderate": 7.0
+  },
+  "warnings": [
+    "ALERTE CRITIQUE: Les 3 portefeuilles sont à 0% bonds — Stable à 94.6% equity est une anomalie majeure qui expose à un drawdown sévère en cas de choc",
+    "Divergence CPI (2.4%) vs PCE (4.07%) inhabituelle — si PCE ne converge pas vers le bas, la Fed pourrait reprendre les hausses, créant un choc obligataire",
+    "LQD -1.09% aujourd'hui alors que equity monte: signal de stress crédit naissant à surveiller, possible début de rotation bonds→equity qui pourrait s'inverser violemment",
+    "Gold à -18% de l'ATH malgré inflation élevée: soit le marché price un soft landing parfait, soit c'est un excès de complaisance — tail risk si géopolitique se dégrade",
+    "Consumer-discretionary en difficulté (RADAR) + PCE élevé = consommateur sous pression — risque de révisions bénéficiaires Q3"
+  ]
+}
