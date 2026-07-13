@@ -922,6 +922,16 @@ async function filterETFs() {
     const enrichBondResult = await enrichCombinedBondsCsv(results.bonds, path.join(OUT_DIR, 'combined_bonds.csv'));
     console.log('✅ Enrichissement combined_etfs.csv:', enrichEtfResult.success ? `OK (${enrichEtfResult.stats?.matched || 0} matchés)` : enrichEtfResult.reason);
     console.log('✅ Enrichissement combined_bonds.csv:', enrichBondResult.success ? `OK (${enrichBondResult.matched || 0} matchés)` : enrichBondResult.reason);
+    // v14.5 (2026-07-12) : enrichir aussi les fichiers _all.csv (sans filtre hasObjective)
+    // utilisés par le clustering / analyses techniques.
+    try {
+        const enrichEtfAll = await enrichCombinedEtfsCsv(results.etfs, path.join(OUT_DIR, 'combined_etfs_all.csv'));
+        const enrichBondAll = await enrichCombinedBondsCsv(results.bonds, path.join(OUT_DIR, 'combined_bonds_all.csv'));
+        console.log('✅ Enrichissement combined_etfs_all.csv:', enrichEtfAll.success ? `OK (${enrichEtfAll.stats?.matched || 0} matchés)` : enrichEtfAll.reason);
+        console.log('✅ Enrichissement combined_bonds_all.csv:', enrichBondAll.success ? `OK (${enrichBondAll.matched || 0} matchés)` : enrichBondAll.reason);
+    } catch (e) {
+        console.log('⚠️ Enrichissement _all.csv échoué (fichiers absents ?): ' + e.message);
+    }
     if (process.env.GITHUB_OUTPUT) { const fsSync = require('fs'); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etfs_count=${results.etfs.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_count=${results.bonds.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `etf_holdings_rows=${narrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_holdings_rows=${bondsNarrowRows.length}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `total_holdings_positions=${etfPositionsCount + bondsPositionsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_duration=${bondsWithDuration}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_credit=${bondsWithCredit}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `bonds_with_rating=${bondsWithRating}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `sector_suspects=${sectorSuspectsCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `equity_filtered=${equityRejectedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `limited_run=${results.stats.limited_run}\n`); if (CONFIG.TRANSLATE_OBJECTIVE || CONFIG.TRANSLATE_TAXONOMY) { fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `objectives_translated=${translatedCount}\n`); fsSync.appendFileSync(process.env.GITHUB_OUTPUT, `taxonomies_translated=${taxonomyTranslatedCount}\n`); } }
 }
 // ==================== v14.4: ENRICHISSEMENT combined_etfs.csv ====================

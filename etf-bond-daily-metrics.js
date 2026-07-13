@@ -483,9 +483,16 @@ async function main(){
     const sg = bondSectorGuard.get(row.symbol) || {};
     return { ...row, ...sg };
   });
+  // v14.5 (2026-07-12) : version SANS filtre hasObjective pour clustering/analyses
+  // techniques qui n'ont pas besoin de la description texte. Utilisé par
+  // scripts/prepare_univers_ucits.py et similaires.
+  const bondFinalAll = bondMergedWithExposure.map(row => {
+    const sg = bondSectorGuard.get(row.symbol) || {};
+    return { ...row, ...sg };
+  });
 
   // v2.9: colonnes avec beta + Sector Guard
-  await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), bondFinal, [
+  const BOND_CSV_COLS = [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type',
     'aum_usd','total_expense_ratio','yield_ttm',
     'bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating',
@@ -496,7 +503,11 @@ async function main(){
     'holding_top','holdings_top10',
     'data_quality_score',
     'sector_bucket','sector_trust','sector_signal_ok','underlying_ticker'
-  ]);
+  ];
+  await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), bondFinal, BOND_CSV_COLS);
+  await writeCSV(path.join(OUT_DIR, 'combined_bonds_all.csv'), bondFinalAll, BOND_CSV_COLS);
+  console.log(`📝 combined_bonds.csv (avec objective): ${bondFinal.length} lignes`);
+  console.log(`📝 combined_bonds_all.csv (SANS filtre objective): ${bondFinalAll.length} lignes`);
 
   const etfExposure = weeklyEtfs.map(e => ({
     symbol: e.symbol, name: e.name || '', isin: e.isin || '', mic_code: e.mic_code || '', currency: e.currency || '',
@@ -538,9 +549,15 @@ async function main(){
     const sg = etfSectorGuard.get(row.symbol) || {};
     return { ...row, ...sg };
   });
+  // v14.5 (2026-07-12) : version SANS filtre hasObjective pour clustering/analyses
+  // techniques (prepare_univers_ucits.py, screener_clusters_etf.py).
+  const etfFinalAll = etfMergedWithExposure.map(row => {
+    const sg = etfSectorGuard.get(row.symbol) || {};
+    return { ...row, ...sg };
+  });
 
   // v2.9: colonnes avec beta + Sector Guard
-  await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), etfFinal, [
+  const ETF_CSV_COLS = [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',
     'aum_usd','total_expense_ratio','yield_ttm','objective',
     'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of',
@@ -548,7 +565,11 @@ async function main(){
     'holding_top','holdings_top10',
     'data_quality_score',
     'sector_bucket','sector_trust','sector_signal_ok','underlying_ticker'
-  ]);
+  ];
+  await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), etfFinal, ETF_CSV_COLS);
+  await writeCSV(path.join(OUT_DIR, 'combined_etfs_all.csv'), etfFinalAll, ETF_CSV_COLS);
+  console.log(`📝 combined_etfs.csv (avec objective): ${etfFinal.length} lignes`);
+  console.log(`📝 combined_etfs_all.csv (SANS filtre objective): ${etfFinalAll.length} lignes`);
 
   const bondsHoldingsHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
   const bondsHoldingsRows = weeklyBonds.filter(hasObjective).flatMap(fund => {
