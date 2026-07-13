@@ -442,9 +442,14 @@ async function main(){
   const etfMerged = mergeWeeklyDaily(weeklyEtfs, new Map(etfDaily.map(x=>[x.symbol,x])));
   const bondMerged = mergeWeeklyDaily(weeklyBonds, new Map(bondDaily.map(x=>[x.symbol,x])));
 
-  const etfMergedFiltered = etfMerged.filter(hasObjective);
-  const bondMergedFiltered = bondMerged.filter(hasObjective);
-  console.log(`🚯 Filtre "sans objectif": -${etfMerged.length-etfMergedFiltered.length} ETFs, -${bondMerged.length-bondMergedFiltered.length} Bonds`);
+  // v14.5 (2026-07-12) : filtre hasObjective retiré (voir raison dans etfFinal).
+  // Les variables gardent leur nom pour minimiser le diff en aval.
+  const etfMergedFiltered = etfMerged;
+  const bondMergedFiltered = bondMerged;
+  const etfsSansObj = etfMerged.filter(e => !hasObjective(e)).length;
+  const bondsSansObj = bondMerged.filter(b => !hasObjective(b)).length;
+  console.log(`ℹ️  ETFs sans objective conservés : ${etfsSansObj} (avant : filtrés)`);
+  console.log(`ℹ️  Bonds sans objective conservés : ${bondsSansObj} (avant : filtrés)`);
   
   await fs.writeFile(path.join(OUT_DIR, 'combined_snapshot.json'), JSON.stringify({ timestamp: todayISO(), etfs: etfMergedFiltered, bonds: bondMergedFiltered }, null, 2));
 
@@ -479,20 +484,17 @@ async function main(){
   });
 
   // v2.8: Merger Sector Guard dans bonds
-  const bondFinal = bondMergedWithExposure.filter(hasObjective).map(row => {
-    const sg = bondSectorGuard.get(row.symbol) || {};
-    return { ...row, ...sg };
-  });
-  // v14.5 (2026-07-12) : version SANS filtre hasObjective pour clustering/analyses
-  // techniques qui n'ont pas besoin de la description texte. Utilisé par
-  // scripts/prepare_univers_ucits.py et similaires.
-  const bondFinalAll = bondMergedWithExposure.map(row => {
+  // v14.5 (2026-07-12) : filtre hasObjective retiré — preset_etf.py utilise
+  // déjà fillna("") sur objective, aucun crash aval. Bénéfice : ~326 bonds
+  // au lieu de ~94 (les 232 sans description Twelve Data étaient éliminés
+  // silencieusement, ce qui privait le clustering des vrais clusters bonds).
+  const bondFinal = bondMergedWithExposure.map(row => {
     const sg = bondSectorGuard.get(row.symbol) || {};
     return { ...row, ...sg };
   });
 
   // v2.9: colonnes avec beta + Sector Guard
-  const BOND_CSV_COLS = [
+  await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), bondFinal, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type',
     'aum_usd','total_expense_ratio','yield_ttm',
     'bond_avg_duration','bond_avg_maturity','bond_credit_score','bond_credit_rating',
@@ -503,11 +505,8 @@ async function main(){
     'holding_top','holdings_top10',
     'data_quality_score',
     'sector_bucket','sector_trust','sector_signal_ok','underlying_ticker'
-  ];
-  await writeCSV(path.join(OUT_DIR, 'combined_bonds.csv'), bondFinal, BOND_CSV_COLS);
-  await writeCSV(path.join(OUT_DIR, 'combined_bonds_all.csv'), bondFinalAll, BOND_CSV_COLS);
-  console.log(`📝 combined_bonds.csv (avec objective): ${bondFinal.length} lignes`);
-  console.log(`📝 combined_bonds_all.csv (SANS filtre objective): ${bondFinalAll.length} lignes`);
+  ]);
+  console.log(`📝 combined_bonds.csv : ${bondFinal.length} lignes (sans filtre hasObjective)`);
 
   const etfExposure = weeklyEtfs.map(e => ({
     symbol: e.symbol, name: e.name || '', isin: e.isin || '', mic_code: e.mic_code || '', currency: e.currency || '',
@@ -522,7 +521,7 @@ async function main(){
     data_quality_score: e.data_quality_score ?? ''
   }));
 
-  const etfExposureFiltered = etfExposure.filter(hasObjective);
+  const etfExposureFiltered = etfExposure;  // v14.5 : filtre hasObjective retiré
   await writeCSV(path.join(OUT_DIR, 'combined_etfs_exposure.csv'), etfExposureFiltered, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',
     'aum_usd','total_expense_ratio','yield_ttm','objective',
@@ -545,19 +544,15 @@ async function main(){
   });
 
   // v2.8: Merger Sector Guard dans ETFs
-  const etfFinal = etfMergedWithExposure.filter(hasObjective).map(row => {
-    const sg = etfSectorGuard.get(row.symbol) || {};
-    return { ...row, ...sg };
-  });
-  // v14.5 (2026-07-12) : version SANS filtre hasObjective pour clustering/analyses
-  // techniques (prepare_univers_ucits.py, screener_clusters_etf.py).
-  const etfFinalAll = etfMergedWithExposure.map(row => {
+  // v14.5 (2026-07-12) : filtre hasObjective retiré — voir bondFinal ci-dessus.
+  // Bénéfice : ~840 ETF au lieu de ~277.
+  const etfFinal = etfMergedWithExposure.map(row => {
     const sg = etfSectorGuard.get(row.symbol) || {};
     return { ...row, ...sg };
   });
 
   // v2.9: colonnes avec beta + Sector Guard
-  const ETF_CSV_COLS = [
+  await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), etfFinal, [
     'symbol','name','isin','mic_code','currency','fund_type','etf_type','leverage',
     'aum_usd','total_expense_ratio','yield_ttm','objective',
     'daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close','as_of',
@@ -565,14 +560,11 @@ async function main(){
     'holding_top','holdings_top10',
     'data_quality_score',
     'sector_bucket','sector_trust','sector_signal_ok','underlying_ticker'
-  ];
-  await writeCSV(path.join(OUT_DIR, 'combined_etfs.csv'), etfFinal, ETF_CSV_COLS);
-  await writeCSV(path.join(OUT_DIR, 'combined_etfs_all.csv'), etfFinalAll, ETF_CSV_COLS);
-  console.log(`📝 combined_etfs.csv (avec objective): ${etfFinal.length} lignes`);
-  console.log(`📝 combined_etfs_all.csv (SANS filtre objective): ${etfFinalAll.length} lignes`);
+  ]);
+  console.log(`📝 combined_etfs.csv : ${etfFinal.length} lignes (sans filtre hasObjective)`);
 
   const bondsHoldingsHeader = 'etf_symbol,rank,holding_symbol,holding_name,weight_pct\n';
-  const bondsHoldingsRows = weeklyBonds.filter(hasObjective).flatMap(fund => {
+  const bondsHoldingsRows = weeklyBonds.flatMap(fund => {  // v14.5 : filtre hasObjective retiré
     const hs = Array.isArray(fund.holdings_top10) ? fund.holdings_top10 : [];
     const norm = hs.map(h => ('t' in h) ? { sym: h.t || '', name: h.n || '', w: h.w != null ? Number(h.w) : null } : { sym: h.symbol || '', name: h.name || '', w: h.weight != null ? Number((h.weight*100).toFixed(2)) : null });
     return norm.map((h, idx) => {

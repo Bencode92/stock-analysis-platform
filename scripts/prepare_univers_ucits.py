@@ -26,36 +26,17 @@ REPO = Path("/Users/benoit/stock-analysis-platform")
 FX_USD_EUR = 0.92
 
 
-def _load_and_tag(bucket: str, primary: Path, fallback: Path) -> pd.DataFrame:
-    """Préfère la version _all (sans filtre hasObjective) si disponible.
-
-    v14.5 du workflow produit combined_*_all.csv en parallèle de combined_*.csv.
-    Le _all contient 3× plus d'ETF (ex: 840 vs 277) car il ne filtre pas les
-    ETF sans description Twelve Data.
-    """
-    if primary.exists():
-        df = pd.read_csv(primary)
-        source = primary.name
-    else:
-        df = pd.read_csv(fallback)
-        source = fallback.name + " (fallback, _all pas encore produit)"
+def _load_and_tag(path: Path, bucket: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
     df["bucket"] = bucket
-    print(f"  {bucket:<6} : {len(df)} lignes depuis {source}")
+    print(f"  {bucket:<6} : {len(df)} lignes depuis {path.name}")
     return df
 
 
 def prepare():
     print("Chargement univers UCITS :")
-    etf = _load_and_tag(
-        "equity",
-        REPO / "data/combined_etfs_all.csv",
-        REPO / "data/combined_etfs.csv",
-    )
-    bond = _load_and_tag(
-        "bond",
-        REPO / "data/combined_bonds_all.csv",
-        REPO / "data/combined_bonds.csv",
-    )
+    etf = _load_and_tag(REPO / "data/combined_etfs.csv", "equity")
+    bond = _load_and_tag(REPO / "data/combined_bonds.csv", "bond")
     combined = pd.concat([etf, bond], ignore_index=True)
     combined = combined[combined["symbol"].notna()]
     combined["symbol"] = combined["symbol"].astype(str).str.strip()
