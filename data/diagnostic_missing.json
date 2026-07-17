@@ -1,7 +1,17 @@
 {
-  "generated_at": "2026-07-17T09:40:30.057Z",
+  "generated_at": "2026-07-17T10:24:58.567Z",
   "total_stocks": 279,
-  "no_data": [],
+  "no_data": [
+    {
+      "ticker": "BMED",
+      "name": "BANCA MEDIOLANUM",
+      "country": "Italie",
+      "exchange_csv": "Borsa Italiana",
+      "resolved_symbol": null,
+      "data_exchange": null,
+      "data_mic": null
+    }
+  ],
   "missing_roe": [
     {
       "ticker": "EBS",
@@ -527,16 +537,7 @@
       "exchange_csv": "SIX Swiss Exchange",
       "resolved_symbol": "BCVN",
       "data_exchange": "SIX",
-      "data_mic": "XSWX"
-    },
-    {
-      "ticker": "BMED",
-      "name": "BANCA MEDIOLANUM",
-      "country": "Italie",
-      "exchange_csv": "Borsa Italiana",
-      "resolved_symbol": "BMED",
-      "data_exchange": "MTA",
-      "data_mic": "XMIL"
+      "data_mic": null
     },
     {
       "ticker": "EXO",
@@ -566,9 +567,38 @@
       "data_mic": "XPAR"
     }
   ],
-  "missing_perf": [],
-  "missing_dividend": [],
+  "missing_perf": [
+    {
+      "ticker": "FER",
+      "name": "FERROVIAL",
+      "country": "Espagne",
+      "exchange_csv": "Bolsa De Madrid",
+      "resolved_symbol": "FER",
+      "data_exchange": "BME",
+      "data_mic": "XMAD",
+      "has_price": true,
+      "has_perf_1d": true
+    }
+  ],
+  "missing_dividend": [
+    {
+      "ticker": "BCVN",
+      "name": "BC VAUD N",
+      "country": "Suisse",
+      "resolved_symbol": "BCVN",
+      "data_exchange": "SIX",
+      "data_mic": null
+    }
+  ],
   "by_exchange": [
+    {
+      "exchange": "Borsa Italiana",
+      "total": 24,
+      "no_data": 1,
+      "no_roe": 1,
+      "no_de": 0,
+      "no_perf": 0
+    },
     {
       "exchange": "Euronext Amsterdam",
       "total": 26,
@@ -615,15 +645,7 @@
       "no_data": 0,
       "no_roe": 0,
       "no_de": 0,
-      "no_perf": 0
-    },
-    {
-      "exchange": "Borsa Italiana",
-      "total": 24,
-      "no_data": 0,
-      "no_roe": 1,
-      "no_de": 0,
-      "no_perf": 0
+      "no_perf": 1
     },
     {
       "exchange": "Nyse Euronext - Euronext Brussels",
@@ -715,12 +737,22 @@
     },
     {
       "mic": "XMIL",
-      "total": 12,
+      "total": 11,
       "no_roe": 1,
       "no_de": 0,
       "no_perf": 0,
       "tickers": [
         "TRN"
+      ]
+    },
+    {
+      "mic": "XMAD",
+      "total": 17,
+      "no_roe": 0,
+      "no_de": 0,
+      "no_perf": 1,
+      "tickers": [
+        "FER"
       ]
     }
   ]
