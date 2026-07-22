@@ -1,7 +1,35 @@
 {
-  "generated_at": "2026-07-22T16:15:40.271Z",
+  "generated_at": "2026-07-22T17:12:59.412Z",
   "total_stocks": 515,
-  "no_data": [],
+  "no_data": [
+    {
+      "ticker": "GE",
+      "name": "GE AEROSPACE",
+      "country": "Etats-Unis",
+      "exchange_csv": "New York Stock Exchange Inc.",
+      "resolved_symbol": null,
+      "data_exchange": null,
+      "data_mic": null
+    },
+    {
+      "ticker": "GILD",
+      "name": "GILEAD SCIENCES INC",
+      "country": "Etats-Unis",
+      "exchange_csv": "NASDAQ",
+      "resolved_symbol": null,
+      "data_exchange": null,
+      "data_mic": null
+    },
+    {
+      "ticker": "CRM",
+      "name": "SALESFORCE INC",
+      "country": "Etats-Unis",
+      "exchange_csv": "New York Stock Exchange Inc.",
+      "resolved_symbol": null,
+      "data_exchange": null,
+      "data_mic": null
+    }
+  ],
   "missing_roe": [
     {
       "ticker": "CTAS",
@@ -67,7 +95,7 @@
       "exchange_csv": "New York Stock Exchange Inc.",
       "resolved_symbol": "WFC",
       "data_exchange": "NYSE",
-      "data_mic": "XNYS"
+      "data_mic": null
     },
     {
       "ticker": "C",
@@ -94,7 +122,7 @@
       "exchange_csv": "New York Stock Exchange Inc.",
       "resolved_symbol": "AXP",
       "data_exchange": "NYSE",
-      "data_mic": "XNYS"
+      "data_mic": null
     },
     {
       "ticker": "SCHW",
@@ -103,7 +131,7 @@
       "exchange_csv": "New York Stock Exchange Inc.",
       "resolved_symbol": "SCHW",
       "data_exchange": "NYSE",
-      "data_mic": "XNYS"
+      "data_mic": null
     },
     {
       "ticker": "COF",
@@ -340,19 +368,7 @@
       "data_mic": "XNGS"
     }
   ],
-  "missing_perf": [
-    {
-      "ticker": "WY",
-      "name": "WEYERHAEUSER REIT",
-      "country": "Etats-Unis",
-      "exchange_csv": "New York Stock Exchange Inc.",
-      "resolved_symbol": "WY",
-      "data_exchange": "NYSE",
-      "data_mic": "XNYS",
-      "has_price": true,
-      "has_perf_1d": true
-    }
-  ],
+  "missing_perf": [],
   "missing_dividend": [
     {
       "ticker": "NFLX",
@@ -361,6 +377,70 @@
       "resolved_symbol": "NFLX",
       "data_exchange": "NASDAQ",
       "data_mic": "XNGS"
+    },
+    {
+      "ticker": "LRCX",
+      "name": "LAM RESEARCH CORP",
+      "country": "Etats-Unis",
+      "resolved_symbol": "LRCX",
+      "data_exchange": "NASDAQ",
+      "data_mic": null
+    },
+    {
+      "ticker": "PM",
+      "name": "PHILIP MORRIS INTERNATIONAL INC",
+      "country": "Etats-Unis",
+      "resolved_symbol": "PM",
+      "data_exchange": "NYSE",
+      "data_mic": null
+    },
+    {
+      "ticker": "WFC",
+      "name": "WELLS FARGO",
+      "country": "Etats-Unis",
+      "resolved_symbol": "WFC",
+      "data_exchange": "NYSE",
+      "data_mic": null
+    },
+    {
+      "ticker": "TXN",
+      "name": "TEXAS INSTRUMENT INC",
+      "country": "Etats-Unis",
+      "resolved_symbol": "TXN",
+      "data_exchange": "NASDAQ",
+      "data_mic": null
+    },
+    {
+      "ticker": "AXP",
+      "name": "AMERICAN EXPRESS",
+      "country": "Etats-Unis",
+      "resolved_symbol": "AXP",
+      "data_exchange": "NYSE",
+      "data_mic": null
+    },
+    {
+      "ticker": "COP",
+      "name": "CONOCOPHILLIPS",
+      "country": "Etats-Unis",
+      "resolved_symbol": "COP",
+      "data_exchange": "NYSE",
+      "data_mic": null
+    },
+    {
+      "ticker": "SCHW",
+      "name": "CHARLES SCHWAB CORP",
+      "country": "Etats-Unis",
+      "resolved_symbol": "SCHW",
+      "data_exchange": "NYSE",
+      "data_mic": null
+    },
+    {
+      "ticker": "PFE",
+      "name": "PFIZER INC",
+      "country": "Etats-Unis",
+      "resolved_symbol": "PFE",
+      "data_exchange": "NYSE",
+      "data_mic": null
     },
     {
       "ticker": "CRWD",
@@ -397,20 +477,20 @@
   ],
   "by_exchange": [
     {
-      "exchange": "NASDAQ",
-      "total": 175,
-      "no_data": 0,
-      "no_roe": 2,
-      "no_de": 0,
-      "no_perf": 0
-    },
-    {
       "exchange": "New York Stock Exchange Inc.",
       "total": 339,
-      "no_data": 0,
+      "no_data": 2,
       "no_roe": 1,
       "no_de": 0,
       "no_perf": 1
+    },
+    {
+      "exchange": "NASDAQ",
+      "total": 175,
+      "no_data": 1,
+      "no_roe": 2,
+      "no_de": 0,
+      "no_perf": 0
     },
     {
       "exchange": "Cboe BZX",
@@ -424,7 +504,7 @@
   "by_data_mic": [
     {
       "mic": "XNGS",
-      "total": 172,
+      "total": 168,
       "no_roe": 2,
       "no_de": 0,
       "no_perf": 0,
@@ -435,13 +515,12 @@
     },
     {
       "mic": "XNYS",
-      "total": 337,
+      "total": 328,
       "no_roe": 1,
       "no_de": 0,
       "no_perf": 1,
       "tickers": [
-        "FERG",
-        "WY"
+        "FERG"
       ]
     }
   ]
