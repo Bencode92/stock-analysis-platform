@@ -116,6 +116,7 @@ const EX2MIC_PATTERNS = [
 ];
 
 const COUNTRY2MIC = {
+  'united states':'XNYS', 'etats-unis':'XNYS', 'états-unis':'XNYS', 'usa':'XNYS',
   'switzerland':'XSWX', 'france':'XPAR', 'belgium':'XBRU', 'netherlands':'XAMS', 'portugal':'XLIS',
   'united kingdom':'XLON', 'uk':'XLON',
   'germany':'XETR', 'spain':'XMAD', 'italy':'XMIL',
