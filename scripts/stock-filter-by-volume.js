@@ -65,7 +65,7 @@ const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
 const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '800', 10);
 const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '99999', 10);
-const RATE_LIMIT_PAUSE_MS = 70000;
+const RATE_LIMIT_PAUSE_MS = parseInt(process.env.RATE_LIMIT_PAUSE || '30000', 10); // 30s (fenêtre TD ~1min) au lieu de 70s ; le retry recurse si encore 429
 
 // Seuils par région
 const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
