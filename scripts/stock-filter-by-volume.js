@@ -63,7 +63,7 @@ if (INPUTS.length === 0) {
 // ═══════════════════════════════════════════════════════════════════════════
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
-const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '400', 10);
+const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '800', 10);
 const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '99999', 10);
 const RATE_LIMIT_PAUSE_MS = 70000;
 
@@ -446,6 +446,11 @@ async function fetchBalanceSheet(symbol, context = {}) {
 
     return { periods: allPeriods };
   } catch (error) {
+    // ✅ HTTP 429 = rate limit -> déclenche le filet pause+retry (au lieu d'abandonner le titre)
+    if (error.response?.status === 429) {
+      console.warn(`  ⏱️ Rate limit (429) balance_sheet ${symbol}`);
+      return { _rateLimited: true };
+    }
     console.error(`  ❌ Erreur balance_sheet ${symbol}:`, error.message);
     return null;
   }
@@ -528,6 +533,11 @@ async function fetchIncomeStatement(symbol, context = {}) {
 
     return { periods: allPeriods };
   } catch (error) {
+    // ✅ HTTP 429 = rate limit -> déclenche le filet pause+retry (au lieu d'abandonner le titre)
+    if (error.response?.status === 429) {
+      console.warn(`  ⏱️ Rate limit (429) income_statement ${symbol}`);
+      return { _rateLimited: true };
+    }
     console.error(`  ❌ Erreur income_statement ${symbol}:`, error.message);
     return null;
   }
