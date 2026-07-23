@@ -47,7 +47,7 @@ jobs:
     outputs:
       should_run: ${{ steps.detect.outputs.should_run }}
       regions: ${{ steps.detect.outputs.regions }}
-      
+
     steps:
       - name: 🕐 Detect if we should run
         id: detect
@@ -68,8 +68,8 @@ jobs:
     needs: gate
     if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 180
-    
+    timeout-minutes: 360
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -96,10 +96,11 @@ jobs:
           echo "📊 Running stock-filter-by-volume.js"
           echo "🌍 REGIONS=$REGIONS"
           echo "══════════════════════════════════════════════════════════════"
-          
+
           node scripts/stock-filter-by-volume.js
 
       - name: Upload filtered data
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: filtered-stocks-${{ github.run_number }}
@@ -107,10 +108,11 @@ jobs:
           retention-days: 7
 
       - name: 📋 Summary
+        if: always()
         run: |
           echo "📂 Filtered files:"
           ls -lh data/filtered/*.csv 2>/dev/null || echo "No CSV files"
-          
+
           echo ""
           echo "📈 Counts:"
           for f in data/filtered/*_filtered.csv; do
@@ -119,45 +121,46 @@ jobs:
               echo "  $(basename $f): $COUNT stocks"
             fi
           done
-          
+
           # GitHub Summary
           REGIONS="${{ needs.gate.outputs.regions }}"
           echo "## 📊 Volume Filter Results (REGIONS=$REGIONS)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ -f data/filtered/Actions_US_filtered.csv ]; then
             US_COUNT=$(tail -n +2 data/filtered/Actions_US_filtered.csv | wc -l)
             echo "- 🇺🇸 US: **$US_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [ -f data/filtered/Actions_Europe_filtered.csv ]; then
             EU_COUNT=$(tail -n +2 data/filtered/Actions_Europe_filtered.csv | wc -l)
             echo "- 🇪🇺 Europe: **$EU_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [ -f data/filtered/Actions_Asie_filtered.csv ]; then
             ASIA_COUNT=$(tail -n +2 data/filtered/Actions_Asie_filtered.csv | wc -l)
             echo "- 🌏 Asia: **$ASIA_COUNT** stocks" >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: 💾 Commit and push
+        if: always()
         run: |
           set -e
           git config user.email "actions@github.com"
           git config user.name "github-actions[bot]"
-          
+
           git add data/filtered/*.csv 2>/dev/null || true
           git add data/fundamentals_cache.json 2>/dev/null || true
-          
+
           if git diff --quiet && git diff --staged --quiet; then
             echo "ℹ️ Nothing to commit"
             exit 0
           fi
-          
+
           REGIONS="${{ needs.gate.outputs.regions }}"
           TS=$(date -u +'%Y-%m-%d %H:%M UTC')
           git commit -m "📊 Volume Filter [$REGIONS] - $TS [skip ci]"
-          
+
           BRANCH="${GITHUB_REF_NAME:-main}"
           for i in 1 2 3; do
             git fetch origin && git rebase -X theirs "origin/$BRANCH" || git rebase --abort || true
@@ -165,3 +168,4 @@ jobs:
             sleep $((RANDOM%5+2))
           done
           exit 1
+
