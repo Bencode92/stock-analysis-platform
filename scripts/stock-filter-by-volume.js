@@ -834,8 +834,10 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
 
       const formulaOk = (cached._formulaVersion || 0) >= FORMULA_VERSION;
       const needsContextMigration = cached.roe === null && cached.de_ratio === null && !cached._hasContext;
+      // ✅ Force re-fetch des entrées VIDES (échec 429/transitoire mis en cache) au lieu de garder le vide
+      const isEmptyData = cached.roe === null && cached.de_ratio === null && cached.roic === null;
 
-      if (cacheNotExpired && formulaOk && !needsContextMigration) {
+      if (cacheNotExpired && formulaOk && !needsContextMigration && !isEmptyData) {
         stock.roe = cached.roe;
         stock.de_ratio = cached.de_ratio;
         stock.roic = cached.roic;
