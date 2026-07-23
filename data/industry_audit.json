@@ -1,13 +1,3445 @@
 [
   {
-    "ticker": "BSX",
-    "name": "BOSTON SCIENTIFIC CORPORATION",
-    "name_api": "Boston Scientific Corporation",
-    "sector_csv": "",
+    "ticker": "ASML",
+    "name": "ASML HOLDING NV",
+    "name_api": "ASML Holding N.V.",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Semiconductor Equipment & Materials",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AZN",
+    "name": "ASTRAZENECA PLC",
+    "name_api": "AstraZeneca PLC",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NOVN",
+    "name": "NOVARTIS AG",
+    "name_api": "Novartis AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HSBA",
+    "name": "HSBC HOLDINGS PLC",
+    "name_api": "HSBC Holdings plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 59,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ROP",
+    "name": "ROCHE PS PAR AG",
+    "name_api": "Roche Holding AG",
+    "name_match": "1.0/2 tokens",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 69,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SHEL",
+    "name": "SHELL PLC",
+    "name_api": "Shell plc",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 62,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NESN",
+    "name": "NESTLE SA",
+    "name_api": "Nestlé S.A.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Packaged Foods",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 49,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TTE",
+    "name": "TOTALENERGIES",
+    "name_api": "TotalEnergies SE",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SIE",
+    "name": "SIEMENS N AG",
+    "name_api": "Siemens Aktiengesellschaft",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 49,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SAP",
+    "name": "SAP",
+    "name_api": "SAP SE",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Software - Application",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 61,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SAN",
+    "name": "BANCO SANTANDER SA",
+    "name_api": "Banco Santander, S.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 69,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ALV",
+    "name": "ALLIANZ",
+    "name_api": "Allianz SE",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SU",
+    "name": "SCHNEIDER ELECTRIC",
+    "name_api": "Schneider Electric SE",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IBE",
+    "name": "IBERDROLA SA",
+    "name_api": "Iberdrola, S.A.",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Diversified",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DTE",
+    "name": "DEUTSCHE TELEKOM N AG",
+    "name_api": "Deutsche Telekom AG",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Telecom Services",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MC",
+    "name": "LVMH",
+    "name_api": "LVMH Moët Hennessy Louis Vuitton SE",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Luxury Goods",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 61,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENR",
+    "name": "SIEMENS ENERGY N AG",
+    "name_api": "Siemens Energy AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BATS",
+    "name": "BRITISH AMERICAN TOBACCO",
+    "name_api": "British American Tobacco plc",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Industrials",
+    "industry": "Industrial Distribution",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "UBSG",
+    "name": "UBS GROUP AG",
+    "name_api": "UBS Group AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ABBN",
+    "name": "ABB LTD",
+    "name_api": "ABB Ltd",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Electrical Equipment & Parts",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ULVR",
+    "name": "UNILEVER PLC",
+    "name_api": "Unilever PLC",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Household & Personal Products",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AI",
+    "name": "LAIR LIQUIDE SOCIETE ANONYME POUR",
+    "name_api": "Air Liquide S.A.",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 61,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BBVA",
+    "name": "BANCO BILBAO VIZCAYA ARGENTARIA SA",
+    "name_api": "Banco Bilbao Vizcaya Argentaria, S.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 72,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SAF",
+    "name": "SAFRAN SA",
+    "name_api": "Safran SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GSK",
+    "name": "GLAXOSMITHKLINE",
+    "name_api": "GSK plc",
+    "name_match": "0.6/1 tokens",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AIR",
+    "name": "AIRBUS GROUP",
+    "name_api": "Airbus SE",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SAN",
+    "name": "SANOFI SA",
+    "name_api": "Sanofi SA",
+    "sector_csv": "Santé",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Footwear & Accessories",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 69,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RIO",
+    "name": "RIO TINTO PLC",
+    "name_api": "Rio Tinto plc",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 74,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ZURN",
+    "name": "ZURICH INSURANCE GROUP AG",
+    "name_api": "Zurich Insurance Group AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 54,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "UCG",
+    "name": "UNICREDIT",
+    "name_api": "UniCredit S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 75,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "OR",
+    "name": "LOREAL SA",
+    "name_api": "L'Oréal S.A.",
+    "name_match": "0.7/1 tokens",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Household & Personal Products",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BNP",
+    "name": "BNP PARIBAS SA",
+    "name_api": "BNP Paribas SA",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CFR",
+    "name": "COMPAGNIE FINANCIERE RICHEMONT SA",
+    "name_api": "Compagnie Financière Richemont SA",
+    "name_match": "2.7/3 tokens",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Luxury Goods",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 62,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENEL",
+    "name": "ENEL",
+    "name_api": "Enel S.p.A.",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Diversified",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 29,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ISP",
+    "name": "INTESA SANPAOLO",
+    "name_api": "Intesa Sanpaolo S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CS",
+    "name": "AXA SA",
+    "name_api": "AXA SA",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RHM",
+    "name": "RHEINMETALL AG",
+    "name_api": "Rheinmetall AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GLEN",
+    "name": "GLENCORE PLC",
+    "name_api": "Glencore plc",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 22,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "INGA",
+    "name": "ING GROEP NV",
+    "name_api": "ING Groep N.V.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DG",
+    "name": "VINCI SA",
+    "name_api": "Vinci SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Engineering & Construction",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BARC",
+    "name": "BARCLAYS PLC",
+    "name_api": "Barclays PLC",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EL",
+    "name": "ESSILORLUXOTTICA SA",
+    "name_api": "EssilorLuxottica",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Instruments & Supplies",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ABI",
+    "name": "ANHEUSER-BUSCH INBEV SA",
+    "name_api": "Anheuser-Busch InBev SA/NV",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Brewers",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 57,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ITX",
+    "name": "INDUSTRIA DE DISENO TEXTIL SA",
+    "name_api": "Industria de Diseño Textil, S.A.",
+    "name_match": "2.7/3 tokens",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Apparel Retail",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 77,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "REL",
+    "name": "RELX PLC",
+    "name_api": "RELX plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Business Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PRX",
+    "name": "PROSUS NV CLASS N",
+    "name_api": "Prosus N.V.",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Holding / Investment Companies",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 69,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RMS",
+    "name": "HERMES INTERNATIONAL",
+    "name_api": "Hermès International Société en commandite par actions",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Luxury Goods",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 72,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NWG",
+    "name": "NATWEST GROUP PLC",
+    "name_api": "NatWest Group plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LSEG",
+    "name": "LONDON STOCK EXCHANGE GROUP PLC",
+    "name_api": "London Stock Exchange Group plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Financial Data & Stock Exchanges",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 42,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENGI",
+    "name": "ENGIE SA",
+    "name_api": "Engie SA",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Diversified",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 37,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IFX",
+    "name": "INFINEON TECHNOLOGIES AG",
+    "name_api": "Infineon Technologies AG",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Semiconductors",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 36,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENI",
+    "name": "ENI",
+    "name_api": "Eni S.p.A.",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 25,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DBK",
+    "name": "DEUTSCHE BANK AG",
+    "name_api": "Deutsche Bank AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 56,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BAS",
+    "name": "BASF N",
+    "name_api": "BASF SE",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 16,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BN",
+    "name": "DANONE SA",
+    "name_api": "Danone S.A.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Packaged Foods",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 45,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DB1",
+    "name": "DEUTSCHE BOERSE AG",
+    "name_api": "Deutsche Börse AG",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Financial Data & Stock Exchanges",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GLE",
+    "name": "SOCIETE GENERALE SA",
+    "name_api": "Société Générale SA",
+    "name_match": "1.4/2 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SREN",
+    "name": "SWISS RE AG",
+    "name_api": "Swiss Re AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Reinsurance",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 68,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CPG",
+    "name": "COMPASS GROUP PLC",
+    "name_api": "Compass Group plc",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Restaurants",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 79,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LONN",
+    "name": "LONZA GROUP AG",
+    "name_api": "Lonza Group AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Diagnostics & Research",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 15,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MBG",
+    "name": "MERCEDES-BENZ GROUP N AG",
+    "name_api": "Mercedes-Benz Group AG",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 26,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AAL",
+    "name": "ANGLO AMERICAN PLC",
+    "name_api": "Anglo American plc",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Other Industrial Metals & Mining",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 12,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CABK",
+    "name": "CAIXABANK SA",
+    "name_api": "CaixaBank, S.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 55,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SSE",
+    "name": "SSE PLC",
+    "name_api": "SSE plc",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Diversified",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 44,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RKT",
+    "name": "RECKITT BENCKISER GROUP PLC",
+    "name_api": "Reckitt Benckiser Group plc",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Household & Personal Products",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 72,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ARGX",
+    "name": "ARGENX",
+    "name_api": "argenx SE",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 48,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BAYN",
+    "name": "BAYER AG",
+    "name_api": "Bayer AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 34,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RWE",
+    "name": "RWE AG",
+    "name_api": "RWE AG",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Diversified",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 34,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HOLN",
+    "name": "HOLCIM LTD AG",
+    "name_api": "Holcim Ltd",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Building Materials",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 36,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RACE",
+    "name": "FERRARI NV",
+    "name_api": "Ferrari N.V.",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AD",
+    "name": "KONINKLIJKE AHOLD DELHAIZE NV",
+    "name_api": "Koninklijke Ahold Delhaize N.V.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Grocery Stores",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DGE",
+    "name": "DIAGEO PLC",
+    "name_api": "Diageo plc",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Wineries & Distilleries",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 43,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LR",
+    "name": "LEGRAND SA",
+    "name_api": "Legrand SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Electrical Equipment & Parts",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 68,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ORA",
+    "name": "ORANGE SA",
+    "name_api": "Orange S.A.",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Telecom Services",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 35,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EQNR",
+    "name": "EQUINOR",
+    "name_api": "Equinor ASA",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 52,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TSCO",
+    "name": "TESCO PLC",
+    "name_api": "Tesco PLC",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Grocery Stores",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 57,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "STAN",
+    "name": "STANDARD CHARTERED PLC",
+    "name_api": "Standard Chartered PLC",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 53,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "UCB",
+    "name": "UCB SA",
+    "name_api": "UCB SA",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "REP",
+    "name": "REPSOL SA",
+    "name_api": "Repsol S.A.",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SGO",
+    "name": "COMPAGNIE DE SAINT GOBAIN SA",
+    "name_api": "Compagnie de Saint-Gobain S.A.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Building Products & Equipment",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 74,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ALC",
+    "name": "ALCON AG",
+    "name_api": "Alcon Inc.",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Instruments & Supplies",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 61,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "G",
+    "name": "ASSICURAZIONI GENERALI",
+    "name_api": "Assicurazioni Generali S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "FER",
+    "name": "FERROVIAL",
+    "name_api": "Ferrovial SE",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Engineering & Construction",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 32,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ASM",
+    "name": "ASM INTERNATIONAL NV",
+    "name_api": "ASM International NV",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Semiconductor Equipment & Materials",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PRU",
+    "name": "PRUDENTIAL PLC",
+    "name_api": "Prudential plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Life",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PRY",
+    "name": "PRYSMIAN",
+    "name_api": "Prysmian S.p.A.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Electrical Equipment & Parts",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SLHN",
+    "name": "SWISS LIFE HOLDING AG",
+    "name_api": "Swiss Life Holding AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 40,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EBS",
+    "name": "ERSTE GROUP BANK AG",
+    "name_api": "Erste Group Bank AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GALD",
+    "name": "GALDERMA GROUP N AG",
+    "name_api": "Galderma Group AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 41,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "III",
+    "name": "3I GROUP PLC",
+    "name_api": "3i Group plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Asset Management",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 86,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SDZ",
+    "name": "SANDOZ GROUP AG",
+    "name_api": "Sandoz Group AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 36,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EXPN",
+    "name": "EXPERIAN PLC",
+    "name_api": "Experian plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Consulting Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 74,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IMB",
+    "name": "IMPERIAL BRANDS PLC",
+    "name_api": "Imperial Brands PLC",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Tobacco",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 69,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LDO",
+    "name": "LEONARDO FINMECCANICA SPA",
+    "name_api": "Leonardo S.p.A.",
+    "name_match": "1.0/3 tokens",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 53,
+    "flags": [
+      "name_mismatch_WARNING",
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SUNB",
+    "name": "SUNBELT RENTALS HOLDINGS INC",
+    "name_api": "Sunbelt Rentals Holdings, Inc.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Rental & Leasing Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ADS",
+    "name": "ADIDAS N AG",
+    "name_api": "adidas AG",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Footwear & Accessories",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 49,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BMW",
+    "name": "BMW AG",
+    "name_api": "Bayerische Motoren Werke AG",
+    "name_match": "0.6/1 tokens",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DNB",
+    "name": "DNB BANK",
+    "name_api": "DNB Bank ASA",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 83,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DTG",
+    "name": "DAIMLER TRUCK HOLDING E AG",
+    "name_api": "Daimler Truck Holding AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Farm & Heavy Construction Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 25,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HO",
+    "name": "THALES SA",
+    "name_api": "Thales S.A.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 61,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AMS",
+    "name": "AMADEUS IT GROUP SA",
+    "name_api": "Amadeus IT Group, S.A.",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Technology",
+    "industry": "Information Technology Services",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 75,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HEI",
+    "name": "HEIDELBERG MATERIALS AG",
+    "name_api": "Heidelberg Materials AG",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Building Materials",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CBK",
+    "name": "COMMERZBANK AG",
+    "name_api": "Commerzbank AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 44,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KBC",
+    "name": "KBC GROEP",
+    "name_api": "KBC Group NV",
+    "name_match": "1.0/2 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 57,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ADYEN",
+    "name": "ADYEN NV",
+    "name_api": "Adyen N.V.",
+    "sector_csv": "Finance",
+    "sector_api": "Technology",
+    "industry": "Software - Infrastructure",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 68,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "A5G",
+    "name": "AIB GROUP PLC",
+    "name_api": "AIB Group plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 75,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SIKA",
+    "name": "SIKA AG",
+    "name_api": "Sika AG",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AENA",
+    "name": "AENA SME SA",
+    "name_api": "Aena SME SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Airports & Air Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 82,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PHIA",
+    "name": "KONINKLIJKE PHILIPS NV",
+    "name_api": "Koninklijke Philips N.V.",
+    "sector_csv": "Santé",
     "sector_api": "Healthcare",
     "industry": "Medical Devices",
-    "quality_peer": "US|Unknown",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 35,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NN",
+    "name": "NN GROUP NV",
+    "name_api": "NN Group N.V.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 32,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RYA",
+    "name": "RYANAIR HOLDINGS PLC",
+    "name_api": "Ryanair Holdings plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Airlines",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "STMPA",
+    "name": "STMICROELECTRONICS NV",
+    "name_api": "STMicroelectronics N.V.",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Semiconductors",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 13,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GEBN",
+    "name": "GEBERIT AG",
+    "name_api": "Geberit AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Building Products & Equipment",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SCMN",
+    "name": "SWISSCOM AG",
+    "name_api": "Swisscom AG",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Telecom Services",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 52,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PGHN",
+    "name": "PARTNERS GROUP HOLDING AG",
+    "name_api": "Partners Group Holding AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Asset Management",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 81,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VIE",
+    "name": "VEOLIA ENVIRON. SA",
+    "name_api": "Veolia Environnement SA",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Services publics",
+    "sector_api": "Industrials",
+    "industry": "Waste Management",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 53,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MTX",
+    "name": "MTU AERO ENGINES HOLDING AG",
+    "name_api": "MTU Aero Engines AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MT",
+    "name": "ARCELORMITTAL SA",
+    "name_api": "ArcelorMittal S.A.",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Steel",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 37,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HEIA",
+    "name": "HEINEKEN NV",
+    "name_api": "Heineken N.V.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Brewers",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 43,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ML",
+    "name": "MICHELIN",
+    "name_api": "Michelin (CGDE)",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "UMG",
+    "name": "UNIVERSAL MUSIC GROUP NV",
+    "name_api": "Universal Music Group N.V.",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Entertainment",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HBAN",
+    "name": "HELVETIA BALOISE HOLDING N AG",
+    "name_api": "Helvetia Baloise Holding AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 28,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VOW3",
+    "name": "VOLKSWAGEN NON-VOTING PREF AG",
+    "name_api": "Volkswagen AG Preferred Stock",
+    "name_match": "1.0/2 tokens",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KER",
+    "name": "KERING SA",
+    "name_api": "Kering SA",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Luxury Goods",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 29,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NXT",
+    "name": "NEXT PLC",
+    "name_api": "Next plc",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Apparel Retail",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BPE",
+    "name": "BPER BANCA",
+    "name_api": "BPER Banca SpA",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 65,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PUB",
+    "name": "PUBLICIS GROUPE SA",
+    "name_api": "Publicis Groupe S.A.",
+    "sector_csv": "La communication",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas E&P",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 77,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "FRE",
+    "name": "FRESENIUS SE AND CO KGAA",
+    "name_api": "Fresenius SE & Co. KGaA",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Care Facilities",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 49,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SGSN",
+    "name": "SGS SA",
+    "name_api": "SGS SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Consulting Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 59,
+    "flags": [
+      "sector_mismatch",
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ACA",
+    "name": "CREDIT AGRICOLE SA",
+    "name_api": "Crédit Agricole S.A.",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
     "quality_score": 75,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KPN",
+    "name": "KONINKLIJKE KPN NV",
+    "name_api": "Koninklijke KPN N.V.",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Telecom Services",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ACS",
+    "name": "ACS ACTIVIDADES DE CONSTRUCCION Y",
+    "name_api": "ACS, Actividades de Construcción y Servicios, S.A.",
+    "name_match": "2.7/3 tokens",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Engineering & Construction",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 45,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CAP",
+    "name": "CAPGEMINI",
+    "name_api": "Capgemini SE",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Healthcare",
+    "industry": "Health Information Services",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IHG",
+    "name": "INTERCONTINENTAL HOTELS GROUP PLC",
+    "name_api": "InterContinental Hotels Group PLC",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Lodging",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 47,
+    "flags": [
+      "sector_mismatch",
+      "equity_negative",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "WKL",
+    "name": "WOLTERS KLUWER NV",
+    "name_api": "Wolters Kluwer N.V.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Business Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 76,
+    "flags": [
+      "sector_mismatch",
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BIRG",
+    "name": "BANK OF IRELAND GROUP PLC",
+    "name_api": "Bank of Ireland Group plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ABN",
+    "name": "ABN AMRO BANK NV",
+    "name_api": "ABN AMRO Bank N.V. Depositary Receipt",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 54,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BMPS",
+    "name": "BANCA MONTE DEI PASCHI DI SIENA SP",
+    "name_api": "Banca Monte dei Paschi di Siena S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VNA",
+    "name": "VONOVIA SE",
+    "name_api": "Vonovia SE",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "Real Estate Services",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 54,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LOGN",
+    "name": "LOGITECH INTERNATIONAL SA",
+    "name_api": "Logitech International S.A.",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Computer Hardware",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 76,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HNR1",
+    "name": "HANNOVER RUECK",
+    "name_api": "Hannover Rück SE",
+    "name_match": "1.0/2 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Reinsurance",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 74,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BAMI",
+    "name": "BANCO BPM",
+    "name_api": "Banco BPM S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HLMA",
+    "name": "HALMA PLC",
+    "name_api": "Halma plc",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Industrials",
+    "industry": "Conglomerates",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 72,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "FBK",
+    "name": "FINECOBANK BANCA FINECO",
+    "name_api": "FinecoBank Banca Fineco S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VACN",
+    "name": "VAT GROUP AG",
+    "name_api": "VAT Group AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 65,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CLNX",
+    "name": "CELLNEX TELECOM",
+    "name_api": "Cellnex Telecom, S.A.",
+    "sector_csv": "La communication",
+    "sector_api": "Real Estate",
+    "industry": "Telecom Services",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 32,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BESI",
+    "name": "BE SEMICONDUCTOR INDUSTRIES NV",
+    "name_api": "BE Semiconductor Industries N.V.",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Semiconductor Equipment & Materials",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 57,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TRN",
+    "name": "TERNA RETE ELETTRICA NAZIONALE",
+    "name_api": "Terna - Rete Elettrica Nazionale SpA",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Electric",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 44,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BAER",
+    "name": "JULIUS BAER GRUPPE AG",
+    "name_api": "Julius Bär Gruppe AG",
+    "name_match": "2.0/3 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Asset Management",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 41,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SHL",
+    "name": "SIEMENS HEALTHINEERS AG",
+    "name_api": "Siemens Healthineers AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Devices",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ANTO",
+    "name": "ANTOFAGASTA PLC",
+    "name_api": "Antofagasta plc",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Copper",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 62,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MRK",
+    "name": "MERCK",
+    "name_api": "Merck KGaA",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RTO",
+    "name": "RENTOKIL INITIAL PLC",
+    "name_api": "Rentokil Initial plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Business Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 41,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RI",
+    "name": "PERNOD RICARD SA",
+    "name_api": "Pernod Ricard SA",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Wineries & Distilleries",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "URW",
+    "name": "UNIBAIL RODAMCO WE STAPLED UNITS",
+    "name_api": "Unibail-Rodamco-Westfield SE",
+    "name_match": "2.0/4 tokens",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Retail",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 52,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EDP",
+    "name": "EDP ENERGIAS DE PORTUGAL SA",
+    "name_api": "EDP, S.A.",
+    "name_match": "1.0/3 tokens",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Diversified",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 37,
+    "flags": [
+      "name_mismatch_WARNING",
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SRG",
+    "name": "SNAM",
+    "name_api": "Snam S.p.A.",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Gas",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SY1",
+    "name": "SYMRISE AG",
+    "name_api": "Symrise AG",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 42,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "STLAM",
+    "name": "STELLANTIS NV",
+    "name_api": "Stellantis N.V.",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 13,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ELE",
+    "name": "ENDESA SA",
+    "name_api": "Endesa, S.A.",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Electric",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 57,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MONC",
+    "name": "MONCLER",
+    "name_api": "Moncler S.p.A.",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Apparel Manufacturing",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENX",
+    "name": "EURONEXT NV",
+    "name_api": "Euronext N.V.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Financial Data & Stock Exchanges",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HEN3",
+    "name": "HENKEL & KGAA PREF AG",
+    "name_api": "Henkel AG & Co. KGaA Vz (Preferred Shares)",
+    "name_match": "2.0/3 tokens",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Household & Personal Products",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 61,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TEN",
+    "name": "TENARIS SA",
+    "name_api": "Tecan Group AG",
+    "sector_csv": "Energie",
+    "sector_api": "Healthcare",
+    "industry": "Oil & Gas Equipment & Services",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 53,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "STMN",
+    "name": "STRAUMANN HOLDING AG",
+    "name_api": "Straumann Holding AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Instruments & Supplies",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DSY",
+    "name": "DASSAULT SYSTEMES",
+    "name_api": "Dassault Systèmes SE",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Software - Application",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SGRO",
+    "name": "SEGRO REIT PLC",
+    "name_api": "Segro plc",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Industrial",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 49,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PST",
+    "name": "POSTE ITALIANE",
+    "name_api": "Poste Italiane SpA",
+    "sector_csv": "Finance",
+    "sector_api": "Industrials",
+    "industry": "Conglomerates",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CA",
+    "name": "CARREFOUR SA",
+    "name_api": "Carrefour SA",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Grocery Stores",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 55,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DSFIR",
+    "name": "DSM FIRMENICH AG",
+    "name_api": "DSM-Firmenich AG",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 7,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TEL",
+    "name": "TELENOR",
+    "name_api": "Telenor ASA",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Telecom Services",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 53,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KRX",
+    "name": "KINGSPAN GROUP PLC",
+    "name_api": "Kingspan Group plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Building Products & Equipment",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CCH",
+    "name": "COCA COLA HBC AG",
+    "name_api": "Coca-Cola HBC AG",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Non-Alcoholic",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SCHP",
+    "name": "SCHINDLER HOLDING PAR AG",
+    "name_api": "Schindler Holding AG Participation Certificate",
+    "name_match": "1.0/2 tokens",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 76,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BG",
+    "name": "BAWAG GROUP AG",
+    "name_api": "BAWAG Group AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SOON",
+    "name": "SONOVA HOLDING AG",
+    "name_api": "Sonova Holding AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Devices",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 57,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SPSN",
+    "name": "SWISS PRIME SITE AG",
+    "name_api": "Swiss Prime Site AG",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "Real Estate - Diversified",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 55,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EDV",
+    "name": "ENDEAVOUR MINING",
+    "name_api": "Endeavour Mining plc",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Gold",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KRZ",
+    "name": "KERRY GROUP PLC",
+    "name_api": "Kerry Group plc Class A",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Packaged Foods",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "G1A",
+    "name": "GEA GROUP AG",
+    "name_api": "GEA Group AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "INF",
+    "name": "INFORMA PLC",
+    "name_api": "Informa plc",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Publishing",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 27,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KNIN",
+    "name": "KUEHNE UND NAGEL INTERNATIONAL AG",
+    "name_api": "Kuehne + Nagel International AG",
+    "name_match": "2.0/3 tokens",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Integrated Freight & Logistics",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EN",
+    "name": "BOUYGUES SA",
+    "name_api": "Bouygues SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Engineering & Construction",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ERF",
+    "name": "EUROFINS SCIENTIFIC",
+    "name_api": "Eurofins Scientific SE",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Diagnostics & Research",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 56,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "UNI",
+    "name": "UNIPOL ASSICURAZIONI SPA",
+    "name_api": "Unipol Assicurazioni S.p.A.",
+    "name_match": "2.0/3 tokens",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ASRNL",
+    "name": "ASR NEDERLAND NV",
+    "name_api": "ASR Nederland N.V.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 24,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BKT",
+    "name": "BANKINTER SA",
+    "name_api": "Bankinter, S.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SMIN",
+    "name": "SMITHS GROUP PLC",
+    "name_api": "Smiths Group plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 36,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "OMV",
+    "name": "OMV AG",
+    "name_api": "OMV AG",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SVT",
+    "name": "SEVERN TRENT PLC",
+    "name_api": "Severn Trent Plc",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Water",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 22,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "FGR",
+    "name": "EIFFAGE SA",
+    "name_api": "Eiffage S.A.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Engineering & Construction",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GBLB",
+    "name": "GROUPE BRUXELLES LAMBERT NV",
+    "name_api": "Groupe Bruxelles Lambert SA",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Holding / Investment Companies",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 24,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SGE",
+    "name": "THE SAGE GROUP PLC",
+    "name_api": "Sage Group plc",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 63,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ADM",
+    "name": "ADMIRAL GROUP PLC",
+    "name_api": "Admiral Group plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Property & Casualty",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TLX",
+    "name": "TALANX AG",
+    "name_api": "Talanx AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 65,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PSON",
+    "name": "PEARSON PLC",
+    "name_api": "Pearson plc",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Communication Services",
+    "industry": "Publishing",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 68,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AKZA",
+    "name": "AKZO NOBEL NV",
+    "name_api": "Akzo Nobel N.V.",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 64,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BNZL",
+    "name": "BUNZL",
+    "name_api": "Bunzl plc",
+    "sector_csv": "Industries",
+    "sector_api": "Consumer Defensive",
+    "industry": "Food Distribution",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "FME",
+    "name": "FRESENIUS MEDICAL CARE AG",
+    "name_api": "Fresenius Medical Care AG",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Care Facilities",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 56,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MRO",
+    "name": "MELROSE INDUSTRIES PLC",
+    "name_api": "Melrose Industries PLC",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BVI",
+    "name": "BUREAU VERITAS SA",
+    "name_api": "Bureau Veritas SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Consulting Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 74,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HEIO",
+    "name": "HEINEKEN HOLDING NV",
+    "name_api": "Heineken Holding N.V.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Brewers",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RXL",
+    "name": "REXEL SA",
+    "name_api": "Rexel SA",
+    "sector_csv": "Industries",
+    "sector_api": "Technology",
+    "industry": "Electronics & Computer Distribution",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GALP",
+    "name": "GALP ENERGIA SGPS SA CLASS B",
+    "name_api": "Galp Energia, SGPS, S.A.",
+    "sector_csv": "Energie",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Integrated",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AGS",
+    "name": "AGEAS SA",
+    "name_api": "ageas SA/NV",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 67,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ALO",
+    "name": "ALSTOM SA",
+    "name_api": "Alstom SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Railroads",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 52,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AC",
+    "name": "ACCOR SA",
+    "name_api": "Accor SA",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Lodging",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 56,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "QIA",
+    "name": "QIAGEN NV",
+    "name_api": "QIAGEN N.V.",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Diagnostics & Research",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "FRES",
+    "name": "FRESNILLO PLC",
+    "name_api": "Fresnillo plc",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Other Precious Metals & Mining",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 76,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AM",
+    "name": "DASSAULT AVIATION SA",
+    "name_api": "Dassault Aviation SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 76,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ELI",
+    "name": "ELIA GROUP SA",
+    "name_api": "Elia Group SA/NV",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Electric",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 37,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BEI",
+    "name": "BEIERSDORF AG",
+    "name_api": "Beiersdorf AG",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Household & Personal Products",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 70,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BEAN",
+    "name": "BELIMO N AG",
+    "name_api": "Belimo Holding AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Building Products & Equipment",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ABF",
+    "name": "ASSOCIATED BRITISH FOODS PLC",
+    "name_api": "Associated British Foods plc",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Packaged Foods",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 62,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GET",
+    "name": "GETLINK",
+    "name_api": "Getlink SE",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Railroads",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 45,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EVK",
+    "name": "EVONIK INDUSTRIES AG",
+    "name_api": "Evonik Industries AG",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 35,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RBI",
+    "name": "RAIFFEISEN BANK INTERNATIONAL AG",
+    "name_api": "Raiffeisen Bank International AG",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 52,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ITRK",
+    "name": "INTERTEK GROUP PLC",
+    "name_api": "Intertek Group plc",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Business Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 68,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RED",
+    "name": "REDEIA CORPORACION SA",
+    "name_api": "Redeia Corporación, S.A.",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Electric",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 50,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MICC",
+    "name": "MAGNUM ICE CREAM NV",
+    "name_api": "The Magnum Ice Cream Company N.V.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Packaged Foods",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 51,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NTGY",
+    "name": "NATURGY ENERGY GROUP SA",
+    "name_api": "Naturgy Energy Group, S.A.",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Gas",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BNR",
+    "name": "BRENNTAG",
+    "name_api": "Brenntag SE",
+    "sector_csv": "Industries",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 33,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "G24",
+    "name": "SCOUT24 N",
+    "name_api": "Scout24 SE",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Internet Content & Information",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 75,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "WISE",
+    "name": "WISE PLC CLASS A",
+    "name_api": "Wise Plc",
+    "sector_csv": "Finance",
+    "sector_api": "Technology",
+    "industry": "Information Technology Services",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IG",
+    "name": "ITALGAS",
+    "name_api": "Italgas S.p.A.",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Gas",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 75,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "KBX",
+    "name": "KNORR BREMSE AG",
+    "name_api": "Knorr-Bremse AG",
+    "sector_csv": "Industries",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Parts",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BCVN",
+    "name": "BC VAUD N",
+    "name_api": "Banque Cantonale Vaudoise",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LI",
+    "name": "KLEPIERRE REIT SA",
+    "name_api": "Klépierre SA",
+    "name_match": "0.7/1 tokens",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Retail",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 71,
+    "flags": [
+      "sector_mismatch",
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BMED",
+    "name": "BANCA MEDIOLANUM",
+    "name_api": "Banca Mediolanum S.p.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Banks - Regional",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 81,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AUTO",
+    "name": "AUTOTRADER GROUP PLC",
+    "name_api": "Auto Trader Group Plc",
+    "name_match": "0.7/1 tokens",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Internet Content & Information",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 83,
+    "flags": [
+      "sector_mismatch",
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CON",
+    "name": "CONTINENTAL AG",
+    "name_api": "Continental AG",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Parts",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 41,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AGN",
+    "name": "AEGON LTD",
+    "name_api": "Aegon Ltd.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 36,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IPN",
+    "name": "IPSEN SA",
+    "name_api": "Ipsen S.A.",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 66,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "JMT",
+    "name": "JERONIMO MARTINS SA",
+    "name_api": "Jerónimo Martins SGPS, S.A.",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Food Distribution",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "RNO",
+    "name": "RENAULT SA",
+    "name_api": "Renault SA",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 47,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SRT3",
+    "name": "SARTORIUS PREF AG",
+    "name_api": "Sartorius AG Preference Shares",
+    "name_match": "1.0/2 tokens",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Instruments & Supplies",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 31,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EXO",
+    "name": "EXOR NV",
+    "name_api": "Exor N.V.",
+    "sector_csv": "Finance",
+    "sector_api": "Industrials",
+    "industry": "Holding / Investment Companies",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 45,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AYV",
+    "name": "AYVENS SA",
+    "name_api": "Ayvens SA",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Rental & Leasing Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 60,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "IDR",
+    "name": "INDRA SISTEMAS SA",
+    "name_api": "Indra Sistemas, S.A.",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Information Technology Services",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 45,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SCHN",
+    "name": "SCHINDLER HOLDING AG",
+    "name_api": "Schindler Holding AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 77,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VER",
+    "name": "VERBUND AG",
+    "name_api": "Verbund AG",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Renewable",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 54,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "HAG",
+    "name": "HENSOLDT AG",
+    "name_api": "Hensoldt AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 41,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "REC",
+    "name": "RECORDATI INDUSTRIA CHIMICA E FARM",
+    "name_api": "Recordati Industria Chimica e Farmaceutica S.p.A.",
+    "name_match": "3.0/4 tokens",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 77,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -123,35 +3555,108 @@
     "sector_csv": "",
     "sector_api": "Industrials",
     "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 58,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AVOL",
+    "name": "AVOLTA AG",
+    "name_api": "Avolta AG",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Specialty Retail",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 51,
     "flags": [
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "GMED",
-    "name": "GLOBUS MEDICAL INC.",
-    "name_api": "Globus Medical Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Medical Devices",
-    "quality_peer": "US|Unknown",
-    "quality_score": 68,
+    "ticker": "BZU",
+    "name": "BUZZI",
+    "name_api": "Buzzi S.p.A.",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Building Materials",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 76,
     "flags": [
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "MTG",
-    "name": "MGIC INVESTMENT CORPORATION",
-    "name_api": "MGIC Investment Corporation",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Specialty",
-    "quality_peer": "US|Unknown",
-    "quality_score": 87,
+    "ticker": "CSG",
+    "name": "CSG CLASS A NV",
+    "name_api": "CSG N.V.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 28,
     "flags": [
+      "sector_mismatch",
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "UHR",
+    "name": "THE SWATCH GROUP AG",
+    "name_api": "The Swatch Group AG",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Luxury Goods",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 20,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "BKW",
+    "name": "BKW N AG",
+    "name_api": "BKW AG",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Renewable",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 56,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EMSN",
+    "name": "EMS-CHEMIE HOLDING AG",
+    "name_api": "EMS-Chemie Holding AG",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Specialty Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 73,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "PAH3",
+    "name": "PORSCHE AUTOMOBIL HOLDING PREF",
+    "name_api": "Porsche Automobil Holding SE Preference Shares",
+    "name_match": "2.0/3 tokens",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Holding / Investment Companies",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 37,
+    "flags": [
+      "sector_mismatch",
       "margin_extreme",
       "peer_fallback_to_sector"
     ]
@@ -162,22 +3667,108 @@
     "name_api": "Republic Services, Inc.",
     "sector_csv": "",
     "sector_api": "Industrials",
-    "industry": "Waste Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 67,
+    "industry": "Integrated Freight & Logistics",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 48,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DIM",
+    "name": "SARTORIUS STEDIM BIOTECH SA",
+    "name_api": "Sartorius Stedim Biotech S.A.",
+    "sector_csv": "Santé",
+    "sector_api": "Healthcare",
+    "industry": "Medical Instruments & Supplies",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 37,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "P911",
+    "name": "DR ING HC F PORSCHE PRF AG",
+    "name_api": "Dr. Ing. h.c. F. Porsche Aktiengesellschaft Preference",
+    "name_match": "2.0/3 tokens",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 13,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LAND",
+    "name": "LAND SECURITIES GROUP REIT PLC",
+    "name_api": "Land Securities Group plc",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Diversified",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 49,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "WTB",
+    "name": "WHITBREAD PLC",
+    "name_api": "Whitbread plc",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Lodging",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 45,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SDR",
+    "name": "SCHRODERS PLC",
+    "name_api": "Schroders plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Asset Management",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 53,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AMUN",
+    "name": "AMUNDI SA",
+    "name_api": "Amundi S.A.",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Asset Management",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 64,
     "flags": [
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "GM",
-    "name": "GENERAL MOTORS COMPANY",
-    "name_api": "General Motors Company",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Auto Manufacturers",
-    "quality_peer": "US|Unknown",
-    "quality_score": 52,
+    "ticker": "EDPR",
+    "name": "EDP RENOVAVEIS SA",
+    "name_api": "EDP Renováveis S.A.",
+    "name_match": "1.7/2 tokens",
+    "sector_csv": "Services publics",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Renewable",
+    "quality_peer": "EUROPE|Services publics",
+    "quality_score": 40,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -397,152 +3988,22 @@
     "name_api": "Glaukos Corporation",
     "sector_csv": "",
     "sector_api": "Healthcare",
-    "industry": "Medical Devices",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
+    "industry": "Drug Manufacturers - General",
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 58,
     "flags": [
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "BTE",
-    "name": "BAYTEX ENERGY CORP",
-    "name_api": "Baytex Energy Corp",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 38,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "PSA",
-    "name": "PUBLIC STORAGE COMMON STOCK",
-    "name_api": "Public Storage Common Stock",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Industrial",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BTGO",
-    "name": "BITGO HOLDINGS, INC.",
-    "name_api": "Bitgo Holdings, Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Capital Markets",
-    "quality_peer": "US|Unknown",
-    "quality_score": 42,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TT",
-    "name": "TRANE TECHNOLOGIES PLC",
-    "name_api": "Trane Technologies plc",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Building Products & Equipment",
-    "quality_peer": "US|Unknown",
-    "quality_score": 75,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GIS",
-    "name": "GENERAL MILLS, INC.",
-    "name_api": "General Mills, Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Packaged Foods",
-    "quality_peer": "US|Unknown",
-    "quality_score": 52,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BTU",
-    "name": "PEABODY ENERGY CORPORATION",
-    "name_api": "Peabody Energy Corporation",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Thermal Coal",
-    "quality_peer": "US|Unknown",
-    "quality_score": 39,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GIL",
-    "name": "GILDAN ACTIVEWEAR INC.",
-    "name_api": "Gildan Activewear Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Apparel Manufacturing",
-    "quality_peer": "US|Unknown",
-    "quality_score": 36,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GNL",
-    "name": "GLOBAL NET LEASE, INC.",
-    "name_api": "Global Net Lease, Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Diversified",
-    "quality_peer": "US|Unknown",
-    "quality_score": 37,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BRO",
-    "name": "BROWN & BROWN INC.",
-    "name_api": "Brown & Brown Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance Brokers",
-    "quality_peer": "US|Unknown",
-    "quality_score": 72,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "STZ",
-    "name": "CONSTELLATION BRANDS, INC.",
-    "name_api": "Constellation Brands, Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Beverages - Brewers",
-    "quality_peer": "US|Unknown",
-    "quality_score": 62,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SU",
-    "name": "SUNCOR ENERGY INC.",
-    "name_api": "Suncor Energy Inc.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Integrated",
-    "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "ticker": "BOL",
+    "name": "BOLLORE",
+    "name_api": "Bolloré SE",
+    "sector_csv": "Energie",
+    "sector_api": "Communication Services",
+    "industry": "Entertainment",
+    "quality_peer": "EUROPE|Energie",
+    "quality_score": 18,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -566,390 +4027,9 @@
     "name_api": "Ermenegildo Zegna N.V.",
     "sector_csv": "",
     "sector_api": "Consumer Cyclical",
-    "industry": "Apparel Manufacturing",
-    "quality_peer": "US|Unknown",
-    "quality_score": 54,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BOX",
-    "name": "BOX INC.",
-    "name_api": "Box Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 54,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MSI",
-    "name": "MOTOROLA SOLUTIONS, INC.",
-    "name_api": "Motorola Solutions, Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Communication Equipment",
-    "quality_peer": "US|Unknown",
-    "quality_score": 57,
-    "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MSCI",
-    "name": "MSCI INC.",
-    "name_api": "MSCI Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Financial Data & Stock Exchanges",
-    "quality_peer": "US|Unknown",
-    "quality_score": 46,
-    "flags": [
-      "roe_extreme",
-      "equity_negative",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BOOT",
-    "name": "BOOT BARN HOLDINGS, INC.",
-    "name_api": "Boot Barn Holdings, Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Apparel Retail",
-    "quality_peer": "US|Unknown",
+    "industry": "Internet Retail",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
     "quality_score": 53,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "RCUS",
-    "name": "ARCUS BIOSCIENCES INC.",
-    "name_api": "Arcus Biosciences Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
-    "quality_peer": "US|Unknown",
-    "quality_score": 31,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "STWD",
-    "name": "STARWOOD PROPERTY TRUST INC.",
-    "name_api": "Starwood Property Trust Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Mortgage",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "AIV",
-    "name": "APARTMENT INVESTMENT AND MANAGEMENT COMPANY",
-    "name_api": "Apartment Investment and Management Company",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Residential",
-    "quality_peer": "US|Unknown",
-    "quality_score": 25,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MS",
-    "name": "MORGAN STANLEY",
-    "name_api": "Morgan Stanley",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Capital Markets",
-    "quality_peer": "US|Unknown",
-    "quality_score": 66,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ZETA",
-    "name": "ZETA GLOBAL HOLDINGS CORP.",
-    "name_api": "Zeta Global Holdings Corp.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 42,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BORR",
-    "name": "BORR DRILLING LTD.",
-    "name_api": "Borr Drilling Ltd.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Drilling",
-    "quality_peer": "US|Unknown",
-    "quality_score": 38,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GRNT",
-    "name": "GRANITE RIDGE RESOURCES INC.",
-    "name_api": "Granite Ridge Resources Inc.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 20,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GRND",
-    "name": "GRINDR INC.",
-    "name_api": "Grindr Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Application",
-    "quality_peer": "US|Unknown",
-    "quality_score": 46,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GRMN",
-    "name": "GARMIN LTD.",
-    "name_api": "Garmin Ltd.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Scientific & Technical Instruments",
-    "quality_peer": "US|Unknown",
-    "quality_score": 81,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "RSKD",
-    "name": "RISKIFIED LTD.",
-    "name_api": "Riskified Ltd.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Application",
-    "quality_peer": "US|Unknown",
-    "quality_score": 42,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SUI",
-    "name": "SUN COMMUNITIES INC.",
-    "name_api": "Sun Communities Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Residential",
-    "quality_peer": "US|Unknown",
-    "quality_score": 34,
-    "flags": [
-      "margin_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BROS",
-    "name": "DUTCH BROS INC.",
-    "name_api": "Dutch Bros Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Restaurants",
-    "quality_peer": "US|Unknown",
-    "quality_score": 45,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GPRK",
-    "name": "GEOPARK LTD.",
-    "name_api": "GeoPark Ltd.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 63,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MTB",
-    "name": "M&T BANK CORPORATION",
-    "name_api": "M&T Bank Corporation",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Banks - Regional",
-    "quality_peer": "US|Unknown",
-    "quality_score": 77,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "PRU",
-    "name": "PRUDENTIAL FINANCIAL, INC.",
-    "name_api": "Prudential Financial, Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Life",
-    "quality_peer": "US|Unknown",
-    "quality_score": 70,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GNW",
-    "name": "GENWORTH FINANCIAL INC.",
-    "name_api": "Genworth Financial Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Life",
-    "quality_peer": "US|Unknown",
-    "quality_score": 60,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MTDR",
-    "name": "MATADOR RESOURCES COMPANY",
-    "name_api": "Matador Resources Company",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 45,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BRK.B",
-    "name": "BERKSHIRE HATHAWAY INC. CLASS B",
-    "name_api": "Berkshire Hathaway Inc. Class B",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Diversified",
-    "quality_peer": "US|Unknown",
-    "quality_score": 65,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GNRC",
-    "name": "GENERAC HOLDINGS INC.",
-    "name_api": "Generac Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 45,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "AIR",
-    "name": "AAR CORP.",
-    "name_api": "AAR Corp.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Aerospace & Defense",
-    "quality_peer": "US|Unknown",
-    "quality_score": 48,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SUNB",
-    "name": "SUNBELT RENTALS HOLDINGS, INC.",
-    "name_api": "Sunbelt Rentals Holdings, Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Rental & Leasing Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 56,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GOOS",
-    "name": "CANADA GOOSE HOLDINGS INC.",
-    "name_api": "Canada Goose Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Apparel Manufacturing",
-    "quality_peer": "US|Unknown",
-    "quality_score": 57,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GPN",
-    "name": "GLOBAL PAYMENTS INC.",
-    "name_api": "Global Payments Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Business Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 64,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BR",
-    "name": "BROADRIDGE FINANCIAL SOLUTIONS, INC.",
-    "name_api": "Broadridge Financial Solutions, Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Information Technology Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 77,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GPK",
-    "name": "GRAPHIC PACKAGING HOLDING COMPANY",
-    "name_api": "Graphic Packaging Holding Company",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Packaging & Containers",
-    "quality_peer": "US|Unknown",
-    "quality_score": 61,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -1298,9 +4378,9 @@
     "name_api": "Smurfit WestRock PLC",
     "sector_csv": "",
     "sector_api": "Consumer Cyclical",
-    "industry": "Packaging & Containers",
-    "quality_peer": "US|Unknown",
-    "quality_score": 33,
+    "industry": "Auto Manufacturers",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 50,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -1403,437 +4483,8 @@
     "sector_csv": "",
     "sector_api": "Real Estate",
     "industry": "Real Estate Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 60,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "NCLH",
-    "name": "NORWEGIAN CRUISE LINE HOLDINGS LTD.",
-    "name_api": "Norwegian Cruise Line Holdings Ltd.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Travel Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 34,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "AGI",
-    "name": "ALAMOS GOLD INC.",
-    "name_api": "Alamos Gold Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Gold",
-    "quality_peer": "US|Unknown",
-    "quality_score": 78,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TROX",
-    "name": "TRONOX HOLDINGS PLC",
-    "name_api": "Tronox Holdings plc",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 12,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FSS",
-    "name": "FEDERAL SIGNAL CORP.",
-    "name_api": "Federal Signal Corp.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Farm & Heavy Construction Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 75,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SWK",
-    "name": "STANLEY BLACK & DECKER INC.",
-    "name_api": "Stanley Black & Decker Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Tools & Accessories",
-    "quality_peer": "US|Unknown",
-    "quality_score": 34,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FTV",
-    "name": "FORTIVE CORPORATION",
-    "name_api": "Fortive Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Scientific & Technical Instruments",
-    "quality_peer": "US|Unknown",
-    "quality_score": 63,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FTS",
-    "name": "FORTIS INC.",
-    "name_api": "Fortis Inc.",
-    "sector_csv": "",
-    "sector_api": "Utilities",
-    "industry": "Utilities - Regulated Electric",
-    "quality_peer": "US|Unknown",
-    "quality_score": 41,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "OGG",
-    "name": "OSISKO GOLD GROUP INC.",
-    "name_api": "Osisko Gold Group Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Gold",
-    "quality_peer": "US|Unknown",
-    "quality_score": 40,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CAT",
-    "name": "CATERPILLAR INC.",
-    "name_api": "Caterpillar Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Farm & Heavy Construction Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 62,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FTI",
-    "name": "TECHNIPFMC PLC",
-    "name_api": "TechnipFMC plc",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Equipment & Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 64,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CAVA",
-    "name": "CAVA GROUP INC.",
-    "name_api": "Cava Group Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Restaurants",
-    "quality_peer": "US|Unknown",
-    "quality_score": 34,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CB",
-    "name": "CHUBB LIMITED",
-    "name_api": "Chubb Limited",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Property & Casualty",
-    "quality_peer": "US|Unknown",
-    "quality_score": 81,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TRP",
-    "name": "TC ENERGY CORPORATION",
-    "name_api": "TC Energy Corporation",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Midstream",
-    "quality_peer": "US|Unknown",
-    "quality_score": 41,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FUBO",
-    "name": "FUBOTV INC.",
-    "name_api": "FuboTV Inc.",
-    "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Broadcasting",
-    "quality_peer": "US|Unknown",
-    "quality_score": 42,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "G",
-    "name": "GENPACT LTD.",
-    "name_api": "Genpact Ltd.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Information Technology Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 65,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BXMT",
-    "name": "BLACKSTONE MORTGAGE TRUST INC",
-    "name_api": "Blackstone Mortgage Trust Inc",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Mortgage",
-    "quality_peer": "US|Unknown",
-    "quality_score": 37,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BXP",
-    "name": "BOSTON PROPERTIES, INC.",
-    "name_api": "Boston Properties, Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Office",
-    "quality_peer": "US|Unknown",
-    "quality_score": 40,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BXSL",
-    "name": "BLACKSTONE SECURED LENDING FUND",
-    "name_api": "Blackstone Secured Lending Fund",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Asset Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 45,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "AIG",
-    "name": "AMERICAN INTERNATIONAL GROUP INC.",
-    "name_api": "American International Group Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Diversified",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MWA",
-    "name": "MUELLER WATER PRODUCTS INC.",
-    "name_api": "Mueller Water Products Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
+    "quality_peer": "EUROPE|Immobilier",
     "quality_score": 56,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BYD",
-    "name": "BOYD GAMING CORPORATION",
-    "name_api": "Boyd Gaming Corporation",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Resorts & Casinos",
-    "quality_peer": "US|Unknown",
-    "quality_score": 66,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MX",
-    "name": "MAGNACHIP SEMICONDUCTOR CORPORATION",
-    "name_api": "Magnachip Semiconductor Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Semiconductors",
-    "quality_peer": "US|Unknown",
-    "quality_score": 24,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "RRC",
-    "name": "RANGE RESOURCES CORPORATION",
-    "name_api": "Range Resources Corporation",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 62,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GENI",
-    "name": "GENIUS SPORTS LTD.",
-    "name_api": "Genius Sports Ltd.",
-    "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Internet Content & Information",
-    "quality_peer": "US|Unknown",
-    "quality_score": 42,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BXDC",
-    "name": "BLACKSTONE DIGITAL INFRASTRUCTURE TRUST INC.",
-    "name_api": "Blackstone Digital Infrastructure Trust Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Specialty",
-    "quality_peer": "US|Unknown",
-    "quality_score": 39,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "RDDT",
-    "name": "REDDIT INC CLASS A",
-    "name_api": "Reddit Inc Class A",
-    "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Internet Content & Information",
-    "quality_peer": "US|Unknown",
-    "quality_score": 54,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GEV",
-    "name": "GE VERNOVA INC.",
-    "name_api": "GE Vernova Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 56,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GETY",
-    "name": "GETTY IMAGES HOLDINGS, INC. CLASS A COMMON STOCK",
-    "name_api": "Getty Images Holdings, Inc. Class A Common Stock",
-    "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Internet Content & Information",
-    "quality_peer": "US|Unknown",
-    "quality_score": 32,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MUR",
-    "name": "MURPHY OIL CORPORATION",
-    "name_api": "Murphy Oil Corporation",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 37,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MUX",
-    "name": "MCEWEN MINING INC.",
-    "name_api": "McEwen Mining Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Other Precious Metals & Mining",
-    "quality_peer": "US|Unknown",
-    "quality_score": 54,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GEO",
-    "name": "THE GEO GROUP, INC.",
-    "name_api": "The Geo Group, Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Security & Protection Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BX",
-    "name": "BLACKSTONE INC.",
-    "name_api": "Blackstone Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Asset Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 53,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "PSN",
-    "name": "PARSONS CORPORATION",
-    "name_api": "Parsons Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Information Technology Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 55,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -2768,14 +5419,14 @@
     ]
   },
   {
-    "ticker": "SOBO",
-    "name": "SOUTH BOW CORPORATION",
-    "name_api": "South Bow Corporation",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Midstream",
-    "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "ticker": "SDLF",
+    "name": "STANDARD LIFE PLC",
+    "name_api": "Standard Life Plc",
+    "sector_csv": "Finance",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Life",
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 51,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -2814,34 +5465,90 @@
     "sector_csv": "",
     "sector_api": "Healthcare",
     "industry": "Diagnostics & Research",
-    "quality_peer": "US|Unknown",
-    "quality_score": 48,
+    "quality_peer": "EUROPE|Santé",
+    "quality_score": 79,
     "flags": [
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "PNR",
-    "name": "PENTAIR PLC",
-    "name_api": "Pentair plc",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 76,
+    "ticker": "SYENS",
+    "name": "SYENSQO NV",
+    "name_api": "Syensqo SA/NV",
+    "sector_csv": "Matériaux",
+    "sector_api": "Basic Materials",
+    "industry": "Chemicals",
+    "quality_peer": "EUROPE|Matériaux",
+    "quality_score": 21,
     "flags": [
+      "sector_mismatch",
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "BKD",
-    "name": "BROOKDALE SENIOR LIVING INC.",
-    "name_api": "Brookdale Senior Living Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Medical Care Facilities",
-    "quality_peer": "US|Unknown",
+    "ticker": "NEM",
+    "name": "NEMETSCHEK",
+    "name_api": "Nemetschek SE",
+    "sector_csv": "Technologie de l'information",
+    "sector_api": "Technology",
+    "industry": "Software - Application",
+    "quality_peer": "EUROPE|Technologie de l'information",
+    "quality_score": 79,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CPR",
+    "name": "DAVIDE CAMPARI MILANO NV",
+    "name_api": "Davide Campari-Milano N.V.",
+    "sector_csv": "Biens de consommation de base",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Wineries & Distilleries",
+    "quality_peer": "EUROPE|Biens de consommation de base",
+    "quality_score": 46,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENT",
+    "name": "ENTAIN PLC",
+    "name_api": "Entain plc",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Gambling",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
     "quality_score": 33,
+    "flags": [
+      "sector_mismatch",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EVD",
+    "name": "CTS EVENTIM AG",
+    "name_api": "CTS Eventim AG & Co. KGaA",
+    "sector_csv": "La communication",
+    "sector_api": "Communication Services",
+    "industry": "Entertainment",
+    "quality_peer": "EUROPE|La communication",
+    "quality_score": 73,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "LHA",
+    "name": "DEUTSCHE LUFTHANSA AG",
+    "name_api": "Deutsche Lufthansa AG",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Airlines",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 34,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -3049,415 +5756,8 @@
     "sector_csv": "",
     "sector_api": "Financial Services",
     "industry": "Asset Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 31,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BEPC",
-    "name": "BROOKFIELD RENEWABLE CORPORATION",
-    "name_api": "Brookfield Renewable Corporation",
-    "sector_csv": "",
-    "sector_api": "Utilities",
-    "industry": "Utilities - Renewable",
-    "quality_peer": "US|Unknown",
-    "quality_score": 50,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "VZ",
-    "name": "VERIZON COMMUNICATIONS INC.",
-    "name_api": "Verizon Communications Inc.",
-    "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Telecom Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 67,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SMA",
-    "name": "SMARTSTOP SELF STORAGE REIT INC.",
-    "name_api": "SmartStop Self Storage REIT Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Industrial",
-    "quality_peer": "US|Unknown",
-    "quality_score": 35,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "UCB",
-    "name": "UNITED COMMUNITY BANKS, INC.",
-    "name_api": "United Community Banks, Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Banks - Regional",
-    "quality_peer": "US|Unknown",
-    "quality_score": 61,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HESM",
-    "name": "HESS MIDSTREAM LP",
-    "name_api": "Hess Midstream LP",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Midstream",
-    "quality_peer": "US|Unknown",
-    "quality_score": 52,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BETA",
-    "name": "BETA TECHNOLOGIES, INC.",
-    "name_api": "Beta Technologies, Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Aerospace & Defense",
-    "quality_peer": "US|Unknown",
-    "quality_score": 30,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "XPRO",
-    "name": "EXPRO GROUP HOLDINGS N.V.",
-    "name_api": "Expro Group Holdings N.V.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Equipment & Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 52,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MLI",
-    "name": "MUELLER INDUSTRIES INC.",
-    "name_api": "Mueller Industries Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Metal Fabrication",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BG",
-    "name": "BUNGE GLOBAL S.A.",
-    "name_api": "Bunge Global S.A.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Farm Products",
-    "quality_peer": "US|Unknown",
-    "quality_score": 30,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HBM",
-    "name": "HUDBAY MINERALS INC.",
-    "name_api": "Hudbay Minerals Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Copper",
-    "quality_peer": "US|Unknown",
-    "quality_score": 58,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "RJF",
-    "name": "RAYMOND JAMES FINANCIAL INC.",
-    "name_api": "Raymond James Financial Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Asset Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 78,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "DLR",
-    "name": "DIGITAL REALTY TRUST, INC.",
-    "name_api": "Digital Realty Trust, Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Specialty",
-    "quality_peer": "US|Unknown",
-    "quality_score": 45,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HAYW",
-    "name": "HAYWARD HOLDINGS INC.",
-    "name_api": "Hayward Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Electrical Equipment & Parts",
-    "quality_peer": "US|Unknown",
-    "quality_score": 55,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HAWK",
-    "name": "HAWKEYE 360, INC.",
-    "name_api": "HawkEye 360, Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Aerospace & Defense",
-    "quality_peer": "US|Unknown",
-    "quality_score": 33,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BILL",
-    "name": "BILL HOLDINGS INC.",
-    "name_api": "Bill Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Application",
-    "quality_peer": "US|Unknown",
-    "quality_score": 41,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "UA",
-    "name": "UNDER ARMOUR INC.",
-    "name_api": "Under Armour Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Apparel Manufacturing",
-    "quality_peer": "US|Unknown",
-    "quality_score": 39,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "PM",
-    "name": "PHILIP MORRIS INTERNATIONAL INC.",
-    "name_api": "Philip Morris International Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Tobacco",
-    "quality_peer": "US|Unknown",
-    "quality_score": 44,
-    "flags": [
-      "roe_extreme",
-      "equity_negative",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HASI",
-    "name": "HANNON ARMSTRONG SUSTAINABLE INFRASTRUCTURE CAPITAL INC.",
-    "name_api": "Hannon Armstrong Sustainable Infrastructure Capital Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Asset Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 35,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BHVN",
-    "name": "BIOHAVEN LTD.",
-    "name_api": "Biohaven Ltd.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
-    "quality_peer": "US|Unknown",
-    "quality_score": 30,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "DK",
-    "name": "DELEK US HOLDINGS INC.",
-    "name_api": "Delek US Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Refining & Marketing",
-    "quality_peer": "US|Unknown",
-    "quality_score": 37,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ODV",
-    "name": "OSISKO DEVELOPMENT CORP.",
-    "name_api": "Osisko Development Corp.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Gold",
-    "quality_peer": "US|Unknown",
-    "quality_score": 32,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "DLB",
-    "name": "DOLBY LABORATORIES INC.",
-    "name_api": "Dolby Laboratories Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Business Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 58,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "OEC",
-    "name": "ORION S.A.",
-    "name_api": "Orion S.A.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 60,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BGS",
-    "name": "B&G FOODS INC.",
-    "name_api": "B&G Foods Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Packaged Foods",
-    "quality_peer": "US|Unknown",
-    "quality_score": 39,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HCC",
-    "name": "WARRIOR MET COAL INC.",
-    "name_api": "Warrior Met Coal Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Coking Coal",
-    "quality_peer": "US|Unknown",
-    "quality_score": 36,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BHC",
-    "name": "BAUSCH HEALTH COMPANIES INC.",
-    "name_api": "Bausch Health Companies Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Drug Manufacturers - Specialty & Generic",
-    "quality_peer": "US|Unknown",
-    "quality_score": 66,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "DKS",
-    "name": "DICK'S SPORTING GOODS, INC.",
-    "name_api": "Dick's Sporting Goods, Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Specialty Retail",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "UBER",
-    "name": "UBER TECHNOLOGIES, INC.",
-    "name_api": "Uber Technologies, Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Application",
-    "quality_peer": "US|Unknown",
-    "quality_score": 68,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "HCA",
-    "name": "HCA HEALTHCARE INC.",
-    "name_api": "HCA Healthcare Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Medical Care Facilities",
-    "quality_peer": "US|Unknown",
-    "quality_score": 50,
-    "flags": [
-      "roe_extreme",
-      "equity_negative",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "AA",
-    "name": "ALCOA CORPORATION",
-    "name_api": "Alcoa Corporation",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Aluminum",
-    "quality_peer": "US|Unknown",
-    "quality_score": 63,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "MMC",
-    "name": "MARSH & MCLENNAN COMPANIES, INC.",
-    "name_api": "Marsh & McLennan Companies, Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance Brokers",
-    "quality_peer": "US|Unknown",
-    "quality_score": 56,
+    "quality_peer": "EUROPE|Finance",
+    "quality_score": 53,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -4481,27 +6781,27 @@
     ]
   },
   {
-    "ticker": "WBS",
-    "name": "WEBSTER FINANCIAL CORPORATION",
-    "name_api": "Webster Financial Corporation",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Banks - Regional",
-    "quality_peer": "US|Unknown",
-    "quality_score": 62,
+    "ticker": "ADP",
+    "name": "AEROPORTS DE PARIS SA",
+    "name_api": "Automatic Data Processing, Inc.",
+    "sector_csv": "Industries",
+    "sector_api": "Industrials",
+    "industry": "Airports & Air Services",
+    "quality_peer": "EUROPE|Industries",
+    "quality_score": 39,
     "flags": [
       "peer_fallback_to_sector"
     ]
   },
   {
-    "ticker": "SPGI",
-    "name": "S&P GLOBAL INC.",
-    "name_api": "S&P Global Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Financial Data & Stock Exchanges",
-    "quality_peer": "US|Unknown",
-    "quality_score": 70,
+    "ticker": "GFC",
+    "name": "GECINA SA",
+    "name_api": "Gecina SA",
+    "sector_csv": "Immobilier",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Office",
+    "quality_peer": "EUROPE|Immobilier",
+    "quality_score": 54,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -4770,14 +7070,14 @@
     ]
   },
   {
-    "ticker": "PPL",
-    "name": "PPL CORPORATION",
-    "name_api": "PPL Corporation",
-    "sector_csv": "",
-    "sector_api": "Utilities",
-    "industry": "Utilities - Regulated Electric",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
+    "ticker": "DHER",
+    "name": "DELIVERY HERO",
+    "name_api": "Delivery Hero SE",
+    "sector_csv": "Biens de consommation cycliques",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Internet Retail",
+    "quality_peer": "EUROPE|Biens de consommation cycliques",
+    "quality_score": 45,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -4827,466 +7127,9 @@
     "name_api": "Seritage Growth Properties",
     "sector_csv": "",
     "sector_api": "Real Estate",
-    "industry": "Real Estate Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 29,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "BLSH",
-    "name": "BULLISH INC.",
-    "name_api": "Bullish Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 26,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TWLO",
-    "name": "TWILIO INC.",
-    "name_api": "Twilio Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 51,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ORCL",
-    "name": "ORACLE CORPORATION",
-    "name_api": "Oracle Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 50,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "PR",
-    "name": "PERMIAN RESOURCES CORPORATION",
-    "name_api": "Permian Resources Corporation",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
+    "industry": "REIT - Diversified",
+    "quality_peer": "EUROPE|Immobilier",
     "quality_score": 41,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "PRA",
-    "name": "PROASSURANCE CORPORATION",
-    "name_api": "ProAssurance Corporation",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Insurance - Property & Casualty",
-    "quality_peer": "US|Unknown",
-    "quality_score": 58,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "AACT",
-    "name": "KODIAK AI, INC.",
-    "name_api": "Kodiak AI, Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CC",
-    "name": "CHEMOURS CO.",
-    "name_api": "Chemours Co.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 39,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "COTY",
-    "name": "COTY INC.",
-    "name_api": "Coty Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Household & Personal Products",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "COUR",
-    "name": "COURSERA INC.",
-    "name_api": "Coursera Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Education & Training Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 48,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TNL",
-    "name": "TRAVEL + LEISURE CO.",
-    "name_api": "Travel + Leisure Co.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Travel Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 61,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TECK",
-    "name": "TECK RESOURCES LTD.",
-    "name_api": "Teck Resources Ltd.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Other Industrial Metals & Mining",
-    "quality_peer": "US|Unknown",
-    "quality_score": 58,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CP",
-    "name": "CANADIAN PACIFIC KANSAS CITY LIMITED",
-    "name_api": "Canadian Pacific Kansas City Limited",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Railroads",
-    "quality_peer": "US|Unknown",
-    "quality_score": 50,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "EOG",
-    "name": "EOG RESOURCES, INC.",
-    "name_api": "EOG Resources, Inc.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 74,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TE",
-    "name": "T1 ENERGY INC.",
-    "name_api": "T1 Energy Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Electrical Equipment & Parts",
-    "quality_peer": "US|Unknown",
-    "quality_score": 32,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "OIS",
-    "name": "OIL STATES INTERNATIONAL INC.",
-    "name_api": "Oil States International Inc.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Equipment & Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 55,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "DDD",
-    "name": "3D SYSTEMS CORPORATION",
-    "name_api": "3D Systems Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Computer Hardware",
-    "quality_peer": "US|Unknown",
-    "quality_score": 39,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TDW",
-    "name": "TIDEWATER INC.",
-    "name_api": "Tidewater Inc.",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Equipment & Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 77,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CON",
-    "name": "CONCENTRA GROUP HOLDINGS INC.",
-    "name_api": "Concentra Group Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Medical Care Facilities",
-    "quality_peer": "US|Unknown",
-    "quality_score": 57,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "EPC",
-    "name": "EDGEWELL PERSONAL CARE CO.",
-    "name_api": "Edgewell Personal Care Co.",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Household & Personal Products",
-    "quality_peer": "US|Unknown",
-    "quality_score": 35,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "EPAM",
-    "name": "EPAM SYSTEMS INC.",
-    "name_api": "Epam Systems Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Information Technology Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 82,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "EPAC",
-    "name": "ENERPAC TOOL GROUP CORP.",
-    "name_api": "Enerpac Tool Group Corp.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 74,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "COP",
-    "name": "CONOCOPHILLIPS",
-    "name_api": "ConocoPhillips",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 61,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TDY",
-    "name": "TELEDYNE TECHNOLOGIES INCORPORATED",
-    "name_api": "Teledyne Technologies Incorporated",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Scientific & Technical Instruments",
-    "quality_peer": "US|Unknown",
-    "quality_score": 69,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "COR",
-    "name": "CENCORA, INC.",
-    "name_api": "Cencora, Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Medical Distribution",
-    "quality_peer": "US|Unknown",
-    "quality_score": 41,
-    "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "DD",
-    "name": "DUPONT DE NEMOURS, INC.",
-    "name_api": "DuPont de Nemours, Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 9,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ENR",
-    "name": "ENERGIZER HOLDINGS INC.",
-    "name_api": "Energizer Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Electrical Equipment & Parts",
-    "quality_peer": "US|Unknown",
-    "quality_score": 67,
-    "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "NSP",
-    "name": "INSPERITY INC.",
-    "name_api": "Insperity Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Staffing & Employment Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 13,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "EMN",
-    "name": "EASTMAN CHEMICAL COMPANY",
-    "name_api": "Eastman Chemical Company",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 48,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "WHR",
-    "name": "WHIRLPOOL CORPORATION",
-    "name_api": "Whirlpool Corporation",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Furnishings, Fixtures & Appliances",
-    "quality_peer": "US|Unknown",
-    "quality_score": 14,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CRBG",
-    "name": "COREBRIDGE FINANCIAL INC.",
-    "name_api": "Corebridge Financial Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Asset Management",
-    "quality_peer": "US|Unknown",
-    "quality_score": 12,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CRCL",
-    "name": "CIRCLE INTERNET GROUP, INC.",
-    "name_api": "Circle Internet Group, Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Capital Markets",
-    "quality_peer": "US|Unknown",
-    "quality_score": 21,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "NTR",
-    "name": "NUTRIEN LTD.",
-    "name_api": "Nutrien Ltd.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Agricultural Inputs",
-    "quality_peer": "US|Unknown",
-    "quality_score": 57,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ELV",
-    "name": "ELEVANCE HEALTH, INC.",
-    "name_api": "Elevance Health, Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Healthcare Plans",
-    "quality_peer": "US|Unknown",
-    "quality_score": 69,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CRC",
-    "name": "CALIFORNIA RESOURCES CORP",
-    "name_api": "California Resources Corp",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas E&P",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CPT",
-    "name": "CAMDEN PROPERTY TRUST",
-    "name_api": "Camden Property Trust",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Residential",
-    "quality_peer": "US|Unknown",
-    "quality_score": 42,
     "flags": [
       "peer_fallback_to_sector"
     ]
