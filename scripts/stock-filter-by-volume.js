@@ -230,6 +230,8 @@ function buildFundamentalsParams(symbol, context = {}) {
 // ───────── Helpers de désambiguïsation ─────────
 const US_EXCH = /nasdaq|nyse|arca|amex|bats/i;
 const LSE_IOB = /^[0][A-Z0-9]{3}$/;
+// reconnaît les US même quand le seed est en français ("Etats-Unis")
+const isUSC = (c='') => { const n = normalize(c); return n==='united states'||n==='usa'||n==='us'||n==='etats-unis'||n==='états-unis'; };
 
 function tokens(s){
   return normalize(s).normalize("NFKD").replace(/[^a-z0-9\s]/g," ")
@@ -1031,7 +1033,7 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
   const mic = toMIC(exchange, country);
   let quote = await tryQuote(ticker, mic);
   const looksUS   = quote?.exchange && US_EXCH.test(quote.exchange);
-  const okMarket  = !(looksUS && normalize(country) !== 'united states');
+  const okMarket  = !(looksUS && !isUSC(country));
   const okName    = quote?.name ? nameLooksRight(quote.name, expectedName) : true;
 
   if (quote && okMarket && okName) {
@@ -1044,7 +1046,7 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
     const best = cand[0];
     const qBest = await tryQuote(best.symbol, best.mic_code);
     if (qBest) {
-      const okM = !(US_EXCH.test(qBest.exchange||"") && normalize(country) !== 'united states');
+      const okM = !(US_EXCH.test(qBest.exchange||"") && !isUSC(country));
       const okN = nameLooksRight(qBest.name || '', expectedName);
       if (okM && okN) {
         return { sym: best.symbol, quote: qBest, reason: 'stocks_ok' };
