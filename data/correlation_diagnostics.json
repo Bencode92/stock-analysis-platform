@@ -1,30 +1,38 @@
 {
   "_meta": {
-    "generated": "2026-07-23T10:13:50",
-    "portfolio_generated": "2026-07-23T10:11:49.027247",
-    "n_assets": 12,
-    "n_with_returns": 7,
+    "generated": "2026-07-24T10:10:31",
+    "portfolio_generated": "2026-07-24T10:08:22.479658",
+    "n_assets": 14,
+    "n_with_returns": 9,
     "covariance_method": "hybrid_shrunk",
-    "condition_number": 86.21,
+    "condition_number": 88.9,
     "pca_factors": 4
   },
   "profiles": {
     "Agressif": {
-      "n_assets": 8,
-      "weighted_avg_correlation": 0.1829,
+      "n_assets": 9,
+      "weighted_avg_correlation": 0.1885,
       "most_correlated": [
         {
           "t1": "IEMG",
           "t2": "HUBB",
-          "corr": 0.569,
-          "w1": 20.0,
+          "corr": 0.5482,
+          "w1": 15.0,
           "w2": 5.0,
-          "combined_weight": 25.0
+          "combined_weight": 20.0
+        },
+        {
+          "t1": "EXPD",
+          "t2": "FHI",
+          "corr": 0.3683,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
         },
         {
           "t1": "VWCE.DE",
           "t2": "EXPD",
-          "corr": 0.3269,
+          "corr": 0.3206,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
@@ -32,15 +40,39 @@
         {
           "t1": "EXPD",
           "t2": "SGLN.AS",
-          "corr": 0.3269,
+          "corr": 0.3206,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
         },
         {
+          "t1": "HUBB",
+          "t2": "FHI",
+          "corr": 0.2936,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "IEMG",
+          "t2": "FHI",
+          "corr": 0.2819,
+          "w1": 15.0,
+          "w2": 5.0,
+          "combined_weight": 20.0
+        },
+        {
+          "t1": "VWCE.DE",
+          "t2": "SGLN.AS",
+          "corr": 0.2756,
+          "w1": 50.0,
+          "w2": 5.0,
+          "combined_weight": 55.0
+        },
+        {
           "t1": "VWCE.DE",
           "t2": "HUBB",
-          "corr": 0.2735,
+          "corr": 0.2715,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
@@ -48,23 +80,7 @@
         {
           "t1": "HUBB",
           "t2": "SGLN.AS",
-          "corr": 0.2735,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "VWCE.DE",
-          "t2": "SGLN.AS",
-          "corr": 0.2597,
-          "w1": 50.0,
-          "w2": 5.0,
-          "combined_weight": 55.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "HUBB",
-          "corr": 0.2503,
+          "corr": 0.2715,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -72,41 +88,25 @@
         {
           "t1": "VWCE.DE",
           "t2": "IEMG",
-          "corr": 0.2478,
+          "corr": 0.2576,
           "w1": 50.0,
-          "w2": 20.0,
-          "combined_weight": 70.0
-        },
-        {
-          "t1": "IEMG",
-          "t2": "SGLN.AS",
-          "corr": 0.2478,
-          "w1": 20.0,
-          "w2": 5.0,
-          "combined_weight": 25.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "CBOE",
-          "corr": 0.2309,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
+          "w2": 15.0,
+          "combined_weight": 65.0
         }
       ],
       "least_correlated": [
         {
           "t1": "CF",
-          "t2": "IBGS.AS",
-          "corr": 0.027,
+          "t2": "FHI",
+          "corr": -0.0119,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
         },
         {
-          "t1": "CF",
-          "t2": "HUBB",
-          "corr": -0.0909,
+          "t1": "HUBB",
+          "t2": "CF",
+          "corr": -0.092,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -114,15 +114,15 @@
         {
           "t1": "IEMG",
           "t2": "CBOE",
-          "corr": -0.1829,
-          "w1": 20.0,
+          "corr": -0.188,
+          "w1": 15.0,
           "w2": 5.0,
-          "combined_weight": 25.0
+          "combined_weight": 20.0
         },
         {
           "t1": "CBOE",
           "t2": "HUBB",
-          "corr": -0.3204,
+          "corr": -0.3223,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -130,22 +130,30 @@
         {
           "t1": "IEMG",
           "t2": "CF",
-          "corr": -0.3399,
-          "w1": 20.0,
+          "corr": -0.3407,
+          "w1": 15.0,
           "w2": 5.0,
-          "combined_weight": 25.0
+          "combined_weight": 20.0
         }
       ],
       "high_corr_high_weight": []
     },
     "Mod\u00e9r\u00e9": {
-      "n_assets": 8,
-      "weighted_avg_correlation": 0.1035,
+      "n_assets": 9,
+      "weighted_avg_correlation": 0.1201,
       "most_correlated": [
+        {
+          "t1": "EXPD",
+          "t2": "FHI",
+          "corr": 0.3683,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
         {
           "t1": "VWCE.DE",
           "t2": "EXPD",
-          "corr": 0.3269,
+          "corr": 0.3206,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
@@ -153,7 +161,7 @@
         {
           "t1": "EXPD",
           "t2": "SGLN.AS",
-          "corr": 0.3269,
+          "corr": 0.3206,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -161,15 +169,39 @@
         {
           "t1": "VWCE.DE",
           "t2": "SGLN.AS",
-          "corr": 0.2597,
+          "corr": 0.2756,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
         },
         {
+          "t1": "VWCE.DE",
+          "t2": "FHI",
+          "corr": 0.2315,
+          "w1": 50.0,
+          "w2": 5.0,
+          "combined_weight": 55.0
+        },
+        {
+          "t1": "FHI",
+          "t2": "SGLN.AS",
+          "corr": 0.2315,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
           "t1": "EXPD",
           "t2": "CBOE",
-          "corr": 0.2309,
+          "corr": 0.2146,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "CBOE",
+          "t2": "CF",
+          "corr": 0.1609,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -177,7 +209,7 @@
         {
           "t1": "VWCE.DE",
           "t2": "CBOE",
-          "corr": 0.1658,
+          "corr": 0.1578,
           "w1": 50.0,
           "w2": 5.0,
           "combined_weight": 55.0
@@ -185,39 +217,7 @@
         {
           "t1": "CBOE",
           "t2": "SGLN.AS",
-          "corr": 0.1658,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "CBOE",
-          "t2": "CF",
-          "corr": 0.1605,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "EXPD",
-          "t2": "CF",
-          "corr": 0.1217,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "VWCE.DE",
-          "t2": "CF",
-          "corr": 0.108,
-          "w1": 50.0,
-          "w2": 5.0,
-          "combined_weight": 55.0
-        },
-        {
-          "t1": "CF",
-          "t2": "SGLN.AS",
-          "corr": 0.108,
+          "corr": 0.1578,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -225,41 +225,41 @@
       ],
       "least_correlated": [
         {
-          "t1": "CF",
-          "t2": "IBCI.AS",
-          "corr": 0.027,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "CF",
-          "t2": "IBGS.AS",
-          "corr": 0.027,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
           "t1": "AGGH.AS",
           "t2": "IBCI.AS",
-          "corr": 0.0124,
-          "w1": 20.0,
+          "corr": 0.0135,
+          "w1": 15.0,
           "w2": 5.0,
-          "combined_weight": 25.0
+          "combined_weight": 20.0
         },
         {
           "t1": "AGGH.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0124,
-          "w1": 20.0,
+          "corr": 0.0135,
+          "w1": 15.0,
           "w2": 5.0,
-          "combined_weight": 25.0
+          "combined_weight": 20.0
         },
         {
           "t1": "IBCI.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0124,
+          "corr": 0.0135,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "CBOE",
+          "t2": "FHI",
+          "corr": 0.0064,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "CF",
+          "t2": "FHI",
+          "corr": -0.0119,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -268,13 +268,21 @@
       "high_corr_high_weight": []
     },
     "Stable": {
-      "n_assets": 7,
-      "weighted_avg_correlation": 0.0641,
+      "n_assets": 8,
+      "weighted_avg_correlation": 0.0653,
       "most_correlated": [
+        {
+          "t1": "LI",
+          "t2": "SREN",
+          "corr": 0.3453,
+          "w1": 3.3,
+          "w2": 3.3,
+          "combined_weight": 6.7
+        },
         {
           "t1": "VWCE.DE",
           "t2": "SGLN.AS",
-          "corr": 0.2597,
+          "corr": 0.2756,
           "w1": 20.0,
           "w2": 10.0,
           "combined_weight": 30.0
@@ -282,97 +290,89 @@
         {
           "t1": "VWCE.DE",
           "t2": "LI",
-          "corr": 0.2539,
+          "corr": 0.2725,
           "w1": 20.0,
-          "w2": 5.0,
-          "combined_weight": 25.0
+          "w2": 3.3,
+          "combined_weight": 23.3
         },
         {
           "t1": "SGLN.AS",
           "t2": "LI",
-          "corr": 0.2539,
+          "corr": 0.2725,
           "w1": 10.0,
-          "w2": 5.0,
-          "combined_weight": 15.0
+          "w2": 3.3,
+          "combined_weight": 13.3
         },
         {
           "t1": "VWCE.DE",
           "t2": "AMUN",
-          "corr": 0.1631,
+          "corr": 0.1754,
           "w1": 20.0,
-          "w2": 5.0,
-          "combined_weight": 25.0
+          "w2": 3.3,
+          "combined_weight": 23.3
         },
         {
           "t1": "SGLN.AS",
           "t2": "AMUN",
-          "corr": 0.1631,
+          "corr": 0.1754,
           "w1": 10.0,
-          "w2": 5.0,
-          "combined_weight": 15.0
+          "w2": 3.3,
+          "combined_weight": 13.3
         },
         {
           "t1": "LI",
           "t2": "AMUN",
-          "corr": 0.1479,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "AGGH.AS",
-          "t2": "VWCE.DE",
-          "corr": 0.0568,
-          "w1": 25.0,
-          "w2": 20.0,
-          "combined_weight": 45.0
-        },
-        {
-          "t1": "AGGH.AS",
-          "t2": "SGLN.AS",
-          "corr": 0.0568,
-          "w1": 25.0,
-          "w2": 10.0,
-          "combined_weight": 35.0
-        },
-        {
-          "t1": "AGGH.AS",
-          "t2": "LI",
-          "corr": 0.0568,
-          "w1": 25.0,
-          "w2": 5.0,
-          "combined_weight": 30.0
+          "corr": 0.1632,
+          "w1": 3.3,
+          "w2": 3.3,
+          "combined_weight": 6.7
         },
         {
           "t1": "VWCE.DE",
-          "t2": "IBCI.AS",
-          "corr": 0.0568,
+          "t2": "SREN",
+          "corr": 0.1137,
           "w1": 20.0,
-          "w2": 20.0,
-          "combined_weight": 40.0
+          "w2": 3.3,
+          "combined_weight": 23.3
+        },
+        {
+          "t1": "SGLN.AS",
+          "t2": "SREN",
+          "corr": 0.1137,
+          "w1": 10.0,
+          "w2": 3.3,
+          "combined_weight": 13.3
+        },
+        {
+          "t1": "SREN",
+          "t2": "AMUN",
+          "corr": 0.0672,
+          "w1": 3.3,
+          "w2": 3.3,
+          "combined_weight": 6.7
         }
       ],
       "least_correlated": [
         {
           "t1": "IBCI.AS",
-          "t2": "AMUN",
-          "corr": 0.0358,
+          "t2": "SREN",
+          "corr": 0.0256,
           "w1": 20.0,
-          "w2": 5.0,
-          "combined_weight": 25.0
+          "w2": 3.3,
+          "combined_weight": 23.3
         },
         {
           "t1": "IBGS.AS",
-          "t2": "AMUN",
-          "corr": 0.0358,
+          "t2": "SREN",
+          "corr": 0.0256,
           "w1": 15.0,
-          "w2": 5.0,
-          "combined_weight": 20.0
+          "w2": 3.3,
+          "combined_weight": 18.3
         },
         {
           "t1": "AGGH.AS",
           "t2": "IBCI.AS",
-          "corr": 0.0124,
+          "corr": 0.0135,
           "w1": 25.0,
           "w2": 20.0,
           "combined_weight": 45.0
@@ -380,7 +380,7 @@
         {
           "t1": "AGGH.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0124,
+          "corr": 0.0135,
           "w1": 25.0,
           "w2": 15.0,
           "combined_weight": 40.0
@@ -388,7 +388,7 @@
         {
           "t1": "IBCI.AS",
           "t2": "IBGS.AS",
-          "corr": 0.0124,
+          "corr": 0.0135,
           "w1": 20.0,
           "w2": 15.0,
           "combined_weight": 35.0
@@ -401,7 +401,7 @@
     {
       "t1": "HUBB",
       "t2": "IEMG",
-      "corr_hybrid": 0.569,
+      "corr_hybrid": 0.5482,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -413,7 +413,7 @@
     {
       "t1": "IEMG",
       "t2": "LI",
-      "corr_hybrid": 0.4258,
+      "corr_hybrid": 0.4133,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "Act",
@@ -425,7 +425,31 @@
     {
       "t1": "HUBB",
       "t2": "LI",
-      "corr_hybrid": 0.377,
+      "corr_hybrid": 0.3855,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "EXPD",
+      "t2": "FHI",
+      "corr_hybrid": 0.3683,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "LI",
+      "t2": "SREN",
+      "corr_hybrid": 0.3453,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -437,7 +461,7 @@
     {
       "t1": "CF",
       "t2": "IEMG",
-      "corr_hybrid": -0.3399,
+      "corr_hybrid": -0.3407,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -447,33 +471,9 @@
       "fam2": "em_equity"
     },
     {
-      "t1": "EXPD",
-      "t2": "SGLN.AS",
-      "corr_hybrid": 0.3269,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "EXPD",
-      "t2": "VWCE.DE",
-      "corr_hybrid": 0.3269,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
       "t1": "CBOE",
       "t2": "HUBB",
-      "corr_hybrid": -0.3204,
+      "corr_hybrid": -0.3223,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -483,9 +483,9 @@
       "fam2": null
     },
     {
-      "t1": "HUBB",
+      "t1": "EXPD",
       "t2": "SGLN.AS",
-      "corr_hybrid": 0.2735,
+      "corr_hybrid": 0.3206,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -495,9 +495,9 @@
       "fam2": null
     },
     {
-      "t1": "HUBB",
+      "t1": "EXPD",
       "t2": "VWCE.DE",
-      "corr_hybrid": 0.2735,
+      "corr_hybrid": 0.3206,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -505,11 +505,35 @@
       "exp2": null,
       "fam1": null,
       "fam2": null
+    },
+    {
+      "t1": "FHI",
+      "t2": "HUBB",
+      "corr_hybrid": 0.2936,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "FHI",
+      "t2": "IEMG",
+      "corr_hybrid": 0.2819,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": "emerging_markets",
+      "fam1": null,
+      "fam2": "em_equity"
     },
     {
       "t1": "SGLN.AS",
       "t2": "VWCE.DE",
-      "corr_hybrid": 0.2597,
+      "corr_hybrid": 0.2756,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "ETF",
@@ -521,7 +545,7 @@
     {
       "t1": "LI",
       "t2": "SGLN.AS",
-      "corr_hybrid": 0.2539,
+      "corr_hybrid": 0.2725,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -533,7 +557,7 @@
     {
       "t1": "LI",
       "t2": "VWCE.DE",
-      "corr_hybrid": 0.2539,
+      "corr_hybrid": 0.2725,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -543,12 +567,24 @@
       "fam2": null
     },
     {
-      "t1": "EXPD",
-      "t2": "HUBB",
-      "corr_hybrid": 0.2503,
+      "t1": "HUBB",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.2715,
       "corr_structured": null,
       "cat1": "Act",
-      "cat2": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HUBB",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.2715,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -557,7 +593,7 @@
     {
       "t1": "IEMG",
       "t2": "SGLN.AS",
-      "corr_hybrid": 0.2478,
+      "corr_hybrid": 0.2576,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "ETF",
@@ -569,7 +605,7 @@
     {
       "t1": "IEMG",
       "t2": "VWCE.DE",
-      "corr_hybrid": 0.2478,
+      "corr_hybrid": 0.2576,
       "corr_structured": null,
       "cat1": "ETF",
       "cat2": "ETF",
@@ -579,9 +615,33 @@
       "fam2": null
     },
     {
+      "t1": "FHI",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.2315,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "FHI",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.2315,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
       "t1": "CBOE",
       "t2": "EXPD",
-      "corr_hybrid": 0.2309,
+      "corr_hybrid": 0.2146,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -593,7 +653,19 @@
     {
       "t1": "AMUN",
       "t2": "EXPD",
-      "corr_hybrid": 0.2134,
+      "corr_hybrid": 0.2117,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "HUBB",
+      "t2": "SREN",
+      "corr_hybrid": 0.2042,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -604,116 +676,8 @@
     },
     {
       "t1": "EXPD",
-      "t2": "IEMG",
-      "corr_hybrid": 0.1848,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": "emerging_markets",
-      "fam1": null,
-      "fam2": "em_equity"
-    },
-    {
-      "t1": "CBOE",
-      "t2": "IEMG",
-      "corr_hybrid": -0.1829,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": "emerging_markets",
-      "fam1": null,
-      "fam2": "em_equity"
-    },
-    {
-      "t1": "CBOE",
-      "t2": "LI",
-      "corr_hybrid": 0.1704,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CBOE",
-      "t2": "SGLN.AS",
-      "corr_hybrid": 0.1658,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CBOE",
-      "t2": "VWCE.DE",
-      "corr_hybrid": 0.1658,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AMUN",
-      "t2": "SGLN.AS",
-      "corr_hybrid": 0.1631,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AMUN",
-      "t2": "VWCE.DE",
-      "corr_hybrid": 0.1631,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "ETF",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "EXPD",
-      "t2": "LI",
-      "corr_hybrid": -0.1631,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CBOE",
-      "t2": "CF",
-      "corr_hybrid": 0.1605,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AMUN",
       "t2": "HUBB",
-      "corr_hybrid": 0.1486,
+      "corr_hybrid": 0.1982,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -723,33 +687,9 @@
       "fam2": null
     },
     {
-      "t1": "AMUN",
-      "t2": "LI",
-      "corr_hybrid": 0.1479,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AMUN",
-      "t2": "CBOE",
-      "corr_hybrid": 0.1309,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AMUN",
+      "t1": "CBOE",
       "t2": "IEMG",
-      "corr_hybrid": 0.1294,
+      "corr_hybrid": -0.188,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "ETF",
@@ -757,16 +697,76 @@
       "exp2": "emerging_markets",
       "fam1": null,
       "fam2": "em_equity"
+    },
+    {
+      "t1": "IEMG",
+      "t2": "SREN",
+      "corr_hybrid": 0.1824,
+      "corr_structured": null,
+      "cat1": "ETF",
+      "cat2": "Act",
+      "exp1": "emerging_markets",
+      "exp2": null,
+      "fam1": "em_equity",
+      "fam2": null
+    },
+    {
+      "t1": "EXPD",
+      "t2": "IEMG",
+      "corr_hybrid": 0.18,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": "emerging_markets",
+      "fam1": null,
+      "fam2": "em_equity"
+    },
+    {
+      "t1": "CBOE",
+      "t2": "LI",
+      "corr_hybrid": 0.179,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "AMUN",
+      "t2": "SGLN.AS",
+      "corr_hybrid": 0.1754,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "AMUN",
+      "t2": "VWCE.DE",
+      "corr_hybrid": 0.1754,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "ETF",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
     }
   ],
   "all_pairs_bottom_10": [
     {
       "t1": "CF",
-      "t2": "LI",
-      "corr_hybrid": 0.0368,
+      "t2": "IBGS.AS",
+      "corr_hybrid": 0.0283,
       "corr_structured": null,
       "cat1": "Act",
-      "cat2": "Act",
+      "cat2": "Obl",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -774,8 +774,8 @@
     },
     {
       "t1": "AGGH.AS",
-      "t2": "AMUN",
-      "corr_hybrid": 0.0358,
+      "t2": "SREN",
+      "corr_hybrid": 0.0256,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Act",
@@ -785,33 +785,9 @@
       "fam2": null
     },
     {
-      "t1": "AMUN",
-      "t2": "IBCI.AS",
-      "corr_hybrid": 0.0358,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Obl",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AMUN",
-      "t2": "IBGS.AS",
-      "corr_hybrid": 0.0358,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Obl",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AGGH.AS",
-      "t2": "CF",
-      "corr_hybrid": 0.027,
+      "t1": "IBCI.AS",
+      "t2": "SREN",
+      "corr_hybrid": 0.0256,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Act",
@@ -821,24 +797,12 @@
       "fam2": null
     },
     {
-      "t1": "CF",
-      "t2": "IBCI.AS",
-      "corr_hybrid": 0.027,
+      "t1": "IBGS.AS",
+      "t2": "SREN",
+      "corr_hybrid": 0.0256,
       "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Obl",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CF",
-      "t2": "IBGS.AS",
-      "corr_hybrid": 0.027,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Obl",
+      "cat1": "Obl",
+      "cat2": "Act",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -847,7 +811,7 @@
     {
       "t1": "AGGH.AS",
       "t2": "IBCI.AS",
-      "corr_hybrid": 0.0124,
+      "corr_hybrid": 0.0135,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Obl",
@@ -859,7 +823,7 @@
     {
       "t1": "AGGH.AS",
       "t2": "IBGS.AS",
-      "corr_hybrid": 0.0124,
+      "corr_hybrid": 0.0135,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Obl",
@@ -871,10 +835,46 @@
     {
       "t1": "IBCI.AS",
       "t2": "IBGS.AS",
-      "corr_hybrid": 0.0124,
+      "corr_hybrid": 0.0135,
       "corr_structured": null,
       "cat1": "Obl",
       "cat2": "Obl",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "CBOE",
+      "t2": "SREN",
+      "corr_hybrid": -0.0119,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "CF",
+      "t2": "FHI",
+      "corr_hybrid": -0.0119,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "CBOE",
+      "t2": "FHI",
+      "corr_hybrid": 0.0064,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
       "exp1": null,
       "exp2": null,
       "fam1": null,
@@ -888,181 +888,239 @@
       "CBOE",
       "CF",
       "EXPD",
+      "FHI",
       "HUBB",
       "IBCI.AS",
       "IBGS.AS",
       "IEMG",
       "LI",
       "SGLN.AS",
+      "SREN",
       "VWCE.DE"
     ],
     "matrix": [
       [
         1.0,
-        0.0358,
-        0.0382,
-        0.027,
-        0.0704,
-        0.0584,
-        0.0124,
-        0.0124,
-        0.0524,
-        0.0568,
-        0.0568,
-        0.0568
+        0.0389,
+        0.0365,
+        0.0283,
+        0.0698,
+        0.0504,
+        0.0589,
+        0.0135,
+        0.0135,
+        0.0553,
+        0.0614,
+        0.061,
+        0.0256,
+        0.061
       ],
       [
-        0.0358,
+        0.0389,
         1.0,
-        0.1309,
-        0.0987,
-        0.2134,
-        0.1486,
-        0.0358,
-        0.0358,
-        0.1294,
-        0.1479,
-        0.1631,
-        0.1631
+        0.1258,
+        0.1032,
+        0.2117,
+        0.1423,
+        0.1513,
+        0.0389,
+        0.0389,
+        0.1391,
+        0.1632,
+        0.1754,
+        0.0672,
+        0.1754
       ],
       [
-        0.0382,
-        0.1309,
+        0.0365,
+        0.1258,
         1.0,
-        0.1605,
-        0.2309,
-        -0.3204,
-        0.0382,
-        0.0382,
-        -0.1829,
-        0.1704,
-        0.1658,
-        0.1658
+        0.1609,
+        0.2146,
+        0.0064,
+        -0.3223,
+        0.0365,
+        0.0365,
+        -0.188,
+        0.179,
+        0.1578,
+        -0.0119,
+        0.1578
       ],
       [
-        0.027,
-        0.0987,
-        0.1605,
+        0.0283,
+        0.1032,
+        0.1609,
         1.0,
-        0.1217,
-        -0.0909,
-        0.027,
-        0.027,
-        -0.3399,
-        0.0368,
-        0.108,
-        0.108
+        0.1212,
+        -0.0119,
+        -0.092,
+        0.0283,
+        0.0283,
+        -0.3407,
+        0.0303,
+        0.1136,
+        0.0665,
+        0.1136
       ],
       [
-        0.0704,
-        0.2134,
-        0.2309,
-        0.1217,
+        0.0698,
+        0.2117,
+        0.2146,
+        0.1212,
         1.0,
-        0.2503,
-        0.0704,
-        0.0704,
-        0.1848,
-        -0.1631,
-        0.3269,
-        0.3269
+        0.3683,
+        0.1982,
+        0.0698,
+        0.0698,
+        0.18,
+        -0.1603,
+        0.3206,
+        -0.0752,
+        0.3206
       ],
       [
-        0.0584,
-        0.1486,
-        -0.3204,
-        -0.0909,
-        0.2503,
+        0.0504,
+        0.1423,
+        0.0064,
+        -0.0119,
+        0.3683,
         1.0,
-        0.0584,
-        0.0584,
-        0.569,
-        0.377,
-        0.2735,
-        0.2735
+        0.2936,
+        0.0504,
+        0.0504,
+        0.2819,
+        0.1139,
+        0.2315,
+        0.0541,
+        0.2315
       ],
       [
-        0.0124,
-        0.0358,
-        0.0382,
-        0.027,
-        0.0704,
-        0.0584,
+        0.0589,
+        0.1513,
+        -0.3223,
+        -0.092,
+        0.1982,
+        0.2936,
         1.0,
-        0.0124,
-        0.0524,
-        0.0568,
-        0.0568,
-        0.0568
+        0.0589,
+        0.0589,
+        0.5482,
+        0.3855,
+        0.2715,
+        0.2042,
+        0.2715
       ],
       [
-        0.0124,
-        0.0358,
-        0.0382,
-        0.027,
-        0.0704,
-        0.0584,
-        0.0124,
+        0.0135,
+        0.0389,
+        0.0365,
+        0.0283,
+        0.0698,
+        0.0504,
+        0.0589,
         1.0,
-        0.0524,
-        0.0568,
-        0.0568,
-        0.0568
+        0.0135,
+        0.0553,
+        0.0614,
+        0.061,
+        0.0256,
+        0.061
       ],
       [
-        0.0524,
-        0.1294,
-        -0.1829,
-        -0.3399,
-        0.1848,
-        0.569,
-        0.0524,
-        0.0524,
+        0.0135,
+        0.0389,
+        0.0365,
+        0.0283,
+        0.0698,
+        0.0504,
+        0.0589,
+        0.0135,
         1.0,
-        0.4258,
-        0.2478,
-        0.2478
+        0.0553,
+        0.0614,
+        0.061,
+        0.0256,
+        0.061
       ],
       [
-        0.0568,
-        0.1479,
-        0.1704,
-        0.0368,
-        -0.1631,
-        0.377,
-        0.0568,
-        0.0568,
-        0.4258,
+        0.0553,
+        0.1391,
+        -0.188,
+        -0.3407,
+        0.18,
+        0.2819,
+        0.5482,
+        0.0553,
+        0.0553,
         1.0,
-        0.2539,
-        0.2539
+        0.4133,
+        0.2576,
+        0.1824,
+        0.2576
       ],
       [
-        0.0568,
-        0.1631,
-        0.1658,
-        0.108,
-        0.3269,
-        0.2735,
-        0.0568,
-        0.0568,
-        0.2478,
-        0.2539,
+        0.0614,
+        0.1632,
+        0.179,
+        0.0303,
+        -0.1603,
+        0.1139,
+        0.3855,
+        0.0614,
+        0.0614,
+        0.4133,
         1.0,
-        0.2597
+        0.2725,
+        0.3453,
+        0.2725
       ],
       [
-        0.0568,
-        0.1631,
-        0.1658,
-        0.108,
-        0.3269,
-        0.2735,
-        0.0568,
-        0.0568,
-        0.2478,
-        0.2539,
-        0.2597,
+        0.061,
+        0.1754,
+        0.1578,
+        0.1136,
+        0.3206,
+        0.2315,
+        0.2715,
+        0.061,
+        0.061,
+        0.2576,
+        0.2725,
+        1.0,
+        0.1137,
+        0.2756
+      ],
+      [
+        0.0256,
+        0.0672,
+        -0.0119,
+        0.0665,
+        -0.0752,
+        0.0541,
+        0.2042,
+        0.0256,
+        0.0256,
+        0.1824,
+        0.3453,
+        0.1137,
+        1.0,
+        0.1137
+      ],
+      [
+        0.061,
+        0.1754,
+        0.1578,
+        0.1136,
+        0.3206,
+        0.2315,
+        0.2715,
+        0.061,
+        0.061,
+        0.2576,
+        0.2725,
+        0.2756,
+        0.1137,
         1.0
       ]
     ]
