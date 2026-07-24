@@ -74,6 +74,11 @@ const VOL_MIN = { US: 500_000, EUROPE: 50_000, ASIA: 100_000 };
 // Ex: NVR ($7K × 22K shares = $156M/j), MKL ($1.9K × 54K = $106M/j), AZO, MELI, EQIX…
 // Ces titres échouent le seuil en shares mais sont ultra-liquides en $.
 const DOLLAR_VOL_MIN_US = 50_000_000; // $50M/jour
+// Fallback turnover Asie : les blue chips haut-prix (Keyence ¥60k, Samsung Bio...)
+// peuvent rater le seuil 100k-titres. On repêche si le turnover en USD est élevé.
+const DOLLAR_VOL_MIN_ASIA = 5_000_000; // $5M/jour équivalent
+const FX_TO_USD = { JPY:0.0064, KRW:0.00072, TWD:0.031, HKD:0.128, INR:0.012,
+  CNY:0.14, CNH:0.14, SGD:0.74, MYR:0.22, THB:0.028, IDR:0.000061, USD:1 };
 
 const VOL_MIN_BY_MIC = {
   XNAS: 500_000, XNYS: 350_000, BATS: 500_000,
@@ -1029,8 +1034,15 @@ async function writeCSVGeneric(file, rows, header) {
   await fs.writeFile(file, out, 'utf8');
 }
 
+// Bourses asiatiques à tickers 6 chiffres (zéros de tête mangés à l'export Excel :
+// Samsung 5930→005930, SK Hynix 660→000660). On re-pad avant résolution.
+const PAD6_EX = new Set(['KRX', 'KOSDAQ', 'SSE', 'SZSE']);
+
 async function resolveSymbol(ticker, exchange, expectedName = '', country = '') {
   const mic = toMIC(exchange, country);
+  if (PAD6_EX.has((exchange || '').toUpperCase().trim()) && /^\d{1,5}$/.test(ticker)) {
+    ticker = ticker.padStart(6, '0');
+  }
   let quote = await tryQuote(ticker, mic);
   const looksUS   = quote?.exchange && US_EXCH.test(quote.exchange);
   const okMarket  = !(looksUS && !isUSC(country));
@@ -1119,7 +1131,11 @@ async function checkVolume(r, region){
   const dollarVol = vol * price;
   const passShares  = vol >= thr;
   const passDollars = US_MICS.has(mic) && dollarVol >= DOLLAR_VOL_MIN_US;
-  return { pass: passShares || passDollars, passShares, vol, thr, sym, mic, source, price, dollarVol };
+  // Fallback turnover Asie (FX-ajusté)
+  const fx = FX_TO_USD[r['Devise de marché']] || 0;
+  const usdVol = vol * price * fx;
+  const passTurnoverAsia = region === 'ASIA' && usdVol >= DOLLAR_VOL_MIN_ASIA;
+  return { pass: passShares || passDollars || passTurnoverAsia, passShares, vol, thr, sym, mic, source, price, dollarVol };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
