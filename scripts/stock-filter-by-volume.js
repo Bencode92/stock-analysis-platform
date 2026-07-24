@@ -1040,6 +1040,17 @@ async function resolveSymbol(ticker, exchange, expectedName = '', country = '') 
     return { sym: ticker, quote, reason: 'direct_ok' };
   }
 
+  // ✅ Classe d'actions nordique/EU : 'NOVO.B' ne résout pas sur Twelve Data (attend NOVO-B / NOVO_B / NOVOB).
+  // Sans ça, la ligne maison ultra-liquide (Novo@Copenhague) remonte volume 0 → faux rejet.
+  if (/\.[A-Z0-9]{1,2}$/.test(ticker)) {
+    for (const alt of [ticker.replace('.', '-'), ticker.replace('.', '_'), ticker.replace('.', '')]) {
+      const qAlt = await tryQuote(alt, mic);
+      if (qAlt && !(US_EXCH.test(qAlt.exchange || '') && !isUSC(country)) && nameLooksRight(qAlt.name || '', expectedName)) {
+        return { sym: alt, quote: qAlt, reason: 'classvariant_ok' };
+      }
+    }
+  }
+
   const cand = await tdStocksLookup({ symbol: ticker, country, exchange });
   if (cand.length) {
     cand.sort((a,b)=>rankCandidate(b,{country,exchange}) - rankCandidate(a,{country,exchange}));
@@ -1074,6 +1085,41 @@ async function throttle() {
     await new Promise(r => setTimeout(r, MIN_DELAY - elapsed));
   }
   lastRequest = Date.now();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DÉDUP PAR LIQUIDITÉ (paresseuse) — helpers
+//   Le seed contient TOUTES les cotations primaires d'une société (PQ ne collapse
+//   plus). On les groupe par société et on garde LA PREMIÈRE qui passe le seuil de
+//   volume → on jette automatiquement les recotes fantômes (XETR vol 1, etc.) sans
+//   deviner le domicile. Coût : +1 quote seulement quand la 1ʳᵉ cotation est fantôme.
+// ═══════════════════════════════════════════════════════════════════════════
+function normName(s){
+  return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
+// Places d'importation (recoteurs de valeurs étrangères) essayées EN DERNIER —
+// on ne préfère jamais une ligne viennoise/Francfort si une maison existe.
+const IMPORTER_MICS = new Set(['XWBO','XFRA','FSX']);
+function micRank(mic){ return IMPORTER_MICS.has(mic) ? 1 : 0; }
+
+// Teste le volume d'UNE cotation (extrait de l'ancienne boucle).
+async function checkVolume(r, region){
+  const ticker = (r['Ticker']||'').trim();
+  const exch   = r['Bourse de valeurs'] || '';
+  const mic    = toMIC(exch, r['Pays'] || '');
+  const { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
+  let vol = quote
+    ? Math.max(Number(quote.average_volume)||0, Number(quote.volume)||0)
+    : await fetchVolume(sym);
+  const price = quote ? (Number(quote.close)||Number(quote.previous_close)||0) : 0;
+  if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) vol = 999_999;
+  const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
+  const source = VOL_MIN_BY_MIC[mic || ''] ? `MIC:${mic}` : `REGION:${region}`;
+  const dollarVol = vol * price;
+  const passShares  = vol >= thr;
+  const passDollars = US_MICS.has(mic) && dollarVol >= DOLLAR_VOL_MIN_US;
+  return { pass: passShares || passDollars, passShares, vol, thr, sym, mic, source, price, dollarVol };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1144,67 +1190,68 @@ async function throttle() {
     const rejected = [];
     let processed = 0;
 
+    // ── Dédup paresseuse par liquidité ──────────────────────────────────────
+    // Grouper toutes les cotations d'une même société, puis garder LA PREMIÈRE
+    // qui passe le seuil de volume (recotes fantômes jetées automatiquement).
+    const byCompany = new Map();
     for (const r of rows) {
-      await throttle();
+      const g = normName(r['Stock']);
+      if (!byCompany.has(g)) byCompany.set(g, []);
+      byCompany.get(g).push(r);
+    }
+    console.log(`  🔗 ${rows.length} cotations → ${byCompany.size} sociétés uniques`);
 
-      const ticker = (r['Ticker']||'').trim();
-      const exch   = r['Bourse de valeurs'] || '';
-      const mic    = toMIC(exch, r['Pays'] || '');
-      let { sym, quote } = await resolveSymbol(ticker, exch, r['Stock'] || '', r['Pays'] || '');
-      let vol = quote
-        ? Math.max(Number(quote.average_volume)||0, Number(quote.volume)||0)
-        : await fetchVolume(sym);
-      const price = quote ? (Number(quote.close)||Number(quote.previous_close)||0) : 0;
+    for (const [, listings] of byCompany) {
+      // recotes importatrices (Vienne/Francfort) essayées en dernier
+      listings.sort((a, b) =>
+        micRank(toMIC(a['Bourse de valeurs'], a['Pays'] || '')) -
+        micRank(toMIC(b['Bourse de valeurs'], b['Pays'] || '')));
 
-      // ITALY_FALLBACK whitelist
-      if (mic === 'XMIL' && ITALY_FALLBACK[ticker]) {
-        vol = 999_999;
-        console.log(`  [ITALY WHITELIST] ${ticker} → forced pass (blue chip)`);
+      let winner = null, lastFail = null;
+      for (const r of listings) {
+        await throttle();
+        const c = await checkVolume(r, region);
+        if (c.pass) { winner = { r, c }; break; }   // 1ʳᵉ liquide → on s'arrête
+        lastFail = { r, c };                         // fantôme sauté (pas un vrai rejet)
       }
-
-      const thr = VOL_MIN_BY_MIC[mic || ''] ?? VOL_MIN[region] ?? 0;
-      const source = VOL_MIN_BY_MIC[mic || ''] ? `MIC:${mic}` : `REGION:${region}`;
       stats.total++;
 
-      // ✅ v2.14: fallback dollar-volume US pour blue chips haut-prix
-      const dollarVol = vol * price;
-      const passShares  = vol >= thr;
-      const passDollars = US_MICS.has(mic) && dollarVol >= DOLLAR_VOL_MIN_US;
-
-      if (passShares || passDollars) {
+      if (winner) {
+        const { r, c } = winner;
         filtered.push({
-          'Ticker': ticker,
-          'Stock': r['Stock']||'',
-          'Secteur': r['Secteur']||'',
-          'Pays': r['Pays']||'',
-          'Bourse de valeurs': r['Bourse de valeurs']||'',
-          'Devise de marché': r['Devise de marché']||'',
+          'Ticker': (r['Ticker'] || '').trim(),
+          'Stock': r['Stock'] || '',
+          'Secteur': r['Secteur'] || '',
+          'Pays': r['Pays'] || '',
+          'Bourse de valeurs': r['Bourse de valeurs'] || '',
+          'Devise de marché': r['Devise de marché'] || '',
           'roe': null, 'de_ratio': null, 'roic': null,
-          // ✅ v2.11: Nouvelles colonnes initialisées
           'roe_avg_3y': null, 'roe_std_3y': null,
           'roic_avg_3y': null, 'roic_std_3y': null,
           'net_margin': null, 'revenue_growth_3y': null
         });
         stats.passed++;
-        if (passShares) {
-          console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} >= ${thr.toLocaleString()} (${source})`);
+        const extra = listings.length > 1 ? ` [${listings.length} cotations → ${c.mic}]` : '';
+        if (c.passShares) {
+          console.log(`  ✅ ${r['Ticker']}: ${c.vol.toLocaleString()} >= ${c.thr.toLocaleString()} (${c.source})${extra}`);
         } else {
-          console.log(`  ✅ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()} BUT $${Math.round(dollarVol/1e6)}M/j >= $${DOLLAR_VOL_MIN_US/1e6}M ($VOL-US)`);
+          console.log(`  ✅ ${r['Ticker']}: $${Math.round(c.dollarVol/1e6)}M/j ($VOL-US)${extra}`);
         }
-      } else {
+      } else if (lastFail) {
+        const { r, c } = lastFail;
         stats.failed++;
-        console.log(`  ❌ ${ticker}: ${vol.toLocaleString()} < ${thr.toLocaleString()} (${source})`);
+        console.log(`  ❌ ${r['Ticker']}: aucune cotation liquide / ${listings.length} (${c.vol.toLocaleString()} < ${c.thr.toLocaleString()})`);
         rejected.push({
-          'Ticker': ticker, 'Stock': r['Stock']||'', 'Secteur': r['Secteur']||'',
-          'Pays': r['Pays']||'', 'Bourse de valeurs': r['Bourse de valeurs']||'',
-          'Devise de marché': r['Devise de marché']||'', 'Volume': vol, 'Seuil': thr,
-          'MIC': mic || '', 'Symbole': sym, 'Source': source,
-          'Raison': `Volume ${vol} < Seuil ${thr}`
+          'Ticker': (r['Ticker'] || '').trim(), 'Stock': r['Stock'] || '', 'Secteur': r['Secteur'] || '',
+          'Pays': r['Pays'] || '', 'Bourse de valeurs': r['Bourse de valeurs'] || '',
+          'Devise de marché': r['Devise de marché'] || '', 'Volume': c.vol, 'Seuil': c.thr,
+          'MIC': c.mic || '', 'Symbole': c.sym, 'Source': c.source,
+          'Raison': `Volume ${c.vol} < Seuil ${c.thr} (${listings.length} cotations testées)`
         });
       }
 
       processed++;
-      if (processed % 10 === 0) console.log(`  Progression: ${processed}/${rows.length}`);
+      if (processed % 25 === 0) console.log(`  Progression: ${processed}/${byCompany.size} sociétés`);
     }
 
     allOutputs.push({ title: region, file: path.join(OUT_DIR, file.replace('.csv','_filtered.csv')), rows: filtered });
