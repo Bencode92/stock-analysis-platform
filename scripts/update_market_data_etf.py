@@ -66,7 +66,13 @@ def create_empty_market_data() -> Dict:
             "north-america": [],
             "latin-america": [],
             "asia": [],
-            "other": []
+            "other": [],
+            # Blocs non-géographiques (proxies signal, routés par la colonne Classification)
+            "global": [],       # benchmarks mondiaux (Monde, Émergents)
+            "thematic": [],     # thématiques value-chain (semi, aéro, énergie, IA...)
+            "factor": [],       # facteurs / styles (Value, Growth, Quality, Momentum...)
+            "commodity": [],    # matières premières (or, énergie, cuivre, argent)
+            "macro": []         # régime macro (taux, high yield, dollar, bitcoin)
         },
         "top_performers": {
             "daily": {
@@ -323,8 +329,18 @@ def main():
                 "trend": "down" if day_pct < 0 else "up"
             }
             
-            # Ajouter à la bonne région
-            market_region = determine_market_region(country)
+            # Ajouter à la bonne région / bloc
+            # Les proxies non-géographiques sont routés par leur Classification
+            # (Global/Thématique/Facteur/Matières premières/Macro) plutôt que par pays.
+            CLASSIFICATION_BUCKET = {
+                "Global": "global",
+                "Thématique": "thematic",
+                "Facteur": "factor",
+                "Matières premières": "commodity",
+                "Macro": "macro",
+            }
+            classification = etf.get("Classification", "")
+            market_region = CLASSIFICATION_BUCKET.get(classification) or determine_market_region(country)
             MARKET_DATA["indices"][market_region].append(market_entry)
             ALL_INDICES.append(market_entry)
             processed_count += 1

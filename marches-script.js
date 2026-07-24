@@ -29,6 +29,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let etfHoldingsData = null;
     let holdingsLoadPromise = null;
     
+    // Régions/blocs affichés = géographiques + proxies signal non-géographiques
+    // (routés côté Python par la colonne Classification du mapping ETF)
+    const MARKET_REGIONS = [
+        'europe', 'north-america', 'latin-america', 'asia', 'other',
+        'global', 'thematic', 'factor', 'commodity', 'macro'
+    ];
+
     // Mapping des aliases pour l'aperçu des marchés (ETF → Indices)
     // Utilisé pour trouver les indices dans les données JSON
     const OVERVIEW_ALIASES = {
@@ -628,15 +635,9 @@ document.addEventListener('DOMContentLoaded', function() {
             'Israël': 'other'
         };
         
-        const buckets = {
-            europe: [],
-            'north-america': [],
-            'latin-america': [],
-            asia: [],
-            other: []
-        };
-        
-        const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+        const buckets = Object.fromEntries(MARKET_REGIONS.map(r => [r, []]));
+
+        const regions = MARKET_REGIONS;
         
         for (const region of regions) {
             for (const rec of indicesData.indices[region]) {
@@ -665,7 +666,7 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         
         if (!found) {
-            const allRegions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+            const allRegions = MARKET_REGIONS;
             for (const r of allRegions) {
                 found = (indicesData.indices[r] || []).find(idx =>
                     patterns.some(rx => 
@@ -766,7 +767,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const rawData = await response.json();
             
-            ['europe', 'north-america', 'latin-america', 'asia', 'other'].forEach(region => {
+            MARKET_REGIONS.forEach(region => {
                 indicesData.indices[region] = (rawData.indices[region] || []).map(normalizeRecord);
             });
             
@@ -817,8 +818,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 sourceLink.textContent = indicesData.meta.source;
             }
             
-            const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
-            
+            const regions = MARKET_REGIONS;
+
             regions.forEach(region => {
                 const indices = indicesData.indices[region] || [];
                 const tableBody = document.getElementById(`${region}-indices-body`);
@@ -1068,6 +1069,8 @@ document.addEventListener('DOMContentLoaded', function() {
      * Calcule et affiche les top performers (daily, YTD et 52W)
      */
     function updateTopPerformers() {
+        // Volontairement géographique : le top-movers compare des indices pays.
+        // Les proxies thématiques/facteurs/matières/macro sont vus dans leurs blocs dédiés.
         const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
         const allIndices = regions.flatMap(r => indicesData.indices[r] || []);
         
