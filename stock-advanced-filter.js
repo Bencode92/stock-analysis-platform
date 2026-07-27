@@ -155,6 +155,18 @@ const CONFIG = {
     }
 };
 
+// ✅ Cache disque SÉLECTIF des fetches réseau d'enrichissement.
+//    Modelé sur scripts/stock-filter-by-volume.js (structure {data:{cacheKey:{...}}},
+//    TTL 7j, clé ticker:country). But : (a) éviter de re-fetcher les données stables à
+//    chaque run, (b) préserver le travail déjà fetché si le job GitHub Actions
+//    timeout (limite 6h) — sauvegarde incrémentale pendant l'enrichissement.
+//    ⚠️ Ne cache QUE les 6 payloads stables (résolution + dividends/stats/market_cap/
+//    growth/profile/earnings). Les PRIX (perf/quote) sont re-fetchés frais chaque run,
+//    et le quality_score peer-relatif reste calculé APRÈS enrichissement (jamais caché).
+const SCORER_CACHE_FILE = path.join(OUT_DIR, 'advanced_scorer_cache.json');
+const SCORER_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
+let SCORER_CACHE = { updated: null, data: {} };
+
 let creditsUsed = 0;
 let windowStart = Date.now();
 // v3.35: Regional benchmarks for beta CAPM
@@ -1511,45 +1523,109 @@ function sanitizeForwardYield({ yieldFwd, yieldReg, yieldTtmCalc, freq, recentSp
     return yieldFwd;
 }
 
+// ✅ Clé de cache scorer : ticker:country (aligné sur le volume filter, évite les
+//    collisions SAN:france vs SAN:espagne). Fallback ticker seul si pays absent.
+function buildScorerCacheKey(stock) {
+    const c = normalize(stock.country || '');
+    return c ? `${stock.symbol}:${c}` : stock.symbol;
+}
+
+async function loadScorerCache() {
+    try {
+        const txt = await fs.readFile(SCORER_CACHE_FILE, 'utf8');
+        return JSON.parse(txt);
+    } catch {
+        console.log('📁 Cache scorer non trouvé, création nouveau cache');
+        return { updated: null, data: {} };
+    }
+}
+
+async function saveScorerCache() {
+    SCORER_CACHE.updated = new Date().toISOString();
+    await fs.mkdir(path.dirname(SCORER_CACHE_FILE), { recursive: true });
+    // JSON compact : le cache contient les payloads bruts de tout l'univers (~6k stocks)
+    await fs.writeFile(SCORER_CACHE_FILE, JSON.stringify(SCORER_CACHE), 'utf8');
+}
+
 // ✅ v3.23: Mise à jour enrichStock pour inclure FCF Yield et EPS Growth 5Y
 async function enrichStock(stock) {
     console.log(`  📊 ${stock.symbol}...`);
-    
-    // Résolution robuste une fois pour toutes
-    const resolved = await resolveSymbolSmart(stock.symbol, stock);
-    if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
-    
-    // 📊 LOGGING v3.14: Détection ADR améliorée
-    const wasADR = isADRLike(stock);
-    if (CONFIG.DEBUG && resolved) {
-        console.log(`[RESOLVE] ${stock.symbol} | Exchange: "${stock.exchange}" | Country: ${stock.country}`);
-        console.log(`  → Resolved: ${resolved} | ADR? ${wasADR}`);
-        if (wasADR && stock.country === 'France') {
-            console.warn(`  ⚠️ French stock marked as ADR - CHECK THIS!`);
+
+    // ✅ Cache disque SÉLECTIF : les prix (perf/quote) sont TOUJOURS re-fetchés frais
+    //    (le funnel perf/momentum en dépend), seuls les 6 payloads stables/coûteux
+    //    (dividendes, stats, market_cap, growth, profile, earnings — quarterly-stable)
+    //    sont cachés (TTL 7j). `resolved` est caché aussi (résolution symbole stable).
+    const cacheKey = buildScorerCacheKey(stock);
+    const cachedEntry = SCORER_CACHE.data[cacheKey];
+    const cacheFresh = cachedEntry && cachedEntry.fetched_at
+        && (Date.now() - new Date(cachedEntry.fetched_at).getTime() < SCORER_CACHE_TTL_MS);
+    // Force re-fetch si l'entrée stable est vide (échec transitoire mis en cache)
+    const cacheEmpty = cachedEntry && cachedEntry.raw
+        && !cachedEntry.raw.dividends && !cachedEntry.raw.stats;
+    const stableHit = cacheFresh && !cacheEmpty;
+
+    let resolved, perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData;
+
+    if (stableHit) {
+        // Réutilise résolution + 6 payloads stables depuis le cache (skip 6 fetches + resolve)
+        const r = cachedEntry.raw || {};
+        ({ resolved = null, dividends = null, stats = null,
+           mcDirect = null, growth = null, profileData = null, earningsData = null } = r);
+        if (cachedEntry.is_adr) stock.is_adr = true; // restaure le tag ADR
+        if (CONFIG.DEBUG) console.log(`[CACHE HIT stable] ${stock.symbol} [${cacheKey}]`);
+    } else {
+        // Résolution robuste une fois pour toutes
+        resolved = await resolveSymbolSmart(stock.symbol, stock);
+        if (CONFIG.DEBUG) console.log('[RESOLVED]', stock.symbol, '→', resolved || '(none)');
+
+        // 📊 LOGGING v3.14: Détection ADR améliorée
+        const wasADR = isADRLike(stock);
+        if (CONFIG.DEBUG && resolved) {
+            console.log(`[RESOLVE] ${stock.symbol} | Exchange: "${stock.exchange}" | Country: ${stock.country}`);
+            console.log(`  → Resolved: ${resolved} | ADR? ${wasADR}`);
+            if (wasADR && stock.country === 'France') {
+                console.warn(`  ⚠️ French stock marked as ADR - CHECK THIS!`);
+            }
+        }
+
+        // Si on n'a rien résolu et que l'exchange du CSV est US alors que le pays n'est pas US → ADR
+        if (!resolved && isUS(stock.exchange, stock.country) && !isUSCountry(stock.country)) {
+            if (CONFIG.DEBUG) console.log(`[ADR] ${stock.symbol} détecté comme ADR`);
+            stock.is_adr = true; // Tag pour traçabilité
+            // On continue avec le symbole brut pour récupérer les données US
         }
     }
-    
-    // Si on n'a rien résolu et que l'exchange du CSV est US alors que le pays n'est pas US → ADR
-    if (!resolved && isUS(stock.exchange, stock.country) && !isUSCountry(stock.country)) {
-        if (CONFIG.DEBUG) console.log(`[ADR] ${stock.symbol} détecté comme ADR`);
-        stock.is_adr = true; // Tag pour traçabilité
-        // On continue avec le symbole brut pour récupérer les données US
-    }
-    
-    // ✅ v3.23: Ajout de getGrowthEstimates dans le Promise.all
+
+    // ✅ v3.23 / cache sélectif: perf & quote TOUJOURS frais ; les 6 stables seulement sur miss
     const sym = resolved || stock.symbol;  // symbole final (évent. suffixé :MIC)
     const ctx = stock;                     // garde exchange + country d'origine
-    const [perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData] = await Promise.all([
-        getPerformanceData(sym, ctx),
-        getQuoteData(sym, ctx),
-        getDividendData(sym, ctx),
-        getStatisticsData(sym, ctx),
-        getMarketCapDirect(sym, ctx),
-        getGrowthEstimates(sym, ctx),  // ✅ v3.23
-        getProfileData(sym, ctx),      // ✅ v3.31: industry pour peer groups
-        getEarningsData(sym, ctx)      // ✅ v7.3: EPS Surprise (PEAD)
-    ]);
-    
+    if (stableHit) {
+        // Prix frais uniquement (les stables viennent du cache)
+        [perf, quote] = await Promise.all([
+            getPerformanceData(sym, ctx),
+            getQuoteData(sym, ctx)
+        ]);
+    } else {
+        // Miss: fetch les 8 payloads en parallèle, puis met en cache les 6 stables
+        [perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData] = await Promise.all([
+            getPerformanceData(sym, ctx),
+            getQuoteData(sym, ctx),
+            getDividendData(sym, ctx),
+            getStatisticsData(sym, ctx),
+            getMarketCapDirect(sym, ctx),
+            getGrowthEstimates(sym, ctx),  // ✅ v3.23
+            getProfileData(sym, ctx),      // ✅ v3.31: industry pour peer groups
+            getEarningsData(sym, ctx)      // ✅ v7.3: EPS Surprise (PEAD)
+        ]);
+
+        // ✅ Cache uniquement les payloads stables/coûteux (PAS perf/quote — prix frais chaque run)
+        SCORER_CACHE.data[cacheKey] = {
+            fetched_at: new Date().toISOString(),
+            is_adr: stock.is_adr || false,
+            raw: { resolved, dividends, stats, mcDirect, growth, profileData, earningsData }
+        };
+    }
+
     // Fallback prix & range depuis la série si quote indisponible
     let price = quote?.price ?? null;
     let change_percent = quote?.percent_change ?? null;
@@ -2587,7 +2663,12 @@ async function main() {
     console.log(`🌍 Régions sélectionnées: ${activeRegions} (input: "${REGIONS_INPUT}")\n`);
     
     await fs.mkdir(OUT_DIR, { recursive: true });
-    
+
+    // ✅ Charger le cache disque des fetches réseau (court-circuite les appels API)
+    SCORER_CACHE = await loadScorerCache();
+    const _scorerCacheCount = Object.keys(SCORER_CACHE.data).length;
+    console.log(`📁 Cache scorer: ${_scorerCacheCount} entrées (TTL 7j)${SCORER_CACHE.updated ? ' — maj ' + SCORER_CACHE.updated : ''}\n`);
+
     // ✅ v3.21: Chargement conditionnel des CSV
     const [usStocks, europeStocks, asiaStocks] = await Promise.all([
         SELECTED_REGIONS.us     ? loadStockCSV('data/filtered/Actions_US_filtered.csv')     : Promise.resolve([]),
@@ -2719,13 +2800,24 @@ async function main() {
         const benchInfo = region.name === 'us' ? 'SPY (daily)' : region.name === 'europe' ? 'EXSA/STOXX600 (daily)' : 'INDA/EWY/EWT/AAXJ (all weekly)';
         console.log(`\n🌍 ${region.name.toUpperCase()} (benchmark: ${benchInfo})`);
         const enrichedStocks = [];
-        
+
+        let batchesSinceSave = 0;
         for (let i = 0; i < region.stocks.length; i += CONFIG.CHUNK_SIZE) {
             const batch = region.stocks.slice(i, i + CONFIG.CHUNK_SIZE);
             const enrichedBatch = await Promise.all(batch.map(enrichStock));
             enrichedStocks.push(...enrichedBatch);
+
+            // ✅ Sauvegarde incrémentale du cache (~toutes les 100 stocks) : préserve le
+            //    travail fetché si le job timeout (limite 6h GitHub Actions)
+            if (++batchesSinceSave >= 20) {
+                await saveScorerCache();
+                batchesSinceSave = 0;
+                console.log(`  💾 Cache scorer sauvegardé (${enrichedStocks.length}/${region.stocks.length} ${region.name})`);
+            }
         }
-        
+        // ✅ Flush du cache en fin de région
+        await saveScorerCache();
+
         // ✅ v3.27: Injecter le champ region pour le peer group scoring
         const regionTag = region.name.toUpperCase();
         for (const s of enrichedStocks) {

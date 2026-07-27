@@ -1047,11 +1047,19 @@ async function writeCSVGeneric(file, rows, header) {
 // Bourses asiatiques à tickers 6 chiffres (zéros de tête mangés à l'export Excel :
 // Samsung 5930→005930, SK Hynix 660→000660). On re-pad avant résolution.
 const PAD6_EX = new Set(['KRX', 'KOSDAQ', 'SSE', 'SZSE']);
+// Hong Kong : codes du main board sur 4 chiffres, zéros de tête mangés aussi
+// (ASM Pacific 522→0522, Tencent 700→0700). padStart(4) ne touche pas les codes
+// déjà à 4-5 chiffres (9988 reste 9988), ne corrige que les courts qui échouent.
+const PAD4_EX = new Set(['HKEX']);
 
 async function resolveSymbol(ticker, exchange, expectedName = '', country = '') {
   const mic = toMIC(exchange, country);
-  if (PAD6_EX.has((exchange || '').toUpperCase().trim()) && /^\d{1,5}$/.test(ticker)) {
+  const exU = (exchange || '').toUpperCase().trim();
+  if (PAD6_EX.has(exU) && /^\d{1,5}$/.test(ticker)) {
     ticker = ticker.padStart(6, '0');
+  }
+  if (PAD4_EX.has(exU) && /^\d{1,4}$/.test(ticker)) {
+    ticker = ticker.padStart(4, '0');
   }
   let quote = await tryQuote(ticker, mic);
   const looksUS   = quote?.exchange && US_EXCH.test(quote.exchange);
