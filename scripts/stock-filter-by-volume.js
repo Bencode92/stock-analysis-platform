@@ -193,9 +193,19 @@ function buildCacheKey(ticker, country) {
   return c ? `${ticker}:${c}` : ticker;
 }
 
+// Codes courts asiatiques (le seed a "KRX"/"JPX", pas le nom long) → mic exact.
+// Sans ça toMIC renvoie null → tryQuote sans mic → TD résout sur une mauvaise
+// ligne (ex Samsung 005930 tombait sur un GDR fin à 77k au lieu du KRX à 10M).
+const EX_SHORT2MIC = {
+  'jpx':'XTKS', 'krx':'XKRX', 'kosdaq':'XKOS', 'hkex':'XHKG',
+  'sse':'XSHG', 'szse':'XSHE', 'twse':'XTAI', 'nse':'XNSE',
+  'bse':'XBOM', 'set':'XBKK', 'myx':'XKLS', 'idx':'XIDX', 'sgx':'XSES'
+};
+
 function toMIC(exchange, country=''){
   const ex = normalize(exchange);
   if (ex) {
+    if (EX_SHORT2MIC[ex]) return EX_SHORT2MIC[ex];   // Asie : codes courts exacts
     for (const [pat, mic] of EX2MIC_PATTERNS) {
       if (ex.includes(pat)) return mic;
     }
