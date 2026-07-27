@@ -83,6 +83,39 @@ large**, taille thématique réduite, et on l'assume.
 | 2027-07-27 (12 mo) | | | | | | |
 | 2028-07-27 (24 mo) | | | | | | |
 
+## 6. Amendements datés (append-only — le pari §1 reste intact)
+
+> Règle : on n'efface ni ne réécrit le pari gelé. Toute décision de construction s'**ajoute** ici,
+> datée, avec son rationnel. Un plafond ou une règle qui se négocie après coup au fil de l'eau
+> n'est plus une règle ; daté et écrit, c'est une décision assumée.
+
+**A1 — 2026-07-27 · Sizing des 4 profils (curseurs par défaut).**
+Cœur VWCE / ballast (oblig+or) / satellite thématique = **Stable 57/35/8 · Modéré 68/15/17 ·
+Agressif 67/8/25 · Agressif-Thématique 45/5/50**. Dans le satellite : thèmes **equal-weight**
+(le backtest interdit de classer par conviction), **ETF-primary** (H4 : le direct ne bat quasi pas
+l'ETF-thème). Rationnel : cœur = marché (rien ne le bat) ; satellite = STRUCTURE de risque, pas alpha.
+*Ces chiffres sont les curseurs de départ manipulables ; tout resizing final = nouvel amendement daté.*
+
+**A2 — 2026-07-27 · Robotique exclue du satellite investi (résout le point 1 d'audit).**
+La robotique est en **VEILLE** (critères d'activation non remplis) → elle ne peut pas figurer dans un
+satellite investi. Le pré-calcul qui donnait l'Agressif-Thématique à ~39 % de capex-IA **comptait à tort
+la robotique**. Recalcul robotique exclue : **32 % ≤ 35 %**. **Conséquence : le plafond 35 % tient sans
+amendement ni trim.** On n'a pas eu à « assumer un dépassement » — il n'y en avait pas.
+
+**A3 — 2026-07-27 · `transition_progressive` de la poche actions scorées (point 2).**
+Le bras B a testé un **proxy** qualité sur ~200 large-caps US, pas le composite ni l'univers. Il ne
+justifie pas de **vendre** FHI/EXPD/CBOE/CF : le coût (frottement + PFU 30 % sur PV latentes hors enveloppe)
+est **réel et certain**, le bénéfice **théorique et hors-univers**. Décision : **gel des achats** dans la
+poche scorée, **décroissance naturelle** ou transition par tranches vers le satellite structurel. **Aucune
+vente forcée.** Flag `transition_progressive` dans le générateur.
+
+**A4 — 2026-07-27 · Règle de dérive passive du cœur (point 4).**
+`CORE_MEGATECH` (part IA implicite de VWCE, ~22 % à date) est une **variable, pas une constante** : si les
+mega-caps montent, le cœur consomme davantage du budget capex-IA sans transaction. Règle écrite d'avance :
+**recalcul à chaque revue trimestrielle** ; **bande de tolérance ±3 pts** ; **action (trim satellite)
+seulement au rebalancement annuel**, sauf dépassement passif > 3 pts qui déclenche un trim hors-cycle.
+Un dépassement passif ne se **renégocie** pas — il applique cette règle.
+
 ---
 
 *Ce document rend la démarche crédible précisément parce qu'il peut échouer publiquement.
