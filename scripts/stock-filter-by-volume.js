@@ -1287,14 +1287,26 @@ async function checkVolume(r, region){
     console.log(`✅ ${region}: ${filtered.length}/${rows.length} retenus`);
   }
 
+  // ✅ 2026-07-27 : PERSISTANCE AVANT ENRICHISSEMENT.
+  // enrichWithFundamentals tourne des heures sur les gros univers (6106 titres Asie) et peut
+  // être tué par le timeout du job GitHub AVANT d'atteindre l'écriture. Résultat du bug : les
+  // 6106 retenus (Japon inclus) n'étaient JAMAIS écrits, _filtered.csv restait périmé, et le
+  // scorer aval produisait un stocks_asia.json sans Japon. On écrit donc le résultat du filtre
+  // volume d'abord (il survit à tout), puis on ré-écrit avec les fondamentaux si l'enrichissement
+  // aboutit (mêmes objets ligne mutés en place → 2ᵉ écriture = mise à jour).
+  for (const output of allOutputs) {
+    await writeCSV(output.file, output.rows);
+    console.log(`💾 ${output.title}: ${output.rows.length} stocks (pré-enrichissement) → ${output.file}`);
+  }
+
   // Enrichissement fondamentaux multi-années
   let combined = allOutputs.flatMap(o => o.rows);
   combined = await enrichWithFundamentals(combined, MAX_NEW_FETCHES_PER_RUN);
 
-  // Sauvegarde par région
+  // Ré-écriture par région AVEC les fondamentaux (si l'enrichissement a abouti)
   for (const output of allOutputs) {
     await writeCSV(output.file, output.rows);
-    console.log(`📁 ${output.title}: ${output.rows.length} stocks → ${output.file}`);
+    console.log(`📁 ${output.title}: ${output.rows.length} stocks (enrichi) → ${output.file}`);
   }
 
   await writeCSV(path.join(OUT_DIR, 'Actions_filtrees_par_volume.csv'), combined);
