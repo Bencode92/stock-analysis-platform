@@ -143,7 +143,11 @@ const CONFIG = {
     API_KEY: process.env.TWELVE_DATA_API_KEY,
     DEBUG: process.env.DEBUG === '1',
     CHUNK_SIZE: 5,
-    CREDIT_LIMIT: 800,
+    // 2000/min (marge sous les 2584/min du tier API) : ~2,5× plus rapide qu'à 800.
+    // But : que le run cold FINISSE dans les 6h (Asie ~3h20 au lieu de ~8h) → le cache
+    // se réchauffe → runs suivants ~10× moins chers. Si des runs concurrents provoquent
+    // du 429, le backoff les auto-throttle (baisser à 1500 si ça arrive souvent).
+    CREDIT_LIMIT: 2000,
     CREDITS: {
         QUOTE: 1,
         TIME_SERIES: 5,
