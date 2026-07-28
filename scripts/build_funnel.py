@@ -30,6 +30,18 @@ SECTOR = {"semi": "Technologie", "ai_infra": "Technologie", "grid": "Utilities /
           "nuclear": "Énergie / Utilities", "defense": "Industrie / Défense",
           "materials": "Matériaux", "robotics": "Industrie"}
 
+# Contexte pédagogique en langage clair (driver + goulot + dépendance) — QUALITATIF, sans chiffre inventé.
+# Les stats précises + sourcées (« 50% de l'Europe est nucléaire ») viendront de la couche news/IA (Phase B).
+CONTEXT = {
+ "semi": "Le driver : l'IA fait exploser la demande de puces avancées. Mais on ne peut pas les fabriquer sans une poignée d'équipementiers amont — ASML, seul au monde à faire la lithographie EUV, plus le dépôt, la gravure et le test. Goulot ultra-concentré, très exposé à Taïwan (TSMC) et au Japon.",
+ "grid": "Le driver : l'électrification (voitures électriques, datacenters, renouvelables) sature des réseaux vieillissants. Le goulot n'est pas la production d'électricité mais son TRANSPORT — transformateurs et câbles haute tension, avec des délais de commande de plusieurs années. Cuivre en amont, largement importé.",
+ "nuclear": "Le driver : relance mondiale du nucléaire pour décarboner. Le goulot est le COMBUSTIBLE — l'uranium (Kazakhstan, Niger, Canada) et surtout son enrichissement, longtemps dépendant de la Russie. Chokepoint plus géopolitique qu'industriel.",
+ "ai_infra": "Le driver : les datacenters IA consomment des quantités folles d'électricité et de refroidissement. Le goulot, ce sont les équipements électriques et thermiques (Vertiv, Eaton, Schneider) et l'accès à l'énergie. Très couplé au capex-IA — si l'IA ralentit, ça ralentit.",
+ "defense": "Le driver : réarmement structurel, l'Europe surtout. Le vrai goulot n'est pas les avions ou chars médiatisés mais les COMPOSANTS critiques (électronique, munitions, capteurs). Cher après la forte hausse récente.",
+ "materials": "Le driver : l'électrification et la défense ont besoin de cuivre, terres rares, lithium. Le goulot : la Chine domine le RAFFINAGE (surtout les terres rares). Chokepoint géopolitique amont — celui qui raffine tient la chaîne.",
+ "robotics": "En VEILLE — thème pas encore activé (critères d'activation non remplis). On surveille, on n'investit pas.",
+}
+
 # axes du panel : (champ stock, clé sortie). Momentum=contexte ; le reste=signal.
 AXES = [("perf_1y", "momentum"), ("roic", "moat"), ("buffett_score", "qualite"),
         ("volatility_3y", "risque"), ("fcf_yield", "valeur")]
@@ -62,6 +74,7 @@ for t in FW["themes"]:
              "capex_ia": t.get("capex_ia"), "survives_ai": t.get("survives_ai"),
              "veille": is_veille(t), "regions": {}, "news": [],
              # textes riches (le "pourquoi" + la chaîne détaillée)
+             "context": CONTEXT.get(t["key"]),
              "thesis": t.get("thesis"), "diff": t.get("diff"), "decomp": t.get("decomp"),
              "risks": t.get("risks") or [], "gap": t.get("gap"), "maillons": maillons}
     for reg in ["US", "EU", "Asie"]:

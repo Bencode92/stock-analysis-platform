@@ -107,6 +107,10 @@
   /* rich text : thèse, chaîne, maillons, risques */
   .meta{margin-bottom:12px;font-size:12.5px}
   .blk-h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;margin-bottom:6px}
+  .context{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;
+    padding:15px 17px;margin-bottom:16px}
+  .context p{margin:0;font-size:14.5px;line-height:1.55}
+  .context .blk-h{color:var(--accent)}
   .thesis{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
     border-radius:10px;padding:14px 16px;margin-bottom:22px;box-shadow:var(--shadow)}
   .thesis p{margin:0 0 8px;font-size:14px}
@@ -114,8 +118,12 @@
   .thesis .diff{color:var(--muted);font-size:12.5px}
   .sec-h{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;
     margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-  .chain{display:flex;flex-direction:column;gap:10px}
-  .maillon{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+  .chain{display:flex;flex-direction:column;gap:12px;position:relative;padding-left:28px}
+  .chain::before{content:"";position:absolute;left:8px;top:12px;bottom:12px;width:2px;
+    background:linear-gradient(var(--accent),var(--border))}
+  .maillon{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+  .maillon::before{content:"";position:absolute;left:-26px;top:15px;width:12px;height:12px;border-radius:50%;
+    background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 0 2px var(--border)}
   .mlabel{font-weight:650;font-size:14.5px;margin-bottom:3px}
   .mdesc{color:var(--muted);font-size:12.5px;margin-bottom:8px;line-height:1.5}
   .comps{display:flex;flex-wrap:wrap;gap:6px}
@@ -295,8 +303,9 @@ function renderChain(sector, key){
     ? `<div class="risks"><div class="blk-h">⚠️ Risques de la chaîne</div><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>` : "";
   return `
     <div class="pos meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA : <b>${ch.survives_ai||'?'}</b></div>
-    ${ch.thesis?`<div class="thesis"><div class="blk-h">Thèse — pourquoi cette chaîne</div><p>${ch.thesis}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}${ch.decomp?`<p class="diff">${ch.decomp}</p>`:''}</div>`:''}
-    <h3 class="sec-h">La chaîne, étape par étape</h3>
+    ${ch.context?`<div class="context"><div class="blk-h">🔑 En bref — pourquoi regarder cette chaîne</div><p>${ch.context}</p></div>`:''}
+    ${ch.thesis?`<div class="thesis"><div class="blk-h">La thèse (angle picks &amp; shovels)</div><p>${ch.thesis}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}${ch.decomp?`<p class="diff">${ch.decomp}</p>`:''}</div>`:''}
+    <h3 class="sec-h">Le schéma de la chaîne, étape par étape</h3>
     <div class="chain">${chainHTML}</div>
     <h3 class="sec-h">Performance par région</h3>
     <div class="regions">${cols}</div>
