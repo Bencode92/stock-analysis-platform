@@ -70,6 +70,19 @@
   .next-btn{margin-top:26px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);
     border-radius:var(--r-s);padding:10px 18px;font-size:13.5px;cursor:pointer;font-weight:600}
   .next-btn:hover{background:var(--accent);color:#fff}
+  /* COULEUR PAR SECTEUR (chrome teinté ; les couleurs data vert/ambre/rouge restent) */
+  .sec-card{border-top:3px solid var(--accent)}
+  .sec-card .eyebrow{color:var(--accent);font-weight:700}
+  .chainview .sec-h{color:var(--accent)}
+  .chainview .sec-h::after{background:color-mix(in srgb,var(--accent) 22%,var(--line))}
+  .chainview .lab{color:var(--accent)}
+  .chainview .tab.active{background:var(--accent);border-color:var(--accent)}
+  .probleme .shk{border-top:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+  .probleme .shk-v{color:var(--accent)}
+  .brief{border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+  .choke{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+  .kpi{border-top:3px solid var(--accent)}
+  .choke-t{color:var(--accent)}
 
   /* cards grid */
   .grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
@@ -172,7 +185,7 @@
   .trip li{font-size:12.5px;margin:5px 0;color:var(--ink2);line-height:1.5}
   .sh-note{font-family:var(--sans);text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400;font-size:11px}
   /* surlignage des termes clés (highlighter) */
-  .hl{font-weight:700;background:linear-gradient(180deg,transparent 58%,rgba(47,95,146,.16) 58%);padding:0 1px;border-radius:1px}
+  .hl{font-weight:700;background:linear-gradient(180deg,transparent 58%,color-mix(in srgb,var(--accent) 20%,transparent) 58%);padding:0 1px;border-radius:1px}
   /* KPI cards */
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 18px}
   .kpi{border:1px solid var(--line2);border-radius:var(--r);padding:15px 16px;background:var(--surface);box-shadow:0 1px 2px rgba(14,22,32,.05)}
@@ -240,6 +253,10 @@
 
 <script>
 const FLAG={US:"🇺🇸",EU:"🇪🇺",Asie:"🌏"};
+// couleur d'identité par secteur (fonctionnelle : on sait où on est)
+const SECTOR_COLORS={"Technologie":"#3a5bd0","Utilities / Industrie":"#0f8f7e","Énergie / Utilities":"#c0862e",
+  "Industrie / Défense":"#566b8c","Matériaux":"#8a5cc0","Industrie":"#6b8e5a"};
+const secColor=n=>SECTOR_COLORS[n]||"#16324e";
 let DATA=null, PATH=[];
 // surligne les termes clés en majuscules (ASML, EUV, TRANSPORT, HVDC, monopole…) en gras
 function hl(t){return (t||"").replace(/\b([A-ZÀ-Ý][A-ZÀ-Ý0-9&.\-]{1,})\b/g,'<b class="hl">$1</b>');}
@@ -297,13 +314,14 @@ function renderCrumbs(){
 function renderSectors(){
   return `<div class="grid">`+Object.entries(DATA.sectors).map(([name,v])=>{
     const n=Object.keys(v.chains).length, ch=Object.values(v.chains).map(c=>c.label.split(" ")[0]).slice(0,4).join(" · ");
-    return `<div class="card nav" data-go='["${name}"]'><span class="arrow">→</span><div class="eyebrow">Secteur</div><h3>${name}</h3><div class="pos">${n} chaîne${n>1?'s':''} — ${ch}</div></div>`;
+    return `<div class="card nav sec-card" data-go='["${name}"]' style="--accent:${secColor(name)}"><span class="arrow">→</span><div class="eyebrow">Secteur</div><h3>${name}</h3><div class="pos">${n} chaîne${n>1?'s':''} — ${ch}</div></div>`;
   }).join("")+`</div>`;
 }
 function renderChains(sector){
-  return `<div class="grid">`+Object.entries(DATA.sectors[sector].chains).map(([k,ch])=>{
+  const col=secColor(sector);
+  return `<div class="grid" style="--accent:${col}">`+Object.entries(DATA.sectors[sector].chains).map(([k,ch])=>{
     const regs=Object.entries(ch.regions).map(([r,d])=>`${FLAG[r]} ${d.panel.n}`).join("&nbsp;&nbsp;");
-    return `<div class="card nav" data-go='["${sector}","${k}"]'><span class="arrow">→</span><div class="eyebrow">Chaîne #${ch.rank||'—'}</div><h3>${ch.label}</h3><div class="pos">${ch.position}</div><div class="chips"><span class="chip">capex-IA ${ch.capex_ia}%</span>${ch.veille?'<span class="chip veille">veille</span>':''}</div><div class="rcount">${regs||'—'}</div></div>`;
+    return `<div class="card nav sec-card" data-go='["${sector}","${k}"]'><span class="arrow">→</span><div class="eyebrow">Chaîne #${ch.rank||'—'}</div><h3>${ch.label}</h3><div class="pos">${ch.position}</div><div class="chips"><span class="chip">capex-IA ${ch.capex_ia}%</span>${ch.veille?'<span class="chip veille">veille</span>':''}</div><div class="rcount">${regs||'—'}</div></div>`;
   }).join("")+`</div>`;
 }
 function renderChain(sector,key){
@@ -377,7 +395,7 @@ function renderChain(sector,key){
   ].filter(t=>t.h&&t.h.trim());
   const tabbar=`<div class="tabs">${tabs.map((t,i)=>`<button class="tab${i===0?' active':''}" data-tab="${t.id}">${t.l}</button>`).join("")}</div>`;
   const panels=tabs.map((t,i)=>`<section class="tabpanel${i===0?' active':''}" data-panel="${t.id}"><div class="sec-h">${t.l}${t.id==='e'?' <span class="sh-note">— descriptif, pas une reco</span>':''}</div>${t.h}${i<tabs.length-1?`<button class="next-btn" data-next="${tabs[i+1].id}">${tabs[i+1].l} →</button>`:''}</section>`).join("");
-  return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>${tabbar}${panels}`;
+  return `<div class="chainview" style="--accent:${secColor(sector)};--accent2:${secColor(sector)}"><div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>${tabbar}${panels}</div>`;
 }
 
 fetch("./data/funnel.json").then(r=>r.json()).then(d=>{
