@@ -70,11 +70,16 @@ for t in FW["themes"]:
     # maillons = les ÉTAPES de la chaîne (label + explication + boîtes avec rôle, tagué région)
     def has_data(tk, reg):
         return (tk or "").upper() in IDX.get(reg, {})
+    def cmet(tk, reg, field):
+        return IDX.get(reg, {}).get((tk or "").upper(), {}).get(field)
     maillons = []
     for m in t["maillons"]:
         comps = [{"ticker": c.get("ticker"), "name": c.get("name"), "role": c.get("role"),
                   "region": c.get("region"), "status": c.get("status"),
-                  "has_data": has_data(c.get("ticker"), c.get("region"))}
+                  "has_data": has_data(c.get("ticker"), c.get("region")),
+                  "perf_1y": cmet(c.get("ticker"), c.get("region"), "perf_1y"),
+                  "roic": cmet(c.get("ticker"), c.get("region"), "roic"),
+                  "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score")}
                  for c in m.get("companies", [])]
         maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps})
     chain = {"label": t["label"], "position": t["position"], "rank": t.get("rank"),

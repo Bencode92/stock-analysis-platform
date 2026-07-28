@@ -133,6 +133,15 @@
   .et-note{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:3px}
   /* surlignage des termes clés (highlighter) */
   .hl{font-weight:700;background:linear-gradient(180deg,transparent 58%,rgba(47,95,146,.16) 58%);padding:0 1px;border-radius:1px}
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 18px}
+  .kpi{border:1px solid var(--line2);border-radius:var(--r);padding:15px 16px;background:var(--surface);box-shadow:0 1px 2px rgba(14,22,32,.05)}
+  .kn{font-family:var(--mono);font-size:23px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .kl{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px}
+  @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  /* stats inline sur les boîtes de la chaîne */
+  .cperf{font-family:var(--mono);font-size:11px;font-weight:700}
+  .croic{font-family:var(--mono);font-size:9.5px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
   /* graphe de comparaison régionale */
   .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .cmp-col{border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;background:var(--panel)}
@@ -263,7 +272,11 @@ function renderChain(sector,key){
     return `<div class="region"><h4><span>${FLAG[r]} ${r}</span><span class="n">${p.n} act.</span></h4>${body}</div>`;
   }).join("");
   const chainHTML=(ch.maillons||[]).map(m=>{
-    const comps=(m.companies||[]).map(c=>`<span class="comp ${c.has_data?'':'nd'}">${FLAG[c.region]||'•'}<span class="ctk">${c.ticker||''}</span><span class="crole">${c.role||c.name||''}</span></span>`).join("");
+    const comps=(m.companies||[]).map(c=>{
+      const perf=c.perf_1y!=null?`<span class="cperf ${c.perf_1y<0?'b':'g'}">${c.perf_1y>0?'+':''}${c.perf_1y.toFixed(0)}%</span>`:'';
+      const roic=c.roic!=null?`<span class="croic">ROIC ${c.roic.toFixed(0)}%</span>`:'';
+      return `<span class="comp ${c.has_data?'':'nd'}">${FLAG[c.region]||'•'}<span class="ctk">${c.ticker||''}</span>${perf}${roic}<span class="crole">${c.role||c.name||''}</span></span>`;
+    }).join("");
     return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div></div>`;
   }).join("");
   const risks=(ch.risks&&ch.risks.length)?`<div class="risks"><span class="lab">Risques de la chaîne</span><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:"";
@@ -280,13 +293,27 @@ function renderChain(sector,key){
     return rlist.map(r=>{const v=ch.regions[r].panel[metric];const g=grade(metric,v);
       return `<div class="crow"><span class="cr-l">${FLAG[r]} ${r}</span><span class="cr-bar"><span class="${g.bg}" style="width:${v!=null?Math.max(4,Math.abs(v)/mx*100):0}%"></span></span><span class="cr-v ${g.cls}">${fmt(v,metric)}</span></div>`;}).join("");
   };
-  const compHTML=rlist.length>1?`<div class="compare"><div class="cmp-col"><span class="lab">Qui a le moat — ROIC</span>${cmp("moat")}</div><div class="cmp-col"><span class="lab">Qui a couru — momentum</span>${cmp("momentum")}</div></div>`:"";
+  // KPI + graphes
+  const parseP=s=>s?parseFloat(String(s).replace(/[^0-9.\-]/g,'')):null;
+  const totalEn=(ch.maillons||[]).reduce((s,m)=>s+(m.companies||[]).length,0);
+  const domR=rlist.length?rlist.reduce((a,b)=>((ch.regions[b].panel.moat??-99)>(ch.regions[a].panel.moat??-99)?b:a)):null;
+  const w52n=parseP(e.signal_w52);
+  const kpis=`<div class="kpis">
+    <div class="kpi"><div class="kn ${w52n!=null&&w52n<0?'b':'g'}">${e.signal_w52||'—'}</div><div class="kl">Panier signal · 52 sem</div></div>
+    <div class="kpi"><div class="kn">${ch.capex_ia}%</div><div class="kl">Exposition capex-IA</div></div>
+    <div class="kpi"><div class="kn">${totalEn}</div><div class="kl">Boîtes de la chaîne</div></div>
+    <div class="kpi"><div class="kn">${domR?FLAG[domR]+' '+domR:'—'}</div><div class="kl">Meilleur moat (ROIC)</div></div></div>`;
+  const H=[['3 mois',e.signal_3m],['YTD',e.signal_ytd],['52 sem',e.signal_w52]];
+  const mxH=Math.max(...H.map(([_,v])=>Math.abs(parseP(v)||0)),1);
+  const perfC=`<div class="cmp-col"><span class="lab">Perf du panier signal</span>${H.map(([l,v])=>{const n=parseP(v);return `<div class="crow"><span class="cr-l">${l}</span><span class="cr-bar"><span class="${n<0?'bg-b':'bg-g'}" style="width:${n!=null?Math.max(4,Math.abs(n)/mxH*100):0}%"></span></span><span class="cr-v ${n<0?'b':'g'}">${v||'—'}</span></div>`;}).join("")}</div>`;
+  const moatC=rlist.length>1?`<div class="cmp-col"><span class="lab">Qui a le moat — ROIC par région</span>${cmp("moat")}</div>`:"";
   return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>
+    ${kpis}
     ${ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${hl(ch.context)}</p></div>`:''}
+    <div class="sec-h">Les chiffres en un coup d'œil</div><div class="compare">${perfC}${moatC}</div>
     ${ch.thesis?`<div class="thesis"><p>${hl(ch.thesis)}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}</div>`:''}
     <div class="sec-h">Le schéma de la chaîne, étape par étape</div><div class="chain">${chainHTML}</div>
     ${expo}
-    ${compHTML?`<div class="sec-h">Comparaison régionale</div>${compHTML}`:''}
     <div class="sec-h">Détail par région</div><div class="regions">${cols}</div>
     ${risks}${newsHTML(ch.news)}`;
 }
