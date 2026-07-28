@@ -15,17 +15,6 @@
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
     --r:8px; --r-s:6px;
   }
-  @media (prefers-color-scheme:dark){
-    :root{
-      --bg:#0c1014; --surface:#12181f; --surface2:#161d26; --panel:#141b23;
-      --ink:#e8edf3; --ink2:#c3ccd8; --muted:#8593a3; --faint:#5f6b78;
-      --line:#222b36; --line2:#2e3946; --accent:#8fb4dc; --accent2:#6b96c6;
-      --good:#3fb583; --warn:#d0a04a; --bad:#dd6c5e; --neutral:#6b9bd0;
-      --good-b:#122318; --warn-b:#241d10; --bad-b:#251512; --neutral-b:#111c28;
-    }
-  }
-  :root[data-theme="light"]{--bg:#ffffff;--surface:#ffffff;--surface2:#f6f8fa;--panel:#fbfcfd;--ink:#0e1620;--ink2:#33404f;--muted:#697585;--faint:#9aa5b2;--line:#e7ebf0;--line2:#d4dae2;--accent:#16324e;--accent2:#2f5f92;--good:#0c7a4d;--warn:#9c6b12;--bad:#b23a2e;--neutral:#37618e;--good-b:#e5f2ec;--warn-b:#f4ecdb;--bad-b:#f6e6e3;--neutral-b:#e6edf5}
-  :root[data-theme="dark"]{--bg:#0c1014;--surface:#12181f;--surface2:#161d26;--panel:#141b23;--ink:#e8edf3;--ink2:#c3ccd8;--muted:#8593a3;--faint:#5f6b78;--line:#222b36;--line2:#2e3946;--accent:#8fb4dc;--accent2:#6b96c6;--good:#3fb583;--warn:#d0a04a;--bad:#dd6c5e;--neutral:#6b9bd0;--good-b:#122318;--warn-b:#241d10;--bad-b:#251512;--neutral-b:#111c28}
 
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -168,7 +157,6 @@
       <h1>Entonnoir</h1>
       <p class="sub">Secteur → Chaîne → Région → Action · <span id="meta"></span></p>
     </div>
-    <button class="theme-btn" id="theme">THÈME</button>
   </header>
 
   <p class="strip"><b>Lecture, pas signal.</b> On décrit. Le momentum est du contexte (neutre) ; le moat / risque / valeur sont le signal (colorés). Les positions gelées ne se re-tradent pas sur une lecture.</p>
@@ -276,10 +264,6 @@ function renderChain(sector,key){
     ${risks}${newsHTML(ch.news)}`;
 }
 
-document.getElementById("theme").onclick=()=>{
-  const c=document.documentElement.getAttribute("data-theme");
-  document.documentElement.setAttribute("data-theme", c==="dark"?"light":c==="light"?"dark":(matchMedia("(prefers-color-scheme:dark)").matches?"light":"dark"));
-};
 fetch("./data/funnel.json").then(r=>r.json()).then(d=>{
   DATA=d;
   document.getElementById("meta").textContent="généré "+(d.meta.generated||"").slice(0,10);
