@@ -139,14 +139,18 @@
   .modal-x{border:1px solid var(--line2);background:var(--surface);border-radius:6px;width:30px;height:30px;cursor:pointer;color:var(--muted);font-size:13px;flex-shrink:0}
   .modal-x:hover{color:var(--ink);border-color:var(--muted)}
   .modal-scroll{overflow:auto;padding:6px 20px 18px}
-  .cmp-table{width:100%;border-collapse:collapse;font-size:12.5px}
-  .cmp-table th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:right;padding:10px 9px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--surface)}
-  .cmp-table th:first-child,.cmp-table th:last-child{text-align:left}
-  .cmp-table td{padding:11px 9px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2);white-space:nowrap}
-  .cmp-table td.name-td{text-align:left;font-family:var(--sans);color:var(--ink)}
-  .cmp-table td.role-td{text-align:left;font-family:var(--sans);color:var(--muted);font-size:11.5px;white-space:normal;min-width:200px}
-  .cmp-row.me{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
-  .cmp-row.me .name-td b{color:var(--accent)}
+  .cmp-card{border:1px solid var(--line2);border-radius:var(--r);padding:15px 17px;margin-bottom:12px;background:var(--surface)}
+  .cmp-card.me{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface));box-shadow:0 1px 5px rgba(14,22,32,.07)}
+  .cmp-hd{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:2px}
+  .cmp-hd .cflag{font-size:15px}
+  .cmp-hd .cmp-tk{font-family:var(--mono);font-size:15px;font-weight:700}
+  .cmp-card.me .cmp-tk{color:var(--accent)}
+  .cmp-hd .cmp-nm{color:var(--muted);font-size:12.5px}
+  .cmp-stats{display:flex;flex-wrap:wrap;gap:20px;padding:11px 0;margin-top:9px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .cst{display:flex;flex-direction:column;gap:2px}
+  .cst-l{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);font-weight:600}
+  .cst-v{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cmp-note{margin:12px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2)}
   .modal-note{font-size:11px;color:var(--faint);font-style:italic;margin:12px 0 0}
 
   /* régions + panels */
@@ -335,16 +339,16 @@ function render(){
 }
 function openCompare(sector,key,mi,tk){
   const m=DATA.sectors[sector].chains[key].maillons[mi];
-  const cols=[["perf_1y","Perf 1a"],["perf_ytd","YTD"],["roic","ROIC"],["buffett_score","Buffett"],["quality_score","Qualité"],["volatility_3y","Volat."],["net_margin","Marge"]];
-  const cell=(c,f)=>{const v=c[f];if(v==null)return '<span class="mut">—</span>';
+  const stats=[["perf_1y","Perf 1a"],["perf_ytd","YTD"],["roic","ROIC"],["buffett_score","Buffett"],["quality_score","Qualité"],["volatility_3y","Volat."],["net_margin","Marge"]];
+  const cell=(c,f)=>{const v=c[f];if(v==null)return '—';
     if(f==="buffett_score"||f==="quality_score")return Math.round(v);
-    const s=(v>0&&(f==="perf_1y"||f==="perf_ytd")?"+":"")+v.toFixed(f==="net_margin"?1:0)+"%";return s;};
-  const head=`<tr><th>Société</th>${cols.map(c=>`<th>${c[1]}</th>`).join("")}<th>Rôle</th></tr>`;
-  const rows=m.companies.map(c=>{const me=c.ticker===tk?" me":"";
-    return `<tr class="cmp-row${me}"><td class="name-td">${FLAG[c.region]||''} <b>${c.ticker||''}</b>${c.has_data?'':' <span class="mut">hors pipe</span>'}</td>${cols.map(([f])=>`<td>${cell(c,f)}</td>`).join("")}<td class="role-td">${c.role||c.name||''}</td></tr>`;
+    return (v>0&&(f==="perf_1y"||f==="perf_ytd")?"+":"")+v.toFixed(f==="net_margin"?1:0)+"%";};
+  const cards=m.companies.map(c=>{const me=c.ticker===tk?" me":"";
+    const st=stats.map(([f,l])=>`<div class="cst"><span class="cst-l">${l}</span><span class="cst-v ${(f==='perf_1y'||f==='perf_ytd')&&c[f]!=null?(c[f]<0?'b':'g'):''}">${cell(c,f)}</span></div>`).join("");
+    return `<div class="cmp-card${me}"><div class="cmp-hd"><span class="cflag">${FLAG[c.region]||'•'}</span><b class="cmp-tk">${c.ticker||''}</b>${c.name&&c.name!==c.ticker?`<span class="cmp-nm">${c.name}</span>`:''}${c.has_data?'':'<span class="mut">hors pipeline</span>'}</div><div class="cmp-stats">${st}</div>${(c.note||c.role)?`<p class="cmp-note">${hl(c.note||c.role)}</p>`:''}</div>`;
   }).join("");
   const mo=document.getElementById("modal");
-  mo.innerHTML=`<div class="modal-card" style="--accent:${secColor(sector)}"><div class="modal-h"><span class="lab">${m.label} — comparaison des acteurs</span><button class="modal-x" onclick="closeModal()">✕</button></div><div class="modal-scroll"><table class="cmp-table">${head}${rows}</table><p class="modal-note">Les concurrents directs de ce maillon. La ligne surlignée = la boîte cliquée. Descriptif, pas une reco.</p></div></div>`;
+  mo.innerHTML=`<div class="modal-card" style="--accent:${secColor(sector)}"><div class="modal-h"><span class="lab">${m.label} — comparaison des acteurs</span><button class="modal-x" onclick="closeModal()">✕</button></div><div class="modal-scroll">${cards}<p class="modal-note">Les concurrents directs de ce maillon. La carte surlignée = la boîte cliquée. Descriptif, pas une reco.</p></div></div>`;
   mo.classList.add("open");
 }
 function closeModal(){const mo=document.getElementById("modal");mo.classList.remove("open");mo.innerHTML="";}

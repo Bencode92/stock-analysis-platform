@@ -83,6 +83,24 @@ BLOCKS = {
  },
 }
 
+# Note développée par société (la "valeur ajoutée de chacun") — qualitatif, positionnement connu.
+# Réseau EU rempli en référence ; fallback = le rôle court du framework si absent.
+COMPANY_NOTES = {
+ "ENR":"Siemens Energy — leader mondial des transformateurs HT et du HVDC (division Grid Technologies), carnet de commandes record (154 Md€). Sa force : la profondeur techno sur toute la chaîne réseau. Sa faiblesse : l'expo réseau y est diluée par les turbines à gaz et l'héritage éolien (ex-Gamesa) qui a plombé les marges — moins « pur réseau » que Prysmian.",
+ "GEV":"GE Vernova — le spin-off énergie de General Electric : transfos, HVDC, mais aussi turbines à gaz et éolien. Croissance portée par la demande grid américaine et l'électrification. Comme Siemens Energy, c'est une exposition MIXTE (le réseau y côtoie le gaz et l'éolien), pas un pure-play.",
+ "6501":"Hitachi Energy est le leader mondial des transformateurs et de l'appareillage HT — mais c'est une filiale noyée dans le conglomérat japonais Hitachi (6501.T). En achetant l'action, on n'achète PAS le réseau pur : on achète tout Hitachi (rail, IT, etc.). D'où « noyé ».",
+ "267260":"HD Hyundai Electric — l'exportateur coréen qui profite à plein de la pénurie mondiale de transfos, en envoyant des volumes massifs vers les US et l'Europe. ROIC 25 % et marge nette ~18 % remarquables. C'est LE visage de la concurrence asiatique qui bouscule l'oligopole européen sur le segment standard.",
+ "PRY":"Prysmian — n°1 mondial des câbles haute tension et sous-marins, le pure-play le PLUS propre du réseau. Bénéficiaire direct des interconnexions européennes et de l'offshore, avec un atout rare : la capacité de pose (navires câbliers) est elle-même un goulot, ce qui protège les marges.",
+ "NEX":"Nexans — pure-play français des câbles HT, recentré ces dernières années sur l'électrification (cession des activités moins stratégiques). Plus petit que Prysmian mais même exposition interconnexions/offshore ; le « challenger » européen.",
+ "NKT":"NKT — pure-play danois ultra-concentré sur les câbles HVDC sous-marins, donc le plus exposé aux grands projets d'interconnexion offshore. Carnet plein sur plusieurs années ; le plus « pur » mais le plus dépendant de quelques méga-contrats.",
+ "ABBN":"ABB — géant suisse de l'électrification et de l'automation, fort en appareillage HT et HVDC light. ROIC 14 % solide, marges de qualité. Exposition double réseau + industrie, ce qui diversifie mais dilue un peu le pari réseau pur.",
+ "SU":"Schneider Electric — leader mondial de la gestion de l'énergie et de l'automation. Sa valeur ajoutée unique : la DOUBLE exposition réseau ET datacenter (le seul à jouer les deux bouts de la chaîne électrique IA), avec des marges logicielles supérieures au hardware.",
+ "ETN":"Eaton — distribution électrique américaine, avec une forte exposition datacenter/IA-infra en plus du réseau. ROIC 13 %. Croissance mécanique portée par l'électrification US ; un pied dans le réseau, un pied dans l'IA-infra.",
+ "RED":"Redeia — opérateur (TSO) du réseau espagnol, monopole régulé : le capex est garanti par le régulateur donc la croissance est visible, mais le rendement est plafonné. Profil « stable/obligataire », très sensible aux taux d'intérêt.",
+ "TRN":"Terna — opérateur (TSO) du réseau italien, même profil régulé que Redeia : croissance capex visible mais rendement plafonné et forte sensibilité aux taux (d'où la perf négative récente). On le tient pour la stabilité, pas la performance.",
+ "LSCABLE":"LS Cable — câblier coréen, le visage de la concurrence asiatique sur les câbles. Monte en gamme et challenge l'oligopole Prysmian/Nexans/NKT, surtout sur les projets hors-Europe.",
+}
+
 def etf_of(t):
     eb = t.get("etf_buy") or {}
     es = t.get("etf_signal") or {}
@@ -119,6 +137,7 @@ for t in FW["themes"]:
     maillons = []
     for i, m in enumerate(t["maillons"]):
         comps = [{"ticker": c.get("ticker"), "name": c.get("name"), "role": c.get("role"),
+                  "note": COMPANY_NOTES.get(c.get("ticker")),
                   "region": c.get("region"), "status": c.get("status"),
                   "has_data": has_data(c.get("ticker"), c.get("region")),
                   "perf_1y": cmet(c.get("ticker"), c.get("region"), "perf_1y"),
