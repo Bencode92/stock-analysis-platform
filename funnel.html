@@ -115,11 +115,18 @@
     line-height:1;height:26px;font-weight:700}
   .mlabel{font-weight:600;font-size:14px}
   .mdesc{color:var(--muted);font-size:12px;margin:4px 0 9px;line-height:1.55}
-  .comps{display:flex;flex-wrap:wrap;gap:6px}
-  .comp{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:var(--r-s);padding:4px 9px;font-size:11.5px;background:var(--surface)}
-  .comp.nd{opacity:.5}
-  .comp .ctk{font-family:var(--mono);font-weight:600;color:var(--ink)}
-  .comp .crole{color:var(--muted);font-size:11px}
+  .comps{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .comp{display:grid;grid-template-columns:112px 1fr auto;align-items:center;gap:14px;
+    border:1px solid var(--line2);border-radius:var(--r-s);padding:11px 14px;background:var(--surface)}
+  .comp.nd{opacity:.55}
+  .chead{display:flex;align-items:center;gap:8px}
+  .chead .cflag{font-size:15px}
+  .chead .ctk{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--ink)}
+  .comp .crole{color:var(--ink2);font-size:12.5px;line-height:1.45}
+  .cstats{display:flex;gap:16px;align-items:center;white-space:nowrap}
+  .st{font-family:var(--mono);font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+  .st-l{font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);font-weight:600}
+  @media(max-width:640px){.comp{grid-template-columns:1fr;gap:7px}.cstats{justify-content:flex-start}}
 
   /* régions + panels */
   .regions{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
@@ -337,19 +344,20 @@ function renderChain(sector,key){
   }).join("");
   const chainHTML=(ch.maillons||[]).map(m=>{
     const comps=(m.companies||[]).map(c=>{
-      const perf=c.perf_1y!=null?`<span class="cperf ${c.perf_1y<0?'b':'g'}">${c.perf_1y>0?'+':''}${c.perf_1y.toFixed(0)}%</span>`:'';
-      const roic=c.roic!=null?`<span class="croic">ROIC ${c.roic.toFixed(0)}%</span>`:'';
-      return `<span class="comp ${c.has_data?'':'nd'}">${FLAG[c.region]||'•'}<span class="ctk">${c.ticker||''}</span>${perf}${roic}<span class="crole">${c.role||c.name||''}</span></span>`;
+      const perf=c.perf_1y!=null?`<span class="st ${c.perf_1y<0?'b':'g'}"><span class="st-l">perf 1a</span>${c.perf_1y>0?'+':''}${c.perf_1y.toFixed(0)}%</span>`:'';
+      const roic=c.roic!=null?`<span class="st"><span class="st-l">ROIC</span>${c.roic.toFixed(0)}%</span>`:'';
+      const buf=c.buffett_score!=null?`<span class="st"><span class="st-l">Buffett</span>${Math.round(c.buffett_score)}</span>`:'';
+      const stats=(perf||roic||buf)?`<div class="cstats">${perf}${roic}${buf}</div>`:`<div class="cstats"><span class="st mut">${c.has_data?'':'hors pipeline'}</span></div>`;
+      return `<div class="comp ${c.has_data?'':'nd'}"><div class="chead"><span class="cflag">${FLAG[c.region]||'•'}</span><span class="ctk">${c.ticker||''}</span></div><div class="crole">${c.role||c.name||''}</div>${stats}</div>`;
     }).join("");
     const face=m.enface?`<div class="mface"><span class="face-l">En face</span> ${hl(m.enface)}</div>`:'';
     return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div>${face}</div>`;
   }).join('<div class="flow-arrow">↓</div>');
   const risks=(ch.risks&&ch.risks.length)?`<div class="risks"><span class="lab">Risques de la chaîne</span><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:"";
   const e=ch.etf||{};
-  const expo=`<div class="expo"><span class="lab">Comment s'exposer</span><div class="expo-row">
-    ${e.buy?`<div class="ei"><span class="et-tag">ETF</span> <b>${e.buy}</b>${e.buy_name?`<div class="et-note">${e.buy_name}</div>`:''}</div>`:`<div class="ei"><span class="et-tag">ETF</span> <span class="et-note">pas d'ETF pur coté — <b>panier de titres</b> (voir actions par région)</span></div>`}
-    ${e.signal_w52?`<div class="ei"><span class="et-tag">Panier signal</span> 52 sem <b>${e.signal_w52}</b> · YTD ${e.signal_ytd||'—'}</div>`:''}
-  </div><div class="et-note">Les actions précises sont dépliables dans chaque région ci-dessous.</div></div>`;
+  const expo=`<div class="expo"><span class="lab">Le véhicule</span><div class="expo-row">
+    ${e.buy?`<div class="ei"><span class="et-tag">ETF</span> <b>${e.buy}</b>${e.buy_name?`<div class="et-note">${e.buy_name}</div>`:''}</div>`:`<div class="ei"><span class="et-tag">ETF</span> <span class="et-note">Pas d'ETF pur coté — on s'expose via un <b>panier de titres</b> (détail par région plus bas).</span></div>`}
+  </div></div>`;
   // graphe de comparaison régionale — qui domine (moat + momentum)
   const rlist=["US","EU","Asie"].filter(r=>ch.regions[r]&&ch.regions[r].panel.n>0);
   const cmp=(metric,inv)=>{
