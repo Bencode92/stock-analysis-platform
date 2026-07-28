@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entonnoir — Secteur › Chaîne › Région › Action</title>
+<style>
+  :root{
+    --bg:#f7f6f2; --surface:#ffffff; --surface2:#fbfaf7; --ink:#1b1a17; --muted:#6f6b62;
+    --border:#e6e3da; --accent:#a0602f; --accent-soft:#f0e3d6;
+    --good:#2f8f6b; --neutral:#3f74a8; --warn:#bd8a34; --bad:#c1564a;
+    --good-bg:#e8f3ee; --warn-bg:#f6ecd8; --bad-bg:#f7e5e2; --neutral-bg:#e7eef6;
+    --radius:12px; --shadow:0 1px 2px rgba(20,18,14,.05),0 4px 16px rgba(20,18,14,.04);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#15151a; --surface:#1e1e25; --surface2:#20202a; --ink:#efede8; --muted:#9c988e;
+      --border:#2f2f39; --accent:#d38b53; --accent-soft:#33291f;
+      --good:#4fb389; --neutral:#6aa0d4; --warn:#d6a94e; --bad:#d8776a;
+      --good-bg:#1c2f28; --warn-bg:#2f2818; --bad-bg:#2f1f1c; --neutral-bg:#1b2531;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#15151a; --surface:#1e1e25; --surface2:#20202a; --ink:#efede8; --muted:#9c988e;
+    --border:#2f2f39; --accent:#d38b53; --accent-soft:#33291f;
+    --good:#4fb389; --neutral:#6aa0d4; --warn:#d6a94e; --bad:#d8776a;
+    --good-bg:#1c2f28; --warn-bg:#2f2818; --bad-bg:#2f1f1c; --neutral-bg:#1b2531;
+  }
+  :root[data-theme="light"]{
+    --bg:#f7f6f2; --surface:#ffffff; --surface2:#fbfaf7; --ink:#1b1a17; --muted:#6f6b62;
+    --border:#e6e3da; --accent:#a0602f; --accent-soft:#f0e3d6;
+    --good:#2f8f6b; --neutral:#3f74a8; --warn:#bd8a34; --bad:#c1564a;
+    --good-bg:#e8f3ee; --warn-bg:#f6ecd8; --bad-bg:#f7e5e2; --neutral-bg:#e7eef6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+       -webkit-font-smoothing:antialiased;font-size:15px}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+  header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:680}
+  .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+  .theme-btn{border:1px solid var(--border);background:var(--surface);color:var(--muted);
+    border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+  .theme-btn:hover{color:var(--ink)}
+  /* doctrine banner */
+  .banner{margin:16px 0 20px;padding:10px 14px;border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12.5px}
+  .banner b{color:var(--ink)}
+  /* breadcrumb */
+  .crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 18px;font-size:13.5px}
+  .crumb{cursor:pointer;color:var(--accent);text-decoration:none;padding:2px 6px;border-radius:6px}
+  .crumb:hover{background:var(--accent-soft)}
+  .crumb.here{color:var(--ink);cursor:default;font-weight:600}
+  .crumb.here:hover{background:none}
+  .sep{color:var(--muted);opacity:.6}
+  /* grid of cards */
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px;cursor:pointer;transition:transform .12s,border-color .12s}
+  .card.nav:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .card .eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .card h3{margin:6px 0 4px;font-size:16.5px;letter-spacing:-.01em}
+  .pos{font-size:12px;color:var(--muted)}
+  .chev{float:right;color:var(--muted);font-size:18px;line-height:1}
+  .tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);
+    color:var(--muted);margin-right:6px;margin-top:8px;font-family:var(--mono)}
+  .tag.veille{color:var(--warn);border-color:var(--warn);background:var(--warn-bg)}
+  /* region columns */
+  .regions{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:4px}
+  .region{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .region h4{margin:0;padding:12px 14px;font-size:14px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;background:var(--surface2)}
+  .region h4 .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .flag{font-size:15px}
+  .panel{padding:6px 14px 12px}
+  .axis{display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border)}
+  .axis:last-child{border-bottom:none}
+  .axis .lab{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .bar{height:6px;border-radius:3px;background:var(--border);position:relative;overflow:hidden}
+  .bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+  .val{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+  .g{color:var(--good)} .n_{color:var(--neutral)} .w{color:var(--warn)} .b{color:var(--bad)} .muted{color:var(--muted)}
+  .bg-g{background:var(--good)} .bg-n{background:var(--neutral)} .bg-w{background:var(--warn)} .bg-b{background:var(--bad)}
+  .actions-toggle{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);
+    padding:10px 14px;color:var(--accent);cursor:pointer;font-size:12.5px;font-family:var(--sans)}
+  .actions-toggle:hover{background:var(--surface2)}
+  table.acts{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.acts th,table.acts td{padding:6px 14px;text-align:right;border-top:1px solid var(--border)}
+  table.acts th:first-child,table.acts td:first-child{text-align:left}
+  table.acts th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+  table.acts td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  table.acts td:first-child{font-family:var(--sans)}
+  .tk{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .nodata{opacity:.5}
+  /* news slot */
+  .news{margin-top:14px;padding:12px 14px;border:1px dashed var(--border);border-radius:10px;background:var(--surface2)}
+  .news .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:4px}
+  .news .empty{color:var(--muted);font-size:12.5px;font-style:italic}
+  .empty-region{padding:20px 14px;color:var(--muted);font-size:12.5px;font-style:italic;text-align:center}
+  .foot{margin-top:40px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);padding-top:14px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:2px 0 16px}
+  .legend b{color:var(--ink);font-weight:600}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Entonnoir des chaînes de valeur</h1>
+      <p class="sub">Secteur › Chaîne d'approvisionnement › Région › Action — <span id="meta"></span></p>
+    </div>
+    <button class="theme-btn" id="theme">◐ thème</button>
+  </header>
+
+  <div class="banner">
+    <b>Lecture, pas signal.</b> Cet outil <b>décrit</b> : le momentum est du <b>contexte</b> (neutre), le
+    <b>moat / risque / valeur</b> sont le vrai signal (colorés). Les positions gelées ne se re-tradent pas sur une
+    lecture — cette page informe, elle ne décide pas.
+  </div>
+
+  <div class="legend">
+    <span><span class="dot bg-n"></span><b>Momentum</b> perf 1a (contexte)</span>
+    <span><span class="dot bg-g"></span><b>Moat</b> ROIC</span>
+    <span><span class="dot bg-g"></span><b>Qualité</b> Buffett</span>
+    <span><span class="dot bg-w"></span><b>Risque</b> volatilité</span>
+    <span><span class="dot bg-g"></span><b>Valeur</b> FCF yield</span>
+  </div>
+
+  <nav class="crumbs" id="crumbs"></nav>
+  <main id="app"></main>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const FLAG = {US:"🇺🇸", EU:"🇪🇺", Asie:"🌏"};
+let DATA = null;
+let PATH = []; // [sectorKey, chainKey]
+
+// ---- color logic : moat/qualité/risque/valeur = signal ; momentum = neutre (doctrine) ----
+function grade(axis, v){
+  if(v===null||v===undefined) return {cls:"muted", bg:"", w:0};
+  if(axis==="momentum") return {cls:"n_", bg:"bg-n", w:clamp((v+50)/250)}; // neutre toujours
+  if(axis==="moat")   return band(v, [ [20,"g","bg-g"], [5,"w","bg-w"] ], "b","bg-b", clamp((v+10)/50));
+  if(axis==="qualite")return band(v, [ [70,"g","bg-g"], [50,"w","bg-w"] ], "b","bg-b", clamp(v/100));
+  if(axis==="valeur") return band(v, [ [4,"g","bg-g"], [1,"w","bg-w"] ], "b","bg-b", clamp((v+2)/12));
+  if(axis==="risque"){ // inversé : bas = bon
+    const w = clamp(v/80);
+    if(v<35) return {cls:"g",bg:"bg-g",w}; if(v<50) return {cls:"w",bg:"bg-w",w}; return {cls:"b",bg:"bg-b",w};
+  }
+  return {cls:"muted",bg:"",w:0};
+}
+function band(v, tiers, elseCls, elseBg, w){
+  for(const [thr,cls,bg] of tiers){ if(v>=thr) return {cls,bg,w}; }
+  return {cls:elseCls,bg:elseBg,w};
+}
+function clamp(x){ return Math.max(.04, Math.min(1, x)); }
+function fmt(v, axis){
+  if(v===null||v===undefined) return "—";
+  if(axis==="qualite") return Math.round(v);
+  const s = (v>0&&axis!=="risque"?"+":"") + v.toFixed(1);
+  return s + "%";
+}
+const AXES = [["momentum","Momentum"],["moat","Moat"],["qualite","Qualité"],["risque","Risque"],["valeur","Valeur"]];
+
+function panelHTML(p){
+  return `<div class="panel">` + AXES.map(([k,lab])=>{
+    const g = grade(k, p[k]);
+    return `<div class="axis"><span class="lab">${lab}</span>
+      <span class="bar"><span class="${g.bg}" style="width:${(g.w*100).toFixed(0)}%"></span></span>
+      <span class="val ${g.cls}">${fmt(p[k],k)}</span></div>`;
+  }).join("") + `</div>`;
+}
+function newsHTML(arr){
+  const items = (arr&&arr.length)
+    ? arr.map(n=>`<div>📰 <b>${n.date||""}</b> ${n.titre||""} ${n.url?`<a href="${n.url}" target="_blank" rel="noopener">source</a>`:""}</div>`).join("")
+    : `<div class="empty">Aucune actualité cette semaine — silence par défaut (le vide est un résultat valide).</div>`;
+  return `<div class="news"><div class="h">📰 Cette semaine</div>${items}</div>`;
+}
+
+function render(){
+  renderCrumbs();
+  const app = document.getElementById("app");
+  if(PATH.length===0){ app.innerHTML = renderSectors(); }
+  else if(PATH.length===1){ app.innerHTML = renderChains(PATH[0]); }
+  else { app.innerHTML = renderChain(PATH[0], PATH[1]); }
+  app.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ PATH=JSON.parse(el.dataset.go); render(); window.scrollTo(0,0); });
+  app.querySelectorAll(".actions-toggle").forEach(b=>b.onclick=()=>{
+    const t = b.nextElementSibling; t.style.display = t.style.display==="none"?"":"none";
+    b.textContent = t.style.display==="none" ? b.dataset.show : b.dataset.hide;
+  });
+}
+function renderCrumbs(){
+  const c = document.getElementById("crumbs");
+  let html = `<a class="crumb ${PATH.length===0?'here':''}" data-go="[]">Accueil</a>`;
+  if(PATH.length>=1){ html += `<span class="sep">›</span><a class="crumb ${PATH.length===1?'here':''}" data-go='["${PATH[0]}"]'>${PATH[0]}</a>`; }
+  if(PATH.length>=2){ const ch = DATA.sectors[PATH[0]].chains[PATH[1]];
+    html += `<span class="sep">›</span><span class="crumb here">${ch.label}</span>`; }
+  c.innerHTML = html;
+  c.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ PATH=JSON.parse(el.dataset.go); render(); window.scrollTo(0,0); });
+}
+function renderSectors(){
+  const secs = Object.entries(DATA.sectors);
+  return `<div class="grid">` + secs.map(([name,v])=>{
+    const nch = Object.keys(v.chains).length;
+    const chips = Object.values(v.chains).map(c=>c.label.split(" ")[0]).slice(0,4).join(" · ");
+    return `<div class="card nav" data-go='["${name}"]'><span class="chev">›</span>
+      <div class="eyebrow">Secteur</div><h3>${name}</h3>
+      <div class="pos">${nch} chaîne${nch>1?'s':''} — ${chips}</div></div>`;
+  }).join("") + `</div>`;
+}
+function renderChains(sector){
+  const chains = Object.entries(DATA.sectors[sector].chains);
+  return `<div class="grid">` + chains.map(([key,ch])=>{
+    const regs = Object.entries(ch.regions).map(([r,d])=>`${FLAG[r]} ${d.panel.n}`).join("  ");
+    return `<div class="card nav" data-go='["${sector}","${key}"]'><span class="chev">›</span>
+      <div class="eyebrow">Chaîne #${ch.rank||'—'}</div><h3>${ch.label}</h3>
+      <div class="pos">${ch.position}</div>
+      <span class="tag">capex-IA ${ch.capex_ia}%</span>${ch.veille?'<span class="tag veille">VEILLE</span>':''}
+      <div class="pos" style="margin-top:8px">${regs||'—'}</div></div>`;
+  }).join("") + `</div>`;
+}
+function renderChain(sector, key){
+  const ch = DATA.sectors[sector].chains[key];
+  const regs = ["US","EU","Asie"].filter(r=>ch.regions[r]);
+  const cols = regs.map(r=>{
+    const d = ch.regions[r]; const p = d.panel;
+    let acts = "";
+    if(d.actions.length){
+      const rows = d.actions.map(a=>`<tr class="${a.has_data?'':'nodata'}">
+        <td>${a.ticker!==a.name?`${a.name||a.ticker} <span class="tk">${a.ticker}</span>`:a.ticker}</td>
+        <td>${a.perf_1y!=null?(a.perf_1y>0?'+':'')+a.perf_1y.toFixed(0)+'%':'—'}</td>
+        <td>${a.roic!=null?a.roic.toFixed(0)+'%':'—'}</td>
+        <td>${a.buffett_score!=null?Math.round(a.buffett_score):'—'}</td></tr>`).join("");
+      acts = `<button class="actions-toggle" data-show="▸ ${d.actions.length} actions" data-hide="▾ masquer">▸ ${d.actions.length} actions</button>
+        <div style="display:none"><table class="acts"><tr><th>Action</th><th>Perf 1a</th><th>ROIC</th><th>Buffett</th></tr>${rows}</table></div>`;
+    }
+    const body = p.n>0 ? panelHTML(p)+acts
+      : `<div class="empty-region">Aucune donnée — se remplira au prochain run de scoring.</div>`;
+    return `<div class="region"><h4><span><span class="flag">${FLAG[r]}</span> ${r}</span><span class="n">${p.n} act.</span></h4>${body}</div>`;
+  }).join("");
+  return `<div style="margin-bottom:6px" class="pos">${ch.position} · capex-IA ${ch.capex_ia}% · survit stress IA : ${ch.survives_ai||'?'}</div>
+    <div class="regions">${cols}</div>${newsHTML(ch.news)}`;
+}
+
+// ---- theme toggle ----
+document.getElementById("theme").onclick=()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur==="dark"?"light":(cur==="light"?"dark":(matchMedia("(prefers-color-scheme:dark)").matches?"light":"dark"));
+  document.documentElement.setAttribute("data-theme", next);
+};
+
+// ---- load ----
+fetch("./data/funnel.json").then(r=>r.json()).then(d=>{
+  DATA = d;
+  document.getElementById("meta").textContent = "généré " + (d.meta.generated||"").slice(0,10);
+  document.getElementById("foot").innerHTML =
+    `Données <b>${(d.meta.generated||'').slice(0,10)}</b> · médianes des enablers par nœud · momentum = contexte, moat/risque/valeur = signal · `
+    + `news = couche à venir (Phase B, sourcée + datée). Aucun appel API en direct : la page lit un JSON committé.`;
+  render();
+}).catch(e=>{
+  document.getElementById("app").innerHTML =
+    `<div class="banner">Impossible de charger <code>data/funnel.json</code>. En local, sers le dossier via un serveur (ex. <code>python3 -m http.server</code>) — le <code>fetch</code> ne marche pas en <code>file://</code>.</div>`;
+});
+</script>
+</body>
+</html>
