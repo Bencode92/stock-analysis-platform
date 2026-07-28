@@ -39,8 +39,15 @@ jobs:
             echo "ℹ️ funnel.json inchangé, rien à committer"; exit 0
           fi
           git add data/funnel.json
-          TS=$(date -u '+%Y-%m-%d %H:%M UTC')
-          git commit -m "🔻 Build Funnel - $TS [skip ci]"
-          git fetch origin main
-          git rebase -X ours origin/main || git rebase --abort || true
-          git push origin HEAD:main && echo "✅ Push OK"
+          git commit -m "🔻 Build Funnel - $(date -u '+%Y-%m-%d %H:%M UTC') [skip ci]"
+          # push robuste : boucle fetch→rebase→push (résiste aux pushes concurrents)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase -X ours origin/main; then
+              if git push origin HEAD:main; then echo "✅ Push OK (essai $i)"; exit 0; fi
+            else
+              git rebase --abort || true
+            fi
+            echo "↻ retry $i…"; sleep $((i * 3))
+          done
+          echo "❌ push échoué après 5 essais"; exit 1
