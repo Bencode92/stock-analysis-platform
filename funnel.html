@@ -127,6 +127,27 @@
   .st{font-family:var(--mono);font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
   .st-l{font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);font-weight:600}
   @media(max-width:640px){.comp{grid-template-columns:1fr;gap:7px}.cstats{justify-content:flex-start}}
+  .comp.clk{cursor:pointer;transition:border-color .12s,box-shadow .12s}
+  .comp.clk:hover{border-color:var(--accent);box-shadow:0 2px 9px rgba(14,22,32,.09)}
+  /* modal comparaison des acteurs */
+  .modal{display:none;position:fixed;inset:0;background:rgba(14,22,32,.5);z-index:100;padding:36px 18px;overflow-y:auto}
+  .modal.open{display:flex;align-items:flex-start;justify-content:center}
+  .modal-card{background:var(--surface);border:1px solid var(--line2);border-top:4px solid var(--accent);border-radius:12px;
+    max-width:960px;width:100%;box-shadow:0 16px 50px rgba(14,22,32,.3);display:flex;flex-direction:column;max-height:calc(100vh - 72px)}
+  .modal-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--line)}
+  .modal-h .lab{color:var(--accent)}
+  .modal-x{border:1px solid var(--line2);background:var(--surface);border-radius:6px;width:30px;height:30px;cursor:pointer;color:var(--muted);font-size:13px;flex-shrink:0}
+  .modal-x:hover{color:var(--ink);border-color:var(--muted)}
+  .modal-scroll{overflow:auto;padding:6px 20px 18px}
+  .cmp-table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .cmp-table th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:right;padding:10px 9px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+  .cmp-table th:first-child,.cmp-table th:last-child{text-align:left}
+  .cmp-table td{padding:11px 9px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2);white-space:nowrap}
+  .cmp-table td.name-td{text-align:left;font-family:var(--sans);color:var(--ink)}
+  .cmp-table td.role-td{text-align:left;font-family:var(--sans);color:var(--muted);font-size:11.5px;white-space:normal;min-width:200px}
+  .cmp-row.me{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+  .cmp-row.me .name-td b{color:var(--accent)}
+  .modal-note{font-size:11px;color:var(--faint);font-style:italic;margin:12px 0 0}
 
   /* régions + panels */
   .regions{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
@@ -257,6 +278,7 @@
   <main id="app"></main>
   <div class="foot" id="foot"></div>
 </div>
+<div id="modal" class="modal" onclick="if(event.target.id==='modal')closeModal()"></div>
 
 <script>
 const FLAG={US:"🇺🇸",EU:"🇪🇺",Asie:"🌏"};
@@ -309,7 +331,24 @@ function render(){
     app.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.dataset.panel===id));
     window.scrollTo(0,0);
   });
+  app.querySelectorAll(".comp.clk").forEach(el=>el.onclick=()=>{const a=JSON.parse(el.dataset.cmp);openCompare(a[0],a[1],a[2],el.dataset.tk);});
 }
+function openCompare(sector,key,mi,tk){
+  const m=DATA.sectors[sector].chains[key].maillons[mi];
+  const cols=[["perf_1y","Perf 1a"],["perf_ytd","YTD"],["roic","ROIC"],["buffett_score","Buffett"],["quality_score","Qualité"],["volatility_3y","Volat."],["net_margin","Marge"]];
+  const cell=(c,f)=>{const v=c[f];if(v==null)return '<span class="mut">—</span>';
+    if(f==="buffett_score"||f==="quality_score")return Math.round(v);
+    const s=(v>0&&(f==="perf_1y"||f==="perf_ytd")?"+":"")+v.toFixed(f==="net_margin"?1:0)+"%";return s;};
+  const head=`<tr><th>Société</th>${cols.map(c=>`<th>${c[1]}</th>`).join("")}<th>Rôle</th></tr>`;
+  const rows=m.companies.map(c=>{const me=c.ticker===tk?" me":"";
+    return `<tr class="cmp-row${me}"><td class="name-td">${FLAG[c.region]||''} <b>${c.ticker||''}</b>${c.has_data?'':' <span class="mut">hors pipe</span>'}</td>${cols.map(([f])=>`<td>${cell(c,f)}</td>`).join("")}<td class="role-td">${c.role||c.name||''}</td></tr>`;
+  }).join("");
+  const mo=document.getElementById("modal");
+  mo.innerHTML=`<div class="modal-card" style="--accent:${secColor(sector)}"><div class="modal-h"><span class="lab">${m.label} — comparaison des acteurs</span><button class="modal-x" onclick="closeModal()">✕</button></div><div class="modal-scroll"><table class="cmp-table">${head}${rows}</table><p class="modal-note">Les concurrents directs de ce maillon. La ligne surlignée = la boîte cliquée. Descriptif, pas une reco.</p></div></div>`;
+  mo.classList.add("open");
+}
+function closeModal(){const mo=document.getElementById("modal");mo.classList.remove("open");mo.innerHTML="";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
 function renderCrumbs(){
   const c=document.getElementById("crumbs");
   let h=`<span class="crumb ${PATH.length===0?'here':''}" data-go="[]">Accueil</span>`;
@@ -342,13 +381,13 @@ function renderChain(sector,key){
     const body=p.n>0?panelHTML(p)+acts:`<div class="empty-r">Aucune donnée — se remplit au prochain scoring.</div>`;
     return `<div class="region"><h4><span>${FLAG[r]} ${r}</span><span class="n">${p.n} act.</span></h4>${body}</div>`;
   }).join("");
-  const chainHTML=(ch.maillons||[]).map(m=>{
+  const chainHTML=(ch.maillons||[]).map((m,mi)=>{
     const comps=(m.companies||[]).map(c=>{
       const perf=c.perf_1y!=null?`<span class="st ${c.perf_1y<0?'b':'g'}"><span class="st-l">perf 1a</span>${c.perf_1y>0?'+':''}${c.perf_1y.toFixed(0)}%</span>`:'';
       const roic=c.roic!=null?`<span class="st"><span class="st-l">ROIC</span>${c.roic.toFixed(0)}%</span>`:'';
       const buf=c.buffett_score!=null?`<span class="st"><span class="st-l">Buffett</span>${Math.round(c.buffett_score)}</span>`:'';
       const stats=(perf||roic||buf)?`<div class="cstats">${perf}${roic}${buf}</div>`:`<div class="cstats"><span class="st mut">${c.has_data?'':'hors pipeline'}</span></div>`;
-      return `<div class="comp ${c.has_data?'':'nd'}"><div class="chead"><span class="cflag">${FLAG[c.region]||'•'}</span><span class="ctk">${c.ticker||''}</span></div><div class="crole">${c.role||c.name||''}</div>${stats}</div>`;
+      return `<div class="comp clk ${c.has_data?'':'nd'}" data-cmp='["${sector}","${key}",${mi}]' data-tk="${c.ticker||''}" title="Comparer aux autres du maillon"><div class="chead"><span class="cflag">${FLAG[c.region]||'•'}</span><span class="ctk">${c.ticker||''}</span></div><div class="crole">${c.role||c.name||''}</div>${stats}</div>`;
     }).join("");
     const face=m.enface?`<div class="mface"><span class="face-l">En face</span> ${hl(m.enface)}</div>`:'';
     return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div>${face}</div>`;

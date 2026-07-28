@@ -122,8 +122,12 @@ for t in FW["themes"]:
                   "region": c.get("region"), "status": c.get("status"),
                   "has_data": has_data(c.get("ticker"), c.get("region")),
                   "perf_1y": cmet(c.get("ticker"), c.get("region"), "perf_1y"),
+                  "perf_ytd": cmet(c.get("ticker"), c.get("region"), "perf_ytd"),
                   "roic": cmet(c.get("ticker"), c.get("region"), "roic"),
-                  "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score")}
+                  "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score"),
+                  "quality_score": cmet(c.get("ticker"), c.get("region"), "quality_score"),
+                  "volatility_3y": cmet(c.get("ticker"), c.get("region"), "volatility_3y"),
+                  "net_margin": cmet(c.get("ticker"), c.get("region"), "net_margin")}
                  for c in m.get("companies", [])]
         maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps,
                          "enface": enface[i] if i < len(enface) else None})
