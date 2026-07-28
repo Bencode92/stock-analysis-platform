@@ -55,6 +55,21 @@
   .sec-h{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
     font-weight:600;margin:26px 0 12px;display:flex;align-items:center;gap:10px}
   .sec-h::after{content:"";flex:1;height:1px;background:var(--line)}
+  /* onglets de section (navigation, pas scroll) */
+  .tabs{display:flex;flex-wrap:wrap;gap:5px;position:sticky;top:0;background:var(--bg);padding:12px 0;
+    margin:8px 0 20px;border-bottom:1px solid var(--line);z-index:20}
+  .tab{border:1px solid var(--line2);background:var(--surface);color:var(--muted);border-radius:var(--r-s);
+    padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .tab:hover{color:var(--ink);border-color:var(--muted)}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+  .tabpanel{display:none}
+  .tabpanel.active{display:block;animation:fade .18s ease}
+  .tabpanel .sec-h:first-child{margin-top:4px}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.tabpanel.active{animation:none}}
+  .next-btn{margin-top:26px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);
+    border-radius:var(--r-s);padding:10px 18px;font-size:13.5px;cursor:pointer;font-weight:600}
+  .next-btn:hover{background:var(--accent);color:#fff}
 
   /* cards grid */
   .grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
@@ -264,6 +279,12 @@ function render(){
   app.innerHTML = PATH.length===0?renderSectors():PATH.length===1?renderChains(PATH[0]):renderChain(PATH[0],PATH[1]);
   app.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{PATH=JSON.parse(el.dataset.go);render();scrollTo(0,0);});
   app.querySelectorAll(".acts-btn").forEach(b=>b.onclick=()=>{const t=b.nextElementSibling;const h=t.style.display==="none";t.style.display=h?"":"none";b.textContent=h?b.dataset.hide:b.dataset.show;});
+  app.querySelectorAll(".tab,.next-btn").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.tab||b.dataset.next;
+    app.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===id));
+    app.querySelectorAll(".tabpanel").forEach(p=>p.classList.toggle("active",p.dataset.panel===id));
+    window.scrollTo(0,0);
+  });
 }
 function renderCrumbs(){
   const c=document.getElementById("crumbs");
@@ -336,19 +357,27 @@ function renderChain(sector,key){
   // ===== 7 BLOCS : problème → dépendance → en route → chaîne → chokepoint → exposition → risques =====
   const B=ch.blocks||{}, src=s=>s?`<div class="src">${s}</div>`:'';
   const facts=arr=>(arr||[]).map(d=>`<div class="factline"><p>${hl(d.t)}</p>${src(d.src)}</div>`).join("");
-  const bloc1=B.problem
-    ?`<div class="probleme"><span class="lab">Le problème</span><p class="prob-lead">${hl(B.problem.lead)}</p><div class="shock">${B.problem.figures.map(f=>`<div class="shk"><div class="shk-v">${f.v}</div><div class="shk-l">${f.l}</div>${src(f.src)}</div>`).join("")}</div></div>`
-    :(ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${hl(ch.context)}</p></div>`:'');
-  const pending=!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU. En attendant : le contexte qualitatif ci-dessus + la chaîne et la data ci-dessous.</div>`:'';
-  const bloc2=(B.dependency&&B.dependency.length)?`<div class="sec-h">La dépendance aujourd'hui</div>${facts(B.dependency)}`:'';
-  const bloc3=(B.motion&&B.motion.length)?`<div class="sec-h">Ce qui est déjà en route</div>${facts(B.motion)}`:'';
-  const bloc4=`<div class="sec-h">La chaîne, maillon par maillon</div><div class="chain">${chainHTML}</div>`;
-  const bloc5=B.chokepoint?`<div class="sec-h">Le chokepoint — la preuve</div><div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
-  const bloc6=`<div class="sec-h">Comment s'y exposer <span class="sh-note">— descriptif, pas une reco</span></div>${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div>`;
+  const bloc1=(B.problem
+    ?`<div class="probleme"><p class="prob-lead">${hl(B.problem.lead)}</p><div class="shock">${B.problem.figures.map(f=>`<div class="shk"><div class="shk-v">${f.v}</div><div class="shk-l">${f.l}</div>${src(f.src)}</div>`).join("")}</div></div>`
+    :(ch.context?`<div class="brief"><p>${hl(ch.context)}</p></div>`:''))
+    +(!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU.</div>`:'');
+  const bloc4=`<div class="chain">${chainHTML}</div>`;
+  const bloc5=B.chokepoint?`<div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
+  const bloc6=`${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div>`;
   const trip=(B.tripwires&&B.tripwires.length)?`<div class="trip"><span class="lab">Ce qui casserait la thèse — tripwires</span><ul>${B.tripwires.map(t=>`<li>${hl(t)}</li>`).join("")}</ul></div>`:'';
-  const bloc7=`<div class="sec-h">Risques &amp; falsification</div>${risks}${trip}${newsHTML(ch.news)}`;
-  return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>
-    ${bloc1}${pending}${bloc2}${bloc3}${bloc4}${bloc5}${bloc6}${bloc7}`;
+  const bloc7=`${risks}${trip}${newsHTML(ch.news)}`;
+  const tabs=[
+    {id:'p',l:'Le problème',h:bloc1},
+    {id:'d',l:'La dépendance',h:facts(B.dependency)},
+    {id:'r',l:'Ce qui est en route',h:facts(B.motion)},
+    {id:'c',l:'La chaîne',h:bloc4},
+    {id:'k',l:'Le chokepoint',h:bloc5},
+    {id:'e',l:"Comment s'exposer",h:bloc6},
+    {id:'x',l:'Risques',h:bloc7},
+  ].filter(t=>t.h&&t.h.trim());
+  const tabbar=`<div class="tabs">${tabs.map((t,i)=>`<button class="tab${i===0?' active':''}" data-tab="${t.id}">${t.l}</button>`).join("")}</div>`;
+  const panels=tabs.map((t,i)=>`<section class="tabpanel${i===0?' active':''}" data-panel="${t.id}"><div class="sec-h">${t.l}${t.id==='e'?' <span class="sh-note">— descriptif, pas une reco</span>':''}</div>${t.h}${i<tabs.length-1?`<button class="next-btn" data-next="${tabs[i+1].id}">${tabs[i+1].l} →</button>`:''}</section>`).join("");
+  return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>${tabbar}${panels}`;
 }
 
 fetch("./data/funnel.json").then(r=>r.json()).then(d=>{
