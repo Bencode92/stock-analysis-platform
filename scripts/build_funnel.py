@@ -21,7 +21,8 @@ def rows(fn):
 IDX = {"US": {}, "EU": {}, "Asie": {}}
 for reg, fn in [("US", "stocks_us.json"), ("EU", "stocks_europe.json"), ("Asie", "stocks_asia.json")]:
     for r in rows(fn):
-        IDX[reg][(r.get("ticker") or "").upper()] = r
+        # clé = ticker OU symbol : les titres en erreur market-data (NO_DATA) n'ont que "symbol"
+        IDX[reg][(r.get("ticker") or r.get("symbol") or "").upper()] = r
 
 FW = json.load(open(os.path.join(BASE, "framework.json"), encoding="utf-8"))
 
