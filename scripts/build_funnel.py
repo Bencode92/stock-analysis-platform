@@ -41,6 +41,48 @@ CONTEXT = {
  "materials": "L'électrification et la défense ont un besoin explosif de cuivre, terres rares et lithium. Mais le diagnostic est FORT et les véhicules FAIBLES : le vrai chokepoint n'est pas la mine, c'est le RAFFINAGE — et la Chine y domine massivement (surtout les terres rares). Celui qui raffine tient la chaîne, et c'est un levier géopolitique (la Chine peut restreindre les exports). Problème pratique : peu d'ETF/actions propres pour s'y exposer sans acheter des mineurs très cycliques et politiques (Amérique latine pour le cuivre). Donc exposition bornée, volontairement petite.",
  "robotics": "La robotique et les humanoïdes sont un thème d'avenir médiatisé — mais on est en VEILLE : les critères d'activation ne sont pas remplis (adoption réelle, marges, moat durable encore incertains). C'est le thème le plus spéculatif et le plus « saillant » (en vogue parce qu'il fait la une), donc précisément celui où il faut de la discipline. On surveille les vrais chokepoints (réducteurs de précision, actionneurs), on n'investit pas encore.",
 }
+# Contenu "7 blocs" par chaîne — problème / dépendance / en route / en-face / chokepoint / tripwires.
+# CHAQUE chiffre porte sa source datée (jamais fabriquée). URL à ajouter par la couche news/IA.
+# Réseau EU = référence entièrement remplie (recherche sourcée 28/07/2026, relayée par le conseil IA).
+BLOCKS = {
+ "grid": {
+  "problem": {
+   "lead": "L'Europe veut électrifier son industrie, ses datacenters et sa défense énergétique — mais le réseau qui doit TRANSPORTER ces électrons est le goulot.",
+   "figures": [
+    {"v":"57 %", "l":"de l'énergie de l'UE est importée", "src":"Eurostat, données 2024 (publ. mars 2026)"},
+    {"v":"48-60 mois", "l":"d'attente pour un transformateur HT Tier 1 (vs ~12 mois avant)", "src":"GridReadiness / PwC via pv magazine, mai-juin 2026"},
+    {"v":"2-10 ans", "l":"pour un raccordement au réseau selon les pays de l'UE", "src":"AIE, 2026"},
+   ]},
+  "dependency": [
+   {"t":"Taux de dépendance énergétique UE : <b>57 %</b> (imports nets). Pétrole = 67 % des imports d'énergie, gaz = 24 % ; 1er fournisseur de gaz : Norvège (30 %).", "src":"Eurostat, « Energy in Europe 2026 », données 2024"},
+   {"t":"Datacenters : capacité UE <b>12 GW (2025) → 28 GW attendus (2030)</b> — plus qu'un doublement ; l'UE vise un triplement d'ici 2035.", "src":"Commission européenne / Reuters, juin 2026"},
+   {"t":"Les datacenters = <b>10 % de la croissance</b> de la demande électrique UE d'ici 2030, en plus de l'électrification du chauffage, des transports et de l'industrie.", "src":"AIE, 2026"},
+   {"t":"Amont matière : les cœurs de transformateurs dépendent de l'acier électrique à grains orientés (GOES), production mondiale concentrée et en pénurie.", "src":"Terrapin / industrie, juin 2026"},
+  ],
+  "motion": [
+   {"t":"Demande de transformateurs élévateurs <b>+274 %</b> (2019-2025), sous-stations +116 % ; prix <b>+80 %</b> en 5 ans.", "src":"Wood Mackenzie via pv magazine, mai 2026"},
+   {"t":"Les industriels investissent mais lentement : Hitachi Energy >1 Md$ (usine South Boston en ligne <b>2028</b>) ; Siemens Energy usine Charlotte 421 M$ + plan grid 1,2 Md€.", "src":"pv magazine, mai 2026"},
+   {"t":"La preuve par les carnets : Siemens Energy carnet record <b>154 Md€</b>, ventes grid +27 % attendues cette année. Citation : « le monde a besoin de plus d'électricité qu'il ne peut en transporter ».", "src":"Siemens Energy, juin 2026"},
+   {"t":"Réglementation : reporting énergétique obligatoire des datacenters (EED) ; l'Irlande exige une génération/stockage sur site équivalente à leur import.", "src":"Commission européenne, 2026"},
+  ],
+  "enface": [
+   "Oligopole serré (Siemens Energy, Hitachi, ABB, GE Vernova). En face : Hyundai Electric, Hyosung (Corée) exportent massivement — concurrence sur le standard, pas sur le THT de pointe ; WEG (Brésil) monte.",
+   "Oligopole 3-4 acteurs (Prysmian n°1, Nexans, NKT). Capacité de pose (navires câbliers) elle-même limitée. En face : LS Cable (Corée).",
+   "Très concentré : Siemens Energy, Hitachi, GE Vernova, ABB.",
+   "Leaders installés (Schneider, Eaton, ABB). En face : concurrence chinoise forte sur le bas de gamme, faible sur le logiciel de gestion.",
+  ],
+  "chokepoint": {
+   "title":"Le transformateur haute tension",
+   "body":"« Le goulot le plus sous-estimé du déploiement IA n'est pas le GPU ni le raccordement : c'est le transformateur — sans lui, rien ne fonctionne. » Délais Tier 1 (ABB, Siemens Energy, Hitachi) : <b>48-60 mois</b>, carnets pleins jusqu'en 2030, nouvelles commandes livrées <b>2030-2031</b>. Un fournisseur US de transfos/switchgear datacenters : commandes <b>+268 %</b> sur un an (T3 2026). Personne ne peut « imprimer » de la capacité : l'usine Hitachi annoncée en 2026 ne produit qu'en 2028. Goulot structurel, pas conjoncturel.",
+   "src":"GridReadiness (suivi mensuel de 14 fabricants), juin 2026"},
+  "tripwires": [
+   "Délais transformateurs Tier 1 repassant durablement sous ~24 mois (fin de la pénurie).",
+   "Book-to-bill < 1 deux trimestres de suite chez les 3 leaders.",
+   "Capacité GOES nouvelle massive mise en ligne.",
+  ],
+ },
+}
+
 def etf_of(t):
     eb = t.get("etf_buy") or {}
     es = t.get("etf_signal") or {}
@@ -72,8 +114,10 @@ for t in FW["themes"]:
         return (tk or "").upper() in IDX.get(reg, {})
     def cmet(tk, reg, field):
         return IDX.get(reg, {}).get((tk or "").upper(), {}).get(field)
+    blk = BLOCKS.get(t["key"], {})
+    enface = blk.get("enface", [])
     maillons = []
-    for m in t["maillons"]:
+    for i, m in enumerate(t["maillons"]):
         comps = [{"ticker": c.get("ticker"), "name": c.get("name"), "role": c.get("role"),
                   "region": c.get("region"), "status": c.get("status"),
                   "has_data": has_data(c.get("ticker"), c.get("region")),
@@ -81,12 +125,14 @@ for t in FW["themes"]:
                   "roic": cmet(c.get("ticker"), c.get("region"), "roic"),
                   "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score")}
                  for c in m.get("companies", [])]
-        maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps})
+        maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps,
+                         "enface": enface[i] if i < len(enface) else None})
     chain = {"label": t["label"], "position": t["position"], "rank": t.get("rank"),
              "capex_ia": t.get("capex_ia"), "survives_ai": t.get("survives_ai"),
              "veille": is_veille(t), "regions": {}, "news": [],
              # textes riches (le "pourquoi" + la chaîne détaillée) + comment s'exposer
              "context": CONTEXT.get(t["key"]), "etf": etf_of(t),
+             "blocks": {k: v for k, v in blk.items() if k != "enface"},
              "thesis": t.get("thesis"), "diff": t.get("diff"), "decomp": t.get("decomp"),
              "risks": t.get("risks") or [], "gap": t.get("gap"), "maillons": maillons}
     for reg in ["US", "EU", "Asie"]:

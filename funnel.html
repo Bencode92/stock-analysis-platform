@@ -131,6 +131,32 @@
   .et-tag{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);
     border:1px solid var(--line2);border-radius:4px;padding:1px 6px;margin-right:6px}
   .et-note{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:3px}
+  /* BLOC 1 — le problème (accroche + chiffres-choc en gros) */
+  .probleme{margin:8px 0 24px}
+  .prob-lead{font-size:19px;line-height:1.42;font-weight:500;margin:10px 0 18px;letter-spacing:-.01em}
+  .shock{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .shk{border:1px solid var(--line2);border-radius:var(--r);padding:16px 18px;background:var(--surface);box-shadow:0 1px 3px rgba(14,22,32,.06)}
+  .shk-v{font-family:var(--mono);font-size:31px;font-weight:700;letter-spacing:-.03em;color:var(--accent);line-height:1}
+  .shk-l{font-size:13px;color:var(--ink2);margin:9px 0 7px;line-height:1.4}
+  .src{font-family:var(--mono);font-size:9.5px;color:var(--faint);line-height:1.45}
+  @media(max-width:720px){.shock{grid-template-columns:1fr}}
+  /* BLOC 2-3 — faits sourcés */
+  .factline{padding:11px 0;border-bottom:1px solid var(--line)}
+  .factline:last-child{border:none}
+  .factline p{margin:0 0 4px;font-size:14px;line-height:1.55}
+  .pending{font-size:12px;color:var(--muted);font-style:italic;border:1px dashed var(--line2);border-radius:var(--r);padding:11px 15px;margin-bottom:6px}
+  /* en face (concurrence) dans le maillon */
+  .mface{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:12px;color:var(--ink2);line-height:1.5}
+  .face-l{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid var(--warn);border-radius:3px;padding:0 5px;margin-right:6px}
+  /* BLOC 5 — chokepoint dramatisé */
+  .choke{border:1px solid var(--accent);border-left:4px solid var(--accent);border-radius:var(--r);padding:16px 20px;background:var(--surface);box-shadow:0 2px 10px rgba(14,22,32,.08)}
+  .choke-t{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-bottom:9px}
+  .choke p{margin:0 0 9px;font-size:14px;line-height:1.6}
+  /* tripwires */
+  .trip{margin-top:16px;border:1px solid var(--line2);border-radius:var(--r);padding:13px 18px}
+  .trip ul{margin:8px 0 0;padding-left:18px}
+  .trip li{font-size:12.5px;margin:5px 0;color:var(--ink2);line-height:1.5}
+  .sh-note{font-family:var(--sans);text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400;font-size:11px}
   /* surlignage des termes clés (highlighter) */
   .hl{font-weight:700;background:linear-gradient(180deg,transparent 58%,rgba(47,95,146,.16) 58%);padding:0 1px;border-radius:1px}
   /* KPI cards */
@@ -277,7 +303,8 @@ function renderChain(sector,key){
       const roic=c.roic!=null?`<span class="croic">ROIC ${c.roic.toFixed(0)}%</span>`:'';
       return `<span class="comp ${c.has_data?'':'nd'}">${FLAG[c.region]||'•'}<span class="ctk">${c.ticker||''}</span>${perf}${roic}<span class="crole">${c.role||c.name||''}</span></span>`;
     }).join("");
-    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div></div>`;
+    const face=m.enface?`<div class="mface"><span class="face-l">En face</span> ${hl(m.enface)}</div>`:'';
+    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div>${face}</div>`;
   }).join("");
   const risks=(ch.risks&&ch.risks.length)?`<div class="risks"><span class="lab">Risques de la chaîne</span><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:"";
   const e=ch.etf||{};
@@ -307,15 +334,22 @@ function renderChain(sector,key){
   const mxH=Math.max(...H.map(([_,v])=>Math.abs(parseP(v)||0)),1);
   const perfC=`<div class="cmp-col"><span class="lab">Perf du panier signal</span>${H.map(([l,v])=>{const n=parseP(v);return `<div class="crow"><span class="cr-l">${l}</span><span class="cr-bar"><span class="${n<0?'bg-b':'bg-g'}" style="width:${n!=null?Math.max(4,Math.abs(n)/mxH*100):0}%"></span></span><span class="cr-v ${n<0?'b':'g'}">${v||'—'}</span></div>`;}).join("")}</div>`;
   const moatC=rlist.length>1?`<div class="cmp-col"><span class="lab">Qui a le moat — ROIC par région</span>${cmp("moat")}</div>`:"";
+  // ===== 7 BLOCS : problème → dépendance → en route → chaîne → chokepoint → exposition → risques =====
+  const B=ch.blocks||{}, src=s=>s?`<div class="src">${s}</div>`:'';
+  const facts=arr=>(arr||[]).map(d=>`<div class="factline"><p>${hl(d.t)}</p>${src(d.src)}</div>`).join("");
+  const bloc1=B.problem
+    ?`<div class="probleme"><span class="lab">Le problème</span><p class="prob-lead">${hl(B.problem.lead)}</p><div class="shock">${B.problem.figures.map(f=>`<div class="shk"><div class="shk-v">${f.v}</div><div class="shk-l">${f.l}</div>${src(f.src)}</div>`).join("")}</div></div>`
+    :(ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${hl(ch.context)}</p></div>`:'');
+  const pending=!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU. En attendant : le contexte qualitatif ci-dessus + la chaîne et la data ci-dessous.</div>`:'';
+  const bloc2=(B.dependency&&B.dependency.length)?`<div class="sec-h">La dépendance aujourd'hui</div>${facts(B.dependency)}`:'';
+  const bloc3=(B.motion&&B.motion.length)?`<div class="sec-h">Ce qui est déjà en route</div>${facts(B.motion)}`:'';
+  const bloc4=`<div class="sec-h">La chaîne, maillon par maillon</div><div class="chain">${chainHTML}</div>`;
+  const bloc5=B.chokepoint?`<div class="sec-h">Le chokepoint — la preuve</div><div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
+  const bloc6=`<div class="sec-h">Comment s'y exposer <span class="sh-note">— descriptif, pas une reco</span></div>${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div>`;
+  const trip=(B.tripwires&&B.tripwires.length)?`<div class="trip"><span class="lab">Ce qui casserait la thèse — tripwires</span><ul>${B.tripwires.map(t=>`<li>${hl(t)}</li>`).join("")}</ul></div>`:'';
+  const bloc7=`<div class="sec-h">Risques &amp; falsification</div>${risks}${trip}${newsHTML(ch.news)}`;
   return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>
-    ${kpis}
-    ${ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${hl(ch.context)}</p></div>`:''}
-    <div class="sec-h">Les chiffres en un coup d'œil</div><div class="compare">${perfC}${moatC}</div>
-    ${ch.thesis?`<div class="thesis"><p>${hl(ch.thesis)}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}</div>`:''}
-    <div class="sec-h">Le schéma de la chaîne, étape par étape</div><div class="chain">${chainHTML}</div>
-    ${expo}
-    <div class="sec-h">Détail par région</div><div class="regions">${cols}</div>
-    ${risks}${newsHTML(ch.news)}`;
+    ${bloc1}${pending}${bloc2}${bloc3}${bloc4}${bloc5}${bloc6}${bloc7}`;
 }
 
 fetch("./data/funnel.json").then(r=>r.json()).then(d=>{

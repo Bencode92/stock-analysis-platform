@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generated": "2026-07-28T09:25:14.099360Z",
+  "generated": "2026-07-28T09:38:35.040145Z",
   "note": "Entonnoir descriptif (médianes). News=[] tant que Phase B n'a pas tourné.",
   "axes": [
    "momentum",
@@ -230,6 +230,74 @@
       "signal_w52": "+26.61 %",
       "signal_3m": "+3.61 %"
      },
+     "blocks": {
+      "problem": {
+       "lead": "L'Europe veut électrifier son industrie, ses datacenters et sa défense énergétique — mais le réseau qui doit TRANSPORTER ces électrons est le goulot.",
+       "figures": [
+        {
+         "v": "57 %",
+         "l": "de l'énergie de l'UE est importée",
+         "src": "Eurostat, données 2024 (publ. mars 2026)"
+        },
+        {
+         "v": "48-60 mois",
+         "l": "d'attente pour un transformateur HT Tier 1 (vs ~12 mois avant)",
+         "src": "GridReadiness / PwC via pv magazine, mai-juin 2026"
+        },
+        {
+         "v": "2-10 ans",
+         "l": "pour un raccordement au réseau selon les pays de l'UE",
+         "src": "AIE, 2026"
+        }
+       ]
+      },
+      "dependency": [
+       {
+        "t": "Taux de dépendance énergétique UE : <b>57 %</b> (imports nets). Pétrole = 67 % des imports d'énergie, gaz = 24 % ; 1er fournisseur de gaz : Norvège (30 %).",
+        "src": "Eurostat, « Energy in Europe 2026 », données 2024"
+       },
+       {
+        "t": "Datacenters : capacité UE <b>12 GW (2025) → 28 GW attendus (2030)</b> — plus qu'un doublement ; l'UE vise un triplement d'ici 2035.",
+        "src": "Commission européenne / Reuters, juin 2026"
+       },
+       {
+        "t": "Les datacenters = <b>10 % de la croissance</b> de la demande électrique UE d'ici 2030, en plus de l'électrification du chauffage, des transports et de l'industrie.",
+        "src": "AIE, 2026"
+       },
+       {
+        "t": "Amont matière : les cœurs de transformateurs dépendent de l'acier électrique à grains orientés (GOES), production mondiale concentrée et en pénurie.",
+        "src": "Terrapin / industrie, juin 2026"
+       }
+      ],
+      "motion": [
+       {
+        "t": "Demande de transformateurs élévateurs <b>+274 %</b> (2019-2025), sous-stations +116 % ; prix <b>+80 %</b> en 5 ans.",
+        "src": "Wood Mackenzie via pv magazine, mai 2026"
+       },
+       {
+        "t": "Les industriels investissent mais lentement : Hitachi Energy >1 Md$ (usine South Boston en ligne <b>2028</b>) ; Siemens Energy usine Charlotte 421 M$ + plan grid 1,2 Md€.",
+        "src": "pv magazine, mai 2026"
+       },
+       {
+        "t": "La preuve par les carnets : Siemens Energy carnet record <b>154 Md€</b>, ventes grid +27 % attendues cette année. Citation : « le monde a besoin de plus d'électricité qu'il ne peut en transporter ».",
+        "src": "Siemens Energy, juin 2026"
+       },
+       {
+        "t": "Réglementation : reporting énergétique obligatoire des datacenters (EED) ; l'Irlande exige une génération/stockage sur site équivalente à leur import.",
+        "src": "Commission européenne, 2026"
+       }
+      ],
+      "chokepoint": {
+       "title": "Le transformateur haute tension",
+       "body": "« Le goulot le plus sous-estimé du déploiement IA n'est pas le GPU ni le raccordement : c'est le transformateur — sans lui, rien ne fonctionne. » Délais Tier 1 (ABB, Siemens Energy, Hitachi) : <b>48-60 mois</b>, carnets pleins jusqu'en 2030, nouvelles commandes livrées <b>2030-2031</b>. Un fournisseur US de transfos/switchgear datacenters : commandes <b>+268 %</b> sur un an (T3 2026). Personne ne peut « imprimer » de la capacité : l'usine Hitachi annoncée en 2026 ne produit qu'en 2028. Goulot structurel, pas conjoncturel.",
+       "src": "GridReadiness (suivi mensuel de 14 fabricants), juin 2026"
+      },
+      "tripwires": [
+       "Délais transformateurs Tier 1 repassant durablement sous ~24 mois (fin de la pénurie).",
+       "Book-to-bill < 1 deux trimestres de suite chez les 3 leaders.",
+       "Capacité GOES nouvelle massive mise en ligne."
+      ]
+     },
      "thesis": "Quel que soit le mix (nucléaire, gaz, renouvelable), chaque électron passe par un transformateur et un câble. Le réseau est le chokepoint physique commun à la sécurité énergétique EU, la réindustrialisation subventionnée et les datacenters — délais de livraison en années.",
      "diff": "Croisement de TOUTES les convictions (dépendance post-Russie/Iran, subventions EU, électrification, IA). Un des rares thèmes qui survit à un stress capex IA.",
      "decomp": "Demande = baseline politique/remplacement (REPowerEU, interconnexions — IA-indépendante) + incrément datacenter (capex-IA). Seule la baseline diversifie ; la part datacenter compte dans le plafond capex-IA.",
@@ -288,7 +356,8 @@
          "roic": 24.58,
          "buffett_score": 67
         }
-       ]
+       ],
+       "enface": "Oligopole serré (Siemens Energy, Hitachi, ABB, GE Vernova). En face : Hyundai Electric, Hyosung (Corée) exportent massivement — concurrence sur le standard, pas sur le THT de pointe ; WEG (Brésil) monte."
       },
       {
        "label": "② Câbles HT / sous-marins",
@@ -338,7 +407,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": "Oligopole 3-4 acteurs (Prysmian n°1, Nexans, NKT). Capacité de pose (navires câbliers) elle-même limitée. En face : LS Cable (Corée)."
       },
       {
        "label": "③ Appareillage HT / HVDC",
@@ -377,7 +447,8 @@
          "roic": 2.04,
          "buffett_score": 60
         }
-       ]
+       ],
+       "enface": "Très concentré : Siemens Energy, Hitachi, GE Vernova, ABB."
       },
       {
        "label": "④ Distribution / gestion intelligente",
@@ -416,7 +487,8 @@
          "roic": 14.27,
          "buffett_score": 77
         }
-       ]
+       ],
+       "enface": "Leaders installés (Schneider, Eaton, ABB). En face : concurrence chinoise forte sur le bas de gamme, faible sur le logiciel de gestion."
       },
       {
        "label": "⑤ Opérateurs (TSO/DSO)",
@@ -455,7 +527,8 @@
          "roic": 1.67,
          "buffett_score": 0
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     }
@@ -598,6 +671,7 @@
       "signal_w52": "+7.45 %",
       "signal_3m": "-13.24 %"
      },
+     "blocks": {},
      "thesis": "La demande nucléaire est CONTRACTUALISÉE : les hyperscalers signent des PPA multi-décennaux et paient d'avance, transformant des projets spéculatifs en actifs bancables. Le cycle du combustible est le maillon le plus concentré géopolitiquement de l'énergie occidentale.",
      "diff": "« Les datacenters paient le nucléaire en avance, construction en attente » : 13 deals hyperscalers, >9,8 GW (mai 2026). LE CONTRAT DÉBLOQUE LA CONSTRUCTION, pas l'inverse.",
      "decomp": "Découpé en 3 HORIZONS aux gagnants différents (le décalage temporel est central : datacenters veulent des électrons 2026-2028, les SMR livrent 2030-2035).",
@@ -667,7 +741,8 @@
          "roic": 2.33,
          "buffett_score": 40
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "H2 (permanent) — le combustible",
@@ -706,7 +781,8 @@
          "roic": 1.67,
          "buffett_score": 0
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "H3 (2030+) — développeurs SMR",
@@ -745,7 +821,8 @@
          "roic": 16.18,
          "buffett_score": 43
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     }
@@ -888,6 +965,7 @@
       "signal_w52": "+55.55 %",
       "signal_3m": "+1.86 %"
      },
+     "blocks": {},
      "thesis": "Le picks & shovels DU picks & shovels : quel que soit le gagnant des LLM ou des puces, les datacenters ont besoin d'électricité distribuée et de refroidissement. La densité (racks >100 kW) rend le refroidissement liquide OBLIGATOIRE.",
      "diff": "ASML elle-même identifie l'énergie de l'IA comme le défi majeur de l'industrie (avril 2026). Conviction relative la plus forte du bloc capex-IA (moins dépendant de qui gagne la course aux puces).",
      "decomp": "100% capex-IA — AUCUNE protection en cas de stress. Compte plein dans le plafond.",
@@ -947,7 +1025,8 @@
          "roic": 14.27,
          "buffett_score": 77
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "② Refroidissement liquide",
@@ -975,7 +1054,8 @@
          "roic": 7.75,
          "buffett_score": 43
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "③ Générateurs / backup",
@@ -1014,7 +1094,8 @@
          "roic": null,
          "buffett_score": 33
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     },
@@ -1205,6 +1286,7 @@
       "signal_w52": "+155.82 %",
       "signal_3m": "+17.80 %"
      },
+     "blocks": {},
      "thesis": "On n'achète pas le chip médiatisé (Nvidia) mais les équipements amont sans lesquels aucun chip avancé n'existe — monopole (ASML EUV) ou quasi-monopole vérifiables. Ajout 2026 : la MÉMOIRE (HBM) est une sous-chaîne à part entière.",
      "diff": "Descendu volontairement au 5e rang : pas parce que la thèse est fausse, mais parce que c'est le thème le plus détenu, le mieux compris et le plus cher. Entrée par tranches.",
      "decomp": "100% capex-IA. Compte plein dans le plafond. Tail risk Taïwan (TSMC) = binaire, non diversifiable.",
@@ -1242,7 +1324,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "② EDA (logiciels de design)",
@@ -1270,7 +1353,8 @@
          "roic": 20.1,
          "buffett_score": 77
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "③ Dépôt / gravure / métrologie",
@@ -1320,7 +1404,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "④ Packaging avancé (CoWoS, HBM)",
@@ -1359,7 +1444,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "⑤ Test",
@@ -1387,7 +1473,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     }
@@ -1600,6 +1687,7 @@
       "signal_w52": "-9.00 %",
       "signal_3m": "+5.13 %"
      },
+     "blocks": {},
      "thesis": "Le réarmement européen est un moteur budgétaire structurel (~800 Md€/an visés fin décennie), renforcé par le découplage US. Mais 2026 a prouvé que le risque n'est PAS la macro, c'est L'EXÉCUTION (annulations de programmes, marges déçues).",
      "diff": "Leçon 2026 : F126 annulé → Rheinmetall -18% en une séance (-38% depuis janvier). Le backlog tient (RHM 63,8 Md€), c'est la conversion backlog→marges qui est scrutée. D'où : composants à moat > primes.",
      "decomp": "capex-IA ≈ 0 → rôle DIVERSIFIANT réel (avec le réseau). Moteur = budgets publics/sécurité, pas l'IA.",
@@ -1714,7 +1802,8 @@
          "roic": 1.67,
          "buffett_score": 0
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "② Composants à moat / aftermarket",
@@ -1775,7 +1864,8 @@
          "roic": 9.44,
          "buffett_score": 67
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "③ Électronique de défense / capteurs",
@@ -1814,7 +1904,8 @@
          "roic": 4.64,
          "buffett_score": 43
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     }
@@ -1897,6 +1988,7 @@
       "signal_w52": "+4.34 %",
       "signal_3m": "-15.76 %"
      },
+     "blocks": {},
      "thesis": "Dépendance chinoise sur les matières = diagnostic validé, exécution prudente. Pas une fiche-thème autonome (fourre-tout) mais un maillon amont documenté DANS chaque fiche + exposition optionnelle petite et bornée.",
      "diff": "La Chine FIXE les prix des matières qu'elle domine et peut écraser les cours pour tuer la concurrence (déjà fait sur les terres rares). Un pari MP/Lynas = pari sur un soutien politique occidental DURABLE, pas sur le marché libre.",
      "decomp": "Se joue mieux via les fiches AVAL (réseau, défense) qui subissent la dépendance et la répercutent dans leurs prix.",
@@ -1933,7 +2025,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "Cuivre & métaux",
@@ -1950,7 +2043,8 @@
          "roic": 8.63,
          "buffett_score": 43
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     }
@@ -2076,6 +2170,7 @@
       "signal_w52": "+66.80 %",
       "signal_3m": "+9.25 %"
      },
+     "blocks": {},
      "thesis": "Si les humanoïdes passent à l'échelle, les gagnants picks & shovels sont les composants critiques — réducteurs harmoniques, actionneurs, capteurs — massivement japonais/asiatiques. Le thème est réel, le TIMING d'investissement ne l'est pas encore.",
      "diff": "Revenus humanoïdes réels négligeables → payer aujourd'hui = payer le narratif. Les vrais picks & shovels sont dans le trou Asie.",
      "decomp": "Compte dans le plafond capex-IA le jour où activé.",
@@ -2123,7 +2218,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       },
       {
        "label": "Réducteurs / actionneurs (trou Asie)",
@@ -2162,7 +2258,8 @@
          "roic": null,
          "buffett_score": null
         }
-       ]
+       ],
+       "enface": null
       }
      ]
     }
