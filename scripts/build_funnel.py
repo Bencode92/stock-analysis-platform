@@ -48,9 +48,22 @@ for t in FW["themes"]:
     tree.setdefault(sec, {"chains": {}, "news": []})
     ens = [(c["ticker"], c.get("region", ""), c.get("name", ""))
            for m in t["maillons"] for c in m["companies"] if c.get("ticker")]
+    # maillons = les ÉTAPES de la chaîne (label + explication + boîtes avec rôle, tagué région)
+    def has_data(tk, reg):
+        return (tk or "").upper() in IDX.get(reg, {})
+    maillons = []
+    for m in t["maillons"]:
+        comps = [{"ticker": c.get("ticker"), "name": c.get("name"), "role": c.get("role"),
+                  "region": c.get("region"), "status": c.get("status"),
+                  "has_data": has_data(c.get("ticker"), c.get("region"))}
+                 for c in m.get("companies", [])]
+        maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps})
     chain = {"label": t["label"], "position": t["position"], "rank": t.get("rank"),
              "capex_ia": t.get("capex_ia"), "survives_ai": t.get("survives_ai"),
-             "veille": is_veille(t), "regions": {}, "news": []}
+             "veille": is_veille(t), "regions": {}, "news": [],
+             # textes riches (le "pourquoi" + la chaîne détaillée)
+             "thesis": t.get("thesis"), "diff": t.get("diff"), "decomp": t.get("decomp"),
+             "risks": t.get("risks") or [], "gap": t.get("gap"), "maillons": maillons}
     for reg in ["US", "EU", "Asie"]:
         tks = [tk for tk, rg, _ in ens if rg == reg]
         n = sum(1 for tk in tks if tk.upper() in IDX[reg])

@@ -99,7 +99,35 @@
   .news{margin-top:14px;padding:12px 14px;border:1px dashed var(--border);border-radius:10px;background:var(--surface2)}
   .news .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:4px}
   .news .empty{color:var(--muted);font-size:12.5px;font-style:italic}
+  .news .ni{font-size:12.5px;margin:5px 0;line-height:1.5}
+  .news .ni a{color:var(--accent)}
+  .news .ni.lecture{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+  .news .interp{color:var(--muted);font-size:11px;font-style:italic}
   .empty-region{padding:20px 14px;color:var(--muted);font-size:12.5px;font-style:italic;text-align:center}
+  /* rich text : thèse, chaîne, maillons, risques */
+  .meta{margin-bottom:12px;font-size:12.5px}
+  .blk-h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;margin-bottom:6px}
+  .thesis{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:10px;padding:14px 16px;margin-bottom:22px;box-shadow:var(--shadow)}
+  .thesis p{margin:0 0 8px;font-size:14px}
+  .thesis p:last-child{margin-bottom:0}
+  .thesis .diff{color:var(--muted);font-size:12.5px}
+  .sec-h{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;
+    margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .chain{display:flex;flex-direction:column;gap:10px}
+  .maillon{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+  .mlabel{font-weight:650;font-size:14.5px;margin-bottom:3px}
+  .mdesc{color:var(--muted);font-size:12.5px;margin-bottom:8px;line-height:1.5}
+  .comps{display:flex;flex-wrap:wrap;gap:6px}
+  .comp{display:flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;
+    padding:4px 9px;font-size:12px;background:var(--surface2)}
+  .comp.nd{opacity:.55}
+  .comp .cflag{font-size:13px}
+  .comp .ctk{font-family:var(--mono);font-weight:600}
+  .comp .crole{color:var(--muted);font-size:11.5px}
+  .risks{margin-top:22px;background:var(--bad-bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+  .risks ul{margin:0;padding-left:18px}
+  .risks li{font-size:12.5px;margin:3px 0;color:var(--ink)}
   .foot{margin-top:40px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);padding-top:14px}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:2px 0 16px}
   .legend b{color:var(--ink);font-weight:600}
@@ -175,11 +203,21 @@ function panelHTML(p){
       <span class="val ${g.cls}">${fmt(p[k],k)}</span></div>`;
   }).join("") + `</div>`;
 }
-function newsHTML(arr){
-  const items = (arr&&arr.length)
-    ? arr.map(n=>`<div>📰 <b>${n.date||""}</b> ${n.titre||""} ${n.url?`<a href="${n.url}" target="_blank" rel="noopener">source</a>`:""}</div>`).join("")
-    : `<div class="empty">Aucune actualité cette semaine — silence par défaut (le vide est un résultat valide).</div>`;
-  return `<div class="news"><div class="h">📰 Cette semaine</div>${items}</div>`;
+function newsHTML(n){
+  // n : [] (vide) ou {faits, news:[{date,titre,url}], lecture} — alimenté par le workflow news/IA (Phase B)
+  const isObj = n && !Array.isArray(n);
+  const items = isObj ? (n.news||[]) : (n||[]);
+  const has = items.length || (isObj && (n.faits||n.lecture));
+  let body;
+  if(!has){
+    body = `<div class="empty">Aucune actualité cette semaine — <b>silence par défaut</b> (le vide est un résultat valide).
+      <br>Cet encart sera alimenté par le <b>GitHub Actions news/IA</b> : <i>faits</i> (les chiffres) + <i>news</i> sourcée &amp; datée + <i>lecture</i> — ex. « risque Chine sur ASML, 27/07 ».</div>`;
+  } else {
+    const list = items.map(x=>`<div class="ni">📰 <b>${x.date||""}</b> ${x.titre||""} ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">source</a>`:""}</div>`).join("");
+    body = (isObj&&n.faits?`<div class="ni"><b>Faits :</b> ${n.faits}</div>`:"") + list
+      + (isObj&&n.lecture?`<div class="ni lecture">🧭 <b>Lecture :</b> ${n.lecture} <span class="interp">(interprétation)</span></div>`:"");
+  }
+  return `<div class="news"><div class="blk-h">📰 Actualité — cette semaine</div>${body}</div>`;
 }
 
 function render(){
@@ -243,8 +281,27 @@ function renderChain(sector, key){
       : `<div class="empty-region">Aucune donnée — se remplira au prochain run de scoring.</div>`;
     return `<div class="region"><h4><span><span class="flag">${FLAG[r]}</span> ${r}</span><span class="n">${p.n} act.</span></h4>${body}</div>`;
   }).join("");
-  return `<div style="margin-bottom:6px" class="pos">${ch.position} · capex-IA ${ch.capex_ia}% · survit stress IA : ${ch.survives_ai||'?'}</div>
-    <div class="regions">${cols}</div>${newsHTML(ch.news)}`;
+  // maillons = les étapes de la chaîne, avec explication + boîtes (rôle + drapeau région)
+  const chainHTML = (ch.maillons||[]).map(m=>{
+    const comps = (m.companies||[]).map(c=>`<div class="comp ${c.has_data?'':'nd'}">
+        <span class="cflag">${FLAG[c.region]||'•'}</span>
+        <span class="ctk">${c.ticker||''}</span>
+        <span class="crole">${c.role||c.name||''}</span></div>`).join("");
+    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>
+      ${m.desc?`<div class="mdesc">${m.desc}</div>`:''}
+      <div class="comps">${comps}</div></div>`;
+  }).join("");
+  const risksHTML = (ch.risks&&ch.risks.length)
+    ? `<div class="risks"><div class="blk-h">⚠️ Risques de la chaîne</div><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>` : "";
+  return `
+    <div class="pos meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA : <b>${ch.survives_ai||'?'}</b></div>
+    ${ch.thesis?`<div class="thesis"><div class="blk-h">Thèse — pourquoi cette chaîne</div><p>${ch.thesis}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}${ch.decomp?`<p class="diff">${ch.decomp}</p>`:''}</div>`:''}
+    <h3 class="sec-h">La chaîne, étape par étape</h3>
+    <div class="chain">${chainHTML}</div>
+    <h3 class="sec-h">Performance par région</h3>
+    <div class="regions">${cols}</div>
+    ${risksHTML}
+    ${newsHTML(ch.news)}`;
 }
 
 // ---- theme toggle ----

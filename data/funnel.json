@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generated": "2026-07-27T21:25:11.427948Z",
+  "generated": "2026-07-28T08:39:04.097820Z",
   "note": "Entonnoir descriptif (médianes). News=[] tant que Phase B n'a pas tourné.",
   "axes": [
    "momentum",
@@ -221,7 +221,184 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "Quel que soit le mix (nucléaire, gaz, renouvelable), chaque électron passe par un transformateur et un câble. Le réseau est le chokepoint physique commun à la sécurité énergétique EU, la réindustrialisation subventionnée et les datacenters — délais de livraison en années.",
+     "diff": "Croisement de TOUTES les convictions (dépendance post-Russie/Iran, subventions EU, électrification, IA). Un des rares thèmes qui survit à un stress capex IA.",
+     "decomp": "Demande = baseline politique/remplacement (REPowerEU, interconnexions — IA-indépendante) + incrément datacenter (capex-IA). Seule la baseline diversifie ; la part datacenter compte dans le plafond capex-IA.",
+     "risks": [
+      "Exécution industrielle (monter la capacité transfo prend des années ; carnets pleins peuvent cacher des marges sous pression)",
+      "Politique/permis (contestations lignes, revirements budgétaires)",
+      "Valorisation : Siemens Energy/Schneider déjà fortement montés depuis 2023"
+     ],
+     "gap": "Nexans/NKT/National Grid/E.ON/Terna à récupérer au prochain run EU. Asie : Hyundai Electric, Hyosung, LS Cable (transformateurs/câbles).",
+     "maillons": [
+      {
+       "label": "① Transformateurs HT/THT",
+       "desc": "LE goulot : délais en années, capacité mondiale insuffisante, personnel rare. Sans transformateur, aucun raccordement (datacenter, usine, parc renouvelable). Oligopole serré.",
+       "companies": [
+        {
+         "ticker": "ENR",
+         "name": "Siemens Energy AG",
+         "role": "Transfo + HVDC + réseau (dilué par gaz/ex-Gamesa)",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "GEV",
+         "name": "GE Vernova",
+         "role": "Transfo + turbines gaz + éolien (dilué)",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "6501",
+         "name": "Hitachi Energy",
+         "role": "Leader transfo — noyé dans Hitachi (6501.T, Asie)",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        },
+        {
+         "ticker": "267260",
+         "name": "Hyundai Electric / Hyosung",
+         "role": "Exportateurs transfo massifs vers US/EU",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "② Câbles HT / sous-marins",
+       "desc": "Le vrai jeu PUR du réseau (challenge #2). Interconnexions EU, raccordement offshore. Carnets pluriannuels ; capacité de pose (navires) elle-même limitée. Oligopole 3-4 acteurs.",
+       "companies": [
+        {
+         "ticker": "PRY",
+         "name": "Prysmian",
+         "role": "Câbles HT/sous-marins — pure-play, n°1 mondial",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "NEX",
+         "name": "Nexans",
+         "role": "Câbles HT — pure-play FR (à récupérer run EU)",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "NKT",
+         "name": "NKT A/S",
+         "role": "Câbles HVDC sous-marins — pure-play DK (à récupérer)",
+         "region": "EU",
+         "status": "hors_pipe",
+         "has_data": false
+        },
+        {
+         "ticker": "LSCABLE",
+         "name": "LS Cable",
+         "role": "Câbles — Corée",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      },
+      {
+       "label": "③ Appareillage HT / HVDC",
+       "desc": "Convertisseurs HVDC indispensables aux interconnexions longues et à l'offshore. Techno concentrée chez très peu d'acteurs.",
+       "companies": [
+        {
+         "ticker": "ENR",
+         "name": "Siemens Energy",
+         "role": "HVDC (Grid Technologies)",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "ABBN",
+         "name": "ABB Ltd",
+         "role": "Appareillage HT, HVDC light",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "GEV",
+         "name": "GE Vernova",
+         "role": "HVDC",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "④ Distribution / gestion intelligente",
+       "desc": "Digitalisation du réseau, gestion de charge (datacenters + EV). Marges logicielles > hardware. Double exposition réseau + datacenter.",
+       "companies": [
+        {
+         "ticker": "SU",
+         "name": "Schneider Electric",
+         "role": "Leader mondial gestion énergie — double expo réseau+datacenter (à récupérer run EU)",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "ETN",
+         "name": "Eaton",
+         "role": "Distribution électrique (aussi IA-infra)",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "ABBN",
+         "name": "ABB Ltd",
+         "role": "Électrification & automation",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "⑤ Opérateurs (TSO/DSO)",
+       "desc": "Monopoles régulés : capex garanti par le régulateur = croissance visible mais rendement plafonné. Profil stable, pas thématique. Très sensibles aux taux.",
+       "companies": [
+        {
+         "ticker": "RED",
+         "name": "Redeia (Red Eléctrica)",
+         "role": "TSO espagnol",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "TRN",
+         "name": "Terna",
+         "role": "TSO italien (régulé, sensible aux taux)",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": null,
+         "name": "National Grid / E.ON",
+         "role": "TSO/DSO UK & DE (à récupérer run EU)",
+         "region": "EU",
+         "status": "unlisted",
+         "has_data": true
+        }
+       ]
+      }
+     ]
     }
    },
    "news": []
@@ -353,7 +530,124 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "La demande nucléaire est CONTRACTUALISÉE : les hyperscalers signent des PPA multi-décennaux et paient d'avance, transformant des projets spéculatifs en actifs bancables. Le cycle du combustible est le maillon le plus concentré géopolitiquement de l'énergie occidentale.",
+     "diff": "« Les datacenters paient le nucléaire en avance, construction en attente » : 13 deals hyperscalers, >9,8 GW (mai 2026). LE CONTRAT DÉBLOQUE LA CONSTRUCTION, pas l'inverse.",
+     "decomp": "Découpé en 3 HORIZONS aux gagnants différents (le décalage temporel est central : datacenters veulent des électrons 2026-2028, les SMR livrent 2030-2035).",
+     "risks": [
+      "Décalage temporel datacenters(26-28) vs SMR(30-35)",
+      "Risque politique ratepayers US (enquête sénat, pledge mars 2026)",
+      "Equities uranium : drawdowns 30-50% ORDINAIRES même en marché haussier"
+     ],
+     "gap": "Enrichissement (le vrai 'ASML du nucléaire') largement NON COTÉ : Urenco, Orano. Seul Centrus coté (petit, volatil). Trou investissable réel.",
+     "maillons": [
+      {
+       "label": "H1 (2026-2029) — combler le trou",
+       "desc": "Actifs existants + gaz : seule capacité livrable avant 2030. Les PPA (TMI, Talen) revalorisent des actifs déjà amortis.",
+       "companies": [
+        {
+         "ticker": "CEG",
+         "name": "Constellation Energy",
+         "role": "1er parc nucléaire US — PPA Microsoft TMI 835MW/20ans",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "VST",
+         "name": "Vistra",
+         "role": "Producteur incluant nucléaire",
+         "region": "US",
+         "status": "data",
+         "has_data": false
+        },
+        {
+         "ticker": "TLN",
+         "name": "Talen Energy",
+         "role": "Nucléaire + PPA Amazon 17 ans",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "GEV",
+         "name": "GE Vernova",
+         "role": "Turbines gaz (comble physiquement le trou 26-30)",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "ENR",
+         "name": "Siemens Energy",
+         "role": "Turbines gaz",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "H2 (permanent) — le combustible",
+       "desc": "Le chokepoint géopolitique. Offre primaire qui se resserre (Kazatomprom réduit, Niger à l'arrêt). Prix LONG TERME >90$/lb (1ère fois depuis 2008).",
+       "companies": [
+        {
+         "ticker": "CCJ",
+         "name": "Cameco",
+         "role": "Plus grand mineur uranium coté + conversion (Port Hope) + Westinghouse",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "LEU",
+         "name": "Centrus Energy",
+         "role": "Enrichissement — seul pure-play coté (HALEU pour SMR), volatil",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": null,
+         "name": "Urenco / Orano",
+         "role": "Enrichissement = quasi-duopole occidental — NON COTÉS (le meilleur maillon est inaccessible)",
+         "region": "EU",
+         "status": "unlisted",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "H3 (2030+) — développeurs SMR",
+       "desc": "Le maillon le plus MÉDIATISÉ et le plus fragile. Revenus lointains, valorisations narratives, dilutions probables. DÉPRIORISÉ (VEILLE).",
+       "companies": [
+        {
+         "ticker": "OKLO",
+         "name": "Oklo",
+         "role": "Micro-réacteurs — pari techno long, très volatil",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "SMR",
+         "name": "NuScale Power",
+         "role": "SMR — pré-revenu, spéculatif",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": null,
+         "name": "X-energy / TerraPower / Kairos",
+         "role": "SMR — NON COTÉS",
+         "region": "US",
+         "status": "unlisted",
+         "has_data": true
+        }
+       ]
+      }
+     ]
     }
    },
    "news": []
@@ -485,7 +779,109 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "Le picks & shovels DU picks & shovels : quel que soit le gagnant des LLM ou des puces, les datacenters ont besoin d'électricité distribuée et de refroidissement. La densité (racks >100 kW) rend le refroidissement liquide OBLIGATOIRE.",
+     "diff": "ASML elle-même identifie l'énergie de l'IA comme le défi majeur de l'industrie (avril 2026). Conviction relative la plus forte du bloc capex-IA (moins dépendant de qui gagne la course aux puces).",
+     "decomp": "100% capex-IA — AUCUNE protection en cas de stress. Compte plein dans le plafond.",
+     "risks": [
+      "100% corrélé capex IA",
+      "Valorisations tendues post-run 2024-26 (Vertiv)",
+      "Standard refroidissement liquide pas figé → risque techno",
+      "Concentration clients (quelques hyperscalers)"
+     ],
+     "gap": "Delta Electronics (Taïwan), composants asiatiques (connecteurs, alim) — à venir avec l'Asie.",
+     "maillons": [
+      {
+       "label": "① Power distribution (UPS/PDU/switchgear)",
+       "desc": "Chaque MW installé passe par eux ; revenus récurrents services. Oligopole.",
+       "companies": [
+        {
+         "ticker": "VRT",
+         "name": "Vertiv",
+         "role": "Power + cooling datacenter (>60% CA datacenter)",
+         "region": "US",
+         "status": "data",
+         "has_data": false
+        },
+        {
+         "ticker": "ETN",
+         "name": "Eaton",
+         "role": "Gestion électrique",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "SU",
+         "name": "Schneider Electric",
+         "role": "Leader mondial (à récupérer run EU)",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "ABBN",
+         "name": "ABB Ltd",
+         "role": "Distribution",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "② Refroidissement liquide",
+       "desc": "Le passage air→liquide EST le changement techno. Positions pas encore figées → opportunité ET risque.",
+       "companies": [
+        {
+         "ticker": "VRT",
+         "name": "Vertiv",
+         "role": "Direct-to-chip, immersion",
+         "region": "US",
+         "status": "data",
+         "has_data": false
+        },
+        {
+         "ticker": "NVT",
+         "name": "nVent Electric",
+         "role": "Thermal management, connexion",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "③ Générateurs / backup",
+       "desc": "Continuité de service obligatoire. Oligopole.",
+       "companies": [
+        {
+         "ticker": "CMI",
+         "name": "Cummins",
+         "role": "Générateurs",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "CAT",
+         "name": "Caterpillar",
+         "role": "Générateurs",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "GNRC",
+         "name": "Generac",
+         "role": "Backup power",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      }
+     ]
     },
     "semi": {
      "label": "Semi-conducteurs (équipement + mémoire/HBM)",
@@ -665,7 +1061,153 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "On n'achète pas le chip médiatisé (Nvidia) mais les équipements amont sans lesquels aucun chip avancé n'existe — monopole (ASML EUV) ou quasi-monopole vérifiables. Ajout 2026 : la MÉMOIRE (HBM) est une sous-chaîne à part entière.",
+     "diff": "Descendu volontairement au 5e rang : pas parce que la thèse est fausse, mais parce que c'est le thème le plus détenu, le mieux compris et le plus cher. Entrée par tranches.",
+     "decomp": "100% capex-IA. Compte plein dans le plafond. Tail risk Taïwan (TSMC) = binaire, non diversifiable.",
+     "risks": [
+      "Valorisation sans marge d'erreur (thèse carnet 2028 déjà pricée)",
+      "Cycle : décalage 6 mois du capex → correction -30/-40% historique",
+      "Taïwan (binaire, catastrophique)",
+      "Chine : restrictions export + chaîne domestique subventionnée"
+     ],
+     "gap": "Tokyo Electron (#3 WFE), Lasertec (monopole inspection masques EUV), Advantest (test), TSMC (foundry), SK Hynix/Samsung (HBM), ASMPT/Hanmi (packaging) — cœur du trou Asie.",
+     "maillons": [
+      {
+       "label": "① Lithographie EUV",
+       "desc": "MONOPOLE MONDIAL. L'exemple canonique du chokepoint : fournisseur UNIQUE d'EUV. Machines >200M€, 2 ans de fabrication.",
+       "companies": [
+        {
+         "ticker": "ASML",
+         "name": "ASML Holding",
+         "role": "Monopole EUV — carnet plein jusqu'en 2028",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "6920",
+         "name": "Lasertec",
+         "role": "Monopole inspection masques EUV",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      },
+      {
+       "label": "② EDA (logiciels de design)",
+       "desc": "DUOPOLE. Chaque puce du monde passe par leurs outils ; revenus récurrents, moins cyclique que l'équipement.",
+       "companies": [
+        {
+         "ticker": "SNPS",
+         "name": "Synopsys",
+         "role": "EDA + IP",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "CDNS",
+         "name": "Cadence Design",
+         "role": "EDA",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "③ Dépôt / gravure / métrologie",
+       "desc": "Oligopole (3 acteurs) + KLA quasi-indélogeable sur l'inspection.",
+       "companies": [
+        {
+         "ticker": "AMAT",
+         "name": "Applied Materials",
+         "role": "N°1 équipement diversifié",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "LRCX",
+         "name": "Lam Research",
+         "role": "Gravure/dépôt (ROIC 48%)",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "KLAC",
+         "name": "KLA Corp",
+         "role": "Quasi-monopole métrologie/inspection",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "8035",
+         "name": "Tokyo Electron",
+         "role": "#3 WFE mondial",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      },
+      {
+       "label": "④ Packaging avancé (CoWoS, HBM)",
+       "desc": "Goulot RÉEL du ramp IA 24-26 : c'est ici que logic et mémoire se rejoignent (HBM sur interposer).",
+       "companies": [
+        {
+         "ticker": "BESI",
+         "name": "BE Semiconductor",
+         "role": "Hybrid bonding — brique HBM",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "MU",
+         "name": "Micron",
+         "role": "Mémoire HBM (le plus cyclique)",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "0522",
+         "name": "ASMPT / Hanmi",
+         "role": "Bonding — Asie",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      },
+      {
+       "label": "⑤ Test",
+       "desc": "Duopole.",
+       "companies": [
+        {
+         "ticker": "TER",
+         "name": "Teradyne",
+         "role": "Leader test (ATE) + robotique",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "6857",
+         "name": "Advantest",
+         "role": "Test HBM — Asie",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      }
+     ]
     }
    },
    "news": []
@@ -867,7 +1409,173 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "Le réarmement européen est un moteur budgétaire structurel (~800 Md€/an visés fin décennie), renforcé par le découplage US. Mais 2026 a prouvé que le risque n'est PAS la macro, c'est L'EXÉCUTION (annulations de programmes, marges déçues).",
+     "diff": "Leçon 2026 : F126 annulé → Rheinmetall -18% en une séance (-38% depuis janvier). Le backlog tient (RHM 63,8 Md€), c'est la conversion backlog→marges qui est scrutée. D'où : composants à moat > primes.",
+     "decomp": "capex-IA ≈ 0 → rôle DIVERSIFIANT réel (avec le réseau). Moteur = budgets publics/sécurité, pas l'IA.",
+     "risks": [
+      "Risque programme/politique (F126 : budgets votés ≠ contrats ≠ marges)",
+      "Valorisation encore élevée vs historique malgré le derating 2026",
+      "Capacité industrielle : conversion lente",
+      "Concentration client (états), risque export"
+     ],
+     "gap": "BAE Systems (UK), Saab (SE) à récupérer. Munitions (Eurenco/Nammo non cotés). Drones/spatial : expo cotée mince (VEILLE spatial).",
+     "maillons": [
+      {
+       "label": "① Primes / intégrateurs",
+       "desc": "Portent le RISQUE PROGRAMME (annulations, prix fixes). Exposition macro max, qualité revenus min.",
+       "companies": [
+        {
+         "ticker": "RTX",
+         "name": "RTX Corp",
+         "role": "Moteurs (Pratt) + défense",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "LMT",
+         "name": "Lockheed Martin",
+         "role": "Prime défense US",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "GD",
+         "name": "General Dynamics",
+         "role": "Défense + Gulfstream",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "NOC",
+         "name": "Northrop Grumman",
+         "role": "Défense + nucléaire strat.",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "RHM",
+         "name": "Rheinmetall",
+         "role": "Munitions/blindés — cœur réarmement EU",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "HO",
+         "name": "Thales",
+         "role": "Défense/électronique",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "AM",
+         "name": "Dassault Aviation",
+         "role": "Rafale",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "LDO",
+         "name": "Leonardo",
+         "role": "Prime défense IT — hélico/électronique",
+         "region": "EU",
+         "status": "hors_pipe",
+         "has_data": false
+        },
+        {
+         "ticker": null,
+         "name": "BAE / Saab",
+         "role": "UK/SE (à récupérer run EU)",
+         "region": "EU",
+         "status": "unlisted",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "② Composants à moat / aftermarket",
+       "desc": "LE picks & shovels défense : pièces certifiées sole-source, revenus rechange récurrents — INSENSIBLES aux annulations de programmes neufs.",
+       "companies": [
+        {
+         "ticker": "TDG",
+         "name": "TransDigm",
+         "role": "Pièces propriétaires, pricing power extrême — modèle canonique",
+         "region": "US",
+         "status": "data",
+         "has_data": false
+        },
+        {
+         "ticker": "HEI",
+         "name": "Heico",
+         "role": "Aftermarket, croissance composée",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "HWM",
+         "name": "Howmet",
+         "role": "Aubes & composants moteurs",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "SAF",
+         "name": "Safran",
+         "role": "Moteurs (CFM) + aftermarket civil/militaire",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "MTX",
+         "name": "MTU Aero Engines",
+         "role": "Moteurs + MRO",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      },
+      {
+       "label": "③ Électronique de défense / capteurs",
+       "desc": "Radars, guerre électronique, optronique — contenu croissant par plateforme.",
+       "companies": [
+        {
+         "ticker": "HAG",
+         "name": "Hensoldt",
+         "role": "Capteurs, radars — DE",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "HO",
+         "name": "Thales",
+         "role": "Électronique embarquée",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "LHX",
+         "name": "L3Harris",
+         "role": "Comms tactiques — US",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      }
+     ]
     }
    },
    "news": []
@@ -939,7 +1647,54 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "Dépendance chinoise sur les matières = diagnostic validé, exécution prudente. Pas une fiche-thème autonome (fourre-tout) mais un maillon amont documenté DANS chaque fiche + exposition optionnelle petite et bornée.",
+     "diff": "La Chine FIXE les prix des matières qu'elle domine et peut écraser les cours pour tuer la concurrence (déjà fait sur les terres rares). Un pari MP/Lynas = pari sur un soutien politique occidental DURABLE, pas sur le marché libre.",
+     "decomp": "Se joue mieux via les fiches AVAL (réseau, défense) qui subissent la dépendance et la répercutent dans leurs prix.",
+     "risks": [
+      "Pure-plays rares, souvent non rentables sans subventions, très volatils",
+      "La Chine peut écraser les prix",
+      "Beaucoup de véhicules = paniers médiocres"
+     ],
+     "gap": "Gallium/germanium : quasi rien en pure-play coté. Lynas (AU) à récupérer.",
+     "maillons": [
+      {
+       "label": "Terres rares / aimants",
+       "desc": "Chine domine raffinage et aimants NdFeB. Sert défense, robotique, éolien.",
+       "companies": [
+        {
+         "ticker": "MP",
+         "name": "MP Materials",
+         "role": "Terres rares US — dépendant soutien politique (price-floor DoD)",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "LYC",
+         "name": "Lynas",
+         "role": "Terres rares — Australie",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      },
+      {
+       "label": "Cuivre & métaux",
+       "desc": "Concentré côté mines (Chili/Pérou/RDC), pas côté Chine. Sert réseau + datacenter.",
+       "companies": [
+        {
+         "ticker": "FCX",
+         "name": "Freeport-McMoRan",
+         "role": "Cuivre — major diversifiée",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        }
+       ]
+      }
+     ]
     }
    },
    "news": []
@@ -1054,7 +1809,78 @@
        "news": []
       }
      },
-     "news": []
+     "news": [],
+     "thesis": "Si les humanoïdes passent à l'échelle, les gagnants picks & shovels sont les composants critiques — réducteurs harmoniques, actionneurs, capteurs — massivement japonais/asiatiques. Le thème est réel, le TIMING d'investissement ne l'est pas encore.",
+     "diff": "Revenus humanoïdes réels négligeables → payer aujourd'hui = payer le narratif. Les vrais picks & shovels sont dans le trou Asie.",
+     "decomp": "Compte dans le plafond capex-IA le jour où activé.",
+     "risks": [
+      "Payer le narratif (revenus quasi nuls)",
+      "Vrais enablers dans le trou Asie",
+      "Forte corrélation sentiment IA"
+     ],
+     "gap": "Harmonic Drive, Nabtesco (duopole réducteurs), Nidec, Keyence, Fanuc, Yaskawa — cœur du trou Asie. Critères activation : carnets composants en inflexion + couverture Asie + déploiement commercial payant.",
+     "maillons": [
+      {
+       "label": "Capteurs / vision (accessible)",
+       "desc": "Leaders à marges très élevées.",
+       "companies": [
+        {
+         "ticker": "CGNX",
+         "name": "Cognex",
+         "role": "Vision industrielle — US",
+         "region": "US",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "ABBN",
+         "name": "ABB Ltd",
+         "role": "Robots industriels",
+         "region": "EU",
+         "status": "data",
+         "has_data": true
+        },
+        {
+         "ticker": "6861",
+         "name": "Keyence",
+         "role": "Capteurs — Japon (marges extrêmes)",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      },
+      {
+       "label": "Réducteurs / actionneurs (trou Asie)",
+       "desc": "Quasi-duopole mondial — le vrai chokepoint, entièrement asiatique.",
+       "companies": [
+        {
+         "ticker": "6324",
+         "name": "Harmonic Drive / Nabtesco",
+         "role": "Réducteurs harmoniques — duopole JP",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        },
+        {
+         "ticker": "6594",
+         "name": "Nidec",
+         "role": "Moteurs/actionneurs — JP",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        },
+        {
+         "ticker": "6954",
+         "name": "Fanuc / Yaskawa",
+         "role": "Intégrateurs robots — JP",
+         "region": "Asie",
+         "status": "hors_pipe",
+         "has_data": false
+        }
+       ]
+      }
+     ]
     }
    },
    "news": []
