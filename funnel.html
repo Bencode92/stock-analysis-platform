@@ -235,6 +235,9 @@
   .cr-bar{height:9px;background:var(--line);border-radius:4px;overflow:hidden}
   .cr-bar>span{display:block;height:100%;border-radius:4px}
   .cr-v{font-family:var(--mono);font-size:12.5px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  .cr-n{font-family:var(--mono);font-size:9px;color:var(--faint);font-weight:400}
+  .cr-n.small{color:var(--warn)}
+  .cmp-cav{font-size:10.5px;color:var(--faint);font-style:italic;margin:11px 0 0;line-height:1.4}
   @media(max-width:640px){.compare{grid-template-columns:1fr}}
   /* relief : ombres douces + perf en gros */
   .brief,.maillon,.cmp-col,.region,.card{box-shadow:0 1px 2px rgba(14,22,32,.045)}
@@ -406,23 +409,26 @@ function renderChain(sector,key){
   const cmp=(metric,inv)=>{
     const vals=rlist.map(r=>ch.regions[r].panel[metric]).filter(v=>v!=null);
     const mx=Math.max(...vals.map(Math.abs),1);
-    return rlist.map(r=>{const v=ch.regions[r].panel[metric];const g=grade(metric,v);
-      return `<div class="crow"><span class="cr-l">${FLAG[r]} ${r}</span><span class="cr-bar"><span class="${g.bg}" style="width:${v!=null?Math.max(4,Math.abs(v)/mx*100):0}%"></span></span><span class="cr-v ${g.cls}">${fmt(v,metric)}</span></div>`;}).join("");
+    return rlist.map(r=>{const v=ch.regions[r].panel[metric];const g=grade(metric,v);const nn=ch.regions[r].panel.n;
+      return `<div class="crow"><span class="cr-l">${FLAG[r]} ${r} <span class="cr-n${nn<3?' small':''}">n=${nn}</span></span><span class="cr-bar"><span class="${g.bg}" style="width:${v!=null?Math.max(4,Math.abs(v)/mx*100):0}%"></span></span><span class="cr-v ${g.cls}">${fmt(v,metric)}</span></div>`;}).join("");
   };
   // KPI + graphes
   const parseP=s=>s?parseFloat(String(s).replace(/[^0-9.\-]/g,'')):null;
   const totalEn=(ch.maillons||[]).reduce((s,m)=>s+(m.companies||[]).length,0);
-  const domR=rlist.length?rlist.reduce((a,b)=>((ch.regions[b].panel.moat??-99)>(ch.regions[a].panel.moat??-99)?b:a)):null;
+  // meilleur moat : uniquement parmi les régions n>=3 (1 titre ne peut pas "gagner" une région)
+  const bigR=rlist.filter(r=>ch.regions[r].panel.n>=3);
+  const domR=bigR.length?bigR.reduce((a,b)=>((ch.regions[b].panel.moat??-99)>(ch.regions[a].panel.moat??-99)?b:a)):null;
+  const domN=domR?ch.regions[domR].panel.n:0;
   const w52n=parseP(e.signal_w52);
   const kpis=`<div class="kpis">
     <div class="kpi"><div class="kn ${w52n!=null&&w52n<0?'b':'g'}">${e.signal_w52||'—'}</div><div class="kl">Panier signal · 52 sem</div></div>
     <div class="kpi"><div class="kn">${ch.capex_ia}%</div><div class="kl">Exposition capex-IA</div></div>
     <div class="kpi"><div class="kn">${totalEn}</div><div class="kl">Boîtes de la chaîne</div></div>
-    <div class="kpi"><div class="kn">${domR?FLAG[domR]+' '+domR:'—'}</div><div class="kl">Meilleur moat (ROIC)</div></div></div>`;
+    <div class="kpi"><div class="kn">${domR?FLAG[domR]+' '+domR:'<span class="mut">n&lt;3</span>'}</div><div class="kl">Meilleur moat (ROIC)${domR?' · n='+domN:' · échantillon insuffisant'}</div></div></div>`;
   const H=[['3 mois',e.signal_3m],['YTD',e.signal_ytd],['52 sem',e.signal_w52]];
   const mxH=Math.max(...H.map(([_,v])=>Math.abs(parseP(v)||0)),1);
   const perfC=`<div class="cmp-col"><span class="lab">Perf du panier signal</span>${H.map(([l,v])=>{const n=parseP(v);return `<div class="crow"><span class="cr-l">${l}</span><span class="cr-bar"><span class="${n<0?'bg-b':'bg-g'}" style="width:${n!=null?Math.max(4,Math.abs(n)/mxH*100):0}%"></span></span><span class="cr-v ${n<0?'b':'g'}">${v||'—'}</span></div>`;}).join("")}</div>`;
-  const moatC=rlist.length>1?`<div class="cmp-col"><span class="lab">Qui a le moat — ROIC par région</span>${cmp("moat")}</div>`:"";
+  const moatC=rlist.length>1?`<div class="cmp-col"><span class="lab">Qui a le moat — ROIC par région</span>${cmp("moat")}<p class="cmp-cav">Médianes des enablers. <b>n&lt;3</b> = indicatif (trop peu de titres pour trancher).</p></div>`:"";
   // ===== 7 BLOCS : problème → dépendance → en route → chaîne → chokepoint → exposition → risques =====
   const B=ch.blocks||{}, src=s=>s?`<div class="src">${s}</div>`:'';
   const facts=arr=>(arr||[]).map(d=>`<div class="factline"><p>${hl(d.t)}</p>${src(d.src)}</div>`).join("");

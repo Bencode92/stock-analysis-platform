@@ -110,7 +110,8 @@ def etf_of(t):
             "signal_ytd": es.get("ytd"), "signal_w52": es.get("w52"), "signal_3m": es.get("m3")}
 
 # axes du panel : (champ stock, clé sortie). Momentum=contexte ; le reste=signal.
-AXES = [("perf_1y", "momentum"), ("roic", "moat"), ("buffett_score", "qualite"),
+# "Qualité" = quality_score (PARTOUT, cohérent avec le modal) ; Buffett reste une colonne à part.
+AXES = [("perf_1y", "momentum"), ("roic", "moat"), ("quality_score", "qualite"),
         ("volatility_3y", "risque"), ("fcf_yield", "valeur")]
 
 def med(idx, tickers, field):
