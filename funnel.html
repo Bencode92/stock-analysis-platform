@@ -80,12 +80,11 @@
   .meta b{color:var(--ink2)}
 
   /* schéma de chaîne — pipeline technique */
-  .chain{position:relative;padding-left:26px;display:flex;flex-direction:column;gap:1px;
-    border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--line)}
-  .chain::before{content:"";position:absolute;left:11px;top:0;bottom:0;width:1px;background:var(--line2);z-index:1}
-  .maillon{position:relative;background:var(--surface);padding:13px 16px 14px}
-  .maillon::before{content:"";position:absolute;left:-19.5px;top:17px;width:8px;height:8px;background:var(--accent);
-    border:2px solid var(--surface);border-radius:2px;z-index:2;transform:rotate(45deg)}
+  .chain{display:flex;flex-direction:column;gap:0}
+  .maillon{background:var(--surface);border:1px solid var(--line2);border-radius:var(--r);padding:15px 18px;
+    box-shadow:0 1px 3px rgba(14,22,32,.05)}
+  .flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:22px;
+    line-height:1;height:26px;font-weight:700}
   .mlabel{font-weight:600;font-size:14px}
   .mdesc{color:var(--muted);font-size:12px;margin:4px 0 9px;line-height:1.55}
   .comps{display:flex;flex-wrap:wrap;gap:6px}
@@ -305,7 +304,7 @@ function renderChain(sector,key){
     }).join("");
     const face=m.enface?`<div class="mface"><span class="face-l">En face</span> ${hl(m.enface)}</div>`:'';
     return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div>${face}</div>`;
-  }).join("");
+  }).join('<div class="flow-arrow">↓</div>');
   const risks=(ch.risks&&ch.risks.length)?`<div class="risks"><span class="lab">Risques de la chaîne</span><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:"";
   const e=ch.etf||{};
   const expo=`<div class="expo"><span class="lab">Comment s'exposer</span><div class="expo-row">
