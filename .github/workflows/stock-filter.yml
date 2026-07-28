@@ -65,9 +65,10 @@ on:
     - cron: '0 22 * * 1-5'
 
 concurrency:
-  # Un groupe PAR workflow : les workflows ne s'annulent plus entre eux.
-  # La sécurité anti-conflit de push est assurée par le rebase+retry ci-dessous.
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Un groupe PAR MARCHÉ/CRON (plus par workflow) : asia ne se fait plus starve/annuler
+  # par les runs europe/us qui partageaient le même créneau. Chaque cron (et chaque marché
+  # manuel) a son groupe → un run asia long va au bout. Push anti-conflit = rebase+retry.
+  group: ${{ github.workflow }}-${{ github.event.schedule || inputs.market || 'manual' }}
   cancel-in-progress: false
 
 permissions:
