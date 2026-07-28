@@ -131,8 +131,23 @@
   .et-tag{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);
     border:1px solid var(--line2);border-radius:4px;padding:1px 6px;margin-right:6px}
   .et-note{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:3px}
+  /* surlignage des termes clés (highlighter) */
+  .hl{font-weight:700;background:linear-gradient(180deg,transparent 58%,rgba(47,95,146,.16) 58%);padding:0 1px;border-radius:1px}
+  /* graphe de comparaison régionale */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .cmp-col{border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;background:var(--panel)}
+  .crow{display:grid;grid-template-columns:70px 1fr 50px;align-items:center;gap:10px;margin:10px 0 0}
+  .cr-l{font-size:12px;color:var(--ink2)}
+  .cr-bar{height:9px;background:var(--line);border-radius:4px;overflow:hidden}
+  .cr-bar>span{display:block;height:100%;border-radius:4px}
+  .cr-v{font-family:var(--mono);font-size:12.5px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  @media(max-width:640px){.compare{grid-template-columns:1fr}}
+  /* relief : ombres douces + perf en gros */
+  .brief,.maillon,.cmp-col,.region,.card{box-shadow:0 1px 2px rgba(14,22,32,.045)}
+  .ei b{font-size:16px}
+  .expo .ei:last-child b{font-size:19px;color:var(--good)}
   /* risques */
-  .risks{margin-top:22px;border:1px solid var(--line2);border-radius:var(--r);padding:14px 18px}
+  .risks{margin-top:22px;border:1px solid var(--line2);border-radius:var(--r);padding:14px 18px;box-shadow:0 1px 2px rgba(14,22,32,.045)}
   .risks ul{margin:8px 0 0;padding-left:18px}
   .risks li{font-size:12.5px;margin:4px 0;color:var(--ink2);line-height:1.5}
 
@@ -177,6 +192,8 @@
 <script>
 const FLAG={US:"🇺🇸",EU:"🇪🇺",Asie:"🌏"};
 let DATA=null, PATH=[];
+// surligne les termes clés en majuscules (ASML, EUV, TRANSPORT, HVDC, monopole…) en gras
+function hl(t){return (t||"").replace(/\b([A-ZÀ-Ý][A-ZÀ-Ý0-9&.\-]{1,})\b/g,'<b class="hl">$1</b>');}
 
 function grade(axis,v){
   if(v==null) return {cls:"mut",bg:"",w:0};
@@ -247,7 +264,7 @@ function renderChain(sector,key){
   }).join("");
   const chainHTML=(ch.maillons||[]).map(m=>{
     const comps=(m.companies||[]).map(c=>`<span class="comp ${c.has_data?'':'nd'}">${FLAG[c.region]||'•'}<span class="ctk">${c.ticker||''}</span><span class="crole">${c.role||c.name||''}</span></span>`).join("");
-    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${m.desc}</div>`:''}<div class="comps">${comps}</div></div>`;
+    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div></div>`;
   }).join("");
   const risks=(ch.risks&&ch.risks.length)?`<div class="risks"><span class="lab">Risques de la chaîne</span><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:"";
   const e=ch.etf||{};
@@ -255,12 +272,22 @@ function renderChain(sector,key){
     ${e.buy?`<div class="ei"><span class="et-tag">ETF</span> <b>${e.buy}</b>${e.buy_name?`<div class="et-note">${e.buy_name}</div>`:''}</div>`:`<div class="ei"><span class="et-tag">ETF</span> <span class="et-note">pas d'ETF pur coté — <b>panier de titres</b> (voir actions par région)</span></div>`}
     ${e.signal_w52?`<div class="ei"><span class="et-tag">Panier signal</span> 52 sem <b>${e.signal_w52}</b> · YTD ${e.signal_ytd||'—'}</div>`:''}
   </div><div class="et-note">Les actions précises sont dépliables dans chaque région ci-dessous.</div></div>`;
+  // graphe de comparaison régionale — qui domine (moat + momentum)
+  const rlist=["US","EU","Asie"].filter(r=>ch.regions[r]&&ch.regions[r].panel.n>0);
+  const cmp=(metric,inv)=>{
+    const vals=rlist.map(r=>ch.regions[r].panel[metric]).filter(v=>v!=null);
+    const mx=Math.max(...vals.map(Math.abs),1);
+    return rlist.map(r=>{const v=ch.regions[r].panel[metric];const g=grade(metric,v);
+      return `<div class="crow"><span class="cr-l">${FLAG[r]} ${r}</span><span class="cr-bar"><span class="${g.bg}" style="width:${v!=null?Math.max(4,Math.abs(v)/mx*100):0}%"></span></span><span class="cr-v ${g.cls}">${fmt(v,metric)}</span></div>`;}).join("");
+  };
+  const compHTML=rlist.length>1?`<div class="compare"><div class="cmp-col"><span class="lab">Qui a le moat — ROIC</span>${cmp("moat")}</div><div class="cmp-col"><span class="lab">Qui a couru — momentum</span>${cmp("momentum")}</div></div>`:"";
   return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>
-    ${ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${ch.context}</p></div>`:''}
-    ${ch.thesis?`<div class="thesis"><p>${ch.thesis}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}</div>`:''}
+    ${ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${hl(ch.context)}</p></div>`:''}
+    ${ch.thesis?`<div class="thesis"><p>${hl(ch.thesis)}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}</div>`:''}
     <div class="sec-h">Le schéma de la chaîne, étape par étape</div><div class="chain">${chainHTML}</div>
     ${expo}
-    <div class="sec-h">Performance par région</div><div class="regions">${cols}</div>
+    ${compHTML?`<div class="sec-h">Comparaison régionale</div>${compHTML}`:''}
+    <div class="sec-h">Détail par région</div><div class="regions">${cols}</div>
     ${risks}${newsHTML(ch.news)}`;
 }
 
