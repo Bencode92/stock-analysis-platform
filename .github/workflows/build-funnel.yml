@@ -1,0 +1,46 @@
+name: 🔻 Build Funnel
+
+# Fabrique data/funnel.json (Secteur › Chaîne › Région › Action + panels multi-axes)
+# à partir de data/framework.json + data/stocks_*.json. La page funnel.html LIT ce JSON
+# (fetch même-origine sur GitHub Pages) — aucun appel API en direct depuis le navigateur.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # après les mises à jour stocks du matin (Paris ~08:30 été / 09:30 hiver)
+    - cron: '30 6 * * 1-5'
+    - cron: '30 7 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-funnel
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: 🔻 Générer funnel.json
+        run: python3 scripts/build_funnel.py
+
+      - name: 💾 Commit et push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/funnel.json; then
+            echo "ℹ️ funnel.json inchangé, rien à committer"; exit 0
+          fi
+          git add data/funnel.json
+          TS=$(date -u '+%Y-%m-%d %H:%M UTC')
+          git commit -m "🔻 Build Funnel - $TS [skip ci]"
+          git fetch origin main
+          git rebase -X ours origin/main || git rebase --abort || true
+          git push origin HEAD:main && echo "✅ Push OK"
