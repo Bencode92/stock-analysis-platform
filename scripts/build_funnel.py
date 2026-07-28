@@ -33,14 +33,21 @@ SECTOR = {"semi": "Technologie", "ai_infra": "Technologie", "grid": "Utilities /
 # Contexte pédagogique en langage clair (driver + goulot + dépendance) — QUALITATIF, sans chiffre inventé.
 # Les stats précises + sourcées (« 50% de l'Europe est nucléaire ») viendront de la couche news/IA (Phase B).
 CONTEXT = {
- "semi": "Le driver : l'IA fait exploser la demande de puces avancées. Mais on ne peut pas les fabriquer sans une poignée d'équipementiers amont — ASML, seul au monde à faire la lithographie EUV, plus le dépôt, la gravure et le test. Goulot ultra-concentré, très exposé à Taïwan (TSMC) et au Japon.",
- "grid": "Le driver : l'électrification (voitures électriques, datacenters, renouvelables) sature des réseaux vieillissants. Le goulot n'est pas la production d'électricité mais son TRANSPORT — transformateurs et câbles haute tension, avec des délais de commande de plusieurs années. Cuivre en amont, largement importé.",
- "nuclear": "Le driver : relance mondiale du nucléaire pour décarboner. Le goulot est le COMBUSTIBLE — l'uranium (Kazakhstan, Niger, Canada) et surtout son enrichissement, longtemps dépendant de la Russie. Chokepoint plus géopolitique qu'industriel.",
- "ai_infra": "Le driver : les datacenters IA consomment des quantités folles d'électricité et de refroidissement. Le goulot, ce sont les équipements électriques et thermiques (Vertiv, Eaton, Schneider) et l'accès à l'énergie. Très couplé au capex-IA — si l'IA ralentit, ça ralentit.",
- "defense": "Le driver : réarmement structurel, l'Europe surtout. Le vrai goulot n'est pas les avions ou chars médiatisés mais les COMPOSANTS critiques (électronique, munitions, capteurs). Cher après la forte hausse récente.",
- "materials": "Le driver : l'électrification et la défense ont besoin de cuivre, terres rares, lithium. Le goulot : la Chine domine le RAFFINAGE (surtout les terres rares). Chokepoint géopolitique amont — celui qui raffine tient la chaîne.",
- "robotics": "En VEILLE — thème pas encore activé (critères d'activation non remplis). On surveille, on n'investit pas.",
+ "semi": "Les semi-conducteurs, ce sont les puces qui font tourner toute l'électronique — et l'IA en dévore des quantités record. Le point clé : on ne peut PAS fabriquer une puce avancée sans passer par une poignée de goulots quasi-monopolistiques en amont. ASML est le SEUL au monde à fabriquer les machines de lithographie EUV (>200 M€ pièce, 2 ans de délai) — sans elle, pas de puce sous 7 nm. À côté : le dépôt, la gravure, le test, puis la fonderie (TSMC domine le leading-edge mondial). C'est la doctrine picks & shovels par excellence : on n'achète pas Nvidia (le produit médiatisé), on achète les fournisseurs incontournables sans qui rien n'existe. Le risque : tout est concentré à Taïwan, au Japon et aux Pays-Bas → forte exposition géopolitique.",
+ "grid": "Le réseau électrique, c'est le transport de l'électricité entre les centrales et les prises. Le driver : l'électrification massive (voitures électriques, datacenters, renouvelables) sature des réseaux vieux de 40-50 ans qu'il faut refaire. Le goulot n'est PAS la production d'électricité — c'est le TRANSPORT : les transformateurs haute tension et les câbles, dont les carnets de commande dépassent déjà 3-4 ans. Peu d'acteurs capables d'en fabriquer (surtout européens et asiatiques), donc un vrai chokepoint industriel. En amont : le cuivre, largement importé. C'est un thème lent mais structurel — la demande est mécanique, pas spéculative.",
+ "nuclear": "Le nucléaire connaît une relance mondiale pour décarboner sans dépendre du soleil et du vent. Mais le vrai goulot n'est pas de construire des réacteurs — c'est le COMBUSTIBLE. Il faut de l'uranium (concentré au Kazakhstan, Niger, Canada) puis surtout l'ENRICHIR, une étape longtemps dominée par la Russie (Rosatom) — d'où un chokepoint plus géopolitique qu'industriel. Trois horizons : l'existant (entretien des centrales, sûr), le combustible (la vraie tension), et les SMR (petits réacteurs modulaires — prometteur mais pas prouvé, donc en veille). On joue le combustible et l'existant, pas le rêve SMR.",
+ "ai_infra": "L'IA-infra, c'est tout ce qui ALIMENTE et REFROIDIT les datacenters d'IA — l'angle mort du boom. Un datacenter IA consomme autant qu'une ville : le goulot devient l'électricité et le refroidissement, pas les puces. Les gagnants : les équipements électriques et thermiques (Vertiv pour le refroidissement, Eaton, Schneider pour la distribution). C'est encore du picks & shovels : on ne parie pas sur le modèle d'IA, on parie sur ce sans quoi aucun datacenter ne tourne. Attention : très couplé au capex-IA — si les géants ralentissent leurs investissements, cette chaîne ralentit avec eux (c'est le pari de régime à surveiller).",
+ "defense": "Le réarmement est structurel, l'Europe surtout, après des décennies de sous-investissement. Mais le vrai goulot n'est pas les avions et chars médiatisés (chers, très détenus) — c'est l'amont : les COMPOSANTS critiques (électronique de défense, munitions, capteurs, propulsion) que peu de fournisseurs savent produire et qu'on ne remplace pas en 6 mois. Intérêt supplémentaire : la défense se DÉCORRÈLE des semi/IA en cas de stress (2022 : semi −28% / défense +71%) — c'est le seul hedge robuste du portefeuille. On achète sur repli (c'est cher après la hausse récente), et plutôt les composants que les primes.",
+ "materials": "L'électrification et la défense ont un besoin explosif de cuivre, terres rares et lithium. Mais le diagnostic est FORT et les véhicules FAIBLES : le vrai chokepoint n'est pas la mine, c'est le RAFFINAGE — et la Chine y domine massivement (surtout les terres rares). Celui qui raffine tient la chaîne, et c'est un levier géopolitique (la Chine peut restreindre les exports). Problème pratique : peu d'ETF/actions propres pour s'y exposer sans acheter des mineurs très cycliques et politiques (Amérique latine pour le cuivre). Donc exposition bornée, volontairement petite.",
+ "robotics": "La robotique et les humanoïdes sont un thème d'avenir médiatisé — mais on est en VEILLE : les critères d'activation ne sont pas remplis (adoption réelle, marges, moat durable encore incertains). C'est le thème le plus spéculatif et le plus « saillant » (en vogue parce qu'il fait la une), donc précisément celui où il faut de la discipline. On surveille les vrais chokepoints (réducteurs de précision, actionneurs), on n'investit pas encore.",
 }
+def etf_of(t):
+    eb = t.get("etf_buy") or {}
+    es = t.get("etf_signal") or {}
+    sym = eb.get("symbol") if isinstance(eb, dict) else eb
+    buyable = sym if sym and sym != "—" else None
+    return {"buy": buyable, "buy_name": (eb.get("name") if isinstance(eb, dict) else None),
+            "signal_ytd": es.get("ytd"), "signal_w52": es.get("w52"), "signal_3m": es.get("m3")}
 
 # axes du panel : (champ stock, clé sortie). Momentum=contexte ; le reste=signal.
 AXES = [("perf_1y", "momentum"), ("roic", "moat"), ("buffett_score", "qualite"),
@@ -73,8 +80,8 @@ for t in FW["themes"]:
     chain = {"label": t["label"], "position": t["position"], "rank": t.get("rank"),
              "capex_ia": t.get("capex_ia"), "survives_ai": t.get("survives_ai"),
              "veille": is_veille(t), "regions": {}, "news": [],
-             # textes riches (le "pourquoi" + la chaîne détaillée)
-             "context": CONTEXT.get(t["key"]),
+             # textes riches (le "pourquoi" + la chaîne détaillée) + comment s'exposer
+             "context": CONTEXT.get(t["key"]), "etf": etf_of(t),
              "thesis": t.get("thesis"), "diff": t.get("diff"), "decomp": t.get("decomp"),
              "risks": t.get("risks") or [], "gap": t.get("gap"), "maillons": maillons}
     for reg in ["US", "EU", "Asie"]:

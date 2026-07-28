@@ -3,335 +3,289 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entonnoir — Secteur › Chaîne › Région › Action</title>
+<title>Entonnoir — chaînes de valeur</title>
 <style>
   :root{
-    --bg:#f7f6f2; --surface:#ffffff; --surface2:#fbfaf7; --ink:#1b1a17; --muted:#6f6b62;
-    --border:#e6e3da; --accent:#a0602f; --accent-soft:#f0e3d6;
-    --good:#2f8f6b; --neutral:#3f74a8; --warn:#bd8a34; --bad:#c1564a;
-    --good-bg:#e8f3ee; --warn-bg:#f6ecd8; --bad-bg:#f7e5e2; --neutral-bg:#e7eef6;
-    --radius:12px; --shadow:0 1px 2px rgba(20,18,14,.05),0 4px 16px rgba(20,18,14,.04);
-    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --bg:#ffffff; --surface:#ffffff; --surface2:#f6f8fa; --panel:#fbfcfd;
+    --ink:#0e1620; --ink2:#33404f; --muted:#697585; --faint:#9aa5b2;
+    --line:#e7ebf0; --line2:#d4dae2; --accent:#16324e; --accent2:#2f5f92;
+    --good:#0c7a4d; --warn:#9c6b12; --bad:#b23a2e; --neutral:#37618e;
+    --good-b:#e5f2ec; --warn-b:#f4ecdb; --bad-b:#f6e6e3; --neutral-b:#e6edf5;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    --r:8px; --r-s:6px;
   }
   @media (prefers-color-scheme:dark){
     :root{
-      --bg:#15151a; --surface:#1e1e25; --surface2:#20202a; --ink:#efede8; --muted:#9c988e;
-      --border:#2f2f39; --accent:#d38b53; --accent-soft:#33291f;
-      --good:#4fb389; --neutral:#6aa0d4; --warn:#d6a94e; --bad:#d8776a;
-      --good-bg:#1c2f28; --warn-bg:#2f2818; --bad-bg:#2f1f1c; --neutral-bg:#1b2531;
+      --bg:#0c1014; --surface:#12181f; --surface2:#161d26; --panel:#141b23;
+      --ink:#e8edf3; --ink2:#c3ccd8; --muted:#8593a3; --faint:#5f6b78;
+      --line:#222b36; --line2:#2e3946; --accent:#8fb4dc; --accent2:#6b96c6;
+      --good:#3fb583; --warn:#d0a04a; --bad:#dd6c5e; --neutral:#6b9bd0;
+      --good-b:#122318; --warn-b:#241d10; --bad-b:#251512; --neutral-b:#111c28;
     }
   }
-  :root[data-theme="dark"]{
-    --bg:#15151a; --surface:#1e1e25; --surface2:#20202a; --ink:#efede8; --muted:#9c988e;
-    --border:#2f2f39; --accent:#d38b53; --accent-soft:#33291f;
-    --good:#4fb389; --neutral:#6aa0d4; --warn:#d6a94e; --bad:#d8776a;
-    --good-bg:#1c2f28; --warn-bg:#2f2818; --bad-bg:#2f1f1c; --neutral-bg:#1b2531;
-  }
-  :root[data-theme="light"]{
-    --bg:#f7f6f2; --surface:#ffffff; --surface2:#fbfaf7; --ink:#1b1a17; --muted:#6f6b62;
-    --border:#e6e3da; --accent:#a0602f; --accent-soft:#f0e3d6;
-    --good:#2f8f6b; --neutral:#3f74a8; --warn:#bd8a34; --bad:#c1564a;
-    --good-bg:#e8f3ee; --warn-bg:#f6ecd8; --bad-bg:#f7e5e2; --neutral-bg:#e7eef6;
-  }
+  :root[data-theme="light"]{--bg:#ffffff;--surface:#ffffff;--surface2:#f6f8fa;--panel:#fbfcfd;--ink:#0e1620;--ink2:#33404f;--muted:#697585;--faint:#9aa5b2;--line:#e7ebf0;--line2:#d4dae2;--accent:#16324e;--accent2:#2f5f92;--good:#0c7a4d;--warn:#9c6b12;--bad:#b23a2e;--neutral:#37618e;--good-b:#e5f2ec;--warn-b:#f4ecdb;--bad-b:#f6e6e3;--neutral-b:#e6edf5}
+  :root[data-theme="dark"]{--bg:#0c1014;--surface:#12181f;--surface2:#161d26;--panel:#141b23;--ink:#e8edf3;--ink2:#c3ccd8;--muted:#8593a3;--faint:#5f6b78;--line:#222b36;--line2:#2e3946;--accent:#8fb4dc;--accent2:#6b96c6;--good:#3fb583;--warn:#d0a04a;--bad:#dd6c5e;--neutral:#6b9bd0;--good-b:#122318;--warn-b:#241d10;--bad-b:#251512;--neutral-b:#111c28}
+
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
-       -webkit-font-smoothing:antialiased;font-size:15px}
-  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
-  header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
-  h1{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:680}
-  .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
-  .theme-btn{border:1px solid var(--border);background:var(--surface);color:var(--muted);
-    border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
-  .theme-btn:hover{color:var(--ink)}
-  /* doctrine banner */
-  .banner{margin:16px 0 20px;padding:10px 14px;border:1px solid var(--border);border-left:3px solid var(--accent);
-    border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12.5px}
-  .banner b{color:var(--ink)}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 22px 90px}
+
+  /* header */
+  header.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
+    padding-bottom:16px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:19px;font-weight:640;letter-spacing:-.015em}
+  .kicker{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:5px}
+  .sub{color:var(--muted);font-size:12.5px;margin:3px 0 0}
+  .theme-btn{border:1px solid var(--line2);background:var(--surface);color:var(--muted);border-radius:var(--r-s);
+    padding:5px 11px;font-size:12px;font-family:var(--mono);cursor:pointer;letter-spacing:.04em}
+  .theme-btn:hover{color:var(--ink);border-color:var(--muted)}
+
+  /* doctrine strip — plein, sobre, pas de "carte à accent" */
+  .strip{margin:18px 0;font-size:12px;color:var(--muted);line-height:1.55;
+    padding:0 0 0 14px;border-left:2px solid var(--line2)}
+  .strip b{color:var(--ink2);font-weight:600}
+
+  /* legend */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);margin:0 0 22px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:9px;height:9px;border-radius:2px;display:inline-block}
+
   /* breadcrumb */
-  .crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 18px;font-size:13.5px}
-  .crumb{cursor:pointer;color:var(--accent);text-decoration:none;padding:2px 6px;border-radius:6px}
-  .crumb:hover{background:var(--accent-soft)}
+  .crumbs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:0 0 22px;font-size:12.5px;font-family:var(--mono)}
+  .crumb{cursor:pointer;color:var(--accent2);padding:3px 7px;border-radius:var(--r-s)}
+  .crumb:hover{background:var(--surface2)}
   .crumb.here{color:var(--ink);cursor:default;font-weight:600}
   .crumb.here:hover{background:none}
-  .sep{color:var(--muted);opacity:.6}
-  /* grid of cards */
-  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-    box-shadow:var(--shadow);padding:16px;cursor:pointer;transition:transform .12s,border-color .12s}
-  .card.nav:hover{transform:translateY(-2px);border-color:var(--accent)}
-  .card .eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
-  .card h3{margin:6px 0 4px;font-size:16.5px;letter-spacing:-.01em}
-  .pos{font-size:12px;color:var(--muted)}
-  .chev{float:right;color:var(--muted);font-size:18px;line-height:1}
-  .tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);
-    color:var(--muted);margin-right:6px;margin-top:8px;font-family:var(--mono)}
-  .tag.veille{color:var(--warn);border-color:var(--warn);background:var(--warn-bg)}
-  /* region columns */
-  .regions{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:4px}
-  .region{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-  .region h4{margin:0;padding:12px 14px;font-size:14px;border-bottom:1px solid var(--border);
-    display:flex;justify-content:space-between;align-items:center;background:var(--surface2)}
-  .region h4 .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
-  .flag{font-size:15px}
-  .panel{padding:6px 14px 12px}
-  .axis{display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border)}
-  .axis:last-child{border-bottom:none}
-  .axis .lab{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-  .bar{height:6px;border-radius:3px;background:var(--border);position:relative;overflow:hidden}
-  .bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
-  .val{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
-  .g{color:var(--good)} .n_{color:var(--neutral)} .w{color:var(--warn)} .b{color:var(--bad)} .muted{color:var(--muted)}
-  .bg-g{background:var(--good)} .bg-n{background:var(--neutral)} .bg-w{background:var(--warn)} .bg-b{background:var(--bad)}
-  .actions-toggle{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);
-    padding:10px 14px;color:var(--accent);cursor:pointer;font-size:12.5px;font-family:var(--sans)}
-  .actions-toggle:hover{background:var(--surface2)}
-  table.acts{width:100%;border-collapse:collapse;font-size:12.5px}
-  table.acts th,table.acts td{padding:6px 14px;text-align:right;border-top:1px solid var(--border)}
-  table.acts th:first-child,table.acts td:first-child{text-align:left}
-  table.acts th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
-  table.acts td{font-family:var(--mono);font-variant-numeric:tabular-nums}
-  table.acts td:first-child{font-family:var(--sans)}
-  .tk{font-family:var(--mono);font-size:11px;color:var(--muted)}
-  .nodata{opacity:.5}
-  /* news slot */
-  .news{margin-top:14px;padding:12px 14px;border:1px dashed var(--border);border-radius:10px;background:var(--surface2)}
-  .news .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:4px}
-  .news .empty{color:var(--muted);font-size:12.5px;font-style:italic}
-  .news .ni{font-size:12.5px;margin:5px 0;line-height:1.5}
-  .news .ni a{color:var(--accent)}
-  .news .ni.lecture{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
-  .news .interp{color:var(--muted);font-size:11px;font-style:italic}
-  .empty-region{padding:20px 14px;color:var(--muted);font-size:12.5px;font-style:italic;text-align:center}
-  /* rich text : thèse, chaîne, maillons, risques */
-  .meta{margin-bottom:12px;font-size:12.5px}
-  .blk-h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;margin-bottom:6px}
-  .context{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;
-    padding:15px 17px;margin-bottom:16px}
-  .context p{margin:0;font-size:14.5px;line-height:1.55}
-  .context .blk-h{color:var(--accent)}
-  .thesis{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
-    border-radius:10px;padding:14px 16px;margin-bottom:22px;box-shadow:var(--shadow)}
-  .thesis p{margin:0 0 8px;font-size:14px}
-  .thesis p:last-child{margin-bottom:0}
-  .thesis .diff{color:var(--muted);font-size:12.5px}
-  .sec-h{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;
-    margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-  .chain{display:flex;flex-direction:column;gap:12px;position:relative;padding-left:28px}
-  .chain::before{content:"";position:absolute;left:8px;top:12px;bottom:12px;width:2px;
-    background:linear-gradient(var(--accent),var(--border))}
-  .maillon{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
-  .maillon::before{content:"";position:absolute;left:-26px;top:15px;width:12px;height:12px;border-radius:50%;
-    background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 0 2px var(--border)}
-  .mlabel{font-weight:650;font-size:14.5px;margin-bottom:3px}
-  .mdesc{color:var(--muted);font-size:12.5px;margin-bottom:8px;line-height:1.5}
+  .sep{color:var(--faint)}
+
+  /* section labels — typographiques, pas d'emoji */
+  .lab{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
+  .sec-h{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+    font-weight:600;margin:26px 0 12px;display:flex;align-items:center;gap:10px}
+  .sec-h::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  /* cards grid */
+  .grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .card{background:var(--surface);padding:18px;cursor:pointer;transition:background .12s;position:relative}
+  .card.nav:hover{background:var(--surface2)}
+  .card .eyebrow{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint)}
+  .card h3{margin:7px 0 5px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+  .card .pos{font-size:12px;color:var(--muted);line-height:1.45}
+  .card .arrow{position:absolute;top:18px;right:18px;color:var(--faint);font-family:var(--mono)}
+  .chips{margin-top:11px;display:flex;gap:5px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:10px;padding:2px 7px;border:1px solid var(--line2);border-radius:4px;color:var(--muted)}
+  .chip.veille{color:var(--warn);border-color:var(--warn)}
+  .rcount{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:10px}
+
+  /* "en bref" — plein, bord fin, pas de fond coloré criard */
+  .brief{border:1px solid var(--line2);border-radius:var(--r);padding:16px 18px;margin-bottom:14px;background:var(--panel)}
+  .brief p{margin:8px 0 0;font-size:15px;line-height:1.6;color:var(--ink)}
+  .thesis{margin-bottom:8px;padding:0 0 0 14px;border-left:2px solid var(--line2)}
+  .thesis p{margin:6px 0;font-size:13px;color:var(--ink2);line-height:1.55}
+  .thesis .diff{color:var(--muted);font-size:12px}
+  .meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:16px;letter-spacing:.02em}
+  .meta b{color:var(--ink2)}
+
+  /* schéma de chaîne — pipeline technique */
+  .chain{position:relative;padding-left:26px;display:flex;flex-direction:column;gap:1px;
+    border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--line)}
+  .chain::before{content:"";position:absolute;left:11px;top:0;bottom:0;width:1px;background:var(--line2);z-index:1}
+  .maillon{position:relative;background:var(--surface);padding:13px 16px 14px}
+  .maillon::before{content:"";position:absolute;left:-19.5px;top:17px;width:8px;height:8px;background:var(--accent);
+    border:2px solid var(--surface);border-radius:2px;z-index:2;transform:rotate(45deg)}
+  .mlabel{font-weight:600;font-size:14px}
+  .mdesc{color:var(--muted);font-size:12px;margin:4px 0 9px;line-height:1.55}
   .comps{display:flex;flex-wrap:wrap;gap:6px}
-  .comp{display:flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;
-    padding:4px 9px;font-size:12px;background:var(--surface2)}
-  .comp.nd{opacity:.55}
-  .comp .cflag{font-size:13px}
-  .comp .ctk{font-family:var(--mono);font-weight:600}
-  .comp .crole{color:var(--muted);font-size:11.5px}
-  .risks{margin-top:22px;background:var(--bad-bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
-  .risks ul{margin:0;padding-left:18px}
-  .risks li{font-size:12.5px;margin:3px 0;color:var(--ink)}
-  .foot{margin-top:40px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);padding-top:14px}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:2px 0 16px}
-  .legend b{color:var(--ink);font-weight:600}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .comp{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:var(--r-s);padding:4px 9px;font-size:11.5px;background:var(--surface)}
+  .comp.nd{opacity:.5}
+  .comp .ctk{font-family:var(--mono);font-weight:600;color:var(--ink)}
+  .comp .crole{color:var(--muted);font-size:11px}
+
+  /* régions + panels */
+  .regions{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .region{background:var(--surface)}
+  .region h4{margin:0;padding:11px 15px;font-size:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;
+    border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;color:var(--ink2);background:var(--surface2)}
+  .region h4 .n{color:var(--faint);font-size:10.5px}
+  .panel{padding:8px 15px 12px}
+  .axis{display:grid;grid-template-columns:66px 1fr 54px;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .axis:last-child{border:none}
+  .axis .al{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:2px}
+  .v{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right;font-weight:500}
+  .g{color:var(--good)}.n_{color:var(--neutral)}.w{color:var(--warn)}.b{color:var(--bad)}.mut{color:var(--faint)}
+  .bg-g{background:var(--good)}.bg-n{background:var(--neutral)}.bg-w{background:var(--warn)}.bg-b{background:var(--bad)}
+  .acts-btn{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--line);
+    padding:9px 15px;color:var(--accent2);cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.03em}
+  .acts-btn:hover{background:var(--surface2)}
+  table.acts{width:100%;border-collapse:collapse;font-size:12px}
+  table.acts th,table.acts td{padding:6px 15px;text-align:right;border-top:1px solid var(--line)}
+  table.acts th:first-child,table.acts td:first-child{text-align:left}
+  table.acts th{font-family:var(--mono);color:var(--faint);font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em}
+  table.acts td{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2)}
+  table.acts td:first-child{font-family:var(--sans);color:var(--ink)}
+  .tk{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .nd-row{opacity:.5}
+  .empty-r{padding:22px 15px;color:var(--faint);font-size:12px;text-align:center;font-style:italic}
+
+  /* exposition (ETF / panier) */
+  .expo{margin-top:16px;border:1px solid var(--line2);border-radius:var(--r);padding:14px 18px;background:var(--surface2)}
+  .expo-row{display:flex;flex-wrap:wrap;gap:22px;margin-top:9px}
+  .ei{font-size:13px}
+  .ei b{font-family:var(--mono);font-size:14px}
+  .et-tag{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);
+    border:1px solid var(--line2);border-radius:4px;padding:1px 6px;margin-right:6px}
+  .et-note{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:3px}
+  /* risques */
+  .risks{margin-top:22px;border:1px solid var(--line2);border-radius:var(--r);padding:14px 18px}
+  .risks ul{margin:8px 0 0;padding-left:18px}
+  .risks li{font-size:12.5px;margin:4px 0;color:var(--ink2);line-height:1.5}
+
+  /* news */
+  .news{margin-top:22px;border:1px dashed var(--line2);border-radius:var(--r);padding:14px 18px;background:var(--panel)}
+  .news .empty{color:var(--muted);font-size:12.5px;line-height:1.6;margin-top:8px}
+  .news .empty b{color:var(--ink2)}
+  .news .ni{font-size:12.5px;margin:6px 0;line-height:1.55}
+  .news .ni a{color:var(--accent2)}
+  .news .ni.lecture{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+  .news .interp{color:var(--faint);font-size:11px}
+
+  .foot{margin-top:44px;color:var(--faint);font-size:11px;font-family:var(--mono);line-height:1.7;
+    border-top:1px solid var(--line);padding-top:16px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Entonnoir des chaînes de valeur</h1>
-      <p class="sub">Secteur › Chaîne d'approvisionnement › Région › Action — <span id="meta"></span></p>
+      <div class="kicker">Picks &amp; shovels · chaînes de valeur</div>
+      <h1>Entonnoir</h1>
+      <p class="sub">Secteur → Chaîne → Région → Action · <span id="meta"></span></p>
     </div>
-    <button class="theme-btn" id="theme">◐ thème</button>
+    <button class="theme-btn" id="theme">THÈME</button>
   </header>
 
-  <div class="banner">
-    <b>Lecture, pas signal.</b> Cet outil <b>décrit</b> : le momentum est du <b>contexte</b> (neutre), le
-    <b>moat / risque / valeur</b> sont le vrai signal (colorés). Les positions gelées ne se re-tradent pas sur une
-    lecture — cette page informe, elle ne décide pas.
-  </div>
+  <p class="strip"><b>Lecture, pas signal.</b> On décrit. Le momentum est du contexte (neutre) ; le moat / risque / valeur sont le signal (colorés). Les positions gelées ne se re-tradent pas sur une lecture.</p>
 
   <div class="legend">
-    <span><span class="dot bg-n"></span><b>Momentum</b> perf 1a (contexte)</span>
-    <span><span class="dot bg-g"></span><b>Moat</b> ROIC</span>
-    <span><span class="dot bg-g"></span><b>Qualité</b> Buffett</span>
-    <span><span class="dot bg-w"></span><b>Risque</b> volatilité</span>
-    <span><span class="dot bg-g"></span><b>Valeur</b> FCF yield</span>
+    <span><i class="sw bg-n"></i>Momentum</span>
+    <span><i class="sw bg-g"></i>Moat</span>
+    <span><i class="sw bg-g"></i>Qualité</span>
+    <span><i class="sw bg-w"></i>Risque</span>
+    <span><i class="sw bg-g"></i>Valeur</span>
   </div>
 
   <nav class="crumbs" id="crumbs"></nav>
   <main id="app"></main>
-
   <div class="foot" id="foot"></div>
 </div>
 
 <script>
-const FLAG = {US:"🇺🇸", EU:"🇪🇺", Asie:"🌏"};
-let DATA = null;
-let PATH = []; // [sectorKey, chainKey]
+const FLAG={US:"🇺🇸",EU:"🇪🇺",Asie:"🌏"};
+let DATA=null, PATH=[];
 
-// ---- color logic : moat/qualité/risque/valeur = signal ; momentum = neutre (doctrine) ----
-function grade(axis, v){
-  if(v===null||v===undefined) return {cls:"muted", bg:"", w:0};
-  if(axis==="momentum") return {cls:"n_", bg:"bg-n", w:clamp((v+50)/250)}; // neutre toujours
-  if(axis==="moat")   return band(v, [ [20,"g","bg-g"], [5,"w","bg-w"] ], "b","bg-b", clamp((v+10)/50));
-  if(axis==="qualite")return band(v, [ [70,"g","bg-g"], [50,"w","bg-w"] ], "b","bg-b", clamp(v/100));
-  if(axis==="valeur") return band(v, [ [4,"g","bg-g"], [1,"w","bg-w"] ], "b","bg-b", clamp((v+2)/12));
-  if(axis==="risque"){ // inversé : bas = bon
-    const w = clamp(v/80);
-    if(v<35) return {cls:"g",bg:"bg-g",w}; if(v<50) return {cls:"w",bg:"bg-w",w}; return {cls:"b",bg:"bg-b",w};
-  }
-  return {cls:"muted",bg:"",w:0};
+function grade(axis,v){
+  if(v==null) return {cls:"mut",bg:"",w:0};
+  if(axis==="momentum") return {cls:"n_",bg:"bg-n",w:clamp((v+50)/250)};
+  if(axis==="moat")    return band(v,[[20,"g","bg-g"],[5,"w","bg-w"]],"b","bg-b",clamp((v+10)/50));
+  if(axis==="qualite") return band(v,[[70,"g","bg-g"],[50,"w","bg-w"]],"b","bg-b",clamp(v/100));
+  if(axis==="valeur")  return band(v,[[4,"g","bg-g"],[1,"w","bg-w"]],"b","bg-b",clamp((v+2)/12));
+  if(axis==="risque"){const w=clamp(v/80); if(v<35)return{cls:"g",bg:"bg-g",w}; if(v<50)return{cls:"w",bg:"bg-w",w}; return{cls:"b",bg:"bg-b",w};}
+  return {cls:"mut",bg:"",w:0};
 }
-function band(v, tiers, elseCls, elseBg, w){
-  for(const [thr,cls,bg] of tiers){ if(v>=thr) return {cls,bg,w}; }
-  return {cls:elseCls,bg:elseBg,w};
-}
-function clamp(x){ return Math.max(.04, Math.min(1, x)); }
-function fmt(v, axis){
-  if(v===null||v===undefined) return "—";
-  if(axis==="qualite") return Math.round(v);
-  const s = (v>0&&axis!=="risque"?"+":"") + v.toFixed(1);
-  return s + "%";
-}
-const AXES = [["momentum","Momentum"],["moat","Moat"],["qualite","Qualité"],["risque","Risque"],["valeur","Valeur"]];
+function band(v,tiers,ec,eb,w){for(const[t,c,b]of tiers)if(v>=t)return{cls:c,bg:b,w};return{cls:ec,bg:eb,w};}
+function clamp(x){return Math.max(.05,Math.min(1,x));}
+function fmt(v,a){if(v==null)return"—";if(a==="qualite")return Math.round(v);return (v>0&&a!=="risque"?"+":"")+v.toFixed(1)+"%";}
+const AXES=[["momentum","Moment."],["moat","Moat"],["qualite","Qualité"],["risque","Risque"],["valeur","Valeur"]];
 
 function panelHTML(p){
-  return `<div class="panel">` + AXES.map(([k,lab])=>{
-    const g = grade(k, p[k]);
-    return `<div class="axis"><span class="lab">${lab}</span>
-      <span class="bar"><span class="${g.bg}" style="width:${(g.w*100).toFixed(0)}%"></span></span>
-      <span class="val ${g.cls}">${fmt(p[k],k)}</span></div>`;
-  }).join("") + `</div>`;
+  return `<div class="panel">`+AXES.map(([k,l])=>{const g=grade(k,p[k]);
+    return `<div class="axis"><span class="al">${l}</span><span class="bar"><span class="${g.bg}" style="width:${(g.w*100).toFixed(0)}%"></span></span><span class="v ${g.cls}">${fmt(p[k],k)}</span></div>`;
+  }).join("")+`</div>`;
 }
 function newsHTML(n){
-  // n : [] (vide) ou {faits, news:[{date,titre,url}], lecture} — alimenté par le workflow news/IA (Phase B)
-  const isObj = n && !Array.isArray(n);
-  const items = isObj ? (n.news||[]) : (n||[]);
-  const has = items.length || (isObj && (n.faits||n.lecture));
+  const isObj=n&&!Array.isArray(n), items=isObj?(n.news||[]):(n||[]);
+  const has=items.length||(isObj&&(n.faits||n.lecture));
   let body;
-  if(!has){
-    body = `<div class="empty">Aucune actualité cette semaine — <b>silence par défaut</b> (le vide est un résultat valide).
-      <br>Cet encart sera alimenté par le <b>GitHub Actions news/IA</b> : <i>faits</i> (les chiffres) + <i>news</i> sourcée &amp; datée + <i>lecture</i> — ex. « risque Chine sur ASML, 27/07 ».</div>`;
-  } else {
-    const list = items.map(x=>`<div class="ni">📰 <b>${x.date||""}</b> ${x.titre||""} ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">source</a>`:""}</div>`).join("");
-    body = (isObj&&n.faits?`<div class="ni"><b>Faits :</b> ${n.faits}</div>`:"") + list
-      + (isObj&&n.lecture?`<div class="ni lecture">🧭 <b>Lecture :</b> ${n.lecture} <span class="interp">(interprétation)</span></div>`:"");
-  }
-  return `<div class="news"><div class="blk-h">📰 Actualité — cette semaine</div>${body}</div>`;
+  if(!has){body=`<div class="empty">Aucune actualité — <b>silence par défaut</b> (le vide est un résultat valide). Cet encart sera alimenté par le workflow news/IA : <b>faits</b> + <b>news sourcée &amp; datée</b> + <b>lecture</b> (ex. « risque Chine sur ASML, 27/07 »).</div>`;}
+  else{const l=items.map(x=>`<div class="ni"><b>${x.date||""}</b> ${x.titre||""} ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">source</a>`:""}</div>`).join("");
+    body=(isObj&&n.faits?`<div class="ni"><b>Faits.</b> ${n.faits}</div>`:"")+l+(isObj&&n.lecture?`<div class="ni lecture"><b>Lecture.</b> ${n.lecture} <span class="interp">(interprétation)</span></div>`:"");}
+  return `<div class="news"><span class="lab">Actualité — cette semaine</span>${body}</div>`;
 }
 
 function render(){
   renderCrumbs();
-  const app = document.getElementById("app");
-  if(PATH.length===0){ app.innerHTML = renderSectors(); }
-  else if(PATH.length===1){ app.innerHTML = renderChains(PATH[0]); }
-  else { app.innerHTML = renderChain(PATH[0], PATH[1]); }
-  app.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ PATH=JSON.parse(el.dataset.go); render(); window.scrollTo(0,0); });
-  app.querySelectorAll(".actions-toggle").forEach(b=>b.onclick=()=>{
-    const t = b.nextElementSibling; t.style.display = t.style.display==="none"?"":"none";
-    b.textContent = t.style.display==="none" ? b.dataset.show : b.dataset.hide;
-  });
+  const app=document.getElementById("app");
+  app.innerHTML = PATH.length===0?renderSectors():PATH.length===1?renderChains(PATH[0]):renderChain(PATH[0],PATH[1]);
+  app.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{PATH=JSON.parse(el.dataset.go);render();scrollTo(0,0);});
+  app.querySelectorAll(".acts-btn").forEach(b=>b.onclick=()=>{const t=b.nextElementSibling;const h=t.style.display==="none";t.style.display=h?"":"none";b.textContent=h?b.dataset.hide:b.dataset.show;});
 }
 function renderCrumbs(){
-  const c = document.getElementById("crumbs");
-  let html = `<a class="crumb ${PATH.length===0?'here':''}" data-go="[]">Accueil</a>`;
-  if(PATH.length>=1){ html += `<span class="sep">›</span><a class="crumb ${PATH.length===1?'here':''}" data-go='["${PATH[0]}"]'>${PATH[0]}</a>`; }
-  if(PATH.length>=2){ const ch = DATA.sectors[PATH[0]].chains[PATH[1]];
-    html += `<span class="sep">›</span><span class="crumb here">${ch.label}</span>`; }
-  c.innerHTML = html;
-  c.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ PATH=JSON.parse(el.dataset.go); render(); window.scrollTo(0,0); });
+  const c=document.getElementById("crumbs");
+  let h=`<span class="crumb ${PATH.length===0?'here':''}" data-go="[]">Accueil</span>`;
+  if(PATH.length>=1)h+=`<span class="sep">/</span><span class="crumb ${PATH.length===1?'here':''}" data-go='["${PATH[0]}"]'>${PATH[0]}</span>`;
+  if(PATH.length>=2)h+=`<span class="sep">/</span><span class="crumb here">${DATA.sectors[PATH[0]].chains[PATH[1]].label}</span>`;
+  c.innerHTML=h;
+  c.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{PATH=JSON.parse(el.dataset.go);render();scrollTo(0,0);});
 }
 function renderSectors(){
-  const secs = Object.entries(DATA.sectors);
-  return `<div class="grid">` + secs.map(([name,v])=>{
-    const nch = Object.keys(v.chains).length;
-    const chips = Object.values(v.chains).map(c=>c.label.split(" ")[0]).slice(0,4).join(" · ");
-    return `<div class="card nav" data-go='["${name}"]'><span class="chev">›</span>
-      <div class="eyebrow">Secteur</div><h3>${name}</h3>
-      <div class="pos">${nch} chaîne${nch>1?'s':''} — ${chips}</div></div>`;
-  }).join("") + `</div>`;
+  return `<div class="grid">`+Object.entries(DATA.sectors).map(([name,v])=>{
+    const n=Object.keys(v.chains).length, ch=Object.values(v.chains).map(c=>c.label.split(" ")[0]).slice(0,4).join(" · ");
+    return `<div class="card nav" data-go='["${name}"]'><span class="arrow">→</span><div class="eyebrow">Secteur</div><h3>${name}</h3><div class="pos">${n} chaîne${n>1?'s':''} — ${ch}</div></div>`;
+  }).join("")+`</div>`;
 }
 function renderChains(sector){
-  const chains = Object.entries(DATA.sectors[sector].chains);
-  return `<div class="grid">` + chains.map(([key,ch])=>{
-    const regs = Object.entries(ch.regions).map(([r,d])=>`${FLAG[r]} ${d.panel.n}`).join("  ");
-    return `<div class="card nav" data-go='["${sector}","${key}"]'><span class="chev">›</span>
-      <div class="eyebrow">Chaîne #${ch.rank||'—'}</div><h3>${ch.label}</h3>
-      <div class="pos">${ch.position}</div>
-      <span class="tag">capex-IA ${ch.capex_ia}%</span>${ch.veille?'<span class="tag veille">VEILLE</span>':''}
-      <div class="pos" style="margin-top:8px">${regs||'—'}</div></div>`;
-  }).join("") + `</div>`;
+  return `<div class="grid">`+Object.entries(DATA.sectors[sector].chains).map(([k,ch])=>{
+    const regs=Object.entries(ch.regions).map(([r,d])=>`${FLAG[r]} ${d.panel.n}`).join("&nbsp;&nbsp;");
+    return `<div class="card nav" data-go='["${sector}","${k}"]'><span class="arrow">→</span><div class="eyebrow">Chaîne #${ch.rank||'—'}</div><h3>${ch.label}</h3><div class="pos">${ch.position}</div><div class="chips"><span class="chip">capex-IA ${ch.capex_ia}%</span>${ch.veille?'<span class="chip veille">veille</span>':''}</div><div class="rcount">${regs||'—'}</div></div>`;
+  }).join("")+`</div>`;
 }
-function renderChain(sector, key){
-  const ch = DATA.sectors[sector].chains[key];
-  const regs = ["US","EU","Asie"].filter(r=>ch.regions[r]);
-  const cols = regs.map(r=>{
-    const d = ch.regions[r]; const p = d.panel;
-    let acts = "";
+function renderChain(sector,key){
+  const ch=DATA.sectors[sector].chains[key];
+  const cols=["US","EU","Asie"].filter(r=>ch.regions[r]).map(r=>{
+    const d=ch.regions[r],p=d.panel;let acts="";
     if(d.actions.length){
-      const rows = d.actions.map(a=>`<tr class="${a.has_data?'':'nodata'}">
-        <td>${a.ticker!==a.name?`${a.name||a.ticker} <span class="tk">${a.ticker}</span>`:a.ticker}</td>
-        <td>${a.perf_1y!=null?(a.perf_1y>0?'+':'')+a.perf_1y.toFixed(0)+'%':'—'}</td>
-        <td>${a.roic!=null?a.roic.toFixed(0)+'%':'—'}</td>
-        <td>${a.buffett_score!=null?Math.round(a.buffett_score):'—'}</td></tr>`).join("");
-      acts = `<button class="actions-toggle" data-show="▸ ${d.actions.length} actions" data-hide="▾ masquer">▸ ${d.actions.length} actions</button>
-        <div style="display:none"><table class="acts"><tr><th>Action</th><th>Perf 1a</th><th>ROIC</th><th>Buffett</th></tr>${rows}</table></div>`;
+      const rows=d.actions.map(a=>`<tr class="${a.has_data?'':'nd-row'}"><td>${a.ticker!==a.name?`${a.name||a.ticker} <span class="tk">${a.ticker}</span>`:a.ticker}</td><td>${a.perf_1y!=null?(a.perf_1y>0?'+':'')+a.perf_1y.toFixed(0)+'%':'—'}</td><td>${a.roic!=null?a.roic.toFixed(0)+'%':'—'}</td><td>${a.buffett_score!=null?Math.round(a.buffett_score):'—'}</td></tr>`).join("");
+      acts=`<button class="acts-btn" data-show="+ ${d.actions.length} actions" data-hide="− masquer">+ ${d.actions.length} actions</button><div style="display:none"><table class="acts"><tr><th>Action</th><th>Perf 1a</th><th>ROIC</th><th>Buffett</th></tr>${rows}</table></div>`;
     }
-    const body = p.n>0 ? panelHTML(p)+acts
-      : `<div class="empty-region">Aucune donnée — se remplira au prochain run de scoring.</div>`;
-    return `<div class="region"><h4><span><span class="flag">${FLAG[r]}</span> ${r}</span><span class="n">${p.n} act.</span></h4>${body}</div>`;
+    const body=p.n>0?panelHTML(p)+acts:`<div class="empty-r">Aucune donnée — se remplit au prochain scoring.</div>`;
+    return `<div class="region"><h4><span>${FLAG[r]} ${r}</span><span class="n">${p.n} act.</span></h4>${body}</div>`;
   }).join("");
-  // maillons = les étapes de la chaîne, avec explication + boîtes (rôle + drapeau région)
-  const chainHTML = (ch.maillons||[]).map(m=>{
-    const comps = (m.companies||[]).map(c=>`<div class="comp ${c.has_data?'':'nd'}">
-        <span class="cflag">${FLAG[c.region]||'•'}</span>
-        <span class="ctk">${c.ticker||''}</span>
-        <span class="crole">${c.role||c.name||''}</span></div>`).join("");
-    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>
-      ${m.desc?`<div class="mdesc">${m.desc}</div>`:''}
-      <div class="comps">${comps}</div></div>`;
+  const chainHTML=(ch.maillons||[]).map(m=>{
+    const comps=(m.companies||[]).map(c=>`<span class="comp ${c.has_data?'':'nd'}">${FLAG[c.region]||'•'}<span class="ctk">${c.ticker||''}</span><span class="crole">${c.role||c.name||''}</span></span>`).join("");
+    return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${m.desc}</div>`:''}<div class="comps">${comps}</div></div>`;
   }).join("");
-  const risksHTML = (ch.risks&&ch.risks.length)
-    ? `<div class="risks"><div class="blk-h">⚠️ Risques de la chaîne</div><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>` : "";
-  return `
-    <div class="pos meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA : <b>${ch.survives_ai||'?'}</b></div>
-    ${ch.context?`<div class="context"><div class="blk-h">🔑 En bref — pourquoi regarder cette chaîne</div><p>${ch.context}</p></div>`:''}
-    ${ch.thesis?`<div class="thesis"><div class="blk-h">La thèse (angle picks &amp; shovels)</div><p>${ch.thesis}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}${ch.decomp?`<p class="diff">${ch.decomp}</p>`:''}</div>`:''}
-    <h3 class="sec-h">Le schéma de la chaîne, étape par étape</h3>
-    <div class="chain">${chainHTML}</div>
-    <h3 class="sec-h">Performance par région</h3>
-    <div class="regions">${cols}</div>
-    ${risksHTML}
-    ${newsHTML(ch.news)}`;
+  const risks=(ch.risks&&ch.risks.length)?`<div class="risks"><span class="lab">Risques de la chaîne</span><ul>${ch.risks.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:"";
+  const e=ch.etf||{};
+  const expo=`<div class="expo"><span class="lab">Comment s'exposer</span><div class="expo-row">
+    ${e.buy?`<div class="ei"><span class="et-tag">ETF</span> <b>${e.buy}</b>${e.buy_name?`<div class="et-note">${e.buy_name}</div>`:''}</div>`:`<div class="ei"><span class="et-tag">ETF</span> <span class="et-note">pas d'ETF pur coté — <b>panier de titres</b> (voir actions par région)</span></div>`}
+    ${e.signal_w52?`<div class="ei"><span class="et-tag">Panier signal</span> 52 sem <b>${e.signal_w52}</b> · YTD ${e.signal_ytd||'—'}</div>`:''}
+  </div><div class="et-note">Les actions précises sont dépliables dans chaque région ci-dessous.</div></div>`;
+  return `<div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>
+    ${ch.context?`<div class="brief"><span class="lab">En bref — ce que c'est, pourquoi c'est important</span><p>${ch.context}</p></div>`:''}
+    ${ch.thesis?`<div class="thesis"><p>${ch.thesis}</p>${ch.diff?`<p class="diff">${ch.diff}</p>`:''}</div>`:''}
+    <div class="sec-h">Le schéma de la chaîne, étape par étape</div><div class="chain">${chainHTML}</div>
+    ${expo}
+    <div class="sec-h">Performance par région</div><div class="regions">${cols}</div>
+    ${risks}${newsHTML(ch.news)}`;
 }
 
-// ---- theme toggle ----
 document.getElementById("theme").onclick=()=>{
-  const cur = document.documentElement.getAttribute("data-theme");
-  const next = cur==="dark"?"light":(cur==="light"?"dark":(matchMedia("(prefers-color-scheme:dark)").matches?"light":"dark"));
-  document.documentElement.setAttribute("data-theme", next);
+  const c=document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", c==="dark"?"light":c==="light"?"dark":(matchMedia("(prefers-color-scheme:dark)").matches?"light":"dark"));
 };
-
-// ---- load ----
 fetch("./data/funnel.json").then(r=>r.json()).then(d=>{
-  DATA = d;
-  document.getElementById("meta").textContent = "généré " + (d.meta.generated||"").slice(0,10);
-  document.getElementById("foot").innerHTML =
-    `Données <b>${(d.meta.generated||'').slice(0,10)}</b> · médianes des enablers par nœud · momentum = contexte, moat/risque/valeur = signal · `
-    + `news = couche à venir (Phase B, sourcée + datée). Aucun appel API en direct : la page lit un JSON committé.`;
+  DATA=d;
+  document.getElementById("meta").textContent="généré "+(d.meta.generated||"").slice(0,10);
+  document.getElementById("foot").innerHTML=`Données ${(d.meta.generated||'').slice(0,10)} · médianes des enablers par nœud · aucun appel API en direct : la page lit un JSON committé · news = couche à venir (sourcée + datée).`;
   render();
-}).catch(e=>{
-  document.getElementById("app").innerHTML =
-    `<div class="banner">Impossible de charger <code>data/funnel.json</code>. En local, sers le dossier via un serveur (ex. <code>python3 -m http.server</code>) — le <code>fetch</code> ne marche pas en <code>file://</code>.</div>`;
-});
+}).catch(()=>{document.getElementById("app").innerHTML=`<p class="strip">Impossible de charger data/funnel.json. En local, sers le dossier (python3 -m http.server) — le fetch ne marche pas en file://.</p>`;});
 </script>
 </body>
 </html>
