@@ -530,10 +530,12 @@ const COUNTRY2MIC = {
     'sweden':'XSTO', 'suède':'XSTO',
     'denmark':'XCSE', 'danemark':'XCSE',
     'finland':'XHEL', 'finlande':'XHEL',
-    'japan':'XTKS', 'japon':'XTKS',
-    'hong kong':'XHKG', 'singapore':'XSES',
-    'taiwan':'XTAI', 'taïwan':'XTAI',
-    'south korea':'XKRX', 'corée':'XKRX',
+    // ✅ v7.4: Twelve Data indexe l'Asie sous ses CODES EXCHANGE, pas les MIC ISO.
+    // Testé en direct API: 8035:JPX ✅ / 8035:XTKS ❌. Ne PAS "corriger" vers les MIC ISO.
+    'japan':'JPX', 'japon':'JPX',              // était XTKS (KO)
+    'hong kong':'HKEX', 'singapore':'SGX',     // étaient XHKG / XSES (KO)
+    'taiwan':'TWSE', 'taïwan':'TWSE',          // était XTAI (KO)
+    'south korea':'KRX', 'corée':'KRX',        // était XKRX (KO)
     'india':'XNSE', 'inde':'XNSE',
     'thailand':'XBKK', 'philippines':'XPHS', 'malaysia':'XKLS',
     'china':'XSHG' // si "Shenzhen", l'intitulé d'exchange donne XSHE via le pattern
@@ -785,11 +787,21 @@ async function loadStockCSV(filepath) {
     try {
         const csvText = await fs.readFile(filepath, 'utf8');
         const records = parseCSV(csvText);
-        return records.map(row => ({
-            symbol: row['Ticker'] || row['Symbol'] || '',
+        return records.map(row => {
+            const country = row['Pays'] || row['Country'] || '';
+            let symbol = row['Ticker'] || row['Symbol'] || '';
+            // ✅ v7.4: Corée = codes 6 chiffres. Le CSV strip le zéro de tête (42520 → 042520)
+            // → Twelve Data rejette 42520:KRX mais accepte 042520:KRX. Testé en direct.
+            // normalize() ne strip PAS les accents → on les retire ici ("corée" → "coree").
+            const _cn = normalize(country).normalize('NFD').replace(/[̀-ͯ]/g, '');
+            if (/coree|korea/.test(_cn) && /^\d{1,6}$/.test(symbol)) {
+                symbol = symbol.padStart(6, '0');
+            }
+            return ({
+            symbol,
             name: row['Stock'] || row['Name'] || '',
             sector: row['Secteur'] || row['Sector'] || '',
-            country: row['Pays'] || row['Country'] || '',
+            country,
             exchange: row['Bourse de valeurs'] || row['Exchange'] || '',
             // ✅ v3.22: Lecture ROE et D/E depuis le CSV
             roe: parseNumberLoose(row['roe']) ?? null,
@@ -803,7 +815,8 @@ async function loadStockCSV(filepath) {
             roic_std_3y: parseNumberLoose(row['roic_std_3y']) ?? null,
             net_margin: parseNumberLoose(row['net_margin']) ?? null,
             revenue_growth_3y: parseNumberLoose(row['revenue_growth_3y']) ?? null
-        })).filter(s => s.symbol);
+            });
+        }).filter(s => s.symbol);
     } catch (error) {
         console.error(`Erreur ${filepath}: ${error.message}`);
         return [];
