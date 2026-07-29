@@ -540,6 +540,9 @@ const COUNTRY2MIC = {
     'thailand':'XBKK', 'philippines':'XPHS', 'malaysia':'XKLS',
     'china':'XSHG' // si "Shenzhen", l'intitulé d'exchange donne XSHE via le pattern
 };
+// ✅ v7.6: codes-bourse TD des marchés asiatiques à codes numériques (collisions inter-marchés).
+// Sert à la garde anti-contamination : une résolution cachée doit porter ':<ce code>'.
+const ASIA_MICS = new Set(['JPX', 'HKEX', 'SGX', 'TWSE', 'KRX']);
 // ✅ v3.25: Mapping pays FR→EN pour l'API TD
 const COUNTRY_EN = {
     'france':'France', 'belgique':'Belgium', 'pays-bas':'Netherlands',
@@ -1582,7 +1585,14 @@ async function enrichStock(stock) {
     // Force re-fetch si l'entrée stable est vide (échec transitoire mis en cache)
     const cacheEmpty = cachedEntry && cachedEntry.raw
         && !cachedEntry.raw.dividends && !cachedEntry.raw.stats;
-    const stableHit = cacheFresh && !cacheEmpty;
+    // ✅ v7.6: garde anti-contamination (collisions JP/HK). Une résolution cachée qui ne
+    // porte PAS le code-bourse attendu du pays (ex: "8035" nu ou ":XTKS" au lieu de ":JPX")
+    // vient d'un cache d'avant le fix codes-bourse → cache INVALIDE → refetch complet frais
+    // (résolution + stats + profil), pas juste re-résolution. Scoped Asie (codes numériques).
+    const _expMic = toMIC(stock.exchange, stock.country);
+    const _cr = cachedEntry && cachedEntry.raw ? cachedEntry.raw.resolved : null;
+    const resolvedStale = ASIA_MICS.has(_expMic) && (!_cr || !String(_cr).endsWith(':' + _expMic));
+    const stableHit = cacheFresh && !cacheEmpty && !resolvedStale;
 
     let resolved, perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData;
 
