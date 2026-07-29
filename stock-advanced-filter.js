@@ -170,6 +170,10 @@ const CONFIG = {
 const SCORER_CACHE_FILE = path.join(OUT_DIR, 'advanced_scorer_cache.json');
 const SCORER_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
 let SCORER_CACHE = { updated: null, data: {} };
+// ✅ v7.7: codes en collision inter-marchés asie (même ticker dans ≥2 pays).
+// Rempli au chargement. La garde anti-contamination ne s'applique QU'À ces codes
+// → les ~5400 autres restent cache-hit (run rapide, pas de refetch massif à froid).
+let COLLISION_CODES = new Set();
 
 let creditsUsed = 0;
 let windowStart = Date.now();
@@ -1589,9 +1593,11 @@ async function enrichStock(stock) {
     // porte PAS le code-bourse attendu du pays (ex: "8035" nu ou ":XTKS" au lieu de ":JPX")
     // vient d'un cache d'avant le fix codes-bourse → cache INVALIDE → refetch complet frais
     // (résolution + stats + profil), pas juste re-résolution. Scoped Asie (codes numériques).
+    // v7.7: SCOPED aux codes en collision uniquement → les autres restent cache-hit (rapide).
     const _expMic = toMIC(stock.exchange, stock.country);
     const _cr = cachedEntry && cachedEntry.raw ? cachedEntry.raw.resolved : null;
-    const resolvedStale = ASIA_MICS.has(_expMic) && (!_cr || !String(_cr).endsWith(':' + _expMic));
+    const resolvedStale = ASIA_MICS.has(_expMic) && COLLISION_CODES.has(String(stock.symbol))
+        && (!_cr || !String(_cr).endsWith(':' + _expMic));
     const stableHit = cacheFresh && !cacheEmpty && !resolvedStale;
 
     let resolved, perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData;
@@ -2707,6 +2713,19 @@ async function main() {
     ]);
     
     console.log(`Stocks chargés: US ${usStocks.length} | Europe ${europeStocks.length} | Asie ${asiaStocks.length}\n`);
+
+    // ✅ v7.7: repérer les codes en collision (même ticker dans ≥2 marchés asie).
+    // Seuls ceux-là sont exposés à la contamination bare-code → seuls eux déclenchent
+    // la garde (refetch). Le reste garde son cache → run rapide.
+    {
+        const byCode = {};
+        for (const s of asiaStocks) {
+            const k = String(s.symbol);
+            (byCode[k] = byCode[k] || new Set()).add(normalize(s.country || ''));
+        }
+        COLLISION_CODES = new Set(Object.entries(byCode).filter(([, c]) => c.size >= 2).map(([k]) => k));
+        console.log(`🔎 Codes en collision inter-marchés asie: ${COLLISION_CODES.size} (garde anti-contamination ciblée)\n`);
+    }
 
     // ✅ v3.35: Fetch regional benchmarks for beta CAPM
     const regionKey = (REGIONS_INPUT === 'all') ? 'all' : REGIONS_INPUT;
