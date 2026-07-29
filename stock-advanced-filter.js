@@ -648,6 +648,9 @@ const isCommonStock = (c) => {
 async function tryQuote(sym, mic){
     const attempt = async (params) => {
         try {
+            // ✅ v7.5: throttle la résolution (tryQuote bypassait pay() → 429 silencieux
+            // en résolution de masse → mauvaise société / NONE. Cf. collisions JP/HK).
+            await pay(CONFIG.CREDITS.QUOTE);
             const { data } = await axios.get('https://api.twelvedata.com/quote', { params, timeout: 15000 });
             if (data && data.status !== 'error') return data;
         } catch {}
