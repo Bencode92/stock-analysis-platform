@@ -2864,6 +2864,31 @@ async function main() {
                 console.log(`  💾 Cache scorer sauvegardé (${enrichedStocks.length}/${region.stocks.length} ${region.name})`);
             }
         }
+
+        // ✅ v7.8: passe de RATTRAPAGE ciblée sur les VRAIS échecs (error=NO_DATA = quote+
+        // series+market_cap tous KO, typiquement 429 transitoire). En fin de run la charge
+        // est retombée → on les re-tente UNE fois → récupère les 429 transitoires.
+        // ⚠️ On NE re-tente PAS les 'perf vide sans erreur' : ce sont des jeunes cotations
+        // (<1 an d'historique, ex HK IPO 6951=16 barres) — perf_1y impossible, irréductible.
+        const isMiss = s => !!s.error;
+        const failed = enrichedStocks.filter(isMiss);
+        if (failed.length) {
+            console.log(`  ↻ Rattrapage ${region.name}: ${failed.length} NO_DATA re-tentés...`);
+            const retryMap = new Map();
+            for (let i = 0; i < failed.length; i += CONFIG.CHUNK_SIZE) {
+                const batch = failed.slice(i, i + CONFIG.CHUNK_SIZE);
+                const res = await Promise.all(batch.map(enrichStock));
+                for (const r of res) retryMap.set(buildScorerCacheKey(r), r);
+            }
+            let recov = 0;
+            for (let j = 0; j < enrichedStocks.length; j++) {
+                if (!isMiss(enrichedStocks[j])) continue;
+                const r = retryMap.get(buildScorerCacheKey(enrichedStocks[j]));
+                if (r && !isMiss(r)) { enrichedStocks[j] = r; recov++; }
+            }
+            console.log(`  ✅ Rattrapage ${region.name}: ${recov}/${failed.length} récupérés`);
+        }
+
         // ✅ Flush du cache en fin de région
         await saveScorerCache();
 
