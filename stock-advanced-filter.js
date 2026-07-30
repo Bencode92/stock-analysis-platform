@@ -2168,7 +2168,15 @@ async function enrichStock(stock) {
         perf_ytd: perf.performances?.ytd != null ? +perf.performances.ytd : null,
         perf_1y: perf.performances?.year_1 != null ? +perf.performances.year_1 : null,
         perf_3y: perf.performances?.year_3 != null ? +perf.performances.year_3 : null,
-        
+
+        // ✅ v7.9: libellé AUTOMATIQUE (zéro liste en dur), déduit de l'historique réel.
+        // <252 séances (~1 an de bourse) → perf_1y mathématiquement impossible.
+        // Distingue une "jeune cotation" (IPO récente, données OK mais courtes) d'une vraie erreur.
+        history_days: perf._series_meta?.series_points ?? null,
+        young_listing: (perf.performances?.year_1 == null
+            && Number.isFinite(perf._series_meta?.series_points)
+            && perf._series_meta.series_points < 252) || false,
+
         // ✅ v3.22: Fondamentaux Buffett depuis CSV
    roe: stock.roe,
     de_ratio: stock.de_ratio,
