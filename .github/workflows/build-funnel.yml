@@ -1,11 +1,17 @@
 name: 🔻 Build Funnel
 
-# Fabrique data/funnel.json (Secteur › Chaîne › Région › Action + panels multi-axes)
-# à partir de data/framework.json + data/stocks_*.json. La page funnel.html LIT ce JSON
-# (fetch même-origine sur GitHub Pages) — aucun appel API en direct depuis le navigateur.
+# Workflow UNIQUE du funnel :
+#  - funnel.json    : à chaque run (Secteur › Chaîne › Région › Action + panels multi-axes)
+#  - funnel_news.json : HEBDO (lundi) ou sur déclenchement manuel — news réelles classées (codebook)
+# La page funnel.html LIT ces JSON (fetch même-origine) — aucun appel API en direct depuis le navigateur.
 
 on:
   workflow_dispatch:
+    inputs:
+      news:
+        description: 'Régénérer aussi les news (funnel_news.json)'
+        type: boolean
+        default: true
   schedule:
     # après les mises à jour stocks du matin (Paris ~08:30 été / 09:30 hiver)
     - cron: '30 6 * * 1-5'
@@ -31,14 +37,26 @@ jobs:
       - name: 🔻 Générer funnel.json
         run: python3 scripts/build_funnel.py
 
+      - name: 📰 Générer funnel_news.json (hebdo lundi, ou manuel)
+        run: |
+          # News = contexte, pas signal → cadence hebdo. On la régénère le LUNDI (cron)
+          # ou sur déclenchement manuel avec l'input news=true.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            [ "${{ inputs.news }}" = "true" ] && python3 scripts/build_news.py || echo "ℹ️ news désactivées (input)"
+          elif [ "$(date -u +%u)" = "1" ]; then
+            python3 scripts/build_news.py
+          else
+            echo "ℹ️ news : hebdo (lundi) — skip aujourd'hui"
+          fi
+
       - name: 💾 Commit et push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- data/funnel.json; then
-            echo "ℹ️ funnel.json inchangé, rien à committer"; exit 0
+          git add data/funnel.json data/funnel_news.json 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "ℹ️ rien de changé, rien à committer"; exit 0
           fi
-          git add data/funnel.json
           git commit -m "🔻 Build Funnel - $(date -u '+%Y-%m-%d %H:%M UTC') [skip ci]"
           # push robuste : boucle fetch→rebase→push (résiste aux pushes concurrents)
           for i in 1 2 3 4 5; do
