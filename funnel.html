@@ -433,7 +433,7 @@ function renderChain(sector,key){
   const B=ch.blocks||{}, src=s=>s?`<div class="src">${s}</div>`:'';
   const facts=arr=>(arr||[]).map(d=>`<div class="factline"><p>${hl(d.t)}</p>${src(d.src)}</div>`).join("");
   const bloc1=(B.problem
-    ?`<div class="probleme"><p class="prob-lead">${hl(B.problem.lead)}</p><div class="shock">${B.problem.figures.map(f=>`<div class="shk"><div class="shk-v">${f.v}</div><div class="shk-l">${f.l}</div>${src(f.src)}</div>`).join("")}</div></div>`
+    ?`<div class="probleme"><p class="prob-lead">${hl(B.problem.lead)}</p>${(B.problem.figures&&B.problem.figures.length)?`<div class="shock">${B.problem.figures.map(f=>`<div class="shk"><div class="shk-v">${f.v}</div><div class="shk-l">${f.l}</div>${src(f.src)}</div>`).join("")}</div>`:''}</div>`
     :(ch.context?`<div class="brief"><p>${hl(ch.context)}</p></div>`:''))
     +(!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU.</div>`:'');
   const bloc4=`<div class="chain">${chainHTML}</div>`;
