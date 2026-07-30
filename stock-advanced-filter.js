@@ -456,21 +456,44 @@ async function fetchTD(endpoint, trials, extraParams = {}) {
         trials = [cachedParams, ...trials.filter(t => makeKey(t) !== makeKey(cachedParams))];
     }
 
+    // ✅ v8.0: retry+backoff sur 429 (rate-limit). La clé Twelve Data est partagée par
+    // plusieurs workflows → sous contention on se prend des 429. AVANT : abandon immédiat
+    // → NO_DATA (storms à 0%). MAINTENANT : on attend et on réessaie le MÊME param → le run
+    // ralentit sous charge mais ne PERD plus les données. 429 renvoyé soit en HTTP 429,
+    // soit en corps {status:'error', code:429, message:'...run out of api credits...'}.
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const isRL = (data, e) =>
+        (e && e.response && e.response.status === 429) ||
+        (data && (data.code === 429 || /rate limit|run out of api credits|too many requests/i.test(data.message || '')));
+
     for (const p of trials) {
-        try {
-            const { data } = await axios.get(`https://api.twelvedata.com/${endpoint}`, {
-                params: { ...p, ...extraParams, apikey: CONFIG.API_KEY },
-                timeout: 15000
-            });
-            if (data && data.status !== 'error') {
-                successCache.set(makeKey(p), p);   // ✅ on mémorise par paramètres exacts
-                if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
-                return data;
-            }
-            if (CONFIG.DEBUG) console.warn(`[TD FAIL ${endpoint}]`, p, data?.message || data?.status);
-        } catch (e) {
-            if (CONFIG.DEBUG && e.response?.status !== 404) {
-                console.warn(`[TD EXC ${endpoint}]`, p, e.message);
+        for (let attempt = 0; attempt <= 4; attempt++) {
+            try {
+                const { data } = await axios.get(`https://api.twelvedata.com/${endpoint}`, {
+                    params: { ...p, ...extraParams, apikey: CONFIG.API_KEY },
+                    timeout: 15000
+                });
+                if (data && data.status !== 'error') {
+                    successCache.set(makeKey(p), p);   // ✅ on mémorise par paramètres exacts
+                    if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
+                    return data;
+                }
+                if (isRL(data, null) && attempt < 4) {
+                    if (CONFIG.DEBUG) console.warn(`[TD 429 ${endpoint}] backoff ${1500*(attempt+1)}ms`, p);
+                    await sleep(1500 * (attempt + 1));
+                    continue;                          // 429 → réessaie le MÊME param
+                }
+                if (CONFIG.DEBUG) console.warn(`[TD FAIL ${endpoint}]`, p, data?.message || data?.status);
+                break;                                 // erreur non-429 → param suivant
+            } catch (e) {
+                if (isRL(null, e) && attempt < 4) {
+                    await sleep(1500 * (attempt + 1));
+                    continue;                          // 429 HTTP → réessaie
+                }
+                if (CONFIG.DEBUG && e.response?.status !== 404) {
+                    console.warn(`[TD EXC ${endpoint}]`, p, e.message);
+                }
+                break;                                 // autre exception → param suivant
             }
         }
     }
