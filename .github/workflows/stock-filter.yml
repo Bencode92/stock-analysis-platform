@@ -65,10 +65,12 @@ on:
     - cron: '0 22 * * 1-5'
 
 concurrency:
-  # Un groupe PAR MARCHÉ/CRON (plus par workflow) : asia ne se fait plus starve/annuler
-  # par les runs europe/us qui partageaient le même créneau. Chaque cron (et chaque marché
-  # manuel) a son groupe → un run asia long va au bout. Push anti-conflit = rebase+retry.
-  group: ${{ github.workflow }}-${{ github.event.schedule || inputs.market || 'manual' }}
+  # ✅ SÉRIALISATION : un SEUL run stock à la fois (tous marchés confondus). Avant, le groupe
+  # par-marché laissait asia + europe-open (07:00 UTC) tourner EN PARALLÈLE → ils se battaient
+  # pour la clé Twelve Data partagée → 429 en masse → run tombé à 0% de perf (le 30/07 07:52).
+  # Un groupe unique + cancel-in-progress:false → europe/us ATTENDENT la fin d'asia (pas
+  # d'annulation, pas de contention). Trade-off : un run stock peut attendre ~30min, acceptable.
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 permissions:
