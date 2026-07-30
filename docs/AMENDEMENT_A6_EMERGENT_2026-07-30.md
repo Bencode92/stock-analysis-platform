@@ -45,9 +45,17 @@ TSMC est la 1ʳᵉ ligne de tout indice EM/Asie. L'étage ① via **MSCI Taiwan 
 | **TSMC TOTAL avec Émergents** | **~6,7 à 7,0 % → BREACH du cap 5 %** ❌ |
 
 **Conséquence gelable :** l'étage ① **ne peut pas** se faire via un indice Taïwan concentré sans faire sauter le
-cap look-through TSMC. Trois issues possibles (à trancher) : (a) véhicule Taïwan **ex-TSMC** ou pondéré autrement ;
-(b) l'étage ① remplace, et ne s'ajoute pas, à la ligne directe TSMC + surpoids IEMG (on ne paie pas 3 fois) ;
-(c) on réduit fortement l'étage ①. **Sans ce tableau, valider la proposition = valider un chiffre invérifiable.**
+cap TSMC. **Trois options chiffrables — Fabre choisit :**
+
+- **(i) Étage tech via indice Taïwan concentré** (MSCI Taiwan). → breach TSMC **quasi certain** (~6,7-7,0 %, cf.
+  tableau) → **refusé en l'état.**
+- **(ii) Version réduite** : **Japon développé en direct gaté** (Tokyo Electron, Advantest — hors indice EM, donc
+  pas de TSMC ajouté) **+ Corée via ETF**, **sans indice Taïwan.** → **tient le cap 5 %**, mais ce n'est plus
+  vraiment de « l'émergent » (Japon = marché développé).
+- **(iii) Étage tech abandonné** : poche EM = **Inde + Chine conso + LatAm réservée** (A7). → l'émergent devient
+  **purement diversifiant** (capex-IA faible), **cohérent avec la réserve IA.**
+
+**Sans ce tableau + ces options, valider la proposition = valider un chiffre invérifiable.**
 
 ## Règle de pondération (rappel du freeze — le document l'avait violée)
 

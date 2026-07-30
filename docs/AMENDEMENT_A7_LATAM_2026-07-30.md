@@ -22,8 +22,11 @@ Une position ne doit pas **s'évaporer** : elle se **décide et se date**.
 **LatAm = DIFFÉRÉE, pas retirée.** Décision utilisateur : *« focus Asie maintenant, LatAm après l'élection
 brésilienne »*. C'est un choix de **timing**, pas de doctrine : la LatAm reste le diversifiant EM de référence.
 
-- **Déclencheur de réactivation :** résultat de l'élection présidentielle brésilienne (risque politique/fiscal =
-  le vrai facteur de la thèse LatAm, à lever avant d'engager).
+- **Déclencheur de réactivation — MÉCANIQUE, pas discrétionnaire.** Pas « au bon résultat » (ce serait de la
+  prédiction politique) : la 1ʳᵉ tranche LatAm s'engage à **date fixe, X semaines APRÈS l'élection, quel qu'en
+  soit le résultat**. Ce qu'on attendait, c'est la **levée de l'incertitude binaire** (l'événement passé), pas
+  un vainqueur précis. **Exception :** un tripwire spécifique défini d'avance (ex. rupture de l'ancrage fiscal /
+  contrôle des capitaux) reporte l'engagement. La discipline en **règle**, pas en jugement du moment.
 - **Part réservée :** ~⅓ de la poche EM cible reste **fléchée LatAm** — elle n'est pas réallouée à l'Asie par
   défaut. Les étages asiatiques (A6) sont **dimensionnés pour laisser cette place**, pas pour la combler.
 - **Véhicule pressenti :** ETF UCITS *MSCI Brazil* / *Latin America* (à valider), + lien avec la fiche Matières
@@ -42,4 +45,5 @@ déclencheur tombe, un amendement A-suivant réactive la LatAm sans rouvrir tout
 ## Statut
 
 **GELÉ (décision de timing)** — la LatAm est différée par choix utilisateur explicite. La part ⅓ reste réservée.
-Réactivation = nouvel amendement daté au résultat de l'élection brésilienne.
+Réactivation = **règle mécanique** (1ʳᵉ tranche X semaines après l'élection, quel que soit le résultat, sauf
+tripwire pré-défini), posée dans un amendement A-suivant.
