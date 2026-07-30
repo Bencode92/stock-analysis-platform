@@ -1,0 +1,51 @@
+name: 📰 Build News
+
+# Couche news de l'entonnoir : fetch news RÉELLES (Google News RSS) → classe (codebook) →
+# funnel_news.json. Hebdo (contexte, pas signal). La page LIT funnel_news.json à côté de funnel.json.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # lundi 06:00 UTC — hebdo, PAS aligné sur le scoreur (c'est du contexte, pas du signal)
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-news
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: 📰 Générer funnel_news.json
+        run: python3 scripts/build_news.py
+
+      - name: 💾 Commit et push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/funnel_news.json; then
+            echo "ℹ️ funnel_news.json inchangé"; exit 0
+          fi
+          git add data/funnel_news.json
+          git commit -m "📰 News hebdo - $(date -u '+%Y-%m-%d %H:%M UTC') [skip ci]"
+          # push robuste (résiste aux pushes concurrents)
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase -X ours origin/main; then
+              if git push origin HEAD:main; then echo "✅ Push OK"; exit 0; fi
+            else
+              git rebase --abort || true
+            fi
+            echo "↻ retry $i…"; sleep $((i * 3))
+          done
+          echo "❌ push échoué"; exit 1

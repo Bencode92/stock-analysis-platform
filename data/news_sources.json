@@ -1,0 +1,28 @@
+{
+  "_doc": "Config de la couche news. Les entreprises viennent de framework.json (pas de doublon). Ici : chaînes pilotes, fenêtre temporelle, langue, mots-clés par chaîne, et le mapping mots-clés → type d'événement du codebook (classification v1 par règles ; v2 = IA). Source = Google News RSS (vraies URL/dates).",
+  "config": {
+    "pilot_chains": ["semi", "emerging"],
+    "days_window": 14,
+    "lang": "en",
+    "region": "US",
+    "max_items_per_company": 4
+  },
+  "chain_keywords": {
+    "semi": "semiconductor OR chip OR foundry OR EUV",
+    "emerging": "chip OR EV OR earnings"
+  },
+  "_classify_note": "v1 : règles mots-clés (transparent, sans clé API). v2 : remplacer classify() par un appel IA qui CLASSE dans le codebook (le code garde l'attribution des valeurs).",
+  "classify_rules": {
+    "earnings_beat":      ["beats", "tops estimates", "beat expectations", "record profit", "record revenue"],
+    "earnings_miss":      ["misses", "falls short", "disappoints", "profit warning", "cuts profit"],
+    "guidance_up":        ["raises guidance", "lifts outlook", "raises forecast", "upgrades outlook"],
+    "guidance_down":      ["cuts guidance", "lowers outlook", "trims forecast", "warns on"],
+    "orderbook_strong":   ["sold out", "record orders", "order backlog", "strong demand", "booked"],
+    "capacity_expansion": ["new plant", "expands capacity", "opens factory", "invests in fab", "billion investment"],
+    "competitor_warning": ["china", "rival", "competitor", "market share loss", "domestic alternative", "catches up"],
+    "regulatory_risk":    ["export ban", "sanction", "antitrust", "probe", "regulator", "restriction", "tariff"],
+    "litigation":         ["lawsuit", "sues", "court", "settlement", "investigation"],
+    "downgrade":          ["downgrade", "cut to sell", "price target cut", "bearish"]
+  },
+  "warning_types": ["competitor_warning", "regulatory_risk"]
+}
