@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generated": "2026-07-30T09:09:42.777528Z",
+  "generated": "2026-07-30T09:18:56.377201Z",
   "note": "Entonnoir descriptif (médianes). News=[] tant que Phase B n'a pas tourné.",
   "axes": [
    "momentum",
@@ -756,7 +756,20 @@
       "signal_w52": "+7.45 %",
       "signal_3m": "-13.24 %"
      },
-     "blocks": {},
+     "blocks": {
+      "problem": {
+       "lead": "Le nucléaire revient pour décarboner sans dépendre du soleil et du vent — les hyperscalers signent des PPA multi-décennaux et paient d'avance. Mais le vrai goulot n'est pas de construire des réacteurs : c'est le COMBUSTIBLE."
+      },
+      "chokepoint": {
+       "title": "Le cycle du combustible",
+       "body": "L'uranium est concentré géographiquement (Kazakhstan, Niger, Canada), mais le vrai chokepoint est l'<b>enrichissement</b> — longtemps dominé par la Russie (Rosatom). C'est le maillon le plus concentré géopolitiquement de l'énergie occidentale. Trois horizons : l'existant (entretien, sûr), le combustible (la vraie tension), et les SMR (médiatisés mais non prouvés — en veille). <b>On joue le combustible et l'existant, pas le rêve SMR.</b>"
+      },
+      "tripwires": [
+       "Retour massif de l'offre russe d'enrichissement (détend le chokepoint).",
+       "Échec ou report en série des PPA hyperscalers (les projets redeviennent spéculatifs).",
+       "SMR qui prouve enfin son économie à l'échelle (changerait la donne — pas encore le cas)."
+      ]
+     },
      "thesis": "La demande nucléaire est CONTRACTUALISÉE : les hyperscalers signent des PPA multi-décennaux et paient d'avance, transformant des projets spéculatifs en actifs bancables. Le cycle du combustible est le maillon le plus concentré géopolitiquement de l'énergie occidentale.",
      "diff": "« Les datacenters paient le nucléaire en avance, construction en attente » : 13 deals hyperscalers, >9,8 GW (mai 2026). LE CONTRAT DÉBLOQUE LA CONSTRUCTION, pas l'inverse.",
      "decomp": "Découpé en 3 HORIZONS aux gagnants différents (le décalage temporel est central : datacenters veulent des électrons 2026-2028, les SMR livrent 2030-2035).",
@@ -852,7 +865,7 @@
          "net_margin": 4.31
         }
        ],
-       "enface": null
+       "enface": "Existant (H1, 2026-29) : Constellation, Vistra, Talen, GE Vernova, Siemens Energy — seule capacité livrable avant 2030."
       },
       {
        "label": "H2 (permanent) — le combustible",
@@ -907,7 +920,7 @@
          "net_margin": null
         }
        ],
-       "enface": null
+       "enface": "Combustible (H2, permanent) : Cameco, Centrus, Urenco/Orano — le chokepoint géopolitique."
       },
       {
        "label": "H3 (2030+) — développeurs SMR",
@@ -962,7 +975,7 @@
          "net_margin": null
         }
        ],
-       "enface": null
+       "enface": "SMR (H3, 2030+) : Oklo, NuScale, X-energy/TerraPower — le maillon le plus médiatisé et le plus fragile."
       }
      ]
     }
@@ -1105,7 +1118,20 @@
       "signal_w52": "+55.55 %",
       "signal_3m": "+1.86 %"
      },
-     "blocks": {},
+     "blocks": {
+      "problem": {
+       "lead": "Quel que soit le gagnant des LLM ou des puces, les datacenters ont besoin d'électricité distribuée et de refroidissement. La densité (racks >100 kW) rend le refroidissement liquide OBLIGATOIRE — l'air ne suffit plus."
+      },
+      "chokepoint": {
+       "title": "Le power & cooling",
+       "body": "Chaque MW installé dans un datacenter passe par la <b>distribution électrique</b> (UPS/PDU/switchgear) et, avec la densité IA, par le <b>refroidissement liquide</b> — un changement techno obligatoire. C'est le picks & shovels DU picks & shovels : on ne parie pas sur le gagnant de l'IA, on parie sur ce dont TOUS ont besoin. Vertiv est le pure-play qui joue les deux bouts (power + cooling)."
+      },
+      "tripwires": [
+       "Effondrement ou pause nette du capex IA des hyperscalers (thèse 100 % corrélée).",
+       "Standard de refroidissement liquide qui se fige au détriment des acteurs cotés.",
+       "Valorisations déjà tendues post-run 2024-26 (Vertiv) qui se dégonflent."
+      ]
+     },
      "thesis": "Le picks & shovels DU picks & shovels : quel que soit le gagnant des LLM ou des puces, les datacenters ont besoin d'électricité distribuée et de refroidissement. La densité (racks >100 kW) rend le refroidissement liquide OBLIGATOIRE.",
      "diff": "ASML elle-même identifie l'énergie de l'IA comme le défi majeur de l'industrie (avril 2026). Conviction relative la plus forte du bloc capex-IA (moins dépendant de qui gagne la course aux puces).",
      "decomp": "100% capex-IA — AUCUNE protection en cas de stress. Compte plein dans le plafond.",
@@ -1186,7 +1212,7 @@
          "net_margin": 14.52
         }
        ],
-       "enface": null
+       "enface": "Power distribution : Vertiv, Eaton, Schneider, ABB — leaders installés, revenus services récurrents."
       },
       {
        "label": "② Refroidissement liquide",
@@ -1225,7 +1251,7 @@
          "net_margin": 18.24
         }
        ],
-       "enface": null
+       "enface": "Refroidissement liquide : Vertiv, nVent — le passage air→liquide EST le changement techno."
       },
       {
        "label": "③ Générateurs / backup",
@@ -1280,7 +1306,7 @@
          "net_margin": null
         }
        ],
-       "enface": null
+       "enface": "Générateurs/backup : Cummins, Caterpillar, Generac — continuité de service obligatoire."
       }
      ]
     },
@@ -1471,7 +1497,20 @@
       "signal_w52": "+155.82 %",
       "signal_3m": "+17.80 %"
      },
-     "blocks": {},
+     "blocks": {
+      "problem": {
+       "lead": "On ne fabrique AUCUNE puce avancée sans passer par une poignée d'équipements amont dont certains n'ont qu'UN SEUL fournisseur au monde. Le chip médiatisé (Nvidia) est la partie visible ; la valeur défendable est en amont, chez ceux sans qui rien n'existe."
+      },
+      "chokepoint": {
+       "title": "La lithographie EUV",
+       "body": "<b>ASML est le seul fabricant au monde</b> de machines de lithographie EUV — indispensables pour graver les transistors les plus fins. Pas de second fournisseur, pas de substitut : c'est le monopole vérifiable le plus net de toute la tech. En dessous, l'EDA (Synopsys + Cadence = <b>duopole</b> par lequel passe chaque puce conçue) et l'inspection/métrologie (KLA quasi-indélogeable) forment des goulots secondaires mais tout aussi structurels."
+      },
+      "tripwires": [
+       "Émergence crédible d'un 2ᵉ fournisseur EUV (Chine ou autre).",
+       "Rupture technologique rendant l'EUV contournable.",
+       "Effondrement du capex des fondeurs (TSMC/Samsung/Intel) deux trimestres de suite → correction cyclique."
+      ]
+     },
      "thesis": "On n'achète pas le chip médiatisé (Nvidia) mais les équipements amont sans lesquels aucun chip avancé n'existe — monopole (ASML EUV) ou quasi-monopole vérifiables. Ajout 2026 : la MÉMOIRE (HBM) est une sous-chaîne à part entière.",
      "diff": "Descendu volontairement au 5e rang : pas parce que la thèse est fausse, mais parce que c'est le thème le plus détenu, le mieux compris et le plus cher. Entrée par tranches.",
      "decomp": "100% capex-IA. Compte plein dans le plafond. Tail risk Taïwan (TSMC) = binaire, non diversifiable.",
@@ -1520,7 +1559,7 @@
          "net_margin": -31.9
         }
        ],
-       "enface": null
+       "enface": "EUV : ASML SANS concurrent ; la Chine tente une filière domestique subventionnée, loin du niveau."
       },
       {
        "label": "② EDA (logiciels de design)",
@@ -1559,7 +1598,7 @@
          "net_margin": 20.94
         }
        ],
-       "enface": null
+       "enface": "EDA : duopole Synopsys/Cadence ; Siemens EDA en 3ᵉ, loin derrière."
       },
       {
        "label": "③ Dépôt / gravure / métrologie",
@@ -1630,7 +1669,7 @@
          "net_margin": -11.8
         }
        ],
-       "enface": null
+       "enface": "Dépôt/gravure/métrologie : oligopole AMAT/Lam/Tokyo Electron + KLA quasi-indélogeable sur l'inspection."
       },
       {
        "label": "④ Packaging avancé (CoWoS, HBM)",
@@ -1685,7 +1724,7 @@
          "net_margin": null
         }
        ],
-       "enface": null
+       "enface": "Packaging avancé (CoWoS/HBM) : goulot réel du ramp IA ; BESI/ASMPT sur l'équipement, oligopole mémoire (Micron/SK Hynix/Samsung)."
       },
       {
        "label": "⑤ Test",
@@ -1724,7 +1763,7 @@
          "net_margin": 33.26
         }
        ],
-       "enface": null
+       "enface": "Test : duopole Teradyne/Advantest."
       }
      ]
     }
@@ -1937,7 +1976,20 @@
       "signal_w52": "-9.00 %",
       "signal_3m": "+5.13 %"
      },
-     "blocks": {},
+     "blocks": {
+      "problem": {
+       "lead": "Le réarmement européen est un moteur budgétaire structurel (~800 Md€/an visés fin décennie), renforcé par le découplage US. Mais 2026 a prouvé que le risque n'est PAS la macro — c'est l'EXÉCUTION (annulations de programmes, marges déçues)."
+      },
+      "chokepoint": {
+       "title": "L'aftermarket sole-source",
+       "body": "Le vrai picks & shovels de la défense n'est pas le prime (qui porte le <b>risque programme</b> : annulations, prix fixes) mais les <b>composants certifiés sole-source</b> à revenus de rechange récurrents — INSENSIBLES aux annulations de programmes neufs. TransDigm et Heico en sont l'archétype : une pièce certifiée sur une plateforme vole pendant 30 ans et se rachète en pièces détachées."
+      },
+      "tripwires": [
+       "Désescalade géopolitique majeure réduisant durablement les budgets.",
+       "Dérating généralisé du secteur (valorisations encore élevées vs historique).",
+       "Rupture de la logique sole-source (2ᵉ source certifiée imposée sur l'aftermarket)."
+      ]
+     },
      "thesis": "Le réarmement européen est un moteur budgétaire structurel (~800 Md€/an visés fin décennie), renforcé par le découplage US. Mais 2026 a prouvé que le risque n'est PAS la macro, c'est L'EXÉCUTION (annulations de programmes, marges déçues).",
      "diff": "Leçon 2026 : F126 annulé → Rheinmetall -18% en une séance (-38% depuis janvier). Le backlog tient (RHM 63,8 Md€), c'est la conversion backlog→marges qui est scrutée. D'où : composants à moat > primes.",
      "decomp": "capex-IA ≈ 0 → rôle DIVERSIFIANT réel (avec le réseau). Moteur = budgets publics/sécurité, pas l'IA.",
@@ -2098,7 +2150,7 @@
          "net_margin": null
         }
        ],
-       "enface": null
+       "enface": "Primes/intégrateurs : RTX, Lockheed, GD, Northrop, Rheinmetall, Thales, Dassault, Leonardo — portent le risque programme."
       },
       {
        "label": "② Composants à moat / aftermarket",
@@ -2185,7 +2237,7 @@
          "net_margin": 11.73
         }
        ],
-       "enface": null
+       "enface": "Composants à moat/aftermarket : TransDigm, Heico, Howmet, Safran, MTU — le vrai picks & shovels, insensible aux annulations."
       },
       {
        "label": "③ Électronique de défense / capteurs",
@@ -2240,7 +2292,7 @@
          "net_margin": 7.35
         }
        ],
-       "enface": null
+       "enface": "Électronique de défense/capteurs : Hensoldt, Thales, L3Harris — contenu croissant par plateforme."
       }
      ]
     }
@@ -2323,7 +2375,20 @@
       "signal_w52": "+4.34 %",
       "signal_3m": "-15.76 %"
      },
-     "blocks": {},
+     "blocks": {
+      "problem": {
+       "lead": "L'électrification et la défense ont un besoin explosif de cuivre, terres rares et lithium. Mais le diagnostic est FORT et les véhicules FAIBLES : le vrai chokepoint n'est pas la mine, c'est le RAFFINAGE — dominé par la Chine."
+      },
+      "chokepoint": {
+       "title": "Le raffinage (pas la mine)",
+       "body": "Celui qui raffine tient la chaîne. La <b>Chine domine massivement le raffinage</b> des terres rares et des aimants NdFeB — un levier géopolitique (elle peut restreindre les exports). Problème pratique : peu d'ETF/actions propres pour s'exposer sans acheter des mineurs très cycliques et politiques (Amérique latine pour le cuivre). <b>Exposition volontairement petite et bornée.</b>"
+      },
+      "tripwires": [
+       "Capacité de raffinage occidentale crédible mise en ligne (réduit la dépendance).",
+       "La Chine écrase les prix pour tuer les pure-plays non subventionnés.",
+       "Disparition des subventions qui maintiennent les pure-plays à flot."
+      ]
+     },
      "thesis": "Dépendance chinoise sur les matières = diagnostic validé, exécution prudente. Pas une fiche-thème autonome (fourre-tout) mais un maillon amont documenté DANS chaque fiche + exposition optionnelle petite et bornée.",
      "diff": "La Chine FIXE les prix des matières qu'elle domine et peut écraser les cours pour tuer la concurrence (déjà fait sur les terres rares). Un pari MP/Lynas = pari sur un soutien politique occidental DURABLE, pas sur le marché libre.",
      "decomp": "Se joue mieux via les fiches AVAL (réseau, défense) qui subissent la dépendance et la répercutent dans leurs prix.",
@@ -2371,7 +2436,7 @@
          "net_margin": null
         }
        ],
-       "enface": null
+       "enface": "Terres rares/aimants : MP Materials, Lynas — la Chine domine raffinage et aimants NdFeB."
       },
       {
        "label": "Cuivre & métaux",
@@ -2394,7 +2459,7 @@
          "net_margin": 16.02
         }
        ],
-       "enface": null
+       "enface": "Cuivre & métaux : Freeport-McMoRan — concentré côté mines (Chili/Pérou/RDC), pas côté Chine."
       }
      ]
     }
@@ -2520,7 +2585,20 @@
       "signal_w52": "+66.80 %",
       "signal_3m": "+9.25 %"
      },
-     "blocks": {},
+     "blocks": {
+      "problem": {
+       "lead": "Si les humanoïdes passent à l'échelle, les gagnants picks & shovels sont les composants critiques — réducteurs, actionneurs, capteurs — massivement japonais/asiatiques. Le thème est réel, le TIMING d'investissement ne l'est pas encore : on est en VEILLE."
+      },
+      "chokepoint": {
+       "title": "Les réducteurs de précision",
+       "body": "Le vrai chokepoint, <b>entièrement asiatique</b>, est le réducteur harmonique/de précision (quasi-duopole mondial Harmonic Drive/Nabtesco) et les actionneurs. Sans eux, pas d'articulation robotique précise. Les capteurs/vision (Keyence, Cognex) sont plus accessibles. <b>On surveille, on n'investit pas encore</b> : les critères d'activation (adoption réelle, marges, moat durable) ne sont pas remplis."
+      },
+      "tripwires": [
+       "Adoption réelle des humanoïdes AVEC marges prouvées → activation du thème.",
+       "Percée d'un fournisseur non-asiatique crédible sur les réducteurs de précision.",
+       "Le narratif qui se dégonfle (revenus quasi nuls aujourd'hui)."
+      ]
+     },
      "thesis": "Si les humanoïdes passent à l'échelle, les gagnants picks & shovels sont les composants critiques — réducteurs harmoniques, actionneurs, capteurs — massivement japonais/asiatiques. Le thème est réel, le TIMING d'investissement ne l'est pas encore.",
      "diff": "Revenus humanoïdes réels négligeables → payer aujourd'hui = payer le narratif. Les vrais picks & shovels sont dans le trou Asie.",
      "decomp": "Compte dans le plafond capex-IA le jour où activé.",
@@ -2584,7 +2662,7 @@
          "net_margin": 38.07
         }
        ],
-       "enface": null
+       "enface": "Capteurs/vision (accessible) : Cognex, ABB, Keyence — leaders à marges très élevées."
       },
       {
        "label": "Réducteurs / actionneurs (trou Asie)",
@@ -2639,7 +2717,7 @@
          "net_margin": 19.75
         }
        ],
-       "enface": null
+       "enface": "Réducteurs/actionneurs (trou Asie) : Harmonic Drive/Nabtesco, Nidec, Fanuc/Yaskawa — quasi-duopole mondial, le vrai chokepoint."
       }
      ]
     }
