@@ -1,0 +1,28 @@
+{
+  "_doc": "Sortie de la couche news (workflow hebdo). Lu par funnel.html À CÔTÉ de funnel.json. Clé = chaîne puis ticker. Les items `_example:true` sont des placeholders de démo — SERONT ÉCRASÉS au 1er run réel. Chaque badge/warning/news réel portera src + url + date, et passera les 2 garde-fous CI (corpus + lint causalité).",
+  "meta": { "generated": "STUB — en attente du 1er run news", "codebook_version": 1 },
+  "chains": {
+    "semi": {
+      "global": [],
+      "companies": {
+        "ASML": {
+          "badges": [ { "type": "orderbook_strong", "date": "2026-07-25", "src": "EXEMPLE", "url": null, "_example": true } ],
+          "news_heat": 1,
+          "warnings": [ { "title": "EXEMPLE (à remplacer) — la Chine progresse sur la lithographie", "src": "EXEMPLE", "date": "2026-07-20", "url": null, "_example": true } ],
+          "alert": false
+        }
+      }
+    },
+    "emerging": {
+      "global": [],
+      "companies": {
+        "000660": {
+          "badges": [ { "type": "orderbook_strong", "date": "2026-07-22", "src": "EXEMPLE", "url": null, "_example": true } ],
+          "news_heat": 1,
+          "warnings": [],
+          "alert": false
+        }
+      }
+    }
+  }
+}

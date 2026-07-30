@@ -134,6 +134,15 @@
   .crit-m .cm{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
   .crit-m .cm b{font-family:var(--mono);font-size:13.5px}
   .crit-m .cm i{font-size:9.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-style:normal;margin-top:1px}
+  /* couche news : badges + heat + warnings */
+  .news-c .nv{display:inline-flex;align-items:center;gap:4px}
+  .nb-dots{display:inline-flex;gap:3px}
+  .nb{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .nb-pos{background:#1a7a4a} .nb-neg{background:#b23a5b} .nb-alert{font-size:11px;line-height:1}
+  .warn-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;background:color-mix(in srgb,#b23a5b 6%,var(--surface));border:1px solid color-mix(in srgb,#b23a5b 22%,var(--line));border-radius:9px;padding:9px 13px;margin:0 0 12px;font-size:13px}
+  .warn-bar .wl{font-weight:700;color:#b23a5b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .warn-bar .wi{color:var(--ink)} .warn-bar .wi em{color:var(--mut);font-style:normal;font-size:11px}
+  .warn-bar a{color:var(--accent);text-decoration:none}
   .section-sub{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700;margin:6px 0 14px;padding-top:16px;border-top:1px solid var(--line)}
   @media(max-width:640px){.crit-row{grid-template-columns:18px 1fr}.crit-m{grid-column:1/-1;justify-content:flex-start;gap:14px;margin-top:4px}}
   .comp .crole{color:var(--ink2);font-size:12.5px;line-height:1.45}
@@ -307,7 +316,7 @@ const FLAG={US:"🇺🇸",EU:"🇪🇺",Asie:"🌏"};
 const SECTOR_COLORS={"Technologie":"#3a5bd0","Utilities / Industrie":"#0f8f7e","Énergie / Utilities":"#c0862e",
   "Industrie / Défense":"#566b8c","Matériaux":"#8a5cc0","Industrie":"#6b8e5a","Émergents / Asie":"#b23a5b"};
 const secColor=n=>SECTOR_COLORS[n]||"#16324e";
-let DATA=null, PATH=[];
+let DATA=null, PATH=[], NEWS=null, CODEBOOK=null;
 // surligne les termes clés en majuscules (ASML, EUV, TRANSPORT, HVDC, monopole…) en gras
 function hl(t){return (t||"").replace(/\b([A-ZÀ-Ý][A-ZÀ-Ý0-9&.\-]{1,})\b/g,'<b class="hl">$1</b>');}
 
@@ -466,11 +475,24 @@ function renderChain(sector,key){
   };
   // ordre = POSITION DANS LA CHAÎNE (chokepoint d'abord = picks & shovels), pas un tri par score hybride
   const critRows=(ch.maillons||[]).flatMap(m=>(m.companies||[]).filter(c=>c.has_data));
-  const critHTML=critRows.length?`<div class="crit"><span class="lab">Les entreprises critiques — par position dans la chaîne</span>${critRows.map(c=>{
+  // couche NEWS : badges typés (codebook), affichés À CÔTÉ de la solidité, JAMAIS additionnés
+  const CB=(CODEBOOK&&CODEBOOK.events)||{};
+  const cnews=(NEWS&&NEWS.chains&&NEWS.chains[key])||null;
+  const newsCell=tk=>{
+    const n=cnews&&cnews.companies&&cnews.companies[tk];
+    if(!n) return `<span class="cm news-c"><b class="mut">—</b><i>news</i></span>`;
+    const heat=typeof n.news_heat==='number'?n.news_heat:0;
+    const dots=(n.badges||[]).slice(0,3).map(b=>{const e=CB[b.type]||{};return `<span class="nb nb-${e.tone||'neg'}" title="${(e.label||b.type)}${b._example?' (exemple)':''}"></span>`;}).join("");
+    return `<span class="cm news-c"><span class="nv">${n.alert?'<span class="nb-alert" title="Tripwire franchi → revue humaine">🔴</span>':''}<b class="${heat>0?'g':(heat<0?'b':'mut')}">${heat>0?'+':''}${heat}</b>${dots?`<span class="nb-dots">${dots}</span>`:''}</span><i>news</i></span>`;
+  };
+  const warns=[];
+  if(cnews){ (cnews.global||[]).forEach(w=>warns.push(w)); Object.values(cnews.companies||{}).forEach(co=>(co.warnings||[]).forEach(w=>warns.push(w))); }
+  const warnBar=warns.length?`<div class="warn-bar"><span class="wl">⚠ Warnings</span>${warns.slice(0,3).map(w=>`<span class="wi">${hl(w.title||'')} <em>${w.src||''} ${w.date||''}${w.url?` <a href="${w.url}" target="_blank" rel="noopener">↗</a>`:''}</em></span>`).join("")}</div>`:'';
+  const critHTML=critRows.length?`<div class="crit"><span class="lab">Les entreprises critiques — par position dans la chaîne</span>${warnBar}${critRows.map(c=>{
     const sol=solidity(c);
     const solCell=sol!=null?`<span class="cm"><b>${sol}</b><i>solidité</i></span>`:`<span class="cm"><b class="mut">n/a</b><i>données insuff.</i></span>`;
-    return `<div class="crit-row"><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m">${solCell}<span class="cm"><b>${c.roic_avg_3y!=null?Math.round(c.roic_avg_3y)+'%':'—'}</b><i>moat 3a</i></span><span class="cm news-c"><b class="mut">—</b><i>news</i></span></div></div>`;
-  }).join("")}<p class="cmp-cav"><b>Solidité</b> = moat 3 ans (stable, pas au pic de cycle) + qualité hors momentum, avec <b>gate de couverture</b> (données insuffisantes → affiché mais <b>non classé</b>, jamais de rang sur du vide). La colonne <b>news</b> (badges typés) viendra <b>à côté</b> — jamais additionnée : la news alerte, elle ne classe pas. Ordre = position dans la chaîne, pas un score hybride.</p></div>`:'';
+    return `<div class="crit-row"><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m">${solCell}<span class="cm"><b>${c.roic_avg_3y!=null?Math.round(c.roic_avg_3y)+'%':'—'}</b><i>moat 3a</i></span>${newsCell(c.ticker)}</div></div>`;
+  }).join("")}<p class="cmp-cav"><b>Solidité</b> (classe) = moat 3 ans stable + qualité hors momentum, gate de couverture. <b>News</b> (à côté, JAMAIS additionnée) = heat borné [−3,+3] + badges du codebook fermé ; 🔴 = tripwire → revue humaine. La news alerte, elle ne classe pas.</p></div>`:'';
   const bloc6=`${critHTML}<div class="glob"><span class="section-sub">L'analyse globale</span>${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div></div>`;
   const trip=(B.tripwires&&B.tripwires.length)?`<div class="trip"><span class="lab">Ce qui casserait la thèse — tripwires</span><ul>${B.tripwires.map(t=>`<li>${hl(t)}</li>`).join("")}</ul></div>`:'';
   const bloc7=`${risks}${trip}${newsHTML(ch.news)}`;
@@ -488,10 +510,14 @@ function renderChain(sector,key){
   return `<div class="chainview" style="--accent:${secColor(sector)};--accent2:${secColor(sector)}"><div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>${tabbar}${panels}</div>`;
 }
 
-fetch("./data/funnel.json").then(r=>r.json()).then(d=>{
-  DATA=d;
+Promise.all([
+  fetch("./data/funnel.json").then(r=>r.json()),
+  fetch("./data/funnel_news.json").then(r=>r.ok?r.json():null).catch(()=>null),
+  fetch("./data/news_codebook.json").then(r=>r.ok?r.json():null).catch(()=>null)
+]).then(([d,news,cb])=>{
+  DATA=d; NEWS=news; CODEBOOK=cb;
   document.getElementById("meta").textContent="généré "+(d.meta.generated||"").slice(0,10);
-  document.getElementById("foot").innerHTML=`Données ${(d.meta.generated||'').slice(0,10)} · médianes des enablers par nœud · aucun appel API en direct : la page lit un JSON committé · news = couche à venir (sourcée + datée).`;
+  document.getElementById("foot").innerHTML=`Données ${(d.meta.generated||'').slice(0,10)} · médianes des enablers par nœud · aucun appel API en direct : la page lit des JSON committés · news = badges typés (codebook fermé), affichés à côté de la solidité, jamais additionnés.`;
   render();
 }).catch(()=>{document.getElementById("app").innerHTML=`<p class="strip">Impossible de charger data/funnel.json. En local, sers le dossier (python3 -m http.server) — le fetch ne marche pas en file://.</p>`;});
 </script>

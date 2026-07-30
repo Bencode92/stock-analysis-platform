@@ -1,0 +1,20 @@
+{
+  "_doc": "Codebook FERMÉ des événements news. L'IA CLASSE un événement dans un `type` ci-dessous ; le CODE (build) attribue la `value`. L'IA ne donne JAMAIS de points — sinon le jugement LLM est blanchi en nombre. news_heat = Σ des valeurs actives (décroissance demi-vie), borné [-3, +3], AFFICHÉ à côté de la solidité, JAMAIS additionné.",
+  "version": 1,
+  "half_life_days": 14,
+  "news_heat_bounds": [-3, 3],
+  "dedup": "par événement (3 articles sur le même fait = 1 badge)",
+  "events": {
+    "earnings_beat":      { "label": "Résultats > attentes",       "value": 1,  "tone": "pos" },
+    "earnings_miss":      { "label": "Résultats < attentes",       "value": -1, "tone": "neg" },
+    "guidance_up":        { "label": "Guidance relevée",           "value": 1,  "tone": "pos" },
+    "guidance_down":      { "label": "Guidance abaissée",          "value": -1, "tone": "neg" },
+    "orderbook_strong":   { "label": "Carnet plein / sold-out",    "value": 1,  "tone": "pos" },
+    "capacity_expansion": { "label": "Expansion de capacité",      "value": 1,  "tone": "pos" },
+    "competitor_warning": { "label": "Menace concurrentielle",     "value": -2, "tone": "neg" },
+    "regulatory_risk":    { "label": "Risque réglementaire",       "value": -2, "tone": "neg" },
+    "litigation":         { "label": "Litige / enquête",           "value": -1, "tone": "neg" },
+    "downgrade":          { "label": "Dégradation analyste",       "value": -1, "tone": "neg" },
+    "tripwire_hit":       { "label": "Tripwire franchi",           "value": 0,  "tone": "alert", "alert": true }
+  }
+}
