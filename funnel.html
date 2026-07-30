@@ -126,9 +126,7 @@
   .chead .cticker{font-family:var(--mono);font-size:10.5px;color:var(--mut);margin-top:1px}
   /* entreprises critiques (haut de "Comment s'exposer") */
   .crit{margin:0 0 20px}
-  .crit-row{display:grid;grid-template-columns:24px 20px 1fr auto;align-items:center;gap:11px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;margin:7px 0;background:var(--surface)}
-  .crit-row:first-of-type{border-color:var(--accent);box-shadow:0 1px 6px rgba(14,22,32,.06)}
-  .crit-rk{font-family:var(--mono);font-size:12px;color:var(--mut);text-align:center}
+  .crit-row{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:12px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;margin:7px 0;background:var(--surface)}
   .crit-id{display:flex;flex-direction:column;gap:1px;min-width:0}
   .crit-nm{font-weight:650;font-size:14px;color:var(--ink)}
   .crit-ro{font-size:12px;color:var(--ink2)}
@@ -137,7 +135,7 @@
   .crit-m .cm b{font-family:var(--mono);font-size:13.5px}
   .crit-m .cm i{font-size:9.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-style:normal;margin-top:1px}
   .section-sub{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700;margin:6px 0 14px;padding-top:16px;border-top:1px solid var(--line)}
-  @media(max-width:640px){.crit-row{grid-template-columns:20px 18px 1fr}.crit-m{grid-column:1/-1;justify-content:flex-start;gap:14px;margin-top:4px}}
+  @media(max-width:640px){.crit-row{grid-template-columns:18px 1fr}.crit-m{grid-column:1/-1;justify-content:flex-start;gap:14px;margin-top:4px}}
   .comp .crole{color:var(--ink2);font-size:12.5px;line-height:1.45}
   .cstats{display:flex;gap:16px;align-items:center;white-space:nowrap}
   .st{font-family:var(--mono);font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
@@ -454,17 +452,25 @@ function renderChain(sector,key){
     +(!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU.</div>`:'');
   const bloc4=`<div class="chain">${chainHTML}</div>`;
   const bloc5=B.chokepoint?`<div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
-  // Les entreprises critiques : composite de critères FIXES (moat + qualité, null-safe) — vue "qui compte".
-  // (La variable news viendra pondérer ce score quand la couche news sera branchée.)
-  const _allC=(ch.maillons||[]).flatMap(m=>(m.companies||[]));
-  const critScore=c=>{
-    const q=(typeof c.quality_score==='number')?c.quality_score:null;                 // qualité (signal, 0-100)
-    const m=(typeof c.roic==='number')?Math.max(0,Math.min(100,(c.roic+20)/80*100)):null; // moat normalisé
-    if(q!=null&&m!=null) return 0.55*q+0.45*m;
-    return q!=null?q:(m!=null?m:0);   // ex. Samsung : roic null → classé sur la qualité, pas relégué
+  // ===== Entreprises critiques : DEUX dimensions NON fusionnées (archi corrigée) =====
+  // Dim 1 SOLIDITÉ (classe/décrit) : moat 3 ans STABLE (pas spot) + qualité EX-momentum, avec GATE de couverture.
+  // Dim 2 NEWS (alerte, à brancher) : badges typés affichés À CÔTÉ, JAMAIS additionnés à la solidité.
+  const solidity=c=>{
+    if(typeof c.quality_coverage!=='number'||c.quality_coverage<40||typeof c.roic_avg_3y!=='number') return null; // gate → non classé
+    const s=c.quality_subscores||{};
+    const qs=['quality','safety','value','growth'].map(k=>s[k]).filter(x=>typeof x==='number'); // EX-momentum
+    const QUAL=qs.length?qs.reduce((a,b)=>a+b,0)/qs.length:(c.quality_score??50);
+    const moatLvl=Math.max(0,Math.min(100,c.roic_avg_3y/40*100));                                 // niveau 3 ans normalisé
+    const instab=20*Math.max(0,Math.min(1,Math.abs(c.roic_std_3y||0)/Math.max(1,Math.abs(c.roic_avg_3y)))); // pénalité cyclicité
+    return Math.round(0.55*QUAL+0.45*Math.max(0,moatLvl-instab));
   };
-  const _crit=_allC.filter(c=>c.has_data).sort((a,b)=>critScore(b)-critScore(a));
-  const critHTML=_crit.length?`<div class="crit"><span class="lab">Les entreprises critiques — rangées par solidité (moat + qualité)</span>${_crit.map((c,i)=>`<div class="crit-row"><span class="crit-rk">${i+1}</span><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m"><span class="cm"><b class="${c.perf_1y<0?'b':'g'}">${c.perf_1y!=null?(c.perf_1y>0?'+':'')+c.perf_1y.toFixed(0)+'%':'—'}</b><i>perf</i></span><span class="cm"><b>${c.roic!=null?c.roic.toFixed(0)+'%':'—'}</b><i>moat</i></span><span class="cm"><b>${c.quality_score??'—'}</b><i>qual</i></span></div></div>`).join("")}<p class="cmp-cav">Composite de critères <b>fixes</b> : moat (ROIC) + qualité — null-safe (un titre sans ROIC est classé sur sa qualité, pas relégué). La <b>variable news</b> pondérera ce score une fois la couche news branchée. Descriptif, pas une reco.</p></div>`:'';
+  // ordre = POSITION DANS LA CHAÎNE (chokepoint d'abord = picks & shovels), pas un tri par score hybride
+  const critRows=(ch.maillons||[]).flatMap(m=>(m.companies||[]).filter(c=>c.has_data));
+  const critHTML=critRows.length?`<div class="crit"><span class="lab">Les entreprises critiques — par position dans la chaîne</span>${critRows.map(c=>{
+    const sol=solidity(c);
+    const solCell=sol!=null?`<span class="cm"><b>${sol}</b><i>solidité</i></span>`:`<span class="cm"><b class="mut">n/a</b><i>données insuff.</i></span>`;
+    return `<div class="crit-row"><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m">${solCell}<span class="cm"><b>${c.roic_avg_3y!=null?Math.round(c.roic_avg_3y)+'%':'—'}</b><i>moat 3a</i></span><span class="cm news-c"><b class="mut">—</b><i>news</i></span></div></div>`;
+  }).join("")}<p class="cmp-cav"><b>Solidité</b> = moat 3 ans (stable, pas au pic de cycle) + qualité hors momentum, avec <b>gate de couverture</b> (données insuffisantes → affiché mais <b>non classé</b>, jamais de rang sur du vide). La colonne <b>news</b> (badges typés) viendra <b>à côté</b> — jamais additionnée : la news alerte, elle ne classe pas. Ordre = position dans la chaîne, pas un score hybride.</p></div>`:'';
   const bloc6=`${critHTML}<div class="glob"><span class="section-sub">L'analyse globale</span>${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div></div>`;
   const trip=(B.tripwires&&B.tripwires.length)?`<div class="trip"><span class="lab">Ce qui casserait la thèse — tripwires</span><ul>${B.tripwires.map(t=>`<li>${hl(t)}</li>`).join("")}</ul></div>`:'';
   const bloc7=`${risks}${trip}${newsHTML(ch.news)}`;

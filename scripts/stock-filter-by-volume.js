@@ -226,9 +226,10 @@ function buildFundamentalsParams(symbol, context = {}) {
 
   if (hint) {
     if (/euronext/i.test(hint.exchange || '')) {
+      // ✅ v2.12: exchange='Euronext' SEUL. Le MIC de ville (XPAR pour un libellé "Euronext"
+      // générique) est souvent FAUX (ASML=Amsterdam mais toMIC→XPAR/Paris) → mic_code+country
+      // faux → TD rejette → 0 fondamental EU. Testé : symbol=ASML&exchange=Euronext ✅.
       params.exchange = 'Euronext';
-      params.mic_code = mic;
-      params.country = hint.country;
     } else {
       if (hint.exchange) params.exchange = hint.exchange;
       if (hint.country) params.country = hint.country;
@@ -790,6 +791,24 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
     }
 
     return { symbol, ...ratiosDE, fetched_at: new Date().toISOString() };
+  }
+
+  // ✅ v2.12: FALLBACK SYMBOLE NU si le fetch contextualisé n'a rien ramené (params exchange/mic
+  // faux, ex. Euronext générique). Le balance_sheet TD résout les titres EU en symbole nu
+  // (testé : symbol=ASML ✅). Catch-all robuste pour TOUTES les bourses EU.
+  if (bsPeriods.length === 0 && context && (context.exchange || context.country)) {
+    const bsBare = await fetchBalanceSheet(symbol, {});
+    if (!bsBare?._rateLimited) {
+      await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
+      const isBare = await fetchIncomeStatement(symbol, {});
+      const bp = bsBare?.periods ?? [];
+      const ip = isBare?._rateLimited ? [] : (isBare?.periods ?? []);
+      if (bp.length) {
+        if (DEBUG) console.log(`  ↻ [BARE FALLBACK] ${symbol}: ${bp.length} périodes en symbole nu`);
+        const ratiosBare = computeMultiYearRatios(bp, ip);
+        return { symbol, ...ratiosBare, fetched_at: new Date().toISOString() };
+      }
+    }
   }
 
   const ratios = computeMultiYearRatios(bsPeriods, isPeriods);

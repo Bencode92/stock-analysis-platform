@@ -276,7 +276,12 @@ for t in FW["themes"]:
                   "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score", _cc(c)),
                   "quality_score": cmet(c.get("ticker"), c.get("region"), "quality_score", _cc(c)),
                   "volatility_3y": cmet(c.get("ticker"), c.get("region"), "volatility_3y", _cc(c)),
-                  "net_margin": cmet(c.get("ticker"), c.get("region"), "net_margin", _cc(c))}
+                  "net_margin": cmet(c.get("ticker"), c.get("region"), "net_margin", _cc(c)),
+                  # ✅ v7.10: champs pour la SOLIDITÉ corrigée (moat 3y stable + gate de couverture, ex-momentum)
+                  "roic_avg_3y": cmet(c.get("ticker"), c.get("region"), "roic_avg_3y", _cc(c)),
+                  "roic_std_3y": cmet(c.get("ticker"), c.get("region"), "roic_std_3y", _cc(c)),
+                  "quality_coverage": cmet(c.get("ticker"), c.get("region"), "quality_coverage", _cc(c)),
+                  "quality_subscores": cmet(c.get("ticker"), c.get("region"), "quality_subscores", _cc(c))}
                  for c in m.get("companies", [])]
         maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps,
                          "enface": enface[i] if i < len(enface) else None})
