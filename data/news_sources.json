@@ -7,9 +7,11 @@
     "region": "US",
     "max_items_per_company": 4
   },
-  "chain_keywords": {
-    "semi": "semiconductor OR chip OR foundry OR EUV",
-    "emerging": "chip OR EV OR earnings"
+  "_yahoo_doc": "ticker funnel → symbole Yahoo Finance. Défaut = ticker (OK pour les US-listés type ASML/SNPS). Ici : ADR US (TSM/BABA/BYDDY) pour meilleure couverture EN, ou suffixe de bourse (.T Tokyo, .KS Corée, .HK Hong Kong, .TW Taïwan) sinon.",
+  "yahoo_map": {
+    "6920": "6920.T", "8035": "8035.T", "6857": "6857.T", "0522": "0522.HK", "BESI": "BESIY",
+    "2330": "TSM", "000660": "000660.KS", "005930": "005930.KS", "2317": "HNHPF",
+    "9988": "BABA", "3690": "3690.HK", "1211": "BYDDY"
   },
   "_classify_note": "v1 : règles mots-clés (transparent, sans clé API). v2 : remplacer classify() par un appel IA qui CLASSE dans le codebook (le code garde l'attribution des valeurs).",
   "classify_rules": {
