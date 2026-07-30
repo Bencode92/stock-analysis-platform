@@ -116,12 +116,28 @@
   .mlabel{font-weight:600;font-size:14px}
   .mdesc{color:var(--muted);font-size:12px;margin:4px 0 9px;line-height:1.55}
   .comps{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-  .comp{display:grid;grid-template-columns:112px 1fr auto;align-items:center;gap:14px;
+  .comp{display:grid;grid-template-columns:minmax(150px,215px) 1fr auto;align-items:center;gap:14px;
     border:1px solid var(--line2);border-radius:var(--r-s);padding:11px 14px;background:var(--surface)}
   .comp.nd{opacity:.55}
   .chead{display:flex;align-items:center;gap:8px}
   .chead .cflag{font-size:15px}
   .chead .ctk{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--ink)}
+  .chead .cname{font-weight:650;font-size:13.5px;color:var(--ink);line-height:1.2}
+  .chead .cticker{font-family:var(--mono);font-size:10.5px;color:var(--mut);margin-top:1px}
+  /* entreprises critiques (haut de "Comment s'exposer") */
+  .crit{margin:0 0 20px}
+  .crit-row{display:grid;grid-template-columns:24px 20px 1fr auto;align-items:center;gap:11px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;margin:7px 0;background:var(--surface)}
+  .crit-row:first-of-type{border-color:var(--accent);box-shadow:0 1px 6px rgba(14,22,32,.06)}
+  .crit-rk{font-family:var(--mono);font-size:12px;color:var(--mut);text-align:center}
+  .crit-id{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .crit-nm{font-weight:650;font-size:14px;color:var(--ink)}
+  .crit-ro{font-size:12px;color:var(--ink2)}
+  .crit-m{display:flex;gap:18px}
+  .crit-m .cm{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
+  .crit-m .cm b{font-family:var(--mono);font-size:13.5px}
+  .crit-m .cm i{font-size:9.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;font-style:normal;margin-top:1px}
+  .section-sub{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700;margin:6px 0 14px;padding-top:16px;border-top:1px solid var(--line)}
+  @media(max-width:640px){.crit-row{grid-template-columns:20px 18px 1fr}.crit-m{grid-column:1/-1;justify-content:flex-start;gap:14px;margin-top:4px}}
   .comp .crole{color:var(--ink2);font-size:12.5px;line-height:1.45}
   .cstats{display:flex;gap:16px;align-items:center;white-space:nowrap}
   .st{font-family:var(--mono);font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
@@ -348,7 +364,7 @@ function openCompare(sector,key,mi,tk){
     return (v>0&&(f==="perf_1y"||f==="perf_ytd")?"+":"")+v.toFixed(f==="net_margin"?1:0)+"%";};
   const cards=m.companies.map(c=>{const me=c.ticker===tk?" me":"";
     const st=stats.map(([f,l])=>`<div class="cst"><span class="cst-l">${l}</span><span class="cst-v ${(f==='perf_1y'||f==='perf_ytd')&&c[f]!=null?(c[f]<0?'b':'g'):''}">${cell(c,f)}</span></div>`).join("");
-    return `<div class="cmp-card${me}"><div class="cmp-hd"><span class="cflag">${FLAG[c.region]||'•'}</span><b class="cmp-tk">${c.ticker||''}</b>${c.name&&c.name!==c.ticker?`<span class="cmp-nm">${c.name}</span>`:''}${c.has_data?'':'<span class="mut">hors pipeline</span>'}</div><div class="cmp-stats">${st}</div>${(c.note||c.role)?`<p class="cmp-note">${hl(c.note||c.role)}</p>`:''}</div>`;
+    return `<div class="cmp-card${me}"><div class="cmp-hd"><span class="cflag">${FLAG[c.region]||'•'}</span><b class="cmp-tk">${c.name||c.ticker||''}</b>${c.name&&c.ticker&&String(c.name)!==String(c.ticker)?`<span class="cmp-nm">${c.ticker}</span>`:''}${c.has_data?'':'<span class="mut">hors pipeline</span>'}</div><div class="cmp-stats">${st}</div>${(c.note||c.role)?`<p class="cmp-note">${hl(c.note||c.role)}</p>`:''}</div>`;
   }).join("");
   const mo=document.getElementById("modal");
   mo.innerHTML=`<div class="modal-card" style="--accent:${secColor(sector)}"><div class="modal-h"><span class="lab">${m.label} — comparaison des acteurs</span><button class="modal-x" onclick="closeModal()">✕</button></div><div class="modal-scroll">${cards}<p class="modal-note">Les concurrents directs de ce maillon. La carte surlignée = la boîte cliquée. Descriptif, pas une reco.</p></div></div>`;
@@ -394,7 +410,7 @@ function renderChain(sector,key){
       const roic=c.roic!=null?`<span class="st"><span class="st-l">ROIC</span>${c.roic.toFixed(0)}%</span>`:'';
       const buf=c.buffett_score!=null?`<span class="st"><span class="st-l">Buffett</span>${Math.round(c.buffett_score)}</span>`:'';
       const stats=(perf||roic||buf)?`<div class="cstats">${perf}${roic}${buf}</div>`:`<div class="cstats"><span class="st mut">${c.has_data?'':'hors pipeline'}</span></div>`;
-      return `<div class="comp clk ${c.has_data?'':'nd'}" data-cmp='["${sector}","${key}",${mi}]' data-tk="${c.ticker||''}" title="Comparer aux autres du maillon"><div class="chead"><span class="cflag">${FLAG[c.region]||'•'}</span><span class="ctk">${c.ticker||''}</span></div><div class="crole">${c.role||c.name||''}</div>${stats}</div>`;
+      return `<div class="comp clk ${c.has_data?'':'nd'}" data-cmp='["${sector}","${key}",${mi}]' data-tk="${c.ticker||''}" title="Comparer aux autres du maillon"><div class="chead"><span class="cflag">${FLAG[c.region]||'•'}</span><div><div class="cname">${c.name||c.ticker||''}</div>${c.name&&c.ticker&&String(c.name)!==String(c.ticker)?`<div class="cticker">${c.ticker}</div>`:''}</div></div><div class="crole">${c.role||''}</div>${stats}</div>`;
     }).join("");
     const face=m.enface?`<div class="mface"><span class="face-l">En face</span> ${hl(m.enface)}</div>`:'';
     return `<div class="maillon"><div class="mlabel">${m.label||''}</div>${m.desc?`<div class="mdesc">${hl(m.desc)}</div>`:''}<div class="comps">${comps}</div>${face}</div>`;
@@ -438,7 +454,11 @@ function renderChain(sector,key){
     +(!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU.</div>`:'');
   const bloc4=`<div class="chain">${chainHTML}</div>`;
   const bloc5=B.chokepoint?`<div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
-  const bloc6=`${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div>`;
+  // Les entreprises critiques : sociétés de la chaîne avec data, rangées par moat (ROIC) — vue "qui compte"
+  const _allC=(ch.maillons||[]).flatMap(m=>(m.companies||[]));
+  const _crit=_allC.filter(c=>c.has_data).sort((a,b)=>(b.roic??-999)-(a.roic??-999));
+  const critHTML=_crit.length?`<div class="crit"><span class="lab">Les entreprises critiques — rangées par moat (ROIC)</span>${_crit.map((c,i)=>`<div class="crit-row"><span class="crit-rk">${i+1}</span><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m"><span class="cm"><b class="${c.perf_1y<0?'b':'g'}">${c.perf_1y!=null?(c.perf_1y>0?'+':'')+c.perf_1y.toFixed(0)+'%':'—'}</b><i>perf</i></span><span class="cm"><b>${c.roic!=null?c.roic.toFixed(0)+'%':'—'}</b><i>moat</i></span><span class="cm"><b>${c.quality_score??'—'}</b><i>qual</i></span></div></div>`).join("")}<p class="cmp-cav">Rangées par moat (ROIC) : plus il est haut, plus la position est difficile à déloger. Descriptif, pas une reco.</p></div>`:'';
+  const bloc6=`${critHTML}<div class="glob"><span class="section-sub">L'analyse globale</span>${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div></div>`;
   const trip=(B.tripwires&&B.tripwires.length)?`<div class="trip"><span class="lab">Ce qui casserait la thèse — tripwires</span><ul>${B.tripwires.map(t=>`<li>${hl(t)}</li>`).join("")}</ul></div>`:'';
   const bloc7=`${risks}${trip}${newsHTML(ch.news)}`;
   const tabs=[
