@@ -19,17 +19,24 @@ def rows(fn):
         return []
 
 IDX = {"US": {}, "EU": {}, "Asie": {}}
+# ✅ index country-aware : (ticker, pays) → record. Désambiguïse les collisions inter-marchés
+# asie (ex 8035 = Tokyo Electron au Japon ET Janco à HK) que l'index par ticker seul écrasait.
+IDXC = {"US": {}, "EU": {}, "Asie": {}}
+_norm = lambda s: (s or "").strip().lower()
 for reg, fn in [("US", "stocks_us.json"), ("EU", "stocks_europe.json"), ("Asie", "stocks_asia.json")]:
     for r in rows(fn):
         # clé = ticker OU symbol : les titres en erreur market-data (NO_DATA) n'ont que "symbol"
-        IDX[reg][(r.get("ticker") or r.get("symbol") or "").upper()] = r
+        tk = (r.get("ticker") or r.get("symbol") or "").upper()
+        IDX[reg][tk] = r
+        IDXC[reg][(tk, _norm(r.get("country") or r.get("pays")))] = r
 
 FW = json.load(open(os.path.join(BASE, "framework.json"), encoding="utf-8"))
 
 # chaîne → secteur GICS (l'étage 1 de l'entonnoir)
 SECTOR = {"semi": "Technologie", "ai_infra": "Technologie", "grid": "Utilities / Industrie",
           "nuclear": "Énergie / Utilities", "defense": "Industrie / Défense",
-          "materials": "Matériaux", "robotics": "Industrie"}
+          "materials": "Matériaux", "robotics": "Industrie",
+          "emerging": "Émergents / Asie"}
 
 # Contexte pédagogique en langage clair (driver + goulot + dépendance) — QUALITATIF, sans chiffre inventé.
 # Les stats précises + sourcées (« 50% de l'Europe est nucléaire ») viendront de la couche news/IA (Phase B).
@@ -179,6 +186,23 @@ BLOCKS = {
    "Réducteurs/actionneurs (trou Asie) : Harmonic Drive/Nabtesco, Nidec, Fanuc/Yaskawa — quasi-duopole mondial, le vrai chokepoint.",
   ],
  },
+
+ "emerging": {
+  "problem": {"lead": "L'Asie cesse d'être l'atelier du monde pour en devenir le CŒUR technologique. On la joue en 3 étages : la chaîne tech (le péage IA), la Chine domestique, et l'Inde. Point clé : on veut notre expo semi ICI — pas dans les valeurs US chères déjà détenues via les indices d'un autre portefeuille."},
+  "chokepoint": {"title": "La chaîne tech asiatique — le péage obligé de l'IA",
+   "body": "Taïwan (<b>TSMC</b>, fonderie leading-edge), la Corée (<b>SK Hynix / Samsung</b>, mémoire & HBM) et les équipementiers japonais (Tokyo Electron, Advantest) forment le <b>péage par lequel passe toute l'IA mondiale</b>. Quel que soit le gagnant des puces ou des modèles, la valeur transite par eux — et c'est LÀ qu'on veut l'exposition semi, Asie-only, pour ne pas payer deux fois le risque US. La Chine crée de la valeur réelle (VE, solaire) mais sa demande interne ne suit pas → on préfère la <b>consommation domestique et les champions tech</b> aux exportateurs en guerre des prix. L'Inde est le <b>relais démographique et manufacturier</b> de la décennie."},
+  "tripwires": [
+   "Taïwan : événement géopolitique majeur (le risque binaire de la thèse).",
+   "Chine : durcissement réglementaire/politique sur les champions, ou demande interne durablement molle.",
+   "Inde : valorisations qui dérapent (le relais devient cher).",
+   "Double-expo semi non cadrée vs les indices US détenus ailleurs.",
+  ],
+  "enface": [
+   "① Chaîne tech (péage IA) : TSMC (fonderie), SK Hynix/Samsung (mémoire/HBM), Tokyo Electron/Advantest (équipement), Hon Hai (assemblage). Asie-only, cœur de la poche.",
+   "② Chine (conso + champions) : Alibaba, Meituan (demande domestique), BYD (VE). PAS les exportateurs en guerre des prix ; robotique = long terme.",
+   "③ Inde (relais décennie) : via ETF UCITS MSCI India / Nifty — peu de titres indiens dans l'univers scoré aujourd'hui.",
+  ],
+ },
 }
 
 # Note développée par société (la "valeur ajoutée de chacun") — qualitatif, positionnement connu.
@@ -227,10 +251,17 @@ for t in FW["themes"]:
     ens = [(c["ticker"], c.get("region", ""), c.get("name", ""))
            for m in t["maillons"] for c in m["companies"] if c.get("ticker")]
     # maillons = les ÉTAPES de la chaîne (label + explication + boîtes avec rôle, tagué région)
-    def has_data(tk, reg):
-        return (tk or "").upper() in IDX.get(reg, {})
-    def cmet(tk, reg, field):
-        return IDX.get(reg, {}).get((tk or "").upper(), {}).get(field)
+    def has_data(tk, reg, country=None):
+        tk = (tk or "").upper()
+        if country and (tk, _norm(country)) in IDXC.get(reg, {}): return True
+        return tk in IDX.get(reg, {})
+    def cmet(tk, reg, field, country=None):
+        tk = (tk or "").upper()
+        rec = IDXC.get(reg, {}).get((tk, _norm(country))) if country else None
+        if rec is None: rec = IDX.get(reg, {}).get(tk)
+        return (rec or {}).get(field)
+    # pays de désambiguïsation : explicite (emerging) OU baké dans m.country (chaînes existantes)
+    _cc = lambda c: c.get("country") or (c.get("m") or {}).get("country")
     blk = BLOCKS.get(t["key"], {})
     enface = blk.get("enface", [])
     maillons = []
@@ -238,14 +269,14 @@ for t in FW["themes"]:
         comps = [{"ticker": c.get("ticker"), "name": c.get("name"), "role": c.get("role"),
                   "note": COMPANY_NOTES.get(c.get("ticker")),
                   "region": c.get("region"), "status": c.get("status"),
-                  "has_data": has_data(c.get("ticker"), c.get("region")),
-                  "perf_1y": cmet(c.get("ticker"), c.get("region"), "perf_1y"),
-                  "perf_ytd": cmet(c.get("ticker"), c.get("region"), "perf_ytd"),
-                  "roic": cmet(c.get("ticker"), c.get("region"), "roic"),
-                  "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score"),
-                  "quality_score": cmet(c.get("ticker"), c.get("region"), "quality_score"),
-                  "volatility_3y": cmet(c.get("ticker"), c.get("region"), "volatility_3y"),
-                  "net_margin": cmet(c.get("ticker"), c.get("region"), "net_margin")}
+                  "has_data": has_data(c.get("ticker"), c.get("region"), _cc(c)),
+                  "perf_1y": cmet(c.get("ticker"), c.get("region"), "perf_1y", _cc(c)),
+                  "perf_ytd": cmet(c.get("ticker"), c.get("region"), "perf_ytd", _cc(c)),
+                  "roic": cmet(c.get("ticker"), c.get("region"), "roic", _cc(c)),
+                  "buffett_score": cmet(c.get("ticker"), c.get("region"), "buffett_score", _cc(c)),
+                  "quality_score": cmet(c.get("ticker"), c.get("region"), "quality_score", _cc(c)),
+                  "volatility_3y": cmet(c.get("ticker"), c.get("region"), "volatility_3y", _cc(c)),
+                  "net_margin": cmet(c.get("ticker"), c.get("region"), "net_margin", _cc(c))}
                  for c in m.get("companies", [])]
         maillons.append({"label": m.get("label"), "desc": m.get("desc"), "companies": comps,
                          "enface": enface[i] if i < len(enface) else None})
