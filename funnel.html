@@ -454,10 +454,17 @@ function renderChain(sector,key){
     +(!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU.</div>`:'');
   const bloc4=`<div class="chain">${chainHTML}</div>`;
   const bloc5=B.chokepoint?`<div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
-  // Les entreprises critiques : sociétés de la chaîne avec data, rangées par moat (ROIC) — vue "qui compte"
+  // Les entreprises critiques : composite de critères FIXES (moat + qualité, null-safe) — vue "qui compte".
+  // (La variable news viendra pondérer ce score quand la couche news sera branchée.)
   const _allC=(ch.maillons||[]).flatMap(m=>(m.companies||[]));
-  const _crit=_allC.filter(c=>c.has_data).sort((a,b)=>(b.roic??-999)-(a.roic??-999));
-  const critHTML=_crit.length?`<div class="crit"><span class="lab">Les entreprises critiques — rangées par moat (ROIC)</span>${_crit.map((c,i)=>`<div class="crit-row"><span class="crit-rk">${i+1}</span><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m"><span class="cm"><b class="${c.perf_1y<0?'b':'g'}">${c.perf_1y!=null?(c.perf_1y>0?'+':'')+c.perf_1y.toFixed(0)+'%':'—'}</b><i>perf</i></span><span class="cm"><b>${c.roic!=null?c.roic.toFixed(0)+'%':'—'}</b><i>moat</i></span><span class="cm"><b>${c.quality_score??'—'}</b><i>qual</i></span></div></div>`).join("")}<p class="cmp-cav">Rangées par moat (ROIC) : plus il est haut, plus la position est difficile à déloger. Descriptif, pas une reco.</p></div>`:'';
+  const critScore=c=>{
+    const q=(typeof c.quality_score==='number')?c.quality_score:null;                 // qualité (signal, 0-100)
+    const m=(typeof c.roic==='number')?Math.max(0,Math.min(100,(c.roic+20)/80*100)):null; // moat normalisé
+    if(q!=null&&m!=null) return 0.55*q+0.45*m;
+    return q!=null?q:(m!=null?m:0);   // ex. Samsung : roic null → classé sur la qualité, pas relégué
+  };
+  const _crit=_allC.filter(c=>c.has_data).sort((a,b)=>critScore(b)-critScore(a));
+  const critHTML=_crit.length?`<div class="crit"><span class="lab">Les entreprises critiques — rangées par solidité (moat + qualité)</span>${_crit.map((c,i)=>`<div class="crit-row"><span class="crit-rk">${i+1}</span><span class="cflag">${FLAG[c.region]||'•'}</span><div class="crit-id"><span class="crit-nm">${c.name||c.ticker}</span><span class="crit-ro">${c.role||''}</span></div><div class="crit-m"><span class="cm"><b class="${c.perf_1y<0?'b':'g'}">${c.perf_1y!=null?(c.perf_1y>0?'+':'')+c.perf_1y.toFixed(0)+'%':'—'}</b><i>perf</i></span><span class="cm"><b>${c.roic!=null?c.roic.toFixed(0)+'%':'—'}</b><i>moat</i></span><span class="cm"><b>${c.quality_score??'—'}</b><i>qual</i></span></div></div>`).join("")}<p class="cmp-cav">Composite de critères <b>fixes</b> : moat (ROIC) + qualité — null-safe (un titre sans ROIC est classé sur sa qualité, pas relégué). La <b>variable news</b> pondérera ce score une fois la couche news branchée. Descriptif, pas une reco.</p></div>`:'';
   const bloc6=`${critHTML}<div class="glob"><span class="section-sub">L'analyse globale</span>${kpis}${expo}<div class="compare">${perfC}${moatC}</div><div class="regions">${cols}</div></div>`;
   const trip=(B.tripwires&&B.tripwires.length)?`<div class="trip"><span class="lab">Ce qui casserait la thèse — tripwires</span><ul>${B.tripwires.map(t=>`<li>${hl(t)}</li>`).join("")}</ul></div>`:'';
   const bloc7=`${risks}${trip}${newsHTML(ch.news)}`;
