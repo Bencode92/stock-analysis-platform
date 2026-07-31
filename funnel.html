@@ -174,6 +174,15 @@
   .cst-l{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);font-weight:600}
   .cst-v{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
   .cmp-note{margin:12px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2)}
+  .cnews{margin:12px 0 0;padding-top:11px;border-top:1px dashed var(--line)}
+  .cnews-h{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:700;margin-bottom:6px}
+  .nheat{font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:20px;background:var(--card);border:1px solid var(--line);color:var(--mut)}
+  .nheat.g{color:#1a7a4a} .nheat.b{color:#b23a5b}
+  .nwarn{font-size:11px;color:#b23a5b;font-weight:700}
+  .cni{font-size:13px;line-height:1.5;color:var(--ink);margin:4px 0}
+  .cni>b{font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:400}
+  .cni em{color:var(--mut);font-style:normal;font-size:11px}
+  .cni a{color:var(--accent);text-decoration:none;font-weight:700}
   .modal-note{font-size:11px;color:var(--faint);font-style:italic;margin:12px 0 0}
 
   /* régions + panels */
@@ -363,6 +372,17 @@ function render(){
   });
   app.querySelectorAll(".comp.clk").forEach(el=>el.onclick=()=>{const a=JSON.parse(el.dataset.cmp);openCompare(a[0],a[1],a[2],el.dataset.tk);});
 }
+function companyNewsHTML(key,tk){
+  const cn=NEWS&&NEWS.chains&&NEWS.chains[key];
+  const n=cn&&cn.companies&&cn.companies[tk];
+  if(!n||!n.news||!n.news.length) return '';
+  const heat=typeof n.news_heat==='number'?n.news_heat:0;
+  const hb=`<span class="nheat ${heat>0?'g':(heat<0?'b':'mut')}">news ${heat>0?'+':''}${heat}</span>`;
+  const wb=(n.warnings&&n.warnings.length)?`<span class="nwarn">⚠ ${n.warnings.length}</span>`:'';
+  const ab=n.alert?'<span class="nwarn">🔴</span>':'';
+  const items=n.news.slice(0,3).map(x=>`<div class="cni">${x.date?`<b>${x.date}</b> `:''}${x.title||''} ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">↗</a>`:''}${x.src?` <em>${x.src}</em>`:''}</div>`).join("");
+  return `<div class="cnews"><div class="cnews-h">Actu · Yahoo Finance ${hb}${wb}${ab}</div>${items}</div>`;
+}
 function openCompare(sector,key,mi,tk){
   const m=DATA.sectors[sector].chains[key].maillons[mi];
   const stats=[["perf_1y","Perf 1a"],["perf_ytd","YTD"],["roic","ROIC"],["buffett_score","Buffett"],["quality_score","Qualité"],["volatility_3y","Volat."],["net_margin","Marge"]];
@@ -371,7 +391,7 @@ function openCompare(sector,key,mi,tk){
     return (v>0&&(f==="perf_1y"||f==="perf_ytd")?"+":"")+v.toFixed(f==="net_margin"?1:0)+"%";};
   const cards=m.companies.map(c=>{const me=c.ticker===tk?" me":"";
     const st=stats.map(([f,l])=>`<div class="cst"><span class="cst-l">${l}</span><span class="cst-v ${(f==='perf_1y'||f==='perf_ytd')&&c[f]!=null?(c[f]<0?'b':'g'):''}">${cell(c,f)}</span></div>`).join("");
-    return `<div class="cmp-card${me}"><div class="cmp-hd"><span class="cflag">${FLAG[c.region]||'•'}</span><b class="cmp-tk">${c.name||c.ticker||''}</b>${c.name&&c.ticker&&String(c.name)!==String(c.ticker)?`<span class="cmp-nm">${c.ticker}</span>`:''}${c.has_data?'':'<span class="mut">hors pipeline</span>'}</div><div class="cmp-stats">${st}</div>${(c.note||c.role)?`<p class="cmp-note">${hl(c.note||c.role)}</p>`:''}</div>`;
+    return `<div class="cmp-card${me}"><div class="cmp-hd"><span class="cflag">${FLAG[c.region]||'•'}</span><b class="cmp-tk">${c.name||c.ticker||''}</b>${c.name&&c.ticker&&String(c.name)!==String(c.ticker)?`<span class="cmp-nm">${c.ticker}</span>`:''}${c.has_data?'':'<span class="mut">hors pipeline</span>'}</div><div class="cmp-stats">${st}</div>${(c.note||c.role)?`<p class="cmp-note">${hl(c.note||c.role)}</p>`:''}${companyNewsHTML(key,c.ticker)}</div>`;
   }).join("");
   const mo=document.getElementById("modal");
   mo.innerHTML=`<div class="modal-card" style="--accent:${secColor(sector)}"><div class="modal-h"><span class="lab">${m.label} — comparaison des acteurs</span><button class="modal-x" onclick="closeModal()">✕</button></div><div class="modal-scroll">${cards}<p class="modal-note">Les concurrents directs de ce maillon. La carte surlignée = la boîte cliquée. Descriptif, pas une reco.</p></div></div>`;
