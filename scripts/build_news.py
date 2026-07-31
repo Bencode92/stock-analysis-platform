@@ -134,7 +134,7 @@ def ai_chain_summary(label, comp):
               '{"companies": {"<TICKER>": "<1 phrase de synthèse de son actu>"}, '
               '"chain": "<2 phrases : le thème dominant de la semaine sur cette chaîne>"}\n\n'
               + "\n".join(blocks))
-    res = ai_json(prompt)
+    res = ai_json(prompt, max_tokens=500 + 200 * len(comp))  # scale : sinon JSON tronqué sur grosses chaînes
     if not res: return None
     for tk, s in (res.get("companies") or {}).items():
         if tk in comp: comp[tk]["summary"] = s
