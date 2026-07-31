@@ -200,6 +200,27 @@
   .geo-h{font-weight:700;font-size:14px;color:var(--ink);margin-bottom:6px}
   .geo-card p{margin:0;font-size:13px;line-height:1.55;color:var(--ink2)}
   .geo-note{margin:14px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+  /* tableau de bord "actu par conviction" : conviction à gauche, news en face */
+  .newsboard{margin:0 0 26px}
+  .nb-row{display:grid;grid-template-columns:minmax(210px,290px) 1fr;border:1px solid var(--line);
+    border-radius:var(--r);overflow:hidden;margin-bottom:12px;background:var(--surface)}
+  .nb-left{position:relative;padding:15px 18px;background:var(--surface2);border-right:1px solid var(--line);
+    cursor:pointer;transition:background .15s}
+  .nb-left:hover{background:var(--neutral-b)}
+  .nb-left .eyebrow{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+  .nb-left h4{margin:5px 0 5px;font-size:15.5px;line-height:1.25;color:var(--ink);text-wrap:balance}
+  .nb-pos{font-size:12px;color:var(--muted);margin-bottom:9px;line-height:1.4}
+  .nb-arrow{position:absolute;top:14px;right:15px;color:var(--faint);font-size:15px}
+  .nb-right{padding:14px 18px;display:flex;flex-direction:column;gap:9px;min-width:0}
+  .nb-sum{margin:0 0 2px;font-size:13px;line-height:1.55;color:var(--ink2)}
+  .nb-item{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;line-height:1.5}
+  .nb-co{font-weight:600;color:var(--ink);white-space:nowrap}
+  .nb-hl{color:var(--ink2);flex:1;min-width:180px}
+  .nb-hl>b{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400}
+  .nb-hl em{color:var(--muted);font-style:normal;font-size:11px}
+  .nb-hl a{color:var(--accent);text-decoration:none;font-weight:700}
+  .nb-empty{color:var(--muted);font-size:13px;font-style:italic;justify-content:center;align-items:center;display:flex}
+  @media(max-width:640px){.nb-row{grid-template-columns:1fr}.nb-left{border-right:none;border-bottom:1px solid var(--line)}}
   .ck-news{margin:16px 0 0;padding-top:13px;border-top:1px dashed var(--line)}
   .ck-nrow{display:grid;grid-template-columns:minmax(120px,190px) auto 1fr;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
   .ck-nrow:last-child{border-bottom:none}
@@ -441,8 +462,40 @@ function geoPanelHTML(){
   if(!cards) return '';
   return `<div class="geo-panel"><div class="geo-lab"><span class="ai-tag">résumé IA</span> Vue d'ensemble — l'actu de la semaine par zone géographique</div><div class="geo-grid">${cards}</div><p class="geo-note">Synthèse IA des titres réels (Yahoo Finance) des sociétés du funnel. Contexte, pas signal — jamais additionné à la solidité.</p></div>`;
 }
+function chainCompanyMeta(sector,key){
+  const map={};
+  (DATA.sectors[sector].chains[key].maillons||[]).forEach(m=>(m.companies||[]).forEach(c=>{if(c.ticker)map[c.ticker]={name:c.name||c.ticker,region:c.region};}));
+  return map;
+}
+function renderNewsBoard(){
+  if(!NEWS||!NEWS.chains) return '';
+  const rows=[];
+  Object.entries(DATA.sectors).forEach(([sector,sv])=>Object.entries(sv.chains).forEach(([key,ch])=>{
+    const cn=NEWS.chains[key];
+    const hasNews=!!(cn&&cn.companies&&Object.keys(cn.companies).length);
+    const left=`<div class="nb-left" data-go='["${sector}","${key}"]'><div class="eyebrow">${sector}</div><h4>${ch.label}</h4><div class="nb-pos">${ch.position||''}</div><div class="chips"><span class="chip">capex-IA ${ch.capex_ia}%</span></div><span class="nb-arrow">→</span></div>`;
+    let right;
+    if(hasNews){
+      const meta=chainCompanyMeta(sector,key);
+      const sum=cn.summary?`<p class="nb-sum"><span class="ai-tag">résumé IA</span>${cn.summary}</p>`:'';
+      const items=Object.entries(cn.companies).filter(([tk,co])=>co.news&&co.news.length)
+        .sort((a,b)=>Math.abs(b[1].news_heat||0)-Math.abs(a[1].news_heat||0)).slice(0,4).map(([tk,co])=>{
+        const nm=(meta[tk]&&meta[tk].name)||tk, fl=FLAG[(meta[tk]||{}).region]||'•';
+        const heat=typeof co.news_heat==='number'?co.news_heat:0, top=co.news[0];
+        const al=co.alert?'<span class="nwarn">🔴</span>':((co.warnings&&co.warnings.length)?'<span class="nwarn">⚠</span>':'');
+        return `<div class="nb-item"><span class="nb-co">${fl} ${nm}</span><span class="nheat ${heat>0?'g':(heat<0?'b':'mut')}">${heat>0?'+':''}${heat}</span>${al}<span class="nb-hl">${top.date?`<b>${top.date}</b> `:''}${top.title||''} ${top.url?`<a href="${top.url}" target="_blank" rel="noopener">↗</a>`:''}${top.src?` <em>${top.src}</em>`:''}</span></div>`;
+      }).join("");
+      right=`<div class="nb-right">${sum}${items}</div>`;
+    } else {
+      right=`<div class="nb-right nb-empty">Silence cette semaine — le vide est un résultat valide.</div>`;
+    }
+    rows.push({hasNews,html:`<div class="nb-row">${left}${right}</div>`});
+  }));
+  rows.sort((a,b)=>(b.hasNews?1:0)-(a.hasNews?1:0));
+  return `<div class="newsboard"><div class="geo-lab"><span class="ai-tag">actu</span> L'actu par conviction — chaque chaîne et ses news de la semaine</div>${rows.map(r=>r.html).join("")}</div>`;
+}
 function renderSectors(){
-  return geoPanelHTML()+`<div class="grid">`+Object.entries(DATA.sectors).map(([name,v])=>{
+  return geoPanelHTML()+renderNewsBoard()+`<div class="grid">`+Object.entries(DATA.sectors).map(([name,v])=>{
     const n=Object.keys(v.chains).length, ch=Object.values(v.chains).map(c=>c.label.split(" ")[0]).slice(0,4).join(" · ");
     return `<div class="card nav sec-card" data-go='["${name}"]' style="--accent:${secColor(name)}"><span class="arrow">→</span><div class="eyebrow">Secteur</div><h3>${name}</h3><div class="pos">${n} chaîne${n>1?'s':''} — ${ch}</div></div>`;
   }).join("")+`</div>`;
