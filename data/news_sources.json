@@ -1,7 +1,7 @@
 {
   "_doc": "Config de la couche news. Les entreprises viennent de framework.json (pas de doublon). Ici : chaînes pilotes, fenêtre temporelle, langue, mots-clés par chaîne, et le mapping mots-clés → type d'événement du codebook (classification v1 par règles ; v2 = IA). Source = Google News RSS (vraies URL/dates).",
   "config": {
-    "pilot_chains": ["semi", "emerging"],
+    "pilot_chains": ["grid", "nuclear", "ai_infra", "defense", "semi", "materials", "robotics", "emerging"],
     "days_window": 14,
     "lang": "en",
     "region": "US",
@@ -11,7 +11,17 @@
   "yahoo_map": {
     "6920": "6920.T", "8035": "8035.T", "6857": "6857.T", "0522": "0522.HK", "BESI": "BESIY",
     "2330": "TSM", "000660": "000660.KS", "005930": "005930.KS", "2317": "HNHPF",
-    "9988": "BABA", "3690": "3690.HK", "1211": "BYDDY"
+    "9988": "BABA", "3690": "3690.HK", "1211": "BYDDY",
+
+    "ENR": "ENR.DE", "6501": "6501.T", "267260": "267260.KS", "PRY": "PRY.MI", "NEX": "NEX.PA",
+    "NKT": "NKT.CO", "ABBN": "ABB", "SU": "SU.PA", "RED": "RED.MC", "TRN": "TRN.MI",
+
+    "RHM": "RHM.DE", "HO": "HO.PA", "AM": "AM.PA", "LDO": "LDO.MI", "SAF": "SAF.PA",
+    "MTX": "MTX.DE", "HAG": "HAG.DE",
+
+    "LYC": "LYC.AX",
+
+    "6861": "6861.T", "6324": "6324.T", "6594": "6594.T", "6954": "6954.T"
   },
   "_classify_note": "v1 : règles mots-clés (transparent, sans clé API). v2 : remplacer classify() par un appel IA qui CLASSE dans le codebook (le code garde l'attribution des valeurs).",
   "classify_rules": {
