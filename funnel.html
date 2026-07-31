@@ -183,6 +183,15 @@
   .cni>b{font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:400}
   .cni em{color:var(--mut);font-style:normal;font-size:11px}
   .cni a{color:var(--accent);text-decoration:none;font-weight:700}
+  .ck-news{margin:16px 0 0;padding-top:13px;border-top:1px dashed var(--line)}
+  .ck-nrow{display:grid;grid-template-columns:minmax(120px,190px) auto 1fr;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .ck-nrow:last-child{border-bottom:none}
+  .ck-nm{font-weight:650;font-size:13.5px;color:var(--ink)}
+  .ck-hl{font-size:13px;line-height:1.45;color:var(--ink)}
+  .ck-hl>b{font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:400}
+  .ck-hl em{color:var(--mut);font-style:normal;font-size:11px}
+  .ck-hl a{color:var(--accent);text-decoration:none;font-weight:700}
+  @media(max-width:640px){.ck-nrow{grid-template-columns:1fr auto}.ck-hl{grid-column:1/-1}}
   .modal-note{font-size:11px;color:var(--faint);font-style:italic;margin:12px 0 0}
 
   /* régions + panels */
@@ -480,7 +489,19 @@ function renderChain(sector,key){
     :(ch.context?`<div class="brief"><p>${hl(ch.context)}</p></div>`:''))
     +(!B.problem?`<div class="pending">Recherche sourcée (problème · dépendance · chiffres-choc) à faire pour cette chaîne, comme le Réseau EU.</div>`:'');
   const bloc4=`<div class="chain">${chainHTML}</div>`;
-  const bloc5=B.chokepoint?`<div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}</div>`:'';
+  // actu du chokepoint = news des sociétés du 1er maillon (le maillon-chokepoint)
+  const ckMaillon=(ch.maillons||[])[0];
+  const ckNews=(ckMaillon&&ckMaillon.companies?ckMaillon.companies:[]).map(c=>{
+    const cn=NEWS&&NEWS.chains&&NEWS.chains[key];
+    const n=cn&&cn.companies&&cn.companies[c.ticker];
+    if(!n||!n.news||!n.news.length) return '';
+    const heat=typeof n.news_heat==='number'?n.news_heat:0;
+    const top=n.news[0];
+    const flag=n.alert?'<span class="nwarn">🔴</span>':((n.warnings&&n.warnings.length)?'<span class="nwarn">⚠</span>':'');
+    return `<div class="ck-nrow"><span class="ck-nm">${FLAG[c.region]||'•'} ${c.name||c.ticker}</span><span class="nheat ${heat>0?'g':(heat<0?'b':'mut')}">${heat>0?'+':''}${heat}</span>${flag}<span class="ck-hl">${top.date?`<b>${top.date}</b> `:''}${top.title||''} ${top.url?`<a href="${top.url}" target="_blank" rel="noopener">↗</a>`:''}${top.src?` <em>${top.src}</em>`:''}</span></div>`;
+  }).filter(Boolean).join("");
+  const ckNewsBlock=ckNews?`<div class="ck-news"><span class="lab">Actu du chokepoint — Yahoo Finance</span>${ckNews}</div>`:'';
+  const bloc5=B.chokepoint?`<div class="choke"><div class="choke-t">${B.chokepoint.title}</div><p>${hl(B.chokepoint.body)}</p>${src(B.chokepoint.src)}${ckNewsBlock}</div>`:'';
   // ===== Entreprises critiques : DEUX dimensions NON fusionnées (archi corrigée) =====
   // Dim 1 SOLIDITÉ (classe/décrit) : moat 3 ans STABLE (pas spot) + qualité EX-momentum, avec GATE de couverture.
   // Dim 2 NEWS (alerte, à brancher) : badges typés affichés À CÔTÉ, JAMAIS additionnés à la solidité.
