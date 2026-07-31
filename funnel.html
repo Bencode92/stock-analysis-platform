@@ -209,7 +209,7 @@
   .nb-left:hover{background:var(--neutral-b)}
   .nb-left .eyebrow{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
   .nb-left h4{margin:5px 0 5px;font-size:15.5px;line-height:1.25;color:var(--ink);text-wrap:balance}
-  .nb-pos{font-size:12px;color:var(--muted);margin-bottom:9px;line-height:1.4}
+  .nb-posn{font-size:12px;color:var(--muted);margin-bottom:9px;line-height:1.4}
   .nb-arrow{position:absolute;top:14px;right:15px;color:var(--faint);font-size:15px}
   .nb-right{padding:14px 18px;display:flex;flex-direction:column;gap:9px;min-width:0}
   .nb-sum{margin:0 0 2px;font-size:13px;line-height:1.55;color:var(--ink2)}
@@ -473,7 +473,7 @@ function renderNewsBoard(){
   Object.entries(DATA.sectors).forEach(([sector,sv])=>Object.entries(sv.chains).forEach(([key,ch])=>{
     const cn=NEWS.chains[key];
     const hasNews=!!(cn&&cn.companies&&Object.keys(cn.companies).length);
-    const left=`<div class="nb-left" data-go='["${sector}","${key}"]'><div class="eyebrow">${sector}</div><h4>${ch.label}</h4><div class="nb-pos">${ch.position||''}</div><div class="chips"><span class="chip">capex-IA ${ch.capex_ia}%</span></div><span class="nb-arrow">→</span></div>`;
+    const left=`<div class="nb-left" data-go='["${sector}","${key}"]'><div class="eyebrow">${sector}</div><h4>${ch.label}</h4><div class="nb-posn">${ch.position||''}</div><div class="chips"><span class="chip">capex-IA ${ch.capex_ia}%</span></div><span class="nb-arrow">→</span></div>`;
     let right;
     if(hasNews){
       const meta=chainCompanyMeta(sector,key);
