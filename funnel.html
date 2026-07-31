@@ -183,6 +183,23 @@
   .cni>b{font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:400}
   .cni em{color:var(--mut);font-style:normal;font-size:11px}
   .cni a{color:var(--accent);text-decoration:none;font-weight:700}
+  /* couche IA (résumés) — teinte neutre distincte, contexte descriptif */
+  .ai-tag{display:inline-block;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;
+    font-weight:700;color:var(--neutral);background:var(--neutral-b);border:1px solid var(--line2);
+    border-radius:20px;padding:1px 7px;margin-right:7px;vertical-align:middle}
+  .ai-sum{margin:2px 0 8px;padding:8px 10px;font-size:13px;line-height:1.55;color:var(--ink2);
+    background:var(--neutral-b);border-left:2px solid var(--neutral);border-radius:0 var(--r-s) var(--r-s) 0}
+  .chain-ai{margin:0 0 20px;padding:13px 16px;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--neutral);border-radius:var(--r)}
+  .chain-ai p{margin:6px 0 0;font-size:14px;line-height:1.6;color:var(--ink)}
+  .geo-panel{margin:0 0 26px;padding:18px 20px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r)}
+  .geo-lab{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    font-weight:600;margin-bottom:14px}
+  .geo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .geo-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:13px 14px}
+  .geo-h{font-weight:700;font-size:14px;color:var(--ink);margin-bottom:6px}
+  .geo-card p{margin:0;font-size:13px;line-height:1.55;color:var(--ink2)}
+  .geo-note{margin:14px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
   .ck-news{margin:16px 0 0;padding-top:13px;border-top:1px dashed var(--line)}
   .ck-nrow{display:grid;grid-template-columns:minmax(120px,190px) auto 1fr;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
   .ck-nrow:last-child{border-bottom:none}
@@ -390,7 +407,8 @@ function companyNewsHTML(key,tk){
   const wb=(n.warnings&&n.warnings.length)?`<span class="nwarn">⚠ ${n.warnings.length}</span>`:'';
   const ab=n.alert?'<span class="nwarn">🔴</span>':'';
   const items=n.news.slice(0,3).map(x=>`<div class="cni">${x.date?`<b>${x.date}</b> `:''}${x.title||''} ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">↗</a>`:''}${x.src?` <em>${x.src}</em>`:''}</div>`).join("");
-  return `<div class="cnews"><div class="cnews-h">Actu · Yahoo Finance ${hb}${wb}${ab}</div>${items}</div>`;
+  const sum=n.summary?`<div class="ai-sum"><span class="ai-tag">résumé IA</span>${n.summary}</div>`:'';
+  return `<div class="cnews"><div class="cnews-h">Actu · Yahoo Finance ${hb}${wb}${ab}</div>${sum}${items}</div>`;
 }
 function openCompare(sector,key,mi,tk){
   const m=DATA.sectors[sector].chains[key].maillons[mi];
@@ -416,8 +434,15 @@ function renderCrumbs(){
   c.innerHTML=h;
   c.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{PATH=JSON.parse(el.dataset.go);render();scrollTo(0,0);});
 }
+function geoPanelHTML(){
+  const g=NEWS&&NEWS.geo; if(!g||!Object.keys(g).length) return '';
+  const order=[["US","🇺🇸","États-Unis"],["EU","🇪🇺","Europe"],["Asie","🌏","Asie"]];
+  const cards=order.filter(([k])=>g[k]).map(([k,fl,l])=>`<div class="geo-card"><div class="geo-h">${fl} ${l}</div><p>${g[k]}</p></div>`).join("");
+  if(!cards) return '';
+  return `<div class="geo-panel"><div class="geo-lab"><span class="ai-tag">résumé IA</span> Vue d'ensemble — l'actu de la semaine par zone géographique</div><div class="geo-grid">${cards}</div><p class="geo-note">Synthèse IA des titres réels (Yahoo Finance) des sociétés du funnel. Contexte, pas signal — jamais additionné à la solidité.</p></div>`;
+}
 function renderSectors(){
-  return `<div class="grid">`+Object.entries(DATA.sectors).map(([name,v])=>{
+  return geoPanelHTML()+`<div class="grid">`+Object.entries(DATA.sectors).map(([name,v])=>{
     const n=Object.keys(v.chains).length, ch=Object.values(v.chains).map(c=>c.label.split(" ")[0]).slice(0,4).join(" · ");
     return `<div class="card nav sec-card" data-go='["${name}"]' style="--accent:${secColor(name)}"><span class="arrow">→</span><div class="eyebrow">Secteur</div><h3>${name}</h3><div class="pos">${n} chaîne${n>1?'s':''} — ${ch}</div></div>`;
   }).join("")+`</div>`;
@@ -548,7 +573,9 @@ function renderChain(sector,key){
   ].filter(t=>t.h&&t.h.trim());
   const tabbar=`<div class="tabs">${tabs.map((t,i)=>`<button class="tab${i===0?' active':''}" data-tab="${t.id}">${t.l}</button>`).join("")}</div>`;
   const panels=tabs.map((t,i)=>`<section class="tabpanel${i===0?' active':''}" data-panel="${t.id}"><div class="sec-h">${t.l}${t.id==='e'?' <span class="sh-note">— descriptif, pas une reco</span>':''}</div>${t.h}${i<tabs.length-1?`<button class="next-btn" data-next="${tabs[i+1].id}">${tabs[i+1].l} →</button>`:''}</section>`).join("");
-  return `<div class="chainview" style="--accent:${secColor(sector)};--accent2:${secColor(sector)}"><div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>${tabbar}${panels}</div>`;
+  const chSumTxt=(NEWS&&NEWS.chains&&NEWS.chains[key]&&NEWS.chains[key].summary)||'';
+  const chSum=chSumTxt?`<div class="chain-ai"><span class="ai-tag">résumé IA de la semaine</span><p>${chSumTxt}</p></div>`:'';
+  return `<div class="chainview" style="--accent:${secColor(sector)};--accent2:${secColor(sector)}"><div class="meta">${ch.position} · capex-IA <b>${ch.capex_ia}%</b> · survit stress IA <b>${ch.survives_ai||'?'}</b></div>${chSum}${tabbar}${panels}</div>`;
 }
 
 Promise.all([

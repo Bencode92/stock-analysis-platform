@@ -23,6 +23,28 @@ HALF_LIFE = CB.get("half_life_days", 14)
 HEAT_MIN, HEAT_MAX = CB.get("news_heat_bounds", [-3, 3])
 NOW = datetime.now(timezone.utc)
 
+# ── v2 : résumé IA (Claude). Grounded sur les titres RÉELLEMENT fetchés : on résume, on n'invente pas,
+#    aucun conseil d'achat/vente (décrit, ne prescrit pas). Gardé sur la présence de la clé. ──
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
+AI_MODEL = "claude-haiku-4-5-20251001"
+
+def ai_json(prompt, max_tokens=1500):
+    if not ANTHROPIC_KEY: return None
+    body = json.dumps({"model": AI_MODEL, "max_tokens": max_tokens,
+                       "messages": [{"role": "user", "content": prompt}]}).encode()
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=body, method="POST",
+        headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            txt = json.load(r)["content"][0]["text"]
+        mm = re.search(r"\{.*\}", txt, re.S)
+        return json.loads(mm.group(0)) if mm else None
+    except Exception as e:
+        print(f"    ⚠️ IA KO: {e}"); return None
+
+AI_RULES = ("Résume UNIQUEMENT à partir de ces titres réels, en FRANÇAIS. N'invente RIEN (pas de chiffre/fait "
+            "hors titres). AUCUN conseil d'achat/vente — décris, ne prescris pas. Factuel et bref.")
+
 def fetch_rss(symbol):
     # Yahoo Finance RSS par ticker : datacenter-friendly. News taguées au ticker = plus précis.
     url = (f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={urllib.parse.quote(symbol)}"
@@ -98,27 +120,66 @@ def companies_of(chain_key):
         for m in t["maillons"]:
             for c in m.get("companies", []):
                 if c.get("ticker") and c.get("name"):
-                    out.append((c["ticker"], c["name"]))
+                    out.append((c["ticker"], c["name"], c.get("region", "")))
     return out
+
+def chain_label(ck):
+    return (next((t for t in FW["themes"] if t["key"] == ck), {}) or {}).get("label", ck)
+
+def ai_chain_summary(label, comp):
+    """Résumé IA : 1 phrase par entreprise (injectée dans comp) + synthèse de chaîne (retour)."""
+    blocks = [f"{tk}: " + " ; ".join(n["title"] for n in co["news"][:4]) for tk, co in comp.items()]
+    prompt = (f"News récentes de la chaîne « {label} » (titres réels).\n{AI_RULES}\n\n"
+              "Réponds en JSON strict, rien d'autre :\n"
+              '{"companies": {"<TICKER>": "<1 phrase de synthèse de son actu>"}, '
+              '"chain": "<2 phrases : le thème dominant de la semaine sur cette chaîne>"}\n\n'
+              + "\n".join(blocks))
+    res = ai_json(prompt)
+    if not res: return None
+    for tk, s in (res.get("companies") or {}).items():
+        if tk in comp: comp[tk]["summary"] = s
+    return res.get("chain")
+
+def ai_geo_summary(geo_news):
+    names = {"US": "États-Unis", "EU": "Europe", "Asie": "Asie"}
+    blocks = [f"[{names.get(r, r)}]\n" + "\n".join("- " + x for x in items[:20])
+              for r, items in geo_news.items() if items]
+    if not blocks: return {}
+    prompt = (f"News récentes par région (titres réels).\n{AI_RULES}\n\n"
+              "Résume l'actu de CHAQUE région en 2 phrases (le mouvement d'ensemble).\n"
+              'JSON strict : {"US": "...", "EU": "...", "Asie": "..."}\n\n' + "\n\n".join(blocks))
+    return ai_json(prompt) or {}
 
 def main():
     out = {"meta": {"generated": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "codebook_version": CB.get("version"), "source": "Yahoo Finance RSS"},
-           "chains": {}}
+                    "codebook_version": CB.get("version"), "source": "Yahoo Finance RSS",
+                    "ai": bool(ANTHROPIC_KEY)},
+           "chains": {}, "geo": {}}
+    geo_news = {"US": [], "EU": [], "Asie": []}
     for ck in CFG["pilot_chains"]:
-        print(f"■ {ck}")
+        print(f"■ {chain_label(ck)}")
         comp = {}
-        for tk, name in companies_of(ck):
+        for tk, name, reg in companies_of(ck):
             print(f"  📰 {name} ({tk})")
             r = process_company(tk, name)
             if r["news"] or r["badges"]:
                 comp[tk] = r
-        out["chains"][ck] = {"global": [], "companies": comp}
+                geo_news.setdefault(reg, [])
+                for n in r["news"][:2]:
+                    geo_news[reg].append(f"{name}: {n['title']}")
+        chain_obj = {"global": [], "companies": comp}
+        if ANTHROPIC_KEY and comp:
+            print("  🤖 résumé IA (entreprises + chaîne)…")
+            chain_obj["summary"] = ai_chain_summary(chain_label(ck), comp)
+        out["chains"][ck] = chain_obj
         print(f"  → {len(comp)} sociétés avec news")
+    if ANTHROPIC_KEY:
+        print("🤖 vue d'ensemble géo (IA)…")
+        out["geo"] = ai_geo_summary(geo_news)
     json.dump(out, open(os.path.join(BASE, "funnel_news.json"), "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
     tot = sum(len(c["companies"]) for c in out["chains"].values())
-    print(f"\n✅ funnel_news.json écrit ({tot} sociétés, {len(out['chains'])} chaînes)")
+    print(f"\n✅ funnel_news.json écrit ({tot} sociétés, {len(out['chains'])} chaînes, IA={bool(ANTHROPIC_KEY)})")
 
 if __name__ == "__main__":
     main()
