@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-08-02T09:52:44.777576",
+    "generated_at": "2026-08-03T11:10:35.857266",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -9,39 +9,42 @@
   },
   "period": {
     "start_date": "2026-04-08",
-    "end_date": "2026-07-31",
-    "n_trading_days": 83,
+    "end_date": "2026-08-03",
+    "n_trading_days": 84,
     "sample_dates": [
       "2026-04-08",
-      "2026-05-06",
-      "2026-06-04",
-      "2026-07-03",
-      "2026-07-31"
+      "2026-05-07",
+      "2026-06-05",
+      "2026-07-06",
+      "2026-08-03"
     ]
   },
   "data_coverage": {
-    "total_tickers_requested": 20,
-    "tickers_with_data": 15,
+    "total_tickers_requested": 21,
+    "tickers_with_data": 12,
     "tickers_missing": [
       "AGGH.AS",
       "IBCI.AS",
       "IBGS.AS",
+      "SCHO",
       "SGLN.AS",
+      "SPY",
+      "TIGO",
+      "URTH",
       "VWCE.DE"
     ]
   },
   "assets_by_type": {
     "Action": [
       "3355",
-      "94VE",
-      "AJB",
+      "ABCB",
       "AN",
-      "CBUF",
-      "G2X",
+      "BBVA",
       "H4ZJ",
+      "IFS",
+      "NWG",
       "RNR",
-      "SCHO",
-      "TEN"
+      "SAN"
     ],
     "ETF": [
       "IEMG"
@@ -50,21 +53,19 @@
     "Crypto": [],
     "Benchmark": [
       "AGG",
-      "QQQ",
-      "SPY",
-      "URTH"
+      "QQQ"
     ]
   },
   "asset_details": {
     "3355": {
       "ticker": "3355",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 45.0,
-      "last_price": 34.0,
-      "total_return_pct": -24.44,
+      "last_price": 36.06,
+      "total_return_pct": -19.87,
       "volatility_annual_pct": 97.78,
       "weights_by_profile": {
         "Modéré": 5.0
@@ -79,93 +80,93 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 42.98,
-          "prev_date": "2026-05-05",
-          "prev_close": 43.88,
-          "daily_return_pct": -2.051,
-          "formula": "(42.9800 / 43.8800) - 1"
+          "date": "2026-05-07",
+          "close": 43.1,
+          "prev_date": "2026-05-06",
+          "prev_close": 42.98,
+          "daily_return_pct": 0.2792,
+          "formula": "(43.1000 / 42.9800) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 35.98,
-          "prev_date": "2026-06-03",
-          "prev_close": 37.88,
-          "daily_return_pct": -5.0158,
-          "formula": "(35.9800 / 37.8800) - 1"
+          "date": "2026-06-05",
+          "close": 35.46,
+          "prev_date": "2026-06-04",
+          "prev_close": 35.98,
+          "daily_return_pct": -1.4452,
+          "formula": "(35.4600 / 35.9800) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 37.5,
-          "prev_date": "2026-07-02",
-          "prev_close": 34.6,
-          "daily_return_pct": 8.3815,
-          "formula": "(37.5000 / 34.6000) - 1"
+          "date": "2026-07-06",
+          "close": 34.26,
+          "prev_date": "2026-07-03",
+          "prev_close": 37.5,
+          "daily_return_pct": -8.64,
+          "formula": "(34.2600 / 37.5000) - 1"
         },
         {
-          "date": "2026-07-31",
-          "close": 34.0,
-          "prev_date": "2026-07-30",
-          "prev_close": 33.04,
-          "daily_return_pct": 2.9056,
-          "formula": "(34.0000 / 33.0400) - 1"
+          "date": "2026-08-03",
+          "close": 36.06,
+          "prev_date": "2026-07-31",
+          "prev_close": 34.0,
+          "daily_return_pct": 6.0588,
+          "formula": "(36.0600 / 34.0000) - 1"
         }
       ],
       "is_benchmark": false
     },
-    "94VE": {
-      "ticker": "94VE",
+    "ABCB": {
+      "ticker": "ABCB",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 42.875,
-      "last_price": 45.735,
-      "total_return_pct": 6.67,
-      "volatility_annual_pct": 19.33,
+      "last_date": "2026-08-03",
+      "first_price": 82.2,
+      "last_price": 87.21,
+      "total_return_pct": 6.09,
+      "volatility_annual_pct": 20.07,
       "weights_by_profile": {
-        "Agressif": 5.0
+        "Modéré": 5.0
       },
       "price_samples": [
         {
           "date": "2026-04-08",
-          "close": 42.875,
+          "close": 82.2,
           "prev_date": null,
           "prev_close": null,
           "daily_return_pct": null,
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 46.305,
-          "prev_date": "2026-05-05",
-          "prev_close": 45.765,
-          "daily_return_pct": 1.1799,
-          "formula": "(46.3050 / 45.7650) - 1"
+          "date": "2026-05-07",
+          "close": 86.33,
+          "prev_date": "2026-05-06",
+          "prev_close": 87.26,
+          "daily_return_pct": -1.0658,
+          "formula": "(86.3300 / 87.2600) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 46.17,
-          "prev_date": "2026-06-03",
-          "prev_close": 46.335,
-          "daily_return_pct": -0.3561,
-          "formula": "(46.1700 / 46.3350) - 1"
+          "date": "2026-06-05",
+          "close": 85.47,
+          "prev_date": "2026-06-04",
+          "prev_close": 85.13,
+          "daily_return_pct": 0.3994,
+          "formula": "(85.4700 / 85.1300) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 46.905,
-          "prev_date": "2026-07-02",
-          "prev_close": 46.885,
-          "daily_return_pct": 0.0427,
-          "formula": "(46.9050 / 46.8850) - 1"
+          "date": "2026-07-06",
+          "close": 90.83,
+          "prev_date": "2026-07-03",
+          "prev_close": 90.12,
+          "daily_return_pct": 0.7878,
+          "formula": "(90.8300 / 90.1200) - 1"
         },
         {
-          "date": "2026-07-31",
-          "close": 45.735,
-          "prev_date": "2026-07-30",
-          "prev_close": 45.15,
-          "daily_return_pct": 1.2957,
-          "formula": "(45.7350 / 45.1500) - 1"
+          "date": "2026-08-03",
+          "close": 87.21,
+          "prev_date": "2026-07-31",
+          "prev_close": 87.21,
+          "daily_return_pct": 0.0,
+          "formula": "(87.2100 / 87.2100) - 1"
         }
       ],
       "is_benchmark": false
@@ -173,13 +174,13 @@
     "AGG": {
       "ticker": "AGG",
       "type": "Benchmark",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 99.43,
       "last_price": 97.37,
       "total_return_pct": -2.07,
-      "volatility_annual_pct": 4.06,
+      "volatility_annual_pct": 4.04,
       "weights_by_profile": {},
       "price_samples": [
         {
@@ -191,107 +192,50 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 99.19,
-          "prev_date": "2026-05-05",
-          "prev_close": 98.77,
-          "daily_return_pct": 0.4252,
-          "formula": "(99.1900 / 98.7700) - 1"
+          "date": "2026-05-07",
+          "close": 98.95,
+          "prev_date": "2026-05-06",
+          "prev_close": 99.19,
+          "daily_return_pct": -0.242,
+          "formula": "(98.9500 / 99.1900) - 1"
         },
         {
-          "date": "2026-06-04",
+          "date": "2026-06-05",
+          "close": 98.17,
+          "prev_date": "2026-06-04",
+          "prev_close": 98.66,
+          "daily_return_pct": -0.4967,
+          "formula": "(98.1700 / 98.6600) - 1"
+        },
+        {
+          "date": "2026-07-06",
           "close": 98.66,
-          "prev_date": "2026-06-03",
-          "prev_close": 98.5,
-          "daily_return_pct": 0.1624,
-          "formula": "(98.6600 / 98.5000) - 1"
-        },
-        {
-          "date": "2026-07-03",
-          "close": 98.61,
-          "prev_date": "2026-07-02",
+          "prev_date": "2026-07-03",
           "prev_close": 98.61,
-          "daily_return_pct": 0.0,
-          "formula": "(98.6100 / 98.6100) - 1"
+          "daily_return_pct": 0.0507,
+          "formula": "(98.6600 / 98.6100) - 1"
         },
         {
-          "date": "2026-07-31",
+          "date": "2026-08-03",
           "close": 97.37,
-          "prev_date": "2026-07-30",
-          "prev_close": 97.62,
-          "daily_return_pct": -0.2561,
-          "formula": "(97.3700 / 97.6200) - 1"
+          "prev_date": "2026-07-31",
+          "prev_close": 97.37,
+          "daily_return_pct": 0.0,
+          "formula": "(97.3700 / 97.3700) - 1"
         }
       ],
       "is_benchmark": true
     },
-    "AJB": {
-      "ticker": "AJB",
-      "type": "Action",
-      "n_days_data": 83,
-      "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 518.5,
-      "last_price": 587.5,
-      "total_return_pct": 13.31,
-      "volatility_annual_pct": 36.55,
-      "weights_by_profile": {
-        "Modéré": 5.0
-      },
-      "price_samples": [
-        {
-          "date": "2026-04-08",
-          "close": 518.5,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-05-06",
-          "close": 526.0,
-          "prev_date": "2026-05-05",
-          "prev_close": 524.5,
-          "daily_return_pct": 0.286,
-          "formula": "(526.0000 / 524.5000) - 1"
-        },
-        {
-          "date": "2026-06-04",
-          "close": 615.0,
-          "prev_date": "2026-06-03",
-          "prev_close": 615.0,
-          "daily_return_pct": 0.0,
-          "formula": "(615.0000 / 615.0000) - 1"
-        },
-        {
-          "date": "2026-07-03",
-          "close": 636.0,
-          "prev_date": "2026-07-02",
-          "prev_close": 631.0,
-          "daily_return_pct": 0.7924,
-          "formula": "(636.0000 / 631.0000) - 1"
-        },
-        {
-          "date": "2026-07-31",
-          "close": 587.5,
-          "prev_date": "2026-07-30",
-          "prev_close": 599.0,
-          "daily_return_pct": -1.9199,
-          "formula": "(587.5000 / 599.0000) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
     "AN": {
       "ticker": "AN",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 196.91,
       "last_price": 212.4,
       "total_return_pct": 7.87,
-      "volatility_annual_pct": 34.43,
+      "volatility_annual_pct": 34.22,
       "weights_by_profile": {
         "Modéré": 5.0
       },
@@ -305,150 +249,93 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 204.77,
-          "prev_date": "2026-05-05",
-          "prev_close": 202.29,
-          "daily_return_pct": 1.226,
-          "formula": "(204.7700 / 202.2900) - 1"
+          "date": "2026-05-07",
+          "close": 205.29,
+          "prev_date": "2026-05-06",
+          "prev_close": 204.77,
+          "daily_return_pct": 0.2539,
+          "formula": "(205.2900 / 204.7700) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 188.14,
-          "prev_date": "2026-06-03",
-          "prev_close": 190.25,
-          "daily_return_pct": -1.1091,
-          "formula": "(188.1400 / 190.2500) - 1"
+          "date": "2026-06-05",
+          "close": 187.72,
+          "prev_date": "2026-06-04",
+          "prev_close": 188.14,
+          "daily_return_pct": -0.2232,
+          "formula": "(187.7200 / 188.1400) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 186.41,
-          "prev_date": "2026-07-02",
+          "date": "2026-07-06",
+          "close": 190.72,
+          "prev_date": "2026-07-03",
           "prev_close": 186.41,
-          "daily_return_pct": 0.0,
-          "formula": "(186.4100 / 186.4100) - 1"
+          "daily_return_pct": 2.3121,
+          "formula": "(190.7200 / 186.4100) - 1"
         },
         {
-          "date": "2026-07-31",
+          "date": "2026-08-03",
           "close": 212.4,
-          "prev_date": "2026-07-30",
-          "prev_close": 214.65,
-          "daily_return_pct": -1.0482,
-          "formula": "(212.4000 / 214.6500) - 1"
+          "prev_date": "2026-07-31",
+          "prev_close": 212.4,
+          "daily_return_pct": 0.0,
+          "formula": "(212.4000 / 212.4000) - 1"
         }
       ],
       "is_benchmark": false
     },
-    "CBUF": {
-      "ticker": "CBUF",
+    "BBVA": {
+      "ticker": "BBVA",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 6.47,
-      "last_price": 6.907,
-      "total_return_pct": 6.75,
-      "volatility_annual_pct": 17.1,
+      "last_date": "2026-08-03",
+      "first_price": 19.54,
+      "last_price": 24.2,
+      "total_return_pct": 23.85,
+      "volatility_annual_pct": 29.42,
       "weights_by_profile": {
         "Agressif": 5.0
       },
       "price_samples": [
         {
           "date": "2026-04-08",
-          "close": 6.47,
+          "close": 19.54,
           "prev_date": null,
           "prev_close": null,
           "daily_return_pct": null,
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 6.301,
-          "prev_date": "2026-05-05",
-          "prev_close": 6.285,
-          "daily_return_pct": 0.2546,
-          "formula": "(6.3010 / 6.2850) - 1"
+          "date": "2026-05-07",
+          "close": 18.975,
+          "prev_date": "2026-05-06",
+          "prev_close": 18.875,
+          "daily_return_pct": 0.5298,
+          "formula": "(18.9750 / 18.8750) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 6.531,
-          "prev_date": "2026-06-03",
-          "prev_close": 6.357,
-          "daily_return_pct": 2.7371,
-          "formula": "(6.5310 / 6.3570) - 1"
+          "date": "2026-06-05",
+          "close": 19.41,
+          "prev_date": "2026-06-04",
+          "prev_close": 19.65,
+          "daily_return_pct": -1.2214,
+          "formula": "(19.4100 / 19.6500) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 7.046,
-          "prev_date": "2026-07-02",
-          "prev_close": 7.041,
-          "daily_return_pct": 0.071,
-          "formula": "(7.0460 / 7.0410) - 1"
+          "date": "2026-07-06",
+          "close": 22.78,
+          "prev_date": "2026-07-03",
+          "prev_close": 22.74,
+          "daily_return_pct": 0.1759,
+          "formula": "(22.7800 / 22.7400) - 1"
         },
         {
-          "date": "2026-07-31",
-          "close": 6.907,
-          "prev_date": "2026-07-30",
-          "prev_close": 6.944,
-          "daily_return_pct": -0.5328,
-          "formula": "(6.9070 / 6.9440) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "G2X": {
-      "ticker": "G2X",
-      "type": "Action",
-      "n_days_data": 83,
-      "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 95.52,
-      "last_price": 72.91,
-      "total_return_pct": -23.67,
-      "volatility_annual_pct": 47.31,
-      "weights_by_profile": {
-        "Agressif": 5.0
-      },
-      "price_samples": [
-        {
-          "date": "2026-04-08",
-          "close": 95.52,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-05-06",
-          "close": 88.83,
-          "prev_date": "2026-05-05",
-          "prev_close": 83.82,
-          "daily_return_pct": 5.9771,
-          "formula": "(88.8300 / 83.8200) - 1"
-        },
-        {
-          "date": "2026-06-04",
-          "close": 84.28,
-          "prev_date": "2026-06-03",
-          "prev_close": 83.37,
-          "daily_return_pct": 1.0915,
-          "formula": "(84.2800 / 83.3700) - 1"
-        },
-        {
-          "date": "2026-07-03",
-          "close": 79.98,
-          "prev_date": "2026-07-02",
-          "prev_close": 77.85,
-          "daily_return_pct": 2.736,
-          "formula": "(79.9800 / 77.8500) - 1"
-        },
-        {
-          "date": "2026-07-31",
-          "close": 72.91,
-          "prev_date": "2026-07-30",
-          "prev_close": 73.95,
-          "daily_return_pct": -1.4064,
-          "formula": "(72.9100 / 73.9500) - 1"
+          "date": "2026-08-03",
+          "close": 24.2,
+          "prev_date": "2026-07-31",
+          "prev_close": 24.2,
+          "daily_return_pct": 0.0,
+          "formula": "(24.2000 / 24.2000) - 1"
         }
       ],
       "is_benchmark": false
@@ -456,13 +343,13 @@
     "H4ZJ": {
       "ticker": "H4ZJ",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 38.284,
       "last_price": 42.007,
       "total_return_pct": 9.72,
-      "volatility_annual_pct": 9.63,
+      "volatility_annual_pct": 9.58,
       "weights_by_profile": {
         "Stable": 5.0
       },
@@ -476,36 +363,36 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 40.551,
-          "prev_date": "2026-05-05",
-          "prev_close": 40.122,
-          "daily_return_pct": 1.0692,
-          "formula": "(40.5510 / 40.1220) - 1"
+          "date": "2026-05-07",
+          "close": 40.579,
+          "prev_date": "2026-05-06",
+          "prev_close": 40.551,
+          "daily_return_pct": 0.069,
+          "formula": "(40.5790 / 40.5510) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 42.037,
-          "prev_date": "2026-06-03",
-          "prev_close": 42.047,
-          "daily_return_pct": -0.0238,
-          "formula": "(42.0370 / 42.0470) - 1"
+          "date": "2026-06-05",
+          "close": 41.86,
+          "prev_date": "2026-06-04",
+          "prev_close": 42.037,
+          "daily_return_pct": -0.4211,
+          "formula": "(41.8600 / 42.0370) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 42.684,
-          "prev_date": "2026-07-02",
-          "prev_close": 42.522,
-          "daily_return_pct": 0.381,
-          "formula": "(42.6840 / 42.5220) - 1"
+          "date": "2026-07-06",
+          "close": 42.877,
+          "prev_date": "2026-07-03",
+          "prev_close": 42.684,
+          "daily_return_pct": 0.4522,
+          "formula": "(42.8770 / 42.6840) - 1"
         },
         {
-          "date": "2026-07-31",
+          "date": "2026-08-03",
           "close": 42.007,
-          "prev_date": "2026-07-30",
-          "prev_close": 41.79,
-          "daily_return_pct": 0.5193,
-          "formula": "(42.0070 / 41.7900) - 1"
+          "prev_date": "2026-07-31",
+          "prev_close": 42.007,
+          "daily_return_pct": 0.0,
+          "formula": "(42.0070 / 42.0070) - 1"
         }
       ],
       "is_benchmark": false
@@ -513,13 +400,13 @@
     "IEMG": {
       "ticker": "IEMG",
       "type": "ETF",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 74.14,
       "last_price": 77.61,
       "total_return_pct": 4.68,
-      "volatility_annual_pct": 30.27,
+      "volatility_annual_pct": 30.08,
       "weights_by_profile": {
         "Agressif": 15.0
       },
@@ -533,36 +420,150 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 82.55,
-          "prev_date": "2026-05-05",
-          "prev_close": 80.15,
-          "daily_return_pct": 2.9944,
-          "formula": "(82.5500 / 80.1500) - 1"
+          "date": "2026-05-07",
+          "close": 81.47,
+          "prev_date": "2026-05-06",
+          "prev_close": 82.55,
+          "daily_return_pct": -1.3083,
+          "formula": "(81.4700 / 82.5500) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 84.01,
-          "prev_date": "2026-06-03",
-          "prev_close": 84.84,
-          "daily_return_pct": -0.9783,
-          "formula": "(84.0100 / 84.8400) - 1"
+          "date": "2026-06-05",
+          "close": 78.63,
+          "prev_date": "2026-06-04",
+          "prev_close": 84.01,
+          "daily_return_pct": -6.404,
+          "formula": "(78.6300 / 84.0100) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 79.84,
-          "prev_date": "2026-07-02",
+          "date": "2026-07-06",
+          "close": 82.0,
+          "prev_date": "2026-07-03",
           "prev_close": 79.84,
-          "daily_return_pct": 0.0,
-          "formula": "(79.8400 / 79.8400) - 1"
+          "daily_return_pct": 2.7054,
+          "formula": "(82.0000 / 79.8400) - 1"
         },
         {
-          "date": "2026-07-31",
+          "date": "2026-08-03",
           "close": 77.61,
-          "prev_date": "2026-07-30",
-          "prev_close": 77.05,
-          "daily_return_pct": 0.7268,
-          "formula": "(77.6100 / 77.0500) - 1"
+          "prev_date": "2026-07-31",
+          "prev_close": 77.61,
+          "daily_return_pct": 0.0,
+          "formula": "(77.6100 / 77.6100) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
+    "IFS": {
+      "ticker": "IFS",
+      "type": "Action",
+      "n_days_data": 84,
+      "first_date": "2026-04-08",
+      "last_date": "2026-08-03",
+      "first_price": 51.86,
+      "last_price": 58.31,
+      "total_return_pct": 12.44,
+      "volatility_annual_pct": 42.13,
+      "weights_by_profile": {
+        "Agressif": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2026-04-08",
+          "close": 51.86,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2026-05-07",
+          "close": 44.88,
+          "prev_date": "2026-05-06",
+          "prev_close": 45.44,
+          "daily_return_pct": -1.2324,
+          "formula": "(44.8800 / 45.4400) - 1"
+        },
+        {
+          "date": "2026-06-05",
+          "close": 47.12,
+          "prev_date": "2026-06-04",
+          "prev_close": 48.45,
+          "daily_return_pct": -2.7451,
+          "formula": "(47.1200 / 48.4500) - 1"
+        },
+        {
+          "date": "2026-07-06",
+          "close": 59.03,
+          "prev_date": "2026-07-03",
+          "prev_close": 58.13,
+          "daily_return_pct": 1.5483,
+          "formula": "(59.0300 / 58.1300) - 1"
+        },
+        {
+          "date": "2026-08-03",
+          "close": 58.31,
+          "prev_date": "2026-07-31",
+          "prev_close": 58.31,
+          "daily_return_pct": 0.0,
+          "formula": "(58.3100 / 58.3100) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
+    "NWG": {
+      "ticker": "NWG",
+      "type": "Action",
+      "n_days_data": 84,
+      "first_date": "2026-04-08",
+      "last_date": "2026-08-03",
+      "first_price": 608.0,
+      "last_price": 705.8,
+      "total_return_pct": 16.09,
+      "volatility_annual_pct": 28.41,
+      "weights_by_profile": {
+        "Agressif": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2026-04-08",
+          "close": 608.0,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2026-05-07",
+          "close": 572.253,
+          "prev_date": "2026-05-06",
+          "prev_close": 576.0,
+          "daily_return_pct": -0.6505,
+          "formula": "(572.2530 / 576.0000) - 1"
+        },
+        {
+          "date": "2026-06-05",
+          "close": 593.8,
+          "prev_date": "2026-06-04",
+          "prev_close": 601.4,
+          "daily_return_pct": -1.2637,
+          "formula": "(593.8000 / 601.4000) - 1"
+        },
+        {
+          "date": "2026-07-06",
+          "close": 686.4,
+          "prev_date": "2026-07-03",
+          "prev_close": 682.8,
+          "daily_return_pct": 0.5272,
+          "formula": "(686.4000 / 682.8000) - 1"
+        },
+        {
+          "date": "2026-08-03",
+          "close": 705.8,
+          "prev_date": "2026-07-31",
+          "prev_close": 705.8,
+          "daily_return_pct": 0.0,
+          "formula": "(705.8000 / 705.8000) - 1"
         }
       ],
       "is_benchmark": false
@@ -570,13 +571,13 @@
     "QQQ": {
       "ticker": "QQQ",
       "type": "Benchmark",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 606.09,
       "last_price": 687.99,
       "total_return_pct": 13.51,
-      "volatility_annual_pct": 23.41,
+      "volatility_annual_pct": 23.27,
       "weights_by_profile": {},
       "price_samples": [
         {
@@ -588,36 +589,36 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 695.77,
-          "prev_date": "2026-05-05",
-          "prev_close": 681.61,
-          "daily_return_pct": 2.0774,
-          "formula": "(695.7700 / 681.6100) - 1"
+          "date": "2026-05-07",
+          "close": 694.94,
+          "prev_date": "2026-05-06",
+          "prev_close": 695.77,
+          "daily_return_pct": -0.1193,
+          "formula": "(694.9400 / 695.7700) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 740.61,
-          "prev_date": "2026-06-03",
-          "prev_close": 744.21,
-          "daily_return_pct": -0.4837,
-          "formula": "(740.6100 / 744.2100) - 1"
+          "date": "2026-06-05",
+          "close": 705.06,
+          "prev_date": "2026-06-04",
+          "prev_close": 740.61,
+          "daily_return_pct": -4.8001,
+          "formula": "(705.0600 / 740.6100) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 712.6,
-          "prev_date": "2026-07-02",
+          "date": "2026-07-06",
+          "close": 722.82,
+          "prev_date": "2026-07-03",
           "prev_close": 712.6,
-          "daily_return_pct": 0.0,
-          "formula": "(712.6000 / 712.6000) - 1"
+          "daily_return_pct": 1.4342,
+          "formula": "(722.8200 / 712.6000) - 1"
         },
         {
-          "date": "2026-07-31",
+          "date": "2026-08-03",
           "close": 687.99,
-          "prev_date": "2026-07-30",
-          "prev_close": 683.55,
-          "daily_return_pct": 0.6496,
-          "formula": "(687.9900 / 683.5500) - 1"
+          "prev_date": "2026-07-31",
+          "prev_close": 687.99,
+          "daily_return_pct": 0.0,
+          "formula": "(687.9900 / 687.9900) - 1"
         }
       ],
       "is_benchmark": true
@@ -625,13 +626,13 @@
     "RNR": {
       "ticker": "RNR",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
+      "last_date": "2026-08-03",
       "first_price": 307.08,
       "last_price": 319.98,
       "total_return_pct": 4.2,
-      "volatility_annual_pct": 26.31,
+      "volatility_annual_pct": 26.15,
       "weights_by_profile": {
         "Modéré": 5.0
       },
@@ -645,328 +646,151 @@
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 302.63,
-          "prev_date": "2026-05-05",
-          "prev_close": 302.04,
-          "daily_return_pct": 0.1953,
-          "formula": "(302.6300 / 302.0400) - 1"
+          "date": "2026-05-07",
+          "close": 300.84,
+          "prev_date": "2026-05-06",
+          "prev_close": 302.63,
+          "daily_return_pct": -0.5915,
+          "formula": "(300.8400 / 302.6300) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 277.73,
-          "prev_date": "2026-06-03",
-          "prev_close": 280.61,
-          "daily_return_pct": -1.0263,
-          "formula": "(277.7300 / 280.6100) - 1"
+          "date": "2026-06-05",
+          "close": 288.48,
+          "prev_date": "2026-06-04",
+          "prev_close": 277.73,
+          "daily_return_pct": 3.8707,
+          "formula": "(288.4800 / 277.7300) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 326.29,
-          "prev_date": "2026-07-02",
+          "date": "2026-07-06",
+          "close": 323.11,
+          "prev_date": "2026-07-03",
           "prev_close": 326.29,
-          "daily_return_pct": 0.0,
-          "formula": "(326.2900 / 326.2900) - 1"
+          "daily_return_pct": -0.9746,
+          "formula": "(323.1100 / 326.2900) - 1"
         },
         {
-          "date": "2026-07-31",
+          "date": "2026-08-03",
           "close": 319.98,
-          "prev_date": "2026-07-30",
-          "prev_close": 318.36,
-          "daily_return_pct": 0.5089,
-          "formula": "(319.9800 / 318.3600) - 1"
+          "prev_date": "2026-07-31",
+          "prev_close": 319.98,
+          "daily_return_pct": 0.0,
+          "formula": "(319.9800 / 319.9800) - 1"
         }
       ],
       "is_benchmark": false
     },
-    "SCHO": {
-      "ticker": "SCHO",
+    "SAN": {
+      "ticker": "SAN",
       "type": "Action",
-      "n_days_data": 83,
+      "n_days_data": 84,
       "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 24.22,
-      "last_price": 24.1,
-      "total_return_pct": -0.5,
-      "volatility_annual_pct": 1.75,
-      "weights_by_profile": {
-        "Agressif": 5.0,
-        "Stable": 5.0
-      },
-      "price_samples": [
-        {
-          "date": "2026-04-08",
-          "close": 24.22,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-05-06",
-          "close": 24.19,
-          "prev_date": "2026-05-05",
-          "prev_close": 24.16,
-          "daily_return_pct": 0.1242,
-          "formula": "(24.1900 / 24.1600) - 1"
-        },
-        {
-          "date": "2026-06-04",
-          "close": 24.11,
-          "prev_date": "2026-06-03",
-          "prev_close": 24.09,
-          "daily_return_pct": 0.083,
-          "formula": "(24.1100 / 24.0900) - 1"
-        },
-        {
-          "date": "2026-07-03",
-          "close": 24.09,
-          "prev_date": "2026-07-02",
-          "prev_close": 24.09,
-          "daily_return_pct": 0.0,
-          "formula": "(24.0900 / 24.0900) - 1"
-        },
-        {
-          "date": "2026-07-31",
-          "close": 24.1,
-          "prev_date": "2026-07-30",
-          "prev_close": 24.11,
-          "daily_return_pct": -0.0415,
-          "formula": "(24.1000 / 24.1100) - 1"
-        }
-      ],
-      "is_benchmark": false
-    },
-    "SPY": {
-      "ticker": "SPY",
-      "type": "Benchmark",
-      "n_days_data": 83,
-      "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 676.01,
-      "last_price": 747.03,
-      "total_return_pct": 10.51,
-      "volatility_annual_pct": 12.81,
-      "weights_by_profile": {},
-      "price_samples": [
-        {
-          "date": "2026-04-08",
-          "close": 676.01,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-05-06",
-          "close": 733.83,
-          "prev_date": "2026-05-05",
-          "prev_close": 723.77,
-          "daily_return_pct": 1.3899,
-          "formula": "(733.8300 / 723.7700) - 1"
-        },
-        {
-          "date": "2026-06-04",
-          "close": 757.09,
-          "prev_date": "2026-06-03",
-          "prev_close": 754.24,
-          "daily_return_pct": 0.3779,
-          "formula": "(757.0900 / 754.2400) - 1"
-        },
-        {
-          "date": "2026-07-03",
-          "close": 744.78,
-          "prev_date": "2026-07-02",
-          "prev_close": 744.78,
-          "daily_return_pct": 0.0,
-          "formula": "(744.7800 / 744.7800) - 1"
-        },
-        {
-          "date": "2026-07-31",
-          "close": 747.03,
-          "prev_date": "2026-07-30",
-          "prev_close": 741.69,
-          "daily_return_pct": 0.72,
-          "formula": "(747.0300 / 741.6900) - 1"
-        }
-      ],
-      "is_benchmark": true
-    },
-    "TEN": {
-      "ticker": "TEN",
-      "type": "Action",
-      "n_days_data": 83,
-      "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 148.7,
-      "last_price": 202.0,
-      "total_return_pct": 35.84,
-      "volatility_annual_pct": 41.8,
+      "last_date": "2026-08-03",
+      "first_price": 10.46,
+      "last_price": 12.318,
+      "total_return_pct": 17.76,
+      "volatility_annual_pct": 29.88,
       "weights_by_profile": {
         "Agressif": 5.0
       },
       "price_samples": [
         {
           "date": "2026-04-08",
-          "close": 148.7,
+          "close": 10.46,
           "prev_date": null,
           "prev_close": null,
           "daily_return_pct": null,
           "formula": null
         },
         {
-          "date": "2026-05-06",
-          "close": 137.0,
-          "prev_date": "2026-05-05",
-          "prev_close": 133.3,
-          "daily_return_pct": 2.7757,
-          "formula": "(137.0000 / 133.3000) - 1"
+          "date": "2026-05-07",
+          "close": 10.58,
+          "prev_date": "2026-05-06",
+          "prev_close": 10.588,
+          "daily_return_pct": -0.0756,
+          "formula": "(10.5800 / 10.5880) - 1"
         },
         {
-          "date": "2026-06-04",
-          "close": 169.9,
-          "prev_date": "2026-06-03",
-          "prev_close": 170.2,
-          "daily_return_pct": -0.1763,
-          "formula": "(169.9000 / 170.2000) - 1"
+          "date": "2026-06-05",
+          "close": 10.674,
+          "prev_date": "2026-06-04",
+          "prev_close": 10.728,
+          "daily_return_pct": -0.5034,
+          "formula": "(10.6740 / 10.7280) - 1"
         },
         {
-          "date": "2026-07-03",
-          "close": 196.2,
-          "prev_date": "2026-07-02",
-          "prev_close": 189.1,
-          "daily_return_pct": 3.7546,
-          "formula": "(196.2000 / 189.1000) - 1"
+          "date": "2026-07-06",
+          "close": 12.508,
+          "prev_date": "2026-07-03",
+          "prev_close": 12.418,
+          "daily_return_pct": 0.7248,
+          "formula": "(12.5080 / 12.4180) - 1"
         },
         {
-          "date": "2026-07-31",
-          "close": 202.0,
-          "prev_date": "2026-07-30",
-          "prev_close": 197.3,
-          "daily_return_pct": 2.3822,
-          "formula": "(202.0000 / 197.3000) - 1"
+          "date": "2026-08-03",
+          "close": 12.318,
+          "prev_date": "2026-07-31",
+          "prev_close": 12.318,
+          "daily_return_pct": 0.0,
+          "formula": "(12.3180 / 12.3180) - 1"
         }
       ],
       "is_benchmark": false
-    },
-    "URTH": {
-      "ticker": "URTH",
-      "type": "Benchmark",
-      "n_days_data": 83,
-      "first_date": "2026-04-08",
-      "last_date": "2026-07-31",
-      "first_price": 187.66,
-      "last_price": 203.37,
-      "total_return_pct": 8.37,
-      "volatility_annual_pct": 13.19,
-      "weights_by_profile": {},
-      "price_samples": [
-        {
-          "date": "2026-04-08",
-          "close": 187.66,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-05-06",
-          "close": 200.63,
-          "prev_date": "2026-05-05",
-          "prev_close": 197.03,
-          "daily_return_pct": 1.8271,
-          "formula": "(200.6300 / 197.0300) - 1"
-        },
-        {
-          "date": "2026-06-04",
-          "close": 205.67,
-          "prev_date": "2026-06-03",
-          "prev_close": 204.65,
-          "daily_return_pct": 0.4984,
-          "formula": "(205.6700 / 204.6500) - 1"
-        },
-        {
-          "date": "2026-07-03",
-          "close": 202.65,
-          "prev_date": "2026-07-02",
-          "prev_close": 202.65,
-          "daily_return_pct": 0.0,
-          "formula": "(202.6500 / 202.6500) - 1"
-        },
-        {
-          "date": "2026-07-31",
-          "close": 203.37,
-          "prev_date": "2026-07-30",
-          "prev_close": 202.98,
-          "daily_return_pct": 0.1921,
-          "formula": "(203.3700 / 202.9800) - 1"
-        }
-      ],
-      "is_benchmark": true
     }
   },
   "daily_calculations": [
     {
-      "date": "2026-07-31",
-      "prev_date": "2026-07-30",
+      "date": "2026-08-03",
+      "prev_date": "2026-07-31",
       "profile": "Agressif",
       "assets": [
         {
           "ticker": "IEMG",
           "type": "ETF",
           "weight_pct": 15.0,
-          "price_prev": 77.05,
+          "price_prev": 77.61,
           "price_today": 77.61,
-          "return_pct": 0.7268,
-          "contribution_pct": 0.109
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
         },
         {
-          "ticker": "G2X",
+          "ticker": "IFS",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 73.95,
-          "price_today": 72.91,
-          "return_pct": -1.4064,
-          "contribution_pct": -0.0703
+          "price_prev": 58.31,
+          "price_today": 58.31,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
         },
         {
-          "ticker": "CBUF",
+          "ticker": "NWG",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 6.944,
-          "price_today": 6.907,
-          "return_pct": -0.5328,
-          "contribution_pct": -0.0266
+          "price_prev": 705.8,
+          "price_today": 705.8,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
         },
         {
-          "ticker": "94VE",
+          "ticker": "BBVA",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 45.15,
-          "price_today": 45.735,
-          "return_pct": 1.2957,
-          "contribution_pct": 0.0648
+          "price_prev": 24.2,
+          "price_today": 24.2,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
         },
         {
-          "ticker": "TEN",
+          "ticker": "SAN",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 197.3,
-          "price_today": 202.0,
-          "return_pct": 2.3822,
-          "contribution_pct": 0.1191
-        },
-        {
-          "ticker": "SCHO",
-          "type": "Action",
-          "weight_pct": 5.0,
-          "price_prev": 24.11,
-          "price_today": 24.1,
-          "return_pct": -0.0415,
-          "contribution_pct": -0.0021
+          "price_prev": 12.318,
+          "price_today": 12.318,
+          "return_pct": 0.0,
+          "contribution_pct": 0.0
         }
       ],
-      "total_portfolio_return_pct": 0.1939,
+      "total_portfolio_return_pct": 0.0,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -974,41 +798,41 @@
     {
       "asset_type": "Action",
       "ticker": "3355",
-      "date": "2026-05-06",
-      "prev_date": "2026-05-05",
-      "close_J": 42.98,
-      "close_J_minus_1": 43.88,
-      "formula": "(42.9800 / 43.8800) - 1",
-      "daily_return_pct": -2.051,
+      "date": "2026-05-07",
+      "prev_date": "2026-05-06",
+      "close_J": 43.1,
+      "close_J_minus_1": 42.98,
+      "formula": "(43.1000 / 42.9800) - 1",
+      "daily_return_pct": 0.2792,
       "weight_pct": 5.0,
-      "contribution_pct": -0.1026,
-      "explanation": "Le 2026-05-06, 3355 (Action) a clôturé à 42.98 vs 43.88 le 2026-05-05, soit un rendement de -2.05%"
+      "contribution_pct": 0.014,
+      "explanation": "Le 2026-05-07, 3355 (Action) a clôturé à 43.1 vs 42.98 le 2026-05-06, soit un rendement de 0.28%"
     },
     {
       "asset_type": "ETF",
       "ticker": "IEMG",
-      "date": "2026-05-06",
-      "prev_date": "2026-05-05",
-      "close_J": 82.55,
-      "close_J_minus_1": 80.15,
-      "formula": "(82.5500 / 80.1500) - 1",
-      "daily_return_pct": 2.9944,
+      "date": "2026-05-07",
+      "prev_date": "2026-05-06",
+      "close_J": 81.47,
+      "close_J_minus_1": 82.55,
+      "formula": "(81.4700 / 82.5500) - 1",
+      "daily_return_pct": -1.3083,
       "weight_pct": 15.0,
-      "contribution_pct": 0.4492,
-      "explanation": "Le 2026-05-06, IEMG (ETF) a clôturé à 82.55 vs 80.15 le 2026-05-05, soit un rendement de 2.99%"
+      "contribution_pct": -0.1962,
+      "explanation": "Le 2026-05-07, IEMG (ETF) a clôturé à 81.47 vs 82.55 le 2026-05-06, soit un rendement de -1.31%"
     },
     {
       "asset_type": "Benchmark",
       "ticker": "AGG",
-      "date": "2026-05-06",
-      "prev_date": "2026-05-05",
-      "close_J": 99.19,
-      "close_J_minus_1": 98.77,
-      "formula": "(99.1900 / 98.7700) - 1",
-      "daily_return_pct": 0.4252,
+      "date": "2026-05-07",
+      "prev_date": "2026-05-06",
+      "close_J": 98.95,
+      "close_J_minus_1": 99.19,
+      "formula": "(98.9500 / 99.1900) - 1",
+      "daily_return_pct": -0.242,
       "weight_pct": 0,
       "contribution_pct": null,
-      "explanation": "Le 2026-05-06, AGG (Benchmark) a clôturé à 99.19 vs 98.77 le 2026-05-05, soit un rendement de 0.43%"
+      "explanation": "Le 2026-05-07, AGG (Benchmark) a clôturé à 98.95 vs 99.19 le 2026-05-06, soit un rendement de -0.24%"
     }
   ],
   "profiles_summary": {
@@ -1031,15 +855,15 @@
           15.0
         ],
         [
-          "G2X",
+          "TIGO",
           5.0
         ],
         [
-          "CBUF",
+          "IFS",
           5.0
         ],
         [
-          "94VE",
+          "NWG",
           5.0
         ]
       ]
@@ -1071,7 +895,7 @@
           5.0
         ],
         [
-          "3355",
+          "ABCB",
           5.0
         ]
       ]
@@ -1111,31 +935,31 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 3.17,
-      "net_return_pct": 3.17,
-      "volatility_pct": 6.6,
-      "max_drawdown_pct": -1.87,
+      "gross_return_pct": 5.78,
+      "net_return_pct": 5.78,
+      "volatility_pct": 8.07,
+      "max_drawdown_pct": -1.81,
       "benchmark_symbol": "QQQ",
-      "benchmark_return_pct": 2.25,
-      "excess_return_pct": 0.92
+      "benchmark_return_pct": 0.94,
+      "excess_return_pct": 4.85
     },
     "Modéré": {
-      "gross_return_pct": 1.58,
-      "net_return_pct": 1.58,
-      "volatility_pct": 5.42,
-      "max_drawdown_pct": -1.7,
-      "benchmark_symbol": "URTH",
-      "benchmark_return_pct": 3.99,
-      "excess_return_pct": -2.41
+      "gross_return_pct": 1.26,
+      "net_return_pct": 1.26,
+      "volatility_pct": 5.23,
+      "max_drawdown_pct": -2.34,
+      "benchmark_symbol": "AOR",
+      "benchmark_return_pct": 0.88,
+      "excess_return_pct": 0.37
     },
     "Stable": {
-      "gross_return_pct": 1.3,
-      "net_return_pct": 1.3,
-      "volatility_pct": 0.52,
-      "max_drawdown_pct": -0.08,
+      "gross_return_pct": 1.33,
+      "net_return_pct": 1.33,
+      "volatility_pct": 0.51,
+      "max_drawdown_pct": -0.07,
       "benchmark_symbol": "AGG",
-      "benchmark_return_pct": -1.24,
-      "excess_return_pct": 2.53
+      "benchmark_return_pct": -1.42,
+      "excess_return_pct": 2.75
     }
   },
   "uniformity_proof": {
