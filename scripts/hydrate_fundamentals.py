@@ -26,7 +26,10 @@ def key(tk, country):
 
 
 def load_arr(path):
-    d = json.load(open(path, encoding="utf-8"))
+    try:
+        d = json.load(open(path, encoding="utf-8"))
+    except Exception as e:
+        print(f"⚠️  {os.path.basename(path)} illisible ({type(e).__name__}) — skip"); return None, None
     if isinstance(d, list):
         return d, None
     return (d.get("stocks") or d.get("data") or []), d
@@ -42,6 +45,8 @@ def main():
         if not os.path.exists(path):
             print(f"⚠️  {fn} absent"); continue
         arr, wrapper = load_arr(path)
+        if arr is None:
+            continue
         hydrated = refreshed = gate_ok = 0
         for s in arr:
             tk = str(s.get("ticker") or s.get("symbol") or "")
