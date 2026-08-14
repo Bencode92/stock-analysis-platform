@@ -34,6 +34,12 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
 
+      - name: 💧 Hydrater roic+quality depuis le snapshot (anti-kill 6h)
+        # La passe fondamentaux (filter-stocks) se fait tuer à 6h → stocks_*.json sortent avec
+        # roic ET quality null → gate solidité KO. On re-hydrate depuis le dernier état SAIN
+        # (fundamentals_snapshot.json), qui se rafraîchit tout seul quand un run réussit.
+        run: python3 scripts/hydrate_fundamentals.py
+
       - name: 🔻 Générer funnel.json
         run: python3 scripts/build_funnel.py
 
@@ -56,6 +62,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/funnel.json data/funnel_news.json 2>/dev/null || true
+          git add data/fundamentals_snapshot.json data/stocks_us.json data/stocks_europe.json data/stocks_asia.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ rien de changé, rien à committer"; exit 0
           fi
