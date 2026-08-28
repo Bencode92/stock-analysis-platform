@@ -65,6 +65,10 @@ jobs:
           # concurrent → un rebase-merge JSON les corromprait). L'hydratation les modifie en
           # mémoire pour bâtir funnel.json ; c'est funnel.json (+ snapshot) qu'on persiste.
           git add data/funnel.json data/funnel_news.json data/fundamentals_snapshot.json 2>/dev/null || true
+          # L'hydratation a modifié les stocks_*.json sur le disque (utilisés en mémoire pour bâtir
+          # funnel.json). On ne les persiste pas → on JETTE ces modifs non-stagées, sinon `git rebase`
+          # refuse (« cannot rebase: You have unstaged changes »).
+          git checkout -- data/stocks_us.json data/stocks_europe.json data/stocks_asia.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "ℹ️ rien de changé, rien à committer"; exit 0
           fi
