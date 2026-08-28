@@ -22,14 +22,19 @@ on:
 
   schedule:
     # ═══════════════════════════════════════════════════════════════════════════
-    # 🌙 NUIT (04:00 Paris) - après clôture US
-    # été: 02:00 UTC | hiver: 03:00 UTC
+    # 🗓️ WEEK-END SEULEMENT — les fondamentaux (ROIC = métrique 3 ans) ne bougent pas
+    # en semaine ; les gros runs quotidiens étaient du gaspillage (et se faisaient tuer à 6h).
+    # Passes bornées (MAX_FUNDAMENTALS_FETCH) qui écrivent toujours le CSV et rafraîchissent
+    # la tranche périmée en rotation (TTL 30j). 4 passes Sam+Dim couvrent tout l'univers.
     # ═══════════════════════════════════════════════════════════════════════════
-    - cron: '0 2 * * 1-5'
-    - cron: '0 3 * * 1-5'
+    - cron: '0 2 * * 6'    # Samedi 02:00 UTC
+    - cron: '0 12 * * 6'   # Samedi 12:00 UTC
+    - cron: '0 2 * * 0'    # Dimanche 02:00 UTC
+    - cron: '0 12 * * 0'   # Dimanche 12:00 UTC
 
 concurrency:
-  group: repo-writes-global
+  # groupe dédié (plus repo-writes-global partagé) → ne se fait plus annuler par les autres workflows
+  group: filter-stocks
   cancel-in-progress: false
 
 permissions:
@@ -91,6 +96,12 @@ jobs:
           DATA_DIR: data
           OUTPUT_DIR: data/filtered
           REGIONS: ${{ needs.gate.outputs.regions }}
+          # Run BORNÉ : ≤1500 nouveaux fetchs/passe → finit en ~3h (bien sous 6h) et écrit TOUJOURS
+          # le CSV (frais + reste depuis cache). Le reste de la tranche périmée est couvert par les
+          # passes suivantes du week-end (rotation). Sans ce cap (99999=illimité), le run dépassait
+          # 6h et se faisait tuer AVANT d'écrire le CSV → roic jamais mis à jour.
+          MAX_FUNDAMENTALS_FETCH: '1500'
+          CACHE_TTL_DAYS: '30'
         run: |
           echo "══════════════════════════════════════════════════════════════"
           echo "📊 Running stock-filter-by-volume.js"

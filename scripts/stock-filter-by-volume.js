@@ -62,7 +62,9 @@ if (INPUTS.length === 0) {
 // CONFIGURATION FONDAMENTAUX
 // ═══════════════════════════════════════════════════════════════════════════
 const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
+// TTL 30j par défaut : le ROIC/fondamentaux sont trimestriels → inutile de refetch chaque semaine.
+// Avec un run hebdo (week-end), seule ~1/4 de l'univers est périmée à chaque passe → charge bornée.
+const CACHE_TTL_MS = parseInt(process.env.CACHE_TTL_DAYS || '30', 10) * 24 * 60 * 60 * 1000;
 const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '800', 10);
 const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '99999', 10);
 const RATE_LIMIT_PAUSE_MS = parseInt(process.env.RATE_LIMIT_PAUSE || '30000', 10); // 30s (fenêtre TD ~1min) au lieu de 70s ; le retry recurse si encore 429
