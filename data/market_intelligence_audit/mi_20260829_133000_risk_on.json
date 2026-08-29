@@ -1,0 +1,357 @@
+{
+  "timestamp": "2026-08-29T13:30:00.925959",
+  "version": "1.0.0",
+  "model": "claude-opus-4-6",
+  "market_data_input": {
+    "date": "2026-08-29",
+    "brent_usd": 88.1,
+    "brent_usd_avg5d": 87.82912200000001,
+    "gold_usd": 4458.85616,
+    "silver_usd": 66.44141,
+    "vix": 22.0,
+    "fed_funds_rate": 3.63,
+    "fed_funds_rate_delta_6m": 0.0,
+    "cpi_yoy_pct": 2.4,
+    "cpi_index": 332.813,
+    "ig_spread_bps": 135.0,
+    "hy_spread_bps": 263.0,
+    "us_10y_yield": 4.67,
+    "us_2y_yield": 4.2,
+    "yield_curve_2s10s": 47.0,
+    "breakeven_5y": 2.3,
+    "sp500_level": 7711.76,
+    "sp500_change_1d_pct": 0.4872061159417689,
+    "hyg_change_1d_pct": 0.16329606833311827,
+    "lqd_change_1d_pct": 0.4059667673715942,
+    "trade_weighted_usd": 118.0628,
+    "eurusd": 1.15842,
+    "nasdaq_change_1d_pct": -0.64622225,
+    "xlu_perf_1d_pct": -1.08847,
+    "xle_perf_1d_pct": 0.5939941,
+    "cpi_core_mom_pct": 0.22,
+    "pce_yoy_pct": 3.7,
+    "vix_trend": "Stable",
+    "hy_spread_trend": "Stable",
+    "_stress_flags": [],
+    "gold_price": 4458.75729,
+    "gold_ath_120d": 4735.46064,
+    "gold_drawdown_from_ath_pct": 5.843219298724879,
+    "radar_regime": "risk-on",
+    "radar_confidence": 0.9,
+    "favored_sectors": "utilities, healthcare, real-estate",
+    "avoided_sectors": "",
+    "favored_regions": "singapore, value, japan, turkey",
+    "avoided_regions": "bitcoin, india, argent",
+    "key_trends": "Secteur leader: energy (+40.2% YTD) | Région leader: south-korea (+85.4% YTD) | 3 secteur(s) en refroidissement (3M ≤ -2.0%) | 52W leader: energy (+38.7% sur 12 mois) | 6M leader: information-technology (+32.5% sur 6 mois)",
+    "risks": "Secteurs en difficulté: communication-services, consumer-discretionary | Régions en difficulté: india, robotique & ia, bitcoin | 3 secteurs avec 6M négatif (momentum moyen-terme dégradé)",
+    "sector_momentum_summary": "healthcare(favored,b=0.48,d=-0.44%), utilities(favored,b=0.55,d=-0.43%), information-technology(neutral,b=1.46,d=-1.03%), materials(neutral,b=0.79,d=-0.09%), energy(neutral,b=0.46,d=0.63%), real-estate(favored,b=0.53,d=-0.4%), financials(neutral,b=0.88,d=0.35%), consumer-staples(neutral,b=0.2,d=1.08%), communication-services(neutral,b=0.86,d=1.42%), consumer-discretionary(neutral,b=1.16,d=1.15%), industrials(neutral,b=0.89,d=-0.93%)"
+  },
+  "ai_response": {
+    "regime": "risk_on",
+    "regime_confidence": 3,
+    "regime_rationale": "Croissance solide (S&P à 7711, energy +40% YTD, courbe 2s10s positive à +47bps) avec inflation maîtrisée (CPI 2.4%, breakeven 5Y 2.3%) et Fed en pause — conditions proches du goldilocks mais le PCE à 3.7% crée un décalage inquiétant avec le CPI, le Brent à $88 maintient une pression inflationniste latente, et le VIX à 22 signale une nervosité modérée qui empêche un risk-on plein.",
+    "adjustments": [
+      {
+        "type": "bond_floor_delta",
+        "action": "Augmenter significativement le floor obligataire — les 3 portefeuilles sont à 0% bonds, ce qui est dangereusement sous-diversifié",
+        "params": {
+          "delta_pct": 5
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 5,
+        "rationale": "0% bonds dans les 3 profils est une anomalie structurelle inacceptable: même en risk-on, Stable devrait avoir 30%+ et Modéré 15%+ pour absorber un choc."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Préférer TIPS et treasury intermédiaire, éviter HY et securitized",
+        "params": {
+          "action": "prefer_tips",
+          "max_dur": 6.0,
+          "fund_types": [
+            "High Yield Bond",
+            "Securitized Bond"
+          ]
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 4,
+        "rationale": "PCE à 3.7% vs CPI 2.4% signale une inflation sous-jacente persistante dans les services — les TIPS offrent une protection réelle que les nominaux ne captent pas, et le 10Y à 4.67% rend la duration intermédiaire attractive en carry."
+      },
+      {
+        "type": "bond_preference",
+        "action": "Avoid HY bonds malgré spreads serrés",
+        "params": {
+          "action": "avoid_fund_types",
+          "fund_types": [
+            "High Yield Bond"
+          ]
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "HY spreads à 263bps sont historiquement serrés — le ratio risque/rendement est asymétrique: peu de compression possible mais un écartement brutal en cas de choc, surtout avec VIX à 22 et Brent élevé."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer energy/oil — momentum fort + Brent élevé",
+        "params": {
+          "theme": "energy_oil",
+          "delta_pct": 3
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Energy leader YTD (+40.2%) et sur 52 semaines (+38.7%), Brent à $88 soutenu, XLE en hausse — le momentum est intact et le secteur sert de hedge inflation naturel contre le PCE élevé."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer healthcare — secteur défensif favorisé par le RADAR avec beta faible",
+        "params": {
+          "theme": "healthcare",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Healthcare favorisé par le RADAR (beta 0.48), offre une diversification défensive pertinente dans un contexte où le VIX à 22 et le divergence Nasdaq/S&P (-0.65% vs +0.49%) signalent une rotation hors growth."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Réduire légèrement semi/AI — rotation visible hors tech",
+        "params": {
+          "theme": "semi",
+          "delta_pct": -2
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré"
+        ],
+        "conviction": 3,
+        "rationale": "Nasdaq en baisse de -0.65% alors que le S&P monte de +0.49% — divergence classique de rotation sectorielle hors tech/semi, IT en refroidissement 3M, et les taux élevés (10Y 4.67%) pèsent sur les multiples de duration longue."
+      },
+      {
+        "type": "mandatory_hedge_delta",
+        "action": "Maintenir gold — drawdown modéré de 5.8% depuis ATH, hedge inflation PCE",
+        "params": {
+          "hedge": "gold",
+          "delta_pct": 1
+        },
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Gold à $4459 en drawdown de ~6% depuis ATH offre un point d'entrée raisonnable; le PCE à 3.7% et le dollar neutre (DTWEXBGS 118) soutiennent le métal comme hedge inflation et tail risk."
+      },
+      {
+        "type": "thematic_cap_delta",
+        "action": "Renforcer dividend_value — rotation vers value visible",
+        "params": {
+          "theme": "dividend_value",
+          "delta_pct": 2
+        },
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "conviction": 3,
+        "rationale": "Consumer staples (+1.08%) et financials (+0.35%) surperforment tech (-1.03%) aujourd'hui — la rotation value est cohérente avec des taux élevés et un PCE persistant qui favorise les cash flows proches."
+      }
+    ],
+    "bond_strategy": {
+      "regime_summary": "Privilégier TIPS et treasury intermédiaire (3-6y) pour capturer le carry du 10Y à 4.67% tout en se protégeant contre l'inflation PCE persistante à 3.7%; éviter le HY dont les spreads à 263bps n'offrent pas de marge de sécurité.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    },
+    "cash_allocation": {
+      "Agressif": 3,
+      "Modéré": 4,
+      "Stable": 5,
+      "rationale": "VIX à 22 et divergence Nasdaq/S&P justifient une poche cash modeste comme option d'achat sur un éventuel dip; pas de cash excessif car les T-bills à ~3.6% sont du cash productif déjà présent dans les bonds courts."
+    },
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0,
+      "rationale": "RADAR signale bitcoin en difficulté (région évitée) — réduire l'exposition crypto malgré le régime risk-on; le signal quantitatif négatif sur BTC combiné au VIX à 22 justifie la prudence."
+    },
+    "warnings": [
+      "ALERTE STRUCTURELLE: Les 3 portefeuilles sont à 0% bonds — exposition equity pure de 81-88% sans aucun amortisseur obligataire, vulnérabilité extrême à un choc de volatilité",
+      "Divergence CPI/PCE (2.4% vs 3.7%) inhabituellement large — si le PCE ne converge pas vers le bas, la Fed pourrait reprendre un biais hawkish malgré la pause actuelle",
+      "Brent à $88 avec energy +40% YTD: un choc géopolitique (Moyen-Orient, OPEC+) pourrait pousser le pétrole >$100 et basculer le régime vers stagflation",
+      "10Y à 4.67% avec Fed funds à 3.63% = term premium élevé (~100bps) — le marché price un risque fiscal ou d'offre de treasuries qui pourrait s'amplifier",
+      "Rotation tech→value en cours (Nasdaq -0.65% vs S&P +0.49%) — si elle s'accélère, les portefeuilles tech-heavy subiront un drawdown significatif",
+      "HY spreads à 263bps sont au 10e percentile historique — asymétrie négative extrême, tout choc les écarte violemment"
+    ],
+    "market_interpretation": {
+      "geopolitical_risk": "Risque modéré: Brent à $88 reflète des tensions d'offre persistantes (OPEC+ discipline) sans choc aigu, mais le niveau est suffisamment élevé pour alimenter l'inflation PCE via les services de transport.",
+      "fed_stance": "hawkish_hold",
+      "prob_hike_next_fomc_pct": 10,
+      "sentiment_estimate": "neutral",
+      "dollar_assessment": "neutral"
+    }
+  },
+  "adjustments_output": {
+    "thematic_cap_deltas": {
+      "energy_oil": {
+        "Agressif": 3,
+        "Modéré": 3
+      },
+      "healthcare": {
+        "Modéré": 2,
+        "Stable": 2
+      },
+      "semi": {
+        "Agressif": -2,
+        "Modéré": -2
+      },
+      "dividend_value": {
+        "Modéré": 2,
+        "Stable": 2
+      }
+    },
+    "hedge_deltas": {
+      "gold": {
+        "Agressif": 1,
+        "Modéré": 1,
+        "Stable": 1
+      }
+    },
+    "bond_preferences": [
+      {
+        "action": "prefer_tips",
+        "profiles": [
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": 6.0,
+        "fund_types": [
+          "High Yield Bond",
+          "Securitized Bond"
+        ],
+        "rule_id": "ai_risk_on"
+      },
+      {
+        "action": "avoid_fund_types",
+        "profiles": [
+          "Agressif",
+          "Modéré",
+          "Stable"
+        ],
+        "max_dur": null,
+        "fund_types": [
+          "High Yield Bond"
+        ],
+        "rule_id": "ai_risk_on"
+      },
+      {
+        "action": "prefer_treasury",
+        "profiles": [
+          "Stable"
+        ],
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Stable"
+        ],
+        "max_dur": 5.0,
+        "rule_id": "ai_bond_strategy"
+      },
+      {
+        "action": "shorten_duration",
+        "profiles": [
+          "Modéré"
+        ],
+        "max_dur": 7.0,
+        "rule_id": "ai_bond_strategy"
+      }
+    ],
+    "active_rules": [
+      "ai_risk_on"
+    ],
+    "bond_floor_deltas": {
+      "Agressif": 5,
+      "Modéré": 5,
+      "Stable": 5
+    },
+    "cash_tactical": {
+      "Agressif": 3,
+      "Modéré": 4,
+      "Stable": 5
+    },
+    "cash_tactical_rationale": "VIX à 22 et divergence Nasdaq/S&P justifient une poche cash modeste comme option d'achat sur un éventuel dip; pas de cash excessif car les T-bills à ~3.6% sont du cash productif déjà présent dans les bonds courts.",
+    "crypto_allocation": {
+      "Agressif": 5,
+      "Modéré": 2,
+      "Stable": 0
+    },
+    "ai_regime": "risk_on",
+    "ai_regime_confidence": 3,
+    "ai_warnings": [
+      "ALERTE STRUCTURELLE: Les 3 portefeuilles sont à 0% bonds — exposition equity pure de 81-88% sans aucun amortisseur obligataire, vulnérabilité extrême à un choc de volatilité",
+      "Divergence CPI/PCE (2.4% vs 3.7%) inhabituellement large — si le PCE ne converge pas vers le bas, la Fed pourrait reprendre un biais hawkish malgré la pause actuelle",
+      "Brent à $88 avec energy +40% YTD: un choc géopolitique (Moyen-Orient, OPEC+) pourrait pousser le pétrole >$100 et basculer le régime vers stagflation",
+      "10Y à 4.67% avec Fed funds à 3.63% = term premium élevé (~100bps) — le marché price un risque fiscal ou d'offre de treasuries qui pourrait s'amplifier",
+      "Rotation tech→value en cours (Nasdaq -0.65% vs S&P +0.49%) — si elle s'accélère, les portefeuilles tech-heavy subiront un drawdown significatif",
+      "HY spreads à 263bps sont au 10e percentile historique — asymétrie négative extrême, tout choc les écarte violemment"
+    ],
+    "ai_bond_strategy": {
+      "regime_summary": "Privilégier TIPS et treasury intermédiaire (3-6y) pour capturer le carry du 10Y à 4.67% tout en se protégeant contre l'inflation PCE persistante à 3.7%; éviter le HY dont les spreads à 263bps n'offrent pas de marge de sécurité.",
+      "prefer_tips": true,
+      "prefer_treasury": true,
+      "avoid_hy": true,
+      "avoid_securitized": false,
+      "avoid_em_bonds": false,
+      "max_duration_stable": 5.0,
+      "max_duration_moderate": 7.0
+    }
+  },
+  "regime": "risk_on",
+  "regime_rationale": "Croissance solide (S&P à 7711, energy +40% YTD, courbe 2s10s positive à +47bps) avec inflation maîtrisée (CPI 2.4%, breakeven 5Y 2.3%) et Fed en pause — conditions proches du goldilocks mais le PCE à 3.7% crée un décalage inquiétant avec le CPI, le Brent à $88 maintient une pression inflationniste latente, et le VIX à 22 signale une nervosité modérée qui empêche un risk-on plein.",
+  "market_interpretation": {
+    "geopolitical_risk": "Risque modéré: Brent à $88 reflète des tensions d'offre persistantes (OPEC+ discipline) sans choc aigu, mais le niveau est suffisamment élevé pour alimenter l'inflation PCE via les services de transport.",
+    "fed_stance": "hawkish_hold",
+    "prob_hike_next_fomc_pct": 10,
+    "sentiment_estimate": "neutral",
+    "dollar_assessment": "neutral"
+  },
+  "bond_strategy_full": {
+    "regime_summary": "Privilégier TIPS et treasury intermédiaire (3-6y) pour capturer le carry du 10Y à 4.67% tout en se protégeant contre l'inflation PCE persistante à 3.7%; éviter le HY dont les spreads à 263bps n'offrent pas de marge de sécurité.",
+    "prefer_tips": true,
+    "prefer_treasury": true,
+    "avoid_hy": true,
+    "avoid_securitized": false,
+    "avoid_em_bonds": false,
+    "max_duration_stable": 5.0,
+    "max_duration_moderate": 7.0
+  },
+  "warnings": [
+    "ALERTE STRUCTURELLE: Les 3 portefeuilles sont à 0% bonds — exposition equity pure de 81-88% sans aucun amortisseur obligataire, vulnérabilité extrême à un choc de volatilité",
+    "Divergence CPI/PCE (2.4% vs 3.7%) inhabituellement large — si le PCE ne converge pas vers le bas, la Fed pourrait reprendre un biais hawkish malgré la pause actuelle",
+    "Brent à $88 avec energy +40% YTD: un choc géopolitique (Moyen-Orient, OPEC+) pourrait pousser le pétrole >$100 et basculer le régime vers stagflation",
+    "10Y à 4.67% avec Fed funds à 3.63% = term premium élevé (~100bps) — le marché price un risque fiscal ou d'offre de treasuries qui pourrait s'amplifier",
+    "Rotation tech→value en cours (Nasdaq -0.65% vs S&P +0.49%) — si elle s'accélère, les portefeuilles tech-heavy subiront un drawdown significatif",
+    "HY spreads à 263bps sont au 10e percentile historique — asymétrie négative extrême, tout choc les écarte violemment"
+  ]
+}
