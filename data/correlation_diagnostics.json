@@ -1,11 +1,11 @@
 {
   "_meta": {
-    "generated": "2026-08-29T13:31:04",
-    "portfolio_generated": "2026-08-29T13:29:10.646707",
+    "generated": "2026-08-30T13:28:03",
+    "portfolio_generated": "2026-08-30T13:25:56.951108",
     "n_assets": 16,
     "n_with_returns": 7,
     "covariance_method": "structured",
-    "condition_number": 92.6,
+    "condition_number": 92.64,
     "pca_factors": 3
   },
   "profiles": {
@@ -23,7 +23,7 @@
         },
         {
           "t1": "VWCE.DE",
-          "t2": "G2X",
+          "t2": "AYEU",
           "corr": 0.6742,
           "w1": 50.0,
           "w2": 5.0,
@@ -39,7 +39,7 @@
         },
         {
           "t1": "VWCE.DE",
-          "t2": "AYEU",
+          "t2": "G2X",
           "corr": 0.6742,
           "w1": 50.0,
           "w2": 5.0,
@@ -55,7 +55,7 @@
         },
         {
           "t1": "IEMG",
-          "t2": "G2X",
+          "t2": "AYEU",
           "corr": 0.6742,
           "w1": 15.0,
           "w2": 5.0,
@@ -71,7 +71,7 @@
         },
         {
           "t1": "IEMG",
-          "t2": "AYEU",
+          "t2": "G2X",
           "corr": 0.6742,
           "w1": 15.0,
           "w2": 5.0,
@@ -86,7 +86,7 @@
           "combined_weight": 20.0
         },
         {
-          "t1": "G2X",
+          "t1": "AYEU",
           "t2": "F5ESG",
           "corr": 0.6742,
           "w1": 5.0,
@@ -96,8 +96,8 @@
       ],
       "least_correlated": [
         {
-          "t1": "AYEU",
-          "t2": "IBGS.AS",
+          "t1": "SCHO",
+          "t2": "SGLN.AS",
           "corr": 0.1349,
           "w1": 5.0,
           "w2": 5.0,
@@ -112,8 +112,8 @@
           "combined_weight": 10.0
         },
         {
-          "t1": "SCHO",
-          "t2": "R",
+          "t1": "R",
+          "t2": "SCHO",
           "corr": 0.0504,
           "w1": 5.0,
           "w2": 5.0,
@@ -140,7 +140,7 @@
     },
     "Mod\u00e9r\u00e9": {
       "n_assets": 9,
-      "weighted_avg_correlation": 0.1908,
+      "weighted_avg_correlation": 0.1896,
       "most_correlated": [
         {
           "t1": "VWCE.DE",
@@ -151,41 +151,17 @@
           "combined_weight": 55.0
         },
         {
-          "t1": "RNR",
-          "t2": "AXTA",
-          "corr": 0.4961,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "RNR",
-          "t2": "CLI",
-          "corr": 0.496,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
           "t1": "SPNT",
           "t2": "AXTA",
-          "corr": 0.496,
+          "corr": 0.5149,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
         },
         {
-          "t1": "SPNT",
-          "t2": "CLI",
-          "corr": 0.496,
-          "w1": 5.0,
-          "w2": 5.0,
-          "combined_weight": 10.0
-        },
-        {
-          "t1": "AXTA",
-          "t2": "CLI",
-          "corr": 0.496,
+          "t1": "RNR",
+          "t2": "AXTA",
+          "corr": 0.5106,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -193,7 +169,31 @@
         {
           "t1": "RNR",
           "t2": "SPNT",
-          "corr": 0.4494,
+          "corr": 0.5024,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "RNR",
+          "t2": "CLI",
+          "corr": 0.4475,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "SPNT",
+          "t2": "CLI",
+          "corr": 0.4333,
+          "w1": 5.0,
+          "w2": 5.0,
+          "combined_weight": 10.0
+        },
+        {
+          "t1": "AXTA",
+          "t2": "CLI",
+          "corr": 0.3533,
           "w1": 5.0,
           "w2": 5.0,
           "combined_weight": 10.0
@@ -651,9 +651,21 @@
       "fam2": null
     },
     {
+      "t1": "AXTA",
+      "t2": "R",
+      "corr_hybrid": 0.562,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
       "t1": "R",
       "t2": "SPNT",
-      "corr_hybrid": 0.5365,
+      "corr_hybrid": 0.525,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -663,21 +675,9 @@
       "fam2": null
     },
     {
-      "t1": "AXTA",
+      "t1": "R",
       "t2": "RNR",
-      "corr_hybrid": 0.4961,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "AXTA",
-      "t2": "CLI",
-      "corr_hybrid": 0.496,
+      "corr_hybrid": 0.5184,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -689,43 +689,7 @@
     {
       "t1": "AXTA",
       "t2": "SPNT",
-      "corr_hybrid": 0.496,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CLI",
-      "t2": "R",
-      "corr_hybrid": 0.496,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CLI",
-      "t2": "RNR",
-      "corr_hybrid": 0.496,
-      "corr_structured": null,
-      "cat1": "Act",
-      "cat2": "Act",
-      "exp1": null,
-      "exp2": null,
-      "fam1": null,
-      "fam2": null
-    },
-    {
-      "t1": "CLI",
-      "t2": "SPNT",
-      "corr_hybrid": 0.496,
+      "corr_hybrid": 0.5149,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -736,8 +700,8 @@
     },
     {
       "t1": "AXTA",
-      "t2": "R",
-      "corr_hybrid": 0.4959,
+      "t2": "RNR",
+      "corr_hybrid": 0.5106,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -749,7 +713,43 @@
     {
       "t1": "RNR",
       "t2": "SPNT",
-      "corr_hybrid": 0.4494,
+      "corr_hybrid": 0.5024,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "CLI",
+      "t2": "RNR",
+      "corr_hybrid": 0.4475,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "CLI",
+      "t2": "SPNT",
+      "corr_hybrid": 0.4333,
+      "corr_structured": null,
+      "cat1": "Act",
+      "cat2": "Act",
+      "exp1": null,
+      "exp2": null,
+      "fam1": null,
+      "fam2": null
+    },
+    {
+      "t1": "AXTA",
+      "t2": "CLI",
+      "corr_hybrid": 0.3533,
       "corr_structured": null,
       "cat1": "Act",
       "cat2": "Act",
@@ -923,18 +923,18 @@
         0.0504,
         1.0,
         0.2,
-        0.496,
+        0.3533,
         0.2,
         0.2,
         0.2,
         0.0504,
         0.0504,
         0.2,
-        0.4959,
-        0.4961,
+        0.562,
+        0.5106,
         0.0504,
         0.2,
-        0.496,
+        0.5149,
         0.2
       ],
       [
@@ -957,7 +957,7 @@
       ],
       [
         0.0504,
-        0.496,
+        0.3533,
         0.2,
         1.0,
         0.2,
@@ -966,11 +966,11 @@
         0.0504,
         0.0504,
         0.2,
-        0.496,
-        0.496,
+        0.2774,
+        0.4475,
         0.0504,
         0.2,
-        0.496,
+        0.4333,
         0.2
       ],
       [
@@ -1083,9 +1083,9 @@
       ],
       [
         0.0504,
-        0.4959,
+        0.562,
         0.2,
-        0.496,
+        0.2774,
         0.2,
         0.2,
         0.2,
@@ -1093,28 +1093,28 @@
         0.0504,
         0.2,
         1.0,
-        0.1871,
+        0.5184,
         0.0504,
         0.2,
-        0.5365,
+        0.525,
         0.2
       ],
       [
         0.0504,
-        0.4961,
+        0.5106,
         0.2,
-        0.496,
+        0.4475,
         0.2,
         0.2,
         0.2,
         0.0504,
         0.0504,
         0.2,
-        0.1871,
+        0.5184,
         1.0,
         0.0504,
         0.2,
-        0.4494,
+        0.5024,
         0.2
       ],
       [
@@ -1155,17 +1155,17 @@
       ],
       [
         0.0504,
-        0.496,
+        0.5149,
         0.2,
-        0.496,
+        0.4333,
         0.2,
         0.2,
         0.2,
         0.0504,
         0.0504,
         0.2,
-        0.5365,
-        0.4494,
+        0.525,
+        0.5024,
         0.0504,
         0.2,
         1.0,
