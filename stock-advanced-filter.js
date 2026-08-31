@@ -2566,10 +2566,14 @@ function computeDurability(stock) {
     const crit = [];
     const push = (group, label, val, note) => crit.push({ group, label, val, note: note || null });
 
-    // 1) RENTABILITÉ STRUCTURELLE
-    const cRoePos = band(roe, 0.01, -5), cRoic = band(roicAvg, growth ? 6 : 10, 0), cMargin = band(netMarg, growth ? 0.01 : 5, growth ? -10 : 0);
-    const gRent = cRoePos * 0.4 + cRoic * 0.35 + cMargin * 0.25;
-    push('Rentabilité', 'ROE positif', cRoePos); push('Rentabilité', 'ROIC ≥ coût du capital', cRoic); push('Rentabilité', 'Marge nette saine', cMargin);
+    // 1) RENTABILITÉ STRUCTURELLE — ROIC + marge d'abord (structurels), ROE ROBUSTE ensuite.
+    // Un ROE négatif dû à des capitaux propres négatifs (rachats massifs : MCD, AZO, LOW, HCA…) n'est
+    // PAS une perte : si ROIC & marge sont positifs, c'est un artefact de structure, pas un piège.
+    const realProfit = (roicAvg != null && roicAvg > 0) && (netMarg != null && netMarg > 0);
+    const cRoe = (roe != null && roe > 0) ? 1 : (realProfit ? 0.75 : (roe != null && roe < 0 ? 0 : 0.5));
+    const cRoic = band(roicAvg, growth ? 6 : 10, 0), cMargin = band(netMarg, growth ? 0.01 : 5, growth ? -10 : 0);
+    const gRent = cRoic * 0.45 + cMargin * 0.35 + cRoe * 0.20;
+    push('Rentabilité', 'ROIC ≥ coût du capital', cRoic); push('Rentabilité', 'Marge nette saine', cMargin); push('Rentabilité', 'ROE (structurel)', cRoe);
     // 2) STABILITÉ
     const roicCV = (roicAvg != null && Math.abs(roicAvg) > 0.5) ? Math.abs((roicStd ?? 0) / roicAvg) : null;
     const cStab = band(roicCV, 0.30, 0.60, false), cDD = band(dd == null ? null : Math.abs(dd), 35, 55, false);
@@ -2603,7 +2607,7 @@ function computeDurability(stock) {
     }
     // cohérence : le business fait-il de VRAIS profits (ce qui soutient le grade peer) ? Basé sur la
     // rentabilité absolue, PAS sur buffett_score (qui chute pour une valo chère → faux positif type Apple).
-    const cCoher = (roe != null && roe > 0 && roicAvg != null && roicAvg > 0) ? 1 : (roe != null && roe < 0 ? 0 : 0.5);
+    const cCoher = realProfit ? 1 : (((roicAvg != null && roicAvg < 0) || (netMarg != null && netMarg < 0)) ? 0 : 0.5);
     const gValo = cValo * 0.5 + cCoher * 0.5;
     push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Profits réels (grade non flatté)', cCoher);
 
