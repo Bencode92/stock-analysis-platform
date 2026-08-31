@@ -1550,6 +1550,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const bc = {}, bcHas = {}; (stock.buffett_criteria || []).forEach(c => { bcHas[c.name] = true; bc[c.name] = (c.passed ?? c.pass) === true; });
         const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
         const growth = (profile === 'TECH'); // V1 : TECH = profil croissance/IA
+        // GATE de couverture : sans les fondamentaux clés, on n'invente pas un score (→ "données insuffisantes")
+        const _core = [roe, roicAvg, netMarg].filter(v => v != null).length;
+        if (roicAvg == null || _core < 2) {
+            return { insufficient: true, score: null, grade: null, verdict: 'Données insuffisantes', profile, growth, mirage: false, crit: [] };
+        }
 
         // score 0..1 : plein si passe `full`, moitié si passe `part`, sinon 0 ; null → neutre 0.5 (pas de faux drapeau)
         const band = (v, full, part, hib = true) => {
@@ -1598,10 +1603,11 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             cValo = band(pe, 20, 30, false);
         }
-        const mirage = (['A', 'B'].includes(qGrade) && buffAbs != null && buffAbs < 40); // grade peer flatté par des pairs faibles
-        const cCoher = mirage ? 0 : 1;
+        // cohérence : le business fait-il de VRAIS profits (soutient le grade peer) ? Basé sur la rentabilité
+        // absolue, PAS sur buffett_score (qui chute pour une valo chère → faux positif type Apple).
+        const cCoher = (roe != null && roe > 0 && roicAvg != null && roicAvg > 0) ? 1 : (roe != null && roe < 0 ? 0 : 0.5);
         const gValo = cValo * 0.5 + cCoher * 0.5;
-        push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Grade cohérent en absolu', cCoher, mirage ? 'grade flatté' : null);
+        push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Profits réels (grade non flatté)', cCoher);
 
         // Poids des groupes (LOGIQUES, non backtestés) — bascule value ↔ croissance
         const W = growth
@@ -1612,6 +1618,8 @@ document.addEventListener('DOMContentLoaded', function() {
         score = Math.round(score);
         const grade = score >= 75 ? 'A' : score >= 55 ? 'B' : score >= 35 ? 'C' : 'D';
         const verdict = grade === 'A' ? 'Solide' : grade === 'B' ? 'Correct' : grade === 'C' ? 'À creuser' : 'Piège probable';
+        // mirage = grade peer flatteur (A/B) mais durabilité faible (C/D) — vraie contradiction affichée
+        const mirage = ['A', 'B'].includes(qGrade) && ['C', 'D'].includes(grade);
         return { score, grade, verdict, profile, growth, mirage, crit };
     }
 
@@ -2520,28 +2528,35 @@ document.addEventListener('DOMContentLoaded', function() {
                                     verdict: stock.durability_verdict || _dur.verdict, profile: stock.durability_profile || _dur.profile,
                                     mirage: stock.durability_mirage != null ? stock.durability_mirage : _dur.mirage };
                             }
+                            const _durOK = _dur && _dur.score != null;
                             const _durDot = v => v >= 1 ? '#4caf50' : v >= 0.5 ? '#ff9800' : '#f44336';
-                            const _durGroups = [...new Set(_dur.crit.map(c => c.group))];
+                            const _durGroups = _durOK ? [...new Set(_dur.crit.map(c => c.group))] : [];
                             const _durCritHTML = _durGroups.map(g => `
                                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:3px 0;">
                                     <span style="width:120px;min-width:120px;font-size:0.6rem;opacity:0.45;text-transform:uppercase;letter-spacing:0.05em;">${g}</span>
                                     ${_dur.crit.filter(c => c.group === g).map(c => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;opacity:0.85;">
                                         <span style="width:7px;height:7px;border-radius:50%;background:${_durDot(c.val)};flex-shrink:0;"></span>${c.label}${c.note ? ` <em style="opacity:0.45;font-style:normal;">· ${c.note}</em>` : ''}</span>`).join('')}
                                 </div>`).join('');
-                            const _durTint = _dur.grade === 'D' ? 'rgba(244,67,54,0.07)' : _dur.grade === 'C' ? 'rgba(255,152,0,0.05)' : 'rgba(76,175,80,0.04)';
-
-                            detailsRow.innerHTML = `
-                                <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
-                                    <div style="padding:12px 16px;background:${_durTint};border-bottom:1px solid var(--card-border);">
+                            const _durTint = !_durOK ? 'rgba(255,255,255,0.03)' : _dur.grade === 'D' ? 'rgba(244,67,54,0.07)' : _dur.grade === 'C' ? 'rgba(255,152,0,0.05)' : 'rgba(76,175,80,0.04)';
+                            const _durBanner = !_durOK
+                                ? `<div style="padding:10px 16px;background:${_durTint};border-bottom:1px solid var(--card-border);">
+                                        <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Durabilité <span style="opacity:0.7;">· anti-piège</span></span>
+                                        <span style="font-size:0.8rem;opacity:0.55;margin-left:12px;">Données insuffisantes — fondamentaux manquants (ROIC 3 ans / ROE / marge)</span>
+                                   </div>`
+                                : `<div style="padding:12px 16px;background:${_durTint};border-bottom:1px solid var(--card-border);">
                                         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:8px;">
                                             <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Durabilité <span style="opacity:0.7;">· anti-piège</span></span>
                                             <span style="font-weight:800;font-size:1.15rem;color:${_gradeColor(_dur.grade)};">${_dur.grade} <span style="font-size:0.8rem;opacity:0.8;">(${_dur.score})</span></span>
                                             <span style="font-weight:600;font-size:0.9rem;color:${_gradeColor(_dur.grade)};">${_dur.verdict}</span>
                                             <span style="font-size:0.65rem;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.06);opacity:0.7;">profil ${_dur.profile}${_dur.growth ? ' · croissance' : ''}</span>
-                                            ${_dur.mirage ? `<span style="font-size:0.72rem;color:#f44336;font-weight:600;">⚠ Grade peer flatté par des pairs faibles</span>` : ''}
+                                            ${_dur.mirage ? `<span style="font-size:0.72rem;color:#f44336;font-weight:600;">⚠ Grade peer flatté (bon vs pairs mais durabilité faible)</span>` : ''}
                                         </div>
                                         ${_durCritHTML}
-                                    </div>
+                                   </div>`;
+
+                            detailsRow.innerHTML = `
+                                <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
+                                    ${_durBanner}
                                     <div class="grid md:grid-cols-3 gap-6 p-4">
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>

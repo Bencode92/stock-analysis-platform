@@ -2553,6 +2553,12 @@ function computeDurability(stock) {
     (stock.buffett_criteria || []).forEach(c => { bcHas[c.name] = true; bc[c.name] = (c.passed ?? c.pass) === true; });
     const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
     const growth = (profile === 'TECH'); // V1 : TECH = profil croissance/IA
+    // GATE de couverture : sans les fondamentaux clés (surtout roic 3 ans), on n'invente pas un score
+    // trompeur à partir de valeurs neutres — on renvoie "données insuffisantes" (comme le gate du funnel).
+    const _core = [roe, roicAvg, netMarg].filter(v => v != null).length;
+    if (roicAvg == null || _core < 2) {
+        return { insufficient: true, score: null, grade: null, verdict: 'Données insuffisantes', profile, growth, mirage: false, crit: [] };
+    }
     const band = (v, full, part, hib = true) => {
         if (v == null) return 0.5;
         return hib ? (v >= full ? 1 : v >= part ? 0.5 : 0) : (v <= full ? 1 : v <= part ? 0.5 : 0);
@@ -2595,10 +2601,11 @@ function computeDurability(stock) {
     } else {
         cValo = band(pe, 20, 30, false);
     }
-    const mirage = (['A', 'B'].includes(qGrade) && buffAbs != null && buffAbs < 40);
-    const cCoher = mirage ? 0 : 1;
+    // cohérence : le business fait-il de VRAIS profits (ce qui soutient le grade peer) ? Basé sur la
+    // rentabilité absolue, PAS sur buffett_score (qui chute pour une valo chère → faux positif type Apple).
+    const cCoher = (roe != null && roe > 0 && roicAvg != null && roicAvg > 0) ? 1 : (roe != null && roe < 0 ? 0 : 0.5);
     const gValo = cValo * 0.5 + cCoher * 0.5;
-    push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Grade cohérent en absolu', cCoher, mirage ? 'grade flatté' : null);
+    push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Profits réels (grade non flatté)', cCoher);
 
     const W = growth
         ? { 'Rentabilité': 20, 'Stabilité': 20, 'Trajectoire': 35, 'Bilan': 10, 'Valo & honnêteté': 15 }
@@ -2608,6 +2615,8 @@ function computeDurability(stock) {
     score = Math.round(score);
     const grade = score >= 75 ? 'A' : score >= 55 ? 'B' : score >= 35 ? 'C' : 'D';
     const verdict = grade === 'A' ? 'Solide' : grade === 'B' ? 'Correct' : grade === 'C' ? 'À creuser' : 'Piège probable';
+    // mirage = le grade peer flatte (A/B) mais la durabilité est faible (C/D) — vraie contradiction affichée.
+    const mirage = ['A', 'B'].includes(qGrade) && ['C', 'D'].includes(grade);
     return { score, grade, verdict, profile, growth, mirage, crit };
 }
 
