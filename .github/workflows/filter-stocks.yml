@@ -15,6 +15,10 @@ on:
         type: choice
         options: [all, us, europe, asia]
         default: 'all'
+      skip_volume:
+        description: 'ROIC seul (sauter le scan volume ~6h). Décoche pour un scan volume complet.'
+        type: boolean
+        default: true
       debug:
         description: 'Enable debug mode'
         required: false
@@ -96,10 +100,13 @@ jobs:
           DATA_DIR: data
           OUTPUT_DIR: data/filtered
           REGIONS: ${{ needs.gate.outputs.regions }}
-          # Run BORNÉ : ≤1500 nouveaux fetchs/passe → finit en ~3h (bien sous 6h) et écrit TOUJOURS
-          # le CSV (frais + reste depuis cache). Le reste de la tranche périmée est couvert par les
-          # passes suivantes du week-end (rotation). Sans ce cap (99999=illimité), le run dépassait
-          # 6h et se faisait tuer AVANT d'écrire le CSV → roic jamais mis à jour.
+          # WEEK-END (schedule) → SKIP_VOLUME : on saute le scan volume (fetch de 11k cotations
+          # 1-par-1 = 6h, jamais fini) et on repart de l'univers déjà filtré pour n'enrichir que le
+          # ROIC. L'appartenance à l'univers est stable → le scan volume complet se lance à la main
+          # (workflow_dispatch, skip_volume décoché) quand il faut rafraîchir l'univers.
+          SKIP_VOLUME: ${{ (github.event_name == 'schedule' || inputs.skip_volume) && '1' || '0' }}
+          # Run BORNÉ : ≤1500 nouveaux fetchs fondamentaux/passe → finit en ~1-2h. Le reste de la
+          # tranche périmée (TTL 30j) est couvert par les passes suivantes du week-end (rotation).
           MAX_FUNDAMENTALS_FETCH: '1500'
           CACHE_TTL_DAYS: '30'
         run: |

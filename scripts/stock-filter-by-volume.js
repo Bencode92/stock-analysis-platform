@@ -67,6 +67,10 @@ const FUNDAMENTALS_CACHE_FILE = path.join(DATA_DIR, 'fundamentals_cache.json');
 const CACHE_TTL_MS = parseInt(process.env.CACHE_TTL_DAYS || '30', 10) * 24 * 60 * 60 * 1000;
 const FUNDAMENTALS_RATE_LIMIT_MS = parseInt(process.env.FUNDAMENTALS_RATE_LIMIT || '800', 10);
 const MAX_NEW_FETCHES_PER_RUN = parseInt(process.env.MAX_FUNDAMENTALS_FETCH || '99999', 10);
+// SKIP_VOLUME=1 : saute le scan volume (11k cotations 1-par-1 = 6h) et repart de l'univers DÉJÀ
+// filtré (data/filtered/*_filtered.csv) pour n'enrichir QUE les fondamentaux (ROIC). L'appartenance
+// à l'univers est stable → inutile de la recalculer chaque week-end ; c'est le ROIC qu'on veut frais.
+const SKIP_VOLUME = ['1', 'true', 'yes'].includes((process.env.SKIP_VOLUME || '').toLowerCase());
 const RATE_LIMIT_PAUSE_MS = parseInt(process.env.RATE_LIMIT_PAUSE || '30000', 10); // 30s (fenêtre TD ~1min) au lieu de 70s ; le retry recurse si encore 429
 
 // Seuils par région
@@ -1215,6 +1219,17 @@ async function checkVolume(r, region){
   const allRejected = [];
   const stats = { total: 0, passed: 0, failed: 0 };
 
+  if (SKIP_VOLUME) {
+    // Mode ROIC-only : on recharge l'univers déjà filtré, on saute tout le scan volume.
+    for (const {file, region} of INPUTS) {
+      const fp = path.join(OUT_DIR, file.replace('.csv', '_filtered.csv'));
+      let rows = [];
+      try { rows = await readCSV(fp); }
+      catch { console.log(`⚠️  ${fp} absent → région ${region} sautée`); }
+      console.log(`⏭️  ${region}: SKIP_VOLUME — ${rows.length} titres chargés depuis ${fp}`);
+      allOutputs.push({ title: region, file: fp, rows });
+    }
+  } else
   for (const {file, region} of INPUTS) {
     const src = path.join(DATA_DIR, file);
     const rows = await readCSV(src);
