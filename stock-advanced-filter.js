@@ -2530,6 +2530,87 @@ function calculateDrawdowns(prices) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ✅ v3.30: Export peer group details for transparency
+// === v9.0 : SCORE DURABILITÉ (anti-piège), ADAPTATIF PAR PROFIL ===
+// Complète Quality (peer-relatif) et Value (Buffett absolu) : note de SOLIDITÉ structurelle 0-100 +
+// grade, par critères, pour repérer les value traps (beau vs pairs mais fragile en absolu, type GoPro).
+// Poids LOGIQUES (non backtestés). Seuils ADAPTÉS au profil : un TECH/croissance n'est pas puni pour
+// valo/dette élevées (normales en invest) — son piège = croissance qui décélère + marge qui ne scale
+// pas + dette non couverte. Calculé dans le pipeline → écrit dans stocks_*.json (réutilisable portefeuille).
+function computeDurability(stock) {
+    const num = v => {
+        if (v == null || v === '' || v === '-') return null;
+        if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+        const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.').replace('%', '').replace('+', ''));
+        return Number.isFinite(n) ? n : null;
+    };
+    const roe = num(stock.roe), roicAvg = num(stock.roic_avg_3y), roicStd = num(stock.roic_std_3y);
+    const netMarg = num(stock.net_margin), revG = num(stock.revenue_growth_3y);
+    const de = num(stock.de_ratio), fcfy = num(stock.fcf_yield), pe = num(stock.pe_ratio);
+    const dd = num(stock.max_drawdown_3y), epsS = num(stock.eps_surprise_avg_2q);
+    const epsBeat = num(stock.eps_beat_streak) || 0, buffAbs = num(stock.buffett_score);
+    const qGrade = (stock.quality_grade || '').toUpperCase();
+    const bc = {}, bcHas = {};
+    (stock.buffett_criteria || []).forEach(c => { bcHas[c.name] = true; bc[c.name] = (c.passed ?? c.pass) === true; });
+    const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
+    const growth = (profile === 'TECH'); // V1 : TECH = profil croissance/IA
+    const band = (v, full, part, hib = true) => {
+        if (v == null) return 0.5;
+        return hib ? (v >= full ? 1 : v >= part ? 0.5 : 0) : (v <= full ? 1 : v <= part ? 0.5 : 0);
+    };
+    const crit = [];
+    const push = (group, label, val, note) => crit.push({ group, label, val, note: note || null });
+
+    // 1) RENTABILITÉ STRUCTURELLE
+    const cRoePos = band(roe, 0.01, -5), cRoic = band(roicAvg, growth ? 6 : 10, 0), cMargin = band(netMarg, growth ? 0.01 : 5, growth ? -10 : 0);
+    const gRent = cRoePos * 0.4 + cRoic * 0.35 + cMargin * 0.25;
+    push('Rentabilité', 'ROE positif', cRoePos); push('Rentabilité', 'ROIC ≥ coût du capital', cRoic); push('Rentabilité', 'Marge nette saine', cMargin);
+    // 2) STABILITÉ
+    const roicCV = (roicAvg != null && Math.abs(roicAvg) > 0.5) ? Math.abs((roicStd ?? 0) / roicAvg) : null;
+    const cStab = band(roicCV, 0.30, 0.60, false), cDD = band(dd == null ? null : Math.abs(dd), 35, 55, false);
+    const gStab = cStab * 0.6 + cDD * 0.4;
+    push('Stabilité', 'ROIC régulier', cStab); push('Stabilité', 'Drawdown contenu', cDD);
+    // 3) TRAJECTOIRE / CROISSANCE
+    const cMoat = bcHas.moat_expansion ? (bc.moat_expansion ? 1 : 0) : 0.5;
+    const cRev = band(revG, growth ? 10 : 2, growth ? 3 : -3);
+    const cEps = (epsS != null) ? band(epsS, 0.01, -5) : (epsBeat >= 2 ? 1 : 0.5);
+    const gTraj = cMoat * 0.4 + cRev * 0.35 + cEps * 0.25;
+    push('Trajectoire', 'Moat en expansion', cMoat); push('Trajectoire', growth ? 'Croissance CA soutenue' : 'CA non déclinant', cRev); push('Trajectoire', 'EPS tenus / beats', cEps);
+    // 4) BILAN — dette CONTEXTUELLE
+    let cLev, cCash;
+    if (growth) {
+        const covered = (fcfy != null && fcfy > 0) || bc.cash_generation;
+        cLev = (de == null) ? 0.5 : (de <= 2 ? 1 : covered ? 0.5 : 0);
+        cCash = covered ? 1 : (revG != null && revG > 10 ? 0.5 : 0);
+    } else {
+        cLev = band(de, 1, 2, false);
+        cCash = (bc.cash_generation || (fcfy != null && fcfy > 0)) ? 1 : 0;
+    }
+    const gBilan = cLev * 0.5 + cCash * 0.5;
+    push('Bilan', growth ? 'Dette couverte par le cash' : 'Levier maîtrisé', cLev, growth ? 'contextuel' : null); push('Bilan', 'Génère du cash', cCash);
+    // 5) VALO CONTEXTUELLE + COHÉRENCE peer↔absolu (anti-mirage)
+    let cValo;
+    if (growth) {
+        const peg = (pe != null && pe > 0 && revG != null && revG > 0) ? pe / revG : null;
+        cValo = band(peg, 1.5, 2.5, false);
+    } else {
+        cValo = band(pe, 20, 30, false);
+    }
+    const mirage = (['A', 'B'].includes(qGrade) && buffAbs != null && buffAbs < 40);
+    const cCoher = mirage ? 0 : 1;
+    const gValo = cValo * 0.5 + cCoher * 0.5;
+    push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Grade cohérent en absolu', cCoher, mirage ? 'grade flatté' : null);
+
+    const W = growth
+        ? { 'Rentabilité': 20, 'Stabilité': 20, 'Trajectoire': 35, 'Bilan': 10, 'Valo & honnêteté': 15 }
+        : { 'Rentabilité': 30, 'Stabilité': 25, 'Trajectoire': 20, 'Bilan': 15, 'Valo & honnêteté': 10 };
+    const G = { 'Rentabilité': gRent, 'Stabilité': gStab, 'Trajectoire': gTraj, 'Bilan': gBilan, 'Valo & honnêteté': gValo };
+    let score = 0; for (const k in W) score += W[k] * G[k];
+    score = Math.round(score);
+    const grade = score >= 75 ? 'A' : score >= 55 ? 'B' : score >= 35 ? 'C' : 'D';
+    const verdict = grade === 'A' ? 'Solide' : grade === 'B' ? 'Correct' : grade === 'C' ? 'À creuser' : 'Piège probable';
+    return { score, grade, verdict, profile, growth, mirage, crit };
+}
+
 function exportPeerGroups(allStocks) {
     const groups = new Map();
     
@@ -2972,7 +3053,22 @@ async function main() {
         const filled = expected.filter(m => Number.isFinite(s[m])).length;
         s.quality_coverage = Math.round((filled / expected.length) * 100);
     }
-    
+
+    // ✅ v9.0: Score Durabilité (anti-piège) — après computeQualityScores (quality_grade/profile prêts).
+    // On persiste les SCALAIRES (le breakdown des critères est recalculé côté liste.html, même logique).
+    let durD = 0;
+    for (const s of allForScoring) {
+        if (s.error) continue;
+        const d = computeDurability(s);
+        s.durability_score = d.score;
+        s.durability_grade = d.grade;
+        s.durability_verdict = d.verdict;
+        s.durability_profile = d.profile;
+        s.durability_mirage = d.mirage;
+        if (d.grade === 'D') durD++;
+    }
+    console.log(`🛡️ Durabilité calculée: ${allForScoring.filter(s => !s.error).length} titres (${durD} en grade D = piège probable)`);
+
     // ✅ v3.30: Export peer groups pour transparence du scoring
     const peerGroupsData = exportPeerGroups(allForScoring);
     const peerGroupsPath = path.join(OUT_DIR, 'peer_groups.json');

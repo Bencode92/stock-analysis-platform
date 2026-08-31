@@ -1519,6 +1519,12 @@ document.addEventListener('DOMContentLoaded', function() {
             net_margin: r.net_margin ?? null,
             revenue_growth_3y: r.revenue_growth_3y ?? null,
             eps_growth_5y: r.eps_growth_5y ?? null,
+            // v9.0: scalaires Durabilité écrits par le pipeline (source de vérité) ; breakdown recalculé localement
+            durability_score: r.durability_score ?? null,
+            durability_grade: r.durability_grade ?? null,
+            durability_verdict: r.durability_verdict ?? null,
+            durability_profile: r.durability_profile ?? null,
+            durability_mirage: r.durability_mirage ?? null,
         };
     }
     
@@ -1538,10 +1544,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const roe = num(stock.roe), roicAvg = num(stock.roic_avg_3y), roicStd = num(stock.roic_std_3y);
         const netMarg = num(stock.net_margin), revG = num(stock.revenue_growth_3y);
         const de = num(stock.de_ratio), fcfy = num(stock.fcf_yield), pe = num(stock.pe_ratio);
-        const dd = Math.abs(num(stock.max_drawdown_3y) ?? 0), epsS = num(stock.eps_surprise_avg_2q);
+        const dd = num(stock.max_drawdown_3y), epsS = num(stock.eps_surprise_avg_2q);
         const epsBeat = num(stock.eps_beat_streak) || 0, buffAbs = num(stock.buffett_score);
         const qGrade = (stock.quality_grade || '').toUpperCase();
-        const bc = {}; (stock.buffett_criteria || []).forEach(c => { bc[c.name] = !!c.pass; });
+        const bc = {}, bcHas = {}; (stock.buffett_criteria || []).forEach(c => { bcHas[c.name] = true; bc[c.name] = (c.passed ?? c.pass) === true; });
         const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
         const growth = (profile === 'TECH'); // V1 : TECH = profil croissance/IA
 
@@ -1560,12 +1566,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 2) STABILITÉ
         const roicCV = (roicAvg != null && Math.abs(roicAvg) > 0.5) ? Math.abs((roicStd ?? 0) / roicAvg) : null;
-        const cStab = band(roicCV, 0.30, 0.60, false), cDD = band(dd, 35, 55, false);
+        const cStab = band(roicCV, 0.30, 0.60, false), cDD = band(dd == null ? null : Math.abs(dd), 35, 55, false);
         const gStab = cStab * 0.6 + cDD * 0.4;
         push('Stabilité', 'ROIC régulier', cStab); push('Stabilité', 'Drawdown contenu', cDD);
 
         // 3) TRAJECTOIRE / CROISSANCE (lourd en profil croissance)
-        const cMoat = bc.moat_expansion === true ? 1 : bc.moat_expansion === false ? 0 : 0.5;
+        const cMoat = bcHas.moat_expansion ? (bc.moat_expansion ? 1 : 0) : 0.5;
         const cRev = band(revG, growth ? 10 : 2, growth ? 3 : -3);
         const cEps = (epsS != null) ? band(epsS, 0.01, -5) : (epsBeat >= 2 ? 1 : 0.5);
         const gTraj = cMoat * 0.4 + cRev * 0.35 + cEps * 0.25;
@@ -2505,8 +2511,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _de = stock.de_ratio != null ? parseFloat(stock.de_ratio).toFixed(2) : null;
                             const _fcfy = stock.fcf_yield != null ? parseFloat(stock.fcf_yield).toFixed(1) : null;
 
-                            // v9.0: Score Durabilité (anti-piège), adaptatif par profil
-                            const _dur = computeDurability(stock);
+                            // v9.0: Score Durabilité (anti-piège), adaptatif par profil.
+                            // Scalaires du pipeline (stocks_*.json) = source de vérité ; le breakdown des
+                            // critères est recalculé localement (même logique) pour l'affichage des pastilles.
+                            let _dur = computeDurability(stock);
+                            if (stock.durability_score != null) {
+                                _dur = { ..._dur, score: stock.durability_score, grade: stock.durability_grade,
+                                    verdict: stock.durability_verdict || _dur.verdict, profile: stock.durability_profile || _dur.profile,
+                                    mirage: stock.durability_mirage != null ? stock.durability_mirage : _dur.mirage };
+                            }
                             const _durDot = v => v >= 1 ? '#4caf50' : v >= 0.5 ? '#ff9800' : '#f44336';
                             const _durGroups = [...new Set(_dur.crit.map(c => c.group))];
                             const _durCritHTML = _durGroups.map(g => `
@@ -2555,7 +2568,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             ${_subBar('Momentum', _qs.momentum)}
                                             <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Value Grade ${_vScore != null ? `<span style="color:${_gradeColor(_vGrade)};font-weight:700;">${_vGrade} (${_vScore})</span>` : ''}</div>
                                             <div class="space-y-1 text-sm">
-                                                ${_bc.length > 0 ? _bc.map(c => `<div>${_checkIcon(c.pass)} <span class="opacity-70">${_criteriaNames[c.name] || c.name}</span></div>`).join('') : '<div class="opacity-40">Données non disponibles</div>'}
+                                                ${_bc.length > 0 ? _bc.map(c => `<div>${_checkIcon(c.passed ?? c.pass)} <span class="opacity-70">${_criteriaNames[c.name] || c.name}</span></div>`).join('') : '<div class="opacity-40">Données non disponibles</div>'}
                                             </div>
                                         </div>
                                         <div>
