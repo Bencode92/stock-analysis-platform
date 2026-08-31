@@ -1513,9 +1513,102 @@ document.addEventListener('DOMContentLoaded', function() {
             eps_surprise_avg_2q: r.eps_surprise_avg_2q ?? null,
             eps_beat_streak: r.eps_beat_streak ?? null,
             industry: r.industry || null,
+            // v9.0: champs pour le Score Durabilité (déjà dans stocks_*.json)
+            roic_avg_3y: r.roic_avg_3y ?? null,
+            roic_std_3y: r.roic_std_3y ?? null,
+            net_margin: r.net_margin ?? null,
+            revenue_growth_3y: r.revenue_growth_3y ?? null,
+            eps_growth_5y: r.eps_growth_5y ?? null,
         };
     }
     
+    // === v9.0 : SCORE DURABILITÉ (anti-piège), ADAPTATIF PAR PROFIL ===
+    // Complète Quality (peer-relatif) et Value (Buffett absolu) par une note de SOLIDITÉ structurelle :
+    // le business tient-il, ou est-ce un piège (beau vs pairs mais fragile en absolu, type GoPro) ?
+    // Barème par CRITÈRES, poids LOGIQUES (non backtestés). Les seuils s'ADAPTENT au profil : un
+    // TECH/croissance n'est pas puni pour valo/dette élevées (normales en phase d'invest) — son piège
+    // à lui = croissance qui décélère + marge qui ne scale pas + dette non couverte par le cash.
+    function computeDurability(stock) {
+        const num = v => {
+            if (v == null || v === '' || v === '-') return null;
+            if (typeof v === 'number') return isFinite(v) ? v : null;
+            const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.').replace('%', '').replace('+', ''));
+            return isFinite(n) ? n : null;
+        };
+        const roe = num(stock.roe), roicAvg = num(stock.roic_avg_3y), roicStd = num(stock.roic_std_3y);
+        const netMarg = num(stock.net_margin), revG = num(stock.revenue_growth_3y);
+        const de = num(stock.de_ratio), fcfy = num(stock.fcf_yield), pe = num(stock.pe_ratio);
+        const dd = Math.abs(num(stock.max_drawdown_3y) ?? 0), epsS = num(stock.eps_surprise_avg_2q);
+        const epsBeat = num(stock.eps_beat_streak) || 0, buffAbs = num(stock.buffett_score);
+        const qGrade = (stock.quality_grade || '').toUpperCase();
+        const bc = {}; (stock.buffett_criteria || []).forEach(c => { bc[c.name] = !!c.pass; });
+        const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
+        const growth = (profile === 'TECH'); // V1 : TECH = profil croissance/IA
+
+        // score 0..1 : plein si passe `full`, moitié si passe `part`, sinon 0 ; null → neutre 0.5 (pas de faux drapeau)
+        const band = (v, full, part, hib = true) => {
+            if (v == null) return 0.5;
+            return hib ? (v >= full ? 1 : v >= part ? 0.5 : 0) : (v <= full ? 1 : v <= part ? 0.5 : 0);
+        };
+        const crit = [];
+        const push = (group, label, val, note) => crit.push({ group, label, val, note: note || null });
+
+        // 1) RENTABILITÉ STRUCTURELLE
+        const cRoePos = band(roe, 0.01, -5), cRoic = band(roicAvg, growth ? 6 : 10, 0), cMargin = band(netMarg, growth ? 0.01 : 5, growth ? -10 : 0);
+        const gRent = cRoePos * 0.4 + cRoic * 0.35 + cMargin * 0.25;
+        push('Rentabilité', 'ROE positif', cRoePos); push('Rentabilité', 'ROIC ≥ coût du capital', cRoic); push('Rentabilité', 'Marge nette saine', cMargin);
+
+        // 2) STABILITÉ
+        const roicCV = (roicAvg != null && Math.abs(roicAvg) > 0.5) ? Math.abs((roicStd ?? 0) / roicAvg) : null;
+        const cStab = band(roicCV, 0.30, 0.60, false), cDD = band(dd, 35, 55, false);
+        const gStab = cStab * 0.6 + cDD * 0.4;
+        push('Stabilité', 'ROIC régulier', cStab); push('Stabilité', 'Drawdown contenu', cDD);
+
+        // 3) TRAJECTOIRE / CROISSANCE (lourd en profil croissance)
+        const cMoat = bc.moat_expansion === true ? 1 : bc.moat_expansion === false ? 0 : 0.5;
+        const cRev = band(revG, growth ? 10 : 2, growth ? 3 : -3);
+        const cEps = (epsS != null) ? band(epsS, 0.01, -5) : (epsBeat >= 2 ? 1 : 0.5);
+        const gTraj = cMoat * 0.4 + cRev * 0.35 + cEps * 0.25;
+        push('Trajectoire', 'Moat en expansion', cMoat); push('Trajectoire', growth ? 'Croissance CA soutenue' : 'CA non déclinant', cRev); push('Trajectoire', 'EPS tenus / beats', cEps);
+
+        // 4) BILAN — dette CONTEXTUELLE
+        let cLev, cCash;
+        if (growth) {
+            const covered = (fcfy != null && fcfy > 0) || bc.cash_generation;
+            cLev = (de == null) ? 0.5 : (de <= 2 ? 1 : covered ? 0.5 : 0);              // dette tolérée sauf élevée ET non couverte
+            cCash = covered ? 1 : (revG != null && revG > 10 ? 0.5 : 0);                 // FCF- toléré si la croissance suit
+        } else {
+            cLev = band(de, 1, 2, false);
+            cCash = (bc.cash_generation || (fcfy != null && fcfy > 0)) ? 1 : 0;
+        }
+        const gBilan = cLev * 0.5 + cCash * 0.5;
+        push('Bilan', growth ? 'Dette couverte par le cash' : 'Levier maîtrisé', cLev, growth ? 'contextuel' : null); push('Bilan', 'Génère du cash', cCash);
+
+        // 5) VALO CONTEXTUELLE + COHÉRENCE peer↔absolu (anti-mirage)
+        let cValo;
+        if (growth) {
+            const peg = (pe != null && pe > 0 && revG != null && revG > 0) ? pe / revG : null; // survalo seulement si la croissance ne suit pas
+            cValo = band(peg, 1.5, 2.5, false);
+        } else {
+            cValo = band(pe, 20, 30, false);
+        }
+        const mirage = (['A', 'B'].includes(qGrade) && buffAbs != null && buffAbs < 40); // grade peer flatté par des pairs faibles
+        const cCoher = mirage ? 0 : 1;
+        const gValo = cValo * 0.5 + cCoher * 0.5;
+        push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Grade cohérent en absolu', cCoher, mirage ? 'grade flatté' : null);
+
+        // Poids des groupes (LOGIQUES, non backtestés) — bascule value ↔ croissance
+        const W = growth
+            ? { 'Rentabilité': 20, 'Stabilité': 20, 'Trajectoire': 35, 'Bilan': 10, 'Valo & honnêteté': 15 }
+            : { 'Rentabilité': 30, 'Stabilité': 25, 'Trajectoire': 20, 'Bilan': 15, 'Valo & honnêteté': 10 };
+        const G = { 'Rentabilité': gRent, 'Stabilité': gStab, 'Trajectoire': gTraj, 'Bilan': gBilan, 'Valo & honnêteté': gValo };
+        let score = 0; for (const k in W) score += W[k] * G[k];
+        score = Math.round(score);
+        const grade = score >= 75 ? 'A' : score >= 55 ? 'B' : score >= 35 ? 'C' : 'D';
+        const verdict = grade === 'A' ? 'Solide' : grade === 'B' ? 'Correct' : grade === 'C' ? 'À creuser' : 'Piège probable';
+        return { score, grade, verdict, profile, growth, mirage, crit };
+    }
+
     function dedupByNameTicker(arr) {
         const seen = new Set();
         return arr.filter(s => {
@@ -2412,8 +2505,30 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _de = stock.de_ratio != null ? parseFloat(stock.de_ratio).toFixed(2) : null;
                             const _fcfy = stock.fcf_yield != null ? parseFloat(stock.fcf_yield).toFixed(1) : null;
 
+                            // v9.0: Score Durabilité (anti-piège), adaptatif par profil
+                            const _dur = computeDurability(stock);
+                            const _durDot = v => v >= 1 ? '#4caf50' : v >= 0.5 ? '#ff9800' : '#f44336';
+                            const _durGroups = [...new Set(_dur.crit.map(c => c.group))];
+                            const _durCritHTML = _durGroups.map(g => `
+                                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:3px 0;">
+                                    <span style="width:120px;min-width:120px;font-size:0.6rem;opacity:0.45;text-transform:uppercase;letter-spacing:0.05em;">${g}</span>
+                                    ${_dur.crit.filter(c => c.group === g).map(c => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;opacity:0.85;">
+                                        <span style="width:7px;height:7px;border-radius:50%;background:${_durDot(c.val)};flex-shrink:0;"></span>${c.label}${c.note ? ` <em style="opacity:0.45;font-style:normal;">· ${c.note}</em>` : ''}</span>`).join('')}
+                                </div>`).join('');
+                            const _durTint = _dur.grade === 'D' ? 'rgba(244,67,54,0.07)' : _dur.grade === 'C' ? 'rgba(255,152,0,0.05)' : 'rgba(76,175,80,0.04)';
+
                             detailsRow.innerHTML = `
                                 <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
+                                    <div style="padding:12px 16px;background:${_durTint};border-bottom:1px solid var(--card-border);">
+                                        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:8px;">
+                                            <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Durabilité <span style="opacity:0.7;">· anti-piège</span></span>
+                                            <span style="font-weight:800;font-size:1.15rem;color:${_gradeColor(_dur.grade)};">${_dur.grade} <span style="font-size:0.8rem;opacity:0.8;">(${_dur.score})</span></span>
+                                            <span style="font-weight:600;font-size:0.9rem;color:${_gradeColor(_dur.grade)};">${_dur.verdict}</span>
+                                            <span style="font-size:0.65rem;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.06);opacity:0.7;">profil ${_dur.profile}${_dur.growth ? ' · croissance' : ''}</span>
+                                            ${_dur.mirage ? `<span style="font-size:0.72rem;color:#f44336;font-weight:600;">⚠ Grade peer flatté par des pairs faibles</span>` : ''}
+                                        </div>
+                                        ${_durCritHTML}
+                                    </div>
                                     <div class="grid md:grid-cols-3 gap-6 p-4">
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
