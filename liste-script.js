@@ -964,6 +964,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Données complètes non filtrées pour la section A→Z
     let stocksDataUnfiltered = null;
+
+    // v9.2 — lien FUNNEL : ticker → conviction (chaîne de valeur) + maillon, depuis framework.json.
+    let FUNNEL_MAP = {};
+    fetch('data/framework.json').then(r => r.ok ? r.json() : null).then(fw => {
+        if (!fw || !fw.themes) return;
+        for (const t of fw.themes) for (const m of (t.maillons || [])) for (const c of (m.companies || [])) {
+            if (c.ticker) FUNNEL_MAP[String(c.ticker)] = { conv: t.label || t.key, maillon: m.label || '' };
+        }
+    }).catch(() => {});
     
     // Données des deux marchés pour le classement global
     let globalData = {
@@ -1656,6 +1665,27 @@ document.addEventListener('DOMContentLoaded', function() {
         // mirage = grade peer flatteur (A/B) mais durabilité faible (C/D) — vraie contradiction affichée
         const mirage = ['A', 'B'].includes(qGrade) && ['C', 'D'].includes(grade);
         return { score, grade, verdict, profile: secLabel, growth, mirage, crit };
+    }
+
+    // v9.2 — B : « pourquoi ce grade, vs qui ». Rang de l'action dans SON INDUSTRIE FINE (vrais concurrents,
+    // ex. Aerospace & Defense — pas le secteur large) + lien vers la conviction du funnel.
+    function computeIndustryContext(stock) {
+        const src = (typeof window !== 'undefined' && window.stocksDataUnfiltered) || stocksData;
+        const all = (src && src.indices) ? Object.values(src.indices).flat() : [];
+        const ind = stock.industry;
+        if (!ind || all.length < 2) return null;
+        const peers = all.filter(s => s.industry === ind);
+        if (peers.length < 3) return null;
+        const numf = v => { if (v == null) return null; const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.').replace('%', '').replace('+', '')); return Number.isFinite(n) ? n : null; };
+        const dims = [['roic_avg_3y', 'ROIC'], ['net_margin', 'marge'], ['revenue_growth_3y', 'croissance'], ['roe', 'ROE']];
+        const ranks = [];
+        for (const [k, l] of dims) {
+            const mine = numf(stock[k]); if (mine == null) continue;
+            const vals = peers.map(s => numf(s[k])).filter(v => v != null);
+            if (vals.length < 3) continue;
+            ranks.push({ l, rank: vals.filter(v => v > mine).length + 1, of: vals.length, top: vals.filter(v => v > mine).length === 0 });
+        }
+        return ranks.length ? { industry: ind, n: peers.length, ranks } : null;
     }
 
     function dedupByNameTicker(arr) {
@@ -2589,9 +2619,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ${_durCritHTML}
                                    </div>`;
 
+                            // v9.2 — B : « vs son industrie » (rang chez ses vrais concurrents) + lien funnel
+                            const _ic = computeIndustryContext(stock);
+                            const _fun = FUNNEL_MAP[String(stock.ticker)];
+                            const _icHTML = (_ic || _fun) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
+                                <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Vs son industrie</span>
+                                ${_ic ? `<span style="font-weight:600;">${_ic.industry}</span><span style="opacity:0.4;">· ${_ic.n} concurrents</span>${_ic.ranks.map(r => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${r.top ? 'rgba(76,175,80,0.16)' : 'rgba(255,255,255,0.06)'};color:${r.top ? '#4caf50' : 'inherit'};opacity:${r.top ? 1 : 0.82};font-weight:${r.top ? 700 : 400};">#${r.rank}/${r.of} ${r.l}${r.top ? ' · personne de mieux' : ''}</span>`).join('')}` : ''}
+                                ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
+                            </div>` : '';
+
                             detailsRow.innerHTML = `
                                 <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
                                     ${_durBanner}
+                                    ${_icHTML}
                                     <div class="grid md:grid-cols-3 gap-6 p-4">
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
