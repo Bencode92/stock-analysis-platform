@@ -1519,6 +1519,11 @@ document.addEventListener('DOMContentLoaded', function() {
             net_margin: r.net_margin ?? null,
             revenue_growth_3y: r.revenue_growth_3y ?? null,
             eps_growth_5y: r.eps_growth_5y ?? null,
+            // v9.2: champs pour le barème sectoriel (banque=ROE, utility/REIT=dividende)
+            roe_avg_3y: r.roe_avg_3y ?? null,
+            roe_std_3y: r.roe_std_3y ?? null,
+            payout_ratio_ttm: r.payout_ratio_ttm ?? null,
+            sector_api: r.sector_api ?? null,
             // v9.0: scalaires Durabilité écrits par le pipeline (source de vérité) ; breakdown recalculé localement
             durability_score: r.durability_score ?? null,
             durability_grade: r.durability_grade ?? null,
@@ -1548,12 +1553,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const epsBeat = num(stock.eps_beat_streak) || 0, buffAbs = num(stock.buffett_score);
         const qGrade = (stock.quality_grade || '').toUpperCase();
         const bc = {}, bcHas = {}; (stock.buffett_criteria || []).forEach(c => { bcHas[c.name] = true; bc[c.name] = (c.passed ?? c.pass) === true; });
+        const roeAvg = num(stock.roe_avg_3y), roeStd = num(stock.roe_std_3y);
+        const payout = num(stock.payout_ratio_ttm), divY = num(stock.dividend_yield_ttm ?? stock.dividend_yield);
         const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
-        const growth = (profile === 'TECH'); // V1 : TECH = profil croissance/IA
-        // GATE de couverture : sans les fondamentaux clés, on n'invente pas un score (→ "données insuffisantes")
+        // SECTEUR (via industrie) : FIN et YIELD ont leurs propres indicateurs (banque=ROE pas ROIC,
+        // utility/REIT=levier structurel + dividende). Sinon barème croissance / value.
+        const ind = ((stock.industry || '') + ' ' + (stock.sector_api || '')).toLowerCase();
+        const isFin = /bank|insurance|reinsurance|capital market|financial serv|asset manage|credit serv/.test(ind);
+        const isYield = /reit|utilit/.test(ind);
+        const growth = !isFin && !isYield && profile === 'TECH';
+        const secLabel = isFin ? 'finance' : isYield ? 'utility/REIT' : growth ? 'croissance' : 'value';
+        const gateVal = isFin ? roe : roicAvg; // banque : gate sur ROE (pas de ROIC)
         const _core = [roe, roicAvg, netMarg].filter(v => v != null).length;
-        if (roicAvg == null || _core < 2) {
-            return { insufficient: true, score: null, grade: null, verdict: 'Données insuffisantes', profile, growth, mirage: false, crit: [] };
+        if (gateVal == null || _core < 2) {
+            return { insufficient: true, score: null, grade: null, verdict: 'Données insuffisantes', profile: secLabel, growth, mirage: false, crit: [] };
         }
 
         // score 0..1 : plein si passe `full`, moitié si passe `part`, sinon 0 ; null → neutre 0.5 (pas de faux drapeau)
@@ -1564,39 +1577,59 @@ document.addEventListener('DOMContentLoaded', function() {
         const crit = [];
         const push = (group, label, val, note) => crit.push({ group, label, val, note: note || null });
 
-        // 1) RENTABILITÉ STRUCTURELLE — ROIC + marge d'abord (structurels), ROE ROBUSTE ensuite.
-        // ROE négatif dû à des capitaux propres négatifs (rachats : MCD, AZO, LOW…) = artefact, pas perte.
-        const realProfit = (roicAvg != null && roicAvg > 0) && (netMarg != null && netMarg > 0);
-        const cRoe = (roe != null && roe > 0) ? 1 : (realProfit ? 0.75 : (roe != null && roe < 0 ? 0 : 0.5));
-        const cRoic = band(roicAvg, growth ? 6 : 10, 0), cMargin = band(netMarg, growth ? 0.01 : 5, growth ? -10 : 0);
-        const gRent = cRoic * 0.45 + cMargin * 0.35 + cRoe * 0.20;
-        push('Rentabilité', 'ROIC ≥ coût du capital', cRoic); push('Rentabilité', 'Marge nette saine', cMargin); push('Rentabilité', 'ROE (structurel)', cRoe);
+        // 1) RENTABILITÉ — métriques ADAPTÉES au secteur.
+        const realProfit = isFin
+            ? (roe != null && roe > 0 && netMarg != null && netMarg > 0)
+            : ((roicAvg != null && roicAvg > 0) && (netMarg != null && netMarg > 0));
+        let gRent;
+        if (isFin) {
+            const cRoe = band(roe, 10, 0), cMargin = band(netMarg, 15, 5);
+            const cRoeStab = (roeAvg != null && Math.abs(roeAvg) > 0.5) ? band(Math.abs((roeStd ?? 0) / roeAvg), 0.30, 0.60, false) : 0.5;
+            gRent = cRoe * 0.5 + cMargin * 0.3 + cRoeStab * 0.2;
+            push('Rentabilité', 'ROE ≥ 10%', cRoe); push('Rentabilité', 'Marge nette élevée', cMargin); push('Rentabilité', 'ROE régulier', cRoeStab);
+        } else {
+            const cRoic = band(roicAvg, isYield ? 3 : growth ? 6 : 10, 0);
+            const cMargin = band(netMarg, growth ? 0.01 : 5, growth ? -10 : 0);
+            const cRoe = (roe != null && roe > 0) ? 1 : (realProfit ? 0.75 : (roe != null && roe < 0 ? 0 : 0.5));
+            gRent = cRoic * 0.45 + cMargin * 0.35 + cRoe * 0.20;
+            push('Rentabilité', isYield ? 'ROIC ≥ 3% (régulé)' : 'ROIC ≥ coût du capital', cRoic); push('Rentabilité', 'Marge nette saine', cMargin); push('Rentabilité', 'ROE (structurel)', cRoe);
+        }
 
-        // 2) STABILITÉ
-        const roicCV = (roicAvg != null && Math.abs(roicAvg) > 0.5) ? Math.abs((roicStd ?? 0) / roicAvg) : null;
-        const cStab = band(roicCV, 0.30, 0.60, false), cDD = band(dd == null ? null : Math.abs(dd), 35, 55, false);
+        // 2) STABILITÉ — banque : régularité du ROE ; sinon du ROIC. Utility : drawdown attendu plus faible.
+        const stabBase = isFin
+            ? ((roeAvg != null && Math.abs(roeAvg) > 0.5) ? Math.abs((roeStd ?? 0) / roeAvg) : null)
+            : ((roicAvg != null && Math.abs(roicAvg) > 0.5) ? Math.abs((roicStd ?? 0) / roicAvg) : null);
+        const cStab = band(stabBase, 0.30, 0.60, false);
+        const cDD = band(dd == null ? null : Math.abs(dd), isYield ? 25 : 35, isYield ? 45 : 55, false);
         const gStab = cStab * 0.6 + cDD * 0.4;
-        push('Stabilité', 'ROIC régulier', cStab); push('Stabilité', 'Drawdown contenu', cDD);
+        push('Stabilité', isFin ? 'ROE régulier' : 'ROIC régulier', cStab); push('Stabilité', 'Drawdown contenu', cDD);
 
         // 3) TRAJECTOIRE / CROISSANCE (lourd en profil croissance)
         const cMoat = bcHas.moat_expansion ? (bc.moat_expansion ? 1 : 0) : 0.5;
-        const cRev = band(revG, growth ? 10 : 2, growth ? 3 : -3);
+        const cRev = band(revG, growth ? 10 : isYield ? 1 : 2, growth ? 3 : isYield ? -2 : -3);
         const cEps = (epsS != null) ? band(epsS, 0.01, -5) : (epsBeat >= 2 ? 1 : 0.5);
         const gTraj = cMoat * 0.4 + cRev * 0.35 + cEps * 0.25;
         push('Trajectoire', 'Moat en expansion', cMoat); push('Trajectoire', growth ? 'Croissance CA soutenue' : 'CA non déclinant', cRev); push('Trajectoire', 'EPS tenus / beats', cEps);
 
-        // 4) BILAN — dette CONTEXTUELLE
+        // 4) BILAN — CONTEXTUEL par secteur
         let cLev, cCash;
-        if (growth) {
+        if (isFin || isYield) {
+            // finance & utility/REIT : levier STRUCTUREL (normal) → NON pénalisé ; on regarde le DIVIDENDE.
+            cLev = 1;
+            cCash = isFin
+                ? ((payout == null) ? 0.75 : band(payout, 60, 90, false))
+                : ((divY != null && divY > 0) ? 1 : 0.5);
+        } else if (growth) {
             const covered = (fcfy != null && fcfy > 0) || bc.cash_generation;
-            cLev = (de == null) ? 0.5 : (de <= 2 ? 1 : covered ? 0.5 : 0);              // dette tolérée sauf élevée ET non couverte
-            cCash = covered ? 1 : (revG != null && revG > 10 ? 0.5 : 0);                 // FCF- toléré si la croissance suit
+            cLev = (de == null) ? 0.5 : (de <= 2 ? 1 : covered ? 0.5 : 0);
+            cCash = covered ? 1 : (revG != null && revG > 10 ? 0.5 : 0);
         } else {
             cLev = band(de, 1, 2, false);
             cCash = (bc.cash_generation || (fcfy != null && fcfy > 0)) ? 1 : 0;
         }
         const gBilan = cLev * 0.5 + cCash * 0.5;
-        push('Bilan', growth ? 'Dette couverte par le cash' : 'Levier maîtrisé', cLev, growth ? 'contextuel' : null); push('Bilan', 'Génère du cash', cCash);
+        push('Bilan', (isFin || isYield) ? 'Levier structurel (OK)' : growth ? 'Dette couverte par le cash' : 'Levier maîtrisé', cLev, (isFin || isYield) ? 'sectoriel' : growth ? 'contextuel' : null);
+        push('Bilan', (isFin || isYield) ? 'Dividende soutenable' : 'Génère du cash', cCash);
 
         // 5) VALO CONTEXTUELLE + COHÉRENCE peer↔absolu (anti-mirage)
         let cValo;
@@ -1604,11 +1637,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const peg = (pe != null && pe > 0 && revG != null && revG > 0) ? pe / revG : null; // survalo seulement si la croissance ne suit pas
             cValo = band(peg, 1.5, 2.5, false);
         } else {
-            cValo = band(pe, 20, 30, false);
+            cValo = band(pe, isFin ? 15 : 20, isFin ? 22 : 30, false);
         }
-        // cohérence : le business fait-il de VRAIS profits (soutient le grade peer) ? Basé sur la rentabilité
-        // absolue, PAS sur buffett_score (qui chute pour une valo chère → faux positif type Apple).
-        const cCoher = realProfit ? 1 : (((roicAvg != null && roicAvg < 0) || (netMarg != null && netMarg < 0)) ? 0 : 0.5);
+        // cohérence : le business fait-il de VRAIS profits (soutient le grade peer) ? Rentabilité absolue.
+        const cCoher = realProfit ? 1 : (((roicAvg != null && roicAvg < 0) || (netMarg != null && netMarg < 0) || (isFin && roe != null && roe < 0)) ? 0 : 0.5);
         const gValo = cValo * 0.5 + cCoher * 0.5;
         push('Valo & honnêteté', growth ? 'Valo justifiée par la croissance' : 'Valo raisonnable', cValo, growth ? 'PEG' : null); push('Valo & honnêteté', 'Profits réels (grade non flatté)', cCoher);
 
@@ -1623,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const verdict = grade === 'A' ? 'Solide' : grade === 'B' ? 'Correct' : grade === 'C' ? 'À creuser' : 'Piège probable';
         // mirage = grade peer flatteur (A/B) mais durabilité faible (C/D) — vraie contradiction affichée
         const mirage = ['A', 'B'].includes(qGrade) && ['C', 'D'].includes(grade);
-        return { score, grade, verdict, profile, growth, mirage, crit };
+        return { score, grade, verdict, profile: secLabel, growth, mirage, crit };
     }
 
     function dedupByNameTicker(arr) {
