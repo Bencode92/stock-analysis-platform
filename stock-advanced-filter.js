@@ -2624,6 +2624,59 @@ function computeDurability(stock) {
     return { score, grade, verdict, profile, growth, mirage, crit };
 }
 
+// === v9.1 : COHÉRENCE PAR ENTITÉ ===
+// Une société doit être jugée pour ce qu'elle EST, pas pour la cotation qu'on regarde. Les lignes
+// secondaires (Apple sur Xetra, Arista en Asie…) récupèrent des fondamentaux FAUX/incomplets. On
+// regroupe par name_api (clé d'entité), on élit la ligne PRIMAIRE (couverture qualité max, puis
+// liquidité/volume), et on propage ses fondamentaux BUSINESS aux secondaires, puis on recalcule la
+// durabilité. Prix/perf/market_cap/quality-peer restent PAR COTATION (légitimement relatifs).
+// Chaque run ne corrige QUE les marchés qu'il écrit (byRegion) → aucune écriture cross-workflow.
+async function reconcileEntities(byRegion) {
+    const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const FUND = ['roe', 'roe_avg_3y', 'roe_std_3y', 'roic', 'roic_avg_3y', 'roic_std_3y', 'net_margin',
+        'revenue_growth_3y', 'de_ratio', 'fcf_yield', 'eps_growth_5y', 'buffett_score', 'buffett_grade',
+        'buffett_criteria', 'quality_profile'];
+    const written = new Set(Object.keys(byRegion).filter(r => byRegion[r] && byRegion[r].length));
+    // pool de référence = les marchés PAS traités par ce run, lus sur disque (lecture seule)
+    const pool = [];
+    for (const [tag, file] of [['US', 'stocks_us.json'], ['EUROPE', 'stocks_europe.json'], ['ASIA', 'stocks_asia.json']]) {
+        if (written.has(tag)) continue;
+        try { const j = JSON.parse(await fs.readFile(path.join(OUT_DIR, file), 'utf-8')); (j.stocks || j).forEach(s => pool.push(s)); } catch {}
+    }
+    const fresh = [...(byRegion.US || []), ...(byRegion.EUROPE || []), ...(byRegion.ASIA || [])];
+    const byEnt = new Map();
+    for (const s of [...fresh, ...pool]) { const k = norm(s.name_api || s.name); if (!k) continue; if (!byEnt.has(k)) byEnt.set(k, []); byEnt.get(k).push(s); }
+    // ligne PRIMAIRE = la plus LIQUIDE (volume) — seul signal robuste du listing de référence ;
+    // market_cap (cross-devise) et couverture se font piéger. Tiebreaks : cap puis couverture.
+    const better = (a, b) => {
+        const va = Number(a.volume) || 0, vb = Number(b.volume) || 0; if (va !== vb) return va > vb;
+        const ca = Number(a.market_cap) || 0, cb = Number(b.market_cap) || 0; if (ca !== cb) return ca > cb;
+        return (Number(a.quality_coverage) || 0) > (Number(b.quality_coverage) || 0);
+    };
+    let fixed = 0;
+    for (const s of fresh) {
+        const k = norm(s.name_api || s.name); if (!k) continue;
+        const group = byEnt.get(k); if (!group || group.length < 2) continue;
+        const primary = group.reduce((a, b) => better(b, a) ? b : a);
+        if (primary === s || primary.roic_avg_3y == null) continue;
+        // garde anti-collision de nom : même industrie que la primaire
+        if (s.industry && primary.industry && s.industry !== primary.industry) continue;
+        // garde de CONFIANCE : la primaire doit dominer nettement en liquidité (≥3×), sinon on s'abstient
+        // (on ne sait pas laquelle est la vraie → on ne touche à rien).
+        if (!((Number(primary.volume) || 0) >= 3 * (Number(s.volume) || 0) + 1)) continue;
+        let changed = false;
+        for (const f of FUND) { if (primary[f] !== undefined && JSON.stringify(primary[f]) !== JSON.stringify(s[f])) { s[f] = primary[f]; changed = true; } }
+        if (changed) {
+            s.fundamentals_from = `${primary.ticker}@${primary.data_exchange || primary.exchange || ''}`;
+            const d = computeDurability(s);
+            s.durability_score = d.score; s.durability_grade = d.grade; s.durability_verdict = d.verdict;
+            s.durability_profile = d.profile; s.durability_mirage = d.mirage;
+            fixed++;
+        }
+    }
+    console.log(`🔗 Cohérence par entité: ${fixed} cotations secondaires alignées sur leur ligne primaire`);
+}
+
 function exportPeerGroups(allStocks) {
     const groups = new Map();
     
@@ -3081,6 +3134,9 @@ async function main() {
         if (d.grade === 'D') durD++;
     }
     console.log(`🛡️ Durabilité calculée: ${allForScoring.filter(s => !s.error).length} titres (${durD} en grade D = piège probable)`);
+
+    // ✅ v9.1: cohérence par entité — aligner les cotations secondaires sur leur ligne primaire
+    await reconcileEntities(byRegion);
 
     // ✅ v3.30: Export peer groups pour transparence du scoring
     const peerGroupsData = exportPeerGroups(allForScoring);
