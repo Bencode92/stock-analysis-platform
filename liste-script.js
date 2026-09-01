@@ -973,6 +973,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (c.ticker) FUNNEL_MAP[String(c.ticker)] = { conv: t.label || t.key, maillon: m.label || '' };
         }
     }).catch(() => {});
+
+    // v9.2 — index inverse ETF : action → liste des ETF qui la détiennent (contexte/crowding, PAS un score).
+    let ETF_MAP = {};
+    fetch('data/etf_holdings.json').then(r => r.ok ? r.json() : null).then(d => {
+        const etfs = (d && d.etfs) || {};
+        for (const [esym, e] of Object.entries(etfs)) for (const h of (e.holdings || [])) {
+            if (!h.symbol) continue;
+            (ETF_MAP[String(h.symbol)] = ETF_MAP[String(h.symbol)] || []).push({ etf: esym, w: h.weight });
+        }
+        for (const k in ETF_MAP) ETF_MAP[k].sort((a, b) => (b.w || 0) - (a.w || 0));
+    }).catch(() => {});
     
     // Données des deux marchés pour le classement global
     let globalData = {
@@ -2628,10 +2639,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
                             </div>` : '';
 
+                            // v9.2 — C : dans combien d'ETF / lesquels (contexte crowding, jamais un signal de qualité)
+                            const _etf = ETF_MAP[String(stock.ticker)] || [];
+                            const _etfHTML = _etf.length ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
+                                <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Dans les ETF</span>
+                                <span style="opacity:0.75;">détenue par <b>${_etf.length}</b> ETF de la liste</span>
+                                ${_etf.slice(0, 12).map(e => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);">${e.etf}${e.w != null ? ` <span style="opacity:0.5;">${(e.w <= 1 ? e.w * 100 : e.w).toFixed(1)}%</span>` : ''}</span>`).join('')}
+                                <span style="opacity:0.35;font-size:0.62rem;">crowding · contexte, pas un signal de qualité</span>
+                            </div>` : '';
+
                             detailsRow.innerHTML = `
                                 <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
                                     ${_durBanner}
                                     ${_icHTML}
+                                    ${_etfHTML}
                                     <div class="grid md:grid-cols-3 gap-6 p-4">
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Informations</div>
