@@ -2626,6 +2626,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <span style="font-weight:600;font-size:0.9rem;color:${_gradeColor(_dur.grade)};">${_dur.verdict}</span>
                                             <span style="font-size:0.65rem;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.06);opacity:0.7;">profil ${_dur.profile}${_dur.growth ? ' · croissance' : ''}</span>
                                             ${_dur.mirage ? `<span style="font-size:0.72rem;color:#f44336;font-weight:600;">⚠ Grade peer flatté (bon vs pairs mais durabilité faible)</span>` : ''}
+                                            ${_dur.profile === 'finance' ? `<span style="font-size:0.68rem;color:#e0a13c;">⚠ angle mort : risque crédit / capital non vu</span>` : _dur.profile === 'utility/REIT' ? `<span style="font-size:0.68rem;color:#e0a13c;">⚠ angle mort : risque taux / régulation non vu</span>` : ''}
                                         </div>
                                         ${_durCritHTML}
                                    </div>`;
