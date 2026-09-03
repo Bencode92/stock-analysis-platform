@@ -636,12 +636,21 @@ function computeOneYearRatios(bsCurrent, bsPrevious, incomeStatement) {
     net_margin = Math.round((net_income / revenue) * 10000) / 100;
   }
 
+  // ✅ v9.3: LEVIER RÉEL (surtout banques) = actifs / fonds propres. 10× sain, >15× risqué, >20× dangereux.
+  // C'est LE signal de risque bancaire (2008, SVB) que le D/E ne capte pas.
+  const assets = bsCurrent.total_assets ?? null;
+  let assets_to_equity = null;
+  if (equity != null && equity > 0 && assets != null) {
+    assets_to_equity = Math.round((assets / equity) * 100) / 100;
+  }
+
   return {
     fiscal_date: bsCurrent.fiscal_date || incomeStatement?.fiscal_date || null,
     roe, de_ratio, roic, net_margin,
     net_income, revenue, operating_income: opIncome,
     nopat, tax_rate: Math.round(taxRate * 10000) / 100,
     total_debt: debt, total_equity: equity, avg_equity: avgEquity,
+    total_assets: assets, assets_to_equity,
     invested_capital: icCurrent, avg_invested_capital: avgIC,
     cash_and_st_investments: bsCurrent.cash_and_st_investments ?? 0,
   };
@@ -728,6 +737,8 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
     tax_rate: latest.tax_rate,
     total_debt: latest.total_debt,
     total_equity: latest.total_equity,
+    total_assets: latest.total_assets ?? null,
+    assets_to_equity: latest.assets_to_equity ?? null,   // ✅ v9.3: levier réel (banques)
     avg_equity: latest.avg_equity,
     invested_capital: latest.invested_capital,
     avg_invested_capital: latest.avg_invested_capital,
@@ -891,6 +902,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         stock.roic_std_3y = cached.roic_std_3y ?? null;
         stock.net_margin = cached.net_margin ?? null;
         stock.revenue_growth_3y = cached.revenue_growth_3y ?? null;
+        stock.assets_to_equity = cached.assets_to_equity ?? null;   // ✅ v9.3: levier réel
         fromCache.push(ticker);
         continue;
       }
@@ -942,6 +954,7 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.roic_std_3y = fundamentals.roic_std_3y ?? null;
       stock.net_margin = fundamentals.net_margin ?? null;
       stock.revenue_growth_3y = fundamentals.revenue_growth_3y ?? null;
+      stock.assets_to_equity = fundamentals.assets_to_equity ?? null;   // ✅ v9.3: levier réel
 
       if (fundamentals.roe !== null || fundamentals.de_ratio !== null || fundamentals.roic !== null) {
         const yrs = fundamentals.years_available || 1;
@@ -1037,11 +1050,11 @@ const HEADER = [
   'Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché',
   'roe','de_ratio','roic',
   'roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y',
-  'net_margin','revenue_growth_3y'
+  'net_margin','revenue_growth_3y','assets_to_equity'
 ];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
-const FLOAT_COLS = new Set(['roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','net_margin','revenue_growth_3y']);
+const FLOAT_COLS = new Set(['roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','net_margin','revenue_growth_3y','assets_to_equity']);
 
 const csvLine = obj => HEADER.map(h => {
   const val = obj[h];

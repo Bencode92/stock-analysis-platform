@@ -1544,6 +1544,7 @@ document.addEventListener('DOMContentLoaded', function() {
             roe_std_3y: r.roe_std_3y ?? null,
             payout_ratio_ttm: r.payout_ratio_ttm ?? null,
             sector_api: r.sector_api ?? null,
+            assets_to_equity: r.assets_to_equity ?? null, // v9.3: levier réel (banques)
             // v9.0: scalaires Durabilité écrits par le pipeline (source de vérité) ; breakdown recalculé localement
             durability_score: r.durability_score ?? null,
             durability_grade: r.durability_grade ?? null,

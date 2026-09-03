@@ -20,7 +20,7 @@
     const qGrade = (stock.quality_grade || '').toUpperCase();
     const bc = {}, bcHas = {};
     (stock.buffett_criteria || []).forEach(c => { bcHas[c.name] = true; bc[c.name] = (c.passed ?? c.pass) === true; });
-    const roeAvg = num(stock.roe_avg_3y), roeStd = num(stock.roe_std_3y);
+    const roeAvg = num(stock.roe_avg_3y), roeStd = num(stock.roe_std_3y), a2e = num(stock.assets_to_equity);
     const payout = num(stock.payout_ratio_ttm), divY = num(stock.dividend_yield_ttm ?? stock.dividend_yield);
     const profile = (stock.quality_profile || 'DEFAULT').toUpperCase();
     // SECTEUR : les profils data ne distinguent que DEFAULT/TECH → on lit l'INDUSTRIE pour FIN et YIELD.
@@ -80,8 +80,10 @@
     // 4) BILAN — CONTEXTUEL par secteur
     let cLev, cCash;
     if (isFin || isYield) {
-        // finance & utility/REIT : levier STRUCTUREL (normal) → NON pénalisé ; on regarde le DIVIDENDE.
-        cLev = 1;
+        // FIN : le VRAI risque bancaire = le LEVIER (actifs/fonds propres), pas le D/E. ≤10× solide,
+        // ≤15× ok, >15× risqué (SVB/2008). Null (pas encore fetché) → neutre, aucun faux drapeau.
+        // Utility/REIT : levier structurel normal → non pénalisé. Les deux : couverture = dividende.
+        cLev = isFin ? (a2e == null ? 1 : band(a2e, 10, 15, false)) : 1;
         cCash = isFin
             ? ((payout == null) ? 0.75 : band(payout, 60, 90, false))   // banque : payout bas = soutenable
             : ((divY != null && divY > 0) ? 1 : 0.5);                    // utility/REIT : verse un dividende régulier
@@ -93,8 +95,9 @@
         cLev = band(de, 1, 2, false);
         cCash = (bc.cash_generation || (fcfy != null && fcfy > 0)) ? 1 : 0;
     }
-    const gBilan = cLev * 0.5 + cCash * 0.5;
-    push('Bilan', (isFin || isYield) ? 'Levier structurel (OK)' : growth ? 'Dette couverte par le cash' : 'Levier maîtrisé', cLev, (isFin || isYield) ? 'sectoriel' : growth ? 'contextuel' : null);
+    // banque : le levier DOMINE le bilan (c'est le risque qui compte le plus)
+    const gBilan = isFin ? (cLev * 0.7 + cCash * 0.3) : (cLev * 0.5 + cCash * 0.5);
+    push('Bilan', isFin ? 'Levier réel (actifs / fonds propres)' : isYield ? 'Levier structurel (OK)' : growth ? 'Dette couverte par le cash' : 'Levier maîtrisé', cLev, isFin ? (a2e != null ? a2e + '×' : 'levier non vu') : isYield ? 'sectoriel' : growth ? 'contextuel' : null);
     push('Bilan', (isFin || isYield) ? 'Dividende soutenable' : 'Génère du cash', cCash);
     // 5) VALO CONTEXTUELLE + COHÉRENCE peer↔absolu (anti-mirage)
     let cValo;
@@ -112,7 +115,10 @@
 
     const W = growth
         ? { 'Rentabilité': 20, 'Stabilité': 20, 'Trajectoire': 35, 'Bilan': 10, 'Valo & honnêteté': 15 }
-        : { 'Rentabilité': 30, 'Stabilité': 25, 'Trajectoire': 20, 'Bilan': 15, 'Valo & honnêteté': 10 };
+        : isFin
+            // banque : le LEVIER (dans Bilan) est LE risque → poids lourd, pour qu'un levier dangereux flippe le grade
+            ? { 'Rentabilité': 25, 'Stabilité': 20, 'Trajectoire': 10, 'Bilan': 35, 'Valo & honnêteté': 10 }
+            : { 'Rentabilité': 30, 'Stabilité': 25, 'Trajectoire': 20, 'Bilan': 15, 'Valo & honnêteté': 10 };
     const G = { 'Rentabilité': gRent, 'Stabilité': gStab, 'Trajectoire': gTraj, 'Bilan': gBilan, 'Valo & honnêteté': gValo };
     let score = 0; for (const k in W) score += W[k] * G[k];
     score = Math.round(score);

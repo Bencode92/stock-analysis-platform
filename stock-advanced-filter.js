@@ -847,7 +847,8 @@ async function loadStockCSV(filepath) {
             roic_avg_3y: parseNumberLoose(row['roic_avg_3y']) ?? null,
             roic_std_3y: parseNumberLoose(row['roic_std_3y']) ?? null,
             net_margin: parseNumberLoose(row['net_margin']) ?? null,
-            revenue_growth_3y: parseNumberLoose(row['revenue_growth_3y']) ?? null
+            revenue_growth_3y: parseNumberLoose(row['revenue_growth_3y']) ?? null,
+            assets_to_equity: parseNumberLoose(row['assets_to_equity']) ?? null
             });
         }).filter(s => s.symbol);
     } catch (error) {
@@ -2211,6 +2212,7 @@ async function enrichStock(stock) {
     roic_std_3y: stock.roic_std_3y,
     net_margin: stock.net_margin,
     revenue_growth_3y: stock.revenue_growth_3y,
+    assets_to_equity: stock.assets_to_equity ?? null,   // v9.3: levier réel (banques)
     buffett_score,
     buffett_grade,
     buffett_criteria: buffett.criteria || [],
