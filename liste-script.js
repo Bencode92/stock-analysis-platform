@@ -985,11 +985,11 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const k in ETF_MAP) ETF_MAP[k].sort((a, b) => (b.w || 0) - (a.w || 0));
     }).catch(() => {});
 
-    // v9.2 — clic sur un concurrent (Top 3) → l'ouvrir dans un NOUVEL ONGLET (recherche par son nom).
-    window.openStockTab = function (ticker) {
-        const s = window._stockMap && window._stockMap[ticker];
-        const q = s ? (s.name || ticker) : ticker;
-        window.open('liste.html?q=' + encodeURIComponent(q), '_blank');
+    // v9.2 — clic sur un concurrent (Top 3) → l'ouvrir dans un NOUVEL ONGLET, par NOM (pas par ticker :
+    // les tickers numériques asiatiques se répètent — 3661 = SG Micro ET une autre société → collision).
+    window.openStockTab = function (encodedName) {
+        const q = decodeURIComponent(encodedName);
+        if (q) window.open('liste.html?q=' + encodeURIComponent(q), '_blank');
     };
     // si l'onglet est ouvert via ?q=... : attendre le chargement de la liste, puis lancer la recherche.
     (function () {
@@ -2619,13 +2619,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _phrase = durabilityPhrase(_dur, _ic, stock);
                             // médiane du secteur à afficher à côté de chaque fondamental
                             const _med = (k, u) => (_ic && _ic.medians && _ic.medians[k] != null) ? ` <span style="opacity:0.4;font-size:0.85em;" title="médiane de l'industrie">· secteur ${(+_ic.medians[k]).toFixed(k === 'de_ratio' || k === 'beta' ? 2 : 1)}${u || ''}</span>` : '';
+                            // nom court (pour afficher les concurrents lisiblement, pas un ticker numérique cryptique)
+                            const _short = s => { s = String(s || '').replace(/\s+(SE|S\.?A\.?|N\.?V\.?|PLC|AG|Inc\.?|Corp\.?|Co\.?|Ltd\.?|Holdings?|Group|International|Company|Class [A-Z].*)$/gi, '').replace(/[,]+$/, '').trim(); return s.length > 18 ? s.slice(0, 17) + '…' : s; };
                             const _phraseHTML = _phrase ? `<div style="padding:9px 16px;font-size:0.82rem;line-height:1.55;opacity:0.9;border-bottom:1px solid var(--card-border);">${_phrase}</div>` : '';
                             const _lead = (_ic && _ic.leaders && _ic.leaders.length) ? _ic.leaders : null;
                             const _icHTML = (_ic || _fun) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
                                 <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Vs son industrie</span>
                                 ${_ic ? `<span style="font-weight:600;">${_ic.industry}</span><span style="opacity:0.4;">· ${_ic.n} concurrents</span>${_ic.ranks.map(r => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${r.top ? 'rgba(76,175,80,0.16)' : 'rgba(255,255,255,0.06)'};color:${r.top ? '#4caf50' : 'inherit'};opacity:${r.top ? 1 : 0.82};font-weight:${r.top ? 700 : 400};">#${r.rank}/${r.of} ${r.l}${r.top ? ' · personne de mieux' : ''}</span>`).join('')}` : ''}
                                 ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
-                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">🏆 Top 3 du secteur</span>${_lead.map(l => `<span ${l.me ? '' : `onclick="openStockTab('${String(l.t).replace(/'/g, '')}')" role="button"`} style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};${l.me ? '' : 'cursor:pointer;'}" title="${l.me ? 'vous' : 'Ouvrir ' + String(l.n || l.t).replace(/"/g, '')}">${l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
+                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">🏆 Top 3 du secteur</span>${_lead.map(l => `<span ${l.me ? '' : `onclick="openStockTab('${encodeURIComponent(l.n || l.t)}')" role="button"`} style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};${l.me ? '' : 'cursor:pointer;'}" title="${l.me ? 'vous' : 'Ouvrir ' + String(l.n || l.t).replace(/"/g, '')}">${_short(l.n) || l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
                             </div>` : '';
 
                             // v9.2 — C : dans combien d'ETF / lesquels (contexte crowding, jamais un signal de qualité)
