@@ -1406,6 +1406,11 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Helpers de normalisation pour les données régionales
      */
+    // répare les noms mal encodés (mojibake UTF-8 lu en Latin-1 : « MOÃ«T » → « MOËT »)
+    function _fixMojibake(s) {
+        if (!s || !/[ÃÂ]/.test(s)) return s;
+        try { const f = decodeURIComponent(escape(s)); return f.indexOf('�') >= 0 ? s : f; } catch (e) { return s; }
+    }
     function pctToStr(x) {
         if (x == null || x === '-') return '-';
         const n = typeof x === 'string' ? parseFloat(x.replace(',', '.')) : Number(x);
@@ -1461,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function normalizeRecord(r, fallbackRegion) {
         // On accepte {price,change_percent,perf_ytd,open,high,low,volume} ou {last,change,ytd,...}
-        const name = r.name || r.ticker || '—';
+        const name = _fixMojibake(r.name || r.ticker || '—');
         const ticker = r.ticker || r.symbol || '';
         const region = r.region || fallbackRegion || 'GLOBAL';
         const country = r.country || r.location || '';
