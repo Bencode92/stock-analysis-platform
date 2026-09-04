@@ -1560,6 +1560,7 @@ document.addEventListener('DOMContentLoaded', function() {
             eps_surprise_avg_2q: r.eps_surprise_avg_2q ?? null,
             eps_beat_streak: r.eps_beat_streak ?? null,
             industry: r.industry || null,
+            name_api: r.name_api || null, // clé d'entité (identique cross-cotation) pour dédupliquer les cross-listings
             // v9.0: champs pour le Score Durabilité (déjà dans stocks_*.json)
             roic_avg_3y: r.roic_avg_3y ?? null,
             roic_std_3y: r.roic_std_3y ?? null,
@@ -1606,6 +1607,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return _indIndexCache.map;
     }
+    // Région d'ORIGINE d'une société = celle où sa cotation est la PLUS liquide (plus gros volume).
+    // Sert à écarter les cotations secondaires (ex. NVIDIA sur Xetra, vol 77K vs 133M au NASDAQ) du
+    // Top 3 d'une zone : « Top 3 Europe » = sociétés dont le marché principal est en Europe, pas les
+    // américaines cross-listées. Construite UNE fois, mise en cache comme l'index industrie.
+    let _homeCache = { src: null, map: null };
+    function _homeRegionByName() {
+        const src = (typeof window !== 'undefined' && window.stocksDataUnfiltered) || stocksData;
+        if (!src || !src.indices) return null;
+        if (_homeCache.src !== src) {
+            const pv = v => { if (v == null) return 0; const n = Number(String(v).replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : 0; };
+            const best = new Map(); // clé entité (name_api|name) -> {vol, region}
+            for (const arr of Object.values(src.indices)) for (const s of arr) {
+                const nm = s.name_api || s.name; if (!nm || !s.region) continue;
+                const vol = pv(s.volume), cur = best.get(nm);
+                if (!cur || vol > cur.vol) best.set(nm, { vol, region: s.region });
+            }
+            const map = new Map(); for (const [nm, o] of best) map.set(nm, o.region);
+            _homeCache = { src, map };
+        }
+        return _homeCache.map;
+    }
     function computeIndustryContext(stock) {
         const ind = stock.industry;
         const map = ind ? _industryIndex() : null;
@@ -1636,7 +1658,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const regLabel = { US: 'US', EUROPE: 'Europe', ASIA: 'Asie' }[myReg] || null;
         let regLeaders = null, regDurRank = null, regDurOf = null, regN = 0;
         if (regLabel) {
-            const regPeers = peers.filter(s => s.region === myReg);
+            // seulement les sociétés dont le marché PRINCIPAL est dans la zone (exclut les cross-listées)
+            const homeMap = _homeRegionByName();
+            const regPeers = peers.filter(s => s.region === myReg && (!homeMap || homeMap.get(s.name_api || s.name) === myReg));
             regN = regPeers.length;
             if (regPeers.length >= 3 && regPeers.length < peers.length) {
                 const gR = topOf(regPeers);
