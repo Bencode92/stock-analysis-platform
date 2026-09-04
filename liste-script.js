@@ -2279,6 +2279,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Basculer celui-ci uniquement si il était fermé
       if (!isOpen){
+        // v9.2 LAZY : construire la carte détail à la 1ʳᵉ ouverture (bâtir toutes au chargement = crash mémoire)
+        if (detailsRow.__build) { detailsRow.innerHTML = detailsRow.__build(); detailsRow.__build = null; }
         detailsRow.classList.remove('hidden');
         button.setAttribute('aria-expanded','true');
         const icon = button.querySelector('i');
@@ -2463,6 +2465,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             const detailsRow = document.createElement('tr');
                             detailsRow.className = 'details-row hidden';
                             detailsRow.setAttribute('data-for', stockKey);
+                            // v9.2: LAZY — la carte détail (lourde : durabilité + rang industrie + ETF) n'est
+                            // construite QU'À L'OUVERTURE (voir toggleDetailsRow). Bâtir toutes les cartes au
+                            // chargement saturait la mémoire (crash « erreur 5 »). Ici on ne stocke que le builder.
+                            detailsRow.__build = function () {
                             // v8.0: Enriched detail panel with Value Grade criteria + Quality subscores
                             const _qs = stock.quality_subscores || {};
                             const _bc = stock.buffett_criteria || [];
@@ -2546,7 +2552,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span style="opacity:0.35;font-size:0.62rem;">crowding · contexte, pas un signal de qualité</span>
                             </div>` : '';
 
-                            detailsRow.innerHTML = `
+                            return `
                                 <td colspan="10" style="background:rgba(0,255,135,0.02); border-top: 1px solid var(--card-border);">
                                     ${_durBanner}
                                     ${_icHTML}
@@ -2603,7 +2609,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 </td>
                             `;
-                            
+                            };
+
                             tableBody.appendChild(row);
                             tableBody.appendChild(detailsRow);
                         });
