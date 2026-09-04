@@ -1564,13 +1564,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // v9.2 — B : « pourquoi ce grade, vs qui ». Rang de l'action dans SON INDUSTRIE FINE (vrais concurrents,
     // ex. Aerospace & Defense — pas le secteur large) + lien vers la conviction du funnel.
-    function computeIndustryContext(stock) {
+    // index par industrie construit UNE SEULE FOIS (pas à chaque ligne) → évite le O(n²) qui figeait la page
+    let _indIndexCache = { src: null, map: null };
+    function _industryIndex() {
         const src = (typeof window !== 'undefined' && window.stocksDataUnfiltered) || stocksData;
-        const all = (src && src.indices) ? Object.values(src.indices).flat() : [];
+        if (!src || !src.indices) return null;
+        if (_indIndexCache.src !== src) {
+            const map = new Map();
+            for (const arr of Object.values(src.indices)) for (const s of arr) {
+                const k = s.industry; if (!k) continue;
+                let a = map.get(k); if (!a) { a = []; map.set(k, a); } a.push(s);
+            }
+            _indIndexCache = { src, map };
+        }
+        return _indIndexCache.map;
+    }
+    function computeIndustryContext(stock) {
         const ind = stock.industry;
-        if (!ind || all.length < 2) return null;
-        const peers = all.filter(s => s.industry === ind);
-        if (peers.length < 3) return null;
+        const map = ind ? _industryIndex() : null;
+        const peers = map ? map.get(ind) : null;
+        if (!peers || peers.length < 3) return null;
         const numf = v => { if (v == null) return null; const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.').replace('%', '').replace('+', '')); return Number.isFinite(n) ? n : null; };
         const dims = [['roic_avg_3y', 'ROIC'], ['net_margin', 'marge'], ['revenue_growth_3y', 'croissance'], ['roe', 'ROE']];
         const ranks = [];
