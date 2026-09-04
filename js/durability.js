@@ -30,7 +30,7 @@
     const isFin = /bank|insurance|reinsurance|capital market|financial serv|asset manage|credit serv/.test(ind);
     const isYield = /reit|utilit/.test(ind);
     const growth = !isFin && !isYield && profile === 'TECH';
-    const secLabel = isFin ? 'finance' : isYield ? 'utility/REIT' : growth ? 'croissance' : 'value';
+    const secLabel = isFin ? 'finance' : isYield ? 'utility/REIT' : growth ? 'croissance' : 'classique';
     // GATE sector-aware : une banque n'a PAS de ROIC (normal) → on gate sur le ROE. Sinon sur le ROIC.
     const gateVal = isFin ? roe : roicAvg;
     const _core = [roe, roicAvg, netMarg].filter(v => v != null).length;
