@@ -1606,7 +1606,14 @@ document.addEventListener('DOMContentLoaded', function() {
             durOf = scored.length;
             durRank = scored.filter(s => s.durability_score > stock.durability_score).length + 1;
         }
-        return ranks.length ? { industry: ind, n: peers.length, ranks, leaders, durRank, durOf } : null;
+        // MÉDIANE du secteur pour chaque paramètre (comparer le titre à son industrie d'un coup d'œil)
+        const median = arr => { if (!arr.length) return null; const s = [...arr].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+        const medians = {};
+        for (const k of ['pe_ratio', 'roe', 'de_ratio', 'fcf_yield', 'net_margin', 'dividend_yield_ttm', 'payout_ratio_ttm', 'beta', 'volatility_3y', 'roic_avg_3y']) {
+            const vals = peers.map(s => numf(s[k])).filter(v => v != null);
+            if (vals.length >= 3) medians[k] = median(vals);
+        }
+        return ranks.length ? { industry: ind, n: peers.length, ranks, leaders, durRank, durOf, medians } : null;
     }
 
     // v9.2 — B : phrase de synthèse CONCRÈTE & PERSONNALISÉE, générée depuis les signaux (pas d'IA, ancré).
@@ -2588,6 +2595,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _fun = FUNNEL_MAP[String(stock.ticker)];
                             // B : phrase de synthèse concrète
                             const _phrase = durabilityPhrase(_dur, _ic, stock);
+                            // médiane du secteur à afficher à côté de chaque fondamental
+                            const _med = (k, u) => (_ic && _ic.medians && _ic.medians[k] != null) ? ` <span style="opacity:0.4;font-size:0.85em;" title="médiane de l'industrie">· secteur ${(+_ic.medians[k]).toFixed(k === 'de_ratio' || k === 'beta' ? 2 : 1)}${u || ''}</span>` : '';
                             const _phraseHTML = _phrase ? `<div style="padding:9px 16px;font-size:0.82rem;line-height:1.55;opacity:0.9;border-bottom:1px solid var(--card-border);">${_phrase}</div>` : '';
                             const _lead = (_ic && _ic.leaders && _ic.leaders.length) ? _ic.leaders : null;
                             const _icHTML = (_ic || _fun) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
@@ -2644,17 +2653,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <div>
                                             <div class="text-xs opacity-60 mb-2 uppercase tracking-wider">Fondamentaux</div>
                                             <div class="space-y-1 text-sm">
-                                                <div><span class="opacity-60">PE Ratio:</span> ${_pe}</div>
-                                                <div><span class="opacity-60">ROE:</span> ${_roe != null ? _roe + '%' : '–'}</div>
-                                                <div><span class="opacity-60">D/E Ratio:</span> ${_de || '–'}</div>
-                                                <div><span class="opacity-60">FCF Yield:</span> ${_fcfy != null ? _fcfy + '%' : '–'}</div>
+                                                <div><span class="opacity-60">PE Ratio:</span> ${_pe}${_med('pe_ratio', '')}</div>
+                                                <div><span class="opacity-60">ROE:</span> ${_roe != null ? _roe + '%' : '–'}${_med('roe', '%')}</div>
+                                                <div><span class="opacity-60">D/E Ratio:</span> ${_de || '–'}${_med('de_ratio', '')}</div>
+                                                <div><span class="opacity-60">FCF Yield:</span> ${_fcfy != null ? _fcfy + '%' : '–'}${_med('fcf_yield', '%')}</div>
                                                 <div><span class="opacity-60">Div TTM:</span> ${stock.dividend_yield_ttm || stock.dividend_yield || '–'}</div>
                                                 <div><span class="opacity-60">Payout:</span> <span class="${stock.payout_class}">${stock.payout_ratio || '–'}</span></div>
                                             </div>
                                             <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Risque</div>
                                             <div class="space-y-1 text-sm">
-                                                <div><span class="opacity-60">Beta:</span> ${_beta || '–'}</div>
-                                                <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}</div>
+                                                <div><span class="opacity-60">Beta:</span> ${_beta || '–'}${_med('beta', '')}</div>
+                                                <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}${_med('volatility_3y', '%')}</div>
                                                 <div><span class="opacity-60">Drawdown max 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
                                                 ${_epsS != null ? `<div><span class="opacity-60">EPS Surprise:</span> <span class="${parseFloat(_epsS) >= 0 ? 'positive' : 'negative'}">${_epsS}%</span>${_epsBeat > 1 ? ` <span style="font-size:0.7rem;opacity:0.5;">(${_epsBeat} beats)</span>` : ''}</div>` : ''}
                                                 <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
