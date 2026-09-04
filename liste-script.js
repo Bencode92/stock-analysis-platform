@@ -1620,13 +1620,28 @@ document.addEventListener('DOMContentLoaded', function() {
             if (vals.length < 3) continue;
             ranks.push({ l, rank: vals.filter(v => v > mine).length + 1, of: vals.length, top: vals.filter(v => v > mine).length === 0 });
         }
-        // TOP 3 de l'industrie par durabilité + rang de l'action en durabilité (pour se situer vs les leaders)
-        const scored = peers.filter(s => s.durability_score != null).sort((a, b) => b.durability_score - a.durability_score);
-        const leaders = scored.slice(0, 3).map(s => ({ t: s.ticker, n: s.name, g: s.durability_grade, sc: s.durability_score, me: s.ticker === stock.ticker }));
-        let durRank = null, durOf = null;
-        if (stock.durability_score != null && scored.length >= 3) {
-            durOf = scored.length;
-            durRank = scored.filter(s => s.durability_score > stock.durability_score).length + 1;
+        // TOP 3 par durabilité + rang de l'action — helper réutilisé pour le MONDIAL et la ZONE géo
+        const topOf = grp => {
+            const sc = grp.filter(s => s.durability_score != null).sort((a, b) => b.durability_score - a.durability_score);
+            const lead = sc.slice(0, 3).map(s => ({ t: s.ticker, n: s.name, g: s.durability_grade, sc: s.durability_score, me: s.ticker === stock.ticker }));
+            let rank = null, of = null;
+            if (stock.durability_score != null && sc.length >= 3) { of = sc.length; rank = sc.filter(s => s.durability_score > stock.durability_score).length + 1; }
+            return { lead, rank, of };
+        };
+        const g0 = topOf(peers);
+        const leaders = g0.lead, durRank = g0.rank, durOf = g0.of;
+        // TOP 3 de la ZONE géographique (US / Europe / Asie) — EN PLUS du mondial, seulement si la vue
+        // couvre plusieurs zones (sinon régional == mondial → redondant, on masque).
+        const myReg = stock.region;
+        const regLabel = { US: 'US', EUROPE: 'Europe', ASIA: 'Asie' }[myReg] || null;
+        let regLeaders = null, regDurRank = null, regDurOf = null, regN = 0;
+        if (regLabel) {
+            const regPeers = peers.filter(s => s.region === myReg);
+            regN = regPeers.length;
+            if (regPeers.length >= 3 && regPeers.length < peers.length) {
+                const gR = topOf(regPeers);
+                regLeaders = gR.lead; regDurRank = gR.rank; regDurOf = gR.of;
+            }
         }
         // MÉDIANE du secteur pour chaque paramètre (comparer le titre à son industrie d'un coup d'œil)
         const median = arr => { if (!arr.length) return null; const s = [...arr].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
@@ -1635,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const vals = peers.map(s => numf(s[k])).filter(v => v != null);
             if (vals.length >= 3) medians[k] = median(vals);
         }
-        return ranks.length ? { industry: ind, n: peers.length, ranks, leaders, durRank, durOf, medians } : null;
+        return ranks.length ? { industry: ind, n: peers.length, ranks, leaders, durRank, durOf, medians, regLeaders, regDurRank, regDurOf, regN, regLabel } : null;
     }
 
     // v9.2 — B : phrase de synthèse CONCRÈTE & PERSONNALISÉE, générée depuis les signaux (pas d'IA, ancré).
@@ -2623,11 +2638,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _short = s => { s = String(s || '').replace(/\s+(SE|S\.?A\.?|N\.?V\.?|PLC|AG|Inc\.?|Corp\.?|Co\.?|Ltd\.?|Holdings?|Group|International|Company|Class [A-Z].*)$/gi, '').replace(/[,]+$/, '').trim(); return s.length > 18 ? s.slice(0, 17) + '…' : s; };
                             const _phraseHTML = _phrase ? `<div style="padding:9px 16px;font-size:0.82rem;line-height:1.55;opacity:0.9;border-bottom:1px solid var(--card-border);">${_phrase}</div>` : '';
                             const _lead = (_ic && _ic.leaders && _ic.leaders.length) ? _ic.leaders : null;
+                            const _regLead = (_ic && _ic.regLeaders && _ic.regLeaders.length) ? _ic.regLeaders : null;
+                            // rendu d'une rangée « Top 3 » (mondial ou zone) : label + puces cliquables (par NOM, pas ticker)
+                            const _topRow = (label, arr) => arr ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">${label}</span>${arr.map(l => `<span ${l.me ? '' : `onclick="openStockTab('${encodeURIComponent(l.n || l.t)}')" role="button"`} style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};${l.me ? '' : 'cursor:pointer;'}" title="${l.me ? 'vous' : 'Ouvrir ' + String(l.n || l.t).replace(/"/g, '')}">${_short(l.n) || l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : '';
                             const _icHTML = (_ic || _fun) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
                                 <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Vs son industrie</span>
                                 ${_ic ? `<span style="font-weight:600;">${_ic.industry}</span><span style="opacity:0.4;">· ${_ic.n} concurrents</span>${_ic.ranks.map(r => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${r.top ? 'rgba(76,175,80,0.16)' : 'rgba(255,255,255,0.06)'};color:${r.top ? '#4caf50' : 'inherit'};opacity:${r.top ? 1 : 0.82};font-weight:${r.top ? 700 : 400};">#${r.rank}/${r.of} ${r.l}${r.top ? ' · personne de mieux' : ''}</span>`).join('')}` : ''}
                                 ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
-                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">🏆 Top 3 du secteur</span>${_lead.map(l => `<span ${l.me ? '' : `onclick="openStockTab('${encodeURIComponent(l.n || l.t)}')" role="button"`} style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};${l.me ? '' : 'cursor:pointer;'}" title="${l.me ? 'vous' : 'Ouvrir ' + String(l.n || l.t).replace(/"/g, '')}">${_short(l.n) || l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
+                                ${_topRow(_regLead ? '🌍 Top 3 mondial' : '🏆 Top 3 du secteur', _lead)}
+                                ${_regLead ? _topRow(`📍 Top 3 ${_ic.regLabel}`, _regLead) : ''}
                             </div>` : '';
 
                             // v9.2 — C : dans combien d'ETF / lesquels (contexte crowding, jamais un signal de qualité)
