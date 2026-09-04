@@ -1593,36 +1593,51 @@ document.addEventListener('DOMContentLoaded', function() {
             if (vals.length < 3) continue;
             ranks.push({ l, rank: vals.filter(v => v > mine).length + 1, of: vals.length, top: vals.filter(v => v > mine).length === 0 });
         }
-        // les MEILLEURS de l'industrie (par durabilité, sinon ROIC) — pour se comparer aux leaders
-        const scored = peers.filter(s => s.durability_score != null);
-        const ranked = (scored.length ? scored.sort((a, b) => b.durability_score - a.durability_score)
-            : peers.filter(s => numf(s.roic_avg_3y) != null).sort((a, b) => numf(b.roic_avg_3y) - numf(a.roic_avg_3y)));
-        const leaders = ranked.slice(0, 4).map(s => ({ t: s.ticker, n: s.name, g: s.durability_grade, sc: s.durability_score, me: s.ticker === stock.ticker }));
-        return ranks.length ? { industry: ind, n: peers.length, ranks, leaders } : null;
+        // TOP 3 de l'industrie par durabilité + rang de l'action en durabilité (pour se situer vs les leaders)
+        const scored = peers.filter(s => s.durability_score != null).sort((a, b) => b.durability_score - a.durability_score);
+        const leaders = scored.slice(0, 3).map(s => ({ t: s.ticker, n: s.name, g: s.durability_grade, sc: s.durability_score, me: s.ticker === stock.ticker }));
+        let durRank = null, durOf = null;
+        if (stock.durability_score != null && scored.length >= 3) {
+            durOf = scored.length;
+            durRank = scored.filter(s => s.durability_score > stock.durability_score).length + 1;
+        }
+        return ranks.length ? { industry: ind, n: peers.length, ranks, leaders, durRank, durOf } : null;
     }
 
-    // v9.2 — B : phrase de synthèse concrète, générée depuis les signaux (pas d'IA, instantané, ancré).
-    function durabilityPhrase(dur, ic) {
+    // v9.2 — B : phrase de synthèse CONCRÈTE & PERSONNALISÉE, générée depuis les signaux (pas d'IA, ancré).
+    function durabilityPhrase(dur, ic, stock) {
         if (!dur || dur.insufficient || dur.score == null) return '';
+        const nm = (stock.name || stock.ticker || '').replace(/\s+(SE|S\.?A\.?|N\.?V\.?|PLC|AG|Inc\.?|Corp\.?|Co\.?|Ltd\.?|Class [A-Z].*)$/gi, '').replace(/[,]+$/, '').trim();
         const groups = [...new Set(dur.crit.map(c => c.group))];
         const strong = [], weak = [];
         for (const g of groups) {
             const cs = dur.crit.filter(c => c.group === g);
             const mn = Math.min(...cs.map(c => c.val));
-            if (mn >= 0.75) strong.push(g.toLowerCase());
-            else if (mn <= 0.25) weak.push(g.toLowerCase());
+            if (mn >= 0.75) strong.push(g.toLowerCase()); else if (mn <= 0.25) weak.push(g.toLowerCase());
         }
-        const head = { A: 'Business solide', B: 'Business correct', C: 'Business à surveiller', D: 'Business fragile' }[dur.grade] || 'Business';
-        let s = `${head} (durabilité ${dur.grade} — ${dur.verdict.toLowerCase()})`;
-        if (strong.length) s += ` — au rendez-vous sur ${strong.join(', ')}`;
-        if (weak.length) s += (strong.length ? ' ; en retrait sur ' : ' — en retrait sur ') + weak.join(', ');
-        if (ic && ic.ranks) {
-            const tops = ic.ranks.filter(r => r.top).map(r => r.l);
-            if (tops.length) s += `. Personne de mieux dans son industrie sur ${tops.join(', ')}`;
+        const head = { A: 'business solide', B: 'business correct', C: 'business à surveiller', D: 'business fragile' }[dur.grade] || 'business';
+        const andJoin = a => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' et ' + a[a.length - 1];
+        const parts = [];
+        // 1) qui c'est + verdict + forces/faiblesses
+        let p1 = `${nm} : ${head} (durabilité ${dur.grade})`;
+        if (strong.length) p1 += `, porté par ${andJoin(strong)}`;
+        if (weak.length) p1 += (strong.length ? ', mais freiné par ' : ', freiné par ') + andJoin(weak);
+        parts.push(p1);
+        // 2) positionnement CHIFFRÉ dans son industrie + meilleure/pire dimension
+        if (ic) {
+            const pos = (ic.durRank && ic.durOf)
+                ? (ic.durRank === 1 ? `n°1 de ${ic.industry} en durabilité` : ic.durRank <= 3 ? `dans le top 3 de ${ic.industry}` : `#${ic.durRank}/${ic.durOf} de ${ic.industry} en durabilité`)
+                : `dans ${ic.industry}`;
+            const byPct = ic.ranks.map(r => ({ ...r, pct: r.rank / r.of })).sort((a, b) => a.pct - b.pct);
+            const best = byPct[0], worst = byPct[byPct.length - 1];
+            let dim = best ? `meilleur sur ${best.l} (#${best.rank}/${best.of})` : '';
+            if (worst && worst !== best && worst.pct > 0.5) dim += `${dim ? ', ' : ''}à la traîne sur ${worst.l} (#${worst.rank}/${worst.of})`;
+            parts.push(`${pos}${dim ? ` — ${dim}` : ''}`);
         }
-        if (dur.mirage) s += `. ⚠ le grade « vs pairs » flatte — la durabilité est en dessous`;
-        if (dur.profile === 'finance') s += `. Angle mort : le risque crédit/capital n'est pas visible`;
-        return s + '.';
+        // 3) alertes
+        if (dur.mirage) parts.push('⚠ le grade « vs pairs » le flatte, la durabilité est en dessous');
+        if (dur.profile === 'finance') parts.push('angle mort : le risque crédit / capital n\'est pas visible');
+        return parts.join('. ') + '.';
     }
 
     function dedupByNameTicker(arr) {
@@ -2567,14 +2582,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _ic = computeIndustryContext(stock);
                             const _fun = FUNNEL_MAP[String(stock.ticker)];
                             // B : phrase de synthèse concrète
-                            const _phrase = durabilityPhrase(_dur, _ic);
+                            const _phrase = durabilityPhrase(_dur, _ic, stock);
                             const _phraseHTML = _phrase ? `<div style="padding:9px 16px;font-size:0.82rem;line-height:1.55;opacity:0.9;border-bottom:1px solid var(--card-border);">${_phrase}</div>` : '';
                             const _lead = (_ic && _ic.leaders && _ic.leaders.length) ? _ic.leaders : null;
                             const _icHTML = (_ic || _fun) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
                                 <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Vs son industrie</span>
                                 ${_ic ? `<span style="font-weight:600;">${_ic.industry}</span><span style="opacity:0.4;">· ${_ic.n} concurrents</span>${_ic.ranks.map(r => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${r.top ? 'rgba(76,175,80,0.16)' : 'rgba(255,255,255,0.06)'};color:${r.top ? '#4caf50' : 'inherit'};opacity:${r.top ? 1 : 0.82};font-weight:${r.top ? 700 : 400};">#${r.rank}/${r.of} ${r.l}${r.top ? ' · personne de mieux' : ''}</span>`).join('')}` : ''}
                                 ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
-                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">Meilleurs du secteur</span>${_lead.map(l => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};" title="${(l.n || '').replace(/"/g, '')}">${l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
+                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">🏆 Top 3 du secteur</span>${_lead.map(l => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};" title="${(l.n || '').replace(/"/g, '')}">${l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
                             </div>` : '';
 
                             // v9.2 — C : dans combien d'ETF / lesquels (contexte crowding, jamais un signal de qualité)
