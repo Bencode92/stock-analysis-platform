@@ -984,6 +984,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         for (const k in ETF_MAP) ETF_MAP[k].sort((a, b) => (b.w || 0) - (a.w || 0));
     }).catch(() => {});
+
+    // v9.2 — clic sur un concurrent (Top 3) → l'ouvrir dans un NOUVEL ONGLET (recherche par son nom).
+    window.openStockTab = function (ticker) {
+        const s = window._stockMap && window._stockMap[ticker];
+        const q = s ? (s.name || ticker) : ticker;
+        window.open('liste.html?q=' + encodeURIComponent(q), '_blank');
+    };
+    // si l'onglet est ouvert via ?q=... : attendre le chargement de la liste, puis lancer la recherche.
+    (function () {
+        const q = new URLSearchParams(location.search).get('q');
+        if (!q) return;
+        let tries = 0;
+        const timer = setInterval(() => {
+            const input = document.getElementById('stock-search');
+            const hasRows = document.querySelector('[id$="-indices-body"] tr:not(.details-row)');
+            if (input && hasRows) {
+                input.value = q;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                clearInterval(timer);
+            } else if (++tries > 40) clearInterval(timer);
+        }, 300);
+    })();
     
     // Données des deux marchés pour le classement global
     let globalData = {
@@ -1609,7 +1631,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // MÉDIANE du secteur pour chaque paramètre (comparer le titre à son industrie d'un coup d'œil)
         const median = arr => { if (!arr.length) return null; const s = [...arr].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
         const medians = {};
-        for (const k of ['pe_ratio', 'roe', 'de_ratio', 'fcf_yield', 'net_margin', 'dividend_yield_ttm', 'payout_ratio_ttm', 'beta', 'volatility_3y', 'roic_avg_3y']) {
+        for (const k of ['pe_ratio', 'roe', 'de_ratio', 'fcf_yield', 'net_margin', 'dividend_yield_ttm', 'payout_ratio_ttm', 'beta', 'volatility_3y', 'roic_avg_3y', 'perf_1m', 'perf_3m', 'perf_1y', 'ytd', 'max_drawdown_3y']) {
             const vals = peers.map(s => numf(s[k])).filter(v => v != null);
             if (vals.length >= 3) medians[k] = median(vals);
         }
@@ -2603,7 +2625,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Vs son industrie</span>
                                 ${_ic ? `<span style="font-weight:600;">${_ic.industry}</span><span style="opacity:0.4;">· ${_ic.n} concurrents</span>${_ic.ranks.map(r => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${r.top ? 'rgba(76,175,80,0.16)' : 'rgba(255,255,255,0.06)'};color:${r.top ? '#4caf50' : 'inherit'};opacity:${r.top ? 1 : 0.82};font-weight:${r.top ? 700 : 400};">#${r.rank}/${r.of} ${r.l}${r.top ? ' · personne de mieux' : ''}</span>`).join('')}` : ''}
                                 ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
-                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">🏆 Top 3 du secteur</span>${_lead.map(l => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};" title="${(l.n || '').replace(/"/g, '')}">${l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
+                                ${_lead ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">🏆 Top 3 du secteur</span>${_lead.map(l => `<span ${l.me ? '' : `onclick="openStockTab('${String(l.t).replace(/'/g, '')}')" role="button"`} style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};${l.me ? '' : 'cursor:pointer;'}" title="${l.me ? 'vous' : 'Ouvrir ' + String(l.n || l.t).replace(/"/g, '')}">${l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : ''}
                             </div>` : '';
 
                             // v9.2 — C : dans combien d'ETF / lesquels (contexte crowding, jamais un signal de qualité)
@@ -2632,10 +2654,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                             </div>
                                             <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Performances</div>
                                             <div class="space-y-1 text-sm">
-                                                <div><span class="opacity-60">1 mois:</span> <span class="${stock.perf_1m && stock.perf_1m.includes('-') ? 'negative' : 'positive'}">${stock.perf_1m||'–'}</span></div>
-                                                <div><span class="opacity-60">3 mois:</span> <span class="${stock.perf_3m && stock.perf_3m.includes('-') ? 'negative' : 'positive'}">${stock.perf_3m||'–'}</span></div>
-                                                <div><span class="opacity-60">1 an:</span> <span class="${perf1yClass}">${stock.perf_1y||'–'}</span></div>
-                                                <div><span class="opacity-60">YTD:</span> <span class="${ytdClass}">${stock.ytd||'–'}</span></div>
+                                                <div><span class="opacity-60">1 mois:</span> <span class="${stock.perf_1m && stock.perf_1m.includes('-') ? 'negative' : 'positive'}">${stock.perf_1m||'–'}</span>${_med('perf_1m','%')}</div>
+                                                <div><span class="opacity-60">3 mois:</span> <span class="${stock.perf_3m && stock.perf_3m.includes('-') ? 'negative' : 'positive'}">${stock.perf_3m||'–'}</span>${_med('perf_3m','%')}</div>
+                                                <div><span class="opacity-60">1 an:</span> <span class="${perf1yClass}">${stock.perf_1y||'–'}</span>${_med('perf_1y','%')}</div>
+                                                <div><span class="opacity-60">YTD:</span> <span class="${ytdClass}">${stock.ytd||'–'}</span>${_med('ytd','%')}</div>
                                             </div>
                                         </div>
                                         <div>
@@ -2657,14 +2679,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <div><span class="opacity-60">ROE:</span> ${_roe != null ? _roe + '%' : '–'}${_med('roe', '%')}</div>
                                                 <div><span class="opacity-60">D/E Ratio:</span> ${_de || '–'}${_med('de_ratio', '')}</div>
                                                 <div><span class="opacity-60">FCF Yield:</span> ${_fcfy != null ? _fcfy + '%' : '–'}${_med('fcf_yield', '%')}</div>
-                                                <div><span class="opacity-60">Div TTM:</span> ${stock.dividend_yield_ttm || stock.dividend_yield || '–'}</div>
-                                                <div><span class="opacity-60">Payout:</span> <span class="${stock.payout_class}">${stock.payout_ratio || '–'}</span></div>
+                                                <div><span class="opacity-60">Div TTM:</span> ${stock.dividend_yield_ttm || stock.dividend_yield || '–'}${_med('dividend_yield_ttm','%')}</div>
+                                                <div><span class="opacity-60">Payout:</span> <span class="${stock.payout_class}">${stock.payout_ratio || '–'}</span>${_med('payout_ratio_ttm','%')}</div>
                                             </div>
                                             <div class="text-xs opacity-60 mb-2 mt-4 uppercase tracking-wider">Risque</div>
                                             <div class="space-y-1 text-sm">
                                                 <div><span class="opacity-60">Beta:</span> ${_beta || '–'}${_med('beta', '')}</div>
                                                 <div><span class="opacity-60">Volatilité 3Y:</span> ${stock.volatility_3y || '–'}${_med('volatility_3y', '%')}</div>
-                                                <div><span class="opacity-60">Drawdown max 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span></div>
+                                                <div><span class="opacity-60">Drawdown max 3Y:</span> <span class="negative">${stock.max_drawdown_3y || '–'}</span>${_med('max_drawdown_3y','%')}</div>
                                                 ${_epsS != null ? `<div><span class="opacity-60">EPS Surprise:</span> <span class="${parseFloat(_epsS) >= 0 ? 'positive' : 'negative'}">${_epsS}%</span>${_epsBeat > 1 ? ` <span style="font-size:0.7rem;opacity:0.5;">(${_epsBeat} beats)</span>` : ''}</div>` : ''}
                                                 <div><span class="opacity-60">52 semaines:</span> ${stock.range_52w || '–'}</div>
                                                 <div><span class="opacity-60">Volume:</span> ${stock.volume || '–'}</div>
