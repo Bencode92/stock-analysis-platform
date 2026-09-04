@@ -3089,18 +3089,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Recherche en temps réel
+        let _searchTimer = null;
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.trim().toLowerCase();
-            
-            // Afficher/masquer le bouton d'effacement
+
+            // Afficher/masquer le bouton d'effacement (immédiat)
             clearButton.style.opacity = searchTerm ? '1' : '0';
-            
-            // Effectuer la recherche
-            if (searchTerm) {
-                performSearch(searchTerm);
-            } else {
-                clearSearch();
-            }
+
+            // DEBOUNCE : la recherche scanne des milliers de lignes → on ne la lance qu'APRÈS que
+            // l'utilisateur a arrêté de taper (220 ms), pas à chaque caractère (« apple » = 1 scan, pas 5).
+            clearTimeout(_searchTimer);
+            _searchTimer = setTimeout(() => {
+                if (searchTerm) performSearch(searchTerm);
+                else clearSearch();
+            }, 220);
         });
         
         // Effacer la recherche
