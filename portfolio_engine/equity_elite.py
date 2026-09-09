@@ -257,6 +257,34 @@ def build_elite_portfolio():
     tot = sum(raw.values()) or 1.0
     weights = {tk: round(w / tot * 100, 2) for tk, w in raw.items()}   # renormalisé à 100 %
 
+    chosen_keys = {(str(s.get("ticker")), s["_region"]) for s in final}
+
+    def _justify(s):
+        """Pourquoi CELLE-CI : rang dans son industrie (pool) + concurrent devancé + différenciateur."""
+        ind = s.get("industry")
+        peers = sorted((p for p in pool if p.get("industry") == ind), key=_rank_key, reverse=True)
+        n = len(peers)
+        try:
+            rank = peers.index(s) + 1
+        except ValueError:
+            rank = None
+        # concurrent = meilleur pair du POOL non retenu au portefeuille
+        runner = next((p for p in peers if (str(p.get("ticker")), p["_region"]) not in chosen_keys), None)
+        diff = None
+        if runner is not None:
+            if _stability(s) < _stability(runner) - 1e-6:
+                diff = "ROIC plus régulier"
+            elif (_num(s.get("roic_avg_3y")) or 0) > (_num(runner.get("roic_avg_3y")) or 0):
+                diff = "rentabilité plus élevée"
+            elif (_num(s.get("fcf_yield")) or 0) > (_num(runner.get("fcf_yield")) or 0):
+                diff = "moins cher (FCF)"
+            else:
+                diff = "durabilité supérieure"
+        return {"industry_rank": rank, "industry_n": n,
+                "runner_up": (runner.get("name") if runner else None),
+                "runner_up_ticker": (str(runner.get("ticker")) if runner else None),
+                "differentiator": diff}
+
     def row(s):
         tk = str(s.get("ticker"))
         fin = _is_fin(s)
@@ -268,6 +296,7 @@ def build_elite_portfolio():
             "stability": round(_stability(s), 2), "fcf_yield": _num(s.get("fcf_yield")),
             "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
             "funnel": funnel.get(tk), "held_hysteresis": tk in {str(x.get("ticker")) for x in kept[:n_held]},
+            "why": _justify(s),
         }
     holdings = [row(s) for s in final]
     holdings.sort(key=lambda r: (-(r["weight"] or 0), -(r["durability_score"] or 0)))
