@@ -40,6 +40,34 @@ FX_TO_USD = {
 }
 _FIN_RE = re.compile(r"bank|insurance|reinsurance|capital market|financial serv|asset manage|credit serv", re.I)
 
+# --- caps de diversification (revue expert v2) ---
+SECTOR_CAP = 8         # max 8 lignes / secteur GICS (20 %) — la concentration est SECTORIELLE
+FIN_CAP = 6            # max 6 financières / 40 (ROE = ROE haut de cycle sous levier, prudence)
+REGION_TARGET = 0.68   # après rééquilibrage : une région ≤ 68 % (l'alerte à 70 % déclenche une ACTION)
+
+# industrie fine → secteur GICS (regex ordonné, approximatif — le mapping fin est bruité, assumé).
+_GICS_RULES = [
+    ("Financials", r"insurance|bank|capital market|asset manage|financial data|stock exchange|reinsurance|credit serv|financial serv"),
+    ("Santé", r"drug|biotech|medical|diagnostic|health|pharma|life scien"),
+    ("Communication", r"internet content|publishing|media|telecom|advertis|entertainment|electronic gaming|interactive"),
+    ("Tech", r"software|semiconductor|electronic component|scientific & technical|information technology|computer|it serv|hardware|electronics & comp"),
+    ("Conso de base", r"packaged food|beverage|household & personal|tobacco|grocery|confection"),
+    ("Conso discrétionnaire", r"apparel|retail|restaurant|leisure|resort|casino|auto|furnishings|rental & leasing|residential construction|gaming|luxury|hotel|footwear|home improv|education"),
+    ("Matériaux", r"chemical|mining|metal|materials|agricultural input|packaging|paper|gold|steel|copper|building material"),
+    ("Énergie", r"oil|gas|coal|uranium|drilling"),
+    ("Immobilier", r"reit|real estate"),
+    ("Utilities", r"utilit|electric power|water utility"),
+    ("Industrie", r"industrial|machinery|building product|freight|logistics|distribution|security & protection|pollution|business services|aerospace|defense|engineering|electrical equipment|conglomerate|farm & heavy|tools|staffing|waste|railroad|airline|personal services|construction"),
+]
+
+
+def _gics(s):
+    ind = (s.get("industry") or "").lower()
+    for sector, pat in _GICS_RULES:
+        if re.search(pat, ind):
+            return sector
+    return "Industrie"   # défaut (la majorité des non-classés sont industriels)
+
 
 def _num(v):
     try:
@@ -100,7 +128,11 @@ def _passes_gates(s, grades):
         return False
     if (s.get("quality_grade") or "") not in ("A", "B"):
         return False
-    if not _has_history(s):                          # historique ≥ 3 ans
+    if (s.get("buffett_grade") or "") not in ("A", "B"):   # DISCIPLINE VALO explicite (revue expert #6)
+        return False
+    if s.get("young_listing") is True:               # jeune cotation → porte historique renforcée
+        return False
+    if not _has_history(s):                          # historique ≥ 3 ans (stats 3Y présentes)
         return False
     adv = _adv_usd(s)
     if adv is None or adv < ADV_MIN_USD:             # liquidité
@@ -160,39 +192,47 @@ def build_elite_portfolio():
     pool = [s for s in rows if s.get("industry") and _passes_gates(s, ("A", "B"))]
     pool.sort(key=_rank_key, reverse=True)           # meilleur départage d'abord — SANS funnel (doctrine)
 
-    # 2) SÉLECTION greedy : meilleurs globalement, CAP max 2 / industrie fine (contrainte, pas quota)
-    per_ind = defaultdict(int)
-    fresh = []
-    for s in pool:
-        ind = s["industry"]
-        if per_ind[ind] >= MAX_PER_INDUSTRY:
-            continue
-        fresh.append(s)
-        per_ind[ind] += 1
-        if len(fresh) >= MAX_HOLDINGS:
-            break
+    # CAPS de diversification : max 2/industrie fine, max 8/secteur GICS, max 6 financières.
+    ind_c, sec_c = defaultdict(int), defaultdict(int)
+    fin_c = [0]
 
-    # 3) HYSTÉRÉSIS : les tenus qui passent encore la SORTIE restent ; on complète avec du frais.
+    def _can_add(s):
+        return (ind_c[s["industry"]] < MAX_PER_INDUSTRY and sec_c[_gics(s)] < SECTOR_CAP
+                and (not _is_fin(s) or fin_c[0] < FIN_CAP))
+
+    def _commit(s):
+        ind_c[s["industry"]] += 1; sec_c[_gics(s)] += 1
+        if _is_fin(s):
+            fin_c[0] += 1
+
+    # 2) HYSTÉRÉSIS d'abord : les tenus qui passent la SORTIE restent (respecte les caps) → anti-turnover.
     held_keys = []
     if os.path.exists(PREV_FILE):
         try:
             held_keys = [tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or [])]
         except Exception:
             held_keys = []
-    kept, seen_ind, chosen = [], defaultdict(int), set()
-    for key in held_keys:                             # priorité aux positions tenues (anti-turnover)
+    kept, chosen = [], set()
+    for key in held_keys:
         s = by_key.get(tuple(key))
-        if s and _passes_exit(s) and s.get("industry") and seen_ind[s["industry"]] < MAX_PER_INDUSTRY:
-            kept.append(s); chosen.add((str(s.get("ticker")), s["_region"])); seen_ind[s["industry"]] += 1
+        if s and _passes_exit(s) and s.get("industry") and _can_add(s):
+            kept.append(s); chosen.add((str(s.get("ticker")), s["_region"])); _commit(s)
     n_held = len(kept)
-    for s in fresh:                                   # complète jusqu'à MAX_HOLDINGS
+    # 3) COMPLÈTE au top-40 depuis le pool trié (meilleur départage), sous tous les caps.
+    for s in pool:
         k = (str(s.get("ticker")), s["_region"])
-        if k in chosen or seen_ind[s["industry"]] >= MAX_PER_INDUSTRY:
+        if k in chosen or not _can_add(s):
             continue
         if len(kept) >= MAX_HOLDINGS:
             break
-        kept.append(s); chosen.add(k); seen_ind[s["industry"]] += 1
+        kept.append(s); chosen.add(k); _commit(s)
     final = kept
+
+    # 4) RÉGION : PAS de cap dur / swap automatique (revue expert : un cap ajoute des noms « un cran en
+    #    dessous » ; retirer Alphabet pour équilibrer la géo est un changement radical injustifié).
+    #    On garde l'ALERTE > 70 % ; l'ACTION est une REVUE HUMAINE (assumer, ou swap manuel des plus
+    #    faibles). Le vrai correctif du biais Japon est le barème ROIC-hors-cash (à faire au pipeline).
+    region_swaps = []
 
     # 4) POIDS : équipondéré + plafond de contribution au risque (écrête les plus volatils, sans tri)
     base = 100.0 / len(final) if final else 0.0
@@ -213,7 +253,7 @@ def build_elite_portfolio():
         fin = _is_fin(s)
         return {
             "ticker": tk, "name": s.get("name"), "region": s["_region"], "industry": s.get("industry"),
-            "weight": weights.get(tk), "durability": s.get("durability_grade"),
+            "sector": _gics(s), "weight": weights.get(tk), "durability": s.get("durability_grade"),
             "durability_score": _num(s.get("durability_score")), "quality": s.get("quality_grade"),
             "fin": fin, "roic_or_roe": _num(s.get("roe_avg_3y") if fin else s.get("roic_avg_3y")),
             "stability": round(_stability(s), 2), "fcf_yield": _num(s.get("fcf_yield")),
@@ -232,7 +272,8 @@ def build_elite_portfolio():
         "n": len(holdings), "pool_size": len(pool), "n_held_hysteresis": n_held,
         "total_pct": round(sum(h["weight"] or 0 for h in holdings), 1),
         "region_split": dict(reg), "max_region_pct": round(max_reg, 0),
-        "region_review_flag": max_reg > REGION_REVIEW,
+        "region_review_flag": max_reg > REGION_REVIEW, "region_swaps": region_swaps,
+        "sector_split": dict(Counter(h["sector"] for h in holdings).most_common()),
         "n_financials": sum(1 for h in holdings if h["fin"]), "n_funnel": sum(1 for h in holdings if h["funnel"]),
     }
 
@@ -243,8 +284,11 @@ def main():
     print(f"Pool elite (portes sectorielles + historique + ADV) : {pf['pool_size']}")
     print(f"Portefeuille : {pf['n']} lignes, {pf['total_pct']}% | régions {pf['region_split']}"
           + (f"  ⚠ REVUE (>{REGION_REVIEW:.0f}% sur une région)" if pf["region_review_flag"] else ""))
-    print(f"  financières (jugées au ROE) : {pf['n_financials']} · tags funnel : {pf['n_funnel']}"
+    print(f"  secteurs GICS : {pf['sector_split']}")
+    print(f"  financières (au ROE, cap {FIN_CAP}) : {pf['n_financials']} · tags funnel : {pf['n_funnel']}"
           + (f" · maintenus hystérésis : {pf['n_held_hysteresis']}" if pf["n_held_hysteresis"] else ""))
+    if pf.get("region_swaps"):
+        print(f"  ⇄ rééquilibrage région (action) : {pf['region_swaps']}")
     print(f"\n{'TICKER':<8}{'POIDS':>6}  {'NOM':<26}{'RÉG':<7}{'D':<2}{'Q':<2}{'ROIC/E':>7}{'STAB':>6}{'FCF%':>6}{'VOL%':>6}  IND")
     for h in pf["holdings"]:
         fn = f" 🧭{h['funnel']}" if h["funnel"] else ""
