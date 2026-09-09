@@ -6704,7 +6704,7 @@
           "EQQQ"
         ],
         "industry": "cœur broad",
-        "beta": null,
+        "beta": 1.05,
         "role": "core"
       },
       "EIMI": {
@@ -6715,7 +6715,7 @@
           "EIMI"
         ],
         "industry": "cœur broad",
-        "beta": null,
+        "beta": 0.85,
         "role": "core"
       },
       "FGEQ": {
@@ -6726,7 +6726,7 @@
           "FGEQ"
         ],
         "industry": "dividende",
-        "beta": null,
+        "beta": 0.8,
         "role": "core"
       },
       "SGLN.AS": {
@@ -6737,7 +6737,7 @@
           "SGLN.AS"
         ],
         "industry": "or",
-        "beta": null,
+        "beta": 0.05,
         "role": "core"
       },
       "URNM": {
@@ -6748,7 +6748,7 @@
           "URNM"
         ],
         "industry": "thématique",
-        "beta": null,
+        "beta": 1.2,
         "role": "core"
       },
       "WDEF": {
@@ -6759,7 +6759,7 @@
           "WDEF"
         ],
         "industry": "thématique",
-        "beta": null,
+        "beta": 1.0,
         "role": "core"
       },
       "SMH": {
@@ -6770,7 +6770,7 @@
           "SMH"
         ],
         "industry": "thématique",
-        "beta": null,
+        "beta": 1.3,
         "role": "core"
       },
       "COPX": {
@@ -6781,7 +6781,7 @@
           "COPX"
         ],
         "industry": "thématique",
-        "beta": null,
+        "beta": 1.2,
         "role": "core"
       },
       "ISPY": {
@@ -6792,7 +6792,7 @@
           "ISPY"
         ],
         "industry": "thématique",
-        "beta": null,
+        "beta": 1.1,
         "role": "core"
       }
     },
@@ -6807,6 +6807,66 @@
       "COPX": 0.05,
       "ISPY": 0.05
     },
-    "Commentaire": "Portefeuille Agressif-Thematique (v7.0) — PILOTÉ PAR LE FUNNEL (conviction_sleeves). Cœur broad UCITS (EQQQ + EIMI) + ballast dividende qualité (FGEQ) + or, puis sleeves thématiques disciplinés : nucléaire (URNM), semi (SMH), défense EU (WDEF), cuivre (COPX), cybersécurité (ISPY). Poids = base uniforme × stance (ACTIF 10% / PROGRESSIF-SÉLECTIF 5%). Tous véhicules UCITS (revue expert). La conviction FILTRE (thème + véhicule + stance), le rang ne pondère jamais. ETF-only ; les thèmes sans ETF (réseau, IA-infra) sont portés hors de ce compte. Fallback THEMATIQUE_CORE si funnel indisponible."
+    "Commentaire": "Portefeuille Agressif-Thematique (v7.0) — PILOTÉ PAR LE FUNNEL (conviction_sleeves). Cœur broad UCITS (EQQQ + EIMI) + ballast dividende qualité (FGEQ) + or, puis sleeves thématiques disciplinés : nucléaire (URNM), semi (SMH), défense EU (WDEF), cuivre (COPX), cybersécurité (ISPY). Poids = base uniforme × stance (ACTIF 10% / PROGRESSIF-SÉLECTIF 5%). Tous véhicules UCITS (revue expert). La conviction FILTRE (thème + véhicule + stance), le rang ne pondère jamais. ETF-only ; les thèmes sans ETF (réseau, IA-infra) sont portés hors de ce compte. Fallback THEMATIQUE_CORE si funnel indisponible.",
+    "beta_est": 0.94,
+    "_lookthrough": {
+      "taiwan_pct": 4.09,
+      "nvidia_pct": 3.33,
+      "taiwan_cap": 6.0,
+      "name_cap": 4.0,
+      "taiwan_ok": true,
+      "nvidia_ok": true,
+      "source": "illustratif — remplacer par holdings réels (data/etf_lookthrough/)"
+    },
+    "_exposures": {
+      "by_role": {
+        "core": 1.0,
+        "satellite": 0.0,
+        "defensive": 0.0,
+        "lottery": 0.0,
+        "unknown": 0.0
+      },
+      "by_region": {
+        "US": 0.42,
+        "Global": 0.37,
+        "Émergents": 0.16,
+        "Europe": 0.05
+      },
+      "by_region_equity_only": {
+        "US": 0.42,
+        "Global": 0.29,
+        "Émergents": 0.16,
+        "Europe": 0.05
+      },
+      "by_sector": {
+        "Technology": 0.42,
+        "Diversified": 0.3,
+        "Matières premières": 0.15,
+        "Or": 0.08,
+        "Industrials": 0.05
+      },
+      "by_category": {
+        "ETF": 1.0
+      },
+      "by_risk_bucket": {
+        "equity_like": 0.92,
+        "commodity_like": 0.08
+      },
+      "concentration": {
+        "hhi": 1740.0,
+        "effective_n": 5.75,
+        "n_positions": 9,
+        "top_5_weight": 0.8,
+        "top_10_weight": 1.0,
+        "largest_position": 0.32,
+        "smallest_position": 0.05,
+        "concentration_level": "moderately_concentrated"
+      },
+      "unknown_weight": 0.0,
+      "warnings": [],
+      "is_execution_ready": true,
+      "beta_portfolio": 0.94,
+      "source": "exposures.py (look-through ETF)"
+    }
   }
 }
