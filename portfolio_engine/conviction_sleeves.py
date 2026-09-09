@@ -55,6 +55,25 @@ def _num(v):
 # ⚠ Le `rank` (1-8) NE pilote JAMAIS un poids : rank→poids = re-classement momentum INTERDIT (backtest OOS).
 STANCE_MULT = {"ACTIF": 1.0, "PROGRESSIF": 0.5, "SÉLECTIF": 0.5, "BORNÉ": 0.33, "VEILLE": 0.0}
 
+# --- RÈGLE DE POIDS (revue expert) : BASE UNIFORME par profil × stance = LE poids du thème.
+# La stance devient le SEUL levier (règle précise, gérable). Fini le double-comptage cap×stance.
+# Ex Agressif : ACTIF 10 % · PROGRESSIF/SÉLECTIF 5 % · BORNÉ 3,3 % · VEILLE 0.
+PROFILE_BASE = {"Agressif": 10.0, "Modéré": 6.0, "Stable": 3.0}
+# Stance décidée hors funnel (expert+user) — à reporter dans framework.json `position` à terme.
+STANCE_OVERRIDE = {"materials": "PROGRESSIF"}  # cuivre = proxy réseau de facto (survit IA + réseau)
+# Véhicules UCITS retenus après revue expert (achetables par un particulier FR ; meilleur AUM/thèse).
+ETF_OVERRIDE = {
+    "nuclear": ("URNM", "Sprott Uranium Miners UCITS"),
+    "semi": ("SMH", "VanEck Semiconductor UCITS (ASML/TSMC en tête)"),
+    "defense": ("WDEF", "WisdomTree Europe Defence UCITS (EU pur)"),
+    "materials": ("COPX", "Global X Copper Miners UCITS"),
+}
+# Sleeve(s) ETF-only ajouté(s) hors value-chain (pas de maillons/actions) — cybersécurité SÉLECTIF.
+EXTRA_ETF_SLEEVES = [
+    {"key": "cyber", "label": "Cybersécurité", "stance": "SÉLECTIF",
+     "etf": ("ISPY", "L&G Cyber Security UCITS")},
+]
+
 
 def _stance(position):
     s = (position or "").strip().upper()
@@ -114,13 +133,10 @@ def build_theme_sleeve(theme, profile, dur_by_t, dur_by_n, rules, catalog):
     if cap_key is None:
         return {"key": key, "label": theme.get("label"), "eligible": False,
                 "reason": "bucket géographique / pas de sleeve value-chain"}
-    caps = rules.get("thematic_caps_pct", {}).get(cap_key, {})
-    target_full = _num(caps.get(profile))
-    if not target_full:
-        return {"key": key, "label": theme.get("label"), "eligible": False,
-                "reason": f"pas de plafond {cap_key}/{profile}"}
-    # stance funnel → multiplicateur de cap (discret, structurel, expert)
-    stance, mult = _stance(theme.get("position"))
+    # BASE UNIFORME par profil (revue expert) — plus de cap par thème ; la stance seule fait le poids.
+    target_full = PROFILE_BASE.get(profile, 10.0)
+    # stance : override expert d'abord (ex. cuivre PROGRESSIF), sinon la stance funnel `position`
+    stance, mult = _stance(STANCE_OVERRIDE.get(key) or theme.get("position"))
     target = round(target_full * mult, 2)
     if mult == 0:  # VEILLE → thème non activé (fidèle à ta stance funnel)
         return {"key": key, "label": theme.get("label"), "eligible": True, "stance": stance,
@@ -323,7 +339,9 @@ def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_
 # Plus maintenable : le compte ETF est set-and-forget ; les MAJ funnel ne touchent que le petit
 # compte actions (churn peu coûteux). grid/ai_infra (sans ETF) n'existent QUE côté actions.
 ETF_ACCOUNT_GOLD = 8.0
-ETF_ACCOUNT_DIVIDEND = 18.0
+ETF_ACCOUNT_DIVIDEND = 14.0     # revue expert : dividende ≠ décorrélation, l'or fait le ballast → 18→14
+# Cœur UCITS (achetable par un particulier FR ; QQQ/IEMG US sont hors PRIIPs). Nasdaq gardé (World déjà en modéré).
+CORE_UCITS = [("EQQQ", "Invesco Nasdaq-100 UCITS", 2), ("EIMI", "iShares Core MSCI EM IMI UCITS · couvre émergents", 1)]
 
 
 def build_split_portfolios(profile, fw, rules, catalog, dur_by_t, dur_by_n):
@@ -334,6 +352,10 @@ def build_split_portfolios(profile, fw, rules, catalog, dur_by_t, dur_by_n):
     # ---- COMPTE A : Thématique ETF (100 %) ----
     thematic = []  # (sym, name, target)
     for s in elig:
+        ov = ETF_OVERRIDE.get(s["key"])   # véhicule UCITS retenu par l'expert
+        if ov:
+            thematic.append((ov[0], ov[1], s["target_pct"]))
+            continue
         etf = s.get("etf") or _pick_etf(s["key"], catalog)
         if not etf:
             eb = next((t for t in fw["themes"] if t["key"] == s["key"]), {}).get("etf_buy") or {}
@@ -341,6 +363,10 @@ def build_split_portfolios(profile, fw, rules, catalog, dur_by_t, dur_by_n):
                 etf = {"symbol": eb["symbol"], "name": eb.get("name", "")}
         if etf:
             thematic.append((etf["symbol"], etf["name"], s["target_pct"]))
+    # sleeves ETF-only ajoutés (cyber…) : stance × base uniforme
+    for ex in EXTRA_ETF_SLEEVES:
+        w = round(PROFILE_BASE.get(profile, 10.0) * STANCE_MULT.get(ex["stance"], 0.5), 2)
+        thematic.append((ex["etf"][0], ex["etf"][1] + f" · {ex['label']} {ex['stance']}", w))
     th_tot = round(sum(w for _, _, w in thematic), 2)
     core_tot = round(100 - ETF_ACCOUNT_GOLD - ETF_ACCOUNT_DIVIDEND - th_tot, 2)
     if core_tot < 10:  # trop de thématique → on rogne proportionnellement
@@ -348,12 +374,12 @@ def build_split_portfolios(profile, fw, rules, catalog, dur_by_t, dur_by_n):
         thematic = [(a, b, round(w * k, 2)) for a, b, w in thematic]
         th_tot = round(sum(w for _, _, w in thematic), 2)
         core_tot = 10.0
-    etf_account = {
-        "QQQ": {"w": round(core_tot * 2 / 3, 2), "name": "Invesco QQQ (Nasdaq 100)", "role": "cœur broad"},
-        "IEMG": {"w": round(core_tot / 3, 2), "name": "iShares Core MSCI EM IMI", "role": "cœur broad"},
-        BALLAST_TICKER: {"w": ETF_ACCOUNT_DIVIDEND, "name": BALLAST_NAME, "role": "dividende"},
-        "SGLN.AS": {"w": ETF_ACCOUNT_GOLD, "name": "iShares Physical Gold", "role": "or"},
-    }
+    ctot = sum(r[2] for r in CORE_UCITS)
+    etf_account = {}
+    for tk, nm, wt in CORE_UCITS:
+        etf_account[tk] = {"w": round(core_tot * wt / ctot, 2), "name": nm, "role": "cœur broad"}
+    etf_account[BALLAST_TICKER] = {"w": ETF_ACCOUNT_DIVIDEND, "name": BALLAST_NAME, "role": "dividende"}
+    etf_account["SGLN.AS"] = {"w": ETF_ACCOUNT_GOLD, "name": "iShares Physical Gold", "role": "or"}
     for sym, nm, w in thematic:
         etf_account[sym] = {"w": w, "name": nm, "role": "thématique"}
 
