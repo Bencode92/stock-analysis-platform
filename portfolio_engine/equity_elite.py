@@ -17,9 +17,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 
 # --- PORTES (gates) ---
-ROIC_MIN = 15.0         # ROIC vraiment élevé (revue expert : 12 % laissait entrer des 12-14 % qui
-                        # gagnaient ensuite sur la stabilité → socle « ennuyeux ». Relever = vrai haut de gamme)
-ROE_MIN_FIN = 15.0      # financières : ROE (le ROIC/D/E n'ont pas de sens — revue expert)
+ROIC_MIN = 12.0         # non-financières : ROIC élevé (business à moat)
+ROE_MIN_FIN = 12.0      # financières : ROE (le ROIC/D/E n'ont pas de sens — revue expert)
 MARGIN_MIN = 0.0
 DE_MAX = 2.5            # levier (non-financières)
 ADV_MIN_USD = 5.0e6    # INVESTABILITÉ : volume $ quotidien ≥ 5 M$ (meilleur proxy que la seule mcap)
@@ -173,60 +172,23 @@ def _passes_exit(s):
     return v is not None and v >= EXIT_ROIC
 
 
-def _roic_lat_avg_std(s):
-    """(courant, moyen 3a, écart-type 3a) du ROIC — ou du ROE pour les financières."""
+def _stability(s):
+    """Instabilité du ROIC (ou ROE pour les financières) = écart-type / |moyenne|. Plus BAS = mieux."""
     if _is_fin(s):
-        return _num(s.get("roe")), _num(s.get("roe_avg_3y")), _num(s.get("roe_std_3y"))
-    return _num(s.get("roic")), _num(s.get("roic_avg_3y")), _num(s.get("roic_std_3y"))
-
-
-def _floor(s):
-    """PERSISTANCE : plancher estimé du ROIC (pire année ≈ moyenne − écart-type). Plus HAUT = mieux.
-    Récompense un ROIC haut ET soutenu — un compounder en accélération n'est pas puni pour sa hausse."""
-    _lat, avg, std = _roic_lat_avg_std(s)
-    if avg is None:
-        return -999.0
-    return avg - (std or 0.0)
-
-
-def _downside(s):
-    """BAISSE directionnelle (semi-déviation, revue expert) : de combien le ROIC courant est SOUS sa
-    moyenne. 0 s'il est en HAUSSE (Nvidia/TSMC ne sont plus pénalisés), positif s'il DÉCLINE."""
-    lat, avg, _std = _roic_lat_avg_std(s)
-    if lat is None or avg is None:
-        return 0.0
-    return max(0.0, avg - lat)
-
-
-def _instability(s):
-    """Instabilité ASYMÉTRIQUE du ROIC (revue expert) : écart-type/moyenne, mais la volatilité
-    HAUSSIÈRE est peu pénalisée (×0,3) et la baissière pleinement (×1). Corrige v3 (qui punissait
-    Nvidia/TSMC d'avoir PROGRESSÉ) sans casser le reste (les compounders stables restent bas).
-    Plus BAS = mieux."""
-    lat, avg, std = _roic_lat_avg_std(s)
+        avg, std = _num(s.get("roe_avg_3y")), _num(s.get("roe_std_3y"))
+    else:
+        avg, std = _num(s.get("roic_avg_3y")), _num(s.get("roic_std_3y"))
     if avg is None or std is None or abs(avg) < 1e-6:
         return 9.99
-    base = abs(std / avg)
-    rising = lat is not None and lat >= avg          # ROIC courant ≥ moyenne → en hausse/stable
-    return base * (0.3 if rising else 1.0)
-
-
-# contexte SECTORIEL + funnel, peuplé au début de build() — le classement est SECTOR-RELATIF (revue user :
-# « fondamentaux PAR secteur, le funnel donc conviction, ce que l'entreprise EST »).
-_SECTOR_MED = {}   # {secteur GICS : ROIC médian du pool}
-_FUNNEL_SET = set()
+    return abs(std / avg)
 
 
 def _rank_key(s):
-    """Départage SECTOR-RELATIF, descriptif :
-       durabilité (A>B, ce qu'elle EST) → instabilité asymétrique (régulière/en hausse) →
-       LEADERSHIP sectoriel (ROIC − médiane de SON secteur) → conviction funnel → FCF yield (valo).
-       Une société est jugée vs SON secteur : un top-semi bat un staple médian même à ROIC absolu plus bas."""
+    """Départage LEXICOGRAPHIQUE, tout descriptif (revue expert E) :
+       durabilité (A>B) → stabilité du ROIC (persistance) → FCF yield (valo, pas prédiction)."""
     bucket = 1 if (s.get("durability_grade") == "A") else 0
-    lead = (_num(s.get("roic_avg_3y")) or 0.0) - _SECTOR_MED.get(_gics(s), 0.0)   # au-dessus de son secteur ?
-    conv = 1 if str(s.get("ticker")) in _FUNNEL_SET else 0
     fcf = _num(s.get("fcf_yield")) or 0.0
-    return (bucket, -_instability(s), lead, conv, fcf)   # tri desc
+    return (bucket, -_stability(s), fcf)   # tri desc : bucket haut, instabilité basse, fcf haut
 
 
 def build_elite_portfolio():
@@ -237,36 +199,18 @@ def build_elite_portfolio():
 
     # 1) POOL ELITE (portes sectorielles)
     pool = [s for s in rows if s.get("industry") and _passes_gates(s, ("A", "B"))]
-    # contexte SECTOR-RELATIF : médiane ROIC par secteur GICS + set funnel (peuplés AVANT le tri)
-    _SECTOR_MED.clear(); _FUNNEL_SET.clear()
-    _FUNNEL_SET.update(funnel.keys())
-    _by_sec = defaultdict(list)
-    for s in pool:
-        r = _num(s.get("roic_avg_3y"))
-        if r is not None:
-            _by_sec[_gics(s)].append(r)
-    for sec, vals in _by_sec.items():
-        vs = sorted(vals)
-        _SECTOR_MED[sec] = vs[len(vs) // 2] if vs else 0.0
-    pool.sort(key=_rank_key, reverse=True)           # tri SECTOR-RELATIF (leadership + conviction)
+    pool.sort(key=_rank_key, reverse=True)           # meilleur départage d'abord — SANS funnel (doctrine)
 
     # CAPS de diversification : max 2/industrie fine, max 8/secteur GICS, max 6 financières.
     ind_c, sec_c = defaultdict(int), defaultdict(int)
     fin_c = [0]
 
-    chosen_ent = set()   # dédup CROSS-LISTING par entité (TJX-US = TJX-Europe = même société)
-
-    def _ent(s):
-        return ((s.get("name_api") or s.get("name") or str(s.get("ticker"))) or "").upper()
-
     def _can_add(s):
-        return (_ent(s) not in chosen_ent
-                and ind_c[s["industry"]] < MAX_PER_INDUSTRY and sec_c[_gics(s)] < SECTOR_CAP
+        return (ind_c[s["industry"]] < MAX_PER_INDUSTRY and sec_c[_gics(s)] < SECTOR_CAP
                 and (not _is_fin(s) or fin_c[0] < FIN_CAP))
 
     def _commit(s):
         ind_c[s["industry"]] += 1; sec_c[_gics(s)] += 1
-        chosen_ent.add(_ent(s))
         if _is_fin(s):
             fin_c[0] += 1
 
@@ -329,8 +273,10 @@ def build_elite_portfolio():
         runner = next((p for p in peers if str(p.get("ticker")) not in port_tks and str(p.get("ticker")) != tk), None)
         diff = None
         if runner is not None:
-            if _instability(s) < _instability(runner) - 1e-6:
-                diff = "ROIC plus régulier ou en meilleure trajectoire"
+            if _stability(s) < _stability(runner) - 1e-6:
+                diff = "ROIC plus régulier"
+            elif (_num(s.get("roic_avg_3y")) or 0) > (_num(runner.get("roic_avg_3y")) or 0):
+                diff = "rentabilité plus élevée"
             elif (_num(s.get("fcf_yield")) or 0) > (_num(runner.get("fcf_yield")) or 0):
                 diff = "moins cher (FCF)"
             else:
@@ -348,8 +294,7 @@ def build_elite_portfolio():
             "sector": _gics(s), "weight": weights.get(tk), "durability": s.get("durability_grade"),
             "durability_score": _num(s.get("durability_score")), "quality": s.get("quality_grade"),
             "fin": fin, "roic_or_roe": _num(s.get("roe_avg_3y") if fin else s.get("roic_avg_3y")),
-            "roic_floor": round(_floor(s), 1), "roic_downside": round(_downside(s), 1),
-            "fcf_yield": _num(s.get("fcf_yield")),
+            "stability": round(_stability(s), 2), "fcf_yield": _num(s.get("fcf_yield")),
             "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
             "funnel": funnel.get(tk), "held_hysteresis": tk in {str(x.get("ticker")) for x in kept[:n_held]},
             "why": _justify(s),
@@ -383,14 +328,13 @@ def main():
           + (f" · maintenus hystérésis : {pf['n_held_hysteresis']}" if pf["n_held_hysteresis"] else ""))
     if pf.get("region_swaps"):
         print(f"  ⇄ rééquilibrage région (action) : {pf['region_swaps']}")
-    print(f"\n{'TICKER':<8}{'POIDS':>6}  {'NOM':<24}{'RÉG':<7}{'D':<2}{'Q':<2}{'ROICmoy':>8}{'PLANCH':>7}{'BAISSE':>7}  vs / IND")
+    print(f"\n{'TICKER':<8}{'POIDS':>6}  {'NOM':<26}{'RÉG':<7}{'D':<2}{'Q':<2}{'ROIC/E':>7}{'STAB':>6}{'FCF%':>6}{'VOL%':>6}  IND")
     for h in pf["holdings"]:
         fn = f" 🧭{h['funnel']}" if h["funnel"] else ""
         fin = "ᶠ" if h["fin"] else " "
-        w = h["why"]
-        why = f"#{w['industry_rank']}/{w['industry_n']} " + (f"dvt {w['runner_up_ticker']}" if w['runner_up_ticker'] else "seul")
-        print(f"{h['ticker']:<8}{h['weight']:>5}%  {str(h['name'])[:23]:<24}{h['region']:<7}"
-              f"{h['durability']}{fin}{h['quality']:<2}{int(h['roic_or_roe'] or 0):>7}{h['roic_floor']:>7}{h['roic_downside']:>7}  {why}")
+        print(f"{h['ticker']:<8}{h['weight']:>5}%  {str(h['name'])[:25]:<26}{h['region']:<7}"
+              f"{h['durability']}{fin}{h['quality']:<2}{int(h['roic_or_roe'] or 0):>6} {h['stability']:>5}"
+              f"{round(h['fcf_yield'] or 0,1):>6}{int(h['vol_3y'] or 0):>6}  {str(h['industry'])[:20]}{fn}")
     with open(PREV_FILE, "w", encoding="utf-8") as f:
         json.dump(pf, f, ensure_ascii=False, indent=2)
     print(f"\n✅ écrit → data/portfolios_elite.json")
