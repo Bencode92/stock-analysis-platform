@@ -60,7 +60,9 @@ STANCE_MULT = {"ACTIF": 1.0, "PROGRESSIF": 0.5, "SÉLECTIF": 0.5, "BORNÉ": 0.33
 # Ex Agressif : ACTIF 10 % · PROGRESSIF/SÉLECTIF 5 % · BORNÉ 3,3 % · VEILLE 0.
 PROFILE_BASE = {"Agressif": 10.0, "Modéré": 6.0, "Stable": 3.0}
 # Stance décidée hors funnel (expert+user) — à reporter dans framework.json `position` à terme.
-STANCE_OVERRIDE = {"materials": "PROGRESSIF"}  # cuivre = proxy réseau de facto (survit IA + réseau)
+# ⚠ JOURNAL (revue expert v2) : COPX = exposition CUIVRE (demande Chine/LME), PAS le proxy réseau.
+# La conviction réseau (rang 1) reste NON exprimée en ETF. Cuivre PROGRESSIF = pari cuivre autonome.
+STANCE_OVERRIDE = {"materials": "PROGRESSIF"}
 # Véhicules UCITS retenus après revue expert (achetables par un particulier FR ; meilleur AUM/thèse).
 ETF_OVERRIDE = {
     "nuclear": ("URNM", "Sprott Uranium Miners UCITS"),
