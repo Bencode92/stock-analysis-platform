@@ -319,6 +319,67 @@ def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_
             "beta_est": beta, "beta_target": BETA_TARGET, "total_pct": total}
 
 
+# --- MODÈLE 2 COMPTES : ETF thématique (le gros) + livre d'actions conviction (le petit) ---
+# Plus maintenable : le compte ETF est set-and-forget ; les MAJ funnel ne touchent que le petit
+# compte actions (churn peu coûteux). grid/ai_infra (sans ETF) n'existent QUE côté actions.
+ETF_ACCOUNT_GOLD = 8.0
+ETF_ACCOUNT_DIVIDEND = 18.0
+
+
+def build_split_portfolios(profile, fw, rules, catalog, dur_by_t, dur_by_n):
+    sleeves = [build_theme_sleeve(t, profile, dur_by_t, dur_by_n, rules, catalog)
+               for t in fw.get("themes", [])]
+    elig = [s for s in sleeves if s.get("eligible") and s.get("vehicle") != "veille"]
+
+    # ---- COMPTE A : Thématique ETF (100 %) ----
+    thematic = []  # (sym, name, target)
+    for s in elig:
+        etf = s.get("etf") or _pick_etf(s["key"], catalog)
+        if not etf:
+            eb = next((t for t in fw["themes"] if t["key"] == s["key"]), {}).get("etf_buy") or {}
+            if eb.get("symbol") and eb["symbol"] != "—":
+                etf = {"symbol": eb["symbol"], "name": eb.get("name", "")}
+        if etf:
+            thematic.append((etf["symbol"], etf["name"], s["target_pct"]))
+    th_tot = round(sum(w for _, _, w in thematic), 2)
+    core_tot = round(100 - ETF_ACCOUNT_GOLD - ETF_ACCOUNT_DIVIDEND - th_tot, 2)
+    if core_tot < 10:  # trop de thématique → on rogne proportionnellement
+        k = (100 - ETF_ACCOUNT_GOLD - ETF_ACCOUNT_DIVIDEND - 10) / th_tot if th_tot else 1
+        thematic = [(a, b, round(w * k, 2)) for a, b, w in thematic]
+        th_tot = round(sum(w for _, _, w in thematic), 2)
+        core_tot = 10.0
+    etf_account = {
+        "QQQ": {"w": round(core_tot * 2 / 3, 2), "name": "Invesco QQQ (Nasdaq 100)", "role": "cœur broad"},
+        "IEMG": {"w": round(core_tot / 3, 2), "name": "iShares Core MSCI EM IMI", "role": "cœur broad"},
+        BALLAST_TICKER: {"w": ETF_ACCOUNT_DIVIDEND, "name": BALLAST_NAME, "role": "dividende"},
+        "SGLN.AS": {"w": ETF_ACCOUNT_GOLD, "name": "iShares Physical Gold", "role": "or"},
+    }
+    for sym, nm, w in thematic:
+        etf_account[sym] = {"w": w, "name": nm, "role": "thématique"}
+
+    # ---- COMPTE B : Convictions actions seules (100 %, normalisé) ----
+    direct = {}
+    for s in elig:
+        if not s["vehicle"].startswith("direct"):
+            continue
+        for h in s["holdings"]:
+            e = direct.get(h["ticker"])
+            if not e:
+                direct[h["ticker"]] = {"name": h["name"], "dur": h["dur"], "w": h["weight"],
+                                       "themes": [s["key"]]}
+            else:
+                e["w"] = max(e["w"], h["weight"])
+                e["themes"].append(s["key"])
+    raw = sum(v["w"] for v in direct.values())
+    stock_account = {}
+    if raw:
+        for tk, v in sorted(direct.items(), key=lambda kv: -kv[1]["w"]):
+            stock_account[tk] = {"w": round(v["w"] / raw * 100, 2), "name": v["name"],
+                                 "dur": v["dur"], "themes": v["themes"]}
+    return {"etf_account": etf_account, "stock_account": stock_account,
+            "etf_lines": len(etf_account), "stock_lines": len(stock_account)}
+
+
 def _fmt(sl):
     out = []
     if not sl.get("eligible"):
@@ -393,10 +454,36 @@ def _assemble_and_write(profile, fw, rules, catalog, dur_by_t, dur_by_n):
     print(f"\n✅ écrit → data/portfolios_conviction.json (fichier de revue ; portfolios.json intact)")
 
 
+def _split_and_write(profile, fw, rules, catalog, dur_by_t, dur_by_n):
+    sp = build_split_portfolios(profile, fw, rules, catalog, dur_by_t, dur_by_n)
+    print(f"\n### MODÈLE 2 COMPTES — {profile} (proposition, fichier de revue) ###\n")
+    print(f"— COMPTE A · Thématique ETF ({sp['etf_lines']} lignes, le GROS des fonds, set-and-forget) —")
+    for sym, v in sp["etf_account"].items():
+        print(f"   {sym:<9}{v['w']:>6}%  [{v['role']:<10}] {v['name'][:40]}")
+    print(f"\n— COMPTE B · Convictions actions ({sp['stock_lines']} lignes, PETIT montant, MAJ funnel ici) —")
+    for tk, v in sp["stock_account"].items():
+        print(f"   {tk:<9}{v['w']:>6}%  dur:{v['dur'] or '-'}  {v['name'][:24]:<25}[{'+'.join(v['themes'])}]")
+    out = {
+        f"{profile}-ThematiqueETF": {
+            "ETF": {k: {"allocation": f"{v['w']}%", "name": v["name"], "role": v["role"]}
+                    for k, v in sp["etf_account"].items()},
+            "_meta": {"type": "full ETF, set-and-forget, gros des fonds", "lines": sp["etf_lines"]}},
+        f"{profile}-ConvictionsActions": {
+            "Actions": {k: {"allocation": f"{v['w']}%", "name": v["name"], "durability": v["dur"],
+                            "themes": v["themes"]} for k, v in sp["stock_account"].items()},
+            "_meta": {"type": "actions conviction seules, petit montant, piloté funnel", "lines": sp["stock_lines"]}},
+    }
+    path = os.path.join(DATA, "portfolios_split.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+    print(f"\n✅ écrit → data/portfolios_split.json (revue ; portfolios.json intact)")
+
+
 def main():
     args = [a for a in sys.argv[1:]]
     do_assemble = "assemble" in args
-    profile = next((a for a in args if a not in ("assemble",)), "Agressif")
+    do_split = "split" in args
+    profile = next((a for a in args if a not in ("assemble", "split")), "Agressif")
     fw = _load("framework.json")
     rules = _load("allocation_rules.json")
     catalog = _load("etf_thematic_catalog.json")
@@ -412,6 +499,8 @@ def main():
     print(f"→ Enveloppe thématique RÉELLEMENT allouée (avant dédup/caps) : {total:.0f}% du portefeuille {profile}")
     if do_assemble:
         _assemble_and_write(profile, fw, rules, catalog, dur_by_t, dur_by_n)
+    if do_split:
+        _split_and_write(profile, fw, rules, catalog, dur_by_t, dur_by_n)
 
 
 if __name__ == "__main__":
