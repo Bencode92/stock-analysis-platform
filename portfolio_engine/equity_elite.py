@@ -2,49 +2,43 @@
 # -*- coding: utf-8 -*-
 """
 equity_elite.py — portefeuille full-actions « meilleur des meilleurs », par EMPILEMENT DE FILTRES.
+v2 : intègre la revue expert (portes sectorielles, départage par stabilité, ADV liquidité, historique,
+     caps de diversification, sortie resserrée, funnel = TAG SEULEMENT — plus de tri par conviction).
 
-DOCTRINE (cf mémoire) : on JUGE l'entreprise pour ce qu'elle EST (valeur réelle + ratios sains),
-JAMAIS par un classement prédictif backtesté (« composite = FILTRE, pas ranking »). Le portefeuille
-= les survivants des portes, resserrés par diversification structurelle (champion d'industrie),
-équipondérés (A cœur / B extension). Le funnel = tag, pas un poids. Hystérésis = anti-turnover.
+DOCTRINE : juger l'entreprise pour ce qu'elle EST (valeur réelle + ratios sains), JAMAIS un classement
+prédictif. Les scores = PORTES. La conviction FILTRE, ne CLASSE pas → funnel = tag, pas un tie-break.
 
 Standalone : `python3 portfolio_engine/equity_elite.py`  → data/portfolios_elite.json
 """
-import json, os
+import json, os, re
 from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 
-# --- PORTES (gates) — seuils = doctrine (logique AVANT chiffre), pas backtestés ---
-ROIC_MIN = 12.0         # ROIC élevé (vrai business à moat, pas juste ≥ coût du capital)
-MAX_HOLDINGS = 40       # taille cible du portefeuille ; coupe au top-N (durabilité puis ROIC)
-MARGIN_MIN = 0.0        # marge nette réellement positive
-DE_MAX = 2.5            # levier maîtrisé
-MCAP_MIN = 2.0e9        # INVESTABILITÉ : ≥ 2 Md USD (exclut les micro-caps illiquides où le score sature)
-# market_cap est en DEVISE LOCALE (piège cross-devise) → normaliser via data_currency.
+# --- PORTES (gates) ---
+ROIC_MIN = 12.0         # non-financières : ROIC élevé (business à moat)
+ROE_MIN_FIN = 12.0      # financières : ROE (le ROIC/D/E n'ont pas de sens — revue expert)
+MARGIN_MIN = 0.0
+DE_MAX = 2.5            # levier (non-financières)
+ADV_MIN_USD = 5.0e6    # INVESTABILITÉ : volume $ quotidien ≥ 5 M$ (meilleur proxy que la seule mcap)
+# --- diversification & taille ---
+MAX_HOLDINGS = 40
+MAX_PER_INDUSTRY = 2    # cap (contrainte), plus « 1 champion obligatoire par industrie »
+REGION_REVIEW = 70.0    # pas de cap dur ; alerte de revue si une région > 70 %
+# --- pondération : équipondéré + plafond de contribution au risque (écrête les plus volatils) ---
+RISK_CAP_MULT = 1.5
+# --- hystérésis (anti-turnover) ---
+EXIT_ROIC = 8.0        # sortie à ROIC < 8 % (moitié de l'entrée), pas < 0 (revue expert)
+PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
+
 FX_TO_USD = {
     "USD": 1.0, "EUR": 1.08, "GBP": 1.27, "CHF": 1.10, "CAD": 0.73, "SGD": 0.74,
     "JPY": 0.0064, "TWD": 0.031, "HKD": 0.128, "KRW": 0.00074, "CNY": 0.138, "INR": 0.012,
     "IDR": 0.000063, "THB": 0.028, "PLN": 0.25, "ILS": 0.27, "ILA": 0.0027, "PKR": 0.0036,
     "TRY": 0.03, "QAR": 0.27, "ZAc": 0.00053, "PHP": 0.017, "HUF": 0.0028, "SAR": 0.27,
 }
-
-
-def _mcap_usd(s):
-    """market_cap normalisé en USD via data_currency. None si devise inconnue (exclu, prudent)."""
-    m = _num(s.get("market_cap"))
-    fx = FX_TO_USD.get(s.get("data_currency"))
-    return m * fx if (m is not None and fx is not None) else None
-QUALITY_OK = ("A", "B")  # qualité peer-relative
-DURAB_CORE = "A"        # cœur = durabilité A ; extension = B
-DURAB_EXT = "B"
-# --- diversification & taille ---
-MAX_PER_INDUSTRY = 1    # le CHAMPION de chaque industrie (meilleure durabilité du secteur)
-REGION_CAP = 0.45       # max 45 % des lignes par région (évite le tout-Asie)
-NAME_CAP = 5.0          # cap par ligne (%)
-# --- hystérésis (anti-turnover) : un nom TENU sort seulement s'il casse la porte de SORTIE ---
-PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
+_FIN_RE = re.compile(r"bank|insurance|reinsurance|capital market|financial serv|asset manage|credit serv", re.I)
 
 
 def _num(v):
@@ -52,6 +46,21 @@ def _num(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _is_fin(s):
+    return bool(_FIN_RE.search((s.get("industry") or "") + " " + (s.get("sector_api") or "")))
+
+
+def _adv_usd(s):
+    """Volume quotidien en USD = volume(actions) × prix × FX. Proxy de liquidité (> market cap)."""
+    vol, px, fx = _num(s.get("volume")), _num(s.get("price")), FX_TO_USD.get(s.get("data_currency"))
+    return vol * px * fx if (vol and px and fx) else None
+
+
+def _has_history(s):
+    """≥ 3 ans de recul : stats 3Y présentes (exclut les IPO récentes type Slide Insurance 2025)."""
+    return all(s.get(k) not in (None, "", "-") for k in ("perf_3y", "roic_std_3y", "max_drawdown_3y"))
 
 
 def _load_stocks():
@@ -84,154 +93,168 @@ def _funnel_tickers():
 
 
 def _passes_gates(s, grades):
-    """Porte d'ENTRÉE (stricte) : anti-piège + qualité + rentabilité + solidité."""
+    """Portes d'entrée — SECTORIELLES (financières jugées au ROE, pas au ROIC/D-E)."""
     if (s.get("durability_grade") or "") not in grades:
         return False
-    if s.get("durability_mirage") is True:              # grade pairs flatté = rejeté
+    if s.get("durability_mirage") is True:
         return False
-    if (s.get("quality_grade") or "") not in QUALITY_OK:
+    if (s.get("quality_grade") or "") not in ("A", "B"):
         return False
-    mcap = _mcap_usd(s)                              # investabilité (taille/liquidité), FX-normalisé
-    if mcap is None or mcap < MCAP_MIN:
+    if not _has_history(s):                          # historique ≥ 3 ans
         return False
-    roic, marg, de = _num(s.get("roic_avg_3y")), _num(s.get("net_margin")), _num(s.get("de_ratio"))
-    if roic is None or roic < ROIC_MIN:
+    adv = _adv_usd(s)
+    if adv is None or adv < ADV_MIN_USD:             # liquidité
         return False
+    marg = _num(s.get("net_margin"))
     if marg is None or marg <= MARGIN_MIN:
         return False
+    if _is_fin(s):                                   # FINANCIÈRES : ROE, pas ROIC/D-E
+        roe = _num(s.get("roe_avg_3y")) or _num(s.get("roe"))
+        return roe is not None and roe >= ROE_MIN_FIN
+    roic, de = _num(s.get("roic_avg_3y")), _num(s.get("de_ratio"))
+    if roic is None or roic < ROIC_MIN:
+        return False
     if de is not None and de > DE_MAX:
+        return False
+    fcf = _num(s.get("fcf_yield"))                   # génère du cash (proxy anti-accruals ; FCF/RN indispo)
+    if fcf is None or fcf <= 0:
         return False
     return True
 
 
 def _passes_exit(s):
-    """Porte de SORTIE (souple, hystérésis) : un nom tenu reste tant qu'il n'est pas cassé.
-    Sort si durabilité C/D, mirage, ROIC négatif, ou marge négative."""
-    if (s.get("durability_grade") or "") not in ("A", "B"):
+    """Porte de SORTIE (hystérésis) resserrée : durab A/B, pas mirage, rentabilité ≥ moitié de l'entrée."""
+    if (s.get("durability_grade") or "") not in ("A", "B") or s.get("durability_mirage") is True:
         return False
-    if s.get("durability_mirage") is True:
-        return False
-    roic, marg = _num(s.get("roic_avg_3y")), _num(s.get("net_margin"))
-    if roic is None or roic < 0 or marg is None or marg <= 0:
-        return False
-    return True
+    key = "roe_avg_3y" if _is_fin(s) else "roic_avg_3y"
+    v = _num(s.get(key)) if s.get(key) is not None else _num(s.get("roe") if _is_fin(s) else s.get("roic_avg_3y"))
+    return v is not None and v >= EXIT_ROIC
+
+
+def _stability(s):
+    """Instabilité du ROIC (ou ROE pour les financières) = écart-type / |moyenne|. Plus BAS = mieux."""
+    if _is_fin(s):
+        avg, std = _num(s.get("roe_avg_3y")), _num(s.get("roe_std_3y"))
+    else:
+        avg, std = _num(s.get("roic_avg_3y")), _num(s.get("roic_std_3y"))
+    if avg is None or std is None or abs(avg) < 1e-6:
+        return 9.99
+    return abs(std / avg)
+
+
+def _rank_key(s):
+    """Départage LEXICOGRAPHIQUE, tout descriptif (revue expert E) :
+       durabilité (A>B) → stabilité du ROIC (persistance) → FCF yield (valo, pas prédiction)."""
+    bucket = 1 if (s.get("durability_grade") == "A") else 0
+    fcf = _num(s.get("fcf_yield")) or 0.0
+    return (bucket, -_stability(s), fcf)   # tri desc : bucket haut, instabilité basse, fcf haut
 
 
 def build_elite_portfolio():
     rows = _load_stocks()
     funnel = _funnel_tickers()
-    by_tk = {str(s.get("ticker")): s for s in rows if s.get("ticker")}
+    # clé (ticker, région) : les tickers numériques asiatiques se collisionnent → jamais par ticker seul
+    by_key = {(str(s.get("ticker")), s["_region"]): s for s in rows if s.get("ticker")}
 
-    # 1) POOL ELITE (porte d'entrée A+B)
-    pool = [s for s in rows if _passes_gates(s, ("A", "B")) and s.get("industry")]
+    # 1) POOL ELITE (portes sectorielles)
+    pool = [s for s in rows if s.get("industry") and _passes_gates(s, ("A", "B"))]
+    pool.sort(key=_rank_key, reverse=True)           # meilleur départage d'abord — SANS funnel (doctrine)
 
-    # 2) CHAMPION par industrie fine : meilleure DURABILITÉ du secteur (sélection structurelle
-    #    intra-industrie = tiebreak de qualité, PAS un ranking de rendement).
-    champ_by_ind = {}
+    # 2) SÉLECTION greedy : meilleurs globalement, CAP max 2 / industrie fine (contrainte, pas quota)
+    per_ind = defaultdict(int)
+    fresh = []
     for s in pool:
         ind = s["industry"]
-        cur = champ_by_ind.get(ind)
-        if cur is None or (_num(s.get("durability_score")) or 0) > (_num(cur.get("durability_score")) or 0):
-            champ_by_ind[ind] = s
-    champions = list(champ_by_ind.values())
+        if per_ind[ind] >= MAX_PER_INDUSTRY:
+            continue
+        fresh.append(s)
+        per_ind[ind] += 1
+        if len(fresh) >= MAX_HOLDINGS:
+            break
 
-    # 3) HYSTÉRÉSIS : on garde les noms précédemment tenus qui passent encore la porte de SORTIE
-    #    (même s'ils ne sont plus champions) → anti-turnover. Nouveaux champions ajoutés en plus.
-    held_prev = set()
-    kept_held = []
+    # 3) HYSTÉRÉSIS : les tenus qui passent encore la SORTIE restent ; on complète avec du frais.
+    held_keys = []
     if os.path.exists(PREV_FILE):
         try:
-            prev = json.load(open(PREV_FILE, encoding="utf-8"))
-            for tk in (prev.get("_holdings") or []):
-                held_prev.add(str(tk))
+            held_keys = [tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or [])]
         except Exception:
-            pass
-    selected = {}
-    for s in champions:
-        selected[str(s["ticker"])] = s
-    for tk in held_prev:
-        if tk not in selected and tk in by_tk and _passes_exit(by_tk[tk]):
-            kept_held.append(tk)
-            selected[tk] = by_tk[tk]
+            held_keys = []
+    kept, seen_ind, chosen = [], defaultdict(int), set()
+    for key in held_keys:                             # priorité aux positions tenues (anti-turnover)
+        s = by_key.get(tuple(key))
+        if s and _passes_exit(s) and s.get("industry") and seen_ind[s["industry"]] < MAX_PER_INDUSTRY:
+            kept.append(s); chosen.add((str(s.get("ticker")), s["_region"])); seen_ind[s["industry"]] += 1
+    n_held = len(kept)
+    for s in fresh:                                   # complète jusqu'à MAX_HOLDINGS
+        k = (str(s.get("ticker")), s["_region"])
+        if k in chosen or seen_ind[s["industry"]] >= MAX_PER_INDUSTRY:
+            continue
+        if len(kept) >= MAX_HOLDINGS:
+            break
+        kept.append(s); chosen.add(k); seen_ind[s["industry"]] += 1
+    final = kept
 
-    sel = list(selected.values())
+    # 4) POIDS : équipondéré + plafond de contribution au risque (écrête les plus volatils, sans tri)
+    base = 100.0 / len(final) if final else 0.0
+    vols = [v for v in (_num(s.get("volatility_3y")) for s in final) if v]
+    med_vol = sorted(vols)[len(vols) // 2] if vols else None
+    raw = {}
+    for s in final:
+        w = base
+        vol = _num(s.get("volatility_3y"))
+        if med_vol and vol and vol > 0:
+            w = min(base, base * med_vol * RISK_CAP_MULT / vol)
+        raw[str(s.get("ticker"))] = w
+    tot = sum(raw.values()) or 1.0
+    weights = {tk: round(w / tot * 100, 2) for tk, w in raw.items()}   # renormalisé à 100 %
 
-    # 4) CAP RÉGION (souple) : si une région > REGION_CAP des lignes, on coupe les plus faibles
-    #    (par durabilité) de cette région en surnombre. Priorité de maintien : funnel > durabilité.
-    n_total = len(sel)
-    cap_n = int(n_total * REGION_CAP) + 1
-    by_reg = defaultdict(list)
-    for s in sel:
-        by_reg[s["_region"]].append(s)
-    final = []
-    for reg, lst in by_reg.items():
-        if len(lst) <= cap_n:
-            final.extend(lst)
-        else:
-            lst.sort(key=lambda s: (str(s.get("ticker")) in funnel, _num(s.get("durability_score")) or 0), reverse=True)
-            final.extend(lst[:cap_n])
-
-    # 4b) COUPE au top-N : « meilleur des meilleurs » → on garde les MAX_HOLDINGS plus solides.
-    #     Ordre = funnel d'abord (tag prioritaire), puis durabilité, puis ROIC (qualité réelle, pas
-    #     un pari de rendement). Les noms tenus par hystérésis restent prioritaires (anti-turnover).
-    _held_set = set(kept_held)
-    final.sort(key=lambda s: (
-        str(s.get("ticker")) in _held_set,
-        str(s.get("ticker")) in funnel,
-        _num(s.get("durability_score")) or 0,
-        _num(s.get("roic_avg_3y")) or 0,
-    ), reverse=True)
-    final = final[:MAX_HOLDINGS]
-
-    # 5) TIERS + POIDS : A = cœur (poids plein), B = extension (demi-poids). Équipondéré dans le tier.
-    core = [s for s in final if (s.get("durability_grade") or "") == DURAB_CORE]
-    ext = [s for s in final if (s.get("durability_grade") or "") == DURAB_EXT]
-    nA, nB = len(core), len(ext)
-    unit = 100.0 / (nA + nB / 2.0) if (nA + nB) else 0.0
-    wA = min(unit, NAME_CAP)
-    wB = min(unit / 2.0, NAME_CAP)
-
-    def row(s, tier, w):
+    def row(s):
+        tk = str(s.get("ticker"))
+        fin = _is_fin(s)
         return {
-            "ticker": str(s.get("ticker")), "name": s.get("name"), "region": s["_region"],
-            "industry": s.get("industry"), "tier": tier, "weight": round(w, 2),
-            "durability": s.get("durability_grade"), "durability_score": _num(s.get("durability_score")),
-            "quality": s.get("quality_grade"), "roic": _num(s.get("roic_avg_3y")),
-            "net_margin": _num(s.get("net_margin")), "funnel": funnel.get(str(s.get("ticker"))),
-            "held_hysteresis": str(s.get("ticker")) in kept_held,
+            "ticker": tk, "name": s.get("name"), "region": s["_region"], "industry": s.get("industry"),
+            "weight": weights.get(tk), "durability": s.get("durability_grade"),
+            "durability_score": _num(s.get("durability_score")), "quality": s.get("quality_grade"),
+            "fin": fin, "roic_or_roe": _num(s.get("roe_avg_3y") if fin else s.get("roic_avg_3y")),
+            "stability": round(_stability(s), 2), "fcf_yield": _num(s.get("fcf_yield")),
+            "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
+            "funnel": funnel.get(tk), "held_hysteresis": tk in {str(x.get("ticker")) for x in kept[:n_held]},
         }
-    holdings = [row(s, "core", wA) for s in core] + [row(s, "extension", wB) for s in ext]
-    holdings.sort(key=lambda r: (-{"core": 1, "extension": 0}[r["tier"]], -(r["durability_score"] or 0)))
-    total = round(sum(h["weight"] for h in holdings), 1)
+    holdings = [row(s) for s in final]
+    holdings.sort(key=lambda r: (-(r["weight"] or 0), -(r["durability_score"] or 0)))
+    from collections import Counter
+    reg = Counter(h["region"] for h in holdings)
+    max_reg = max((100 * v / len(holdings)) for v in reg.values()) if holdings else 0
 
     return {
         "holdings": holdings, "_holdings": [h["ticker"] for h in holdings],
-        "n_core": nA, "n_extension": nB, "total_pct": total,
-        "pool_size": len(pool), "n_industries": len(champ_by_ind), "n_held_hysteresis": len(kept_held),
-        "weights": {"core": round(wA, 2), "extension": round(wB, 2)},
+        "_keys": [[h["ticker"], h["region"]] for h in holdings],
+        "n": len(holdings), "pool_size": len(pool), "n_held_hysteresis": n_held,
+        "total_pct": round(sum(h["weight"] or 0 for h in holdings), 1),
+        "region_split": dict(reg), "max_region_pct": round(max_reg, 0),
+        "region_review_flag": max_reg > REGION_REVIEW,
+        "n_financials": sum(1 for h in holdings if h["fin"]), "n_funnel": sum(1 for h in holdings if h["funnel"]),
     }
 
 
 def main():
     pf = build_elite_portfolio()
-    print(f"\n### PORTEFEUILLE ELITE FULL-ACTIONS (v1) ###\n")
-    print(f"Pool elite (portes A+B) : {pf['pool_size']} · {pf['n_industries']} industries")
-    print(f"Portefeuille : {pf['n_core']} cœur (A, {pf['weights']['core']}%) + {pf['n_extension']} "
-          f"extension (B, {pf['weights']['extension']}%) = {pf['n_core']+pf['n_extension']} lignes, {pf['total_pct']}%")
-    if pf["n_held_hysteresis"]:
-        print(f"  (dont {pf['n_held_hysteresis']} maintenus par hystérésis — anti-turnover)")
-    from collections import Counter
-    print("  répartition région :", dict(Counter(h["region"] for h in pf["holdings"])))
-    print("  dont dans le funnel :", sum(1 for h in pf["holdings"] if h["funnel"]))
-    print("\n— aperçu (cœur A, top durabilité) —")
-    for h in [x for x in pf["holdings"] if x["tier"] == "core"][:20]:
-        fn = f" 🎯{h['funnel']}" if h["funnel"] else ""
-        print(f"   {h['ticker']:<8}{h['weight']:>5}%  {str(h['name'])[:26]:<27}{h['region']:<7}"
-              f"dur{h['durability']}({int(h['durability_score'] or 0)}) Q{h['quality']} "
-              f"roic{int(h['roic'] or 0)} {str(h['industry'])[:22]}{fn}")
-    with open(os.path.join(DATA, "portfolios_elite.json"), "w", encoding="utf-8") as f:
+    print(f"\n### PORTEFEUILLE ELITE FULL-ACTIONS (v2 — revue expert) ###\n")
+    print(f"Pool elite (portes sectorielles + historique + ADV) : {pf['pool_size']}")
+    print(f"Portefeuille : {pf['n']} lignes, {pf['total_pct']}% | régions {pf['region_split']}"
+          + (f"  ⚠ REVUE (>{REGION_REVIEW:.0f}% sur une région)" if pf["region_review_flag"] else ""))
+    print(f"  financières (jugées au ROE) : {pf['n_financials']} · tags funnel : {pf['n_funnel']}"
+          + (f" · maintenus hystérésis : {pf['n_held_hysteresis']}" if pf["n_held_hysteresis"] else ""))
+    print(f"\n{'TICKER':<8}{'POIDS':>6}  {'NOM':<26}{'RÉG':<7}{'D':<2}{'Q':<2}{'ROIC/E':>7}{'STAB':>6}{'FCF%':>6}{'VOL%':>6}  IND")
+    for h in pf["holdings"]:
+        fn = f" 🧭{h['funnel']}" if h["funnel"] else ""
+        fin = "ᶠ" if h["fin"] else " "
+        print(f"{h['ticker']:<8}{h['weight']:>5}%  {str(h['name'])[:25]:<26}{h['region']:<7}"
+              f"{h['durability']}{fin}{h['quality']:<2}{int(h['roic_or_roe'] or 0):>6} {h['stability']:>5}"
+              f"{round(h['fcf_yield'] or 0,1):>6}{int(h['vol_3y'] or 0):>6}  {str(h['industry'])[:20]}{fn}")
+    with open(PREV_FILE, "w", encoding="utf-8") as f:
         json.dump(pf, f, ensure_ascii=False, indent=2)
-    print(f"\n✅ écrit → data/portfolios_elite.json (revue ; portfolios.json intact)")
+    print(f"\n✅ écrit → data/portfolios_elite.json")
 
 
 if __name__ == "__main__":
