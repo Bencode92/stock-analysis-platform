@@ -227,10 +227,12 @@ BROAD_CORE = [("QQQ", "Invesco QQQ Trust (Nasdaq 100)", 2, 1.05),
               ("IEMG", "iShares Core MSCI EM IMI (UCITS via IS3N)", 1, 0.85)]
 BETA_THEMATIC_ETF = 1.20  # ETF sectoriel (NUCG/COPM/NATO) — béta élevé
 BETA_GOLD = 0.05
-BETA_BOND = 0.0
-BETA_TARGET = 0.82        # cible pratique (0.80 strict → ~14% oblig, trop pour un agressif)
-BONDS_MIN, BONDS_MAX = 5.0, 12.0   # sleeve défensif, dimensionné pour tirer le β vers la cible
-BOND_TICKER, BOND_NAME = "IBGS.AS", "iShares EUR Govt Bond 1-3yr UCITS"
+BETA_TARGET = 0.85        # cible pratique (le ballast dividende β~0.80 est un levier faible)
+# BALLAST = ETF dividende QUALITÉ (pas high-yield = piège) : reste en actions, verse du rendement,
+# β modéré ~0.80 → tire le β vers le bas MOINS qu'une oblig, mais garde le profil agressif/actions.
+BETA_BALLAST = 0.80
+BALLAST_MIN, BALLAST_MAX = 8.0, 20.0
+BALLAST_TICKER, BALLAST_NAME = "FGEQ", "Fidelity Global Quality Income UCITS (dividende qualité)"
 
 
 def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_n):
@@ -264,7 +266,6 @@ def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_
                 e["themes"].append(s["key"])
     sat = round(sum(v["weight"] for v in direct.values()) + sum(v["weight"] for v in tetf.values()), 2)
     beta_core = sum(w * bt for _, _, w, bt in BROAD_CORE) / sum(w for _, _, w, _ in BROAD_CORE)
-    beta_bond = BETA_BOND
 
     def _satbeta(s):
         if s <= 0:
@@ -274,21 +275,22 @@ def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_
         return num / s
     beta_sat = _satbeta(sat)
 
-    # borne d'abord le satellite pour laisser cœur>=MIN + or + oblig min
-    max_sat = 100 - GOLD_PCT - MIN_BROAD_CORE - BONDS_MIN
+    # borne d'abord le satellite pour laisser cœur>=MIN + or + ballast min
+    max_sat = 100 - GOLD_PCT - MIN_BROAD_CORE - BALLAST_MIN
     if sat > max_sat and sat > 0:
         k = max_sat / sat
         for v in list(direct.values()) + list(tetf.values()):
             v["weight"] = round(v["weight"] * k, 2)
         sat = round(sat * k, 2)
 
-    # DIMENSIONNE LES OBLIGATIONS pour tirer le β global vers BETA_TARGET (les oblig sont le seul vrai
-    # levier baissier avec l'or). β = [or·βor + oblig·0 + cœur·βcœur + sat·βsat]/100, cœur=100-or-oblig-sat.
-    # → oblig = 100 - or - sat - (100·T - or·βor - sat·βsat)/βcœur
-    core_for_T = (100 * BETA_TARGET - GOLD_PCT * BETA_GOLD - sat * beta_sat) / beta_core
-    bonds = round(100 - GOLD_PCT - sat - core_for_T, 2)
-    bonds = max(BONDS_MIN, min(BONDS_MAX, bonds))
-    core_budget = round(100 - GOLD_PCT - bonds - sat, 2)
+    # DIMENSIONNE LE BALLAST DIVIDENDE pour tirer le β vers BETA_TARGET. Résolveur général (βball ≠ 0) :
+    # 100·T = or·βor + ball·βball + cœur·βcœur + sat·βsat, cœur=100-or-ball-sat
+    # → ball = [100·T - or·βor - sat·βsat - (100-or-sat)·βcœur] / (βball - βcœur)
+    denom = (BETA_BALLAST - beta_core)
+    ball_raw = (100 * BETA_TARGET - GOLD_PCT * BETA_GOLD - sat * beta_sat
+                - (100 - GOLD_PCT - sat) * beta_core) / denom if denom else BALLAST_MIN
+    ballast = max(BALLAST_MIN, min(BALLAST_MAX, round(ball_raw, 2)))
+    core_budget = round(100 - GOLD_PCT - ballast - sat, 2)
     if core_budget < MIN_BROAD_CORE:  # si le cœur passe sous le plancher, on rogne le satellite
         over = MIN_BROAD_CORE - core_budget
         k = max(0.0, (sat - over) / sat) if sat > 0 else 1.0
@@ -302,7 +304,7 @@ def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_
             for t, n, w, bt in BROAD_CORE]
 
     # β pondéré réel (recalculé sur les poids finaux)
-    bsum = GOLD_PCT * BETA_GOLD + bonds * beta_bond
+    bsum = GOLD_PCT * BETA_GOLD + ballast * BETA_BALLAST
     for c in core:
         bsum += c["weight"] * c["beta"]
     for v in direct.values():
@@ -311,9 +313,9 @@ def assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_
         bsum += v["weight"] * BETA_THEMATIC_ETF
     beta = round(bsum / 100.0, 2)
 
-    total = round(GOLD_PCT + bonds + sat + sum(c["weight"] for c in core), 1)
+    total = round(GOLD_PCT + ballast + sat + sum(c["weight"] for c in core), 1)
     return {"profile": profile, "direct": direct, "thematic_etf": tetf, "core": core,
-            "gold_pct": GOLD_PCT, "bonds_pct": bonds, "satellite_pct": sat, "core_pct": core_budget,
+            "gold_pct": GOLD_PCT, "ballast_pct": ballast, "satellite_pct": sat, "core_pct": core_budget,
             "beta_est": beta, "beta_target": BETA_TARGET, "total_pct": total}
 
 
@@ -357,14 +359,14 @@ def _fmt(sl):
 def _assemble_and_write(profile, fw, rules, catalog, dur_by_t, dur_by_n):
     pf = assemble_conviction_portfolio(profile, fw, rules, catalog, dur_by_t, dur_by_n)
     print(f"\n### PORTEFEUILLE PILOTÉ-CONVICTION — {profile} (proposition, fichier de revue) ###\n")
-    print(f"Structure : or {pf['gold_pct']}% · oblig {pf['bonds_pct']}% · cœur broad {pf['core_pct']}%"
+    print(f"Structure : or {pf['gold_pct']}% · dividende {pf['ballast_pct']}% · cœur broad {pf['core_pct']}%"
           f" · satellite conviction {pf['satellite_pct']}%  → total {pf['total_pct']}%")
     print(f"β estimé ≈ {pf['beta_est']}  (cible {pf['beta_target']} ; broad seul ≈ 1.0)\n")
-    print("— CŒUR BROAD (diversification/β) —")
+    print("— CŒUR BROAD + BALLAST DIVIDENDE (diversification/β/rendement) —")
     for c in pf["core"]:
         print(f"   {c['ticker']:<7}{c['weight']:>5}%  {c['name'][:40]}")
+    print(f"   {BALLAST_TICKER:<7}{pf['ballast_pct']:>5}%  {BALLAST_NAME} (β~0.80, verse du rendement)")
     print(f"   {'SGLN':<7}{pf['gold_pct']:>5}%  or physique (couverture)")
-    print(f"   {BOND_TICKER:<7}{pf['bonds_pct']:>5}%  {BOND_NAME} (défensif, cale le β)")
     print("\n— SATELLITE CONVICTION : actions directes (enablers) —")
     for tk, v in sorted(pf["direct"].items(), key=lambda kv: -kv[1]["weight"]):
         th = "+".join(v["themes"])
@@ -377,13 +379,13 @@ def _assemble_and_write(profile, fw, rules, catalog, dur_by_t, dur_by_n):
     actions = {tk: {"allocation": f"{v['weight']}%", "name": v["name"], "themes": v["themes"],
                     "durability": v["dur"]} for tk, v in pf["direct"].items()}
     etf = {c["ticker"]: {"allocation": f"{c['weight']}%", "name": c["name"], "role": "core broad"} for c in pf["core"]}
+    etf[BALLAST_TICKER] = {"allocation": f"{pf['ballast_pct']}%", "name": BALLAST_NAME, "role": "ballast dividende"}
     etf["SGLN.AS"] = {"allocation": f"{pf['gold_pct']}%", "name": "iShares Physical Gold ETC", "role": "hedge"}
     for sym, v in pf["thematic_etf"].items():
         etf[sym] = {"allocation": f"{v['weight']}%", "name": v["name"], "role": "thematic", "themes": v["themes"]}
-    obligations = {BOND_TICKER: {"allocation": f"{pf['bonds_pct']}%", "name": BOND_NAME, "role": "defensive"}}
-    out = {f"{profile}-Conviction": {"Actions": actions, "ETF": etf, "Obligations": obligations,
+    out = {f"{profile}-Conviction": {"Actions": actions, "ETF": etf,
            "_meta": {"beta_est": pf["beta_est"], "beta_target": pf["beta_target"], "gold_pct": pf["gold_pct"],
-                     "bonds_pct": pf["bonds_pct"], "core_pct": pf["core_pct"], "satellite_pct": pf["satellite_pct"],
+                     "ballast_dividende_pct": pf["ballast_pct"], "core_pct": pf["core_pct"], "satellite_pct": pf["satellite_pct"],
                      "doctrine": "conviction FILTRE (qui+véhicule), poids=plafond profil FIXE ; standalone, non branché"}}}
     path = os.path.join(DATA, "portfolios_conviction.json")
     with open(path, "w", encoding="utf-8") as f:

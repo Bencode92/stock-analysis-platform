@@ -142,14 +142,19 @@
     },
     "ETF": {
       "QQQ": {
-        "allocation": "22.24%",
+        "allocation": "16.91%",
         "name": "Invesco QQQ Trust (Nasdaq 100)",
         "role": "core broad"
       },
       "IEMG": {
-        "allocation": "11.12%",
+        "allocation": "8.45%",
         "name": "iShares Core MSCI EM IMI (UCITS via IS3N)",
         "role": "core broad"
+      },
+      "FGEQ": {
+        "allocation": "20.0%",
+        "name": "Fidelity Global Quality Income UCITS (dividende qualité)",
+        "role": "ballast dividende"
       },
       "SGLN.AS": {
         "allocation": "8.0%",
@@ -165,19 +170,12 @@
         ]
       }
     },
-    "Obligations": {
-      "IBGS.AS": {
-        "allocation": "12.0%",
-        "name": "iShares EUR Govt Bond 1-3yr UCITS",
-        "role": "defensive"
-      }
-    },
     "_meta": {
-      "beta_est": 0.85,
-      "beta_target": 0.82,
+      "beta_est": 0.93,
+      "beta_target": 0.85,
       "gold_pct": 8.0,
-      "bonds_pct": 12.0,
-      "core_pct": 33.36,
+      "ballast_dividende_pct": 20.0,
+      "core_pct": 25.36,
       "satellite_pct": 46.64,
       "doctrine": "conviction FILTRE (qui+véhicule), poids=plafond profil FIXE ; standalone, non branché"
     }
