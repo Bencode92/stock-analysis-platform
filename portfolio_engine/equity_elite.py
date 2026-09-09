@@ -211,11 +211,22 @@ def _instability(s):
     return base * (0.3 if rising else 1.0)
 
 
+# contexte SECTORIEL + funnel, peuplé au début de build() — le classement est SECTOR-RELATIF (revue user :
+# « fondamentaux PAR secteur, le funnel donc conviction, ce que l'entreprise EST »).
+_SECTOR_MED = {}   # {secteur GICS : ROIC médian du pool}
+_FUNNEL_SET = set()
+
+
 def _rank_key(s):
-    """durabilité (A>B) → instabilité asymétrique (basse = régulier OU en hausse) → FCF yield (valo)."""
+    """Départage SECTOR-RELATIF, descriptif :
+       durabilité (A>B, ce qu'elle EST) → instabilité asymétrique (régulière/en hausse) →
+       LEADERSHIP sectoriel (ROIC − médiane de SON secteur) → conviction funnel → FCF yield (valo).
+       Une société est jugée vs SON secteur : un top-semi bat un staple médian même à ROIC absolu plus bas."""
     bucket = 1 if (s.get("durability_grade") == "A") else 0
+    lead = (_num(s.get("roic_avg_3y")) or 0.0) - _SECTOR_MED.get(_gics(s), 0.0)   # au-dessus de son secteur ?
+    conv = 1 if str(s.get("ticker")) in _FUNNEL_SET else 0
     fcf = _num(s.get("fcf_yield")) or 0.0
-    return (bucket, -_instability(s), fcf)   # tri desc
+    return (bucket, -_instability(s), lead, conv, fcf)   # tri desc
 
 
 def build_elite_portfolio():
@@ -226,7 +237,18 @@ def build_elite_portfolio():
 
     # 1) POOL ELITE (portes sectorielles)
     pool = [s for s in rows if s.get("industry") and _passes_gates(s, ("A", "B"))]
-    pool.sort(key=_rank_key, reverse=True)           # meilleur départage d'abord — SANS funnel (doctrine)
+    # contexte SECTOR-RELATIF : médiane ROIC par secteur GICS + set funnel (peuplés AVANT le tri)
+    _SECTOR_MED.clear(); _FUNNEL_SET.clear()
+    _FUNNEL_SET.update(funnel.keys())
+    _by_sec = defaultdict(list)
+    for s in pool:
+        r = _num(s.get("roic_avg_3y"))
+        if r is not None:
+            _by_sec[_gics(s)].append(r)
+    for sec, vals in _by_sec.items():
+        vs = sorted(vals)
+        _SECTOR_MED[sec] = vs[len(vs) // 2] if vs else 0.0
+    pool.sort(key=_rank_key, reverse=True)           # tri SECTOR-RELATIF (leadership + conviction)
 
     # CAPS de diversification : max 2/industrie fine, max 8/secteur GICS, max 6 financières.
     ind_c, sec_c = defaultdict(int), defaultdict(int)
