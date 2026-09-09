@@ -107,9 +107,9 @@
         ],
         "durability": "A"
       },
-      "GD": {
+      "LMT": {
         "allocation": "2.0%",
-        "name": "General Dynamics",
+        "name": "Lockheed Martin",
         "themes": [
           "defense"
         ],
@@ -142,12 +142,12 @@
     },
     "ETF": {
       "QQQ": {
-        "allocation": "20.16%",
+        "allocation": "22.24%",
         "name": "Invesco QQQ Trust (Nasdaq 100)",
         "role": "core broad"
       },
       "IEMG": {
-        "allocation": "25.2%",
+        "allocation": "11.12%",
         "name": "iShares Core MSCI EM IMI (UCITS via IS3N)",
         "role": "core broad"
       },
@@ -165,10 +165,19 @@
         ]
       }
     },
+    "Obligations": {
+      "IBGS.AS": {
+        "allocation": "12.0%",
+        "name": "iShares EUR Govt Bond 1-3yr UCITS",
+        "role": "defensive"
+      }
+    },
     "_meta": {
-      "beta_est": 0.95,
+      "beta_est": 0.85,
+      "beta_target": 0.82,
       "gold_pct": 8.0,
-      "core_pct": 45.36,
+      "bonds_pct": 12.0,
+      "core_pct": 33.36,
       "satellite_pct": 46.64,
       "doctrine": "conviction FILTRE (qui+véhicule), poids=plafond profil FIXE ; standalone, non branché"
     }
