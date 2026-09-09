@@ -17,16 +17,25 @@ disponible. **Aucune nouvelle variante de clé ne doit être testée avant ce ru
   écrasent artificiellement le ROIC). Trésorerie excédentaire ≈ cash au-delà de ~2 % du CA (à caler).
 - **Financières** : jugées au **ROE** (le ROIC/D-E n'a pas de sens pour un assureur/broker), même logique.
 
-## 2. Fenêtre
+## 2. Fenêtre — 6 ans (contrainte source : Twelve Data plafonne à 6 exercices)
 
-- **10 exercices**. Minimum **7 disponibles**, sinon le nom est marqué **« historique court »** et ne peut
-  **pas dépasser le demi-poids**.
+Vérifié 2026-09 : Twelve Data (`/income_statement`, `/balance_sheet`, période `annual`) renvoie **6 années
+max** (2020→2025), pas 10. Le « 10 ans » idéal exigerait une source payante (FMP, Sharadar). On retient
+donc **6 exercices** — déjà 2× les 3 ans du départage v3, et couvrant COVID 2020 + choc taux 2022 (vrai
+test de persistance). Minimum **4 disponibles**, sinon **« historique court »** → plafonné au demi-poids.
+
+**Tous les champs ROIC sont dans Twelve Data** (mapping figé) :
+- NOPAT = `operating_income` × (1 − `income_tax`/`pretax_income`).
+- Capital = `shareholders_equity.total_shareholders_equity`
+  + (`short_term_debt` + `long_term_debt`)  [dette]
+  − (`cash_and_cash_equivalents` + `other_short_term_investments`)  [cash / trésorerie excédentaire].
+- Goodwill INCLUS (`assets.non_current_assets.goodwill`, déjà dans le capital via l'équité — ne pas soustraire).
 
 ## 3. Les quatre clés, dans l'ORDRE FIGÉ (lexicographique, tout descriptif)
 
 1. **Durabilité** (score anti-piège maison, A > B) — ce que l'entreprise EST.
-2. **Persistance** = nombre d'exercices sur 10 avec **ROIC ≥ 12 %** (financières : ROE ≥ 12 %). Plus haut = mieux.
-3. **Dispersion** = **semi-déviation SOUS la médiane 10 ans uniquement** — JAMAIS l'écart-type total.
+2. **Persistance** = nombre d'exercices sur **6** avec **ROIC ≥ 12 %** (financières : ROE ≥ 12 %). Plus haut = mieux.
+3. **Dispersion** = **semi-déviation SOUS la médiane 6 ans uniquement** — JAMAIS l'écart-type total.
    Une hausse de ROIC ne pénalise pas ; une baisse, oui. Plus bas = mieux.
 4. **FCF yield vs médiane du secteur** (valorisation descriptive, pas prédiction). Plus haut = mieux.
 
