@@ -36,6 +36,12 @@ PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 BANNED = {
     "JBS": "Cotée NY juin 2025 → pas de vrai historique 3Y (young_listing raté) ; entité US/Brésil incohérente (groupe Batista).",
 }
+# PAIRES CORRÉLÉES > 0,70 (hebdo) → max 1 par paire. On garde le meilleur départage, on saute l'autre.
+# ROST/TJX = 0,74 hebdo (confirmé) → même business, même cycle. Décision APPLIQUÉE (pas 'à appliquer').
+CORRELATED_PAIRS = [("ROST", "TJX")]
+_PAIR = {}
+for _a, _b in CORRELATED_PAIRS:
+    _PAIR[_a] = _b; _PAIR[_b] = _a
 
 FX_TO_USD = {
     "USD": 1.0, "EUR": 1.08, "GBP": 1.27, "CHF": 1.10, "CAD": 0.73, "SGD": 0.74,
@@ -205,12 +211,16 @@ def build_elite_portfolio():
     ind_c, sec_c = defaultdict(int), defaultdict(int)
     fin_c = [0]
 
+    chosen_tk = set()   # tickers retenus, pour la règle des paires corrélées (max 1)
+
     def _can_add(s):
-        return (ind_c[s["industry"]] < MAX_PER_INDUSTRY and sec_c[_gics(s)] < SECTOR_CAP
+        return (_PAIR.get(str(s.get("ticker"))) not in chosen_tk            # paire corrélée → max 1
+                and ind_c[s["industry"]] < MAX_PER_INDUSTRY and sec_c[_gics(s)] < SECTOR_CAP
                 and (not _is_fin(s) or fin_c[0] < FIN_CAP))
 
     def _commit(s):
         ind_c[s["industry"]] += 1; sec_c[_gics(s)] += 1
+        chosen_tk.add(str(s.get("ticker")))
         if _is_fin(s):
             fin_c[0] += 1
 
@@ -221,6 +231,8 @@ def build_elite_portfolio():
             held_keys = [tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or [])]
         except Exception:
             held_keys = []
+    # traiter les tenus par MEILLEUR départage d'abord → sur une paire corrélée, le meilleur est gardé
+    held_keys.sort(key=lambda k: _rank_key(by_key[k]) if k in by_key else (-1,), reverse=True)
     kept, chosen = [], set()
     for key in held_keys:
         s = by_key.get(tuple(key))
