@@ -872,13 +872,13 @@ def positions_to_format_b(positions: List[Dict], profile: str) -> Dict:
     # Commentaire min 50 chars (schema requirement) — adapté au profil
     if profile == "Agressif-Thematique":
         commentaire = (
-            "Portefeuille Agressif-Thematique (v6.9) — variante POUSSÉE pour comparaison. "
-            "Cœur 80% en ETFs thématiques diversifiés Growth/EM/Tech/SmallCap/MidCap/"
-            "International/Énergie (QQQ + IEMG + VGT + CGXU + VBK + VOT + XLE + or + EWT). "
-            "Satellite 20% = mêmes 5 actions qualité que l'Agressif Principal (continuité). "
-            "Σ = 100% par construction. β attendu ~1.1, MaxDD historique -60 à -75% sur "
-            "fenêtre complète 2000-2026 (incluant dotcom + GFC). À COMPARER dans le "
-            "dashboard avec l'Agressif Principal — pas optimisation, pari thématique assumé."
+            "Portefeuille Agressif-Thematique (v7.0) — PILOTÉ PAR LE FUNNEL (conviction_sleeves). "
+            "Cœur broad UCITS (EQQQ + EIMI) + ballast dividende qualité (FGEQ) + or, puis sleeves "
+            "thématiques disciplinés : nucléaire (URNM), semi (SMH), défense EU (WDEF), cuivre "
+            "(COPX), cybersécurité (ISPY). Poids = base uniforme × stance (ACTIF 10% / PROGRESSIF-"
+            "SÉLECTIF 5%). Tous véhicules UCITS (revue expert). La conviction FILTRE (thème + "
+            "véhicule + stance), le rang ne pondère jamais. ETF-only ; les thèmes sans ETF (réseau, "
+            "IA-infra) sont portés hors de ce compte. Fallback THEMATIQUE_CORE si funnel indisponible."
         )
     else:
         commentaire = (
@@ -1124,26 +1124,58 @@ def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
     Le paramètre satellite_positions_unused est conservé pour la signature
     mais ignoré.
     """
-    positions = []
+    # v7.0 (2026-09) : le cœur thématique est piloté par le FUNNEL (conviction_sleeves),
+    # revue expert intégrée (UCITS, base-uniforme×stance, swaps, cyber). Fallback dur sur
+    # THEMATIQUE_CORE si conviction_sleeves échoue (données manquantes en CI) → jamais casser.
+    positions = _conviction_etf_positions() or _thematique_core_positions()
+    return positions_to_format_b(positions, "Agressif-Thematique")
 
-    # Cœur thématique (100 %) — 8 ETF, anti-concentration vs prorata aveugle
+
+def _thematique_core_positions() -> List[Dict]:
+    """Fallback : ancien cœur thématique hardcodé (8 ETF, anti-concentration)."""
+    positions = []
     for tk, info in THEMATIQUE_CORE.items():
         positions.append({
-            "ticker": tk,
-            "name": info["name"][:80],
-            "category": "ETF",
+            "ticker": tk, "name": info["name"][:80], "category": "ETF",
             "industry": info.get("fund_type", ""),
-            "weight_pct": round(info["weight"] * 100, 2),
-            "weight": info["weight"],
-            "role": "core",
-            "asset_ids": [tk],
-            "beta": None,
-            "isin": info.get("isin"),
-            "ter": info.get("ter"),
-            "currency": info.get("currency"),
+            "weight_pct": round(info["weight"] * 100, 2), "weight": info["weight"],
+            "role": "core", "asset_ids": [tk], "beta": None,
+            "isin": info.get("isin"), "ter": info.get("ter"), "currency": info.get("currency"),
         })
+    return positions
 
-    return positions_to_format_b(positions, "Agressif-Thematique")
+
+def _conviction_etf_positions() -> Optional[List[Dict]]:
+    """Cœur thématique piloté-conviction (compte ETF du modèle 2 comptes). None si indisponible."""
+    try:
+        try:
+            from portfolio_engine import conviction_sleeves as cs
+        except ImportError:
+            from . import conviction_sleeves as cs
+        fw = cs._load("framework.json")
+        rules = cs._load("allocation_rules.json")
+        catalog = cs._load("etf_thematic_catalog.json")
+        by_t, by_n = cs._durability_index()
+        sp = cs.build_split_portfolios("Agressif", fw, rules, catalog, by_t, by_n)
+        acct = sp.get("etf_account") or {}
+        if len(acct) < 4:
+            return None
+        positions = []
+        for tk, info in acct.items():
+            w = float(info["w"])
+            positions.append({
+                "ticker": tk, "name": str(info.get("name", tk))[:80], "category": "ETF",
+                "industry": info.get("role", "thématique"),
+                "weight_pct": round(w, 2), "weight": round(w / 100.0, 4),
+                "role": "core", "asset_ids": [tk], "beta": None,
+                "isin": None, "ter": None, "currency": None,
+            })
+        return positions
+    except Exception as _e:
+        import logging as _logging
+        _logging.getLogger("portfolio_engine.core_satellite_discipline").warning(
+            f"⚠️ conviction_sleeves indisponible, fallback THEMATIQUE_CORE : {_e}")
+        return None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
