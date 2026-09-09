@@ -310,6 +310,12 @@ def build_elite_portfolio():
             "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
             "funnel": funnel.get(tk), "held_hysteresis": tk in {str(x.get("ticker")) for x in kept[:n_held]},
             "why": _justify(s),
+            # performance + métriques (pour l'affichage portefeuille)
+            "perf_ytd": _num(s.get("perf_ytd")), "perf_1y": _num(s.get("perf_1y")),
+            "perf_3m": _num(s.get("perf_3m")), "perf_1m": _num(s.get("perf_1m")),
+            "roe": _num(s.get("roe")), "pe": _num(s.get("pe_ratio")),
+            "div_yield": _num(s.get("dividend_yield_ttm")) if s.get("dividend_yield_ttm") is not None else _num(s.get("dividend_yield")),
+            "buffett": _num(s.get("buffett_score")), "max_dd_3y": _num(s.get("max_drawdown_3y")),
         }
     holdings = [row(s) for s in final]
     holdings.sort(key=lambda r: (-(r["weight"] or 0), -(r["durability_score"] or 0)))
@@ -374,9 +380,11 @@ def _inject_into_portfolios(pf):
             details.append({"ticker": tk, "name": label, "weight_pct": w, "category": "Actions",
                             "role": "core", "rationale": rat, "sector": h.get("sector"),
                             "country": h.get("region"), "risk_note": "",
-                            "metrics": {"roe": None, "pe_ratio": None, "dividend_yield": None,
-                                        "ytd": None, "volatility": h.get("vol_3y"),
-                                        "buffett_score": None}})
+                            "metrics": {"roe": h.get("roe"), "pe_ratio": h.get("pe"),
+                                        "dividend_yield": h.get("div_yield"), "ytd": h.get("perf_ytd"),
+                                        "perf_1y": h.get("perf_1y"), "perf_3m": h.get("perf_3m"),
+                                        "volatility": h.get("vol_3y"), "buffett_score": h.get("buffett"),
+                                        "max_dd_3y": h.get("max_dd_3y")}})
         tickers = {str(h["ticker"]): round((h["weight"] or 0) / 100.0, 4) for h in pf["holdings"]}
         p["Actions-Elite"] = {
             "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},

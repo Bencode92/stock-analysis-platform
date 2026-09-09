@@ -361,6 +361,10 @@ class PortfolioManagerV3 {
         if (metrics.dividend_yield) chips.push(`Div ${metrics.dividend_yield.toFixed(1)}%`);
         if (metrics.buffett_score) chips.push(`Buffett ${Math.round(metrics.buffett_score)}`);
         if (metrics.volatility) chips.push(`Vol ${metrics.volatility.toFixed(0)}%`);
+        // performance (colorée vert/rouge) — 0% est valide donc test != null
+        const _pfChip = (lbl, v) => v != null ? `${lbl} <b style="color:${v >= 0 ? '#4caf50' : '#ff5252'}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</b>` : null;
+        [['YTD', metrics.ytd], ['1 an', metrics.perf_1y], ['3 m', metrics.perf_3m]].forEach(([l, v]) => { const c = _pfChip(l, v); if (c) chips.push(c); });
+        if (metrics.max_dd_3y != null) chips.push(`DD 3a ${metrics.max_dd_3y.toFixed(0)}%`);
 
         // v6.24: mapping asiatique (ADR/alternatives ACTION/ETF dernier recours)
         const asianMapping = this.asianAlternatives?.[ticker];
