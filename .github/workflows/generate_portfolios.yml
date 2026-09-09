@@ -64,7 +64,13 @@ jobs:
           echo ""
           echo "🚀 Running portfolio engine..."
           python generate_portfolios_v4.py
- 
+
+      # ============= Socle actions elite (v3 figé, standalone) =============
+      - name: 🏆 Socle actions elite
+        run: |
+          echo "🏆 Génération du socle actions elite (equity_elite v3)..."
+          python portfolio_engine/equity_elite.py || echo "⚠️ equity_elite échec (non-bloquant)"
+
       # ============= v4.5 NEW: Schema Validation =============
       - name: ✅ Valider le schéma JSON
         run: |
@@ -598,6 +604,7 @@ jobs:
           
           # Ajouter les artefacts générés (v5.3.0 + turnover tracking)
           git add data/portfolios.json \
+                  data/portfolios_elite.json \
                   data/portfolios_previous.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \

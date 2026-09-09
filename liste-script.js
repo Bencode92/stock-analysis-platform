@@ -974,6 +974,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }).catch(() => {});
 
+    // Socle actions elite (equity_elite) : ticker → présence + justification (rang industrie, concurrent devancé).
+    let ELITE_MAP = {};
+    fetch('data/portfolios_elite.json').then(r => r.ok ? r.json() : null).then(pf => {
+        if (!pf || !pf.holdings) return;
+        for (const h of pf.holdings) {
+            if (h.ticker) ELITE_MAP[String(h.ticker)] = {
+                rank: h.why && h.why.industry_rank, n: h.why && h.why.industry_n,
+                runner: h.why && h.why.runner_up_ticker, diff: h.why && h.why.differentiator,
+                weight: h.weight, industry: h.industry, fin: h.fin,
+            };
+        }
+    }).catch(() => {});
+
     // v9.2 — index inverse ETF : action → liste des ETF qui la détiennent (contexte/crowding, PAS un score).
     let ETF_MAP = {};
     fetch('data/etf_holdings.json').then(r => r.ok ? r.json() : null).then(d => {
@@ -2654,6 +2667,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             // v9.2 — B : « vs son industrie » (rang chez ses vrais concurrents) + lien funnel
                             const _ic = computeIndustryContext(stock);
                             const _fun = FUNNEL_MAP[String(stock.ticker)];
+                            const _elite = ELITE_MAP[String(stock.ticker)];
                             // B : phrase de synthèse concrète
                             const _phrase = durabilityPhrase(_dur, _ic, stock);
                             // médiane du secteur à afficher à côté de chaque fondamental
@@ -2665,9 +2679,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             const _regLead = (_ic && _ic.regLeaders && _ic.regLeaders.length) ? _ic.regLeaders : null;
                             // rendu d'une rangée « Top 3 » (mondial ou zone) : label + puces cliquables (par NOM, pas ticker)
                             const _topRow = (label, arr) => arr ? `<span style="flex-basis:100%;height:0;"></span><span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em;">${label}</span>${arr.map(l => `<span ${l.me ? '' : `onclick="openStockTab('${encodeURIComponent(l.n || l.t)}')" role="button"`} style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${l.me ? 'rgba(0,200,116,0.18)' : 'rgba(255,255,255,0.06)'};font-weight:${l.me ? 700 : 400};${l.me ? '' : 'cursor:pointer;'}" title="${l.me ? 'vous' : 'Ouvrir ' + String(l.n || l.t).replace(/"/g, '')}">${_short(l.n) || l.t}${l.g ? ` ${l.g}` : ''}${l.me ? ' ← vous' : ''}</span>`).join('')}` : '';
-                            const _icHTML = (_ic || _fun) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
+                            const _icHTML = (_ic || _fun || _elite) ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--card-border);font-size:0.72rem;">
                                 <span style="font-size:0.6rem;opacity:0.5;text-transform:uppercase;letter-spacing:0.09em;">Vs son industrie</span>
                                 ${_ic ? `<span style="font-weight:600;">${_ic.industry}</span><span style="opacity:0.4;">· ${_ic.n} concurrents</span>${_ic.ranks.map(r => `<span style="font-family:monospace;padding:2px 8px;border-radius:20px;background:${r.top ? 'rgba(76,175,80,0.16)' : 'rgba(255,255,255,0.06)'};color:${r.top ? '#4caf50' : 'inherit'};opacity:${r.top ? 1 : 0.82};font-weight:${r.top ? 700 : 400};">#${r.rank}/${r.of} ${r.l}${r.top ? ' · personne de mieux' : ''}</span>`).join('')}` : ''}
+                                ${_elite ? `<span title="${_elite.runner ? 'Retenue devant ' + _elite.runner + ' (' + (_elite.diff || '') + ')' : 'Seule de son industrie'}" style="padding:2px 9px;border-radius:20px;background:rgba(212,175,55,0.16);color:#d4af37;font-weight:700;">🏆 Socle elite${_elite.rank ? ' · n°' + _elite.rank + '/' + _elite.n + ' de son industrie' : ''}${_elite.weight ? ' · ' + _elite.weight + '%' : ''}</span>` : ''}
                                 ${_fun ? `<span style="padding:2px 9px;border-radius:20px;background:rgba(0,255,135,0.1);color:#00c774;font-weight:700;">🎯 conviction : ${_fun.conv}</span>` : ''}
                                 ${_topRow(_regLead ? '🌍 Top 3 mondial' : '🏆 Top 3 du secteur', _lead)}
                                 ${_regLead ? _topRow(`📍 Top 3 ${_ic.regLabel}`, _regLead) : ''}
