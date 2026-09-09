@@ -85,3 +85,25 @@ Le run 10 ans produira une liste différente de v3. Pour ne pas re-churner 60 % 
 `data/portfolios_elite.json` = **v3 figé** (clé symétrique provisoire, validé au contrôle facteurs :
 R² 0,74 vs S&P500 EW, tilt qualité +0,51). La présente spec s'applique au **prochain** run, quand le ROIC
 10 ans sera ingéré dans le pipeline. Réexamen déclenché par cette ingestion, pas avant.
+
+## 7. INTÉGRATION CODÉE (2026-09-09) — gatée derrière `ELITE_KEY`, CI toujours en v3
+
+L'ingestion 6 ans est **branchée dans le pipeline GitHub Actions existant, sans nouveau workflow ni appel
+API** (la série 6 ans était déjà fetchée par Twelve Data et jetée à la sérialisation) :
+
+- **`scripts/stock-filter-by-volume.js`** (job `filter-stocks.yml`, week-end) : calcule `roic_persist_6y`,
+  `roe_persist_6y`, `roic_downside_6y`, `roe_downside_6y`, `years_roic_6y` depuis `yearlyRatios` (déjà là).
+  Helpers `arrPersist` (nb ≥ 12 %) + `arrDownsideDev` (semi-déviation sous médiane). Écrits au CSV (HEADER),
+  aux 3 sites d'assignation + placeholder. **`deriveElite6y`** dérive ces champs des `yearly_roic`/`yearly_roe`
+  **déjà stockés dans `fundamentals_cache.json`** → les 15 655 entrées cache sont enrichies **sans refetch**.
+- **`stock-advanced-filter.js`** (job `stock-filter.yml`) : parse les colonnes CSV, réémet dans l'objet
+  écrit en `stocks_*.json`, et **propage** les 5 champs (entité-niveau) dans `reconcileEntities.FUND`.
+- **`portfolio_engine/equity_elite.py`** : `ELITE_KEY` (défaut `v3`). `ELITE_KEY=v4` active la clé figée §3
+  (persistance ↑ → semi-déviation ↓ → FCF), la **porte valo au critère `valuation_ok`** (§3bis), l'historique
+  court à demi-poids (§2), et la **règle de transition §5** (top-60 + plafond 10 changements/run, sorties
+  hors top-60 différées en vagues). `ELITE_DRY=1` = aperçu sans écraser les fichiers commités.
+
+**Séquencement** : (1) prochain `filter-stocks.yml` peuple les champs (dérivés du cache, immédiat) ; (2)
+`ELITE_KEY=v4 ELITE_DRY=1 python3 portfolio_engine/equity_elite.py` → montre le **before/after ≤ 10** ;
+(3) validation humaine ; (4) bascule du défaut ou run réel `ELITE_KEY=v4`. Le CI par défaut (v3) est resté
+**identique** (run de contrôle : 0 changement).

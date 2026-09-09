@@ -32,6 +32,15 @@ RISK_CAP_MULT = 1.5
 EXIT_ROIC = 8.0        # sortie à ROIC < 8 % (moitié de l'entrée), pas < 0 (revue expert)
 PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 
+# ═══ CLÉ DE DÉPARTAGE : v3 (figée, symétrique provisoire) vs v4 (spec ROIC 6 ans, docs/ELITE_ROIC_10Y_SPEC.md) ═══
+# v4 ne s'active QUE sur ELITE_KEY=v4 → le run CI par défaut reste v3 tant que Benoit n'a pas validé le
+# before/after. Doctrine : la clé est FIGÉE avant de voir la sortie ; le basculement est un run DÉLIBÉRÉ.
+ELITE_KEY = os.environ.get("ELITE_KEY", "v3").lower()
+PERSIST_THRESHOLD = 12.0   # spec §3 clé 2 : ROIC (ou ROE fin.) ≥ 12 % compte comme exercice « tenu »
+PERSIST_MIN_YEARS = 4      # < 4 exercices dispo → « historique court » → persistance à demi-poids (spec §2)
+TRANSITION_TOP_N = 60      # spec §5 : un tenu ne sort que hors top-60 (zone tampon d'hystérésis)
+TRANSITION_MAX_CHANGES = 10  # spec §5 : ≤ 10 changements par run ; le surplus par vagues trimestrielles
+
 # BANNIS manuels (journal) — une porte connue comme violée mais non appliquée est pire qu'absente (expert).
 BANNED = {
     "JBS": "Cotée NY juin 2025 → pas de vrai historique 3Y (young_listing raté) ; entité US/Brésil incohérente (groupe Batista).",
@@ -141,7 +150,13 @@ def _passes_gates(s, grades):
         return False
     if (s.get("quality_grade") or "") not in ("A", "B"):
         return False
-    if (s.get("buffett_grade") or "") not in ("A", "B"):   # DISCIPLINE VALO explicite (revue expert #6)
+    if ELITE_KEY == "v4":
+        vok = _valuation_ok(s)                       # spec §3bis : porte valo au CRITÈRE, pas au grade
+        if vok is False:                             # PE trop cher → sort (ASML/Lam PE ~55)
+            return False
+        if vok is None and (s.get("buffett_grade") or "") not in ("A", "B"):
+            return False                             # critère absent → repli sur le grade (prudence)
+    elif (s.get("buffett_grade") or "") not in ("A", "B"):   # v3 : DISCIPLINE VALO via grade (revue expert #6)
         return False
     if s.get("young_listing") is True:               # jeune cotation → porte historique renforcée
         return False
@@ -189,12 +204,50 @@ def _stability(s):
     return abs(std / avg)
 
 
+def _years6(s):
+    """Nombre d'exercices ROIC disponibles (spec §2 : < 4 → historique court → demi-poids)."""
+    return _num(s.get("years_roic_6y"))
+
+
+def _persist(s):
+    """Spec §3 clé 2 — persistance : nb d'exercices sur 6 avec ROIC (ROE fin.) ≥ 12 %. Plus HAUT = mieux.
+       Historique court (< 4 ans dispo) → demi-poids, pour ne pas récompenser un « 3/3 » sur peu de recul."""
+    key = "roe_persist_6y" if _is_fin(s) else "roic_persist_6y"
+    p = _num(s.get(key))
+    if p is None:
+        return -1.0                                   # champ absent (pipeline pas encore repeuplé) → dernier
+    yrs = _years6(s)
+    if yrs is not None and yrs < PERSIST_MIN_YEARS:
+        return p / 2.0                                # demi-poids historique court (spec §2)
+    return p
+
+
+def _downside(s):
+    """Spec §3 clé 3 — semi-déviation SOUS la médiane 6 ans (jamais l'écart-type total). Plus BAS = mieux.
+       Une hausse de ROIC ne pénalise pas ; seule la baisse compte."""
+    key = "roe_downside_6y" if _is_fin(s) else "roic_downside_6y"
+    d = _num(s.get(key))
+    return d if d is not None else 9.99               # absent → pénalisé (départage descendant)
+
+
+def _valuation_ok(s):
+    """Spec §3bis — porte valo au CRITÈRE binaire `valuation_ok`, pas au grade Buffett (un grade B peut
+       s'obtenir en RATANT précisément la valo). ASML/Lam (PE ~55) sortent, Nvidia (PE 28,7) reste."""
+    for c in (s.get("buffett_criteria") or []):
+        if c.get("name") == "valuation_ok":
+            return c.get("passed") is True
+    return None                                       # critère absent → indéterminé (géré par l'appelant)
+
+
 def _rank_key(s):
-    """Départage LEXICOGRAPHIQUE, tout descriptif (revue expert E) :
-       durabilité (A>B) → stabilité du ROIC (persistance) → FCF yield (valo, pas prédiction)."""
+    """Départage LEXICOGRAPHIQUE, tout descriptif.
+       v3 (figée) : durabilité (A>B) → stabilité du ROIC (symétrique) → FCF yield.
+       v4 (spec ROIC 6 ans §3) : durabilité → persistance ↑ → semi-déviation sous médiane ↓ → FCF yield."""
     bucket = 1 if (s.get("durability_grade") == "A") else 0
     fcf = _num(s.get("fcf_yield")) or 0.0
-    return (bucket, -_stability(s), fcf)   # tri desc : bucket haut, instabilité basse, fcf haut
+    if ELITE_KEY == "v4":
+        return (bucket, _persist(s), -_downside(s), fcf)  # tri desc : durab, persistance, faible baisse, fcf
+    return (bucket, -_stability(s), fcf)   # v3 : bucket haut, instabilité basse, fcf haut
 
 
 def build_elite_portfolio():
@@ -233,8 +286,28 @@ def build_elite_portfolio():
             held_keys = []
     # traiter les tenus par MEILLEUR départage d'abord → sur une paire corrélée, le meilleur est gardé
     held_keys.sort(key=lambda k: _rank_key(by_key[k]) if k in by_key else (-1,), reverse=True)
+
+    # v4 — RÈGLE DE TRANSITION (spec §5) : un tenu ne sort que s'il CASSE la sortie OU tombe hors top-60,
+    # et on plafonne à 10 changements/run (le surplus attend une vague trimestrielle). En v3 : inchangé.
+    drop_v4 = set()   # tenus qu'on laisse VOLONTAIREMENT sortir ce run (hors top-60, dans le budget)
+    if ELITE_KEY == "v4":
+        pool_rank = {(str(s.get("ticker")), s["_region"]): i for i, s in enumerate(pool)}
+        forced, optional = [], []   # forced = casse la sortie (obligé) ; optional = hors top-60 (au choix)
+        for key in held_keys:
+            s = by_key.get(tuple(key))
+            if not (s and _passes_exit(s) and s.get("industry")):
+                forced.append(key)                       # casse la sortie → sortie obligatoire
+            elif pool_rank.get(key, 10**9) >= TRANSITION_TOP_N:
+                optional.append(key)                     # passe la sortie mais hors top-60 → candidat sortie
+        budget = max(0, TRANSITION_MAX_CHANGES - len(forced))
+        # on exécute les PIRES sorties optionnelles d'abord (rang de pool le plus mauvais), dans le budget
+        optional.sort(key=lambda k: pool_rank.get(k, 10**9), reverse=True)
+        drop_v4 = set(optional[:budget])                 # le reste des « hors top-60 » est CONSERVÉ ce run
+
     kept, chosen = [], set()
     for key in held_keys:
+        if key in drop_v4:                               # sortie volontaire différée-bornée (spec §5)
+            continue
         s = by_key.get(tuple(key))
         if s and _passes_exit(s) and s.get("industry") and _can_add(s):
             kept.append(s); chosen.add((str(s.get("ticker")), s["_region"])); _commit(s)
@@ -323,9 +396,23 @@ def build_elite_portfolio():
     reg = Counter(h["region"] for h in holdings)
     max_reg = max((100 * v / len(holdings)) for v in reg.values()) if holdings else 0
 
+    # DIAGNOSTIC DE TRANSITION vs run précédent (spec §5 : borne ≤ 10 changements/run)
+    prev_set = set(held_keys)
+    new_set = {(h["ticker"], h["region"]) for h in holdings}
+    _name = {(str(s.get("ticker")), s["_region"]): s.get("name") for s in rows if s.get("ticker")}
+    added = sorted(new_set - prev_set)
+    dropped = sorted(prev_set - new_set)
+    transition = {
+        "key_version": ELITE_KEY, "changes": max(len(added), len(dropped)),
+        "added": [{"ticker": k[0], "region": k[1], "name": _name.get(k)} for k in added],
+        "dropped": [{"ticker": k[0], "region": k[1], "name": _name.get(k)} for k in dropped],
+        "deferred_top60_drops": len(drop_v4),   # sorties hors top-60 non exécutées ce run (vagues suivantes)
+    }
+
     return {
         "holdings": holdings, "_holdings": [h["ticker"] for h in holdings],
         "_keys": [[h["ticker"], h["region"]] for h in holdings],
+        "_transition": transition,
         "n": len(holdings), "pool_size": len(pool), "n_held_hysteresis": n_held,
         "total_pct": round(sum(h["weight"] or 0 for h in holdings), 1),
         "region_split": dict(reg), "max_region_pct": round(max_reg, 0),
@@ -353,6 +440,22 @@ def main():
         print(f"{h['ticker']:<8}{h['weight']:>5}%  {str(h['name'])[:25]:<26}{h['region']:<7}"
               f"{h['durability']}{fin}{h['quality']:<2}{int(h['roic_or_roe'] or 0):>6} {h['stability']:>5}"
               f"{round(h['fcf_yield'] or 0,1):>6}{int(h['vol_3y'] or 0):>6}  {str(h['industry'])[:20]}{fn}")
+    # DIAGNOSTIC DE TRANSITION (spec §5) — surtout utile au run v4 avant validation
+    tr = pf.get("_transition") or {}
+    if tr:
+        print(f"\n── TRANSITION (clé {tr.get('key_version')}) : {tr.get('changes')} changement(s) "
+              f"[plafond {TRANSITION_MAX_CHANGES}] ──")
+        for a in tr.get("added", []):
+            print(f"  + IN  {a['ticker']:<8} {str(a.get('name'))[:30]:<30} ({a['region']})")
+        for d in tr.get("dropped", []):
+            print(f"  - OUT {d['ticker']:<8} {str(d.get('name'))[:30]:<30} ({d['region']})")
+        if tr.get("deferred_top60_drops"):
+            print(f"  … {tr['deferred_top60_drops']} sortie(s) hors top-60 différée(s) (vague trimestrielle)")
+
+    # ELITE_DRY=1 → aperçu seul (utile pour comparer v4 sans écraser le v3 commité). Sinon : écriture normale.
+    if os.environ.get("ELITE_DRY"):
+        print(f"\n🔎 ELITE_DRY : aperçu — data/portfolios_elite.json & portfolios.json NON modifiés.")
+        return
     with open(PREV_FILE, "w", encoding="utf-8") as f:
         json.dump(pf, f, ensure_ascii=False, indent=2)
     print(f"\n✅ écrit → data/portfolios_elite.json")
@@ -389,10 +492,13 @@ def _inject_into_portfolios(pf):
         p["Actions-Elite"] = {
             "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},
             "_tickers": tickers,
-            "Commentaire": ("Socle actions elite (v3) — 40 compounders sélectionnés par EMPILEMENT DE "
-                            "FILTRES (anti-piège durabilité + qualité + valo Buffett + ROIC + FCF + "
+            "Commentaire": (f"Socle actions elite ({ELITE_KEY}) — 40 compounders sélectionnés par EMPILEMENT "
+                            "DE FILTRES (anti-piège durabilité + qualité + valo + ROIC + FCF + "
                             "investabilité), équipondérés, diversifiés par secteur GICS. Jugé sur les "
-                            "fondamentaux, pas la notoriété. Évolution douce (portes de sortie), pas de churn."),
+                            + ("fondamentaux, pas la notoriété. Départage : persistance ROIC 6 ans + "
+                               "semi-déviation sous médiane (spec §3). " if ELITE_KEY == "v4"
+                               else "fondamentaux, pas la notoriété. ")
+                            + "Évolution douce (portes de sortie), pas de churn."),
             "_asset_details": details,
         }
         with open(path, "w", encoding="utf-8") as f:

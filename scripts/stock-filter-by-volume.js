@@ -348,6 +348,46 @@ function arrStd(arr) {
   return Math.sqrt(variance);
 }
 
+function arrMedian(arr) {
+  const v = arr.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
+// ✅ Spec elite ROIC 6 ans §3 clé 2 : persistance = nb d'exercices avec ratio ≥ seuil.
+function arrPersist(arr, threshold) {
+  const v = arr.filter(Number.isFinite);
+  if (!v.length) return null;
+  return v.filter(x => x >= threshold).length;
+}
+
+// ✅ Spec elite ROIC 6 ans §3 clé 3 : semi-déviation SOUS la médiane uniquement.
+// Une hausse ne pénalise pas ; seule la baisse compte (interdit : écart-type symétrique).
+function arrDownsideDev(arr) {
+  const v = arr.filter(Number.isFinite);
+  if (v.length < 2) return null;
+  const med = arrMedian(v);
+  const below = v.filter(x => x < med).map(x => (x - med) ** 2);
+  if (!below.length) return 0;                       // jamais sous la médiane = 0 (idéal)
+  return Math.sqrt(below.reduce((a, b) => a + b, 0) / below.length);
+}
+
+// ✅ Dérive les 4 champs elite 6 ans depuis les séries yearly_roic/yearly_roe (fraîches OU en cache).
+// Le cache fondamentaux stocke déjà yearly_roic → les anciennes entrées sont enrichies SANS refetch.
+function deriveElite6y(src) {
+  const r6 = (src.yearly_roic || []).filter(Number.isFinite);
+  const e6 = (src.yearly_roe || []).filter(Number.isFinite);
+  const rd = arrDownsideDev(r6), ed = arrDownsideDev(e6);
+  return {
+    roic_persist_6y:  arrPersist(r6, 12),
+    roe_persist_6y:   arrPersist(e6, 12),
+    roic_downside_6y: rd != null ? Math.round(rd * 100) / 100 : null,
+    roe_downside_6y:  ed != null ? Math.round(ed * 100) / 100 : null,
+    years_roic_6y:    r6.length,
+  };
+}
+
 // ── Parse une seule période de balance sheet ──
 function parseOneBalanceSheet(sheet) {
   if (!sheet || typeof sheet !== 'object') return null;
@@ -691,6 +731,17 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
   const roic_avg_3y = arrAvg(roicArr);
   const roic_std_3y = arrStd(roicArr);
 
+  // ✅ Spec elite ROIC 6 ans (docs/ELITE_ROIC_10Y_SPEC.md §3) : clés de départage figées.
+  // Base = série ROIC/ROE par exercice DÉJÀ calculée (yearlyRatios, jusqu'à 6 ans),
+  // pas de refetch. Seuil 12 % = porte rentabilité elite ; equity_elite choisit ROIC
+  // (non-fin.) ou ROE (financières). years_available < 4 → « historique court » côté ranker.
+  const roic6 = yearlyRatios.map(r => r.roic).filter(Number.isFinite);
+  const roe6  = yearlyRatios.map(r => r.roe).filter(Number.isFinite);
+  const roic_persist_6y  = arrPersist(roic6, 12);
+  const roe_persist_6y   = arrPersist(roe6, 12);
+  const roic_downside_6y = arrDownsideDev(roic6);
+  const roe_downside_6y  = arrDownsideDev(roe6);
+
   // ✅ v2.11: Marge nette (année N)
   const net_margin = latest.net_margin;
 
@@ -727,6 +778,14 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
     roe_std_3y:  roe_std_3y != null ? Math.round(roe_std_3y * 100) / 100 : null,
     roic_avg_3y: roic_avg_3y != null ? Math.round(roic_avg_3y * 100) / 100 : null,
     roic_std_3y: roic_std_3y != null ? Math.round(roic_std_3y * 100) / 100 : null,
+
+    // ✅ Spec elite ROIC 6 ans §3 : persistance (clé 2) + semi-déviation sous médiane (clé 3)
+    roic_persist_6y:  roic_persist_6y,
+    roe_persist_6y:   roe_persist_6y,
+    roic_downside_6y: roic_downside_6y != null ? Math.round(roic_downside_6y * 100) / 100 : null,
+    roe_downside_6y:  roe_downside_6y != null ? Math.round(roe_downside_6y * 100) / 100 : null,
+    years_roic_6y:    roic6.length,
+
     net_margin:  net_margin != null ? Math.round(net_margin * 100) / 100 : null,
     revenue_growth_3y: revenue_growth_3y != null ? Math.round(revenue_growth_3y * 100) / 100 : null,
 
@@ -900,6 +959,14 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         stock.roe_std_3y = cached.roe_std_3y ?? null;
         stock.roic_avg_3y = cached.roic_avg_3y ?? null;
         stock.roic_std_3y = cached.roic_std_3y ?? null;
+        // ✅ Spec elite ROIC 6 ans §3 : persistance + semi-déviation sous médiane.
+        // Champs absents des vieilles entrées cache → dérivés de yearly_roic déjà stocké (aucun refetch).
+        const _e6 = (cached.roic_persist_6y != null) ? cached : deriveElite6y(cached);
+        stock.roic_persist_6y = _e6.roic_persist_6y ?? null;
+        stock.roe_persist_6y = _e6.roe_persist_6y ?? null;
+        stock.roic_downside_6y = _e6.roic_downside_6y ?? null;
+        stock.roe_downside_6y = _e6.roe_downside_6y ?? null;
+        stock.years_roic_6y = _e6.years_roic_6y ?? null;
         stock.net_margin = cached.net_margin ?? null;
         stock.revenue_growth_3y = cached.revenue_growth_3y ?? null;
         stock.assets_to_equity = cached.assets_to_equity ?? null;   // ✅ v9.3: levier réel
@@ -952,6 +1019,12 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.roe_std_3y = fundamentals.roe_std_3y ?? null;
       stock.roic_avg_3y = fundamentals.roic_avg_3y ?? null;
       stock.roic_std_3y = fundamentals.roic_std_3y ?? null;
+      // ✅ Spec elite ROIC 6 ans §3 : persistance + semi-déviation sous médiane
+      stock.roic_persist_6y = fundamentals.roic_persist_6y ?? null;
+      stock.roe_persist_6y = fundamentals.roe_persist_6y ?? null;
+      stock.roic_downside_6y = fundamentals.roic_downside_6y ?? null;
+      stock.roe_downside_6y = fundamentals.roe_downside_6y ?? null;
+      stock.years_roic_6y = fundamentals.years_roic_6y ?? null;
       stock.net_margin = fundamentals.net_margin ?? null;
       stock.revenue_growth_3y = fundamentals.revenue_growth_3y ?? null;
       stock.assets_to_equity = fundamentals.assets_to_equity ?? null;   // ✅ v9.3: levier réel
@@ -972,6 +1045,8 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         roe: null, de_ratio: null, roic: null,
         roe_avg_3y: null, roe_std_3y: null,
         roic_avg_3y: null, roic_std_3y: null,
+        roic_persist_6y: null, roe_persist_6y: null,
+        roic_downside_6y: null, roe_downside_6y: null, years_roic_6y: null,
         net_margin: null, revenue_growth_3y: null,
         _hasContext: true,
         _formulaVersion: FORMULA_VERSION,
@@ -981,6 +1056,8 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.roe = null; stock.de_ratio = null; stock.roic = null;
       stock.roe_avg_3y = null; stock.roe_std_3y = null;
       stock.roic_avg_3y = null; stock.roic_std_3y = null;
+      stock.roic_persist_6y = null; stock.roe_persist_6y = null;
+      stock.roic_downside_6y = null; stock.roe_downside_6y = null; stock.years_roic_6y = null;
       stock.net_margin = null; stock.revenue_growth_3y = null;
       failed++;
     }
@@ -1009,6 +1086,14 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     stock.roe_std_3y = cached?.roe_std_3y ?? null;
     stock.roic_avg_3y = cached?.roic_avg_3y ?? null;
     stock.roic_std_3y = cached?.roic_std_3y ?? null;
+    // ✅ Spec elite ROIC 6 ans §3 : persistance + semi-déviation (dérivées de yearly_roic si absentes)
+    const _e6b = (cached && cached.roic_persist_6y != null) ? cached
+                 : (cached ? deriveElite6y(cached) : {});
+    stock.roic_persist_6y = _e6b.roic_persist_6y ?? null;
+    stock.roe_persist_6y = _e6b.roe_persist_6y ?? null;
+    stock.roic_downside_6y = _e6b.roic_downside_6y ?? null;
+    stock.roe_downside_6y = _e6b.roe_downside_6y ?? null;
+    stock.years_roic_6y = _e6b.years_roic_6y ?? null;
     stock.net_margin = cached?.net_margin ?? null;
     stock.revenue_growth_3y = cached?.revenue_growth_3y ?? null;
   }
@@ -1050,11 +1135,13 @@ const HEADER = [
   'Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché',
   'roe','de_ratio','roic',
   'roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y',
+  // ✅ Spec elite ROIC 6 ans §3 : persistance (nb exercices ≥12%) + semi-déviation sous médiane
+  'roic_persist_6y','roe_persist_6y','roic_downside_6y','roe_downside_6y','years_roic_6y',
   'net_margin','revenue_growth_3y','assets_to_equity'
 ];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
-const FLOAT_COLS = new Set(['roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','net_margin','revenue_growth_3y','assets_to_equity']);
+const FLOAT_COLS = new Set(['roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','roic_downside_6y','roe_downside_6y','net_margin','revenue_growth_3y','assets_to_equity']);
 
 const csvLine = obj => HEADER.map(h => {
   const val = obj[h];
@@ -1311,6 +1398,8 @@ async function checkVolume(r, region){
           'roe': null, 'de_ratio': null, 'roic': null,
           'roe_avg_3y': null, 'roe_std_3y': null,
           'roic_avg_3y': null, 'roic_std_3y': null,
+          'roic_persist_6y': null, 'roe_persist_6y': null,
+          'roic_downside_6y': null, 'roe_downside_6y': null, 'years_roic_6y': null,
           'net_margin': null, 'revenue_growth_3y': null
         });
         stats.passed++;
