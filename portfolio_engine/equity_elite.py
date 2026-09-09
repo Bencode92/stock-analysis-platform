@@ -257,19 +257,20 @@ def build_elite_portfolio():
     tot = sum(raw.values()) or 1.0
     weights = {tk: round(w / tot * 100, 2) for tk, w in raw.items()}   # renormalisé à 100 %
 
-    chosen_keys = {(str(s.get("ticker")), s["_region"]) for s in final}
+    port_tks = {str(s.get("ticker")) for s in final}
 
     def _justify(s):
-        """Pourquoi CELLE-CI : rang dans son industrie (pool) + concurrent devancé + différenciateur."""
+        """Pourquoi CELLE-CI : rang dans son industrie (pool) + concurrent EXCLU devancé + différenciateur."""
         ind = s.get("industry")
+        tk = str(s.get("ticker"))
         peers = sorted((p for p in pool if p.get("industry") == ind), key=_rank_key, reverse=True)
         n = len(peers)
         try:
             rank = peers.index(s) + 1
         except ValueError:
             rank = None
-        # concurrent = meilleur pair du POOL non retenu au portefeuille
-        runner = next((p for p in peers if (str(p.get("ticker")), p["_region"]) not in chosen_keys), None)
+        # concurrent = meilleur pair du POOL NON retenu au portefeuille (ce qu'on a écarté)
+        runner = next((p for p in peers if str(p.get("ticker")) not in port_tks and str(p.get("ticker")) != tk), None)
         diff = None
         if runner is not None:
             if _stability(s) < _stability(runner) - 1e-6:
