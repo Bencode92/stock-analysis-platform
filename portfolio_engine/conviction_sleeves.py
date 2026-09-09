@@ -50,6 +50,29 @@ def _num(v):
     return float(m.group().replace(",", ".")) if m else None
 
 
+# stance structurelle (funnel `position`) → multiplicateur de cap DISCRET (bandes, cf doctrine).
+# Décidée avec expert, discrète, documentée → « moins de X, plus de Y » en pas bornés.
+# ⚠ Le `rank` (1-8) NE pilote JAMAIS un poids : rank→poids = re-classement momentum INTERDIT (backtest OOS).
+STANCE_MULT = {"ACTIF": 1.0, "PROGRESSIF": 0.5, "SÉLECTIF": 0.5, "BORNÉ": 0.33, "VEILLE": 0.0}
+
+
+def _stance(position):
+    s = (position or "").strip().upper()
+    if s.startswith("VEILLE"):
+        return "VEILLE", 0.0                    # robotics — non activé
+    if "BORN" in s:
+        return "BORNÉ", 0.33                     # materials — exposition bornée
+    if "SELECT" in s or "SÉLECT" in s:
+        return "SÉLECTIF", 0.5                   # defense — sélectif sur repli
+    if "PROGRESSIF" in s:
+        return "PROGRESSIF", 0.5                 # grid / semi / emerging — montée par palier
+    if "ACTIF" in s or "PLEIN" in s:
+        return "ACTIF", 1.0                      # nuclear / ai_infra — plein
+    if "VEILLE" in s:
+        return "VEILLE", 0.0
+    return "ACTIF", 1.0                          # stance inconnue → plein (pas de pénalité silencieuse)
+
+
 def _durability_index():
     """Map d'entité -> durabilité, par ticker ET par nom (fallback). Depuis stocks_*.json."""
     by_t, by_n = {}, {}
@@ -92,10 +115,20 @@ def build_theme_sleeve(theme, profile, dur_by_t, dur_by_n, rules, catalog):
         return {"key": key, "label": theme.get("label"), "eligible": False,
                 "reason": "bucket géographique / pas de sleeve value-chain"}
     caps = rules.get("thematic_caps_pct", {}).get(cap_key, {})
-    target = _num(caps.get(profile))
-    if not target:
+    target_full = _num(caps.get(profile))
+    if not target_full:
         return {"key": key, "label": theme.get("label"), "eligible": False,
                 "reason": f"pas de plafond {cap_key}/{profile}"}
+    # stance funnel → multiplicateur de cap (discret, structurel, expert)
+    stance, mult = _stance(theme.get("position"))
+    target = round(target_full * mult, 2)
+    if mult == 0:  # VEILLE → thème non activé (fidèle à ta stance funnel)
+        return {"key": key, "label": theme.get("label"), "eligible": True, "stance": stance,
+                "position": theme.get("position"), "cap_key": cap_key, "target_full": round(target_full, 2),
+                "target_pct": 0.0, "allocated_pct": 0.0, "survives_ai": theme.get("survives_ai"),
+                "ytd": None, "overheated": False, "vehicle": "veille",
+                "vehicle_why": f"stance {stance} → non détenu (critères d'activation à cocher)",
+                "etf": None, "holdings": [], "overflow": [], "dropped": []}
     pos_max = _num((rules.get("position_max_per_profile") or {}).get(profile)) or 12.0
     pos_min = _num((rules.get("position_minimum_pct") or {}).get(profile)) or 2.0
 
@@ -179,6 +212,7 @@ def build_theme_sleeve(theme, profile, dur_by_t, dur_by_n, rules, catalog):
 
     return {"key": key, "label": theme.get("label"), "eligible": True,
             "profile": profile, "cap_key": cap_key, "target_pct": round(target, 2),
+            "target_full": round(target_full, 2), "stance": stance, "position": theme.get("position"),
             "allocated_pct": allocated,
             "survives_ai": theme.get("survives_ai"), "ytd": ytd, "overheated": overheated,
             "vehicle": vehicle, "vehicle_why": why, "etf": etf,
@@ -256,8 +290,12 @@ def _fmt(sl):
     out = []
     if not sl.get("eligible"):
         return f"  ⊘ {sl['label']:<40} — {sl['reason']}"
-    head = (f"══ {sl['label']}  [{sl['key']}]  cap {sl['cap_key']} {sl['target_pct']}%"
-            f" | survives_ai:{sl['survives_ai']}"
+    if sl.get("vehicle") == "veille":
+        return (f"══ {sl['label']}  [{sl['key']}]  stance {sl['stance']} → EN VEILLE, NON DÉTENU"
+                f"  (cap plein aurait été {sl['target_full']}%)")
+    mult = STANCE_MULT.get(sl.get("stance", "ACTIF"), 1.0)
+    head = (f"══ {sl['label']}  [{sl['key']}]  cap {sl['cap_key']} {sl['target_full']}%×{mult}"
+            f"({sl['stance']})={sl['target_pct']}% | survives_ai:{sl['survives_ai']}"
             + (f" | ⚠ SURCHAUFFE YTD {sl['ytd']:.0f}%" if sl['overheated'] else ""))
     out.append(head)
     fill = ""
