@@ -350,6 +350,48 @@ def main():
     with open(PREV_FILE, "w", encoding="utf-8") as f:
         json.dump(pf, f, ensure_ascii=False, indent=2)
     print(f"\n✅ écrit → data/portfolios_elite.json")
+    _inject_into_portfolios(pf)
+
+
+def _inject_into_portfolios(pf):
+    """Ajoute le socle comme profil 'Actions-Elite' dans data/portfolios.json (Format B) → onglet
+    dans portefeuille.html comme les autres. La justification par ligne va dans _asset_details.rationale."""
+    path = os.path.join(DATA, "portfolios.json")
+    if not os.path.exists(path):
+        return
+    try:
+        import math
+        p = json.load(open(path, encoding="utf-8"))
+        actions, details = {}, []
+        for h in pf["holdings"]:
+            tk, nm, w = h["ticker"], (h.get("name") or h["ticker"]), (h["weight"] or 0)
+            label = f"{nm} ({tk})"
+            actions[label] = "<1%" if w < 1 else f"{round(w, 1)}%"   # schéma : 1 décimale max
+            wy = h.get("why") or {}
+            rat = f"n°{wy.get('industry_rank')}/{wy.get('industry_n')} de {h.get('industry')} en solidité"
+            if wy.get("runner_up_ticker"):
+                rat += f" — préféré à {wy['runner_up_ticker']} ({wy.get('differentiator') or ''})"
+            details.append({"ticker": tk, "name": label, "weight_pct": w, "category": "Actions",
+                            "role": "core", "rationale": rat, "sector": h.get("sector"),
+                            "country": h.get("region"), "risk_note": "",
+                            "metrics": {"roe": None, "pe_ratio": None, "dividend_yield": None,
+                                        "ytd": None, "volatility": h.get("vol_3y"),
+                                        "buffett_score": None}})
+        tickers = {str(h["ticker"]): round((h["weight"] or 0) / 100.0, 4) for h in pf["holdings"]}
+        p["Actions-Elite"] = {
+            "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},
+            "_tickers": tickers,
+            "Commentaire": ("Socle actions elite (v3) — 40 compounders sélectionnés par EMPILEMENT DE "
+                            "FILTRES (anti-piège durabilité + qualité + valo Buffett + ROIC + FCF + "
+                            "investabilité), équipondérés, diversifiés par secteur GICS. Jugé sur les "
+                            "fondamentaux, pas la notoriété. Évolution douce (portes de sortie), pas de churn."),
+            "_asset_details": details,
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(p, f, ensure_ascii=False, indent=2, default=str)
+        print("✅ profil 'Actions-Elite' injecté dans portfolios.json (→ onglet portefeuille.html)")
+    except Exception as _e:
+        print(f"⚠️ injection portfolios.json échouée (non-bloquant) : {_e}")
 
 
 if __name__ == "__main__":

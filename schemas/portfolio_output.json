@@ -4,7 +4,12 @@
   "title": "TradePulse Portfolio Output Schema",
   "description": "Schema for validating generated portfolio JSON files (v2.8.0 - Pipe-separated roles)",
   "type": "object",
-  "required": ["Agressif", "Modéré", "Stable", "_meta"],
+  "required": [
+    "Agressif",
+    "Modéré",
+    "Stable",
+    "_meta"
+  ],
   "additionalProperties": false,
   "properties": {
     "Agressif": {
@@ -46,12 +51,23 @@
     "_schema": {
       "$ref": "#/definitions/SchemaInfo",
       "description": "Schema version info (optional)"
+    },
+    "Actions-Elite": {
+      "$ref": "#/definitions/ProfilePortfolio",
+      "description": "Socle actions elite (equity_elite v3) — 40 compounders par empilement de filtres anti-piège, standalone."
     }
   },
   "definitions": {
     "ProfilePortfolio": {
       "type": "object",
-      "required": ["Commentaire", "Actions", "ETF", "Obligations", "Crypto", "_tickers"],
+      "required": [
+        "Commentaire",
+        "Actions",
+        "ETF",
+        "Obligations",
+        "Crypto",
+        "_tickers"
+      ],
       "additionalProperties": false,
       "properties": {
         "Commentaire": {
@@ -127,17 +143,35 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "from_ticker": { "type": "string" },
-              "from_name": { "type": "string" },
-              "to_ticker": { "type": "string" },
-              "to_name": { "type": "string" },
-              "reason": { "type": "string" },
-              "weight_pct": { "type": ["number", "string"] }
+              "from_ticker": {
+                "type": "string"
+              },
+              "from_name": {
+                "type": "string"
+              },
+              "to_ticker": {
+                "type": "string"
+              },
+              "to_name": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "weight_pct": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              }
             }
           }
         },
         "risk_analysis": {
-          "type": ["object", "null"],
+          "type": [
+            "object",
+            "null"
+          ],
           "description": "v5.2.1: Export risk analysis (may evolve)",
           "additionalProperties": true
         },
@@ -160,9 +194,15 @@
           "items": {
             "type": "object",
             "properties": {
-              "candidate": { "type": "string" },
-              "weight_pct": { "type": "number" },
-              "reason": { "type": "string" }
+              "candidate": {
+                "type": "string"
+              },
+              "weight_pct": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              }
             }
           }
         },
@@ -177,9 +217,17 @@
           "description": "v2.1: Cash tactique non investi (AI-driven)",
           "additionalProperties": true,
           "properties": {
-            "pct": { "type": "number", "minimum": 0, "maximum": 20 },
-            "label": { "type": "string" },
-            "rationale": { "type": "string" }
+            "pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "label": {
+              "type": "string"
+            },
+            "rationale": {
+              "type": "string"
+            }
           }
         },
         "_tickers_rendement": {
@@ -187,12 +235,19 @@
           "description": "v7.3: Yield-driven allocation (same stocks, weights redistributed for max dividend)"
         },
         "_yield_metrics": {
-          "type": ["object", "null"],
+          "type": [
+            "object",
+            "null"
+          ],
           "description": "v7.3: Yield optimization metrics",
           "additionalProperties": true,
           "properties": {
-            "weighted_yield": { "type": "number" },
-            "n_positions": { "type": "integer" }
+            "weighted_yield": {
+              "type": "number"
+            },
+            "n_positions": {
+              "type": "integer"
+            }
           }
         },
         "_alternates": {
@@ -204,17 +259,51 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "ticker": { "type": "string" },
-                "name": { "type": "string" },
-                "score": { "type": "number" },
-                "category": { "type": "string" },
-                "sector": { "type": ["string", "null"] },
-                "industry": { "type": ["string", "null"] },
-                "region": { "type": ["string", "null"] },
-                "vol_annual": { "type": "number" },
-                "exposure_family": { "type": ["string", "null"] }
+                "ticker": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "sector": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "industry": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "region": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "vol_annual": {
+                  "type": "number"
+                },
+                "exposure_family": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
               },
-              "required": ["ticker", "name", "score"]
+              "required": [
+                "ticker",
+                "name",
+                "score"
+              ]
             }
           }
         },
@@ -258,7 +347,12 @@
           },
           "category": {
             "type": "string",
-            "enum": ["Actions", "ETF", "Obligations", "Crypto"],
+            "enum": [
+              "Actions",
+              "ETF",
+              "Obligations",
+              "Crypto"
+            ],
             "description": "Asset category (guaranteed)"
           },
           "name": {
@@ -267,11 +361,16 @@
           },
           "asset_ids": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Original asset IDs"
           }
         },
-        "required": ["weight", "category"]
+        "required": [
+          "weight",
+          "category"
+        ]
       }
     },
     "AssetDetailsList": {
@@ -284,7 +383,10 @@
     "AssetDetail": {
       "type": "object",
       "description": "v4.11.0: Individual asset detail with rationale and context",
-      "required": ["name", "weight_pct"],
+      "required": [
+        "name",
+        "weight_pct"
+      ],
       "additionalProperties": true,
       "properties": {
         "name": {
@@ -292,7 +394,10 @@
           "description": "Asset display name"
         },
         "ticker": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Ticker symbol"
         },
         "weight_pct": {
@@ -303,15 +408,26 @@
         },
         "category": {
           "type": "string",
-          "enum": ["Actions", "ETF", "Obligations", "Crypto"],
+          "enum": [
+            "Actions",
+            "ETF",
+            "Obligations",
+            "Crypto"
+          ],
           "description": "Asset category"
         },
         "sector": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Sector classification"
         },
         "country": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Country of domicile"
         },
         "rationale": {
@@ -326,11 +442,17 @@
           "description": "Role in portfolio construction. Single value or pipe-separated combo (e.g., 'core|income')"
         },
         "risk_note": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Key risk to monitor"
         },
         "market_context_link": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Link to RADAR market context if applicable"
         },
         "metrics": {
@@ -338,20 +460,63 @@
           "description": "Asset metrics snapshot",
           "additionalProperties": true,
           "properties": {
-            "roe": { "type": ["string", "number", "null"] },
-            "pe_ratio": { "type": ["number", "null"] },
-            "dividend_yield": { "type": ["string", "number", "null"] },
-            "ytd": { "type": ["string", "number", "null"] },
-            "volatility": { "type": ["string", "number", "null"] },
-            "buffett_score": { "type": ["number", "null"] },
-            "ter": { "type": ["string", "number", "null"] }
+            "roe": {
+              "type": [
+                "string",
+                "number",
+                "null"
+              ]
+            },
+            "pe_ratio": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "dividend_yield": {
+              "type": [
+                "string",
+                "number",
+                "null"
+              ]
+            },
+            "ytd": {
+              "type": [
+                "string",
+                "number",
+                "null"
+              ]
+            },
+            "volatility": {
+              "type": [
+                "string",
+                "number",
+                "null"
+              ]
+            },
+            "buffett_score": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ter": {
+              "type": [
+                "string",
+                "number",
+                "null"
+              ]
+            }
           }
         }
       }
     },
     "MetaInfo": {
       "type": "object",
-      "required": ["generated_at", "version"],
+      "required": [
+        "generated_at",
+        "version"
+      ],
       "additionalProperties": true,
       "properties": {
         "generated_at": {
@@ -366,7 +531,12 @@
         },
         "buffett_mode": {
           "type": "string",
-          "enum": ["strict", "soft", "off", "none"],
+          "enum": [
+            "strict",
+            "soft",
+            "off",
+            "none"
+          ],
           "description": "Buffett score filtering mode"
         },
         "buffett_min_score": {
@@ -419,9 +589,16 @@
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "source": { "type": "string" },
-              "hash": { "type": "string" },
-              "timestamp": { "type": "string", "format": "date-time" }
+              "source": {
+                "type": "string"
+              },
+              "hash": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
             }
           },
           "description": "Data sources with hashes"
@@ -436,22 +613,34 @@
         "survivorship_bias": {
           "type": "object",
           "properties": {
-            "present": { "type": "boolean" },
-            "description": { "type": "string" }
+            "present": {
+              "type": "boolean"
+            },
+            "description": {
+              "type": "string"
+            }
           }
         },
         "point_in_time": {
           "type": "object",
           "properties": {
-            "compliant": { "type": "boolean" },
-            "description": { "type": "string" }
+            "compliant": {
+              "type": "boolean"
+            },
+            "description": {
+              "type": "string"
+            }
           }
         },
         "fx_handling": {
           "type": "object",
           "properties": {
-            "method": { "type": "string" },
-            "description": { "type": "string" }
+            "method": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
           }
         },
         "backtest_methodology": {
@@ -487,19 +676,50 @@
     "BacktestResults": {
       "type": "object",
       "properties": {
-        "return_pct": { "type": "number" },
-        "return_gross_pct": { "type": "number" },
-        "return_net_pct": { "type": "number" },
-        "volatility_pct": { "type": "number" },
-        "sharpe_ratio": { "type": ["number", "null"] },
-        "max_drawdown_pct": { "type": "number" },
-        "benchmark_return_pct": { "type": "number" },
-        "benchmark_symbol": { "type": "string" },
-        "transaction_cost_bp": { "type": "number" },
-        "turnover": { "type": "number" },
-        "days": { "type": "integer" },
-        "start_date": { "type": "string", "format": "date" },
-        "end_date": { "type": "string", "format": "date" }
+        "return_pct": {
+          "type": "number"
+        },
+        "return_gross_pct": {
+          "type": "number"
+        },
+        "return_net_pct": {
+          "type": "number"
+        },
+        "volatility_pct": {
+          "type": "number"
+        },
+        "sharpe_ratio": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "max_drawdown_pct": {
+          "type": "number"
+        },
+        "benchmark_return_pct": {
+          "type": "number"
+        },
+        "benchmark_symbol": {
+          "type": "string"
+        },
+        "transaction_cost_bp": {
+          "type": "number"
+        },
+        "turnover": {
+          "type": "number"
+        },
+        "days": {
+          "type": "integer"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        }
       }
     },
     "ConstraintReport": {
@@ -507,29 +727,59 @@
       "description": "P0-2: Post-rounding constraint verification report (supports both basic and Phase 1 enriched)",
       "additionalProperties": true,
       "properties": {
-        "all_satisfied": { "type": "boolean" },
-        "all_hard_satisfied": { "type": "boolean" },
-        "all_soft_satisfied": { "type": "boolean" },
-        "profile": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "n_violations": { "type": "integer" },
+        "all_satisfied": {
+          "type": "boolean"
+        },
+        "all_hard_satisfied": {
+          "type": "boolean"
+        },
+        "all_soft_satisfied": {
+          "type": "boolean"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "n_violations": {
+          "type": "integer"
+        },
         "violations": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "constraint_name": { "type": "string" },
-              "priority": { "type": "string", "enum": ["hard", "soft", "relaxable"] },
-              "actual": { "type": "number" },
-              "expected": { "type": "string" },
-              "context": { "type": "string" }
+              "constraint_name": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "hard",
+                  "soft",
+                  "relaxable"
+                ]
+              },
+              "actual": {
+                "type": "number"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "context": {
+                "type": "string"
+              }
             }
           }
         },
         "warnings": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "margins": {
           "type": "object",
@@ -537,16 +787,26 @@
         },
         "relaxed_constraints": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "quality_score": { "type": "number" },
+        "quality_score": {
+          "type": "number"
+        },
         "bindings": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true }
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
         },
         "detailed_margins": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true }
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
         }
       }
     },
@@ -564,11 +824,17 @@
           "description": "Whether heuristic fallback was used"
         },
         "vol_realized": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Realized portfolio volatility (%)"
         },
         "vol_target": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Target volatility (%)"
         },
         "disclaimer": {
@@ -584,7 +850,10 @@
           "description": "Volatility tolerance band (%)"
         },
         "fallback_reason": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Reason for fallback if applicable"
         },
         "covariance_method": {
@@ -612,27 +881,50 @@
         "llm_sanitizer": {
           "type": "object",
           "properties": {
-            "sanitized": { "type": "boolean" },
-            "removed_sentences": { "type": "integer" },
-            "original_length": { "type": "integer" },
-            "cleaned_length": { "type": "integer" },
-            "removal_ratio": { "type": "number" },
+            "sanitized": {
+              "type": "boolean"
+            },
+            "removed_sentences": {
+              "type": "integer"
+            },
+            "original_length": {
+              "type": "integer"
+            },
+            "cleaned_length": {
+              "type": "integer"
+            },
+            "removal_ratio": {
+              "type": "number"
+            },
             "hits": {
               "type": "array",
               "items": {
                 "type": "object",
                 "properties": {
-                  "pattern": { "type": "string" },
-                  "matched": { "type": "string" },
-                  "category": { "type": "string" }
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "matched": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "version": { "type": "string" },
-        "fallback_used": { "type": "boolean" }
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string"
+        },
+        "fallback_used": {
+          "type": "boolean"
+        }
       }
     },
     "ExposuresReport": {
@@ -643,27 +935,37 @@
         "by_category": {
           "type": "object",
           "description": "Exposure by asset category (Actions, ETF, Obligations, Crypto)",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "type": "number"
+          }
         },
         "by_sector": {
           "type": "object",
           "description": "Exposure by sector",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "type": "number"
+          }
         },
         "by_region": {
           "type": "object",
           "description": "Exposure by geographic region",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "type": "number"
+          }
         },
         "by_risk_bucket": {
           "type": "object",
           "description": "Exposure by risk bucket (equity_like, bond_like, leveraged, etc.)",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "type": "number"
+          }
         },
         "by_role": {
           "type": "object",
           "description": "Exposure by portfolio role (core, defensive, satellite, lottery)",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "type": "number"
+          }
         },
         "concentration": {
           "type": "object",
@@ -675,7 +977,12 @@
             },
             "hhi_interpretation": {
               "type": "string",
-              "enum": ["well_diversified", "diversified", "moderately_concentrated", "highly_concentrated"],
+              "enum": [
+                "well_diversified",
+                "diversified",
+                "moderately_concentrated",
+                "highly_concentrated"
+              ],
               "description": "HHI interpretation"
             },
             "effective_n": {
@@ -718,7 +1025,9 @@
         "exchanges": {
           "type": "array",
           "description": "List of exchanges",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "total_weight": {
           "type": "number",
