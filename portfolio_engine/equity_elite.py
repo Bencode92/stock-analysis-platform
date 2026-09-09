@@ -32,6 +32,11 @@ RISK_CAP_MULT = 1.5
 EXIT_ROIC = 8.0        # sortie à ROIC < 8 % (moitié de l'entrée), pas < 0 (revue expert)
 PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 
+# BANNIS manuels (journal) — une porte connue comme violée mais non appliquée est pire qu'absente (expert).
+BANNED = {
+    "JBS": "Cotée NY juin 2025 → pas de vrai historique 3Y (young_listing raté) ; entité US/Brésil incohérente (groupe Batista).",
+}
+
 FX_TO_USD = {
     "USD": 1.0, "EUR": 1.08, "GBP": 1.27, "CHF": 1.10, "CAD": 0.73, "SGD": 0.74,
     "JPY": 0.0064, "TWD": 0.031, "HKD": 0.128, "KRW": 0.00074, "CNY": 0.138, "INR": 0.012,
@@ -122,6 +127,8 @@ def _funnel_tickers():
 
 def _passes_gates(s, grades):
     """Portes d'entrée — SECTORIELLES (financières jugées au ROE, pas au ROIC/D-E)."""
+    if str(s.get("ticker")) in BANNED:               # banni manuel journalisé
+        return False
     if (s.get("durability_grade") or "") not in grades:
         return False
     if s.get("durability_mirage") is True:
@@ -156,6 +163,8 @@ def _passes_gates(s, grades):
 
 def _passes_exit(s):
     """Porte de SORTIE (hystérésis) resserrée : durab A/B, pas mirage, rentabilité ≥ moitié de l'entrée."""
+    if str(s.get("ticker")) in BANNED:               # un banni sort aussi par la porte de sortie
+        return False
     if (s.get("durability_grade") or "") not in ("A", "B") or s.get("durability_mirage") is True:
         return False
     key = "roe_avg_3y" if _is_fin(s) else "roic_avg_3y"
