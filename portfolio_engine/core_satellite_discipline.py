@@ -1047,12 +1047,8 @@ def _enrich_thematique(profile: Dict, positions: List[Dict]) -> None:
         beta = round(sum(w[t] * meta.get(t, {}).get("beta", 1.0) for t in w), 2)
         tw = round(sum(w[t] * meta.get(t, {}).get("tw", 0.0) for t in w) / 100.0 * 100, 2)
         nvda = round(sum(w[t] * meta.get(t, {}).get("nvda", 0.0) for t in w) / 100.0 * 100, 2)
-        profile["beta_est"] = beta
-        profile["_lookthrough"] = {
-            "taiwan_pct": tw, "nvidia_pct": nvda, "taiwan_cap": 6.0, "name_cap": 4.0,
-            "taiwan_ok": tw <= 6.0, "nvidia_ok": nvda <= 4.0,
-            "source": "illustratif — remplacer par holdings réels (data/etf_lookthrough/)",
-        }
+        # ⚠ NE PAS mettre au niveau RACINE du profil : le schéma est strict (additionalProperties:false).
+        # β et look-through vont DANS _exposures (permissif, comme beta_portfolio/source).
         try:
             from portfolio_engine.exposures import compute_all_exposures
         except ImportError:
@@ -1066,6 +1062,11 @@ def _enrich_thematique(profile: Dict, positions: List[Dict]) -> None:
         exp_d = exp.to_dict() if hasattr(exp, "to_dict") else {}
         exp_d["beta_portfolio"] = beta
         exp_d["source"] = "exposures.py (look-through ETF)"
+        exp_d["lookthrough"] = {
+            "taiwan_pct": tw, "nvidia_pct": nvda, "taiwan_cap": 6.0, "name_cap": 4.0,
+            "taiwan_ok": tw <= 6.0, "nvidia_ok": nvda <= 4.0,
+            "source": "illustratif — remplacer par holdings réels (data/etf_lookthrough/)",
+        }
         profile["_exposures"] = exp_d
     except Exception as _e:
         import logging as _logging
