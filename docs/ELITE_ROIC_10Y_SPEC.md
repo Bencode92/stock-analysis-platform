@@ -37,7 +37,24 @@ disponible. **Aucune nouvelle variante de clé ne doit être testée avant ce ru
   — il réintroduit « le meilleur d'un secteur médiocre » (violation retirée en v2).
 - ❌ **funnel / conviction dans le tri** — la conviction FILTRE, ne CLASSE pas. Funnel = tag seulement.
 
-## 4. Portes d'entrée (inchangées vs v3)
+## 3bis. Porte VALORISATION — critère, pas grade (à corriger au run 10 ans)
+
+La porte valo actuelle utilise `buffett_grade ∈ {A,B}`. Or un grade B peut s'obtenir en RATANT
+précisément le critère valo (4/6 autres critères passés). Vérifié : ASML (grade B, `valuation_ok` ✗,
+PE 56) et Lam (grade B, `valuation_ok` ✗, PE 53) passent la porte alors qu'ils sont chers ; Nvidia
+(grade A, `valuation_ok` ✓, PE 28,7) passe légitimement. **Correctif figé** : la porte valo devient le
+**critère binaire `valuation_ok` = vrai**, pas le grade. Avec ça, ASML/Lam sortent pour la valo,
+Nvidia reste (et son exclusion serait alors purement le départage 3 ans).
+
+**Journal ASML/Lam/Nvidia** (formulation correcte, laisse la méthode trancher) :
+« ASML/Lam/Nvidia passent les portes de qualité. Nvidia passe aussi la valo (PE 28,7). ASML/Lam
+échouent le critère valo (PE ~55) — exclus à raison une fois la porte valo passée au critère.
+Nvidia : exclu TEMPORAIREMENT par le départage 3 ans (défaut connu) et un cap Tech rempli de B à
+12-14 %. Réexamen au run ROIC 10 ans avec coupe intra-secteur par persistance. Détenus via SMH (11 %)
+entre-temps ; le plafond look-through par titre (4 %) gère le cumul. » — PAS « pas leur place dans un
+socle qualité » (résultat faux gravé en doctrine).
+
+## 4. Portes d'entrée (inchangées vs v3, sauf porte valo → critère ci-dessus au run 10 ans)
 
 Anti-piège (durab A/B + mirage=faux) · qualité A/B · **valo** buffett A/B · rentabilité ROIC ≥ 15 % (fin. :
 ROE ≥ 15 %) · marge > 0 · FCF > 0 · levier D/E ≤ 2,5 (hors fin.) · investabilité **ADV ≥ 5 M$** · historique
