@@ -1014,6 +1014,65 @@ THEMATIQUE_CORE = {
 }  # total = 1.00 exactement, 8 lignes, pas de satellite stocks
 
 
+# Méta look-through par ETF (revue expert) : region/secteur/β + expo Taïwan/Nvidia (illustratives,
+# ordres de grandeur — à remplacer par les holdings réels). Sert à enrichir le profil thématique
+# (β, expositions, look-through) comme les profils principaux.
+_THEMATIQUE_ETF_META = {
+    "EQQQ":    {"region": "US", "sector": "Technology", "beta": 1.05, "tw": 0.0, "nvda": 8.4},
+    "EIMI":    {"region": "Émergents", "sector": "Diversified", "beta": 0.85, "tw": 20.0, "nvda": 0.0},
+    "FGEQ":    {"region": "Global", "sector": "Diversified", "beta": 0.80, "tw": 1.0, "nvda": 1.0},
+    "SGLN.AS": {"region": "Global", "sector": "Or", "beta": 0.05, "risk_bucket": "commodity_like"},
+    "URNM":    {"region": "Global", "sector": "Matières premières", "beta": 1.20},
+    "SMH":     {"region": "US", "sector": "Technology", "beta": 1.30, "tw": 13.0, "nvda": 10.0},
+    "WDEF":    {"region": "Europe", "sector": "Industrials", "beta": 1.00},
+    "COPX":    {"region": "Global", "sector": "Matières premières", "beta": 1.20},
+    "ISPY":    {"region": "US", "sector": "Technology", "beta": 1.10, "tw": 2.0},
+    # tickers de fallback (ancien THEMATIQUE_CORE)
+    "QQQ": {"region": "US", "sector": "Technology", "beta": 1.05, "nvda": 8.4},
+    "IEMG": {"region": "Émergents", "sector": "Diversified", "beta": 0.85, "tw": 20.0},
+    "VGT": {"region": "US", "sector": "Technology", "beta": 1.15, "nvda": 6.0},
+    "CGXU": {"region": "International", "sector": "Diversified", "beta": 1.00},
+    "VBK": {"region": "US", "sector": "Diversified", "beta": 1.20},
+    "VOT": {"region": "US", "sector": "Diversified", "beta": 1.10},
+    "XLE": {"region": "US", "sector": "Énergie", "beta": 0.90},
+}
+
+
+def _enrich_thematique(profile: Dict, positions: List[Dict]) -> None:
+    """Attache β / expositions / look-through au profil thématique (comme les profils principaux).
+    Tout en try/except : jamais bloquant."""
+    try:
+        w = {p["ticker"]: float(p.get("weight", 0.0)) for p in positions}
+        meta = _THEMATIQUE_ETF_META
+        beta = round(sum(w[t] * meta.get(t, {}).get("beta", 1.0) for t in w), 2)
+        tw = round(sum(w[t] * meta.get(t, {}).get("tw", 0.0) for t in w) / 100.0 * 100, 2)
+        nvda = round(sum(w[t] * meta.get(t, {}).get("nvda", 0.0) for t in w) / 100.0 * 100, 2)
+        profile["beta_est"] = beta
+        profile["_lookthrough"] = {
+            "taiwan_pct": tw, "nvidia_pct": nvda, "taiwan_cap": 6.0, "name_cap": 4.0,
+            "taiwan_ok": tw <= 6.0, "nvidia_ok": nvda <= 4.0,
+            "source": "illustratif — remplacer par holdings réels (data/etf_lookthrough/)",
+        }
+        try:
+            from portfolio_engine.exposures import compute_all_exposures
+        except ImportError:
+            from .exposures import compute_all_exposures
+        asset_data = {t: {"role": "core", "category": "ETF",
+                          "region": meta.get(t, {}).get("region", "Global"),
+                          "sector": meta.get(t, {}).get("sector", "Diversified"),
+                          "risk_bucket": meta.get(t, {}).get("risk_bucket", "equity_like")}
+                      for t in w}
+        exp = compute_all_exposures(w, asset_data)
+        exp_d = exp.to_dict() if hasattr(exp, "to_dict") else {}
+        exp_d["beta_portfolio"] = beta
+        exp_d["source"] = "exposures.py (look-through ETF)"
+        profile["_exposures"] = exp_d
+    except Exception as _e:
+        import logging as _logging
+        _logging.getLogger("portfolio_engine.core_satellite_discipline").warning(
+            f"⚠️ enrichissement thématique (β/expo) échoué, non-bloquant : {_e}")
+
+
 # v6.14 : Satellite thématique DYNAMISÉ (plus d'actions en dur).
 # Sélectionné via fit_score_agressif (qui privilégie haute vol + momentum +
 # EPS growth — les caractéristiques des actions thématiques par construction).
@@ -1128,7 +1187,12 @@ def _build_agressif_thematique(satellite_positions_unused: List[Dict]) -> Dict:
     # revue expert intégrée (UCITS, base-uniforme×stance, swaps, cyber). Fallback dur sur
     # THEMATIQUE_CORE si conviction_sleeves échoue (données manquantes en CI) → jamais casser.
     positions = _conviction_etf_positions() or _thematique_core_positions()
-    return positions_to_format_b(positions, "Agressif-Thematique")
+    for _p in positions:  # β par ligne (les ETF n'ont pas de β natif)
+        if _p.get("beta") is None:
+            _p["beta"] = _THEMATIQUE_ETF_META.get(_p["ticker"], {}).get("beta")
+    profile = positions_to_format_b(positions, "Agressif-Thematique")
+    _enrich_thematique(profile, positions)  # β / expositions / look-through (comme les principaux)
+    return profile
 
 
 def _thematique_core_positions() -> List[Dict]:
