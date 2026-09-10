@@ -37,7 +37,7 @@ const OUT_DIR = process.env.OUTPUT_DIR || 'data/filtered';
 const DEBUG = process.env.DEBUG === 'true' || process.env.DEBUG === '1';
 
 // ✅ v2.13: Version 4 — force re-fetch pour corriger collisions ticker (SAN, ADM, NEM, ADP)
-const FORMULA_VERSION = 4;
+const FORMULA_VERSION = 5;   // ✅ T3 2026-09-10 : ROIC hors cash excédentaire (côté actifs + plancher relatif + NOPAT ex-intérêts) → refetch complet
 
 // ✅ v2.8: Toutes les régions disponibles
 const ALL_INPUTS = [
@@ -460,6 +460,7 @@ function parseOneBalanceSheet(sheet) {
 
   return {
     total_debt: totalDebt,
+    short_term_debt: shortTermDebt,   // ✅ T3 : dette CT = seul passif courant porteur d'intérêt (reste dans l'IC)
     total_equity: totalEquity,
     total_assets: totalAssets,
     total_liabilities: totalLiabilities,
@@ -549,12 +550,19 @@ function parseOneIncomeStatement(statement) {
   const pretaxIncome = parseFloatSafe(statement.pretax_income) ?? null;
   const incomeTax    = parseFloatSafe(statement.income_tax) ?? null;
 
+  // ✅ T3 : produits financiers sur trésorerie — retirés de l'EBIT au numérateur du ROIC (si on retire
+  // le cash du dénominateur, on retire ses intérêts sinon le ROIC est gonflé deux fois).
+  const noi = statement.non_operating_interest || {};
+  const interestIncome = parseFloatSafe(statement.interest_income)
+    ?? parseFloatSafe(noi.income) ?? parseFloatSafe(noi.interest_income) ?? null;
+
   return {
     net_income: netIncome,
     revenue: revenue,
     operating_income: operatingIncome,
     pretax_income: pretaxIncome,
     income_tax: incomeTax,
+    interest_income: interestIncome,
     ebitda: parseFloatSafe(statement.ebitda) ?? parseFloatSafe(statement.normalized_ebitda) ?? null,
     fiscal_date: statement.fiscal_date || statement.date || null
   };
@@ -608,24 +616,22 @@ async function fetchIncomeStatement(symbol, context = {}) {
   }
 }
 
-// Invested Capital (méthode GuruFocus)
-function computeInvestedCapital(bs) {
-  if (!bs || bs.total_assets == null) return null;
+// ✅ T3 (spec §9bis) : Invested Capital côté ACTIFS + cash excédentaire (buffer 2%·CA) + PLANCHER RELATIF.
+// IC = total_assets − (passifs courants non porteurs d'intérêt) − max(0, cash − 2%·CA), planché à 0,5·IC_brut
+// → retirer le cash dormant ne peut au plus que diviser l'IC par 2 (ROIC ×2 max). Nécessite le CA de l'exercice.
+function computeInvestedCapital(bs, revenue) {
+  if (!bs || bs.total_assets == null || revenue == null || revenue <= 0) return null;
 
-  const totalAssets = bs.total_assets;
-  const cash = bs.cash_and_st_investments ?? 0;
-  const curLiab = bs.total_current_liabilities ?? 0;
-  const curAssets = bs.total_current_assets ?? 0;
-  const ap = bs.accounts_payable ?? 0;
-  const accrued = bs.accrued_expenses ?? 0;
+  const nibcl = Math.max(0, (bs.total_current_liabilities ?? 0) - (bs.short_term_debt ?? 0));
+  const icBrut = bs.total_assets - nibcl;
+  if (icBrut <= 0) return null;                      // bilan pathologique (passif courant > actifs nets)
 
-  const excessCash = cash - Math.max(0, curLiab - curAssets + cash);
-  const ic = totalAssets - ap - accrued - excessCash;
+  const excessCash = Math.max(0, (bs.cash_and_st_investments ?? 0) - 0.02 * revenue);
+  const ic = Math.max(icBrut - excessCash, 0.5 * icBrut);   // plancher relatif (revue expert 2026-09-10)
 
   if (DEBUG) {
-    console.log(`    [IC] assets=${totalAssets}, ap+accrued=${ap + accrued}, excessCash=${excessCash} → IC=${ic}`);
+    console.log(`    [IC-T3] assets=${bs.total_assets}, nibcl=${nibcl}, excessCash=${excessCash} → IC=${ic} (brut ${icBrut})`);
   }
-
   return ic;
 }
 
@@ -641,6 +647,7 @@ function computeOneYearRatios(bsCurrent, bsPrevious, incomeStatement) {
   const opIncome   = incomeStatement?.operating_income ?? null;
   const pretax     = incomeStatement?.pretax_income ?? null;
   const taxAmount  = incomeStatement?.income_tax ?? null;
+  const interestIncome = incomeStatement?.interest_income ?? null;   // ✅ T3
 
   // ROE = Net Income / Average Equity (en %)
   const avgEquity = (equity != null && equityPrev != null) ? (equity + equityPrev) / 2 : equity;
@@ -655,14 +662,15 @@ function computeOneYearRatios(bsCurrent, bsPrevious, incomeStatement) {
     de_ratio = Math.round((debt / equity) * 100) / 100;
   }
 
-  // ROIC = NOPAT / Average IC (en %)
+  // ROIC = NOPAT / Average IC (en %) — ✅ T3 : taux borné 15-35 %, NOPAT ex-intérêts sur trésorerie
   let taxRate = 0.25;
   if (pretax != null && pretax > 0 && taxAmount != null && taxAmount >= 0) {
-    taxRate = Math.min(Math.max(taxAmount / pretax, 0), 0.50);
+    taxRate = Math.min(Math.max(taxAmount / pretax, 0.15), 0.35);
   }
-  const nopat = opIncome != null ? opIncome * (1 - taxRate) : null;
-  const icCurrent  = computeInvestedCapital(bsCurrent);
-  const icPrevious = bsPrevious ? computeInvestedCapital(bsPrevious) : icCurrent;
+  const ebit = opIncome != null ? opIncome - (interestIncome ?? 0) : null;
+  const nopat = ebit != null ? ebit * (1 - taxRate) : null;
+  const icCurrent  = computeInvestedCapital(bsCurrent, revenue);
+  const icPrevious = bsPrevious ? computeInvestedCapital(bsPrevious, revenue) : icCurrent;
   const avgIC = (icCurrent != null && icPrevious != null) ? (icCurrent + icPrevious) / 2 : icCurrent;
 
   let roic = null;
