@@ -221,9 +221,11 @@ Aperçu v3→v4a (drawdown dérivé, ancien ROIC) = 10 changements. Revue expert
   négatifs (IC côté actifs gère) mais PE très élevé → à vérifier contre la future porte v4b (ne pas le faire
   entrer puis sortir en 2 runs).
 
-### DÉCISION EN ATTENTE — fenêtre 6 ans contient 2020 (COVID)
-Le max drawdown punit systématiquement ce qui a fermé en 2020 (retail/resto/luxe/voyage) et épargne le reste.
-CHOIX à figer AVANT le run, pour tout l'univers : **(A) accepter** (traverser 2020 sans chute = info de
-résilience ; simple, figé ; mais le socle sort du conso discrétionnaire ~4 ans jusqu'à ce que 2020 quitte la
-fenêtre) vs **(B) neutraliser** (ignorer un creux d'un exercice si le ROIC repasse au-dessus du niveau pré-creux
-sous 2 ans ; plus juste, plus de paramètres). Expert penche **A** avec la phrase écrite au journal.
+### DÉCISION FIGÉE (2026-09-10) — fenêtre 6 ans contient 2020 (COVID) : **ACCEPTER**
+Le max drawdown punit ce qui a fermé en 2020 (retail/resto/luxe/voyage) et épargne le reste. **Décision : A —
+accepter, ne pas neutraliser.** Aucun paramètre ajouté à la clé (drawdown 6 ans brut, 2020 inclus).
+
+**Phrase de journal (figée)** : « Le socle traite un ROIC traversé sans chute en 2020 comme une information de
+RÉSILIENCE, et l'assume. Conséquence acceptée : sous-pondération mécanique du conso discrétionnaire jusqu'à ce
+que l'exercice 2020 quitte la fenêtre 6 ans (~2029). Choix figé, non re-débattu — cohérent avec la doctrine
+"juger l'entreprise pour ce qu'elle EST", 2020 étant un vrai test de solidité, pas un artefact. »
