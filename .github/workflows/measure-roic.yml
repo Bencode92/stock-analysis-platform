@@ -1,0 +1,27 @@
+name: 🔬 Measure ROIC ex-cash (T3)
+
+# MESURE D'IMPACT SEULE (spec §9) — ROIC actuel vs ROIC hors cash excédentaire re-figé.
+# Ne commit RIEN, ne touche à aucune donnée de prod : imprime les 6 critères d'acceptation dans le log.
+on:
+  workflow_dispatch:
+    inputs:
+      n_us:
+        description: "Taille de l'échantillon US aléatoire (déterministe)"
+        required: false
+        default: '300'
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci || npm install axios
+      - name: 🔬 Mesure ROIC ex-cash
+        env:
+          TWELVE_DATA_API: ${{ secrets.TWELVE_DATA_API }}
+        run: node scripts/measure_roic_excash.mjs "${{ github.event.inputs.n_us }}"

@@ -143,3 +143,43 @@ tel quel.** On découple, deux dossiers, deux dates :
 **Correctif de la reco initiale** : la porte valo « critère `valuation_ok` obligatoire » (§3bis) a été proposée
 sans connaître sa définition (PE plat non sectoriel). Elle est **mauvaise telle qu'implémentée** — c'est l'objet
 de v4b. `valuation_ok` reste utilisé par v4 (gaté, non basculé) en attendant la refonte v4b.
+
+## 9. T3 — ROIC HORS CASH EXCÉDENTAIRE : définition RE-FIGÉE (revue expert 2026-09-10)
+
+**Historique** : l'expert a d'abord écrit une formule **côté financement** (`capital = CP + dette − max(0, cash −
+2%·CA)`). Mesurée sur le cache (10 608 titres) AVANT de coder : **IC négatif pour 1 129 titres (11 %)** dès que
+`cash > CP + dette` (précisément les riches en cash visés), 48 % de changement matériel, +1 191 franchissements
+nets de la porte 12 %. **Défaut numérique, pas désaccord.** L'expert corrige et re-fige **côté actifs, avec
+plancher** (une seule définition, tout l'univers **hors financières** — celles-ci restent au ROE) :
+
+- **IC** = total actifs − dettes fournisseurs − charges à payer − autres passifs courants NON porteurs d'intérêt
+  − max(0, trésorerie − 2 %·CA). Implémentation : `IC = total_assets − (total_current_liabilities −
+  short_term_debt) − max(0, cash − 0,02·revenue)` (la dette court terme = seul passif courant porteur d'intérêt,
+  reste dans l'IC comme financement).
+- **NOPAT** = (EBIT − produits financiers sur trésorerie) × (1 − taux d'impôt effectif **borné 15-35 %**). Si on
+  retire le cash du dénominateur, on retire ses intérêts du numérateur — sinon ROIC gonflé deux fois.
+- **PLANCHER IC** = `max(IC, 0,10·CA)`. Un IC → 0 (plateformes asset-light) fait exploser le ratio ; le plancher
+  borne le ROIC (affichage + drawdown), **PAS une porte** (ne change pas qui passe 12 %). Garantit `IC > 0` pour
+  tout CA positif → critère « IC négatif = 0 » satisfait **par construction**.
+- **COHÉRENCE** : cette définition remplace le ROIC **partout** (affichage, porte 4, persistance, drawdown). Pas
+  deux ROIC. Le plancher 10 %·CA est un choix de robustesse **figé** (5 % ou 15 % défendables — ne pas optimiser).
+
+### Critères d'acceptation — ÉCRITS AVANT LA MESURE (si un seul échoue : remonter, re-figer, relancer une fois)
+
+| Test | Seuil |
+|---|---|
+| IC négatif | **0 titre** (garanti par le plancher) |
+| Δ ROIC médian | **±2 pts** |
+| Changement matériel (\|Δ\|>2 pts) | **< 25 %** de l'univers |
+| Franchissent 12 % net vers le haut | **< +300** (≈ 3 %) — au-delà : buffer 2 % trop agressif → tester 5 %·CA |
+| Japon (DISCO, MonotaRO, OBIC) | restent **relevés** (sens + ordre de grandeur) |
+| p99 Δ | **< +30 pts** |
+
+**Protocole** : la mesure exige une passe de données BRUTES (dettes fournisseurs / charges à payer / passifs
+courants / produits financiers — AUCUN n'est dans le cache). `scripts/measure_roic_excash.mjs` fetche un
+échantillon stratifié (tout le Japon cash-lourd + N aléatoires/région), calcule ROIC ancien vs nouveau, évalue
+les 6 critères — **SANS toucher la prod**. Bascule (remplacement global du ROIC) **seulement si les 6 passent**.
+
+**Point de méthode (journal)** : l'expert a écrit une formule côté-financement sans la tester ; le pipeline l'a
+mesurée avant de coder. Règle qui en sort : *toute définition figée passe par une mesure d'impact sur l'univers
+avant le run de sélection, même quand elle vient de l'expert.*
