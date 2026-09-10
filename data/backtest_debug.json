@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-09-10T08:41:24.197536",
+    "generated_at": "2026-09-10T12:32:42.509454",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -62,9 +62,9 @@
       "first_date": "2026-05-14",
       "last_date": "2026-09-10",
       "first_price": 11.31,
-      "last_price": 11.95,
-      "total_return_pct": 5.66,
-      "volatility_annual_pct": 44.46,
+      "last_price": 11.94,
+      "total_return_pct": 5.57,
+      "volatility_annual_pct": 44.47,
       "weights_by_profile": {
         "Stable": 2.5
       },
@@ -103,11 +103,11 @@
         },
         {
           "date": "2026-09-10",
-          "close": 11.95,
+          "close": 11.94,
           "prev_date": "2026-09-09",
           "prev_close": 12.14,
-          "daily_return_pct": -1.5651,
-          "formula": "(11.9500 / 12.1400) - 1"
+          "daily_return_pct": -1.6474,
+          "formula": "(11.9400 / 12.1400) - 1"
         }
       ],
       "is_benchmark": false
@@ -119,9 +119,9 @@
       "first_date": "2026-05-14",
       "last_date": "2026-09-10",
       "first_price": 52.9522,
-      "last_price": 60.8,
-      "total_return_pct": 14.82,
-      "volatility_annual_pct": 18.56,
+      "last_price": 60.9,
+      "total_return_pct": 15.01,
+      "volatility_annual_pct": 18.55,
       "weights_by_profile": {
         "Stable": 2.5
       },
@@ -160,11 +160,11 @@
         },
         {
           "date": "2026-09-10",
-          "close": 60.8,
+          "close": 60.9,
           "prev_date": "2026-09-09",
           "prev_close": 60.9,
-          "daily_return_pct": -0.1642,
-          "formula": "(60.8000 / 60.9000) - 1"
+          "daily_return_pct": 0.0,
+          "formula": "(60.9000 / 60.9000) - 1"
         }
       ],
       "is_benchmark": false
@@ -176,9 +176,9 @@
       "first_date": "2026-05-14",
       "last_date": "2026-09-10",
       "first_price": 1384.0,
-      "last_price": 1246.0,
-      "total_return_pct": -9.97,
-      "volatility_annual_pct": 21.43,
+      "last_price": 1249.0,
+      "total_return_pct": -9.75,
+      "volatility_annual_pct": 21.42,
       "weights_by_profile": {
         "Agressif": 5.0
       },
@@ -217,11 +217,11 @@
         },
         {
           "date": "2026-09-10",
-          "close": 1246.0,
+          "close": 1249.0,
           "prev_date": "2026-09-09",
           "prev_close": 1255.0,
-          "daily_return_pct": -0.7171,
-          "formula": "(1246.0000 / 1255.0000) - 1"
+          "daily_return_pct": -0.4781,
+          "formula": "(1249.0000 / 1255.0000) - 1"
         }
       ],
       "is_benchmark": false
@@ -906,12 +906,12 @@
           "type": "Action",
           "weight_pct": 5.0,
           "price_prev": 1255.0,
-          "price_today": 1246.0,
-          "return_pct": -0.7171,
-          "contribution_pct": -0.0359
+          "price_today": 1249.0,
+          "return_pct": -0.4781,
+          "contribution_pct": -0.0239
         }
       ],
-      "total_portfolio_return_pct": -0.0359,
+      "total_portfolio_return_pct": -0.0239,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1056,13 +1056,13 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 2.33,
-      "net_return_pct": 2.33,
+      "gross_return_pct": 2.34,
+      "net_return_pct": 2.34,
       "volatility_pct": 5.37,
       "max_drawdown_pct": -1.69,
       "benchmark_symbol": "QQQ",
       "benchmark_return_pct": -0.7,
-      "excess_return_pct": 3.03
+      "excess_return_pct": 3.04
     },
     "Modéré": {
       "gross_return_pct": 2.2,
@@ -1080,7 +1080,7 @@
       "max_drawdown_pct": -0.43,
       "benchmark_symbol": "AGG",
       "benchmark_return_pct": -2.11,
-      "excess_return_pct": 3.27
+      "excess_return_pct": 3.28
     }
   },
   "uniformity_proof": {

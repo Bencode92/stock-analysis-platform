@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-09-10-08-36-10",
-    "git_sha": "add032c11",
-    "git_sha_full": "add032c11ca1dbb7887ed2015fdf09ec8c4c5fb0",
+    "run_id": "2026-09-10-12-25-19",
+    "git_sha": "b2810a2a6",
+    "git_sha_full": "b2810a2a6775b64a930bbd98a53924b60bdb96b7",
     "config_hash": "5b753993",
     "universe_asof": "2026-09-10",
-    "timestamp_utc": "2026-09-10T08:36:10.413149+00:00",
+    "timestamp_utc": "2026-09-10T12:25:19.878224+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 321.98
+    "total_duration_sec": 449.41
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -33,11 +33,11 @@
     "hard_filters_equity": {
       "name": "hard_filters",
       "before": 11108,
-      "after": 7458,
-      "rejected": 3650,
+      "after": 7464,
+      "rejected": 3644,
       "category": "equity",
       "reason_counts": {
-        "MISSING_DATA": 3650
+        "MISSING_DATA": 3644
       },
       "duration_sec": 0.0
     },
@@ -51,31 +51,31 @@
       "top_k": [
         {
           "ticker": "VCTR",
-          "score": 1.1252
+          "score": 1.1254
         },
         {
           "ticker": "5434",
-          "score": 1.07
+          "score": 1.0713
         },
         {
           "ticker": "2330",
-          "score": 1.0654
+          "score": 1.065
         },
         {
           "ticker": "1184",
-          "score": 1.062
+          "score": 1.0623
         },
         {
           "ticker": "DHT",
-          "score": 1.0603
+          "score": 1.0606
         },
         {
           "ticker": "OCANF",
-          "score": 1.0574
+          "score": 1.057
         },
         {
           "ticker": "6448",
-          "score": 1.0381
+          "score": 1.0395
         },
         {
           "ticker": "ENS",
@@ -83,11 +83,11 @@
         },
         {
           "ticker": "4578",
-          "score": 1.0235
+          "score": 1.0241
         },
         {
           "ticker": "LUG",
-          "score": 1.0157
+          "score": 1.0158
         }
       ]
     },
@@ -209,43 +209,43 @@
       "top_k": [
         {
           "ticker": "HIG",
-          "score": 1.0047
+          "score": 1.0056
         },
         {
           "ticker": "GTT",
-          "score": 1.0
+          "score": 0.9993
         },
         {
           "ticker": "2546",
-          "score": 0.9909
+          "score": 0.9912
         },
         {
           "ticker": "RNR",
-          "score": 0.9871
+          "score": 0.9893
+        },
+        {
+          "ticker": "G",
+          "score": 0.9858
         },
         {
           "ticker": "SEIC",
-          "score": 0.9652
+          "score": 0.9655
         },
         {
           "ticker": "ACGL",
-          "score": 0.9469
+          "score": 0.9485
         },
         {
           "ticker": "9436",
-          "score": 0.9312
+          "score": 0.9324
         },
         {
           "ticker": "3633",
-          "score": 0.929
+          "score": 0.9303
         },
         {
           "ticker": "TRV",
-          "score": 0.9284
-        },
-        {
-          "ticker": "EXPD",
-          "score": 0.925
+          "score": 0.9299
         }
       ]
     },
@@ -359,23 +359,23 @@
     },
     "5_selection_equity_Stable": {
       "name": "selection_equity",
-      "before": 134,
-      "after": 134,
+      "before": 131,
+      "after": 131,
       "rejected": 0,
       "category": "equity",
       "profile": "Stable",
       "top_k": [
         {
           "ticker": "4506",
-          "score": 1.1088
+          "score": 1.1071
         },
         {
           "ticker": "4105",
-          "score": 1.081
+          "score": 1.0799
         },
         {
           "ticker": "9911",
-          "score": 1.0285
+          "score": 1.0265
         },
         {
           "ticker": "3076",
@@ -383,27 +383,27 @@
         },
         {
           "ticker": "6024",
-          "score": 0.9755
+          "score": 0.9719
         },
         {
           "ticker": "1450",
-          "score": 0.9723
+          "score": 0.9688
         },
         {
           "ticker": "6929",
-          "score": 0.9697
+          "score": 0.9688
         },
         {
           "ticker": "SNA",
-          "score": 0.9659
+          "score": 0.9645
         },
         {
           "ticker": "CINF",
-          "score": 0.92
+          "score": 0.9174
         },
         {
           "ticker": "1232",
-          "score": 0.9111
+          "score": 0.9105
         }
       ]
     },
@@ -501,15 +501,12 @@
     },
     "5_selection_equity_Dividende-PEA": {
       "name": "selection_equity",
-      "before": 4,
-      "after": 4,
+      "before": 3,
+      "after": 3,
       "rejected": 0,
       "category": "equity",
       "profile": "Dividende-PEA",
       "top_k": [
-        {
-          "ticker": "REC"
-        },
         {
           "ticker": "HNR1"
         },
@@ -565,7 +562,7 @@
   "top10_by_preset": {
     "equity": {
       "agressif": {
-        "count": 626,
+        "count": 628,
         "criteria": {
           "vol_min": 35
         },
@@ -588,10 +585,10 @@
             "buffett": 100.0,
             "vol": 37.0,
             "roe": 19.0,
-            "div_yield": 2.54,
+            "div_yield": 2.52,
             "payout": 40.0,
-            "perf_ytd": -0.5,
-            "perf_1y": -0.2,
+            "perf_ytd": 0.1,
+            "perf_1y": 0.4,
             "mcap": "594.4B"
           },
           {
@@ -600,10 +597,10 @@
             "buffett": 100.0,
             "vol": 37.8,
             "roe": 18.9,
-            "div_yield": 7.87,
+            "div_yield": 8.0,
             "payout": 36.0,
-            "perf_ytd": -3.2,
-            "perf_1y": -3.2,
+            "perf_ytd": -4.8,
+            "perf_1y": -4.8,
             "mcap": "787.5M"
           },
           {
@@ -678,27 +675,15 @@
             "mcap": "6.9B"
           },
           {
-            "ticker": "ACT",
-            "name": "ALZCHEM GROUP AG",
-            "buffett": 93.0,
-            "vol": 43.8,
-            "roe": 13.0,
-            "div_yield": 1.29,
-            "payout": 31.0,
-            "perf_ytd": 4.8,
-            "perf_1y": 14.8,
-            "mcap": "1.6B"
-          },
-          {
             "ticker": "6841",
             "name": "YOKOGAWA ELECTRIC CORPORATION",
             "buffett": 93.0,
             "vol": 37.0,
             "roe": 12.1,
-            "div_yield": 1.7,
+            "div_yield": 1.68,
             "payout": 34.0,
-            "perf_ytd": -8.3,
-            "perf_1y": 6.4,
+            "perf_ytd": -7.5,
+            "perf_1y": 7.3,
             "mcap": "1.3T"
           },
           {
@@ -721,8 +706,8 @@
             "roe": 14.1,
             "div_yield": 0.94,
             "payout": 20.0,
-            "perf_ytd": -9.7,
-            "perf_1y": -15.0,
+            "perf_ytd": -9.4,
+            "perf_1y": -14.7,
             "mcap": "19.3B"
           },
           {
@@ -731,10 +716,10 @@
             "buffett": 93.0,
             "vol": 36.4,
             "roe": 10.3,
-            "div_yield": 3.4,
+            "div_yield": 3.42,
             "payout": 56.0,
-            "perf_ytd": 1.9,
-            "perf_1y": 8.2,
+            "perf_ytd": 1.4,
+            "perf_1y": 7.5,
             "mcap": "29.0B"
           },
           {
@@ -753,12 +738,12 @@
             "ticker": "3773",
             "name": "ADVANCED MEDIA INC.",
             "buffett": 93.0,
-            "vol": 43.3,
+            "vol": 43.4,
             "roe": 13.2,
-            "div_yield": 3.16,
+            "div_yield": 3.14,
             "payout": 28.0,
-            "perf_ytd": -1.5,
-            "perf_1y": 2.9,
+            "perf_ytd": -0.8,
+            "perf_1y": 3.6,
             "mcap": "15.8B"
           },
           {
@@ -769,8 +754,8 @@
             "roe": 9.4,
             "div_yield": 2.61,
             "payout": 62.0,
-            "perf_ytd": -7.3,
-            "perf_1y": 3.0,
+            "perf_ytd": -7.5,
+            "perf_1y": 2.8,
             "mcap": "34.4B"
           },
           {
@@ -779,10 +764,10 @@
             "buffett": 93.0,
             "vol": 59.3,
             "roe": 11.2,
-            "div_yield": 10.59,
+            "div_yield": 10.56,
             "payout": 50.0,
-            "perf_ytd": 2.9,
-            "perf_1y": -8.8,
+            "perf_ytd": 3.2,
+            "perf_1y": -8.6,
             "mcap": "3.1B"
           },
           {
@@ -791,10 +776,10 @@
             "buffett": 93.0,
             "vol": 45.0,
             "roe": 16.2,
-            "div_yield": 1.83,
+            "div_yield": 1.84,
             "payout": 29.0,
-            "perf_ytd": -5.0,
-            "perf_1y": -19.9,
+            "perf_ytd": -5.5,
+            "perf_1y": -20.3,
             "mcap": "35.4B"
           },
           {
@@ -803,16 +788,28 @@
             "buffett": 93.0,
             "vol": 43.9,
             "roe": 15.4,
-            "div_yield": 5.25,
+            "div_yield": 5.19,
             "payout": 60.0,
-            "perf_ytd": -4.7,
-            "perf_1y": -20.6,
+            "perf_ytd": -3.4,
+            "perf_1y": -19.6,
             "mcap": "6.8B"
+          },
+          {
+            "ticker": "893",
+            "name": "CHINA VANADIUM TITANO-MAGNETIT",
+            "buffett": 93.0,
+            "vol": 45.0,
+            "roe": 18.1,
+            "div_yield": 3.29,
+            "payout": 35.0,
+            "perf_ytd": 4.7,
+            "perf_1y": 9.3,
+            "mcap": "410.1M"
           }
         ]
       },
       "croissance": {
-        "count": 217,
+        "count": 222,
         "criteria": {
           "vol_min": 20,
           "perf_1y_min": 10
@@ -836,10 +833,10 @@
             "buffett": 100.0,
             "vol": 32.0,
             "roe": 15.7,
-            "div_yield": 1.8,
+            "div_yield": 1.79,
             "payout": 42.0,
-            "perf_ytd": 1.6,
-            "perf_1y": -4.4,
+            "perf_ytd": 2.3,
+            "perf_1y": -3.7,
             "mcap": "747.2B"
           },
           {
@@ -850,8 +847,8 @@
             "roe": 16.4,
             "div_yield": 3.3,
             "payout": 49.0,
-            "perf_ytd": 0.6,
-            "perf_1y": 0.6,
+            "perf_ytd": 0.7,
+            "perf_1y": 0.8,
             "mcap": "61.9B"
           },
           {
@@ -872,10 +869,10 @@
             "buffett": 100.0,
             "vol": 32.5,
             "roe": 33.5,
-            "div_yield": 2.09,
+            "div_yield": 2.11,
             "payout": 83.0,
-            "perf_ytd": 3.3,
-            "perf_1y": 13.8,
+            "perf_ytd": 2.4,
+            "perf_1y": 12.8,
             "mcap": "52.5B"
           },
           {
@@ -932,10 +929,10 @@
             "buffett": 93.0,
             "vol": 29.8,
             "roe": 11.2,
-            "div_yield": 1.99,
+            "div_yield": 1.98,
             "payout": 33.0,
-            "perf_ytd": 1.1,
-            "perf_1y": 8.9,
+            "perf_ytd": 1.7,
+            "perf_1y": 9.5,
             "mcap": "133.8B"
           },
           {
@@ -944,10 +941,10 @@
             "buffett": 93.0,
             "vol": 32.0,
             "roe": 17.4,
-            "div_yield": 2.52,
+            "div_yield": 2.51,
             "payout": 14.0,
-            "perf_ytd": 3.2,
-            "perf_1y": 10.3,
+            "perf_ytd": 3.6,
+            "perf_1y": 10.8,
             "mcap": "339.5B"
           },
           {
@@ -958,8 +955,8 @@
             "roe": 7.3,
             "div_yield": 3.41,
             "payout": 55.0,
-            "perf_ytd": 1.3,
-            "perf_1y": -3.1,
+            "perf_ytd": 1.4,
+            "perf_1y": -3.0,
             "mcap": "78.9B"
           },
           {
@@ -980,10 +977,10 @@
             "buffett": 93.0,
             "vol": 34.3,
             "roe": 14.2,
-            "div_yield": 3.32,
+            "div_yield": 3.27,
             "payout": 38.0,
-            "perf_ytd": 0.1,
-            "perf_1y": 14.6,
+            "perf_ytd": 1.7,
+            "perf_1y": 16.4,
             "mcap": "125.5B"
           },
           {
@@ -992,10 +989,10 @@
             "buffett": 93.0,
             "vol": 33.2,
             "roe": 7.2,
-            "div_yield": 6.93,
+            "div_yield": 6.91,
             "payout": 71.0,
-            "perf_ytd": 0.9,
-            "perf_1y": -13.2,
+            "perf_ytd": 1.2,
+            "perf_1y": -13.0,
             "mcap": "3.0B"
           },
           {
@@ -1004,10 +1001,10 @@
             "buffett": 93.0,
             "vol": 30.1,
             "roe": 10.9,
-            "div_yield": 9.75,
+            "div_yield": 9.78,
             "payout": 86.0,
-            "perf_ytd": 1.1,
-            "perf_1y": -2.5,
+            "perf_ytd": 0.7,
+            "perf_1y": -2.8,
             "mcap": "1.4B"
           },
           {
@@ -1016,8 +1013,8 @@
             "buffett": 85.0,
             "vol": 34.9,
             "roe": 18.1,
-            "perf_ytd": 1.0,
-            "perf_1y": 17.3
+            "perf_ytd": 1.2,
+            "perf_1y": 17.6
           },
           {
             "ticker": "PHM",
@@ -1049,10 +1046,10 @@
             "buffett": 83.0,
             "vol": 28.1,
             "roe": 12.2,
-            "div_yield": 1.54,
+            "div_yield": 1.53,
             "payout": 30.0,
-            "perf_ytd": 0.8,
-            "perf_1y": 15.2,
+            "perf_ytd": 1.1,
+            "perf_1y": 15.6,
             "mcap": "452.4B"
           }
         ]
@@ -1081,23 +1078,34 @@
             "ticker": "FAGR",
             "name": "FAGRON NV",
             "buffett": 100.0,
-            "vol": 19.9,
+            "vol": 19.8,
             "roe": 17.2,
-            "div_yield": 1.87,
+            "div_yield": 1.88,
             "payout": 32.0,
-            "perf_ytd": 0.5,
-            "perf_1y": 2.9,
+            "perf_1y": 6.6,
             "mcap": "1.6B"
+          },
+          {
+            "ticker": "G",
+            "name": "ASSICURAZIONI GENERALI S.P.A.",
+            "buffett": 100.0,
+            "vol": 18.0,
+            "roe": 22.4,
+            "div_yield": 1.52,
+            "payout": 21.0,
+            "perf_ytd": 25.5,
+            "perf_1y": 36.2,
+            "mcap": "5.9B"
           },
           {
             "ticker": "CNP",
             "name": "INGREDION INCORPORATED",
             "buffett": 100.0,
-            "vol": 20.1,
+            "vol": 19.9,
             "roe": 17.8,
             "div_yield": 0.83,
             "payout": 12.0,
-            "perf_ytd": -0.3
+            "perf_ytd": 0.2
           },
           {
             "ticker": "HIG",
@@ -1179,8 +1187,8 @@
             "roe": 25.6,
             "div_yield": 1.66,
             "payout": 56.0,
-            "perf_ytd": -2.1,
-            "perf_1y": -8.9,
+            "perf_ytd": -0.3,
+            "perf_1y": -9.7,
             "mcap": "518.9M"
           },
           {
@@ -1191,8 +1199,8 @@
             "roe": 14.1,
             "div_yield": 0.55,
             "payout": 41.0,
-            "perf_ytd": -4.3,
-            "perf_1y": -13.5,
+            "perf_ytd": -4.8,
+            "perf_1y": -15.0,
             "mcap": "662.5M"
           },
           {
@@ -1204,7 +1212,7 @@
             "div_yield": 0.87,
             "payout": 0.0,
             "perf_ytd": 11.0,
-            "perf_1y": 15.9
+            "perf_1y": 15.4
           },
           {
             "ticker": "TJX",
@@ -1224,10 +1232,10 @@
             "buffett": 93.0,
             "vol": 18.2,
             "roe": 10.1,
-            "div_yield": 0.94,
+            "div_yield": 0.93,
             "payout": 24.0,
-            "perf_ytd": 2.3,
-            "perf_1y": 1.0,
+            "perf_ytd": 2.4,
+            "perf_1y": 1.1,
             "mcap": "16.7B"
           },
           {
@@ -1236,10 +1244,10 @@
             "buffett": 93.0,
             "vol": 12.1,
             "roe": 6.1,
-            "div_yield": 0.99,
+            "div_yield": 0.98,
             "payout": 20.0,
-            "perf_ytd": 10.0,
-            "perf_1y": 16.8,
+            "perf_ytd": 10.4,
+            "perf_1y": 17.3,
             "mcap": "32.1B"
           },
           {
@@ -1248,8 +1256,8 @@
             "buffett": 90.0,
             "vol": 20.7,
             "roe": 42.9,
-            "perf_ytd": -4.1,
-            "perf_1y": -3.2
+            "perf_ytd": -3.7,
+            "perf_1y": -4.1
           },
           {
             "ticker": "2702",
@@ -1257,8 +1265,8 @@
             "buffett": 85.0,
             "vol": 19.4,
             "roe": 12.7,
-            "perf_ytd": 26.3,
-            "perf_1y": 22.6
+            "perf_ytd": 26.8,
+            "perf_1y": 23.1
           },
           {
             "ticker": "5609",
@@ -1266,8 +1274,8 @@
             "buffett": 85.0,
             "vol": 20.0,
             "roe": 17.7,
-            "perf_ytd": -1.8,
-            "perf_1y": -0.6
+            "perf_ytd": -1.6,
+            "perf_1y": -0.5
           },
           {
             "ticker": "1720",
@@ -1275,25 +1283,13 @@
             "buffett": 85.0,
             "vol": 21.0,
             "roe": 13.8,
-            "perf_ytd": 4.8,
-            "perf_1y": 9.0
-          },
-          {
-            "ticker": "DGX",
-            "name": "QUEST DIAGNOSTICS INC.",
-            "buffett": 83.0,
-            "vol": 21.9,
-            "roe": 14.8,
-            "div_yield": 1.41,
-            "payout": 26.0,
-            "perf_ytd": 35.7,
-            "perf_1y": 29.0,
-            "mcap": "26.0B"
+            "perf_ytd": 5.1,
+            "perf_1y": 9.4
           }
         ]
       },
       "low_volatility": {
-        "count": 25,
+        "count": 27,
         "criteria": {
           "vol_max": 22,
           "buffett_min": 55
@@ -1343,9 +1339,19 @@
             "roe": 17.8,
             "div_yield": 1.35,
             "payout": 37.0,
-            "perf_ytd": 10.5,
-            "perf_1y": -0.3,
+            "perf_ytd": 10.9,
+            "perf_1y": -1.9,
             "mcap": "185.5B"
+          },
+          {
+            "ticker": "8255",
+            "name": "AXIAL RETAILING INC.",
+            "buffett": 60.0,
+            "vol": 19.9,
+            "roe": 9.5,
+            "perf_ytd": 10.4,
+            "perf_1y": 9.4,
+            "mcap": "101.3B"
           },
           {
             "ticker": "1375",
@@ -1355,8 +1361,8 @@
             "roe": 21.6,
             "div_yield": 0.3,
             "payout": 31.0,
-            "perf_ytd": 11.0,
-            "perf_1y": 8.2,
+            "perf_ytd": 10.7,
+            "perf_1y": 7.9,
             "mcap": "41.9B"
           },
           {
@@ -1367,8 +1373,8 @@
             "roe": 10.0,
             "div_yield": 0.66,
             "payout": 27.0,
-            "perf_ytd": 25.6,
-            "perf_1y": 16.9,
+            "perf_ytd": 26.1,
+            "perf_1y": 17.3,
             "mcap": "50.4B"
           },
           {
@@ -1390,8 +1396,8 @@
             "roe": 9.5,
             "div_yield": 0.01,
             "payout": 10.0,
-            "perf_ytd": -1.6,
-            "perf_1y": 2.7,
+            "perf_ytd": -1.5,
+            "perf_1y": 2.9,
             "mcap": "22.4B"
           },
           {
@@ -1400,8 +1406,8 @@
             "buffett": 60.0,
             "vol": 16.3,
             "roe": 5.3,
-            "perf_ytd": -17.0,
-            "perf_1y": -11.5,
+            "perf_ytd": -16.8,
+            "perf_1y": -11.3,
             "mcap": "791.7B"
           },
           {
@@ -1410,8 +1416,8 @@
             "buffett": 60.0,
             "vol": 13.8,
             "roe": 5.4,
-            "perf_ytd": -15.5,
-            "perf_1y": -8.1
+            "perf_ytd": -15.2,
+            "perf_1y": -7.8
           },
           {
             "ticker": "9633",
@@ -1419,8 +1425,8 @@
             "buffett": 60.0,
             "vol": 13.7,
             "roe": 5.1,
-            "perf_ytd": 25.4,
-            "perf_1y": 40.4
+            "perf_ytd": 24.9,
+            "perf_1y": 39.9
           },
           {
             "ticker": "8984",
@@ -1437,8 +1443,17 @@
             "buffett": 60.0,
             "vol": 16.3,
             "roe": 6.5,
-            "perf_ytd": -9.2,
-            "perf_1y": 0.5
+            "perf_ytd": -9.3,
+            "perf_1y": 0.4
+          },
+          {
+            "ticker": "8952",
+            "name": "JAPAN REAL ESTATE INVESTMENT C",
+            "buffett": 60.0,
+            "vol": 17.0,
+            "roe": 6.8,
+            "perf_ytd": -11.9,
+            "perf_1y": -10.8
           },
           {
             "ticker": "2594",
@@ -1446,8 +1461,8 @@
             "buffett": 60.0,
             "vol": 8.8,
             "roe": 3.2,
-            "perf_ytd": 0.8,
-            "perf_1y": 0.5
+            "perf_ytd": 1.1,
+            "perf_1y": 0.7
           },
           {
             "ticker": "9052",
@@ -1455,8 +1470,8 @@
             "buffett": 60.0,
             "vol": 14.0,
             "roe": 6.8,
-            "perf_ytd": -4.4,
-            "perf_1y": -5.9
+            "perf_ytd": -4.5,
+            "perf_1y": -6.1
           },
           {
             "ticker": "8628",
@@ -1464,8 +1479,8 @@
             "buffett": 60.0,
             "vol": 18.9,
             "roe": 19.5,
-            "perf_ytd": 39.2,
-            "perf_1y": 54.0
+            "perf_ytd": 39.8,
+            "perf_1y": 54.6
           },
           {
             "ticker": "2115",
@@ -1473,8 +1488,8 @@
             "buffett": 60.0,
             "vol": 18.1,
             "roe": 5.1,
-            "perf_ytd": -1.0,
-            "perf_1y": -10.4
+            "perf_ytd": -1.4,
+            "perf_1y": -10.8
           },
           {
             "ticker": "6023",
@@ -1484,29 +1499,11 @@
             "roe": 15.0,
             "perf_ytd": -0.5,
             "perf_1y": 11.4
-          },
-          {
-            "ticker": "1102",
-            "name": "ASIA CEMENT CORPORATION",
-            "buffett": 60.0,
-            "vol": 19.5,
-            "roe": 5.0,
-            "perf_ytd": -4.8,
-            "perf_1y": -4.5
-          },
-          {
-            "ticker": "6115",
-            "name": "I-SHENG ELECTRIC WIRE & CABLE ",
-            "buffett": 60.0,
-            "vol": 15.2,
-            "roe": 9.8,
-            "perf_ytd": -7.0,
-            "perf_1y": -5.9
           }
         ]
       },
       "momentum_trend": {
-        "count": 2677,
+        "count": 2686,
         "criteria": {
           "vol_min": 25,
           "perf_ytd_min": 5
@@ -1626,23 +1623,11 @@
             "buffett": 100.0,
             "vol": 31.5,
             "roe": 17.8,
-            "div_yield": 3.73,
+            "div_yield": 3.74,
             "payout": 66.0,
-            "perf_ytd": 17.2,
-            "perf_1y": 0.6,
+            "perf_ytd": 16.9,
+            "perf_1y": -1.1,
             "mcap": "2.5B"
-          },
-          {
-            "ticker": "CENER",
-            "name": "CENERGY HOLDINGS S.A.",
-            "buffett": 100.0,
-            "vol": 33.5,
-            "roe": 24.3,
-            "div_yield": 0.46,
-            "payout": 23.0,
-            "perf_ytd": 58.9,
-            "perf_1y": 127.9,
-            "mcap": "5.1B"
           },
           {
             "ticker": "GALP",
@@ -1650,10 +1635,10 @@
             "buffett": 100.0,
             "vol": 30.0,
             "roe": 23.7,
-            "div_yield": 3.18,
+            "div_yield": 3.17,
             "payout": 41.0,
-            "perf_ytd": 46.2,
-            "perf_1y": 36.2,
+            "perf_ytd": 46.8,
+            "perf_1y": 34.8,
             "mcap": "15.5B"
           },
           {
@@ -1662,34 +1647,22 @@
             "buffett": 100.0,
             "vol": 32.3,
             "roe": 15.2,
-            "div_yield": 3.21,
+            "div_yield": 3.22,
             "payout": 37.0,
-            "perf_ytd": 8.6,
-            "perf_1y": 35.1,
+            "perf_ytd": 7.9,
+            "perf_1y": 28.9,
             "mcap": "5.6B"
-          },
-          {
-            "ticker": "BHP",
-            "name": "BHP GROUP LIMITED",
-            "buffett": 100.0,
-            "vol": 29.5,
-            "roe": 24.0,
-            "div_yield": 3.73,
-            "payout": 69.0,
-            "perf_ytd": 52.8,
-            "perf_1y": 70.2,
-            "mcap": "234.5B"
           },
           {
             "ticker": "SCT",
             "name": "SOFTCAT PLC",
             "buffett": 100.0,
-            "vol": 29.8,
+            "vol": 29.9,
             "roe": 43.3,
-            "div_yield": 0.5,
+            "div_yield": 0.51,
             "payout": 42.0,
-            "perf_ytd": 31.9,
-            "perf_1y": 16.6,
+            "perf_ytd": 29.8,
+            "perf_1y": 15.8,
             "mcap": "3.7B"
           },
           {
@@ -1700,8 +1673,8 @@
             "roe": 23.1,
             "div_yield": 1.94,
             "payout": 32.0,
-            "perf_ytd": 77.9,
-            "perf_1y": 119.6,
+            "perf_ytd": 77.7,
+            "perf_1y": 117.1,
             "mcap": "2.0B"
           },
           {
@@ -1710,10 +1683,10 @@
             "buffett": 100.0,
             "vol": 31.3,
             "roe": 49.9,
-            "div_yield": 2.07,
+            "div_yield": 2.06,
             "payout": 47.0,
-            "perf_ytd": 34.1,
-            "perf_1y": 16.9,
+            "perf_ytd": 34.9,
+            "perf_1y": 15.5,
             "mcap": "2.3B"
           },
           {
@@ -1724,8 +1697,8 @@
             "roe": 17.2,
             "div_yield": 0.1,
             "payout": 1.0,
-            "perf_ytd": 6.4,
-            "perf_1y": -8.2,
+            "perf_ytd": 6.0,
+            "perf_1y": -7.7,
             "mcap": "2.7B"
           },
           {
@@ -1734,10 +1707,10 @@
             "buffett": 100.0,
             "vol": 44.2,
             "roe": 15.7,
-            "div_yield": 1.42,
+            "div_yield": 1.41,
             "payout": 30.0,
-            "perf_ytd": 43.0,
-            "perf_1y": 53.3,
+            "perf_ytd": 43.7,
+            "perf_1y": 54.0,
             "mcap": "246.9B"
           },
           {
@@ -1748,14 +1721,38 @@
             "roe": 19.6,
             "div_yield": 0.85,
             "payout": 30.0,
-            "perf_ytd": 26.8,
-            "perf_1y": 91.1,
+            "perf_ytd": 27.0,
+            "perf_1y": 91.3,
             "mcap": "108.8B"
+          },
+          {
+            "ticker": "7832",
+            "name": "BANDAI NAMCO HOLDINGS INC.",
+            "buffett": 100.0,
+            "vol": 34.0,
+            "roe": 17.0,
+            "div_yield": 0.4,
+            "payout": 21.0,
+            "perf_ytd": 25.5,
+            "perf_1y": 2.1,
+            "mcap": "3.0T"
+          },
+          {
+            "ticker": "6638",
+            "name": "MIMAKI ENGINEERING CO., LTD.",
+            "buffett": 100.0,
+            "vol": 50.7,
+            "roe": 18.7,
+            "div_yield": 2.59,
+            "payout": 22.0,
+            "perf_ytd": 18.1,
+            "perf_1y": 7.4,
+            "mcap": "45.0B"
           }
         ]
       },
       "quality_high_vol": {
-        "count": 74,
+        "count": 75,
         "criteria": {},
         "top_10": [
           {
@@ -1861,8 +1858,8 @@
             "roe": 31.6,
             "div_yield": 2.37,
             "payout": 63.0,
-            "perf_ytd": 18.1,
-            "perf_1y": 28.2,
+            "perf_ytd": 17.1,
+            "perf_1y": 25.8,
             "mcap": "3.6B"
           },
           {
@@ -1873,8 +1870,8 @@
             "roe": 21.7,
             "div_yield": 1.48,
             "payout": 35.0,
-            "perf_ytd": 3.2,
-            "perf_1y": 81.9,
+            "perf_ytd": 3.8,
+            "perf_1y": 82.8,
             "mcap": "229.9B"
           },
           {
@@ -1885,9 +1882,21 @@
             "roe": 20.3,
             "div_yield": 2.61,
             "payout": 30.0,
-            "perf_ytd": 70.1,
-            "perf_1y": 126.2,
+            "perf_ytd": 71.1,
+            "perf_1y": 127.5,
             "mcap": "1.2T"
+          },
+          {
+            "ticker": "6226",
+            "name": "MORIYA TRANSPORTATION ENGINEER",
+            "buffett": 100.0,
+            "vol": 51.2,
+            "roe": 31.4,
+            "div_yield": 0.51,
+            "payout": 25.0,
+            "perf_ytd": -9.9,
+            "perf_1y": -8.3,
+            "mcap": "96.4B"
           },
           {
             "ticker": "8136",
@@ -1897,8 +1906,8 @@
             "roe": 41.7,
             "div_yield": 5.28,
             "payout": 31.0,
-            "perf_ytd": 19.4,
-            "perf_1y": -23.9,
+            "perf_ytd": 19.3,
+            "perf_1y": -24.0,
             "mcap": "1.4T"
           },
           {
@@ -1907,10 +1916,10 @@
             "buffett": 100.0,
             "vol": 50.8,
             "roe": 21.5,
-            "div_yield": 1.47,
+            "div_yield": 1.46,
             "payout": 32.0,
-            "perf_ytd": -5.6,
-            "perf_1y": 9.0,
+            "perf_ytd": -5.0,
+            "perf_1y": 9.7,
             "mcap": "613.9B"
           },
           {
@@ -1919,10 +1928,10 @@
             "buffett": 100.0,
             "vol": 48.8,
             "roe": 31.3,
-            "div_yield": 0.91,
+            "div_yield": 0.92,
             "payout": 21.0,
-            "perf_ytd": -8.2,
-            "perf_1y": -18.3,
+            "perf_ytd": -8.4,
+            "perf_1y": -18.5,
             "mcap": "50.3B"
           },
           {
@@ -1933,8 +1942,8 @@
             "roe": 20.6,
             "div_yield": 0.0,
             "payout": 0.0,
-            "perf_ytd": 6.0,
-            "perf_1y": -37.5,
+            "perf_ytd": 5.0,
+            "perf_1y": -38.1,
             "mcap": "55.6B"
           },
           {
@@ -1945,8 +1954,8 @@
             "roe": 43.9,
             "div_yield": 0.0,
             "payout": 31.0,
-            "perf_ytd": 31.6,
-            "perf_1y": 10.4,
+            "perf_ytd": 32.6,
+            "perf_1y": 11.3,
             "mcap": "1.4B"
           },
           {
@@ -1955,10 +1964,10 @@
             "buffett": 100.0,
             "vol": 55.8,
             "roe": 21.9,
-            "div_yield": 3.39,
+            "div_yield": 3.38,
             "payout": 54.0,
-            "perf_ytd": 23.4,
-            "perf_1y": 18.8,
+            "perf_ytd": 23.9,
+            "perf_1y": 19.3,
             "mcap": "46.8B"
           },
           {
@@ -1967,10 +1976,10 @@
             "buffett": 100.0,
             "vol": 55.9,
             "roe": 21.5,
-            "div_yield": 2.03,
+            "div_yield": 2.02,
             "payout": 34.0,
-            "perf_ytd": 32.8,
-            "perf_1y": 15.8,
+            "perf_ytd": 33.6,
+            "perf_1y": 16.4,
             "mcap": "124.2B"
           },
           {
@@ -1979,28 +1988,16 @@
             "buffett": 100.0,
             "vol": 66.7,
             "roe": 45.8,
-            "div_yield": 7.63,
+            "div_yield": 7.66,
             "payout": 50.0,
-            "perf_ytd": 14.6,
-            "perf_1y": 9.3,
+            "perf_ytd": 14.1,
+            "perf_1y": 8.8,
             "mcap": "506.6M"
-          },
-          {
-            "ticker": "1651",
-            "name": "PRECISION TSUGAMI (CHINA) CORP",
-            "buffett": 100.0,
-            "vol": 55.9,
-            "roe": 32.4,
-            "div_yield": 1.82,
-            "payout": 34.0,
-            "perf_ytd": 47.7,
-            "perf_1y": 78.8,
-            "mcap": "11.9B"
           }
         ]
       },
       "quality_premium": {
-        "count": 1093,
+        "count": 1084,
         "criteria": {
           "vol_max": 35,
           "roe_min": 15,
@@ -2250,7 +2247,7 @@
         ]
       },
       "recovery": {
-        "count": 1179,
+        "count": 1184,
         "criteria": {
           "vol_min": 35,
           "perf_ytd_max": -10
@@ -2341,15 +2338,26 @@
             "mcap": "22.0B"
           },
           {
+            "ticker": "MONC",
+            "name": "MONCLER S.P.A.",
+            "buffett": 100.0,
+            "vol": 42.8,
+            "roe": 16.9,
+            "div_yield": 3.18,
+            "payout": 60.0,
+            "perf_ytd": -20.3,
+            "mcap": "14.4B"
+          },
+          {
             "ticker": "NOVC",
             "name": "NOVO NORDISK A/S",
             "buffett": 100.0,
             "vol": 44.7,
             "roe": 72.0,
             "div_yield": 28.85,
-            "payout": 91.0,
-            "perf_ytd": -12.2,
-            "perf_1y": -17.3,
+            "payout": 92.0,
+            "perf_ytd": -12.0,
+            "perf_1y": -16.1,
             "mcap": "131.4B"
           },
           {
@@ -2358,23 +2366,11 @@
             "buffett": 100.0,
             "vol": 37.9,
             "roe": 25.5,
-            "div_yield": 4.19,
+            "div_yield": 4.16,
             "payout": 58.0,
-            "perf_ytd": -13.8,
-            "perf_1y": -17.7,
+            "perf_ytd": -13.2,
+            "perf_1y": -17.1,
             "mcap": "232.3B"
-          },
-          {
-            "ticker": "6226",
-            "name": "MORIYA TRANSPORTATION ENGINEER",
-            "buffett": 100.0,
-            "vol": 51.3,
-            "roe": 31.4,
-            "div_yield": 0.52,
-            "payout": 25.0,
-            "perf_ytd": -10.8,
-            "perf_1y": -9.2,
-            "mcap": "96.4B"
           },
           {
             "ticker": "6224",
@@ -2382,10 +2378,10 @@
             "buffett": 100.0,
             "vol": 43.9,
             "roe": 27.2,
-            "div_yield": 2.53,
+            "div_yield": 2.52,
             "payout": 32.0,
-            "perf_ytd": -16.1,
-            "perf_1y": -27.7,
+            "perf_ytd": -15.7,
+            "perf_1y": -27.4,
             "mcap": "17.2B"
           },
           {
@@ -2396,8 +2392,8 @@
             "roe": 36.8,
             "div_yield": 3.34,
             "payout": 50.0,
-            "perf_ytd": -18.2,
-            "perf_1y": -26.4,
+            "perf_ytd": -18.4,
+            "perf_1y": -26.5,
             "mcap": "71.8B"
           },
           {
@@ -2406,10 +2402,10 @@
             "buffett": 100.0,
             "vol": 41.0,
             "roe": 27.8,
-            "div_yield": 4.71,
+            "div_yield": 4.7,
             "payout": 54.0,
-            "perf_ytd": -33.3,
-            "perf_1y": -44.0,
+            "perf_ytd": -33.2,
+            "perf_1y": -43.9,
             "mcap": "67.9B"
           },
           {
@@ -2418,10 +2414,10 @@
             "buffett": 100.0,
             "vol": 42.7,
             "roe": 16.1,
-            "div_yield": 0.98,
+            "div_yield": 0.99,
             "payout": 18.0,
-            "perf_ytd": -26.5,
-            "perf_1y": -42.8,
+            "perf_ytd": -27.1,
+            "perf_1y": -43.2,
             "mcap": "299.9B"
           },
           {
@@ -2442,10 +2438,10 @@
             "buffett": 100.0,
             "vol": 38.3,
             "roe": 18.4,
-            "div_yield": 4.08,
+            "div_yield": 4.06,
             "payout": 54.0,
-            "perf_ytd": -12.4,
-            "perf_1y": -31.7,
+            "perf_ytd": -11.9,
+            "perf_1y": -31.4,
             "mcap": "31.9B"
           },
           {
@@ -2457,7 +2453,7 @@
             "div_yield": 0.78,
             "payout": 31.0,
             "perf_ytd": -15.3,
-            "perf_1y": -15.0,
+            "perf_1y": -15.1,
             "mcap": "99.2B"
           },
           {
@@ -2468,8 +2464,8 @@
             "roe": 23.8,
             "div_yield": 0.49,
             "payout": 0.0,
-            "perf_ytd": -15.2,
-            "perf_1y": -46.0,
+            "perf_ytd": -14.9,
+            "perf_1y": -45.8,
             "mcap": "255.1B"
           },
           {
@@ -2478,10 +2474,10 @@
             "buffett": 100.0,
             "vol": 47.1,
             "roe": 34.2,
-            "div_yield": 1.6,
+            "div_yield": 1.58,
             "payout": 48.0,
-            "perf_ytd": -14.0,
-            "perf_1y": -36.6,
+            "perf_ytd": -13.1,
+            "perf_1y": -36.0,
             "mcap": "61.5B"
           },
           {
@@ -2490,16 +2486,16 @@
             "buffett": 100.0,
             "vol": 39.9,
             "roe": 22.4,
-            "div_yield": 2.7,
+            "div_yield": 2.69,
             "payout": 39.0,
-            "perf_ytd": -27.2,
-            "perf_1y": -40.7,
+            "perf_ytd": -27.1,
+            "perf_1y": -40.6,
             "mcap": "378.4B"
           }
         ]
       },
       "rendement": {
-        "count": 443,
+        "count": 435,
         "criteria": {
           "vol_max": 28,
           "div_yield_min": 1.5
@@ -2535,10 +2531,10 @@
             "buffett": 100.0,
             "vol": 21.1,
             "roe": 34.6,
-            "div_yield": 3.31,
+            "div_yield": 3.27,
             "payout": 70.0,
-            "perf_ytd": 1.9,
-            "perf_1y": 7.4,
+            "perf_ytd": 3.4,
+            "perf_1y": 10.8,
             "mcap": "212.2B"
           },
           {
@@ -2547,10 +2543,10 @@
             "buffett": 100.0,
             "vol": 18.0,
             "roe": 30.2,
-            "div_yield": 3.91,
+            "div_yield": 3.88,
             "payout": 56.0,
-            "perf_ytd": 11.9,
-            "perf_1y": 24.3,
+            "perf_ytd": 12.9,
+            "perf_1y": 25.1,
             "mcap": "165.8B"
           },
           {
@@ -2561,8 +2557,8 @@
             "roe": 30.3,
             "div_yield": 3.0,
             "payout": 64.0,
-            "perf_ytd": -0.2,
-            "perf_1y": -7.9,
+            "perf_ytd": 0.1,
+            "perf_1y": -8.6,
             "mcap": "285.5B"
           },
           {
@@ -2571,10 +2567,10 @@
             "buffett": 100.0,
             "vol": 21.7,
             "roe": 17.1,
-            "div_yield": 3.76,
+            "div_yield": 3.79,
             "payout": 32.0,
-            "perf_ytd": 3.2,
-            "perf_1y": 0.6,
+            "perf_ytd": 2.3,
+            "perf_1y": -0.3,
             "mcap": "12.3B"
           },
           {
@@ -2583,10 +2579,10 @@
             "buffett": 100.0,
             "vol": 19.4,
             "roe": 16.0,
-            "div_yield": 4.65,
+            "div_yield": 4.64,
             "payout": 55.0,
-            "perf_ytd": -14.1,
-            "perf_1y": -14.2,
+            "perf_ytd": -14.0,
+            "perf_1y": -14.0,
             "mcap": "12.6B"
           },
           {
@@ -2595,10 +2591,10 @@
             "buffett": 100.0,
             "vol": 19.7,
             "roe": 30.9,
-            "div_yield": 5.4,
+            "div_yield": 5.37,
             "payout": 100.0,
-            "perf_ytd": -7.5,
-            "perf_1y": 0.2,
+            "perf_ytd": -7.1,
+            "perf_1y": 0.7,
             "mcap": "267.5B"
           },
           {
@@ -2619,10 +2615,10 @@
             "buffett": 100.0,
             "vol": 13.4,
             "roe": 23.1,
-            "div_yield": 4.63,
+            "div_yield": 4.6,
             "payout": 80.0,
-            "perf_ytd": 7.6,
-            "perf_1y": 4.4,
+            "perf_ytd": 8.3,
+            "perf_1y": 5.0,
             "mcap": "25.2B"
           },
           {
@@ -2667,10 +2663,10 @@
             "buffett": 100.0,
             "vol": 20.9,
             "roe": 16.7,
-            "div_yield": 6.09,
+            "div_yield": 6.1,
             "payout": 135.0,
-            "perf_ytd": -1.9,
-            "perf_1y": -3.2,
+            "perf_ytd": -2.1,
+            "perf_1y": -3.3,
             "mcap": "1.2B"
           },
           {
@@ -2691,10 +2687,10 @@
             "buffett": 100.0,
             "vol": 17.4,
             "roe": 20.2,
-            "div_yield": 6.12,
+            "div_yield": 6.11,
             "payout": 78.0,
-            "perf_ytd": -2.4,
-            "perf_1y": -5.8,
+            "perf_ytd": -2.3,
+            "perf_1y": -5.7,
             "mcap": "18.0B"
           },
           {
@@ -2727,10 +2723,10 @@
             "buffett": 100.0,
             "vol": 15.3,
             "roe": 27.9,
-            "div_yield": 3.23,
+            "div_yield": 3.24,
             "payout": 64.0,
-            "perf_ytd": 13.4,
-            "perf_1y": 14.8,
+            "perf_ytd": 12.8,
+            "perf_1y": 14.2,
             "mcap": "570.9M"
           },
           {
@@ -2748,7 +2744,7 @@
         ]
       },
       "value_dividend": {
-        "count": 1031,
+        "count": 1030,
         "criteria": {
           "vol_max": 30,
           "roe_min": 8
@@ -2803,40 +2799,16 @@
             "mcap": "6.4B"
           },
           {
-            "ticker": "G",
-            "name": "ASSICURAZIONI GENERALI S.P.A.",
-            "buffett": 100.0,
-            "vol": 32.6,
-            "roe": 22.4,
-            "div_yield": 1.57,
-            "payout": 21.0,
-            "perf_ytd": -25.5,
-            "perf_1y": -21.2,
-            "mcap": "5.9B"
-          },
-          {
             "ticker": "REY",
             "name": "REPLY S.P.A.",
             "buffett": 100.0,
             "vol": 31.5,
             "roe": 18.1,
-            "div_yield": 1.19,
+            "div_yield": 1.2,
             "payout": 19.0,
-            "perf_ytd": -1.4,
-            "perf_1y": -1.9,
+            "perf_ytd": -2.2,
+            "perf_1y": -2.6,
             "mcap": "4.4B"
-          },
-          {
-            "ticker": "MONC",
-            "name": "MONCLER S.P.A.",
-            "buffett": 100.0,
-            "vol": 30.4,
-            "roe": 16.9,
-            "div_yield": 3.1,
-            "payout": 60.0,
-            "perf_ytd": -17.8,
-            "perf_1y": -7.0,
-            "mcap": "14.4B"
           },
           {
             "ticker": "ALFA",
@@ -2844,10 +2816,10 @@
             "buffett": 100.0,
             "vol": 32.1,
             "roe": 61.5,
-            "div_yield": 5.81,
+            "div_yield": 5.73,
             "payout": 45.0,
-            "perf_ytd": -27.0,
-            "perf_1y": -36.4,
+            "perf_ytd": -25.9,
+            "perf_1y": -34.0,
             "mcap": "2.0B"
           },
           {
@@ -2856,10 +2828,10 @@
             "buffett": 100.0,
             "vol": 30.5,
             "roe": 18.4,
-            "div_yield": 5.38,
+            "div_yield": 5.46,
             "payout": 51.0,
-            "perf_ytd": -35.1,
-            "perf_1y": -31.1,
+            "perf_ytd": -36.0,
+            "perf_1y": -32.4,
             "mcap": "196.5M"
           },
           {
@@ -2868,10 +2840,10 @@
             "buffett": 100.0,
             "vol": 32.1,
             "roe": 61.5,
-            "div_yield": 13.57,
+            "div_yield": 13.38,
             "payout": 16.0,
-            "perf_ytd": -27.0,
-            "perf_1y": -36.4,
+            "perf_ytd": -25.9,
+            "perf_1y": -34.0,
             "mcap": "460.6M"
           },
           {
@@ -2880,10 +2852,10 @@
             "buffett": 100.0,
             "vol": 31.9,
             "roe": 266.1,
-            "div_yield": 2.28,
+            "div_yield": 2.27,
             "payout": 37.0,
-            "perf_ytd": -10.1,
-            "perf_1y": -36.0,
+            "perf_ytd": -9.9,
+            "perf_1y": -35.6,
             "mcap": "3.4B"
           },
           {
@@ -2892,10 +2864,10 @@
             "buffett": 100.0,
             "vol": 32.8,
             "roe": 18.5,
-            "div_yield": 2.29,
+            "div_yield": 2.27,
             "payout": 31.0,
-            "perf_ytd": -29.4,
-            "perf_1y": -22.0,
+            "perf_ytd": -28.8,
+            "perf_1y": -23.7,
             "mcap": "27.7B"
           },
           {
@@ -2904,10 +2876,10 @@
             "buffett": 100.0,
             "vol": 32.6,
             "roe": 17.9,
-            "div_yield": 2.55,
+            "div_yield": 2.54,
             "payout": 41.0,
-            "perf_ytd": -13.2,
-            "perf_1y": -26.0,
+            "perf_ytd": -12.8,
+            "perf_1y": -25.7,
             "mcap": "585.0B"
           },
           {
@@ -2918,8 +2890,8 @@
             "roe": 20.8,
             "div_yield": 2.11,
             "payout": 29.0,
-            "perf_ytd": -1.7,
-            "perf_1y": -13.5,
+            "perf_ytd": -1.5,
+            "perf_1y": -13.4,
             "mcap": "44.2B"
           },
           {
@@ -2928,10 +2900,10 @@
             "buffett": 100.0,
             "vol": 31.1,
             "roe": 17.5,
-            "div_yield": 4.43,
+            "div_yield": 4.42,
             "payout": 40.0,
-            "perf_ytd": -20.1,
-            "perf_1y": -31.6,
+            "perf_ytd": -19.8,
+            "perf_1y": -31.4,
             "mcap": "541.4B"
           },
           {
@@ -2942,7 +2914,7 @@
             "roe": 21.8,
             "div_yield": 2.65,
             "payout": 49.0,
-            "perf_ytd": -0.8,
+            "perf_ytd": -0.9,
             "perf_1y": 14.9,
             "mcap": "108.9B"
           },
@@ -2952,10 +2924,10 @@
             "buffett": 100.0,
             "vol": 32.6,
             "roe": 20.7,
-            "div_yield": 3.84,
+            "div_yield": 3.81,
             "payout": 44.0,
-            "perf_ytd": -10.1,
-            "perf_1y": -12.5,
+            "perf_ytd": -9.6,
+            "perf_1y": -12.0,
             "mcap": "32.4B"
           },
           {
@@ -2964,10 +2936,10 @@
             "buffett": 100.0,
             "vol": 33.0,
             "roe": 23.7,
-            "div_yield": 2.67,
+            "div_yield": 2.66,
             "payout": 38.0,
-            "perf_ytd": -31.6,
-            "perf_1y": -21.4,
+            "perf_ytd": -31.3,
+            "perf_1y": -21.1,
             "mcap": "65.8B"
           },
           {
@@ -2976,10 +2948,10 @@
             "buffett": 100.0,
             "vol": 32.4,
             "roe": 25.7,
-            "div_yield": 4.2,
+            "div_yield": 4.19,
             "payout": 51.0,
-            "perf_ytd": -15.8,
-            "perf_1y": -38.4,
+            "perf_ytd": -15.6,
+            "perf_1y": -38.3,
             "mcap": "45.2B"
           },
           {
@@ -2988,11 +2960,35 @@
             "buffett": 100.0,
             "vol": 32.1,
             "roe": 17.8,
-            "div_yield": 3.64,
+            "div_yield": 3.65,
             "payout": 46.0,
-            "perf_ytd": -16.4,
-            "perf_1y": -30.1,
+            "perf_ytd": -16.6,
+            "perf_1y": -30.3,
             "mcap": "854.9B"
+          },
+          {
+            "ticker": "1571",
+            "name": "XIN POINT HOLDINGS LIMITED",
+            "buffett": 100.0,
+            "vol": 34.6,
+            "roe": 14.7,
+            "div_yield": 13.39,
+            "payout": 88.0,
+            "perf_ytd": -2.5,
+            "perf_1y": -10.7,
+            "mcap": "3.8B"
+          },
+          {
+            "ticker": "3316",
+            "name": "BINJIANG SERVICE GROUP CO., LT",
+            "buffett": 100.0,
+            "vol": 34.5,
+            "roe": 36.5,
+            "div_yield": 4.15,
+            "payout": 72.0,
+            "perf_ytd": -10.7,
+            "perf_1y": -14.2,
+            "mcap": "6.7B"
           }
         ]
       }
@@ -3398,26 +3394,26 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 14.29,
+    "has_drift": true,
+    "drift_pct": 25.0,
     "details": {
       "hard_filters_equity.after": {
-        "current": 7458,
-        "previous": 7465,
-        "delta": -7,
-        "pct_change": 0.09
+        "current": 7464,
+        "previous": 7458,
+        "delta": 6,
+        "pct_change": 0.08
       },
-      "5_selection_etf_Stable.after": {
-        "current": 18,
-        "previous": 21,
+      "5_selection_equity_Stable.after": {
+        "current": 131,
+        "previous": 134,
         "delta": -3,
-        "pct_change": 14.29
+        "pct_change": 2.24
       },
-      "5_selection_equity_Dividende-CTO.after": {
-        "current": 66,
-        "previous": 63,
-        "delta": 3,
-        "pct_change": 4.76
+      "5_selection_equity_Dividende-PEA.after": {
+        "current": 3,
+        "previous": 4,
+        "delta": -1,
+        "pct_change": 25.0
       }
     }
   }
