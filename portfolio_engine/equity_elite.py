@@ -48,7 +48,7 @@ BANNED = {
 }
 # PAIRES CORRÉLÉES > 0,70 (hebdo) → max 1 par paire. On garde le meilleur départage, on saute l'autre.
 # ROST/TJX = 0,74 hebdo (confirmé) → même business, même cycle. Décision APPLIQUÉE (pas 'à appliquer').
-CORRELATED_PAIRS = [("ROST", "TJX")]
+CORRELATED_PAIRS = [("ROST", "TJX"), ("V", "MA")]   # V/MA : réseaux paiement, corr hebdo > 0,8 (revue expert 2026-09-10)
 _PAIR = {}
 for _a, _b in CORRELATED_PAIRS:
     _PAIR[_a] = _b; _PAIR[_b] = _a
@@ -60,6 +60,9 @@ FX_TO_USD = {
     "TRY": 0.03, "QAR": 0.27, "ZAc": 0.00053, "PHP": 0.017, "HUF": 0.0028, "SAR": 0.27,
 }
 _FIN_RE = re.compile(r"bank|insurance|reinsurance|capital market|financial serv|asset manage|credit serv", re.I)
+# ✅ Revue expert 2026-09-10 : réseaux de paiement (Visa/MA) + bourses (SGX) = capital investi RÉEL → jugés
+# au ROIC, PAS au ROE (banques/assureurs/gérants restent au ROE). Sinon SGX au ROE et Visa au ROIC = incohérent.
+_FIN_ROIC_RE = re.compile(r"credit serv|stock exchange|financial data", re.I)
 
 # --- caps de diversification (revue expert v2) ---
 SECTOR_CAP = 8         # max 8 lignes / secteur GICS (20 %) — la concentration est SECTORIELLE
@@ -98,7 +101,10 @@ def _num(v):
 
 
 def _is_fin(s):
-    return bool(_FIN_RE.search((s.get("industry") or "") + " " + (s.get("sector_api") or "")))
+    txt = (s.get("industry") or "") + " " + (s.get("sector_api") or "")
+    if _FIN_ROIC_RE.search(txt):     # réseaux/bourses → jugés au ROIC (non-fin pour le départage + cap 6)
+        return False
+    return bool(_FIN_RE.search(txt))
 
 
 def _adv_usd(s):

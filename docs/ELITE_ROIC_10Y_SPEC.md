@@ -200,4 +200,30 @@ Mesure #1 (216 titres) : 4/6 ✅ mais **matériel 35,2 %** et **p99 +132** ÉCHO
 **RÈGLE D'ARRÊT (figée)** : **un seul re-run**. S'il échoue encore un critère → **T3 ABANDONNÉ pour ce cycle** :
 on passe à T2 + v4a avec le ROIC actuel, biais Japon documenté comme limite connue, T3 revient au chantier
 suivant. **Pas de 3ᵉ re-figuration** — une correction qui demande trois essais pour passer ses propres critères
-n'est pas figée.
+n'est pas figée. **[Résultat 2026-09-10 : run #2 = 6/6 PASS → T3 adopté, basculé en prod, refetch en cours.]**
+
+## 10. PREP v4a après revue de l'aperçu (2026-09-10) — corrections AVANT le run unique
+
+Aperçu v3→v4a (drawdown dérivé, ancien ROIC) = 10 changements. Revue expert → 4 points réglés AVANT le run :
+
+- **Un seul run, APRÈS T3** : ne PAS exécuter les 10 changements v4a maintenant (ancien ROIC) puis 10 autres
+  après T3 = contourner le plafond de 10 en le respectant deux fois. L'aperçu est un aperçu ; le run unique
+  attend le nouveau ROIC. Le run v4a se fait UNE fois, ≤ 10 changements.
+- **Paire Visa/Mastercard** (réseaux paiement, corr hebdo > 0,8) ajoutée à `CORRELATED_PAIRS` → max 1
+  (départage : Visa drawdown 0 % vs MA 1 % → Visa). MSFT rang 82 (hors socle) → pas de conflit Adobe.
+- **Réseaux/bourses au ROIC** (`_FIN_ROIC_RE` : credit services + stock exchanges + financial data) : Visa/MA/SGX
+  = capital investi réel → jugés au ROIC, pas au ROE (banques/assureurs/gérants restent au ROE). Libère aussi
+  le cap 6 financières. v3 vérifié inchangé (0 chgt).
+- **Journal des 6 sorties** : Anjoy (rang 440), Toyo Tire (331), Hannover Rück (446), Marsh (439), MGIC (370),
+  RLI (355) — TOUS hors top-60 (spec §5), sortie légitime, pas « déclassé » vague. Games Workshop REVIENT
+  (retiré à tort par la clé fautive, la persistance le réhabilite).
+- **À surveiller (journal)** : Hugel ADV 9,1 M$ (passe le seuil 5 M$ mais juste, Corée) ; Wingstop fonds propres
+  négatifs (IC côté actifs gère) mais PE très élevé → à vérifier contre la future porte v4b (ne pas le faire
+  entrer puis sortir en 2 runs).
+
+### DÉCISION EN ATTENTE — fenêtre 6 ans contient 2020 (COVID)
+Le max drawdown punit systématiquement ce qui a fermé en 2020 (retail/resto/luxe/voyage) et épargne le reste.
+CHOIX à figer AVANT le run, pour tout l'univers : **(A) accepter** (traverser 2020 sans chute = info de
+résilience ; simple, figé ; mais le socle sort du conso discrétionnaire ~4 ans jusqu'à ce que 2020 quitte la
+fenêtre) vs **(B) neutraliser** (ignorer un creux d'un exercice si le ROIC repasse au-dessus du niveau pré-creux
+sous 2 ans ; plus juste, plus de paramètres). Expert penche **A** avec la phrase écrite au journal.
