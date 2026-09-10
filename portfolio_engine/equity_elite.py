@@ -227,11 +227,18 @@ def _persist(s):
 
 
 def _downside(s):
-    """Spec §3 clé 3 — semi-déviation SOUS la médiane 6 ans (jamais l'écart-type total). Plus BAS = mieux.
-       Une hausse de ROIC ne pénalise pas ; seule la baisse compte."""
+    """(déprécié — remplacé par _drawdown en v4a) semi-déviation sous la médiane 6 ans."""
     key = "roe_downside_6y" if _is_fin(s) else "roic_downside_6y"
     d = _num(s.get(key))
-    return d if d is not None else 9.99               # absent → pénalisé (départage descendant)
+    return d if d is not None else 9.99
+
+
+def _drawdown(s):
+    """T2 (spec §8) — MAX DRAWDOWN du ROIC (ROE fin.) sur 6 ans, en %. Plus BAS = mieux ; un riser pur = 0.
+       Remplace la semi-déviation (qui punissait les hausses) : seule une VRAIE chute pénalise."""
+    key = "roe_drawdown_6y" if _is_fin(s) else "roic_drawdown_6y"
+    d = _num(s.get(key))
+    return d if d is not None else 999.0              # absent → pénalisé (départage descendant)
 
 
 def _valuation_ok(s):
@@ -266,11 +273,12 @@ def _gate_miss(s):
 def _rank_key(s):
     """Départage LEXICOGRAPHIQUE, tout descriptif.
        v3 (figée) : durabilité (A>B) → stabilité du ROIC (symétrique) → FCF yield.
-       v4 (spec ROIC 6 ans §3) : durabilité → persistance ↑ → semi-déviation sous médiane ↓ → FCF yield."""
+       v4a / v4 : durabilité → persistance ↑ → MAX DRAWDOWN du ROIC ↓ (T2) → FCF yield.
+       (v4a = ce départage + porte valo v3 par grade ; v4 = idem + porte valuation_ok v4b.)"""
     bucket = 1 if (s.get("durability_grade") == "A") else 0
     fcf = _num(s.get("fcf_yield")) or 0.0
-    if ELITE_KEY == "v4":
-        return (bucket, _persist(s), -_downside(s), fcf)  # tri desc : durab, persistance, faible baisse, fcf
+    if ELITE_KEY in ("v4a", "v4"):
+        return (bucket, _persist(s), -_drawdown(s), fcf)  # tri desc : durab, persistance, faible chute, fcf
     return (bucket, -_stability(s), fcf)   # v3 : bucket haut, instabilité basse, fcf haut
 
 
@@ -314,7 +322,7 @@ def build_elite_portfolio():
     # v4 — RÈGLE DE TRANSITION (spec §5) : un tenu ne sort que s'il CASSE la sortie OU tombe hors top-60,
     # et on plafonne à 10 changements/run (le surplus attend une vague trimestrielle). En v3 : inchangé.
     drop_v4 = set()   # tenus qu'on laisse VOLONTAIREMENT sortir ce run (hors top-60, dans le budget)
-    if ELITE_KEY == "v4":
+    if ELITE_KEY in ("v4a", "v4"):
         pool_rank = {(str(s.get("ticker")), s["_region"]): i for i, s in enumerate(pool)}
         forced, optional = [], []   # forced = casse la sortie (obligé) ; optional = hors top-60 (au choix)
         for key in held_keys:
@@ -521,7 +529,7 @@ def _inject_into_portfolios(pf):
                             "DE FILTRES (anti-piège durabilité + qualité + valo + ROIC + FCF + "
                             "investabilité), équipondérés, diversifiés par secteur GICS. Jugé sur les "
                             + ("fondamentaux, pas la notoriété. Départage : persistance ROIC 6 ans + "
-                               "semi-déviation sous médiane (spec §3). " if ELITE_KEY == "v4"
+                               "max drawdown du ROIC (T2). " if ELITE_KEY in ("v4a", "v4")
                                else "fondamentaux, pas la notoriété. ")
                             + "Évolution douce (portes de sortie), pas de churn."),
             "_asset_details": details,

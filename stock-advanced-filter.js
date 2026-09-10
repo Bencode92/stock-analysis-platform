@@ -851,6 +851,8 @@ async function loadStockCSV(filepath) {
             roe_persist_6y: parseNumberLoose(row['roe_persist_6y']) ?? null,
             roic_downside_6y: parseNumberLoose(row['roic_downside_6y']) ?? null,
             roe_downside_6y: parseNumberLoose(row['roe_downside_6y']) ?? null,
+            roic_drawdown_6y: parseNumberLoose(row['roic_drawdown_6y']) ?? null,
+            roe_drawdown_6y: parseNumberLoose(row['roe_drawdown_6y']) ?? null,
             years_roic_6y: parseNumberLoose(row['years_roic_6y']) ?? null,
             net_margin: parseNumberLoose(row['net_margin']) ?? null,
             revenue_growth_3y: parseNumberLoose(row['revenue_growth_3y']) ?? null,
@@ -2221,6 +2223,8 @@ async function enrichStock(stock) {
     roe_persist_6y: stock.roe_persist_6y ?? null,
     roic_downside_6y: stock.roic_downside_6y ?? null,
     roe_downside_6y: stock.roe_downside_6y ?? null,
+    roic_drawdown_6y: stock.roic_drawdown_6y ?? null,
+    roe_drawdown_6y: stock.roe_drawdown_6y ?? null,
     years_roic_6y: stock.years_roic_6y ?? null,
     net_margin: stock.net_margin,
     revenue_growth_3y: stock.revenue_growth_3y,
@@ -2564,7 +2568,8 @@ async function reconcileEntities(byRegion) {
     const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const FUND = ['roe', 'roe_avg_3y', 'roe_std_3y', 'roic', 'roic_avg_3y', 'roic_std_3y', 'net_margin',
         // ✅ Spec elite ROIC 6 ans §3 : persistance/dispersion = fondamentaux entité-niveau, à propager
-        'roic_persist_6y', 'roe_persist_6y', 'roic_downside_6y', 'roe_downside_6y', 'years_roic_6y',
+        'roic_persist_6y', 'roe_persist_6y', 'roic_downside_6y', 'roe_downside_6y',
+        'roic_drawdown_6y', 'roe_drawdown_6y', 'years_roic_6y',
         'revenue_growth_3y', 'de_ratio', 'fcf_yield', 'eps_growth_5y', 'buffett_score', 'buffett_grade',
         'buffett_criteria', 'quality_profile'];
     const written = new Set(Object.keys(byRegion).filter(r => byRegion[r] && byRegion[r].length));
