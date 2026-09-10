@@ -107,3 +107,39 @@ API** (la série 6 ans était déjà fetchée par Twelve Data et jetée à la s�
 `ELITE_KEY=v4 ELITE_DRY=1 python3 portfolio_engine/equity_elite.py` → montre le **before/after ≤ 10** ;
 (3) validation humaine ; (4) bascule du défaut ou run réel `ELITE_KEY=v4`. Le CI par défaut (v3) est resté
 **identique** (run de contrôle : 0 changement).
+
+## 8. DÉCISION EXPERT 2026-09-10 — v4 REFUSÉ en l'état, découplé en v4a / v4b
+
+Test sur données réelles : **8 sorties sur 10 viennent de la porte valo, pas du départage**. Basculer v4
+bundlé = convertir un socle qualité en socle value sous couvert d'un fix data. **Décision : ne pas basculer v4
+tel quel.** On découple, deux dossiers, deux dates :
+
+- **v4a = départage 6 ans seul.** Ne se lance **qu'après T3 puis T2**, dans cet ordre :
+  - **T3 (ROIC hors cash excédentaire)** — *avant tout*, non négociable. Capital investi = capitaux propres
+    + dette financière − (trésorerie − max(0, 2 % du CA)). Sinon la persistance (n/6 ≥ 12 %) est biaisée pour
+    ~1/3 de l'Asie (Keyence, OBIC, DISCO, MonotaRO). Cohérence d'affichage à mettre à jour en même temps.
+  - **T2 (re-spéc de la clé downside)** — la semi-déviation sous médiane **punit les risers** (Nvidia 47,7),
+    promesse non tenue mathématiquement. Remplacer par **max drawdown du ROIC** (plus grande baisse pic→creux
+    *ultérieur* sur la fenêtre, en % du pic) : un riser pur = 0 ; une vraie chute (TSMC 2023, Nvidia 2022) =
+    pénalité légitime. Ordre v4a figé : durabilité → persistance (n/6 ≥ 12 %) → **ROIC-drawdown ↓** → FCF yield ↑.
+  - Puis figer v4a → **DRY sur le pool v3 (402)** → dossier v4a seul (churn attendu < 10). C'est le chiffre
+    qui manque : mesurer l'effet PROPRE du départage, hors redécoupage du pool par la porte.
+- **v4b = porte valo.** Un **PE plat ~30 n'est PAS une porte valo pour un socle qualité** (rejette l'archétype :
+  ISRG/Fastenal/Keyence PE > 30 depuis 10 ans ; punit à contre-sens les cycliques : VAT PE 88 = creux de cycle,
+  pas excès de prix ; contredit l'identité facteur VALUE −0,13 figée au §6 sans dossier facteur). Remplacer par
+  une **porte d'ABSURDITÉ sectorielle** (EV/EBIT ≤ 2× médiane secteur ; financières P/B ≤ 2× médiane) + **rendement
+  minimal** (FCF yield ≥ 1,5 % croissance / 3 % classique, barème adaptatif existant), et **laisser la valo au
+  départage** (FCF yield, déjà clé 4). Pas de PEG (réintroduit une prévision de croissance, hors doctrine).
+  **Avant tout seuil** : test rétroactif de `valuation_ok` sur les 40 tenus × 6 exercices — si > 25 % échouent
+  *de façon persistante*, la porte change le STYLE, pas la sélection. Décision séparée, ~fin d'année, + dossier facteur.
+
+### Corrections immédiates HORS v4 (revue expert, appliquées 2026-09-10)
+1. **ADV en porte de SORTIE** (`_passes_exit`, seuil 3 M$, bande de grâce vs 5 M$ entrée) : un tenu devenu
+   illiquide sort. Corrige une fuite v3 — le socle gelé tenait **5 noms < 3 M$** (Thinking 2,56 · Topco 2,81 ·
+   Shanghai Conant 1,28 · Anjoy 2,18 · XPS 2,25). `EXIT_ADV_USD`. **Applique en v3, pas gaté.**
+2. **Sélection déterministe des sortants au-delà du plafond** (`_gate_miss`) : ordre = pire rang de pool →
+   pire échec de porte (distance au seuil) → ticker. Fini l'ordre-de-liste arbitraire.
+
+**Correctif de la reco initiale** : la porte valo « critère `valuation_ok` obligatoire » (§3bis) a été proposée
+sans connaître sa définition (PE plat non sectoriel). Elle est **mauvaise telle qu'implémentée** — c'est l'objet
+de v4b. `valuation_ok` reste utilisé par v4 (gaté, non basculé) en attendant la refonte v4b.

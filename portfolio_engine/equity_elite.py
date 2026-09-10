@@ -22,6 +22,7 @@ ROE_MIN_FIN = 12.0      # financières : ROE (le ROIC/D/E n'ont pas de sens — 
 MARGIN_MIN = 0.0
 DE_MAX = 2.5            # levier (non-financières)
 ADV_MIN_USD = 5.0e6    # INVESTABILITÉ : volume $ quotidien ≥ 5 M$ (meilleur proxy que la seule mcap)
+EXIT_ADV_USD = 3.0e6   # SORTIE investabilité : un tenu tombé < 3 M$ (bande de grâce vs 5 M$) sort (revue expert 2026-09-10)
 # --- diversification & taille ---
 MAX_HOLDINGS = 40
 MAX_PER_INDUSTRY = 2    # cap (contrainte), plus « 1 champion obligatoire par industrie »
@@ -188,6 +189,9 @@ def _passes_exit(s):
         return False
     if (s.get("durability_grade") or "") not in ("A", "B") or s.get("durability_mirage") is True:
         return False
+    adv = _adv_usd(s)                                 # INVESTABILITÉ à la SORTIE (revue expert 2026-09-10) :
+    if adv is not None and adv < EXIT_ADV_USD:        # un illiquide tombé < 3 M$ ne se garde plus par hystérésis
+        return False                                  # (corrige la fuite v3 : Thinking/Topco tenus sous le seuil)
     key = "roe_avg_3y" if _is_fin(s) else "roic_avg_3y"
     v = _num(s.get(key)) if s.get(key) is not None else _num(s.get("roe") if _is_fin(s) else s.get("roic_avg_3y"))
     return v is not None and v >= EXIT_ROIC
@@ -237,6 +241,26 @@ def _valuation_ok(s):
         if c.get("name") == "valuation_ok":
             return c.get("passed") is True
     return None                                       # critère absent → indéterminé (géré par l'appelant)
+
+
+def _gate_miss(s):
+    """Sévérité d'échec aux portes d'entrée (0 = passe tout ; plus HAUT = rate plus fort). DÉTERMINISTE :
+       ordonne les sorties au-delà du plafond par distance au seuil, pas par ordre de liste (revue expert)."""
+    miss = 0.0
+    adv = _adv_usd(s)
+    if adv is not None and adv < ADV_MIN_USD:
+        miss += (ADV_MIN_USD - adv) / ADV_MIN_USD
+    if _is_fin(s):
+        roe = _num(s.get("roe_avg_3y")) or _num(s.get("roe")) or 0.0
+        if roe < ROE_MIN_FIN:
+            miss += (ROE_MIN_FIN - roe) / ROE_MIN_FIN
+    else:
+        roic = _num(s.get("roic_avg_3y")) or 0.0
+        if roic < ROIC_MIN:
+            miss += (ROIC_MIN - roic) / ROIC_MIN
+    if _valuation_ok(s) is False:
+        miss += 1.0
+    return miss
 
 
 def _rank_key(s):
@@ -300,8 +324,9 @@ def build_elite_portfolio():
             elif pool_rank.get(key, 10**9) >= TRANSITION_TOP_N:
                 optional.append(key)                     # passe la sortie mais hors top-60 → candidat sortie
         budget = max(0, TRANSITION_MAX_CHANGES - len(forced))
-        # on exécute les PIRES sorties optionnelles d'abord (rang de pool le plus mauvais), dans le budget
-        optional.sort(key=lambda k: pool_rank.get(k, 10**9), reverse=True)
+        # DÉTERMINISTE (revue expert) : on sort les PIRES d'abord — pire rang de pool, puis pire échec de
+        # porte (distance au seuil), puis ticker en dernier recours. Plus d'ordre-de-liste arbitraire.
+        optional.sort(key=lambda k: (-pool_rank.get(k, 10**9), -_gate_miss(by_key[k]), k[0]))
         drop_v4 = set(optional[:budget])                 # le reste des « hors top-60 » est CONSERVÉ ce run
 
     kept, chosen = [], set()
