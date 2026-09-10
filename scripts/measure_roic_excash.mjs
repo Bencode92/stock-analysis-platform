@@ -74,9 +74,13 @@ function icOld(bs) {
 function icNew(bs, revenue, applyFloor = true) {
   if (!bs || bs.total_assets == null || revenue == null || revenue <= 0) return null;
   const nibcl = Math.max(0, (bs.total_current_liabilities ?? 0) - (bs.short_term_debt ?? 0));
+  const icBrut = bs.total_assets - nibcl;                  // IC côté actifs, AVANT retrait du cash
+  if (icBrut <= 0) return null;                            // bilan pathologique (passif courant > actifs)
   const excessCash = Math.max(0, (bs.cash_and_st_investments ?? 0) - 0.02 * revenue);
-  const ic = bs.total_assets - nibcl - excessCash;
-  return applyFloor ? Math.max(ic, 0.10 * revenue) : ic;   // PLANCHER → IC > 0 garanti
+  const ic = icBrut - excessCash;
+  // PLANCHER RELATIF (revue expert 2026-09-10) : retirer le cash ne peut au plus que diviser l'IC par 2
+  // (donc ROIC ×2 max). Pas de dépendance au CA, pas d'explosion asset-light, pas de cas négatif.
+  return applyFloor ? Math.max(ic, 0.5 * icBrut) : ic;
 }
 
 function roicYear(bsC, bsP, is, mode) {
@@ -163,27 +167,32 @@ async function measure(entry) {
     await sleep(400);
   }
   console.log(`\n\n=== RÉSULTATS : ${rows.length} titres valides ===`);
-  const deltas = rows.map(r => r.new - r.old).sort((a, b) => a - b);
+  // POPULATION D'ÉVALUATION (revue expert) : ROIC_brut > 0 (les pertes échouent la porte 4 de toute façon ;
+  // leur ROIC à −50000% est un artefact sans conséquence de sélection). Univers entier = info seulement.
+  const evalR = rows.filter(r => r.old > 0);
+  const dAll = rows.map(r => r.new - r.old).sort((a, b) => a - b);
+  const meanAll = dAll.reduce((a, b) => a + b, 0) / dAll.length;
+  const medAll = dAll[Math.floor(dAll.length / 2)];
+  const deltas = evalR.map(r => r.new - r.old).sort((a, b) => a - b);
   const med = deltas[Math.floor(deltas.length / 2)];
-  const mean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
   const p99 = deltas[Math.floor(0.99 * deltas.length)];
-  const big = rows.filter(r => Math.abs(r.new - r.old) > 2).length;
-  const rescued = rows.filter(r => r.rawICneg).length;          // IC brut ≤ 0 → rattrapé par le plancher
-  const negROIC = rows.filter(r => r.negROIC).length;           // ROIC < 0 = pertes d'exploi (légitime, ≠ IC<0)
-  const up = rows.filter(r => r.old < 12 && r.new >= 12).length;
-  const down = rows.filter(r => r.new < 12 && r.old >= 12).length;
+  const big = evalR.filter(r => Math.abs(r.new - r.old) > 2).length;
+  const rescued = rows.filter(r => r.rawICneg).length;          // IC (avant plancher) ≤ 0 → rattrapé
+  const negROIC = rows.filter(r => r.negROIC).length;           // ROIC < 0 = pertes (exclues de l'éval)
+  const up = evalR.filter(r => r.old < 12 && r.new >= 12).length;
+  const down = evalR.filter(r => r.new < 12 && r.old >= 12).length;
   const withInt = rows.filter(r => r.hadInterest).length;
-  const scaleFull = 11000 / rows.length;                        // extrapolation à ~11k titres
+  const scaleFull = 11000 / evalR.length;                       // extrapolation à ~11k titres éligibles
   const P = (ok) => ok ? '✅ PASS' : '❌ FAIL';
   console.log(`couverture produits financiers (NOPAT ex-intérêts) : ${withInt}/${rows.length} (${(100*withInt/rows.length).toFixed(0)}%)`);
-  console.log(`plancher IC déclenché (IC brut ≤ 0 rattrapés) : ${rescued} | ROIC<0 (pertes, légitime) : ${negROIC}`);
-  console.log('\n─ CRITÈRES D\'ACCEPTATION (spec §9) ─');
+  console.log(`plancher relatif déclenché : ${rescued} | exclus de l'éval (ROIC<0, pertes) : ${negROIC}`);
+  console.log(`INFO univers entier (${rows.length}) : Δ médian ${medAll.toFixed(2)} · Δ moyen ${meanAll.toFixed(2)}`);
+  console.log(`\n─ CRITÈRES D'ACCEPTATION (spec §9) — population ROIC_brut>0 : ${evalR.length} titres ─`);
   console.log(`  IC effectif > 0 (garanti plancher): 0 négatif  ${P(true)}`);
   console.log(`  Δ médian ∈ ±2 pts            : ${med.toFixed(2)}  ${P(Math.abs(med) <= 2)}`);
-  console.log(`  matériel (|Δ|>2) < 25%       : ${(100*big/rows.length).toFixed(1)}%  ${P(big/rows.length < 0.25)}`);
+  console.log(`  matériel (|Δ|>2) < 25%       : ${(100*big/evalR.length).toFixed(1)}%  ${P(big/evalR.length < 0.25)}`);
   console.log(`  franchissent 12% net (extrap): +${Math.round((up-down)*scaleFull)} (< +300 ?)  ${P((up-down)*scaleFull < 300)}   [éch: +${up}/−${down}]`);
   console.log(`  p99 Δ < +30 pts              : ${p99.toFixed(1)}  ${P(p99 < 30)}`);
-  console.log(`  Δ moyen (info)               : ${mean.toFixed(2)}`);
   console.log('\n─ JAPON (doit rester relevé, sens + ordre de grandeur) ─');
   for (const j of JAPAN) {
     const r = rows.find(x => x.sym === j.sym);

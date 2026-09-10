@@ -183,3 +183,21 @@ les 6 critères — **SANS toucher la prod**. Bascule (remplacement global du RO
 **Point de méthode (journal)** : l'expert a écrit une formule côté-financement sans la tester ; le pipeline l'a
 mesurée avant de coder. Règle qui en sort : *toute définition figée passe par une mesure d'impact sur l'univers
 avant le run de sélection, même quand elle vient de l'expert.*
+
+### 9bis. RE-FIGURATION après échec mesure #1 (2026-09-10) — plancher relatif
+
+Mesure #1 (216 titres) : 4/6 ✅ mais **matériel 35,2 %** et **p99 +132** ÉCHOUENT. Diagnostic : buffer 2 % OK
+(franchissements +102, Japon relevé) ; coupable = **plancher `10 %·CA`** (pathologique faibles-CA → pertes à
+−50000 %, moyenne −8565 ; trop lâche asset-light). Deux décisions expert (seuils des 6 critères INCHANGÉS) :
+
+- **Plancher RELATIF** (abandon du CA) : `IC_ajusté = max( IC_brut − max(0, cash − 2%·CA) , 0,5 × IC_brut )`
+  avec `IC_brut = total_assets − (total_current_liabilities − short_term_debt)`. Retirer le cash ne peut au plus
+  que **diviser l'IC par 2** (ROIC ×2 max). Justif : la plus forte correction légitime (DISCO +15 sur ~20 = ×1,75)
+  reste sous ×2. Pas de dépendance CA, pas d'explosion asset-light, pas de cas négatif (`IC_brut ≤ 0` → titre écarté).
+- **Population d'évaluation** : non-financières avec **ROIC_brut > 0**. Les pertes échouent la porte 4 de toute
+  façon ; leur ROIC à −50000 % est un artefact de mesure. Stats univers entier = **info**, pas critère.
+
+**RÈGLE D'ARRÊT (figée)** : **un seul re-run**. S'il échoue encore un critère → **T3 ABANDONNÉ pour ce cycle** :
+on passe à T2 + v4a avec le ROIC actuel, biais Japon documenté comme limite connue, T3 revient au chantier
+suivant. **Pas de 3ᵉ re-figuration** — une correction qui demande trois essais pour passer ses propres critères
+n'est pas figée.
