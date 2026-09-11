@@ -35,6 +35,10 @@ on:
     - cron: '0 12 * * 6'   # Samedi 12:00 UTC
     - cron: '0 2 * * 0'    # Dimanche 02:00 UTC
     - cron: '0 12 * * 0'   # Dimanche 12:00 UTC
+    # ⚠️ TEMPORAIRE T3 (2026-09-11) — À RETIRER une fois la couverture ROIC v5 complète.
+    # Enchaîne les tranches de refetch toutes les 3h (sérialisées par le groupe de concurrence),
+    # de façon robuste et native GitHub (indépendant de tout process externe).
+    - cron: '0 */3 * * *'  # toutes les 3h — refetch T3 en cours
 
 concurrency:
   # groupe dédié (plus repo-writes-global partagé) → ne se fait plus annuler par les autres workflows
