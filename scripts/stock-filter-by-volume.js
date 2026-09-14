@@ -993,7 +993,9 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         stock.roic_std_3y = cached.roic_std_3y ?? null;
         // ✅ Spec elite ROIC 6 ans §3 : persistance + semi-déviation sous médiane.
         // Champs absents des vieilles entrées cache → dérivés de yearly_roic déjà stocké (aucun refetch).
-        const _e6 = (cached.roic_persist_6y != null) ? cached : deriveElite6y(cached);
+        // ⚠️ Clé `roic_drawdown_6y` ABSENTE (≠ null) = entrée v5 figée entre T3 et T2 (2026-09-10 11:44→13:51,
+        // ~1500 titres dont 19 tenus du socle) → SANS re-dérivation, equity_elite lit « absent » = 999 (pénalité max).
+        const _e6 = (cached.roic_persist_6y != null && cached.roic_drawdown_6y !== undefined) ? cached : deriveElite6y(cached);
         stock.roic_persist_6y = _e6.roic_persist_6y ?? null;
         stock.roe_persist_6y = _e6.roe_persist_6y ?? null;
         stock.roic_downside_6y = _e6.roic_downside_6y ?? null;
@@ -1125,8 +1127,8 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     stock.roic_avg_3y = cached?.roic_avg_3y ?? null;
     stock.roic_std_3y = cached?.roic_std_3y ?? null;
     // ✅ Spec elite ROIC 6 ans §3 : persistance + semi-déviation (dérivées de yearly_roic si absentes)
-    const _e6b = (cached && cached.roic_persist_6y != null) ? cached
-                 : (cached ? deriveElite6y(cached) : {});
+    const _e6b = (cached && cached.roic_persist_6y != null && cached.roic_drawdown_6y !== undefined) ? cached
+                 : (cached ? deriveElite6y(cached) : {});   // idem : re-dérive si la clé drawdown manque (v5 pré-T2)
     stock.roic_persist_6y = _e6b.roic_persist_6y ?? null;
     stock.roe_persist_6y = _e6b.roe_persist_6y ?? null;
     stock.roic_downside_6y = _e6b.roic_downside_6y ?? null;
