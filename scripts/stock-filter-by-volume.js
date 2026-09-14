@@ -920,7 +920,20 @@ function entityMismatch(meta, context = {}) {
 }
 const resolvedOf = (meta) => meta ? { name: meta.name, exchange: meta.exchange, mic_code: meta.mic_code, currency: meta.currency } : null;
 
+// ✅ 2026-09-14 (revue expert) : ALIAS d'historique — changement de ticker chez l'émetteur, Twelve Data ne
+// renvoie que les exercices postérieurs sous le nouveau symbole. On fetche l'ancien symbole (même entité,
+// vérifiée par meta.name) et on stocke sous la clé du ticker courant. Correction de donnée, pas de méthode.
+const FUNDAMENTALS_ALIAS = { 'MRSH': 'MMC' };   // Marsh & McLennan : MMC → MRSH (2025), 2 exercices sous MRSH, 6 sous MMC
+
 async function fetchFundamentalsForSymbol(symbol, context = {}) {
+  const alias = FUNDAMENTALS_ALIAS[symbol];
+  if (alias && !context._aliased) {
+    const viaAlias = await fetchFundamentalsForSymbol(alias, { ...context, _aliased: true });
+    if ((viaAlias.years_available || 0) >= 4) {
+      console.log(`  🔗 ${symbol}: historique via alias ${alias} (${viaAlias.years_available} exercices)`);
+      return { ...viaAlias, symbol, _alias_of: alias };
+    }
+  }
   const bsResult = await fetchBalanceSheet(symbol, context);
 
   if (bsResult?._rateLimited) {

@@ -36,7 +36,12 @@ PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 # ═══ CLÉ DE DÉPARTAGE : v3 (figée, symétrique provisoire) vs v4 (spec ROIC 6 ans, docs/ELITE_ROIC_10Y_SPEC.md) ═══
 # v4 ne s'active QUE sur ELITE_KEY=v4 → le run CI par défaut reste v3 tant que Benoit n'a pas validé le
 # before/after. Doctrine : la clé est FIGÉE avant de voir la sortie ; le basculement est un run DÉLIBÉRÉ.
-ELITE_KEY = os.environ.get("ELITE_KEY", "v3").lower()
+ELITE_KEY = os.environ.get("ELITE_KEY", "v3").lower()   # ⏳ bascule du défaut → v4a dans le commit du run unique (verdict expert « passe », 2026-09-14)
+# ═══ PORTE 0 « place accessible » (revue expert Q7) : le socle réel = US + Europe ; l'Asie n'est pas achetable ═══
+ELITE_REGIONS = set(r.strip() for r in os.environ.get("ELITE_REGIONS", "US,Europe").split(","))
+# ═══ VAGUES TRIMESTRIELLES : entre deux vagues, le run CI quotidien REPRODUIT la liste (0 changement) ═══
+WAVE_DAYS = 90
+ELITE_FORCE_WAVE = os.environ.get("ELITE_FORCE_WAVE") == "1"   # run unique / vague déclenchée à la main
 PERSIST_THRESHOLD = 12.0   # spec §3 clé 2 : ROIC (ou ROE fin.) ≥ 12 % compte comme exercice « tenu »
 PERSIST_MIN_YEARS = 4      # < 4 exercices dispo → « historique court » → persistance à demi-poids (spec §2)
 TRANSITION_TOP_N = 100     # spec §11 (revue expert 2026-09-14) : top-100 = 2,5× le book (top-60 = 15 % du pool, trop serré)
@@ -62,7 +67,9 @@ BANNED = {
 }
 # PAIRES CORRÉLÉES > 0,70 (hebdo) → max 1 par paire. On garde le meilleur départage, on saute l'autre.
 # ROST/TJX = 0,74 hebdo (confirmé) → même business, même cycle. Décision APPLIQUÉE (pas 'à appliquer').
-CORRELATED_PAIRS = [("ROST", "TJX"), ("V", "MA")]   # V/MA : réseaux paiement, corr hebdo > 0,8 (revue expert 2026-09-10)
+CORRELATED_PAIRS = [("ROST", "TJX"), ("V", "MA"),   # V/MA : réseaux paiement, corr hebdo > 0,8 (revue expert 2026-09-10)
+                    ("NMIH", "MTG")]                 # assurance hypothécaire, corr hebdo 0,90 sur 109 sem. (mesurée 2026-09-14) :
+                                                     # NMIH n'entre qu'une fois MGIC sorti (tenu prioritaire, comme Visa/MA)
 _PAIR = {}
 for _a, _b in CORRELATED_PAIRS:
     _PAIR[_a] = _b; _PAIR[_b] = _a
@@ -141,6 +148,8 @@ def _load_stocks():
         j = json.load(open(p, encoding="utf-8"))
         arr = j if isinstance(j, list) else j.get("stocks", [])
         reg = {"stocks_us.json": "US", "stocks_europe.json": "Europe", "stocks_asia.json": "Asie"}[f]
+        if reg not in ELITE_REGIONS:                 # PORTE 0 « place accessible » : un tenu hors périmètre = sortie forcée
+            continue
         for s in arr:
             s["_region"] = reg
             rows.append(s)
@@ -418,6 +427,18 @@ def build_elite_portfolio():
     # v4 — RÈGLE DE TRANSITION (spec §5) : un tenu ne sort que s'il CASSE la sortie OU tombe hors top-60,
     # et on plafonne à 10 changements/run (le surplus attend une vague trimestrielle). En v3 : inchangé.
     drop_v4 = set()   # tenus qu'on laisse VOLONTAIREMENT sortir ce run (hors top-60, dans le budget)
+    forced, optional = [], []
+    # ═══ CADENCE : vague trimestrielle (WAVE_DAYS) ou run forcé ; sinon le run CI quotidien REPRODUIT la liste ═══
+    prev_tr = {}
+    if os.path.exists(PREV_FILE):
+        try:
+            prev_tr = json.load(open(PREV_FILE, encoding="utf-8")).get("_transition") or {}
+        except Exception:
+            prev_tr = {}
+    from datetime import date, datetime
+    last_wave = prev_tr.get("wave_date")
+    days_since = (date.today() - datetime.strptime(last_wave, "%Y-%m-%d").date()).days if last_wave else None
+    wave_due = ELITE_FORCE_WAVE or (ELITE_KEY == "v3") or (days_since is None) or (days_since >= WAVE_DAYS)
     if ELITE_KEY in ("v4a", "v4"):
         pool_rank = {(str(s.get("ticker")), s["_region"]): i for i, s in enumerate(pool)}
         forced, optional = [], []   # forced = casse la sortie (obligé) ; optional = hors top-60 (au choix)
@@ -427,7 +448,7 @@ def build_elite_portfolio():
                 forced.append(key)                       # casse la sortie → sortie obligatoire
             elif pool_rank.get(key, 10**9) >= TRANSITION_TOP_N:
                 optional.append(key)                     # passe la sortie mais hors top-60 → candidat sortie
-        budget = max(0, TRANSITION_MAX_CHANGES - len(forced))
+        budget = max(0, TRANSITION_MAX_CHANGES - len(forced)) if wave_due else 0
         # DÉTERMINISTE (revue expert) : on sort les PIRES d'abord — pire rang de pool, puis pire échec de
         # porte (distance au seuil), puis ticker en dernier recours. Plus d'ordre-de-liste arbitraire.
         optional.sort(key=lambda k: (-pool_rank.get(k, 10**9), -_gate_miss(by_key[k]), k[0]))
@@ -438,7 +459,11 @@ def build_elite_portfolio():
         if key in drop_v4:                               # sortie volontaire différée-bornée (spec §5)
             continue
         s = by_key.get(tuple(key))
-        if s and _passes_exit(s) and s.get("industry") and _can_add(s):
+        if s is None or not s.get("industry"):
+            continue                                     # hors périmètre / hors données → sortie (forcée)
+        if not wave_due and ELITE_KEY in ("v4a", "v4"):  # entre deux vagues : on REPRODUIT, porte cassée journalisée
+            kept.append(s); chosen.add((str(s.get("ticker")), s["_region"])); _commit(s); continue
+        if _passes_exit(s) and _can_add(s):
             kept.append(s); chosen.add((str(s.get("ticker")), s["_region"])); _commit(s)
     n_held = len(kept)
     # 3) COMPLÈTE au top-40 depuis le pool trié (meilleur départage), sous tous les caps.
@@ -535,7 +560,13 @@ def build_elite_portfolio():
         "key_version": ELITE_KEY, "changes": max(len(added), len(dropped)),
         "added": [{"ticker": k[0], "region": k[1], "name": _name.get(k)} for k in added],
         "dropped": [{"ticker": k[0], "region": k[1], "name": _name.get(k)} for k in dropped],
-        "deferred_top60_drops": len(drop_v4),   # sorties hors top-60 non exécutées ce run (vagues suivantes)
+        "wave_due": wave_due,
+        "wave_date": (date.today().isoformat() if (wave_due and ELITE_KEY in ("v4a", "v4")) else last_wave),
+        "days_since_wave": days_since,
+        "forced_exits": [k[0] for k in forced],                       # porte de sortie cassée (exécutées si vague)
+        "optional_drops_executed": [k[0] for k in sorted(drop_v4)],   # hors top-N, dans le budget
+        "optional_drops_deferred": [k[0] for k in optional if k not in drop_v4],   # hors top-N, vagues suivantes
+        "deferred_top60_drops": len([k for k in optional if k not in drop_v4]),   # (compat) sorties différées
     }
 
     return {
@@ -579,7 +610,11 @@ def main():
         for d in tr.get("dropped", []):
             print(f"  - OUT {d['ticker']:<8} {str(d.get('name'))[:30]:<30} ({d['region']})")
         if tr.get("deferred_top60_drops"):
-            print(f"  … {tr['deferred_top60_drops']} sortie(s) hors top-60 différée(s) (vague trimestrielle)")
+            print(f"  … {tr['deferred_top60_drops']} sortie(s) hors top-{TRANSITION_TOP_N} différée(s) (vague trimestrielle) : "
+                  + ", ".join(tr.get("optional_drops_deferred") or []))
+        if tr.get("wave_due") is False:
+            print(f"  ⏸ entre deux vagues ({tr.get('days_since_wave')} j depuis {tr.get('wave_date')}) : liste reproduite, "
+                  f"portes cassées en attente : {', '.join(tr.get('forced_exits') or []) or 'aucune'}")
 
     # ELITE_DRY=1 → aperçu seul (utile pour comparer v4 sans écraser le v3 commité). Sinon : écriture normale.
     if os.environ.get("ELITE_DRY"):

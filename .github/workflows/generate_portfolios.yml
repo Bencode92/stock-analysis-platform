@@ -68,7 +68,7 @@ jobs:
       # ============= Socle actions elite (v3 figé, standalone) =============
       - name: 🏆 Socle actions elite
         run: |
-          echo "🏆 Génération du socle actions elite (equity_elite v3)..."
+          echo "🏆 Génération du socle actions elite (equity_elite — clé par défaut du module)..."
           python portfolio_engine/equity_elite.py || echo "⚠️ equity_elite échec (non-bloquant)"
 
       # ============= v4.5 NEW: Schema Validation =============
