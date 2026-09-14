@@ -205,18 +205,43 @@ function buildCacheKey(ticker, country) {
 const EX_SHORT2MIC = {
   'jpx':'XTKS', 'krx':'XKRX', 'kosdaq':'XKOS', 'hkex':'XHKG',
   'sse':'XSHG', 'szse':'XSHE', 'twse':'XTAI', 'nse':'XNSE',
-  'bse':'XBOM', 'set':'XBKK', 'myx':'XKLS', 'idx':'XIDX', 'sgx':'XSES'
+  'bse':'XBOM', 'set':'XBKK', 'myx':'XKLS', 'idx':'XIDX', 'sgx':'XSES',
+  // ✅ 2026-09-14 — codes courts EUROPE du seed (Actions_Europe.csv). Sans eux toMIC → null → requête
+  // en symbole nu → Twelve Data sert la cotation US homonyme (Costain=Costco, Generali=Genpact,
+  // Allianz=Autoliv… 178 titres pollués). 'euronext' se résout par le pays (XPAR/XAMS/XBRU/XLIS).
+  'lse':'XLON', 'mta':'XMIL', 'xetr':'XETR', 'omx':'XSTO', 'omxc':'XCSE', 'omxh':'XHEL',
+  'bme':'XMAD', 'ose':'XOSL', 'six':'XSWX', 'vse':'XWBO', 'ise':'XDUB'
+};
+// Pays du seed (français) → MIC. Complète COUNTRY2MIC (anglais) pour que le pays serve de repli.
+const COUNTRY_FR2MIC = {
+  'royaume-uni':'XLON', 'allemagne':'XETR', 'italie':'XMIL', 'espagne':'XMAD', 'france':'XPAR',
+  'pays-bas':'XAMS', 'belgique':'XBRU', 'portugal':'XLIS', 'suisse':'XSWX', 'autriche':'XWBO',
+  'norvège':'XOSL', 'norvege':'XOSL', 'suède':'XSTO', 'suede':'XSTO', 'danemark':'XCSE', 'finlande':'XHEL',
+  'irlande':'XDUB', 'japon':'XTKS', 'corée':'XKRX', 'coree':'XKRX', 'taïwan':'XTAI', 'taiwan':'XTAI',
+  'chine':'XSHG', 'hong kong':'XHKG', 'singapour':'XSES', 'inde':'XNSE', 'thaïlande':'XBKK',
+  'malaisie':'XKLS', 'philippines':'XPHS', 'indonésie':'XIDX'
+};
+// MIC → paramètre `mic_code` Twelve Data (précis, testé 2026-09-14 sur 12 places). Tokyo = XJPX chez TD.
+const MIC_CODE_PARAM = {
+  'XLON':'XLON','XMIL':'XMIL','XETR':'XETR','XSTO':'XSTO','XCSE':'XCSE','XHEL':'XHEL','XMAD':'XMAD',
+  'XOSL':'XOSL','XSWX':'XSWX','XWBO':'XWBO','XDUB':'XDUB','XPAR':'XPAR','XAMS':'XAMS','XBRU':'XBRU','XLIS':'XLIS',
+  // Asie (testé XJPX/XTAI/XSES/XHKG/XKRX/XBKK) — Singapour était fetché NU ('singapour' absent de COUNTRY_EN
+  // → aucun paramètre) : BTG Singapour portait le bilan de B2Gold.
+  'XTKS':'XJPX','XTAI':'XTAI','XSES':'XSES','XHKG':'XHKG','XKRX':'XKRX','XKOS':'XKOS','XSHG':'XSHG','XSHE':'XSHE',
+  'XNSE':'XNSE','XBOM':'XBOM','XBKK':'XBKK','XKLS':'XKLS','XIDX':'XIDX','XPHS':'XPHS','ROCO':'ROCO'
 };
 
 function toMIC(exchange, country=''){
   const ex = normalize(exchange);
+  const c  = normalize(country);
   if (ex) {
-    if (EX_SHORT2MIC[ex]) return EX_SHORT2MIC[ex];   // Asie : codes courts exacts
+    if (ex === 'euronext') return COUNTRY_FR2MIC[c] || COUNTRY2MIC[c] || 'XPAR';  // place = pays
+    if (EX_SHORT2MIC[ex]) return EX_SHORT2MIC[ex];   // codes courts exacts (Asie + Europe)
     for (const [pat, mic] of EX2MIC_PATTERNS) {
       if (ex.includes(pat)) return mic;
     }
   }
-  return COUNTRY2MIC[normalize(country)] || null;
+  return COUNTRY2MIC[c] || COUNTRY_FR2MIC[c] || null;
 }
 
 function buildFundamentalsParams(symbol, context = {}) {
@@ -225,6 +250,14 @@ function buildFundamentalsParams(symbol, context = {}) {
 
   if (mic && US_MICS.has(mic)) {
     if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
+    return params;
+  }
+
+  // ✅ 2026-09-14 : place européenne connue → `mic_code` (désambiguïsation exacte, testée sur 12 MIC).
+  // Remplace les hints exchange/country (Europe + Asie) ; les hints restent en repli pour un MIC inconnu.
+  if (mic && MIC_CODE_PARAM[mic]) {
+    params.mic_code = MIC_CODE_PARAM[mic];
+    if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}:`, JSON.stringify(params));
     return params;
   }
 
@@ -530,7 +563,7 @@ async function fetchBalanceSheet(symbol, context = {}) {
       console.log(`  [DEBUG] ${symbol} BS: ${allPeriods.length} périodes (${allPeriods.map(p => p.fiscal_date).join(', ')})`);
     }
 
-    return { periods: allPeriods };
+    return { periods: allPeriods, meta: data.meta || null };   // meta = entité RÉSOLUE par TD (name/exchange/mic/currency)
   } catch (error) {
     // ✅ HTTP 429 = rate limit -> déclenche le filet pause+retry (au lieu d'abandonner le titre)
     if (error.response?.status === 429) {
@@ -850,6 +883,18 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
 }
 
 // ✅ v2.11: Refactored — utilise les tableaux multi-périodes
+// ✅ 2026-09-14 — GARDE-FOU ENTITÉ : un titre NON-US dont Twelve Data renvoie une cotation US (NASDAQ/NYSE/
+// OTC…) est un homonyme, pas le titre demandé → on REFUSE la donnée (error entity_mismatch) plutôt que de
+// polluer le cache. Avant : Costain portait le bilan de Costco, Generali celui de Genpact (178 cas).
+const US_META_MICS = new Set(['XNAS','XNGS','XNMS','XNCM','XNYS','XASE','ARCX','BATS','OTCM','PINX','OTCB','OTCQ']);
+function entityMismatch(meta, context = {}) {
+  if (!meta) return null;                                   // pas de meta → on ne peut pas juger
+  if (isUSC(context.country) || US_MICS.has(toMIC(context.exchange || '', context.country || ''))) return null;
+  const usVenue = US_META_MICS.has(meta.mic_code) || /nasdaq|nyse|otc|arca|amex/i.test(meta.exchange || '');
+  return usVenue ? `entity_mismatch:${meta.name || meta.symbol} (${meta.exchange || meta.mic_code})` : null;
+}
+const resolvedOf = (meta) => meta ? { name: meta.name, exchange: meta.exchange, mic_code: meta.mic_code, currency: meta.currency } : null;
+
 async function fetchFundamentalsForSymbol(symbol, context = {}) {
   const bsResult = await fetchBalanceSheet(symbol, context);
 
@@ -869,11 +914,19 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
     const isRetry = await fetchIncomeStatement(symbol, context);
     const bsPeriods = bsResult?.periods ?? [];
     const isPeriods = isRetry?._rateLimited ? [] : (isRetry?.periods ?? []);
+    const mm = entityMismatch(bsResult?.meta, context);
+    if (mm) { console.warn(`  🚫 ${symbol}: ${mm}`); return { symbol, roe: null, de_ratio: null, roic: null, error: mm, _resolved: resolvedOf(bsResult?.meta), fetched_at: new Date().toISOString() }; }
     const ratios = computeMultiYearRatios(bsPeriods, isPeriods);
-    return { symbol, ...ratios, fetched_at: new Date().toISOString() };
+    return { symbol, ...ratios, _resolved: resolvedOf(bsResult?.meta), fetched_at: new Date().toISOString() };
   }
 
   await new Promise(r => setTimeout(r, FUNDAMENTALS_RATE_LIMIT_MS));
+
+  const mismatch = entityMismatch(bsResult?.meta, context);
+  if (mismatch) {
+    console.warn(`  🚫 ${symbol}: ${mismatch}`);
+    return { symbol, roe: null, de_ratio: null, roic: null, error: mismatch, _resolved: resolvedOf(bsResult?.meta), fetched_at: new Date().toISOString() };
+  }
 
   const bsPeriods = bsResult?.periods ?? [];
   const isPeriods = isResult?.periods ?? [];
@@ -911,10 +964,16 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
       const isBare = await fetchIncomeStatement(symbol, {});
       const bp = bsBare?.periods ?? [];
       const ip = isBare?._rateLimited ? [] : (isBare?.periods ?? []);
+      // ✅ 2026-09-14 : le symbole nu est LE vecteur de collision → garde-fou obligatoire ici.
+      const mmBare = entityMismatch(bsBare?.meta, context);
+      if (mmBare) {
+        console.warn(`  🚫 ${symbol} [BARE FALLBACK refusé]: ${mmBare}`);
+        return { symbol, roe: null, de_ratio: null, roic: null, error: mmBare, _resolved: resolvedOf(bsBare?.meta), fetched_at: new Date().toISOString() };
+      }
       if (bp.length) {
         if (DEBUG) console.log(`  ↻ [BARE FALLBACK] ${symbol}: ${bp.length} périodes en symbole nu`);
         const ratiosBare = computeMultiYearRatios(bp, ip);
-        return { symbol, ...ratiosBare, fetched_at: new Date().toISOString() };
+        return { symbol, ...ratiosBare, _resolved: resolvedOf(bsBare?.meta), fetched_at: new Date().toISOString() };
       }
     }
   }
@@ -924,6 +983,7 @@ async function fetchFundamentalsForSymbol(symbol, context = {}) {
   return {
     symbol,
     ...ratios,
+    _resolved: resolvedOf(bsResult?.meta),   // entité résolue par TD, pour audit (name/exchange/mic/currency)
     fetched_at: new Date().toISOString()
   };
 }
