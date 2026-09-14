@@ -375,7 +375,8 @@ def _rank_key(s):
     if ELITE_KEY in ("v4a", "v4"):
         # spec §12 R1 : durab A/B → persistance (12 % entrée / 10 % tenu) → SCORE de durabilité continu →
         # quality score → FCF yield en dernier (> 25 % = manquant → 0). Le drawdown est une PORTE, pas un rang.
-        fcf_v = _fcf_valid(s) or 0.0
+        # Financières au ROE : le FCF yield n'est pas une métrique (revue expert 2026-09-14) → non applicable (0)
+        fcf_v = 0.0 if _is_fin(s) else (_fcf_valid(s) or 0.0)
         return (bucket, _persist(s), _num(s.get("durability_score")) or 0.0, _num(s.get("quality_score")) or 0.0, fcf_v)
     return (bucket, -_stability(s), fcf)   # v3 : bucket haut, instabilité basse, fcf haut
 
