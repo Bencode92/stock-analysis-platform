@@ -42,7 +42,14 @@ PERSIST_MIN_YEARS = 4      # < 4 exercices dispo → « historique court » → 
 TRANSITION_TOP_N = 100     # spec §11 (revue expert 2026-09-14) : top-100 = 2,5× le book (top-60 = 15 % du pool, trop serré)
 # ═══ RE-SPEC v4a (spec §11, figée 2026-09-14) ═══
 DRAWDOWN_MAX = 35.0        # PORTE (pass/fail, entrée) : max drawdown du ROIC 6 ans ≤ 35 % — au-delà = vraie chute
-PERSIST_HIGH = 20.0        # ÉCHELLE de persistance : nb d'exercices /6 à ROIC (ROE fin.) ≥ 20 % — départage « hauteur »
+DRAWDOWN_MAX_HELD = 40.0   # spec §12 R4 : bande de grâce pour un TENU (entrée stricte / sortie tolérante)
+PERSIST_HIGH = 20.0        # (§11, retiré de la clé par §12 — champ conservé à titre informatif)
+# ═══ §12 R1/R2 (2026-09-14, DERNIÈRE retouche — clé gelée 12 mois ensuite) ═══
+FCF_MIN_ENTRY = 1.0        # R2 : FCF yield en PORTE à l'entrée (≥ 1 %)
+FCF_MAX_VALID = 25.0       # R2 : FCF yield > 25 % = artefact de donnée → traité comme MANQUANT (échoue la porte)
+ND_EBIT_MAX = 3.0          # R2 : porte levier net debt / EBIT ≤ 3 (proxy EBITDA indisponible ; remplace D/E ≤ 2,5)
+ND_EBIT_MAX_NEG_EQ = 1.5   # R2 : fonds propres négatifs → échec SAUF net debt / EBIT ≤ 1,5 (rachats payés en cash)
+_HELD = set()              # (ticker, région) tenus du run précédent — pour les seuils « tenu » (R4)
 MIRAGE_PE_MAX, MIRAGE_VOL_MIN = 5.0, 50.0   # flag mirage AUTO : PE < 5 ET vol 3 ans > 50 % (OppFi : PE 2,5 / vol 68)
 BANNED_INDUSTRY_RE = re.compile(r"gambling|resorts & casinos", re.I)   # jeux d'argent : hors mandat compounder
 TRANSITION_MAX_CHANGES = 10  # spec §5 : ≤ 10 changements par run ; le surplus par vagues trimestrielles
@@ -166,8 +173,8 @@ def _passes_gates(s, grades):
         return False
     if (s.get("quality_grade") or "") not in ("A", "B"):
         return False
-    if ELITE_KEY in ("v4a", "v4") and _drawdown(s) > DRAWDOWN_MAX:   # spec §11 : PORTE drawdown (entrée)
-        return False                                                  # absent (999) → échoue aussi
+    if ELITE_KEY in ("v4a", "v4") and _drawdown(s) > (DRAWDOWN_MAX_HELD if _is_held(s) else DRAWDOWN_MAX):
+        return False                                  # §11 PORTE drawdown ; §12 R4 : 35 % entrée / 40 % tenu ; absent (999) → échoue
     if ELITE_KEY == "v4":
         vok = _valuation_ok(s)                       # spec §3bis : porte valo au CRITÈRE, pas au grade
         if vok is False:                             # PE trop cher → sort (ASML/Lam PE ~55)
@@ -189,9 +196,17 @@ def _passes_gates(s, grades):
     if _is_fin(s):                                   # FINANCIÈRES : ROE, pas ROIC/D-E
         roe = _num(s.get("roe_avg_3y")) or _num(s.get("roe"))
         return roe is not None and roe >= ROE_MIN_FIN
-    roic, de = _num(s.get("roic_avg_3y")), _num(s.get("de_ratio"))
+    roic = _num(s.get("roic_avg_3y"))
     if roic is None or roic < ROIC_MIN:
         return False
+    if ELITE_KEY in ("v4a", "v4"):
+        if not _leverage_ok(s):                      # §12 R2 : net debt / EBIT (fonds propres négatifs → 1,5)
+            return False
+        fcf = _fcf_valid(s)                          # §12 R2 : FCF yield en PORTE ≥ 1 %, > 25 % = manquant
+        if fcf is None:
+            return False
+        return fcf > 0 if _is_held(s) else fcf >= FCF_MIN_ENTRY   # §12 R4 : tenu = ancienne porte (> 0), entrant ≥ 1 %
+    de = _num(s.get("de_ratio"))
     if de is not None and de > DE_MAX:
         return False
     fcf = _num(s.get("fcf_yield"))                   # génère du cash (proxy anti-accruals ; FCF/RN indispo)
@@ -239,8 +254,11 @@ def _years6(s):
 def _persist(s):
     """Spec §3 clé 2 — persistance : nb d'exercices sur 6 avec ROIC (ROE fin.) ≥ 12 %. Plus HAUT = mieux.
        Historique court (< 4 ans dispo) → demi-poids, pour ne pas récompenser un « 3/3 » sur peu de recul."""
-    key = "roe_persist_6y" if _is_fin(s) else "roic_persist_6y"
+    held = _is_held(s)                                # §12 R4 : un tenu est compté à la barre 10 %, pas 12 %
+    key = ("roe_persist10_6y" if held else "roe_persist_6y") if _is_fin(s) else ("roic_persist10_6y" if held else "roic_persist_6y")
     p = _num(s.get(key))
+    if p is None and held:                            # champ « tenu » pas encore propagé → repli barre 12 %
+        p = _num(s.get("roe_persist_6y" if _is_fin(s) else "roic_persist_6y"))
     if p is None:
         return -1.0                                   # champ absent (pipeline pas encore repeuplé) → dernier
     yrs = _years6(s)
@@ -254,6 +272,30 @@ def _downside(s):
     key = "roe_downside_6y" if _is_fin(s) else "roic_downside_6y"
     d = _num(s.get(key))
     return d if d is not None else 9.99
+
+
+def _is_held(s):
+    return (str(s.get("ticker")), s.get("_region")) in _HELD
+
+
+def _fcf_valid(s):
+    """§12 R2 — FCF yield exploitable : présent et ≤ 25 % (au-delà = artefact → manquant)."""
+    f = _num(s.get("fcf_yield"))
+    return f if (f is not None and f <= FCF_MAX_VALID) else None
+
+
+def _leverage_ok(s):
+    """§12 R2 — porte levier : net debt / EBIT ≤ 3 ; fonds propres négatifs → échec sauf ND/EBIT ≤ 1,5.
+       Champ `net_debt_to_ebit` propagé par le pipeline ; repli D/E ≤ 2,5 tant qu'il n'est pas peuplé."""
+    nd = _num(s.get("net_debt_to_ebit"))
+    eq = _num(s.get("total_equity"))
+    neg_eq = (eq is not None and eq < 0) or ((_num(s.get("de_ratio")) or 0) < 0)
+    if nd is None:                                    # pas encore propagé → ancienne porte (transition)
+        de = _num(s.get("de_ratio"))
+        return not (neg_eq or (de is not None and de > DE_MAX))
+    if neg_eq:
+        return nd <= ND_EBIT_MAX_NEG_EQ
+    return nd <= ND_EBIT_MAX
 
 
 def _mirage_auto(s):
@@ -316,14 +358,16 @@ def _gate_miss(s):
 def _rank_key(s):
     """Départage LEXICOGRAPHIQUE, tout descriptif.
        v3 (figée) : durabilité (A>B) → stabilité du ROIC (symétrique) → FCF yield.
-       v4a / v4 (re-spec §11, 2026-09-14) : durabilité → persistance ≥12 % ↑ → échelle ≥20 % ↑ → FCF yield.
-       Le drawdown n'est plus un classement (tri sur du bruit) mais une PORTE (≤ 35 %) dans _passes_gates.
+       v4a / v4 (§12, 2026-09-14, GELÉE 12 MOIS) : durabilité A/B → persistance ↑ → durability_score ↑ →
+       quality_score ↑ → FCF yield ↑ (dernier). Le drawdown est une PORTE (35 % entrée / 40 % tenu), pas un rang.
        (v4a = ce départage + porte valo v3 par grade ; v4 = idem + porte valuation_ok v4b.)"""
     bucket = 1 if (s.get("durability_grade") == "A") else 0
     fcf = _num(s.get("fcf_yield")) or 0.0
     if ELITE_KEY in ("v4a", "v4"):
-        # spec §11 : durab → persistance ≥12 % → [porte drawdown ≤35 % déjà appliquée] → échelle ≥20 % → fcf
-        return (bucket, _persist(s), _persist_high(s), fcf)
+        # spec §12 R1 : durab A/B → persistance (12 % entrée / 10 % tenu) → SCORE de durabilité continu →
+        # quality score → FCF yield en dernier (> 25 % = manquant → 0). Le drawdown est une PORTE, pas un rang.
+        fcf_v = _fcf_valid(s) or 0.0
+        return (bucket, _persist(s), _num(s.get("durability_score")) or 0.0, _num(s.get("quality_score")) or 0.0, fcf_v)
     return (bucket, -_stability(s), fcf)   # v3 : bucket haut, instabilité basse, fcf haut
 
 
@@ -333,6 +377,13 @@ def build_elite_portfolio():
     # clé (ticker, région) : les tickers numériques asiatiques se collisionnent → jamais par ticker seul
     by_key = {(str(s.get("ticker")), s["_region"]): s for s in rows if s.get("ticker")}
 
+    # §12 R4 : les TENUS du run précédent sont jugés avec leurs seuils « tenu » (drawdown 40 %, persistance 10 %)
+    _HELD.clear()
+    if os.path.exists(PREV_FILE):
+        try:
+            _HELD.update(tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or []))
+        except Exception:
+            pass
     # 1) POOL ELITE (portes sectorielles)
     pool = [s for s in rows if s.get("industry") and _passes_gates(s, ("A", "B"))]
     pool.sort(key=_rank_key, reverse=True)           # meilleur départage d'abord — SANS funnel (doctrine)
@@ -393,7 +444,7 @@ def build_elite_portfolio():
     # 3) COMPLÈTE au top-40 depuis le pool trié (meilleur départage), sous tous les caps.
     for s in pool:
         k = (str(s.get("ticker")), s["_region"])
-        if k in chosen or not _can_add(s):
+        if k in chosen or k in drop_v4 or not _can_add(s):   # §12 : un sorti volontaire n'est pas ré-admis ce run
             continue
         if len(kept) >= MAX_HOLDINGS:
             break
@@ -574,7 +625,7 @@ def _inject_into_portfolios(pf):
                             "DE FILTRES (anti-piège durabilité + qualité + valo + ROIC + FCF + "
                             "investabilité), équipondérés, diversifiés par secteur GICS. Jugé sur les "
                             + ("fondamentaux, pas la notoriété. Porte : drawdown ROIC 6 ans ≤ 35 %. "
-                               "Départage : persistance ROIC ≥ 12 % puis ≥ 20 % sur 6 ans. " if ELITE_KEY in ("v4a", "v4")
+                               "Départage : persistance ROIC 6 ans, puis score de durabilité, qualité, FCF. " if ELITE_KEY in ("v4a", "v4")
                                else "fondamentaux, pas la notoriété. ")
                             + "Évolution douce (portes de sortie), pas de churn."),
             "_asset_details": details,

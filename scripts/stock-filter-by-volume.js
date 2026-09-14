@@ -424,6 +424,14 @@ function arrMaxDrawdown(arr) {
   return Math.round(maxDD * 10000) / 100;             // en %
 }
 
+// ✅ spec §12 R2 : net debt / EBIT = (dette totale − cash & placements CT) / résultat opérationnel (année N).
+// EBITDA indisponible (pas de D&A dans le flux) → EBIT, plus strict, seuils inchangés (figé, à ratifier).
+function netDebtToEbit(src) {
+  const debt = src.total_debt, cash = src.cash_and_st_investments ?? 0, ebit = src.operating_income;
+  if (!Number.isFinite(debt) || !Number.isFinite(ebit) || ebit <= 0) return null;
+  return Math.round(((debt - cash) / ebit) * 100) / 100;
+}
+
 // ✅ Dérive les champs elite 6 ans depuis les séries yearly_roic/yearly_roe (fraîches OU en cache).
 // Le cache fondamentaux stocke déjà yearly_roic → les anciennes entrées sont enrichies SANS refetch.
 function deriveElite6y(src) {
@@ -435,6 +443,10 @@ function deriveElite6y(src) {
     roe_persist_6y:   arrPersist(e6, 12),
     roic_persist20_6y: arrPersist(r6, 20),           // ✅ spec §11 (2026-09-14) : échelle de persistance ≥ 20 %
     roe_persist20_6y:  arrPersist(e6, 20),
+    roic_persist10_6y: arrPersist(r6, 10),           // ✅ spec §12 R4 : barre « tenu » 10 %
+    roe_persist10_6y:  arrPersist(e6, 10),
+    net_debt_to_ebit:  netDebtToEbit(src),           // ✅ spec §12 R2 : porte levier
+    total_equity:      src.total_equity ?? null,
     roic_downside_6y: rd != null ? Math.round(rd * 100) / 100 : null,
     roe_downside_6y:  ed != null ? Math.round(ed * 100) / 100 : null,
     roic_drawdown_6y: arrMaxDrawdown(r6),             // ✅ T2 : max drawdown ROIC
@@ -804,6 +816,8 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
   const roic_persist_6y  = arrPersist(roic6, 12);
   const roic_persist20_6y = arrPersist(roic6, 20);   // ✅ spec §11 : échelle ≥ 20 % (clé 4 v4a re-spécifiée)
   const roe_persist20_6y  = arrPersist(roe6, 20);
+  const roic_persist10_6y = arrPersist(roic6, 10);   // ✅ spec §12 R4 : barre « tenu »
+  const roe_persist10_6y  = arrPersist(roe6, 10);
   const roe_persist_6y   = arrPersist(roe6, 12);
   const roic_downside_6y = arrDownsideDev(roic6);
   const roe_downside_6y  = arrDownsideDev(roe6);
@@ -851,6 +865,9 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
     roic_persist_6y:  roic_persist_6y,
     roic_persist20_6y: roic_persist20_6y,
     roe_persist20_6y:  roe_persist20_6y,
+    roic_persist10_6y: roic_persist10_6y,
+    roe_persist10_6y:  roe_persist10_6y,
+    net_debt_to_ebit:  netDebtToEbit(latest),         // ✅ spec §12 R2
     roe_persist_6y:   roe_persist_6y,
     roic_downside_6y: roic_downside_6y != null ? Math.round(roic_downside_6y * 100) / 100 : null,
     roe_downside_6y:  roe_downside_6y != null ? Math.round(roe_downside_6y * 100) / 100 : null,
@@ -1049,11 +1066,15 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
         // Champs absents des vieilles entrées cache → dérivés de yearly_roic déjà stocké (aucun refetch).
         // ⚠️ Clé `roic_drawdown_6y` ABSENTE (≠ null) = entrée v5 figée entre T3 et T2 (2026-09-10 11:44→13:51,
         // ~1500 titres dont 19 tenus du socle) → SANS re-dérivation, equity_elite lit « absent » = 999 (pénalité max).
-        const _e6 = (cached.roic_persist_6y != null && cached.roic_drawdown_6y !== undefined && cached.roic_persist20_6y !== undefined && cached.years_roe_6y !== undefined) ? cached : deriveElite6y(cached);
+        const _e6 = (cached.roic_persist_6y != null && cached.roic_drawdown_6y !== undefined && cached.roic_persist20_6y !== undefined && cached.years_roe_6y !== undefined && cached.roic_persist10_6y !== undefined) ? cached : deriveElite6y(cached);
         stock.roic_persist_6y = _e6.roic_persist_6y ?? null;
         stock.roic_persist20_6y = _e6.roic_persist20_6y ?? null;
         stock.roe_persist20_6y = _e6.roe_persist20_6y ?? null;
         stock.years_roe_6y = _e6.years_roe_6y ?? null;
+        stock.roic_persist10_6y = _e6.roic_persist10_6y ?? null;
+        stock.roe_persist10_6y = _e6.roe_persist10_6y ?? null;
+        stock.net_debt_to_ebit = cached.net_debt_to_ebit ?? netDebtToEbit(cached);
+        stock.total_equity = cached.total_equity ?? null;
         stock.roe_persist_6y = _e6.roe_persist_6y ?? null;
         stock.roic_downside_6y = _e6.roic_downside_6y ?? null;
         stock.roe_downside_6y = _e6.roe_downside_6y ?? null;
@@ -1117,6 +1138,10 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       stock.roic_persist20_6y = fundamentals.roic_persist20_6y ?? null;
       stock.roe_persist20_6y = fundamentals.roe_persist20_6y ?? null;
       stock.years_roe_6y = fundamentals.years_roe_6y ?? null;
+      stock.roic_persist10_6y = fundamentals.roic_persist10_6y ?? null;
+      stock.roe_persist10_6y = fundamentals.roe_persist10_6y ?? null;
+      stock.net_debt_to_ebit = fundamentals.net_debt_to_ebit ?? null;
+      stock.total_equity = fundamentals.total_equity ?? null;
       stock.roe_persist_6y = fundamentals.roe_persist_6y ?? null;
       stock.roic_downside_6y = fundamentals.roic_downside_6y ?? null;
       stock.roe_downside_6y = fundamentals.roe_downside_6y ?? null;
@@ -1187,12 +1212,16 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
     stock.roic_avg_3y = cached?.roic_avg_3y ?? null;
     stock.roic_std_3y = cached?.roic_std_3y ?? null;
     // ✅ Spec elite ROIC 6 ans §3 : persistance + semi-déviation (dérivées de yearly_roic si absentes)
-    const _e6b = (cached && cached.roic_persist_6y != null && cached.roic_drawdown_6y !== undefined && cached.roic_persist20_6y !== undefined && cached.years_roe_6y !== undefined) ? cached
+    const _e6b = (cached && cached.roic_persist_6y != null && cached.roic_drawdown_6y !== undefined && cached.roic_persist20_6y !== undefined && cached.years_roe_6y !== undefined && cached.roic_persist10_6y !== undefined) ? cached
                  : (cached ? deriveElite6y(cached) : {});   // idem : re-dérive si drawdown ou persist20 manquent
     stock.roic_persist_6y = _e6b.roic_persist_6y ?? null;
     stock.roic_persist20_6y = _e6b.roic_persist20_6y ?? null;
     stock.roe_persist20_6y = _e6b.roe_persist20_6y ?? null;
     stock.years_roe_6y = _e6b.years_roe_6y ?? null;
+    stock.roic_persist10_6y = _e6b.roic_persist10_6y ?? null;
+    stock.roe_persist10_6y = _e6b.roe_persist10_6y ?? null;
+    stock.net_debt_to_ebit = cached ? (cached.net_debt_to_ebit ?? netDebtToEbit(cached)) : null;
+    stock.total_equity = cached?.total_equity ?? null;
     stock.roe_persist_6y = _e6b.roe_persist_6y ?? null;
     stock.roic_downside_6y = _e6b.roic_downside_6y ?? null;
     stock.roe_downside_6y = _e6b.roe_downside_6y ?? null;
@@ -1241,12 +1270,12 @@ const HEADER = [
   'roe','de_ratio','roic',
   'roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y',
   // ✅ Spec elite ROIC 6 ans §3 : persistance (nb exercices ≥12%) + semi-déviation sous médiane
-  'roic_persist_6y','roe_persist_6y','roic_persist20_6y','roe_persist20_6y','roic_downside_6y','roe_downside_6y','roic_drawdown_6y','roe_drawdown_6y','years_roic_6y','years_roe_6y',
+  'roic_persist_6y','roe_persist_6y','roic_persist20_6y','roe_persist20_6y','roic_downside_6y','roe_downside_6y','roic_drawdown_6y','roe_drawdown_6y','years_roic_6y','years_roe_6y','roic_persist10_6y','roe_persist10_6y','net_debt_to_ebit','total_equity',
   'net_margin','revenue_growth_3y','assets_to_equity'
 ];
 const REJ_HEADER = ['Ticker','Stock','Secteur','Pays','Bourse de valeurs','Devise de marché','Volume','Seuil','MIC','Symbole','Source','Raison'];
 
-const FLOAT_COLS = new Set(['roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','roic_downside_6y','roe_downside_6y','roic_drawdown_6y','roe_drawdown_6y','net_margin','revenue_growth_3y','assets_to_equity']);
+const FLOAT_COLS = new Set(['net_debt_to_ebit','total_equity','roe','de_ratio','roic','roe_avg_3y','roe_std_3y','roic_avg_3y','roic_std_3y','roic_downside_6y','roe_downside_6y','roic_drawdown_6y','roe_drawdown_6y','net_margin','revenue_growth_3y','assets_to_equity']);
 
 const csvLine = obj => HEADER.map(h => {
   const val = obj[h];

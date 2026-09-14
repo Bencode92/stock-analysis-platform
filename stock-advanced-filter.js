@@ -852,6 +852,10 @@ async function loadStockCSV(filepath) {
             roic_persist20_6y: parseNumberLoose(row['roic_persist20_6y']) ?? null,   // ✅ spec §11 : échelle ≥ 20 %
             roe_persist20_6y: parseNumberLoose(row['roe_persist20_6y']) ?? null,
             years_roe_6y: parseNumberLoose(row['years_roe_6y']) ?? null,
+            roic_persist10_6y: parseNumberLoose(row['roic_persist10_6y']) ?? null,   // ✅ spec §12 R4
+            roe_persist10_6y: parseNumberLoose(row['roe_persist10_6y']) ?? null,
+            net_debt_to_ebit: parseNumberLoose(row['net_debt_to_ebit']) ?? null,     // ✅ spec §12 R2
+            total_equity: parseNumberLoose(row['total_equity']) ?? null,
             roic_downside_6y: parseNumberLoose(row['roic_downside_6y']) ?? null,
             roe_downside_6y: parseNumberLoose(row['roe_downside_6y']) ?? null,
             roic_drawdown_6y: parseNumberLoose(row['roic_drawdown_6y']) ?? null,
@@ -2227,6 +2231,10 @@ async function enrichStock(stock) {
     roic_persist20_6y: stock.roic_persist20_6y ?? null,
     roe_persist20_6y: stock.roe_persist20_6y ?? null,
     years_roe_6y: stock.years_roe_6y ?? null,
+    roic_persist10_6y: stock.roic_persist10_6y ?? null,
+    roe_persist10_6y: stock.roe_persist10_6y ?? null,
+    net_debt_to_ebit: stock.net_debt_to_ebit ?? null,
+    total_equity: stock.total_equity ?? null,
     roic_downside_6y: stock.roic_downside_6y ?? null,
     roe_downside_6y: stock.roe_downside_6y ?? null,
     roic_drawdown_6y: stock.roic_drawdown_6y ?? null,
@@ -2576,6 +2584,7 @@ async function reconcileEntities(byRegion) {
         // ✅ Spec elite ROIC 6 ans §3 : persistance/dispersion = fondamentaux entité-niveau, à propager
         'roic_persist_6y', 'roe_persist_6y', 'roic_persist20_6y', 'roe_persist20_6y', 'roic_downside_6y', 'roe_downside_6y',
         'roic_drawdown_6y', 'roe_drawdown_6y', 'years_roic_6y', 'years_roe_6y',
+        'roic_persist10_6y', 'roe_persist10_6y', 'net_debt_to_ebit', 'total_equity',
         'revenue_growth_3y', 'de_ratio', 'fcf_yield', 'eps_growth_5y', 'buffett_score', 'buffett_grade',
         'buffett_criteria', 'quality_profile'];
     const written = new Set(Object.keys(byRegion).filter(r => byRegion[r] && byRegion[r].length));

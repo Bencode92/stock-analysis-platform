@@ -281,3 +281,67 @@ selon la nouvelle clé ; ≤ 10) → vagues trimestrielles journalisées avec la
 
 **Données à corriger avant le run** : Lilly (volume/PE absents du flux → ADV null) ; Novo Nordisk (Twelve Data ne sert
 pas `NOVO.B` XCSE sur le plan ; `NOVC` Xetra illiquide ; ADR `NVO` absent du seed US → décision d'univers à prendre).
+
+## 12. DERNIÈRE RETOUCHE v4a (revue expert 2026-09-14, R1–R4) — FIGÉE, PUIS GEL 12 MOIS
+
+**Constat du DRY §11** : la porte drawdown fait le travail (Expeditors, T. Rowe, OLED sortent, rien d'autre) mais
+l'échelle ≥ 20 % ne casse pas les égalités en tête : 39 titres à (6/6, 6/6) → le FCF yield seul les classe → PROG
+(FCF 103,8 % artefact), Bath & Body Works (fonds propres négatifs), BellRing en tête **par le prix**. Correction unique.
+
+**R1 — Clé de départage (ordre lexicographique)** :
+1. Durabilité A > B
+2. Persistance : nb d'exercices /6 à ROIC (ROE fin.) ≥ 12 % à l'entrée — **≥ 10 % pour un tenu** (R4)
+3. **Score de durabilité continu (0-100)** — « ce que l'entreprise EST », descriptif, non-prix
+4. **Quality score (0-100)** — relais si la durabilité sature (39 titres US à 100, médiane 62)
+5. FCF yield — parle en dernier : la valo départage à qualité vraiment égale, elle ne classe pas
+L'échelle ≥ 20 % (§11 clé 4) est **retirée de la clé** (champ conservé, informatif). Pas de 3ᵉ barre à 30 %.
+
+**R2 — Portes de données** :
+- **FCF yield en PORTE** : ≥ 1 % à l'entrée. **FCF yield > 25 % = manquant** (artefact) → échoue la porte tant que la donnée
+  n'est pas corrigée (PROG 103,8 %).
+- **Porte levier** : `net debt / EBIT ≤ 3` remplace D/E ≤ 2,5. **Fonds propres négatifs → échec sauf net debt / EBIT ≤ 1,5**
+  (rachats financés par du cash, pas par de la dette). *Proxy figé* : EBITDA indisponible (pas de D&A dans le flux) →
+  EBIT au dénominateur, plus strict que l'EBITDA, seuils inchangés — à ratifier. Net debt = total_debt − cash & ST inv.
+  Financières : porte non appliquée (levier structurel, jugées au ROE).
+
+**R3 — Coca-Cola** : sort par vague sous §11 (5/6 à 12 %, 2020 = 11,45 %) ; la bande de grâce R4 le compte 6/6 **comme tenu**.
+
+**R4 — Bande de grâce GÉNÉRALISÉE** (entrée stricte / sortie tolérante, comme ADV 5/3 M$ et ROIC 12/8) :
+| Porte | Entrée | Tenu |
+|---|---|---|
+| Drawdown ROIC 6 ans | ≤ 35 % | ≤ 40 % |
+| Persistance (barre de comptage) | ≥ 12 % | ≥ 10 % |
+| ADV | ≥ 5 M$ | ≥ 3 M$ (existant) |
+| ROIC 3 ans (sortie) | ≥ 12 % | ≥ 8 % (existant) |
+Un tenu est classé dans le pool avec ses seuils « tenu » ; un entrant à 38 % ou 11,45 % ne rentre toujours pas.
+Un tenu sorti volontairement (hors top-100) ne peut pas être ré-admis dans le même run.
+
+**Garde-fous sur le DRY** : Marsh refetch (2 exercices) avant jugement ; Modivo (young_listing, ADV en $) ; Primerica
+(financière au ROE → cap 6 avec IBKR). **Attendu** : Mastercard, Hermès, Medpace, Visa reviennent en tête ;
+PROG / Bath & Body Works / BellRing disparaissent. Si ce n'est pas ce qui sort : on remonte, on ne règle pas.
+
+**RÈGLE D'ARRÊT (figée)** : deuxième et dernière re-spécification. **Après ce DRY, la clé v4a est gelée douze mois**,
+quel que soit le résultat : si elle passe → run ; sinon → on reste en v3 jusqu'au prochain cycle, journal du pourquoi.
+Une clé qui demande une troisième retouche pour produire ce qu'on attend n'est pas une clé, c'est un ajustement au
+résultat.
+
+### 12bis. Lectures prises à l'implémentation (à ratifier, pas des retouches de clé)
+- **FCF yield, bande tenu** : R4 dit « chaque porte » sans chiffrer le FCF → tenu = ancienne porte (> 0), entrant ≥ 1 % —
+  même construction que ROIC 12/8 et ADV 5/3. Sans elle, Alphabet (FCF 0,55 %) sortait par vague.
+- **Levier** : pas de bande (porte de sécurité bilan), identique tenu/entrant.
+- **Marsh & McLennan** : changement de ticker MMC → MRSH (2025) → Twelve Data ne renvoie que 2 exercices sous MRSH.
+  Structurel, pas transitoire. Option : rattacher l'historique MMC (alias) — décision d'univers.
+
+### Résultat du DRY §12 (2026-09-14, périmètre US+Europe, cache corrigé) — pour verdict expert
+- PROG / Bath & Body Works / BellRing (et Wingstop) **hors pool** ✓ (FCF artefact ; fonds propres négatifs + ND/EBIT > 1,5).
+- **Visa rang 13 → entre** ✓ ; Mastercard rang 16 → bloqué par la paire ✓ (hystérésis).
+- **Hermès rang 71, Medpace rang 80 ✗** — durabilité 85 / 83 : la tête du pool est aux scores 98-100 (NMI Holdings,
+  United Therapeutics, Alphabet, Federated Hermes, Primerica, SEI, Games Workshop, Applied Industrial, Donaldson,
+  Viscofan, Kinsale). 5 financières dans les 11 premiers.
+- Coca-Cola tenu 6/6 (barre 10 %), rang 25 ✓ ; Howden (38,7 %) rang 17, Vontier (38,3 %) tenus ✓ (bande 40 %).
+- Entrants du run : Visa, Publicis, Games Workshop, Applied Industrial, Viscofan, Gentex, Genpact, Gilead,
+  Coca-Cola HBC, NMI Holdings. Federated Hermes / Primerica / SEI / Kinsale bloqués par le cap financières (6, tenus
+  différés compris) ; Donaldson par le cap secteur Industrie.
+- 12 tenus hors top-100 ou porte cassée → vagues : Marsh (2 exercices), Hannover Rück, Chipotle, Atmus, Veralto,
+  Ross, MGIC (rang 101), Expeditors / T. Rowe / RLI / OLED (drawdown > 40 %), PROG (FCF artefact).
+**Verdict expert attendu** : passe → run unique ; ne passe pas → v3 douze mois, journal. Aucune retouche possible.
