@@ -229,3 +229,55 @@ accepter, ne pas neutraliser.** Aucun paramètre ajouté à la clé (drawdown 6 
 RÉSILIENCE, et l'assume. Conséquence acceptée : sous-pondération mécanique du conso discrétionnaire jusqu'à ce
 que l'exercice 2020 quitte la fenêtre 6 ans (~2029). Choix figé, non re-débattu — cohérent avec la doctrine
 "juger l'entreprise pour ce qu'elle EST", 2020 étant un vrai test de solidité, pas un artefact. »
+
+## 11. RE-SPÉCIFICATION v4a (revue expert 2026-09-14) — FIGÉE AVANT LE DRY
+
+**Constat** (DRY US+Europe sur données corrigées, 14/09) : ~200 éligibles sont à 6/6 de persistance → le drawdown seul
+les classe **au dixième de point** (IBKR 0,9 vs Meitec 1,2). Un écart 3 % vs 4 % de drawdown n'est pas une différence
+justifiable a priori : c'est un tri sur du bruit, qui ferait tourner la moitié du socle en trois trimestres (19 tenus
+hors top-60). **La doctrine dit portes, pas classements. Le drawdown doit être une porte.**
+
+**Clé v4a re-spécifiée** — ordre lexicographique, tout descriptif, une seule re-spec (pas de troisième clé) :
+
+1. **Durabilité** A > B (inchangé)
+2. **Persistance ≥ 12 %** : n/6 (inchangé ; historique court < 4 ans → demi-poids)
+3. **PORTE drawdown ROIC ≤ 35 %** (pass/fail, à l'ENTRÉE) — au-delà, c'est une vraie chute, pas une normalisation.
+   Un tenu qui la casse n'est plus dans le pool → sort **par vagues** (hors top-N), pas en sortie forcée.
+4. **Échelle de persistance** : nombre d'exercices sur 6 avec ROIC ≥ **20 %** — départage « à quelle hauteur
+   au-dessus de la barre », **sans classer par niveau de ROIC** (ce qui ramènerait l'asset-light). Même demi-poids si
+   historique court. Financières : ROE, mêmes seuils.
+5. **FCF yield** ↑ (inchangé, dernier)
+
+Pourquoi pas « porte drawdown puis FCF directement » : avec 200 égalités, le FCF yield deviendrait le classement
+effectif → le socle glisserait vers « la qualité la moins chère », biais value par la porte de derrière, sans dossier
+facteur. L'échelle 20 % absorbe l'essentiel des égalités avant que le prix ne parle.
+
+**Hystérésis** : top-60 sur un pool de ~395 est trop serré pour un book de 40 (15 % du pool). **TRANSITION_TOP_N = 100**
+(2,5× le book). L'évolution douce est une règle, pas un vœu.
+
+**Effet attendu sur les 19 tenus hors top-60 (à VÉRIFIER dans le DRY — si ce n'est pas ce qui sort, on remonte)** :
+- **cassent la porte drawdown → sortent par vagues, légitimement** : Expeditors (50 %), VAT (45 %), T. Rowe (49 %),
+  RLI (52 %), Universal Display (54 %), Thinking Electronic (43 %, déjà hors périmètre)
+- **ne sont plus hors classement pour un dixième de point** : Coca-Cola (0 %), Chipotle (3 %), Veralto (1 %), Marsh (4 %)
+
+**Règle d'exclusion (Q3, transforme le ban OppFi en méthode)** : la durabilité aurait dû le voir (PE 2,5 + vol 3 ans
+68 % + subprime = mirage par définition).
+- **Industries exclues du socle** : crédit conso subprime / prêteurs sur gages (pas d'industrie dédiée dans la
+  nomenclature → traité par le flag ci-dessous + journal), jeux d'argent (`Gambling`, `Resorts & Casinos`).
+- **Flag mirage automatique** : PE < 5 **et** vol 3 ans > 50 % → échec de porte (journalisé « mirage_auto »).
+- Ban manuel OppFi journalisé (`BANNED`), motif « profil hors mandat compounder ».
+
+**Paires max-1 (Q4)** : pas de bascule automatique. Le second (Visa) reste « prochain » et n'entre que si le premier
+(Mastercard) casse une porte de sortie — c'est l'hystérésis. Règle valable pour toute paire.
+
+**Europe (Q1)** : 34/6 accepté, structurel (ADV 3 M$ = +12 éligibles seulement). Pas de plancher régional. Réserves
+journalisées : (i) 69 % d'Européens sous ROIC 12 % dépend en partie de la définition du capital investi (figée, assumé) ;
+(ii) la file d'attente est déjà européenne (L'Oréal 16, Hermès 52, ASML 56, Ferrari, Publicis) → le 6 remontera seul.
+
+**Séquence (Q5)** : re-spec → DRY → vérification des 19 → **run unique** (9 Asie + Hannover sortent, forcés ; 10 entrants
+selon la nouvelle clé ; ≤ 10) → vagues trimestrielles journalisées avec la porte cassée nommée.
+
+**Pilier 3** : priorité au socle. ASML (rang 56) est un cas limite : s'il entre au socle, il quitte le pilier 3.
+
+**Données à corriger avant le run** : Lilly (volume/PE absents du flux → ADV null) ; Novo Nordisk (Twelve Data ne sert
+pas `NOVO.B` XCSE sur le plan ; `NOVC` Xetra illiquide ; ADR `NVO` absent du seed US → décision d'univers à prendre).

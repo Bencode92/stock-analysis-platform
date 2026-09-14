@@ -39,12 +39,19 @@ PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 ELITE_KEY = os.environ.get("ELITE_KEY", "v3").lower()
 PERSIST_THRESHOLD = 12.0   # spec §3 clé 2 : ROIC (ou ROE fin.) ≥ 12 % compte comme exercice « tenu »
 PERSIST_MIN_YEARS = 4      # < 4 exercices dispo → « historique court » → persistance à demi-poids (spec §2)
-TRANSITION_TOP_N = 60      # spec §5 : un tenu ne sort que hors top-60 (zone tampon d'hystérésis)
+TRANSITION_TOP_N = 100     # spec §11 (revue expert 2026-09-14) : top-100 = 2,5× le book (top-60 = 15 % du pool, trop serré)
+# ═══ RE-SPEC v4a (spec §11, figée 2026-09-14) ═══
+DRAWDOWN_MAX = 35.0        # PORTE (pass/fail, entrée) : max drawdown du ROIC 6 ans ≤ 35 % — au-delà = vraie chute
+PERSIST_HIGH = 20.0        # ÉCHELLE de persistance : nb d'exercices /6 à ROIC (ROE fin.) ≥ 20 % — départage « hauteur »
+MIRAGE_PE_MAX, MIRAGE_VOL_MIN = 5.0, 50.0   # flag mirage AUTO : PE < 5 ET vol 3 ans > 50 % (OppFi : PE 2,5 / vol 68)
+BANNED_INDUSTRY_RE = re.compile(r"gambling|resorts & casinos", re.I)   # jeux d'argent : hors mandat compounder
 TRANSITION_MAX_CHANGES = 10  # spec §5 : ≤ 10 changements par run ; le surplus par vagues trimestrielles
 
 # BANNIS manuels (journal) — une porte connue comme violée mais non appliquée est pire qu'absente (expert).
 BANNED = {
     "JBS": "Cotée NY juin 2025 → pas de vrai historique 3Y (young_listing raté) ; entité US/Brésil incohérente (groupe Batista).",
+    "OPFI": "Prêteur subprime (PE 2,5 · vol 3 ans 68 %) : profil hors mandat compounder — revue expert 2026-09-14 (spec §11). "
+            "Couvert aussi par le flag mirage auto ; ban journalisé pour trace.",
 }
 # PAIRES CORRÉLÉES > 0,70 (hebdo) → max 1 par paire. On garde le meilleur départage, on saute l'autre.
 # ROST/TJX = 0,74 hebdo (confirmé) → même business, même cycle. Décision APPLIQUÉE (pas 'à appliquer').
@@ -155,8 +162,12 @@ def _passes_gates(s, grades):
         return False
     if s.get("durability_mirage") is True:
         return False
+    if _mirage_auto(s) or BANNED_INDUSTRY_RE.search(s.get("industry") or ""):   # spec §11 (règle OppFi)
+        return False
     if (s.get("quality_grade") or "") not in ("A", "B"):
         return False
+    if ELITE_KEY in ("v4a", "v4") and _drawdown(s) > DRAWDOWN_MAX:   # spec §11 : PORTE drawdown (entrée)
+        return False                                                  # absent (999) → échoue aussi
     if ELITE_KEY == "v4":
         vok = _valuation_ok(s)                       # spec §3bis : porte valo au CRITÈRE, pas au grade
         if vok is False:                             # PE trop cher → sort (ASML/Lam PE ~55)
@@ -215,7 +226,13 @@ def _stability(s):
 
 
 def _years6(s):
-    """Nombre d'exercices ROIC disponibles (spec §2 : < 4 → historique court → demi-poids)."""
+    """Nombre d'exercices disponibles (spec §2 : < 4 → historique court → demi-poids).
+       Financières : exercices ROE (le ROIC n'est pas leur métrique — MGIC/RLI avaient 2 ans de ROIC et 6 de ROE,
+       et se faisaient couper en deux à tort). Repli sur years_roic_6y si le champ ROE n'est pas encore propagé."""
+    if _is_fin(s):
+        y = _num(s.get("years_roe_6y"))
+        if y is not None:
+            return y
     return _num(s.get("years_roic_6y"))
 
 
@@ -237,6 +254,26 @@ def _downside(s):
     key = "roe_downside_6y" if _is_fin(s) else "roic_downside_6y"
     d = _num(s.get(key))
     return d if d is not None else 9.99
+
+
+def _mirage_auto(s):
+    """Spec §11 — flag mirage AUTOMATIQUE : PE < 5 ET vol 3 ans > 50 % (un multiple de 2,5× sur un titre qui bouge
+       de 68 %/an n'est pas une aubaine, c'est le marché qui dit que le bénéfice ne tient pas)."""
+    pe, vol = _num(s.get("pe_ratio")), _num(s.get("volatility_3y"))
+    return pe is not None and vol is not None and 0 < pe < MIRAGE_PE_MAX and vol > MIRAGE_VOL_MIN
+
+
+def _persist_high(s):
+    """Spec §11 clé 4 — ÉCHELLE de persistance : nb d'exercices /6 à ROIC (ROE fin.) ≥ 20 %. Plus HAUT = mieux.
+       Départage « à quelle hauteur au-dessus de la barre », sans classer par niveau de ROIC. Demi-poids si < 4 ans."""
+    key = "roe_persist20_6y" if _is_fin(s) else "roic_persist20_6y"
+    p = _num(s.get(key))
+    if p is None:
+        return -1.0                                   # champ absent (pipeline pas encore repeuplé) → dernier
+    yrs = _years6(s)
+    if yrs is not None and yrs < PERSIST_MIN_YEARS:
+        return p / 2.0
+    return p
 
 
 def _drawdown(s):
@@ -279,12 +316,14 @@ def _gate_miss(s):
 def _rank_key(s):
     """Départage LEXICOGRAPHIQUE, tout descriptif.
        v3 (figée) : durabilité (A>B) → stabilité du ROIC (symétrique) → FCF yield.
-       v4a / v4 : durabilité → persistance ↑ → MAX DRAWDOWN du ROIC ↓ (T2) → FCF yield.
+       v4a / v4 (re-spec §11, 2026-09-14) : durabilité → persistance ≥12 % ↑ → échelle ≥20 % ↑ → FCF yield.
+       Le drawdown n'est plus un classement (tri sur du bruit) mais une PORTE (≤ 35 %) dans _passes_gates.
        (v4a = ce départage + porte valo v3 par grade ; v4 = idem + porte valuation_ok v4b.)"""
     bucket = 1 if (s.get("durability_grade") == "A") else 0
     fcf = _num(s.get("fcf_yield")) or 0.0
     if ELITE_KEY in ("v4a", "v4"):
-        return (bucket, _persist(s), -_drawdown(s), fcf)  # tri desc : durab, persistance, faible chute, fcf
+        # spec §11 : durab → persistance ≥12 % → [porte drawdown ≤35 % déjà appliquée] → échelle ≥20 % → fcf
+        return (bucket, _persist(s), _persist_high(s), fcf)
     return (bucket, -_stability(s), fcf)   # v3 : bucket haut, instabilité basse, fcf haut
 
 
@@ -534,8 +573,8 @@ def _inject_into_portfolios(pf):
             "Commentaire": (f"Socle actions elite ({ELITE_KEY}) — 40 compounders sélectionnés par EMPILEMENT "
                             "DE FILTRES (anti-piège durabilité + qualité + valo + ROIC + FCF + "
                             "investabilité), équipondérés, diversifiés par secteur GICS. Jugé sur les "
-                            + ("fondamentaux, pas la notoriété. Départage : persistance ROIC 6 ans + "
-                               "max drawdown du ROIC (T2). " if ELITE_KEY in ("v4a", "v4")
+                            + ("fondamentaux, pas la notoriété. Porte : drawdown ROIC 6 ans ≤ 35 %. "
+                               "Départage : persistance ROIC ≥ 12 % puis ≥ 20 % sur 6 ans. " if ELITE_KEY in ("v4a", "v4")
                                else "fondamentaux, pas la notoriété. ")
                             + "Évolution douce (portes de sortie), pas de churn."),
             "_asset_details": details,
