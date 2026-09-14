@@ -1000,29 +1000,15 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
   const cache = await loadFundamentalsCache();
   const now = Date.now();
 
-  // ✅ v2.13: Migration anciennes clés "TICKER" → "TICKER:pays"
-  // Copie les entrées non-ambiguës vers les nouvelles clés.
-  // Les tickers collisionnés (SAN, ADM, NEM, ADP) sont exclus → re-fetch forcé.
-  const COLLISION_TICKERS = new Set(['SAN', 'ADM', 'NEM', 'ADP']);
-  let migrated = 0, skippedCollisions = 0;
-  for (const stock of stocks) {
-    const ticker = stock['Ticker'];
-    const newKey = buildCacheKey(ticker, stock['Pays'] || '');
-    if (newKey === ticker) continue; // pas de pays → même clé
-    if (cache.data[newKey]) continue; // déjà migré
-    if (!cache.data[ticker]) continue; // rien à migrer
-    if (COLLISION_TICKERS.has(ticker)) {
-      // Clé ambiguë — on ne sait pas à quel pays correspondent les données
-      skippedCollisions++;
-      continue;
-    }
-    // Copier l'ancienne entrée vers la nouvelle clé
-    cache.data[newKey] = cache.data[ticker];
-    migrated++;
+  // ⛔ 2026-09-14 : la migration v2.13 « clé nue TICKER → TICKER:pays » est SUPPRIMÉE. Les clés nues datent
+  // d'avant le contexte pays : elles ont été fetchées en symbole nu, donc résolues sur la cotation US quand
+  // un homonyme existe (COST = Costco). Les recopier vers COST:royaume-uni = réinjecter la collision.
+  // Toute clé nue restante est ignorée et purgée à la sauvegarde.
+  let legacyDropped = 0;
+  for (const k of Object.keys(cache.data)) {
+    if (!k.includes(':')) { delete cache.data[k]; legacyDropped++; }
   }
-  if (migrated || skippedCollisions) {
-    console.log(`🔄 Migration cache: ${migrated} clés migrées, ${skippedCollisions} collisions forcées au re-fetch`);
-  }
+  if (legacyDropped) console.log(`🧹 ${legacyDropped} clés héritées sans pays supprimées du cache (données résolues US, non fiables)`);
 
   const needsUpdate = [];
   const fromCache = [];
