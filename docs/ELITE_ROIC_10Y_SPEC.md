@@ -375,3 +375,19 @@ le travail.
   ne jamais citer ces 12,5 % comme performance du socle.
 
 Après ce run, le socle est fermé : clé, portes, caps, poids. Reste l'agrégation.
+
+## 14. JOURNAL DU RUN UNIQUE — 2026-09-15 07:20 UTC (clé v4a §12, poids §13, périmètre US+Europe)
+- **Sorties (10)** : 9 cotations asiatiques (porte 0 « place accessible » : Topco, Anjoy, IGS, Keyence, OBIC, Toyo Tire,
+  SGX, Thinking, Shanghai Conant) + VAT Group (drawdown 45 % > 40 % tenu).
+- **Entrées (10)** : Visa, Publicis, Games Workshop, Applied Industrial, Gentex, Gilead, Coca-Cola HBC, Federated Hermes,
+  Reply, ResMed.
+- **Différées (11, vague 2026-12)** : Expeditors, Universal Display, PROG (FCF artefact), RLI, T. Rowe (drawdown > 40 %) ;
+  Hannover Rück, Chipotle, Atmus, Veralto, Ross, MGIC (hors top-100).
+- **Écarts aperçu (14/09 soir) → run** : Viscofan ADV 4,0 M$ le 15/09 (5,2 la veille) → porte liquidité ; Reply rang 14
+  (absent de l'aperçu hydraté) → prend la 2ᵉ place IT Services avec Accenture → Genpact bloqué (cap 2/industrie) ;
+  ResMed 10ᵉ sous les caps (prédit par l'expert). **VUSD** (Visa Londres) entrait en doublon de Visa NYSE → **porte 0 bis
+  « une entité = une ligne, cotation la plus liquide »** ajoutée avant le run (129 cotations secondaires écartées).
+- Poids §13 : 40 lignes, 1,5 – 4,0 %, total 100 ; Industrie 16 / Financials 16 / Conso disc. 15 / Santé 14 / Conso base
+  13,5 / Tech 13,5 / Communication 8 / Matériaux 4. Financières au ROE : 6/6 du cap (Visa au ROIC).
+- Cadence : wave_date = 2026-09-15 ; le run CI quotidien reproduit la liste jusqu'au 2026-12-14.
+- **GEL** : clé, portes, bandes, caps, poids → 2027-09-14.

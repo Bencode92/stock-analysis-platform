@@ -40,7 +40,7 @@ PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 # ═══ CLÉ DE DÉPARTAGE : v3 (figée, symétrique provisoire) vs v4 (spec ROIC 6 ans, docs/ELITE_ROIC_10Y_SPEC.md) ═══
 # v4 ne s'active QUE sur ELITE_KEY=v4 → le run CI par défaut reste v3 tant que Benoit n'a pas validé le
 # before/after. Doctrine : la clé est FIGÉE avant de voir la sortie ; le basculement est un run DÉLIBÉRÉ.
-ELITE_KEY = os.environ.get("ELITE_KEY", "v3").lower()   # ⏳ bascule du défaut → v4a dans le commit du run unique (verdict expert « passe », 2026-09-14)
+ELITE_KEY = os.environ.get("ELITE_KEY", "v4a").lower()  # ✅ 2026-09-15 : v4a §12-§13 = défaut (run unique exécuté), GELÉE jusqu'au 2027-09-14
 # ═══ PORTE 0 « place accessible » (revue expert Q7) : le socle réel = US + Europe ; l'Asie n'est pas achetable ═══
 ELITE_REGIONS = set(r.strip() for r in os.environ.get("ELITE_REGIONS", "US,Europe").split(","))
 # ═══ VAGUES TRIMESTRIELLES : entre deux vagues, le run CI quotidien REPRODUIT la liste (0 changement) ═══
@@ -414,6 +414,34 @@ def _weights_sector_invvol(final):
     return {t: x / tot * 100 for t, x in w.items()}
 
 
+_NAME_NOISE = re.compile(r"[^A-Z0-9]+")
+def _entity_key(s):
+    """Nom normalisé = identité d'entité (VISA INC. CLASS A = VISA INC. CLASS A, cotée NYSE ou LSE)."""
+    return _NAME_NOISE.sub("", (s.get("name") or "").upper())
+
+
+def _dedupe_entities(rows):
+    """PORTE 0 bis (2026-09-15) — UNE ENTITÉ = UNE LIGNE : une société cotée sur plusieurs places (Visa NYSE + VUSD
+       Londres, Nike Xetra, Ferrovial Amsterdam/NASDAQ…) ne peut pas entrer deux fois au socle. On garde la cotation la
+       plus liquide (ADV) ; un TENU garde sa cotation. Les scores par cotation divergent (durabilité 98 vs 95 pour
+       Visa) : seule la cotation retenue est jugée."""
+    groups = defaultdict(list)
+    for s in rows:
+        k = _entity_key(s)
+        if k:
+            groups[k].append(s)
+    keep, dropped = [], 0
+    for k, lst in groups.items():
+        if len(lst) == 1:
+            keep.append(lst[0]); continue
+        held = [s for s in lst if (str(s.get("ticker")), s["_region"]) in _HELD]
+        best = held[0] if held else max(lst, key=lambda s: _adv_usd(s) or 0)
+        keep.append(best); dropped += len(lst) - 1
+    if dropped:
+        print(f"🧬 {dropped} cotation(s) secondaire(s) écartée(s) (une entité = une ligne, cotation la plus liquide)")
+    return keep
+
+
 def build_elite_portfolio():
     rows = _load_stocks()
     funnel = _funnel_tickers()
@@ -427,6 +455,8 @@ def build_elite_portfolio():
             _HELD.update(tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or []))
         except Exception:
             pass
+    rows = _dedupe_entities(rows)                    # porte 0 bis : une entité = une ligne
+    by_key = {(str(s.get("ticker")), s["_region"]): s for s in rows if s.get("ticker")}
     # 1) POOL ELITE (portes sectorielles)
     pool = [s for s in rows if s.get("industry") and _passes_gates(s, ("A", "B"))]
     pool.sort(key=_rank_key, reverse=True)           # meilleur départage d'abord — SANS funnel (doctrine)
