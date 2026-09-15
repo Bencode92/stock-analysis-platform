@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-09-15-11-37-56",
-    "git_sha": "a4de55817",
-    "git_sha_full": "a4de55817e487968a591792b257fcfca19e39653",
+    "run_id": "2026-09-15-11-48-05",
+    "git_sha": "6e673fdcc",
+    "git_sha_full": "6e673fdcc71ca4fa2b96a669ac71dccec394db22",
     "config_hash": "5b753993",
     "universe_asof": "2026-09-15",
-    "timestamp_utc": "2026-09-15T11:37:56.912415+00:00",
+    "timestamp_utc": "2026-09-15T11:48:05.071052+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 308.09
+    "total_duration_sec": 415.06
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -151,8 +151,8 @@
     },
     "5_selection_bond_Agressif": {
       "name": "selection_bond",
-      "before": 14,
-      "after": 14,
+      "before": 9,
+      "after": 9,
       "rejected": 0,
       "category": "bond",
       "profile": "Agressif",
@@ -163,39 +163,34 @@
         },
         {
           "ticker": "GOVZ",
-          "score": 74.9
-        },
-        {
-          "ticker": "EBND",
-          "score": 68.42
-        },
-        {
-          "ticker": "JAAA",
-          "score": 64.78
+          "score": 74.26
         },
         {
           "ticker": "HIGH",
-          "score": 58.3
-        },
-        {
-          "ticker": "ICLO",
-          "score": 55.87
-        },
-        {
-          "ticker": "CLOX",
-          "score": 53.44
+          "score": 63.13
         },
         {
           "ticker": "IBCA",
-          "score": 29.96
-        },
-        {
-          "ticker": "CEMB",
-          "score": 16.6
+          "score": 45.22
         },
         {
           "ticker": "CORP",
-          "score": 13.36
+          "score": 43.3
+        },
+        {
+          "ticker": "EAGG",
+          "score": 21.91
+        },
+        {
+          "ticker": "LGOV",
+          "score": 14.26
+        },
+        {
+          "ticker": "IBTL",
+          "score": 12.0
+        },
+        {
+          "ticker": "GOVI"
         }
       ]
     },
@@ -309,50 +304,38 @@
     },
     "5_selection_bond_Modéré": {
       "name": "selection_bond",
-      "before": 10,
-      "after": 10,
+      "before": 7,
+      "after": 7,
       "rejected": 0,
       "category": "bond",
       "profile": "Modéré",
       "top_k": [
         {
-          "ticker": "JAAA",
-          "score": 79.29
-        },
-        {
           "ticker": "GOVZ",
-          "score": 74.82
+          "score": 80.23
         },
         {
-          "ticker": "CLOX",
-          "score": 61.79
-        },
-        {
-          "ticker": "EBND",
-          "score": 55.11
+          "ticker": "HIGH",
+          "score": 77.19
         },
         {
           "ticker": "LGOV",
-          "score": 55.04
+          "score": 64.64
         },
         {
           "ticker": "IBTL",
-          "score": 21.45
+          "score": 23.19
         },
         {
           "ticker": "CORP",
-          "score": 18.12
+          "score": 20.15
         },
         {
           "ticker": "EAGG",
-          "score": 15.98
+          "score": 0.76
         },
         {
-          "ticker": "IBCA",
-          "score": 6.68
-        },
-        {
-          "ticker": "CEMB"
+          "ticker": "IBCA"
         }
       ]
     },
@@ -466,8 +449,8 @@
     },
     "5_selection_bond_Stable": {
       "name": "selection_bond",
-      "before": 6,
-      "after": 6,
+      "before": 5,
+      "after": 5,
       "rejected": 0,
       "category": "bond",
       "profile": "Stable",
@@ -477,20 +460,16 @@
           "score": 100.0
         },
         {
-          "ticker": "JAAA",
-          "score": 82.87
-        },
-        {
           "ticker": "IBTL",
-          "score": 65.42
+          "score": 74.52
         },
         {
           "ticker": "HIGH",
-          "score": 44.24
+          "score": 42.66
         },
         {
           "ticker": "EAGG",
-          "score": 21.5
+          "score": 18.01
         },
         {
           "ticker": "CORP"
@@ -3395,56 +3374,26 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 14.29,
+    "has_drift": true,
+    "drift_pct": 35.71,
     "details": {
-      "1_initial.after": {
-        "current": 12176,
-        "previous": 12178,
-        "delta": -2,
-        "pct_change": 0.02
-      },
-      "1_initial.etf": {
-        "current": 764,
-        "previous": 765,
-        "delta": -1,
-        "pct_change": 0.13
-      },
-      "1_initial.bond": {
-        "current": 304,
-        "previous": 305,
-        "delta": -1,
-        "pct_change": 0.33
-      },
-      "hard_filters_equity.after": {
-        "current": 7427,
-        "previous": 7429,
-        "delta": -2,
-        "pct_change": 0.03
-      },
       "5_selection_bond_Agressif.after": {
-        "current": 14,
-        "previous": 15,
-        "delta": -1,
-        "pct_change": 6.67
+        "current": 9,
+        "previous": 14,
+        "delta": -5,
+        "pct_change": 35.71
       },
-      "5_selection_equity_Stable.after": {
-        "current": 130,
-        "previous": 131,
-        "delta": -1,
-        "pct_change": 0.76
-      },
-      "5_selection_etf_Stable.after": {
-        "current": 24,
-        "previous": 21,
-        "delta": 3,
-        "pct_change": 14.29
-      },
-      "5_selection_equity_Dividende-CTO.after": {
-        "current": 58,
-        "previous": 61,
+      "5_selection_bond_Modéré.after": {
+        "current": 7,
+        "previous": 10,
         "delta": -3,
-        "pct_change": 4.92
+        "pct_change": 30.0
+      },
+      "5_selection_bond_Stable.after": {
+        "current": 5,
+        "previous": 6,
+        "delta": -1,
+        "pct_change": 16.67
       }
     }
   }
