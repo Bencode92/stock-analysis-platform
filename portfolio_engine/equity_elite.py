@@ -435,7 +435,9 @@ def _dedupe_entities(rows):
         if len(lst) == 1:
             keep.append(lst[0]); continue
         held = [s for s in lst if (str(s.get("ticker")), s["_region"]) in _HELD]
-        best = held[0] if held else max(lst, key=lambda s: _adv_usd(s) or 0)
+        # cotation retenue : un TENU d'abord ; sinon celle qui a des FONDAMENTAUX (une ligne sans bilan est un
+        # doublon mal étiqueté — GDX Xetra « General Dynamics » sans états financiers, volume aberrant), puis l'ADV
+        best = held[0] if held else max(lst, key=lambda s: ((_num(s.get("roic")) is not None or _num(s.get("roe")) is not None), _adv_usd(s) or 0))
         keep.append(best); dropped += len(lst) - 1
     if dropped:
         print(f"🧬 {dropped} cotation(s) secondaire(s) écartée(s) (une entité = une ligne, cotation la plus liquide)")
