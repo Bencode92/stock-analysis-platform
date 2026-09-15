@@ -683,11 +683,29 @@ async function fxToUSD(currency) {
     console.warn(`⚠️ Taux FX ${currency}/USD non trouvé, utilise 1`); fxCache.set(cacheKey, 1); return 1;
 }
 
+// ⛔ 2026-09-15 : un 429 (quota Twelve Data partagé avec les autres workflows) n'est PAS « non supporté ».
+// Le 12/09, la passe ROIC tournait en parallèle → 3 799/3 963 instruments classés UNSUPPORTED → univers ETF
+// réécrit à 11 lignes → generate_portfolios en panne 3 jours. On attend et on réessaie ; on ne classe jamais
+// une erreur de quota comme une absence de couverture.
+const isRateLimited = (e, data) => (e?.response?.status === 429) || (data && (data.code === 429 || /run out of API credits/i.test(data.message || '')));
+async function quoteWithRetry(params, tries = 6) {
+    for (let i = 0; i < tries; i++) {
+        try {
+            const data = await axios.get('https://api.twelvedata.com/quote', { params: { ...params, apikey: CONFIG.API_KEY } }).then(r => r.data);
+            if (isRateLimited(null, data)) { await new Promise(r => setTimeout(r, 20000)); continue; }
+            return data;
+        } catch (e) {
+            if (isRateLimited(e)) { await new Promise(r => setTimeout(r, 20000)); continue; }
+            return null;
+        }
+    }
+    throw new Error('RATE_LIMITED');
+}
 async function resolveSymbol(item) {
     const { symbol, mic_code, isin } = item;
     const cleaned = cleanSymbol(symbol);
-    try { const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: cleaned, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: cleaned, quote }; } catch {}
-    if (mic_code && !US_MIC_CODES.includes(mic_code)) { try { const symbolWithMic = `${cleaned}:${mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: symbolWithMic, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: symbolWithMic, quote }; } catch {} }
+    { const quote = await quoteWithRetry({ symbol: cleaned }); if (quote && quote.status !== 'error') return { symbolParam: cleaned, quote }; }
+    if (mic_code && !US_MIC_CODES.includes(mic_code)) { const symbolWithMic = `${cleaned}:${mic_code}`; const quote = await quoteWithRetry({ symbol: symbolWithMic }); if (quote && quote.status !== 'error') return { symbolParam: symbolWithMic, quote }; }
     try { const search = await axios.get('https://api.twelvedata.com/symbol_search', { params: { symbol: cleaned, apikey: CONFIG.API_KEY } }).then(r => r.data); if (search?.data?.[0]) { const result = search.data[0]; const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) ? result.symbol : `${result.symbol}:${result.mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: resolvedSymbol, quote }; } } catch {}
     if (isin) { try { const search = await axios.get('https://api.twelvedata.com/symbol_search', { params: { isin: isin, apikey: CONFIG.API_KEY } }).then(r => r.data); if (search?.data?.[0]) { const result = search.data[0]; const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) ? result.symbol : `${result.symbol}:${result.mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: resolvedSymbol, quote }; } } catch {} }
     return null;
@@ -815,7 +833,8 @@ async function fetchWeeklyPack(symbolParam, item) {
 
 async function processListing(item) {
     try {
-        const resolved = await resolveSymbol(item); if (!resolved) return { ...item, reason: 'UNSUPPORTED_BY_PROVIDER' };
+        let resolved; try { resolved = await resolveSymbol(item); } catch (e) { if (e.message === 'RATE_LIMITED') return { ...item, reason: 'RATE_LIMITED' }; throw e; }
+        if (!resolved) return { ...item, reason: 'UNSUPPORTED_BY_PROVIDER' };
         const { symbolParam, quote } = resolved;
         const nameFromQuote = quote.name || quote.instrument_name || quote.fund_name || null;
         let finalName = nameFromQuote; if (!finalName && CONFIG.DEBUG) finalName = await lookupNameViaSearch(cleanSymbol(item.symbol));
@@ -892,6 +911,18 @@ async function filterETFs() {
     const rejectionReasons = {}; results.rejected.forEach(item => { if (item.reason) rejectionReasons[item.reason] = (rejectionReasons[item.reason] || 0) + 1; else if (item.failed) item.failed.forEach(f => { rejectionReasons[f] = (rejectionReasons[f] || 0) + 1; }); }); results.stats.rejection_reasons = rejectionReasons;
     const filteredPath = path.join(OUT_DIR, 'filtered_advanced.json'); await fs.writeFile(filteredPath, JSON.stringify(results, null, 2));
     const weekly = { timestamp: new Date().toISOString(), limited_run: results.stats.limited_run, etfs: results.etfs.map(pickWeekly), bonds: results.bonds.map(pickWeekly), stats: { total_etfs: results.stats.etfs_retained, total_bonds: results.stats.bonds_retained, data_quality: results.stats.data_quality, sector_guard: results.stats.sector_guard, bond_metrics: results.stats.bond_metrics, translation: results.stats.translation } };
+    // ⛔ GARDE-FOU (2026-09-15) : si l'univers retenu s'effondre par rapport au snapshot précédent (< 50 %), c'est le
+    // fournisseur ou le quota, pas le marché → on N'ÉCRIT RIEN et on échoue franchement. Un univers vide commité
+    // casse generate_portfolios (KeyError _profile_score) et se propage par les Daily Metrics.
+    try {
+        const prevEtf = (await fs.readFile(path.join(OUT_DIR, 'weekly_snapshot_etfs.csv'), 'utf8')).trim().split('\n').length - 1;
+        const prevBonds = (await fs.readFile(path.join(OUT_DIR, 'weekly_snapshot_bonds.csv'), 'utf8')).trim().split('\n').length - 1;
+        const rl = (results.rejected || []).filter(r => r.reason === 'RATE_LIMITED').length;
+        if ((prevEtf >= 50 && results.etfs.length < prevEtf * 0.5) || (prevBonds >= 50 && results.bonds.length < prevBonds * 0.5) || rl > 50) {
+            console.error(`❌ Univers effondré : ETF ${results.etfs.length} (précédent ${prevEtf}), Bonds ${results.bonds.length} (précédent ${prevBonds}), rate-limited ${rl} → AUCUN fichier écrit, run interrompu`);
+            process.exit(1);
+        }
+    } catch (e) { if (e.code !== 'ENOENT') throw e; }
     const weeklyPath = path.join(OUT_DIR, 'weekly_snapshot.json'); await fs.writeFile(weeklyPath, JSON.stringify(weekly, null, 2));
 
     // === SECTOR SUSPECTS CSV (audit) ===
