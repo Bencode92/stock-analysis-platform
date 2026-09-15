@@ -888,6 +888,7 @@ async function getQuoteData(symbol, stock) {
             change: parseNumberLoose(data.change) || 0,
             percent_change: parseNumberLoose(data.percent_change) || 0,
             volume: parseNumberLoose(data.volume) || 0,
+            average_volume: parseNumberLoose(data.average_volume) || null,   // ✅ 15/09 : ADV 30j TD (volume = intraday en séance)
             fifty_two_week: {
                 high: parseNumberLoose(data.fifty_two_week?.high) || null,
                 low: parseNumberLoose(data.fifty_two_week?.low) || null,
