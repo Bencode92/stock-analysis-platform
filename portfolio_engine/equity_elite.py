@@ -499,9 +499,10 @@ def build_elite_portfolio():
             prev_tr = json.load(open(PREV_FILE, encoding="utf-8")).get("_transition") or {}
         except Exception:
             prev_tr = {}
-    from datetime import date, datetime
+    from datetime import date
     last_wave = prev_tr.get("wave_date")
-    days_since = (date.today() - datetime.strptime(last_wave, "%Y-%m-%d").date()).days if last_wave else None
+    # date.fromisoformat (pas strptime : strptime importe le module stdlib `calendar`, masqué par portfolio_engine/calendar.py)
+    days_since = (date.today() - date.fromisoformat(last_wave)).days if last_wave else None
     wave_due = ELITE_FORCE_WAVE or (ELITE_KEY == "v3") or (days_since is None) or (days_since >= WAVE_DAYS)
     if ELITE_KEY in ("v4a", "v4"):
         pool_rank = {(str(s.get("ticker")), s["_region"]): i for i, s in enumerate(pool)}
