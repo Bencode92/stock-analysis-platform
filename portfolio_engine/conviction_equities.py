@@ -5,8 +5,9 @@ conviction_equities.py — PILIER 3 « Actions-Conviction » : 100 % actions, en
 
 DOCTRINE (revue expert 2026-09-14/15, docs/CONVICTION_ACTIONS_EXPERT_BRIEF_2026-09-14.md + artefacts) :
   - Le SLEEVE N'ACCEPTE QUE LE MAILLON : seules les sociétés nommées dans une chaîne du funnel (framework.json)
-    peuvent entrer. Le screen par industrie PROPOSE (journal), il ne remplit jamais. Un thème sans enabler
-    éligible reste VIDE — pas de remplisseur, budget laissé de côté (S2-a), jamais redistribué (S2-b refusé).
+    sont candidates. PAS DE SCREEN HORS FUNNEL (Benoit, 2026-09-15) : un enabler s'ajoute au funnel par la
+    recherche (maillon nommé, rôle écrit), jamais par une industrie. Un thème sans enabler éligible reste VIDE —
+    pas de remplisseur, budget laissé de côté (S2-a), jamais redistribué (S2-b refusé).
   - SAIN = bilan + trajectoire : durabilité A/B sans mirage · dette nette / EBIT ≤ 4 (proxy d'EBITDA ≤ 3 ;
     fonds propres négatifs → ≤ 2) · marge de FCF ≥ 5 % du CA sur le dernier exercice ET FCF ≥ 0 l'exercice
     précédent (tableau de flux, jamais le champ « statistics ») · ROIC 3 ans ≥ 10 % OU marge en hausse 3 ans ·
@@ -48,12 +49,11 @@ STANCE_MULT = {"ACTIF": 1.0, "PROGRESSIF": 0.5, "SÉLECTIF": 0.5, "BORNÉ": 0.33
 STANCE_OVERRIDE = {"materials": "BORNÉ", "robotics": "VEILLE"}
 THEME_LABEL = {"ai_infra": "IA-infra", "nuclear": "Nucléaire", "grid": "Réseau électrique",
                "semi": "Semi-conducteurs", "defense": "Défense", "materials": "Métaux"}
-# liste FERMÉE d'industries enablers — le screen ne PROPOSE que dans ces industries (S5, ratifiée + 2)
+# Industries enablers — INFORMATIF (médianes de prix par industrie). Aucun screen : seuls les maillons du funnel entrent.
 ENABLER_INDUSTRIES = {
     "Semiconductor Equipment & Materials": "semi", "Semiconductors": "semi",
     "Electrical Equipment & Parts": "grid", "Specialty Industrial Machinery": "grid",
-    "Engineering & Construction": "grid",            # restreint aux constructeurs réseau/datacenters (maillon)
-    "Electronic Components": "ai_infra",
+    "Engineering & Construction": "grid", "Electronic Components": "ai_infra",
     "Aerospace & Defense": "defense", "Uranium": "nuclear",
     "Utilities - Independent Power Producers": "nuclear",
     "Copper": "materials", "Other Industrial Metals & Mining": "materials",
@@ -211,8 +211,10 @@ def build():
     for s in rows:
         key = (s["ticker"].upper(), s["_region"], (s.get("country") or "").lower())
         f = fidx.get(key)
-        th, src = (f["theme"], "maillon") if f else (ENABLER_INDUSTRIES.get(s.get("industry")), "screen")
-        if not th or th not in tw:
+        if not f:
+            continue                                  # pas de screen hors funnel : maillon nommé ou rien
+        th, src = f["theme"], "maillon"
+        if th not in tw:
             continue
         fm, _ = fcf_margin(s)
         cands.append({"ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
@@ -279,11 +281,10 @@ def build():
         "holdings": selected, "_keys": [list(k) for k in new_keys], "n": len(selected),
         "allocated_pct": round(total * 100, 1), "cher_pct": round(cher * 100, 1), "themes": per_theme,
         "waiting": waiting, "blocked_maillons": [c for c in cands if c["src"] == "maillon" and c["gates_failed"]],
-        "screen_proposals": [c for c in cands if c["src"] == "screen" and not c["gates_failed"] and (c["rel"] or 0) >= REL_ARTEFACT],
         "medians_ev_ebit": {k: round(v, 1) for k, v in med_ind.items() if k in ENABLER_INDUSTRIES},
         "_transition": {"wave_due": wave_due, "wave_date": date.today().isoformat() if wave_due else last_wave,
                         "days_since_wave": days, "added": [list(k) for k in added], "dropped": [list(k) for k in dropped]},
-        "_doctrine": "maillon seulement · sain (ND/EBIT ≤ 4, marge FCF ≥ 5 % + exercice précédent ≥ 0, trajectoire) · prix relatif "
+        "_doctrine": "maillon seulement, aucun screen hors funnel · sain (ND/EBIT ≤ 4, marge FCF ≥ 5 % + exercice précédent ≥ 0, trajectoire) · prix relatif "
                      "(≤ 2,5×, cher ≤ 30 %) · thèse avant chaîne · pas d'ETF · exclusion socle · thème vide reste vide",
         "generated": date.today().isoformat(),
     }
