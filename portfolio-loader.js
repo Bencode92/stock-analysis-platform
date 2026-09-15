@@ -129,6 +129,22 @@ class PortfolioManagerV3 {
 
   normalizeType(t) { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 
+  // Nom affiché : retire « (TICKER) » en fin et un ticker en tête SEULEMENT s'il est un mot entier
+  // (avant : name.replace(ticker,'') mangeait « PUB » dans PUBLICIS → « LICIS », « V » dans VISA → « ISA »),
+  // et répare le mojibake du seed (HANNOVER RÃ¼CK → RÜCK).
+  displayName(name, ticker) {
+    let n = String(name || '');
+    n = n.replace(/Ã©/g, 'é').replace(/Ã¨/g, 'è').replace(/Ã¼/g, 'ü').replace(/Ã«/g, 'ë').replace(/Ã³/g, 'ó').replace(/Ã¶/g, 'ö').replace(/Ã¤/g, 'ä').replace(/Ã /g, 'à').replace(/Ã§/g, 'ç').replace(/Ã¸/g, 'ø').replace(/Ã¥/g, 'å');
+    if (ticker) {
+      const t = String(ticker).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      n = n.replace(new RegExp('\\s*\\(' + t + '\\)\\s*$', 'i'), '');
+      n = n.replace(new RegExp('^' + t + '\\s*[-–—:]\\s*', 'i'), '');   // « PUB — Publicis », pas « RLI Corp. »
+    }
+    n = n.trim();
+    if (n && n === n.toUpperCase().replace(/[üéèëóöäàçøå]/g, c => c) && !/[a-z]/.test(n)) n = n.toUpperCase();   // nom tout en capitales → accents en capitales
+    return n || name;
+  }
+
   getProfileConfig(type) {
     const n = this.normalizeType(type);
     if (n.includes('dividende-pea') || n.includes('dividende pea')) return { color: '#be50ff', bg: 'rgba(190,80,255,0.08)', icon: 'fa-seedling', label: 'Dividende PEA', risk: 'Modéré', horizon: '10+ ans' };
@@ -380,7 +396,7 @@ class PortfolioManagerV3 {
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:0.5rem;">
                 ${ticker ? `<span style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:${catColor};font-weight:700;min-width:40px;">${ticker}</span>` : ''}
-                <span style="font-size:0.85rem;font-weight:600;line-height:1.3;word-break:break-word;flex:1;min-width:0;" title="${a.name.replace(/"/g, '&quot;')}">${a.name.replace(` (${ticker})`, '').replace(ticker, '').trim() || a.name}</span>
+                <span style="font-size:0.85rem;font-weight:600;line-height:1.3;word-break:break-word;flex:1;min-width:0;" title="${a.name.replace(/"/g, '&quot;')}">${this.displayName(a.name, ticker)}</span>
                 ${roleBadge}
                 ${isNew ? '<span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:rgba(76,175,80,0.2);color:#4caf50;font-weight:700;">NEW</span>' : ''}
                 ${hasDetail ? '<i class="fas fa-chevron-down" style="font-size:0.5rem;color:rgba(255,255,255,0.25);margin-left:auto;"></i>' : ''}
