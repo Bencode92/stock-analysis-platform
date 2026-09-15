@@ -427,3 +427,12 @@ travers socle + ETF + convictions), trois portefeuilles cohérents chacun et un 
   raisonnable — la seule frontière du système), jamais un nom daté (thèses 2026-2035).
 - « Un ETF nucléaire détient Cameco à tout prix ; le pilier 3 ne le détient pas » — la largeur serait au pilier 2 ETF,
   SI Benoit le détient. Benoit a dit « pas d'ETF » : dans ce cas Cameco n'est nulle part, choix acté, pas oubli.
+
+## 17. COÛT DE TRANSITION — DATÉ (revue expert 2026-09-15)
+- Vagues de septembre (10) et décembre 2026 (≤ 10) = **coût unique** v3 → v4a + sortie Asie : ~50 % du socle en deux vagues.
+- **Fin de transition : mars 2027.** À partir de la vague de mars 2027, le régime de croisière s'applique et le test
+  « turnover réalisé < 25 %/an » est mesuré sur 12 mois glissants. Une vague à 10 après mars 2027 n'est plus « la transition ».
+- Financières à chaque vague (déc. 2026 : Kinsale, Primerica, AJ Bell) : le cap 6 borne, mais c'est LUI qui choisit — chantier
+  du score de durabilité au cycle 2027, journalisé à chaque vague.
+- Nvidia : deux refus, deux raisons écrites avant le résultat — socle (clé : ROIC à à-coups, rang ~134) et pilier 3 (pas un
+  maillon de la thèse « amont »). Look-through via EQQQ/SMH SEULEMENT si le pilier 2 ETF est détenu (Benoit : « pas d'ETF »).

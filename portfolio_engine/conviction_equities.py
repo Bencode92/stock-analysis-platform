@@ -72,6 +72,9 @@ THEME_NOTE = {
     "nuclear": "Combustible et exploitants en phase capex : chers ou FCF négatif sur plusieurs exercices. Non exprimable en actions saines.",
     "materials": "Mineurs cycliques : trajectoire et FCF instables. Non exprimable en actions saines.",
     "defense": "Thèse EUROPÉENNE, composants > primes : sleeve scope Europe. Les primes US éligibles (LMT, GD) restent en file « hors thèse ».",
+    "semi": "Thèse « l'amont capte la valeur » (ASML, KLA, Lam — pas le chip médiatisé). SCÉNARIO ADVERSE N°1 : si Nvidia "
+            "continue de prendre la marge que l'équipement ne prend pas, ce sleeve sous-performe le Nasdaq pendant des années, "
+            "et on le saura chaque trimestre. Risque de conviction, pas défaut de méthode.",
 }
 FX_TO_USD = {"USD": 1.0, "EUR": 1.08, "GBP": 1.27, "CHF": 1.10, "SEK": 0.095, "NOK": 0.093, "DKK": 0.145, "PLN": 0.25}
 FX_MCAP_TO_REPORT = {}   # capitalisation (devise de cotation) vs comptes (devise de reporting) : identique sauf ADR
@@ -163,9 +166,14 @@ def funnel_index(fw, today=None):
                 if not ok:
                     pending.append({"ticker": c["ticker"], "theme": t["key"], "why": why}); continue
                 reg = "US" if c["region"] == "US" else "Europe"
-                idx.setdefault((c["ticker"].upper(), reg, (c.get("country") or "").lower()),
-                               {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role"),
-                                "proof_pending": why})
+                key = (c["ticker"].upper(), reg, (c.get("country") or "").lower())
+                entry = {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role"), "proof_pending": why}
+                first = THEME_SCOPE.get(t["key"], {}).get("maillon_first", [])
+                rank = lambda lab: next((i for i, m0 in enumerate(first) if (lab or "").startswith(m0)), len(first))
+                # société citée dans PLUSIEURS maillons (Thales : ① prime ET ③ électronique) → on retient celui que la
+                # thèse met en avant (« composants > primes »), pas le premier de la liste
+                if key not in idx or rank(entry["label"]) < rank(idx[key]["label"]):
+                    idx[key] = entry
     if len(adoptions) > ADOPTIONS_PER_YEAR_MAX:
         print(f"⚠️ {len(adoptions)} adoptions issues du screen sur 12 mois (plafond {ADOPTIONS_PER_YEAR_MAX}) : "
               + ", ".join(t for _, t in sorted(adoptions)) + " — les adoptions du 15/09 (revue expert) sont journalisées comme lot fondateur")
