@@ -345,3 +345,33 @@ résultat.
 - 12 tenus hors top-100 ou porte cassée → vagues : Marsh (2 exercices), Hannover Rück, Chipotle, Atmus, Veralto,
   Ross, MGIC (rang 101), Expeditors / T. Rowe / RLI / OLED (drawdown > 40 %), PROG (FCF artefact).
 **Verdict expert attendu** : passe → run unique ; ne passe pas → v3 douze mois, journal. Aucune retouche possible.
+
+## 13. PONDÉRATION (revue expert 2026-09-14) — FIGÉE AVEC LA CLÉ jusqu'au 2027-09-14
+
+**Doctrine** : les poids ne varient que sur des grandeurs DESCRIPTIVES (secteur, risque, durabilité) — jamais sur un
+rendement attendu (mean-variance, momentum, cap-weight = paris ou prédictions, refusés). « Plus de risque pour plus de
+rendement » se règle dans l'AGRÉGATION entre piliers, pas dans les poids du socle.
+
+**Mesure (14/09, 3 ans hebdo 2023-09-25 → 2026-09-14, liste v4a, réf. S&P 500 équipondéré)** : rendements indiscernables
+(12,3 → 13,3 %/an = bruit), vol 11,9 → 13,0 %, max DD 10,8 → 13,1 %. Le choix de poids est un choix de RISQUE, fait sur la
+doctrine, pas sur le 12,8 %. Sector-balanced brut inutilisable (12,5 % sur une ligne : secteur à 2 noms) → les bornes font
+le travail.
+
+**Schéma figé** : **sector-balanced × inverse-volatilité, bornes 1,5 – 4 % par ligne**
+1. part égale par secteur GICS présent (1/n_secteurs), puis dans le secteur poids ∝ 1 / vol 3 ans hebdo ;
+2. **vol bornée AVANT inversion** : plancher 15 %, plafond 50 % (sinon une ligne à 12 % pèse 4× une à 48 % et les bornes
+   1,5-4 % font tout — ce ne serait plus de l'inverse-vol, ce seraient des bornes) ;
+3. bornes 1,5 % / 4 % par ligne, itérées jusqu'à somme 100 %.
+
+**Clauses**
+- **Gel** : schéma figé jusqu'au 14/09/2027 comme la clé. On ne rouvre pas « inverse-vol vs durabilité » parce qu'un schéma
+  a fait 0,8 point de mieux un trimestre.
+- **Bandes de rebalancement** : cibles recalculées à chaque vague (vol 3 ans mise à jour) ; on ne trade une ligne que si
+  son poids s'écarte de **± 25 % relatif** de sa cible ; sinon le poids précédent est conservé (renormalisé). Entrants /
+  sortants : poids cible d'office.
+- **Journal** : 12,5 % vs 15 % (S&P EW) sur 3 ans haussiers à vol égale, DD 13 vs 16 — c'est le PRIX DE LA STABILITÉ,
+  écrit avant la prochaine année haussière ou baissière, pas réécrit après. Un socle qui ne bat pas l'indice EW en hausse
+  et le bat en baisse fait ce qu'on lui demande. La mesure ex post sur la liste v4a compare des POIDS, pas la sélection :
+  ne jamais citer ces 12,5 % comme performance du socle.
+
+Après ce run, le socle est fermé : clé, portes, caps, poids. Reste l'agrégation.

@@ -28,7 +28,11 @@ MAX_HOLDINGS = 40
 MAX_PER_INDUSTRY = 2    # cap (contrainte), plus « 1 champion obligatoire par industrie »
 REGION_REVIEW = 70.0    # pas de cap dur ; alerte de revue si une région > 70 %
 # --- pondération : équipondéré + plafond de contribution au risque (écrête les plus volatils) ---
-RISK_CAP_MULT = 1.5
+RISK_CAP_MULT = 1.5     # (v3) écrêtage de contribution au risque
+# ═══ §13 PONDÉRATION v4a (revue expert 2026-09-14, FIGÉE avec la clé jusqu'au 2027-09-14) ═══
+W_VOL_FLOOR, W_VOL_CAP = 15.0, 50.0    # vol 3 ans bornée AVANT inversion (sinon les bornes de poids font tout)
+W_MIN, W_MAX = 1.5, 4.0                # bornes par ligne (%), itérées jusqu'à somme 100
+W_REBAL_BAND = 0.25                    # on ne trade une ligne que si |poids − cible| > 25 % relatif de la cible
 # --- hystérésis (anti-turnover) ---
 EXIT_ROIC = 8.0        # sortie à ROIC < 8 % (moitié de l'entrée), pas < 0 (revue expert)
 PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
@@ -381,6 +385,35 @@ def _rank_key(s):
     return (bucket, -_stability(s), fcf)   # v3 : bucket haut, instabilité basse, fcf haut
 
 
+def _weights_sector_invvol(final):
+    """§13 — sector-balanced × inverse-vol : part égale par secteur GICS présent, puis ∝ 1/vol (vol bornée 15-50)
+       dans le secteur ; bornes 1,5-4 % par ligne itérées jusqu'à somme 100. Vol absente → vol médiane du book."""
+    if not final:
+        return {}
+    vols = {str(s.get("ticker")): _num(s.get("volatility_3y")) for s in final}
+    known = [v for v in vols.values() if v]
+    med = sorted(known)[len(known) // 2] if known else 30.0
+    inv = {tk: 1.0 / min(W_VOL_CAP, max(W_VOL_FLOOR, (v or med))) for tk, v in vols.items()}
+    by_sec = defaultdict(list)
+    for s in final:
+        by_sec[_gics(s)].append(str(s.get("ticker")))
+    w = {}
+    for sec, tks in by_sec.items():
+        tot = sum(inv[t] for t in tks)
+        for t in tks:
+            w[t] = (100.0 / len(by_sec)) * inv[t] / tot
+    for _ in range(100):                               # bornes 1,5-4 %, redistribution sur les lignes libres
+        w = {t: min(W_MAX, max(W_MIN, x)) for t, x in w.items()}
+        gap = 100.0 - sum(w.values())
+        free = [t for t in w if W_MIN < w[t] < W_MAX]
+        if abs(gap) < 1e-6 or not free:
+            break
+        for t in free:
+            w[t] += gap / len(free)
+    tot = sum(w.values()) or 1.0
+    return {t: x / tot * 100 for t, x in w.items()}
+
+
 def build_elite_portfolio():
     rows = _load_stocks()
     funnel = _funnel_tickers()
@@ -483,19 +516,47 @@ def build_elite_portfolio():
     #    faibles). Le vrai correctif du biais Japon est le barème ROIC-hors-cash (à faire au pipeline).
     region_swaps = []
 
-    # 4) POIDS : équipondéré + plafond de contribution au risque (écrête les plus volatils, sans tri)
-    base = 100.0 / len(final) if final else 0.0
-    vols = [v for v in (_num(s.get("volatility_3y")) for s in final) if v]
-    med_vol = sorted(vols)[len(vols) // 2] if vols else None
-    raw = {}
-    for s in final:
-        w = base
-        vol = _num(s.get("volatility_3y"))
-        if med_vol and vol and vol > 0:
-            w = min(base, base * med_vol * RISK_CAP_MULT / vol)
-        raw[str(s.get("ticker"))] = w
-    tot = sum(raw.values()) or 1.0
-    weights = {tk: round(w / tot * 100, 2) for tk, w in raw.items()}   # renormalisé à 100 %
+    # 4) POIDS
+    if ELITE_KEY in ("v4a", "v4"):
+        # §13 : sector-balanced × inverse-vol (vol bornée 15-50 avant inversion), bornes 1,5-4 %, bandes de rebal ±25 %
+        targets = _weights_sector_invvol(final)
+        prev_w = {}
+        if os.path.exists(PREV_FILE):
+            try:
+                _prev = json.load(open(PREV_FILE, encoding="utf-8"))
+                # bandes de rebalancement seulement entre deux vagues du MÊME schéma (§13) ; première application
+                # du schéma (run unique depuis v3) → toutes les lignes à leur cible
+                if (_prev.get("_transition") or {}).get("key_version") in ("v4a", "v4"):
+                    prev_w = {h["ticker"]: _num(h.get("weight")) for h in (_prev.get("holdings") or [])}
+            except Exception:
+                prev_w = {}
+        held_w = {}
+        for tk, tgt in targets.items():
+            pw = prev_w.get(tk)
+            if pw and tgt and abs(pw - tgt) / tgt <= W_REBAL_BAND:
+                held_w[tk] = pw                       # dans la bande → on ne trade pas, poids conservé
+            else:
+                held_w[tk] = tgt                      # entrant / sortie de bande → cible
+        tot = sum(held_w.values()) or 1.0
+        held_w = {tk: min(W_MAX, max(W_MIN, w / tot * 100)) for tk, w in held_w.items()}   # renormalisé, bornes tenues
+        tot = sum(held_w.values()) or 1.0
+        weights = {tk: round(w / tot * 100, 2) for tk, w in held_w.items()}
+        weight_targets = {tk: round(w, 2) for tk, w in targets.items()}
+    else:
+        # v3 : équipondéré + plafond de contribution au risque (écrête les plus volatils, sans tri)
+        base = 100.0 / len(final) if final else 0.0
+        vols = [v for v in (_num(s.get("volatility_3y")) for s in final) if v]
+        med_vol = sorted(vols)[len(vols) // 2] if vols else None
+        raw = {}
+        for s in final:
+            w = base
+            vol = _num(s.get("volatility_3y"))
+            if med_vol and vol and vol > 0:
+                w = min(base, base * med_vol * RISK_CAP_MULT / vol)
+            raw[str(s.get("ticker"))] = w
+        tot = sum(raw.values()) or 1.0
+        weights = {tk: round(w / tot * 100, 2) for tk, w in raw.items()}   # renormalisé à 100 %
+        weight_targets = dict(weights)
 
     port_tks = {str(s.get("ticker")) for s in final}
 
@@ -531,7 +592,7 @@ def build_elite_portfolio():
         fin = _is_fin(s)
         return {
             "ticker": tk, "name": s.get("name"), "region": s["_region"], "industry": s.get("industry"),
-            "sector": _gics(s), "weight": weights.get(tk), "durability": s.get("durability_grade"),
+            "sector": _gics(s), "weight": weights.get(tk), "weight_target": weight_targets.get(tk), "durability": s.get("durability_grade"),
             "durability_score": _num(s.get("durability_score")), "quality": s.get("quality_grade"),
             "fin": fin, "roic_or_roe": _num(s.get("roe_avg_3y") if fin else s.get("roic_avg_3y")),
             "stability": round(_stability(s), 2), "fcf_yield": _num(s.get("fcf_yield")),
