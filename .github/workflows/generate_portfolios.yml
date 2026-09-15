@@ -70,6 +70,8 @@ jobs:
         run: |
           echo "🏆 Génération du socle actions elite (equity_elite — clé par défaut du module)..."
           python portfolio_engine/equity_elite.py || echo "⚠️ equity_elite échec (non-bloquant)"
+          echo "🎯 Pilier 3 Actions-Conviction (enablers funnel, sains, prix relatif — vagues trimestrielles)..."
+          python portfolio_engine/conviction_equities.py || echo "⚠️ conviction_equities échec (non-bloquant)"
 
       # ============= v4.5 NEW: Schema Validation =============
       - name: ✅ Valider le schéma JSON
@@ -605,6 +607,7 @@ jobs:
           # Ajouter les artefacts générés (v5.3.0 + turnover tracking)
           git add data/portfolios.json \
                   data/portfolios_elite.json \
+                  data/portfolios_conviction_equities.json \
                   data/portfolios_previous.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
