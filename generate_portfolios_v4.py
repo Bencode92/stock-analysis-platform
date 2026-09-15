@@ -2936,25 +2936,7 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     # Le MI tourne actuellement APRÈS les select_bonds (architecture v4),
     # on utilise donc le dernier mi_*.json disponible pour orienter les bonds
     # via avoid_securitized / prefer_tips / avoid_em_bonds.
-    bond_strategy = None
-    try:
-        import glob as _glob_mi
-        _mi_files = sorted(_glob_mi.glob("data/market_intelligence_audit/mi_*.json"))
-        if _mi_files:
-            with open(_mi_files[-1], "r", encoding="utf-8") as _f_mi:
-                _mi_data = json.load(_f_mi)
-            bond_strategy = _mi_data.get("bond_strategy_full") or {}
-            if bond_strategy:
-                logger.info(
-                    f"   [Bond strategy] Loaded from {os.path.basename(_mi_files[-1])}: "
-                    f"tips={bond_strategy.get('prefer_tips')}, "
-                    f"avoid_sec={bond_strategy.get('avoid_securitized')}, "
-                    f"avoid_em={bond_strategy.get('avoid_em_bonds')}, "
-                    f"regime={_mi_data.get('regime','?')}"
-                )
-    except Exception as _e_bs:
-        logger.warning(f"   [Bond strategy] Could not load MI: {_e_bs}")
-        bond_strategy = None
+    bond_strategy = _load_bond_strategy()
 
     # Phase1-B1: Charger l'allocation précédente une seule fois (turnover control)
     _prev_alloc = _load_previous_allocation(CONFIG["output_path"])
@@ -4771,6 +4753,30 @@ def build_portfolios_deterministic() -> Dict[str, Dict]:
     return portfolios, all_assets
 
 
+def _load_bond_strategy():
+    """Dernier mi_*.json → bond_strategy_full (partagé par build_portfolios_deterministic ET build_portfolios_euus —
+       le second référençait une variable locale du premier : NameError, run EU/US en échec depuis le 15/09)."""
+    try:
+        import glob as _glob_mi
+        _mi_files = sorted(_glob_mi.glob("data/market_intelligence_audit/mi_*.json"))
+        if _mi_files:
+            with open(_mi_files[-1], "r", encoding="utf-8") as _f_mi:
+                _mi_data = json.load(_f_mi)
+            bond_strategy = _mi_data.get("bond_strategy_full") or {}
+            if bond_strategy:
+                logger.info(
+                    f"   [Bond strategy] Loaded from {os.path.basename(_mi_files[-1])}: "
+                    f"tips={bond_strategy.get('prefer_tips')}, "
+                    f"avoid_sec={bond_strategy.get('avoid_securitized')}, "
+                    f"avoid_em={bond_strategy.get('avoid_em_bonds')}, "
+                    f"regime={_mi_data.get('regime','?')}"
+                )
+            return bond_strategy
+    except Exception as _e_bs:
+        logger.warning(f"   [Bond strategy] Could not load MI: {_e_bs}")
+    return None
+
+
 def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     """
     v4.15.0 P0 FIX: Pipeline EU/US Focus avec sélection PAR PROFIL.
@@ -4779,6 +4785,7 @@ def build_portfolios_euus() -> Tuple[Dict[str, Dict], List]:
     - Avant: equities sélectionnées UNE FOIS pour tous les profils
     - Maintenant: equities sélectionnées PAR PROFIL (comme Global)
     """
+    bond_strategy = _load_bond_strategy()   # fix 2026-09-15 : NameError (variable locale de l'autre builder)
     if not HAS_EUUS_PROFILES:
         logger.warning("⚠️ PROFILES_EUUS non disponible, skip EU/US generation")
         return {}, []
