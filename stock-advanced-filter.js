@@ -1629,6 +1629,12 @@ async function enrichStock(stock) {
     // Force re-fetch si l'entrée stable est vide (échec transitoire mis en cache)
     const cacheEmpty = cachedEntry && cachedEntry.raw
         && !cachedEntry.raw.dividends && !cachedEntry.raw.stats;
+    // ✅ 15/09: `stats: {}` (429/timeout) passait le test ci-dessus et gelait market_cap=null
+    //    pendant tout le TTL (CDNS, LLY, ADBE, AMGN… sans EV/EBIT ni PE). Sans market_cap
+    //    ni mcDirect → on retente au bout de 3 j (pas à chaque run : l'Asie en a ~1 500 légitimes).
+    const mcapMissing = cachedEntry && cachedEntry.raw
+        && !(cachedEntry.raw.stats && cachedEntry.raw.stats.market_cap) && !cachedEntry.raw.mcDirect
+        && (Date.now() - new Date(cachedEntry.fetched_at || 0).getTime() > 3 * 24 * 3600 * 1000);
     // ✅ v7.6: garde anti-contamination (collisions JP/HK). Une résolution cachée qui ne
     // porte PAS le code-bourse attendu du pays (ex: "8035" nu ou ":XTKS" au lieu de ":JPX")
     // vient d'un cache d'avant le fix codes-bourse → cache INVALIDE → refetch complet frais
@@ -1638,7 +1644,7 @@ async function enrichStock(stock) {
     const _cr = cachedEntry && cachedEntry.raw ? cachedEntry.raw.resolved : null;
     const resolvedStale = ASIA_MICS.has(_expMic) && COLLISION_CODES.has(String(stock.symbol))
         && (!_cr || !String(_cr).endsWith(':' + _expMic));
-    const stableHit = cacheFresh && !cacheEmpty && !resolvedStale;
+    const stableHit = cacheFresh && !cacheEmpty && !mcapMissing && !resolvedStale;
 
     let resolved, perf, quote, dividends, stats, mcDirect, growth, profileData, earningsData;
 

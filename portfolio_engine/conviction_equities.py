@@ -381,8 +381,8 @@ if __name__ == "__main__":
     for th, t in pf["themes"].items():
         print(f"  {t['label']:18} {t['stance']:11} cible {t['target_pct']:>5}% alloué {t['allocated_pct']:>5}%  {t['lines']}/{t['slots']}  {t['status']}")
     for h in pf["holdings"]:
-        nd = h['nd_ebit'] if h['nd_ebit'] is not None else float('nan')
-        print(f"  {THEME_LABEL[h['theme']]:16} {h['ticker']:6} {str(h['name'])[:28]:28} {h['weight']*100:4.1f}%  {h['rel']:.2f}×  FCF {h['fcf_margin']:.0f}%  ND {nd:.1f}  {h['maillon_label']}")
+        f = lambda v, fmt: (fmt % v) if isinstance(v, (int, float)) else "n/a"   # une porte n/a ne doit jamais bloquer l'écriture
+        print(f"  {THEME_LABEL[h['theme']]:16} {h['ticker']:6} {str(h['name'])[:28]:28} {h['weight']*100:4.1f}%  {f(h['rel'], '%.2f')}×  FCF {f(h['fcf_margin'], '%.0f')}%  ND {f(h['nd_ebit'], '%.1f')}  {h['maillon_label']}")
     tr = pf["_transition"]
     print(f"  vague : {'OUI' if tr['wave_due'] else 'non (' + str(tr['days_since_wave']) + ' j)'} · +{len(tr['added'])} / -{len(tr['dropped'])} · file d'attente {len(pf['waiting'])} · bloqués {len(pf['blocked_maillons'])}")
     if DRY:
