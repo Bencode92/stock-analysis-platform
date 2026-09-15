@@ -141,7 +141,7 @@ class PortfolioManagerV3 {
       n = n.replace(new RegExp('^' + t + '\\s*[-–—:]\\s*', 'i'), '');   // « PUB — Publicis », pas « RLI Corp. »
     }
     n = n.trim();
-    if (n && n === n.toUpperCase().replace(/[üéèëóöäàçøå]/g, c => c) && !/[a-z]/.test(n)) n = n.toUpperCase();   // nom tout en capitales → accents en capitales
+    if (n && !/[a-z]/.test(n)) n = n.toUpperCase();   // nom tout en capitales → accents réparés en capitales aussi
     return n || name;
   }
 
