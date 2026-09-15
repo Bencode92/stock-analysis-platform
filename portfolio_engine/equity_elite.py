@@ -139,8 +139,11 @@ def _adv_usd(s):
 
 
 def _has_history(s):
-    """≥ 3 ans de recul : stats 3Y présentes (exclut les IPO récentes type Slide Insurance 2025)."""
-    return all(s.get(k) not in (None, "", "-") for k in ("perf_3y", "roic_std_3y", "max_drawdown_3y"))
+    """≥ 3 ans de recul : stats 3Y présentes (exclut les IPO récentes type Slide Insurance 2025).
+       Financières : dispersion du ROE (le ROIC n'est pas leur métrique — JPMorgan, BNP, Santander échouaient
+       « historique < 3 ans » sur un champ ROIC vide : bug de porte, corrigé 2026-09-15)."""
+    disp = "roe_std_3y" if _is_fin(s) else "roic_std_3y"
+    return all(s.get(k) not in (None, "", "-") for k in ("perf_3y", disp, "max_drawdown_3y"))
 
 
 def _load_stocks():
