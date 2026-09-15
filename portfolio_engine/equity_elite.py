@@ -136,7 +136,10 @@ def _is_fin(s):
 
 def _adv_usd(s):
     """Volume quotidien en USD = volume(actions) × prix × FX. Proxy de liquidité (> market cap)."""
-    vol, px, fx = _num(s.get("volume")), _num(s.get("price")), FX_TO_USD.get(s.get("data_currency"))
+    # volume MOYEN d'abord (Twelve Data average_volume) : le `volume` du quote est intraday — un run à l'ouverture US
+    # (14:16 UTC le 15/09) donnait Coca-Cola 151 k titres → « illiquide » → 19 tenus en porte cassée. Repli : volume.
+    vol = _num(s.get("average_volume")) or _num(s.get("volume"))
+    px, fx = _num(s.get("price")), FX_TO_USD.get(s.get("data_currency"))
     return vol * px * fx if (vol and px and fx) else None
 
 

@@ -2198,6 +2198,7 @@ async function enrichStock(stock) {
         price,
         change_percent: (typeof change_percent === 'number') ? Number(change_percent.toFixed(2)) : null,
         volume: quote?.volume ?? null,
+        average_volume: quote?.average_volume ?? null,   // ✅ 15/09 : ADV robuste — `volume` = intraday à l'ouverture (KO 151k au lieu de 12M) → faux « illiquide »
         market_cap,
         range_52w,
         

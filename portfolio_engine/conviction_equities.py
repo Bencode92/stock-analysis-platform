@@ -113,7 +113,8 @@ def _stance(theme):
 
 
 def _adv_usd(s):
-    v, p, fx = _num(s.get("volume")), _num(s.get("price")), FX_TO_USD.get(s.get("data_currency"))
+    v = _num(s.get("average_volume")) or _num(s.get("volume"))   # volume moyen d'abord (intraday sinon)
+    p, fx = _num(s.get("price")), FX_TO_USD.get(s.get("data_currency"))
     return v * p * fx if (v and p and fx) else None
 
 
