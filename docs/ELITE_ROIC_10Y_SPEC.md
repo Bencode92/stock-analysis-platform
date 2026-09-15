@@ -418,3 +418,12 @@ Le socle ignore ~60 % des champs de la fiche : plus de champs en sélection = pl
 **« Optimal » n'est pas ici** : sans règle d'agrégation (poids des trois piliers, détention totale d'un même titre à
 travers socle + ETF + convictions), trois portefeuilles cohérents chacun et un patrimoine au risque inconnu.
 → Prochain et seul chantier : la RÈGLE D'AGRÉGATION.
+
+## 16. VOCABULAIRE FIGÉ (revue expert 2026-09-15) — les mots comptent
+- Le socle « **compose sans à-coups** ». Jamais « cherche à ne pas perdre » : c'est de l'action à drawdown PLUS FAIBLE, pas de
+  la préservation de capital (−13 % sur 3 ans haussiers ; 2022 aurait coûté −20 à −25 %). Une année baissière n'est pas un
+  échec de la méthode.
+- Le pilier 3 s'appelle **Actions-Conviction**. Jamais « ETF » (ETF = large, à tout prix ; actions = maillon, sain, prix
+  raisonnable — la seule frontière du système), jamais un nom daté (thèses 2026-2035).
+- « Un ETF nucléaire détient Cameco à tout prix ; le pilier 3 ne le détient pas » — la largeur serait au pilier 2 ETF,
+  SI Benoit le détient. Benoit a dit « pas d'ETF » : dans ce cas Cameco n'est nulle part, choix acté, pas oubli.
