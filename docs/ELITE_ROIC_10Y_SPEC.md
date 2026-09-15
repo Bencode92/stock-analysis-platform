@@ -391,3 +391,30 @@ Après ce run, le socle est fermé : clé, portes, caps, poids. Reste l'agrégat
   13,5 / Tech 13,5 / Communication 8 / Matériaux 4. Financières au ROE : 6/6 du cap (Visa au ROIC).
 - Cadence : wave_date = 2026-09-15 ; le run CI quotidien reproduit la liste jusqu'au 2026-12-14.
 - **GEL** : clé, portes, bandes, caps, poids → 2027-09-14.
+
+## 15. BILAN EXPERT POST-RUN (2026-09-15) — à connaître, pas à corriger avant 2027
+
+**Solide** : 40 lignes traçables porte par porte, clé et poids gelés, journal des écarts ; stats dans le bon sens sans
+dégrader la qualité (drawdown médian ROIC 21 → 16 %, PE 22 → 20, vol 31 → 28, persistance/durabilité inchangées) ;
+hystérésis vérifiée sur le run (NMIH bloqué par la paire, Genpact par le cap, ResMed 10ᵉ, doublon Visa Londres attrapé).
+
+**Faiblesses connues (journal, révision au cycle 2027)**
+1. **Sector-balanced = gros poids aux secteurs minces** : Alphabet, Publicis, PG, Coca-Cola à 4 % parce que seuls de leur
+   secteur, pas parce que « meilleurs ». Lire le haut du tableau comme « secteur peu peuplé », pas « conviction ».
+2. **Les prochains entrants sont des financières** (NMIH, Primerica, SEI, Kinsale rangs 1-11) : à chaque vague, les
+   sorties financières différées seront remplacées par d'autres financières via le score de durabilité. Le cap 6 borne
+   la quantité mais c'est LUI qui sélectionne — le chantier « score généreux avec les financières » décide de 15 % du
+   socle. → cycle de révision du score.
+3. **Dérive vers la maturité** (Coca-Cola, PG, JNJ, Gilead, Publicis, Coca-Cola HBC) : aucune porte ne regarde la
+   trajectoire (croissance, réinvestissement). Choix de doctrine — stabilité ici, croissance au pilier 3 — à savoir.
+4. **Turnover de transition 21/40 sur trois trimestres** = coût unique v3 → v4a + sortie Asie. **Test 2027 : turnover
+   réalisé attendu < 25 %/an** ; au-delà, la clé n'est pas aussi stable qu'elle en a l'air.
+
+**Non utilisé, volontairement** : perf vs secteur / momentum / EPS surprise (rejetés au backtest ; utiles en DIAGNOSTIC :
+une ligne qui sous-performe son secteur 12 mois = revue de la fiche durabilité) ; tags funnel / convictions (0/40 →
+pilier 3 et sleeves ETF) ; score Buffett (grade en porte valo seulement → v4b) ; beta / vol (pondération seulement).
+Le socle ignore ~60 % des champs de la fiche : plus de champs en sélection = plus d'overfitting, pas plus d'information.
+
+**« Optimal » n'est pas ici** : sans règle d'agrégation (poids des trois piliers, détention totale d'un même titre à
+travers socle + ETF + convictions), trois portefeuilles cohérents chacun et un patrimoine au risque inconnu.
+→ Prochain et seul chantier : la RÈGLE D'AGRÉGATION.
