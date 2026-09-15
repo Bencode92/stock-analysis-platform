@@ -133,6 +133,8 @@ class PortfolioManagerV3 {
     const n = this.normalizeType(type);
     if (n.includes('dividende-pea') || n.includes('dividende pea')) return { color: '#be50ff', bg: 'rgba(190,80,255,0.08)', icon: 'fa-seedling', label: 'Dividende PEA', risk: 'Modéré', horizon: '10+ ans' };
     if (n.includes('dividende-cto') || n.includes('dividende cto')) return { color: '#ffb43c', bg: 'rgba(255,180,60,0.08)', icon: 'fa-coins', label: 'Dividende CTO', risk: 'Modéré', horizon: '10+ ans' };
+    if (n.includes('actions-conviction')) return { color: '#D9A07C', bg: 'rgba(217,160,124,0.10)', icon: 'fa-bullseye', label: 'Actions Conviction', risk: 'Élevé', horizon: '5-10 ans' };
+    if (n.includes('actions-elite')) return { color: '#6FB3D2', bg: 'rgba(111,179,210,0.10)', icon: 'fa-trophy', label: 'Socle Actions', risk: 'Modéré', horizon: '10+ ans' };
     if (n.includes('agressif-thematique') || n.includes('agressif thematique')) return { color: '#FF3D7F', bg: 'rgba(255,61,127,0.08)', icon: 'fa-fire', label: 'Agressif Thématique', risk: 'Très élevé', horizon: '7-10 ans' };
     if (n.includes('agressif')) return { color: '#FF7B00', bg: 'rgba(255,123,0,0.08)', icon: 'fa-rocket', label: 'Agressif', risk: 'Élevé', horizon: '5+ ans' };
     if (n.includes('stable')) return { color: '#00B2FF', bg: 'rgba(0,178,255,0.08)', icon: 'fa-shield-alt', label: 'Stable', risk: 'Faible', horizon: '1-3 ans' };
