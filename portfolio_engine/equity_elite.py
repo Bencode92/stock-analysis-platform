@@ -165,7 +165,23 @@ def _load_stocks():
         for s in arr:
             s["_region"] = reg
             rows.append(s)
-    return rows
+    return _drop_adr_duplicates(rows)
+
+
+def _drop_adr_duplicates(rows):
+    """L'Asie s'achète en direct (15/09) : un ADR US dont la cotation d'origine est dans l'univers est un DOUBLON
+       d'entité (TSM = 2330 Taïwan, SONY = 6758 Tokyo…) que le rapprochement par nom ne voit pas toujours
+       (« …LTD » vs « …LIMITED »). Table : data/adr_home_listing.json."""
+    try:
+        adr = json.load(open(os.path.join(DATA, "adr_home_listing.json"), encoding="utf-8"))["adr"]
+    except (FileNotFoundError, KeyError):
+        return rows
+    present = {(str(s.get("ticker")), s["_region"]) for s in rows}
+    keep = [s for s in rows if not (s["_region"] == "US" and str(s.get("ticker")) in adr
+                                    and (adr[str(s["ticker"])]["home"], "Asie") in present)]
+    if len(keep) < len(rows):
+        print(f"🔗 {len(rows) - len(keep)} ADR écarté(s) au profit de la cotation d'origine asiatique")
+    return keep
 
 
 def _funnel_tickers():

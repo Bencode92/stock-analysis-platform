@@ -29,7 +29,7 @@ DOCTRINE (revue expert 2026-09-14/15, docs/CONVICTION_ACTIONS_EXPERT_BRIEF_2026-
 Sorties : data/portfolios_conviction_equities.json + profil « Actions-Conviction » dans data/portfolios.json.
 CONVICTION_DRY=1 → aperçu sans écriture. CONVICTION_FORCE_WAVE=1 → vague déclenchée.
 """
-import json, os, re, statistics, sys
+import json, math, os, re, statistics, sys
 from collections import defaultdict
 from datetime import date
 
@@ -52,7 +52,8 @@ FORCE_WAVE = os.environ.get("CONVICTION_FORCE_WAVE") == "1"
 STANCE_MULT = {"ACTIF": 1.0, "PROGRESSIF": 0.5, "SÉLECTIF": 0.5, "BORNÉ": 0.33, "VEILLE": 0.0}
 STANCE_OVERRIDE = {"materials": "BORNÉ", "robotics": "VEILLE"}
 THEME_LABEL = {"ai_infra": "IA-infra", "nuclear": "Nucléaire", "grid": "Réseau électrique",
-               "semi": "Semi-conducteurs", "defense": "Défense", "materials": "Métaux"}
+               "semi": "Semi-conducteurs", "defense": "Défense", "materials": "Métaux",
+               "emerging": "Asie émergente"}   # 15/09 : Asie accessible en direct → thème du funnel activé (PROGRESSIF)
 # Industries enablers — périmètre du RADAR (propositions) et médianes de prix. Seuls les maillons du funnel entrent.
 ADOPTIONS_PER_YEAR_MAX = 2       # plafond d'adoptions issues du screen (comme « max 2 ajouts/an » des ETF)
 PROOF_SHARE_MIN = 50.0           # preuve chiffrée : ≥ 50 % du CA / carnet sur le maillon
@@ -71,6 +72,9 @@ THEME_NOTE = {
                 "(Vertiv, nVent, GE Vernova) reste hors portes (prix). Seul endroit où un sleeve spéculatif ≤ 5 % aurait un sens.",
     "nuclear": "Combustible et exploitants en phase capex : chers ou FCF négatif sur plusieurs exercices. Non exprimable en actions saines.",
     "materials": "Mineurs cycliques : trajectoire et FCF instables. Non exprimable en actions saines.",
+    "emerging": "Thèse du funnel : l'expo semi se prend ICI (péage IA Taïwan/Corée/Japon), pas dans les valeurs US chères. "
+                "Chine : conso domestique et champions, jamais l'export en guerre des prix. Change non couvert (TWD, KRW, HKD). "
+                "Taïwan = risque géopolitique binaire (assumé, borné par le plafond de ligne).",
     "defense": "Thèse EUROPÉENNE, composants > primes : sleeve scope Europe. Les primes US éligibles (LMT, GD) restent en file « hors thèse ».",
     "semi": "Thèse « l'amont capte la valeur » (ASML, KLA, Lam — pas le chip médiatisé). SCÉNARIO ADVERSE N°1 : si Nvidia "
             "continue de prendre la marge que l'équipement ne prend pas, ce sleeve sous-performe le Nasdaq pendant des années, "
@@ -130,6 +134,13 @@ def load_universe():
         for s in _load(fn).get("stocks", []):
             if s.get("ticker"):
                 s["_region"] = reg; rows.append(s)
+    # ADR US doublon d'une cotation asiatique présente (TSM = 2330…) → on garde la cotation d'origine (Asie en direct)
+    try:
+        adr = _load("adr_home_listing.json")["adr"]
+        present = {(str(s["ticker"]), s["_region"]) for s in rows}
+        rows = [s for s in rows if not (s["_region"] == "US" and str(s["ticker"]) in adr and (adr[str(s["ticker"])]["home"], "Asie") in present)]
+    except (FileNotFoundError, KeyError):
+        pass
     groups = defaultdict(list)
     for s in rows:
         groups[_entity(s)].append(s)
@@ -294,7 +305,7 @@ def build():
         pool = [c for c in cands if c["theme"] == th and c["src"] == "maillon" and not c["gates_failed"]]
         in_scope = [c for c in pool if not scope or c["region"] in scope]
         in_scope.sort(key=order_key(th))
-        k = max(1, round(N_LINES * w))
+        k = max(1, math.ceil(N_LINES * w - 1e-9))   # ceil : un thème ne perd jamais une place à l'arrondi quand un autre s'active
         take, rest = in_scope[:k], in_scope[k:]
         for c in take:
             c["weight"] = round(min(LINE_CAP, w / k), 4)
@@ -324,7 +335,7 @@ def build():
 
     per_theme = {}
     for th in tw:
-        L = [c for c in selected if c["theme"] == th]; k = max(1, round(N_LINES * tw[th]))
+        L = [c for c in selected if c["theme"] == th]; k = max(1, math.ceil(N_LINES * tw[th] - 1e-9))
         per_theme[th] = {"label": THEME_LABEL[th], "stance": stance[th], "target_pct": round(tw[th] * 100, 1),
                          "allocated_pct": round(sum(c["weight"] for c in L) * 100, 1), "lines": len(L), "slots": k,
                          "status": "exprimé" if len(L) >= k else ("partiel" if L else "non exprimable"),
