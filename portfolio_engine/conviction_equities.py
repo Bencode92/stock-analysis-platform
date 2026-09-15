@@ -339,7 +339,8 @@ def inject_portfolio(pf):
         w = round(h["weight"] * 100, 2)
         actions[h["name"] or h["ticker"]] = f"{round(w, 1):.1f}%"   # schéma : 1 décimale max
         details.append({"ticker": h["ticker"], "name": h["name"], "weight_pct": w, "category": "Actions",
-                        "theme": THEME_LABEL.get(h["theme"]), "maillon": h["maillon_label"], "role": h["role"]})
+                        "role": "satellite|growth",                      # vocabulaire du schéma portfolio_output.json
+                        "theme": THEME_LABEL.get(h["theme"]), "maillon": h["maillon_label"], "maillon_role": h["role"]})
     p["Actions-Conviction"] = {
         "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},
         "_tickers": {h["ticker"]: round(h["weight"], 4) for h in pf["holdings"]},
