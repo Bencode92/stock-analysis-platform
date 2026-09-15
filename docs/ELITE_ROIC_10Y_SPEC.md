@@ -436,3 +436,13 @@ travers socle + ETF + convictions), trois portefeuilles cohérents chacun et un 
   du score de durabilité au cycle 2027, journalisé à chaque vague.
 - Nvidia : deux refus, deux raisons écrites avant le résultat — socle (clé : ROIC à à-coups, rang ~134) et pilier 3 (pas un
   maillon de la thèse « amont »). Look-through via EQQQ/SMH SEULEMENT si le pilier 2 ETF est détenu (Benoit : « pas d'ETF »).
+
+## 18. CONSTRUCTION INITIALE — transition exécutée en une fois (2026-09-15, décision Benoit)
+Le plafond « ≤ 10 changements par vague » protège un DÉTENTEUR (frais, fiscalité, pas de retournement brutal). Benoit
+part de zéro : rien à lisser, et construire un socle dont 10 lignes sont déjà condamnées pour décembre serait absurde.
+Les vagues différées ont donc été exécutées le jour même (10 + 1) : sortent Expeditors, T. Rowe, RLI, Universal Display,
+PROG, Hannover Rück, Chipotle, Atmus, Veralto, Ross, MGIC ; entrent Kinsale, Primerica, AJ Bell, NMI Holdings (après
+MGIC, paire respectée), Donaldson, Halma, Mueller Industries, Deckers, Next, Technogym, Generic Sweden.
+État de croisière atteint : 40 lignes, US 29 / Europe 11, 0 sortie différée, 0 porte cassée, financières 6/6.
+**À partir de maintenant le plafond ≤ 10 / trimestre s'applique** (wave_date 2026-09-15, prochaine vague ≥ 2026-12-14).
+Le « coût de transition » du §17 est donc soldé le jour 1 ; le test « turnover < 25 %/an » court dès la vague de décembre.
