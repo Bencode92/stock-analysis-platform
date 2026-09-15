@@ -18,7 +18,7 @@ DOCTRINE (revue expert 2026-09-14/15, docs/CONVICTION_ACTIONS_EXPERT_BRIEF_2026-
     ADV ≥ 5 M$ · ≥ 3 ans de cotation.
   - PRIX relatif à l'industrie : EV/EBIT ≤ 2,5× la médiane (porte d'absurdité) ; budget « cher » (> 1,5×) ≤ 30 % ;
     le prix DÉPARTAGE dans le thème après l'ordre de maillon. EV/EBIT < 0,25× = artefact → écarté.
-  - PÉRIMÈTRE : US + Europe (+ ADR asiatiques déjà dans le seed US) · une entité = une ligne · EXCLUSION du socle
+  - PÉRIMÈTRE : US + Europe + Asie (places accessibles, Benoit 15/09) · une entité = une ligne · EXCLUSION du socle
     (priorité socle, règle Q6) · pas d'ETF (Benoit).
   - POIDS : thème = stance (ACTIF 1 · PROGRESSIF/SÉLECTIF ½ · BORNÉ ⅓) normalisée, cap 30 % ; lignes ∝ poids ;
     équipondéré dans le thème ; 7 % max par ligne.
@@ -76,7 +76,13 @@ THEME_NOTE = {
             "continue de prendre la marge que l'équipement ne prend pas, ce sleeve sous-performe le Nasdaq pendant des années, "
             "et on le saura chaque trimestre. Risque de conviction, pas défaut de méthode.",
 }
-FX_TO_USD = {"USD": 1.0, "EUR": 1.08, "GBP": 1.27, "CHF": 1.10, "SEK": 0.095, "NOK": 0.093, "DKK": 0.145, "PLN": 0.25}
+# table FX = copie de equity_elite.FX_TO_USD (import du paquet impossible ici : portfolio_engine/calendar.py masque le stdlib)
+FX_TO_USD = {
+    "USD": 1.0, "EUR": 1.08, "GBP": 1.27, "CHF": 1.10, "CAD": 0.73, "SGD": 0.74,
+    "JPY": 0.0064, "TWD": 0.031, "HKD": 0.128, "KRW": 0.00074, "CNY": 0.138, "INR": 0.012,
+    "IDR": 0.000063, "THB": 0.028, "PLN": 0.25, "ILS": 0.27, "ILA": 0.0027, "PKR": 0.0036,
+    "TRY": 0.03, "QAR": 0.27, "ZAc": 0.00053, "PHP": 0.017, "HUF": 0.0028, "SAR": 0.27,
+}
 FX_MCAP_TO_REPORT = {}   # capitalisation (devise de cotation) vs comptes (devise de reporting) : identique sauf ADR
 
 
@@ -119,7 +125,7 @@ def _entity(s):
 def load_universe():
     """US + Europe, une entité = une ligne (cotation qui a des fondamentaux, puis la plus liquide), hors socle."""
     rows = []
-    for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json")):
+    for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json"), ("Asie", "stocks_asia.json")):   # Asie accessible (15/09)
         for s in _load(fn).get("stocks", []):
             if s.get("ticker"):
                 s["_region"] = reg; rows.append(s)
@@ -157,7 +163,7 @@ def funnel_index(fw, today=None):
     for t in fw["themes"]:
         for mi, m in enumerate(t["maillons"]):
             for c in m.get("companies", []):
-                if not c.get("ticker") or c.get("region") not in ("US", "EU"):
+                if not c.get("ticker") or c.get("region") not in ("US", "EU", "Asie"):
                     continue
                 ok, why = _qualified(c, today)
                 a = c.get("adopted_from_screen")
@@ -165,7 +171,7 @@ def funnel_index(fw, today=None):
                     adoptions.append((a["date"], c["ticker"]))
                 if not ok:
                     pending.append({"ticker": c["ticker"], "theme": t["key"], "why": why}); continue
-                reg = "US" if c["region"] == "US" else "Europe"
+                reg = {"US": "US", "EU": "Europe", "Asie": "Asie"}[c["region"]]
                 key = (c["ticker"].upper(), reg, (c.get("country") or "").lower())
                 entry = {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role"), "proof_pending": why}
                 first = THEME_SCOPE.get(t["key"], {}).get("maillon_first", [])
@@ -230,6 +236,10 @@ def build():
         if a is None or a < ADV_MIN_USD: g.append("liquidité < 5 M$")
         if (_num(s.get("history_days")) or 0) < HISTORY_MIN_DAYS: g.append("jeune cotation")
         nd, eq = _num(s.get("net_debt_to_ebit")), c.get("total_equity")
+        if nd is None:                                    # champ pas encore propagé (Asie) → calcul depuis le cache
+            debt, cash, ebit = c.get("total_debt"), c.get("cash_and_st_investments") or 0, c.get("operating_income")
+            if isinstance(debt, (int, float)) and isinstance(ebit, (int, float)) and ebit > 0:
+                nd = round((debt - cash) / ebit, 2); s["net_debt_to_ebit"] = nd
         if nd is None: g.append("levier n/a")
         elif isinstance(eq, (int, float)) and eq < 0:
             if nd > ND_EBIT_MAX_NEG_EQ: g.append(f"fonds propres < 0 & ND/EBIT {nd:.1f}")
@@ -255,6 +265,7 @@ def build():
         if not th or th not in tw:
             continue
         fm, _ = fcf_margin(s)
+        gf = gates(s)                                     # d'abord (calcule le levier depuis le cache si absent)
         cands.append({"ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
                       "theme": th, "src": src, "maillon": f["maillon"] if f else None,
                       "maillon_label": f["label"] if f else None, "role": f["role"] if f else None,
@@ -265,7 +276,7 @@ def build():
                       "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
                       "proof_pending": f.get("proof_pending") if f else None,
                       "refused": refusals.get(s["ticker"], {}).get("reason") if src == "screen" else None,
-                      "gates_failed": gates(s)})
+                      "gates_failed": gf})
 
     # ── sélection : maillon seulement, thèse (scope) avant chaîne, prix en départage ──
     def order_key(th):
@@ -369,7 +380,8 @@ if __name__ == "__main__":
     for th, t in pf["themes"].items():
         print(f"  {t['label']:18} {t['stance']:11} cible {t['target_pct']:>5}% alloué {t['allocated_pct']:>5}%  {t['lines']}/{t['slots']}  {t['status']}")
     for h in pf["holdings"]:
-        print(f"  {THEME_LABEL[h['theme']]:16} {h['ticker']:6} {str(h['name'])[:28]:28} {h['weight']*100:4.1f}%  {h['rel']:.2f}×  FCF {h['fcf_margin']:.0f}%  ND {h['nd_ebit']:.1f}  {h['maillon_label']}")
+        nd = h['nd_ebit'] if h['nd_ebit'] is not None else float('nan')
+        print(f"  {THEME_LABEL[h['theme']]:16} {h['ticker']:6} {str(h['name'])[:28]:28} {h['weight']*100:4.1f}%  {h['rel']:.2f}×  FCF {h['fcf_margin']:.0f}%  ND {nd:.1f}  {h['maillon_label']}")
     tr = pf["_transition"]
     print(f"  vague : {'OUI' if tr['wave_due'] else 'non (' + str(tr['days_since_wave']) + ' j)'} · +{len(tr['added'])} / -{len(tr['dropped'])} · file d'attente {len(pf['waiting'])} · bloqués {len(pf['blocked_maillons'])}")
     if DRY:

@@ -446,3 +446,13 @@ MGIC, paire respectée), Donaldson, Halma, Mueller Industries, Deckers, Next, Te
 État de croisière atteint : 40 lignes, US 29 / Europe 11, 0 sortie différée, 0 porte cassée, financières 6/6.
 **À partir de maintenant le plafond ≤ 10 / trimestre s'applique** (wave_date 2026-09-15, prochaine vague ≥ 2026-12-14).
 Le « coût de transition » du §17 est donc soldé le jour 1 ; le test « turnover < 25 %/an » court dès la vague de décembre.
+
+## 19. PÉRIMÈTRE MONDE — l'Asie est accessible (Benoit, 2026-09-15 après-midi)
+L'exclusion de l'Asie (§18, porte 0) reposait sur une hypothèse fausse : Benoit peut acheter les places asiatiques (Trading 212).
+Porte 0 = US + Europe + Asie. Les ADR ajoutés le matin restent, dédupliqués (une entité = une ligne). Les fondamentaux d'un ADR
+sont ceux de sa cotation d'origine (alias sym+mic : TSM → 2330:XTAI…).
+Ré-exécution le jour même (construction initiale) : socle +3 (JNBY Design, Topco Scientific, Shimadzu) / −3 (Accenture,
+Brown-Forman, Vontier) → US 26 / Europe 11 / Asie 3 ; Keyence, OBIC, SGX restent hors top-100 par la clé. Actions-Conviction :
+HD Hyundai Electric (① transformateurs) remplace Schneider (④), Tokyo Electron (③, 0,65×) remplace KLA (③, 1,14×) — le prix
+départage dans le même maillon ; cher 23,5 % (cap 30 %). Données : cash-flows asiatiques récupérés pour les maillons du funnel ;
+net debt/EBIT calculé depuis le cache quand le champ n'est pas encore propagé (Asie) ; FX complet pour l'ADV.
