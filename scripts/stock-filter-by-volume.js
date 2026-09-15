@@ -245,8 +245,9 @@ function toMIC(exchange, country=''){
 }
 
 function buildFundamentalsParams(symbol, context = {}) {
-  const mic = toMIC(context.exchange || '', context.country || '');
   const params = { symbol, period: 'annual', apikey: API_KEY };
+  if (context._mic) { params.mic_code = context._mic; return params; }   // alias vers une cotation d'origine explicite
+  const mic = toMIC(context.exchange || '', context.country || '');
 
   if (mic && US_MICS.has(mic)) {
     if (DEBUG) console.log(`  [DEBUG] Fundamentals params for ${symbol}: US stock, no context needed`);
@@ -914,6 +915,7 @@ function computeMultiYearRatios(bsPeriods, isPeriods) {
 const US_META_MICS = new Set(['XNAS','XNGS','XNMS','XNCM','XNYS','XASE','ARCX','BATS','OTCM','PINX','OTCB','OTCQ']);
 function entityMismatch(meta, context = {}) {
   if (!meta) return null;                                   // pas de meta → on ne peut pas juger
+  if (context._mic) return (meta.mic_code && meta.mic_code !== context._mic) ? `entity_mismatch:${meta.name} (${meta.mic_code} ≠ ${context._mic})` : null;
   if (isUSC(context.country) || US_MICS.has(toMIC(context.exchange || '', context.country || ''))) return null;
   const usVenue = US_META_MICS.has(meta.mic_code) || /nasdaq|nyse|otc|arca|amex/i.test(meta.exchange || '');
   return usVenue ? `entity_mismatch:${meta.name || meta.symbol} (${meta.exchange || meta.mic_code})` : null;
@@ -923,15 +925,50 @@ const resolvedOf = (meta) => meta ? { name: meta.name, exchange: meta.exchange, 
 // ✅ 2026-09-14 (revue expert) : ALIAS d'historique — changement de ticker chez l'émetteur, Twelve Data ne
 // renvoie que les exercices postérieurs sous le nouveau symbole. On fetche l'ancien symbole (même entité,
 // vérifiée par meta.name) et on stocke sous la clé du ticker courant. Correction de donnée, pas de méthode.
-const FUNDAMENTALS_ALIAS = { 'MRSH': 'MMC' };   // Marsh & McLennan : MMC → MRSH (2025), 2 exercices sous MRSH, 6 sous MMC
+// ADR (Trading 212) : l'ADR est la ligne ACHETABLE, les comptes sont ceux de la cotation d'origine (TSM → 2330 Taipei ;
+// sous le ticker ADR, Twelve Data sert des états incomplets : TSM sans ROIC). Même logique que MRSH → MMC.
+const FUNDAMENTALS_ALIAS = { 'MRSH': { sym: 'MMC' },   // Marsh & McLennan : MMC → MRSH (2025), 2 exercices sous MRSH, 6 sous MMC
+  'TSM': { sym: '2330', mic: 'XTAI' },
+  'UMC': { sym: '2303', mic: 'XTAI' },
+  'ASX': { sym: '3711', mic: 'XTAI' },
+  'CHT': { sym: '2412', mic: 'XTAI' },
+  'SONY': { sym: '6758', mic: 'XJPX' },
+  'TM': { sym: '7203', mic: 'XJPX' },
+  'HMC': { sym: '7267', mic: 'XJPX' },
+  'MUFG': { sym: '8306', mic: 'XJPX' },
+  'SMFG': { sym: '8316', mic: 'XJPX' },
+  'MFG': { sym: '8411', mic: 'XJPX' },
+  'NMR': { sym: '8604', mic: 'XJPX' },
+  'TAK': { sym: '4502', mic: 'XJPX' },
+  'IX': { sym: '8591', mic: 'XJPX' },
+  'KB': { sym: '105560', mic: 'XKRX' },
+  'SHG': { sym: '055550', mic: 'XKRX' },
+  'WF': { sym: '316140', mic: 'XKRX' },
+  'PKX': { sym: '005490', mic: 'XKRX' },
+  'SKM': { sym: '017670', mic: 'XKRX' },
+  'HDB': { sym: 'HDFCBANK', mic: 'XNSE' },
+  'IBN': { sym: 'ICICIBANK', mic: 'XNSE' },
+  'INFY': { sym: 'INFY', mic: 'XNSE' },
+  'RDY': { sym: 'DRREDDY', mic: 'XNSE' },
+  'BABA': { sym: '9988', mic: 'XHKG' },
+  'JD': { sym: '9618', mic: 'XHKG' },
+  'BIDU': { sym: '9888', mic: 'XHKG' },
+  'NTES': { sym: '9999', mic: 'XHKG' },
+  'TCOM': { sym: '9961', mic: 'XHKG' },
+  'TME': { sym: '1698', mic: 'XHKG' },
+  'LI': { sym: '2015', mic: 'XHKG' },
+  'NIO': { sym: '9866', mic: 'XHKG' },
+  'XPEV': { sym: '9868', mic: 'XHKG' }
+};
 
 async function fetchFundamentalsForSymbol(symbol, context = {}) {
   const alias = FUNDAMENTALS_ALIAS[symbol];
   if (alias && !context._aliased) {
-    const viaAlias = await fetchFundamentalsForSymbol(alias, { ...context, _aliased: true });
-    if ((viaAlias.years_available || 0) >= 4) {
-      console.log(`  🔗 ${symbol}: historique via alias ${alias} (${viaAlias.years_available} exercices)`);
-      return { ...viaAlias, symbol, _alias_of: alias };
+    const aliasCtx = alias.mic ? { _mic: alias.mic, _aliased: true } : { ...context, _aliased: true };
+    const viaAlias = await fetchFundamentalsForSymbol(alias.sym, aliasCtx);
+    if ((viaAlias.years_available || 0) >= 4 && (viaAlias.roic !== null || viaAlias.roe !== null)) {
+      console.log(`  🔗 ${symbol}: comptes via ${alias.sym}${alias.mic ? ':' + alias.mic : ''} (${viaAlias.years_available} exercices)`);
+      return { ...viaAlias, symbol, _alias_of: alias.sym + (alias.mic ? ':' + alias.mic : '') };
     }
   }
   const bsResult = await fetchBalanceSheet(symbol, context);
