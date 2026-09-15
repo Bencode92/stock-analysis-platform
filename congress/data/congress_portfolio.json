@@ -1,7 +1,7 @@
 {
   "meta": {
-    "generated_at": "2026-08-24T06:40:29+00:00",
-    "as_of": "2026-08-20",
+    "generated_at": "2026-09-15T10:46:09+00:00",
+    "as_of": "2026-09-12",
     "params": {
       "top_k_politicians": 5,
       "lookback_days": 180,
@@ -15,48 +15,64 @@
       "whitelist": [],
       "side_filter": "buy"
     },
-    "n_holdings": 16,
-    "n_candidates": 16,
-    "positions_dropped_by_sell": 3,
+    "n_holdings": 6,
+    "n_candidates": 6,
+    "positions_dropped_by_sell": 4,
     "n_eligible": 22,
-    "n_active": 3,
-    "n_selected": 3,
+    "n_active": 2,
+    "n_selected": 2,
     "top_performers": [
       {
         "representative": "Nancy Pelosi",
-        "score": 52.22
-      },
-      {
-        "representative": "Markwayne Mullin",
-        "score": 45.8
+        "score": 52.26
       },
       {
         "representative": "Tim Moore",
-        "score": 15.45
+        "score": 15.44
       }
     ],
     "inactive_top_performers": [
       "Debbie Wasserman Schultz",
       "Mark Dr Green",
+      "Markwayne Mullin",
       "Lamar Smith"
     ],
     "note": "Selection = top performers ACTIFS sur la fenetre (les retraités, alpha passé mais 0 trade recent, sont ecartes). PEA/CTO indicatif (actions US = CTO). Tilt fondamental/macro = overlay etage 3bis."
   },
   "holdings": [
     {
-      "ticker": "INTC",
+      "ticker": "BE",
       "weight": 0.15,
       "n_buyers": 1,
-      "total_amount_usd": 3000000,
+      "total_amount_usd": 12000002,
       "buyers": [
         {
           "representative": "Nancy Pelosi",
-          "regularity_score": 52.22,
-          "amount_usd": 3000000,
-          "report_date": "2026-06-23"
+          "regularity_score": 52.26,
+          "amount_usd": 12000002,
+          "report_date": "2026-08-21"
         }
       ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~3000k$ investis (ex. Nancy Pelosi, score 52.22).",
+      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~12000k$ investis (ex. Nancy Pelosi, score 52.26).",
+      "eligibility": {
+        "pea": false,
+        "cto": true
+      }
+    },
+    {
+      "ticker": "INTC",
+      "weight": 0.15,
+      "n_buyers": 1,
+      "total_amount_usd": 800001,
+      "buyers": [
+        {
+          "representative": "Nancy Pelosi",
+          "regularity_score": 52.26,
+          "amount_usd": 800001,
+          "report_date": "2026-08-21"
+        }
+      ],
+      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~800k$ investis (ex. Nancy Pelosi, score 52.26).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -66,225 +82,16 @@
       "ticker": "UBER",
       "weight": 0.15,
       "n_buyers": 1,
-      "total_amount_usd": 750000,
+      "total_amount_usd": 50000,
       "buyers": [
         {
           "representative": "Nancy Pelosi",
-          "regularity_score": 52.22,
-          "amount_usd": 750000,
+          "regularity_score": 52.26,
+          "amount_usd": 50000,
           "report_date": "2026-06-23"
         }
       ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~750k$ investis (ex. Nancy Pelosi, score 52.22).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "UNH",
-      "weight": 0.0839,
-      "n_buyers": 1,
-      "total_amount_usd": 75000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 75000,
-          "report_date": "2026-03-10"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~75k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "FCFS",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "C",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "CRS",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "LRN",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "APG",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "VSEC",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "AMKR",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "MPWR",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "ADBE",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
-      "eligibility": {
-        "pea": false,
-        "cto": true
-      }
-    },
-    {
-      "ticker": "MCK",
-      "weight": 0.0559,
-      "n_buyers": 1,
-      "total_amount_usd": 50000,
-      "buyers": [
-        {
-          "representative": "Markwayne Mullin",
-          "regularity_score": 45.8,
-          "amount_usd": 50000,
-          "report_date": "2026-03-02"
-        }
-      ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Markwayne Mullin, score 45.8).",
+      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Nancy Pelosi, score 52.26).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -292,18 +99,18 @@
     },
     {
       "ticker": "IHG",
-      "weight": 0.0189,
+      "weight": 0.15,
       "n_buyers": 1,
       "total_amount_usd": 50000,
       "buyers": [
         {
           "representative": "Tim Moore",
-          "regularity_score": 15.45,
+          "regularity_score": 15.44,
           "amount_usd": 50000,
           "report_date": "2026-05-19"
         }
       ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Tim Moore, score 15.45).",
+      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Tim Moore, score 15.44).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -311,18 +118,18 @@
     },
     {
       "ticker": "RYCEY",
-      "weight": 0.0189,
+      "weight": 0.15,
       "n_buyers": 1,
       "total_amount_usd": 50000,
       "buyers": [
         {
           "representative": "Tim Moore",
-          "regularity_score": 15.45,
+          "regularity_score": 15.44,
           "amount_usd": 50000,
           "report_date": "2026-05-19"
         }
       ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Tim Moore, score 15.45).",
+      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Tim Moore, score 15.44).",
       "eligibility": {
         "pea": false,
         "cto": true
@@ -330,18 +137,18 @@
     },
     {
       "ticker": "SMPL",
-      "weight": 0.0189,
+      "weight": 0.15,
       "n_buyers": 1,
       "total_amount_usd": 50000,
       "buyers": [
         {
           "representative": "Tim Moore",
-          "regularity_score": 15.45,
+          "regularity_score": 15.44,
           "amount_usd": 50000,
           "report_date": "2026-03-24"
         }
       ],
-      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Tim Moore, score 15.45).",
+      "rationale": "Achete par 1 performer(s) du Top 5 sur 180j, ~50k$ investis (ex. Tim Moore, score 15.44).",
       "eligibility": {
         "pea": false,
         "cto": true
