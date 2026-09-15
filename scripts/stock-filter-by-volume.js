@@ -1472,7 +1472,13 @@ async function checkVolume(r, region){
       const fp = path.join(OUT_DIR, file.replace('.csv', '_filtered.csv'));
       let rows = [];
       try { rows = await readCSV(fp); }
-      catch { console.log(`⚠️  ${fp} absent → région ${region} sautée`); }
+      catch (e) {
+        // ⛔ 2026-09-15 : un CSV illisible n'est PAS un fichier absent. Le 15/09 une ligne mal formée a fait
+        // charger 0 titre → l'univers US a été RÉÉCRIT VIDE et commité. On échoue franchement, on n'écrit rien.
+        console.error(`❌ ${fp} illisible (${e.message.slice(0, 120)}) → run interrompu, univers NON réécrit`);
+        process.exit(1);
+      }
+      if (!rows.length) { console.error(`❌ ${fp} : 0 titre chargé → run interrompu, univers NON réécrit`); process.exit(1); }
       console.log(`⏭️  ${region}: SKIP_VOLUME — ${rows.length} titres chargés depuis ${fp}`);
       allOutputs.push({ title: region, file: fp, rows });
     }
