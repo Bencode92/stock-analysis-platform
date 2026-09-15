@@ -5,9 +5,13 @@ conviction_equities.py — PILIER 3 « Actions-Conviction » : 100 % actions, en
 
 DOCTRINE (revue expert 2026-09-14/15, docs/CONVICTION_ACTIONS_EXPERT_BRIEF_2026-09-14.md + artefacts) :
   - Le SLEEVE N'ACCEPTE QUE LE MAILLON : seules les sociétés nommées dans une chaîne du funnel (framework.json)
-    sont candidates. PAS DE SCREEN HORS FUNNEL (Benoit, 2026-09-15) : un enabler s'ajoute au funnel par la
-    recherche (maillon nommé, rôle écrit), jamais par une industrie. Un thème sans enabler éligible reste VIDE —
-    pas de remplisseur, budget laissé de côté (S2-a), jamais redistribué (S2-b refusé).
+    sont candidates. Le SCREEN par industrie est un RADAR : il PROPOSE (journal), jamais une ligne. Deux statuts,
+    jamais un seul (revue expert 2026-09-15) :
+      · maillon nommé → candidat automatique ;
+      · trouvé par le screen → proposition, jusqu'à QUALIFICATION = porte, pas une phrase : preuve chiffrée
+        (≥ 50 % du CA ou du carnet sur le maillon, source citée), ≤ 2 adoptions/an issues du screen, entrée dans
+        la fiche du thème (framework = source de vérité), journal des refus (data/conviction_screen_refusals.json).
+    Un thème sans enabler éligible reste VIDE — pas de remplisseur, budget laissé de côté, jamais redistribué.
   - SAIN = bilan + trajectoire : durabilité A/B sans mirage · dette nette / EBIT ≤ 4 (proxy d'EBITDA ≤ 3 ;
     fonds propres négatifs → ≤ 2) · marge de FCF ≥ 5 % du CA sur le dernier exercice ET FCF ≥ 0 l'exercice
     précédent (tableau de flux, jamais le champ « statistics ») · ROIC 3 ans ≥ 10 % OU marge en hausse 3 ans ·
@@ -49,7 +53,9 @@ STANCE_MULT = {"ACTIF": 1.0, "PROGRESSIF": 0.5, "SÉLECTIF": 0.5, "BORNÉ": 0.33
 STANCE_OVERRIDE = {"materials": "BORNÉ", "robotics": "VEILLE"}
 THEME_LABEL = {"ai_infra": "IA-infra", "nuclear": "Nucléaire", "grid": "Réseau électrique",
                "semi": "Semi-conducteurs", "defense": "Défense", "materials": "Métaux"}
-# Industries enablers — INFORMATIF (médianes de prix par industrie). Aucun screen : seuls les maillons du funnel entrent.
+# Industries enablers — périmètre du RADAR (propositions) et médianes de prix. Seuls les maillons du funnel entrent.
+ADOPTIONS_PER_YEAR_MAX = 2       # plafond d'adoptions issues du screen (comme « max 2 ajouts/an » des ETF)
+PROOF_SHARE_MIN = 50.0           # preuve chiffrée : ≥ 50 % du CA / carnet sur le maillon
 ENABLER_INDUSTRIES = {
     "Semiconductor Equipment & Materials": "semi", "Semiconductors": "semi",
     "Electrical Equipment & Parts": "grid", "Specialty Industrial Machinery": "grid",
@@ -127,18 +133,43 @@ def load_universe():
     return [s for s in rows if (s["ticker"], s["_region"]) not in socle], socle
 
 
-def funnel_index(fw):
-    """(ticker, région, pays) → (thème, indice de maillon, label, rôle) pour les enablers nommés."""
-    idx = {}
+def _qualified(c, today):
+    """Un adopté du screen n'est un MAILLON que si sa preuve est jointe (≥ 50 %, source) — ou tant que sa date
+       limite n'est pas passée (adoptions expert du 15/09 : preuve à joindre avant la vague de décembre)."""
+    a = c.get("adopted_from_screen")
+    if not a:
+        return True, None
+    p = a.get("proof") or {}
+    if _num(p.get("share_pct")) is not None and _num(p["share_pct"]) >= PROOF_SHARE_MIN and p.get("source"):
+        return True, None
+    dl = p.get("deadline")
+    if dl and today <= date.fromisoformat(dl):
+        return True, f"preuve à joindre avant {dl}"
+    return False, "adopté du screen sans preuve chiffrée → retour au statut proposition"
+
+
+def funnel_index(fw, today=None):
+    """(ticker, région, pays) → (thème, indice de maillon, label, rôle) pour les enablers nommés ET qualifiés."""
+    today = today or date.today(); idx = {}; adoptions = []; pending = []
     for t in fw["themes"]:
         for mi, m in enumerate(t["maillons"]):
             for c in m.get("companies", []):
                 if not c.get("ticker") or c.get("region") not in ("US", "EU"):
                     continue
+                ok, why = _qualified(c, today)
+                a = c.get("adopted_from_screen")
+                if a and a.get("date") and (today - date.fromisoformat(a["date"])).days <= 365:
+                    adoptions.append((a["date"], c["ticker"]))
+                if not ok:
+                    pending.append({"ticker": c["ticker"], "theme": t["key"], "why": why}); continue
                 reg = "US" if c["region"] == "US" else "Europe"
                 idx.setdefault((c["ticker"].upper(), reg, (c.get("country") or "").lower()),
-                               {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role")})
-    return idx
+                               {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role"),
+                                "proof_pending": why})
+    if len(adoptions) > ADOPTIONS_PER_YEAR_MAX:
+        print(f"⚠️ {len(adoptions)} adoptions issues du screen sur 12 mois (plafond {ADOPTIONS_PER_YEAR_MAX}) : "
+              + ", ".join(t for _, t in sorted(adoptions)) + " — les adoptions du 15/09 (revue expert) sont journalisées comme lot fondateur")
+    return idx, pending
 
 
 def build():
@@ -146,7 +177,8 @@ def build():
     cache = _load("fundamentals_cache.json")["data"]
     cfc = _load("cashflow_cache.json") if os.path.exists(os.path.join(DATA, "cashflow_cache.json")) else {}
     rows, socle = load_universe()
-    fidx = funnel_index(fw)
+    fidx, pending = funnel_index(fw)
+    refusals = (_load("conviction_screen_refusals.json").get("refusals") if os.path.exists(os.path.join(DATA, "conviction_screen_refusals.json")) else {}) or {}
     themes = {t["key"]: t for t in fw["themes"]}
     stance = {k: _stance(t) for k, t in themes.items()}
     active = {k: STANCE_MULT[v] for k, v in stance.items() if STANCE_MULT.get(v, 0) > 0 and k in THEME_LABEL}
@@ -211,10 +243,8 @@ def build():
     for s in rows:
         key = (s["ticker"].upper(), s["_region"], (s.get("country") or "").lower())
         f = fidx.get(key)
-        if not f:
-            continue                                  # pas de screen hors funnel : maillon nommé ou rien
-        th, src = f["theme"], "maillon"
-        if th not in tw:
+        th, src = (f["theme"], "maillon") if f else (ENABLER_INDUSTRIES.get(s.get("industry")), "screen")
+        if not th or th not in tw:
             continue
         fm, _ = fcf_margin(s)
         cands.append({"ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
@@ -225,6 +255,8 @@ def build():
                       "rev_growth_3y": _num(s.get("revenue_growth_3y")), "durability": s.get("durability_grade"),
                       "durability_score": _num(s.get("durability_score")), "quality_score": _num(s.get("quality_score")),
                       "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
+                      "proof_pending": f.get("proof_pending") if f else None,
+                      "refused": refusals.get(s["ticker"], {}).get("reason") if src == "screen" else None,
                       "gates_failed": gates(s)})
 
     # ── sélection : maillon seulement, thèse (scope) avant chaîne, prix en départage ──
@@ -281,10 +313,14 @@ def build():
         "holdings": selected, "_keys": [list(k) for k in new_keys], "n": len(selected),
         "allocated_pct": round(total * 100, 1), "cher_pct": round(cher * 100, 1), "themes": per_theme,
         "waiting": waiting, "blocked_maillons": [c for c in cands if c["src"] == "maillon" and c["gates_failed"]],
+        # RADAR : propositions du screen (saines, prix raisonnable, pas refusées) — jamais des lignes
+        "screen_proposals": [c for c in cands if c["src"] == "screen" and not c["gates_failed"] and (c["rel"] or 0) >= REL_ARTEFACT and not c["refused"]],
+        "screen_refused": [c for c in cands if c["src"] == "screen" and c["refused"]],
+        "qualification_pending": [c for c in cands if c["src"] == "maillon" and c.get("proof_pending")] + pending,
         "medians_ev_ebit": {k: round(v, 1) for k, v in med_ind.items() if k in ENABLER_INDUSTRIES},
         "_transition": {"wave_due": wave_due, "wave_date": date.today().isoformat() if wave_due else last_wave,
                         "days_since_wave": days, "added": [list(k) for k in added], "dropped": [list(k) for k in dropped]},
-        "_doctrine": "maillon seulement, aucun screen hors funnel · sain (ND/EBIT ≤ 4, marge FCF ≥ 5 % + exercice précédent ≥ 0, trajectoire) · prix relatif "
+        "_doctrine": "maillon seulement (le screen = radar, propose sans entrer ; qualification = preuve ≥ 50 % + source, ≤ 2 adoptions/an, journal des refus) · sain (ND/EBIT ≤ 4, marge FCF ≥ 5 % + exercice précédent ≥ 0, trajectoire) · prix relatif "
                      "(≤ 2,5×, cher ≤ 30 %) · thèse avant chaîne · pas d'ETF · exclusion socle · thème vide reste vide",
         "generated": date.today().isoformat(),
     }
