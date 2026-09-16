@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-16T07:24:27.440678",
+  "timestamp": "2026-09-16T08:46:08.060712",
   "period_days": 90,
   "frequency": "M",
   "platform_fee_annual_bp": 0.0,
@@ -29,20 +29,20 @@
       "original_dates": 87,
       "aligned_dates": 86,
       "removed_dates": 1,
-      "nan_before_avg_pct": 4.77,
-      "nan_after_reindex_avg_pct": 4.77,
+      "nan_before_avg_pct": 4.71,
+      "nan_after_reindex_avg_pct": 4.71,
       "nan_after_ffill_avg_pct": 0.11,
       "symbols_excluded": [],
       "alignment_method": "NYSE_business_days",
       "ffill_limit": 3,
       "ffill_applied": true,
       "warnings": [
-        "ffill(limit=3): 81 values filled",
+        "ffill(limit=3): 80 values filled",
         "Dropped 1 rows with remaining NaN"
       ]
     },
     "quality_report": {
-      "timestamp": "2026-09-16T07:24:27.337294",
+      "timestamp": "2026-09-16T08:46:07.981495",
       "passed": true,
       "n_symbols_checked": 20,
       "n_symbols_passed": 20,
@@ -73,10 +73,10 @@
         "VT": 0.0
       },
       "return_stats": {
-        "mean_daily_pct": 0.0359,
+        "mean_daily_pct": 0.0368,
         "max_daily_pct": 15.2,
         "min_daily_pct": -6.89,
-        "std_daily_pct": 1.2813
+        "std_daily_pct": 1.2816
       }
     },
     "benchmark_coverage": {
@@ -134,9 +134,9 @@
         "cash_allocation": {
           "cash_weight_pct": 60.0,
           "missing_symbols": [
+            "VWCE.DE",
             "IBGS.AS",
-            "SGLN.AS",
-            "VWCE.DE"
+            "SGLN.AS"
           ],
           "n_missing": 3,
           "cash_rate_annual_pct": 4.5,
@@ -296,10 +296,10 @@
           "cash_weight_pct": 80.0,
           "missing_symbols": [
             "IBGS.AS",
-            "SGLN.AS",
-            "IBCI.AS",
             "VWCE.DE",
-            "AGGH.AS"
+            "AGGH.AS",
+            "IBCI.AS",
+            "SGLN.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -436,9 +436,9 @@
       "profile": "Stable",
       "success": true,
       "stats": {
-        "net_return_pct": 1.15,
-        "total_return_pct": 1.15,
-        "gross_return_pct": 1.15,
+        "net_return_pct": 1.19,
+        "total_return_pct": 1.19,
+        "gross_return_pct": 1.19,
         "cost_drag_pct": -0.0,
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
@@ -459,10 +459,10 @@
           "cash_weight_pct": 90.0,
           "missing_symbols": [
             "IBGS.AS",
-            "SGLN.AS",
-            "IBCI.AS",
             "VWCE.DE",
-            "AGGH.AS"
+            "AGGH.AS",
+            "IBCI.AS",
+            "SGLN.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -470,15 +470,15 @@
           "cash_return_contribution_value": 1037.56,
           "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
         },
-        "cagr_pct": 4.54,
-        "gross_cagr_pct": 4.54,
+        "cagr_pct": 4.7,
+        "gross_cagr_pct": 4.7,
         "volatility_pct": 1.24,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
-        "sharpe_computed": 0.01,
+        "sharpe_computed": 0.14,
         "sharpe_display": "Non calculable (période < 1 an)",
         "sharpe_significant": false,
-        "sharpe_daily": 0.0007,
+        "sharpe_daily": 0.0088,
         "max_drawdown_pct": -0.53,
         "avg_turnover_per_rebal": 100.0,
         "total_turnover_pct": 100.0,
@@ -519,11 +519,11 @@
           "asset_class": "fixed_income"
         },
         "benchmark_volatility_pct": 4.01,
-        "excess_return_pct": 4.23,
+        "excess_return_pct": 4.28,
         "tracking_error_pct": 4.42,
-        "information_ratio": 3.77,
+        "information_ratio": 3.81,
         "beta": -0.06,
-        "alpha_pct": 0.97,
+        "alpha_pct": 1.01,
         "upside_capture_pct": -2.3,
         "downside_capture_pct": -13.1
       },
@@ -592,7 +592,7 @@
         "2026-09-11": 101032.65,
         "2026-09-14": 101120.23,
         "2026-09-15": 101029.29,
-        "2026-09-16": 101049.7
+        "2026-09-16": 101090.66
       }
     }
   ],
@@ -620,9 +620,9 @@
       "cash_allocation": {
         "cash_weight_pct": 60.0,
         "missing_symbols": [
+          "VWCE.DE",
           "IBGS.AS",
-          "SGLN.AS",
-          "VWCE.DE"
+          "SGLN.AS"
         ],
         "n_missing": 3,
         "cash_rate_annual_pct": 4.5,
@@ -711,10 +711,10 @@
         "cash_weight_pct": 80.0,
         "missing_symbols": [
           "IBGS.AS",
-          "SGLN.AS",
-          "IBCI.AS",
           "VWCE.DE",
-          "AGGH.AS"
+          "AGGH.AS",
+          "IBCI.AS",
+          "SGLN.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -780,9 +780,9 @@
       "downside_capture_pct": 11.1
     },
     "Stable": {
-      "net_return_pct": 1.15,
-      "total_return_pct": 1.15,
-      "gross_return_pct": 1.15,
+      "net_return_pct": 1.19,
+      "total_return_pct": 1.19,
+      "gross_return_pct": 1.19,
       "cost_drag_pct": -0.0,
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
@@ -803,10 +803,10 @@
         "cash_weight_pct": 90.0,
         "missing_symbols": [
           "IBGS.AS",
-          "SGLN.AS",
-          "IBCI.AS",
           "VWCE.DE",
-          "AGGH.AS"
+          "AGGH.AS",
+          "IBCI.AS",
+          "SGLN.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -814,15 +814,15 @@
         "cash_return_contribution_value": 1037.56,
         "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
       },
-      "cagr_pct": 4.54,
-      "gross_cagr_pct": 4.54,
+      "cagr_pct": 4.7,
+      "gross_cagr_pct": 4.7,
       "volatility_pct": 1.24,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
-      "sharpe_computed": 0.01,
+      "sharpe_computed": 0.14,
       "sharpe_display": "Non calculable (période < 1 an)",
       "sharpe_significant": false,
-      "sharpe_daily": 0.0007,
+      "sharpe_daily": 0.0088,
       "max_drawdown_pct": -0.53,
       "avg_turnover_per_rebal": 100.0,
       "total_turnover_pct": 100.0,
@@ -863,11 +863,11 @@
         "asset_class": "fixed_income"
       },
       "benchmark_volatility_pct": 4.01,
-      "excess_return_pct": 4.23,
+      "excess_return_pct": 4.28,
       "tracking_error_pct": 4.42,
-      "information_ratio": 3.77,
+      "information_ratio": 3.81,
       "beta": -0.06,
-      "alpha_pct": 0.97,
+      "alpha_pct": 1.01,
       "upside_capture_pct": -2.3,
       "downside_capture_pct": -13.1
     }
