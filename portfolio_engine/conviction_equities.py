@@ -410,6 +410,9 @@ def inject_portfolio(pf):
                         "theme": THEME_LABEL.get(h["theme"]), "maillon": h["maillon_label"], "maillon_role": h["role"]})
     p["Actions-Conviction"] = {
         "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},
+        # le non-alloué est AFFICHÉ (le profil doit lire 100 %) sous son nom : « budget en attente de prix » (expert 16/09, Q6)
+        "Cash": {"Budget en attente de prix (thèmes sans enabler sain à prix raisonnable)":
+                 f"{round(100 - sum(float(v.rstrip('%')) for v in actions.values()), 1)}%"},   # complète les poids AFFICHÉS à 100 %
         "_tickers": {h["ticker"]: round(h["weight"], 4) for h in pf["holdings"]},
         "_asset_details": details,
         "_bloc_actions": {"socle_pct": BLOC_SOCLE_PCT, "conviction_investie_pct": round((100 - BLOC_SOCLE_PCT) * pf["allocated_pct"] / 100, 1),
