@@ -177,7 +177,17 @@ async function fetchQuote(symbolParam){
 async function fetchTimeSeriesFrom(dateStartISO, symbolParam){
   await pay(CREDITS.TIME_SERIES);
   const params = { symbol: symbolParam, interval: '1day', start_date: dateStartISO, adjusted: true, apikey: API_KEY };
-  const { data } = await axios.get('https://api.twelvedata.com/time_series', { params });
+  // 16/09 : 429 (quota partagé avec les runs Stocks) → pause + reprise, au lieu d'écrire des métriques nulles
+  let data = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      ({ data } = await axios.get('https://api.twelvedata.com/time_series', { params }));
+      break;
+    } catch (e) {
+      if (e?.response?.status !== 429 || attempt === 3) throw e;
+      await new Promise(r => setTimeout(r, 65000));
+    }
+  }
   if (!data || data.status === 'error' || !Array.isArray(data.values)) return null;
   return data.values;
 }
@@ -277,7 +287,25 @@ async function computeMetricsFor(symbolParam){
 
 async function readCSV(filePath){ const raw = await fs.readFile(filePath, 'utf8'); return csvParse.parse(raw, { columns: true, skip_empty_lines: true }); }
 function rowsToItems(rows, type){ return rows.map(r => ({ type, symbol: r.symbol, name: r.name || null, isin: r.isin || null, mic_code: r.mic_code || null, currency: r.currency || null })); }
-function mergeWeeklyDaily(weeklyArr, dailyMapBySymbol){ return weeklyArr.map(w => { const d = dailyMapBySymbol.get(w.symbol) || {}; return { ...w, ...d }; }); }
+// 16/09 : garde « jamais écraser du bon par du vide » — si le run du jour n'a pas de métrique (429, série vide)
+// mais que combined_*.csv en avait une, on la REPORTE (as_of d'origine) plutôt que d'écrire null.
+// Sans ça, un run étranglé vidait vol/perf sur 765 ETF et cassait le profil Stable (0 candidat).
+const CARRY_COLS = ['daily_change_pct','ytd_return_pct','one_year_return_pct','perf_1m_pct','perf_3m_pct','vol_pct','vol_window','vol_3y_pct','beta','last_close'];
+function mergeWeeklyDaily(weeklyArr, dailyMapBySymbol, prevMapBySymbol = new Map()){
+  let carried = 0;
+  const out = weeklyArr.map(w => {
+    const d = { ...(dailyMapBySymbol.get(w.symbol) || {}) };
+    const p = prevMapBySymbol.get(w.symbol);
+    if (p && CARRY_COLS.every(c => d[c] == null || d[c] === '')) {
+      for (const c of CARRY_COLS) if (p[c] != null && p[c] !== '') d[c] = p[c];
+      if (p.as_of) d.as_of = p.as_of;
+      carried++;
+    }
+    return { ...w, ...d };
+  });
+  if (carried) console.log(`♻️  ${carried} instrument(s) sans métrique aujourd'hui → valeurs précédentes reportées`);
+  return out;
+}
 
 async function writeCSV(filePath, rows, columns) {
   const header = columns.join(',') + '\n';
@@ -439,8 +467,10 @@ async function main(){
     data_quality_score: r.data_quality_score != null ? Number(r.data_quality_score) : ''
   }));
 
-  const etfMerged = mergeWeeklyDaily(weeklyEtfs, new Map(etfDaily.map(x=>[x.symbol,x])));
-  const bondMerged = mergeWeeklyDaily(weeklyBonds, new Map(bondDaily.map(x=>[x.symbol,x])));
+  const prevEtf = await fs.access(path.join(OUT_DIR, 'combined_etfs.csv')).then(() => readCSV(path.join(OUT_DIR, 'combined_etfs.csv'))).catch(() => []);
+  const prevBond = await fs.access(path.join(OUT_DIR, 'combined_bonds.csv')).then(() => readCSV(path.join(OUT_DIR, 'combined_bonds.csv'))).catch(() => []);
+  const etfMerged = mergeWeeklyDaily(weeklyEtfs, new Map(etfDaily.map(x=>[x.symbol,x])), new Map(prevEtf.map(x=>[x.symbol,x])));
+  const bondMerged = mergeWeeklyDaily(weeklyBonds, new Map(bondDaily.map(x=>[x.symbol,x])), new Map(prevBond.map(x=>[x.symbol,x])));
 
   // v14.5 (2026-07-12) : filtre hasObjective retiré (voir raison dans etfFinal).
   // Les variables gardent leur nom pour minimiser le diff en aval.
