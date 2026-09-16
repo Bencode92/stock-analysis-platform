@@ -57,6 +57,12 @@ THEME_LABEL = {"ai_infra": "IA-infra", "nuclear": "Nucléaire", "grid": "Réseau
 # Industries enablers — périmètre du RADAR (propositions) et médianes de prix. Seuls les maillons du funnel entrent.
 ADOPTIONS_PER_YEAR_MAX = 2       # plafond d'adoptions issues du screen (comme « max 2 ajouts/an » des ETF)
 PROOF_SHARE_MIN = 50.0           # preuve chiffrée : ≥ 50 % du CA / carnet sur le maillon
+# Q3 expert 16/09 — l'exposition au maillon s'applique AUSSI aux maillons nommés (sinon le framework est une porte dérobée) :
+# ≥ 50 % du CA → plein ; 20-50 % → demi-poids ; < 20 % → pas un maillon. Champ `maillon_share_pct` sur la fiche société ;
+# absent → plein mais « exposition à documenter » (même échéance que les preuves du screen).
+EXPOSURE_FULL, EXPOSURE_HALF = 50.0, 20.0
+EXPOSURE_DEADLINE = "2026-12-14"
+BLOC_SOCLE_PCT = 75                # répartition du bloc actions (expert 16/09) : 75 socle / 25 conviction, fixe hors changement de stance
 ENABLER_INDUSTRIES = {
     "Semiconductor Equipment & Materials": "semi", "Semiconductors": "semi",
     "Electrical Equipment & Parts": "grid", "Specialty Industrial Machinery": "grid",
@@ -186,7 +192,8 @@ def funnel_index(fw, today=None):
                     pending.append({"ticker": c["ticker"], "theme": t["key"], "why": why}); continue
                 reg = {"US": "US", "EU": "Europe", "Asie": "Asie"}[c["region"]]
                 key = (c["ticker"].upper(), reg, (c.get("country") or "").lower())
-                entry = {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role"), "proof_pending": why}
+                entry = {"theme": t["key"], "maillon": mi, "label": m.get("label"), "role": c.get("role"), "proof_pending": why,
+                         "share_pct": _num(c.get("maillon_share_pct")), "share_estimated": bool(c.get("maillon_share_estimated"))}
                 first = THEME_SCOPE.get(t["key"], {}).get("maillon_first", [])
                 rank = lambda lab: next((i for i, m0 in enumerate(first) if (lab or "").startswith(m0)), len(first))
                 # société citée dans PLUSIEURS maillons (Thales : ① prime ET ③ électronique) → on retient celui que la
@@ -297,7 +304,16 @@ def build():
             continue
         fm, _ = fcf_margin(s)
         gf = gates(s)                                     # d'abord (calcule le levier depuis le cache si absent)
-        cands.append({"ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
+        share = f.get("share_pct") if f else None
+        factor, expo_note = 1.0, None
+        if f and share is not None:
+            if share < EXPOSURE_HALF: gf.append(f"exposition au maillon {share:.0f} % < 20 % (pas un maillon)")
+            elif share < EXPOSURE_FULL: factor, expo_note = 0.5, f"exposition {share:.0f} % → demi-poids"
+            if f.get("share_estimated"): expo_note = (expo_note + " · " if expo_note else "") + f"estimation, source à joindre avant {EXPOSURE_DEADLINE}"
+        elif f:
+            expo_note = f"exposition au maillon à documenter avant {EXPOSURE_DEADLINE}"
+        cands.append({"exposure_pct": share, "weight_factor": factor, "exposure_note": expo_note,
+                      "ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
                       "theme": th, "src": src, "maillon": f["maillon"] if f else None,
                       "maillon_label": f["label"] if f else None, "role": f["role"] if f else None,
                       "industry": s.get("industry"), "ev_ebit": s["_ev_ebit"], "rel": rel(s), "fcf_margin": fm,
@@ -327,7 +343,7 @@ def build():
         k = max(1, math.ceil(N_LINES * w - 1e-9))   # ceil : un thème ne perd jamais une place à l'arrondi quand un autre s'active
         take, rest = in_scope[:k], in_scope[k:]
         for c in take:
-            c["weight"] = round(min(LINE_CAP, w / k), 4)
+            c["weight"] = round(min(LINE_CAP, w / k) * c.get("weight_factor", 1.0), 4)   # demi-poids : le reste va au « budget en attente de prix »
         selected += take
         for c in rest: c["wait_reason"] = "place prise par un maillon plus en amont"
         for c in pool:
@@ -395,10 +411,15 @@ def inject_portfolio(pf):
         "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},
         "_tickers": {h["ticker"]: round(h["weight"], 4) for h in pf["holdings"]},
         "_asset_details": details,
+        "_bloc_actions": {"socle_pct": BLOC_SOCLE_PCT, "conviction_investie_pct": round((100 - BLOC_SOCLE_PCT) * pf["allocated_pct"] / 100, 1),
+                          "budget_en_attente_de_prix_pct": round((100 - BLOC_SOCLE_PCT) * (100 - pf["allocated_pct"]) / 100, 1),
+                          "regle": "75 socle / conviction investie / budget en attente de prix — le cash a une fonction (entrer quand Vertiv, GEV, Cameco passent la porte d'absurdité), pas une durée (expert 16/09)"},
         "Commentaire": (f"Actions-Conviction (pilier 3) — {pf['n']} enablers du funnel, 100 % actions, {pf['allocated_pct']} % de "
-                        f"l'enveloppe alloués ({100 - pf['allocated_pct']:.0f} % laissés de côté : thèmes non exprimables en actions "
-                        "saines à prix raisonnable). Portes : maillon nommé · durabilité A/B · dette nette/EBIT ≤ 4 · marge de FCF "
-                        "≥ 5 % · trajectoire · EV/EBIT ≤ 2,5× l'industrie. Poids par thème = stance du funnel. Priorité au socle, pas d'ETF."),
+                        f"l'enveloppe alloués ({100 - pf['allocated_pct']:.0f} % = budget en attente de prix : thèmes non exprimables en actions "
+                        "saines à prix raisonnable). Portes : maillon nommé · exposition au maillon ≥ 50 % (20-50 % = demi-poids) · durabilité A/B · "
+                        "dette nette/EBIT ≤ 4 · marge de FCF ≥ 5 % · trajectoire · EV/EBIT ≤ 2,5× l'industrie. Poids par thème = stance du funnel. "
+                        f"Bloc actions : {BLOC_SOCLE_PCT} % socle / {round((100 - BLOC_SOCLE_PCT) * pf['allocated_pct'] / 100, 1)} % conviction investie / "
+                        f"{round((100 - BLOC_SOCLE_PCT) * (100 - pf['allocated_pct']) / 100, 1)} % en attente de prix. Priorité au socle, pas d'ETF."),
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(p, f, ensure_ascii=False, indent=2)

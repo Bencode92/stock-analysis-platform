@@ -70,6 +70,8 @@ jobs:
         run: |
           echo "🏆 Génération du socle actions elite (equity_elite — clé par défaut du module)..."
           python portfolio_engine/equity_elite.py || echo "⚠️ equity_elite échec (non-bloquant)"
+          echo "🩺 Diagnostic §15 (fiches descriptives des tenus en sous-performance — sans effet sur la sélection)..."
+          python portfolio_engine/elite_diagnostic.py || echo "⚠️ elite_diagnostic échec (non-bloquant)"
           echo "🎯 Pilier 3 Actions-Conviction (enablers funnel, sains, prix relatif — vagues trimestrielles)..."
           echo "💧 Flux de trésorerie (cash_flow TD) des candidats conviction — incrémental, plafonné..."
           CASHFLOW_MAX=150 python scripts/fetch_cashflow_cache.py || echo "⚠️ cashflow cache échec (non-bloquant)"
@@ -611,6 +613,7 @@ jobs:
                   data/portfolios_elite.json \
                   data/portfolios_conviction_equities.json \
                   data/cashflow_cache.json \
+                  data/elite_diagnostic.json \
                   data/portfolios_previous.json \
                   data/portfolios_euus.json \
                   data/backtest_results.json \
