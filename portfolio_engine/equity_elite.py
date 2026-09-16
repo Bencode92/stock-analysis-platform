@@ -166,7 +166,17 @@ def _load_stocks():
         for s in arr:
             s["_region"] = reg
             rows.append(s)
-    return _drop_adr_duplicates(rows)
+    return _drop_inaccessible(_drop_adr_duplicates(rows))
+
+
+INACCESSIBLE_MICS = {"XMIL"}   # porte 0 (Benoit 16/09) : Borsa Italiana absente de Trading 212 — un titre servi via Xetra reste achetable
+
+
+def _drop_inaccessible(rows):
+    keep = [s for s in rows if (s.get("data_mic") or "") not in INACCESSIBLE_MICS]
+    if len(keep) < len(rows):
+        print(f"🚫 {len(rows) - len(keep)} cotation(s) sur une place inaccessible écartée(s) ({', '.join(sorted(INACCESSIBLE_MICS))})")
+    return keep
 
 
 def _drop_adr_duplicates(rows):

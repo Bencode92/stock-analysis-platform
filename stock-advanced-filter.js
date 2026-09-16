@@ -443,7 +443,19 @@ function tdParamTrials(symbol, stock, resolvedSym=null) {
 }
 
 // ✅ v3.17.4: FIX cache avec clé précise et désactivation du réordonnancement pour endpoints sensibles
-async function fetchTD(endpoint, trials, extraParams = {}) {
+// ✅ 16/09 : GARDE D'ENTITÉ sur les prix — une réponse dont le marché est US (exchange NYSE/Nasdaq ou MIC US) pour un
+//    titre NON US est un homonyme (GENI Suède → Genius Sports NYSE ; TD Italie → Toronto-Dominion ; SNX → TD Synnex…) :
+//    136 lignes Europe portaient des prix américains. Le paramètre nu `{symbol}` du fallback final est le point de fuite.
+function tdMarketOk(data, stock) {
+    if (!stock || !data || isUSCountry(stock.country)) return true;
+    const meta = data.meta || data;
+    const ex = String(meta.exchange || '');
+    const mic = String(meta.mic_code || '');
+    if (US_EXCH.test(ex) || US_MICS.has(mic)) return false;
+    return true;
+}
+
+async function fetchTD(endpoint, trials, extraParams = {}, stock = null) {
     // Clé de cache précise incluant tous les paramètres importants
     const makeKey = (t) => `${endpoint}:${t.symbol || ''}:${t.exchange || ''}:${t.mic_code || ''}:${t.country || ''}`;
 
@@ -473,6 +485,10 @@ async function fetchTD(endpoint, trials, extraParams = {}) {
                     params: { ...p, ...extraParams, apikey: CONFIG.API_KEY },
                     timeout: 15000
                 });
+                if (data && data.status !== 'error' && !tdMarketOk(data, stock)) {
+                    if (CONFIG.DEBUG) console.warn(`[TD ENTITÉ ${endpoint}] réponse US pour un titre ${stock.country} → rejetée`, p);
+                    break;                             // homonyme US → param suivant
+                }
                 if (data && data.status !== 'error') {
                     successCache.set(makeKey(p), p);   // ✅ on mémorise par paramètres exacts
                     if (CONFIG.DEBUG) console.log(`[TD OK ${endpoint}]`, p);
@@ -880,7 +896,7 @@ async function getQuoteData(symbol, stock) {
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
 
-        const data = await fetchTD('quote', trials);
+        const data = await fetchTD('quote', trials, {}, stock);
         if (!data) return null;
 
         const out = {
@@ -923,7 +939,7 @@ async function getPerformanceData(symbol, stock) {
         // ✅ v3.26: 'adjust' (pas 'adjusted') — param correct pour Twelve Data API
         let data = await fetchTD('time_series', trials, {
             interval: '1day', outputsize: 900, order: 'ASC', adjust: 'splits'
-        });
+        }, stock);
         
         // ✅ v3.26: Fallback adjust='none' si adjust='splits' échoue
         if (!data || data.status === 'error' || !data.values) {
@@ -931,7 +947,7 @@ async function getPerformanceData(symbol, stock) {
             await pay(CONFIG.CREDITS.TIME_SERIES);
             data = await fetchTD('time_series', trials, {
                 interval: '1day', outputsize: 900, order: 'ASC', adjust: 'none'
-            });
+            }, stock);
             if (CONFIG.DEBUG && data?.values) {
                 console.log(`[TIME_SERIES] ${symbol}: adjust=none fallback OK (${data.values.length} bars)`);
             }
@@ -1097,7 +1113,7 @@ async function getDividendData(symbol, stock) {
         const data = await fetchTD('dividends', trials, {
             start_date: threeY.toISOString().slice(0,10),
             end_date: todayISO
-        });
+        }, stock);
         
         if (!data || data.status === 'error') return {};
 
@@ -1155,7 +1171,7 @@ async function getStatisticsData(symbol, stock) {
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
         
-        const data = await fetchTD('statistics', trials, { dp: 6 });
+        const data = await fetchTD('statistics', trials, { dp: 6 }, stock);
         if (!data) return {};
 
         const root = data.statistics || data || {};
@@ -1242,7 +1258,7 @@ async function getGrowthEstimates(symbol, stock) {
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
         
-        const data = await fetchTD('growth_estimates', trials);
+        const data = await fetchTD('growth_estimates', trials, {}, stock);
         if (!data || data.status === 'error') {
             if (CONFIG.DEBUG) console.log(`[GROWTH_ESTIMATES] ${symbol}: no data`);
             return {};
@@ -1292,7 +1308,7 @@ async function getEarningsData(symbol, stock) {
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
 
-        const data = await fetchTD('earnings', trials);
+        const data = await fetchTD('earnings', trials, {}, stock);
         if (!data || data.status === 'error' || !data.earnings) {
             return {};
         }
@@ -1355,7 +1371,7 @@ async function getProfileData(symbol, stock) {
         const resolved = resolveSymbol(symbol, stock);
         const trials = tdParamTrials(symbol, stock, resolved);
         
-        const data = await fetchTD('profile', trials);
+        const data = await fetchTD('profile', trials, {}, stock);
         if (!data || data.status === 'error') {
             if (CONFIG.DEBUG) console.log(`[PROFILE] ${symbol}: no data`);
             return {};
@@ -1429,7 +1445,7 @@ async function getMarketCapDirect(symbol, stock) {
         const base = /:/.test(symbol) ? symbol.split(':')[0] : symbol;
         const trials = tdParamTrials(base, stock, symbol);
         
-        const data = await fetchTD('market_cap', trials);
+        const data = await fetchTD('market_cap', trials, {}, stock);
         if (!data) return null;
         
         // Format "série": { market_cap: [{date, value}, ...] }

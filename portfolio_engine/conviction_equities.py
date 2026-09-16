@@ -62,6 +62,7 @@ PROOF_SHARE_MIN = 50.0           # preuve chiffrée : ≥ 50 % du CA / carnet su
 # absent → plein mais « exposition à documenter » (même échéance que les preuves du screen).
 EXPOSURE_FULL, EXPOSURE_HALF = 50.0, 20.0
 EXPOSURE_DEADLINE = "2026-12-14"
+INACCESSIBLE_MICS = {"XMIL"}       # porte 0 (Benoit 16/09) : Borsa Italiana absente de Trading 212
 BLOC_SOCLE_PCT = 75                # répartition du bloc actions (expert 16/09) : 75 socle / 25 conviction, fixe hors changement de stance
 ENABLER_INDUSTRIES = {
     "Semiconductor Equipment & Materials": "semi", "Semiconductors": "semi",
@@ -139,7 +140,7 @@ def load_universe():
     # porte 0 « place accessible » (16/09, confirmé Benoit) : US + Europe ; l'Asie passe par les ADR NYSE/Nasdaq du fichier US
     for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json")):
         for s in _load(fn).get("stocks", []):
-            if s.get("ticker"):
+            if s.get("ticker") and (s.get("data_mic") or "") not in INACCESSIBLE_MICS:   # Milan absent de Trading 212
                 s["_region"] = reg; rows.append(s)
     # ADR US doublon d'une cotation asiatique présente (TSM = 2330…) → on garde la cotation d'origine (Asie en direct)
     try:
