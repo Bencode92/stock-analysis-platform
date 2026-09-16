@@ -146,11 +146,11 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 21.68,
+      "vol_realized": 15.0,
       "vol_target": 24.0,
-      "covariance_trustworthy": false,
-      "returns_coverage_pct": 16.0,
-      "covariance_empirical_weight": 0.0,
+      "covariance_trustworthy": true,
+      "returns_coverage_pct": 84.0,
+      "covariance_empirical_weight": 0.85,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Agressif) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
     "_tickers_pricing": {
@@ -198,15 +198,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 24.0,
-            "observed": 21.68,
-            "slack": 3.68,
+            "observed": 15.0,
+            "slack": -3.0,
             "binding": false,
-            "status": "OK",
+            "status": "VIOLATED",
             "details": {
               "tolerance": 6.0,
               "range_min": 18.0,
               "range_max": 30.0,
-              "diff_from_target": -2.32
+              "diff_from_target": -9.0
             }
           },
           {
@@ -445,13 +445,14 @@
         ],
         "summary": {
           "total": 14,
-          "ok": 11,
+          "ok": 10,
           "binding": 1,
-          "violated": 1,
+          "violated": 2,
           "critical": 1
         },
-        "quality_score": 82.9,
+        "quality_score": 75.7,
         "recommendations": [
+          "🟠 VIOLATED: volatility exceeded by 3.0% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 10.0% — immediate action required",
           "🟡 BINDING: max_single_position at 13.0% (cap=13.0%) — monitor closely",
           "🟠 VIOLATED: max_sector exceeded by 4.0% — reduce exposure"
@@ -700,7 +701,8 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique."
+      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique.",
+      "Volatilité réalisée (15.0%) éloignée de la cible (24.0%) - écart de 9.0%."
     ]
   },
   "Modéré": {
