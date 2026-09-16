@@ -402,25 +402,30 @@ def inject_portfolio(pf):
     except Exception:
         return
     actions, details = {}, []
-    for h in pf["holdings"]:
-        w = round(h["weight"] * 100, 2)
-        actions[h["name"] or h["ticker"]] = f"{round(w, 1):.1f}%"   # schéma : 1 décimale max
+    # AFFICHAGE (Benoit 16/09) : les poids du profil sont ceux de la PART INVESTIE, ramenés à 100 % — c'est ce qu'on
+    # applique au montant réellement placé sur la poche. Le « budget en attente de prix » est porté au niveau du bloc
+    # (_bloc_actions) et dans le commentaire ; les poids bruts (× part allouée) restent dans portfolios_conviction_equities.json.
+    tot = sum(h["weight"] for h in pf["holdings"]) or 1.0
+    disp = [round(h["weight"] / tot * 100, 1) for h in pf["holdings"]]
+    if disp:
+        disp[0] = round(disp[0] + (100.0 - sum(disp)), 1)             # l'arrondi retombe sur la 1re ligne → total 100,0
+    for h, wd in zip(pf["holdings"], disp):
+        w = wd
+        actions[h["name"] or h["ticker"]] = f"{w:.1f}%"   # schéma : 1 décimale max
         details.append({"ticker": h["ticker"], "name": h["name"], "weight_pct": w, "category": "Actions",
                         "role": "satellite|growth",                      # vocabulaire du schéma portfolio_output.json
                         "theme": THEME_LABEL.get(h["theme"]), "maillon": h["maillon_label"], "maillon_role": h["role"]})
     p["Actions-Conviction"] = {
         "Actions": actions, "ETF": {}, "Obligations": {}, "Crypto": {},
         # le non-alloué est AFFICHÉ (le profil doit lire 100 %) sous son nom : « budget en attente de prix » (expert 16/09, Q6)
-        "Cash": {"Budget en attente de prix (thèmes sans enabler sain à prix raisonnable)":
-                 f"{round(100 - sum(float(v.rstrip('%')) for v in actions.values()), 1)}%"},   # complète les poids AFFICHÉS à 100 %
         "_tickers": {h["ticker"]: round(h["weight"], 4) for h in pf["holdings"]},
         "_asset_details": details,
         "_bloc_actions": {"socle_pct": BLOC_SOCLE_PCT, "conviction_investie_pct": round((100 - BLOC_SOCLE_PCT) * pf["allocated_pct"] / 100, 1),
                           "budget_en_attente_de_prix_pct": round((100 - BLOC_SOCLE_PCT) * (100 - pf["allocated_pct"]) / 100, 1),
                           "regle": "75 socle / conviction investie / budget en attente de prix — le cash a une fonction (entrer quand Vertiv, GEV, Cameco passent la porte d'absurdité), pas une durée (expert 16/09)"},
-        "Commentaire": (f"Actions-Conviction (pilier 3) — {pf['n']} enablers du funnel, 100 % actions, {pf['allocated_pct']} % de "
-                        f"l'enveloppe alloués ({100 - pf['allocated_pct']:.0f} % = budget en attente de prix : thèmes non exprimables en actions "
-                        "saines à prix raisonnable). Portes : maillon nommé · exposition au maillon ≥ 50 % (20-50 % = demi-poids) · durabilité A/B · "
+        "Commentaire": (f"Actions-Conviction (pilier 3) — {pf['n']} enablers du funnel, 100 % actions. Poids affichés = part investie "
+                        f"ramenée à 100 %. Le module n'exprime que {pf['allocated_pct']} % de son enveloppe théorique ({100 - pf['allocated_pct']:.0f} % = "
+                        "budget en attente de prix : thèmes non exprimables en actions saines à prix raisonnable, porté au niveau du bloc). Portes : maillon nommé · exposition au maillon ≥ 50 % (20-50 % = demi-poids) · durabilité A/B · "
                         "dette nette/EBIT ≤ 4 · marge de FCF ≥ 5 % · trajectoire · EV/EBIT ≤ 2,5× l'industrie. Poids par thème = stance du funnel. "
                         f"Bloc actions : {BLOC_SOCLE_PCT} % socle / {round((100 - BLOC_SOCLE_PCT) * pf['allocated_pct'] / 100, 1)} % conviction investie / "
                         f"{round((100 - BLOC_SOCLE_PCT) * (100 - pf['allocated_pct']) / 100, 1)} % en attente de prix. Priorité au socle, pas d'ETF."),
