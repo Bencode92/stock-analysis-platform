@@ -171,7 +171,7 @@ def _qualified(c, today):
 
 def funnel_index(fw, today=None):
     """(ticker, région, pays) → (thème, indice de maillon, label, rôle) pour les enablers nommés ET qualifiés."""
-    today = today or date.today(); idx = {}; adoptions = []; pending = []
+    today = today or date.today(); idx = {}; adoptions = []; pending = []; alts = defaultdict(list)
     for t in fw["themes"]:
         for mi, m in enumerate(t["maillons"]):
             for c in m.get("companies", []):
@@ -192,9 +192,12 @@ def funnel_index(fw, today=None):
                 # thèse met en avant (« composants > primes »), pas le premier de la liste
                 if key not in idx or rank(entry["label"]) < rank(idx[key]["label"]):
                     idx[key] = entry
+                if entry["theme"] not in {e["theme"] for e in alts[key]}:
+                    alts[key].append(entry)                 # société citée dans PLUSIEURS thèmes (Advantest : semi ⑤ ET Asie ①)
     if len(adoptions) > ADOPTIONS_PER_YEAR_MAX:
         print(f"⚠️ {len(adoptions)} adoptions issues du screen sur 12 mois (plafond {ADOPTIONS_PER_YEAR_MAX}) : "
               + ", ".join(t for _, t in sorted(adoptions)) + " — les adoptions du 15/09 (revue expert) sont journalisées comme lot fondateur")
+    funnel_index.alts = alts
     return idx, pending
 
 
@@ -273,22 +276,24 @@ def build():
     for s in rows:
         key = (s["ticker"].upper(), s["_region"], (s.get("country") or "").lower())
         f = fidx.get(key)
-        th, src = (f["theme"], "maillon") if f else (ENABLER_INDUSTRIES.get(s.get("industry")), "screen")
-        if not th or th not in tw:
-            continue
+        entries = ([f] + [e for e in funnel_index.alts.get(key, []) if e["theme"] != f["theme"]]) if f else [None]
         fm, _ = fcf_margin(s)
         gf = gates(s)                                     # d'abord (calcule le levier depuis le cache si absent)
-        cands.append({"ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
-                      "theme": th, "src": src, "maillon": f["maillon"] if f else None,
-                      "maillon_label": f["label"] if f else None, "role": f["role"] if f else None,
-                      "industry": s.get("industry"), "ev_ebit": s["_ev_ebit"], "rel": rel(s), "fcf_margin": fm,
-                      "nd_ebit": _num(s.get("net_debt_to_ebit")), "roic_3y": _num(s.get("roic_avg_3y")),
-                      "rev_growth_3y": _num(s.get("revenue_growth_3y")), "durability": s.get("durability_grade"),
-                      "durability_score": _num(s.get("durability_score")), "quality_score": _num(s.get("quality_score")),
-                      "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
-                      "proof_pending": f.get("proof_pending") if f else None,
-                      "refused": refusals.get(s["ticker"], {}).get("reason") if src == "screen" else None,
-                      "gates_failed": gf})
+        for f in entries:
+          th, src = (f["theme"], "maillon") if f else (ENABLER_INDUSTRIES.get(s.get("industry")), "screen")
+          if not th or th not in tw:
+            continue
+          cands.append({"ticker": s["ticker"], "region": s["_region"], "country": s.get("country"), "name": s.get("name"),
+                        "theme": th, "src": src, "maillon": f["maillon"] if f else None,
+                        "maillon_label": f["label"] if f else None, "role": f["role"] if f else None,
+                        "industry": s.get("industry"), "ev_ebit": s["_ev_ebit"], "rel": rel(s), "fcf_margin": fm,
+                        "nd_ebit": _num(s.get("net_debt_to_ebit")), "roic_3y": _num(s.get("roic_avg_3y")),
+                        "rev_growth_3y": _num(s.get("revenue_growth_3y")), "durability": s.get("durability_grade"),
+                        "durability_score": _num(s.get("durability_score")), "quality_score": _num(s.get("quality_score")),
+                        "vol_3y": _num(s.get("volatility_3y")), "adv_musd": round((_adv_usd(s) or 0) / 1e6, 1),
+                        "proof_pending": f.get("proof_pending") if f else None,
+                        "refused": refusals.get(s["ticker"], {}).get("reason") if src == "screen" else None,
+                        "gates_failed": gf})
 
     # ── sélection : maillon seulement, thèse (scope) avant chaîne, prix en départage ──
     def order_key(th):
@@ -299,16 +304,17 @@ def build():
             return (pri, c["maillon"] if c["maillon"] is not None else 99, c["rel"] or 9)
         return k
 
-    selected, waiting = [], []
+    selected, waiting, taken = [], [], set()
     for th, w in sorted(tw.items(), key=lambda kv: -kv[1]):
         scope = THEME_SCOPE.get(th, {}).get("regions")
-        pool = [c for c in cands if c["theme"] == th and c["src"] == "maillon" and not c["gates_failed"]]
+        pool = [c for c in cands if c["theme"] == th and c["src"] == "maillon" and not c["gates_failed"]
+                and (c["ticker"], c["region"]) not in taken]
         in_scope = [c for c in pool if not scope or c["region"] in scope]
         in_scope.sort(key=order_key(th))
         k = max(1, math.ceil(N_LINES * w - 1e-9))   # ceil : un thème ne perd jamais une place à l'arrondi quand un autre s'active
         take, rest = in_scope[:k], in_scope[k:]
         for c in take:
-            c["weight"] = round(min(LINE_CAP, w / k), 4)
+            c["weight"] = round(min(LINE_CAP, w / k), 4); taken.add((c["ticker"], c["region"]))
         selected += take
         for c in rest: c["wait_reason"] = "place prise par un maillon plus en amont"
         for c in pool:
