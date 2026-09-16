@@ -479,3 +479,10 @@ Si D passe : plafond secteur 8 → 10-12 ; plafond financières et paires resten
 - Pilier 3 : règle « une société citée dans plusieurs thèmes prend la place libre » **retirée** (budgets de thèmes non fongibles) ; le framework désigne le maillon (`primary_theme`). Advantest → Asie ① (fiche Asie).
 - Données : Mueller Industries 2:1 (record 25/06, effectif 01/07/2026) — série TD doublée avant le 25/06 → réparation générique des splits dans le pipeline prix (saut = ratio usuel, confirmé par /splits). Capitalisations Asie affichées en devise locale dans les vues : convertir avant tout affichage.
 - **Point ouvert** : l'expert considère l'Asie non achetable (Trading 212 : ni Taipei ni Tokyo) et demande TSM (ADR) au lieu de 2330, Advantest hors périmètre. Benoit a affirmé le 15/09 acheter l'Asie en direct. À trancher par un achat-test ; le périmètre monde reste en vigueur tant que Benoit ne l'infirme pas (§19).
+
+## 21. PORTE 0 TRANCHÉE — Asie via ADR seulement (Benoit, 2026-09-16 : « il a raison, que ADR »)
+
+Remplace §19. Périmètre = **US + Europe** ; l'Asie n'est accessible que par les ADR NYSE/Nasdaq (fichier US). Un tenu hors périmètre = sortie forcée.
+- **Socle** : vague du 16/09 — sortent Shimadzu (7701), Topco (5434), JNBY (3306) ; entrent **Adobe, Genpact, L'Oréal**. 40 lignes, US 28 / Europe 12, pool 269. 3 changements (plafond 10).
+- **Actions-Conviction** : 13 lignes / 53,1 % / cher 12,3 % — TE, Amphenol, Cummins, CAT · Nexans, ABB, Schneider · Safran, Thales · ASML, Cadence, KLA · **TSM (ADR)** en Asie ①. Sortent Hitachi, HD Hyundai Electric, Tokyo Electron, Advantest, 2330, nVent (2,6× sans les médianes Asie). Framework : entrée `TSM` (ADR) ajoutée à Asie ① avec `primary_theme: emerging` ; les comptes d'un ADR viennent de la cotation d'origine (`_alias_of`) en devise locale → la capitalisation USD est convertie dans la devise des comptes avant l'EV/EBIT (TSM passait pour un artefact à −0,03×).
+- La vague conviction fait 5 entrées / 6 sorties (> plafond 5) : changement de périmètre en période de construction, journalisé, pas une re-spec.

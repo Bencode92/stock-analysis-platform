@@ -130,7 +130,8 @@ def _entity(s):
 def load_universe():
     """US + Europe, une entité = une ligne (cotation qui a des fondamentaux, puis la plus liquide), hors socle."""
     rows = []
-    for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json"), ("Asie", "stocks_asia.json")):   # Asie accessible (15/09)
+    # porte 0 « place accessible » (16/09, confirmé Benoit) : US + Europe ; l'Asie passe par les ADR NYSE/Nasdaq du fichier US
+    for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json")):
         for s in _load(fn).get("stocks", []):
             if s.get("ticker"):
                 s["_region"] = reg; rows.append(s)
@@ -223,8 +224,18 @@ def build():
         return cache.get(f"{s['ticker']}:{(s.get('country') or '').lower().strip()}") or {}
 
     # EV/EBIT et médianes par industrie (N ≥ 8) puis secteur
+    # ADR dont les comptes viennent de la cotation d'origine (`_alias_of` = "2330:taïwan") : bilan en devise locale,
+    # capitalisation en USD → on ramène la capitalisation dans la devise des comptes avant l'EV/EBIT.
+    ALIAS_CCY = {"taïwan": "TWD", "japon": "JPY", "corée": "KRW", "hong kong": "HKD", "inde": "INR", "chine": "CNY", "singapour": "SGD"}
+    def _mc_in_books_ccy(s, c):
+        mc = _num(s.get("market_cap"))
+        alias = c.get("_alias_of") or ""
+        ccy = ALIAS_CCY.get(alias.split(":")[-1].strip().lower()) if ":" in alias else None
+        if mc and ccy and (s.get("data_currency") or "USD") == "USD" and FX_TO_USD.get(ccy):
+            return mc / FX_TO_USD[ccy]
+        return mc
     for s in rows:
-        c = cval(s); mc, ebit = _num(s.get("market_cap")), c.get("operating_income")
+        c = cval(s); mc, ebit = _mc_in_books_ccy(s, c), c.get("operating_income")
         debt, cash = c.get("total_debt"), c.get("cash_and_st_investments") or 0
         s["_ev_ebit"] = ((mc + debt - cash) / ebit) if (mc and isinstance(ebit, (int, float)) and ebit > 0
                                                        and isinstance(debt, (int, float))) else None

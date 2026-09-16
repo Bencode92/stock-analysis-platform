@@ -42,9 +42,10 @@ PREV_FILE = os.path.join(DATA, "portfolios_elite.json")
 # before/after. Doctrine : la clé est FIGÉE avant de voir la sortie ; le basculement est un run DÉLIBÉRÉ.
 ELITE_KEY = os.environ.get("ELITE_KEY", "v4a").lower()  # ✅ 2026-09-15 : v4a §12-§13 = défaut (run unique exécuté), GELÉE jusqu'au 2027-09-14
 # ═══ PORTE 0 « place accessible » (revue expert Q7) : le socle réel = US + Europe ; l'Asie n'est pas achetable ═══
-# 2026-09-15 (Benoit) : les places asiatiques SONT accessibles (Trading 212) → univers monde ; les ADR ajoutés restent
-# comme doublons dédupliqués (une entité = une ligne). L'exclusion Asie du matin reposait sur une hypothèse fausse.
-ELITE_REGIONS = set(r.strip() for r in os.environ.get("ELITE_REGIONS", "US,Europe,Asie").split(","))
+# 2026-09-16 (expert, confirmé Benoit) : porte 0 « place accessible » = US + Europe ; l'Asie passe UNIQUEMENT par les
+# ADR NYSE/Nasdaq du fichier US (Trading 212 n'achète ni Tokyo, ni Taipei, ni Séoul, ni Hong Kong). Un tenu hors
+# périmètre = sortie forcée (Shimadzu, Topco, JNBY à la vague du 16/09).
+ELITE_REGIONS = set(r.strip() for r in os.environ.get("ELITE_REGIONS", "US,Europe").split(","))
 # ═══ VAGUES TRIMESTRIELLES : entre deux vagues, le run CI quotidien REPRODUIT la liste (0 changement) ═══
 WAVE_DAYS = 90
 ELITE_FORCE_WAVE = os.environ.get("ELITE_FORCE_WAVE") == "1"   # run unique / vague déclenchée à la main
