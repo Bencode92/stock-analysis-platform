@@ -62,7 +62,7 @@ PROOF_SHARE_MIN = 50.0           # preuve chiffrée : ≥ 50 % du CA / carnet su
 # absent → plein mais « exposition à documenter » (même échéance que les preuves du screen).
 EXPOSURE_FULL, EXPOSURE_HALF = 50.0, 20.0
 EXPOSURE_DEADLINE = "2026-12-14"
-INACCESSIBLE_MICS = {"XMIL"}       # porte 0 (Benoit 16/09) : Borsa Italiana absente de Trading 212
+INACCESSIBLE_MICS = {"XMIL", "XSTO", "XCSE", "XHEL", "XOSL"}       # porte 0 (Benoit 16/09) : Milan + places nordiques absentes de Trading 212
 BLOC_SOCLE_PCT = 75                # répartition du bloc actions (expert 16/09) : 75 socle / 25 conviction, fixe hors changement de stance
 ENABLER_INDUSTRIES = {
     "Semiconductor Equipment & Materials": "semi", "Semiconductors": "semi",

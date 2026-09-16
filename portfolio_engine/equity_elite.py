@@ -169,7 +169,7 @@ def _load_stocks():
     return _drop_inaccessible(_drop_adr_duplicates(rows))
 
 
-INACCESSIBLE_MICS = {"XMIL"}   # porte 0 (Benoit 16/09) : Borsa Italiana absente de Trading 212 — un titre servi via Xetra reste achetable
+INACCESSIBLE_MICS = {"XMIL", "XSTO", "XCSE", "XHEL", "XOSL"}   # porte 0 (Benoit 16/09) : Milan et places nordiques (Stockholm, Copenhague, Helsinki, Oslo) absentes de Trading 212 ; un titre servi via Xetra reste achetable
 
 
 def _drop_inaccessible(rows):
