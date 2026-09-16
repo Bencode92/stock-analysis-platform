@@ -960,6 +960,28 @@ async function getPerformanceData(symbol, stock) {
         );
         if (prices.length < 50) return {};
 
+        // ✅ 16/09 : réparation des SPLITS mal ajustés (Mueller 2:1 du 01/07/2026 : TD « adjust=splits » laisse un
+        //    saut de −49,5 % le 25/06 → YTD −47 %, 3 m −56 %, vol 3 ans faussée → poids §13 faussés).
+        //    Un saut d'un jour dont le ratio est (quasi) un ratio de split usuel = split → on ajuste tout ce qui précède.
+        //    Confirmé par /splits (1 crédit) seulement quand un tel saut est détecté (rare).
+        const SPLIT_RATIOS = [2, 3, 4, 5, 10, 20, 1/2, 1/3, 1/4, 1/5, 1/10, 1/20, 1.5, 2/3];
+        for (let i = 1; i < prices.length; i++) {
+            const r = prices[i - 1].close / prices[i].close;          // > 1 = prix divisé (split), < 1 = regroupement
+            const hit = SPLIT_RATIOS.find(k => Math.abs(r / k - 1) < 0.04);
+            if (!hit || Math.abs(hit - 1) < 0.2) continue;
+            let confirmed = false;
+            try {
+                await pay(1);
+                const { data: sp } = await axios.get('https://api.twelvedata.com/splits', { params: { symbol: symbol.split(':')[0], range: 'last', apikey: CONFIG.API_KEY }, timeout: 15000 });
+                const d0 = new Date(prices[i].date).getTime();
+                confirmed = (sp?.splits || []).some(x => Math.abs(new Date(x.date).getTime() - d0) < 15 * 86400000
+                    && Math.abs((Number(x.from_factor) / Number(x.to_factor)) / hit - 1) < 0.05);
+            } catch (e) { /* pas de confirmation → on ne touche pas */ }
+            if (!confirmed) continue;
+            for (let j = 0; j < i; j++) { prices[j].close /= hit; prices[j].high /= hit; prices[j].low /= hit; }
+            console.log(`  ✂️ ${symbol}: split ${hit}:1 réparé au ${prices[i].date} (série TD mal ajustée)`);
+        }
+
         const current = prices.at(-1)?.close;
         if (!Number.isFinite(current) || current <= 0) return {};
         const prev = prices.at(-2)?.close ?? null;
