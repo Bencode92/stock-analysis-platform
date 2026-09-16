@@ -456,3 +456,26 @@ Brown-Forman, Vontier) → US 26 / Europe 11 / Asie 3 ; Keyence, OBIC, SGX reste
 HD Hyundai Electric (① transformateurs) remplace Schneider (④), Tokyo Electron (③, 0,65×) remplace KLA (③, 1,14×) — le prix
 départage dans le même maillon ; cher 23,5 % (cap 30 %). Données : cash-flows asiatiques récupérés pour les maillons du funnel ;
 net debt/EBIT calculé depuis le cache quand le champ n'est pas encore propagé (Asie) ; FX complet pour l'ADV.
+
+## 20. PLAFONDS SECTORIELS vs « LES 40 MEILLEURS » (revue expert 2026-09-16) — décision A, chantier D en 2027
+
+**Question de Benoit** : les 40 doivent être les 40 meilleurs, même secteur pas grave.
+
+**Mesure (16/09, pool 388 monde / 267 US+Europe, même clé sans plafonds ni paires)** :
+- monde : 13 financières (11 au sens `_is_fin`), 14 Asie, 20 changements / 40 ; industries en tête : banques régionales 4, gérants d'actifs 3 ;
+- US+Europe : 14 financières, 25 communs avec le socle actuel, entrants = ServisFirst, SEI, First Financial, ICICI, Genpact, Mastercard, Cembra, Graco, Schindler, Jack Henry, EXL, EMCOR, Cintas, Lockheed, Hamilton Lane.
+
+**Décision expert : A confirmé, pas de B en décembre.** Le départage a été conçu pour ordonner des ex æquo qui passent toutes les portes ; il n'a jamais été validé comme un classement (biais financières consigné §15). Les plafonds ne diversifient pas par prudence : ils *contiennent* un score imparfait. Relâcher d'abord puis « réparer » le score en regardant qui est entré = réglage au résultat, interdit.
+
+**Chantier D (2027), conditions pour rouvrir la question des plafonds** :
+1. ROE et ROIC rendus comparables, ou financières classées à part ;
+2. un terme de taille de moat (part de marché ou marge brute vs industrie, descriptif) ;
+3. test : le classement ne doit pas mettre plus de 30 % de financières dans son top-40 sans plafond.
+Si D passe : plafond secteur 8 → 10-12 ; plafond financières et paires restent (ROE ≠ ROIC est structurel).
+
+**Annexes tranchées le même jour** :
+- Paires = seuil mesuré > 0,70 hebdo, pas une liste manuelle. KO/CCH mesuré : **0,43** (159 semaines) → coexistent sous le plafond 2.
+- Répartition du bloc actions : **75 % socle / 25 % Actions-Conviction**, fixe hors changement de stance (décision de risque, pas de méthode). À 25 %, une ligne du pilier 3 ≈ 1 % du bloc actions.
+- Pilier 3 : règle « une société citée dans plusieurs thèmes prend la place libre » **retirée** (budgets de thèmes non fongibles) ; le framework désigne le maillon (`primary_theme`). Advantest → Asie ① (fiche Asie).
+- Données : Mueller Industries 2:1 (record 25/06, effectif 01/07/2026) — série TD doublée avant le 25/06 → réparation générique des splits dans le pipeline prix (saut = ratio usuel, confirmé par /splits). Capitalisations Asie affichées en devise locale dans les vues : convertir avant tout affichage.
+- **Point ouvert** : l'expert considère l'Asie non achetable (Trading 212 : ni Taipei ni Tokyo) et demande TSM (ADR) au lieu de 2330, Advantest hors périmètre. Benoit a affirmé le 15/09 acheter l'Asie en direct. À trancher par un achat-test ; le périmètre monde reste en vigueur tant que Benoit ne l'infirme pas (§19).
