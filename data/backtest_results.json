@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-19T12:12:50.423479",
+  "timestamp": "2026-09-20T12:48:24.176125",
   "period_days": 90,
   "frequency": "M",
   "platform_fee_annual_bp": 0.0,
@@ -26,23 +26,23 @@
       "resolver_version": "1.0.0"
     },
     "calendar_report": {
-      "original_dates": 86,
-      "aligned_dates": 85,
+      "original_dates": 85,
+      "aligned_dates": 84,
       "removed_dates": 1,
-      "nan_before_avg_pct": 3.61,
-      "nan_after_reindex_avg_pct": 3.61,
-      "nan_after_ffill_avg_pct": 0.12,
+      "nan_before_avg_pct": 3.53,
+      "nan_after_reindex_avg_pct": 3.53,
+      "nan_after_ffill_avg_pct": 0.93,
       "symbols_excluded": [],
       "alignment_method": "NYSE_business_days",
       "ffill_limit": 3,
       "ffill_applied": true,
       "warnings": [
-        "ffill(limit=3): 57 values filled",
+        "ffill(limit=3): 42 values filled",
         "Dropped 1 rows with remaining NaN"
       ]
     },
     "quality_report": {
-      "timestamp": "2026-09-19T12:12:50.322023",
+      "timestamp": "2026-09-20T12:48:24.112269",
       "passed": true,
       "n_symbols_checked": 19,
       "n_symbols_passed": 19,
@@ -72,10 +72,10 @@
         "VT": 0.0
       },
       "return_stats": {
-        "mean_daily_pct": 0.0232,
+        "mean_daily_pct": 0.0154,
         "max_daily_pct": 8.45,
         "min_daily_pct": -6.89,
-        "std_daily_pct": 1.14
+        "std_daily_pct": 1.1387
       }
     },
     "benchmark_coverage": {
@@ -134,8 +134,8 @@
           "cash_weight_pct": 60.0,
           "missing_symbols": [
             "IBGS.AS",
-            "SGLN.AS",
-            "VWCE.DE"
+            "VWCE.DE",
+            "SGLN.AS"
           ],
           "n_missing": 3,
           "cash_rate_annual_pct": 4.5,
@@ -294,11 +294,11 @@
         "cash_allocation": {
           "cash_weight_pct": 80.0,
           "missing_symbols": [
+            "VWCE.DE",
+            "AGGH.AS",
             "SGLN.AS",
             "IBCI.AS",
-            "AGGH.AS",
-            "IBGS.AS",
-            "VWCE.DE"
+            "IBGS.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -457,11 +457,11 @@
         "cash_allocation": {
           "cash_weight_pct": 90.0,
           "missing_symbols": [
+            "VWCE.DE",
+            "AGGH.AS",
             "SGLN.AS",
             "IBCI.AS",
-            "AGGH.AS",
-            "IBGS.AS",
-            "VWCE.DE"
+            "IBGS.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -620,8 +620,8 @@
         "cash_weight_pct": 60.0,
         "missing_symbols": [
           "IBGS.AS",
-          "SGLN.AS",
-          "VWCE.DE"
+          "VWCE.DE",
+          "SGLN.AS"
         ],
         "n_missing": 3,
         "cash_rate_annual_pct": 4.5,
@@ -709,11 +709,11 @@
       "cash_allocation": {
         "cash_weight_pct": 80.0,
         "missing_symbols": [
+          "VWCE.DE",
+          "AGGH.AS",
           "SGLN.AS",
           "IBCI.AS",
-          "AGGH.AS",
-          "IBGS.AS",
-          "VWCE.DE"
+          "IBGS.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -801,11 +801,11 @@
       "cash_allocation": {
         "cash_weight_pct": 90.0,
         "missing_symbols": [
+          "VWCE.DE",
+          "AGGH.AS",
           "SGLN.AS",
           "IBCI.AS",
-          "AGGH.AS",
-          "IBGS.AS",
-          "VWCE.DE"
+          "IBGS.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
