@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-25T13:12:18.019949",
+  "timestamp": "2026-09-26T12:38:01.209106",
   "period_days": 90,
   "frequency": "M",
   "platform_fee_annual_bp": 0.0,
@@ -26,23 +26,23 @@
       "resolver_version": "1.0.0"
     },
     "calendar_report": {
-      "original_dates": 87,
-      "aligned_dates": 86,
+      "original_dates": 86,
+      "aligned_dates": 85,
       "removed_dates": 1,
-      "nan_before_avg_pct": 3.79,
-      "nan_after_reindex_avg_pct": 3.79,
-      "nan_after_ffill_avg_pct": 0.11,
+      "nan_before_avg_pct": 2.79,
+      "nan_after_reindex_avg_pct": 2.79,
+      "nan_after_ffill_avg_pct": 0.12,
       "symbols_excluded": [],
       "alignment_method": "NYSE_business_days",
       "ffill_limit": 3,
       "ffill_applied": true,
       "warnings": [
-        "ffill(limit=3): 64 values filled",
+        "ffill(limit=3): 46 values filled",
         "Dropped 1 rows with remaining NaN"
       ]
     },
     "quality_report": {
-      "timestamp": "2026-09-25T13:12:17.941442",
+      "timestamp": "2026-09-26T12:38:01.100012",
       "passed": true,
       "n_symbols_checked": 20,
       "n_symbols_passed": 20,
@@ -73,10 +73,10 @@
         "VT": 0.0
       },
       "return_stats": {
-        "mean_daily_pct": 0.0084,
+        "mean_daily_pct": 0.0065,
         "max_daily_pct": 8.03,
         "min_daily_pct": -10.13,
-        "std_daily_pct": 1.266
+        "std_daily_pct": 1.27
       }
     },
     "benchmark_coverage": {
@@ -112,9 +112,9 @@
       "profile": "Agressif",
       "success": true,
       "stats": {
-        "net_return_pct": 1.39,
-        "total_return_pct": 1.39,
-        "gross_return_pct": 1.39,
+        "net_return_pct": 1.56,
+        "total_return_pct": 1.56,
+        "gross_return_pct": 1.56,
         "cost_drag_pct": -0.0,
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
@@ -134,9 +134,9 @@
         "cash_allocation": {
           "cash_weight_pct": 60.0,
           "missing_symbols": [
-            "VWCE.DE",
+            "SGLN.AS",
             "IBGS.AS",
-            "SGLN.AS"
+            "VWCE.DE"
           ],
           "n_missing": 3,
           "cash_rate_annual_pct": 4.5,
@@ -144,15 +144,15 @@
           "cash_return_contribution_value": 692.32,
           "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
         },
-        "cagr_pct": 5.52,
-        "gross_cagr_pct": 5.52,
-        "volatility_pct": 5.13,
+        "cagr_pct": 6.18,
+        "gross_cagr_pct": 6.18,
+        "volatility_pct": 5.14,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
-        "sharpe_computed": 0.21,
+        "sharpe_computed": 0.33,
         "sharpe_display": "Non calculable (période < 1 an)",
         "sharpe_significant": false,
-        "sharpe_daily": 0.0133,
+        "sharpe_daily": 0.0211,
         "max_drawdown_pct": -1.65,
         "avg_turnover_per_rebal": 100.0,
         "total_turnover_pct": 100.0,
@@ -185,20 +185,20 @@
         "n_assets_with_data": 6,
         "n_assets_total": 9,
         "benchmark_symbol": "QQQ",
-        "benchmark_return_pct": 2.35,
+        "benchmark_return_pct": 2.82,
         "benchmark_metadata": {
           "symbol": "QQQ",
           "name": "Invesco QQQ Trust (Nasdaq-100)",
           "rationale": "Growth/tech heavy allocation matches aggressive equity exposure with tech tilt",
           "asset_class": "equity"
         },
-        "benchmark_volatility_pct": 19.64,
-        "excess_return_pct": -0.96,
-        "tracking_error_pct": 15.99,
-        "information_ratio": -0.24,
+        "benchmark_volatility_pct": 19.65,
+        "excess_return_pct": -1.26,
+        "tracking_error_pct": 16.0,
+        "information_ratio": -0.31,
         "beta": 0.2,
-        "alpha_pct": 0.92,
-        "upside_capture_pct": 21.5,
+        "alpha_pct": 0.99,
+        "upside_capture_pct": 21.7,
         "downside_capture_pct": 19.1
       },
       "equity_curve": {
@@ -266,16 +266,16 @@
         "2026-09-22": 102147.29,
         "2026-09-23": 101518.75,
         "2026-09-24": 101282.25,
-        "2026-09-25": 101293.11
+        "2026-09-25": 101456.07
       }
     },
     {
       "profile": "Modéré",
       "success": true,
       "stats": {
-        "net_return_pct": 3.5,
-        "total_return_pct": 3.5,
-        "gross_return_pct": 3.5,
+        "net_return_pct": 3.53,
+        "total_return_pct": 3.53,
+        "gross_return_pct": 3.53,
         "cost_drag_pct": 0.0,
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
@@ -295,11 +295,11 @@
         "cash_allocation": {
           "cash_weight_pct": 80.0,
           "missing_symbols": [
-            "AGGH.AS",
-            "VWCE.DE",
+            "SGLN.AS",
             "IBGS.AS",
+            "AGGH.AS",
             "IBCI.AS",
-            "SGLN.AS"
+            "VWCE.DE"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -307,15 +307,15 @@
           "cash_return_contribution_value": 937.84,
           "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
         },
-        "cagr_pct": 14.25,
-        "gross_cagr_pct": 14.25,
+        "cagr_pct": 14.41,
+        "gross_cagr_pct": 14.41,
         "volatility_pct": 2.37,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
-        "sharpe_computed": 3.82,
+        "sharpe_computed": 3.88,
         "sharpe_display": "Non calculable (période < 1 an)",
         "sharpe_significant": false,
-        "sharpe_daily": 0.2404,
+        "sharpe_daily": 0.2445,
         "max_drawdown_pct": -0.54,
         "avg_turnover_per_rebal": 100.0,
         "total_turnover_pct": 100.0,
@@ -348,20 +348,20 @@
         "n_assets_with_data": 4,
         "n_assets_total": 9,
         "benchmark_symbol": "URTH",
-        "benchmark_return_pct": 3.19,
+        "benchmark_return_pct": 3.72,
         "benchmark_metadata": {
           "symbol": "URTH",
           "name": "iShares MSCI World ETF",
           "rationale": "Global diversified equities benchmark for balanced risk profile",
           "asset_class": "equity"
         },
-        "benchmark_volatility_pct": 10.98,
-        "excess_return_pct": 0.31,
-        "tracking_error_pct": 10.21,
-        "information_ratio": 0.12,
+        "benchmark_volatility_pct": 11.02,
+        "excess_return_pct": -0.19,
+        "tracking_error_pct": 10.25,
+        "information_ratio": -0.07,
         "beta": 0.09,
         "alpha_pct": 3.2,
-        "upside_capture_pct": 14.0,
+        "upside_capture_pct": 13.9,
         "downside_capture_pct": -3.3
       },
       "equity_curve": {
@@ -429,16 +429,16 @@
         "2026-09-22": 103625.76,
         "2026-09-23": 103611.54,
         "2026-09-24": 103377.09,
-        "2026-09-25": 103391.86
+        "2026-09-25": 103430.74
       }
     },
     {
       "profile": "Stable",
       "success": true,
       "stats": {
-        "net_return_pct": 1.23,
-        "total_return_pct": 1.23,
-        "gross_return_pct": 1.23,
+        "net_return_pct": 1.17,
+        "total_return_pct": 1.17,
+        "gross_return_pct": 1.17,
         "cost_drag_pct": -0.0,
         "total_costs_pct": 0.1,
         "total_costs_value": 100.0,
@@ -458,11 +458,11 @@
         "cash_allocation": {
           "cash_weight_pct": 90.0,
           "missing_symbols": [
+            "SGLN.AS",
+            "IBGS.AS",
             "AGGH.AS",
             "VWCE.DE",
-            "IBGS.AS",
-            "IBCI.AS",
-            "SGLN.AS"
+            "IBCI.AS"
           ],
           "n_missing": 5,
           "cash_rate_annual_pct": 4.5,
@@ -470,15 +470,15 @@
           "cash_return_contribution_value": 1039.57,
           "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
         },
-        "cagr_pct": 4.87,
-        "gross_cagr_pct": 4.87,
-        "volatility_pct": 1.52,
+        "cagr_pct": 4.63,
+        "gross_cagr_pct": 4.63,
+        "volatility_pct": 1.54,
         "risk_free_rate_pct": 4.5,
         "sharpe_ratio": null,
-        "sharpe_computed": 0.23,
+        "sharpe_computed": 0.07,
         "sharpe_display": "Non calculable (période < 1 an)",
         "sharpe_significant": false,
-        "sharpe_daily": 0.0143,
+        "sharpe_daily": 0.0045,
         "max_drawdown_pct": -0.61,
         "avg_turnover_per_rebal": 100.0,
         "total_turnover_pct": 100.0,
@@ -511,20 +511,20 @@
         "n_assets_with_data": 4,
         "n_assets_total": 9,
         "benchmark_symbol": "AGG",
-        "benchmark_return_pct": -4.45,
+        "benchmark_return_pct": -4.28,
         "benchmark_metadata": {
           "symbol": "AGG",
           "name": "iShares Core U.S. Aggregate Bond ETF",
           "rationale": "Investment-grade bond benchmark for conservative/income-focused profile",
           "asset_class": "fixed_income"
         },
-        "benchmark_volatility_pct": 4.49,
-        "excess_return_pct": 5.68,
-        "tracking_error_pct": 4.7,
-        "information_ratio": 4.76,
-        "beta": 0.01,
-        "alpha_pct": 1.27,
-        "upside_capture_pct": 12.0,
+        "benchmark_volatility_pct": 4.51,
+        "excess_return_pct": 5.45,
+        "tracking_error_pct": 4.77,
+        "information_ratio": 4.5,
+        "beta": 0.0,
+        "alpha_pct": 1.18,
+        "upside_capture_pct": 8.0,
         "downside_capture_pct": -8.3
       },
       "equity_curve": {
@@ -592,15 +592,15 @@
         "2026-09-22": 101262.01,
         "2026-09-23": 101202.73,
         "2026-09-24": 101258.04,
-        "2026-09-25": 101133.68
+        "2026-09-25": 101073.68
       }
     }
   ],
   "comparison": {
     "Agressif": {
-      "net_return_pct": 1.39,
-      "total_return_pct": 1.39,
-      "gross_return_pct": 1.39,
+      "net_return_pct": 1.56,
+      "total_return_pct": 1.56,
+      "gross_return_pct": 1.56,
       "cost_drag_pct": -0.0,
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
@@ -620,9 +620,9 @@
       "cash_allocation": {
         "cash_weight_pct": 60.0,
         "missing_symbols": [
-          "VWCE.DE",
+          "SGLN.AS",
           "IBGS.AS",
-          "SGLN.AS"
+          "VWCE.DE"
         ],
         "n_missing": 3,
         "cash_rate_annual_pct": 4.5,
@@ -630,15 +630,15 @@
         "cash_return_contribution_value": 692.32,
         "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
       },
-      "cagr_pct": 5.52,
-      "gross_cagr_pct": 5.52,
-      "volatility_pct": 5.13,
+      "cagr_pct": 6.18,
+      "gross_cagr_pct": 6.18,
+      "volatility_pct": 5.14,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
-      "sharpe_computed": 0.21,
+      "sharpe_computed": 0.33,
       "sharpe_display": "Non calculable (période < 1 an)",
       "sharpe_significant": false,
-      "sharpe_daily": 0.0133,
+      "sharpe_daily": 0.0211,
       "max_drawdown_pct": -1.65,
       "avg_turnover_per_rebal": 100.0,
       "total_turnover_pct": 100.0,
@@ -671,26 +671,26 @@
       "n_assets_with_data": 6,
       "n_assets_total": 9,
       "benchmark_symbol": "QQQ",
-      "benchmark_return_pct": 2.35,
+      "benchmark_return_pct": 2.82,
       "benchmark_metadata": {
         "symbol": "QQQ",
         "name": "Invesco QQQ Trust (Nasdaq-100)",
         "rationale": "Growth/tech heavy allocation matches aggressive equity exposure with tech tilt",
         "asset_class": "equity"
       },
-      "benchmark_volatility_pct": 19.64,
-      "excess_return_pct": -0.96,
-      "tracking_error_pct": 15.99,
-      "information_ratio": -0.24,
+      "benchmark_volatility_pct": 19.65,
+      "excess_return_pct": -1.26,
+      "tracking_error_pct": 16.0,
+      "information_ratio": -0.31,
       "beta": 0.2,
-      "alpha_pct": 0.92,
-      "upside_capture_pct": 21.5,
+      "alpha_pct": 0.99,
+      "upside_capture_pct": 21.7,
       "downside_capture_pct": 19.1
     },
     "Modéré": {
-      "net_return_pct": 3.5,
-      "total_return_pct": 3.5,
-      "gross_return_pct": 3.5,
+      "net_return_pct": 3.53,
+      "total_return_pct": 3.53,
+      "gross_return_pct": 3.53,
       "cost_drag_pct": 0.0,
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
@@ -710,11 +710,11 @@
       "cash_allocation": {
         "cash_weight_pct": 80.0,
         "missing_symbols": [
-          "AGGH.AS",
-          "VWCE.DE",
+          "SGLN.AS",
           "IBGS.AS",
+          "AGGH.AS",
           "IBCI.AS",
-          "SGLN.AS"
+          "VWCE.DE"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -722,15 +722,15 @@
         "cash_return_contribution_value": 937.84,
         "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
       },
-      "cagr_pct": 14.25,
-      "gross_cagr_pct": 14.25,
+      "cagr_pct": 14.41,
+      "gross_cagr_pct": 14.41,
       "volatility_pct": 2.37,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
-      "sharpe_computed": 3.82,
+      "sharpe_computed": 3.88,
       "sharpe_display": "Non calculable (période < 1 an)",
       "sharpe_significant": false,
-      "sharpe_daily": 0.2404,
+      "sharpe_daily": 0.2445,
       "max_drawdown_pct": -0.54,
       "avg_turnover_per_rebal": 100.0,
       "total_turnover_pct": 100.0,
@@ -763,26 +763,26 @@
       "n_assets_with_data": 4,
       "n_assets_total": 9,
       "benchmark_symbol": "URTH",
-      "benchmark_return_pct": 3.19,
+      "benchmark_return_pct": 3.72,
       "benchmark_metadata": {
         "symbol": "URTH",
         "name": "iShares MSCI World ETF",
         "rationale": "Global diversified equities benchmark for balanced risk profile",
         "asset_class": "equity"
       },
-      "benchmark_volatility_pct": 10.98,
-      "excess_return_pct": 0.31,
-      "tracking_error_pct": 10.21,
-      "information_ratio": 0.12,
+      "benchmark_volatility_pct": 11.02,
+      "excess_return_pct": -0.19,
+      "tracking_error_pct": 10.25,
+      "information_ratio": -0.07,
       "beta": 0.09,
       "alpha_pct": 3.2,
-      "upside_capture_pct": 14.0,
+      "upside_capture_pct": 13.9,
       "downside_capture_pct": -3.3
     },
     "Stable": {
-      "net_return_pct": 1.23,
-      "total_return_pct": 1.23,
-      "gross_return_pct": 1.23,
+      "net_return_pct": 1.17,
+      "total_return_pct": 1.17,
+      "gross_return_pct": 1.17,
       "cost_drag_pct": -0.0,
       "total_costs_pct": 0.1,
       "total_costs_value": 100.0,
@@ -802,11 +802,11 @@
       "cash_allocation": {
         "cash_weight_pct": 90.0,
         "missing_symbols": [
+          "SGLN.AS",
+          "IBGS.AS",
           "AGGH.AS",
           "VWCE.DE",
-          "IBGS.AS",
-          "IBCI.AS",
-          "SGLN.AS"
+          "IBCI.AS"
         ],
         "n_missing": 5,
         "cash_rate_annual_pct": 4.5,
@@ -814,15 +814,15 @@
         "cash_return_contribution_value": 1039.57,
         "note": "Missing tickers allocated to cash earning risk-free rate instead of renormalizing weights"
       },
-      "cagr_pct": 4.87,
-      "gross_cagr_pct": 4.87,
-      "volatility_pct": 1.52,
+      "cagr_pct": 4.63,
+      "gross_cagr_pct": 4.63,
+      "volatility_pct": 1.54,
       "risk_free_rate_pct": 4.5,
       "sharpe_ratio": null,
-      "sharpe_computed": 0.23,
+      "sharpe_computed": 0.07,
       "sharpe_display": "Non calculable (période < 1 an)",
       "sharpe_significant": false,
-      "sharpe_daily": 0.0143,
+      "sharpe_daily": 0.0045,
       "max_drawdown_pct": -0.61,
       "avg_turnover_per_rebal": 100.0,
       "total_turnover_pct": 100.0,
@@ -855,20 +855,20 @@
       "n_assets_with_data": 4,
       "n_assets_total": 9,
       "benchmark_symbol": "AGG",
-      "benchmark_return_pct": -4.45,
+      "benchmark_return_pct": -4.28,
       "benchmark_metadata": {
         "symbol": "AGG",
         "name": "iShares Core U.S. Aggregate Bond ETF",
         "rationale": "Investment-grade bond benchmark for conservative/income-focused profile",
         "asset_class": "fixed_income"
       },
-      "benchmark_volatility_pct": 4.49,
-      "excess_return_pct": 5.68,
-      "tracking_error_pct": 4.7,
-      "information_ratio": 4.76,
-      "beta": 0.01,
-      "alpha_pct": 1.27,
-      "upside_capture_pct": 12.0,
+      "benchmark_volatility_pct": 4.51,
+      "excess_return_pct": 5.45,
+      "tracking_error_pct": 4.77,
+      "information_ratio": 4.5,
+      "beta": 0.0,
+      "alpha_pct": 1.18,
+      "upside_capture_pct": 8.0,
       "downside_capture_pct": -8.3
     }
   }
