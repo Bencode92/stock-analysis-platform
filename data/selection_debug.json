@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "meta": {
-    "run_id": "2026-09-26-12-32-09",
-    "git_sha": "64608952c",
-    "git_sha_full": "64608952caca590930dde694ba75c4b566657c39",
+    "run_id": "2026-09-27-13-22-21",
+    "git_sha": "0225df1c1",
+    "git_sha_full": "0225df1c190b5669c44a7ed60be3a033c1c87087",
     "config_hash": "5b753993",
-    "universe_asof": "2026-09-26",
-    "timestamp_utc": "2026-09-26T12:32:09.417332+00:00",
+    "universe_asof": "2026-09-27",
+    "timestamp_utc": "2026-09-27T13:22:21.354518+00:00",
     "audit_level": "summary",
-    "total_duration_sec": 356.61
+    "total_duration_sec": 423.31
   },
   "config_snapshot": {
     "buffett_mode": "soft",
@@ -151,8 +151,8 @@
     },
     "5_selection_bond_Agressif": {
       "name": "selection_bond",
-      "before": 10,
-      "after": 10,
+      "before": 15,
+      "after": 15,
       "rejected": 0,
       "category": "bond",
       "profile": "Agressif",
@@ -163,38 +163,39 @@
         },
         {
           "ticker": "GOVZ",
-          "score": 75.6
+          "score": 76.55
+        },
+        {
+          "ticker": "EBND",
+          "score": 69.79
+        },
+        {
+          "ticker": "JAAA",
+          "score": 67.53
         },
         {
           "ticker": "HIGH",
-          "score": 60.44
+          "score": 55.82
+        },
+        {
+          "ticker": "ICLO",
+          "score": 49.79
         },
         {
           "ticker": "IBCA",
-          "score": 48.13
+          "score": 46.39
+        },
+        {
+          "ticker": "CLOX",
+          "score": 43.61
+        },
+        {
+          "ticker": "CLOA",
+          "score": 40.31
         },
         {
           "ticker": "CORP",
-          "score": 46.37
-        },
-        {
-          "ticker": "SUSC",
-          "score": 16.92
-        },
-        {
-          "ticker": "IBTL",
-          "score": 11.21
-        },
-        {
-          "ticker": "EAGG",
-          "score": 10.77
-        },
-        {
-          "ticker": "LGOV",
-          "score": 4.18
-        },
-        {
-          "ticker": "IBTG"
+          "score": 30.0
         }
       ]
     },
@@ -308,43 +309,51 @@
     },
     "5_selection_bond_Modéré": {
       "name": "selection_bond",
-      "before": 8,
-      "after": 8,
+      "before": 10,
+      "after": 10,
       "rejected": 0,
       "category": "bond",
       "profile": "Modéré",
       "top_k": [
         {
-          "ticker": "HIGH",
-          "score": 94.48
+          "ticker": "JAAA",
+          "score": 83.36
         },
         {
           "ticker": "GOVZ",
-          "score": 89.36
+          "score": 77.57
+        },
+        {
+          "ticker": "EBND",
+          "score": 55.58
+        },
+        {
+          "ticker": "ICLO",
+          "score": 55.02
         },
         {
           "ticker": "LGOV",
-          "score": 65.46
-        },
-        {
-          "ticker": "IBTL",
-          "score": 42.15
+          "score": 51.29
         },
         {
           "ticker": "CORP",
-          "score": 37.89
+          "score": 35.71
         },
         {
-          "ticker": "EAGG",
-          "score": 25.67
+          "ticker": "IBTL",
+          "score": 23.21
         },
         {
           "ticker": "IBCA",
-          "score": 22.26
+          "score": 21.79
+        },
+        {
+          "ticker": "EAGG",
+          "score": 19.01
         },
         {
           "ticker": "SUSC",
-          "score": 8.6
+          "score": 4.09
         }
       ]
     },
@@ -458,8 +467,8 @@
     },
     "5_selection_bond_Stable": {
       "name": "selection_bond",
-      "before": 5,
-      "after": 5,
+      "before": 6,
+      "after": 6,
       "rejected": 0,
       "category": "bond",
       "profile": "Stable",
@@ -469,20 +478,24 @@
           "score": 100.0
         },
         {
+          "ticker": "JAAA",
+          "score": 86.6
+        },
+        {
           "ticker": "IBTL",
-          "score": 84.72
+          "score": 71.49
         },
         {
           "ticker": "HIGH",
-          "score": 69.44
+          "score": 62.32
         },
         {
           "ticker": "EAGG",
-          "score": 41.57
+          "score": 35.1
         },
         {
           "ticker": "CORP",
-          "score": 2.02
+          "score": 1.15
         }
       ]
     },
@@ -3354,26 +3367,26 @@
     }
   },
   "drift_vs_previous": {
-    "has_drift": false,
-    "drift_pct": 5.48,
+    "has_drift": true,
+    "drift_pct": 50.0,
     "details": {
-      "hard_filters_equity.after": {
-        "current": 7475,
-        "previous": 7476,
-        "delta": -1,
-        "pct_change": 0.01
+      "5_selection_bond_Agressif.after": {
+        "current": 15,
+        "previous": 10,
+        "delta": 5,
+        "pct_change": 50.0
       },
-      "5_selection_equity_Stable.after": {
-        "current": 133,
-        "previous": 131,
+      "5_selection_bond_Modéré.after": {
+        "current": 10,
+        "previous": 8,
         "delta": 2,
-        "pct_change": 1.53
+        "pct_change": 25.0
       },
-      "5_selection_equity_Dividende-CTO.after": {
-        "current": 69,
-        "previous": 73,
-        "delta": -4,
-        "pct_change": 5.48
+      "5_selection_bond_Stable.after": {
+        "current": 6,
+        "previous": 5,
+        "delta": 1,
+        "pct_change": 20.0
       }
     }
   }
