@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T19:04:54.490Z",
+  "generated_at": "2026-09-29T19:54:38.606Z",
   "total_stocks": 2850,
   "no_data": [
     {
@@ -335,7 +335,7 @@
       "exchange_csv": "NASDAQ",
       "resolved_symbol": "GLND",
       "data_exchange": "NASDAQ",
-      "data_mic": "XNMS"
+      "data_mic": null
     },
     {
       "ticker": "COOT",
@@ -517,7 +517,7 @@
       "exchange_csv": "NASDAQ",
       "resolved_symbol": "GLND",
       "data_exchange": "NASDAQ",
-      "data_mic": "XNMS"
+      "data_mic": null
     },
     {
       "ticker": "CBRG",
@@ -3174,7 +3174,7 @@
       "exchange_csv": "NASDAQ",
       "resolved_symbol": "GLND",
       "data_exchange": "NASDAQ",
-      "data_mic": "XNMS"
+      "data_mic": null
     },
     {
       "ticker": "AIIO",
@@ -3183,7 +3183,7 @@
       "exchange_csv": "NASDAQ",
       "resolved_symbol": "AIIO",
       "data_exchange": "NASDAQ",
-      "data_mic": "XNMS"
+      "data_mic": null
     },
     {
       "ticker": "KOD",
@@ -3192,7 +3192,7 @@
       "exchange_csv": "NASDAQ",
       "resolved_symbol": "KOD",
       "data_exchange": "NASDAQ",
-      "data_mic": "XNMS"
+      "data_mic": null
     },
     {
       "ticker": "COOT",
@@ -4326,7 +4326,7 @@
       "exchange_csv": "NYSE",
       "resolved_symbol": "HDB",
       "data_exchange": "NYSE",
-      "data_mic": null
+      "data_mic": "XNYS"
     },
     {
       "ticker": "IBN",
@@ -4339,6 +4339,17 @@
     }
   ],
   "missing_perf": [
+    {
+      "ticker": "ANGX",
+      "name": "ANGEL STUDIOS, INC.",
+      "country": "Etats-Unis",
+      "exchange_csv": "NYSE",
+      "resolved_symbol": "ANGX",
+      "data_exchange": "NYSE",
+      "data_mic": "XNYS",
+      "has_price": true,
+      "has_perf_1d": true
+    },
     {
       "ticker": "AFI",
       "name": "ARMSTRONG FLOORING INC",
@@ -4413,6 +4424,17 @@
       "resolved_symbol": "NKLA",
       "data_exchange": "NASDAQ",
       "data_mic": "XNGS",
+      "has_price": true,
+      "has_perf_1d": true
+    },
+    {
+      "ticker": "NAMM",
+      "name": "NAMIB MINERALS",
+      "country": "Etats-Unis",
+      "exchange_csv": "NASDAQ",
+      "resolved_symbol": "NAMM",
+      "data_exchange": "NASDAQ",
+      "data_mic": "XNMS",
       "has_price": true,
       "has_perf_1d": true
     },
@@ -5474,7 +5496,7 @@
       "country": "Etats-Unis",
       "resolved_symbol": "AIIO",
       "data_exchange": "NASDAQ",
-      "data_mic": "XNMS"
+      "data_mic": null
     },
     {
       "ticker": "GMTX",
@@ -6882,7 +6904,7 @@
       "country": "Etats-Unis",
       "resolved_symbol": "PKX",
       "data_exchange": "NYSE",
-      "data_mic": null
+      "data_mic": "XNYS"
     },
     {
       "ticker": "SKM",
@@ -6890,7 +6912,7 @@
       "country": "Etats-Unis",
       "resolved_symbol": "SKM",
       "data_exchange": "NYSE",
-      "data_mic": null
+      "data_mic": "XNYS"
     },
     {
       "ticker": "KT",
@@ -6898,7 +6920,7 @@
       "country": "Etats-Unis",
       "resolved_symbol": "KT",
       "data_exchange": "NYSE",
-      "data_mic": null
+      "data_mic": "XNYS"
     },
     {
       "ticker": "HDB",
@@ -6906,7 +6928,7 @@
       "country": "Etats-Unis",
       "resolved_symbol": "HDB",
       "data_exchange": "NYSE",
-      "data_mic": null
+      "data_mic": "XNYS"
     },
     {
       "ticker": "IBN",
@@ -6924,7 +6946,7 @@
       "no_data": 6,
       "no_roe": 19,
       "no_de": 4,
-      "no_perf": 5
+      "no_perf": 6
     },
     {
       "exchange": "NYSE",
@@ -6932,7 +6954,7 @@
       "no_data": 5,
       "no_roe": 20,
       "no_de": 4,
-      "no_perf": 8
+      "no_perf": 9
     },
     {
       "exchange": "CBOE",
@@ -6946,14 +6968,15 @@
   "by_data_mic": [
     {
       "mic": "XNYS",
-      "total": 1358,
+      "total": 1362,
       "no_roe": 19,
       "no_de": 4,
-      "no_perf": 6,
+      "no_perf": 7,
       "tickers": [
         "TPC",
         "XXI",
         "ARIS",
+        "ANGX",
         "USFD",
         "ACM",
         "FERG",
@@ -6969,24 +6992,7 @@
         "CSPR",
         "PKG",
         "LII",
-        "BXDC",
-        "BRK.B"
-      ]
-    },
-    {
-      "mic": "XNMS",
-      "total": 219,
-      "no_roe": 7,
-      "no_de": 3,
-      "no_perf": 0,
-      "tickers": [
-        "CAST",
-        "BRR",
-        "IPXX",
-        "PBK",
-        "CRML",
-        "GLND",
-        "COOT"
+        "BXDC"
       ]
     },
     {
@@ -7008,12 +7014,29 @@
       ]
     },
     {
+      "mic": "XNMS",
+      "total": 214,
+      "no_roe": 6,
+      "no_de": 2,
+      "no_perf": 1,
+      "tickers": [
+        "CAST",
+        "BRR",
+        "IPXX",
+        "PBK",
+        "CRML",
+        "NAMM",
+        "COOT"
+      ]
+    },
+    {
       "mic": "NO_MIC",
-      "total": 44,
-      "no_roe": 3,
-      "no_de": 0,
+      "total": 45,
+      "no_roe": 4,
+      "no_de": 1,
       "no_perf": 2,
       "tickers": [
+        "GLND",
         "HAO",
         "TALK",
         "NCT",
