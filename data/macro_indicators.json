@@ -1,68 +1,70 @@
 {
   "_market_data_flat": {
-    "date": "2026-10-02",
-    "brent_usd": 99.19,
-    "brent_usd_avg5d": 102.57999877929687,
-    "gold_usd": 4187.28894,
-    "silver_usd": 61.51609,
-    "vix": 15.66,
+    "date": "2026-10-03",
+    "brent_usd": 102.25,
+    "brent_usd_avg5d": 103.19199829101562,
+    "gold_usd": 4137.58589,
+    "silver_usd": 60.35965,
+    "vix": 15.31,
     "fed_funds_rate": 3.88,
     "fed_funds_rate_delta_6m": 0.26,
     "cpi_yoy_pct": 3.71,
     "cpi_index": 334.131,
     "ig_spread_bps": 106.0,
     "hy_spread_bps": 324.0,
-    "us_10y_yield": 5.29,
-    "us_2y_yield": 4.88,
-    "yield_curve_2s10s": 41.0,
-    "breakeven_5y": 2.36,
-    "sp500_level": 7738.29,
-    "sp500_change_1d_pct": -0.06612074008737612,
-    "hyg_change_1d_pct": -0.8091446185461025,
-    "lqd_change_1d_pct": -0.7799631818622156,
+    "us_10y_yield": 5.24,
+    "us_2y_yield": 4.78,
+    "yield_curve_2s10s": 46.0,
+    "breakeven_5y": 2.37,
+    "sp500_level": 7722.72,
+    "sp500_change_1d_pct": -0.26719494382965125,
+    "hyg_change_1d_pct": -1.2201387105060402,
+    "lqd_change_1d_pct": -1.3370797403352346,
     "trade_weighted_usd": 120.33,
-    "eurusd": 1.12854,
-    "nasdaq_change_1d_pct": 1.49791,
-    "xlu_perf_1d_pct": 0.57963632,
-    "xle_perf_1d_pct": -0.92504108,
+    "eurusd": 1.12544,
+    "nasdaq_change_1d_pct": 1.017477,
+    "xlu_perf_1d_pct": 0.37802804,
+    "xle_perf_1d_pct": 0.19138585,
     "cpi_core_mom_pct": 0.29,
     "pce_yoy_pct": 3.42,
     "vix_trend": "Stable",
     "hy_spread_trend": "Widening",
-    "_stress_flags": []
+    "_stress_flags": [
+      "energy_shock"
+    ]
   },
   "macro_environment": {
     "brent": {
-      "price": 99.19,
+      "price": 102.25,
       "source": "yahoo_BZ=F",
       "date": "2026-10-02",
-      "avg_5d": 102.57999877929687,
+      "avg_5d": 103.19199829101562,
       "_fred_price": 113.96,
       "_fred_date": "2026-09-29"
     },
     "gold": {
-      "price": 4187.28894,
-      "change_1d_pct": 0.23562532,
-      "datetime": "2026-10-02"
+      "price": 4137.58589,
+      "change_1d_pct": -0.095183711,
+      "datetime": "2026-10-03"
     },
     "silver": {
-      "price": 61.51609,
-      "change_1d_pct": 0.86339438
+      "price": 60.35965,
+      "change_1d_pct": -0.032295917
     },
     "trade_weighted_usd": {
       "value": 120.33,
       "_warning": "FRED DTWEXBGS (Trade-Weighted USD, NOT ICE DXY). Scale ~110-130."
     },
     "sp500": {
-      "level": 7738.29,
-      "change_1d_pct": -0.06612074008737612,
+      "level": 7722.72,
+      "change_1d_pct": -0.26719494382965125,
       "source": "yahoo_^GSPC",
-      "date": "2026-10-02 14:12"
+      "date": "2026-10-02 20:59"
     },
     "vix": {
-      "value": 15.66,
-      "date": "2026-10-02 13:57",
-      "change": -2.55133789670193,
+      "value": 15.31,
+      "date": "2026-10-02 20:15",
+      "change": -4.729309271935281,
       "source": "yahoo_^VIX",
       "_fred_value": 16.39,
       "_fred_date": "2026-10-01",
@@ -70,22 +72,22 @@
       "delta": 0.1
     },
     "hyg_live": {
-      "price": 77.23,
-      "change_1d_pct": -0.8091446185461025,
-      "date": "2026-10-02 14:12",
+      "price": 76.91,
+      "change_1d_pct": -1.2201387105060402,
+      "date": "2026-10-02 20:00",
       "source": "yahoo_HYG",
       "_doc": "HYG ETF live. Baisse = spreads HY s'écartent."
     },
     "lqd_live": {
-      "price": 102.405,
-      "change_1d_pct": -0.7799631818622156,
-      "date": "2026-10-02 14:12",
+      "price": 101.83,
+      "change_1d_pct": -1.3370797403352346,
+      "date": "2026-10-02 20:00",
       "source": "yahoo_LQD",
       "_doc": "LQD ETF live. Baisse = spreads IG s'écartent."
     },
     "fed_rate": {
       "value": 3.88,
-      "date": "2026-09-30",
+      "date": "2026-10-01",
       "delta_6m": 0.26
     },
     "cpi": {
@@ -106,35 +108,35 @@
       "delta_bps": 12.0
     },
     "us_10y_yield": {
-      "value": 5.29,
-      "date": "2026-09-30"
-    },
-    "us_2y_yield": {
-      "value": 4.88,
-      "date": "2026-09-30"
-    },
-    "yield_curve_2s10s": {
-      "value_bps": 41.0
-    },
-    "breakeven_5y": {
-      "value": 2.36,
+      "value": 5.24,
       "date": "2026-10-01"
     },
+    "us_2y_yield": {
+      "value": 4.78,
+      "date": "2026-10-01"
+    },
+    "yield_curve_2s10s": {
+      "value_bps": 46.0
+    },
+    "breakeven_5y": {
+      "value": 2.37,
+      "date": "2026-10-02"
+    },
     "eurusd": {
-      "price": 1.12854,
-      "change_1d_pct": 0.37890917
+      "price": 1.12544,
+      "change_1d_pct": 0.020440629
     },
     "nasdaq": {
-      "level": 753.145,
-      "change_1d_pct": 1.49791
+      "level": 749.58002,
+      "change_1d_pct": 1.017477
     },
     "xlu": {
-      "price": 39.91,
-      "change_1d_pct": 0.57963632
+      "price": 39.83,
+      "change_1d_pct": 0.37802804
     },
     "xle": {
-      "price": 62.12,
-      "change_1d_pct": -0.92504108
+      "price": 62.82,
+      "change_1d_pct": 0.19138585
     },
     "cpi_core": {
       "index_value": 337.765,
@@ -146,20 +148,24 @@
       "yoy_pct": 3.42,
       "date": "2026-08-01"
     },
-    "_flags": [],
-    "_updated": "2026-10-02T14:12:30.185482",
+    "_flags": [
+      "energy_shock"
+    ],
+    "_updated": "2026-10-03T12:48:15.920683",
     "_sources": [
       "twelve_data",
       "fred"
     ]
   },
   "_meta": {
-    "updated": "2026-10-02T14:12:30.186020",
+    "updated": "2026-10-03T12:48:15.921304",
     "sources": [
       "twelve_data",
       "fred"
     ],
     "fields": 30,
-    "stress_flags": []
+    "stress_flags": [
+      "energy_shock"
+    ]
   }
 }
