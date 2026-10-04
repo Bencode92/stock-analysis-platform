@@ -102,15 +102,35 @@ class ModelRetrainer:
         # Vérifier et charger le tokenizer et le modèle
         self._load_model_and_tokenizer()
     
+    @staticmethod
+    def _poids_presents(repertoire):
+        """Vrai si le répertoire contient de vrais poids, pas un pointeur Git LFS.
+
+        Les poids ne sont plus versionnés (LFS coupé le 04/10/2026) : un clone
+        peut laisser derrière lui un fichier de 134 octets qui ressemble à un
+        modèle. On exige donc un fichier de poids d'au moins 1 Mo, sinon on
+        retélécharge depuis HuggingFace.
+        """
+        if not os.path.isdir(repertoire):
+            return False
+        for nom in os.listdir(repertoire):
+            if nom.endswith(('.safetensors', '.bin', '.h5', '.onnx')):
+                try:
+                    if os.path.getsize(os.path.join(repertoire, nom)) > 1_000_000:
+                        return True
+                except OSError:
+                    pass
+        return False
+
     def _load_model_and_tokenizer(self):
         """Charge le tokenizer et le modèle FinBERT"""
         try:
             # Essayer de charger depuis le répertoire local
-            if os.path.exists(FINBERT_FINETUNED_DIR) and os.listdir(FINBERT_FINETUNED_DIR):
+            if self._poids_presents(FINBERT_FINETUNED_DIR):
                 print(f"Chargement du modèle affiné depuis {FINBERT_FINETUNED_DIR}")
                 self.tokenizer = AutoTokenizer.from_pretrained(FINBERT_FINETUNED_DIR)
                 self.model = AutoModelForSequenceClassification.from_pretrained(FINBERT_FINETUNED_DIR)
-            elif os.path.exists(FINBERT_MODEL_DIR) and os.listdir(FINBERT_MODEL_DIR):
+            elif self._poids_presents(FINBERT_MODEL_DIR):
                 print(f"Chargement du modèle de base depuis {FINBERT_MODEL_DIR}")
                 self.tokenizer = AutoTokenizer.from_pretrained(FINBERT_MODEL_DIR)
                 self.model = AutoModelForSequenceClassification.from_pretrained(FINBERT_MODEL_DIR)

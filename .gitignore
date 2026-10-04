@@ -56,3 +56,12 @@ data/diagnostic/
 # Cache prix Twelve Data du module congress (persiste via actions/cache, pas commite)
 congress/data/prices/
 congress/data/alert_email.txt
+
+# Poids de modèles : jamais dans le dépôt (Git LFS désactivé le 04/10/2026,
+# quota de bande passante épuisé). FinBERT vient de HuggingFace Hub au besoin.
+ml/models/finbert_model/
+ml/models/finbert_finetuned/
+ml/models/**/*.safetensors
+ml/models/**/*.bin
+ml/models/**/*.h5
+ml/models/**/*.onnx

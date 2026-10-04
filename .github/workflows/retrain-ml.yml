@@ -87,7 +87,7 @@ print('Réentraînement simulé terminé')
           git config --global user.email 'actions@github.com'
           
           # Ajouter les modifications
-          git add ml/models/ data/metrics/ || true
+          git add data/metrics/ || true
           
           # Vérifier s'il y a des changements
           if git diff --cached --quiet; then
