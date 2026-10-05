@@ -1,15 +1,13 @@
 {
   "market_regime": "neutral",
-  "confidence": 0.88,
-  "as_of": "2026-10-04",
+  "confidence": 0.6,
+  "as_of": "2026-10-05",
   "macro_tilts": {
     "favored_sectors": [
-      "information-technology",
-      "utilities"
+      "financials"
     ],
     "avoided_sectors": [
-      "consumer-discretionary",
-      "communication-services"
+      "consumer-discretionary"
     ],
     "favored_regions": [
       "china"
@@ -17,115 +15,26 @@
     "avoided_regions": [
       "eau"
     ],
-    "rationale": "8/11 secteurs positifs (73%) | MACRO OVERRIDE: "
+    "rationale": "marché mixte: 1 pos, 1 neg / 2"
   },
   "key_trends": [
-    "Secteur leader: energy (+40.5% YTD)",
+    "Secteur leader: financials (+15.9% YTD)",
     "Région leader: china (+3.7% YTD)",
-    "6 secteur(s) en refroidissement (3M ≤ -2.0%)",
-    "52W leader: energy (+41.3% sur 12 mois)",
-    "6M leader: information-technology (+45.5% sur 6 mois)"
+    "2 secteur(s) en refroidissement (3M ≤ -2.0%)"
   ],
   "risks": [
-    "Secteurs en difficulté: financials, consumer-discretionary, communication-services",
+    "Secteurs en difficulté: consumer-discretionary",
     "Régions en difficulté: eau",
-    "Concentration: peu de secteurs en zone favorable (rotation possible)",
-    "4 secteurs avec 6M négatif (momentum moyen-terme dégradé)"
+    "Concentration: peu de secteurs en zone favorable (rotation possible)"
   ],
   "sector_risk_profile": {
-    "materials": {
-      "beta": 0.78,
-      "vol_3y": 17.38,
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.66,
-      "reason": "out_of_range|cooling_m3"
-    },
-    "industrials": {
-      "beta": 0.89,
-      "vol_3y": 16.7,
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.78,
-      "reason": "out_of_range|cooling_m3"
-    },
-    "financials": {
-      "beta": 0.88,
-      "vol_3y": 17.71,
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.2,
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3"
-    },
-    "consumer-staples": {
-      "beta": 0.19,
-      "vol_3y": 14.48,
-      "risk_flag": "defensive",
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.79,
-      "reason": "out_of_range|cooling_m3|defensive_asset"
-    },
     "consumer-discretionary": {
-      "beta": 1.16,
-      "vol_3y": 20.88,
-      "region": "US",
+      "beta": 0.91,
+      "vol_3y": 21.81,
+      "region": "Europe",
       "classification": "avoided",
-      "daily": 1.13,
+      "daily": 0.63,
       "reason": "underperform|cooling_m3|underperform_confirmed"
-    },
-    "information-technology": {
-      "beta": 1.46,
-      "vol_3y": 24.45,
-      "risk_flag": "high_beta",
-      "region": "US",
-      "classification": "favored",
-      "daily": 1.07,
-      "reason": "sweet_spot|w52_confirmed|m6_confirmed|high_beta_warning"
-    },
-    "healthcare": {
-      "beta": 0.48,
-      "vol_3y": 15.01,
-      "risk_flag": "defensive",
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.0,
-      "reason": "out_of_range|defensive_asset"
-    },
-    "communication-services": {
-      "beta": 0.85,
-      "vol_3y": 17.06,
-      "region": "US",
-      "classification": "avoided",
-      "daily": 0.35,
-      "reason": "underperform|underperform_confirmed"
-    },
-    "real-estate": {
-      "beta": 0.52,
-      "vol_3y": 16.68,
-      "risk_flag": "defensive",
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.32,
-      "reason": "out_of_range|cooling_m3|defensive_asset"
-    },
-    "energy": {
-      "beta": 0.45,
-      "vol_3y": 21.85,
-      "risk_flag": "defensive",
-      "region": "US",
-      "classification": "neutral",
-      "daily": 0.19,
-      "reason": "out_of_range|defensive_asset"
-    },
-    "utilities": {
-      "beta": 0.56,
-      "vol_3y": 33.13,
-      "risk_flag": "defensive",
-      "region": "US",
-      "classification": "favored",
-      "daily": 3.41,
-      "reason": "sweet_spot|w52_confirmed|m6_confirmed|defensive_asset"
     }
   },
   "region_risk_profile": {
@@ -147,7 +56,7 @@
     }
   },
   "_meta": {
-    "generated_at": "2026-10-04T13:32:05.450177",
+    "generated_at": "2026-10-05T16:28:48.960663",
     "model": "radar_deterministic_v1.6.1",
     "mode": "DATA_DRIVEN",
     "amf_compliant": true,
@@ -193,13 +102,13 @@
       "floor_neutral_dd_gate": 0.8
     },
     "january_mode_info": {
-      "day_of_year": 277,
+      "day_of_year": 278,
       "effective_ytd_min": 10.0,
       "ramp_days": 90,
       "ytd_floor": 2.0
     },
     "selection_stats": {
-      "preferred": 9,
+      "preferred": 0,
       "medoid": 2,
       "fallback": 0
     },
@@ -240,10 +149,10 @@
       "max_tactical": 0.3
     },
     "momentum_stats": {
-      "sectors_with_w52": 11,
-      "sectors_with_m3": 11,
-      "sectors_with_m6": 11,
-      "sectors_total": 11,
+      "sectors_with_w52": 1,
+      "sectors_with_m3": 2,
+      "sectors_with_m6": 1,
+      "sectors_total": 2,
       "markets_with_w52": 1,
       "markets_with_m3": 1,
       "markets_with_m6": 1,
@@ -251,208 +160,55 @@
       "favored_blocked_by_w52": 0,
       "favored_blocked_by_m6": 0,
       "favored_blocked_by_overheat_cooling": 0,
-      "avoided_rescued_by_w52": 1,
+      "avoided_rescued_by_w52": 0,
       "overheat_w52_count": 0,
-      "cooling_m3_count": 6,
+      "cooling_m3_count": 2,
       "fallback_activated": 0,
-      "beta_high_beta_warnings": 1,
-      "beta_defensive_flags": 5,
+      "beta_high_beta_warnings": 0,
+      "beta_defensive_flags": 0,
       "beta_floor_neutral_count": 0,
       "dead_zone_activated": 0,
       "circuit_breaker_threshold": 5.0,
-      "dispersion_std": 15.43,
+      "dispersion_std": 18.04,
       "dispersion_stressed": true,
       "effective_ytd_max": 40.0
     },
     "diagnostics": {
-      "sectors_loaded": 11,
+      "sectors_loaded": 2,
       "markets_loaded": 2,
       "sector_classifications": [
         {
-          "key": "materials",
-          "ytd": 7.74,
-          "daily": 0.66,
-          "w52": 8.75,
-          "m3": -6.06,
-          "m6": -3.07,
-          "beta": 0.78,
-          "vol_3y": 17.38,
+          "key": "consumer-discretionary",
+          "ytd": -20.17,
+          "daily": 0.63,
+          "w52": -22.48,
+          "m3": -9.43,
+          "m6": -7.13,
+          "beta": 0.91,
+          "vol_3y": 21.81,
           "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 7.74,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "XLB",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "industrials",
-          "ytd": 9.56,
-          "daily": 0.78,
-          "w52": 10.06,
-          "m3": -7.59,
-          "m6": 3.77,
-          "beta": 0.89,
-          "vol_3y": 16.7,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 9.56,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "XLI",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "financials",
-          "ytd": -2.25,
-          "daily": 0.2,
-          "w52": 1.17,
-          "m3": -3.43,
-          "m6": 8.43,
-          "beta": 0.88,
-          "vol_3y": 17.71,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -2.25,
-          "classification": "neutral",
-          "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-          "symbol": "IYG",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "consumer-staples",
-          "ytd": 1.16,
-          "daily": 0.79,
-          "w52": -1.8,
-          "m3": -7.81,
-          "m6": -4.59,
-          "beta": 0.19,
-          "vol_3y": 14.48,
-          "beta_flag": "defensive",
-          "beta_region": "US",
-          "effective_momentum": 1.16,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3|defensive_asset",
-          "symbol": "FTXG",
+          "beta_region": "Europe",
+          "effective_momentum": -20.17,
+          "classification": "avoided",
+          "reason": "underperform|cooling_m3|underperform_confirmed",
+          "symbol": "EX37",
           "selection_method": "medoid"
         },
         {
-          "key": "consumer-discretionary",
-          "ytd": -7.85,
-          "daily": 1.13,
-          "w52": -7.47,
-          "m3": -6.05,
-          "m6": 1.75,
-          "beta": 1.16,
-          "vol_3y": 20.88,
+          "key": "financials",
+          "ytd": 15.91,
+          "daily": 1.33,
+          "w52": null,
+          "m3": -2.47,
+          "m6": null,
+          "beta": null,
+          "vol_3y": null,
           "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -7.85,
-          "classification": "avoided",
-          "reason": "underperform|cooling_m3|underperform_confirmed",
-          "symbol": "XLY",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "information-technology",
-          "ytd": 35.06,
-          "daily": 1.07,
-          "w52": 36.58,
-          "m3": 10.76,
-          "m6": 45.48,
-          "beta": 1.46,
-          "vol_3y": 24.45,
-          "beta_flag": "high_beta",
-          "beta_region": "US",
-          "effective_momentum": 35.06,
+          "beta_region": "Europe",
+          "effective_momentum": 15.91,
           "classification": "favored",
-          "reason": "sweet_spot|w52_confirmed|m6_confirmed|high_beta_warning",
-          "symbol": "IYW",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "healthcare",
-          "ytd": 8.14,
-          "daily": 0.0,
-          "w52": 15.11,
-          "m3": 1.72,
-          "m6": 14.19,
-          "beta": 0.48,
-          "vol_3y": 15.01,
-          "beta_flag": "defensive",
-          "beta_region": "US",
-          "effective_momentum": 8.14,
-          "classification": "neutral",
-          "reason": "out_of_range|defensive_asset",
-          "symbol": "IYH",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "communication-services",
-          "ytd": -6.29,
-          "daily": 0.35,
-          "w52": -5.22,
-          "m3": 0.66,
-          "m6": -1.24,
-          "beta": 0.85,
-          "vol_3y": 17.06,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -6.29,
-          "classification": "avoided",
-          "reason": "underperform|underperform_confirmed",
-          "symbol": "XLC",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "real-estate",
-          "ytd": 1.14,
-          "daily": 0.32,
-          "w52": -3.02,
-          "m3": -8.66,
-          "m6": -1.92,
-          "beta": 0.52,
-          "vol_3y": 16.68,
-          "beta_flag": "defensive",
-          "beta_region": "US",
-          "effective_momentum": 1.14,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3|defensive_asset",
-          "symbol": "XLRE",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "energy",
-          "ytd": 40.51,
-          "daily": 0.19,
-          "w52": 41.31,
-          "m3": 18.04,
-          "m6": 6.03,
-          "beta": 0.45,
-          "vol_3y": 21.85,
-          "beta_flag": "defensive",
-          "beta_region": "US",
-          "effective_momentum": 40.51,
-          "classification": "neutral",
-          "reason": "out_of_range|defensive_asset",
-          "symbol": "XLE",
-          "selection_method": "preferred"
-        },
-        {
-          "key": "utilities",
-          "ytd": 22.67,
-          "daily": 3.41,
-          "w52": 23.67,
-          "m3": -1.0,
-          "m6": 12.45,
-          "beta": 0.56,
-          "vol_3y": 33.13,
-          "beta_flag": "defensive",
-          "beta_region": "US",
-          "effective_momentum": 22.67,
-          "classification": "favored",
-          "reason": "sweet_spot|w52_confirmed|m6_confirmed|defensive_asset",
-          "symbol": "FGRD",
+          "reason": "sweet_spot|cooling_m3|w52_missing",
+          "symbol": "EX28",
           "selection_method": "medoid"
         }
       ],
@@ -492,7 +248,6 @@
           "selection_method": "N/A"
         }
       ]
-    },
-    "smoothing_skipped_reason": "old_context_not_radar (was: unknown)"
+    }
   }
 }
