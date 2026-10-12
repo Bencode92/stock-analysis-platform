@@ -43,6 +43,9 @@ jobs:
       - name: 🔻 Générer funnel.json
         run: python3 scripts/build_funnel.py
 
+      - name: 📌 Suivi des portefeuilles modèles (perf depuis l'entrée, badge funnel)
+        run: python3 scripts/build_portfolio_tracking.py
+
       - name: 🗄️ Archiver les grades de durabilité (hebdo, pour validation forward)
         run: python3 scripts/archive_durability.py
 
@@ -67,7 +70,7 @@ jobs:
           # NB : on NE committe PAS les stocks_*.json (gros fichiers, écrits par le scoring en
           # concurrent → un rebase-merge JSON les corromprait). L'hydratation les modifie en
           # mémoire pour bâtir funnel.json ; c'est funnel.json (+ snapshot) qu'on persiste.
-          git add data/funnel.json data/funnel_news.json data/fundamentals_snapshot.json data/durability_history.json 2>/dev/null || true
+          git add data/funnel.json data/funnel_news.json data/fundamentals_snapshot.json data/durability_history.json data/portfolio_tracking.json data/portfolio_entries.json 2>/dev/null || true
           # L'hydratation a modifié les stocks_*.json sur le disque (utilisés en mémoire pour bâtir
           # funnel.json). On ne les persiste pas → on JETTE ces modifs non-stagées, sinon `git rebase`
           # refuse (« cannot rebase: You have unstaged changes »).
