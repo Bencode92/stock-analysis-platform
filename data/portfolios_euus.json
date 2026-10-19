@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une approche agressive, avec une forte exposition aux actions et aux ETF diversifiés. Les investissements dans des secteurs comme la technologie et l'énergie peuvent offrir des rendements élevés, mais comportent également des risques de volatilité significatifs. De plus, la dépendance à des actifs cycliques expose le portefeuille à des fluctuations de marché. Il est essentiel de considérer ces éléments avant toute décision d'investissement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive, avec une concentration sur des actifs à fort potentiel de croissance. Cependant, il est important de noter que la volatilité historique est élevée, ce qui peut entraîner des fluctuations significatives de la valeur. De plus, l'exposition à des secteurs comme la technologie et l'énergie comporte des risques liés aux cycles économiques. Les investisseurs doivent être conscients des risques associés à ce type de portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "STMICROELECTRONICS NV (STM)": "13.0%",
       "TENARIS S.A. (TEN)": "13.0%",
@@ -134,10 +134,10 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 15.87,
+      "vol_realized": 16.19,
       "vol_target": 24.0,
       "covariance_trustworthy": true,
-      "returns_coverage_pct": 84.0,
+      "returns_coverage_pct": 88.0,
       "covariance_empirical_weight": 0.85,
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Agressif) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
@@ -184,15 +184,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 24.0,
-            "observed": 15.87,
-            "slack": -2.13,
+            "observed": 16.19,
+            "slack": -1.81,
             "binding": false,
             "status": "VIOLATED",
             "details": {
               "tolerance": 6.0,
               "range_min": 18.0,
               "range_max": 30.0,
-              "diff_from_target": -8.13
+              "diff_from_target": -7.81
             }
           },
           {
@@ -432,7 +432,7 @@
         },
         "quality_score": 74.3,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 2.1% — reduce exposure",
+          "🟠 VIOLATED: volatility exceeded by 1.8% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 10.0% — immediate action required",
           "🟡 BINDING: max_single_position at 13.0% (cap=13.0%) — monitor closely",
           "🟠 VIOLATED: max_sector exceeded by 4.0% — reduce exposure"
@@ -669,44 +669,32 @@
     },
     "_limitations": [
       "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique.",
-      "Volatilité réalisée (15.9%) éloignée de la cible (24.0%) - écart de 8.1%."
+      "Volatilité réalisée (16.2%) éloignée de la cible (24.0%) - écart de 7.8%."
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant actions et ETF diversifiés. Les investissements dans des sociétés d'assurance et des infrastructures visent à offrir une possiblee stabilité, mais sont également soumis à des risques liés aux fluctuations économiques. La concentration sur des secteurs spécifiques peut limiter la diversification et augmenter la vulnérabilité aux chocs de marché. Une attention particulière doit être portée aux conditions de marché avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant la croissance et la stabilité. Avec une volatilité réalisée de 8,88%, il vise à offrir une exposition diversifiée tout en limitant les risques. Cependant, la concentration sur des actifs dans des secteurs spécifiques peut exposer les investisseurs à des fluctuations de marché. Les risques liés aux conditions économiques et aux changements réglementaires doivent également être pris en compte. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "ESSENT GROUP LTD. (ESNT)": "16.5%",
-      "GAZTRANSPORT ET TECHNIGAZ SA (GTT)": "16.7%",
-      "FOPE S.P.A. (FPE)": "16.7%",
-      "RENAISSANCERE HOLDINGS LTD. (RNR)": "16.7%",
-      "CINCINNATI FINANCIAL CORPORATION (CINF)": "16.7%"
+      "ESSENT GROUP LTD. (ESNT)": "20.0%",
+      "GAZTRANSPORT ET TECHNIGAZ SA (GTT)": "20.0%",
+      "FOPE S.P.A. (FPE)": "20.0%",
+      "CINCINNATI FINANCIAL CORPORATION (CINF)": "20.0%"
     },
     "ETF": {
-      "iShares Smart City Infrastructure UCITS ETF USD (Acc) (AYEU)": "16.7%"
+      "iShares Smart City Infrastructure UCITS ETF USD (Acc) (AYEU)": "20.0%"
     },
     "Obligations": {},
     "Crypto": {},
     "_tickers": {
-      "AYEU": 0.16649999999999998,
-      "CINF": 0.16670000000000001,
-      "ESNT": 0.16670000000000001,
-      "GTT": 0.16670000000000001,
-      "FPE": 0.16670000000000001,
-      "RNR": 0.16670000000000001
+      "CINF": 0.2,
+      "AYEU": 0.2,
+      "ESNT": 0.2,
+      "GTT": 0.2,
+      "FPE": 0.2
     },
     "_tickers_meta": {
-      "AYEU": {
-        "weight": 0.16649999999999998,
-        "category": "ETF",
-        "name": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
-        "asset_ids": [
-          "iShares Smart City Infrastructure UCITS ETF USD (Acc)"
-        ],
-        "industry": "",
-        "beta": null
-      },
       "CINF": {
-        "weight": 0.16670000000000001,
+        "weight": 0.2,
         "category": "Actions",
         "name": "CINCINNATI FINANCIAL CORPORATION",
         "asset_ids": [
@@ -715,8 +703,18 @@
         "industry": "Insurance - Property & Casualty",
         "beta": 0.68
       },
+      "AYEU": {
+        "weight": 0.2,
+        "category": "ETF",
+        "name": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
+        "asset_ids": [
+          "iShares Smart City Infrastructure UCITS ETF USD (Acc)"
+        ],
+        "industry": "",
+        "beta": null
+      },
       "ESNT": {
-        "weight": 0.16670000000000001,
+        "weight": 0.2,
         "category": "Actions",
         "name": "ESSENT GROUP LTD.",
         "asset_ids": [
@@ -726,7 +724,7 @@
         "beta": 0.84
       },
       "GTT": {
-        "weight": 0.16670000000000001,
+        "weight": 0.2,
         "category": "Actions",
         "name": "GAZTRANSPORT ET TECHNIGAZ SA",
         "asset_ids": [
@@ -736,7 +734,7 @@
         "beta": 0.61
       },
       "FPE": {
-        "weight": 0.16670000000000001,
+        "weight": 0.2,
         "category": "Actions",
         "name": "FOPE S.P.A.",
         "asset_ids": [
@@ -744,22 +742,12 @@
         ],
         "industry": "Specialty Chemicals",
         "beta": 0.82
-      },
-      "RNR": {
-        "weight": 0.16670000000000001,
-        "category": "Actions",
-        "name": "RENAISSANCERE HOLDINGS LTD.",
-        "asset_ids": [
-          "EQ_302"
-        ],
-        "industry": "Insurance - Reinsurance",
-        "beta": 0.41
       }
     },
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 12.0,
+      "vol_realized": 8.88,
       "vol_target": 11.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 100.0,
@@ -767,22 +755,20 @@
       "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Modéré) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
     },
     "_tickers_pricing": {
-      "AYEU": 0.16649999999999998,
-      "CINF": 0.16670000000000001,
-      "ESNT": 0.16670000000000001,
-      "GTT": 0.16670000000000001,
-      "FPE": 0.16670000000000001,
-      "RNR": 0.16670000000000001
+      "CINF": 0.2,
+      "AYEU": 0.2,
+      "ESNT": 0.2,
+      "GTT": 0.2,
+      "FPE": 0.2
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Actions:ESSENT GROUP LTD. (ESNT)": 16.5,
-      "Actions:GAZTRANSPORT ET TECHNIGAZ SA (GTT)": 16.7,
-      "Actions:FOPE S.P.A. (FPE)": 16.7,
-      "Actions:RENAISSANCERE HOLDINGS LTD. (RNR)": 16.7,
-      "ETF:iShares Smart City Infrastructure UCITS ETF USD (Acc) (AYEU)": 16.7,
-      "Actions:CINCINNATI FINANCIAL CORPORATION (CINF)": 16.7
+      "ETF:iShares Smart City Infrastructure UCITS ETF USD (Acc) (AYEU)": 20.0,
+      "Actions:ESSENT GROUP LTD. (ESNT)": 20.0,
+      "Actions:GAZTRANSPORT ET TECHNIGAZ SA (GTT)": 20.0,
+      "Actions:FOPE S.P.A. (FPE)": 20.0,
+      "Actions:CINCINNATI FINANCIAL CORPORATION (CINF)": 20.0
     },
     "_constraint_report": {
       "hard_constraints": [],
@@ -801,15 +787,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 11.0,
-            "observed": 12.0,
-            "slack": 2.0,
-            "binding": false,
-            "status": "OK",
+            "observed": 8.88,
+            "slack": 0.88,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "tolerance": 3.0,
               "range_min": 8.0,
               "range_max": 14.0,
-              "diff_from_target": 1.0
+              "diff_from_target": -2.12
             }
           },
           {
@@ -847,17 +833,17 @@
             "status": "BINDING",
             "details": {
               "largest_position": {
-                "id": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
-                "name": "iShares Smart City Infrastructure UCITS ",
+                "id": "EQ_1985",
+                "name": "CINCINNATI FINANCIAL CORPORATION",
                 "weight": 15.0
               },
               "positions_above_10pct": [
                 {
-                  "id": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
+                  "id": "EQ_1985",
                   "weight": 15.0
                 },
                 {
-                  "id": "EQ_1985",
+                  "id": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
                   "weight": 15.0
                 },
                 {
@@ -871,10 +857,6 @@
                 {
                   "id": "EQ_3404",
                   "weight": 15.0
-                },
-                {
-                  "id": "EQ_302",
-                  "weight": 15.0
                 }
               ]
             }
@@ -883,18 +865,18 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 30.0,
-            "observed": 75.0,
-            "slack": -45.0,
+            "observed": 60.0,
+            "slack": -30.0,
             "binding": false,
             "status": "CRITICAL",
             "details": {
               "most_concentrated": "Unknown",
               "counts_in_max_sector": {
-                "Unknown": 75.0,
+                "Unknown": 60.0,
                 "Diversified": 15.0
               },
               "all_sectors": {
-                "Unknown": 75.0,
+                "Unknown": 60.0,
                 "Diversified": 15.0
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
@@ -904,20 +886,20 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 45.0,
-            "slack": 5.0,
+            "observed": 30.0,
+            "slack": 20.0,
             "binding": false,
             "status": "OK",
             "details": {
               "most_concentrated": "Etats-Unis",
               "counts_in_max_region": {
-                "Etats-Unis": 45.0,
+                "Etats-Unis": 30.0,
                 "Global": 15.0,
                 "France": 15.0,
                 "Italie": 15.0
               },
               "all_regions": {
-                "Etats-Unis": 45.0,
+                "Etats-Unis": 30.0,
                 "Global": 15.0,
                 "France": 15.0,
                 "Italie": 15.0
@@ -929,8 +911,8 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 6,
-            "slack": -4,
+            "observed": 5,
+            "slack": -5,
             "binding": false,
             "status": "VIOLATED",
             "details": {}
@@ -939,8 +921,8 @@
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 6,
-            "slack": 12,
+            "observed": 5,
+            "slack": 13,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -949,15 +931,15 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 70.0,
-            "observed": 90.0,
-            "slack": -20.0,
+            "observed": 75.0,
+            "slack": -5.0,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 50.0,
               "range_max": 70.0,
-              "slack_from_min": 40.0,
-              "slack_from_max": -20.0,
+              "slack_from_min": 25.0,
+              "slack_from_max": -5.0,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1032,51 +1014,50 @@
         ],
         "summary": {
           "total": 13,
-          "ok": 9,
-          "binding": 1,
+          "ok": 8,
+          "binding": 2,
           "violated": 1,
           "critical": 2
         },
-        "quality_score": 72.3,
+        "quality_score": 70.8,
         "recommendations": [
           "🔴 CRITICAL: bonds_min violated by 15.0% — immediate action required",
           "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
-          "🔴 CRITICAL: max_sector violated by 45.0% — immediate action required",
-          "🟠 VIOLATED: min_assets exceeded by 4.0% — reduce exposure",
-          "ℹ️ INFO: bucket_core is 20.0% outside target range (indicator only)"
+          "🔴 CRITICAL: max_sector violated by 30.0% — immediate action required",
+          "🟠 VIOLATED: min_assets exceeded by 5.0% — reduce exposure"
         ],
         "exposures": {
           "by_category": {
-            "ETF": 15.0,
-            "Actions": 75.0
+            "Actions": 60.0,
+            "ETF": 15.0
           },
           "by_sector": {
-            "Unknown": 75.0,
+            "Unknown": 60.0,
             "Diversified": 15.0
           },
           "by_region": {
-            "Etats-Unis": 45.0,
+            "Etats-Unis": 30.0,
             "Global": 15.0,
             "France": 15.0,
             "Italie": 15.0
           },
           "by_risk_bucket": {
-            "equity_like": 90.0
+            "equity_like": 75.0
           },
           "by_role": {
-            "core": 90.0,
+            "core": 75.0,
             "satellite": 0.0,
             "defensive": 0.0,
             "lottery": 0.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 1350.0,
+            "hhi": 1125.0,
             "hhi_interpretation": "diversified",
-            "effective_n": 7.41,
-            "n_positions": 6,
+            "effective_n": 8.89,
+            "n_positions": 5,
             "top_5_weight": 75.0,
-            "top_10_weight": 90.0,
+            "top_10_weight": 75.0,
             "largest_position": 15.0,
             "smallest_position": 15.0,
             "thresholds": {
@@ -1090,17 +1071,6 @@
         },
         "ticker_mapping": [
           {
-            "id": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
-            "ticker": "AYEU",
-            "name": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
-            "weight_pct": 15.0,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
-            "region": "Global",
-            "exchange": null
-          },
-          {
             "id": "EQ_1985",
             "ticker": "CINF",
             "name": "CINCINNATI FINANCIAL CORPORATION",
@@ -1109,6 +1079,17 @@
             "risk_bucket": "equity_like",
             "sector": "Unknown",
             "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
+            "ticker": "AYEU",
+            "name": "iShares Smart City Infrastructure UCITS ETF USD (Acc)",
+            "weight_pct": 15.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
             "exchange": null
           },
           {
@@ -1143,28 +1124,17 @@
             "sector": "Unknown",
             "region": "Italie",
             "exchange": null
-          },
-          {
-            "id": "EQ_302",
-            "ticker": "RNR",
-            "name": "RENAISSANCERE HOLDINGS LTD.",
-            "weight_pct": 15.0,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Unknown",
-            "region": "Etats-Unis",
-            "exchange": null
           }
         ],
         "execution_summary": {
-          "n_positions": 6,
+          "n_positions": 5,
           "n_exchanges": 0,
           "exchanges": [],
-          "total_weight": 90.0,
-          "missing_isin": 5,
+          "total_weight": 75.0,
+          "missing_isin": 4,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 16.7,
+            "isin_coverage": 20.0,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -1173,36 +1143,36 @@
     },
     "_exposures": {
       "by_category": {
-        "ETF": 15.0,
-        "Actions": 75.0
+        "Actions": 60.0,
+        "ETF": 15.0
       },
       "by_sector": {
-        "Unknown": 75.0,
+        "Unknown": 60.0,
         "Diversified": 15.0
       },
       "by_region": {
-        "Etats-Unis": 45.0,
+        "Etats-Unis": 30.0,
         "Global": 15.0,
         "France": 15.0,
         "Italie": 15.0
       },
       "by_risk_bucket": {
-        "equity_like": 90.0
+        "equity_like": 75.0
       },
       "by_role": {
-        "core": 90.0,
+        "core": 75.0,
         "satellite": 0.0,
         "defensive": 0.0,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1350.0,
+        "hhi": 1125.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 7.41,
-        "n_positions": 6,
+        "effective_n": 8.89,
+        "n_positions": 5,
         "top_5_weight": 75.0,
-        "top_10_weight": 90.0,
+        "top_10_weight": 75.0,
         "largest_position": 15.0,
         "smallest_position": 15.0,
         "thresholds": {
@@ -1215,14 +1185,14 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 6,
+      "n_positions": 5,
       "n_exchanges": 0,
       "exchanges": [],
-      "total_weight": 90.0,
-      "missing_isin": 5,
+      "total_weight": 75.0,
+      "missing_isin": 4,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 16.7,
+        "isin_coverage": 20.0,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
@@ -1232,12 +1202,12 @@
     ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une diversification à travers des ETF et des actions de sociétés établies. L'accent sur des secteurs comme les télécommunications et les biens de consommation vise à offrir une possiblee résilience face aux fluctuations du marché. Cependant, la dépendance à des marchés spécifiques peut exposer le portefeuille à des risques économiques régionaux. Une analyse continue des conditions de marché est essentielle pour maintenir cette stratégie. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, visant à minimiser la volatilité tout en offrant une exposition diversifiée. Avec une volatilité réalisée de 10,42%, il est conçu pour les investisseurs recherchant une croissance modérée. Toutefois, les fluctuations des marchés et les risques géopolitiques peuvent impacter la performance. Il est essentiel de considérer ces éléments avant d'investir. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE (SCHP)": "15.0%",
-      "CHUNGHWA TELECOM CO., LTD (CHT)": "15.0%",
-      "PRINCIPAL FINANCIAL GROUP, INC. (PFG)": "6.2%",
-      "PEPSICO, INC. (PEP)": "6.2%"
+      "PROCTER & GAMBLE CO (PRG)": "15.0%",
+      "CHUNGHWA TELECOM CO., LTD (CHT)": "6.2%",
+      "PRINCIPAL FINANCIAL GROUP, INC. (PFG)": "6.2%"
     },
     "ETF": {
       "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc) (IS3T)": "15.0%",
@@ -1252,11 +1222,11 @@
     "_tickers": {
       "IS3T": 0.15,
       "SLMB": 0.15,
-      "CHT": 0.1499,
+      "PRG": 0.1499,
       "10AI": 0.07519999999999999,
       "FUSR": 0.07490000000000001,
+      "CHT": 0.0625,
       "PFG": 0.0625,
-      "PEP": 0.0625,
       "XDED": 0.0625,
       "XWEU": 0.0625,
       "SCHP": 0.15
@@ -1282,15 +1252,15 @@
         "industry": "",
         "beta": null
       },
-      "CHT": {
+      "PRG": {
         "weight": 0.1499,
         "category": "Actions",
-        "name": "CHUNGHWA TELECOM CO., LTD",
+        "name": "PROCTER & GAMBLE CO",
         "asset_ids": [
-          "EQ_2848"
+          "EQ_4248"
         ],
-        "industry": "Telecom Services",
-        "beta": 0.4
+        "industry": "Household & Personal Products",
+        "beta": 0.58
       },
       "10AI": {
         "weight": 0.07519999999999999,
@@ -1312,6 +1282,16 @@
         "industry": "",
         "beta": null
       },
+      "CHT": {
+        "weight": 0.0625,
+        "category": "Actions",
+        "name": "CHUNGHWA TELECOM CO., LTD",
+        "asset_ids": [
+          "EQ_2848"
+        ],
+        "industry": "Telecom Services",
+        "beta": 0.4
+      },
       "PFG": {
         "weight": 0.0625,
         "category": "Actions",
@@ -1321,16 +1301,6 @@
         ],
         "industry": "Asset Management",
         "beta": 0.91
-      },
-      "PEP": {
-        "weight": 0.0625,
-        "category": "Actions",
-        "name": "PEPSICO, INC.",
-        "asset_ids": [
-          "EQ_1461"
-        ],
-        "industry": "Beverages - Non-Alcoholic",
-        "beta": 0.57
       },
       "XDED": {
         "weight": 0.0625,
@@ -1366,7 +1336,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 8.3,
+      "vol_realized": 10.42,
       "vol_target": 6.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 92.3,
@@ -1401,11 +1371,11 @@
     "_tickers_pricing": {
       "IS3T": 0.15,
       "SLMB": 0.15,
-      "CHT": 0.1499,
+      "PRG": 0.1499,
       "10AI": 0.07519999999999999,
       "FUSR": 0.07490000000000001,
+      "CHT": 0.0625,
       "PFG": 0.0625,
-      "PEP": 0.0625,
       "XDED": 0.0625,
       "XWEU": 0.0625,
       "SCHP": 0.15
@@ -1414,12 +1384,12 @@
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
       "Actions:SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE (SCHP)": 15.0,
-      "Actions:CHUNGHWA TELECOM CO., LTD (CHT)": 15.0,
+      "Actions:PROCTER & GAMBLE CO (PRG)": 15.0,
       "ETF:iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc) (IS3T)": 15.0,
       "ETF:Amundi Core MSCI Europe UCITS ETF Dist (10AI)": 7.5,
       "ETF:Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc (FUSR)": 7.5,
+      "Actions:CHUNGHWA TELECOM CO., LTD (CHT)": 6.2,
       "Actions:PRINCIPAL FINANCIAL GROUP, INC. (PFG)": 6.2,
-      "Actions:PEPSICO, INC. (PEP)": 6.2,
       "ETF:Xtrackers S&P 500 Equal Weight UCITS ETF 2D (XDED)": 6.2,
       "ETF:Xtrackers MSCI World UCITS ETF 2C EUR Hedged (XWEU)": 6.2,
       "ETF:iShares MSCI EMU Screened UCITS ETF EUR (Dist) (SLMB)": 15.2
@@ -1441,15 +1411,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 6.0,
-            "observed": 8.3,
-            "slack": 0.7,
-            "binding": true,
-            "status": "BINDING",
+            "observed": 10.42,
+            "slack": -1.42,
+            "binding": false,
+            "status": "VIOLATED",
             "details": {
               "tolerance": 3.0,
               "range_min": 3.0,
               "range_max": 9.0,
-              "diff_from_target": 2.3
+              "diff_from_target": 4.42
             }
           },
           {
@@ -1485,7 +1455,7 @@
                   "weight": 15.0
                 },
                 {
-                  "id": "EQ_2848",
+                  "id": "EQ_4248",
                   "weight": 14.99
                 },
                 {
@@ -1532,13 +1502,15 @@
               "most_concentrated": "Global",
               "counts_in_max_region": {
                 "Global": 57.51,
-                "Etats-Unis": 27.49,
-                "Suisse": 15.0
+                "Suisse": 15.0,
+                "Allemagne": 14.99,
+                "Etats-Unis": 12.5
               },
               "all_regions": {
                 "Global": 57.51,
-                "Etats-Unis": 27.49,
-                "Suisse": 15.0
+                "Suisse": 15.0,
+                "Allemagne": 14.99,
+                "Etats-Unis": 12.5
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -1567,15 +1539,15 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 40.0,
-            "observed": 81.25,
-            "slack": -41.25,
+            "observed": 72.51,
+            "slack": -32.51,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 15.0,
               "range_max": 40.0,
-              "slack_from_min": 66.25,
-              "slack_from_max": -41.25,
+              "slack_from_min": 57.51,
+              "slack_from_max": -32.51,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1601,15 +1573,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 85.0,
-            "observed": 18.75,
-            "slack": -31.25,
+            "observed": 27.49,
+            "slack": -22.51,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 50.0,
               "range_max": 85.0,
-              "slack_from_min": -31.25,
-              "slack_from_max": 66.25,
+              "slack_from_min": -22.51,
+              "slack_from_max": 57.51,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1651,19 +1623,19 @@
         "summary": {
           "total": 12,
           "ok": 6,
-          "binding": 3,
-          "violated": 0,
+          "binding": 2,
+          "violated": 1,
           "critical": 3
         },
-        "quality_score": 65.0,
+        "quality_score": 58.3,
         "recommendations": [
+          "🟠 VIOLATED: volatility exceeded by 1.4% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 35.0% — immediate action required",
           "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
           "🔴 CRITICAL: max_sector violated by 27.5% — immediate action required",
           "🔴 CRITICAL: max_region violated by 7.5% — immediate action required",
-          "ℹ️ INFO: bucket_core is 41.2% outside target range (indicator only)",
-          "ℹ️ INFO: bucket_defensive is 31.2% outside target range (indicator only)",
-          "⚠️ 3 constraints are binding — consider relaxing profile or reducing positions"
+          "ℹ️ INFO: bucket_core is 32.5% outside target range (indicator only)",
+          "ℹ️ INFO: bucket_defensive is 22.5% outside target range (indicator only)"
         ],
         "exposures": {
           "by_category": {
@@ -1676,16 +1648,17 @@
           },
           "by_region": {
             "Global": 57.51,
-            "Etats-Unis": 27.49,
-            "Suisse": 15.0
+            "Suisse": 15.0,
+            "Allemagne": 14.99,
+            "Etats-Unis": 12.5
           },
           "by_risk_bucket": {
             "equity_like": 100.0
           },
           "by_role": {
-            "core": 81.25,
+            "core": 72.51,
             "satellite": 0.0,
-            "defensive": 18.75,
+            "defensive": 27.49,
             "lottery": 0.0,
             "unknown": 0.0
           },
@@ -1742,14 +1715,14 @@
             "exchange": null
           },
           {
-            "id": "EQ_2848",
-            "ticker": "CHT",
-            "name": "CHUNGHWA TELECOM CO., LTD",
+            "id": "EQ_4248",
+            "ticker": "PRG",
+            "name": "PROCTER & GAMBLE CO",
             "weight_pct": 14.99,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Unknown",
-            "region": "Etats-Unis",
+            "region": "Allemagne",
             "exchange": null
           },
           {
@@ -1775,9 +1748,9 @@
             "exchange": null
           },
           {
-            "id": "EQ_1495",
-            "ticker": "PFG",
-            "name": "PRINCIPAL FINANCIAL GROUP, INC.",
+            "id": "EQ_2848",
+            "ticker": "CHT",
+            "name": "CHUNGHWA TELECOM CO., LTD",
             "weight_pct": 6.25,
             "category": "Actions",
             "risk_bucket": "equity_like",
@@ -1786,9 +1759,9 @@
             "exchange": null
           },
           {
-            "id": "EQ_1461",
-            "ticker": "PEP",
-            "name": "PEPSICO, INC.",
+            "id": "EQ_1495",
+            "ticker": "PFG",
+            "name": "PRINCIPAL FINANCIAL GROUP, INC.",
             "weight_pct": 6.25,
             "category": "Actions",
             "risk_bucket": "equity_like",
@@ -1845,16 +1818,17 @@
       },
       "by_region": {
         "Global": 57.51,
-        "Etats-Unis": 27.49,
-        "Suisse": 15.0
+        "Suisse": 15.0,
+        "Allemagne": 14.99,
+        "Etats-Unis": 12.5
       },
       "by_risk_bucket": {
         "equity_like": 100.0
       },
       "by_role": {
-        "core": 81.25,
+        "core": 72.51,
         "satellite": 0.0,
-        "defensive": 18.75,
+        "defensive": 27.49,
         "lottery": 0.0,
         "unknown": 0.0
       },
@@ -1890,11 +1864,12 @@
       "ready_for_execution": true
     },
     "_limitations": [
-      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique."
+      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique.",
+      "Volatilité réalisée (10.4%) éloignée de la cible (6.0%) - écart de 4.4%."
     ]
   },
   "_meta": {
-    "generated_at": "2026-10-18T12:22:57.483675",
+    "generated_at": "2026-10-19T15:11:32.148584",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 50,
