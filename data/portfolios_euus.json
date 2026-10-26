@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle présente une allocation agressive, avec une forte exposition à des secteurs dynamiques comme la technologie et l'énergie. Toutefois, cette stratégie peut entraîner une volatilité élevée, surtout dans un environnement de marché mixte. Les fluctuations des prix des matières premières et les cycles économiques peuvent également impacter les performances. Il est essentiel de surveiller ces risques pour une gestion efficace du portefeuille. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche agressive avec une exposition significative aux secteurs technologique et énergétique, ce qui peut offrir un potentiel de croissance élevé. Cependant, cette stratégie comporte des risques liés à la volatilité des marchés et aux fluctuations des prix des matières premières. De plus, l'exposition aux actions individuelles peut augmenter le risque global du portefeuille. Il est essentiel de surveiller les tendances économiques et sectorielles pour gérer ces risques. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "STMICROELECTRONICS NV (STM)": "13.0%",
       "TENARIS S.A. (TEN)": "13.0%",
@@ -134,7 +134,7 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 15.04,
+      "vol_realized": 15.26,
       "vol_target": 24.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 92.0,
@@ -184,15 +184,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 24.0,
-            "observed": 15.04,
-            "slack": -2.96,
+            "observed": 15.26,
+            "slack": -2.74,
             "binding": false,
             "status": "VIOLATED",
             "details": {
               "tolerance": 6.0,
               "range_min": 18.0,
               "range_max": 30.0,
-              "diff_from_target": -8.96
+              "diff_from_target": -8.74
             }
           },
           {
@@ -432,7 +432,7 @@
         },
         "quality_score": 74.3,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 3.0% — reduce exposure",
+          "🟠 VIOLATED: volatility exceeded by 2.7% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 10.0% — immediate action required",
           "🟡 BINDING: max_single_position at 13.0% (cap=13.0%) — monitor closely",
           "🟠 VIOLATED: max_sector exceeded by 4.0% — reduce exposure"
@@ -669,16 +669,16 @@
     },
     "_limitations": [
       "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique.",
-      "Volatilité réalisée (15.0%) éloignée de la cible (24.0%) - écart de 9.0%."
+      "Volatilité réalisée (15.3%) éloignée de la cible (24.0%) - écart de 8.7%."
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle présente une approche modérée, équilibrant des actifs à potentiel de croissance avec des investissements plus stables. Bien que la volatilité soit relativement maîtrisée, des risques subsistent, notamment liés aux fluctuations des marchés financiers et aux conditions économiques. L'exposition à des secteurs spécifiques peut également engendrer des variations de performance. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une stratégie modérée, équilibrant des actions et des ETF diversifiés. Bien qu'il vise à offrir une croissance stable, il reste exposé aux fluctuations des marchés financiers et aux risques sectoriels. L'accent sur des entreprises dans des secteurs variés peut aider à atténuer possibles risques, mais la concentration sur des actions individuelles peut également introduire de la volatilité. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "SEI INVESTMENTS COMPANY (SEIC)": "16.5%",
       "ESSENT GROUP LTD. (ESNT)": "16.7%",
+      "FOPE S.P.A. (FPE)": "16.7%",
       "GAZTRANSPORT ET TECHNIGAZ SA (GTT)": "16.7%",
-      "RENAISSANCERE HOLDINGS LTD. (RNR)": "16.7%",
       "CINCINNATI FINANCIAL CORPORATION (CINF)": "16.7%"
     },
     "ETF": {
@@ -691,8 +691,8 @@
       "CINF": 0.16670000000000001,
       "SEIC": 0.16670000000000001,
       "ESNT": 0.16670000000000001,
-      "GTT": 0.16670000000000001,
-      "RNR": 0.16670000000000001
+      "FPE": 0.16670000000000001,
+      "GTT": 0.16670000000000001
     },
     "_tickers_meta": {
       "AYEU": {
@@ -735,6 +735,16 @@
         "industry": "Insurance - Specialty",
         "beta": 0.84
       },
+      "FPE": {
+        "weight": 0.16670000000000001,
+        "category": "Actions",
+        "name": "FOPE S.P.A.",
+        "asset_ids": [
+          "EQ_3404"
+        ],
+        "industry": "Specialty Chemicals",
+        "beta": 0.82
+      },
       "GTT": {
         "weight": 0.16670000000000001,
         "category": "Actions",
@@ -744,22 +754,12 @@
         ],
         "industry": "Oil & Gas Equipment & Services",
         "beta": 0.61
-      },
-      "RNR": {
-        "weight": 0.16670000000000001,
-        "category": "Actions",
-        "name": "RENAISSANCERE HOLDINGS LTD.",
-        "asset_ids": [
-          "EQ_302"
-        ],
-        "industry": "Insurance - Reinsurance",
-        "beta": 0.41
       }
     },
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 13.17,
+      "vol_realized": 11.48,
       "vol_target": 11.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 96.0,
@@ -771,16 +771,16 @@
       "CINF": 0.16670000000000001,
       "SEIC": 0.16670000000000001,
       "ESNT": 0.16670000000000001,
-      "GTT": 0.16670000000000001,
-      "RNR": 0.16670000000000001
+      "FPE": 0.16670000000000001,
+      "GTT": 0.16670000000000001
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
       "Actions:SEI INVESTMENTS COMPANY (SEIC)": 16.5,
       "Actions:ESSENT GROUP LTD. (ESNT)": 16.7,
+      "Actions:FOPE S.P.A. (FPE)": 16.7,
       "Actions:GAZTRANSPORT ET TECHNIGAZ SA (GTT)": 16.7,
-      "Actions:RENAISSANCERE HOLDINGS LTD. (RNR)": 16.7,
       "ETF:iShares Smart City Infrastructure UCITS ETF USD (Acc) (AYEU)": 16.7,
       "Actions:CINCINNATI FINANCIAL CORPORATION (CINF)": 16.7
     },
@@ -801,15 +801,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 11.0,
-            "observed": 13.17,
-            "slack": 0.83,
-            "binding": true,
-            "status": "BINDING",
+            "observed": 11.48,
+            "slack": 2.52,
+            "binding": false,
+            "status": "OK",
             "details": {
               "tolerance": 3.0,
               "range_min": 8.0,
               "range_max": 14.0,
-              "diff_from_target": 2.17
+              "diff_from_target": 0.48
             }
           },
           {
@@ -869,11 +869,11 @@
                   "weight": 15.0
                 },
                 {
-                  "id": "EQ_2904",
+                  "id": "EQ_3404",
                   "weight": 15.0
                 },
                 {
-                  "id": "EQ_302",
+                  "id": "EQ_2904",
                   "weight": 15.0
                 }
               ]
@@ -904,20 +904,22 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 60.0,
-            "slack": -10.0,
+            "observed": 45.0,
+            "slack": 5.0,
             "binding": false,
-            "status": "CRITICAL",
+            "status": "OK",
             "details": {
               "most_concentrated": "Etats-Unis",
               "counts_in_max_region": {
-                "Etats-Unis": 60.0,
+                "Etats-Unis": 45.0,
                 "Global": 15.0,
+                "Italie": 15.0,
                 "France": 15.0
               },
               "all_regions": {
-                "Etats-Unis": 60.0,
+                "Etats-Unis": 45.0,
                 "Global": 15.0,
+                "Italie": 15.0,
                 "France": 15.0
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
@@ -1030,17 +1032,16 @@
         ],
         "summary": {
           "total": 13,
-          "ok": 7,
-          "binding": 2,
+          "ok": 9,
+          "binding": 1,
           "violated": 1,
-          "critical": 3
+          "critical": 2
         },
-        "quality_score": 61.5,
+        "quality_score": 72.3,
         "recommendations": [
           "🔴 CRITICAL: bonds_min violated by 15.0% — immediate action required",
           "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
           "🔴 CRITICAL: max_sector violated by 45.0% — immediate action required",
-          "🔴 CRITICAL: max_region violated by 10.0% — immediate action required",
           "🟠 VIOLATED: min_assets exceeded by 4.0% — reduce exposure",
           "ℹ️ INFO: bucket_core is 20.0% outside target range (indicator only)"
         ],
@@ -1054,8 +1055,9 @@
             "Diversified": 15.0
           },
           "by_region": {
-            "Etats-Unis": 60.0,
+            "Etats-Unis": 45.0,
             "Global": 15.0,
+            "Italie": 15.0,
             "France": 15.0
           },
           "by_risk_bucket": {
@@ -1132,6 +1134,17 @@
             "exchange": null
           },
           {
+            "id": "EQ_3404",
+            "ticker": "FPE",
+            "name": "FOPE S.P.A.",
+            "weight_pct": 15.0,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Italie",
+            "exchange": null
+          },
+          {
             "id": "EQ_2904",
             "ticker": "GTT",
             "name": "GAZTRANSPORT ET TECHNIGAZ SA",
@@ -1140,17 +1153,6 @@
             "risk_bucket": "equity_like",
             "sector": "Unknown",
             "region": "France",
-            "exchange": null
-          },
-          {
-            "id": "EQ_302",
-            "ticker": "RNR",
-            "name": "RENAISSANCERE HOLDINGS LTD.",
-            "weight_pct": 15.0,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Unknown",
-            "region": "Etats-Unis",
             "exchange": null
           }
         ],
@@ -1179,8 +1181,9 @@
         "Diversified": 15.0
       },
       "by_region": {
-        "Etats-Unis": 60.0,
+        "Etats-Unis": 45.0,
         "Global": 15.0,
+        "Italie": 15.0,
         "France": 15.0
       },
       "by_risk_bucket": {
@@ -1229,48 +1232,40 @@
     ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle présente une stratégie stable, avec une exposition à des actifs à faible volatilité et des secteurs diversifiés. Bien que la volatilité soit réduite, des risques subsistent, notamment liés aux fluctuations économiques et aux performances sectorielles. Les investissements dans des actions spécifiques peuvent également entraîner des variations de rendement. Une gestion proactive est essentielle pour naviguer dans un environnement de marché changeant. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle présente une approche stable, avec une diversification à travers plusieurs secteurs et régions. L'accent sur des entreprises et des ETF à faible volatilité vise à réduire les fluctuations du portefeuille. Cependant, des risques subsistent, notamment liés aux conditions économiques et aux performances sectorielles. Une attention particulière doit être portée aux tendances du marché pour gérer ces risques efficacement. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
-      "SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE (SCHP)": "15.0%",
-      "CHUNGHWA TELECOM CO., LTD (CHT)": "6.7%",
-      "T. ROWE PRICE GROUP, INC. (TROW)": "6.7%",
-      "AVERY DENNISON CORPORATION (AVY)": "14.8%"
+      "AVERY DENNISON CORPORATION (AVY)": "10.5%",
+      "CHUNGHWA TELECOM CO., LTD (CHT)": "10.0%",
+      "T. ROWE PRICE GROUP, INC. (TROW)": "6.6%",
+      "SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE (SCHP)": "15.0%"
     },
     "ETF": {
-      "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc) (IS3T)": "14.6%",
-      "iShares MSCI EMU Screened UCITS ETF EUR (Dist) (SLMB)": "14.6%",
-      "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc (FUSR)": "7.5%",
-      "Xtrackers S&P 500 Equal Weight UCITS ETF 2D (XDED)": "6.7%",
-      "Amundi Core MSCI Europe UCITS ETF Dist (10AI)": "6.7%",
-      "Xtrackers MSCI World UCITS ETF 2C EUR Hedged (XWEU)": "6.7%"
+      "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc) (IS3T)": "12.0%",
+      "iShares MSCI EMU Screened UCITS ETF EUR (Dist) (SLMB)": "12.0%",
+      "Xtrackers S&P 500 Equal Weight UCITS ETF 2D (XDED)": "9.8%",
+      "Xtrackers MSCI World UCITS ETF 2C - EUR Hedged (XWEU)": "9.8%",
+      "Amundi Core MSCI Europe UCITS ETF Dist (10AI)": "6.6%",
+      "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc (FUSR)": "5.4%",
+      "L&G US Equity UCITS ETF (ETLS)": "2.3%"
     },
     "Obligations": {},
     "Crypto": {},
     "_tickers": {
-      "AVY": 0.15,
-      "IS3T": 0.146,
-      "SLMB": 0.146,
-      "FUSR": 0.0747,
-      "CHT": 0.0667,
-      "TROW": 0.0667,
-      "XDED": 0.0667,
-      "10AI": 0.0667,
-      "XWEU": 0.0667,
-      "SCHP": 0.14980000000000002
+      "IS3T": 0.11981927710843374,
+      "SLMB": 0.11981927710843374,
+      "AVY": 0.10548192771084337,
+      "CHT": 0.09984939759036145,
+      "XDED": 0.09841566265060239,
+      "XWEU": 0.09841566265060239,
+      "TROW": 0.06564457831325302,
+      "10AI": 0.06564457831325302,
+      "FUSR": 0.054072289156626506,
+      "ETLS": 0.02283734939759036,
+      "SCHP": 0.15
     },
     "_tickers_meta": {
-      "AVY": {
-        "weight": 0.15,
-        "category": "Actions",
-        "name": "AVERY DENNISON CORPORATION",
-        "asset_ids": [
-          "EQ_973"
-        ],
-        "industry": "Packaging & Containers",
-        "beta": 0.87
-      },
       "IS3T": {
-        "weight": 0.146,
+        "weight": 0.11699999999999999,
         "category": "ETF",
         "name": "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc)",
         "asset_ids": [
@@ -1280,7 +1275,7 @@
         "beta": null
       },
       "SLMB": {
-        "weight": 0.146,
+        "weight": 0.11699999999999999,
         "category": "ETF",
         "name": "iShares MSCI EMU Screened UCITS ETF EUR (Dist)",
         "asset_ids": [
@@ -1289,18 +1284,18 @@
         "industry": "",
         "beta": null
       },
-      "FUSR": {
-        "weight": 0.0747,
-        "category": "ETF",
-        "name": "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc",
+      "AVY": {
+        "weight": 0.10300000000000001,
+        "category": "Actions",
+        "name": "AVERY DENNISON CORPORATION",
         "asset_ids": [
-          "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc"
+          "EQ_973"
         ],
-        "industry": "",
-        "beta": null
+        "industry": "Packaging & Containers",
+        "beta": 0.87
       },
       "CHT": {
-        "weight": 0.0667,
+        "weight": 0.0975,
         "category": "Actions",
         "name": "CHUNGHWA TELECOM CO., LTD",
         "asset_ids": [
@@ -1309,18 +1304,8 @@
         "industry": "Telecom Services",
         "beta": 0.4
       },
-      "TROW": {
-        "weight": 0.0667,
-        "category": "Actions",
-        "name": "T. ROWE PRICE GROUP, INC.",
-        "asset_ids": [
-          "EQ_2059"
-        ],
-        "industry": null,
-        "beta": 1.32
-      },
       "XDED": {
-        "weight": 0.0667,
+        "weight": 0.09609999999999999,
         "category": "ETF",
         "name": "Xtrackers S&P 500 Equal Weight UCITS ETF 2D",
         "asset_ids": [
@@ -1329,8 +1314,28 @@
         "industry": "",
         "beta": null
       },
+      "XWEU": {
+        "weight": 0.09609999999999999,
+        "category": "ETF",
+        "name": "Xtrackers MSCI World UCITS ETF 2C - EUR Hedged",
+        "asset_ids": [
+          "Xtrackers MSCI World UCITS ETF 2C - EUR Hedged"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "TROW": {
+        "weight": 0.0641,
+        "category": "Actions",
+        "name": "T. ROWE PRICE GROUP, INC.",
+        "asset_ids": [
+          "EQ_2059"
+        ],
+        "industry": null,
+        "beta": 1.32
+      },
       "10AI": {
-        "weight": 0.0667,
+        "weight": 0.0641,
         "category": "ETF",
         "name": "Amundi Core MSCI Europe UCITS ETF Dist",
         "asset_ids": [
@@ -1339,18 +1344,38 @@
         "industry": "",
         "beta": null
       },
-      "XWEU": {
-        "weight": 0.0667,
+      "FUSR": {
+        "weight": 0.0528,
         "category": "ETF",
-        "name": "Xtrackers MSCI World UCITS ETF 2C EUR Hedged",
+        "name": "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc",
         "asset_ids": [
-          "Xtrackers MSCI World UCITS ETF 2C EUR Hedged"
+          "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc"
         ],
         "industry": "",
         "beta": null
       },
+      "ETLS": {
+        "weight": 0.0223,
+        "category": "ETF",
+        "name": "L&G US Equity UCITS ETF",
+        "asset_ids": [
+          "L&G US Equity UCITS ETF"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "PFG": {
+        "weight": 0.0197,
+        "category": "Actions",
+        "name": "PRINCIPAL FINANCIAL GROUP, INC.",
+        "asset_ids": [
+          "EQ_1495"
+        ],
+        "industry": "Asset Management",
+        "beta": 0.91
+      },
       "SCHP": {
-        "weight": 0.14980000000000002,
+        "weight": 0.1503,
         "category": "Actions",
         "name": "SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE",
         "asset_ids": [
@@ -1363,7 +1388,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 9.44,
+      "vol_realized": 8.92,
       "vol_target": 6.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 88.9,
@@ -1396,30 +1421,33 @@
       "why_not_slsqp_details": "Le profil Stable requiert vol_target=6% ± 3% et >35% obligations. Ces contraintes sont mathématiquement incompatibles avec l'optimisation Markowitz mean-variance. L'univers d'actifs disponibles ne permet pas d'atteindre une volatilité si basse avec diversification suffisante. Fallback vers allocation heuristique (règles prédéfinies)."
     },
     "_tickers_pricing": {
-      "AVY": 0.15,
-      "IS3T": 0.146,
-      "SLMB": 0.146,
-      "FUSR": 0.0747,
-      "CHT": 0.0667,
-      "TROW": 0.0667,
-      "XDED": 0.0667,
-      "10AI": 0.0667,
-      "XWEU": 0.0667,
-      "SCHP": 0.14980000000000002
+      "IS3T": 0.11699999999999999,
+      "SLMB": 0.11699999999999999,
+      "AVY": 0.10300000000000001,
+      "CHT": 0.0975,
+      "XDED": 0.09609999999999999,
+      "XWEU": 0.09609999999999999,
+      "TROW": 0.0641,
+      "10AI": 0.0641,
+      "FUSR": 0.0528,
+      "ETLS": 0.0223,
+      "PFG": 0.0197,
+      "SCHP": 0.1503
     },
     "_unpriced_assets": [],
     "_pricing_coverage_pct": 100.0,
     "_numeric_weights": {
-      "Actions:SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE (SCHP)": 15.0,
-      "ETF:iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc) (IS3T)": 14.6,
-      "ETF:iShares MSCI EMU Screened UCITS ETF EUR (Dist) (SLMB)": 14.6,
-      "ETF:Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc (FUSR)": 7.5,
-      "Actions:CHUNGHWA TELECOM CO., LTD (CHT)": 6.7,
-      "Actions:T. ROWE PRICE GROUP, INC. (TROW)": 6.7,
-      "ETF:Xtrackers S&P 500 Equal Weight UCITS ETF 2D (XDED)": 6.7,
-      "ETF:Amundi Core MSCI Europe UCITS ETF Dist (10AI)": 6.7,
-      "ETF:Xtrackers MSCI World UCITS ETF 2C EUR Hedged (XWEU)": 6.7,
-      "Actions:AVERY DENNISON CORPORATION (AVY)": 14.8
+      "ETF:iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc) (IS3T)": 12.0,
+      "ETF:iShares MSCI EMU Screened UCITS ETF EUR (Dist) (SLMB)": 12.0,
+      "Actions:AVERY DENNISON CORPORATION (AVY)": 10.5,
+      "Actions:CHUNGHWA TELECOM CO., LTD (CHT)": 10.0,
+      "ETF:Xtrackers S&P 500 Equal Weight UCITS ETF 2D (XDED)": 9.8,
+      "ETF:Xtrackers MSCI World UCITS ETF 2C - EUR Hedged (XWEU)": 9.8,
+      "Actions:T. ROWE PRICE GROUP, INC. (TROW)": 6.6,
+      "ETF:Amundi Core MSCI Europe UCITS ETF Dist (10AI)": 6.6,
+      "ETF:Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc (FUSR)": 5.4,
+      "ETF:L&G US Equity UCITS ETF (ETLS)": 2.3,
+      "Actions:SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE (SCHP)": 15.0
     },
     "_constraint_report": {
       "hard_constraints": [],
@@ -1438,15 +1466,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 6.0,
-            "observed": 9.44,
-            "slack": -0.44,
-            "binding": false,
-            "status": "VIOLATED",
+            "observed": 8.92,
+            "slack": 0.08,
+            "binding": true,
+            "status": "BINDING",
             "details": {
               "tolerance": 3.0,
               "range_min": 3.0,
               "range_max": 9.0,
-              "diff_from_target": 3.44
+              "diff_from_target": 2.92
             }
           },
           {
@@ -1466,32 +1494,28 @@
             "name": "max_single_position",
             "constraint_type": "max",
             "cap": 15.0,
-            "observed": 25.0,
-            "slack": -10.0,
+            "observed": 18.32,
+            "slack": -3.32,
             "binding": false,
-            "status": "CRITICAL",
+            "status": "VIOLATED",
             "details": {
               "largest_position": {
-                "id": "EQ_973",
-                "name": "AVERY DENNISON CORPORATION",
-                "weight": 25.0
+                "id": "EQ_4396",
+                "name": "SCHINDLER HOLDING AG PARTICIPATION CERTI",
+                "weight": 18.32
               },
               "positions_above_10pct": [
                 {
-                  "id": "EQ_4396",
-                  "weight": 15.0
-                },
-                {
-                  "id": "EQ_973",
-                  "weight": 25.0
-                },
-                {
                   "id": "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc)",
-                  "weight": 14.6
+                  "weight": 11.4
+                },
+                {
+                  "id": "EQ_4396",
+                  "weight": 18.32
                 },
                 {
                   "id": "iShares MSCI EMU Screened UCITS ETF EUR (Dist)",
-                  "weight": 14.6
+                  "weight": 11.4
                 }
               ]
             }
@@ -1500,19 +1524,19 @@
             "name": "max_sector",
             "constraint_type": "max",
             "cap": 30.0,
-            "observed": 50.0,
-            "slack": -20.0,
+            "observed": 54.44,
+            "slack": -24.44,
             "binding": false,
             "status": "CRITICAL",
             "details": {
-              "most_concentrated": "Unknown",
+              "most_concentrated": "Diversified",
               "counts_in_max_sector": {
-                "Unknown": 50.0,
-                "Diversified": 50.0
+                "Diversified": 54.44,
+                "Unknown": 45.55
               },
               "all_sectors": {
-                "Unknown": 50.0,
-                "Diversified": 50.0
+                "Diversified": 54.44,
+                "Unknown": 45.55
               },
               "scope": "EQUITY_LIKE only (excludes Bonds)"
             }
@@ -1521,21 +1545,21 @@
             "name": "max_region",
             "constraint_type": "max",
             "cap": 50.0,
-            "observed": 50.0,
-            "slack": 0.0,
-            "binding": true,
-            "status": "BINDING",
+            "observed": 54.44,
+            "slack": -4.44,
+            "binding": false,
+            "status": "VIOLATED",
             "details": {
               "most_concentrated": "Global",
               "counts_in_max_region": {
-                "Global": 50.0,
-                "Etats-Unis": 35.0,
-                "Suisse": 15.0
+                "Global": 54.44,
+                "Etats-Unis": 27.23,
+                "Suisse": 18.32
               },
               "all_regions": {
-                "Global": 50.0,
-                "Etats-Unis": 35.0,
-                "Suisse": 15.0
+                "Global": 54.44,
+                "Etats-Unis": 27.23,
+                "Suisse": 18.32
               },
               "scope": "EQUITY_LIKE + LEVERAGED only"
             }
@@ -1544,18 +1568,18 @@
             "name": "min_assets",
             "constraint_type": "min",
             "cap": 10,
-            "observed": 10,
-            "slack": 0,
-            "binding": true,
-            "status": "BINDING",
+            "observed": 12,
+            "slack": 2,
+            "binding": false,
+            "status": "OK",
             "details": {}
           },
           {
             "name": "max_assets",
             "constraint_type": "max",
             "cap": 18,
-            "observed": 10,
-            "slack": 8,
+            "observed": 12,
+            "slack": 6,
             "binding": false,
             "status": "OK",
             "details": {}
@@ -1564,15 +1588,15 @@
             "name": "bucket_core",
             "constraint_type": "range",
             "cap": 40.0,
-            "observed": 70.0,
-            "slack": -30.0,
+            "observed": 79.01,
+            "slack": -39.01,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 15.0,
               "range_max": 40.0,
-              "slack_from_min": 55.0,
-              "slack_from_max": -30.0,
+              "slack_from_min": 64.01,
+              "slack_from_max": -39.01,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1598,15 +1622,15 @@
             "name": "bucket_defensive",
             "constraint_type": "range",
             "cap": 85.0,
-            "observed": 30.0,
-            "slack": -20.0,
+            "observed": 20.98,
+            "slack": -29.02,
             "binding": false,
             "status": "OK",
             "details": {
               "range_min": 50.0,
               "range_max": 85.0,
-              "slack_from_min": -20.0,
-              "slack_from_max": 55.0,
+              "slack_from_min": -29.02,
+              "slack_from_max": 64.02,
               "outside_range": true,
               "is_indicator": true
             }
@@ -1647,54 +1671,53 @@
         ],
         "summary": {
           "total": 12,
-          "ok": 6,
-          "binding": 2,
-          "violated": 1,
-          "critical": 3
+          "ok": 7,
+          "binding": 1,
+          "violated": 2,
+          "critical": 2
         },
-        "quality_score": 58.3,
+        "quality_score": 61.7,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 0.4% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 35.0% — immediate action required",
-          "🔴 CRITICAL: max_single_position violated by 10.0% — immediate action required",
-          "🔴 CRITICAL: max_sector violated by 20.0% — immediate action required",
-          "🟡 BINDING: max_region at 50.0% (cap=50.0%) — monitor closely",
-          "ℹ️ INFO: bucket_core is 30.0% outside target range (indicator only)",
-          "ℹ️ INFO: bucket_defensive is 20.0% outside target range (indicator only)"
+          "🟠 VIOLATED: max_single_position exceeded by 3.3% — reduce exposure",
+          "🔴 CRITICAL: max_sector violated by 24.4% — immediate action required",
+          "🟠 VIOLATED: max_region exceeded by 4.4% — reduce exposure",
+          "ℹ️ INFO: bucket_core is 39.0% outside target range (indicator only)",
+          "ℹ️ INFO: bucket_defensive is 29.0% outside target range (indicator only)"
         ],
         "exposures": {
           "by_category": {
-            "Actions": 50.0,
-            "ETF": 50.0
+            "ETF": 54.44,
+            "Actions": 45.55
           },
           "by_sector": {
-            "Unknown": 50.0,
-            "Diversified": 50.0
+            "Diversified": 54.44,
+            "Unknown": 45.55
           },
           "by_region": {
-            "Global": 50.0,
-            "Etats-Unis": 35.0,
-            "Suisse": 15.0
+            "Global": 54.44,
+            "Etats-Unis": 27.23,
+            "Suisse": 18.32
           },
           "by_risk_bucket": {
-            "equity_like": 100.0
+            "equity_like": 99.99
           },
           "by_role": {
-            "core": 70.0,
+            "core": 79.01,
             "satellite": 0.0,
-            "defensive": 30.0,
+            "defensive": 20.98,
             "lottery": 0.0,
             "unknown": 0.0
           },
           "concentration": {
-            "hhi": 1435.0,
+            "hhi": 1064.0,
             "hhi_interpretation": "diversified",
-            "effective_n": 6.97,
-            "n_positions": 10,
-            "top_5_weight": 75.0,
-            "top_10_weight": 100.0,
-            "largest_position": 25.0,
-            "smallest_position": 5.0,
+            "effective_n": 9.4,
+            "n_positions": 12,
+            "top_5_weight": 60.57,
+            "top_10_weight": 96.39,
+            "largest_position": 18.32,
+            "smallest_position": 1.67,
             "thresholds": {
               "well_diversified": "HHI < 1000",
               "diversified": "HHI 1000-1500",
@@ -1706,21 +1729,10 @@
         },
         "ticker_mapping": [
           {
-            "id": "EQ_973",
-            "ticker": "AVY",
-            "name": "AVERY DENNISON CORPORATION",
-            "weight_pct": 25.0,
-            "category": "Actions",
-            "risk_bucket": "equity_like",
-            "sector": "Unknown",
-            "region": "Etats-Unis",
-            "exchange": null
-          },
-          {
             "id": "EQ_4396",
             "ticker": "SCHP",
             "name": "SCHINDLER HOLDING AG PARTICIPATION CERTIFICATE",
-            "weight_pct": 15.0,
+            "weight_pct": 18.32,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Unknown",
@@ -1731,7 +1743,7 @@
             "id": "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc)",
             "ticker": "IS3T",
             "name": "iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD (Acc)",
-            "weight_pct": 14.6,
+            "weight_pct": 11.4,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -1742,7 +1754,7 @@
             "id": "iShares MSCI EMU Screened UCITS ETF EUR (Dist)",
             "ticker": "SLMB",
             "name": "iShares MSCI EMU Screened UCITS ETF EUR (Dist)",
-            "weight_pct": 14.6,
+            "weight_pct": 11.4,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -1750,21 +1762,10 @@
             "exchange": null
           },
           {
-            "id": "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc",
-            "ticker": "FUSR",
-            "name": "Fidelity Sustainable Research Enhanced US Equity UCITS ETF A",
-            "weight_pct": 5.8,
-            "category": "ETF",
-            "risk_bucket": "equity_like",
-            "sector": "Diversified",
-            "region": "Global",
-            "exchange": null
-          },
-          {
-            "id": "EQ_2848",
-            "ticker": "CHT",
-            "name": "CHUNGHWA TELECOM CO., LTD",
-            "weight_pct": 5.0,
+            "id": "EQ_973",
+            "ticker": "AVY",
+            "name": "AVERY DENNISON CORPORATION",
+            "weight_pct": 10.0,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Unknown",
@@ -1772,10 +1773,10 @@
             "exchange": null
           },
           {
-            "id": "EQ_2059",
-            "ticker": "TROW",
-            "name": "T. ROWE PRICE GROUP, INC.",
-            "weight_pct": 5.0,
+            "id": "EQ_2848",
+            "ticker": "CHT",
+            "name": "CHUNGHWA TELECOM CO., LTD",
+            "weight_pct": 9.45,
             "category": "Actions",
             "risk_bucket": "equity_like",
             "sector": "Unknown",
@@ -1786,18 +1787,40 @@
             "id": "Xtrackers S&P 500 Equal Weight UCITS ETF 2D",
             "ticker": "XDED",
             "name": "Xtrackers S&P 500 Equal Weight UCITS ETF 2D",
-            "weight_pct": 5.0,
+            "weight_pct": 9.31,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
             "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Xtrackers MSCI World UCITS ETF 2C - EUR Hedged",
+            "ticker": "XWEU",
+            "name": "Xtrackers MSCI World UCITS ETF 2C - EUR Hedged",
+            "weight_pct": 9.31,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_2059",
+            "ticker": "TROW",
+            "name": "T. ROWE PRICE GROUP, INC.",
+            "weight_pct": 6.11,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
             "exchange": null
           },
           {
             "id": "Amundi Core MSCI Europe UCITS ETF Dist",
             "ticker": "10AI",
             "name": "Amundi Core MSCI Europe UCITS ETF Dist",
-            "weight_pct": 5.0,
+            "weight_pct": 6.11,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
@@ -1805,26 +1828,48 @@
             "exchange": null
           },
           {
-            "id": "Xtrackers MSCI World UCITS ETF 2C EUR Hedged",
-            "ticker": "XWEU",
-            "name": "Xtrackers MSCI World UCITS ETF 2C EUR Hedged",
-            "weight_pct": 5.0,
+            "id": "Fidelity Sustainable Research Enhanced US Equity UCITS ETF Acc",
+            "ticker": "FUSR",
+            "name": "Fidelity Sustainable Research Enhanced US Equity UCITS ETF A",
+            "weight_pct": 4.98,
             "category": "ETF",
             "risk_bucket": "equity_like",
             "sector": "Diversified",
             "region": "Global",
             "exchange": null
+          },
+          {
+            "id": "L&G US Equity UCITS ETF",
+            "ticker": "ETLS",
+            "name": "L&G US Equity UCITS ETF",
+            "weight_pct": 1.93,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1495",
+            "ticker": "PFG",
+            "name": "PRINCIPAL FINANCIAL GROUP, INC.",
+            "weight_pct": 1.67,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
           }
         ],
         "execution_summary": {
-          "n_positions": 10,
+          "n_positions": 12,
           "n_exchanges": 0,
           "exchanges": [],
-          "total_weight": 100.0,
-          "missing_isin": 4,
+          "total_weight": 99.99,
+          "missing_isin": 5,
           "missing_ticker": 0,
           "data_quality": {
-            "isin_coverage": 60.0,
+            "isin_coverage": 58.3,
             "ticker_coverage": 100.0
           },
           "ready_for_execution": true
@@ -1833,37 +1878,37 @@
     },
     "_exposures": {
       "by_category": {
-        "Actions": 50.0,
-        "ETF": 50.0
+        "ETF": 54.44,
+        "Actions": 45.55
       },
       "by_sector": {
-        "Unknown": 50.0,
-        "Diversified": 50.0
+        "Diversified": 54.44,
+        "Unknown": 45.55
       },
       "by_region": {
-        "Global": 50.0,
-        "Etats-Unis": 35.0,
-        "Suisse": 15.0
+        "Global": 54.44,
+        "Etats-Unis": 27.23,
+        "Suisse": 18.32
       },
       "by_risk_bucket": {
-        "equity_like": 100.0
+        "equity_like": 99.99
       },
       "by_role": {
-        "core": 70.0,
+        "core": 79.01,
         "satellite": 0.0,
-        "defensive": 30.0,
+        "defensive": 20.98,
         "lottery": 0.0,
         "unknown": 0.0
       },
       "concentration": {
-        "hhi": 1435.0,
+        "hhi": 1064.0,
         "hhi_interpretation": "diversified",
-        "effective_n": 6.97,
-        "n_positions": 10,
-        "top_5_weight": 75.0,
-        "top_10_weight": 100.0,
-        "largest_position": 25.0,
-        "smallest_position": 5.0,
+        "effective_n": 9.4,
+        "n_positions": 12,
+        "top_5_weight": 60.57,
+        "top_10_weight": 96.39,
+        "largest_position": 18.32,
+        "smallest_position": 1.67,
         "thresholds": {
           "well_diversified": "HHI < 1000",
           "diversified": "HHI 1000-1500",
@@ -1874,25 +1919,24 @@
       }
     },
     "_execution_summary": {
-      "n_positions": 10,
+      "n_positions": 12,
       "n_exchanges": 0,
       "exchanges": [],
-      "total_weight": 100.0,
-      "missing_isin": 4,
+      "total_weight": 99.99,
+      "missing_isin": 5,
       "missing_ticker": 0,
       "data_quality": {
-        "isin_coverage": 60.0,
+        "isin_coverage": 58.3,
         "ticker_coverage": 100.0
       },
       "ready_for_execution": true
     },
     "_limitations": [
-      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique.",
-      "Volatilité réalisée (9.4%) éloignée de la cible (6.0%) - écart de 3.4%."
+      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique."
     ]
   },
   "_meta": {
-    "generated_at": "2026-10-25T12:59:49.962663",
+    "generated_at": "2026-10-26T14:46:43.147609",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 50,
