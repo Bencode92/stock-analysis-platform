@@ -1,0 +1,59 @@
+{
+  "version": "2026-10-28",
+  "note": "Hiérarchie de convictions sur le TOTAL des deux portefeuilles (Conviction + ETF thématique). Cibles en % uniquement : aucun montant réel ici (dépôt public). Les montants viennent des relevés importés dans le navigateur, jamais committés.",
+  "meta": "La rivalité avec la Chine force l'Occident à dépenser pour reconstruire ses propres chaînes : réseau, énergie, défense, semi-conducteurs. Ces dépenses sont les revenus des sociétés détenues. Réserve : ce sont des dépenses d'investissement ; si les taux ou les budgets les freinent, tout ralentit en même temps.",
+  "buckets": [
+    {"key": "b1", "label": "① Contrôle de l'énergie", "sub": "réseau, distribution, stockage", "target": 10,
+     "target_note": "15 % visés dès 5 lignes (Eaton en attente, ETF réseau UCITS à vérifier) ; plafond 5 % du total par titre → 10 % avec 3 lignes, les 5 % restants attendent dans le lest",
+     "receiver": true, "proxies": ["FGRD", "PAVE"]},
+    {"key": "b2", "label": "② Énergie et matières", "sub": "souveraineté, pas le pétrole", "target": 15, "receiver": "partial", "proxies": ["URA", "COPX", "GLD"]},
+    {"key": "b3", "label": "③ Émergents", "sub": "dont Chine ≈ 2-3 % du total", "target": 10, "receiver": false, "proxies": ["EEM", "MCHI", "INDA"]},
+    {"key": "b4", "label": "④ Robots", "sub": "composants · veille jusqu'à la thèse écrite", "target": 0,
+     "target_note": "5 % réservés, pris sur le lest à la vague qui suit la thèse", "receiver": false, "proxies": ["BOTZ", "EWJ"]},
+    {"key": "b5a", "label": "⑤a Adoption de l'IA et tech", "sub": "la thèse dont je suis sûr", "target": 25, "receiver": false, "proxies": ["QQQ", "CIBR"]},
+    {"key": "b5b", "label": "⑤b Infrastructure IA", "sub": "la thèse dont je doute · plus d'argent neuf", "target": 12, "receiver": true, "frozen": true, "proxies": ["SOXX", "EWT"]},
+    {"key": "def", "label": "Défense", "sub": "rattachée à la méta-conviction", "target": 8, "receiver": true, "proxies": ["ITA"]},
+    {"key": "lest", "label": "Lest", "sub": "gagne si l'investissement déçoit · porte les réserves", "target": 20,
+     "target_note": "15 % de lest + 5 % en attente du ① (puis réserve robots)", "receiver": false, "proxies": ["QUAL", "VYM"]}
+  ],
+  "lines": {
+    "SU":   {"bucket": "b1",  "w": 2, "ai": 0.25, "name": "Schneider Electric"},
+    "ABBN": {"bucket": "b1",  "w": 1, "ai": 0.25, "name": "ABB"},
+    "NEX":  {"bucket": "b1",  "w": 1, "ai": 0.25, "name": "Nexans"},
+    "U3O8": {"bucket": "b2",  "w": 10, "ai": 0.15, "receiver": true, "name": "Sprott Uranium Miners"},
+    "SGLN": {"bucket": "b2",  "w": 8, "ai": 0, "receiver": false, "name": "iShares Physical Gold"},
+    "COPG": {"bucket": "b2",  "w": 5, "ai": 0.2, "receiver": true, "name": "Global X Copper Miners"},
+    "IS3N": {"bucket": "b3",  "w": 1, "ai": 0.4, "name": "iShares Core MSCI EM IMI"},
+    "EQEU": {"bucket": "b5a", "w": 32, "ai": 0.65, "name": "Invesco EQQQ Nasdaq-100"},
+    "ISPY": {"bucket": "b5a", "w": 5, "ai": 0.5, "name": "L&G Cyber Security"},
+    "TEL":  {"bucket": "b5b", "w": 1, "ai": 1, "name": "TE Connectivity"},
+    "APH":  {"bucket": "b5b", "w": 1, "ai": 1, "name": "Amphenol"},
+    "NVT":  {"bucket": "b5b", "w": 1, "ai": 1, "name": "nVent"},
+    "CDNS": {"bucket": "b5b", "w": 1, "ai": 1, "name": "Cadence"},
+    "KLAC": {"bucket": "b5b", "w": 1, "ai": 1, "name": "KLA"},
+    "TSM":  {"bucket": "b5b", "w": 1, "ai": 0.45, "name": "TSMC"},
+    "ASML": {"bucket": "b5b", "w": 1, "ai": 1, "name": "ASML"},
+    "SMH":  {"bucket": "b5b", "w": 1, "ai": 1, "name": "VanEck Semiconductor"},
+    "HO":   {"bucket": "def", "w": 2, "ai": 0, "name": "Thales"},
+    "SAF":  {"bucket": "def", "w": 1, "ai": 0, "name": "Safran"},
+    "EUDF": {"bucket": "def", "w": 2, "ai": 0.05, "name": "WisdomTree Europe Defence"},
+    "FGEQ": {"bucket": "lest", "w": 1, "ai": 0.1, "name": "Fidelity Global Quality Income"}
+  },
+  "caps": [
+    {"key": "ai", "label": "IA", "limit": 50, "how": "exposition aux dépenses IA ligne par ligne, comptée large (Nasdaq 65 %, ETF semi 100 %, cyber 50 %, émergents 40 %)"},
+    {"key": "recv", "label": "Investissement (receveurs)", "limit": 55, "how": "ceux qui reçoivent les dépenses d'investissement : ① + ⑤b + défense + uranium + cuivre ; le Nasdaq les paie, il en est exclu"}
+  ],
+  "single_stock_cap": 5,
+  "doctrine": [
+    ["Chine", "Ma Chine, c'est mon ETF émergents. Aucune action chinoise en direct (gouvernance, guerre des prix). Plus de Chine = un ETF à taille fixe, décidé à une vague."],
+    ["Énergie", "Mon énergie, c'est la souveraineté : réseau, nucléaire existant, uranium, cuivre. Pas le pétrole : un prix de crise n'est pas une thèse."],
+    ["Robots", "Composants (réducteurs, actionneurs, capteurs), pas assembleurs. Sortie si les composants deviennent chinois."],
+    ["Devise", "Je ne parie pas sur les devises et je ne couvre pas."],
+    ["Versements", "L'argent neuf va aux écarts, au prorata ; ⑤b n'en reçoit plus. Changer la répartition des versements n'est pas vendre. Ne jamais lancer le « rééquilibrage » de l'application (il vend)."]
+  ],
+  "watch": [
+    ["Europe-Canada", "un terminal GNL financé sur la côte est du Canada"],
+    ["Espace", "une entrée en bourse de SpaceX"],
+    ["Drones", "thèse à écrire avant toute ligne"]
+  ]
+}
