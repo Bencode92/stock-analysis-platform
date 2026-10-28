@@ -86,7 +86,7 @@
     "sector_api": "Industrials",
     "industry": "Industrial Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 76,
+    "quality_score": 75,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -273,7 +273,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Specialty Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 66,
+    "quality_score": 65,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -431,7 +431,7 @@
     "sector_api": "Basic Materials",
     "industry": "Chemicals",
     "quality_peer": "US|Unknown",
-    "quality_score": 45,
+    "quality_score": 44,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -597,19 +597,6 @@
     ]
   },
   {
-    "ticker": "SHO",
-    "name": "SUNSTONE HOTEL INVESTORS INC.",
-    "name_api": "Sunstone Hotel Investors, Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Hotel & Motel",
-    "quality_peer": "US|Unknown",
-    "quality_score": 13,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "U",
     "name": "UNITY SOFTWARE INC.",
     "name_api": "Unity Software Inc.",
@@ -617,7 +604,7 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 14,
+    "quality_score": 10,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -631,6 +618,19 @@
     "industry": "Other Industrial Metals & Mining",
     "quality_peer": "US|Unknown",
     "quality_score": 0,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ED",
+    "name": "CONSOLIDATED EDISON, INC.",
+    "name_api": "Consolidated Edison Inc.",
+    "sector_csv": "",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Regulated Electric",
+    "quality_peer": "US|Unknown",
+    "quality_score": 48,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -832,7 +832,7 @@
     "sector_api": "Basic Materials",
     "industry": "Gold",
     "quality_peer": "US|Unknown",
-    "quality_score": 69,
+    "quality_score": 68,
     "flags": [
       "name_mismatch_WARNING",
       "peer_fallback_to_sector"
@@ -1177,7 +1177,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Apparel Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 83,
+    "quality_score": 82,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -1350,7 +1350,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Regional",
     "quality_peer": "US|Unknown",
-    "quality_score": 80,
+    "quality_score": 61,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -1358,15 +1358,40 @@
   {
     "ticker": "ANGX",
     "name": "ANGEL STUDIOS, INC.",
-    "name_api": "Angel Studios, Inc. Class A Common Stock",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Entertainment",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 16,
+    "quality_score": 11,
     "flags": [
       "roe_extreme",
-      "equity_negative",
+      "equity_negative"
+    ]
+  },
+  {
+    "ticker": "KVYO",
+    "name": "KLAVIYO INC.",
+    "name_api": "Klaviyo Inc. Class A Common Stock",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Software - Application",
+    "quality_peer": "US|Unknown",
+    "quality_score": 32,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AMT",
+    "name": "AMERICAN TOWER CORPORATION",
+    "name_api": "American Tower Corporation",
+    "sector_csv": "",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Specialty",
+    "quality_peer": "US|Unknown",
+    "quality_score": 51,
+    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -1378,7 +1403,7 @@
     "sector_api": "Technology",
     "industry": "Computer Hardware",
     "quality_peer": "US|Unknown",
-    "quality_score": 88,
+    "quality_score": 87,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -1629,7 +1654,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Food Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 61,
+    "quality_score": 60,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -1643,9 +1668,22 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 58,
+    "quality_score": 60,
     "flags": [
       "name_mismatch_WARNING",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENOV",
+    "name": "ENOVIS CORPORATION",
+    "name_api": "Enovis Corporation",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Medical Devices",
+    "quality_peer": "US|Unknown",
+    "quality_score": 26,
+    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -1672,21 +1710,6 @@
     "quality_peer": "US|Unknown",
     "quality_score": 49,
     "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SKY",
-    "name": "SKYLINE CHAMPION CORPORATION",
-    "name_api": "Champion Homes, Inc.",
-    "name_match": "1.0/3 tokens",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Residential Construction",
-    "quality_peer": "US|Unknown",
-    "quality_score": 67,
-    "flags": [
-      "name_mismatch_WARNING",
       "peer_fallback_to_sector"
     ]
   },
@@ -1935,7 +1958,7 @@
     "sector_api": "Technology",
     "industry": "Scientific & Technical Instruments",
     "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -2333,42 +2356,17 @@
     ]
   },
   {
-    "ticker": "SITE",
-    "name": "SITEONE LANDSCAPE SUPPLY INC.",
-    "name_api": "SiteOne Landscape Supply, Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Industrial Distribution",
-    "quality_peer": "US|Unknown",
-    "quality_score": 64,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FF",
-    "name": "FUTUREFUEL CORP",
-    "name_api": "FutureFuel Corp.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 34,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "SITC",
     "name": "SITE CENTERS CORP.",
-    "name_api": null,
+    "name_api": "SITE Centers Corp.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Real Estate",
+    "industry": "REIT - Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 38,
+    "quality_score": 41,
     "flags": [
-      "margin_extreme"
+      "margin_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -2379,7 +2377,7 @@
     "sector_api": "Utilities",
     "industry": "Utilities - Independent Power Producers",
     "quality_peer": "US|Unknown",
-    "quality_score": 35,
+    "quality_score": 34,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -2789,7 +2787,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas Drilling",
     "quality_peer": "US|Unknown",
-    "quality_score": 54,
+    "quality_score": 55,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -3082,7 +3080,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Farm Products",
     "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "quality_score": 52,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -3194,19 +3192,6 @@
     ]
   },
   {
-    "ticker": "LUV",
-    "name": "SOUTHWEST AIRLINES CO.",
-    "name_api": "Southwest Airlines Co.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Airlines",
-    "quality_peer": "US|Unknown",
-    "quality_score": 43,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "MAN",
     "name": "MANPOWERGROUP INC.",
     "name_api": "ManpowerGroup Inc.",
@@ -3214,7 +3199,7 @@
     "sector_api": "Industrials",
     "industry": "Staffing & Employment Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 29,
+    "quality_score": 45,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -3255,7 +3240,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Residential",
     "quality_peer": "US|Unknown",
-    "quality_score": 39,
+    "quality_score": 10,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -3943,7 +3928,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas Midstream",
     "quality_peer": "US|Unknown",
-    "quality_score": 65,
+    "quality_score": 64,
     "flags": [
       "margin_extreme",
       "peer_fallback_to_sector"
@@ -4049,7 +4034,7 @@
     "sector_api": "Industrials",
     "industry": "Specialty Industrial Machinery",
     "quality_peer": "US|Unknown",
-    "quality_score": 56,
+    "quality_score": 55,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -4075,7 +4060,7 @@
     "sector_api": "Financial Services",
     "industry": "Insurance - Property & Casualty",
     "quality_peer": "US|Unknown",
-    "quality_score": 93,
+    "quality_score": 92,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -4101,7 +4086,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 52,
+    "quality_score": 51,
     "flags": [
       "roe_extreme",
       "equity_negative",
@@ -4313,7 +4298,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Beverages - Non-Alcoholic",
     "quality_peer": "US|Unknown",
-    "quality_score": 70,
+    "quality_score": 69,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -4744,19 +4729,6 @@
     ]
   },
   {
-    "ticker": "EPRT",
-    "name": "ESSENTIAL PROPERTIES REALTY TRUST, INC.",
-    "name_api": "Essential Properties Realty Trust, Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Retail",
-    "quality_peer": "US|Unknown",
-    "quality_score": 69,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "EE",
     "name": "EXCELERATE ENERGY, INC.",
     "name_api": "Excelerate Energy Inc Class A Common Stock",
@@ -4829,7 +4801,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Apparel Manufacturing",
     "quality_peer": "US|Unknown",
-    "quality_score": 31,
+    "quality_score": 30,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -5096,7 +5068,7 @@
     "sector_api": "Industrials",
     "industry": "Engineering & Construction",
     "quality_peer": "US|Unknown",
-    "quality_score": 79,
+    "quality_score": 78,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -5270,7 +5242,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Gambling",
     "quality_peer": "US|Unknown",
-    "quality_score": 57,
+    "quality_score": 56,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -5618,19 +5590,6 @@
     ]
   },
   {
-    "ticker": "RRX",
-    "name": "REGAL REXNORD CORPORATION",
-    "name_api": "Regal Rexnord Corporation",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 38,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "RS",
     "name": "RELIANCE INC.",
     "name_api": "Reliance, Inc.",
@@ -5638,7 +5597,7 @@
     "sector_api": "Basic Materials",
     "industry": "Steel",
     "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -6249,7 +6208,7 @@
     "sector_api": "Financial Services",
     "industry": "Capital Markets",
     "quality_peer": "US|Unknown",
-    "quality_score": 82,
+    "quality_score": 81,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -6262,7 +6221,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Packaged Foods",
     "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "quality_score": 59,
     "flags": [
       "equity_negative",
       "peer_fallback_to_sector"
@@ -6289,7 +6248,7 @@
     "sector_api": "Financial Services",
     "industry": "Asset Management",
     "quality_peer": "US|Unknown",
-    "quality_score": 28,
+    "quality_score": 27,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -6330,7 +6289,7 @@
     "sector_api": "Basic Materials",
     "industry": "Other Precious Metals & Mining",
     "quality_peer": "US|Unknown",
-    "quality_score": 68,
+    "quality_score": 67,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -6343,7 +6302,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas E&P",
     "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -6433,6 +6392,19 @@
     ]
   },
   {
+    "ticker": "VOYA",
+    "name": "VOYA FINANCIAL INC.",
+    "name_api": "Voya Financial Inc.",
+    "sector_csv": "",
+    "sector_api": "Financial Services",
+    "industry": "Financial Conglomerates",
+    "quality_peer": "US|Unknown",
+    "quality_score": 56,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "COR",
     "name": "CENCORA, INC.",
     "name_api": null,
@@ -6443,6 +6415,19 @@
     "quality_score": 43,
     "flags": [
       "roe_extreme"
+    ]
+  },
+  {
+    "ticker": "GLOB",
+    "name": "GLOBANT S.A.",
+    "name_api": "Globant S.A.",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Information Technology Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 63,
+    "flags": [
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -7092,7 +7077,7 @@
     "sector_api": "Industrials",
     "industry": "Specialty Industrial Machinery",
     "quality_peer": "US|Unknown",
-    "quality_score": 75,
+    "quality_score": 74,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -7280,7 +7265,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 54,
+    "quality_score": 53,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -7333,7 +7318,7 @@
     "sector_api": "Technology",
     "industry": "Scientific & Technical Instruments",
     "quality_peer": "US|Unknown",
-    "quality_score": 39,
+    "quality_score": 35,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -7400,7 +7385,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Diversified",
     "quality_peer": "US|Unknown",
-    "quality_score": 51,
+    "quality_score": 50,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -7414,6 +7399,19 @@
     "industry": "Asset Management",
     "quality_peer": "US|Unknown",
     "quality_score": 46,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "GLT",
+    "name": "MAGNERA CORP.",
+    "name_api": "Magnera Corp.",
+    "sector_csv": "",
+    "sector_api": "Basic Materials",
+    "industry": "Paper & Paper Products",
+    "quality_peer": "US|Unknown",
+    "quality_score": 50,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -7571,7 +7569,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Industrial",
     "quality_peer": "US|Unknown",
-    "quality_score": 33,
+    "quality_score": 32,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -7889,7 +7887,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Regional",
     "quality_peer": "US|Unknown",
-    "quality_score": 73,
+    "quality_score": 72,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -8304,19 +8302,6 @@
     ]
   },
   {
-    "ticker": "BG",
-    "name": "BUNGE GLOBAL S.A.",
-    "name_api": "Bunge Global SA",
-    "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Farm Products",
-    "quality_peer": "US|Unknown",
-    "quality_score": 37,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "PII",
     "name": "POLARIS INC.",
     "name_api": "Polaris Inc.",
@@ -8402,7 +8387,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Hotel & Motel",
     "quality_peer": "US|Unknown",
-    "quality_score": 30,
+    "quality_score": 29,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -8416,7 +8401,7 @@
     "sector_api": "Industrials",
     "industry": "Farm & Heavy Construction Machinery",
     "quality_peer": "US|Unknown",
-    "quality_score": 66,
+    "quality_score": 65,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -8707,7 +8692,7 @@
     "sector_api": "Utilities",
     "industry": "Utilities - Regulated Gas",
     "quality_peer": "US|Unknown",
-    "quality_score": 51,
+    "quality_score": 50,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -8910,7 +8895,7 @@
     "sector_api": "Healthcare",
     "industry": "Diagnostics & Research",
     "quality_peer": "US|Unknown",
-    "quality_score": 37,
+    "quality_score": 30,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -8962,7 +8947,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Food Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 43,
+    "quality_score": 56,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -8976,6 +8961,19 @@
     "industry": "Waste Management",
     "quality_peer": "US|Unknown",
     "quality_score": 47,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VMI",
+    "name": "VALMONT INDUSTRIES, INC.",
+    "name_api": "Valmont Industries, Inc.",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Conglomerates",
+    "quality_peer": "US|Unknown",
+    "quality_score": 63,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -9201,7 +9199,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Packaged Foods",
     "quality_peer": "US|Unknown",
-    "quality_score": 48,
+    "quality_score": 47,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -9597,7 +9595,7 @@
     "sector_api": "Industrials",
     "industry": "Waste Management",
     "quality_peer": "US|Unknown",
-    "quality_score": 61,
+    "quality_score": 60,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -9838,7 +9836,7 @@
     "sector_api": "Technology",
     "industry": "Scientific & Technical Instruments",
     "quality_peer": "US|Unknown",
-    "quality_score": 82,
+    "quality_score": 81,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -9858,12 +9856,38 @@
     ]
   },
   {
+    "ticker": "CHCT",
+    "name": "COMMUNITY HEALTHCARE TRUST INC.",
+    "name_api": "Community Healthcare Trust Incorporated",
+    "sector_csv": "",
+    "sector_api": "Real Estate",
+    "industry": "REIT - Healthcare Facilities",
+    "quality_peer": "US|Unknown",
+    "quality_score": 44,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "NEXA",
     "name": "NEXA RESOURCES S.A.",
     "name_api": "Nexa Resources S.A.",
     "sector_csv": "",
     "sector_api": "Basic Materials",
     "industry": "Other Industrial Metals & Mining",
+    "quality_peer": "US|Unknown",
+    "quality_score": 65,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CHD",
+    "name": "CHURCH & DWIGHT CO., INC.",
+    "name_api": "Church & Dwight Co., Inc.",
+    "sector_csv": "",
+    "sector_api": "Consumer Defensive",
+    "industry": "Household & Personal Products",
     "quality_peer": "US|Unknown",
     "quality_score": 65,
     "flags": [
@@ -10051,7 +10075,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 64,
+    "quality_score": 63,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -10160,7 +10184,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Specialty",
     "quality_peer": "US|Unknown",
-    "quality_score": 24,
+    "quality_score": 23,
     "flags": [
       "equity_negative",
       "peer_fallback_to_sector"
@@ -10437,7 +10461,7 @@
     "sector_api": "Basic Materials",
     "industry": "Agricultural Inputs",
     "quality_peer": "US|Unknown",
-    "quality_score": 87,
+    "quality_score": 86,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -10450,7 +10474,7 @@
     "sector_api": "Financial Services",
     "industry": "Asset Management",
     "quality_peer": "US|Unknown",
-    "quality_score": 48,
+    "quality_score": 45,
     "flags": [
       "margin_extreme",
       "peer_fallback_to_sector"
@@ -10477,7 +10501,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Devices",
     "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -10570,7 +10594,7 @@
     "sector_api": "Industrials",
     "industry": "Farm & Heavy Construction Machinery",
     "quality_peer": "US|Unknown",
-    "quality_score": 66,
+    "quality_score": 65,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -10662,6 +10686,20 @@
     "industry": "Utilities - Renewable",
     "quality_peer": "US|Unknown",
     "quality_score": 2,
+    "flags": [
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "WBI",
+    "name": "WATERBRIDGE INFRASTRUCTURE LLC",
+    "name_api": "WaterBridge Infrastructure LLC Class A",
+    "sector_csv": "",
+    "sector_api": "Energy",
+    "industry": "Oil & Gas Equipment & Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 23,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -10844,7 +10882,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Restaurants",
     "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "quality_score": 52,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -10922,7 +10960,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Lodging",
     "quality_peer": "US|Unknown",
-    "quality_score": 70,
+    "quality_score": 69,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -11200,20 +11238,7 @@
     "sector_api": "Industrials",
     "industry": "Rental & Leasing Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 22,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "GNL",
-    "name": "GLOBAL NET LEASE, INC.",
-    "name_api": "Global Net Lease, Inc.",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Diversified",
-    "quality_peer": "US|Unknown",
-    "quality_score": 36,
+    "quality_score": 27,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -11239,22 +11264,9 @@
     "sector_api": "Communication Services",
     "industry": "Internet Content & Information",
     "quality_peer": "US|Unknown",
-    "quality_score": 29,
+    "quality_score": 28,
     "flags": [
       "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CNP",
-    "name": "CENTERPOINT ENERGY INC.",
-    "name_api": "CenterPoint Energy, Inc.",
-    "sector_csv": "",
-    "sector_api": "Utilities",
-    "industry": "Utilities - Regulated Electric",
-    "quality_peer": "US|Unknown",
-    "quality_score": 46,
-    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -11272,6 +11284,19 @@
     ]
   },
   {
+    "ticker": "BR",
+    "name": "BROADRIDGE FINANCIAL SOLUTIONS, INC.",
+    "name_api": "Broadridge Financial Solutions, Inc.",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Information Technology Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 77,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "CNQ",
     "name": "CANADIAN NATURAL RESOURCES LIMITED",
     "name_api": "Canadian Natural Resources Ltd.",
@@ -11279,7 +11304,20 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas E&P",
     "quality_peer": "US|Unknown",
-    "quality_score": 60,
+    "quality_score": 77,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CNR",
+    "name": "CORE NATURAL RESOURCES, INC.",
+    "name_api": "Core Natural Resources Inc.",
+    "sector_csv": "",
+    "sector_api": "Energy",
+    "industry": "Thermal Coal",
+    "quality_peer": "US|Unknown",
+    "quality_score": 44,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -11451,7 +11489,7 @@
     "sector_api": "Financial Services",
     "industry": "Insurance - Property & Casualty",
     "quality_peer": "US|Unknown",
-    "quality_score": 76,
+    "quality_score": 75,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -11490,7 +11528,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas Midstream",
     "quality_peer": "US|Unknown",
-    "quality_score": 75,
+    "quality_score": 74,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -12268,7 +12306,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT—Office",
     "quality_peer": "US|Unknown",
-    "quality_score": 61,
+    "quality_score": 60,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -12427,7 +12465,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Restaurants",
     "quality_peer": "US|Unknown",
-    "quality_score": 69,
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -12440,7 +12478,7 @@
     "sector_api": "Industrials",
     "industry": "Engineering & Construction",
     "quality_peer": "US|Unknown",
-    "quality_score": 67,
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -12666,7 +12704,7 @@
     "sector_api": "Industrials",
     "industry": "Building Products & Equipment",
     "quality_peer": "US|Unknown",
-    "quality_score": 79,
+    "quality_score": 78,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -12720,7 +12758,7 @@
     "sector_api": "Healthcare",
     "industry": "Diagnostics & Research",
     "quality_peer": "US|Unknown",
-    "quality_score": 62,
+    "quality_score": 61,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13017,19 +13055,6 @@
     ]
   },
   {
-    "ticker": "AXTA",
-    "name": "AXALTA COATING SYSTEMS LTD.",
-    "name_api": "Axalta Coating Systems Ltd.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 70,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "PSX",
     "name": "PHILLIPS 66",
     "name_api": "Phillips 66",
@@ -13052,7 +13077,6 @@
     "quality_peer": "US|Unknown",
     "quality_score": 20,
     "flags": [
-      "roe_extreme",
       "peer_fallback_to_sector"
     ]
   },
@@ -13090,7 +13114,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Regional",
     "quality_peer": "US|Unknown",
-    "quality_score": 74,
+    "quality_score": 73,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13109,6 +13133,32 @@
     ]
   },
   {
+    "ticker": "WSO",
+    "name": "WATSCO INC.",
+    "name_api": "Watsco Inc.",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Industrial Distribution",
+    "quality_peer": "US|Unknown",
+    "quality_score": 62,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TDAY",
+    "name": "USA TODAY CO., INC.",
+    "name_api": "USA TODAY Co., Inc.",
+    "sector_csv": "",
+    "sector_api": "Communication Services",
+    "industry": "Publishing",
+    "quality_peer": "US|Unknown",
+    "quality_score": 42,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "FOUR",
     "name": "SHIFT4 PAYMENTS, INC.",
     "name_api": "Shift4 Payments Inc. Class A Common Stock",
@@ -13116,7 +13166,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 65,
+    "quality_score": 64,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13263,7 +13313,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Beverages - Non-Alcoholic",
     "quality_peer": "US|Unknown",
-    "quality_score": 33,
+    "quality_score": 32,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13370,7 +13420,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Diversified",
     "quality_peer": "US|Unknown",
-    "quality_score": 65,
+    "quality_score": 64,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13411,7 +13461,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Residential Construction",
     "quality_peer": "US|Unknown",
-    "quality_score": 64,
+    "quality_score": 63,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13504,7 +13554,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Auto Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 50,
+    "quality_score": 49,
     "flags": [
       "roe_extreme",
       "equity_negative",
@@ -13665,7 +13715,7 @@
     "sector_api": "Healthcare",
     "industry": "Diagnostics & Research",
     "quality_peer": "US|Unknown",
-    "quality_score": 71,
+    "quality_score": 70,
     "flags": [
       "name_mismatch_WARNING",
       "peer_fallback_to_sector"
@@ -13905,7 +13955,7 @@
     "sector_api": "Industrials",
     "industry": "Tools & Accessories",
     "quality_peer": "US|Unknown",
-    "quality_score": 70,
+    "quality_score": 69,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -13977,6 +14027,19 @@
     ]
   },
   {
+    "ticker": "MIAX",
+    "name": "MIAMI INTERNATIONAL HOLDINGS, INC.",
+    "name_api": "Miami International Holdings, Inc.",
+    "sector_csv": "",
+    "sector_api": "Financial Services",
+    "industry": "Capital Markets",
+    "quality_peer": "US|Unknown",
+    "quality_score": 56,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "STDN",
     "name": "STANDARD NUCLEAR INC.",
     "name_api": "Standard Nuclear Inc Class A Common Stock",
@@ -14023,7 +14086,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Packaged Foods",
     "quality_peer": "US|Unknown",
-    "quality_score": 61,
+    "quality_score": 60,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14142,7 +14205,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Specialty",
     "quality_peer": "US|Unknown",
-    "quality_score": 44,
+    "quality_score": 43,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14366,7 +14429,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Packaged Foods",
     "quality_peer": "US|Unknown",
-    "quality_score": 80,
+    "quality_score": 79,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14517,19 +14580,6 @@
     ]
   },
   {
-    "ticker": "AVA",
-    "name": "AVISTA CORP.",
-    "name_api": "Avista Corporation",
-    "sector_csv": "",
-    "sector_api": "Utilities",
-    "industry": "Utilities - Diversified",
-    "quality_peer": "US|Unknown",
-    "quality_score": 50,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "DPC",
     "name": "DPC HOLDINGS PLC",
     "name_api": "DPC Holdings PLC",
@@ -14565,7 +14615,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Restaurants",
     "quality_peer": "US|Unknown",
-    "quality_score": 64,
+    "quality_score": 65,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14592,6 +14642,19 @@
     "industry": "Diagnostics & Research",
     "quality_peer": "US|Unknown",
     "quality_score": 71,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MH",
+    "name": "MCGRAW HILL, INC.",
+    "name_api": "McGraw Hill, Inc.",
+    "sector_csv": "",
+    "sector_api": "Consumer Defensive",
+    "industry": "Education & Training Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 52,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14684,7 +14747,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Instruments & Supplies",
     "quality_peer": "US|Unknown",
-    "quality_score": 72,
+    "quality_score": 71,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14725,7 +14788,7 @@
     "sector_api": "Industrials",
     "industry": "Farm & Heavy Construction Machinery",
     "quality_peer": "US|Unknown",
-    "quality_score": 77,
+    "quality_score": 76,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -14842,7 +14905,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas Midstream",
     "quality_peer": "US|Unknown",
-    "quality_score": 68,
+    "quality_score": 67,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -15269,7 +15332,7 @@
     "sector_api": "Basic Materials",
     "industry": "Gold",
     "quality_peer": "US|Unknown",
-    "quality_score": 65,
+    "quality_score": 69,
     "flags": [
       "margin_extreme",
       "peer_fallback_to_sector"
@@ -15302,19 +15365,6 @@
     ]
   },
   {
-    "ticker": "LH",
-    "name": "LABCORP HOLDINGS INC.",
-    "name_api": "Labcorp Holdings Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Diagnostics & Research",
-    "quality_peer": "US|Unknown",
-    "quality_score": 57,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "SMG",
     "name": "SCOTTS MIRACLE-GRO CO.",
     "name_api": "The Scotts Miracle-Gro Company",
@@ -15336,7 +15386,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas Integrated",
     "quality_peer": "US|Unknown",
-    "quality_score": 54,
+    "quality_score": 73,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -15376,6 +15426,19 @@
     "industry": "Utilities - Regulated Electric",
     "quality_peer": "US|Unknown",
     "quality_score": 50,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "DAL",
+    "name": "DELTA AIR LINES, INC.",
+    "name_api": "Delta Air Lines, Inc.",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Airlines",
+    "quality_peer": "US|Unknown",
+    "quality_score": 61,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -15955,7 +16018,7 @@
     "sector_api": "Industrials",
     "industry": "Electrical Equipment & Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 37,
+    "quality_score": 36,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16186,7 +16249,7 @@
     "sector_api": "Communication Services",
     "industry": "Publishing",
     "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "quality_score": 34,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16199,7 +16262,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Regional",
     "quality_peer": "US|Unknown",
-    "quality_score": 76,
+    "quality_score": 58,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16239,7 +16302,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Auto Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 25,
+    "quality_score": 26,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16252,7 +16315,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Regional",
     "quality_peer": "US|Unknown",
-    "quality_score": 52,
+    "quality_score": 72,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16273,6 +16336,19 @@
     ]
   },
   {
+    "ticker": "BEPC",
+    "name": "BROOKFIELD RENEWABLE CORPORATION",
+    "name_api": "Brookfield Renewable Corporation",
+    "sector_csv": "",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Renewable",
+    "quality_peer": "US|Unknown",
+    "quality_score": 52,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "LMT",
     "name": "LOCKHEED MARTIN CORPORATION",
     "name_api": "Lockheed Martin Corporation",
@@ -16280,7 +16356,7 @@
     "sector_api": "Industrials",
     "industry": "Aerospace & Defense",
     "quality_peer": "US|Unknown",
-    "quality_score": 70,
+    "quality_score": 69,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -16294,7 +16370,7 @@
     "sector_api": "Financial Services",
     "industry": "Banks - Regional",
     "quality_peer": "US|Unknown",
-    "quality_score": 63,
+    "quality_score": 73,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16372,7 +16448,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Specialty",
     "quality_peer": "US|Unknown",
-    "quality_score": 10,
+    "quality_score": 9,
     "flags": [
       "equity_negative",
       "peer_fallback_to_sector"
@@ -16479,7 +16555,7 @@
     "sector_api": "Financial Services",
     "industry": "Insurance - Property & Casualty",
     "quality_peer": "US|Unknown",
-    "quality_score": 73,
+    "quality_score": 72,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16586,7 +16662,7 @@
     "sector_api": "Industrials",
     "industry": "Specialty Business Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 75,
+    "quality_score": 74,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16625,7 +16701,7 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 65,
+    "quality_score": 64,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16651,7 +16727,7 @@
     "sector_api": "Industrials",
     "industry": "Specialty Industrial Machinery",
     "quality_peer": "US|Unknown",
-    "quality_score": 64,
+    "quality_score": 63,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16692,7 +16768,7 @@
     "sector_api": "Basic Materials",
     "industry": "Agricultural Inputs",
     "quality_peer": "US|Unknown",
-    "quality_score": 80,
+    "quality_score": 79,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16744,7 +16820,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Instruments & Supplies",
     "quality_peer": "US|Unknown",
-    "quality_score": 64,
+    "quality_score": 63,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -16874,7 +16950,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Mortgage",
     "quality_peer": "US|Unknown",
-    "quality_score": 59,
+    "quality_score": 58,
     "flags": [
       "margin_extreme",
       "peer_fallback_to_sector"
@@ -17093,19 +17169,6 @@
     ]
   },
   {
-    "ticker": "PNR",
-    "name": "PENTAIR PLC",
-    "name_api": "Pentair plc",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Industrial Machinery",
-    "quality_peer": "US|Unknown",
-    "quality_score": 78,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "HZO",
     "name": "MARINEMAX INC.",
     "name_api": "MarineMax Inc.",
@@ -17121,16 +17184,15 @@
   {
     "ticker": "PM",
     "name": "PHILIP MORRIS INTERNATIONAL INC.",
-    "name_api": "Philip Morris International Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Consumer Defensive",
-    "industry": "Tobacco",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 49,
+    "quality_score": 48,
     "flags": [
       "roe_extreme",
-      "equity_negative",
-      "peer_fallback_to_sector"
+      "equity_negative"
     ]
   },
   {
@@ -17142,19 +17204,6 @@
     "industry": "Trucking",
     "quality_peer": "US|Unknown",
     "quality_score": 52,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ASH",
-    "name": "ASHLAND INC.",
-    "name_api": "Ashland Inc.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Specialty Chemicals",
-    "quality_peer": "US|Unknown",
-    "quality_score": 44,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -17194,7 +17243,7 @@
     "sector_api": "Financial Services",
     "industry": "Insurance - Property & Casualty",
     "quality_peer": "US|Unknown",
-    "quality_score": 51,
+    "quality_score": 50,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -17297,14 +17346,29 @@
   {
     "ticker": "OCSL",
     "name": "OAKTREE SPECIALTY LENDING CORPORATION",
-    "name_api": null,
+    "name_api": "Oaktree Specialty Lending Corp.",
+    "name_match": "3.0/4 tokens",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Financial Services",
+    "industry": "Asset Management",
     "quality_peer": "US|Unknown",
-    "quality_score": 44,
+    "quality_score": 45,
     "flags": [
-      "margin_extreme"
+      "margin_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "TRI",
+    "name": "THOMSON REUTERS CORP.",
+    "name_api": "Thomson Reuters Corporation",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Specialty Business Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 69,
+    "flags": [
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -17551,15 +17615,14 @@
   {
     "ticker": "ABSI",
     "name": "ABSCI CORPORATION",
-    "name_api": "Absci Corporation",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 11,
+    "quality_score": 24,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -17570,7 +17633,7 @@
     "sector_api": null,
     "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 30,
+    "quality_score": 28,
     "flags": [
       "roe_extreme"
     ]
@@ -17897,7 +17960,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Mortgage",
     "quality_peer": "US|Unknown",
-    "quality_score": 14,
+    "quality_score": 13,
     "flags": [
       "name_mismatch_WARNING",
       "peer_fallback_to_sector"
@@ -17953,7 +18016,7 @@
     "sector_api": "Technology",
     "industry": "Semiconductors",
     "quality_peer": "US|Unknown",
-    "quality_score": 52,
+    "quality_score": 51,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18178,7 +18241,7 @@
     "sector_api": "Technology",
     "industry": "Solar",
     "quality_peer": "US|Unknown",
-    "quality_score": 75,
+    "quality_score": 74,
     "flags": [
       "name_mismatch_CRITICAL",
       "peer_fallback_to_sector"
@@ -18232,7 +18295,7 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 81,
+    "quality_score": 80,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18337,7 +18400,20 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 27,
+    "quality_score": 36,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ACHC",
+    "name": "ACADIA HEALTHCARE COMPANY, INC.",
+    "name_api": "Acadia Healthcare Company, Inc.",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Medical Care Facilities",
+    "quality_peer": "US|Unknown",
+    "quality_score": 39,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18356,14 +18432,14 @@
     ]
   },
   {
-    "ticker": "PECO",
-    "name": "PHILLIPS EDISON & COMPANY, INC.",
-    "name_api": "Phillips Edison & Company, Inc.",
+    "ticker": "MBLY",
+    "name": "MOBILEYE GLOBAL INC.",
+    "name_api": "Mobileye Global Inc. Class A Common Stock",
     "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Retail",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 48,
+    "quality_score": 38,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18705,7 +18781,7 @@
     "sector_api": "Healthcare",
     "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 38,
+    "quality_score": 37,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -18759,7 +18835,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Beverages - Non-Alcoholic",
     "quality_peer": "US|Unknown",
-    "quality_score": 69,
+    "quality_score": 68,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18772,7 +18848,7 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 52,
+    "quality_score": 58,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18806,14 +18882,15 @@
   {
     "ticker": "PHVS",
     "name": "PHARVARIS N.V.",
-    "name_api": null,
+    "name_api": "Pharvaris N.V. Ordinary Shares",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 52,
+    "quality_score": 43,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -18824,7 +18901,7 @@
     "sector_api": "Technology",
     "industry": "Semiconductors",
     "quality_peer": "US|Unknown",
-    "quality_score": 30,
+    "quality_score": 17,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18876,7 +18953,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Leisure",
     "quality_peer": "US|Unknown",
-    "quality_score": 68,
+    "quality_score": 65,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -18956,7 +19033,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Auto Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 70,
+    "quality_score": 69,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -19157,7 +19234,7 @@
     "sector_api": "Industrials",
     "industry": "Electrical Equipment & Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 75,
+    "quality_score": 74,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -19514,6 +19591,19 @@
     ]
   },
   {
+    "ticker": "OMDA",
+    "name": "OMADA HEALTH, INC.",
+    "name_api": "Omada Health, Inc. Common Stock",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Health Information Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 35,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "MYRG",
     "name": "MYR GROUP INC.",
     "name_api": "MYR Group Inc.",
@@ -19527,14 +19617,14 @@
     ]
   },
   {
-    "ticker": "QRVO",
-    "name": "QORVO INC.",
-    "name_api": "Qorvo Inc.",
+    "ticker": "ON",
+    "name": "ON SEMICONDUCTOR CORPORATION",
+    "name_api": "ON Semiconductor Corporation",
     "sector_csv": "",
     "sector_api": "Technology",
     "industry": "Semiconductors",
     "quality_peer": "US|Unknown",
-    "quality_score": 45,
+    "quality_score": 40,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -19616,7 +19706,7 @@
     "sector_api": "Industrials",
     "industry": "Specialty Business Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 63,
+    "quality_score": 62,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -19682,7 +19772,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Mortgage",
     "quality_peer": "US|Unknown",
-    "quality_score": 57,
+    "quality_score": 56,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -19780,6 +19870,19 @@
     ]
   },
   {
+    "ticker": "NAVI",
+    "name": "NAVIENT CORPORATION",
+    "name_api": "Navient Corporation",
+    "sector_csv": "",
+    "sector_api": "Financial Services",
+    "industry": "Credit Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 2,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "OGI",
     "name": "ORGANIGRAM GLOBAL INC.",
     "name_api": "Organigram Global Inc.",
@@ -19840,7 +19943,7 @@
     "sector_api": "Healthcare",
     "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 80,
+    "quality_score": 79,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -19866,7 +19969,7 @@
     "sector_api": "Healthcare",
     "industry": "Drug Manufacturers - Specialty & Generic",
     "quality_peer": "US|Unknown",
-    "quality_score": 13,
+    "quality_score": 22,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -20143,7 +20246,7 @@
     "sector_api": "Basic Materials",
     "industry": "Other Industrial Metals & Mining",
     "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "quality_score": 52,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -20157,7 +20260,7 @@
     "sector_api": "Communication Services",
     "industry": "Internet Content & Information",
     "quality_peer": "US|Unknown",
-    "quality_score": 50,
+    "quality_score": 49,
     "flags": [
       "roe_extreme",
       "equity_negative",
@@ -20200,7 +20303,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Leisure",
     "quality_peer": "US|Unknown",
-    "quality_score": 36,
+    "quality_score": 35,
     "flags": [
       "equity_negative",
       "peer_fallback_to_sector"
@@ -20254,7 +20357,7 @@
     "sector_api": "Utilities",
     "industry": "Utilities - Regulated Electric",
     "quality_peer": "US|Unknown",
-    "quality_score": 46,
+    "quality_score": 45,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -20321,6 +20424,20 @@
     "industry": "Semiconductors",
     "quality_peer": "US|Unknown",
     "quality_score": 70,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "MDLZ",
+    "name": "MONDELEZ INTERNATIONAL, INC.",
+    "name_api": "Mondelēz International, Inc. Class A Common Stock",
+    "name_match": "0.7/1 tokens",
+    "sector_csv": "",
+    "sector_api": "Consumer Defensive",
+    "industry": "Confectioners",
+    "quality_peer": "US|Unknown",
+    "quality_score": 53,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -20399,7 +20516,7 @@
     "sector_api": "Healthcare",
     "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 34,
+    "quality_score": 44,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -20573,7 +20690,7 @@
     "sector_api": "Healthcare",
     "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 17,
+    "quality_score": 16,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -20681,7 +20798,7 @@
     "sector_api": "Financial Services",
     "industry": "Credit Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 57,
+    "quality_score": 56,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -21219,6 +21336,58 @@
     ]
   },
   {
+    "ticker": "INIO",
+    "name": "INNIO N.V.",
+    "name_api": "Innio N.V.",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Specialty Industrial Machinery",
+    "quality_peer": "US|Unknown",
+    "quality_score": 50,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "AUR",
+    "name": "AURORA INNOVATION, INC.",
+    "name_api": "Aurora Innovation Inc. Class A Common Stock",
+    "sector_csv": "",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Auto Parts",
+    "quality_peer": "US|Unknown",
+    "quality_score": 16,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CTMX",
+    "name": "CYTOMX THERAPEUTICS INC.",
+    "name_api": "CytomX Therapeutics, Inc.",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
+    "quality_peer": "US|Unknown",
+    "quality_score": 23,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ATRO",
+    "name": "ASTRONICS CORPORATION",
+    "name_api": "Astronics Corporation",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
+    "quality_peer": "US|Unknown",
+    "quality_score": 42,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "CTNM",
     "name": "CONTINEUM THERAPEUTICS, INC.",
     "name_api": "Contineum Therapeutics Inc. Class A Common Stock",
@@ -21451,7 +21620,7 @@
     "sector_api": "Healthcare",
     "industry": "Drug Manufacturers - Specialty & Generic",
     "quality_peer": "US|Unknown",
-    "quality_score": 57,
+    "quality_score": 56,
     "flags": [
       "roe_extreme",
       "equity_negative",
@@ -21717,7 +21886,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Devices",
     "quality_peer": "US|Unknown",
-    "quality_score": 72,
+    "quality_score": 71,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -21895,6 +22064,19 @@
     ]
   },
   {
+    "ticker": "RXRX",
+    "name": "RECURSION PHARMACEUTICALS, INC.",
+    "name_api": "Recursion Pharmaceuticals, Inc. Class A Common Stock",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
+    "quality_peer": "US|Unknown",
+    "quality_score": 15,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "RWAY",
     "name": "RUNWAY GROWTH FINANCE CORP",
     "name_api": "Runway Growth Finance Corp.",
@@ -21924,15 +22106,14 @@
   {
     "ticker": "AMLX",
     "name": "AMYLYX PHARMACEUTICALS, INC. COMMON STOCK",
-    "name_api": "Amylyx Pharmaceuticals, Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Drug Manufacturers - Specialty & Generic",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
     "quality_score": 50,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -21949,43 +22130,16 @@
     ]
   },
   {
-    "ticker": "RUN",
-    "name": "SUNRUN INC.",
-    "name_api": "Sunrun Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Solar",
-    "quality_peer": "US|Unknown",
-    "quality_score": 13,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FSLR",
-    "name": "FIRST SOLAR, INC.",
-    "name_api": "First Solar Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Solar",
-    "quality_peer": "US|Unknown",
-    "quality_score": 90,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "TEM",
     "name": "TEMPUS AI, INC.",
-    "name_api": "Tempus AI Inc Class A Common Stock",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Health Information Services",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
     "quality_score": 9,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -22009,7 +22163,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 28,
+    "quality_score": 27,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -22076,7 +22230,7 @@
     "sector_api": "Healthcare",
     "industry": "Drug Manufacturers - Specialty & Generic",
     "quality_peer": "US|Unknown",
-    "quality_score": 34,
+    "quality_score": 33,
     "flags": [
       "roe_extreme",
       "equity_negative",
@@ -22934,19 +23088,6 @@
     ]
   },
   {
-    "ticker": "FWONK",
-    "name": "LIBERTY MEDIA CORPORATION SERIES C FORMULA ONE GROUP COMMON STOCK",
-    "name_api": "Liberty Media Corporation Series C Liberty Formula One Common Stock",
-    "sector_csv": "",
-    "sector_api": "Communication Services",
-    "industry": "Entertainment",
-    "quality_peer": "US|Unknown",
-    "quality_score": 49,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "AOSL",
     "name": "ALPHA AND OMEGA SEMICONDUCTOR LIMITED",
     "name_api": "Alpha & Omega Semiconductor Limited",
@@ -22954,7 +23095,7 @@
     "sector_api": "Technology",
     "industry": "Semiconductors",
     "quality_peer": "US|Unknown",
-    "quality_score": 13,
+    "quality_score": 12,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -22962,16 +23103,14 @@
   {
     "ticker": "SBUX",
     "name": "STARBUCKS CORPORATION",
-    "name_api": "Starbucks Corp.",
-    "name_match": "1.0/2 tokens",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Restaurants",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 24,
+    "quality_score": 30,
     "flags": [
-      "equity_negative",
-      "peer_fallback_to_sector"
+      "equity_negative"
     ]
   },
   {
@@ -22982,7 +23121,7 @@
     "sector_api": "Real Estate",
     "industry": "REIT - Healthcare Facilities",
     "quality_peer": "US|Unknown",
-    "quality_score": 41,
+    "quality_score": 40,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -23397,7 +23536,7 @@
     "sector_api": "Technology",
     "industry": "Electronic Components",
     "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "quality_score": 60,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -23405,14 +23544,41 @@
   {
     "ticker": "CAR",
     "name": "AVIS BUDGET GROUP, INC.",
-    "name_api": null,
+    "name_api": "Avis Budget Group Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Industrials",
+    "industry": "Rental & Leasing Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 20,
+    "quality_score": 47,
     "flags": [
-      "equity_negative"
+      "equity_negative",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CART",
+    "name": "MAPLEBEAR INC.",
+    "name_api": "Maplebear Inc. Common Stock",
+    "sector_csv": "",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Internet Retail",
+    "quality_peer": "US|Unknown",
+    "quality_score": 50,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VIAV",
+    "name": "VIAVI SOLUTIONS INC.",
+    "name_api": "Viavi Solutions Inc.",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Communication Equipment",
+    "quality_peer": "US|Unknown",
+    "quality_score": 56,
+    "flags": [
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -23580,15 +23746,14 @@
   {
     "ticker": "IFRX",
     "name": "INFLARX N.V.",
-    "name_api": "InflaRx N.V.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 12,
+    "quality_score": 26,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -23603,19 +23768,6 @@
     "quality_score": 75,
     "flags": [
       "name_mismatch_CRITICAL",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "VIA",
-    "name": "VIA TRANSPORTATION, INC.",
-    "name_api": "Via Transportation Inc. Class A Common Stock",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Application",
-    "quality_peer": "US|Unknown",
-    "quality_score": 30,
-    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -23913,6 +24065,19 @@
     "industry": "Aerospace & Defense",
     "quality_peer": "US|Unknown",
     "quality_score": 35,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "VSNT",
+    "name": "VERSANT MEDIA GROUP, INC.",
+    "name_api": "Versant Media Group Inc. Class A Common Stock",
+    "sector_csv": "",
+    "sector_api": "Communication Services",
+    "industry": "Entertainment",
+    "quality_peer": "US|Unknown",
+    "quality_score": 81,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -24360,7 +24525,7 @@
     "sector_api": "Technology",
     "industry": "Information Technology Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 69,
+    "quality_score": 68,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -24495,19 +24660,6 @@
     "industry": "Drug Manufacturers - Specialty & Generic",
     "quality_peer": "US|Unknown",
     "quality_score": 75,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CMTL",
-    "name": "COMTECH TELECOMMUNICATIONS CORP.",
-    "name_api": "Comtech Telecommunications Corp.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Communication Equipment",
-    "quality_peer": "US|Unknown",
-    "quality_score": 24,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -25065,9 +25217,22 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Auto Parts",
     "quality_peer": "US|Unknown",
-    "quality_score": 33,
+    "quality_score": 51,
     "flags": [
       "equity_negative",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CEG",
+    "name": "CONSTELLATION ENERGY CORPORATION",
+    "name_api": "Constellation Energy Corporation",
+    "sector_csv": "",
+    "sector_api": "Utilities",
+    "industry": "Utilities - Independent Power Producers",
+    "quality_peer": "US|Unknown",
+    "quality_score": 42,
+    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -25176,69 +25341,16 @@
     ]
   },
   {
-    "ticker": "CEVA",
-    "name": "CEVA INC.",
-    "name_api": "Ceva, Inc.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Semiconductors",
-    "quality_peer": "US|Unknown",
-    "quality_score": 24,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "CDXS",
     "name": "CODEXIS INC.",
-    "name_api": "Codexis Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 20,
+    "quality_score": 15,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CDW",
-    "name": "CDW CORPORATION",
-    "name_api": "CDW Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Information Technology Services",
-    "quality_peer": "US|Unknown",
-    "quality_score": 62,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SVC",
-    "name": "SERVICE PROPERTIES TRUST",
-    "name_api": "Service Properties Trust",
-    "sector_csv": "",
-    "sector_api": "Real Estate",
-    "industry": "REIT - Hotel & Motel",
-    "quality_peer": "US|Unknown",
-    "quality_score": 37,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CBRL",
-    "name": "CRACKER BARREL OLD COUNTRY STORE, INC.",
-    "name_api": "Cracker Barrel Old Country Store, Inc.",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Restaurants",
-    "quality_peer": "US|Unknown",
-    "quality_score": 41,
-    "flags": [
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -25463,7 +25575,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 74,
+    "quality_score": 79,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -25483,6 +25595,19 @@
     ]
   },
   {
+    "ticker": "GPRE",
+    "name": "GREEN PLAINS INC.",
+    "name_api": "Green Plains Inc.",
+    "sector_csv": "",
+    "sector_api": "Basic Materials",
+    "industry": "Chemicals",
+    "quality_peer": "US|Unknown",
+    "quality_score": 40,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "CINF",
     "name": "CINCINNATI FINANCIAL CORPORATION",
     "name_api": "Cincinnati Financial Corporation",
@@ -25490,7 +25615,7 @@
     "sector_api": "Financial Services",
     "industry": "Insurance - Property & Casualty",
     "quality_peer": "US|Unknown",
-    "quality_score": 71,
+    "quality_score": 91,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -25547,7 +25672,7 @@
     "sector_api": "Consumer Defensive",
     "industry": "Food Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 57,
+    "quality_score": 56,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -25640,23 +25765,10 @@
     "sector_api": "Technology",
     "industry": "Computer Hardware",
     "quality_peer": "US|Unknown",
-    "quality_score": 63,
+    "quality_score": 62,
     "flags": [
       "margin_extreme",
       "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "CGNT",
-    "name": "COGNYTE SOFTWARE LTD.",
-    "name_api": "Cognyte Software Ltd.",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Software - Infrastructure",
-    "quality_peer": "US|Unknown",
-    "quality_score": 45,
-    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -25815,7 +25927,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 55,
+    "quality_score": 54,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26093,7 +26205,33 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 23,
+    "quality_score": 22,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "EXEL",
+    "name": "EXELIXIS INC.",
+    "name_api": "Exelixis Inc.",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
+    "quality_peer": "US|Unknown",
+    "quality_score": 79,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "ENTG",
+    "name": "ENTEGRIS, INC.",
+    "name_api": "Entegris Inc.",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Semiconductor Equipment & Materials",
+    "quality_peer": "US|Unknown",
+    "quality_score": 50,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26101,14 +26239,15 @@
   {
     "ticker": "UNIT",
     "name": "UNITI GROUP INC.",
-    "name_api": null,
+    "name_api": "Uniti Group Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Real Estate",
+    "industry": "REIT - Specialty",
     "quality_peer": "US|Unknown",
     "quality_score": 51,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -26319,7 +26458,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 53,
+    "quality_score": 52,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26464,33 +26603,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Internet Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 67,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "ULCC",
-    "name": "FRONTIER GROUP HOLDINGS, INC.",
-    "name_api": "Frontier Group Holdings, Inc.",
-    "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Airlines",
-    "quality_peer": "US|Unknown",
-    "quality_score": 35,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "FCNCA",
-    "name": "FIRST CITIZENS BANCSHARES, INC.",
-    "name_api": "First Citizens BancShares, Inc. Class A Common Stock",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Banks - Regional",
-    "quality_peer": "US|Unknown",
-    "quality_score": 59,
+    "quality_score": 66,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26543,7 +26656,7 @@
     "sector_api": "Technology",
     "industry": "Communication Equipment",
     "quality_peer": "US|Unknown",
-    "quality_score": 63,
+    "quality_score": 62,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26834,7 +26947,7 @@
     "sector_api": "Industrials",
     "industry": "Industrial Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 73,
+    "quality_score": 72,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26887,7 +27000,7 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 31,
+    "quality_score": 30,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -26978,7 +27091,7 @@
     "sector_api": "Consumer Cyclical",
     "industry": "Specialty Retail",
     "quality_peer": "US|Unknown",
-    "quality_score": 34,
+    "quality_score": 44,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -27012,15 +27125,16 @@
   {
     "ticker": "ZVRA",
     "name": "ZEVRA THERAPEUTICS, INC.",
-    "name_api": null,
+    "name_api": "Zevra Therapeutics, Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 24,
+    "quality_score": 47,
     "flags": [
       "margin_extreme",
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -27123,20 +27237,7 @@
     "sector_api": "Industrials",
     "industry": "Industrial Distribution",
     "quality_peer": "US|Unknown",
-    "quality_score": 15,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "TRMD",
-    "name": "TORM PLC CLASS A",
-    "name_api": "TORM plc Class A Common Stock",
-    "sector_csv": "",
-    "sector_api": "Energy",
-    "industry": "Oil & Gas Midstream",
-    "quality_peer": "US|Unknown",
-    "quality_score": 68,
+    "quality_score": 21,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -27214,7 +27315,7 @@
     "sector_api": "Technology",
     "industry": "Communication Equipment",
     "quality_peer": "US|Unknown",
-    "quality_score": 47,
+    "quality_score": 46,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -27502,6 +27603,19 @@
     ]
   },
   {
+    "ticker": "IDN",
+    "name": "INTELLICHECK, INC.",
+    "name_api": "Intellicheck Inc.",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Software - Application",
+    "quality_peer": "US|Unknown",
+    "quality_score": 45,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "MDB",
     "name": "MONGODB INC.",
     "name_api": "MongoDB, Inc. Class A Common Stock",
@@ -27526,6 +27640,19 @@
     "quality_score": 40,
     "flags": [
       "equity_negative",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "NMIH",
+    "name": "NMI HOLDINGS INC.",
+    "name_api": "NMI Holdings, Inc.",
+    "sector_csv": "",
+    "sector_api": "Financial Services",
+    "industry": "Insurance - Specialty",
+    "quality_peer": "US|Unknown",
+    "quality_score": 92,
+    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -27799,19 +27926,6 @@
     ]
   },
   {
-    "ticker": "NEWT",
-    "name": "NEWTEKONE INC.",
-    "name_api": "NewtekOne, Inc.",
-    "sector_csv": "",
-    "sector_api": "Financial Services",
-    "industry": "Banks - Regional",
-    "quality_peer": "US|Unknown",
-    "quality_score": 54,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "GRML",
     "name": "GREENLAND MINES LTD",
     "name_api": "Greenland Mines Ltd.",
@@ -27916,7 +28030,7 @@
     "sector_api": "Healthcare",
     "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 58,
+    "quality_score": 57,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -27982,7 +28096,7 @@
     "sector_api": "Technology",
     "industry": "Solar",
     "quality_peer": "US|Unknown",
-    "quality_score": 23,
+    "quality_score": 22,
     "flags": [
       "equity_negative",
       "peer_fallback_to_sector"
@@ -28740,7 +28854,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 79,
+    "quality_score": 69,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -28780,7 +28894,7 @@
     "sector_api": "Healthcare",
     "industry": "Health Information Services",
     "quality_peer": "US|Unknown",
-    "quality_score": 65,
+    "quality_score": 44,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -28939,7 +29053,7 @@
     "sector_api": "Technology",
     "industry": "Software - Infrastructure",
     "quality_peer": "US|Unknown",
-    "quality_score": 22,
+    "quality_score": 21,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -29230,14 +29344,15 @@
   {
     "ticker": "AUPH",
     "name": "AURINIA PHARMACEUTICALS INC.",
-    "name_api": null,
+    "name_api": "Aurinia Pharmaceuticals Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 45,
+    "quality_score": 65,
     "flags": [
-      "margin_extreme"
+      "margin_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -29352,17 +29467,14 @@
   {
     "ticker": "QUCY",
     "name": "MAINZ BIOMED N.V.",
-    "name_api": "Quantum Cyber N.V.",
-    "name_match": "0.0/2 tokens",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Diagnostics & Research",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 0,
+    "quality_score": 12,
     "flags": [
-      "name_mismatch_CRITICAL",
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -29490,7 +29602,7 @@
     "sector_api": "Technology",
     "industry": "Software - Application",
     "quality_peer": "US|Unknown",
-    "quality_score": 20,
+    "quality_score": 19,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -29836,14 +29948,15 @@
   {
     "ticker": "ALVO",
     "name": "ALVOTECH SA",
-    "name_api": null,
+    "name_api": "Alvotech SA",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic",
     "quality_peer": "US|Unknown",
-    "quality_score": 25,
+    "quality_score": 22,
     "flags": [
-      "equity_negative"
+      "equity_negative",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -29864,15 +29977,16 @@
   {
     "ticker": "EOLS",
     "name": "EVOLUS INC.",
-    "name_api": null,
+    "name_api": "Evolus Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Drug Manufacturers - Specialty & Generic",
     "quality_peer": "US|Unknown",
-    "quality_score": 7,
+    "quality_score": 0,
     "flags": [
       "roe_extreme",
-      "equity_negative"
+      "equity_negative",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -29909,7 +30023,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Devices",
     "quality_peer": "US|Unknown",
-    "quality_score": 40,
+    "quality_score": 26,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -30534,15 +30648,14 @@
   {
     "ticker": "POET",
     "name": "POET TECHNOLOGIES INC.",
-    "name_api": "POET Technologies Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Semiconductors",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 15,
+    "quality_score": 19,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -30865,7 +30978,7 @@
     "sector_api": "Communication Services",
     "industry": "Internet Content & Information",
     "quality_peer": "US|Unknown",
-    "quality_score": 17,
+    "quality_score": 21,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -31157,6 +31270,19 @@
     ]
   },
   {
+    "ticker": "CLDX",
+    "name": "CELLDEX THERAPEUTICS INC.",
+    "name_api": "Celldex Therapeutics Inc.",
+    "sector_csv": "",
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
+    "quality_peer": "US|Unknown",
+    "quality_score": 15,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "QTEX",
     "name": "QTREX QUANTUM LTD.",
     "name_api": "QTREX Quantum Ltd.",
@@ -31271,7 +31397,7 @@
     "sector_api": "Industrials",
     "industry": "Integrated Freight & Logistics",
     "quality_peer": "US|Unknown",
-    "quality_score": 5,
+    "quality_score": 23,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -31756,29 +31882,27 @@
   {
     "ticker": "WKSP",
     "name": "WORKSPORT LTD.",
-    "name_api": "Worksport Ltd.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Auto Parts",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 12,
+    "quality_score": 28,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
     "ticker": "NGEN",
     "name": "NERVGEN PHARMA CORP.",
-    "name_api": "NervGen Pharma Corp.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 55,
+    "quality_score": 50,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -32000,7 +32124,7 @@
     "sector_api": "Basic Materials",
     "industry": "Other Industrial Metals & Mining",
     "quality_peer": "US|Unknown",
-    "quality_score": 28,
+    "quality_score": 19,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -32023,14 +32147,15 @@
   {
     "ticker": "LUCD",
     "name": "LUCID DIAGNOSTICS INC.",
-    "name_api": null,
+    "name_api": "Lucid Diagnostics Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Medical Devices",
     "quality_peer": "US|Unknown",
-    "quality_score": 12,
+    "quality_score": 0,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -32121,7 +32246,7 @@
     "sector_api": "Energy",
     "industry": "Oil & Gas E&P",
     "quality_peer": "US|Unknown",
-    "quality_score": 38,
+    "quality_score": 31,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -32135,7 +32260,7 @@
     "sector_api": "Healthcare",
     "industry": "Medical Instruments & Supplies",
     "quality_peer": "US|Unknown",
-    "quality_score": 24,
+    "quality_score": 23,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -32444,6 +32569,19 @@
     ]
   },
   {
+    "ticker": "DUO",
+    "name": "FANGDD NETWORK GROUP LTD.",
+    "name_api": "Fangdd Network Group Ltd. Class A Ordinary Shares",
+    "sector_csv": "",
+    "sector_api": "Real Estate",
+    "industry": "Real Estate Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 24,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "SLS",
     "name": "SELLAS LIFE SCIENCES GROUP INC.",
     "name_api": "SELLAS Life Sciences Group, Inc.",
@@ -32638,16 +32776,15 @@
   {
     "ticker": "MDXH",
     "name": "MDXHEALTH SA",
-    "name_api": "MDxHealth SA",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Diagnostics & Research",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 0,
+    "quality_score": 16,
     "flags": [
       "roe_extreme",
-      "equity_negative",
-      "peer_fallback_to_sector"
+      "equity_negative"
     ]
   },
   {
@@ -33011,7 +33148,7 @@
     "sector_api": "Industrials",
     "industry": "Pollution & Treatment Controls",
     "quality_peer": "US|Unknown",
-    "quality_score": 8,
+    "quality_score": 19,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -33047,28 +33184,14 @@
   {
     "ticker": "BJDX",
     "name": "BLUEJAY DIAGNOSTICS INC.",
-    "name_api": "Bluejay Diagnostics Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Medical Devices",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
     "quality_score": 42,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "UCAR",
-    "name": "U POWER LTD.",
-    "name_api": "U Power Limited Class A Ordinary Shares",
-    "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Auto & Truck Dealerships",
-    "quality_peer": "US|Unknown",
-    "quality_score": 13,
-    "flags": [
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -33273,7 +33396,7 @@
     "sector_api": "Healthcare",
     "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 32,
+    "quality_score": 31,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -33652,27 +33775,31 @@
   {
     "ticker": "EHGO",
     "name": "ESHALLGO INC.",
-    "name_api": null,
+    "name_api": "Eshallgo Inc. Class A Ordinary Shares",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Industrials",
+    "industry": "Business Equipment & Supplies",
     "quality_peer": "US|Unknown",
-    "quality_score": 31,
+    "quality_score": 13,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
     "ticker": "ITOC",
     "name": "PHETON HOLDINGS LTD.",
-    "name_api": null,
+    "name_api": "iTonic Holdings Ltd.",
+    "name_match": "0.0/1 tokens",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Medical Devices",
     "quality_peer": "US|Unknown",
-    "quality_score": 28,
+    "quality_score": 16,
     "flags": [
-      "roe_extreme"
+      "name_mismatch_CRITICAL",
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -33725,7 +33852,7 @@
     "sector_api": "Basic Materials",
     "industry": "Other Industrial Metals & Mining",
     "quality_peer": "US|Unknown",
-    "quality_score": 25,
+    "quality_score": 24,
     "flags": [
       "roe_extreme",
       "peer_fallback_to_sector"
@@ -33889,15 +34016,14 @@
   {
     "ticker": "VMAR",
     "name": "VISION MARINE TECHNOLOGIES INC.",
-    "name_api": "Vision Marine Technologies Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Consumer Cyclical",
-    "industry": "Recreational Vehicles",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 1,
+    "quality_score": 18,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -34056,40 +34182,57 @@
   {
     "ticker": "KALA",
     "name": "KALA PHARMACEUTICALS, INC.",
-    "name_api": null,
+    "name_api": "KALA BIO, Inc.",
+    "name_match": "1.0/2 tokens",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
-    "quality_score": 43,
+    "quality_score": 40,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
     "ticker": "GCTK",
     "name": "GLUCOTRACK INC.",
-    "name_api": null,
+    "name_api": "GlucoTrack Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Medical Devices",
     "quality_peer": "US|Unknown",
-    "quality_score": 45,
+    "quality_score": 46,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
     "ticker": "OFAL",
     "name": "OFA GROUP INC.",
-    "name_api": null,
+    "name_api": "OFA Group Class A Ordinary Shares",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Industrials",
+    "industry": "Engineering & Construction",
     "quality_peer": "US|Unknown",
-    "quality_score": 18,
+    "quality_score": 6,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SUGP",
+    "name": "SU GROUP HOLDINGS LTD.",
+    "name_api": "SU Group Holdings Limited",
+    "sector_csv": "",
+    "sector_api": "Industrials",
+    "industry": "Security & Protection Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 24,
+    "flags": [
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -34175,30 +34318,28 @@
   {
     "ticker": "RGTI",
     "name": "RIGETTI COMPUTING INC",
-    "name_api": "Rigetti Computing, Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Computer Hardware",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 7,
+    "quality_score": 19,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
     "ticker": "OCGN",
     "name": "OCUGEN INC.",
-    "name_api": "Ocugen, Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 0,
+    "quality_score": 9,
     "flags": [
       "roe_extreme",
-      "equity_negative",
-      "peer_fallback_to_sector"
+      "equity_negative"
     ]
   },
   {
@@ -34400,7 +34541,7 @@
     "sector_api": "Communication Services",
     "industry": "Internet Content & Information",
     "quality_peer": "US|Unknown",
-    "quality_score": 4,
+    "quality_score": 3,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -34513,6 +34654,20 @@
     "flags": [
       "roe_extreme",
       "equity_negative",
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SNDL",
+    "name": "SUNDIAL GROWERS INC.",
+    "name_api": "SNDL Inc.",
+    "name_match": "1.2/2 tokens",
+    "sector_csv": "",
+    "sector_api": "Consumer Defensive",
+    "industry": "Beverages - Wineries & Distilleries",
+    "quality_peer": "US|Unknown",
+    "quality_score": 33,
+    "flags": [
       "peer_fallback_to_sector"
     ]
   },
@@ -34679,43 +34834,16 @@
     ]
   },
   {
-    "ticker": "TH",
-    "name": "TARGET HOSPITALITY CORP.",
-    "name_api": "Target Hospitality Corp.",
+    "ticker": "SQL",
+    "name": "SEQLL INC.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Industrials",
-    "industry": "Specialty Business Services",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
     "quality_score": 18,
     "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "KOPN",
-    "name": "KOPIN CORPORATION",
-    "name_api": "Kopin Corporation",
-    "sector_csv": "",
-    "sector_api": "Technology",
-    "industry": "Electronic Components",
-    "quality_peer": "US|Unknown",
-    "quality_score": 2,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
-    "ticker": "SQL",
-    "name": "SEQLL INC.",
-    "name_api": "SeqLL Inc.",
-    "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Diagnostics & Research",
-    "quality_peer": "US|Unknown",
-    "quality_score": 0,
-    "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -35394,14 +35522,15 @@
   {
     "ticker": "FJET",
     "name": "STARFIGHTERS SPACE, INC.",
-    "name_api": null,
+    "name_api": "Starfighters Space Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Industrials",
+    "industry": "Aerospace & Defense",
     "quality_peer": "US|Unknown",
-    "quality_score": 54,
+    "quality_score": 43,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -35420,14 +35549,15 @@
   {
     "ticker": "OSTX",
     "name": "OS THERAPIES INC.",
-    "name_api": null,
+    "name_api": "OS Therapies Inc.",
     "sector_csv": "",
-    "sector_api": null,
-    "industry": null,
+    "sector_api": "Healthcare",
+    "industry": "Biotechnology",
     "quality_peer": "US|Unknown",
     "quality_score": 46,
     "flags": [
-      "roe_extreme"
+      "roe_extreme",
+      "peer_fallback_to_sector"
     ]
   },
   {
@@ -35557,7 +35687,7 @@
     "sector_api": "Basic Materials",
     "industry": "Silver",
     "quality_peer": "US|Unknown",
-    "quality_score": 64,
+    "quality_score": 63,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -35808,19 +35938,6 @@
     ]
   },
   {
-    "ticker": "IAUX",
-    "name": "I-80 GOLD CORP.",
-    "name_api": "i-80 Gold Corp.",
-    "sector_csv": "",
-    "sector_api": "Basic Materials",
-    "industry": "Gold",
-    "quality_peer": "US|Unknown",
-    "quality_score": 29,
-    "flags": [
-      "peer_fallback_to_sector"
-    ]
-  },
-  {
     "ticker": "IMO",
     "name": "IMPERIAL OIL LIMITED",
     "name_api": "Imperial Oil Limited",
@@ -35849,15 +35966,14 @@
   {
     "ticker": "MAIA",
     "name": "MAIA BIOTECHNOLOGY INC.",
-    "name_api": "MAIA Biotechnology, Inc.",
+    "name_api": null,
     "sector_csv": "",
-    "sector_api": "Healthcare",
-    "industry": "Biotechnology",
+    "sector_api": null,
+    "industry": null,
     "quality_peer": "US|Unknown",
-    "quality_score": 34,
+    "quality_score": 45,
     "flags": [
-      "roe_extreme",
-      "peer_fallback_to_sector"
+      "roe_extreme"
     ]
   },
   {
@@ -36401,7 +36517,7 @@
     "sector_api": "Communication Services",
     "industry": "Internet Content & Information",
     "quality_peer": "US|Unknown",
-    "quality_score": 27,
+    "quality_score": 26,
     "flags": [
       "peer_fallback_to_sector"
     ]
@@ -36512,6 +36628,19 @@
     ]
   },
   {
+    "ticker": "ASX",
+    "name": "ASE TECHNOLOGY HOLDING CO., LTD",
+    "name_api": "ASE Technology Holding Co., Ltd. ADR",
+    "sector_csv": "",
+    "sector_api": "Technology",
+    "industry": "Semiconductors",
+    "quality_peer": "US|Unknown",
+    "quality_score": 54,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
     "ticker": "HIMX",
     "name": "HIMAX TECHNOLOGIES INC",
     "name_api": "Himax Technologies Inc. Sponsored ADR",
@@ -36519,7 +36648,33 @@
     "sector_api": "Technology",
     "industry": "Semiconductors",
     "quality_peer": "US|Unknown",
-    "quality_score": 38,
+    "quality_score": 21,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "CHT",
+    "name": "CHUNGHWA TELECOM CO., LTD",
+    "name_api": "Chunghwa Telecom Co., Ltd. ADR",
+    "sector_csv": "",
+    "sector_api": "Communication Services",
+    "industry": "Telecom Services",
+    "quality_peer": "US|Unknown",
+    "quality_score": 76,
+    "flags": [
+      "peer_fallback_to_sector"
+    ]
+  },
+  {
+    "ticker": "SE",
+    "name": "SEA LIMITED",
+    "name_api": "Sea Limited Sponsored ADR",
+    "sector_csv": "",
+    "sector_api": "Consumer Cyclical",
+    "industry": "Internet Retail",
+    "quality_peer": "US|Unknown",
+    "quality_score": 59,
     "flags": [
       "peer_fallback_to_sector"
     ]
