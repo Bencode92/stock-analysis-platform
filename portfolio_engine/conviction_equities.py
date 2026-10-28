@@ -238,7 +238,8 @@ def build():
     def _mc_in_books_ccy(s, c):
         mc = _num(s.get("market_cap"))
         alias = c.get("_alias_of") or ""
-        ccy = ALIAS_CCY.get(alias.split(":")[-1].strip().lower()) if ":" in alias else None
+        # le cache écrit « 2330:XTAI » (MIC) : la devise des comptes est dans `_resolved` ; pays en repli
+        ccy = ((c.get("_resolved") or {}).get("currency") or ALIAS_CCY.get(alias.split(":")[-1].strip().lower())) if ":" in alias else None
         if mc and ccy and (s.get("data_currency") or "USD") == "USD" and FX_TO_USD.get(ccy):
             return mc / FX_TO_USD[ccy]
         return mc

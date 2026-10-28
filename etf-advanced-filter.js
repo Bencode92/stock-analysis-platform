@@ -1,5 +1,6 @@
 // etf-advanced-filter.js
 // Version hebdomadaire : Filtrage ADV + enrichissement summary/composition + TOP 10 HOLDINGS
+// v14.9: homonymes US/UCITS (ISPY…) — résolution sur la place d'abord + garde-fou de nom
 // v14.8: Fix BITX/MAGX (leveraged not inverse), DUST (inverse not leveraged) — ticker overrides
 // v14.7: Name-to-ticker mapping, inverse leverage magnitude (-2x/-3x), unified lev extraction
 // v14.6: Add underlyings (MSTR,MARA,PLTR,ARKK), fix FX hedged, leveraged 1.25x
@@ -704,10 +705,16 @@ async function quoteWithRetry(params, tries = 6) {
 async function resolveSymbol(item) {
     const { symbol, mic_code, isin } = item;
     const cleaned = cleanSymbol(symbol);
-    { const quote = await quoteWithRetry({ symbol: cleaned }); if (quote && quote.status !== 'error') return { symbolParam: cleaned, quote }; }
-    if (mic_code && !US_MIC_CODES.includes(mic_code)) { const symbolWithMic = `${cleaned}:${mic_code}`; const quote = await quoteWithRetry({ symbol: symbolWithMic }); if (quote && quote.status !== 'error') return { symbolParam: symbolWithMic, quote }; }
-    try { const search = await axios.get('https://api.twelvedata.com/symbol_search', { params: { symbol: cleaned, apikey: CONFIG.API_KEY } }).then(r => r.data); if (search?.data?.[0]) { const result = search.data[0]; const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) ? result.symbol : `${result.symbol}:${result.mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: resolvedSymbol, quote }; } } catch {}
-    if (isin) { try { const search = await axios.get('https://api.twelvedata.com/symbol_search', { params: { isin: isin, apikey: CONFIG.API_KEY } }).then(r => r.data); if (search?.data?.[0]) { const result = search.data[0]; const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) ? result.symbol : `${result.symbol}:${result.mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: resolvedSymbol, quote }; } } catch {} }
+    // v14.9: une ligne cotée hors US ne doit jamais être résolue sur un homonyme US
+    // (ISPY = L&G Cyber Security sur XAMS, pas ProShares S&P 500 High Income).
+    const nonUS = !!(mic_code && !US_MIC_CODES.includes(mic_code));
+    const sameVenue = (m) => !nonUS || (m ? !US_MIC_CODES.includes(m) : true);
+    if (nonUS) { const symbolWithMic = `${cleaned}:${mic_code}`; const quote = await quoteWithRetry({ symbol: symbolWithMic }); if (quote && quote.status !== 'error') return { symbolParam: symbolWithMic, quote }; }
+    { const quote = await quoteWithRetry({ symbol: cleaned }); if (quote && quote.status !== 'error' && sameVenue(quote.mic_code)) return { symbolParam: cleaned, quote }; }
+    const pick = (rows) => (rows || []).find(r => r.mic_code === mic_code) || (rows || []).find(r => sameVenue(r.mic_code));
+    try { const search = await axios.get('https://api.twelvedata.com/symbol_search', { params: { symbol: cleaned, apikey: CONFIG.API_KEY } }).then(r => r.data); const result = pick(search?.data); if (result) { const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) ? result.symbol : `${result.symbol}:${result.mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: resolvedSymbol, quote }; } } catch {}
+    if (isin) { try { const search = await axios.get('https://api.twelvedata.com/symbol_search', { params: { isin: isin, apikey: CONFIG.API_KEY } }).then(r => r.data); const result = pick(search?.data); if (result) { const resolvedSymbol = US_MIC_CODES.includes(result.mic_code) ? result.symbol : `${result.symbol}:${result.mic_code}`; const quote = await axios.get('https://api.twelvedata.com/quote', { params: { symbol: resolvedSymbol, apikey: CONFIG.API_KEY } }).then(r => r.data); if (quote && quote.status !== 'error') return { symbolParam: resolvedSymbol, quote }; } } catch {} }
+    if (nonUS) console.warn(`⚠️ ${cleaned}:${mic_code} non résolu sur sa place — ignoré plutôt que confondu avec un homonyme US`);
     return null;
 }
 
@@ -725,6 +732,10 @@ async function calculate30DayADV(symbolParam) {
     } catch (error) { if (CONFIG.DEBUG) console.error(`Erreur ADV: ${error.message}`); return null; }
 }
 
+const FUND_STOP = new Set(['ucits','fund','funds','index','shares','trust','accumulating','distributing','class','plc','etf']);
+function fundWords(n) { return new Set((String(n).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z0-9]{3,}/g) || []).filter(w => !FUND_STOP.has(w) && !['usd','eur','gbp','acc','dist','etc'].includes(w)).map(w => w.slice(0, 3))); }
+function sameFund(a, b) { const A = fundWords(a), B = fundWords(b); if (!A.size || !B.size) return true; for (const w of A) if (B.has(w)) return true; return false; }
+
 async function fetchWeeklyPack(symbolParam, item) {
     await pay(ENRICH_COST);
     const now = new Date().toISOString();
@@ -732,9 +743,15 @@ async function fetchWeeklyPack(symbolParam, item) {
         axios.get('https://api.twelvedata.com/etfs/world/summary', { params: { symbol: symbolParam, apikey: CONFIG.API_KEY, dp: 5 } }),
         axios.get('https://api.twelvedata.com/etfs/world/composition', { params: { symbol: symbolParam, apikey: CONFIG.API_KEY, dp: 5 } })
     ]);
-    const s = sumRes?.data?.etf?.summary || {};
-    const c = compRes?.data?.etf?.composition || {};
-    const fundName = sumRes?.data?.etf?.name || s?.fund_name || s?.name || item?.name || null;
+    let s = sumRes?.data?.etf?.summary || {};
+    let c = compRes?.data?.etf?.composition || {};
+    let fundName = sumRes?.data?.etf?.name || s?.fund_name || s?.name || item?.name || null;
+    // v14.9: garde-fou homonymes — si le fonds renvoyé ne partage aucun mot avec la liste source
+    // (ex. ISPY:XAMS L&G Cyber → ProShares S&P 500 High Income), on jette summary + composition.
+    if (item?.name && fundName && !sameFund(item.name, fundName)) {
+        console.warn(`⚠️ ${symbolParam} : « ${fundName} » ≠ « ${item.name} » — données écartées (homonyme)`);
+        s = {}; c = {}; fundName = item.name;
+    }
     const bondBreakdown = c.bond_breakdown || {};
     const avgDuration = bondBreakdown.average_duration?.fund != null ? clampAbs(bondBreakdown.average_duration.fund, 50) : null;
     const avgMaturity = bondBreakdown.average_maturity?.fund != null ? clampAbs(bondBreakdown.average_maturity.fund, 100) : null;
