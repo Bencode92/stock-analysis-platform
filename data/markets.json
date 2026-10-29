@@ -74,30 +74,6 @@
         "_ytd_value": 5.44
       },
       {
-        "country": "Italie",
-        "index_name": "iShares MSCI Italy ETF",
-        "symbol": "EWI",
-        "value": "56.14",
-        "value_num": 56.14,
-        "changePercent": "+0.50 %",
-        "change_num": 0.50125,
-        "ytdChange": "+3.33 %",
-        "ytd_num": 3.3314927296153183,
-        "ytd_ref_date": "2025-12-31",
-        "m3Change": "-8.95 %",
-        "m3_num": -8.952319169639955,
-        "m3_ref_date": "2026-07-30",
-        "m6Change": "-2.80 %",
-        "m6_num": -2.804709141274234,
-        "m6_ref_date": "2026-04-30",
-        "w52Change": "+7.73 %",
-        "w52_num": 7.733640376127425,
-        "w52_ref_date": "2025-10-29",
-        "trend": "up",
-        "_change_value": 0.5,
-        "_ytd_value": 3.33
-      },
-      {
         "country": "France",
         "index_name": "iShares MSCI France ETF",
         "symbol": "EWQ",
@@ -2227,10 +2203,18 @@
   },
   "meta": {
     "source": "Twelve Data",
-    "timestamp": "2026-10-29T00:20:56.776108Z",
-    "count": 63,
+    "timestamp": "2026-10-29T01:15:27.421545Z",
+    "count": 62,
+    "errors": [
+      {
+        "symbol": "EWI",
+        "name": "iShares MSCI Italy ETF",
+        "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+        "timestamp": "2026-10-29T01:08:56.252303"
+      }
+    ],
     "total_etfs": 63,
-    "errors_count": 0,
+    "errors_count": 1,
     "ytd_calculation": {
       "method": "price_last_close_prev_year_to_last_close_with_fallback",
       "baseline_year": 2025,
