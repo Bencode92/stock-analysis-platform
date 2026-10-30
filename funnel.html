@@ -706,7 +706,7 @@ function renderChain(sector,key){
 }
 
 /* ── Mes convictions : cible (data/convictions.json) · réel (relevés CSV importés, restent dans le navigateur) · marché (markets/sectors.json) ── */
-let CONV=null, MKT={};
+let CONV=null, MKT={}, NEXTW=null;
 const CONV_KEY="funnel-conv-import-v1", CONV_AMT="funnel-conv-weekly", CONV_OPEN="funnel-conv-open";
 const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
 const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}};
@@ -733,6 +733,9 @@ function convState(){try{return JSON.parse(lsGet(CONV_KEY)||"null");}catch(e){re
 function convCompute(pies){
   const L=CONV.lines, B={}; CONV.buckets.forEach(b=>B[b.key]=b);
   const all=[]; pies.forEach(p=>p.lines.forEach(l=>all.push({...l,pie:p.pie,m:L[l.t]||null})));
+  // nouvelle ligne décidée mais pas encore achetée → portefeuille de même nature (actions / ETF), à 0 €
+  const kind={}; pies.forEach(p=>{const c={};p.lines.forEach(l=>{const m=L[l.t];if(m&&m.pie)c[m.pie]=(c[m.pie]||0)+1;});const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];if(top)kind[top[0]]=p.pie;});
+  Object.entries(L).forEach(([t,m])=>{if(m.new&&!all.some(l=>l.t===t)&&kind[m.pie]) all.push({t,name:m.name,value:0,invested:0,pie:kind[m.pie],m,fresh:true});});
   const T=all.reduce((s,l)=>s+l.value,0); if(!T) return null;
   const V={}; all.forEach(l=>{const k=l.m?l.m.bucket:"?"; V[k]=(V[k]||0)+l.value;});
   const recv=l=>l.m&&(l.m.receiver!=null?l.m.receiver:B[l.m.bucket].receiver===true);
@@ -760,7 +763,7 @@ function convRender(){
   const amt=+(lsGet(CONV_AMT)||0);
   const rows=CONV.buckets.map(b=>{
     const real=C?100*(C.V[b.key]||0)/C.T:null, gap=real==null?null:b.target-real;
-    const held=C?C.all.filter(l=>l.m&&l.m.bucket===b.key).map(l=>esc(l.m.name)).join(", "):Object.entries(CONV.lines).filter(([,m])=>m.bucket===b.key).map(([,m])=>esc(m.name)).join(", ");
+    const held=C?C.all.filter(l=>l.m&&l.m.bucket===b.key).map(l=>esc(l.m.name)+(l.fresh?' <b class="g">(nouvelle)</b>':'')).join(", "):Object.entries(CONV.lines).filter(([,m])=>m.bucket===b.key).map(([,m])=>esc(m.name)).join(", ");
     return `<tr><td><b>${esc(b.label)}</b><span class="cv-sub">${esc(b.sub)}</span>${b.target_note?`<span class="cv-sub">${esc(b.target_note)}</span>`:""}</td><td class="cv-held">${held||'<span class="mut">rien</span>'}</td><td class="n">${pc(real)}</td><td class="n"><b>${b.target} %</b></td><td class="n ${gap==null?"":Math.abs(gap)<2?"mut":gap>0?"g":"b"}">${gap==null?"—":(gap>0?"+":"")+pc(gap)}</td><td class="cv-mkt">${mktCell(b.proxies)}</td></tr>`;
   }).join("");
   const gauge=(c,val)=>{const over=val!=null&&val>c.limit, w=val==null?0:Math.min(100,val);
@@ -777,13 +780,24 @@ function convRender(){
       let w=ls.map(l=>({l,t:Math.round(1000*l.end/E)/10}));
       const d=Math.round((100-w.reduce((s,x)=>s+x.t,0))*10)/10; if(d&&w.length){const top=w.reduce((a,x)=>x.t>a.t?x:a);top.t=Math.round((top.t+d)*10)/10;}
       w.sort((a,b)=>b.t-a.t);
-      return `<div class="cv-pie"><div class="lab">${esc(p.pie)}</div><table><thead><tr><th>Ligne</th><th class="n">Actuel</th><th class="n">Cible à saisir</th></tr></thead><tbody>${w.map(x=>`<tr><td>${esc(x.l.t)} <span class="mut">${esc(x.l.m?x.l.m.name:x.l.name)}</span></td><td class="n">${pc(100*x.l.value/N)}</td><td class="n"><b>${pc(x.t)}</b>${x.l.need<=0?' <span class="mut">gelée</span>':""}</td></tr>`).join("")}</tbody></table></div>`;
+      return `<div class="cv-pie"><div class="lab">${esc(p.pie)}</div><table><thead><tr><th>Ligne</th><th class="n">Actuel</th><th class="n">Cible à saisir</th></tr></thead><tbody>${w.map(x=>`<tr><td>${esc(x.l.t)} <span class="mut">${esc(x.l.m?x.l.m.name:x.l.name)}</span>${x.l.fresh?' <b class="g">nouvelle ligne</b>':''}</td><td class="n">${pc(100*x.l.value/N)}</td><td class="n"><b>${pc(x.t)}</b>${x.l.need<=0?' <span class="mut">gelée</span>':""}</td></tr>`).join("")}</tbody></table></div>`;
     }).join("");
     alloc=`<div class="cv-h">Mes versements</div>
       <div class="cv-amt"><label>Par semaine <input id="cv-amt" type="number" min="0" step="50" value="${amt||""}" placeholder="montant"> €</label><span class="mut">${weeks?`cibles atteintes en ≈ ${weeks} semaines à cours constants (${eur(C.need)} à verser)`:`il reste ${eur(C.need)} à verser pour atteindre les cibles`}</span></div>
       <div class="cv-two"><table><thead><tr><th>Par conviction</th><th class="n">${amt>0?"Par semaine":"Part"}</th></tr></thead><tbody>${bl}</tbody></table>
       <table><thead><tr><th>Par portefeuille</th><th class="n">${amt>0?"Par semaine":"Part"}</th></tr></thead><tbody>${pl}</tbody></table></div>
       <details class="cv-pies"><summary>Poids cibles à saisir dans l'application</summary><p class="cv-sub">Calculés pour que l'argent neuf comble les écarts. Les lignes « gelées » ne reçoivent plus rien : leur poids baisse par dilution. Ne jamais lancer le rééquilibrage de l'application, il vend.</p><div class="cv-two">${pieW}</div></details>`;
+  }
+  let nxt="";
+  if(NEXTW&&(NEXTW.enter||[]).length){
+    const TB=CONV.theme_bucket||{}, BB={}; CONV.buckets.forEach(b=>BB[b.key]=b);
+    const r=NEXTW.enter.map(c=>{
+      const bk=TB[c.theme], b=BB[bk], mine=CONV.lines[c.ticker];
+      const real=C&&bk?100*(C.V[bk]||0)/C.T:null;
+      const verdict=mine?'<span class="g">déjà dans mes lignes</span>':!b?'<span class="mut">hors de mes convictions</span>':b.frozen||(real!=null&&b.target-real<2)?`<span class="w">${esc(b.label)} déjà à sa cible : pas en ajout (remplacement à la vague)</span>`:real==null?`<span class="mut">${esc(b.label)} · importe tes relevés</span>`:`<span class="g">${esc(b.label)} sous sa cible : entrée possible</span>`;
+      return `<tr><td><b>${esc(c.ticker)}</b> <span class="mut">${esc(c.name)}</span><span class="cv-sub">${esc(c.maillon_label||c.theme)}</span></td><td class="n">${c.rel!=null?c.rel.toFixed(2).replace(".",",")+"×":"—"}</td><td class="n">${c.fcf_margin!=null?Math.round(c.fcf_margin)+" %":"—"}</td><td>${verdict}</td></tr>`;}).join("");
+    const ex=(NEXTW.exit||[]).map(k=>esc(k[0])).join(", ");
+    nxt=`<div class="cv-h">Passent les filtres aujourd'hui (entreraient à la vague)</div><div class="cv-tbl"><table><thead><tr><th>Société</th><th class="n">Prix rel.</th><th class="n">Cash-flow</th><th>Pour moi</th></tr></thead><tbody>${r}</tbody></table></div><p class="cv-sub">Règle d'entrée : filtres passés + conviction sous sa cible + argent neuf seulement + une semaine de délai. ${ex?`Sortirait à la vague : ${ex} (les sorties attendent la vague).`:""} Source : pilier conviction recalculé chaque jour.</p>`;
   }
   const unk=C&&C.unknown.length?`<p class="cv-warn">Non classées : ${C.unknown.map(l=>esc(l.t)).join(", ")}. À rattacher à une conviction dans data/convictions.json.</p>`:"";
   const open=lsGet(CONV_OPEN)!=="0";
@@ -793,6 +807,7 @@ function convRender(){
     <div class="cv-tbl"><table><thead><tr><th>Conviction</th><th>Lignes</th><th class="n">Réel</th><th class="n">Cible</th><th class="n">Écart</th><th>Marché (depuis janv. · 3 mois)</th></tr></thead><tbody>${rows}</tbody></table></div>${unk}
     <div class="cv-gs">${gauges}</div>
     ${alloc}
+    ${nxt}
     <div class="cv-h">Doctrine</div><ul class="cv-doc">${CONV.doctrine.map(([k,v])=>`<li><b>${esc(k)}.</b> ${esc(v)}</li>`).join("")}</ul>
     <div class="cv-h">Veille</div><ul class="cv-doc">${CONV.watch.map(([k,v])=>`<li><b>${esc(k)}</b> : ${esc(v)}</li>`).join("")}</ul>
     <p class="cv-sub">Marché : ETF de référence en dollars (markets.json / sectors.json), du contexte, pas un signal. Cibles : data/convictions.json (version ${esc(CONV.version)}).</p>
@@ -810,9 +825,10 @@ function convRender(){
 Promise.all([
   fetch("./data/convictions.json").then(r=>r.ok?r.json():null).catch(()=>null),
   fetch("./data/markets.json").then(r=>r.ok?r.json():null).catch(()=>null),
-  fetch("./data/sectors.json").then(r=>r.ok?r.json():null).catch(()=>null)
-]).then(([cv,mk,se])=>{
-  CONV=cv; if(!CONV) return;
+  fetch("./data/sectors.json").then(r=>r.ok?r.json():null).catch(()=>null),
+  fetch("./data/portfolios_conviction_equities.json").then(r=>r.ok?r.json():null).catch(()=>null)
+]).then(([cv,mk,se,ce])=>{
+  CONV=cv; if(!CONV) return; NEXTW=ce&&ce.next_wave||null;
   const add=x=>{if(x&&x.symbol&&x.ytd_num!=null&&!MKT[x.symbol]) MKT[x.symbol]={ytd:x.ytd_num,m3:x.m3_num,name:x.index_name||x.name};};
   if(mk&&mk.indices) Object.values(mk.indices).forEach(L=>(L||[]).forEach(add));
   if(se&&se.sectors) Object.values(se.sectors).forEach(L=>(L||[]).forEach(add));

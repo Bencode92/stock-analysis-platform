@@ -362,6 +362,12 @@ def build():
     days = (date.today() - date.fromisoformat(last_wave)).days if last_wave else None
     wave_due = FORCE_WAVE or days is None or days >= WAVE_DAYS
     new_keys = [(c["ticker"], c["region"]) for c in selected]
+    # aperçu de la prochaine vague (entre deux vagues on reproduit : sans ça, un entrant comme Vertiv n'apparaît nulle part)
+    fresh = {(c["ticker"], c["region"]): c for c in selected}
+    _pk = set(prev_keys)
+    next_wave = {"enter": [{k: c.get(k) for k in ("ticker", "region", "name", "theme", "maillon_label", "rel", "fcf_margin", "nd_ebit", "durability", "exposure_note")}
+                           for key, c in fresh.items() if key not in _pk],
+                 "exit": [list(k) for k in prev_keys if k not in fresh]}
     if not wave_due and prev_keys:
         by = {(c["ticker"], c["region"]): c for c in cands}
         selected = [dict(by[k], weight=w) for k, w in zip(prev_keys, [h["weight"] for h in prev["holdings"]]) if k in by]
@@ -386,6 +392,7 @@ def build():
         "screen_refused": [c for c in cands if c["src"] == "screen" and c["refused"]],
         "qualification_pending": [c for c in cands if c["src"] == "maillon" and c.get("proof_pending")] + pending,
         "medians_ev_ebit": {k: round(v, 1) for k, v in med_ind.items() if k in ENABLER_INDUSTRIES},
+        "next_wave": next_wave,
         "_transition": {"wave_due": wave_due, "wave_date": date.today().isoformat() if wave_due else last_wave,
                         "days_since_wave": days, "added": [list(k) for k in added], "dropped": [list(k) for k in dropped]},
         "_doctrine": "maillon seulement (le screen = radar, propose sans entrer ; qualification = preuve ≥ 50 % + source, ≤ 2 adoptions/an, journal des refus) · sain (ND/EBIT ≤ 4, marge FCF ≥ 5 % + exercice précédent ≥ 0, trajectoire) · prix relatif "
