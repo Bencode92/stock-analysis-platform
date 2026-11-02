@@ -32,7 +32,9 @@ class PortfolioManagerV3 {
       const PT = window.ConvCalc.pieTargets(C, pies), byTicker = {};
       Object.entries(PT).forEach(([pie, rows]) => rows.forEach(x => { byTicker[x.l.t] = { pct: x.t, fresh: !!x.l.fresh, frozen: x.l.need <= 0 && !x.l.fresh, pie, name: x.l.m ? x.l.m.name : x.l.name }; }));
       const dates = pies.map(p => p.date).filter(Boolean).sort();
-      this.myConv = { byTicker, PT, alias: conv.model_alias || {}, date: dates[dates.length - 1] || null };
+      const needByPie = {}; C.all.forEach(l => { if (l.need > 0) needByPie[l.pie] = (needByPie[l.pie] || 0) + l.need; });
+      let weekly = 0; try { weekly = +(localStorage.getItem('funnel-conv-weekly') || 0); } catch (e) {}
+      this.myConv = { byTicker, PT, alias: conv.model_alias || {}, date: dates[dates.length - 1] || null, needByPie, need: C.need, weekly };
     } catch (e) { this.myConv = null; }
   }
 
@@ -46,6 +48,49 @@ class PortfolioManagerV3 {
     if (!t) return '';
     const pct = t.pct.toFixed(1).replace('.', ',');
     return `<div title="Poids à saisir dans Trading 212 (entonnoir · Mes convictions)" style="font-size:0.72rem;color:#ffd54f;font-weight:700;font-family:'JetBrains Mono',monospace;">ma cible ${pct}%${t.frozen ? ' <span style="color:rgba(255,255,255,0.4);font-weight:400;">gelée</span>' : ''}</div>`;
+  }
+
+  // Bloc rapide : nouvelles lignes + poids à saisir + versement, pour Trading 212
+  renderT212Block(type, portfolio) {
+    const M = this.myConv;
+    if (!M || !['Actions-Conviction', 'Agressif-Thematique'].includes(type)) return '';
+    const model = {};
+    for (const cat of ['Actions', 'ETF']) for (const [n, v] of Object.entries(portfolio[cat] || {})) {
+      const ds = portfolio._asset_details || [];
+      const det = ds.find(d => d.name === n) || ds.find(d => d.ticker && new RegExp('(^|[^A-Z])' + d.ticker.replace('.', '\\.') + '([^A-Z]|$)').test(n));
+      const t = this.myTarget(det?.ticker || (n.match(/\(([A-Z]{1,5})\)/) || [])[1] || '', n);
+      if (t) model[Object.keys(M.byTicker).find(k => M.byTicker[k] === t)] = parseFloat(String(v).replace('%', '')) || 0;
+    }
+    const pies = {}; Object.keys(model).forEach(k => { const p = M.byTicker[k].pie; pies[p] = (pies[p] || 0) + 1; });
+    const pie = Object.entries(pies).sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (!pie) return '';
+    const rows = (M.PT[pie] || []).map(x => ({ t: x.l.t, name: x.l.m ? x.l.m.name : x.l.name, target: x.t, model: model[x.l.t], fresh: !!x.l.fresh, frozen: x.l.need <= 0 && !x.l.fresh }))
+      .sort((a, b) => (b.fresh - a.fresh) || (b.target - a.target));
+    const f = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %';
+    const amt = M.weekly > 0 && M.need > 0 ? Math.round(M.weekly * (M.needByPie[pie] || 0) / M.need) : null;
+    const copyTxt = rows.map(r => `${r.t}\t${r.target.toFixed(1)}`).join('\\n');
+    const id = 't212-' + this.normalizeType(type);
+    const line = r => `
+      <div style="display:grid;grid-template-columns:62px 1fr 70px 18px 78px;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.82rem;">
+        <b style="font-family:'JetBrains Mono',monospace;color:${r.fresh ? '#ffd54f' : 'rgba(255,255,255,0.9)'};">${r.t}</b>
+        <span style="color:rgba(255,255,255,0.75);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}${r.fresh ? ' <span style="font-size:0.62rem;padding:1px 6px;border-radius:8px;background:rgba(255,213,79,0.18);color:#ffd54f;font-weight:700;">NOUVELLE</span>' : ''}${r.frozen ? ' <span style="font-size:0.62rem;color:rgba(255,255,255,0.35);">gelée</span>' : ''}</span>
+        <span style="text-align:right;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.35);">${f(r.model)}</span>
+        <span style="text-align:center;color:${r.model == null || r.target > r.model ? '#4caf50' : r.target < r.model ? '#ff8a80' : 'rgba(255,255,255,0.3)'};">${r.model == null || r.target > r.model ? '↑' : r.target < r.model ? '↓' : '='}</span>
+        <b style="text-align:right;font-family:'JetBrains Mono',monospace;color:#ffd54f;font-size:0.92rem;">${f(r.target)}</b>
+      </div>`;
+    return `
+    <div id="${id}" style="margin-bottom:1.5rem;padding:1rem 1.1rem;border:1px solid rgba(255,213,79,0.35);border-radius:12px;background:rgba(255,213,79,0.04);">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.6rem 1rem;margin-bottom:0.6rem;">
+        <b style="color:#ffd54f;font-size:0.95rem;"><i class="fas fa-bolt" style="margin-right:6px;"></i>À saisir dans Trading 212 · ${pie}</b>
+        ${amt != null ? `<span style="font-size:0.85rem;color:#fff;">Versement de la semaine : <b style="color:#ffd54f;font-family:'JetBrains Mono',monospace;">${amt} €</b></span>` : ''}
+        <button type="button" onclick="(function(b){navigator.clipboard&&navigator.clipboard.writeText('${copyTxt}').then(()=>{b.textContent='Copié ✓';},()=>{});})(this)" style="margin-left:auto;font-size:0.75rem;padding:0.35rem 0.8rem;border-radius:8px;border:1px solid rgba(255,213,79,0.5);background:transparent;color:#ffd54f;cursor:pointer;">Copier la liste</button>
+      </div>
+      <div style="display:grid;grid-template-columns:62px 1fr 70px 18px 78px;gap:0.5rem;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.4);padding-bottom:0.3rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+        <span>Trading 212</span><span>Ligne</span><span style="text-align:right;">Modèle</span><span></span><span style="text-align:right;">Ma cible</span>
+      </div>
+      ${rows.map(line).join('')}
+      <p style="margin:0.7rem 0 0 0;font-size:0.72rem;color:rgba(255,255,255,0.55);line-height:1.5;">Ajoute d'abord les lignes <b style="color:#ffd54f;">NOUVELLE</b>, saisis la colonne « Ma cible », <b style="color:#ff8a80;">refuse le rééquilibrage</b> (il vend), puis verse${amt != null ? ` ${amt} €` : ''}. Relevés du ${M.date ? M.date.slice(8, 10) + '/' + M.date.slice(5, 7) : '—'} importés dans l'entonnoir · rien n'est envoyé.</p>
+    </div>`;
   }
 
   cleanJSON(text) {
@@ -326,6 +371,8 @@ class PortfolioManagerV3 {
     }
 
     // ── Positions detail by category ──
+    html += this.renderT212Block(type, portfolio);
+
     // v7.3: Investment amount calculator
     const amountId = `invest-amount-${normalizedType}`;
     html += `
