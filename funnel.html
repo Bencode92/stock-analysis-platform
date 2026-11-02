@@ -384,6 +384,11 @@
   .cv-two>table,.cv-pie{border:1px solid var(--line);border-radius:var(--r-s);overflow:hidden}
   .cv-pie .lab{display:block;padding:8px 10px}
   .cv-pies{margin:12px 0} .cv-pies>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--accent2);margin-bottom:8px}
+  .cv-uni .cv-tbl table{min-width:1080px}
+  .cv-uni td,.cv-uni th{padding:5px 8px}
+  .cv-grp td{background:var(--surface2);font-weight:600;font-size:12px;color:var(--ink)}
+  .cv-ctx{color:var(--neutral)}
+  .cv-why{color:var(--bad);font-size:11.5px;max-width:220px}
   .cv-doc{margin:0;padding-left:18px;font-size:12.5px;color:var(--ink2);display:grid;gap:4px}
   .conv>:last-child{margin-bottom:14px}
   .pf-strip b{font-family:var(--mono,monospace)} .pf-strip .g{color:var(--good)} .pf-strip .b{color:var(--bad)} .pf-strip .mut{color:var(--ink2);font-size:12px}
@@ -707,7 +712,7 @@ function renderChain(sector,key){
 }
 
 /* ── Mes convictions : cible (data/convictions.json) · réel (relevés CSV importés, restent dans le navigateur) · marché (markets/sectors.json) ── */
-let CONV=null, MKT={}, NEXTW=null;
+let CONV=null, MKT={}, NEXTW=null, CEQ=null, FPERF={};
 const CONV_KEY="funnel-conv-import-v1", CONV_AMT="funnel-conv-weekly", CONV_OPEN="funnel-conv-open";
 const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
 const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}};
@@ -717,6 +722,41 @@ const eur=v=>Math.round(v).toLocaleString("fr-FR")+" €";
 const parseStatement=ConvCalc.parseStatement;
 function convState(){try{return JSON.parse(lsGet(CONV_KEY)||"null");}catch(e){return null;}}
 const convCompute=pies=>ConvCalc.compute(CONV,pies);
+// Toutes les sociétés nommées de mes convictions : performance (contexte) + ratios des filtres (signal)
+function convUniverseHTML(C){
+  if(!CEQ) return "";
+  const TB=CONV.theme_bucket||{}, rows=new Map(), mine=new Set(Object.keys(CONV.lines));
+  const enter=new Set(((CEQ.next_wave||{}).enter||[]).map(c=>c.ticker+":"+c.region));
+  const add=(c,st)=>{const k=c.ticker+":"+c.region; if(!rows.has(k)) rows.set(k,{...c,st});};
+  (CEQ.holdings||[]).forEach(c=>add(c,"model"));
+  (CEQ.blocked_maillons||[]).forEach(c=>add(c,"blocked"));
+  (CEQ.waiting||[]).forEach(c=>add(c,enter.has(c.ticker+":"+c.region)?"enter":"wait"));
+  ((CEQ.next_wave||{}).enter||[]).forEach(c=>{const k=c.ticker+":"+c.region; const r=rows.get(k); if(r) r.st="enter"; else rows.set(k,{...c,st:"enter"});});
+  // les détails complets (ratios) des entrants viennent des listes du pilier
+  const full={}; ["holdings","waiting","blocked_maillons","screen_proposals"].forEach(L=>(CEQ[L]||[]).forEach(c=>{full[c.ticker+":"+c.region]=full[c.ticker+":"+c.region]||c;}));
+  const ORD={mine:0,enter:1,model:2,wait:3,blocked:4};
+  const lab={mine:'<span class="g">● dans mes lignes</span>',enter:'<span class="g">✓ passe · entrerait</span>',model:'<span class="g">✓ modèle</span>',wait:'<span class="mut">✓ passe · en attente</span>',blocked:'<span class="b">✗ bloquée</span>'};
+  const n=(v,d=0,suf="")=>v==null||!isFinite(v)?"—":(Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d})+suf;
+  const gate=(ok,txt)=>`<td class="n ${ok==null?"mut":ok?"g":"b"}">${txt}</td>`;
+  const byB={};
+  rows.forEach((r0,k)=>{
+    const r={...(full[k]||{}),...r0}; if(mine.has(r.ticker)) r.st="mine";
+    const b=TB[r.theme]||"?"; (byB[b]=byB[b]||[]).push(r);
+  });
+  const head=`<thead><tr><th>Société</th><th>Statut</th><th class="n">1 an</th><th class="n">Depuis janv.</th><th class="n">Volat. 3 a</th><th class="n">Prix rel. ≤ 2,5</th><th class="n">Cash-flow ≥ 5 %</th><th class="n">Dette/EBIT ≤ 4</th><th class="n">ROIC 3 a</th><th class="n">Durab.</th><th>Ce qui bloque</th></tr></thead>`;
+  const sec=CONV.buckets.filter(b=>byB[b.key]).map(b=>{
+    const L=byB[b.key].sort((x,y)=>(ORD[x.st]-ORD[y.st])||((x.rel??9)-(y.rel??9)));
+    const tr=L.map(r=>{const P=FPERF[r.ticker+":"+r.region]||{}, gf=(r.gates_failed||[]).join(" · ");
+      return `<tr><td><b>${esc(r.ticker)}</b> <span class="mut">${esc(r.name||"")}</span><span class="cv-sub">${esc(r.maillon_label||"")}</span></td><td>${lab[r.st]}</td>
+      <td class="n cv-ctx">${n(P.p1,0," %")}</td><td class="n cv-ctx">${n(P.ytd,0," %")}</td><td class="n cv-ctx">${n(P.vol??r.vol_3y,0," %")}</td>
+      ${gate(r.rel==null?null:r.rel>=0.05&&r.rel<=2.5,r.rel==null?"—":n(r.rel,2,"×"))}${gate(r.fcf_margin==null?null:r.fcf_margin>=5,n(r.fcf_margin,0," %"))}${gate(r.nd_ebit==null?null:r.nd_ebit<=4,n(r.nd_ebit,1))}
+      <td class="n">${n(r.roic_3y,0," %")}</td>${gate(r.durability?["A","B"].includes(r.durability):null,esc(r.durability||"—"))}<td class="cv-why">${esc(gf)}</td></tr>`;}).join("");
+    return `<tr class="cv-grp"><td colspan="11">${esc(b.label)} <span class="mut">· ${L.length} société${L.length>1?"s":""}</span></td></tr>${tr}`;
+  }).join("");
+  return `<details class="cv-pies cv-uni" open><summary>Toutes les sociétés de mes convictions : qui passe, qui bloque</summary>
+    <div class="cv-tbl"><table>${head}<tbody>${sec}</tbody></table></div>
+    <p class="cv-sub">Performance et volatilité : du contexte (gris), jamais un critère d'entrée. Les filtres (vert = passe, rouge = bloque) : prix relatif = EV/EBIT ÷ médiane de l'industrie ; cash-flow libre / chiffre d'affaires ; dette nette / EBIT ; durabilité A ou B. « Entrerait » = passerait la vague si elle avait lieu aujourd'hui. Mes ETF n'ont pas de ratios : voir la colonne Marché plus haut. Source : pilier conviction du ${esc(CEQ.generated||"")}.</p></details>`;
+}
 function mktCell(syms){
   return (syms||[]).map(s=>{const m=MKT[s]; if(!m) return "";
     return `<span class="cv-mk" title="${esc(m.name)}"><b>${s}</b> ${m.ytd>0?"+":""}${Math.round(m.ytd)} %<span class="mut"> · 3 m ${m.m3>0?"+":""}${Math.round(m.m3)}</span></span>`;}).join("");
@@ -767,6 +807,7 @@ function convRender(){
     <div class="cv-gs">${gauges}</div>
     ${alloc}
     ${nxt}
+    ${convUniverseHTML(C)}
     <div class="cv-h">Doctrine</div><ul class="cv-doc">${CONV.doctrine.map(([k,v])=>`<li><b>${esc(k)}.</b> ${esc(v)}</li>`).join("")}</ul>
     <div class="cv-h">Veille</div><ul class="cv-doc">${CONV.watch.map(([k,v])=>`<li><b>${esc(k)}</b> : ${esc(v)}</li>`).join("")}</ul>
     <p class="cv-sub">Marché : ETF de référence en dollars (markets.json / sectors.json), du contexte, pas un signal. Cibles : data/convictions.json (version ${esc(CONV.version)}).</p>
@@ -785,9 +826,12 @@ Promise.all([
   fetch("./data/convictions.json").then(r=>r.ok?r.json():null).catch(()=>null),
   fetch("./data/markets.json").then(r=>r.ok?r.json():null).catch(()=>null),
   fetch("./data/sectors.json").then(r=>r.ok?r.json():null).catch(()=>null),
-  fetch("./data/portfolios_conviction_equities.json").then(r=>r.ok?r.json():null).catch(()=>null)
-]).then(([cv,mk,se,ce])=>{
-  CONV=cv; if(!CONV) return; NEXTW=ce&&ce.next_wave||null;
+  fetch("./data/portfolios_conviction_equities.json").then(r=>r.ok?r.json():null).catch(()=>null),
+  fetch("./data/funnel.json").then(r=>r.ok?r.json():null).catch(()=>null)
+]).then(([cv,mk,se,ce,fj])=>{
+  CONV=cv; if(!CONV) return; NEXTW=ce&&ce.next_wave||null; CEQ=ce;
+  if(fj&&fj.sectors) Object.values(fj.sectors).forEach(sec=>Object.values(sec.chains||{}).forEach(ch=>(ch.maillons||[]).forEach(m=>(m.companies||[]).forEach(co=>{
+    if(!co.ticker) return; const k=co.ticker+":"+({EU:"Europe"}[co.region]||co.region); if(!FPERF[k]) FPERF[k]={p1:co.perf_1y,ytd:co.perf_ytd,vol:co.volatility_3y,nm:co.net_margin};}))));
   const add=x=>{if(x&&x.symbol&&x.ytd_num!=null&&!MKT[x.symbol]) MKT[x.symbol]={ytd:x.ytd_num,m3:x.m3_num,name:x.index_name||x.name};};
   if(mk&&mk.indices) Object.values(mk.indices).forEach(L=>(L||[]).forEach(add));
   if(se&&se.sectors) Object.values(se.sectors).forEach(L=>(L||[]).forEach(add));

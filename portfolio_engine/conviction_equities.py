@@ -272,9 +272,11 @@ def build():
         g, c = [], cval(s)
         if (s.get("durability_grade") or "") not in ("A", "B") or s.get("durability_mirage"):
             g.append("durabilité")
-        a = _adv_usd(s)
-        if a is None or a < ADV_MIN_USD: g.append("liquidité < 5 M$")
-        if (_num(s.get("history_days")) or 0) < HISTORY_MIN_DAYS: g.append("jeune cotation")
+        a, hd = _adv_usd(s), _num(s.get("history_days"))
+        if a is None and hd is None: g.append("données de marché absentes (trou de collecte)")   # ≠ titre illiquide ou récent (ABB 31/10)
+        else:
+            if a is None or a < ADV_MIN_USD: g.append("liquidité < 5 M$")
+            if (hd or 0) < HISTORY_MIN_DAYS: g.append("jeune cotation")
         nd, eq = _num(s.get("net_debt_to_ebit")), c.get("total_equity")
         if nd is None:                                    # champ pas encore propagé (Asie) → calcul depuis le cache
             debt, cash, ebit = c.get("total_debt"), c.get("cash_and_st_investments") or 0, c.get("operating_income")
