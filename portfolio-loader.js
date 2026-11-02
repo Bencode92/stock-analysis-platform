@@ -20,6 +20,34 @@ class PortfolioManagerV3 {
   // DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
 
+  // « Ma cible » : relevés importés dans l'entonnoir (localStorage, même site) + data/convictions.json.
+  // Rien n'est envoyé : sans import, la page reste celle du modèle.
+  async loadMyTargets() {
+    this.myConv = null;
+    try {
+      if (!window.ConvCalc) return;
+      const pies = window.ConvCalc.loadPies(); if (!pies.length) return;
+      const conv = await this.fetchJSON(['data/convictions.json', './data/convictions.json']); if (!conv) return;
+      const C = window.ConvCalc.compute(conv, pies); if (!C) return;
+      const PT = window.ConvCalc.pieTargets(C, pies), byTicker = {};
+      Object.entries(PT).forEach(([pie, rows]) => rows.forEach(x => { byTicker[x.l.t] = { pct: x.t, fresh: !!x.l.fresh, frozen: x.l.need <= 0 && !x.l.fresh, pie, name: x.l.m ? x.l.m.name : x.l.name }; }));
+      const dates = pies.map(p => p.date).filter(Boolean).sort();
+      this.myConv = { byTicker, PT, alias: conv.model_alias || {}, date: dates[dates.length - 1] || null };
+    } catch (e) { this.myConv = null; }
+  }
+
+  myTarget(ticker, name) {
+    const M = this.myConv; if (!M) return null;
+    const raw = ticker || (name.match(/\(([A-Z0-9.]{2,9})\)/) || [])[1] || '';
+    return M.byTicker[M.alias[raw] || raw] || M.byTicker[raw.split('.')[0]] || null;
+  }
+
+  myTargetHTML(t) {
+    if (!t) return '';
+    const pct = t.pct.toFixed(1).replace('.', ',');
+    return `<div title="Poids à saisir dans Trading 212 (entonnoir · Mes convictions)" style="font-size:0.72rem;color:#ffd54f;font-weight:700;font-family:'JetBrains Mono',monospace;">ma cible ${pct}%${t.frozen ? ' <span style="color:rgba(255,255,255,0.4);font-weight:400;">gelée</span>' : ''}</div>`;
+  }
+
   cleanJSON(text) {
     return text.replace(/\bNaN\b/g, 'null').replace(/\bInfinity\b/g, 'null').replace(/\b-Infinity\b/g, 'null');
   }
@@ -52,6 +80,7 @@ class PortfolioManagerV3 {
 
     const data = await this.fetchJSON(paths);
     if (!data) throw new Error('Impossible de charger portfolios.json');
+    await this.loadMyTargets();
 
     this.meta = data._meta || { version: '?', generated_at: new Date().toISOString(), backtest_days: 90 };
     this.portfolios = {};
@@ -346,6 +375,8 @@ class PortfolioManagerV3 {
         return m;
       }, {});
 
+      let matchedPie = null;
+      const MY_PROFILES = new Set(['Actions-Conviction', 'Agressif-Thematique']);   // mes deux pies Trading 212
       for (const a of sorted) {
         const prevW = parseFloat(String(prevCat[a.name] || 0).replace('%', '')) || 0;
         const delta = prevW > 0 ? a.weight - prevW : null;
@@ -356,6 +387,8 @@ class PortfolioManagerV3 {
           a.name.includes(d.ticker) || (d.name && a.name.includes(d.name))
         );
         const ticker = detail?.ticker || a.name.match(/\(([A-Z]{1,5})\)/)?.[1] || '';
+        const myT = MY_PROFILES.has(type) ? this.myTarget(ticker, a.name) : null;
+        if (myT) matchedPie = myT.pie;
         const rationale = detail?.rationale || '';
         const role = detail?.role || '';
         const riskNote = detail?.risk_note || '';
@@ -407,6 +440,7 @@ class PortfolioManagerV3 {
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <span style="font-size:0.95rem;font-weight:700;color:${catColor};">${a.weight}%</span>
+              ${this.myTargetHTML(myT)}
               <div class="amount-display" data-pf="${normalizedType}" data-weight="${a.weight}" style="font-size:0.75rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;display:none;"></div>
               ${delta !== null && Math.abs(delta) >= 0.5 ? `<div style="font-size:0.7rem;color:${delta > 0 ? '#4caf50' : '#f44336'};font-weight:600;">${delta > 0 ? '+' : ''}${delta.toFixed(1)}%</div>` : ''}
             </div>
@@ -455,6 +489,27 @@ class PortfolioManagerV3 {
           </div>` : ''}
         </div>`;
       }
+      if (matchedPie && this.myConv) {
+        const fresh = (this.myConv.PT[matchedPie] || []).filter(x => x.l.fresh);
+        for (const x of fresh) {
+          html += `
+        <div class="asset-row" style="padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:0.5rem;">
+              <span style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:#ffd54f;font-weight:700;min-width:40px;">${x.l.t}</span>
+              <span style="font-size:0.85rem;font-weight:600;">${x.l.m ? x.l.m.name : x.l.name}</span>
+              <span style="font-size:0.6rem;padding:1px 6px;border-radius:8px;background:rgba(255,213,79,0.15);color:#ffd54f;font-weight:700;">À AJOUTER</span>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span style="font-size:0.95rem;font-weight:700;color:rgba(255,255,255,0.35);">—</span>
+              ${this.myTargetHTML({ pct: x.t })}
+            </div>
+          </div>
+        </div>`;
+        }
+        const d = this.myConv.date;
+        html += `<p style="margin:0.8rem 0 0 0;font-size:0.7rem;color:rgba(255,213,79,0.75);"><i class="fas fa-bullseye" style="margin-right:4px;"></i>« ma cible » = poids à saisir dans Trading 212, calculés par l'entonnoir (Mes convictions) depuis tes relevés${d ? ' du ' + d.slice(8, 10) + '/' + d.slice(5, 7) : ''} · lus dans ce navigateur, jamais envoyés</p>`;
+      }
       html += '</div>';
     }
     html += '</div>';
@@ -468,10 +523,10 @@ class PortfolioManagerV3 {
           <i class="fas fa-chart-bar" style="margin-right:6px;color:#00bcd4;"></i>Indicateurs de risque
         </h3>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
-          ${this.renderMetric('Volatilité', `${(opt.vol_realized || 0).toFixed(1)}%`, cfg.color)}
+          ${this.renderMetric('Volatilité', opt.vol_realized ? `${opt.vol_realized.toFixed(1)}%` : '—', cfg.color)}
           ${this.renderMetric('HHI', Math.round(conc.hhi || 0), conc.hhi < 1500 ? '#4caf50' : '#ff9800')}
           ${this.renderMetric('Positions', conc.n_positions || 0, '#2196f3')}
-          ${this.renderMetric('Top 5', `${conc.top_5_weight || 0}%`, '#9c27b0')}
+          ${this.renderMetric('Top 5', conc.top_5_weight != null ? `${Math.round((conc.top_5_weight <= 1 ? conc.top_5_weight * 100 : conc.top_5_weight) * 10) / 10}%` : '—', '#9c27b0')}
         </div>
         <p style="margin:1rem 0 0 0;text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.5);">
           <em>${conc.hhi < 1000 ? '✅ Bien diversifié' : conc.hhi < 1500 ? '🟢 Diversification acceptable' : conc.hhi < 2500 ? '🟡 Concentration modérée' : '🔴 Forte concentration'}</em>
