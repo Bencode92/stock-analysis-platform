@@ -435,6 +435,20 @@ def _wkey(s):
 def wide_universe(fidx, rows, socle, cands, selected, refusals, gates, rel, fcf_margin, cval, mc_books):
     conv = _load("convictions.json")
     tb, lines = conv.get("theme_bucket", {}), conv.get("lines", {})
+    try:
+        base = _load("conviction_base.json")      # cours figés au départ des portefeuilles (15/09)
+    except FileNotFoundError:
+        base = {"prices": {}}
+    def since(s):
+        b = (base["prices"].get(s["_region"]) or {}).get(f'{s["ticker"]}|{s.get("data_mic") or ""}')
+        p = _num(s.get("price"))
+        if not b or not p or not b[0] or b[1] != s.get("data_currency"):
+            return None
+        v = 100.0 * (p / b[0] - 1)
+        p3 = _num(s.get("perf_3m"))
+        if v < -45 and (p3 is None or p3 > -25):   # chute que le 3 mois ne voit pas : division d'action, pas une perte
+            return None
+        return round(v, 1) if v < 1000 else None
     cby = {(c["ticker"], c["region"]): c for c in cands}
     sel = {(c["ticker"], c["region"]) for c in selected}
     # US + Europe déjà dédupliqués (hors socle) ; on rajoute le socle, Milan/nordiques et l'Asie
@@ -501,13 +515,13 @@ def wide_universe(fidx, rows, socle, cands, selected, refusals, gates, rel, fcf_
             st = "socle"
         out.append({"t": s["ticker"], "n": s.get("name"), "reg": reg, "ctry": ctry, "ind": s.get("industry"), "b": b,
                     "mail": f["label"] if f else None, "st": st,
-                    "p1y": _num(s.get("perf_1y")), "ytd": _num(s.get("perf_ytd")), "p3y": _num(s.get("perf_3y")),
+                    "ps": since(s), "p1y": _num(s.get("perf_1y")), "ytd": _num(s.get("perf_ytd")), "p3y": _num(s.get("perf_3y")),
                     "vol": _num(s.get("volatility_3y")), "mcap": round(mcu / 1e9, 1) if mcu else None,
                     "rel": round(r, 2) if r is not None else None, "fcf": round(fm, 1) if fm is not None else None, "fcf_est": est,
                     "nd": _num(s.get("net_debt_to_ebit")), "roic": _num(s.get("roic_avg_3y")), "dur": s.get("durability_grade"),
                     "why": (refusals.get(s["ticker"]) or {}).get("reason") if st == "refused" else None, "g": g})
-    out.sort(key=lambda x: (x["b"], -(x["p1y"] if x["p1y"] is not None else -999)))
-    return {"generated": date.today().isoformat(), "mcap_min_bn": WIDE_MCAP_MIN_USD / 1e9,
+    out.sort(key=lambda x: (x["b"], -(x["ps"] if x["ps"] is not None else -999)))
+    return {"generated": date.today().isoformat(), "start": base.get("date"), "mcap_min_bn": WIDE_MCAP_MIN_USD / 1e9,
             "em_mcap_min_bn": WIDE_EM_MCAP_MIN_USD / 1e9, "industries": WIDE_INDUSTRY, "rows": out}
 
 

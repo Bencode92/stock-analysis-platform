@@ -759,10 +759,11 @@ function convUniverseHTML(C){
 }
 /* ── Le marché de mes convictions : TOUTES les sociétés cotées des industries de mes convictions (data/conviction_universe.json) ── */
 let UNIV=null;
-function convMarketHTML(){
+function convMarketHTML(C){
   if(!UNIV||!UNIV.rows) return "";
   const R=UNIV.rows, med=a=>{const v=a.filter(x=>x!=null&&isFinite(x)).sort((x,y)=>x-y); if(!v.length) return null; const m=v.length>>1; return v.length%2?v[m]:(v[m-1]+v[m])/2;};
   const n=(v,d=0,suf="")=>v==null||!isFinite(v)?"—":(Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d})+suf;
+  const SD=UNIV.start?UNIV.start.slice(8,10)+"/"+UNIV.start.slice(5,7):"départ";
   const sp=v=>v==null?"—":(v>0?"+":"")+n(v,0," %");
   const PASS=new Set(["pass_maillon","pass_offradar","refused"]);
   const LAB={mine:'<span class="g">● à moi</span>',model:'<span class="g">✓ modèle</span>',pass_maillon:'<span class="g">✓ passe · maillon de ma liste</span>',
@@ -773,40 +774,42 @@ function convMarketHTML(){
     :r.st==="etf"?"pas d'action en direct (doctrine) : je l'ai via l'ETF":(r.g||[]).join(" · ");
   const gate=(ok,txt)=>`<td class="n ${ok==null?"mut":ok?"g":"b"}">${txt}</td>`;
   const row=(r,showB)=>`<tr><td><b>${esc(r.t)}</b> <span class="mut">${esc(r.n||"")}</span><span class="cv-sub">${showB?esc(showB)+" · ":""}${esc(r.mail||r.ind||"")} · ${esc(r.ctry||r.reg)}${r.mcap!=null?" · "+n(r.mcap,0)+" Md$":""}</span></td><td>${LAB[r.st]||esc(r.st)}</td>
-    <td class="n"><b class="${r.p1y==null?"":r.p1y<0?"b":"g"}">${sp(r.p1y)}</b></td><td class="n cv-ctx">${sp(r.ytd)}</td><td class="n cv-ctx">${n(r.vol,0," %")}</td>
+    <td class="n"><b class="${r.ps==null?"":r.ps<0?"b":"g"}">${sp(r.ps)}</b></td><td class="n cv-ctx">${sp(r.p1y)}</td><td class="n cv-ctx">${n(r.vol,0," %")}</td>
     ${gate(r.rel==null?null:r.rel>=0.25&&r.rel<=2.5,r.rel==null?"—":n(r.rel,2,"×"))}${gate(r.fcf==null?null:r.fcf>=5,n(r.fcf,0," %")+(r.fcf_est?"*":""))}${gate(r.nd==null?null:r.nd<=4,n(r.nd,1))}
     <td class="n">${n(r.roic,0," %")}</td>${gate(r.dur?["A","B"].includes(r.dur):null,esc(r.dur||"—"))}<td class="cv-why"${r.st==="blocked"?"":' style="color:var(--ink2)"'}>${esc(why(r))}</td></tr>`;
-  const head=`<thead><tr><th>Société</th><th>Statut</th><th class="n">1 an</th><th class="n">Depuis janv.</th><th class="n">Volat. 3 a</th><th class="n">Prix rel. ≤ 2,5</th><th class="n">Cash-flow ≥ 5 %</th><th class="n">Dette/EBIT ≤ 4</th><th class="n">ROIC 3 a</th><th class="n">Durab.</th><th>Pourquoi je ne l'ai pas</th></tr></thead>`;
+  const head=`<thead><tr><th>Société</th><th>Statut</th><th class="n">Depuis le ${SD}</th><th class="n">1 an</th><th class="n">Volat. 3 a</th><th class="n">Prix rel. ≤ 2,5</th><th class="n">Cash-flow ≥ 5 %</th><th class="n">Dette/EBIT ≤ 4</th><th class="n">ROIC 3 a</th><th class="n">Durab.</th><th>Pourquoi je ne l'ai pas</th></tr></thead>`;
   const BL={}; CONV.buckets.forEach(b=>BL[b.key]=b.label);
-  // 1. bilan par conviction
+  // 1. bilan par conviction (depuis le départ des portefeuilles)
+  const real={}; if(C) C.all.forEach(l=>{const k=l.m?l.m.bucket:"?"; if(l.invested>0){real[k]=real[k]||{v:0,i:0}; real[k].v+=l.value; real[k].i+=l.invested;}});
   const sum=CONV.buckets.filter(b=>R.some(r=>r.b===b.key)).map(b=>{
     const L=R.filter(r=>r.b===b.key), me=L.filter(r=>r.st==="mine"), ps=L.filter(r=>PASS.has(r.st)||r.st==="mine"||r.st==="model"), bk=L.filter(r=>r.st==="blocked");
-    const top=[...L].filter(r=>r.p1y!=null).sort((x,y)=>y.p1y-x.p1y).slice(0,10);
-    const tc=k=>top.filter(k).length;
-    const miss=L.filter(r=>PASS.has(r.st)&&r.p1y!=null).sort((x,y)=>y.p1y-x.p1y)[0];
+    const top=[...L].filter(r=>r.ps!=null).sort((x,y)=>y.ps-x.ps).slice(0,10);
+    const tc=k=>top.filter(k).length, rr=real[b.key];
+    const miss=L.filter(r=>PASS.has(r.st)&&r.ps!=null).sort((x,y)=>y.ps-x.ps)[0];
     return `<tr><td><b>${esc(b.label)}</b><span class="cv-sub">${L.length} sociétés cotées</span></td>
-      <td class="n">${sp(med(L.map(r=>r.p1y)))}</td><td class="n">${me.length?`<b>${sp(med(me.map(r=>r.p1y)))}</b><span class="cv-sub">${me.length} action${me.length>1?"s":""}</span>`:`<span class="mut">ETF</span><span class="cv-sub">${mktCell(b.proxies.slice(0,1))}</span>`}</td>
-      <td class="n">${sp(med(ps.map(r=>r.p1y)))}<span class="cv-sub">${ps.length} passent</span></td><td class="n">${sp(med(bk.map(r=>r.p1y)))}<span class="cv-sub">${bk.length} bloquées</span></td>
+      <td class="n">${rr?`<b class="${rr.v<rr.i?"b":"g"}">${sp(100*(rr.v/rr.i-1))}</b>`:'<span class="mut">—</span>'}<span class="cv-sub">${rr?"mes relevés":C?"rien d'investi":"importe tes relevés"}</span></td>
+      <td class="n">${sp(med(L.map(r=>r.ps)))}</td><td class="n">${me.length?`${sp(med(me.map(r=>r.ps)))}<span class="cv-sub">${me.length} action${me.length>1?"s":""}</span>`:`<span class="mut">ETF</span>`}</td>
+      <td class="n">${sp(med(ps.map(r=>r.ps)))}<span class="cv-sub">${ps.length} passent</span></td><td class="n">${sp(med(bk.map(r=>r.ps)))}<span class="cv-sub">${bk.length} bloquées</span></td>
       <td class="cv-sub">${tc(r=>r.st==="mine")} à moi · ${tc(r=>PASS.has(r.st)||r.st==="model")} passaient · ${tc(r=>r.st==="blocked")} bloquées${tc(r=>r.st==="etf")?` · ${tc(r=>r.st==="etf")} via l'ETF`:""}</td>
-      <td>${miss?`<b>${esc(miss.t)}</b> <span class="mut">${esc((miss.n||"").slice(0,26))}</span> <b class="g">${sp(miss.p1y)}</b>`:'<span class="mut">—</span>'}</td></tr>`;
+      <td>${miss?`<b>${esc(miss.t)}</b> <span class="mut">${esc((miss.n||"").slice(0,26))}</span> <b class="${miss.ps<0?"b":"g"}">${sp(miss.ps)}</b>`:'<span class="mut">—</span>'}</td></tr>`;
   }).join("");
   // 2. ratées qui passaient · 3. ratées parce que bloquées
-  const notMine=r=>r.st!=="mine"&&r.st!=="etf"&&r.p1y!=null;
-  const missPass=R.filter(r=>notMine(r)&&PASS.has(r.st)).sort((x,y)=>y.p1y-x.p1y).slice(0,20);
-  const missBlk=R.filter(r=>notMine(r)&&r.st==="blocked").sort((x,y)=>y.p1y-x.p1y).slice(0,20);
+  const notMine=r=>r.st!=="mine"&&r.st!=="etf"&&r.ps!=null;
+  const missPass=R.filter(r=>notMine(r)&&PASS.has(r.st)).sort((x,y)=>y.ps-x.ps).slice(0,20);
+  const missBlk=R.filter(r=>notMine(r)&&r.st==="blocked").sort((x,y)=>y.ps-x.ps).slice(0,20);
   const tbl=(L,bl)=>`<div class="cv-tbl"><table>${head}<tbody>${L.map(r=>row(r,bl?BL[r.b]:null)).join("")}</tbody></table></div>`;
   // 4. tout, par conviction
   const all=CONV.buckets.filter(b=>R.some(r=>r.b===b.key)).map(b=>{
-    const L=R.filter(r=>r.b===b.key).sort((x,y)=>(y.p1y??-999)-(x.p1y??-999));
-    return `<details class="cv-pies"><summary>${esc(b.label)} · ${L.length} sociétés, de la meilleure à la pire sur 1 an</summary>${tbl(L,false)}</details>`;
+    const L=R.filter(r=>r.b===b.key).sort((x,y)=>(y.ps??-999)-(x.ps??-999));
+    return `<details class="cv-pies"><summary>${esc(b.label)} · ${L.length} sociétés, de la meilleure à la pire depuis le ${SD}</summary>${tbl(L,false)}</details>`;
   }).join("");
   return `<details class="cv-pies cv-uni" open><summary>Le marché de mes convictions : où j'en suis, ce que j'ai raté</summary>
-    <p class="cv-sub">Toutes les sociétés cotées (US, Europe, Asie) des industries de chaque conviction, capitalisation ≥ ${n(UNIV.mcap_min_bn,0)} Md$ (émergents ≥ ${n(UNIV.em_mcap_min_bn,0)} Md$), passées aux mêmes filtres que mes lignes. Les émergents sont dans mon ETF, pas en direct.</p>
-    <div class="cv-tbl"><table><thead><tr><th>Conviction</th><th class="n">Marché · médiane 1 an</th><th class="n">Mes actions · médiane</th><th class="n">Celles qui passent</th><th class="n">Les bloquées</th><th>Les 10 meilleures sur 1 an</th><th>Meilleure que j'ai ratée et qui passait</th></tr></thead><tbody>${sum}</tbody></table></div>
-    <p class="cv-sub">Lecture : si « celles qui passent » font mieux que « les bloquées », les filtres m'ont protégé ; sinon ils m'ont coûté. Sur une seule année, c'est un constat, pas une preuve.</p>
-    <div class="cv-h">Ratées alors qu'elles passaient les filtres (les 20 plus fortes hausses)</div>${tbl(missPass,true)}
+    <p class="cv-sub">Toutes les sociétés cotées (US, Europe, Asie) des industries de chaque conviction, capitalisation ≥ ${n(UNIV.mcap_min_bn,0)} Md$ (émergents ≥ ${n(UNIV.em_mcap_min_bn,0)} Md$), passées aux mêmes filtres que mes lignes. <b>Tout est mesuré depuis le ${SD}, départ de mes portefeuilles</b> ; le « 1 an » reste en gris pour le contexte. Les émergents sont dans mon ETF, pas en direct.</p>
+    <div class="cv-tbl"><table><thead><tr><th>Conviction</th><th class="n">Mon résultat réel</th><th class="n">Marché · médiane</th><th class="n">Mes actions · médiane</th><th class="n">Celles qui passent</th><th class="n">Les bloquées</th><th>Les 10 meilleures</th><th>Meilleure que j'ai ratée et qui passait</th></tr></thead><tbody>${sum}</tbody></table></div>
+    <p class="cv-sub">Lecture : si « celles qui passent » font mieux que « les bloquées », les filtres m'ont protégé ; sinon ils m'ont coûté. Sur quelques semaines, c'est un constat, pas une preuve. « Mon résultat réel » = valeur ÷ montant versé dans mes relevés (les versements récents ont eu moins de temps).</p>
+    <div class="cv-h">Ratées alors qu’elles passaient les filtres : les 20 meilleures depuis le ${SD}</div>${tbl(missPass,true)}
     <p class="cv-sub">« Jamais regardée » : saine et à prix raisonnable, mais dans aucun maillon de mes chaînes. C'est là que la liste est incomplète, ou que l'industrie ratisse trop large (une compagnie d'eau classée « machines »).</p>
-    <div class="cv-h">Ratées parce que les filtres les bloquaient (les 20 plus fortes hausses)</div>${tbl(missBlk,true)}
+    <div class="cv-h">Ratées parce que les filtres les bloquaient : les 20 meilleures depuis le ${SD}</div>${tbl(missBlk,true)}
     <p class="cv-sub">Le prix de la discipline : ces hausses étaient interdites par la dette, le cash-flow, la durabilité ou un prix au-delà de 2,5× son industrie. Un filtre se juge sur sa logique, pas sur une année de performance.</p>
     <div class="cv-h">Tout, par conviction</div>${all}
     <p class="cv-sub">* cash-flow estimé (FCF des 12 derniers mois ÷ chiffre d'affaires) quand le détail annuel n'est pas en cache. Performance : contexte, jamais un critère d'entrée. Source : univers du ${esc(UNIV.generated||"")}.</p></details>`;
@@ -861,7 +864,7 @@ function convRender(){
     <div class="cv-gs">${gauges}</div>
     ${alloc}
     ${nxt}
-    ${convMarketHTML()}
+    ${convMarketHTML(C)}
     ${convUniverseHTML(C)}
     <div class="cv-h">Doctrine</div><ul class="cv-doc">${CONV.doctrine.map(([k,v])=>`<li><b>${esc(k)}.</b> ${esc(v)}</li>`).join("")}</ul>
     <div class="cv-h">Veille</div><ul class="cv-doc">${CONV.watch.map(([k,v])=>`<li><b>${esc(k)}</b> : ${esc(v)}</li>`).join("")}</ul>
