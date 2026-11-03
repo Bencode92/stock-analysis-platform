@@ -385,7 +385,9 @@ def build():
                          "allocated_pct": round(sum(c["weight"] for c in L) * 100, 1), "lines": len(L), "slots": k,
                          "status": "exprimé" if len(L) >= k else ("partiel" if L else "non exprimable"),
                          "note": THEME_NOTE.get(th)}
+    universe = wide_universe(fidx, rows, socle, cands, selected, refusals, gates, rel, fcf_margin, cval, _mc_in_books_ccy)
     out = {
+        "_universe": universe,
         "holdings": selected, "_keys": [list(k) for k in new_keys], "n": len(selected),
         "allocated_pct": round(total * 100, 1), "cher_pct": round(cher * 100, 1), "themes": per_theme,
         "waiting": waiting, "blocked_maillons": [c for c in cands if c["src"] == "maillon" and c["gates_failed"]],
@@ -402,6 +404,111 @@ def build():
         "generated": date.today().isoformat(),
     }
     return out
+
+
+# ── Univers élargi « qu'est-ce qu'on a raté » (affichage seul, aucun effet sur la sélection) ──
+# Toutes les sociétés cotées des industries de mes convictions (data/convictions.json), passées aux MÊMES portes
+# que le pilier. Sortie séparée : data/conviction_universe.json.
+UNIVERSE_FILE = os.path.join(DATA, "conviction_universe.json")
+WIDE_INDUSTRY = {
+    "Electrical Equipment & Parts": "b1", "Utilities - Regulated Electric": "b1", "Utilities - Diversified": "b1",
+    "Engineering & Construction": "b1", "Infrastructure Operations": "b1",
+    "Uranium": "b2", "Utilities - Independent Power Producers": "b2", "Copper": "b2", "Gold": "b2", "Silver": "b2",
+    "Other Precious Metals & Mining": "b2", "Other Industrial Metals & Mining": "b2",
+    "Specialty Industrial Machinery": "b4",
+    "Software - Infrastructure": "b5a", "Software - Application": "b5a", "Internet Content & Information": "b5a",
+    "Semiconductors": "b5b", "Semiconductor Equipment & Materials": "b5b", "Electronic Components": "b5b",
+    "Computer Hardware": "b5b", "Communication Equipment": "b5b",
+    "Aerospace & Defense": "def",
+}
+WIDE_MCAP_MIN_USD = 2e9            # en dessous : micro-caps, bruit
+WIDE_EM_MCAP_MIN_USD = 10e9        # émergents (Asie hors Japon) : les grandes seulement, j'y suis par l'ETF
+EM_COUNTRIES = {"Hong Kong", "Taïwan", "Corée", "Chine", "Inde", "Brésil", "Mexique", "Indonésie", "Thaïlande"}
+
+
+_WSTOP = {"INC", "CORP", "CORPORATION", "CO", "LTD", "PLC", "SA", "SE", "NV", "AG", "HOLDINGS", "HOLDING", "GROUP",
+          "THE", "COMPANY", "LIMITED", "CLASS", "A", "B", "KGAA", "SPA", "S", "P", "N", "V"}
+def _wkey(s):
+    return " ".join(w for w in _NOISE.sub(" ", (s.get("name") or "").upper()).split() if w not in _WSTOP)
+
+
+def wide_universe(fidx, rows, socle, cands, selected, refusals, gates, rel, fcf_margin, cval, mc_books):
+    conv = _load("convictions.json")
+    tb, lines = conv.get("theme_bucket", {}), conv.get("lines", {})
+    cby = {(c["ticker"], c["region"]): c for c in cands}
+    sel = {(c["ticker"], c["region"]) for c in selected}
+    # US + Europe déjà dédupliqués (hors socle) ; on rajoute le socle, Milan/nordiques et l'Asie
+    seen = {(s["ticker"], s["_region"]) for s in rows}
+    extra = []
+    for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json"), ("Asie", "stocks_asia.json")):
+        for s in _load(fn).get("stocks", []):
+            if s.get("ticker") and (s["ticker"], reg) not in seen:
+                s["_region"] = reg; extra.append(s)
+    held_keys = {(c["ticker"], c["region"]) for c in selected}
+    def is_mine(s):                       # même symbole ≠ même société (SU = Schneider à Paris, Suncor à New York)
+        ln = lines.get(s["ticker"])
+        if not ln or s["_region"] == "Asie": return False
+        if (s["ticker"], s["_region"]) in held_keys: return True
+        first = _NOISE.sub(" ", (ln.get("name") or "").upper()).split()
+        return bool(first) and first[0] in (s.get("name") or "").upper()
+    groups = defaultdict(list)
+    for s in rows + extra:
+        groups[_wkey(s)].append(s)
+    ent = [max(g, key=lambda s: (is_mine(s), s["_region"] != "Asie" and (s.get("data_mic") or "") not in INACCESSIBLE_MICS,
+                                 _num(s.get("perf_1y")) is not None, _adv_usd(s) or 0)) for g in groups.values()]
+    out = []
+    for s in ent:
+        reg, ctry = s["_region"], s.get("country") or ""
+        key = (s["ticker"].upper(), reg, ctry.lower())
+        f = fidx.get(key)
+        held = is_mine(s)
+        b = lines[s["ticker"]].get("bucket") if held else None
+        b = b or (tb.get(f["theme"]) if f else None)
+        if reg == "Asie":                 # Asie : émergents (par l'ETF) ou Japon pour les robots seulement
+            b = b or ("b3" if ctry in EM_COUNTRIES else "b4" if ctry == "Japon" and WIDE_INDUSTRY.get(s.get("industry")) == "b4" else None)
+        else:
+            b = b or WIDE_INDUSTRY.get(s.get("industry"))
+        if not b:
+            continue
+        mc = _num(s.get("market_cap")); fx = FX_TO_USD.get(s.get("data_currency") or ("USD" if reg == "US" else None))
+        mcu = mc * fx if (mc and fx) else None
+        if not held and (mcu is None or mcu < (WIDE_EM_MCAP_MIN_USD if b == "b3" else WIDE_MCAP_MIN_USD)):
+            continue
+        young = (_num(s.get("history_days")) or 0) < 260      # cotée depuis moins d'un an : la « perf 1 an » n'en est pas une
+        if (_num(s.get("perf_1y")) is None or young or _num(s.get("perf_1y")) > 1500) and not held:   # > +1 500 % : erreur de cours
+            continue
+        c = cby.get((s["ticker"], reg))
+        if c:
+            g, r, fm, est = list(c["gates_failed"]), c["rel"], c["fcf_margin"], False
+        else:
+            if "_ev_ebit" not in s:
+                cv = cval(s); m, ebit = mc_books(s, cv), cv.get("operating_income")
+                debt, cash = cv.get("total_debt"), cv.get("cash_and_st_investments") or 0
+                s["_ev_ebit"] = ((m + debt - cash) / ebit) if (m and isinstance(ebit, (int, float)) and ebit > 0 and isinstance(debt, (int, float))) else None
+            g, r = gates(s), rel(s)
+            fm, _ = fcf_margin(s); est = False
+            if fm is None:            # flux de trésorerie pas en cache (plafonné aux candidats) → estimation FCF TTM / CA
+                rev = (cval(s).get("yearly_revenue") or [None])[0]; ft = _num(s.get("fcf_ttm"))
+                if ft is not None and isinstance(rev, (int, float)) and rev > 0:
+                    fm, est = 100.0 * ft / rev, True
+                    g = [x for x in g if not x.startswith("marge FCF")] + ([f"marge FCF {fm:.1f} %"] if fm < FCF_MARGIN_MIN else [])
+        if reg == "Asie" or (s.get("data_mic") or "") in INACCESSIBLE_MICS:
+            g = ["place absente de Trading 212"] + g
+        st = ("etf" if reg == "Asie" and b == "b3" else "mine" if held else "model" if (s["ticker"], reg) in sel else
+              "refused" if s["ticker"] in refusals else
+              ("pass_maillon" if f else "pass_offradar") if not g else "blocked")
+        if (s["ticker"], reg) in socle and st not in ("mine", "model"):
+            st = "socle"
+        out.append({"t": s["ticker"], "n": s.get("name"), "reg": reg, "ctry": ctry, "ind": s.get("industry"), "b": b,
+                    "mail": f["label"] if f else None, "st": st,
+                    "p1y": _num(s.get("perf_1y")), "ytd": _num(s.get("perf_ytd")), "p3y": _num(s.get("perf_3y")),
+                    "vol": _num(s.get("volatility_3y")), "mcap": round(mcu / 1e9, 1) if mcu else None,
+                    "rel": round(r, 2) if r is not None else None, "fcf": round(fm, 1) if fm is not None else None, "fcf_est": est,
+                    "nd": _num(s.get("net_debt_to_ebit")), "roic": _num(s.get("roic_avg_3y")), "dur": s.get("durability_grade"),
+                    "why": (refusals.get(s["ticker"]) or {}).get("reason") if st == "refused" else None, "g": g})
+    out.sort(key=lambda x: (x["b"], -(x["p1y"] if x["p1y"] is not None else -999)))
+    return {"generated": date.today().isoformat(), "mcap_min_bn": WIDE_MCAP_MIN_USD / 1e9,
+            "em_mcap_min_bn": WIDE_EM_MCAP_MIN_USD / 1e9, "industries": WIDE_INDUSTRY, "rows": out}
 
 
 def inject_portfolio(pf):
@@ -458,6 +565,8 @@ if __name__ == "__main__":
     if DRY:
         print("🔎 CONVICTION_DRY : rien n'est écrit.")
     else:
+        with open(UNIVERSE_FILE, "w", encoding="utf-8") as f:
+            json.dump(pf.pop("_universe"), f, ensure_ascii=False, separators=(",", ":"), default=str)
         with open(OUT_FILE, "w", encoding="utf-8") as f:
             json.dump(pf, f, ensure_ascii=False, indent=1, default=str)
         print(f"✅ écrit → {OUT_FILE}")
