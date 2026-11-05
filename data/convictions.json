@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-30",
+  "version": "2026-11-05",
   "note": "Hiérarchie de convictions sur le TOTAL des deux portefeuilles (Conviction + ETF thématique). Cibles en % uniquement : aucun montant réel ici (dépôt public). Les montants viennent des relevés importés dans le navigateur, jamais committés.",
   "meta": "La rivalité avec la Chine force l'Occident à dépenser pour reconstruire ses propres chaînes : réseau, énergie, défense, semi-conducteurs. Ces dépenses sont les revenus des sociétés détenues. Réserve : ce sont des dépenses d'investissement ; si les taux ou les budgets les freinent, tout ralentit en même temps.",
   "buckets": [
@@ -333,5 +333,47 @@
     "WDEF": "EUDF",
     "COPX": "COPG",
     "SGLN.AS": "SGLN"
-  }
+  },
+  "decisions": {
+    "LEU": {
+      "v": "non",
+      "why": "l'ETF uranium suffit (décision du 30/10)"
+    },
+    "RHM": {
+      "v": "non",
+      "why": "doublon de l'ETF défense (décision du 30/10)"
+    },
+    "VRT": {
+      "v": "remplacement",
+      "why": "⑤b est gelée : seulement à la place d'une ligne, avec preuve d'exposition (TE ou Amphenol à sourcer)"
+    },
+    "LRCX": {
+      "v": "non",
+      "why": "⑤b est gelée, et KLA tient déjà ce maillon : pas de sortie sans preuve"
+    },
+    "ETN": {
+      "v": "déjà",
+      "why": "entrée le 02/11 ; preuve d'exposition à sourcer avant le 15/12"
+    }
+  },
+  "exit_rules": {
+    "data": "trou de collecte : pas une preuve, la ligne reste et la collecte doit être réparée",
+    "price": "au-delà de 2,5× : on garde tant que la règle votée n'est pas franchie (> 3,5×, ou > 2,5× deux vagues de suite, moitié d'abord)",
+    "slot": "remplacée par un autre maillon sans défaut de la ligne : pas une preuve, elle reste",
+    "health": "filtre de santé cassé : sortie à la vague, à vérifier sur les comptes"
+  },
+  "etf_pending": [
+    {
+      "b": "b1",
+      "what": "ETF réseau pour ① : comparer Xtrackers Electrification & Smart Grid, VanEck Electrification & Power Infrastructure, Global X US Electrification",
+      "rule": "part datacenter ≤ 40 %, sinon ① reste avec Eaton seul",
+      "status": "comparatif à faire avant le 15/12"
+    },
+    {
+      "b": "b4",
+      "what": "Robots : 5 % réservés, pris sur le lest",
+      "rule": "entrée à la vague qui suit la thèse écrite (composants, pas assembleurs)",
+      "status": "thèse à écrire"
+    }
+  ]
 }
