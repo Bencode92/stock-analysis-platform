@@ -31,7 +31,7 @@ class PortfolioManagerV3 {
       // socle : piloté par son modèle, à part des convictions
       const wave = await this.fetchJSON(['data/wave_preview.json', './data/wave_preview.json']);
       const SH = new Set(((wave && wave.socle && wave.socle.holdings) || []).map(h => h.t));
-      const sp = pies.filter(p => !window.ConvCalc.isPiloted(conv, p) && (/socle/i.test(p.pie) || p.lines.filter(l => SH.has(l.t)).length * 2 >= p.lines.length))
+      const sp = pies.filter(p => !window.ConvCalc.isPiloted(conv, p) && (p.role ? p.role === 'socle' : /socle/i.test(p.pie) || p.lines.filter(l => SH.has(l.t)).length * 2 >= p.lines.length))
         .sort((a, b) => b.lines.filter(l => SH.has(l.t)).length - a.lines.filter(l => SH.has(l.t)).length)[0];
       this.mySocle = sp ? { pie: sp.pie, date: sp.date, lines: sp.lines, wave: wave && wave.socle, generated: wave && wave.generated } : null;
       const C = window.ConvCalc.compute(conv, pies); if (!C) return;

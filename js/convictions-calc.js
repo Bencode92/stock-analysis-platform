@@ -35,7 +35,19 @@
 
   // Pilotés (cibles, plafonds, versements) : les portefeuilles dont au moins la moitié des lignes sont dans convictions.json.
   // Les autres (socle, suivi…) sont gardés et analysés à part : ils ne faussent ni les écarts ni les versements.
+  const ROLES = [{ k: "convictions", l: "Actions convictions" }, { k: "thematique", l: "Thématique" }, { k: "socle", l: "Actions socle" }, { k: "track", l: "Track (lié à la banque)" }];
+  function guessRole(CONV, p) {
+    const n = String(p.pie || "");
+    if (/socle/i.test(n)) return "socle";
+    if (/track|banque/i.test(n)) return "track";
+    if (/th[eé]mat/i.test(n)) return "thematique";
+    if (/convic/i.test(n)) return "convictions";
+    const c = {}; p.lines.forEach(l => { const m = CONV.lines[l.t]; if (m && m.pie) c[m.pie] = (c[m.pie] || 0) + 1; });
+    const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
+    return top && top[1] * 2 >= p.lines.length ? (top[0] === "etf" ? "thematique" : "convictions") : "track";
+  }
   function isPiloted(CONV, p) {
+    if (p.role) return p.role === "convictions" || p.role === "thematique";   // choisi à l'import : fait foi
     return p.lines.length > 0 && p.lines.filter(l => CONV.lines[l.t]).length * 2 >= p.lines.length;
   }
   function pilotPies(CONV, pies) { return pies.filter(p => isPiloted(CONV, p)); }
@@ -66,11 +78,12 @@
         let m = CONV.lines[l.t] || null;
         // hors pilotés, le symbole ne suffit pas : même nom exigé
         if (m && !piloted && l.name && !nameWords(l.name).some(w => nameWords(m.name).includes(w))) m = null;
-        const row = findRow(rows, l, m), bucket = m ? m.bucket : row ? row.b : null;
-        return { ...l, m, row, bucket, estimated: !m && !!row, ai: m ? m.ai : bucket ? aiSum[bucket] / aiN[bucket] || 0 : 0, weight: V ? 100 * l.value / V : 0,
+        const row = findRow(rows, l, m), mapped = !m && !row ? (CONV.etf_map || {})[l.t] || null : null;
+        const bucket = m ? m.bucket : row ? row.b : mapped ? mapped.b : null;
+        return { ...l, m, row, bucket, estimated: !m && (!!row || !!mapped), ai: m ? m.ai : mapped ? mapped.ai : bucket ? aiSum[bucket] / aiN[bucket] || 0 : 0, weight: V ? 100 * l.value / V : 0,
                  res: l.invested > 0 ? 100 * (l.value / l.invested - 1) : null };
       }).sort((a, b) => b.value - a.value);
-      return { pie: p.pie, date: p.date, piloted, value: V, invested: I, res: I > 0 ? 100 * (V / I - 1) : null, share: T ? 100 * V / T : 0, lines };
+      return { pie: p.pie, date: p.date, role: p.role || null, piloted, value: V, invested: I, res: I > 0 ? 100 * (V / I - 1) : null, share: T ? 100 * V / T : 0, lines };
     });
     const sumBy = list => { const o = {}; list.forEach(p => p.lines.forEach(l => { const k = l.bucket || "?"; o[k] = (o[k] || 0) + l.value; })); return o; };
     const pil = P.filter(x => x.piloted), TP = pil.reduce((s, x) => s + x.value, 0);
@@ -125,5 +138,5 @@
     return out;
   }
 
-  root.ConvCalc = { KEY, csvRows, parseStatement, loadPies, compute, pieTargets, isPiloted, pilotPies, overview };
+  root.ConvCalc = { KEY, csvRows, parseStatement, loadPies, compute, pieTargets, isPiloted, pilotPies, overview, ROLES, guessRole };
 })(typeof window !== "undefined" ? window : globalThis);

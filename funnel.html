@@ -386,6 +386,8 @@
   .cv-pies{margin:12px 0} .cv-pies>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--accent2);margin-bottom:8px}
   .cv-uni .cv-tbl table{min-width:1080px}
   .cv-uni td,.cv-uni th{padding:5px 8px}
+  .cv-role{font-size:12px;padding:3px 5px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--surface);color:var(--ink);max-width:170px}
+  #cv-stage select{font-size:12.5px;padding:4px 6px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
   .cv-grp td{background:var(--surface2);font-weight:600;font-size:12px;color:var(--ink)}
   .cv-ctx{color:var(--neutral)}
   .cv-why{color:var(--bad);font-size:11.5px;max-width:220px}
@@ -821,14 +823,19 @@ function convPortfoliosHTML(st){
   const sg=v=>v==null||!isFinite(v)?"—":(v>0?"+":"")+pc(v);
   const cl=v=>v==null?"":v<0?"b":"g";
   const hist=(st.hist||[]), SH=WAVE&&WAVE.socle?WAVE.socle.holdings:[];
-  const isSocle=p=>!p.piloted&&(/socle/i.test(p.pie)||(SH.length&&p.lines.filter(l=>SH.some(h=>h.t===l.t)).length*2>=p.lines.length&&p.lines.length>1));
-  const rows=O.pies.map(p=>{const h=hist.filter(x=>x.pie===p.pie&&x.invested>0).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const isSocle=p=>p.role==="socle";
+  const roleSel=p=>`<select class="cv-role" data-pie="${esc(p.pie)}">${ConvCalc.ROLES.map(r=>`<option value="${r.k}"${r.k===p.role?" selected":""}>${esc(r.l)}</option>`).join("")}</select>`;
+  const pilot=p=>p.role==="socle"?'<span class="cv-sub g">modèle socle</span>':p.piloted?'<span class="cv-sub g">mes convictions</span>':'<span class="cv-sub">suivi, sans cible</span>';
+  const pieRow=p=>{const h=hist.filter(x=>x.pie===p.pie&&x.invested>0).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     return `<tr><td><b>${esc(p.pie)}</b>${h.length>1?`<span class="cv-sub">résultat par relevé : ${h.slice(-5).map(x=>`${String(x.date).slice(8,10)}/${String(x.date).slice(5,7)} ${sg(100*(x.value/x.invested-1))}`).join(" · ")}</span>`:""}</td>
-    <td>${p.piloted?'<span class="g">piloté · mes convictions</span>':isSocle(p)?'<span class="g">piloté · modèle socle</span>':'<span class="mut">suivi</span>'}</td><td class="n">${p.date?p.date.slice(8,10)+"/"+p.date.slice(5,7):"—"}</td><td class="n">${p.lines.length}</td>
+    <td>${roleSel(p)}${pilot(p)}</td><td class="n">${p.date?p.date.slice(8,10)+"/"+p.date.slice(5,7):"—"}</td><td class="n">${p.lines.length}</td>
     <td class="n">${eur(p.value)}</td><td class="n">${eur(p.invested)}</td><td class="n"><b class="${cl(p.res)}">${sg(p.res)}</b></td><td class="n">${pc(p.share,0)}</td>
-    <td>${p.lines[0]?`${esc(p.lines[0].t)} <span class="mut">${pc(p.lines[0].weight,0)}</span>`:"—"}</td></tr>`;}).join("");
+    <td>${p.lines[0]?`${esc(p.lines[0].t)} <span class="mut">${pc(p.lines[0].weight,0)}</span>`:"—"}</td></tr>`;};
+  const rows=ConvCalc.ROLES.map(r=>{const L=O.pies.filter(p=>p.role===r.k);
+    return L.length?L.map(pieRow).join(""):`<tr><td colspan="9"><b>${esc(r.l)}</b> <span class="w">· à importer</span></td></tr>`;}).join("");
+  const nIn=ConvCalc.ROLES.filter(r=>O.pies.some(p=>p.role===r.k)).length;
   const TI=O.pies.reduce((s,p)=>s+p.invested,0), tres=TI>0?100*(O.T/TI-1):null;
-  const expo=[...CONV.buckets.map(b=>({k:b.key,l:b.label,t:b.target})),{k:"?",l:"Hors de mes convictions ou non classé",t:null}].filter(x=>x.t>0||O.byAll[x.k]).map(x=>
+  const expo=[...CONV.buckets.map(b=>({k:b.key,l:b.label,t:b.target})),{k:"large",l:"Marché large (indices)",t:null},{k:"?",l:"Hors de mes convictions ou non classé",t:null}].filter(x=>x.t>0||O.byAll[x.k]).map(x=>
     `<tr><td>${esc(x.l)}</td><td class="n">${O.TP?pc(100*(O.byPilot[x.k]||0)/O.TP):"—"}</td><td class="n"><b>${pc(100*(O.byAll[x.k]||0)/O.T)}</b></td><td class="n">${x.t!=null?x.t+" %":"—"}</td></tr>`).join("");
   const capAI=(CONV.caps.find(c=>c.key==="ai")||{}).limit;
   const dup=O.dupes.length?`<div class="cv-h">Mêmes lignes dans plusieurs portefeuilles</div><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Portefeuilles</th><th class="n">Part du total</th></tr></thead><tbody>${O.dupes.map(d=>`<tr><td><b>${esc(d.t)}</b> <span class="mut">${esc(d.name)}</span></td><td>${d.pies.map(esc).join(" · ")}</td><td class="n ${d.share>CONV.single_stock_cap?"w":""}">${pc(d.share)}</td></tr>`).join("")}</tbody></table></div>`:"";
@@ -843,11 +850,11 @@ function convPortfoliosHTML(st){
   }
   const details=O.pies.map(p=>`<details class="cv-pies"><summary>${esc(p.pie)} · ${p.lines.length} lignes</summary><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Conviction</th><th class="n">Poids</th><th class="n">Valeur</th><th class="n">Mon résultat</th><th class="n">Depuis le ${SD}</th><th>Filtres</th></tr></thead><tbody>${p.lines.map(l=>{const r=l.row, g=r?(r.g||[]).join(" · "):"";
     return `<tr><td><b>${esc(l.t)}</b> <span class="mut">${esc(l.m?l.m.name:l.name)}</span></td><td>${l.bucket?esc(BL[l.bucket]||l.bucket)+(l.estimated?' <span class="mut">(par son secteur)</span>':""):'<span class="mut">hors convictions</span>'}</td><td class="n">${pc(l.weight)}</td><td class="n">${eur(l.value)}</td><td class="n"><b class="${cl(l.res)}">${sg(l.res)}</b></td><td class="n">${r?sg(r.ps):"—"}</td><td>${!r?'<span class="mut">pas de ratios (ETF ou hors univers)</span>':g?`<span class="b">${esc(g)}</span>`:'<span class="g">passe</span>'}</td></tr>`;}).join("")}</tbody></table></div></details>`).join("");
-  return `<div class="cv-h">Mes ${O.pies.length} portefeuille${O.pies.length>1?"s":""}</div>
+  return `<div class="cv-h">Mes 4 portefeuilles · situation actuelle (${nIn} sur 4 importés)</div>
     <div class="cv-tbl"><table><thead><tr><th>Portefeuille</th><th>Rôle</th><th class="n">Relevé</th><th class="n">Lignes</th><th class="n">Valeur</th><th class="n">Versé</th><th class="n">Résultat</th><th class="n">Part</th><th>1re ligne</th></tr></thead><tbody>${rows}<tr class="cv-grp"><td colspan="4">Total</td><td class="n">${eur(O.T)}</td><td class="n">${eur(TI)}</td><td class="n">${sg(tres)}</td><td colspan="2"></td></tr></tbody></table></div>
     ${O.dates.length>1?`<p class="cv-warn">Relevés à des dates différentes (${O.dates.map(d=>d.slice(8,10)+"/"+d.slice(5,7)).join(", ")}) : réimporte-les le même jour pour un total exact.</p>`:""}
     <p class="cv-sub">Deux pilotages distincts. « Mes convictions » : cibles, plafonds et versements par conviction. « Modèle socle » : les 40 lignes et les poids du modèle, clé gelée, vagues trimestrielles. « Suivi » : gardé et analysé, sans cible.</p>
-    ${O.pies.some(p=>!p.piloted)?`<div class="cv-h">Vue d'ensemble, tous portefeuilles</div><div class="cv-tbl"><table><thead><tr><th>Conviction</th><th class="n">Mes convictions</th><th class="n">Tous</th><th class="n">Cible (convictions)</th></tr></thead><tbody>${expo}<tr class="cv-grp"><td>IA (estimation)</td><td class="n">${pc(O.aiPilot,0)}</td><td class="n ${O.aiAll>capAI?"b":""}">${pc(O.aiAll,0)}</td><td class="n">${capAI} %</td></tr></tbody></table></div><p class="cv-sub">Pour information, sans effet sur les versements. Une action hors de mes lignes est rangée par son secteur (estimation) ; un ETF inconnu reste « non classé », donc l'exposition IA sur « Tous » est un minimum.</p>`:""}
+    ${O.pies.some(p=>!p.piloted)?`<div class="cv-h">Vue d'ensemble, tous portefeuilles</div><div class="cv-tbl"><table><thead><tr><th>Conviction</th><th class="n">Mes convictions</th><th class="n">Tous</th><th class="n">Cible (convictions)</th></tr></thead><tbody>${expo}<tr class="cv-grp"><td>IA (estimation)</td><td class="n">${pc(O.aiPilot,0)}</td><td class="n ${O.aiAll>capAI?"b":""}">${pc(O.aiAll,0)}</td><td class="n">${capAI} %</td></tr></tbody></table></div><p class="cv-sub">Pour information, sans effet sur les versements. Une action hors de mes lignes est rangée par son secteur, un ETF du track par sa nature, avec une part IA estimée ; ce qui reste « non classé » compte pour zéro, donc l'exposition IA sur « Tous » est un minimum.</p>`:""}
     ${socleTbl}${dup}${details}`;
 }
 /* ── Décembre : ce qui bougerait dans chaque portefeuille, jugé par nos règles (data/wave_preview.json, lecture seule) ── */
@@ -859,7 +866,7 @@ function convWaveHTML(C,st){
   const tag=(c,t)=>`<span class="${c}">${esc(t)}</span>`;
   // socle : le relevé qui recoupe le plus le modèle
   const set=new Set(S.holdings.map(h=>h.t));
-  const mine=pies.map(p=>({p,n:p.lines.filter(l=>set.has(l.t)).length})).filter(x=>!ConvCalc.isPiloted(CONV,x.p)&&(/socle/i.test(x.p.pie)||(x.n*2>=x.p.lines.length&&x.n>0))).sort((a,b)=>b.n-a.n)[0];
+  const mine=pies.map(p=>({p,n:p.lines.filter(l=>set.has(l.t)).length})).filter(x=>x.p.role==="socle").sort((a,b)=>b.n-a.n)[0];
   const has=t=>mine?mine.p.lines.some(l=>l.t===t):null;
   const act=(t,inn)=>{const h=has(t); return h==null?'<span class="mut">importe ton relevé socle</span>':inn?(h?'<span class="mut">déjà en portefeuille</span>':'<span class="g">à ajouter en décembre</span>'):(h?'<span class="w">à sortir en décembre</span>':'<span class="mut">pas en portefeuille</span>');};
   const nm=L=>L.map(x=>esc(x.t)).join(", ")||"aucune";
@@ -900,9 +907,39 @@ function mktCell(syms){
   return (syms||[]).map(s=>{const m=MKT[s]; if(!m) return "";
     return `<span class="cv-mk" title="${esc(m.name)}"><b>${s}</b> ${m.ytd>0?"+":""}${Math.round(m.ytd)} %<span class="mut"> · 3 m ${m.m3>0?"+":""}${Math.round(m.m3)}</span></span>`;}).join("");
 }
+// Import en deux temps : je lis les fichiers, je choisis à quel portefeuille chacun correspond, puis j'intègre
+async function convStage(files){
+  const box=document.getElementById("cv-stage"); if(!box) return;
+  const items=[], errs=[], backups=[];
+  for(const file of files){try{
+    if(/\.json$/i.test(file.name)){const b=JSON.parse(await file.text()); if(!Array.isArray(b.pies)) throw new Error("sauvegarde illisible"); backups.push(b); continue;}
+    const p=parseStatement(await file.text(),file.name); const prev=(convState()||{pies:[]}).pies.find(x=>x.pie===p.pie);
+    p.role=(prev&&prev.role)||ConvCalc.guessRole(CONV,p); items.push(p);
+  }catch(e){errs.push(file.name+" : "+e.message);}}
+  const commit=()=>{
+    const s=convState()||{pies:[]}; s.hist=s.hist||[];
+    const log=p=>{const v=p.lines.reduce((a,l)=>a+l.value,0), i=p.lines.reduce((a,l)=>a+l.invested,0); s.hist=s.hist.filter(h=>!(h.pie===p.pie&&h.date===p.date)).concat({pie:p.pie,date:p.date,value:v,invested:i});};
+    s.pies.forEach(log);                 // relevés importés avant l'historique
+    backups.forEach(b=>{b.pies.forEach(p=>{s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);}); (b.hist||[]).forEach(h=>{s.hist=s.hist.filter(x=>!(x.pie===h.pie&&x.date===h.date)).concat(h);});});
+    items.forEach(p=>{log(p);
+      const cur=s.pies.find(x=>x.pie===p.pie);                 // plusieurs relevés d'un même portefeuille : le plus récent fait foi, les autres vont à l'historique
+      if(!(cur&&cur.date&&p.date&&cur.date>p.date)) s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);
+      else cur.role=p.role;});
+    lsSet(CONV_KEY,JSON.stringify(s)); convRender();
+  };
+  if(!items.length){ if(backups.length) commit(); box.innerHTML=errs.length?`<p class="cv-warn">${errs.map(esc).join("<br>")}</p>`:""; return; }
+  box.innerHTML=`<div class="cv-h">Rattacher chaque relevé à son portefeuille</div><div class="cv-tbl"><table><thead><tr><th>Relevé</th><th class="n">Date</th><th class="n">Lignes</th><th>C'est quel portefeuille ?</th></tr></thead><tbody>${items.map((p,i)=>`<tr><td><b>${esc(p.pie)}</b><span class="cv-sub">${esc(p.lines.slice(0,5).map(l=>l.t).join(", "))}${p.lines.length>5?"…":""}</span></td><td class="n">${p.date?p.date.slice(8,10)+"/"+p.date.slice(5,7):"—"}</td><td class="n">${p.lines.length}</td><td><select data-i="${i}">${ConvCalc.ROLES.map(r=>`<option value="${r.k}"${r.k===p.role?" selected":""}>${esc(r.l)}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>
+    ${errs.length?`<p class="cv-warn">Non lus : ${errs.map(esc).join(" · ")}</p>`:""}
+    <div class="cv-imp"><button id="cv-commit" class="cv-btn" type="button">Intégrer</button><button id="cv-cancel" class="cv-btn ghost" type="button">Annuler</button></div>`;
+  box.querySelectorAll("select").forEach(x=>x.addEventListener("change",()=>{items[+x.dataset.i].role=x.value;}));
+  box.querySelector("#cv-commit").onclick=commit;
+  box.querySelector("#cv-cancel").onclick=()=>{box.innerHTML="";};
+}
 function convRender(){
   const el=document.getElementById("conv"); if(!el||!CONV) return;
-  const st=convState(), pies=(st&&st.pies)||[], C=pies.length?convCompute(pies):null;
+  const st=convState(), pies=(st&&st.pies)||[];
+  pies.forEach(p=>{if(!p.role) p.role=ConvCalc.guessRole(CONV,p);});
+  const C=pies.length?convCompute(pies):null;
   const amt=+(lsGet(CONV_AMT)||0);
   const rows=CONV.buckets.map(b=>{
     const real=C?100*(C.V[b.key]||0)/C.T:null, gap=real==null?null:b.target-real;
@@ -942,6 +979,7 @@ function convRender(){
   el.innerHTML=`<details class="conv"${open?" open":""}><summary><span class="lab">Mes convictions</span>${C?`<span>Piloté ${eur(C.T)}</span><span>IA <b class="${C.ai>CONV.caps[0].limit?"b":""}">${pc(C.ai,0)}</b> / ${CONV.caps[0].limit}</span><span>Receveurs <b class="${C.rc>CONV.caps[1].limit?"b":""}">${pc(C.rc,0)}</b> / ${CONV.caps[1].limit}</span>`:`<span class="mut">cibles · importe tes relevés pour le réel</span>`}</summary>
     <p class="cv-meta">${esc(CONV.meta)}</p>
     <div class="cv-imp"><label class="cv-btn">Importer mes relevés (CSV)<input id="cv-file" type="file" accept=".csv,text/csv,.json" multiple hidden></label>${pies.length?`<button id="cv-save" class="cv-btn ghost" type="button">Sauvegarder (fichier)</button><button id="cv-clear" class="cv-btn ghost" type="button">Effacer</button>`:""}<span class="mut" id="cv-st">${pies.length?`${pies.map(p=>esc(p.pie)+(p.date?" du "+p.date.slice(8,10)+"/"+p.date.slice(5,7):"")).join(" · ")} · lus dans ce navigateur, jamais envoyés`:"Exporte tes portefeuilles depuis l'application, puis importe-les ici : ils restent dans ce navigateur, rien n'est envoyé."}</span></div>
+    <div id="cv-stage"></div>
     <div class="cv-tbl"><table><thead><tr><th>Conviction</th><th>Lignes</th><th class="n">Réel</th><th class="n">Cible</th><th class="n">Écart</th><th>Marché (depuis janv. · 3 mois)</th></tr></thead><tbody>${rows}</tbody></table></div>${unk}
     <div class="cv-gs">${gauges}</div>
     ${convPortfoliosHTML(st)}
@@ -955,22 +993,10 @@ function convRender(){
   </details>`;
   const d=el.querySelector("details.conv"); d.addEventListener("toggle",()=>lsSet(CONV_OPEN,d.open?"1":"0"));
   const f=el.querySelector("#cv-file");
-  f.addEventListener("change",async()=>{
-    const s=convState()||{pies:[]}, msg=[];
-    s.hist=s.hist||[];
-    const log=p=>{const v=p.lines.reduce((a,l)=>a+l.value,0), i=p.lines.reduce((a,l)=>a+l.invested,0); s.hist=s.hist.filter(h=>!(h.pie===p.pie&&h.date===p.date)).concat({pie:p.pie,date:p.date,value:v,invested:i});};
-    s.pies.forEach(log);                 // relevés importés avant l'historique
-    const err=[];
-    for(const file of f.files){try{
-      if(/\.json$/i.test(file.name)){const b=JSON.parse(await file.text()); if(!Array.isArray(b.pies)) throw new Error("sauvegarde illisible");
-        b.pies.forEach(p=>{s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);}); (b.hist||[]).forEach(h=>{s.hist=s.hist.filter(x=>!(x.pie===h.pie&&x.date===h.date)).concat(h);}); continue;}
-      const p=parseStatement(await file.text(),file.name);log(p);msg.push(p.pie);
-      const cur=s.pies.find(x=>x.pie===p.pie);                 // plusieurs relevés d'un même portefeuille : le plus récent fait foi, les autres vont à l'historique
-      if(!(cur&&cur.date&&p.date&&cur.date>p.date)) s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);
-    }catch(e){err.push(file.name+" : "+e.message);}}
-    lsSet(CONV_KEY,JSON.stringify(s)); convRender();
-    if(err.length){const m=document.getElementById("cv-st"); if(m) m.textContent=err.join(" · ");}
-  });
+  f.addEventListener("change",()=>{convStage([...f.files]);f.value="";});
+  el.querySelectorAll(".cv-role").forEach(x=>x.addEventListener("change",()=>{
+    const s=convState(); const p=s&&s.pies.find(y=>y.pie===x.dataset.pie); if(!p) return;
+    p.role=x.value; lsSet(CONV_KEY,JSON.stringify(s)); convRender();}));
   const c=el.querySelector("#cv-clear"); if(c) c.onclick=()=>{if(confirm("Effacer tous les relevés et leur historique de ce navigateur ?")){lsSet(CONV_KEY,null);convRender();}};
   const sv=el.querySelector("#cv-save"); if(sv) sv.onclick=()=>{const u=URL.createObjectURL(new Blob([lsGet(CONV_KEY)||"{}"],{type:"application/json"})), a=document.createElement("a"); a.href=u; a.download="mes-portefeuilles-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(u);};
   const a=el.querySelector("#cv-amt"); if(a) a.addEventListener("change",()=>{lsSet(CONV_AMT,a.value||null);convRender();});
