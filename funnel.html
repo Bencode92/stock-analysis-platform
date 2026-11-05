@@ -947,7 +947,9 @@ function convRender(){
     for(const file of f.files){try{
       if(/\.json$/i.test(file.name)){const b=JSON.parse(await file.text()); if(!Array.isArray(b.pies)) throw new Error("sauvegarde illisible");
         b.pies.forEach(p=>{s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);}); (b.hist||[]).forEach(h=>{s.hist=s.hist.filter(x=>!(x.pie===h.pie&&x.date===h.date)).concat(h);}); continue;}
-      const p=parseStatement(await file.text(),file.name);s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);log(p);msg.push(p.pie);
+      const p=parseStatement(await file.text(),file.name);log(p);msg.push(p.pie);
+      const cur=s.pies.find(x=>x.pie===p.pie);                 // plusieurs relevés d'un même portefeuille : le plus récent fait foi, les autres vont à l'historique
+      if(!(cur&&cur.date&&p.date&&cur.date>p.date)) s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);
     }catch(e){err.push(file.name+" : "+e.message);}}
     lsSet(CONV_KEY,JSON.stringify(s)); convRender();
     if(err.length){const m=document.getElementById("cv-st"); if(m) m.textContent=err.join(" · ");}
