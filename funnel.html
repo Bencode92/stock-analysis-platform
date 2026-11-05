@@ -388,6 +388,38 @@
   .cv-uni td,.cv-uni th{padding:5px 8px}
   .cv-role{font-size:12px;padding:3px 5px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--surface);color:var(--ink);max-width:170px}
   #cv-stage select{font-size:12.5px;padding:4px 6px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--surface);color:var(--ink)}
+  .cv-bar-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;border-bottom:1px solid var(--line);margin-top:4px;position:sticky;top:0;background:var(--surface);z-index:5;padding-top:4px}
+  .cv-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .cv-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 11px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+  .cv-tabs button:hover{color:var(--ink)} .cv-tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .cv-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-bottom:6px;font-size:12px}
+  .cv-tools .cv-btn{padding:4px 9px;font-size:12px}
+  .cv-num input{width:64px;font-family:var(--mono);font-size:12.5px;padding:3px 5px;border:1px solid var(--line2);border-radius:var(--r-s);text-align:right;background:var(--surface);color:var(--ink)}
+  #cv-pane{padding-top:14px;padding-bottom:14px}
+  .cv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-s);overflow:hidden}
+  .cv-kpi{background:var(--surface);padding:10px 13px;display:grid;gap:1px}
+  .cv-kpi span{font-size:11px;color:var(--muted)} .cv-kpi b{font-family:var(--mono);font-size:19px;font-weight:600;color:var(--ink);white-space:nowrap} .cv-kpi b.g{color:var(--good)} .cv-kpi b.b{color:var(--bad)} .cv-kpi b.w{color:var(--warn)}
+  .cv-kpi small{font-size:11px;color:var(--muted)} .cv-kpi small em{font-style:normal;font-weight:600;font-family:var(--mono)}
+  .cv-pfs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-top:10px}
+  .cv-pf{display:grid;grid-template-columns:1fr auto;gap:0 8px;align-items:baseline;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:9px 12px;font:inherit;color:inherit}
+  button.cv-pf{cursor:pointer} button.cv-pf:hover{border-color:var(--accent2)} .cv-pf.off{border-style:dashed}
+  .cv-pf span{grid-column:1/-1;font-size:12px;color:var(--muted)} .cv-pf b{font-family:var(--mono);font-size:15px} .cv-pf em{font-style:normal;font-family:var(--mono);font-size:13px;font-weight:600}
+  .cv-pf small{grid-column:1/-1;font-size:11px;color:var(--muted)} .cv-pf small.w{color:var(--warn)}
+  .cv-sec{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;font-weight:650;color:var(--ink);margin:20px 0 8px}
+  .cv-link{background:none;border:0;color:var(--accent2);font-size:12px;cursor:pointer;font-weight:500}
+  .cv-todo{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+  .cv-todo>div,.cv-box{border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;background:var(--surface)}
+  .cv-todo h4,.cv-box h4{display:flex;justify-content:space-between;gap:8px;margin:0 0 6px;font-size:12.5px;font-weight:600;color:var(--ink)} .cv-todo h4 span{font-family:var(--mono);color:var(--accent)}
+  .cv-mini{list-style:none;margin:0;padding:0;display:grid;gap:3px;font-size:12.5px}
+  .cv-mini li{display:flex;gap:6px;align-items:baseline} .cv-mini li .mut{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px} .cv-mini i{font-style:normal;font-family:var(--mono);margin-left:auto;white-space:nowrap}
+  .cv-alerts{margin:0;padding-left:15px;display:grid;gap:4px;font-size:12px;color:var(--ink2)} .cv-alerts .w{color:var(--warn)} .cv-alerts .mut{color:var(--ink2)}
+  .cv-main{min-width:820px} .cv-bars{width:24%;min-width:140px}
+  .cv-track{position:relative;height:9px;background:var(--surface2);border-radius:3px}
+  .cv-track span{position:absolute;inset:0 auto 0 0;background:var(--accent2);border-radius:3px} .cv-track span.over{background:var(--warn)}
+  .cv-track i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+  .cv-tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;background:var(--surface2);white-space:nowrap}
+  .cv-who{min-width:640px} .cv-who td{vertical-align:baseline}
+  @media(max-width:640px){.cv-kpi b{font-size:16px}.cv-tools{width:100%}.cv-kpi:last-child{grid-column:1/-1}}
   .cv-grp td{background:var(--surface2);font-weight:600;font-size:12px;color:var(--ink)}
   .cv-ctx{color:var(--neutral)}
   .cv-why{color:var(--bad);font-size:11.5px;max-width:220px}
@@ -715,7 +747,7 @@ function renderChain(sector,key){
 
 /* ── Mes convictions : cible (data/convictions.json) · réel (relevés CSV importés, restent dans le navigateur) · marché (markets/sectors.json) ── */
 let CONV=null, MKT={}, NEXTW=null, CEQ=null, FPERF={};
-const CONV_KEY="funnel-conv-import-v1", CONV_AMT="funnel-conv-weekly", CONV_OPEN="funnel-conv-open";
+const CONV_KEY="funnel-conv-import-v1", CONV_AMT="funnel-conv-weekly", CONV_OPEN="funnel-conv-open", CONV_TAB="funnel-conv-tab";
 const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
 const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -857,6 +889,19 @@ function convPortfoliosHTML(st){
     ${O.pies.some(p=>!p.piloted)?`<div class="cv-h">Vue d'ensemble, tous portefeuilles</div><div class="cv-tbl"><table><thead><tr><th>Conviction</th><th class="n">Mes convictions</th><th class="n">Tous</th><th class="n">Cible (convictions)</th></tr></thead><tbody>${expo}<tr class="cv-grp"><td>IA (estimation)</td><td class="n">${pc(O.aiPilot,0)}</td><td class="n ${O.aiAll>capAI?"b":""}">${pc(O.aiAll,0)}</td><td class="n">${capAI} %</td></tr></tbody></table></div><p class="cv-sub">Pour information, sans effet sur les versements. Une action hors de mes lignes est rangée par son secteur, un ETF du track par sa nature, avec une part IA estimée ; ce qui reste « non classé » compte pour zéro, donc l'exposition IA sur « Tous » est un minimum.</p>`:""}
     ${socleTbl}${dup}${details}`;
 }
+function convEnterVerdict(c,C){
+  const d=(CONV.decisions||{})[c.ticker], bk=(CONV.theme_bucket||{})[c.theme], b=CONV.buckets.find(x=>x.key===bk);
+  if(d) return {c:d.v==="non"?"mut":d.v==="déjà"?"g":"w",v:d.v,why:d.why};
+  if(CONV.lines[c.ticker]) return {c:"g",v:"déjà",why:""};
+  if(!b) return {c:"mut",v:"hors convictions",why:""};
+  if(b.frozen) return {c:"w",v:"remplacement",why:b.label+" est gelée"};
+  const g=C?b.target-100*(C.V[bk]||0)/C.T:null;
+  return g==null?{c:"mut",v:"à juger",why:"importe tes relevés"}:g>=2?{c:"g",v:"entrée possible",why:b.label+" sous sa cible"}:{c:"w",v:"attendre",why:b.label+" à sa cible"};
+}
+function convExitVerdict(x){
+  const g=x.g||[], k=g.some(y=>/trou/.test(y))?"data":!g.length?"slot":g.every(y=>/^prix/.test(y))?"price":"health";
+  return {k,health:k==="health",why:(CONV.exit_rules||{})[k]||""};
+}
 /* ── Décembre : ce qui bougerait dans chaque portefeuille, jugé par nos règles (data/wave_preview.json, lecture seule) ── */
 let WAVE=null, DIAG=null;
 function convWaveHTML(C,st){
@@ -890,11 +935,10 @@ function convWaveHTML(C,st){
     ${gap}${socleCtl}<p class="cv-sub">Le tableau montre la vague sans les trous de collecte (dernières données saines). La clé du socle est gelée jusqu'au 14/09/2027 : on regarde, on ne la retouche pas.</p>`;
   // conviction
   const gapOf=bk=>C&&bk?BB[bk].target-100*(C.V[bk]||0)/C.T:null;
-  const inR=V.enter.map(c=>{const d=D[c.ticker], bk=TB[c.theme], b=BB[bk], g=gapOf(bk);
-    const v=d?(d.v==="non"?tag("mut","non"):d.v==="déjà"?tag("g","déjà"):tag("w",d.v)):CONV.lines[c.ticker]?tag("g","déjà"):!b?tag("mut","hors convictions"):b.frozen?tag("w","remplacement"):g==null?tag("mut","importe tes relevés"):g>=2?tag("g","entrée possible"):tag("w","conviction à sa cible");
-    return `<tr><td><b>${esc(c.ticker)}</b> <span class="mut">${esc(c.name||"")}</span><span class="cv-sub">${esc(b?b.label:"")} · ${esc(c.maillon_label||"")}</span></td><td>${tag("g","passe")}</td><td class="n">${c.rel!=null?c.rel.toFixed(2).replace(".",",")+"×":"—"}</td><td>${v}</td><td>${esc(d?d.why:"")}</td></tr>`;}).join("");
-  const exR=V.exit.map(x=>{const g=x.g||[], k=g.some(y=>/trou/.test(y))?"data":!g.length?"slot":g.every(y=>/^prix/.test(y))?"price":"health", L=CONV.lines[x.t];
-    return `<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(L?L.name:"")}</span></td><td>${tag(k==="health"?"b":"w",k==="health"?"sortie":"le moteur la sort")}</td><td class="n">—</td><td>${k==="health"?tag("b","à vérifier"):tag("g","reste")}</td><td>${esc(X[k]||"")}${g.length?` <span class="mut">(${esc(g.join(" · "))})</span>`:""}</td></tr>`;}).join("");
+  const inR=V.enter.map(c=>{const r=convEnterVerdict(c,C), b=BB[TB[c.theme]];
+    return `<tr><td><b>${esc(c.ticker)}</b> <span class="mut">${esc(c.name||"")}</span><span class="cv-sub">${esc(b?b.label:"")} · ${esc(c.maillon_label||"")}</span></td><td>${tag("g","passe")}</td><td class="n">${c.rel!=null?c.rel.toFixed(2).replace(".",",")+"×":"—"}</td><td>${tag(r.c,r.v)}</td><td>${esc(r.why)}</td></tr>`;}).join("");
+  const exR=V.exit.map(x=>{const r=convExitVerdict(x), L=CONV.lines[x.t], g=x.g||[];
+    return `<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(L?L.name:"")}</span></td><td>${tag(r.health?"b":"w",r.health?"sortie":"le moteur la sort")}</td><td class="n">—</td><td>${r.health?tag("b","à vérifier"):tag("g","reste")}</td><td>${esc(r.why)}${g.length?` <span class="mut">(${esc(g.join(" · "))})</span>`:""}</td></tr>`;}).join("");
   const conv=`<div class="cv-h">Actions conviction · vague du ${fd(V.wave_min)}</div><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Moteur</th><th class="n">Prix rel.</th><th>Notre décision</th><th>Pourquoi</th></tr></thead><tbody>${inR+exR}</tbody></table></div>
     <p class="cv-sub">Le moteur applique les filtres ; la décision applique ce qu'on a voté : ⑤b gelée, argent neuf seulement, sorties sur preuve. Le maintien en cas de trou de données est en place ; la règle de prix et celle du remplacement restent à coder avant le ${fd(V.wave_min)}.</p>`;
   // thématique
@@ -939,64 +983,116 @@ function convRender(){
   const el=document.getElementById("conv"); if(!el||!CONV) return;
   const st=convState(), pies=(st&&st.pies)||[];
   pies.forEach(p=>{if(!p.role) p.role=ConvCalc.guessRole(CONV,p);});
-  const C=pies.length?convCompute(pies):null;
-  const amt=+(lsGet(CONV_AMT)||0);
-  const rows=CONV.buckets.map(b=>{
-    const real=C?100*(C.V[b.key]||0)/C.T:null, gap=real==null?null:b.target-real;
-    const held=C?C.all.filter(l=>l.m&&l.m.bucket===b.key).map(l=>esc(l.m.name)+(l.fresh?' <b class="g">(nouvelle)</b>':'')).join(", "):Object.entries(CONV.lines).filter(([,m])=>m.bucket===b.key).map(([,m])=>esc(m.name)).join(", ");
-    return `<tr><td><b>${esc(b.label)}</b><span class="cv-sub">${esc(b.sub)}</span>${b.target_note?`<span class="cv-sub">${esc(b.target_note)}</span>`:""}</td><td class="cv-held">${held||'<span class="mut">rien</span>'}</td><td class="n">${pc(real)}</td><td class="n"><b>${b.target} %</b></td><td class="n ${gap==null?"":Math.abs(gap)<2?"mut":gap>0?"g":"b"}">${gap==null?"—":(gap>0?"+":"")+pc(gap)}</td><td class="cv-mkt">${mktCell(b.proxies)}</td></tr>`;
-  }).join("");
-  const gauge=(c,val)=>{const over=val!=null&&val>c.limit, w=val==null?0:Math.min(100,val);
-    return `<div class="cv-g"><div class="cv-gh"><b>${esc(c.label)}</b><span class="${over?"b":val!=null&&val>c.limit-3?"w":"g"}">${val==null?"—":pc(val,0)} / ${c.limit} %</span></div><div class="cv-bar"><span style="width:${w}%" class="${over?"bg-b":"bg-n"}"></span><i style="left:${c.limit}%"></i></div><div class="cv-sub">${esc(c.how)}</div></div>`;};
-  const gauges=CONV.caps.map(c=>gauge(c,C?(c.key==="ai"?C.ai:C.rc):null)).join("");
-  let alloc="";
+  const C=pies.length?convCompute(pies):null, O=pies.length?ConvCalc.overview(CONV,pies,UNIV&&UNIV.rows):null;
+  const amt=+(lsGet(CONV_AMT)||0), sg=v=>v==null||!isFinite(v)?"—":(v>0?"+":"")+pc(v), cl=v=>v==null?"":v<0?"b":"g";
+  const fd=d=>d?d.slice(8,10)+"/"+d.slice(5,7):"—", byB={}, byP={}, real={};
+  if(C) C.all.forEach(l=>{const k=l.m?l.m.bucket:"?"; if(l.need>0){byB[k]=(byB[k]||0)+l.need; byP[l.pie]=(byP[l.pie]||0)+l.need;} if(l.invested>0){real[k]=real[k]||{v:0,i:0}; real[k].v+=l.value; real[k].i+=l.invested;}});
+  const share=x=>C&&C.need>0?x/C.need:0, money=x=>amt>0?eur(amt*share(x)):pc(100*share(x),0), weeks=C&&amt>0?Math.max(1,Math.round(C.need/amt)):null;
+  const med=a=>{const v=a.filter(x=>x!=null).sort((x,y)=>x-y); if(!v.length) return null; const m=v.length>>1; return v.length%2?v[m]:(v[m-1]+v[m])/2;};
+  // ── chiffres clés ──
+  const TI=O?O.pies.reduce((a,p)=>a+p.invested,0):0, tres=TI>0?100*(O.T/TI-1):null;
+  const kpi=(l,v,sub,c="")=>`<div class="cv-kpi"><span>${l}</span><b class="${c}">${v}</b><small>${sub||""}</small></div>`;
+  const capC=(v,lim)=>v==null?"":v>lim?"b":v>lim-3?"w":"";
+  const daysTo=d=>Math.max(0,Math.ceil((new Date(d)-new Date())/864e5));
+  const kpis=`<div class="cv-kpis">${kpi("Total",O?eur(O.T):"—",O?`<em class="${cl(tres)}">${sg(tres)}</em> sur ${eur(TI)} versés`:"importe tes relevés")}
+    ${kpi("Cette semaine",amt>0?eur(amt):"—",C?(weeks?`cibles dans ≈ ${weeks} semaines`:"indique ton montant"):"")}
+    ${kpi("IA",C?pc(C.ai,0):"—",`plafond ${CONV.caps[0].limit} %`,capC(C&&C.ai,CONV.caps[0].limit))}
+    ${kpi("Receveurs",C?pc(C.rc,0):"—",`plafond ${CONV.caps[1].limit} %`,capC(C&&C.rc,CONV.caps[1].limit))}
+    ${kpi("Prochaine vague",WAVE?fd(WAVE.socle.wave_min):"—",WAVE?`dans ${daysTo(WAVE.socle.wave_min)} jours`:"")}</div>`;
+  // ── les 4 portefeuilles ──
+  const cards=ConvCalc.ROLES.map(r=>{const p=O&&O.pies.find(x=>x.role===r.k);
+    return p?`<button class="cv-pf" type="button" data-go="pf"><span>${esc(r.l)}</span><b>${eur(p.value)}</b><em class="${cl(p.res)}">${sg(p.res)}</em><small>${pc(p.share,0)} du total · relevé ${fd(p.date)}</small></button>`
+      :`<label class="cv-pf off"><span>${esc(r.l)}</span><b>—</b><small class="w">à importer</small></label>`;}).join("");
+  // ── à faire ──
+  let todo="";
   if(C){
-    const byB={}, byP={}; C.all.forEach(l=>{if(l.need>0){const k=l.m?l.m.bucket:"?"; byB[k]=(byB[k]||0)+l.need; byP[l.pie]=(byP[l.pie]||0)+l.need;}});
-    const share=x=>C.need>0?x/C.need:0, weeks=amt>0?Math.max(1,Math.round(C.need/amt)):null;
-    const bl=CONV.buckets.map(b=>`<tr><td>${esc(b.label)}</td><td class="n">${amt>0?eur(amt*share(byB[b.key]||0)):pc(100*share(byB[b.key]||0),0)}</td></tr>`).join("");
-    const pl=Object.keys(byP).map(p=>`<tr><td>${esc(p)}</td><td class="n"><b>${amt>0?eur(amt*share(byP[p])):pc(100*share(byP[p]),0)}</b></td></tr>`).join("");
+    const need=C.all.filter(l=>l.need>0).sort((a,b)=>b.need-a.need);
+    const line=l=>`<li><b>${esc(l.t)}</b> <span class="mut">${esc(l.m?l.m.name:l.name)}</span><i>${money(l.need)}</i></li>`;
+    const group=p=>need.filter(l=>l.pie===p);
+    todo=Object.keys(byP).map(p=>`<div><h4>${esc(p)} <span>${money(byP[p])}</span></h4><ul class="cv-mini">${group(p).slice(0,5).map(line).join("")}</ul>${group(p).length>5?`<small class="mut">+ ${group(p).length-5} autre${group(p).length>6?"s":""} ligne${group(p).length>6?"s":""}</small>`:""}</div>`).join("");
+  }
+  const al=[];
+  if(O){
+    if(O.dates.length>1) al.push(["w",`Relevés à des dates différentes (${O.dates.map(fd).join(", ")}) : total approximatif.`]);
+    ConvCalc.ROLES.filter(r=>!O.pies.some(p=>p.role===r.k)).forEach(r=>al.push(["w",`${r.l} : relevé à importer.`]));
+  }
+  if(WAVE){const h=Object.keys(WAVE.socle.holes||{}); if(h.length) al.push(["mut",`Données manquantes, lignes protégées : ${h.map(esc).join(", ")}.`]);}
+  (CONV.etf_pending||[]).forEach(e=>{const b=CONV.buckets.find(x=>x.key===e.b); al.push(["mut",`${esc(b?b.label:"")} : ${esc(e.status)}.`]);});
+  al.push(["mut","Ne jamais lancer le « rééquilibrage » de l'application : il vend."]);
+  // ── convictions : réel, cible, écart, versement, performance ──
+  const uni=UNIV&&UNIV.rows||[], SD=UNIV&&UNIV.start?fd(UNIV.start):"départ";
+  const scale=Math.max(30,...CONV.buckets.map(b=>b.target),...(C?CONV.buckets.map(b=>100*(C.V[b.key]||0)/C.T):[0]));
+  const conv=CONV.buckets.map(b=>{
+    const R=C?100*(C.V[b.key]||0)/C.T:null, gap=R==null?null:b.target-R, rr=real[b.key], res=rr?100*(rr.v/rr.i-1):null, mk=med(uni.filter(r=>r.b===b.key).map(r=>r.ps));
+    return `<tr><td><b>${esc(b.label)}</b>${b.frozen?' <span class="cv-tag w">gelée</span>':""}<span class="cv-sub">${esc(b.sub)}</span></td>
+      <td class="cv-bars"><div class="cv-track"><span class="${R!=null&&R>b.target+2?"over":""}" style="width:${R==null?0:Math.min(100,100*R/scale)}%"></span><i style="left:${100*b.target/scale}%"></i></div></td>
+      <td class="n">${R==null?"—":pc(R)}</td><td class="n mut">${b.target} %</td><td class="n ${gap==null?"":Math.abs(gap)<2?"mut":gap>0?"g":"w"}">${gap==null?"—":(gap>0?"+":"")+pc(gap)}</td>
+      <td class="n"><b>${C&&byB[b.key]?money(byB[b.key]):'<span class="mut">—</span>'}</b></td><td class="n"><b class="${cl(res)}">${sg(res)}</b></td><td class="n cv-ctx">${sg(mk)}</td></tr>`;}).join("");
+  // ── qui entre, qui sort ──
+  let who="";
+  if(WAVE){
+    const S=WAVE.socle, V=WAVE.conviction, sp=pies.find(p=>p.role==="socle"), has=t=>sp?sp.lines.some(l=>l.t===t):null, tag=(c,t)=>`<span class="cv-tag ${c}">${esc(t)}</span>`;
+    const R=[];
+    V.enter.forEach(c=>{const r=convEnterVerdict(c,C); R.push(["Convictions",c.ticker,c.name,"entre",r.c,r.v,r.why]);});
+    V.exit.forEach(x=>{const r=convExitVerdict(x), L=CONV.lines[x.t]; R.push(["Convictions",x.t,L?L.name:"","sort",r.health?"b":"g",r.health?"à vérifier":"reste",r.why]);});
+    S.clean.in.forEach(x=>{const h=has(x.t); R.push(["Socle",x.t,x.n,"entre",h?"g":"g",h?"déjà":"à ajouter",h?"déjà en portefeuille":`durabilité ${x.durability||"—"}, ${x.weight!=null?pc(x.weight):""} du socle`]);});
+    S.clean.out.forEach(x=>{const h=has(x.t); R.push(["Socle",x.t,x.n,"sort",h?"w":"mut",h?"à sortir":"rien à faire",h?"sous le seuil d'entrée ou hors classement":"pas en portefeuille"]);});
+    (CONV.etf_pending||[]).forEach(e=>{const b=CONV.buckets.find(x=>x.key===e.b); R.push(["Thématique",b?b.label:"",e.what.split(":")[0],"candidat","w","à décider",e.rule]);});
+    const O2={"entrée possible":0,"à ajouter":0,"à sortir":1,"à décider":2,"remplacement":3,"à vérifier":3};
+    R.sort((a,b)=>(O2[a[5]]??5)-(O2[b[5]]??5));
+    who=`<div class="cv-tbl"><table class="cv-who"><thead><tr><th>Où</th><th>Ligne</th><th>Moteur</th><th>Décision</th><th>Pourquoi</th></tr></thead><tbody>${R.map(x=>`<tr><td class="mut">${esc(x[0])}</td><td><b>${esc(x[1])}</b> <span class="mut">${x[2]===x[1]||String(x[1]).includes(x[2])?"":esc(String(x[2]||"").slice(0,30))}</span></td><td class="mut">${x[3]}</td><td>${tag(x[4],x[5])}</td><td class="cv-sub">${esc(x[6])}</td></tr>`).join("")}</tbody></table></div>`;
+  }
+  // ── mes lignes : meilleures et pires ──
+  let movers="";
+  if(O){
+    const seen=new Map(); O.pies.forEach(p=>p.lines.forEach(l=>{if(l.res!=null&&!seen.has(l.t)) seen.set(l.t,{...l,pie:p.pie});}));
+    const L=[...seen.values()].sort((a,b)=>b.res-a.res), row=l=>`<li><b>${esc(l.t)}</b> <span class="mut">${esc(l.m?l.m.name:l.name)}</span><i class="${cl(l.res)}">${sg(l.res)}</i></li>`;
+    movers=`<div class="cv-two"><div class="cv-box"><h4>Mes meilleures lignes</h4><ul class="cv-mini">${L.slice(0,5).map(row).join("")}</ul></div><div class="cv-box"><h4>Mes pires lignes</h4><ul class="cv-mini">${L.slice(-5).reverse().map(row).join("")}</ul></div></div>`;
+  }
+  // ── détail (onglets) ──
+  const legacy=CONV.buckets.map(b=>{
+    const held=C?C.all.filter(l=>l.m&&l.m.bucket===b.key).map(l=>esc(l.m.name)+(l.fresh?' <b class="g">(nouvelle)</b>':'')).join(", "):Object.entries(CONV.lines).filter(([,m])=>m.bucket===b.key).map(([,m])=>esc(m.name)).join(", ");
+    return `<tr><td><b>${esc(b.label)}</b>${b.target_note?`<span class="cv-sub">${esc(b.target_note)}</span>`:""}</td><td class="cv-held">${held||'<span class="mut">rien</span>'}</td><td class="cv-mkt">${mktCell(b.proxies)}</td></tr>`;}).join("");
+  const week=()=>{
+    if(!C) return '<p class="cv-sub">Importe tes relevés pour calculer les versements.</p>';
+    const bl=CONV.buckets.map(b=>`<tr><td>${esc(b.label)}</td><td class="n">${money(byB[b.key]||0)}</td></tr>`).join("");
+    const pl=Object.keys(byP).map(p=>`<tr><td>${esc(p)}</td><td class="n"><b>${money(byP[p])}</b></td></tr>`).join("");
     const PT=ConvCalc.pieTargets(C,pies);
     const pieW=ConvCalc.pilotPies(CONV,pies).map(p=>`<div class="cv-pie"><div class="lab">${esc(p.pie)}</div><table><thead><tr><th>Ligne</th><th class="n">Actuel</th><th class="n">Cible à saisir</th></tr></thead><tbody>${PT[p.pie].map(x=>`<tr><td>${esc(x.l.t)} <span class="mut">${esc(x.l.m?x.l.m.name:x.l.name)}</span>${x.l.fresh?' <b class="g">nouvelle ligne</b>':''}</td><td class="n">${pc(x.cur)}</td><td class="n"><b>${pc(x.t)}</b>${x.l.need<=0&&!x.l.fresh?' <span class="mut">gelée</span>':""}</td></tr>`).join("")}</tbody></table></div>`).join("");
-    alloc=`<div class="cv-h">Mes versements</div>
-      <div class="cv-amt"><label>Par semaine <input id="cv-amt" type="number" min="0" step="50" value="${amt||""}" placeholder="montant"> €</label><span class="mut">${weeks?`cibles atteintes en ≈ ${weeks} semaines à cours constants (${eur(C.need)} à verser)`:`il reste ${eur(C.need)} à verser pour atteindre les cibles`}</span></div>
-      <div class="cv-two"><table><thead><tr><th>Par conviction</th><th class="n">${amt>0?"Par semaine":"Part"}</th></tr></thead><tbody>${bl}</tbody></table>
+    return `<div class="cv-two"><table><thead><tr><th>Par conviction</th><th class="n">${amt>0?"Par semaine":"Part"}</th></tr></thead><tbody>${bl}</tbody></table>
       <table><thead><tr><th>Par portefeuille</th><th class="n">${amt>0?"Par semaine":"Part"}</th></tr></thead><tbody>${pl}</tbody></table></div>
-      <details class="cv-pies"><summary>Poids cibles à saisir dans l'application</summary><p class="cv-sub">Calculés pour que l'argent neuf comble les écarts. Les lignes « gelées » ne reçoivent plus rien : leur poids baisse par dilution. Ne jamais lancer le rééquilibrage de l'application, il vend.</p><div class="cv-two">${pieW}</div></details>`;
-  }
-  let nxt="";
-  if(NEXTW&&(NEXTW.enter||[]).length){
-    const TB=CONV.theme_bucket||{}, BB={}; CONV.buckets.forEach(b=>BB[b.key]=b);
-    const r=NEXTW.enter.map(c=>{
-      const bk=TB[c.theme], b=BB[bk], mine=CONV.lines[c.ticker];
-      const real=C&&bk?100*(C.V[bk]||0)/C.T:null;
-      const verdict=mine?'<span class="g">déjà dans mes lignes</span>':!b?'<span class="mut">hors de mes convictions</span>':b.frozen||(real!=null&&b.target-real<2)?`<span class="w">${esc(b.label)} déjà à sa cible : pas en ajout (remplacement à la vague)</span>`:real==null?`<span class="mut">${esc(b.label)} · importe tes relevés</span>`:`<span class="g">${esc(b.label)} sous sa cible : entrée possible</span>`;
-      return `<tr><td><b>${esc(c.ticker)}</b> <span class="mut">${esc(c.name)}</span><span class="cv-sub">${esc(c.maillon_label||c.theme)}</span></td><td class="n">${c.rel!=null?c.rel.toFixed(2).replace(".",",")+"×":"—"}</td><td class="n">${c.fcf_margin!=null?Math.round(c.fcf_margin)+" %":"—"}</td><td>${verdict}</td></tr>`;}).join("");
-    const ex=(NEXTW.exit||[]).map(k=>esc(k[0])).join(", ");
-    nxt=`<div class="cv-h">Passent les filtres aujourd'hui (entreraient à la vague)</div><div class="cv-tbl"><table><thead><tr><th>Société</th><th class="n">Prix rel.</th><th class="n">Cash-flow</th><th>Pour moi</th></tr></thead><tbody>${r}</tbody></table></div><p class="cv-sub">Règle d'entrée : filtres passés + conviction sous sa cible + argent neuf seulement + une semaine de délai. ${ex?`Sortirait à la vague : ${ex} (les sorties attendent la vague).`:""} Source : pilier conviction recalculé chaque jour.</p>`;
-  }
-  const unk=C&&C.unknown.length?`<p class="cv-warn">Non classées : ${C.unknown.map(l=>esc(l.t)).join(", ")}. À rattacher à une conviction dans data/convictions.json.</p>`:"";
-  const open=lsGet(CONV_OPEN)!=="0";
-  el.innerHTML=`<details class="conv"${open?" open":""}><summary><span class="lab">Mes convictions</span>${C?`<span>Piloté ${eur(C.T)}</span><span>IA <b class="${C.ai>CONV.caps[0].limit?"b":""}">${pc(C.ai,0)}</b> / ${CONV.caps[0].limit}</span><span>Receveurs <b class="${C.rc>CONV.caps[1].limit?"b":""}">${pc(C.rc,0)}</b> / ${CONV.caps[1].limit}</span>`:`<span class="mut">cibles · importe tes relevés pour le réel</span>`}</summary>
-    <p class="cv-meta">${esc(CONV.meta)}</p>
-    <div class="cv-imp"><label class="cv-btn">Importer mes relevés (CSV)<input id="cv-file" type="file" accept=".csv,text/csv,.json" multiple hidden></label>${pies.length?`<button id="cv-save" class="cv-btn ghost" type="button">Sauvegarder (fichier)</button><button id="cv-clear" class="cv-btn ghost" type="button">Effacer</button>`:""}<span class="mut" id="cv-st">${pies.length?`${pies.map(p=>esc(p.pie)+(p.date?" du "+p.date.slice(8,10)+"/"+p.date.slice(5,7):"")).join(" · ")} · lus dans ce navigateur, jamais envoyés`:"Exporte tes portefeuilles depuis l'application, puis importe-les ici : ils restent dans ce navigateur, rien n'est envoyé."}</span></div>
-    <div id="cv-stage"></div>
-    <div class="cv-tbl"><table><thead><tr><th>Conviction</th><th>Lignes</th><th class="n">Réel</th><th class="n">Cible</th><th class="n">Écart</th><th>Marché (depuis janv. · 3 mois)</th></tr></thead><tbody>${rows}</tbody></table></div>${unk}
-    <div class="cv-gs">${gauges}</div>
-    ${convPortfoliosHTML(st)}
-    ${alloc}
-    ${WAVE?convWaveHTML(C,st):nxt}
-    ${convMarketHTML(C)}
-    ${convUniverseHTML(C)}
+      <div class="cv-h">Poids cibles à saisir dans l'application</div><p class="cv-sub">Calculés pour que l'argent neuf comble les écarts. Les lignes « gelées » ne reçoivent plus rien : leur poids baisse par dilution.</p><div class="cv-two">${pieW}</div>`;};
+  const doc=()=>`<p class="cv-meta">${esc(CONV.meta)}</p>
     <div class="cv-h">Doctrine</div><ul class="cv-doc">${CONV.doctrine.map(([k,v])=>`<li><b>${esc(k)}.</b> ${esc(v)}</li>`).join("")}</ul>
     <div class="cv-h">Veille</div><ul class="cv-doc">${CONV.watch.map(([k,v])=>`<li><b>${esc(k)}</b> : ${esc(v)}</li>`).join("")}</ul>
-    <p class="cv-sub">Marché : ETF de référence en dollars (markets.json / sectors.json), du contexte, pas un signal. Cibles : data/convictions.json (version ${esc(CONV.version)}).</p>
+    <div class="cv-h">Lignes et marché par conviction</div><div class="cv-tbl"><table><thead><tr><th>Conviction</th><th>Lignes</th><th>Marché (depuis janv. · 3 mois)</th></tr></thead><tbody>${legacy}</tbody></table></div>
+    <div class="cv-gs">${CONV.caps.map(c=>`<div class="cv-g"><b>${esc(c.label)}</b><div class="cv-sub">${esc(c.how)}</div></div>`).join("")}</div>
+    <p class="cv-sub">Marché : ETF de référence en dollars, du contexte, pas un signal. Cibles : data/convictions.json (version ${esc(CONV.version)}).</p>`;
+  const home=()=>`${kpis}<div class="cv-pfs">${cards}</div>
+    ${C?`<div class="cv-sec">Cette semaine</div><div class="cv-todo">${todo}<div class="cv-box"><h4>À surveiller</h4><ul class="cv-alerts">${al.map(([c,t])=>`<li class="${c}">${t}</li>`).join("")}</ul></div></div>`:""}
+    <div class="cv-sec">Mes convictions</div><div class="cv-tbl"><table class="cv-main"><thead><tr><th>Conviction</th><th>Réel face à la cible</th><th class="n">Réel</th><th class="n">Cible</th><th class="n">Écart</th><th class="n">${amt>0?"Semaine":"Versement"}</th><th class="n">Mon résultat</th><th class="n">Marché depuis ${SD}</th></tr></thead><tbody>${conv}</tbody></table></div>
+    ${who?`<div class="cv-sec">Qui entre, qui sort <button class="cv-link" type="button" data-go="wave">détail →</button></div>${who}`:""}
+    ${movers?`<div class="cv-sec">Mes lignes</div>${movers}`:""}`;
+  const T=[["home","L'essentiel",home],["pf","Portefeuilles",()=>convPortfoliosHTML(st)],["week","Versements",week],["wave","Décembre",()=>convWaveHTML(C,st)],["market","Marché et ratées",()=>convMarketHTML(C)],["all","Mes sociétés",()=>convUniverseHTML(C)],["doc","Doctrine",doc]];
+  const cur=T.some(t=>t[0]===lsGet(CONV_TAB))?lsGet(CONV_TAB):"home", open=lsGet(CONV_OPEN)!=="0";
+  el.innerHTML=`<details class="conv"${open?" open":""}><summary><span class="lab">Mes convictions</span>${O?`<span>Total ${eur(O.T)} <b class="${cl(tres)}">${sg(tres)}</b></span><span>IA <b class="${capC(C&&C.ai,CONV.caps[0].limit)}">${C?pc(C.ai,0):"—"}</b> / ${CONV.caps[0].limit}</span>`:`<span class="mut">importe tes relevés</span>`}</summary>
+    <div class="cv-bar-top"><nav class="cv-tabs" role="tablist">${T.map(t=>`<button type="button" role="tab" data-tab="${t[0]}" aria-selected="${t[0]===cur}">${t[1]}</button>`).join("")}</nav>
+      <div class="cv-tools"><label class="cv-num">Par semaine <input id="cv-amt" type="number" min="0" step="50" value="${amt||""}" placeholder="€"> €</label><label class="cv-btn">Importer<input id="cv-file" type="file" accept=".csv,text/csv,.json" multiple hidden></label>${pies.length?`<button id="cv-save" class="cv-btn ghost" type="button" title="Sauvegarder dans un fichier">Sauvegarder</button><button id="cv-clear" class="cv-btn ghost" type="button">Effacer</button>`:""}</div></div>
+    <div id="cv-stage"></div><div id="cv-pane"></div>
+    ${C&&C.unknown.length?`<p class="cv-warn">Non classées : ${C.unknown.map(l=>esc(l.t)).join(", ")}. À rattacher à une conviction dans data/convictions.json.</p>`:""}
   </details>`;
   const d=el.querySelector("details.conv"); d.addEventListener("toggle",()=>lsSet(CONV_OPEN,d.open?"1":"0"));
+  const pane=el.querySelector("#cv-pane");
+  const show=id=>{const t=T.find(x=>x[0]===id)||T[0]; lsSet(CONV_TAB,t[0]); pane.innerHTML=t[2]()||'<p class="cv-sub">Rien à afficher pour l\'instant.</p>';
+    el.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t[0]));
+    pane.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>show(b.dataset.go));
+    pane.querySelectorAll(".cv-role").forEach(x=>x.addEventListener("change",()=>{
+      const s=convState(); const p=s&&s.pies.find(y=>y.pie===x.dataset.pie); if(!p) return;
+      p.role=x.value; lsSet(CONV_KEY,JSON.stringify(s)); convRender();}));};
+  el.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>show(b.dataset.tab));
+  show(cur);
   const f=el.querySelector("#cv-file");
   f.addEventListener("change",()=>{convStage([...f.files]);f.value="";});
-  el.querySelectorAll(".cv-role").forEach(x=>x.addEventListener("change",()=>{
-    const s=convState(); const p=s&&s.pies.find(y=>y.pie===x.dataset.pie); if(!p) return;
-    p.role=x.value; lsSet(CONV_KEY,JSON.stringify(s)); convRender();}));
   const c=el.querySelector("#cv-clear"); if(c) c.onclick=()=>{if(confirm("Effacer tous les relevés et leur historique de ce navigateur ?")){lsSet(CONV_KEY,null);convRender();}};
   const sv=el.querySelector("#cv-save"); if(sv) sv.onclick=()=>{const u=URL.createObjectURL(new Blob([lsGet(CONV_KEY)||"{}"],{type:"application/json"})), a=document.createElement("a"); a.href=u; a.download="mes-portefeuilles-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(u);};
   const a=el.querySelector("#cv-amt"); if(a) a.addEventListener("change",()=>{lsSet(CONV_AMT,a.value||null);convRender();});
