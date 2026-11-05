@@ -28,6 +28,12 @@ class PortfolioManagerV3 {
       if (!window.ConvCalc) return;
       const pies = window.ConvCalc.loadPies(); if (!pies.length) return;
       const conv = await this.fetchJSON(['data/convictions.json', './data/convictions.json']); if (!conv) return;
+      // socle : piloté par son modèle, à part des convictions
+      const wave = await this.fetchJSON(['data/wave_preview.json', './data/wave_preview.json']);
+      const SH = new Set(((wave && wave.socle && wave.socle.holdings) || []).map(h => h.t));
+      const sp = pies.filter(p => !window.ConvCalc.isPiloted(conv, p) && (/socle/i.test(p.pie) || p.lines.filter(l => SH.has(l.t)).length * 2 >= p.lines.length))
+        .sort((a, b) => b.lines.filter(l => SH.has(l.t)).length - a.lines.filter(l => SH.has(l.t)).length)[0];
+      this.mySocle = sp ? { pie: sp.pie, date: sp.date, lines: sp.lines, wave: wave && wave.socle, generated: wave && wave.generated } : null;
       const C = window.ConvCalc.compute(conv, pies); if (!C) return;
       const PT = window.ConvCalc.pieTargets(C, pies), byTicker = {};
       Object.entries(PT).forEach(([pie, rows]) => rows.forEach(x => { byTicker[x.l.t] = { pct: x.t, fresh: !!x.l.fresh, frozen: x.l.need <= 0 && !x.l.fresh, pie, name: x.l.m ? x.l.m.name : x.l.name }; }));
@@ -48,6 +54,33 @@ class PortfolioManagerV3 {
     if (!t) return '';
     const pct = t.pct.toFixed(1).replace('.', ',');
     return `<div title="Poids à saisir dans Trading 212 (entonnoir · Mes convictions)" style="font-size:0.72rem;color:#ffd54f;font-weight:700;font-family:'JetBrains Mono',monospace;">ma cible ${pct}%${t.frozen ? ' <span style="color:rgba(255,255,255,0.4);font-weight:400;">gelée</span>' : ''}</div>`;
+  }
+
+  // Socle : mes poids réels face au modèle, et ce que la prochaine vague changerait
+  renderSocleBlock(type, portfolio) {
+    const S = this.mySocle;
+    if (!S || type !== 'Actions-Elite') return '';
+    const f = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %';
+    const tot = S.lines.reduce((a, l) => a + l.value, 0) || 1, mine = {};
+    S.lines.forEach(l => { mine[l.t] = 100 * l.value / tot; });
+    const rows = (portfolio._asset_details || []).map(d => ({ t: d.ticker, name: String(d.name || '').replace(/\s*\([^)]*\)\s*$/, ''), model: +d.weight_pct || 0, mine: mine[d.ticker] }))
+      .sort((a, b) => ((a.mine || 0) - a.model) - ((b.mine || 0) - b.model));
+    const known = new Set(rows.map(r => r.t)), extra = S.lines.filter(l => !known.has(l.t));
+    const nb = rows.filter(r => r.mine != null).length, W = S.wave && S.wave.clean, rawOut = S.wave ? S.wave.raw.out.filter(x => !W.out.some(y => y.t === x.t)) : [];
+    const grid = 'display:grid;grid-template-columns:62px 1fr 70px 70px 70px;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.82rem;';
+    const mono = "font-family:'JetBrains Mono',monospace;";
+    const line = r => { const e = r.mine == null ? null : r.mine - r.model;
+      return `<div style="${grid}"><b style="${mono}color:rgba(255,255,255,0.9);">${r.t}</b><span style="color:rgba(255,255,255,0.75);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}${r.mine == null ? ' <b style="color:#ff8a80;">absente</b>' : ''}</span><span style="text-align:right;${mono}">${f(r.mine)}</span><b style="text-align:right;${mono}color:#ffd54f;">${f(r.model)}</b><span style="text-align:right;${mono}color:${e == null ? '#ff8a80' : Math.abs(e) < 0.5 ? 'rgba(255,255,255,0.35)' : e < 0 ? '#4caf50' : '#ff8a80'};">${e == null ? '—' : (e > 0 ? '+' : '') + f(e)}</span></div>`; };
+    const names = L => L.map(x => x.t).join(', ') || 'aucune';
+    return `
+    <div id="t212-socle" style="margin-bottom:1.5rem;padding:1rem 1.1rem;border:1px solid rgba(255,213,79,0.35);border-radius:12px;background:rgba(255,213,79,0.04);">
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem 1rem;align-items:center;margin-bottom:0.6rem;"><b style="color:#ffd54f;font-size:0.95rem;"><i class="fas fa-bolt" style="margin-right:6px;"></i>Trading 212 · ${S.pie}</b><span style="font-size:0.82rem;color:#fff;">${nb}/${rows.length} lignes du modèle${extra.length ? ` · hors modèle : ${extra.map(l => l.t).join(', ')}` : ''}</span></div>
+      ${W ? `<p style="margin:0 0 0.6rem 0;font-size:0.8rem;color:rgba(255,255,255,0.8);">Prochaine vague (dès le 14/12) : entre <b style="color:#4caf50;">${names(W.in)}</b> · sort <b style="color:#ff8a80;">${names(W.out)}</b>.${rawOut.length ? ` Si la collecte reste cassée, sortiraient aussi ${names(rawOut)} : ce ne serait pas une preuve.` : ''} Rien à faire avant.</p>` : ''}
+      <details><summary style="cursor:pointer;font-size:0.8rem;color:#ffd54f;margin-bottom:0.4rem;">Mes poids face au modèle, plus gros écarts d'abord</summary>
+      <div style="${grid}font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.4);"><span>Ticker</span><span>Ligne</span><span style="text-align:right;">Mon poids</span><span style="text-align:right;">Modèle</span><span style="text-align:right;">Écart</span></div>
+      ${rows.map(line).join('')}</details>
+      <p style="margin:0.7rem 0 0 0;font-size:0.72rem;color:rgba(255,255,255,0.55);line-height:1.5;">Relevé${S.date ? ' du ' + S.date.slice(8, 10) + '/' + S.date.slice(5, 7) : ''}. Modèle : clé gelée jusqu'au 14/09/2027, bandes de ±25 %. Ne jamais lancer le « rééquilibrage » de l'application (il vend).</p>
+    </div>`;
   }
 
   // Bloc rapide : nouvelles lignes + poids à saisir + versement, pour Trading 212
@@ -372,6 +405,7 @@ class PortfolioManagerV3 {
 
     // ── Positions detail by category ──
     html += this.renderT212Block(type, portfolio);
+    html += this.renderSocleBlock(type, portfolio);
 
     // v7.3: Investment amount calculator
     const amountId = `invest-amount-${normalizedType}`;

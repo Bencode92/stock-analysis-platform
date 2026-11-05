@@ -851,7 +851,7 @@ function convPortfoliosHTML(st){
     ${socleTbl}${dup}${details}`;
 }
 /* ── Décembre : ce qui bougerait dans chaque portefeuille, jugé par nos règles (data/wave_preview.json, lecture seule) ── */
-let WAVE=null;
+let WAVE=null, DIAG=null;
 function convWaveHTML(C,st){
   if(!WAVE) return "";
   const pies=(st&&st.pies)||[], S=WAVE.socle, V=WAVE.conviction, D=CONV.decisions||{}, X=CONV.exit_rules||{}, BB={}; CONV.buckets.forEach(b=>BB[b.key]=b);
@@ -869,10 +869,18 @@ function convWaveHTML(C,st){
   let gap="";
   if(mine){const miss=S.holdings.filter(h=>!mine.p.lines.some(l=>l.t===h.t)), extra=mine.p.lines.filter(l=>!set.has(l.t));
     gap=`<p class="cv-sub"><b>${esc(mine.p.pie)}</b> face au modèle de 40 lignes : ${mine.n} en commun${miss.length?` · manquantes : ${miss.slice(0,12).map(h=>esc(h.t)).join(", ")}${miss.length>12?"…":""}`:""}${extra.length?` · en plus : ${extra.slice(0,12).map(l=>esc(l.t)).join(", ")}`:""}.</p>`;}
+  const K=S.controls||{}, F=(DIAG&&DIAG.fiches)||[], rs=K.region_split||{}, chg=K.changes;
+  const socleCtl=K.n?`<div class="cv-tbl"><table><thead><tr><th>Contrôle du socle</th><th>État</th><th>Repère</th></tr></thead><tbody>
+    <tr><td>Lignes</td><td class="n ${K.n===40?"g":"b"}">${K.n}</td><td class="cv-sub">40</td></tr>
+    <tr><td>Rotation de cette vague</td><td class="n">${chg} ligne${chg>1?"s":""} sur ${K.n}</td><td class="cv-sub">plafond ${S.max_changes} par vague ; test 2027 : moins de 25 % par an, soit environ 2,5 lignes par vague</td></tr>
+    <tr><td>Financières</td><td class="n ${K.n_financials>K.fin_cap?"b":""}">${K.n_financials} / ${K.fin_cap}</td><td class="cv-sub">plafond</td></tr>
+    <tr><td>Régions</td><td class="n ${K.max_region_pct>70?"w":""}">${Object.entries(rs).map(([k,v])=>esc(k)+" "+v).join(" · ")}</td><td class="cv-sub">au-delà de 70 % sur une région : revue humaine, pas de correction automatique</td></tr>
+    ${F.length?`<tr><td>Diagnostic ${DIAG.as_of?fd(DIAG.as_of):""}</td><td>${F.map(x=>`<b>${esc(x.ticker)}</b> ${x.perf_1y!=null?(x.perf_1y>0?"+":"")+Math.round(x.perf_1y)+" %":""}`).join(" · ")}</td><td class="cv-sub">baisses à surveiller et surveillance IA (${(DIAG.watch_list||[]).map(esc).join(", ")}) : fiches descriptives, sans effet sur la sélection</td></tr>`:""}
+    </tbody></table></div>`:"";
   const socle=`<div class="cv-h">Actions socle · vague possible dès le ${fd(S.wave_min)}</div>
     <div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Mouvement</th><th class="n">Poids</th><th>Motif</th><th>Pour moi</th></tr></thead><tbody>${(cIn+cOut)||'<tr><td colspan="5" class="mut">Aucun mouvement.</td></tr>'}</tbody></table></div>
     ${rawOnly.length?`<p class="cv-warn">Si la collecte reste cassée, le moteur sortirait aussi ${nm(rawOnly)} et ferait entrer ${nm(S.raw.in.filter(x=>!S.clean.in.some(y=>y.t===x.t)))}. Ces sorties ne sont pas des preuves : données manquantes pour ${holes.map(esc).join(", ")}. À réparer avant la vague.</p>`:""}
-    ${gap}<p class="cv-sub">Le tableau montre la vague sans les trous de collecte (dernières données saines). La clé du socle est gelée jusqu'au 14/09/2027 : on regarde, on ne la retouche pas.</p>`;
+    ${gap}${socleCtl}<p class="cv-sub">Le tableau montre la vague sans les trous de collecte (dernières données saines). La clé du socle est gelée jusqu'au 14/09/2027 : on regarde, on ne la retouche pas.</p>`;
   // conviction
   const gapOf=bk=>C&&bk?BB[bk].target-100*(C.V[bk]||0)/C.T:null;
   const inR=V.enter.map(c=>{const d=D[c.ticker], bk=TB[c.theme], b=BB[bk], g=gapOf(bk);
@@ -974,9 +982,10 @@ Promise.all([
   fetch("./data/portfolios_conviction_equities.json").then(r=>r.ok?r.json():null).catch(()=>null),
   fetch("./data/funnel.json").then(r=>r.ok?r.json():null).catch(()=>null),
   fetch("./data/conviction_universe.json").then(r=>r.ok?r.json():null).catch(()=>null),
-  fetch("./data/wave_preview.json").then(r=>r.ok?r.json():null).catch(()=>null)
-]).then(([cv,mk,se,ce,fj,un,wp])=>{
-  CONV=cv; if(!CONV) return; NEXTW=ce&&ce.next_wave||null; CEQ=ce; UNIV=un; WAVE=wp;
+  fetch("./data/wave_preview.json").then(r=>r.ok?r.json():null).catch(()=>null),
+  fetch("./data/elite_diagnostic.json").then(r=>r.ok?r.json():null).catch(()=>null)
+]).then(([cv,mk,se,ce,fj,un,wp,dg])=>{
+  CONV=cv; if(!CONV) return; NEXTW=ce&&ce.next_wave||null; CEQ=ce; UNIV=un; WAVE=wp; DIAG=dg;
   if(fj&&fj.sectors) Object.values(fj.sectors).forEach(sec=>Object.values(sec.chains||{}).forEach(ch=>(ch.maillons||[]).forEach(m=>(m.companies||[]).forEach(co=>{
     if(!co.ticker) return; const k=co.ticker+":"+({EU:"Europe"}[co.region]||co.region); if(!FPERF[k]) FPERF[k]={p1:co.perf_1y,ytd:co.perf_ytd,vol:co.volatility_3y,nm:co.net_margin};}))));
   const add=x=>{if(x&&x.symbol&&x.ytd_num!=null&&!MKT[x.symbol]) MKT[x.symbol]={ytd:x.ytd_num,m3:x.m3_num,name:x.index_name||x.name};};

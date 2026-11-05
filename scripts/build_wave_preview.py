@@ -62,11 +62,15 @@ def _socle(prev):
 
     raw = read(el.build_elite_portfolio())
     el._load_stocks = fetch_with_repair
-    clean = read(el.build_elite_portfolio())
+    pf_clean = el.build_elite_portfolio()
+    clean = read(pf_clean)
     el._load_stocks = orig_load
     return {"raw": raw, "clean": clean, "holes": holes,
             "holdings": [{"t": h["ticker"], "n": h["name"], "reg": h["region"], "w": h["weight"]} for h in prev["holdings"]],
-            "wave_min": "2026-12-14", "max_changes": el.TRANSITION_MAX_CHANGES}
+            "wave_min": "2026-12-14", "max_changes": el.TRANSITION_MAX_CHANGES,
+            "controls": {"n": pf_clean["n"], "region_split": pf_clean["region_split"], "max_region_pct": pf_clean["max_region_pct"],
+                         "sector_split": pf_clean["sector_split"], "n_financials": pf_clean["n_financials"], "fin_cap": el.FIN_CAP,
+                         "pool": pf_clean["pool_size"], "changes": pf_clean["_transition"]["changes"]}}
 
 
 def _conviction():
