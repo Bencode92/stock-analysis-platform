@@ -273,12 +273,21 @@ def apply_data_qc_filters(df: pd.DataFrame) -> pd.DataFrame:
     
     # Doit être un bond
     if "fund_type" in df.columns:
-        fund_type_lower = df["fund_type"].fillna("").str.lower()
+        fund_type_lower = df["fund_type"].fillna("").astype(str).str.lower()
         is_bond = fund_type_lower.str.contains(
             "bond|obligation|fixed income|government|treasury|muni|"
             "inflation|loan|securitized|maturity|convertible|money market",
             regex=True
         )
+        # Le fournisseur ne renseigne pas fund_type pour les UCITS (les seules valeurs venaient d'homonymes US,
+        # écartés depuis le 28/10) : champ vide → on juge sur le nom du fonds.
+        if "name" in df.columns:
+            name_lower = df["name"].fillna("").astype(str).str.lower()
+            is_bond |= (fund_type_lower == "") & name_lower.str.contains(
+                "bond|obligation|treasury|treasur|gilt|govt|government|aggregate|corp|credit|high yield|"
+                "fixed income|ultrashort|ultra short|inflation|tips|floating|loan|sukuk|maturity|money market",
+                regex=True
+            )
         mask &= is_bond
     
     filtered = df[mask].copy()
@@ -701,7 +710,7 @@ def select_bonds_for_profile(
         _filters_applied = []
 
         if bond_strategy.get("avoid_securitized") and "fund_type" in df_constrained.columns:
-            _ft_lower = df_constrained["fund_type"].fillna("").str.lower()
+            _ft_lower = df_constrained["fund_type"].fillna("").astype(str).str.lower()
             _is_securitized = (
                 _ft_lower.str.contains("clo", regex=False)
                 | _ft_lower.str.contains("mbs", regex=False)
@@ -714,7 +723,7 @@ def select_bonds_for_profile(
             _filters_applied.append(f"avoid_securitized: -{_bs_before - len(df_constrained)}")
 
         if bond_strategy.get("avoid_em_bonds") and "fund_type" in df_constrained.columns:
-            _ft_lower = df_constrained["fund_type"].fillna("").str.lower()
+            _ft_lower = df_constrained["fund_type"].fillna("").astype(str).str.lower()
             _before = len(df_constrained)
             _is_em = (
                 _ft_lower.str.contains("emerging", regex=False)

@@ -142,6 +142,19 @@ def load_universe():
         for s in _load(fn).get("stocks", []):
             if s.get("ticker") and (s.get("data_mic") or "") not in INACCESSIBLE_MICS:   # Milan absent de Trading 212
                 s["_region"] = reg; rows.append(s)
+    # un trou de collecte n'est pas une preuve : une ligne tenue garde ses dernières valeurs saines (ABB)
+    try:
+        good = _load("socle_last_good.json")["rows"]
+        held = {tuple(k) for k in _load("portfolios_conviction_equities.json").get("_keys", [])}
+        for s in rows:
+            k = (s["ticker"], s["_region"]); g = good.get(f"{k[0]}|{k[1]}") if k in held else None
+            if g and (s.get("average_volume") is None or s.get("history_days") is None or s.get("durability_grade") is None):
+                for f, v in g.items():
+                    if s.get(f) is None:
+                        s[f] = v
+                print(f"🩹 {k[0]} : trou de collecte, dernières valeurs saines")
+    except (FileNotFoundError, KeyError):
+        pass
     # ADR US doublon d'une cotation asiatique présente (TSM = 2330…) → on garde la cotation d'origine (Asie en direct)
     try:
         adr = _load("adr_home_listing.json")["adr"]

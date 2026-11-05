@@ -7269,7 +7269,7 @@ def save_portfolios(portfolios: Dict, assets: list):
         _eq_sectors = set()
         for _tk, _info in _qt_meta.items():
             if _info.get("category") == "Actions":
-                _ind = _info.get("industry", "").lower()
+                _ind = (_info.get("industry") or "").lower()
                 if _ind:
                     # Map to broad sector
                     if any(x in _ind for x in ["drug", "biotech", "medical", "health"]):

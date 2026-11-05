@@ -166,7 +166,37 @@ def _load_stocks():
         for s in arr:
             s["_region"] = reg
             rows.append(s)
-    return _drop_inaccessible(_drop_adr_duplicates(rows))
+    return _repair_held(_drop_inaccessible(_drop_adr_duplicates(rows)))
+
+
+# Un trou de collecte n'est pas une preuve : une ligne TENUE dont les données ont disparu garde ses dernières valeurs
+# saines (data/socle_last_good.json). Aucun effet sur la clé ni sur les entrants ; désactivé pour montrer le risque.
+REPAIR_HOLES = True
+HOLES = {}
+_HOLE_FIELDS = ("durability_grade", "average_volume", "history_days")
+
+
+def _repair_held(rows):
+    HOLES.clear()
+    if not REPAIR_HOLES:
+        return rows
+    try:
+        good = json.load(open(os.path.join(DATA, "socle_last_good.json"), encoding="utf-8"))["rows"]
+        held = {tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or [])}
+    except (FileNotFoundError, KeyError, ValueError):
+        return rows
+    for s in rows:
+        k = (str(s.get("ticker")), s.get("_region"))
+        miss = [f for f in _HOLE_FIELDS if s.get(f) is None]
+        g = good.get(f"{k[0]}|{k[1]}") if k in held and miss else None
+        if g:
+            HOLES[k[0]] = miss
+            for f, v in g.items():
+                if s.get(f) is None or (f.startswith("years_") and not s.get(f)):   # années à 0 = comptes vides
+                    s[f] = v
+    if HOLES:
+        print(f"🩹 trous de collecte sur des lignes tenues, dernières valeurs saines : {', '.join(sorted(HOLES))}")
+    return rows
 
 
 INACCESSIBLE_MICS = {"XMIL", "XSTO", "XCSE", "XHEL", "XOSL"}   # porte 0 (Benoit 16/09) : Milan et places nordiques (Stockholm, Copenhague, Helsinki, Oslo) absentes de Trading 212 ; un titre servi via Xetra reste achetable

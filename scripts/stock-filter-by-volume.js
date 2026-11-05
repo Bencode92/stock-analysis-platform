@@ -1101,7 +1101,8 @@ async function enrichWithFundamentals(stocks, maxNewFetches = MAX_NEW_FETCHES_PE
       const formulaOk = (cached._formulaVersion || 0) >= FORMULA_VERSION;
       const needsContextMigration = cached.roe === null && cached.de_ratio === null && !cached._hasContext;
       // ✅ Force re-fetch des entrées VIDES (échec 429/transitoire mis en cache) au lieu de garder le vide
-      const isEmptyData = cached.roe === null && cached.de_ratio === null && cached.roic === null;
+      // (bilan reçu mais compte de résultat vide = vide aussi : Adobe, ResMed… restaient creux 30 jours)
+      const isEmptyData = cached.roe === null && cached.roic === null;
 
       if (cacheNotExpired && formulaOk && !needsContextMigration && !isEmptyData) {
         stock.roe = cached.roe;

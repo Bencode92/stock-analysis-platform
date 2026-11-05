@@ -2,7 +2,7 @@
 """Aperçu de la prochaine vague (socle, conviction) : lecture seule, aucun effet sur les portefeuilles.
 
 Écrit data/wave_preview.json et data/conviction_universe.json. Deux lectures du socle : le moteur tel quel,
-et le moteur sans les trous de collecte (dernières valeurs saines : data/socle_last_good.json).
+et le moteur qui protège les lignes tenues des trous de collecte (data/socle_last_good.json).
 Sans appel d'API : tourne sur les fichiers déjà collectés, indépendamment du moteur des portefeuilles.
 """
 import importlib.util, json, os
@@ -27,31 +27,8 @@ def _load(name, default=None):
         return default
 
 
-HOLE_FIELDS = ("durability_grade", "average_volume", "history_days")
-
-
 def _socle(prev):
     el = _module("equity_elite", "portfolio_engine/equity_elite.py")
-    good = (_load("socle_last_good.json") or {}).get("rows", {})
-    held = {(h["ticker"], h["region"]) for h in prev["holdings"]}
-    orig_load = el._load_stocks
-    holes = {}
-
-    def fetch_with_repair():
-        rows = orig_load()
-        for s in rows:
-            k = (str(s.get("ticker")), s.get("_region"))
-            if k not in held:
-                continue
-            miss = [f for f in HOLE_FIELDS if s.get(f) is None]
-            g = good.get(f"{k[0]}|{k[1]}")
-            if miss and g:
-                holes[k[0]] = miss
-                for f, v in g.items():
-                    if s.get(f) is None or (f.startswith("years_") and not s.get(f)):   # années à 0 = comptes vides, pas zéro année
-                        s[f] = v
-        return rows
-
     def read(pf):
         tr, by = pf["_transition"], {h["ticker"]: h for h in pf["holdings"]}
         return {"forced": tr.get("forced_exits") or [], "in": [{"t": a["ticker"], "n": a.get("name"), "reg": a["region"],
@@ -60,11 +37,12 @@ def _socle(prev):
                 "out": [{"t": d["ticker"], "n": d.get("name"), "reg": d["region"]} for d in tr.get("dropped", [])],
                 "weights": {h["ticker"]: h["weight"] for h in pf["holdings"]}}
 
+    el.REPAIR_HOLES = False                  # le risque : ce que ferait le moteur sans la protection des lignes tenues
     raw = read(el.build_elite_portfolio())
-    el._load_stocks = fetch_with_repair
+    el.REPAIR_HOLES = True
     pf_clean = el.build_elite_portfolio()
     clean = read(pf_clean)
-    el._load_stocks = orig_load
+    holes = dict(el.HOLES)
     return {"raw": raw, "clean": clean, "holes": holes,
             "holdings": [{"t": h["ticker"], "n": h["name"], "reg": h["region"], "w": h["weight"]} for h in prev["holdings"]],
             "wave_min": "2026-12-14", "max_changes": el.TRANSITION_MAX_CHANGES,

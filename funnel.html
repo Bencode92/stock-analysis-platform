@@ -896,7 +896,7 @@ function convWaveHTML(C,st){
   const exR=V.exit.map(x=>{const g=x.g||[], k=g.some(y=>/trou/.test(y))?"data":!g.length?"slot":g.every(y=>/^prix/.test(y))?"price":"health", L=CONV.lines[x.t];
     return `<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(L?L.name:"")}</span></td><td>${tag(k==="health"?"b":"w",k==="health"?"sortie":"le moteur la sort")}</td><td class="n">—</td><td>${k==="health"?tag("b","à vérifier"):tag("g","reste")}</td><td>${esc(X[k]||"")}${g.length?` <span class="mut">(${esc(g.join(" · "))})</span>`:""}</td></tr>`;}).join("");
   const conv=`<div class="cv-h">Actions conviction · vague du ${fd(V.wave_min)}</div><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Moteur</th><th class="n">Prix rel.</th><th>Notre décision</th><th>Pourquoi</th></tr></thead><tbody>${inR+exR}</tbody></table></div>
-    <p class="cv-sub">Le moteur applique les filtres ; la décision applique ce qu'on a voté : ⑤b gelée, argent neuf seulement, sorties sur preuve. La règle de prix et le maintien en cas de trou de données restent à coder avant le ${fd(V.wave_min)}.</p>`;
+    <p class="cv-sub">Le moteur applique les filtres ; la décision applique ce qu'on a voté : ⑤b gelée, argent neuf seulement, sorties sur preuve. Le maintien en cas de trou de données est en place ; la règle de prix et celle du remplacement restent à coder avant le ${fd(V.wave_min)}.</p>`;
   // thématique
   const th=(CONV.etf_pending||[]).map(e=>{const b=BB[e.b], g=gapOf(e.b);
     return `<tr><td><b>${esc(b?b.label:"")}</b>${g!=null?`<span class="cv-sub">écart à la cible : ${g>0?"+":""}${pc(g)}</span>`:""}</td><td>${esc(e.what)}</td><td>${esc(e.rule)}</td><td class="w">${esc(e.status)}</td></tr>`;}).join("");
