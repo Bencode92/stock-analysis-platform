@@ -79,7 +79,7 @@
         // hors pilotés, le symbole ne suffit pas : même nom exigé
         if (m && !piloted && l.name && !nameWords(l.name).some(w => nameWords(m.name).includes(w))) m = null;
         const row = findRow(rows, l, m), mapped = !m && !row ? (CONV.etf_map || {})[l.t] || null : null;
-        const bucket = m ? m.bucket : row ? row.b : mapped ? mapped.b : null;
+        const bucket = m ? m.bucket : row && row.b !== "b4" ? row.b : mapped ? mapped.b : null;   // « machines » ≠ robots : ④ n'a aucune ligne tant que la thèse n'est pas écrite
         return { ...l, m, row, bucket, estimated: !m && (!!row || !!mapped), ai: m ? m.ai : mapped ? mapped.ai : bucket ? aiSum[bucket] / aiN[bucket] || 0 : 0, weight: V ? 100 * l.value / V : 0,
                  res: l.invested > 0 ? 100 * (l.value / l.invested - 1) : null };
       }).sort((a, b) => b.value - a.value);
