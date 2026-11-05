@@ -814,6 +814,33 @@ function convMarketHTML(C){
     <div class="cv-h">Tout, par conviction</div>${all}
     <p class="cv-sub">* cash-flow estimé (FCF des 12 derniers mois ÷ chiffre d'affaires) quand le détail annuel n'est pas en cache. Performance : contexte, jamais un critère d'entrée. Source : univers du ${esc(UNIV.generated||"")}.</p></details>`;
 }
+/* ── Tous mes portefeuilles : gardés dans ce navigateur, analysés ; seuls les pilotés comptent pour les cibles et les versements ── */
+function convPortfoliosHTML(st){
+  const pies=(st&&st.pies)||[]; if(!pies.length) return "";
+  const O=ConvCalc.overview(CONV,pies,UNIV&&UNIV.rows), BL={}; CONV.buckets.forEach(b=>BL[b.key]=b.label);
+  const sg=v=>v==null||!isFinite(v)?"—":(v>0?"+":"")+pc(v);
+  const cl=v=>v==null?"":v<0?"b":"g";
+  const hist=(st.hist||[]);
+  const rows=O.pies.map(p=>{const h=hist.filter(x=>x.pie===p.pie&&x.invested>0).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    return `<tr><td><b>${esc(p.pie)}</b>${h.length>1?`<span class="cv-sub">résultat par relevé : ${h.slice(-5).map(x=>`${String(x.date).slice(8,10)}/${String(x.date).slice(5,7)} ${sg(100*(x.value/x.invested-1))}`).join(" · ")}</span>`:""}</td>
+    <td>${p.piloted?'<span class="g">piloté</span>':'<span class="mut">suivi, à part</span>'}</td><td class="n">${p.date?p.date.slice(8,10)+"/"+p.date.slice(5,7):"—"}</td><td class="n">${p.lines.length}</td>
+    <td class="n">${eur(p.value)}</td><td class="n">${eur(p.invested)}</td><td class="n"><b class="${cl(p.res)}">${sg(p.res)}</b></td><td class="n">${pc(p.share,0)}</td>
+    <td>${p.lines[0]?`${esc(p.lines[0].t)} <span class="mut">${pc(p.lines[0].weight,0)}</span>`:"—"}</td></tr>`;}).join("");
+  const TI=O.pies.reduce((s,p)=>s+p.invested,0), tres=TI>0?100*(O.T/TI-1):null;
+  const expo=[...CONV.buckets.map(b=>({k:b.key,l:b.label,t:b.target})),{k:"?",l:"Hors de mes convictions ou non classé",t:null}].filter(x=>x.t>0||O.byAll[x.k]).map(x=>
+    `<tr><td>${esc(x.l)}</td><td class="n">${O.TP?pc(100*(O.byPilot[x.k]||0)/O.TP):"—"}</td><td class="n"><b>${pc(100*(O.byAll[x.k]||0)/O.T)}</b></td><td class="n">${x.t!=null?x.t+" %":"—"}</td></tr>`).join("");
+  const capAI=(CONV.caps.find(c=>c.key==="ai")||{}).limit;
+  const dup=O.dupes.length?`<div class="cv-h">Mêmes lignes dans plusieurs portefeuilles</div><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Portefeuilles</th><th class="n">Part du total</th></tr></thead><tbody>${O.dupes.map(d=>`<tr><td><b>${esc(d.t)}</b> <span class="mut">${esc(d.name)}</span></td><td>${d.pies.map(esc).join(" · ")}</td><td class="n ${d.share>CONV.single_stock_cap?"w":""}">${pc(d.share)}</td></tr>`).join("")}</tbody></table></div>`:"";
+  const SD=UNIV&&UNIV.start?UNIV.start.slice(8,10)+"/"+UNIV.start.slice(5,7):"départ";
+  const details=O.pies.map(p=>`<details class="cv-pies"><summary>${esc(p.pie)} · ${p.lines.length} lignes</summary><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Conviction</th><th class="n">Poids</th><th class="n">Valeur</th><th class="n">Mon résultat</th><th class="n">Depuis le ${SD}</th><th>Filtres</th></tr></thead><tbody>${p.lines.map(l=>{const r=l.row, g=r?(r.g||[]).join(" · "):"";
+    return `<tr><td><b>${esc(l.t)}</b> <span class="mut">${esc(l.m?l.m.name:l.name)}</span></td><td>${l.bucket?esc(BL[l.bucket]||l.bucket)+(l.estimated?' <span class="mut">(par son secteur)</span>':""):'<span class="mut">hors convictions</span>'}</td><td class="n">${pc(l.weight)}</td><td class="n">${eur(l.value)}</td><td class="n"><b class="${cl(l.res)}">${sg(l.res)}</b></td><td class="n">${r?sg(r.ps):"—"}</td><td>${!r?'<span class="mut">pas de ratios (ETF ou hors univers)</span>':g?`<span class="b">${esc(g)}</span>`:'<span class="g">passe</span>'}</td></tr>`;}).join("")}</tbody></table></div></details>`).join("");
+  return `<div class="cv-h">Mes ${O.pies.length} portefeuille${O.pies.length>1?"s":""}</div>
+    <div class="cv-tbl"><table><thead><tr><th>Portefeuille</th><th>Rôle</th><th class="n">Relevé</th><th class="n">Lignes</th><th class="n">Valeur</th><th class="n">Versé</th><th class="n">Résultat</th><th class="n">Part</th><th>1re ligne</th></tr></thead><tbody>${rows}<tr class="cv-grp"><td colspan="4">Total</td><td class="n">${eur(O.T)}</td><td class="n">${eur(TI)}</td><td class="n">${sg(tres)}</td><td colspan="2"></td></tr></tbody></table></div>
+    ${O.dates.length>1?`<p class="cv-warn">Relevés à des dates différentes (${O.dates.map(d=>d.slice(8,10)+"/"+d.slice(5,7)).join(", ")}) : réimporte-les le même jour pour un total exact.</p>`:""}
+    <p class="cv-sub">« Piloté » : au moins la moitié des lignes sont dans mes convictions ; seuls ces portefeuilles comptent pour les cibles, les plafonds et les versements. Les autres sont gardés et analysés à part.</p>
+    ${O.pies.some(p=>!p.piloted)?`<div class="cv-h">Vue d'ensemble, tous portefeuilles</div><div class="cv-tbl"><table><thead><tr><th>Conviction</th><th class="n">Pilotés</th><th class="n">Tous</th><th class="n">Cible (pilotés)</th></tr></thead><tbody>${expo}<tr class="cv-grp"><td>IA (estimation)</td><td class="n">${pc(O.aiPilot,0)}</td><td class="n ${O.aiAll>capAI?"b":""}">${pc(O.aiAll,0)}</td><td class="n">${capAI} %</td></tr></tbody></table></div><p class="cv-sub">Pour information, sans effet sur les versements. Une action hors de mes lignes est rangée par son secteur (estimation) ; un ETF inconnu reste « non classé », donc l'exposition IA sur « Tous » est un minimum.</p>`:""}
+    ${dup}${details}`;
+}
 function mktCell(syms){
   return (syms||[]).map(s=>{const m=MKT[s]; if(!m) return "";
     return `<span class="cv-mk" title="${esc(m.name)}"><b>${s}</b> ${m.ytd>0?"+":""}${Math.round(m.ytd)} %<span class="mut"> · 3 m ${m.m3>0?"+":""}${Math.round(m.m3)}</span></span>`;}).join("");
@@ -837,7 +864,7 @@ function convRender(){
     const bl=CONV.buckets.map(b=>`<tr><td>${esc(b.label)}</td><td class="n">${amt>0?eur(amt*share(byB[b.key]||0)):pc(100*share(byB[b.key]||0),0)}</td></tr>`).join("");
     const pl=Object.keys(byP).map(p=>`<tr><td>${esc(p)}</td><td class="n"><b>${amt>0?eur(amt*share(byP[p])):pc(100*share(byP[p]),0)}</b></td></tr>`).join("");
     const PT=ConvCalc.pieTargets(C,pies);
-    const pieW=pies.map(p=>`<div class="cv-pie"><div class="lab">${esc(p.pie)}</div><table><thead><tr><th>Ligne</th><th class="n">Actuel</th><th class="n">Cible à saisir</th></tr></thead><tbody>${PT[p.pie].map(x=>`<tr><td>${esc(x.l.t)} <span class="mut">${esc(x.l.m?x.l.m.name:x.l.name)}</span>${x.l.fresh?' <b class="g">nouvelle ligne</b>':''}</td><td class="n">${pc(x.cur)}</td><td class="n"><b>${pc(x.t)}</b>${x.l.need<=0&&!x.l.fresh?' <span class="mut">gelée</span>':""}</td></tr>`).join("")}</tbody></table></div>`).join("");
+    const pieW=ConvCalc.pilotPies(CONV,pies).map(p=>`<div class="cv-pie"><div class="lab">${esc(p.pie)}</div><table><thead><tr><th>Ligne</th><th class="n">Actuel</th><th class="n">Cible à saisir</th></tr></thead><tbody>${PT[p.pie].map(x=>`<tr><td>${esc(x.l.t)} <span class="mut">${esc(x.l.m?x.l.m.name:x.l.name)}</span>${x.l.fresh?' <b class="g">nouvelle ligne</b>':''}</td><td class="n">${pc(x.cur)}</td><td class="n"><b>${pc(x.t)}</b>${x.l.need<=0&&!x.l.fresh?' <span class="mut">gelée</span>':""}</td></tr>`).join("")}</tbody></table></div>`).join("");
     alloc=`<div class="cv-h">Mes versements</div>
       <div class="cv-amt"><label>Par semaine <input id="cv-amt" type="number" min="0" step="50" value="${amt||""}" placeholder="montant"> €</label><span class="mut">${weeks?`cibles atteintes en ≈ ${weeks} semaines à cours constants (${eur(C.need)} à verser)`:`il reste ${eur(C.need)} à verser pour atteindre les cibles`}</span></div>
       <div class="cv-two"><table><thead><tr><th>Par conviction</th><th class="n">${amt>0?"Par semaine":"Part"}</th></tr></thead><tbody>${bl}</tbody></table>
@@ -857,11 +884,12 @@ function convRender(){
   }
   const unk=C&&C.unknown.length?`<p class="cv-warn">Non classées : ${C.unknown.map(l=>esc(l.t)).join(", ")}. À rattacher à une conviction dans data/convictions.json.</p>`:"";
   const open=lsGet(CONV_OPEN)!=="0";
-  el.innerHTML=`<details class="conv"${open?" open":""}><summary><span class="lab">Mes convictions</span>${C?`<span>Total ${eur(C.T)}</span><span>IA <b class="${C.ai>CONV.caps[0].limit?"b":""}">${pc(C.ai,0)}</b> / ${CONV.caps[0].limit}</span><span>Receveurs <b class="${C.rc>CONV.caps[1].limit?"b":""}">${pc(C.rc,0)}</b> / ${CONV.caps[1].limit}</span>`:`<span class="mut">cibles · importe tes relevés pour le réel</span>`}</summary>
+  el.innerHTML=`<details class="conv"${open?" open":""}><summary><span class="lab">Mes convictions</span>${C?`<span>Piloté ${eur(C.T)}</span><span>IA <b class="${C.ai>CONV.caps[0].limit?"b":""}">${pc(C.ai,0)}</b> / ${CONV.caps[0].limit}</span><span>Receveurs <b class="${C.rc>CONV.caps[1].limit?"b":""}">${pc(C.rc,0)}</b> / ${CONV.caps[1].limit}</span>`:`<span class="mut">cibles · importe tes relevés pour le réel</span>`}</summary>
     <p class="cv-meta">${esc(CONV.meta)}</p>
-    <div class="cv-imp"><label class="cv-btn">Importer mes relevés (CSV)<input id="cv-file" type="file" accept=".csv,text/csv" multiple hidden></label>${pies.length?`<button id="cv-clear" class="cv-btn ghost" type="button">Effacer</button>`:""}<span class="mut" id="cv-st">${pies.length?`${pies.map(p=>esc(p.pie)+(p.date?" du "+p.date.slice(8,10)+"/"+p.date.slice(5,7):"")).join(" · ")} · lus dans ce navigateur, jamais envoyés`:"Exporte tes deux portefeuilles depuis l'application, puis importe-les ici : rien ne quitte ce navigateur."}</span></div>
+    <div class="cv-imp"><label class="cv-btn">Importer mes relevés (CSV)<input id="cv-file" type="file" accept=".csv,text/csv,.json" multiple hidden></label>${pies.length?`<button id="cv-save" class="cv-btn ghost" type="button">Sauvegarder (fichier)</button><button id="cv-clear" class="cv-btn ghost" type="button">Effacer</button>`:""}<span class="mut" id="cv-st">${pies.length?`${pies.map(p=>esc(p.pie)+(p.date?" du "+p.date.slice(8,10)+"/"+p.date.slice(5,7):"")).join(" · ")} · lus dans ce navigateur, jamais envoyés`:"Exporte tes portefeuilles depuis l'application, puis importe-les ici : ils restent dans ce navigateur, rien n'est envoyé."}</span></div>
     <div class="cv-tbl"><table><thead><tr><th>Conviction</th><th>Lignes</th><th class="n">Réel</th><th class="n">Cible</th><th class="n">Écart</th><th>Marché (depuis janv. · 3 mois)</th></tr></thead><tbody>${rows}</tbody></table></div>${unk}
     <div class="cv-gs">${gauges}</div>
+    ${convPortfoliosHTML(st)}
     ${alloc}
     ${nxt}
     ${convMarketHTML(C)}
@@ -874,10 +902,20 @@ function convRender(){
   const f=el.querySelector("#cv-file");
   f.addEventListener("change",async()=>{
     const s=convState()||{pies:[]}, msg=[];
-    for(const file of f.files){try{const p=parseStatement(await file.text(),file.name);s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);msg.push(p.pie);}catch(e){msg.push(file.name+" : "+e.message);}}
+    s.hist=s.hist||[];
+    const log=p=>{const v=p.lines.reduce((a,l)=>a+l.value,0), i=p.lines.reduce((a,l)=>a+l.invested,0); s.hist=s.hist.filter(h=>!(h.pie===p.pie&&h.date===p.date)).concat({pie:p.pie,date:p.date,value:v,invested:i});};
+    s.pies.forEach(log);                 // relevés importés avant l'historique
+    const err=[];
+    for(const file of f.files){try{
+      if(/\.json$/i.test(file.name)){const b=JSON.parse(await file.text()); if(!Array.isArray(b.pies)) throw new Error("sauvegarde illisible");
+        b.pies.forEach(p=>{s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);}); (b.hist||[]).forEach(h=>{s.hist=s.hist.filter(x=>!(x.pie===h.pie&&x.date===h.date)).concat(h);}); continue;}
+      const p=parseStatement(await file.text(),file.name);s.pies=s.pies.filter(x=>x.pie!==p.pie).concat(p);log(p);msg.push(p.pie);
+    }catch(e){err.push(file.name+" : "+e.message);}}
     lsSet(CONV_KEY,JSON.stringify(s)); convRender();
+    if(err.length){const m=document.getElementById("cv-st"); if(m) m.textContent=err.join(" · ");}
   });
-  const c=el.querySelector("#cv-clear"); if(c) c.onclick=()=>{lsSet(CONV_KEY,null);convRender();};
+  const c=el.querySelector("#cv-clear"); if(c) c.onclick=()=>{if(confirm("Effacer tous les relevés et leur historique de ce navigateur ?")){lsSet(CONV_KEY,null);convRender();}};
+  const sv=el.querySelector("#cv-save"); if(sv) sv.onclick=()=>{const u=URL.createObjectURL(new Blob([lsGet(CONV_KEY)||"{}"],{type:"application/json"})), a=document.createElement("a"); a.href=u; a.download="mes-portefeuilles-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(u);};
   const a=el.querySelector("#cv-amt"); if(a) a.addEventListener("change",()=>{lsSet(CONV_AMT,a.value||null);convRender();});
 }
 Promise.all([
