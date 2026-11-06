@@ -185,12 +185,20 @@ def _repair_held(rows):
         held = {tuple(k) for k in (json.load(open(PREV_FILE, encoding="utf-8")).get("_keys") or [])}
     except (FileNotFoundError, KeyError, ValueError):
         return rows
+    try:
+        prev_h = {(h["ticker"], h["region"]): h for h in json.load(open(PREV_FILE, encoding="utf-8")).get("holdings") or []}
+    except (FileNotFoundError, ValueError):
+        prev_h = {}
     for s in rows:
         k = (str(s.get("ticker")), s.get("_region"))
+        # entre deux vagues un tenu sans secteur sortait du modèle (FAST, UTHR, DCI, NMIH entre le 29/09 et le 28/10)
+        if k in prev_h and not s.get("industry"):
+            s["industry"] = prev_h[k].get("industry")
+            HOLES.setdefault(k[0], []).append("industry")
         miss = [f for f in _HOLE_FIELDS if s.get(f) is None]
         g = good.get(f"{k[0]}|{k[1]}") if k in held and miss else None
         if g:
-            HOLES[k[0]] = miss
+            HOLES[k[0]] = sorted(set(HOLES.get(k[0], []) + miss))
             for f, v in g.items():
                 if s.get(f) is None or (f.startswith("years_") and not s.get(f)):   # années à 0 = comptes vides
                     s[f] = v

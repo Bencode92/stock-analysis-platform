@@ -875,9 +875,9 @@ function convPortfoliosHTML(st){
   const sp0=O.pies.find(isSocle);
   let socleTbl="";
   if(sp0&&SH.length){
-    const got={}; sp0.lines.forEach(l=>got[l.t]=l);
-    const rowsS=SH.map(h=>({t:h.t,n:h.n,m:h.w,r:got[h.t]?got[h.t].weight:0,res:got[h.t]?got[h.t].res:null})).sort((a,b)=>(a.r-a.m)-(b.r-b.m));
-    const extra=sp0.lines.filter(l=>!SH.some(h=>h.t===l.t));
+    const got={}, AL=CONV.model_alias||{}, t212=t=>AL[t]||t; sp0.lines.forEach(l=>got[l.t]=l);
+    const rowsS=SH.map(h=>({t:h.t,n:h.n,m:h.w,r:got[t212(h.t)]?got[t212(h.t)].weight:0,res:got[t212(h.t)]?got[t212(h.t)].res:null})).sort((a,b)=>(a.r-a.m)-(b.r-b.m));
+    const extra=sp0.lines.filter(l=>!SH.some(h=>t212(h.t)===l.t));
     socleTbl=`<details class="cv-pies"><summary>${esc(sp0.pie)} face au modèle socle · ${SH.length-rowsS.filter(x=>!x.r).length}/${SH.length} lignes${extra.length?` · ${extra.length} en plus`:""}</summary><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th class="n">Mon poids</th><th class="n">Poids modèle</th><th class="n">Écart</th><th class="n">Mon résultat</th></tr></thead><tbody>${rowsS.map(x=>`<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(x.n)}</span>${x.r?"":' <b class="w">absente</b>'}</td><td class="n">${pc(x.r)}</td><td class="n">${pc(x.m)}</td><td class="n ${Math.abs(x.r-x.m)<.5?"mut":x.r<x.m?"g":"w"}">${sg(x.r-x.m)}</td><td class="n"><b class="${cl(x.res)}">${sg(x.res)}</b></td></tr>`).join("")}</tbody></table></div>${extra.length?`<p class="cv-warn">Hors modèle : ${extra.map(l=>esc(l.t)).join(", ")}.</p>`:""}</details>`;
   }
   const details=O.pies.map(p=>`<details class="cv-pies"><summary>${esc(p.pie)} · ${p.lines.length} lignes</summary><div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Conviction</th><th class="n">Poids</th><th class="n">Valeur</th><th class="n">Mon résultat</th><th class="n">Depuis le ${SD}</th><th>Filtres</th></tr></thead><tbody>${p.lines.map(l=>{const r=l.row, g=r?(r.g||[]).join(" · "):"";
@@ -910,16 +910,16 @@ function convWaveHTML(C,st){
   const fd=d=>d?d.slice(8,10)+"/"+d.slice(5,7):"—", TB=CONV.theme_bucket||{};
   const tag=(c,t)=>`<span class="${c}">${esc(t)}</span>`;
   // socle : le relevé qui recoupe le plus le modèle
-  const set=new Set(S.holdings.map(h=>h.t));
+  const AL=CONV.model_alias||{}, t212=t=>AL[t]||t, set=new Set(S.holdings.map(h=>t212(h.t)));
   const mine=pies.map(p=>({p,n:p.lines.filter(l=>set.has(l.t)).length})).filter(x=>x.p.role==="socle").sort((a,b)=>b.n-a.n)[0];
-  const has=t=>mine?mine.p.lines.some(l=>l.t===t):null;
+  const has=t=>mine?mine.p.lines.some(l=>l.t===t212(t)):null;
   const act=(t,inn)=>{const h=has(t); return h==null?'<span class="mut">importe ton relevé socle</span>':inn?(h?'<span class="mut">déjà en portefeuille</span>':'<span class="g">à ajouter en décembre</span>'):(h?'<span class="w">à sortir en décembre</span>':'<span class="mut">pas en portefeuille</span>');};
   const nm=L=>L.map(x=>esc(x.t)).join(", ")||"aucune";
   const cIn=S.clean.in.map(x=>`<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(x.n||"")}</span></td><td>${tag("g","entre")}</td><td class="n">${x.weight!=null?pc(x.weight):"—"}</td><td>durabilité ${esc(x.durability||"—")} · ${esc(x.sector||"")}</td><td>${act(x.t,true)}</td></tr>`).join("");
   const cOut=S.clean.out.map(x=>`<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(x.n||"")}</span></td><td>${tag("w","sort")}</td><td class="n">—</td><td>comptes sains, mais hors du haut du classement ou sous le seuil de liquidité d'entrée</td><td>${act(x.t,false)}</td></tr>`).join("");
   const holes=Object.keys(S.holes||{}), rawOnly=S.raw.out.filter(x=>!S.clean.out.some(y=>y.t===x.t));
   let gap="";
-  if(mine){const miss=S.holdings.filter(h=>!mine.p.lines.some(l=>l.t===h.t)), extra=mine.p.lines.filter(l=>!set.has(l.t));
+  if(mine){const miss=S.holdings.filter(h=>!mine.p.lines.some(l=>l.t===t212(h.t))), extra=mine.p.lines.filter(l=>!set.has(l.t));
     gap=`<p class="cv-sub"><b>${esc(mine.p.pie)}</b> face au modèle de 40 lignes : ${mine.n} en commun${miss.length?` · manquantes : ${miss.slice(0,12).map(h=>esc(h.t)).join(", ")}${miss.length>12?"…":""}`:""}${extra.length?` · en plus : ${extra.slice(0,12).map(l=>esc(l.t)).join(", ")}`:""}.</p>`;}
   const K=S.controls||{}, F=(DIAG&&DIAG.fiches)||[], rs=K.region_split||{}, chg=K.changes;
   const socleCtl=K.n?`<div class="cv-tbl"><table><thead><tr><th>Contrôle du socle</th><th>État</th><th>Repère</th></tr></thead><tbody>
@@ -1031,7 +1031,7 @@ function convRender(){
   // ── qui entre, qui sort ──
   let who="";
   if(WAVE){
-    const S=WAVE.socle, V=WAVE.conviction, sp=pies.find(p=>p.role==="socle"), has=t=>sp?sp.lines.some(l=>l.t===t):null, tag=(c,t)=>`<span class="cv-tag ${c}">${esc(t)}</span>`;
+    const S=WAVE.socle, V=WAVE.conviction, sp=pies.find(p=>p.role==="socle"), AL=CONV.model_alias||{}, has=t=>sp?sp.lines.some(l=>l.t===(AL[t]||t)):null, tag=(c,t)=>`<span class="cv-tag ${c}">${esc(t)}</span>`;
     const R=[];
     V.enter.forEach(c=>{const r=convEnterVerdict(c,C); R.push(["Convictions",c.ticker,c.name,"entre",r.c,r.v,r.why]);});
     V.exit.forEach(x=>{const r=convExitVerdict(x), L=CONV.lines[x.t]; R.push(["Convictions",x.t,L?L.name:"","sort",r.health?"b":"g",r.health?"à vérifier":"reste",r.why]);});

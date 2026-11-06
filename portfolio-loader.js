@@ -30,10 +30,10 @@ class PortfolioManagerV3 {
       const conv = await this.fetchJSON(['data/convictions.json', './data/convictions.json']); if (!conv) return;
       // socle : piloté par son modèle, à part des convictions
       const wave = await this.fetchJSON(['data/wave_preview.json', './data/wave_preview.json']);
-      const SH = new Set(((wave && wave.socle && wave.socle.holdings) || []).map(h => h.t));
+      const SH = new Set(((wave && wave.socle && wave.socle.holdings) || []).map(h => (conv.model_alias || {})[h.t] || h.t));
       const sp = pies.filter(p => !window.ConvCalc.isPiloted(conv, p) && (p.role ? p.role === 'socle' : /socle/i.test(p.pie) || p.lines.filter(l => SH.has(l.t)).length * 2 >= p.lines.length))
         .sort((a, b) => b.lines.filter(l => SH.has(l.t)).length - a.lines.filter(l => SH.has(l.t)).length)[0];
-      this.mySocle = sp ? { pie: sp.pie, date: sp.date, lines: sp.lines, wave: wave && wave.socle, generated: wave && wave.generated } : null;
+      this.mySocle = sp ? { alias: conv.model_alias || {}, pie: sp.pie, date: sp.date, lines: sp.lines, wave: wave && wave.socle, generated: wave && wave.generated } : null;
       const C = window.ConvCalc.compute(conv, pies); if (!C) return;
       const PT = window.ConvCalc.pieTargets(C, pies), byTicker = {};
       Object.entries(PT).forEach(([pie, rows]) => rows.forEach(x => { byTicker[x.l.t] = { pct: x.t, fresh: !!x.l.fresh, frozen: x.l.need <= 0 && !x.l.fresh, pie, name: x.l.m ? x.l.m.name : x.l.name }; }));
@@ -63,9 +63,9 @@ class PortfolioManagerV3 {
     const f = v => v == null ? '—' : v.toFixed(1).replace('.', ',') + ' %';
     const tot = S.lines.reduce((a, l) => a + l.value, 0) || 1, mine = {};
     S.lines.forEach(l => { mine[l.t] = 100 * l.value / tot; });
-    const rows = (portfolio._asset_details || []).map(d => ({ t: d.ticker, name: String(d.name || '').replace(/\s*\([^)]*\)\s*$/, ''), model: +d.weight_pct || 0, mine: mine[d.ticker] }))
+    const rows = (portfolio._asset_details || []).map(d => ({ t: d.ticker, name: String(d.name || '').replace(/\s*\([^)]*\)\s*$/, ''), model: +d.weight_pct || 0, mine: mine[(S.alias && S.alias[d.ticker]) || d.ticker] }))
       .sort((a, b) => ((a.mine || 0) - a.model) - ((b.mine || 0) - b.model));
-    const known = new Set(rows.map(r => r.t)), extra = S.lines.filter(l => !known.has(l.t));
+    const known = new Set(rows.map(r => (S.alias && S.alias[r.t]) || r.t)), extra = S.lines.filter(l => !known.has(l.t));
     const nb = rows.filter(r => r.mine != null).length, W = S.wave && S.wave.clean, rawOut = S.wave ? S.wave.raw.out.filter(x => !W.out.some(y => y.t === x.t)) : [];
     const grid = 'display:grid;grid-template-columns:62px 1fr 70px 70px 70px;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.82rem;';
     const mono = "font-family:'JetBrains Mono',monospace;";
