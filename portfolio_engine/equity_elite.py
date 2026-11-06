@@ -173,7 +173,7 @@ def _load_stocks():
 # saines (data/socle_last_good.json). Aucun effet sur la clé ni sur les entrants ; désactivé pour montrer le risque.
 REPAIR_HOLES = True
 HOLES = {}
-_HOLE_FIELDS = ("durability_grade", "average_volume", "history_days")
+_HOLE_FIELDS = ("durability_grade", "average_volume", "history_days", "industry", "market_cap")
 
 
 def _repair_held(rows):

@@ -148,7 +148,7 @@ def load_universe():
         held = {tuple(k) for k in _load("portfolios_conviction_equities.json").get("_keys", [])}
         for s in rows:
             k = (s["ticker"], s["_region"]); g = good.get(f"{k[0]}|{k[1]}") if k in held else None
-            if g and (s.get("average_volume") is None or s.get("history_days") is None or s.get("durability_grade") is None):
+            if g and any(s.get(f) is None for f in ("average_volume", "history_days", "durability_grade", "industry", "market_cap")):
                 for f, v in g.items():
                     if s.get(f) is None:
                         s[f] = v
