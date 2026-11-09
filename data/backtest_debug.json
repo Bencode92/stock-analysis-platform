@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-11-08T14:44:26.634272",
+    "generated_at": "2026-11-09T18:04:34.537883",
     "purpose": "Vérification des prix et calculs du backtest",
     "version": "v4.9.1",
     "data_source": "Twelve Data API",
@@ -34,12 +34,12 @@
     "Action": [
       "ADP",
       "AENA",
-      "AJB",
       "CIE",
       "EXPD",
       "FGR",
       "FHI",
       "HNR1",
+      "LAUR",
       "LTC",
       "SEIC"
     ],
@@ -226,63 +226,6 @@
         }
       ],
       "is_benchmark": true
-    },
-    "AJB": {
-      "ticker": "AJB",
-      "type": "Action",
-      "n_days_data": 85,
-      "first_date": "2026-07-13",
-      "last_date": "2026-11-06",
-      "first_price": 597.0,
-      "last_price": 576.5,
-      "total_return_pct": -3.43,
-      "volatility_annual_pct": 20.82,
-      "weights_by_profile": {
-        "Agressif": 5.0
-      },
-      "price_samples": [
-        {
-          "date": "2026-07-13",
-          "close": 597.0,
-          "prev_date": null,
-          "prev_close": null,
-          "daily_return_pct": null,
-          "formula": null
-        },
-        {
-          "date": "2026-08-11",
-          "close": 610.0,
-          "prev_date": "2026-08-10",
-          "prev_close": 608.0,
-          "daily_return_pct": 0.3289,
-          "formula": "(610.0000 / 608.0000) - 1"
-        },
-        {
-          "date": "2026-09-09",
-          "close": 591.5,
-          "prev_date": "2026-09-08",
-          "prev_close": 598.0,
-          "daily_return_pct": -1.087,
-          "formula": "(591.5000 / 598.0000) - 1"
-        },
-        {
-          "date": "2026-10-08",
-          "close": 579.5,
-          "prev_date": "2026-10-07",
-          "prev_close": 571.0,
-          "daily_return_pct": 1.4886,
-          "formula": "(579.5000 / 571.0000) - 1"
-        },
-        {
-          "date": "2026-11-06",
-          "close": 576.5,
-          "prev_date": "2026-11-05",
-          "prev_close": 582.5,
-          "daily_return_pct": -1.03,
-          "formula": "(576.5000 / 582.5000) - 1"
-        }
-      ],
-      "is_benchmark": false
     },
     "CIE": {
       "ticker": "CIE",
@@ -684,6 +627,63 @@
       ],
       "is_benchmark": false
     },
+    "LAUR": {
+      "ticker": "LAUR",
+      "type": "Action",
+      "n_days_data": 85,
+      "first_date": "2026-07-13",
+      "last_date": "2026-11-06",
+      "first_price": 40.11,
+      "last_price": 33.59,
+      "total_return_pct": -16.26,
+      "volatility_annual_pct": 30.64,
+      "weights_by_profile": {
+        "Agressif": 5.0
+      },
+      "price_samples": [
+        {
+          "date": "2026-07-13",
+          "close": 40.11,
+          "prev_date": null,
+          "prev_close": null,
+          "daily_return_pct": null,
+          "formula": null
+        },
+        {
+          "date": "2026-08-11",
+          "close": 36.68,
+          "prev_date": "2026-08-10",
+          "prev_close": 37.26,
+          "daily_return_pct": -1.5566,
+          "formula": "(36.6800 / 37.2600) - 1"
+        },
+        {
+          "date": "2026-09-09",
+          "close": 35.98,
+          "prev_date": "2026-09-08",
+          "prev_close": 36.38,
+          "daily_return_pct": -1.0995,
+          "formula": "(35.9800 / 36.3800) - 1"
+        },
+        {
+          "date": "2026-10-08",
+          "close": 39.2,
+          "prev_date": "2026-10-07",
+          "prev_close": 38.56,
+          "daily_return_pct": 1.6598,
+          "formula": "(39.2000 / 38.5600) - 1"
+        },
+        {
+          "date": "2026-11-06",
+          "close": 33.59,
+          "prev_date": "2026-11-05",
+          "prev_close": 33.29,
+          "daily_return_pct": 0.9012,
+          "formula": "(33.5900 / 33.2900) - 1"
+        }
+      ],
+      "is_benchmark": false
+    },
     "LTC": {
       "ticker": "LTC",
       "type": "Action",
@@ -998,15 +998,6 @@
           "contribution_pct": -0.0297
         },
         {
-          "ticker": "AENA",
-          "type": "Action",
-          "weight_pct": 5.0,
-          "price_prev": 28.32,
-          "price_today": 28.28,
-          "return_pct": -0.1412,
-          "contribution_pct": -0.0071
-        },
-        {
           "ticker": "EXLS",
           "type": "ETF",
           "weight_pct": 5.0,
@@ -1016,16 +1007,25 @@
           "contribution_pct": -0.0527
         },
         {
-          "ticker": "AJB",
+          "ticker": "LAUR",
           "type": "Action",
           "weight_pct": 5.0,
-          "price_prev": 582.5,
-          "price_today": 576.5,
-          "return_pct": -1.03,
-          "contribution_pct": -0.0515
+          "price_prev": 33.29,
+          "price_today": 33.59,
+          "return_pct": 0.9012,
+          "contribution_pct": 0.0451
+        },
+        {
+          "ticker": "AENA",
+          "type": "Action",
+          "weight_pct": 5.0,
+          "price_prev": 28.32,
+          "price_today": 28.28,
+          "return_pct": -0.1412,
+          "contribution_pct": -0.0071
         }
       ],
-      "total_portfolio_return_pct": 0.1712,
+      "total_portfolio_return_pct": 0.2677,
       "formula_explanation": "Σ (weight_i × return_i) pour tous les actifs"
     }
   ],
@@ -1098,7 +1098,7 @@
           5.0
         ],
         [
-          "AENA",
+          "EXLS",
           5.0
         ]
       ]
@@ -1170,31 +1170,31 @@
   },
   "backtest_results_summary": {
     "Agressif": {
-      "gross_return_pct": 0.77,
-      "net_return_pct": 0.77,
-      "volatility_pct": 5.54,
-      "max_drawdown_pct": -2.05,
+      "gross_return_pct": 0.56,
+      "net_return_pct": 0.56,
+      "volatility_pct": 5.68,
+      "max_drawdown_pct": -2.16,
       "benchmark_symbol": "QQQ",
-      "benchmark_return_pct": -8.98,
-      "excess_return_pct": 9.75
+      "benchmark_return_pct": -8.68,
+      "excess_return_pct": 9.24
     },
     "Modéré": {
-      "gross_return_pct": 1.58,
-      "net_return_pct": 1.58,
-      "volatility_pct": 2.96,
+      "gross_return_pct": 1.64,
+      "net_return_pct": 1.64,
+      "volatility_pct": 2.98,
       "max_drawdown_pct": -1.26,
       "benchmark_symbol": "URTH",
-      "benchmark_return_pct": -4.97,
-      "excess_return_pct": 6.55
+      "benchmark_return_pct": -4.78,
+      "excess_return_pct": 6.41
     },
     "Stable": {
-      "gross_return_pct": 1.45,
-      "net_return_pct": 1.45,
+      "gross_return_pct": 1.53,
+      "net_return_pct": 1.53,
       "volatility_pct": 1.31,
       "max_drawdown_pct": -0.21,
       "benchmark_symbol": "AGG",
-      "benchmark_return_pct": -0.71,
-      "excess_return_pct": 2.16
+      "benchmark_return_pct": -0.79,
+      "excess_return_pct": 2.33
     }
   },
   "uniformity_proof": {

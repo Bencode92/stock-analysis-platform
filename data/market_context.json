@@ -1,9 +1,10 @@
 {
-  "market_regime": "caution",
+  "market_regime": "neutral",
   "confidence": 0.9,
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-09",
   "macro_tilts": {
     "favored_sectors": [
+      "energy",
       "healthcare"
     ],
     "avoided_sectors": [
@@ -11,17 +12,17 @@
       "consumer-discretionary"
     ],
     "favored_regions": [
+      "énergie",
       "biotech",
       "value",
-      "canada",
-      "dividende"
+      "canada"
     ],
     "avoided_regions": [
       "momentum",
       "aérospatiale & défense",
       "argent"
     ],
-    "rationale": "9/11 secteurs positifs (82%) | MACRO OVERRIDE: VIX=26 (elevated)"
+    "rationale": "9/11 secteurs positifs (82%) | MACRO OVERRIDE: "
   },
   "key_trends": [
     "Secteur leader: energy (+37.9% YTD)",
@@ -118,9 +119,9 @@
       "vol_3y": 22.05,
       "risk_flag": "defensive",
       "region": "US",
-      "classification": "neutral",
+      "classification": "favored",
       "daily": 0.02,
-      "reason": "out_of_range|defensive_asset"
+      "reason": "sweet_spot|w52_confirmed|m6_confirmed|defensive_asset"
     },
     "consumer-staples": {
       "beta": 0.16,
@@ -383,7 +384,7 @@
     },
     "semi-conducteurs": {
       "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
+      "reason": "sweet_spot|favored_blocked_m6_nonpositive|cooling_m3|w52_confirmed|m6_weak",
       "ytd": 36.01,
       "w52": 37.68,
       "m3": -24.61,
@@ -534,8 +535,8 @@
       "daily": -0.78
     },
     "énergie": {
-      "classification": "neutral",
-      "reason": "out_of_range",
+      "classification": "favored",
+      "reason": "sweet_spot|w52_confirmed|m6_confirmed",
       "ytd": 37.87,
       "w52": 39.66,
       "m3": 7.2,
@@ -583,7 +584,7 @@
     }
   },
   "_meta": {
-    "generated_at": "2026-11-08T14:37:00.635196",
+    "generated_at": "2026-11-09T17:57:25.906869",
     "model": "radar_deterministic_v1.6.1",
     "mode": "DATA_DRIVEN",
     "amf_compliant": true,
@@ -629,7 +630,7 @@
       "floor_neutral_dd_gate": 0.8
     },
     "january_mode_info": {
-      "day_of_year": 312,
+      "day_of_year": 313,
       "effective_ytd_min": 10.0,
       "ramp_days": 90,
       "ytd_floor": 2.0
@@ -698,7 +699,7 @@
       "circuit_breaker_threshold": 5.0,
       "dispersion_std": 12.08,
       "dispersion_stressed": false,
-      "effective_ytd_max": 35.0
+      "effective_ytd_max": 40.0
     },
     "diagnostics": {
       "sectors_loaded": 11,
@@ -869,8 +870,8 @@
           "beta_flag": "defensive",
           "beta_region": "US",
           "effective_momentum": 37.87,
-          "classification": "neutral",
-          "reason": "out_of_range|defensive_asset",
+          "classification": "favored",
+          "reason": "sweet_spot|w52_confirmed|m6_confirmed|defensive_asset",
           "symbol": "XLE",
           "selection_method": "preferred"
         },
