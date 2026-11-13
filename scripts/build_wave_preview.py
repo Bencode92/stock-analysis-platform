@@ -43,7 +43,31 @@ def _socle(prev):
     pf_clean = el.build_elite_portfolio()
     clean = read(pf_clean)
     holes = dict(el.HOLES)
-    return {"raw": raw, "clean": clean, "holes": holes,
+    # suivants du classement (hors modèle) et le plafond qui les retient — lecture seule
+    rows = el._dedupe_entities(el._load_stocks())
+    el._HELD.clear(); el._HELD.update(tuple(k) for k in prev.get("_keys") or [])
+    pool = sorted([r for r in rows if r.get("industry") and el._passes_gates(r, ("A", "B"))], key=el._rank_key, reverse=True)
+    H = pf_clean["holdings"]; held_t = {h["ticker"] for h in H}
+    ind, sec = {}, {}
+    for h in H:
+        ind[h["industry"]] = ind.get(h["industry"], 0) + 1; sec[h["sector"]] = sec.get(h["sector"], 0) + 1
+    nfin = sum(1 for h in H if h["fin"]); bench = []
+    for i, r in enumerate(pool):
+        t = str(r["ticker"])
+        if t in held_t: continue
+        why = []
+        if el._PAIR.get(t) in held_t: why.append("paire corrélée avec " + el._PAIR[t])
+        if ind.get(r["industry"], 0) >= el.MAX_PER_INDUSTRY: why.append("industrie pleine")
+        if sec.get(el._gics(r), 0) >= el.SECTOR_CAP: why.append("secteur plein")
+        if el._is_fin(r) and nfin >= el.FIN_CAP: why.append("financières pleines")
+        bench.append({"rank": i + 1, "t": t, "n": r.get("name"), "reg": r["_region"], "ind": r.get("industry"), "sec": el._gics(r),
+                      "dur": r.get("durability_score"), "q": r.get("quality_score"), "fcf": r.get("fcf_yield"), "roic": r.get("roic_avg_3y"),
+                      "p1y": r.get("perf_1y"), "why": why})
+        if len(bench) >= 25: break
+    return {"raw": raw, "clean": clean, "holes": holes, "bench": bench, "pool": len(pool),
+            "rules": "durabilité A/B · qualité A/B · valorisation (grade) · 3 ans d'historique · liquidité · marge > 0 · ROIC (ROE pour les financières) · "
+                     "baisse du ROIC sur 6 ans ≤ 35 % (40 % tenu) · dette nette/EBIT ≤ 3 · cash-flow ≥ 1 % (> 0 tenu) · classement : durabilité, persistance, score, qualité, cash-flow · "
+                     "40 lignes, 2 par industrie, 8 par secteur, 6 financières, paires corrélées · top 100 pour rester · 10 changements par vague",
             "holdings": [{"t": h["ticker"], "n": h["name"], "reg": h["region"], "w": h["weight"]} for h in prev["holdings"]],
             "wave_min": "2026-12-14", "max_changes": el.TRANSITION_MAX_CHANGES,
             "controls": {"n": pf_clean["n"], "region_split": pf_clean["region_split"], "max_region_pct": pf_clean["max_region_pct"],
@@ -64,8 +88,56 @@ def _conviction():
             "wave_min": "2026-12-15"}
 
 
+ETF_KEYS = {"b1": r"electrif|smart grid|power grid|grid infra|power infra|energy infra",
+            "b2": r"uranium|nuclear|copper|gold|silver|metal|mining",
+            "b3": r"emerging|em imi|india|china|asia ex",
+            "b4": r"robot|automation",
+            "b5a": r"nasdaq|cyber|software|cloud|artificial intel",
+            "b5b": r"semicond|ai infra|chip",
+            "def": r"defen|aerospace",
+            "lest": r"quality|dividend|low vol|minimum vol"}
+ETF_EXCLUDE = r"leverag|inverse|short|2x|3x|option|covered|yieldmax|put write|daily"
+
+
+def _etfs():
+    import csv, re
+    try:
+        rows = list(csv.DictReader(open(os.path.join(DATA, "combined_etfs.csv"), encoding="utf-8")))
+    except FileNotFoundError:
+        return {}
+    conv = _load("convictions.json") or {}
+    mine_names = [str(m.get("name") or "").lower() for m in conv.get("lines", {}).values() if m.get("pie") == "etf"]
+    mine_stocks = set(conv.get("lines", {})) | {h["ticker"] for h in (_load("portfolios_elite.json") or {}).get("holdings", [])}
+    cat = _load("etf_thematic_catalog.json") or {}
+    min_aum = (cat.get("_min_aum_eur_m") or 200) * 1e6 * 1.08
+    out = {}
+    for b, pat in ETF_KEYS.items():
+        L = []
+        for r in rows:
+            n = r.get("name") or ""
+            if not re.search(pat, n, re.I) or re.search(ETF_EXCLUDE, n, re.I) or (r.get("etf_type") or "standard") != "standard":
+                continue
+            try:
+                top = json.loads(r.get("holdings_top10") or "[]")
+            except ValueError:
+                top = []
+            aum = float(r["aum_usd"]) if r.get("aum_usd") else None
+            nl = n.lower()
+            mine = any(w and nl.startswith(w) and not ("innovation" in nl and "innovation" not in w) for w in mine_names)
+            L.append({"t": r["symbol"], "n": n, "mic": r.get("mic_code"), "aum": aum, "ter": float(r["total_expense_ratio"]) if r.get("total_expense_ratio") else None,
+                      "top": [h.get("n") for h in top[:3]], "overlap": [h.get("t") for h in top if h.get("t") in mine_stocks],
+                      "mine": mine, "small": aum is not None and aum < min_aum})
+        L.sort(key=lambda x: (not x["mine"], x["small"], -(x["aum"] or 0)))
+        seen, ded = set(), []
+        for x in L:                                       # une seule cotation par fonds
+            k = x["n"].lower()[:40]
+            if k not in seen: seen.add(k); ded.append(x)
+        out[b] = ded[:8]
+    return out
+
+
 if __name__ == "__main__":
-    out = {"generated": date.today().isoformat(), "socle": _socle(_load("portfolios_elite.json")), "conviction": _conviction()}
+    out = {"generated": date.today().isoformat(), "socle": _socle(_load("portfolios_elite.json")), "conviction": _conviction(), "etf": _etfs()}
     with open(os.path.join(DATA, "wave_preview.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"), default=str)
     s = out["socle"]

@@ -947,6 +947,40 @@ function convWaveHTML(C,st){
   const them=`<div class="cv-h">Thématique · pas de vague automatique</div><div class="cv-tbl"><table><thead><tr><th>Conviction</th><th>Candidat</th><th>Règle</th><th>État</th></tr></thead><tbody>${th}</tbody></table></div><p class="cv-sub">Aucun ETF ne sort sans décision. Les seules entrées prévues sont celles-ci ; l'argent neuf comble les écarts des 9 lignes en attendant.</p>`;
   return `<details class="cv-pies cv-uni" open><summary>Décembre : ce qui bougerait, déjà jugé par nos règles</summary>${socle}${conv}${them}<p class="cv-sub">Aperçu recalculé chaque jour (${fd(WAVE.generated)}), il peut encore changer d'ici la vague. Rien n'est exécuté et rien n'est à faire avant.</p></details>`;
 }
+/* ── Candidats : qui pourrait entrer, par portefeuille et par conviction (lecture seule) ── */
+function convCandidatesHTML(C){
+  const n=(v,d=0,suf="")=>v==null||!isFinite(v)?"—":(Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d})+suf;
+  const sg=v=>v==null?"—":(v>0?"+":"")+n(v,0," %"), tag=(c,t)=>`<span class="cv-tag ${c}">${esc(t)}</span>`, D=CONV.decisions||{};
+  const gapOf=b=>C?b.target-100*(C.V[b.key]||0)/C.T:null;
+  const door=b=>{const g=gapOf(b); return b.frozen?tag("w","gelée : remplacement seulement"):b.target===0?tag("mut","thèse à écrire"):g==null?tag("mut","importe tes relevés"):g>=2?tag("g",`ouverte · ${n(g,1)} pt sous la cible`):tag("mut",`fermée · ${n(Math.max(0,g),1)} pt de la cible`);};
+  const R=(UNIV&&UNIV.rows)||[], P=new Set(["pass_maillon","pass_offradar","refused"]);
+  // 1. actions convictions
+  const conv=CONV.buckets.map(b=>{
+    const L=R.filter(r=>r.b===b.key&&P.has(r.st)&&r.reg!=="Asie").sort((x,y)=>(x.st==="pass_maillon"?0:1)-(y.st==="pass_maillon"?0:1)||(y.roic||0)-(x.roic||0)).slice(0,12);
+    const mine=R.filter(r=>r.b===b.key&&r.st==="mine").map(r=>r.t);
+    if(!L.length&&!mine.length) return "";
+    const rows=L.map(r=>{const d=D[r.t];
+      return `<tr><td><b>${esc(r.t)}</b> <span class="mut">${esc(String(r.n||"").slice(0,28))}</span><span class="cv-sub">${esc(r.mail||r.ind||"")} · ${esc(r.ctry||r.reg)}</span></td>
+      <td>${r.st==="pass_maillon"?tag("g","maillon"):r.st==="refused"?tag("mut","écartée"):tag("w","screen")}</td><td class="n">${r.rel!=null?n(r.rel,2,"×"):"—"}</td><td class="n">${n(r.fcf,0," %")}</td><td class="n">${n(r.nd,1)}</td><td class="n">${n(r.roic,0," %")}</td><td class="n cv-ctx">${sg(r.ps)}</td>
+      <td class="cv-sub">${d?esc(d.v+" · "+d.why):r.st==="refused"?esc(r.why||""):r.st==="pass_offradar"?"preuve d'exposition ≥ 50 % avant d'en faire un maillon":"maillon validé"}</td></tr>`;}).join("");
+    return `<tr class="cv-grp"><td colspan="8">${esc(b.label)} · ${door(b)}${mine.length?` <span class="mut">· j'ai ${mine.map(esc).join(", ")}</span>`:""}</td></tr>${rows||'<tr><td colspan="8" class="mut">aucune société cotée ne passe tous les filtres</td></tr>'}`;
+  }).join("");
+  // 2. ETF thématique
+  const E=(WAVE&&WAVE.etf)||{};
+  const etf=CONV.buckets.map(b=>{const L=E[b.key]||[];
+    const rows=L.map(x=>`<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(String(x.n).slice(0,46))}</span><span class="cv-sub">${esc((x.top||[]).join(" · "))}</span></td><td>${x.mine?tag("g","à moi"):x.small?tag("b","encours < 200 M€"):tag("mut","candidat")}</td><td class="n">${x.aum?n(x.aum/1e6,0," M$"):"—"}</td><td class="n">${x.ter!=null?n(100*x.ter,2," %"):"—"}</td><td class="cv-sub">${(x.overlap||[]).length?"doublon : "+x.overlap.map(esc).join(", "):""}</td></tr>`).join("");
+    return `<tr class="cv-grp"><td colspan="5">${esc(b.label)} · ${door(b)}</td></tr>${rows||`<tr><td colspan="5" class="mut">${b.key==="b1"?"aucun ETF réseau dans notre collecte (Xtrackers, VanEck, Global X à vérifier sur Trading 212)":"aucun ETF trouvé"}</td></tr>`}`;}).join("");
+  // 3. actions socle
+  const S=WAVE&&WAVE.socle, B=(S&&S.bench)||[];
+  const socle=B.map(x=>`<tr><td class="n">${x.rank}</td><td><b>${esc(x.t)}</b> <span class="mut">${esc(String(x.n||"").slice(0,28))}</span><span class="cv-sub">${esc(x.ind||"")} · ${esc(x.reg)}</span></td><td>${esc(x.sec)}</td><td class="n">${n(x.dur,0)}</td><td class="n">${n(x.q,0)}</td><td class="n">${n(x.fcf,1," %")}</td><td>${x.why.length?tag("mut",x.why.join(" · ")):tag("g","place libre")}</td></tr>`).join("");
+  const sIn=S?S.clean.in.map(x=>esc(x.t)).join(", "):"", sOut=S?S.clean.out.map(x=>esc(x.t)).join(", "):"";
+  return `<div class="cv-sec">Actions convictions · par conviction</div><p class="cv-sub">Filtres : durabilité A/B · liquidité ≥ 5 M$ · 750 jours de cotation · dette/EBIT ≤ 4 · cash-flow ≥ 5 % · trajectoire · prix ≤ 2,5× le secteur. Entrée : conviction ≥ 2 pts sous sa cible, argent neuf seulement, une semaine de délai. « Screen » : passe les filtres mais n'est pas encore un maillon de la chaîne.</p>
+    <div class="cv-tbl"><table class="cv-who"><thead><tr><th>Société</th><th>Origine</th><th class="n">Prix rel.</th><th class="n">Cash-flow</th><th class="n">Dette/EBIT</th><th class="n">ROIC 3 a</th><th class="n">Depuis 15/09</th><th>Ce qu'il manque</th></tr></thead><tbody>${conv}</tbody></table></div>
+    <div class="cv-sec">ETF thématique · par conviction</div><p class="cv-sub">Filtres : thèse écrite avant toute ligne · encours ≥ 200 M€ · pas d'achat en surchauffe (> 50 % depuis janvier) · ETF réseau ≤ 40 % de datacenters · conviction ≥ 2 pts sous sa cible. Les trois premières lignes de chaque ETF montrent ce qu'il contient vraiment.</p>
+    <div class="cv-tbl"><table class="cv-who"><thead><tr><th>ETF</th><th>Statut</th><th class="n">Encours</th><th class="n">Frais</th><th>Recoupement avec mes lignes</th></tr></thead><tbody>${etf}</tbody></table></div>
+    ${S?`<div class="cv-sec">Actions socle · les suivants du classement</div><p class="cv-sub">${esc(S.rules||"")}. Vague dès le ${esc((S.wave_min||"").slice(8,10)+"/"+(S.wave_min||"").slice(5,7))} : entre ${sIn||"aucune"} · sort ${sOut||"aucune"}. Une société n'entre que si une place se libère dans son secteur et sous les plafonds.</p>
+    <div class="cv-tbl"><table class="cv-who"><thead><tr><th class="n">Rang</th><th>Société</th><th>Secteur</th><th class="n">Durab.</th><th class="n">Qualité</th><th class="n">Cash-flow</th><th>Pourquoi pas encore</th></tr></thead><tbody>${socle}</tbody></table></div>`:""}`;
+}
 function mktCell(syms){
   return (syms||[]).map(s=>{const m=MKT[s]; if(!m) return "";
     return `<span class="cv-mk" title="${esc(m.name)}"><b>${s}</b> ${m.ytd>0?"+":""}${Math.round(m.ytd)} %<span class="mut"> · 3 m ${m.m3>0?"+":""}${Math.round(m.m3)}</span></span>`;}).join("");
@@ -1073,7 +1107,7 @@ function convRender(){
     <div class="cv-sec">Mes convictions</div><div class="cv-tbl"><table class="cv-main"><thead><tr><th>Conviction</th><th>Réel face à la cible</th><th class="n">Réel</th><th class="n">Cible</th><th class="n">Écart</th><th class="n">${amt>0?"Semaine":"Versement"}</th><th class="n">Mon résultat</th><th class="n">Marché depuis ${SD}</th></tr></thead><tbody>${conv}</tbody></table></div>
     ${who?`<div class="cv-sec">Qui entre, qui sort <button class="cv-link" type="button" data-go="wave">détail →</button></div>${who}`:""}
     ${movers?`<div class="cv-sec">Mes lignes</div>${movers}`:""}`;
-  const T=[["home","L'essentiel",home],["pf","Portefeuilles",()=>convPortfoliosHTML(st)],["week","Versements",week],["wave","Décembre",()=>convWaveHTML(C,st)],["market","Marché et ratées",()=>convMarketHTML(C)],["all","Mes sociétés",()=>convUniverseHTML(C)],["doc","Doctrine",doc]];
+  const T=[["home","L'essentiel",home],["pf","Portefeuilles",()=>convPortfoliosHTML(st)],["week","Versements",week],["cand","Candidats",()=>convCandidatesHTML(C)],["wave","Décembre",()=>convWaveHTML(C,st)],["market","Marché et ratées",()=>convMarketHTML(C)],["all","Mes sociétés",()=>convUniverseHTML(C)],["doc","Doctrine",doc]];
   const cur=T.some(t=>t[0]===lsGet(CONV_TAB))?lsGet(CONV_TAB):"home", open=lsGet(CONV_OPEN)!=="0";
   el.innerHTML=`<details class="conv"${open?" open":""}><summary><span class="lab">Mes convictions</span>${O?`<span>Total ${eur(O.T)} <b class="${cl(tres)}">${sg(tres)}</b></span><span>IA <b class="${capC(C&&C.ai,CONV.caps[0].limit)}">${C?pc(C.ai,0):"—"}</b> / ${CONV.caps[0].limit}</span>`:`<span class="mut">importe tes relevés</span>`}</summary>
     <div class="cv-bar-top"><nav class="cv-tabs" role="tablist">${T.map(t=>`<button type="button" role="tab" data-tab="${t[0]}" aria-selected="${t[0]===cur}">${t[1]}</button>`).join("")}</nav>
