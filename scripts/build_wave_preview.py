@@ -136,8 +136,58 @@ def _etfs():
     return out
 
 
+def _cash_checks():
+    """Fiche « investit ou brûle » des lignes tenues dont le cash-flow est faible : 4 questions, sans effet sur la sélection."""
+    cache = (_load("fundamentals_cache.json") or {}).get("data", {})
+    cfc = _load("cashflow_cache.json") or {}
+    elite = (_load("portfolios_elite.json") or {}).get("holdings", [])
+    conv = _load("convictions.json") or {}
+    stocks = {}
+    for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json")):
+        for s in (_load(fn) or {}).get("stocks", []):
+            stocks.setdefault((s.get("ticker"), reg), []).append(s)
+    def pick(t, reg, name):                              # même symbole ≠ même société (NXT = Next plc, pas Nueva Expresión)
+        L = stocks.get((t, reg)) or []
+        return next((x for x in L if x.get("name") == name), None) or (L[0] if len(L) == 1 else {})
+    uni = {(r["t"], r["reg"]): r for r in (_load("conviction_universe.json") or {}).get("rows", [])}
+    todo = [(h["ticker"], h["region"], "socle", h["name"], 0.0) for h in elite]
+    todo += [(k[0], k[1], "convictions", r.get("n"), 5.0) for k, r in uni.items() if r.get("st") == "mine"]
+    out = []
+    for t, reg, pf, name, floor in todo:
+        s = pick(t, reg, name)
+        fcf = s.get("fcf_yield") if pf == "socle" else uni[(t, reg)].get("fcf")
+        if fcf is None or fcf > floor:
+            continue
+        c = cache.get(f"{t}:{(s.get('country') or '').lower()}") or {}
+        roics = [x for x in (c.get("yearly_roic") or [])[:3] if isinstance(x, (int, float))]
+        ic, aic = c.get("invested_capital"), c.get("avg_invested_capital")
+        growing = isinstance(ic, (int, float)) and isinstance(aic, (int, float)) and ic > aic
+        q2 = None if not roics else (min(roics) >= 15 and roics[0] >= roics[-1] - 5)
+        debt, cash, ebit = c.get("total_debt"), c.get("cash_and_st_investments"), c.get("operating_income")
+        net = (cash - debt) if isinstance(cash, (int, float)) and isinstance(debt, (int, float)) else None
+        q3 = None if net is None else (net >= 0 or (isinstance(ebit, (int, float)) and ebit > 0 and -net / ebit <= 1.5))
+        y = ((cfc.get(f"{t}:{reg}") or {}).get("years") or [])
+        y0 = y[0] if y else {}
+        q1 = None if y0.get("ocf") is None or y0.get("da") is None else y0["ocf"] > abs(y0["da"])
+        hist = (cfc.get(f"{t}:{reg}") or {}).get("fcf_hist") or []
+        neg = 0
+        for x in hist:
+            if isinstance(x, (int, float)) and x < 0: neg += 1
+            else: break
+        q4 = None if not hist else neg <= 1
+        bad = [q for q in (q2, q3) if q is False]
+        verdict = "brûle" if bad else ("investit" if q2 and q3 and q1 is not False else "à juger")
+        out.append({"t": t, "reg": reg, "pf": pf, "n": s.get("name"), "fcf": fcf, "floor": floor,
+                    "q1": q1, "q2": q2, "q3": q3, "q4": q4, "roic": roics, "growing": growing,
+                    "net_cash_bn": round(net / 1e9, 1) if net is not None else None, "neg_years": neg if hist else None,
+                    "capex_bn": round(abs(y0["capex"]) / 1e9, 1) if y0.get("capex") is not None else None,
+                    "da_bn": round(abs(y0["da"]) / 1e9, 1) if y0.get("da") is not None else None, "verdict": verdict})
+    return out
+
+
 if __name__ == "__main__":
     out = {"generated": date.today().isoformat(), "socle": _socle(_load("portfolios_elite.json")), "conviction": _conviction(), "etf": _etfs()}
+    out["cash_checks"] = _cash_checks()
     with open(os.path.join(DATA, "wave_preview.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"), default=str)
     s = out["socle"]

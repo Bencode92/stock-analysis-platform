@@ -5,7 +5,8 @@ candidats du pilier Actions-Conviction : maillons du framework + industries « e
 du radar, sur les trois régions (US, Europe, Asie).
 
 Clé : TICKER:Région (identique à conviction_equities.py). Entrée :
-  {fiscal_date, fcf, ocf, fcf_hist[6], meta, fetched}   ou   {error, fetched}
+  {fiscal_date, fcf, ocf, fcf_hist[6], years[6] (ocf, amortissements, capex, rachats, dividendes, dette émise), meta, fetched}
+  ou {error, fetched}. Lignes tenues (pilier 3 + socle) d'abord.
 FCF = free_cash_flow TD (OCF − capex ; recalculé si absent). TTL 90 j (données annuelles),
 les erreurs sont retentées après 1 j. Plafond de fetchs par run (quota partagé).
 
@@ -66,9 +67,9 @@ def framework_keys():
 def candidates():
     fw = framework_keys(); out = []
     held = set()
-    for fn in ("portfolios_conviction_equities.json",):
+    for fn in ("portfolios_conviction_equities.json", "portfolios_elite.json"):   # lignes tenues : socle aussi (fiche « investit ou brûle »)
         try:
-            held = {(h["ticker"], h["region"]) for h in json.load(open(os.path.join(DATA, fn), encoding="utf-8"))["holdings"]}
+            held |= {(h["ticker"], h["region"]) for h in json.load(open(os.path.join(DATA, fn), encoding="utf-8"))["holdings"]}
         except Exception:
             pass
     for reg, fn in (("US", "stocks_us.json"), ("Europe", "stocks_europe.json"), ("Asie", "stocks_asia.json")):
@@ -83,10 +84,10 @@ def candidates():
             in_screen = s.get("industry") in ENABLER_INDUSTRIES and (s.get("durability_grade") in ("A", "B")) \
                         and (_adv(s) or 0) >= ADV_MIN_USD
             if in_fw or in_screen or (t, reg) in held:
-                out.append((t, reg, s.get("data_mic") or s.get("resolved_symbol", "").split(":")[-1] or None, in_fw))
-    # une clé = un fetch (priorité framework)
+                out.append((t, reg, s.get("data_mic") or s.get("resolved_symbol", "").split(":")[-1] or None, in_fw, (t, reg) in held))
+    # une clé = un fetch (priorité : lignes tenues, puis framework)
     seen, uniq = set(), []
-    for c in sorted(out, key=lambda c: (not c[3])):
+    for c in sorted(out, key=lambda c: (not c[4], not c[3])):
         if (c[0], c[1]) not in seen:
             seen.add((c[0], c[1])); uniq.append(c)
     return uniq
@@ -102,6 +103,20 @@ def fetch(ticker, mic):
     if d.get("status") == "error" or "cash_flow" not in d:
         return {"error": str(d.get("message") or d.get("code") or "no cash_flow")}
     vals = d["cash_flow"]
+    def g(v, sec, *keys):                                     # le détail sert à séparer entretien et croissance
+        d0 = v.get(sec) or {}
+        for k in keys:
+            x = _num(d0.get(k))
+            if x is not None:
+                return x
+        return None
+    years = [{"date": v.get("fiscal_date"),
+              "ocf": g(v, "operating_activities", "operating_cash_flow"),
+              "da": g(v, "operating_activities", "depreciation", "depreciation_and_amortization", "depreciation_amortization"),
+              "capex": g(v, "investing_activities", "capital_expenditures", "capital_expenditure"),
+              "buyback": g(v, "financing_activities", "common_stock_repurchase", "repurchase_of_common_stock"),
+              "div": g(v, "financing_activities", "common_dividends", "dividends_paid"),
+              "debt_in": g(v, "financing_activities", "long_term_debt_issuance")} for v in vals[:6]]
     hist = []
     for v in vals[:6]:
         fcf = _num(v.get("free_cash_flow"))                       # champ TD (OCF − capex)
@@ -115,7 +130,7 @@ def fetch(ticker, mic):
     v0 = vals[0]
     return {"fiscal_date": v0.get("fiscal_date"), "fcf": hist[0],
             "ocf": _num((v0.get("operating_activities") or {}).get("operating_cash_flow")),
-            "fcf_hist": hist, "meta": d.get("meta")}
+            "fcf_hist": hist, "years": years, "meta": d.get("meta")}
 
 
 def main():
@@ -125,14 +140,15 @@ def main():
     today = date.today(); n_fetch = n_ok = n_err = 0; rate_limited = False
     cands = candidates()
     print(f"cash-flow : {len(cands)} candidats, cache {len(cache)} entrées")
-    for t, reg, mic, in_fw in cands:
+    for t, reg, mic, in_fw, held in cands:
         k = f"{t}:{reg}"; e = cache.get(k)
         if e:
             try:
                 age = (today - date.fromisoformat(e.get("fetched", "2000-01-01"))).days
             except ValueError:
                 age = 999
-            if ("fcf" in e and age < TTL_OK) or ("error" in e and age < TTL_ERR):
+            fresh = "fcf" in e and age < TTL_OK and (not held or "years" in e)   # tenus : détail obligatoire (migration)
+            if fresh or ("error" in e and age < TTL_ERR):
                 continue
         if n_fetch >= MAX_FETCH:
             break

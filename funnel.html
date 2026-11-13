@@ -929,10 +929,19 @@ function convWaveHTML(C,st){
     <tr><td>Régions</td><td class="n ${K.max_region_pct>70?"w":""}">${Object.entries(rs).map(([k,v])=>esc(k)+" "+v).join(" · ")}</td><td class="cv-sub">au-delà de 70 % sur une région : revue humaine, pas de correction automatique</td></tr>
     ${F.length?`<tr><td>Diagnostic ${DIAG.as_of?fd(DIAG.as_of):""}</td><td>${F.map(x=>`<b>${esc(x.ticker)}</b> ${x.perf_1y!=null?(x.perf_1y>0?"+":"")+Math.round(x.perf_1y)+" %":""}`).join(" · ")}</td><td class="cv-sub">baisses à surveiller et surveillance IA (${(DIAG.watch_list||[]).map(esc).join(", ")}) : fiches descriptives, sans effet sur la sélection</td></tr>`:""}
     </tbody></table></div>`:"";
+  const yn=(v,ok,ko)=>v==null?'<span class="mut">donnée à venir</span>':v?`<span class="g">${ok}</span>`:`<span class="b">${ko}</span>`;
+  const CK=WAVE.cash_checks||[];
+  const cashTbl=CK.length?`<div class="cv-h">Cash-flow faible : investit ou brûle ?</div><div class="cv-tbl"><table class="cv-who"><thead><tr><th>Ligne</th><th>Cash-flow</th><th>1. Entretien couvert</th><th>2. Les investissements rapportent</th><th>3. Financement</th><th>4. Durée</th><th>Verdict</th></tr></thead><tbody>${CK.map(x=>`<tr><td><b>${esc(x.t)}</b> <span class="mut">${esc(x.n||"")}</span><span class="cv-sub">${x.pf==="socle"?"socle : cash-flow > 0 exigé":"convictions : cash-flow ≥ 5 % exigé"}</span></td>
+    <td class="n b">${String(x.fcf).replace(".",",")} %</td>
+    <td>${yn(x.q1,"oui","non")}${x.capex_bn!=null&&x.da_bn!=null?`<span class="cv-sub">investit ${x.capex_bn} Md, amortit ${x.da_bn} Md</span>`:""}</td>
+    <td>${yn(x.q2,"oui","non")}<span class="cv-sub">ROIC ${(x.roic||[]).map(v=>Math.round(v)).join(" · ")} %${x.growing?", capital en hausse":""}</span></td>
+    <td>${yn(x.q3,"sain","tendu")}<span class="cv-sub">${x.net_cash_bn!=null?(x.net_cash_bn>=0?"trésorerie nette +":"dette nette ")+String(Math.abs(x.net_cash_bn)).replace(".",",")+" Md":""}</span></td>
+    <td>${yn(x.q4,"passager","répété")}${x.neg_years!=null?`<span class="cv-sub">${x.neg_years} exercice(s) négatif(s) d'affilée</span>`:""}</td>
+    <td>${tag(x.verdict==="investit"?"g":x.verdict==="brûle"?"b":"w",x.verdict)}</td></tr>`).join("")}</tbody></table></div><p class="cv-sub">Diagnostic seulement, sans effet sur la sélection : la règle actuelle s'applique à la vague. « Investit » = rendement du capital stable et financement sain ; « brûle » = l'un des deux casse. Sert à décider en 2027 si la règle doit distinguer l'entretien de la croissance.</p>`:"";
   const socle=`<div class="cv-h">Actions socle · vague possible dès le ${fd(S.wave_min)}</div>
     <div class="cv-tbl"><table><thead><tr><th>Ligne</th><th>Mouvement</th><th class="n">Poids</th><th>Motif</th><th>Pour moi</th></tr></thead><tbody>${(cIn+cOut)||'<tr><td colspan="5" class="mut">Aucun mouvement.</td></tr>'}</tbody></table></div>
     ${rawOnly.length?`<p class="cv-warn">Si la collecte reste cassée, le moteur sortirait aussi ${nm(rawOnly)} et ferait entrer ${nm(S.raw.in.filter(x=>!S.clean.in.some(y=>y.t===x.t)))}. Ces sorties ne sont pas des preuves : données manquantes pour ${holes.map(esc).join(", ")}. À réparer avant la vague.</p>`:""}
-    ${gap}${socleCtl}<p class="cv-sub">Le tableau montre la vague sans les trous de collecte (dernières données saines). La clé du socle est gelée jusqu'au 14/09/2027 : on regarde, on ne la retouche pas.</p>`;
+    ${gap}${socleCtl}${cashTbl}<p class="cv-sub">Le tableau montre la vague sans les trous de collecte (dernières données saines). La clé du socle est gelée jusqu'au 14/09/2027 : on regarde, on ne la retouche pas.</p>`;
   // conviction
   const gapOf=bk=>C&&bk?BB[bk].target-100*(C.V[bk]||0)/C.T:null;
   const inR=V.enter.map(c=>{const r=convEnterVerdict(c,C), b=BB[TB[c.theme]];
