@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-05",
+  "version": "2026-11-13",
   "note": "Hiérarchie de convictions sur le TOTAL des deux portefeuilles (Conviction + ETF thématique). Cibles en % uniquement : aucun montant réel ici (dépôt public). Les montants viennent des relevés importés dans le navigateur, jamais committés.",
   "meta": "La rivalité avec la Chine force l'Occident à dépenser pour reconstruire ses propres chaînes : réseau, énergie, défense, semi-conducteurs. Ces dépenses sont les revenus des sociétés détenues. Réserve : ce sont des dépenses d'investissement ; si les taux ou les budgets les freinent, tout ralentit en même temps.",
   "buckets": [
@@ -8,7 +8,7 @@
       "label": "① Contrôle de l'énergie",
       "sub": "réseau, distribution, stockage",
       "target": 15,
-      "target_note": "4 lignes avec Eaton (entré le 02/11) ; plafond 5 % du total par titre : Schneider 5, Eaton 5, ABB 2,5, Nexans 2,5",
+      "target_note": "5 lignes avec Eaton (02/11) et Hubbell (16/11) ; plafond 5 % du total par titre",
       "receiver": true,
       "proxies": [
         "FGRD",
@@ -255,6 +255,15 @@
       "ai": 0.1,
       "name": "Fidelity Global Quality Income",
       "pie": "etf"
+    },
+    "HUBB": {
+      "bucket": "b1",
+      "w": 1,
+      "ai": 0.2,
+      "name": "Hubbell",
+      "pie": "actions",
+      "new": "2026-11-16",
+      "note": "exposition réseau sourcée : Utility Solutions ≈ 3,7 Md$ sur ≈ 5,8 Md$ de ventes 2025 (≈ 64 %), rapport annuel 2025"
     }
   },
   "caps": [
@@ -367,6 +376,14 @@
     "EME": {
       "v": "après preuve",
       "why": "① est sous sa cible et les filtres passent, mais la part réseau face aux datacenters n'est pas sourcée"
+    },
+    "HUBB": {
+      "v": "déjà",
+      "why": "entrée décidée le 13/11 : ① sous sa cible, filtres passés, réseau ≈ 64 % des ventes (sourcé)"
+    },
+    "LR": {
+      "v": "alternative",
+      "why": "filtres passés ; datacenters 26 % des ventes 2025 (sourcé, sous les 40 %) ; écartée au profit de Hubbell (ROIC, dette)"
     }
   },
   "exit_rules": {
