@@ -64,7 +64,7 @@ def _socle(prev):
                       "dur": r.get("durability_score"), "q": r.get("quality_score"), "fcf": r.get("fcf_yield"), "roic": r.get("roic_avg_3y"),
                       "p1y": r.get("perf_1y"), "why": why})
         if len(bench) >= 25: break
-    return {"raw": raw, "clean": clean, "holes": holes, "bench": bench, "pool": len(pool),
+    return {"raw": raw, "clean": clean, "holes": holes, "bench": bench, "pool": len(pool), "liquidity": _liquidity(el, rows, prev),
             "rules": "durabilité A/B · qualité A/B · valorisation (grade) · 3 ans d'historique · liquidité · marge > 0 · ROIC (ROE pour les financières) · "
                      "baisse du ROIC sur 6 ans ≤ 35 % (40 % tenu) · dette nette/EBIT ≤ 3 · cash-flow ≥ 1 % (> 0 tenu) · classement : durabilité, persistance, score, qualité, cash-flow · "
                      "40 lignes, 2 par industrie, 8 par secteur, 6 financières, paires corrélées · top 100 pour rester · 10 changements par vague",
@@ -73,6 +73,48 @@ def _socle(prev):
             "controls": {"n": pf_clean["n"], "region_split": pf_clean["region_split"], "max_region_pct": pf_clean["max_region_pct"],
                          "sector_split": pf_clean["sector_split"], "n_financials": pf_clean["n_financials"], "fin_cap": el.FIN_CAP,
                          "pool": pf_clean["pool_size"], "changes": pf_clean["_transition"]["changes"]}}
+
+
+def _liquidity(el, rows, prev):
+    """Liquidité lue sur la durée — INFORMATION SEULEMENT, sans effet sur la sélection ni sur la vague.
+    Le moteur juge sur `average_volume` du jour (fenêtre courte du fournisseur) : AJ Bell 12 M$ le 15/09, 2,75 M$ le 20/11,
+    médiane 4,4 M$ (spec §25). On garde chaque jour le volume de la séance (titres × cours × change) des lignes tenues et
+    des candidates qui passeraient tout sauf la liquidité entre 2 et 8 M$, pour afficher leur médiane sur ~3 mois. Ce chiffre
+    ne justifie aucune exception manuelle : une autre fenêtre serait un changement de règle (re-spec 2027)."""
+    import statistics
+    hist, today = _load("volume_history.json", {}) or {}, date.today().isoformat()
+    held = {tuple(k) for k in prev.get("_keys") or []}
+    keep = (el.ADV_MIN_USD, el.EXIT_ADV_USD)
+    el.ADV_MIN_USD = el.EXIT_ADV_USD = 0.0           # « tout sauf la liquidité »
+    try:
+        near = [r for r in rows if r.get("industry") and el._passes_gates(r, ("A", "B"))]
+    finally:
+        el.ADV_MIN_USD, el.EXIT_ADV_USD = keep
+    rows = [r for r in rows if r.get("ticker")]
+    watch = {}                                       # tenu : la cotation la plus liquide (NXT = Next à Londres, pas l'homonyme de Madrid)
+    for r in sorted(rows, key=lambda r: el._adv_usd(r) or 0):
+        if (str(r["ticker"]), r["_region"]) in held: watch[(str(r["ticker"]), r["_region"])] = r
+    for r in near:
+        a = el._adv_usd(r)
+        if a is not None and 2e6 <= a < 8e6:             # proches du seuil de 5 M$
+            watch.setdefault((str(r["ticker"]), r["_region"]), r)
+    out = []
+    for (t, reg), r in watch.items():
+        k = t + "|" + str(r.get("data_mic") or reg)    # clé par place de cotation : un symbole, plusieurs sociétés
+        vol, px, fx = el._num(r.get("volume")), el._num(r.get("price")), el.FX_TO_USD.get(r.get("data_currency"))
+        if vol and px and fx:
+            ser = hist.setdefault(k, {}); ser[today] = round(vol * px * fx / 1e6, 2)
+            for d in sorted(ser)[:-130]: del ser[d]           # ~6 mois de séances
+        vals = [hist[k][d] for d in sorted(hist[k])[-63:]] if k in hist else []   # ~3 mois de séances
+        now = el._adv_usd(r)
+        med = round(statistics.median(vals), 1) if len(vals) >= 20 else None
+        is_held = (t, reg) in held
+        if (now is not None and now < 6e6) or (med is not None and med < 6):
+            out.append({"t": t, "n": r.get("name"), "reg": reg, "held": is_held, "now": round(now / 1e6, 1) if now else None,
+                        "med": med, "days": len(vals), "floor": (el.EXIT_ADV_USD if is_held else el.ADV_MIN_USD) / 1e6})
+    with open(os.path.join(DATA, "volume_history.json"), "w", encoding="utf-8") as f:
+        json.dump(hist, f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return sorted(out, key=lambda x: (not x["held"], x["now"] if x["now"] is not None else 0))
 
 
 def _conviction():
