@@ -274,17 +274,18 @@ def _passes_gates(s, grades):
     if not _has_history(s):                          # historique ≥ 3 ans (stats 3Y présentes)
         return False
     adv = _adv_usd(s)
-    if adv is None or adv < ADV_MIN_USD:             # liquidité
-        return False
+    if adv is None or adv < (EXIT_ADV_USD if _is_held(s) else ADV_MIN_USD):   # liquidité ; tenu = bande de grâce 3 M$
+        return False                                 # (revue expert 2026-09-10), comme drawdown/FCF ci-dessus — sinon le
+                                                     # tenu 3-5 M$ sortait du pool, donc du top-100 (bug vu sur AJB 18/11)
     marg = _num(s.get("net_margin"))
     if marg is None or marg <= MARGIN_MIN:
         return False
     if _is_fin(s):                                   # FINANCIÈRES : ROE, pas ROIC/D-E
         roe = _num(s.get("roe_avg_3y")) or _num(s.get("roe"))
-        return roe is not None and roe >= ROE_MIN_FIN
+        return roe is not None and roe >= (EXIT_ROIC if _is_held(s) else ROE_MIN_FIN)   # §12 R4 : tenu 8 %, entrant 12 %
     roic = _num(s.get("roic_avg_3y"))
-    if roic is None or roic < ROIC_MIN:
-        return False
+    if roic is None or roic < (EXIT_ROIC if _is_held(s) else ROIC_MIN):   # §12 R4 : « un tenu est classé dans le pool
+        return False                                                    # avec ses seuils tenu » (ROIC 12/8)
     if ELITE_KEY in ("v4a", "v4"):
         if not _leverage_ok(s):                      # §12 R2 : net debt / EBIT (fonds propres négatifs → 1,5)
             return False
