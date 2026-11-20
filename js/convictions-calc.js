@@ -118,7 +118,8 @@
     const wsum = {}; all.forEach(l => { if (l.m) wsum[l.m.bucket] = (wsum[l.m.bucket] || 0) + l.m.w; });
     all.forEach(l => {
       const b = l.m && B[l.m.bucket];
-      l.end = (!b || b.frozen || b.key === bind) ? l.value : Math.max(l.value, (b.target / 100) * Ts * l.m.w / wsum[b.key]);
+      // no_new : ligne gardée mais privée d'argent neuf (règle datacenters : source primaire manquante) — sa part reste comptée, rien n'est reporté sur les autres
+      l.end = (!b || b.frozen || b.key === bind || (l.m && l.m.no_new)) ? l.value : Math.max(l.value, (b.target / 100) * Ts * l.m.w / wsum[b.key]);
       l.need = l.end - l.value;
     });
     const need = all.reduce((s, l) => s + l.need, 0);
