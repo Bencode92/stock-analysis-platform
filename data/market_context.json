@@ -1,7 +1,7 @@
 {
-  "market_regime": "risk-off",
+  "market_regime": "caution",
   "confidence": 0.86,
-  "as_of": "2026-11-22",
+  "as_of": "2026-11-23",
   "macro_tilts": {
     "favored_sectors": [
       "healthcare",
@@ -11,28 +11,24 @@
       "communication-services",
       "consumer-discretionary"
     ],
-    "favored_regions": [
-      "énergie",
-      "cybersécurité",
-      "biotech"
-    ],
+    "favored_regions": [],
     "avoided_regions": [
-      "argent",
       "uranium & nucléaire",
-      "bitcoin"
+      "china",
+      "germany"
     ],
-    "rationale": "7/11 secteurs positifs (64%) | MACRO OVERRIDE: VIX=36 (crisis >35), HY spread=352bps (stress)"
+    "rationale": "7/11 secteurs positifs (64%) | MACRO OVERRIDE: VIX=27 (elevated), HY spread=376bps (stress)"
   },
   "key_trends": [
     "Secteur leader: energy (+35.3% YTD)",
-    "Région leader: énergie (+35.3% YTD)",
+    "Région leader: spatial (+-7.2% YTD)",
     "9 secteur(s) en refroidissement (3M ≤ -2.0%)",
     "52W leader: energy (+35.3% sur 12 mois)",
     "6M leader: healthcare (+17.6% sur 6 mois)"
   ],
   "risks": [
     "Secteurs en difficulté: financials, communication-services, consumer-discretionary",
-    "Régions en difficulté: germany, italy, france",
+    "Régions en difficulté: germany, china, spatial",
     "Concentration: peu de secteurs en zone favorable (rotation possible)",
     "7 secteurs avec 6M négatif (momentum moyen-terme dégradé)"
   ],
@@ -135,463 +131,39 @@
   "region_risk_profile": {
     "germany": {
       "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
+      "reason": "underperform|cooling_m3|w52_missing",
       "ytd": -7.84,
-      "w52": -0.58,
-      "m3": -11.38,
-      "daily": -2.54
-    },
-    "united-kingdom": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 1.73,
-      "w52": 6.37,
-      "m3": -8.58,
-      "daily": -1.58
-    },
-    "switzerland": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 3.09,
-      "w52": 9.03,
-      "m3": -3.96,
-      "daily": -1.07
-    },
-    "italy": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -0.79,
-      "w52": 4.72,
-      "m3": -14.32,
-      "daily": -2.69
-    },
-    "france": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -9.14,
-      "w52": -6.43,
-      "m3": -13.02,
-      "daily": -2.39
-    },
-    "netherlands": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 2.3,
-      "w52": 4.33,
-      "m3": -16.01,
-      "daily": -4.05
-    },
-    "spain": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 2.78,
-      "w52": 11.42,
-      "m3": -11.94,
-      "daily": -1.77
-    },
-    "sweden": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -1.5,
-      "w52": 5.28,
-      "m3": -9.58,
-      "daily": -2.98
-    },
-    "zone euro": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -4.64,
-      "w52": 0.56,
-      "m3": -14.44,
-      "daily": -2.86
-    },
-    "europe": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -1.2,
-      "w52": 4.45,
-      "m3": -10.9,
-      "daily": -2.32
-    },
-    "united-states": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 1.16,
-      "w52": 4.67,
-      "m3": -9.91,
-      "daily": -3.64
-    },
-    "canada": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 1.78,
-      "w52": 8.84,
-      "m3": -11.98,
-      "daily": -2.42
-    },
-    "mexico": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 4.11,
-      "w52": 9.3,
-      "m3": -6.72,
-      "daily": -0.47
-    },
-    "brazil": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -10.17,
-      "w52": -10.9,
-      "m3": -18.6,
-      "daily": -3.29
-    },
-    "chile": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -17.13,
-      "w52": -7.87,
-      "m3": -19.21,
-      "daily": -0.95
-    },
-    "argentina": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -29.37,
-      "w52": -24.56,
-      "m3": -30.44,
-      "daily": -3.0
+      "w52": null,
+      "m3": -11.24,
+      "daily": 2.4
     },
     "china": {
       "classification": "avoided",
       "reason": "underperform|cooling_m3|underperform_confirmed",
       "ytd": -16.43,
-      "w52": -7.2,
-      "m3": -24.36,
-      "daily": -3.63
-    },
-    "south-korea": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 26.78,
-      "w52": 38.15,
-      "m3": -30.88,
-      "daily": -8.42
-    },
-    "taiwan": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 17.69,
-      "w52": 20.99,
-      "m3": -28.31,
-      "daily": -10.95
-    },
-    "japan": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 3.33,
-      "w52": 2.76,
-      "m3": -12.35,
-      "daily": -4.11
-    },
-    "hong-kong": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 3.62,
-      "w52": 1.47,
-      "m3": -5.7,
-      "daily": -2.0
-    },
-    "singapore": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 1.05,
-      "w52": 0.65,
-      "m3": -17.68,
-      "daily": -2.56
-    },
-    "india": {
-      "classification": "avoided",
-      "reason": "underperform|underperform_confirmed",
-      "ytd": -2.0,
-      "w52": -2.29,
-      "m3": 6.71,
-      "daily": 1.85
-    },
-    "asie": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -0.44,
-      "w52": 2.39,
-      "m3": -20.3,
-      "daily": -5.41
-    },
-    "saudi-arabia": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -3.98,
-      "w52": -8.67,
-      "m3": -8.74,
-      "daily": -0.54
-    },
-    "israel": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|deep_negative_kept",
-      "ytd": -7.74,
-      "w52": 1.0,
-      "m3": -17.34,
-      "daily": -2.21
-    },
-    "turkey": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -14.06,
-      "w52": -12.43,
-      "m3": -27.39,
-      "daily": -3.21
-    },
-    "australia": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 2.06,
-      "w52": 5.53,
-      "m3": -11.31,
-      "daily": -1.69
-    },
-    "south-africa": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -18.23,
-      "w52": -13.26,
-      "m3": -22.41,
-      "daily": -2.93
-    },
-    "monde": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 0.89,
-      "w52": 4.6,
-      "m3": -10.35,
-      "daily": -3.34
-    },
-    "émergents": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -1.59,
-      "w52": 1.39,
-      "m3": -19.79,
-      "daily": -5.13
-    },
-    "semi-conducteurs": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 22.93,
-      "w52": 36.69,
-      "m3": -28.81,
-      "daily": -10.55
-    },
-    "aérospatiale & défense": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|deep_negative_kept",
-      "ytd": -7.44,
-      "w52": 0.25,
-      "m3": -16.27,
-      "daily": -2.87
+      "w52": -8.02,
+      "m3": -22.82,
+      "daily": 5.36
     },
     "spatial": {
       "classification": "avoided",
-      "reason": "underperform|cooling_m3|divergent|deep_negative_kept",
+      "reason": "underperform|cooling_m3|deep_negative_kept",
       "ytd": -7.19,
-      "w52": 13.0,
-      "m3": -21.89,
-      "daily": -5.53
+      "w52": 10.7,
+      "m3": -19.7,
+      "daily": 4.84
     },
     "uranium & nucléaire": {
       "classification": "avoided",
       "reason": "underperform|cooling_m3|underperform_confirmed",
       "ytd": -37.3,
-      "w52": -35.59,
-      "m3": -41.85,
-      "daily": -6.56
-    },
-    "énergie propre": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -15.82,
-      "w52": -13.94,
-      "m3": -21.38,
-      "daily": -4.55
-    },
-    "robotique & ia": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -24.7,
-      "w52": -18.54,
-      "m3": -24.31,
-      "daily": -5.93
-    },
-    "cybersécurité": {
-      "classification": "favored",
-      "reason": "out_of_range|cooling_m3|fallback_top_n",
-      "ytd": 27.96,
-      "w52": 27.77,
-      "m3": -3.61,
-      "daily": -5.12
-    },
-    "logiciel": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -13.41,
-      "w52": -9.31,
-      "m3": -11.46,
-      "daily": -4.77
-    },
-    "infrastructure": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 2.62,
-      "w52": 5.58,
-      "m3": -13.03,
-      "daily": -3.77
-    },
-    "lithium & batterie": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -19.86,
-      "w52": -13.78,
-      "m3": -32.15,
-      "daily": -4.33
-    },
-    "eau": {
-      "classification": "neutral",
-      "reason": "out_of_range",
-      "ytd": 4.77,
-      "w52": 4.14,
-      "m3": 2.19,
-      "daily": -1.84
-    },
-    "biotech": {
-      "classification": "favored",
-      "reason": "out_of_range|cooling_m3|fallback_top_n",
-      "ytd": 18.23,
-      "w52": 19.11,
-      "m3": -6.56,
-      "daily": -2.05
-    },
-    "bitcoin": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -33.49,
-      "w52": -31.17,
-      "m3": -24.4,
-      "daily": -5.87
-    },
-    "value": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 17.62,
-      "w52": 21.85,
-      "m3": -3.84,
-      "daily": -1.63
-    },
-    "growth": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -14.03,
-      "w52": -11.08,
-      "m3": -16.89,
-      "daily": -6.02
-    },
-    "quality": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 4.48,
-      "w52": 8.09,
-      "m3": -7.03,
-      "daily": -2.68
-    },
-    "momentum": {
-      "classification": "neutral",
-      "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-      "ytd": -3.45,
-      "w52": 1.62,
-      "m3": -20.8,
-      "daily": -5.45
-    },
-    "min volatilité": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 4.34,
-      "w52": 4.86,
-      "m3": -2.94,
-      "daily": -1.48
-    },
-    "dividende": {
-      "classification": "neutral",
-      "reason": "out_of_range|cooling_m3",
-      "ytd": 7.21,
-      "w52": 9.83,
-      "m3": -6.73,
-      "daily": -2.06
-    },
-    "or": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -18.53,
-      "w52": -13.73,
-      "m3": -23.74,
-      "daily": -3.67
-    },
-    "énergie": {
-      "classification": "favored",
-      "reason": "out_of_range|cooling_m3|fallback_top_n",
-      "ytd": 35.34,
-      "w52": 35.34,
-      "m3": -4.92,
-      "daily": -0.62
-    },
-    "cuivre": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -21.54,
-      "w52": -3.53,
-      "m3": -40.45,
-      "daily": -4.98
-    },
-    "argent": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|divergent|underperform_confirmed",
-      "ytd": -42.61,
-      "w52": -18.39,
-      "m3": -41.06,
-      "daily": -6.74
-    },
-    "taux longs us": {
-      "classification": "avoided",
-      "reason": "underperform|underperform_confirmed",
-      "ytd": -6.55,
-      "w52": -8.99,
-      "m3": -0.73,
-      "daily": 1.37
-    },
-    "high yield": {
-      "classification": "avoided",
-      "reason": "underperform|cooling_m3|underperform_confirmed",
-      "ytd": -5.33,
-      "w52": -5.03,
-      "m3": -4.12,
-      "daily": -0.26
-    },
-    "dollar us": {
-      "classification": "neutral",
-      "reason": "out_of_range",
-      "ytd": 9.58,
-      "w52": 4.33,
-      "m3": 6.16,
-      "daily": -0.03
+      "w52": -38.12,
+      "m3": -41.37,
+      "daily": 6.77
     }
   },
   "_meta": {
-    "generated_at": "2026-11-22T15:45:08.761449",
+    "generated_at": "2026-11-23T19:35:16.921733",
     "model": "radar_deterministic_v1.6.1",
     "mode": "DATA_DRIVEN",
     "amf_compliant": true,
@@ -637,7 +209,7 @@
       "floor_neutral_dd_gate": 0.8
     },
     "january_mode_info": {
-      "day_of_year": 326,
+      "day_of_year": 327,
       "effective_ytd_min": 10.0,
       "ramp_days": 90,
       "ytd_floor": 2.0
@@ -688,10 +260,10 @@
       "sectors_with_m3": 11,
       "sectors_with_m6": 11,
       "sectors_total": 11,
-      "markets_with_w52": 57,
-      "markets_with_m3": 57,
-      "markets_with_m6": 57,
-      "markets_total": 57,
+      "markets_with_w52": 3,
+      "markets_with_m3": 4,
+      "markets_with_m6": 3,
+      "markets_total": 4,
       "favored_blocked_by_w52": 0,
       "favored_blocked_by_m6": 0,
       "favored_blocked_by_overheat_cooling": 0,
@@ -706,11 +278,11 @@
       "circuit_breaker_threshold": 5.0,
       "dispersion_std": 12.31,
       "dispersion_stressed": false,
-      "effective_ytd_max": 45.0
+      "effective_ytd_max": 35.0
     },
     "diagnostics": {
       "sectors_loaded": 11,
-      "markets_loaded": 57,
+      "markets_loaded": 4,
       "sector_classifications": [
         {
           "key": "materials",
@@ -904,282 +476,27 @@
         {
           "key": "germany",
           "ytd": -7.84,
-          "daily": -2.54,
-          "w52": -0.58,
-          "m3": -11.38,
-          "m6": -8.72,
+          "daily": 2.4,
+          "w52": null,
+          "m3": -11.24,
+          "m6": null,
           "beta": null,
           "vol_3y": null,
           "beta_flag": null,
           "beta_region": "US",
           "effective_momentum": -7.84,
           "classification": "avoided",
-          "reason": "underperform|cooling_m3|underperform_confirmed",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "united-kingdom",
-          "ytd": 1.73,
-          "daily": -1.58,
-          "w52": 6.37,
-          "m3": -8.58,
-          "m6": -4.99,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 1.73,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "switzerland",
-          "ytd": 3.09,
-          "daily": -1.07,
-          "w52": 9.03,
-          "m3": -3.96,
-          "m6": -1.33,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 3.09,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "italy",
-          "ytd": -0.79,
-          "daily": -2.69,
-          "w52": 4.72,
-          "m3": -14.32,
-          "m6": -8.0,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -0.79,
-          "classification": "neutral",
-          "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "france",
-          "ytd": -9.14,
-          "daily": -2.39,
-          "w52": -6.43,
-          "m3": -13.02,
-          "m6": -9.5,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -9.14,
-          "classification": "avoided",
-          "reason": "underperform|cooling_m3|underperform_confirmed",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "netherlands",
-          "ytd": 2.3,
-          "daily": -4.05,
-          "w52": 4.33,
-          "m3": -16.01,
-          "m6": -12.72,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 2.3,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "spain",
-          "ytd": 2.78,
-          "daily": -1.77,
-          "w52": 11.42,
-          "m3": -11.94,
-          "m6": -1.95,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 2.78,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "sweden",
-          "ytd": -1.5,
-          "daily": -2.98,
-          "w52": 5.28,
-          "m3": -9.58,
-          "m6": -7.51,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -1.5,
-          "classification": "neutral",
-          "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "zone euro",
-          "ytd": -4.64,
-          "daily": -2.86,
-          "w52": 0.56,
-          "m3": -14.44,
-          "m6": -8.62,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -4.64,
-          "classification": "neutral",
-          "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "europe",
-          "ytd": -1.2,
-          "daily": -2.32,
-          "w52": 4.45,
-          "m3": -10.9,
-          "m6": -6.61,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -1.2,
-          "classification": "neutral",
-          "reason": "underperform|avoided_rescued_w52_positive|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "united-states",
-          "ytd": 1.16,
-          "daily": -3.64,
-          "w52": 4.67,
-          "m3": -9.91,
-          "m6": -7.49,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 1.16,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "canada",
-          "ytd": 1.78,
-          "daily": -2.42,
-          "w52": 8.84,
-          "m3": -11.98,
-          "m6": -6.19,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 1.78,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "mexico",
-          "ytd": 4.11,
-          "daily": -0.47,
-          "w52": 9.3,
-          "m3": -6.72,
-          "m6": -7.18,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 4.11,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "brazil",
-          "ytd": -10.17,
-          "daily": -3.29,
-          "w52": -10.9,
-          "m3": -18.6,
-          "m6": -21.53,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -10.17,
-          "classification": "avoided",
-          "reason": "underperform|cooling_m3|underperform_confirmed",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "chile",
-          "ytd": -17.13,
-          "daily": -0.95,
-          "w52": -7.87,
-          "m3": -19.21,
-          "m6": -16.9,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -17.13,
-          "classification": "avoided",
-          "reason": "underperform|cooling_m3|underperform_confirmed",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "argentina",
-          "ytd": -29.37,
-          "daily": -3.0,
-          "w52": -24.56,
-          "m3": -30.44,
-          "m6": -28.58,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": -29.37,
-          "classification": "avoided",
-          "reason": "underperform|cooling_m3|underperform_confirmed",
+          "reason": "underperform|cooling_m3|w52_missing",
           "symbol": "N/A",
           "selection_method": "N/A"
         },
         {
           "key": "china",
           "ytd": -16.43,
-          "daily": -3.63,
-          "w52": -7.2,
-          "m3": -24.36,
-          "m6": -29.02,
+          "daily": 5.36,
+          "w52": -8.02,
+          "m3": -22.82,
+          "m6": -29.8,
           "beta": null,
           "vol_3y": null,
           "beta_flag": null,
@@ -1191,53 +508,36 @@
           "selection_method": "N/A"
         },
         {
-          "key": "south-korea",
-          "ytd": 26.78,
-          "daily": -8.42,
-          "w52": 38.15,
-          "m3": -30.88,
-          "m6": -32.29,
+          "key": "spatial",
+          "ytd": -7.19,
+          "daily": 4.84,
+          "w52": 10.7,
+          "m3": -19.7,
+          "m6": -45.19,
           "beta": null,
           "vol_3y": null,
           "beta_flag": null,
           "beta_region": "US",
-          "effective_momentum": 26.78,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
+          "effective_momentum": -7.19,
+          "classification": "avoided",
+          "reason": "underperform|cooling_m3|deep_negative_kept",
           "symbol": "N/A",
           "selection_method": "N/A"
         },
         {
-          "key": "taiwan",
-          "ytd": 17.69,
-          "daily": -10.95,
-          "w52": 20.99,
-          "m3": -28.31,
-          "m6": -22.79,
+          "key": "uranium & nucléaire",
+          "ytd": -37.3,
+          "daily": 6.77,
+          "w52": -38.12,
+          "m3": -41.37,
+          "m6": -47.33,
           "beta": null,
           "vol_3y": null,
           "beta_flag": null,
           "beta_region": "US",
-          "effective_momentum": 17.69,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
-          "symbol": "N/A",
-          "selection_method": "N/A"
-        },
-        {
-          "key": "japan",
-          "ytd": 3.33,
-          "daily": -4.11,
-          "w52": 2.76,
-          "m3": -12.35,
-          "m6": -8.93,
-          "beta": null,
-          "vol_3y": null,
-          "beta_flag": null,
-          "beta_region": "US",
-          "effective_momentum": 3.33,
-          "classification": "neutral",
-          "reason": "out_of_range|cooling_m3",
+          "effective_momentum": -37.3,
+          "classification": "avoided",
+          "reason": "underperform|cooling_m3|underperform_confirmed",
           "symbol": "N/A",
           "selection_method": "N/A"
         }

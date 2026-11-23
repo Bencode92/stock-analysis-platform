@@ -1,6 +1,6 @@
 {
   "Agressif": {
-    "Commentaire": "Ce portefeuille modèle Agressif présente une allocation orientée croissance avec une volatilité cible élevée. La diversification sectorielle et géographique vise à capturer le potentiel de hausse des marchés actions. Toutefois, ce profil comporte un risque de perte en capital significatif en cas de correction des marchés. La volatilité historique peut entraîner des variations importantes de la valeur du portefeuille à court terme. Ce portefeuille compte 12 lignes avec une volatilité estimée de 15.68%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle Agressif présente une allocation orientée croissance avec une volatilité cible élevée. La diversification sectorielle et géographique vise à capturer le potentiel de hausse des marchés actions. Toutefois, ce profil comporte un risque de perte en capital significatif en cas de correction des marchés. La volatilité historique peut entraîner des variations importantes de la valeur du portefeuille à court terme. Ce portefeuille compte 12 lignes avec une volatilité estimée de 15.78%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "STMICROELECTRONICS NV (STM)": "13.0%",
       "SLIDE INSURANCE HOLDINGS, INC. (SLDE)": "10.9%",
@@ -158,7 +158,7 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 15.68,
+      "vol_realized": 15.78,
       "vol_target": 24.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 88.0,
@@ -212,15 +212,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 24.0,
-            "observed": 15.68,
-            "slack": -2.32,
+            "observed": 15.78,
+            "slack": -2.22,
             "binding": false,
             "status": "VIOLATED",
             "details": {
               "tolerance": 6.0,
               "range_min": 18.0,
               "range_max": 30.0,
-              "diff_from_target": -8.32
+              "diff_from_target": -8.22
             }
           },
           {
@@ -462,7 +462,7 @@
         },
         "quality_score": 75.7,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 2.3% — reduce exposure",
+          "🟠 VIOLATED: volatility exceeded by 2.2% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 10.0% — immediate action required",
           "🟡 BINDING: max_single_position at 13.0% (cap=13.0%) — monitor closely",
           "🟠 VIOLATED: max_sector exceeded by 4.0% — reduce exposure"
@@ -723,11 +723,11 @@
     },
     "_limitations": [
       "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique.",
-      "Volatilité réalisée (15.7%) éloignée de la cible (24.0%) - écart de 8.3%."
+      "Volatilité réalisée (15.8%) éloignée de la cible (24.0%) - écart de 8.2%."
     ]
   },
   "Modéré": {
-    "Commentaire": "Ce portefeuille modèle Modéré combine des actifs de croissance et des instruments à revenu fixe pour un équilibre rendement/risque. L'allocation vise une volatilité intermédiaire tout en maintenant un potentiel de performance. Le risque de perte en capital existe, notamment en période de stress de marché. La corrélation entre classes d'actifs peut augmenter en période de crise, réduisant les bénéfices de la diversification. Ce portefeuille compte 8 lignes avec une volatilité estimée de 11.41%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle Modéré combine des actifs de croissance et des instruments à revenu fixe pour un équilibre rendement/risque. L'allocation vise une volatilité intermédiaire tout en maintenant un potentiel de performance. Le risque de perte en capital existe, notamment en période de stress de marché. La corrélation entre classes d'actifs peut augmenter en période de crise, réduisant les bénéfices de la diversification. Ce portefeuille compte 8 lignes avec une volatilité estimée de 11.46%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "THE TRAVELERS COMPANIES, INC. (TRV)": "13.5%",
       "CINCINNATI FINANCIAL CORPORATION (CINF)": "12.1%",
@@ -837,7 +837,7 @@
     "_optimization": {
       "mode": "fallback_slsqp_failed",
       "is_heuristic": true,
-      "vol_realized": 11.41,
+      "vol_realized": 11.46,
       "vol_target": 11.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 88.0,
@@ -883,15 +883,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 11.0,
-            "observed": 11.41,
-            "slack": 2.59,
+            "observed": 11.46,
+            "slack": 2.54,
             "binding": false,
             "status": "OK",
             "details": {
               "tolerance": 3.0,
               "range_min": 8.0,
               "range_max": 14.0,
-              "diff_from_target": 0.41
+              "diff_from_target": 0.46
             }
           },
           {
@@ -1332,7 +1332,7 @@
     ]
   },
   "Stable": {
-    "Commentaire": "Ce portefeuille modèle Stable privilégie la préservation du capital avec une allocation majoritairement obligataire et des actifs à faible volatilité historique. L'objectif est de limiter les fluctuations tout en générant un rendement modéré. Malgré son profil défensif, ce portefeuille reste exposé au risque de taux et au risque de crédit. En période de hausse des taux, la valeur des obligations peut diminuer significativement. Ce portefeuille compte 10 lignes avec une volatilité estimée de 10.14%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Commentaire": "Ce portefeuille modèle Stable privilégie la préservation du capital avec une allocation majoritairement obligataire et des actifs à faible volatilité historique. L'objectif est de limiter les fluctuations tout en générant un rendement modéré. Malgré son profil défensif, ce portefeuille reste exposé au risque de taux et au risque de crédit. En période de hausse des taux, la valeur des obligations peut diminuer significativement. Ce portefeuille compte 10 lignes avec une volatilité estimée de 10.35%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
     "Actions": {
       "RIO TINTO PLC (RIO)": "15.0%",
       "SYSCO CORPORATION (SYY)": "15.0%",
@@ -1466,7 +1466,7 @@
     "_optimization": {
       "mode": "fallback_heuristic",
       "is_heuristic": true,
-      "vol_realized": 10.14,
+      "vol_realized": 10.35,
       "vol_target": 6.0,
       "covariance_trustworthy": true,
       "returns_coverage_pct": 80.0,
@@ -1541,15 +1541,15 @@
             "name": "volatility",
             "constraint_type": "target",
             "cap": 6.0,
-            "observed": 10.14,
-            "slack": -1.14,
+            "observed": 10.35,
+            "slack": -1.35,
             "binding": false,
             "status": "VIOLATED",
             "details": {
               "tolerance": 3.0,
               "range_min": 3.0,
               "range_max": 9.0,
-              "diff_from_target": 4.14
+              "diff_from_target": 4.35
             }
           },
           {
@@ -1759,7 +1759,7 @@
         },
         "quality_score": 58.3,
         "recommendations": [
-          "🟠 VIOLATED: volatility exceeded by 1.1% — reduce exposure",
+          "🟠 VIOLATED: volatility exceeded by 1.4% — reduce exposure",
           "🔴 CRITICAL: bonds_min violated by 35.0% — immediate action required",
           "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
           "🔴 CRITICAL: max_sector violated by 27.5% — immediate action required",
@@ -1995,11 +1995,11 @@
     },
     "_limitations": [
       "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique.",
-      "Volatilité réalisée (10.1%) éloignée de la cible (6.0%) - écart de 4.1%."
+      "Volatilité réalisée (10.3%) éloignée de la cible (6.0%) - écart de 4.3%."
     ]
   },
   "_meta": {
-    "generated_at": "2026-11-22T15:52:12.468246",
+    "generated_at": "2026-11-23T19:43:10.092543",
     "version": "v4.15.0",
     "buffett_mode": "soft",
     "buffett_min_score": 50,
