@@ -723,6 +723,7 @@ function sauvegarderSaisiePER() {
     try {
         const data = { mode: document.querySelector('input[name="revenu-mode"]:checked')?.value || 'brut', champs: {} };
         PER_SAISIE_IDS.forEach(id => { const e = document.getElementById(id); if (e) data.champs[id] = e.value; });
+        data.mois = moisPER;
         localStorage.setItem(PER_SAISIE_KEY, JSON.stringify(data));
         const st = document.getElementById('per-saisie-statut');
         if (st) { st.textContent = '\u2713 enregistr\u00E9'; clearTimeout(sauvegarderSaisiePER._t); sauvegarderSaisiePER._t = setTimeout(() => { st.textContent = ''; }, 1500); }
@@ -730,10 +731,12 @@ function sauvegarderSaisiePER() {
 }
 
 function initSauvegardeSaisiePER() {
+    let moisSaved = null;
     try {
         const raw = localStorage.getItem(PER_SAISIE_KEY);
         if (raw) {
             const data = JSON.parse(raw);
+            moisSaved = data.mois;
             const radio = document.querySelector('input[name="revenu-mode"][value="' + (data.mode || 'brut') + '"]');
             if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
             Object.entries(data.champs || {}).forEach(([id, v]) => { const e = document.getElementById(id); if (e && v !== undefined && v !== '') e.value = v; });
@@ -742,12 +745,88 @@ function initSauvegardeSaisiePER() {
             if (avance) document.getElementById('bloc-avance-per')?.classList.remove('hidden');
         }
     } catch (e) { /* saisie corrompue : on repart de zéro */ }
+    initMoisPER(moisSaved);
     PER_SAISIE_IDS.forEach(id => { const e = document.getElementById(id); if (e) { e.addEventListener('input', sauvegarderSaisiePER); e.addEventListener('change', sauvegarderSaisiePER); } });
     document.querySelectorAll('input[name="revenu-mode"]').forEach(r => r.addEventListener('change', sauvegarderSaisiePER));
     document.getElementById('btn-effacer-saisie-per')?.addEventListener('click', () => {
         try { localStorage.removeItem(PER_SAISIE_KEY); } catch (e) {}
         PER_SAISIE_IDS.forEach(id => { const e = document.getElementById(id); if (e && e.tagName === 'INPUT') e.value = ''; });
+        moisPER = MOIS_LABELS.map(() => ({ ni: '', pas: '', est: false })); renderMoisPER();
         const st = document.getElementById('per-saisie-statut'); if (st) st.textContent = 'saisie effac\u00E9e';
+    });
+}
+
+// ==========================================
+// 📅 Détail mois par mois (mode fiche de paie)
+// État : 12 lignes { ni, pas, est } — est = ligne remplie par estimation (mois à venir)
+// ==========================================
+const MOIS_LABELS = ['Janvier','F\u00E9vrier','Mars','Avril','Mai','Juin','Juillet','Ao\u00FBt','Septembre','Octobre','Novembre','D\u00E9cembre'];
+let moisPER = MOIS_LABELS.map(() => ({ ni: '', pas: '', est: false }));
+const num = v => parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')) || 0;
+
+function majModeMoisPER() {
+    const mode = document.querySelector('input[name="revenu-mode"]:checked')?.value;
+    document.getElementById('bloc-mois-per')?.classList.toggle('hidden', mode !== 'fiche');
+    if (mode === 'fiche') totauxMoisPER();
+}
+
+function renderMoisPER() {
+    const tb = document.getElementById('tbody-mois-per');
+    if (!tb) return;
+    const inp = 'w-full text-right rounded bg-slate-800/70 border px-2 py-1 ';
+    tb.innerHTML = moisPER.map((m, i) => {
+        const cls = m.est ? 'border-amber-700/50 text-amber-200 italic' : 'border-slate-600 text-white';
+        const taux = num(m.ni) > 0 && num(m.pas) > 0 ? (num(m.pas) / num(m.ni) * 100).toFixed(1) + ' %' : '';
+        return '<tr><td class="py-1 pr-2 text-xs ' + (m.est ? 'text-amber-300/80' : 'text-slate-300') + '">' + MOIS_LABELS[i] + (m.est ? ' <span class="text-[10px]">(est.)</span>' : '') + '</td>'
+            + '<td class="px-2 py-1"><input data-mois="' + i + '" data-k="ni" type="number" step="0.01" min="0" class="' + inp + cls + '" value="' + m.ni + '"></td>'
+            + '<td class="px-2 py-1"><input data-mois="' + i + '" data-k="pas" type="number" step="0.01" min="0" class="' + inp + cls + '" value="' + m.pas + '"></td>'
+            + '<td class="pl-2 py-1 text-right text-[11px] text-slate-500">' + taux + '</td></tr>';
+    }).join('');
+    totauxMoisPER();
+}
+
+function totauxMoisPER() {
+    const t = { rNi: 0, rPas: 0, eNi: 0, ePas: 0 };
+    moisPER.forEach(m => { if (m.est) { t.eNi += num(m.ni); t.ePas += num(m.pas); } else { t.rNi += num(m.ni); t.rPas += num(m.pas); } });
+    const f = v => v ? formatMontant(v) + ' \u20AC' : '\u2014';
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('tot-mois-reel-ni', f(t.rNi)); set('tot-mois-reel-pas', f(t.rPas));
+    set('tot-mois-est-ni', f(t.eNi)); set('tot-mois-est-pas', f(t.ePas));
+    const ni = t.rNi + t.eNi, pas = t.rPas + t.ePas;
+    set('tot-mois-ni', f(ni)); set('tot-mois-pas', f(pas));
+    set('tot-mois-taux', ni > 0 && pas > 0 ? (pas / ni * 100).toFixed(1) + ' %' : '');
+    // Les totaux alimentent les champs principaux (dès qu'au moins un mois est saisi)
+    const modeFiche = document.querySelector('input[name="revenu-mode"]:checked')?.value === 'fiche';
+    if (ni > 0 && modeFiche) {
+        const a = document.getElementById('salaire-brut-simple'); if (a) a.value = String(Math.round(ni * 100) / 100);
+        const b = document.getElementById('pas-cumul-simple'); if (b) b.value = pas > 0 ? String(Math.round(pas * 100) / 100) : '';
+    }
+}
+
+function initMoisPER(saved) {
+    if (Array.isArray(saved) && saved.length === 12) moisPER = saved.map(m => ({ ni: m.ni ?? '', pas: m.pas ?? '', est: !!m.est }));
+    renderMoisPER();
+    majModeMoisPER();
+    if (moisPER.some(m => m.ni !== '' || m.pas !== '')) document.getElementById('tableau-mois-per')?.classList.remove('hidden');
+    document.querySelectorAll('input[name="revenu-mode"]').forEach(r => r.addEventListener('change', majModeMoisPER));
+    document.getElementById('btn-toggle-mois')?.addEventListener('click', () => document.getElementById('tableau-mois-per')?.classList.toggle('hidden'));
+    const tb = document.getElementById('tbody-mois-per');
+    tb?.addEventListener('input', e => {
+        const i = +e.target.dataset.mois, k = e.target.dataset.k;
+        if (isNaN(i) || !k) return;
+        moisPER[i][k] = e.target.value;
+        if (moisPER[i].est) { moisPER[i].est = false; e.target.closest('tr').querySelectorAll('input').forEach(x => x.className = x.className.replace('border-amber-700/50 text-amber-200 italic', 'border-slate-600 text-white')); }
+        totauxMoisPER(); sauvegarderSaisiePER();
+    });
+    document.getElementById('btn-proj-mois')?.addEventListener('click', () => {
+        const ni = num(document.getElementById('proj-ni-mois')?.value), tx = num(document.getElementById('proj-taux-mois')?.value);
+        if (!ni) return;
+        moisPER.forEach(m => { if (m.ni === '' && m.pas === '') { m.ni = String(ni); m.pas = tx ? String(Math.round(ni * tx) / 100) : ''; m.est = true; } });
+        renderMoisPER(); sauvegarderSaisiePER();
+    });
+    document.getElementById('btn-vider-est-mois')?.addEventListener('click', () => {
+        moisPER.forEach(m => { if (m.est) { m.ni = ''; m.pas = ''; m.est = false; } });
+        renderMoisPER(); sauvegarderSaisiePER();
     });
 }
 
