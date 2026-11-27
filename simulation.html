@@ -765,6 +765,13 @@
                 <div class="text-[11px] text-slate-400">Directement de votre avis d'impôt (plus précis)</div>
               </div>
             </label>
+            <label class="flex items-start gap-2 cursor-pointer flex-1 bg-slate-800/40 rounded-lg p-3 border border-slate-700 hover:border-emerald-500 transition">
+              <input type="radio" name="revenu-mode" value="fiche" class="mt-0.5 accent-emerald-500">
+              <div>
+                <div class="text-sm font-semibold text-white">🧾 Net imposable fiche de paie</div>
+                <div class="text-[11px] text-slate-400">Cumul annuel du bulletin — abattement 10 % appliqué automatiquement</div>
+              </div>
+            </label>
           </div>
         </div>
 
@@ -786,6 +793,25 @@
               <span class="absolute inset-y-0 right-3 flex items-center text-slate-400 text-sm">€</span>
             </div>
             <p id="revenu-help" class="text-[11px] text-slate-500 mt-1">Brut avant prélèvements sociaux et impôt</p>
+          </div>
+
+          <!-- Prélèvement à la source de l'année (optionnel) -->
+          <div>
+            <label for="pas-cumul-simple" class="block text-sm font-medium text-slate-300 mb-1">
+              Prélèvement à la source de l'année <span class="text-slate-500 font-normal">(optionnel)</span>
+            </label>
+            <div class="relative">
+              <input
+                id="pas-cumul-simple"
+                type="number"
+                min="0"
+                step="1"
+                class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Ex : 9 800"
+              />
+              <span class="absolute inset-y-0 right-3 flex items-center text-slate-400 text-sm">€</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Cumul « impôt prélevé à la source » de vos fiches (+ mois restants estimés) → écart avec l'impôt réel</p>
           </div>
 
           <!-- Situation familiale -->
@@ -843,13 +869,14 @@
           >
             <p class="text-xs text-slate-400">
               ℹ️ Vous trouverez ces montants sur votre
-              <span class="font-semibold text-slate-200">avis d'impôt 2024</span> (rubrique « Plafond épargne retraite »).
+              <span class="font-semibold text-slate-200">avis d'impôt 2026 (revenus 2025)</span>, rubrique « Plafond épargne retraite ».
+              Recopiez les 4 lignes : leur somme doit égaler le total imprimé sur l'avis.
             </p>
 
             <div class="grid md:grid-cols-3 gap-3">
               <div>
                 <label for="plafond-n3-simple" class="block text-xs font-medium text-slate-300 mb-1">
-                  Plafond N-3 restant <span class="text-amber-400">⚠ périme bientôt</span>
+                  Non utilisé revenus 2023 (N-3) <span class="text-amber-400">⚠ périme fin 2026</span>
                 </label>
                 <input
                   id="plafond-n3-simple"
@@ -863,7 +890,7 @@
 
               <div>
                 <label for="plafond-n2-simple" class="block text-xs font-medium text-slate-300 mb-1">
-                  Plafond N-2 restant
+                  Non utilisé revenus 2024 (N-2)
                 </label>
                 <input
                   id="plafond-n2-simple"
@@ -877,7 +904,7 @@
 
               <div>
                 <label for="plafond-n1-simple" class="block text-xs font-medium text-slate-300 mb-1">
-                  Plafond N-1 restant
+                  Non utilisé revenus 2025 (N-1)
                 </label>
                 <input
                   id="plafond-n1-simple"
@@ -890,8 +917,40 @@
               </div>
             </div>
 
+            <div class="grid md:grid-cols-2 gap-3">
+              <div>
+                <label for="plafond-avis-simple" class="block text-xs font-medium text-slate-300 mb-1">
+                  Plafond calculé sur les revenus 2025 (avis)
+                </label>
+                <input
+                  id="plafond-avis-simple"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Vide = estimé depuis le salaire"
+                />
+                <p class="text-[11px] text-slate-500 mt-1">Rempli : utilisé tel quel, aucun recalcul depuis le salaire.</p>
+              </div>
+
+              <div>
+                <label for="per-deja-verse-simple" class="block text-xs font-medium text-slate-300 mb-1">
+                  Versements PER déjà faits en 2026
+                </label>
+                <input
+                  id="per-deja-verse-simple"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="w-full rounded-lg bg-slate-800/70 border border-slate-600 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Ex : 300"
+                />
+                <p class="text-[11px] text-slate-500 mt-1">Déduits du plafond restant et du revenu imposable.</p>
+              </div>
+            </div>
+
             <p id="alerte-n3" class="text-xs text-amber-400 hidden">
-              ⚠ Vous avez encore un plafond N-3 à utiliser en priorité : il périme bientôt.
+              ⚠ Plafond N-3 : perdu au 31 décembre s'il n'est pas consommé. Il ne sert qu'une fois le plafond de l'année épuisé.
             </p>
           </div>
         </div>
@@ -906,6 +965,11 @@
         >
           🔍 Analyser mon potentiel d'économie
         </button>
+        <p class="mt-2 text-[11px] text-slate-500">
+          💾 Votre saisie est enregistrée automatiquement dans ce navigateur (rien n'est envoyé).
+          <button id="btn-effacer-saisie-per" type="button" class="ml-1 underline text-slate-400 hover:text-red-300">Effacer ma saisie</button>
+          <span id="per-saisie-statut" class="ml-1 text-emerald-400"></span>
+        </p>
       </div>
 
       <!-- ═════════ CALCUL INVERSÉ : COMBIEN VERSER POUR UN IMPÔT CIBLE ═════════ -->

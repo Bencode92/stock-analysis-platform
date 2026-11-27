@@ -12,9 +12,12 @@ const PatrimoineSimulator = (function() {
 
     function getPlafondsPER() {
         const pass = PASS_PAR_ANNEE[ANNEE_SIMULATION] || PASS_PAR_ANNEE[2026];
+        // Salarié : le plafond des versements N est calculé sur les revenus N-1
+        // avec le PASS N-1 (avis N). Ex. versements 2026 → PASS 2025 → 4 710 / 37 680.
+        const passN1 = PASS_PAR_ANNEE[ANNEE_SIMULATION - 1] || pass;
         return {
-            SALARIE_MIN: Math.round(pass * 0.10),
-            SALARIE_MAX: Math.round(pass * 0.10 * 8),
+            SALARIE_MIN: Math.round(passN1 * 0.10),
+            SALARIE_MAX: Math.round(passN1 * 0.10 * 8),
             TNS_MIN: Math.round(pass * 0.10),
             TNS_MAX: Math.round(pass * 0.10 * 8 + pass * 0.15 * 7)
         };
@@ -116,13 +119,21 @@ const PatrimoineSimulator = (function() {
             const ab = calculerAbattementFraisPro(revenuProNet, type);
             plafondN = Math.max(pl.SALARIE_MIN, Math.min(Math.round((revenuProNet - ab) * 0.10), pl.SALARIE_MAX));
         }
-        const ppa = { n3: Math.max(rep.n3||0,0), n2: Math.max(rep.n2||0,0), n1: Math.max(rep.n1||0,0), n: plafondN };
+        // Ligne « plafond calculé sur les revenus N-1 » de l'avis : prime sur l'estimation
+        const avis = Math.max(rep.avis||0, 0);
+        const estime = !(avis > 0);
+        if (!estime) plafondN = Math.round(avis);
+        const ppaBrut = { n3: Math.max(rep.n3||0,0), n2: Math.max(rep.n2||0,0), n1: Math.max(rep.n1||0,0), n: plafondN };
+        const totalBrut = ppaBrut.n3 + ppaBrut.n2 + ppaBrut.n1 + ppaBrut.n;
+        // Versements déjà faits cette année : consomment les plafonds (même ordre d'imputation)
+        const dejaVerse = Math.min(Math.max(rep.dejaVerse||0, 0), totalBrut);
+        const ppa = dejaVerse > 0 ? allouerVersementPER(dejaVerse, ppaBrut).plafondsRestants : ppaBrut;
         const tr = ppa.n3 + ppa.n2 + ppa.n1;
-        return { plafondN, plafondsParAnnee: ppa, totalDisponible: tr + plafondN, totalReports: tr, isTNS };
+        return { plafondN: ppa.n, plafondNBrut: plafondN, plafondsParAnnee: ppa, plafondsBruts: ppaBrut, totalDisponible: tr + ppa.n, totalBrut, totalReports: tr, dejaVerse, estime, isTNS };
     }
 
     function allouerVersementPER(montant, ppa) {
-        const ordre = ['n3','n2','n1','n'];
+        const ordre = ['n','n3','n2','n1']; // BOFiP : plafond de l'année, puis reliquats du plus ancien au plus récent
         const u = {n3:0,n2:0,n1:0,n:0}, r = {n3:0,n2:0,n1:0,n:0};
         let rest = montant;
         for (const a of ordre) { if (rest <= 0) break; const d = ppa[a]||0; if (d<=0) continue; const x = Math.min(rest,d); u[a]=x; rest-=x; }
@@ -168,7 +179,7 @@ const PatrimoineSimulator = (function() {
         state.tauxCharges = params.tauxCharges || getTauxCharges(state.typeRevenu, params.sousType);
         state.perPourcentage = params.perPourcentage !== undefined ? params.perPourcentage : state.perPourcentage;
         state.nbParts = params.nbParts || state.nbParts || 1;
-        if (params.plafondsReportables) state.perPlafondsReportables = { n1:params.plafondsReportables.n1||0, n2:params.plafondsReportables.n2||0, n3:params.plafondsReportables.n3||0 };
+        if (params.plafondsReportables) state.perPlafondsReportables = { n1:params.plafondsReportables.n1||0, n2:params.plafondsReportables.n2||0, n3:params.plafondsReportables.n3||0, avis:params.plafondsReportables.avis||0, dejaVerse:params.plafondsReportables.dejaVerse||0 };
         const rnc = state.revenuBrut * (1 - state.tauxCharges);
         const ab = calculerAbattementFraisPro(rnc, state.typeRevenu);
         const nisp = rnc - ab;
@@ -212,14 +223,22 @@ const PatrimoineSimulator = (function() {
 function formatMontant(n) { return Math.round(n).toLocaleString('fr-FR'); }
 function formatPct(n) { return Math.round(n) + ' %'; }
 
-function buildBreakdownHTML(brut, tauxCharges, revenuProNet, abattement, revenuImposable, isTNS, statutLabel, nbParts, tmiAvant, impotAvant) {
+function buildEcartPASHTML(impot, pas, avecPERdeja) {
+    const ecart = impot - pas;
+    const aPayer = ecart > 0;
+    const couleur = Math.abs(ecart) < 50 ? 'text-slate-300' : aPayer ? 'text-amber-300' : 'text-emerald-400';
+    const texte = Math.abs(ecart) < 50 ? 'Votre pr\u00E9l\u00E8vement est quasiment juste.' : aPayer ? 'Reste \u00E0 payer \u00E0 l\'\u00E9t\u00E9 prochain (r\u00E9gularisation)' : 'Remboursement attendu \u00E0 l\'\u00E9t\u00E9 prochain';
+    return '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">\uD83E\uDDFE Imp\u00F4t r\u00E9el vs pr\u00E9l\u00E8vement \u00E0 la source</h3><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-[11px] text-slate-400">Imp\u00F4t calcul\u00E9 (bar\u00E8me)' + (avecPERdeja ? ' apr\u00E8s PER d\u00E9j\u00E0 vers\u00E9' : ' sans PER') + '</p><p class="text-lg font-bold text-white">' + formatMontant(impot) + ' \u20AC</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-[11px] text-slate-400">Pr\u00E9lev\u00E9 \u00E0 la source</p><p class="text-lg font-bold text-white">' + formatMontant(pas) + ' \u20AC</p></div><div class="bg-slate-800/50 rounded-lg p-3"><p class="text-[11px] text-slate-400">\u00C9cart</p><p class="text-lg font-bold ' + couleur + '">' + (ecart > 0 ? '+' : '') + formatMontant(ecart) + ' \u20AC</p></div></div><p class="text-xs ' + couleur + ' mt-3">' + texte + '</p><p class="text-[11px] text-slate-500 mt-1">Salaire seul : hors autres revenus du foyer, r\u00E9ductions et cr\u00E9dits d\'imp\u00F4t.</p></div>';
+}
+
+function buildBreakdownHTML(brut, tauxCharges, revenuProNet, abattement, revenuImposable, isTNS, statutLabel, nbParts, tmiAvant, impotAvant, revenuMode) {
     const chargesAmt = brut - revenuProNet;
     const chargePct = Math.round(tauxCharges * 100);
     const parPartInfo = nbParts > 1 ? '\u00F7 ' + nbParts + ' parts = ' + formatMontant(Math.round(revenuImposable/nbParts)) + ' \u20AC/part \u2192 ' : '\u2192 ';
     let h = '';
-    h += '<div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"><div class="flex items-center gap-3"><span class="text-xs font-bold bg-blue-900/50 text-blue-400 rounded-full w-6 h-6 flex items-center justify-center">1</span><div><p class="text-sm font-semibold text-white">Salaire brut annuel</p><p class="text-[11px] text-slate-500">Ce que votre employeur verse au total</p></div></div><span class="text-base font-bold text-white">' + formatMontant(brut) + ' \u20AC</span></div>';
+    h += '<div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"><div class="flex items-center gap-3"><span class="text-xs font-bold bg-blue-900/50 text-blue-400 rounded-full w-6 h-6 flex items-center justify-center">1</span><div><p class="text-sm font-semibold text-white">Salaire brut annuel' + (revenuMode && revenuMode !== 'brut' ? ' <span class="text-[11px] font-normal text-amber-300">(reconstitu\u00E9, indicatif)</span>' : '') + '</p><p class="text-[11px] text-slate-500">Ce que votre employeur verse au total</p></div></div><span class="text-base font-bold text-white">' + formatMontant(brut) + ' \u20AC</span></div>';
     h += '<div class="flex items-center gap-3 pl-6"><div class="w-0.5 h-4 bg-red-500/30 ml-2.5"></div><span class="text-xs text-red-400">\u2212 ' + chargePct + '% charges sociales (' + statutLabel + ')</span><span class="text-xs text-red-400 font-medium ml-auto">\u2212' + formatMontant(chargesAmt) + ' \u20AC</span></div>';
-    h += '<div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"><div class="flex items-center gap-3"><span class="text-xs font-bold bg-blue-900/50 text-blue-400 rounded-full w-6 h-6 flex items-center justify-center">2</span><div><p class="text-sm font-semibold text-white">Salaire net de charges</p><p class="text-[11px] text-slate-500">Ce que vous recevez sur votre compte</p></div></div><span class="text-base font-bold text-white">' + formatMontant(revenuProNet) + ' \u20AC</span></div>';
+    h += '<div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"><div class="flex items-center gap-3"><span class="text-xs font-bold bg-blue-900/50 text-blue-400 rounded-full w-6 h-6 flex items-center justify-center">2</span><div><p class="text-sm font-semibold text-white">' + (revenuMode === 'fiche' ? 'Net imposable fiche de paie' : 'Salaire net de charges') + '</p><p class="text-[11px] text-slate-500">' + (revenuMode === 'fiche' ? 'Cumul annuel saisi' : 'Ce que vous recevez sur votre compte') + '</p></div></div><span class="text-base font-bold text-white">' + formatMontant(revenuProNet) + ' \u20AC</span></div>';
     if (abattement > 0) {
         h += '<div class="flex items-center gap-3 pl-6"><div class="w-0.5 h-4 bg-orange-500/30 ml-2.5"></div><span class="text-xs text-orange-400">\u2212 10% abattement frais professionnels (max 14 171 \u20AC)</span><span class="text-xs text-orange-400 font-medium ml-auto">\u2212' + formatMontant(abattement) + ' \u20AC</span></div>';
     } else if (isTNS) {
@@ -231,22 +250,29 @@ function buildBreakdownHTML(brut, tauxCharges, revenuProNet, abattement, revenuI
     return '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">\uD83E\uDDEE Comment votre brut devient imposable</h3><div class="space-y-1">' + h + '</div></div>';
 }
 
-function buildPlafondHTML(plafondN, plafondTheorique, revenuImposable, plafondsReportables, totalDisponible, totalReports, isTNS, constantes) {
+function buildPlafondHTML(plafondN, plafondTheorique, revenuImposable, plafondsReportables, totalDisponible, totalReports, isTNS, constantes, info) {
+    info = info || {};
     const plancher = constantes.PLAFOND_PER_MIN;
     const usePlancher = plafondTheorique < plancher;
     const ANNEE = constantes.ANNEE_SIMULATION;
-    let regle = '<div class="bg-slate-800/40 rounded-lg p-4"><p class="text-sm text-white font-medium mb-2">R\u00E8gle l\u00E9gale : <span class="text-emerald-400">10% de votre revenu imposable</span></p><p class="text-xs text-slate-300">10% \u00D7 ' + formatMontant(revenuImposable) + ' \u20AC = <strong class="text-white">' + formatMontant(plafondTheorique) + ' \u20AC</strong>' + (isTNS ? '<span class="text-blue-400 ml-1">(+ 15% entre 1 et 8 PASS pour les TNS)</span>' : '') + '</p>';
+    const depuisAvis = info.estime === false;
+    let regle = depuisAvis
+        ? '<div class="bg-slate-800/40 rounded-lg p-4"><p class="text-sm text-white font-medium mb-1">Plafond ' + ANNEE + ' : <span class="text-emerald-400">repris de votre avis d\'imp\u00F4t</span></p><p class="text-xs text-slate-300">Ligne \u00AB plafond calcul\u00E9 sur les revenus de ' + (ANNEE-1) + ' \u00BB = <strong class="text-white">' + formatMontant(info.plafondNBrut) + ' \u20AC</strong> \u2014 aucun recalcul depuis le salaire saisi.</p></div>'
+        : null;
+    if (!regle) { regle = '<div class="bg-slate-800/40 rounded-lg p-4"><p class="text-sm text-white font-medium mb-2">R\u00E8gle l\u00E9gale : <span class="text-emerald-400">10% de votre revenu imposable</span></p><p class="text-xs text-slate-300">10% \u00D7 ' + formatMontant(revenuImposable) + ' \u20AC = <strong class="text-white">' + formatMontant(plafondTheorique) + ' \u20AC</strong>' + (isTNS ? '<span class="text-blue-400 ml-1">(+ 15% entre 1 et 8 PASS pour les TNS)</span>' : '') + '</p>';
     if (usePlancher) regle += '<div class="mt-2 bg-emerald-900/20 border border-emerald-700/30 rounded-lg px-3 py-2"><p class="text-xs text-emerald-300">\u2705 Bonne nouvelle : le <strong>plancher l\u00E9gal de ' + formatMontant(plancher) + ' \u20AC</strong> s\'applique (sup\u00E9rieur \u00E0 vos 10%).</p></div>';
-    regle += '</div>';
+    regle += '<p class="text-[11px] text-amber-300/90 mt-2">\u26A0 Estimation : le vrai plafond ' + ANNEE + ' est calcul\u00E9 sur vos revenus ' + (ANNEE-1) + ' (bornes PASS ' + (ANNEE-1) + ' : ' + formatMontant(constantes.PLAFOND_PER_MIN) + ' \u2013 ' + formatMontant(constantes.PLAFOND_PER_MAX) + ' \u20AC). Saisissez la ligne de votre avis dans les param\u00E8tres avanc\u00E9s pour un chiffre exact.</p>';
+    regle += '</div>'; }
+    if (info.dejaVerse > 0) regle += '<div class="bg-slate-800/40 rounded-lg px-4 py-3 flex justify-between items-center"><span class="text-xs text-slate-300">D\u00E9j\u00E0 vers\u00E9 en ' + ANNEE + ' (d\u00E9duit des plafonds et de votre revenu imposable)</span><span class="text-sm font-bold text-red-300">\u2212' + formatMontant(info.dejaVerse) + ' \u20AC</span></div>';
     let rep = '';
     if (totalReports > 0) {
         let lig = '';
-        if (plafondsReportables.n3 > 0) lig += '<div class="flex items-center justify-between bg-amber-900/15 border border-amber-700/30 rounded-lg px-3 py-2"><div class="flex items-center gap-2"><span class="text-amber-400 text-sm">\uD83D\uDEA8</span><div><p class="text-sm font-medium text-amber-300">N-3 : ' + formatMontant(plafondsReportables.n3) + ' \u20AC</p><p class="text-[11px] text-amber-400/80">Expire le 31 d\u00E9cembre ' + ANNEE + ' \u2014 \u00E0 utiliser EN PREMIER</p></div></div><span class="text-xs bg-amber-900/40 text-amber-300 px-2 py-1 rounded font-bold">URGENT</span></div>';
+        if (plafondsReportables.n3 > 0) lig += '<div class="flex items-center justify-between bg-amber-900/15 border border-amber-700/30 rounded-lg px-3 py-2"><div class="flex items-center gap-2"><span class="text-amber-400 text-sm">\uD83D\uDEA8</span><div><p class="text-sm font-medium text-amber-300">N-3 : ' + formatMontant(plafondsReportables.n3) + ' \u20AC</p><p class="text-[11px] text-amber-400/80">Expire le 31 d\u00E9cembre ' + ANNEE + ' \u2014 ne sert qu\'une fois le plafond ' + ANNEE + ' consomm\u00E9</p></div></div><span class="text-xs bg-amber-900/40 text-amber-300 px-2 py-1 rounded font-bold">URGENT</span></div>';
         if (plafondsReportables.n2 > 0) lig += '<div class="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2"><div><p class="text-sm text-white">N-2 : ' + formatMontant(plafondsReportables.n2) + ' \u20AC</p><p class="text-[11px] text-slate-500">P\u00E9rime l\'an prochain</p></div></div>';
         if (plafondsReportables.n1 > 0) lig += '<div class="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2"><p class="text-sm text-white">N-1 : ' + formatMontant(plafondsReportables.n1) + ' \u20AC</p></div>';
-        lig += '<div class="flex items-center justify-between bg-emerald-900/10 border border-emerald-700/30 rounded-lg px-3 py-2"><div><p class="text-sm text-emerald-300">Ann\u00E9e ' + ANNEE + ' : ' + formatMontant(plafondN) + ' \u20AC</p><p class="text-[11px] text-slate-500">Plafond de l\'ann\u00E9e en cours</p></div></div>';
+        lig = '<div class="flex items-center justify-between bg-emerald-900/10 border border-emerald-700/30 rounded-lg px-3 py-2"><div><p class="text-sm text-emerald-300">Ann\u00E9e ' + ANNEE + ' : ' + formatMontant(plafondN) + ' \u20AC</p><p class="text-[11px] text-slate-500">Plafond de l\'ann\u00E9e \u2014 consomm\u00E9 en premier</p></div></div>' + lig;
         rep = '<div class="bg-slate-800/40 rounded-lg p-4"><p class="text-sm text-white font-medium mb-3">Vos plafonds cumul\u00E9s</p><div class="space-y-2">' + lig + '</div><div class="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center"><span class="text-sm text-slate-400">Plafond total disponible</span><span class="text-xl font-black text-emerald-400">' + formatMontant(totalDisponible) + ' \u20AC</span></div>';
-        rep += '<div class="mt-3 bg-blue-900/15 border border-blue-700/30 rounded-lg px-3 py-2.5"><p class="text-xs text-blue-300 leading-relaxed">\uD83D\uDCA1 <strong>Comment \u00E7a marche ?</strong> Chaque ann\u00E9e, vous avez un plafond PER. Non utilis\u00E9, il est report\u00E9 <strong>3 ans</strong>. Au-del\u00E0, il est perdu. Le fisc consomme le <strong>plus ancien d\'abord</strong> (FIFO).' + (plafondsReportables.n3 > 0 ? '<span class="block mt-1 text-amber-300">\u26A0 Vos ' + formatMontant(plafondsReportables.n3) + ' \u20AC de N-3 : derni\u00E8re ann\u00E9e !</span>' : '') + '</p></div></div>';
+        rep += '<div class="mt-3 bg-blue-900/15 border border-blue-700/30 rounded-lg px-3 py-2.5"><p class="text-xs text-blue-300 leading-relaxed">\uD83D\uDCA1 <strong>Comment \u00E7a marche ?</strong> Chaque ann\u00E9e, vous avez un plafond PER. Non utilis\u00E9, il est report\u00E9 <strong>3 ans</strong>. Au-del\u00E0, il est perdu. Vos versements s\'imputent d\'abord sur le <strong>plafond de l\'ann\u00E9e</strong>, puis sur les reliquats <strong>du plus ancien au plus r\u00E9cent</strong>.' + (plafondsReportables.n3 > 0 ? '<span class="block mt-1 text-amber-300">\u26A0 Vos ' + formatMontant(plafondsReportables.n3) + ' \u20AC de N-3 : derni\u00E8re ann\u00E9e \u2014 il faut verser au moins ' + formatMontant(plafondN + plafondsReportables.n3) + ' \u20AC pour les utiliser.</span>' : '') + '</p></div></div>';
     } else {
         rep = '<div class="bg-slate-800/40 rounded-lg p-4"><p class="text-sm text-slate-300">Pas de report \u2014 plafond ' + ANNEE + ' : <strong class="text-emerald-400">' + formatMontant(plafondN) + ' \u20AC</strong></p><p class="text-xs text-slate-500 mt-1">V\u00E9rifiez votre avis d\'imp\u00F4t pour d\'\u00E9ventuels plafonds ant\u00E9rieurs.</p></div>';
     }
@@ -255,10 +281,10 @@ function buildPlafondHTML(plafondN, plafondTheorique, revenuImposable, plafondsR
 
 function buildPlanVersementHTML(repMax, plRep, plN, tmiAvant, vMax, ecoMax, ANNEE) {
     const steps = [];
+    if (repMax.n > 0) steps.push({label:'Ann\u00E9e '+ANNEE,amount:repMax.n,current:true,note:'plafond en cours'});
     if (repMax.n3 > 0) steps.push({label:'N-3',amount:repMax.n3,urgent:true,note:'p\u00E9rime fin '+ANNEE+' !'});
     if (repMax.n2 > 0) steps.push({label:'N-2',amount:repMax.n2,note:'p\u00E9rime l\'an prochain'});
     if (repMax.n1 > 0) steps.push({label:'N-1',amount:repMax.n1});
-    if (repMax.n > 0) steps.push({label:'Ann\u00E9e '+ANNEE,amount:repMax.n,current:true,note:'plafond en cours'});
     if (!steps.length) return '';
     let rows = '';
     steps.forEach((s,i) => {
@@ -267,9 +293,9 @@ function buildPlanVersementHTML(repMax, plRep, plN, tmiAvant, vMax, ecoMax, ANNE
         const amtColor = s.urgent ? 'text-amber-300' : s.current ? 'text-emerald-300' : 'text-white';
         const noteBg = s.urgent ? 'bg-amber-900/30 text-amber-400 font-bold' : s.current ? 'bg-emerald-900/30 text-emerald-400' : 'bg-slate-700/50 text-slate-400';
         const eco = Math.round(s.amount * tmiAvant / 100);
-        rows += '<div class="flex items-center gap-3 rounded-lg px-4 py-3 ' + bg + '"><span class="text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center ' + numBg + '">' + (i+1) + '</span><div class="flex-1"><div class="flex items-center gap-2"><span class="text-sm font-semibold text-white">' + s.label + '</span>' + (s.note ? '<span class="text-[10px] px-1.5 py-0.5 rounded ' + noteBg + '">' + s.note + '</span>' : '') + '</div>' + (s.urgent ? '<p class="text-[11px] text-amber-300/80 mt-0.5">Versez ce montant en premier \u2014 il sera perdu apr\u00E8s le 31 d\u00E9cembre</p>' : '') + '</div><div class="text-right"><p class="text-sm font-bold ' + amtColor + '">' + formatMontant(s.amount) + ' \u20AC</p><p class="text-[10px] text-slate-500">\u00E9co. ~' + formatMontant(eco) + ' \u20AC</p></div></div>';
+        rows += '<div class="flex items-center gap-3 rounded-lg px-4 py-3 ' + bg + '"><span class="text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center ' + numBg + '">' + (i+1) + '</span><div class="flex-1"><div class="flex items-center gap-2"><span class="text-sm font-semibold text-white">' + s.label + '</span>' + (s.note ? '<span class="text-[10px] px-1.5 py-0.5 rounded ' + noteBg + '">' + s.note + '</span>' : '') + '</div>' + (s.urgent ? '<p class="text-[11px] text-amber-300/80 mt-0.5">Perdu apr\u00E8s le 31 d\u00E9cembre s\'il n\'est pas consomm\u00E9</p>' : '') + '</div><div class="text-right"><p class="text-sm font-bold ' + amtColor + '">' + formatMontant(s.amount) + ' \u20AC</p><p class="text-[10px] text-slate-500">\u00E9co. ~' + formatMontant(eco) + ' \u20AC</p></div></div>';
     });
-    return '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">\uD83D\uDCCB Votre plan de versement</h3><p class="text-xs text-slate-500 mb-4">Les plafonds les plus anciens sont utilis\u00E9s en premier (FIFO)</p><div class="space-y-2">' + rows + '</div><div class="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center"><span class="text-sm text-slate-400">Total</span><span class="text-lg font-black text-emerald-400">' + formatMontant(vMax) + ' \u20AC \u2192 \u00E9co. ' + formatMontant(ecoMax) + ' \u20AC</span></div></div>';
+    return '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">\uD83D\uDCCB Votre plan de versement</h3><p class="text-xs text-slate-500 mb-4">Ordre d\'imputation : plafond de l\'ann\u00E9e, puis reliquats du plus ancien au plus r\u00E9cent</p><div class="space-y-2">' + rows + '</div><div class="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center"><span class="text-sm text-slate-400">Total</span><span class="text-lg font-black text-emerald-400">' + formatMontant(vMax) + ' \u20AC \u2192 \u00E9co. ' + formatMontant(ecoMax) + ' \u20AC</span></div></div>';
 }
 
 function runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement }) {
@@ -299,12 +325,26 @@ function runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafo
         ab = PatrimoineSimulator.calculerAbattementFraisPro(rpn, statut);
         nib = rpn - ab;
     }
-    const { plafondN, plafondsParAnnee:ppa, totalDisponible:td, totalReports:tr } = PatrimoineSimulator.calculerPlafondsPER(rpn, plafondsReportables, statut);
+    const { plafondN, plafondsParAnnee:ppa, totalDisponible:td, totalReports:tr, dejaVerse, estime } = PatrimoineSimulator.calculerPlafondsPER(rpn, plafondsReportables, statut);
     const { utilisation:u, perDeductible:pd, perNonDeductible:pnd, plafondsRestants:pr } = PatrimoineSimulator.allouerVersementPER(perVersement, ppa);
-    const nisp = nib, niap = nib - pd;
+    // « Sans PER » = sans versement SUPPLÉMENTAIRE : les versements déjà faits sont déjà déduits
+    const nisp = nib - (dejaVerse||0), niap = nisp - pd;
     const isp = PatrimoineSimulator.calculerImpot(nisp, nbParts), iap = PatrimoineSimulator.calculerImpot(niap, nbParts);
     const pan = PatrimoineSimulator.calculerPlafondsAnneeProchaine(pr);
-    return { revenuProNet:rpn, abattementFraisPro:ab, netImposableSansPER:nisp, netImposableAvecPER:niap, impotSansPER:isp, impotAvecPER:iap, gainFiscal:isp-iap, perVersement, perDeductible:pd, perNonDeductible:pnd, plafondN, plafondTotal:td, totalReports:tr, utilisation:u, plafondsParAnnee:ppa, plafondsRestants:pr, plafondsAnneeProchaine:pan, tmiAvant:PatrimoineSimulator.getTauxMarginal(nisp,nbParts), tmiApres:PatrimoineSimulator.getTauxMarginal(niap,nbParts) };
+    return { revenuProNet:rpn, abattementFraisPro:ab, netImposableSansPER:nisp, netImposableAvecPER:niap, impotSansPER:isp, impotAvecPER:iap, gainFiscal:isp-iap, perVersement, perDeductible:pd, perNonDeductible:pnd, plafondN, plafondTotal:td, dejaVerse:dejaVerse||0, plafondEstime:estime, totalReports:tr, utilisation:u, plafondsParAnnee:ppa, plafondsRestants:pr, plafondsAnneeProchaine:pan, tmiAvant:PatrimoineSimulator.getTauxMarginal(nisp,nbParts), tmiApres:PatrimoineSimulator.getTauxMarginal(niap,nbParts) };
+}
+
+// Champs « Paramètres avancés » : reliquats N-3/N-2/N-1, plafond calculé de l'avis, versements déjà faits
+function lirePlafondsReportablesPER() {
+    const v = id => parseFloat((document.getElementById(id)?.value || '0').replace(/\s/g, '').replace(',', '.')) || 0;
+    return { n3: v('plafond-n3-simple'), n2: v('plafond-n2-simple'), n1: v('plafond-n1-simple'), avis: v('plafond-avis-simple'), dejaVerse: v('per-deja-verse-simple') };
+}
+
+// Mode « fiche de paie » : le net imposable du bulletin est AVANT l'abattement 10 % (frais pro).
+// On le convertit en revenu net imposable « avis » pour réutiliser le reste du calcul.
+function netImposableAvisDepuisSaisie(montant, mode, statut) {
+    if (mode !== 'fiche') return montant;
+    return montant - PatrimoineSimulator.calculerAbattementFraisPro(montant, statut);
 }
 
 function afficherSynthesePER() {
@@ -326,9 +366,9 @@ function afficherSynthesePER() {
 
     // Si net imposable, convertir en brut équivalent pour réutiliser la logique existante
     let brut;
-    if (revenuMode === 'net') {
+    if (revenuMode === 'net' || revenuMode === 'fiche') {
         const tc = PatrimoineSimulator.getTauxCharges(statutTmp);
-        const nib = montantSaisi;
+        const nib = netImposableAvisDepuisSaisie(montantSaisi, revenuMode, statutTmp);
         const isTNS = (statutTmp === 'independant');
         let rpn;
         if (isTNS) {
@@ -349,13 +389,14 @@ function afficherSynthesePER() {
     const isTNS = (statut === 'independant');
     const statutLabels = {salarie:'Salari\u00E9',cadre:'Cadre',fonctionnaire:'Fonctionnaire',independant:'TNS'};
     const statutLabel = statutLabels[statut] || 'Salari\u00E9';
-    const plafondsReportables = { n3:parseFloat(n3Input?.value?.replace(/\s/g,'')||'0')||0, n2:parseFloat(n2Input?.value?.replace(/\s/g,'')||'0')||0, n1:parseFloat(n1Input?.value?.replace(/\s/g,'')||'0')||0 };
+    const plafondsReportables = lirePlafondsReportablesPER();
     PatrimoineSimulator.calculerSimulationFiscale({revenuBrut:brut,typeRevenu:statut,nbParts,perPourcentage:0,plafondsReportables});
     if (alerteN3) alerteN3.classList.toggle('hidden', plafondsReportables.n3 <= 0);
     const tauxCharges = PatrimoineSimulator.getTauxCharges(statut);
     const revenuProNet = brut * (1 - tauxCharges);
     const abattement = PatrimoineSimulator.calculerAbattementFraisPro(revenuProNet, statut);
-    const { plafondN, totalDisponible, totalReports } = PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables, statut);
+    const plInfo = PatrimoineSimulator.calculerPlafondsPER(revenuProNet, plafondsReportables, statut);
+    const { plafondN, totalDisponible, totalReports } = plInfo;
     const _PASS = PatrimoineSimulator.getConstantesPER().PASS_REF;
     const plafondTheorique = isTNS ? Math.round(Math.min(revenuProNet,_PASS*8)*0.10+Math.max(0,Math.min(revenuProNet,_PASS*8)-_PASS)*0.15) : Math.round((revenuProNet-abattement)*0.10);
     const scenSansPER = runScenarioPER({revenuBrut:brut,statut,nbParts,plafondsReportables,perVersement:0});
@@ -380,18 +421,20 @@ function afficherSynthesePER() {
 
     let html = '<div class="space-y-5">';
     html += '<div class="bg-gradient-to-br from-emerald-900/30 to-slate-900/60 border border-emerald-700/40 rounded-2xl p-6 md:p-8 text-center"><p class="text-sm text-slate-400 mb-1">Votre \u00E9conomie d\'imp\u00F4t maximale</p><p class="text-5xl md:text-6xl font-black text-emerald-400 tracking-tight">' + formatMontant(economieMax) + ' \u20AC</p><p class="text-sm text-slate-400 mt-2">en versant <strong class="text-white">' + formatMontant(versementMax) + ' \u20AC</strong> sur votre PER</p>' + (canDropTMI ? '<p class="text-sm text-emerald-300 mt-1">TMI : <strong class="text-orange-400">' + tmiAvant + '%</strong> \u2192 <strong class="text-emerald-400">' + tmiApresMax + '%</strong></p>' : '') + '</div>';
-    html += buildBreakdownHTML(brut, tauxCharges, revenuProNet, abattement, revenuImposable, isTNS, statutLabel, nbParts, tmiAvant, impotAvant);
-    html += buildPlafondHTML(plafondN, plafondTheorique, revenuImposable, plafondsReportables, totalDisponible, totalReports, isTNS, constantes);
+    html += buildBreakdownHTML(brut, tauxCharges, revenuProNet, abattement, revenuImposable, isTNS, statutLabel, nbParts, tmiAvant, impotAvant, revenuMode);
+    const pasCumul = parseFloat((document.getElementById('pas-cumul-simple')?.value || '').replace(/\s/g, '').replace(',', '.')) || 0;
+    if (pasCumul > 0) html += buildEcartPASHTML(impotAvant, pasCumul, plafondsReportables.dejaVerse > 0);
+    html += buildPlafondHTML(plafondN, plafondTheorique, revenuImposable, plafondsReportables, totalDisponible, totalReports, isTNS, constantes, plInfo);
     html += '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">\uD83D\uDCC8 Comparatif des sc\u00E9narios</h3><div class="overflow-x-auto"><table class="min-w-full text-sm text-slate-200 border-collapse"><thead><tr class="bg-slate-800/80 text-slate-300"><th class="px-3 py-3 text-left font-semibold rounded-tl-lg">Sc\u00E9nario</th><th class="px-3 py-3 text-right font-semibold">Versement</th><th class="px-3 py-3 text-right font-semibold">Imp\u00F4t</th><th class="px-3 py-3 text-right font-semibold">\u00C9conomie</th><th class="px-3 py-3 text-right font-semibold rounded-tr-lg">TMI</th></tr></thead><tbody>';
     html += '<tr class="border-t border-slate-700"><td class="px-3 py-3 text-slate-400">Sans PER</td><td class="px-3 py-3 text-right text-slate-400">0 \u20AC</td><td class="px-3 py-3 text-right">' + formatMontant(impotAvant) + ' \u20AC</td><td class="px-3 py-3 text-right text-slate-400">\u2014</td><td class="px-3 py-3 text-right">' + formatPct(tmiAvant) + '</td></tr>';
     if (versementOptimal > 0) html += '<tr class="border-t border-slate-700 ' + (hasOptimal ? 'bg-purple-900/20' : '') + '"><td class="px-3 py-3"><span class="' + (hasOptimal ? 'text-purple-300 font-medium' : 'text-slate-300') + '">' + (hasOptimal ? '\u2605 ' : '') + 'Optimal</span><div class="text-xs text-slate-500 mt-0.5">' + (hasOptimal ? tmiAvant+'% \u2192 '+tmiApresOptimal+'%' : 'Plafond insuffisant') + '</div></td><td class="px-3 py-3 text-right">' + formatMontant(versementOptimal) + ' \u20AC</td><td class="px-3 py-3 text-right">' + formatMontant(impotOptimal) + ' \u20AC</td><td class="px-3 py-3 text-right text-emerald-400 font-medium">' + formatMontant(economieOptimal) + ' \u20AC</td><td class="px-3 py-3 text-right">' + formatPct(tmiApresOptimal) + '</td></tr>';
     html += '<tr class="border-t border-slate-700 bg-emerald-900/10"><td class="px-3 py-3"><span class="text-emerald-300 font-semibold">\u2B06 Maximum</span><div class="text-xs text-slate-500 mt-0.5">Tout le plafond</div></td><td class="px-3 py-3 text-right text-emerald-300 font-semibold">' + formatMontant(versementMax) + ' \u20AC</td><td class="px-3 py-3 text-right">' + formatMontant(impotMax) + ' \u20AC</td><td class="px-3 py-3 text-right text-emerald-400 font-black text-base">' + formatMontant(economieMax) + ' \u20AC</td><td class="px-3 py-3 text-right">' + formatPct(tmiApresMax) + '</td></tr></tbody></table></div></div>';
     html += buildPlanVersementHTML(repartitionMax, plafondsReportables, plafondN, tmiAvant, versementMax, economieMax, ANNEE);
-    if (plafondsReportables.n3 > 0) { const eN3=Math.round(plafondsReportables.n3*tmiAvant/100); html += '<div class="bg-amber-900/20 border border-amber-600/40 rounded-xl p-4"><div class="flex items-start gap-3"><span class="text-amber-400 text-xl mt-0.5">\uD83D\uDEA8</span><div><p class="text-sm font-bold text-amber-300">Priorit\u00E9 n\u00B01 : versez ' + formatMontant(plafondsReportables.n3) + ' \u20AC avant le 31 d\u00E9cembre ' + ANNEE + '</p><p class="text-xs text-slate-300 mt-1">Ce versement seul = <strong class="text-emerald-400">' + formatMontant(eN3) + ' \u20AC</strong> d\'\u00E9conomie.</p></div></div></div>'; }
+    if (plafondsReportables.n3 > 0) { const eN3=Math.round(plafondsReportables.n3*tmiAvant/100); html += '<div class="bg-amber-900/20 border border-amber-600/40 rounded-xl p-4"><div class="flex items-start gap-3"><span class="text-amber-400 text-xl mt-0.5">\uD83D\uDEA8</span><div><p class="text-sm font-bold text-amber-300">N-3 : ' + formatMontant(plafondsReportables.n3) + ' \u20AC perdus au 31 d\u00E9cembre ' + ANNEE + '</p><p class="text-xs text-slate-300 mt-1">Pour les utiliser, versez au moins <strong class="text-white">' + formatMontant(plafondN + plafondsReportables.n3) + ' \u20AC</strong> (plafond de l\'ann\u00E9e d\'abord). Cette tranche N-3 = <strong class="text-emerald-400">' + formatMontant(eN3) + ' \u20AC</strong> d\'\u00E9conomie.</p></div></div></div>'; }
     if (hasOptimal) html += '<div class="bg-purple-900/20 border border-purple-700/40 rounded-xl p-4"><div class="flex items-start gap-3"><span class="text-purple-400 text-xl mt-0.5">\u2605</span><div><p class="text-sm font-bold text-purple-300">' + formatMontant(versementOptimal) + ' \u20AC suffisent pour passer de ' + tmiAvant + '% \u00E0 ' + tmiApresOptimal + '%</p><p class="text-xs text-slate-300 mt-1">\u00C9conomie : <strong class="text-emerald-400">' + formatMontant(economieOptimal) + ' \u20AC</strong>. Au-del\u00E0, chaque euro est d\u00E9ductible \u00E0 ' + tmiApresOptimal + '%.</p></div></div></div>';
     html += '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span class="text-orange-400">\u2696\uFE0F</span> Fiscalit\u00E9 \u00E0 la sortie <span class="text-xs font-normal text-slate-500">(estimation ' + horizonRetraite + ' ans)</span></h3><div class="grid md:grid-cols-2 gap-4 text-sm mb-3"><div class="bg-emerald-900/15 rounded-lg p-3 text-center"><p class="text-xs text-slate-400 mb-1">\u00C9conomie aujourd\'hui</p><p class="text-xl font-bold text-emerald-400">+' + formatMontant(economieMax) + ' \u20AC</p></div><div class="bg-orange-900/15 rounded-lg p-3 text-center"><p class="text-xs text-slate-400 mb-1">Imp\u00F4t \u00E0 la sortie</p><p class="text-xl font-bold text-orange-400">\u2212' + formatMontant(fiscSortie.totalFiscaliteSortie) + ' \u20AC</p></div></div><div class="p-3 rounded-lg text-xs ' + (tmiApresMax >= 30 ? 'bg-orange-900/10 border border-orange-800/30 text-orange-200' : 'bg-emerald-900/10 border border-emerald-800/30 text-emerald-200') + '">' + fiscSortie.avertissement + '</div><div class="mt-3 bg-slate-800/40 rounded-lg p-3 text-xs text-slate-400 leading-relaxed"><strong class="text-slate-300">Comment \u00E7a marche :</strong> le capital vers\u00E9 (d\u00E9duit \u00E0 l\'entr\u00E9e) est r\u00E9impos\u00E9 au bar\u00E8me IR. Les plus-values sont tax\u00E9es au PFU (30%). Si votre TMI baisse \u00E0 la retraite, vous gagnez la diff\u00E9rence.</div></div>';
-    html += '<div class="bg-gradient-to-r from-slate-900 to-slate-900/80 border border-emerald-700/30 rounded-xl p-5 text-center"><p class="text-sm text-slate-300 mb-1">Pour maximiser votre avantage fiscal :</p><p class="text-xl font-bold text-white">Versez <span class="text-emerald-400">' + formatMontant(versementMax) + ' \u20AC</span> avant le 31 d\u00E9cembre ' + ANNEE + '</p>' + (plafondsReportables.n3 > 0 ? '<p class="text-sm text-amber-400 mt-2 font-medium">\uD83D\uDEA8 Dont ' + formatMontant(plafondsReportables.n3) + ' \u20AC en priorit\u00E9 (N-3)</p>' : '') + '<p class="text-xs text-slate-500 mt-2">\u00C9conomie imm\u00E9diate : <strong class="text-emerald-400">' + formatMontant(economieMax) + ' \u20AC</strong></p></div>';
-    html += '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-sm font-semibold text-slate-400 mb-3">\u2139\uFE0F R\u00E9f\u00E9rences ' + ANNEE + '</h3><div class="grid md:grid-cols-2 gap-3 text-xs text-slate-400"><div>PASS : <strong class="text-slate-300">' + formatMontant(constantes.PASS_REF) + ' \u20AC</strong></div><div>Plancher PER : <strong class="text-slate-300">' + formatMontant(constantes.PLAFOND_PER_MIN) + ' \u20AC</strong></div><div>Plafond salari\u00E9s : <strong class="text-slate-300">' + formatMontant(constantes.PLAFOND_PER_MAX) + ' \u20AC</strong></div><div>Plafond TNS : <strong class="text-slate-300">' + formatMontant(constantes.PLAFOND_TNS_MAX) + ' \u20AC</strong></div><div>Abattement frais pro : 10% (max ' + formatMontant(constantes.ABATTEMENT_FRAIS_PRO.plafond) + ' \u20AC)</div><div>Reports 3 ans (FIFO) \u2022 D\u00E9blocage : RP, invalidit\u00E9</div></div></div>';
+    html += '<div class="bg-gradient-to-r from-slate-900 to-slate-900/80 border border-emerald-700/30 rounded-xl p-5 text-center"><p class="text-sm text-slate-300 mb-1">Pour maximiser votre avantage fiscal :</p><p class="text-xl font-bold text-white">Versez <span class="text-emerald-400">' + formatMontant(versementMax) + ' \u20AC</span> avant le 31 d\u00E9cembre ' + ANNEE + '</p>' + (plafondsReportables.n3 > 0 ? '<p class="text-sm text-amber-400 mt-2 font-medium">\uD83D\uDEA8 Dont ' + formatMontant(plafondsReportables.n3) + ' \u20AC de N-3 qui p\u00E9riment fin ' + ANNEE + '</p>' : '') + '<p class="text-xs text-slate-500 mt-2">\u00C9conomie imm\u00E9diate : <strong class="text-emerald-400">' + formatMontant(economieMax) + ' \u20AC</strong></p></div>';
+    html += '<div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-5"><h3 class="text-sm font-semibold text-slate-400 mb-3">\u2139\uFE0F R\u00E9f\u00E9rences ' + ANNEE + '</h3><div class="grid md:grid-cols-2 gap-3 text-xs text-slate-400"><div>PASS : <strong class="text-slate-300">' + formatMontant(constantes.PASS_REF) + ' \u20AC</strong></div><div>Plancher PER salari\u00E9 (PASS ' + (ANNEE-1) + ') : <strong class="text-slate-300">' + formatMontant(constantes.PLAFOND_PER_MIN) + ' \u20AC</strong></div><div>Plafond salari\u00E9s : <strong class="text-slate-300">' + formatMontant(constantes.PLAFOND_PER_MAX) + ' \u20AC</strong></div><div>Plafond TNS : <strong class="text-slate-300">' + formatMontant(constantes.PLAFOND_TNS_MAX) + ' \u20AC</strong></div><div>Abattement frais pro : 10% (max ' + formatMontant(constantes.ABATTEMENT_FRAIS_PRO.plafond) + ' \u20AC)</div><div>Reports 3 ans \u2022 ann\u00E9e d\'abord, puis plus ancien \u2022 D\u00E9blocage : RP, invalidit\u00E9</div></div></div>';
     html += '</div>';
     resultatElement.innerHTML = html;
     resultatElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -501,17 +544,13 @@ function afficherCibleImpot() {
     // Mode de saisie revenu : brut (défaut) ou net imposable
     const revenuMode = document.querySelector('input[name="revenu-mode"]:checked')?.value || 'brut';
     const revenuBrut = revenuMode === 'brut' ? montantSaisi : null;
-    const revenuNetImposable = revenuMode === 'net' ? montantSaisi : null;
+    const revenuNetImposable = revenuMode !== 'brut' ? netImposableAvisDepuisSaisie(montantSaisi, revenuMode, statutSelect?.value || 'salarie') : null;
 
     const valeurSaisie = parseFloat(cibleInput.value) || 0;
     const mode = document.querySelector('input[name="cible-mode"]:checked')?.value || 'economiser';
     const statut = statutSelect?.value || 'salarie';
     const nbParts = parseFloat(situationSelect?.value || '1');
-    const plafondsReportables = {
-        n3: parseFloat(n3Input?.value?.replace(/\s/g, '') || '0') || 0,
-        n2: parseFloat(n2Input?.value?.replace(/\s/g, '') || '0') || 0,
-        n1: parseFloat(n1Input?.value?.replace(/\s/g, '') || '0') || 0
-    };
+    const plafondsReportables = lirePlafondsReportablesPER();
 
     // Calcul de l'impôt initial pour convertir "économiser X" en "atteindre Y"
     const scenInit = runScenarioPER({ revenuBrut, revenuNetImposable, statut, nbParts, plafondsReportables, perVersement: 0 });
@@ -532,10 +571,10 @@ function afficherCibleImpot() {
     const buildPlanFIFO = (utilisation, totalVerse) => {
         const u = utilisation || { n3: 0, n2: 0, n1: 0, n: 0 };
         const ordre = [
-            { key: 'n3', label: 'Plafond N-3', priorite: '🚨 Priorité 1', urgent: true, description: 'Périme bientôt — à utiliser en premier' },
-            { key: 'n2', label: 'Plafond N-2', priorite: '⏳ Priorité 2', urgent: false, description: 'Reportable encore 2 ans' },
-            { key: 'n1', label: 'Plafond N-1', priorite: '📅 Priorité 3', urgent: false, description: 'Reportable encore 3 ans' },
-            { key: 'n',  label: 'Plafond N (année courante)', priorite: '🆕 Priorité 4', urgent: false, description: 'Plafond de cette année' }
+            { key: 'n',  label: 'Plafond N (année courante)', priorite: '① Imputé en 1er', urgent: false, description: 'Plafond de cette année — consommé en premier' },
+            { key: 'n3', label: 'Plafond N-3', priorite: '② Puis', urgent: true, description: 'Dernière année — perdu au 31/12 s\'il reste' },
+            { key: 'n2', label: 'Plafond N-2', priorite: '③ Puis', urgent: false, description: 'Reportable encore 1 an' },
+            { key: 'n1', label: 'Plafond N-1', priorite: '④ Puis', urgent: false, description: 'Reportable encore 2 ans' }
         ];
         const lignes = ordre.filter(o => (u[o.key] || 0) > 0);
         if (lignes.length === 0) return '';
@@ -674,6 +713,44 @@ function calculerFiscalite() {
     Object.entries(el).forEach(([id,v]) => { const e=document.getElementById(id); if(e)e.textContent=v; });
 }
 
+// ==========================================
+// 💾 Sauvegarde locale de la saisie PER (localStorage, rien n'est envoyé)
+// ==========================================
+const PER_SAISIE_KEY = 'per_simulateur_saisie_v1';
+const PER_SAISIE_IDS = ['salaire-brut-simple','situation-familiale','statut-simple','pas-cumul-simple','plafond-n3-simple','plafond-n2-simple','plafond-n1-simple','plafond-avis-simple','per-deja-verse-simple','cible-impot'];
+
+function sauvegarderSaisiePER() {
+    try {
+        const data = { mode: document.querySelector('input[name="revenu-mode"]:checked')?.value || 'brut', champs: {} };
+        PER_SAISIE_IDS.forEach(id => { const e = document.getElementById(id); if (e) data.champs[id] = e.value; });
+        localStorage.setItem(PER_SAISIE_KEY, JSON.stringify(data));
+        const st = document.getElementById('per-saisie-statut');
+        if (st) { st.textContent = '\u2713 enregistr\u00E9'; clearTimeout(sauvegarderSaisiePER._t); sauvegarderSaisiePER._t = setTimeout(() => { st.textContent = ''; }, 1500); }
+    } catch (e) { /* navigation privée : on ignore */ }
+}
+
+function initSauvegardeSaisiePER() {
+    try {
+        const raw = localStorage.getItem(PER_SAISIE_KEY);
+        if (raw) {
+            const data = JSON.parse(raw);
+            const radio = document.querySelector('input[name="revenu-mode"][value="' + (data.mode || 'brut') + '"]');
+            if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+            Object.entries(data.champs || {}).forEach(([id, v]) => { const e = document.getElementById(id); if (e && v !== undefined && v !== '') e.value = v; });
+            // Ouvre les paramètres avancés s'ils contiennent quelque chose
+            const avance = ['plafond-n3-simple','plafond-n2-simple','plafond-n1-simple','plafond-avis-simple','per-deja-verse-simple'].some(id => (data.champs || {})[id]);
+            if (avance) document.getElementById('bloc-avance-per')?.classList.remove('hidden');
+        }
+    } catch (e) { /* saisie corrompue : on repart de zéro */ }
+    PER_SAISIE_IDS.forEach(id => { const e = document.getElementById(id); if (e) { e.addEventListener('input', sauvegarderSaisiePER); e.addEventListener('change', sauvegarderSaisiePER); } });
+    document.querySelectorAll('input[name="revenu-mode"]').forEach(r => r.addEventListener('change', sauvegarderSaisiePER));
+    document.getElementById('btn-effacer-saisie-per')?.addEventListener('click', () => {
+        try { localStorage.removeItem(PER_SAISIE_KEY); } catch (e) {}
+        PER_SAISIE_IDS.forEach(id => { const e = document.getElementById(id); if (e && e.tagName === 'INPUT') e.value = ''; });
+        const st = document.getElementById('per-saisie-statut'); if (st) st.textContent = 'saisie effac\u00E9e';
+    });
+}
+
 window.PatrimoineSimulator = PatrimoineSimulator;
 window.afficherSynthesePER = afficherSynthesePER;
 window.runScenarioPER = runScenarioPER;
@@ -689,6 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tgl && blc) tgl.addEventListener('click', () => { blc.classList.toggle('hidden'); });
     const btnCible = document.getElementById('btn-cible-impot');
     if (btnCible) btnCible.addEventListener('click', afficherCibleImpot);
+    initSauvegardeSaisiePER();
 
     // Mise à jour dynamique du label selon le mode
     document.querySelectorAll('input[name="cible-mode"]').forEach(radio => {
@@ -713,7 +791,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const helpEl = document.getElementById('revenu-help');
             const inputEl = document.getElementById('salaire-brut-simple');
             if (!labelEl || !inputEl) return;
-            if (radio.value === 'net') {
+            if (radio.value === 'fiche') {
+                labelEl.textContent = 'Net imposable annuel (fiche de paie)';
+                if (helpEl) helpEl.textContent = "Cumul « net imposable » / « net fiscal » de votre dernier bulletin (+ mois restants estimés) — avant abattement 10 %";
+                inputEl.placeholder = 'Ex : 70 000';
+            } else if (radio.value === 'net') {
                 labelEl.textContent = 'Revenu net imposable annuel';
                 if (helpEl) helpEl.textContent = "Ligne 'Revenu net imposable' de votre avis d'impôt";
                 inputEl.placeholder = 'Ex : 38 000';
