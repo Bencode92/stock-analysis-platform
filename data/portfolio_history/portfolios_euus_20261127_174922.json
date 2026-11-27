@@ -1,0 +1,1999 @@
+{
+  "Agressif": {
+    "Commentaire": "Ce portefeuille modèle Agressif présente une allocation orientée croissance avec une volatilité cible élevée. La diversification sectorielle et géographique vise à capturer le potentiel de hausse des marchés actions. Toutefois, ce profil comporte un risque de perte en capital significatif en cas de correction des marchés. La volatilité historique peut entraîner des variations importantes de la valeur du portefeuille à court terme. Ce portefeuille compte 11 lignes avec une volatilité estimée de 11.4%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Actions": {
+      "TENARIS S.A. (TEN)": "13.0%",
+      "ARCH CAPITAL GROUP LTD (ACGL)": "8.8%",
+      "UNITED THERAPEUTICS CORPORATION (UTHR)": "8.4%",
+      "PERDOCEO EDUCATION CORPORATION (PRDO)": "5.3%",
+      "JACK HENRY & ASSOCIATES, INC. (JKHY)": "5.0%",
+      "CAIRN HOMES PLC (CRN)": "4.7%",
+      "EOG RESOURCES, INC. (EOG)": "3.0%"
+    },
+    "ETF": {
+      "Invesco Global Buyback Achievers UCITS ETF (BBCK)": "13.0%",
+      "iShares MSCI Europe Health Care Sector UCITS ETF (ESIH)": "13.0%",
+      "L&G Multi-Strategy Enhanced Commodities UCITS ETF (EN4C)": "12.7%",
+      "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc) (JGSC)": "13.1%"
+    },
+    "Obligations": {},
+    "Crypto": {},
+    "_tickers": {
+      "JGSC": 0.13,
+      "BBCK": 0.13,
+      "TEN": 0.13,
+      "EN4C": 0.1274,
+      "ACGL": 0.0882,
+      "UTHR": 0.08439999999999999,
+      "PRDO": 0.053399999999999996,
+      "JKHY": 0.0499,
+      "CRN": 0.0467,
+      "EOG": 0.03,
+      "ESIH": 0.13
+    },
+    "_tickers_meta": {
+      "JGSC": {
+        "weight": 0.13,
+        "category": "ETF",
+        "name": "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)",
+        "asset_ids": [
+          "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "BBCK": {
+        "weight": 0.13,
+        "category": "ETF",
+        "name": "Invesco Global Buyback Achievers UCITS ETF",
+        "asset_ids": [
+          "Invesco Global Buyback Achievers UCITS ETF"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "TEN": {
+        "weight": 0.13,
+        "category": "Actions",
+        "name": "TENARIS S.A.",
+        "asset_ids": [
+          "EQ_3315"
+        ],
+        "industry": "Oil & Gas Equipment & Services",
+        "beta": 1.01
+      },
+      "EN4C": {
+        "weight": 0.1274,
+        "category": "ETF",
+        "name": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+        "asset_ids": [
+          "L&G Multi-Strategy Enhanced Commodities UCITS ETF"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "ACGL": {
+        "weight": 0.0882,
+        "category": "Actions",
+        "name": "ARCH CAPITAL GROUP LTD",
+        "asset_ids": [
+          "EQ_1422"
+        ],
+        "industry": "Insurance - Diversified",
+        "beta": 0.46
+      },
+      "UTHR": {
+        "weight": 0.08439999999999999,
+        "category": "Actions",
+        "name": "UNITED THERAPEUTICS CORPORATION",
+        "asset_ids": [
+          "EQ_1786"
+        ],
+        "industry": "Drug Manufacturers - Specialty & Generic",
+        "beta": 0.65
+      },
+      "PRDO": {
+        "weight": 0.053399999999999996,
+        "category": "Actions",
+        "name": "PERDOCEO EDUCATION CORPORATION",
+        "asset_ids": [
+          "EQ_1424"
+        ],
+        "industry": "Education & Training Services",
+        "beta": 0.83
+      },
+      "JKHY": {
+        "weight": 0.0499,
+        "category": "Actions",
+        "name": "JACK HENRY & ASSOCIATES, INC.",
+        "asset_ids": [
+          "EQ_1779"
+        ],
+        "industry": "Information Technology Services",
+        "beta": 0.69
+      },
+      "CRN": {
+        "weight": 0.0467,
+        "category": "Actions",
+        "name": "CAIRN HOMES PLC",
+        "asset_ids": [
+          "EQ_3710"
+        ],
+        "industry": "Residential Construction",
+        "beta": 0.82
+      },
+      "EOG": {
+        "weight": 0.03,
+        "category": "Actions",
+        "name": "EOG RESOURCES, INC.",
+        "asset_ids": [
+          "EQ_38"
+        ],
+        "industry": "Oil & Gas E&P",
+        "beta": 0.51
+      },
+      "ESIH": {
+        "weight": 0.13,
+        "category": "ETF",
+        "name": "iShares MSCI Europe Health Care Sector UCITS ETF",
+        "asset_ids": [
+          "iShares MSCI Europe Health Care Sector UCITS ETF"
+        ],
+        "industry": "",
+        "beta": null
+      }
+    },
+    "_optimization": {
+      "mode": "fallback_slsqp_failed",
+      "is_heuristic": true,
+      "vol_realized": 11.4,
+      "vol_target": 24.0,
+      "covariance_trustworthy": true,
+      "returns_coverage_pct": 92.0,
+      "covariance_empirical_weight": 0.85,
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Agressif) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
+    },
+    "_tickers_pricing": {
+      "JGSC": 0.13,
+      "BBCK": 0.13,
+      "TEN": 0.13,
+      "EN4C": 0.1274,
+      "ACGL": 0.0882,
+      "UTHR": 0.08439999999999999,
+      "PRDO": 0.053399999999999996,
+      "JKHY": 0.0499,
+      "CRN": 0.0467,
+      "EOG": 0.03,
+      "ESIH": 0.13
+    },
+    "_unpriced_assets": [],
+    "_pricing_coverage_pct": 100.0,
+    "_numeric_weights": {
+      "ETF:Invesco Global Buyback Achievers UCITS ETF (BBCK)": 13.0,
+      "Actions:TENARIS S.A. (TEN)": 13.0,
+      "ETF:iShares MSCI Europe Health Care Sector UCITS ETF (ESIH)": 13.0,
+      "ETF:L&G Multi-Strategy Enhanced Commodities UCITS ETF (EN4C)": 12.7,
+      "Actions:ARCH CAPITAL GROUP LTD (ACGL)": 8.8,
+      "Actions:UNITED THERAPEUTICS CORPORATION (UTHR)": 8.4,
+      "Actions:PERDOCEO EDUCATION CORPORATION (PRDO)": 5.3,
+      "Actions:JACK HENRY & ASSOCIATES, INC. (JKHY)": 5.0,
+      "Actions:CAIRN HOMES PLC (CRN)": 4.7,
+      "Actions:EOG RESOURCES, INC. (EOG)": 3.0,
+      "ETF:JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc) (JGSC)": 13.1
+    },
+    "_constraint_report": {
+      "hard_constraints": [],
+      "indicators": [],
+      "summary": {
+        "hard_all_satisfied": true,
+        "hard_violated_count": 0,
+        "indicators_count": 0,
+        "indicators_out_of_range": 0,
+        "indicators_in_range": 0
+      },
+      "original_report": {
+        "profile_name": "Agressif",
+        "constraints": [
+          {
+            "name": "volatility",
+            "constraint_type": "target",
+            "cap": 24.0,
+            "observed": 11.4,
+            "slack": -6.6,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "tolerance": 6.0,
+              "range_min": 18.0,
+              "range_max": 30.0,
+              "diff_from_target": -12.6
+            }
+          },
+          {
+            "name": "bonds_min",
+            "constraint_type": "min",
+            "cap": 10.0,
+            "observed": 0.0,
+            "slack": -10.0,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "count": 0,
+              "breakdown": []
+            }
+          },
+          {
+            "name": "crypto_max",
+            "constraint_type": "max",
+            "cap": 10.0,
+            "observed": 0.0,
+            "slack": 10.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "breakdown": []
+            }
+          },
+          {
+            "name": "max_single_position",
+            "constraint_type": "max",
+            "cap": 13.0,
+            "observed": 13.0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {
+              "largest_position": {
+                "id": "iShares MSCI Europe Health Care Sector UCITS ETF",
+                "name": "iShares MSCI Europe Health Care Sector U",
+                "weight": 13.0
+              },
+              "positions_above_10pct": [
+                {
+                  "id": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+                  "weight": 12.74
+                },
+                {
+                  "id": "iShares MSCI Europe Health Care Sector UCITS ETF",
+                  "weight": 13.0
+                },
+                {
+                  "id": "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)",
+                  "weight": 13.0
+                },
+                {
+                  "id": "Invesco Global Buyback Achievers UCITS ETF",
+                  "weight": 13.0
+                },
+                {
+                  "id": "EQ_3315",
+                  "weight": 13.0
+                }
+              ]
+            }
+          },
+          {
+            "name": "max_sector",
+            "constraint_type": "max",
+            "cap": 35.0,
+            "observed": 51.74,
+            "slack": -16.74,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "most_concentrated": "Diversified",
+              "counts_in_max_sector": {
+                "Diversified": 51.74,
+                "Unknown": 35.26,
+                "Energie": 13.0
+              },
+              "all_sectors": {
+                "Diversified": 51.74,
+                "Unknown": 35.26,
+                "Energie": 13.0
+              },
+              "scope": "EQUITY_LIKE only (excludes Bonds)"
+            }
+          },
+          {
+            "name": "max_region",
+            "constraint_type": "max",
+            "cap": 50.0,
+            "observed": 51.74,
+            "slack": -1.74,
+            "binding": false,
+            "status": "VIOLATED",
+            "details": {
+              "most_concentrated": "Global",
+              "counts_in_max_region": {
+                "Global": 51.74,
+                "Etats-Unis": 30.59,
+                "Italie": 13.0,
+                "Royaume-Uni": 4.67
+              },
+              "all_regions": {
+                "Global": 51.74,
+                "Etats-Unis": 30.59,
+                "Italie": 13.0,
+                "Royaume-Uni": 4.67
+              },
+              "scope": "EQUITY_LIKE + LEVERAGED only"
+            }
+          },
+          {
+            "name": "min_assets",
+            "constraint_type": "min",
+            "cap": 10,
+            "observed": 11,
+            "slack": 1,
+            "binding": false,
+            "status": "OK",
+            "details": {}
+          },
+          {
+            "name": "max_assets",
+            "constraint_type": "max",
+            "cap": 18,
+            "observed": 11,
+            "slack": 7,
+            "binding": false,
+            "status": "OK",
+            "details": {}
+          },
+          {
+            "name": "bucket_core",
+            "constraint_type": "range",
+            "cap": 50.0,
+            "observed": 39.0,
+            "slack": 9.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 30.0,
+              "range_max": 50.0,
+              "slack_from_min": 9.0,
+              "slack_from_max": 11.0,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_satellite",
+            "constraint_type": "range",
+            "cap": 55.0,
+            "observed": 48.26,
+            "slack": 6.74,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 35.0,
+              "range_max": 55.0,
+              "slack_from_min": 13.26,
+              "slack_from_max": 6.74,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_defensive",
+            "constraint_type": "range",
+            "cap": 15.0,
+            "observed": 12.74,
+            "slack": 2.26,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 5.0,
+              "range_max": 15.0,
+              "slack_from_min": 7.74,
+              "slack_from_max": 2.26,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_lottery",
+            "constraint_type": "range",
+            "cap": 5.0,
+            "observed": 0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {
+              "range_min": 0.0,
+              "range_max": 5.0,
+              "slack_from_min": 0.0,
+              "slack_from_max": 5.0,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "leveraged_cap",
+            "constraint_type": "max",
+            "cap": 5.0,
+            "observed": 0,
+            "slack": 5.0,
+            "binding": false,
+            "status": "OK",
+            "details": {}
+          },
+          {
+            "name": "alternative_cap",
+            "constraint_type": "max",
+            "cap": 20.0,
+            "observed": 0,
+            "slack": 20.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "includes": [
+                "Derivative Income",
+                "Defined Outcome",
+                "Allocation funds"
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "total": 14,
+          "ok": 9,
+          "binding": 1,
+          "violated": 1,
+          "critical": 3
+        },
+        "quality_score": 65.7,
+        "recommendations": [
+          "🔴 CRITICAL: volatility violated by 6.6% — immediate action required",
+          "🔴 CRITICAL: bonds_min violated by 10.0% — immediate action required",
+          "🟡 BINDING: max_single_position at 13.0% (cap=13.0%) — monitor closely",
+          "🔴 CRITICAL: max_sector violated by 16.7% — immediate action required",
+          "🟠 VIOLATED: max_region exceeded by 1.7% — reduce exposure"
+        ],
+        "exposures": {
+          "by_category": {
+            "ETF": 51.74,
+            "Actions": 48.26
+          },
+          "by_sector": {
+            "Diversified": 51.74,
+            "Unknown": 35.26,
+            "Energie": 13.0
+          },
+          "by_region": {
+            "Global": 51.74,
+            "Etats-Unis": 30.59,
+            "Italie": 13.0,
+            "Royaume-Uni": 4.67
+          },
+          "by_risk_bucket": {
+            "equity_like": 100.0
+          },
+          "by_role": {
+            "core": 39.0,
+            "satellite": 48.26,
+            "defensive": 12.74,
+            "lottery": 0.0,
+            "unknown": 0.0
+          },
+          "concentration": {
+            "hhi": 1072.0,
+            "hhi_interpretation": "diversified",
+            "effective_n": 9.33,
+            "n_positions": 11,
+            "top_5_weight": 64.74,
+            "top_10_weight": 97.0,
+            "largest_position": 13.0,
+            "smallest_position": 3.0,
+            "thresholds": {
+              "well_diversified": "HHI < 1000",
+              "diversified": "HHI 1000-1500",
+              "moderately_concentrated": "HHI 1500-2500",
+              "highly_concentrated": "HHI > 2500"
+            },
+            "source": "exposures.py"
+          }
+        },
+        "ticker_mapping": [
+          {
+            "id": "iShares MSCI Europe Health Care Sector UCITS ETF",
+            "ticker": "ESIH",
+            "name": "iShares MSCI Europe Health Care Sector UCITS ETF",
+            "weight_pct": 13.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)",
+            "ticker": "JGSC",
+            "name": "JPMorgan Global Research Enhanced Index Equity SRI Paris Ali",
+            "weight_pct": 13.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Invesco Global Buyback Achievers UCITS ETF",
+            "ticker": "BBCK",
+            "name": "Invesco Global Buyback Achievers UCITS ETF",
+            "weight_pct": 13.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_3315",
+            "ticker": "TEN",
+            "name": "TENARIS S.A.",
+            "weight_pct": 13.0,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Energie",
+            "region": "Italie",
+            "exchange": null
+          },
+          {
+            "id": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+            "ticker": "EN4C",
+            "name": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+            "weight_pct": 12.74,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1422",
+            "ticker": "ACGL",
+            "name": "ARCH CAPITAL GROUP LTD",
+            "weight_pct": 8.82,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1786",
+            "ticker": "UTHR",
+            "name": "UNITED THERAPEUTICS CORPORATION",
+            "weight_pct": 8.44,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1424",
+            "ticker": "PRDO",
+            "name": "PERDOCEO EDUCATION CORPORATION",
+            "weight_pct": 5.34,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1779",
+            "ticker": "JKHY",
+            "name": "JACK HENRY & ASSOCIATES, INC.",
+            "weight_pct": 4.99,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_3710",
+            "ticker": "CRN",
+            "name": "CAIRN HOMES PLC",
+            "weight_pct": 4.67,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Royaume-Uni",
+            "exchange": null
+          },
+          {
+            "id": "EQ_38",
+            "ticker": "EOG",
+            "name": "EOG RESOURCES, INC.",
+            "weight_pct": 3.0,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          }
+        ],
+        "execution_summary": {
+          "n_positions": 11,
+          "n_exchanges": 0,
+          "exchanges": [],
+          "total_weight": 100.0,
+          "missing_isin": 7,
+          "missing_ticker": 0,
+          "data_quality": {
+            "isin_coverage": 36.4,
+            "ticker_coverage": 100.0
+          },
+          "ready_for_execution": true
+        }
+      }
+    },
+    "_exposures": {
+      "by_category": {
+        "ETF": 51.74,
+        "Actions": 48.26
+      },
+      "by_sector": {
+        "Diversified": 51.74,
+        "Unknown": 35.26,
+        "Energie": 13.0
+      },
+      "by_region": {
+        "Global": 51.74,
+        "Etats-Unis": 30.59,
+        "Italie": 13.0,
+        "Royaume-Uni": 4.67
+      },
+      "by_risk_bucket": {
+        "equity_like": 100.0
+      },
+      "by_role": {
+        "core": 39.0,
+        "satellite": 48.26,
+        "defensive": 12.74,
+        "lottery": 0.0,
+        "unknown": 0.0
+      },
+      "concentration": {
+        "hhi": 1072.0,
+        "hhi_interpretation": "diversified",
+        "effective_n": 9.33,
+        "n_positions": 11,
+        "top_5_weight": 64.74,
+        "top_10_weight": 97.0,
+        "largest_position": 13.0,
+        "smallest_position": 3.0,
+        "thresholds": {
+          "well_diversified": "HHI < 1000",
+          "diversified": "HHI 1000-1500",
+          "moderately_concentrated": "HHI 1500-2500",
+          "highly_concentrated": "HHI > 2500"
+        },
+        "source": "exposures.py"
+      }
+    },
+    "_execution_summary": {
+      "n_positions": 11,
+      "n_exchanges": 0,
+      "exchanges": [],
+      "total_weight": 100.0,
+      "missing_isin": 7,
+      "missing_ticker": 0,
+      "data_quality": {
+        "isin_coverage": 36.4,
+        "ticker_coverage": 100.0
+      },
+      "ready_for_execution": true
+    },
+    "_limitations": [
+      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Agressif sont incompatibles avec l'optimisation Markowitz classique.",
+      "Volatilité réalisée (11.4%) éloignée de la cible (24.0%) - écart de 12.6%."
+    ]
+  },
+  "Modéré": {
+    "Commentaire": "Ce portefeuille modèle Modéré combine des actifs de croissance et des instruments à revenu fixe pour un équilibre rendement/risque. L'allocation vise une volatilité intermédiaire tout en maintenant un potentiel de performance. Le risque de perte en capital existe, notamment en période de stress de marché. La corrélation entre classes d'actifs peut augmenter en période de crise, réduisant les bénéfices de la diversification. Ce portefeuille compte 8 lignes avec une volatilité estimée de 11.86%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Actions": {
+      "THE TRAVELERS COMPANIES, INC. (TRV)": "13.8%",
+      "MGIC INVESTMENT CORPORATION (MTG)": "13.5%",
+      "CINCINNATI FINANCIAL CORPORATION (CINF)": "10.6%",
+      "ESSENT GROUP LTD. (ESNT)": "10.0%",
+      "SEI INVESTMENTS COMPANY (SEIC)": "7.0%"
+    },
+    "ETF": {
+      "Xtrackers Stoxx Europe 600 UCITS ETF 1D (XSX7)": "15.0%",
+      "Amundi Core MSCI Europe UCITS ETF Dist (10AI)": "15.0%",
+      "L&G Multi-Strategy Enhanced Commodities UCITS ETF (EN4C)": "15.1%"
+    },
+    "Obligations": {},
+    "Crypto": {},
+    "_tickers": {
+      "XSX7": 0.15,
+      "10AI": 0.15,
+      "TRV": 0.1383,
+      "MTG": 0.1353,
+      "CINF": 0.1061,
+      "ESNT": 0.1003,
+      "SEIC": 0.07,
+      "EN4C": 0.15
+    },
+    "_tickers_meta": {
+      "XSX7": {
+        "weight": 0.15,
+        "category": "ETF",
+        "name": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+        "asset_ids": [
+          "Xtrackers Stoxx Europe 600 UCITS ETF 1D"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "10AI": {
+        "weight": 0.15,
+        "category": "ETF",
+        "name": "Amundi Core MSCI Europe UCITS ETF Dist",
+        "asset_ids": [
+          "Amundi Core MSCI Europe UCITS ETF Dist"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "TRV": {
+        "weight": 0.1383,
+        "category": "Actions",
+        "name": "THE TRAVELERS COMPANIES, INC.",
+        "asset_ids": [
+          "EQ_128"
+        ],
+        "industry": "Insurance - Property & Casualty",
+        "beta": 0.6
+      },
+      "MTG": {
+        "weight": 0.1353,
+        "category": "Actions",
+        "name": "MGIC INVESTMENT CORPORATION",
+        "asset_ids": [
+          "EQ_492"
+        ],
+        "industry": "Insurance - Specialty",
+        "beta": 0.74
+      },
+      "CINF": {
+        "weight": 0.1061,
+        "category": "Actions",
+        "name": "CINCINNATI FINANCIAL CORPORATION",
+        "asset_ids": [
+          "EQ_1985"
+        ],
+        "industry": "Insurance - Property & Casualty",
+        "beta": 0.65
+      },
+      "ESNT": {
+        "weight": 0.1003,
+        "category": "Actions",
+        "name": "ESSENT GROUP LTD.",
+        "asset_ids": [
+          "EQ_297"
+        ],
+        "industry": "Insurance - Specialty",
+        "beta": 0.8
+      },
+      "SEIC": {
+        "weight": 0.07,
+        "category": "Actions",
+        "name": "SEI INVESTMENTS COMPANY",
+        "asset_ids": [
+          "EQ_1760"
+        ],
+        "industry": "Asset Management",
+        "beta": 0.98
+      },
+      "EN4C": {
+        "weight": 0.15,
+        "category": "ETF",
+        "name": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+        "asset_ids": [
+          "L&G Multi-Strategy Enhanced Commodities UCITS ETF"
+        ],
+        "industry": "",
+        "beta": null
+      }
+    },
+    "_optimization": {
+      "mode": "fallback_slsqp_failed",
+      "is_heuristic": true,
+      "vol_realized": 11.86,
+      "vol_target": 11.0,
+      "covariance_trustworthy": true,
+      "returns_coverage_pct": 80.0,
+      "covariance_empirical_weight": 0.85,
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Modéré) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique."
+    },
+    "_tickers_pricing": {
+      "XSX7": 0.15,
+      "10AI": 0.15,
+      "TRV": 0.1383,
+      "MTG": 0.1353,
+      "CINF": 0.1061,
+      "ESNT": 0.1003,
+      "SEIC": 0.07,
+      "EN4C": 0.15
+    },
+    "_unpriced_assets": [],
+    "_pricing_coverage_pct": 100.0,
+    "_numeric_weights": {
+      "ETF:Xtrackers Stoxx Europe 600 UCITS ETF 1D (XSX7)": 15.0,
+      "ETF:Amundi Core MSCI Europe UCITS ETF Dist (10AI)": 15.0,
+      "Actions:THE TRAVELERS COMPANIES, INC. (TRV)": 13.8,
+      "Actions:MGIC INVESTMENT CORPORATION (MTG)": 13.5,
+      "Actions:CINCINNATI FINANCIAL CORPORATION (CINF)": 10.6,
+      "Actions:ESSENT GROUP LTD. (ESNT)": 10.0,
+      "Actions:SEI INVESTMENTS COMPANY (SEIC)": 7.0,
+      "ETF:L&G Multi-Strategy Enhanced Commodities UCITS ETF (EN4C)": 15.1
+    },
+    "_constraint_report": {
+      "hard_constraints": [],
+      "indicators": [],
+      "summary": {
+        "hard_all_satisfied": true,
+        "hard_violated_count": 0,
+        "indicators_count": 0,
+        "indicators_out_of_range": 0,
+        "indicators_in_range": 0
+      },
+      "original_report": {
+        "profile_name": "Modéré",
+        "constraints": [
+          {
+            "name": "volatility",
+            "constraint_type": "target",
+            "cap": 11.0,
+            "observed": 11.86,
+            "slack": 2.14,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "tolerance": 3.0,
+              "range_min": 8.0,
+              "range_max": 14.0,
+              "diff_from_target": 0.86
+            }
+          },
+          {
+            "name": "bonds_min",
+            "constraint_type": "min",
+            "cap": 15.0,
+            "observed": 0.0,
+            "slack": -15.0,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "count": 0,
+              "breakdown": []
+            }
+          },
+          {
+            "name": "crypto_max",
+            "constraint_type": "max",
+            "cap": 5.0,
+            "observed": 0.0,
+            "slack": 5.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "breakdown": []
+            }
+          },
+          {
+            "name": "max_single_position",
+            "constraint_type": "max",
+            "cap": 15.0,
+            "observed": 20.0,
+            "slack": -5.0,
+            "binding": false,
+            "status": "VIOLATED",
+            "details": {
+              "largest_position": {
+                "id": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+                "name": "L&G Multi-Strategy Enhanced Commodities ",
+                "weight": 20.0
+              },
+              "positions_above_10pct": [
+                {
+                  "id": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+                  "weight": 20.0
+                },
+                {
+                  "id": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+                  "weight": 20.0
+                },
+                {
+                  "id": "Amundi Core MSCI Europe UCITS ETF Dist",
+                  "weight": 20.0
+                },
+                {
+                  "id": "EQ_128",
+                  "weight": 10.83
+                },
+                {
+                  "id": "EQ_492",
+                  "weight": 10.53
+                }
+              ]
+            }
+          },
+          {
+            "name": "max_sector",
+            "constraint_type": "max",
+            "cap": 30.0,
+            "observed": 60.0,
+            "slack": -30.0,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "most_concentrated": "Diversified",
+              "counts_in_max_sector": {
+                "Diversified": 60.0,
+                "Unknown": 40.0
+              },
+              "all_sectors": {
+                "Diversified": 60.0,
+                "Unknown": 40.0
+              },
+              "scope": "EQUITY_LIKE only (excludes Bonds)"
+            }
+          },
+          {
+            "name": "max_region",
+            "constraint_type": "max",
+            "cap": 50.0,
+            "observed": 60.0,
+            "slack": -10.0,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "most_concentrated": "Global",
+              "counts_in_max_region": {
+                "Global": 60.0,
+                "Etats-Unis": 40.0
+              },
+              "all_regions": {
+                "Global": 60.0,
+                "Etats-Unis": 40.0
+              },
+              "scope": "EQUITY_LIKE + LEVERAGED only"
+            }
+          },
+          {
+            "name": "min_assets",
+            "constraint_type": "min",
+            "cap": 10,
+            "observed": 8,
+            "slack": -2,
+            "binding": false,
+            "status": "VIOLATED",
+            "details": {}
+          },
+          {
+            "name": "max_assets",
+            "constraint_type": "max",
+            "cap": 18,
+            "observed": 8,
+            "slack": 10,
+            "binding": false,
+            "status": "OK",
+            "details": {}
+          },
+          {
+            "name": "bucket_core",
+            "constraint_type": "range",
+            "cap": 70.0,
+            "observed": 80.0,
+            "slack": -10.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 50.0,
+              "range_max": 70.0,
+              "slack_from_min": 30.0,
+              "slack_from_max": -10.0,
+              "outside_range": true,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_satellite",
+            "constraint_type": "range",
+            "cap": 25.0,
+            "observed": 0,
+            "slack": -10.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 10.0,
+              "range_max": 25.0,
+              "slack_from_min": -10.0,
+              "slack_from_max": 25.0,
+              "outside_range": true,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_defensive",
+            "constraint_type": "range",
+            "cap": 25.0,
+            "observed": 20.0,
+            "slack": 5.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 10.0,
+              "range_max": 25.0,
+              "slack_from_min": 10.0,
+              "slack_from_max": 5.0,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_lottery",
+            "constraint_type": "range",
+            "cap": 2.0,
+            "observed": 0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {
+              "range_min": 0.0,
+              "range_max": 2.0,
+              "slack_from_min": 0.0,
+              "slack_from_max": 2.0,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "alternative_cap",
+            "constraint_type": "max",
+            "cap": 15.0,
+            "observed": 0,
+            "slack": 15.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "includes": [
+                "Derivative Income",
+                "Defined Outcome",
+                "Allocation funds"
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "total": 13,
+          "ok": 8,
+          "binding": 0,
+          "violated": 2,
+          "critical": 3
+        },
+        "quality_score": 56.9,
+        "recommendations": [
+          "🔴 CRITICAL: bonds_min violated by 15.0% — immediate action required",
+          "🟠 VIOLATED: max_single_position exceeded by 5.0% — reduce exposure",
+          "🔴 CRITICAL: max_sector violated by 30.0% — immediate action required",
+          "🔴 CRITICAL: max_region violated by 10.0% — immediate action required",
+          "🟠 VIOLATED: min_assets exceeded by 2.0% — reduce exposure"
+        ],
+        "exposures": {
+          "by_category": {
+            "ETF": 60.0,
+            "Actions": 40.0
+          },
+          "by_sector": {
+            "Diversified": 60.0,
+            "Unknown": 40.0
+          },
+          "by_region": {
+            "Global": 60.0,
+            "Etats-Unis": 40.0
+          },
+          "by_risk_bucket": {
+            "equity_like": 100.0
+          },
+          "by_role": {
+            "core": 80.0,
+            "satellite": 0.0,
+            "defensive": 20.0,
+            "lottery": 0.0,
+            "unknown": 0.0
+          },
+          "concentration": {
+            "hhi": 1552.0,
+            "hhi_interpretation": "moderately_concentrated",
+            "effective_n": 6.45,
+            "n_positions": 8,
+            "top_5_weight": 81.36,
+            "top_10_weight": 100.0,
+            "largest_position": 20.0,
+            "smallest_position": 4.0,
+            "thresholds": {
+              "well_diversified": "HHI < 1000",
+              "diversified": "HHI 1000-1500",
+              "moderately_concentrated": "HHI 1500-2500",
+              "highly_concentrated": "HHI > 2500"
+            },
+            "source": "exposures.py"
+          }
+        },
+        "ticker_mapping": [
+          {
+            "id": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+            "ticker": "EN4C",
+            "name": "L&G Multi-Strategy Enhanced Commodities UCITS ETF",
+            "weight_pct": 20.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+            "ticker": "XSX7",
+            "name": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+            "weight_pct": 20.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Amundi Core MSCI Europe UCITS ETF Dist",
+            "ticker": "10AI",
+            "name": "Amundi Core MSCI Europe UCITS ETF Dist",
+            "weight_pct": 20.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_128",
+            "ticker": "TRV",
+            "name": "THE TRAVELERS COMPANIES, INC.",
+            "weight_pct": 10.83,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_492",
+            "ticker": "MTG",
+            "name": "MGIC INVESTMENT CORPORATION",
+            "weight_pct": 10.53,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1985",
+            "ticker": "CINF",
+            "name": "CINCINNATI FINANCIAL CORPORATION",
+            "weight_pct": 7.61,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_297",
+            "ticker": "ESNT",
+            "name": "ESSENT GROUP LTD.",
+            "weight_pct": 7.03,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1760",
+            "ticker": "SEIC",
+            "name": "SEI INVESTMENTS COMPANY",
+            "weight_pct": 4.0,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          }
+        ],
+        "execution_summary": {
+          "n_positions": 8,
+          "n_exchanges": 0,
+          "exchanges": [],
+          "total_weight": 100.0,
+          "missing_isin": 5,
+          "missing_ticker": 0,
+          "data_quality": {
+            "isin_coverage": 37.5,
+            "ticker_coverage": 100.0
+          },
+          "ready_for_execution": true
+        }
+      }
+    },
+    "_exposures": {
+      "by_category": {
+        "ETF": 60.0,
+        "Actions": 40.0
+      },
+      "by_sector": {
+        "Diversified": 60.0,
+        "Unknown": 40.0
+      },
+      "by_region": {
+        "Global": 60.0,
+        "Etats-Unis": 40.0
+      },
+      "by_risk_bucket": {
+        "equity_like": 100.0
+      },
+      "by_role": {
+        "core": 80.0,
+        "satellite": 0.0,
+        "defensive": 20.0,
+        "lottery": 0.0,
+        "unknown": 0.0
+      },
+      "concentration": {
+        "hhi": 1552.0,
+        "hhi_interpretation": "moderately_concentrated",
+        "effective_n": 6.45,
+        "n_positions": 8,
+        "top_5_weight": 81.36,
+        "top_10_weight": 100.0,
+        "largest_position": 20.0,
+        "smallest_position": 4.0,
+        "thresholds": {
+          "well_diversified": "HHI < 1000",
+          "diversified": "HHI 1000-1500",
+          "moderately_concentrated": "HHI 1500-2500",
+          "highly_concentrated": "HHI > 2500"
+        },
+        "source": "exposures.py"
+      }
+    },
+    "_execution_summary": {
+      "n_positions": 8,
+      "n_exchanges": 0,
+      "exchanges": [],
+      "total_weight": 100.0,
+      "missing_isin": 5,
+      "missing_ticker": 0,
+      "data_quality": {
+        "isin_coverage": 37.5,
+        "ticker_coverage": 100.0
+      },
+      "ready_for_execution": true
+    },
+    "_limitations": [
+      "Allocation heuristique (fallback_slsqp_failed): les contraintes du profil Modéré sont incompatibles avec l'optimisation Markowitz classique."
+    ]
+  },
+  "Stable": {
+    "Commentaire": "Ce portefeuille modèle Stable privilégie la préservation du capital avec une allocation majoritairement obligataire et des actifs à faible volatilité historique. L'objectif est de limiter les fluctuations tout en générant un rendement modéré. Malgré son profil défensif, ce portefeuille reste exposé au risque de taux et au risque de crédit. En période de hausse des taux, la valeur des obligations peut diminuer significativement. Ce portefeuille compte 10 lignes avec une volatilité estimée de 9.73%. ⚠️ Performances calculées sur 90 jours, hors frais de transaction et fiscalité. Sharpe ratio annualisé sur période courte (non représentatif long terme). Les performances passées ne préjugent pas des performances futures.",
+    "Actions": {
+      "RIO TINTO PLC (RIO)": "15.0%",
+      "NATURGY ENERGY GROUP, S.A. (NTGY)": "15.0%",
+      "T. ROWE PRICE GROUP, INC. (TROW)": "6.2%",
+      "PEPSICO, INC. (PEP)": "6.2%"
+    },
+    "ETF": {
+      "iShares Edge MSCI Europe Minimum Volatility UCITS ETF (EUN0)": "15.0%",
+      "Amundi Core MSCI Europe UCITS ETF Dist (10AI)": "7.5%",
+      "Fidelity US Quality Income UCITS ETF Inc-USD (FUSD)": "7.5%",
+      "Xtrackers Stoxx Europe 600 UCITS ETF 1D (XSX7)": "6.2%",
+      "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc) (JGSC)": "6.2%",
+      "iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumulating) (IS3Q)": "15.2%"
+    },
+    "Obligations": {},
+    "Crypto": {},
+    "_tickers": {
+      "EUN0": 0.15,
+      "IS3Q": 0.15,
+      "NTGY": 0.1499,
+      "10AI": 0.07519999999999999,
+      "FUSD": 0.07490000000000001,
+      "TROW": 0.0625,
+      "PEP": 0.0625,
+      "XSX7": 0.0625,
+      "JGSC": 0.0625,
+      "RIO": 0.15
+    },
+    "_tickers_meta": {
+      "EUN0": {
+        "weight": 0.15,
+        "category": "ETF",
+        "name": "iShares Edge MSCI Europe Minimum Volatility UCITS ETF",
+        "asset_ids": [
+          "iShares Edge MSCI Europe Minimum Volatility UCITS ETF"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "IS3Q": {
+        "weight": 0.15,
+        "category": "ETF",
+        "name": "iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumulating)",
+        "asset_ids": [
+          "iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumulating)"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "NTGY": {
+        "weight": 0.1499,
+        "category": "Actions",
+        "name": "NATURGY ENERGY GROUP, S.A.",
+        "asset_ids": [
+          "EQ_3417"
+        ],
+        "industry": "Utilities - Regulated Gas",
+        "beta": 0.66
+      },
+      "10AI": {
+        "weight": 0.07519999999999999,
+        "category": "ETF",
+        "name": "Amundi Core MSCI Europe UCITS ETF Dist",
+        "asset_ids": [
+          "Amundi Core MSCI Europe UCITS ETF Dist"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "FUSD": {
+        "weight": 0.07490000000000001,
+        "category": "ETF",
+        "name": "Fidelity US Quality Income UCITS ETF Inc-USD",
+        "asset_ids": [
+          "Fidelity US Quality Income UCITS ETF Inc-USD"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "TROW": {
+        "weight": 0.0625,
+        "category": "Actions",
+        "name": "T. ROWE PRICE GROUP, INC.",
+        "asset_ids": [
+          "EQ_2059"
+        ],
+        "industry": "Asset Management",
+        "beta": 1.3
+      },
+      "PEP": {
+        "weight": 0.0625,
+        "category": "Actions",
+        "name": "PEPSICO, INC.",
+        "asset_ids": [
+          "EQ_1461"
+        ],
+        "industry": "Beverages - Non-Alcoholic",
+        "beta": 0.55
+      },
+      "XSX7": {
+        "weight": 0.0625,
+        "category": "ETF",
+        "name": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+        "asset_ids": [
+          "Xtrackers Stoxx Europe 600 UCITS ETF 1D"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "JGSC": {
+        "weight": 0.0625,
+        "category": "ETF",
+        "name": "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)",
+        "asset_ids": [
+          "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)"
+        ],
+        "industry": "",
+        "beta": null
+      },
+      "RIO": {
+        "weight": 0.15,
+        "category": "Actions",
+        "name": "RIO TINTO PLC",
+        "asset_ids": [
+          "EQ_4031"
+        ],
+        "industry": "Other Industrial Metals & Mining",
+        "beta": 0.81
+      }
+    },
+    "_optimization": {
+      "mode": "fallback_heuristic",
+      "is_heuristic": true,
+      "vol_realized": 9.73,
+      "vol_target": 6.0,
+      "covariance_trustworthy": true,
+      "returns_coverage_pct": 80.8,
+      "covariance_empirical_weight": 0.85,
+      "disclaimer": "Ce portefeuille utilise une allocation heuristique (règles prédéfinies) et non une optimisation mathématique Markowitz. Les contraintes du profil (Stable) sont incompatibles avec l'optimisation classique. Cette approche privilégie la robustesse à l'optimalité théorique.",
+      "heuristic_name": "stable_rules_v1",
+      "heuristic_version": "1.0.0",
+      "rules_applied": [
+        "bonds_min_35pct",
+        "defensive_bucket_45_60pct",
+        "vol_target_6pct_tolerance_3pct",
+        "max_single_position_15pct",
+        "max_single_bond_25pct",
+        "min_assets_10",
+        "max_assets_18",
+        "low_vol_assets_preferred"
+      ],
+      "rules_parameters": {
+        "bonds_min": 35.0,
+        "vol_target": 6.0,
+        "vol_tolerance": 3.0,
+        "max_single_position": 15.0,
+        "max_single_bond": 25.0,
+        "min_assets": 10,
+        "max_assets": 18,
+        "defensive_min": 45.0,
+        "defensive_max": 60.0
+      },
+      "why_not_slsqp": "vol_target_incompatible_with_markowitz",
+      "why_not_slsqp_details": "Le profil Stable requiert vol_target=6% ± 3% et >35% obligations. Ces contraintes sont mathématiquement incompatibles avec l'optimisation Markowitz mean-variance. L'univers d'actifs disponibles ne permet pas d'atteindre une volatilité si basse avec diversification suffisante. Fallback vers allocation heuristique (règles prédéfinies)."
+    },
+    "_tickers_pricing": {
+      "EUN0": 0.15,
+      "IS3Q": 0.15,
+      "NTGY": 0.1499,
+      "10AI": 0.07519999999999999,
+      "FUSD": 0.07490000000000001,
+      "TROW": 0.0625,
+      "PEP": 0.0625,
+      "XSX7": 0.0625,
+      "JGSC": 0.0625,
+      "RIO": 0.15
+    },
+    "_unpriced_assets": [],
+    "_pricing_coverage_pct": 100.0,
+    "_numeric_weights": {
+      "Actions:RIO TINTO PLC (RIO)": 15.0,
+      "Actions:NATURGY ENERGY GROUP, S.A. (NTGY)": 15.0,
+      "ETF:iShares Edge MSCI Europe Minimum Volatility UCITS ETF (EUN0)": 15.0,
+      "ETF:Amundi Core MSCI Europe UCITS ETF Dist (10AI)": 7.5,
+      "ETF:Fidelity US Quality Income UCITS ETF Inc-USD (FUSD)": 7.5,
+      "Actions:T. ROWE PRICE GROUP, INC. (TROW)": 6.2,
+      "Actions:PEPSICO, INC. (PEP)": 6.2,
+      "ETF:Xtrackers Stoxx Europe 600 UCITS ETF 1D (XSX7)": 6.2,
+      "ETF:JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc) (JGSC)": 6.2,
+      "ETF:iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumulating) (IS3Q)": 15.2
+    },
+    "_constraint_report": {
+      "hard_constraints": [],
+      "indicators": [],
+      "summary": {
+        "hard_all_satisfied": true,
+        "hard_violated_count": 0,
+        "indicators_count": 0,
+        "indicators_out_of_range": 0,
+        "indicators_in_range": 0
+      },
+      "original_report": {
+        "profile_name": "Stable",
+        "constraints": [
+          {
+            "name": "volatility",
+            "constraint_type": "target",
+            "cap": 6.0,
+            "observed": 9.73,
+            "slack": -0.73,
+            "binding": false,
+            "status": "VIOLATED",
+            "details": {
+              "tolerance": 3.0,
+              "range_min": 3.0,
+              "range_max": 9.0,
+              "diff_from_target": 3.73
+            }
+          },
+          {
+            "name": "bonds_min",
+            "constraint_type": "min",
+            "cap": 35.0,
+            "observed": 0.0,
+            "slack": -35.0,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "count": 0,
+              "breakdown": []
+            }
+          },
+          {
+            "name": "max_single_position",
+            "constraint_type": "max",
+            "cap": 15.0,
+            "observed": 15.0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {
+              "largest_position": {
+                "id": "EQ_4031",
+                "name": "RIO TINTO PLC",
+                "weight": 15.0
+              },
+              "positions_above_10pct": [
+                {
+                  "id": "EQ_4031",
+                  "weight": 15.0
+                },
+                {
+                  "id": "EQ_3417",
+                  "weight": 14.99
+                },
+                {
+                  "id": "iShares Edge MSCI Europe Minimum Volatility UCITS ETF",
+                  "weight": 15.0
+                },
+                {
+                  "id": "iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumulating)",
+                  "weight": 15.0
+                }
+              ]
+            }
+          },
+          {
+            "name": "max_sector",
+            "constraint_type": "max",
+            "cap": 30.0,
+            "observed": 57.51,
+            "slack": -27.51,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "most_concentrated": "Diversified",
+              "counts_in_max_sector": {
+                "Diversified": 57.51,
+                "Unknown": 42.49
+              },
+              "all_sectors": {
+                "Diversified": 57.51,
+                "Unknown": 42.49
+              },
+              "scope": "EQUITY_LIKE only (excludes Bonds)"
+            }
+          },
+          {
+            "name": "max_region",
+            "constraint_type": "max",
+            "cap": 50.0,
+            "observed": 57.51,
+            "slack": -7.51,
+            "binding": false,
+            "status": "CRITICAL",
+            "details": {
+              "most_concentrated": "Global",
+              "counts_in_max_region": {
+                "Global": 57.51,
+                "Royaume-Uni": 15.0,
+                "Espagne": 14.99,
+                "Etats-Unis": 12.5
+              },
+              "all_regions": {
+                "Global": 57.51,
+                "Royaume-Uni": 15.0,
+                "Espagne": 14.99,
+                "Etats-Unis": 12.5
+              },
+              "scope": "EQUITY_LIKE + LEVERAGED only"
+            }
+          },
+          {
+            "name": "min_assets",
+            "constraint_type": "min",
+            "cap": 10,
+            "observed": 10,
+            "slack": 0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {}
+          },
+          {
+            "name": "max_assets",
+            "constraint_type": "max",
+            "cap": 18,
+            "observed": 10,
+            "slack": 8,
+            "binding": false,
+            "status": "OK",
+            "details": {}
+          },
+          {
+            "name": "bucket_core",
+            "constraint_type": "range",
+            "cap": 40.0,
+            "observed": 63.76,
+            "slack": -23.76,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 15.0,
+              "range_max": 40.0,
+              "slack_from_min": 48.76,
+              "slack_from_max": -23.76,
+              "outside_range": true,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_satellite",
+            "constraint_type": "range",
+            "cap": 10.0,
+            "observed": 0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {
+              "range_min": 0.0,
+              "range_max": 10.0,
+              "slack_from_min": 0.0,
+              "slack_from_max": 10.0,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_defensive",
+            "constraint_type": "range",
+            "cap": 85.0,
+            "observed": 36.24,
+            "slack": -13.76,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "range_min": 50.0,
+              "range_max": 85.0,
+              "slack_from_min": -13.76,
+              "slack_from_max": 48.76,
+              "outside_range": true,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "bucket_lottery",
+            "constraint_type": "range",
+            "cap": 0.0,
+            "observed": 0,
+            "slack": 0.0,
+            "binding": true,
+            "status": "BINDING",
+            "details": {
+              "range_min": 0.0,
+              "range_max": 0.0,
+              "slack_from_min": 0.0,
+              "slack_from_max": 0.0,
+              "outside_range": false,
+              "is_indicator": true
+            }
+          },
+          {
+            "name": "alternative_cap",
+            "constraint_type": "max",
+            "cap": 5.0,
+            "observed": 0,
+            "slack": 5.0,
+            "binding": false,
+            "status": "OK",
+            "details": {
+              "includes": [
+                "Derivative Income",
+                "Defined Outcome",
+                "Allocation funds"
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "total": 12,
+          "ok": 6,
+          "binding": 2,
+          "violated": 1,
+          "critical": 3
+        },
+        "quality_score": 58.3,
+        "recommendations": [
+          "🟠 VIOLATED: volatility exceeded by 0.7% — reduce exposure",
+          "🔴 CRITICAL: bonds_min violated by 35.0% — immediate action required",
+          "🟡 BINDING: max_single_position at 15.0% (cap=15.0%) — monitor closely",
+          "🔴 CRITICAL: max_sector violated by 27.5% — immediate action required",
+          "🔴 CRITICAL: max_region violated by 7.5% — immediate action required",
+          "ℹ️ INFO: bucket_core is 23.8% outside target range (indicator only)",
+          "ℹ️ INFO: bucket_defensive is 13.8% outside target range (indicator only)"
+        ],
+        "exposures": {
+          "by_category": {
+            "Actions": 42.49,
+            "ETF": 57.51
+          },
+          "by_sector": {
+            "Diversified": 57.51,
+            "Unknown": 42.49
+          },
+          "by_region": {
+            "Global": 57.51,
+            "Royaume-Uni": 15.0,
+            "Espagne": 14.99,
+            "Etats-Unis": 12.5
+          },
+          "by_risk_bucket": {
+            "equity_like": 100.0
+          },
+          "by_role": {
+            "core": 63.76,
+            "satellite": 0.0,
+            "defensive": 36.24,
+            "lottery": 0.0,
+            "unknown": 0.0
+          },
+          "concentration": {
+            "hhi": 1169.0,
+            "hhi_interpretation": "diversified",
+            "effective_n": 8.56,
+            "n_positions": 10,
+            "top_5_weight": 67.51,
+            "top_10_weight": 100.0,
+            "largest_position": 15.0,
+            "smallest_position": 6.25,
+            "thresholds": {
+              "well_diversified": "HHI < 1000",
+              "diversified": "HHI 1000-1500",
+              "moderately_concentrated": "HHI 1500-2500",
+              "highly_concentrated": "HHI > 2500"
+            },
+            "source": "exposures.py"
+          }
+        },
+        "ticker_mapping": [
+          {
+            "id": "EQ_4031",
+            "ticker": "RIO",
+            "name": "RIO TINTO PLC",
+            "weight_pct": 15.0,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Royaume-Uni",
+            "exchange": null
+          },
+          {
+            "id": "iShares Edge MSCI Europe Minimum Volatility UCITS ETF",
+            "ticker": "EUN0",
+            "name": "iShares Edge MSCI Europe Minimum Volatility UCITS ETF",
+            "weight_pct": 15.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumulating)",
+            "ticker": "IS3Q",
+            "name": "iShares Edge MSCI World Quality Factor UCITS ETF USD (Accumu",
+            "weight_pct": 15.0,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_3417",
+            "ticker": "NTGY",
+            "name": "NATURGY ENERGY GROUP, S.A.",
+            "weight_pct": 14.99,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Espagne",
+            "exchange": null
+          },
+          {
+            "id": "Amundi Core MSCI Europe UCITS ETF Dist",
+            "ticker": "10AI",
+            "name": "Amundi Core MSCI Europe UCITS ETF Dist",
+            "weight_pct": 7.52,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "Fidelity US Quality Income UCITS ETF Inc-USD",
+            "ticker": "FUSD",
+            "name": "Fidelity US Quality Income UCITS ETF Inc-USD",
+            "weight_pct": 7.49,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "EQ_2059",
+            "ticker": "TROW",
+            "name": "T. ROWE PRICE GROUP, INC.",
+            "weight_pct": 6.25,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "EQ_1461",
+            "ticker": "PEP",
+            "name": "PEPSICO, INC.",
+            "weight_pct": 6.25,
+            "category": "Actions",
+            "risk_bucket": "equity_like",
+            "sector": "Unknown",
+            "region": "Etats-Unis",
+            "exchange": null
+          },
+          {
+            "id": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+            "ticker": "XSX7",
+            "name": "Xtrackers Stoxx Europe 600 UCITS ETF 1D",
+            "weight_pct": 6.25,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          },
+          {
+            "id": "JPMorgan Global Research Enhanced Index Equity SRI Paris Aligned Active UCITS ETF USD (acc)",
+            "ticker": "JGSC",
+            "name": "JPMorgan Global Research Enhanced Index Equity SRI Paris Ali",
+            "weight_pct": 6.25,
+            "category": "ETF",
+            "risk_bucket": "equity_like",
+            "sector": "Diversified",
+            "region": "Global",
+            "exchange": null
+          }
+        ],
+        "execution_summary": {
+          "n_positions": 10,
+          "n_exchanges": 0,
+          "exchanges": [],
+          "total_weight": 100.0,
+          "missing_isin": 4,
+          "missing_ticker": 0,
+          "data_quality": {
+            "isin_coverage": 60.0,
+            "ticker_coverage": 100.0
+          },
+          "ready_for_execution": true
+        }
+      }
+    },
+    "_exposures": {
+      "by_category": {
+        "Actions": 42.49,
+        "ETF": 57.51
+      },
+      "by_sector": {
+        "Diversified": 57.51,
+        "Unknown": 42.49
+      },
+      "by_region": {
+        "Global": 57.51,
+        "Royaume-Uni": 15.0,
+        "Espagne": 14.99,
+        "Etats-Unis": 12.5
+      },
+      "by_risk_bucket": {
+        "equity_like": 100.0
+      },
+      "by_role": {
+        "core": 63.76,
+        "satellite": 0.0,
+        "defensive": 36.24,
+        "lottery": 0.0,
+        "unknown": 0.0
+      },
+      "concentration": {
+        "hhi": 1169.0,
+        "hhi_interpretation": "diversified",
+        "effective_n": 8.56,
+        "n_positions": 10,
+        "top_5_weight": 67.51,
+        "top_10_weight": 100.0,
+        "largest_position": 15.0,
+        "smallest_position": 6.25,
+        "thresholds": {
+          "well_diversified": "HHI < 1000",
+          "diversified": "HHI 1000-1500",
+          "moderately_concentrated": "HHI 1500-2500",
+          "highly_concentrated": "HHI > 2500"
+        },
+        "source": "exposures.py"
+      }
+    },
+    "_execution_summary": {
+      "n_positions": 10,
+      "n_exchanges": 0,
+      "exchanges": [],
+      "total_weight": 100.0,
+      "missing_isin": 4,
+      "missing_ticker": 0,
+      "data_quality": {
+        "isin_coverage": 60.0,
+        "ticker_coverage": 100.0
+      },
+      "ready_for_execution": true
+    },
+    "_limitations": [
+      "Allocation heuristique (fallback_heuristic): les contraintes du profil Stable sont incompatibles avec l'optimisation Markowitz classique.",
+      "Volatilité réalisée (9.7%) éloignée de la cible (6.0%) - écart de 3.7%."
+    ]
+  },
+  "_meta": {
+    "generated_at": "2026-11-27T17:49:22.561092",
+    "version": "v4.15.0",
+    "buffett_mode": "soft",
+    "buffett_min_score": 50,
+    "tactical_context_enabled": true,
+    "tactical_mode": "radar",
+    "tactical_rules": {
+      "sweet_ytd_min": 10.0,
+      "sweet_ytd_max": 35.0,
+      "sweet_daily_min": -0.5,
+      "overheat_ytd_min": 50.0,
+      "smoothing_alpha": 0.3,
+      "max_favored_sectors": 5,
+      "max_avoided_sectors": 3,
+      "max_favored_regions": 4,
+      "max_avoided_regions": 3
+    },
+    "backtest_days": 90,
+    "platform_fee_annual_bp": 0.0,
+    "ter_handling": "embedded_in_etf_prices",
+    "profile_policy_enabled": true,
+    "execution_grade": "research_only",
+    "investable": false,
+    "research_disclaimer": "Portefeuilles théoriques à vocation éducative et pédagogique. Ne constitue pas un conseil en investissement au sens de l'AMF. Risques obligataires simplifiés (pas d'analyse duration/spread/rating). Pour un investissement réel, consultez un conseiller financier agréé.",
+    "optimization_modes": {
+      "Agressif": "fallback_slsqp_failed",
+      "Modéré": "fallback_slsqp_failed",
+      "Stable": "fallback_heuristic"
+    },
+    "euus_mode": true,
+    "geographic_filter": "EU + US only",
+    "blocked_regions": [
+      "IN",
+      "ASIA_EX_IN",
+      "LATAM"
+    ]
+  }
+}
